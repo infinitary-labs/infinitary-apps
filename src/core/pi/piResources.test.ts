@@ -23,6 +23,7 @@ import {
   HANDOFF,
   handoffSentences,
 } from "../prompts/cardContract";
+import { FLEET_WORK } from "../prompts/fleetWork";
 import { CREWMATE_TOOLS } from "./crewmateTaskTools";
 import { createCrewTools, SHAPE_GROUP_DESCRIPTION } from "./crewTools";
 import { CHECK_CHANGE_TOOL_DESCRIPTION } from "./forgeTools";
@@ -250,7 +251,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
       "the host starts each as its prerequisites clear",
       "It authorizes no credential command, repair, permission change or merge",
       "Backlog (on-request) waits for the captain's word",
-      "do not requeue a piece he moved there without fresh authorization",
+      "do not requeue a piece they moved there without fresh authorization",
       "At a captain-only action, its crewmate asks on a card",
       "design-only limits even a filed build",
       "Never steer an unstarted builder or closed planner",
@@ -287,7 +288,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
       'titled "Build the saved plan: …", with the plan as basis, the implement constraint',
       "never a second, and with no card or reminder",
       "Abandon files nothing.",
-      "The captain's Start on a saved build, or his words to build it, authorizes it",
+      "The captain's Start on a saved build, or their words to build it, authorizes it",
       "its basis's Save and defer choice is not a refusal",
     ];
     for (const [name, served] of agents.slice(0, 1)) {
@@ -509,10 +510,25 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
     expect(core).not.toContain("fm.viz");
   });
 
+  it("serves gender-neutral captain instructions (INF-863 captain request)", () => {
+    for (const prompt of [
+      buildFirstmateSystemPrompt(),
+      buildCrewmateSystemPrompt("pi"),
+      buildCrewmateSystemPrompt("claude"),
+    ]) {
+      expect(prompt).not.toMatch(/\b(?:he|his|him|himself)\b/i);
+    }
+  });
+
   it("keeps the dispatch-policy standing rules", () => {
     expect(core).toContain("Current context and crew_status outrank transcripts");
     expect(core).toContain("Never ask when one confident match exists");
-    expect(core).toContain("Never send the user to Settings");
+    // INF-863 approved A: one shared instruction, once per served persona.
+    for (const prompt of [buildFirstmateSystemPrompt(), buildCrewmateSystemPrompt()]) {
+      expect(prompt.split(FLEET_WORK)).toHaveLength(2);
+    }
+    expect(core).not.toContain("Never send the user to Settings");
+    expect(core).not.toContain("Never ask the captain to click a card instead.");
     // Said once, by the tool that returns it (v4.59).
     const spawn = (
       createCrewTools({} as never) as unknown as { name: string; description: string }[]
@@ -832,7 +848,7 @@ describe("buildFirstmateSystemPrompt (contract v3.6, v4.2, v4.41)", () => {
     // The handoff follows them for the same reason (v4.41): both ends of a
     // plan-to-build handoff act on it.
     expect(buildFirstmateSystemPrompt()).toBe(
-      `${FIRSTMATE_PROMPT_CORE}\n\n${FIRSTMATE_CARD_AUTHORING}\n\n${CARD_REPLY}\n\n${FIRSTMATE_HANDOFF}`,
+      `${FIRSTMATE_PROMPT_CORE}\n\n${FLEET_WORK}\n\n${FIRSTMATE_CARD_AUTHORING}\n\n${CARD_REPLY}\n\n${FIRSTMATE_HANDOFF}`,
     );
     expect(buildFirstmateSystemPrompt()).not.toContain("STYLE (");
   });
@@ -1257,7 +1273,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
   it("runs a program the captain asks for, and keeps a named rule on the crewmate's own choices (INF-205)", () => {
     const prompt = buildCrewmateSystemPrompt();
     expect(prompt).toContain(
-      "When the captain's own words ask you to run a program (his verbatim words in the brief, a reply under your card, a line in the task's Crewmate tab, or a written-in card answer), run it. A rule here that names a program, a sign-in or the keychain governs your own choices, never those words.",
+      "When the captain's own words ask you to run a program (their verbatim words in the brief, a reply under your card, a line in the task's Crewmate tab, or a written-in card answer), run it. A rule here that names a program, a sign-in or the keychain governs your own choices, never those words.",
     );
     expect(prompt).toContain("Keep any secret off the command line and out of what you print.");
   });
@@ -1279,7 +1295,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // A close reaches its author (FI3-435): the crewmate judges it and its
     // report declares the outcome, rather than staying silently idle.
     expect(prompt).toContain(
-      "When he closes one of your cards without choosing, you are told, and you judge what the close meant.",
+      "When they close one of your cards without choosing, you are told, and you judge what the close meant.",
     );
     expect(prompt).not.toContain("Closing your completion card keeps you idle and steerable.");
     // The call mechanics - the completion trigger, the labels, that every
@@ -1545,8 +1561,8 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
 it("keeps the full authoring and handoff sources word for word", () => {
   const hash = (text: string) => createHash("sha256").update(text).digest("hex");
   expect(hash(CARD_AUTHORING)).toBe(
-    "1df95c8b86cb9c1db2c76231695d0d08b0492904aac05dfb724104243220875f",
+    "03f13e13a8b2d51b93f8583b77555399bfbe58a084e097844af8f733c0648e4e",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
-  expect(hash(HANDOFF)).toBe("c743e70be54f1254e53cc65080b6e3c3c1cb562dc06c3c031ecb73abe7b3ce4e");
+  expect(hash(HANDOFF)).toBe("f287b04eb24a403c032b06f115f7a5a4ce1bfdfe934de82316023b0a1842a0eb");
 });

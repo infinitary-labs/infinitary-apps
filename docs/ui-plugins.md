@@ -188,7 +188,7 @@ An answer finished after the document that asked was replaced (`expectDocument`,
 `src/shared/reads.ts` - beside the protocol, never in a plugin-only namespace.
 Eight names, frozen: `observe.sessions`, `observe.session`, `observe.live`, `quota.snapshot`, `feed.recent`, `crew.counts`, `repos.list`, `update.status`.
 Task-system P3 (2026-09-09) added three, frozen the same way: `tasks.board` (re-reads on the `inf:tasks` push, never per task event), `tasks.detail` (re-reads on a `task_changed` / `task_event` for its own id and either board push, including presentation-only changes) and `projects.list` - over `inf:tasks:board`, `inf:tasks:detail`, `inf:projects:list` (`src/shared/tasks.ts` carries the shapes, contract 1.2.0).
-Git integration PR 1.2 (contract 1.28.0) added `forge.changes` over `inf:forges:changes`: the captain's open proposed changes, read with his in-app sign-in, re-read on the `inf:forges` push and every five minutes.
+Git integration PR 1.2 (contract 1.28.0) added `forge.changes` over `inf:forges:changes`: the captain's open proposed changes, read with the captain's in-app sign-in, re-read on the `inf:forges` push and every five minutes.
 The Knowledge browser reads collections, graphs, concepts, findings, entries and standing directions in every build over its `home` channels, re-reading on `knowledge_changed` and project changes (`docs/knowledge.md`, "The browser").
 The task card's Crewmate tab (contract 2.14.0; `docs/task-card-tabs.md`, "The Crewmate tab") added two: `tasks.crewmate`, a task's crewmate's sessions as a transcript, re-read on its task's events, its calls and each second while subscribed, delivered only when its `revision` moves, and `tasks.crewmate.live`, what that crewmate is writing in its running turn, re-read on its stream - over `inf:tasks:crewmate` and `inf:tasks:crewmate:live`; no panel declares them.
 A panel read that takes arguments has its listener third (`reads.subscribe(name, args, listener)`), in either realm, whatever its name.
@@ -233,11 +233,11 @@ The page hears its own focus before it tells Chromium where focus went, so a fra
 Focus that moves from one frame straight to another passes the page by, and the frame left learns it lost focus before the page could hear of the move.
 So while a frame holds focus, the shell spends the activation as soon as the pointer moves over the page's own content, which it crosses on its way to a click in any other frame.
 It spends it again when it sees that focus moved from one frame to another: it reads where focus is each time a frame speaks, and each frame's bridge says when its own window gains or loses focus (`focused`), heard before any script of the body's and sent through what the bridge held from its start.
-Where the pointer never crossed the page, a script may still take focus back in the task right after its frame lost it; for the activation's lifespan after focus left a frame for another, focus that lands back in it while no click or key of the captain's holds the page goes back to the frame he moved to (`giveFocusBack`).
-The window's own gates read the captain's gesture through `windowGesture`, which keeps counting a spent one for as long as it would have lasted, so a press that brings focus back from a frame still counts as his.
+Where the pointer never crossed the page, a script may still take focus back in the task right after its frame lost it; for the activation's lifespan after focus left a frame for another, focus that lands back in it while no click or key of the captain's holds the page goes back to the frame the captain moved to (`giveFocusBack`).
+The window's own gates read the captain's gesture through `windowGesture`, which keeps counting a spent one for as long as it would have lasted, so a press that brings focus back from a frame still counts as the captain's.
 When the window's own page takes focus off a frame without the captain's doing, as a page in a new process does the first time the window is focused, the shell gives it back, whether the page's focus then rests on the frame or on nothing (`guardFrameFocus`, `docs/keyboard.md` "Cards and frames").
-Focus the captain's own click had put there goes back through the frame's window, so the page still sees him click from that frame straight into another, and the guards above still hold.
-`tests/e2e/frame-focus.spec.ts` proves the rule for a card body and an added panel, also right after the captain's own click or key in a card, whether he goes from the card to the main message or straight to a panel's field, and that the captain's key and click and the shell's own move still work.
+Focus the captain's own click had put there goes back through the frame's window, so the page still sees the captain click from that frame straight into another, and the guards above still hold.
+`tests/e2e/frame-focus.spec.ts` proves the rule for a card body and an added panel, also right after the captain's own click or key in a card, whether the captain goes from the card to the main message or straight to a panel's field, and that the captain's key and click and the shell's own move still work.
 
 ### A frame's links
 
@@ -353,7 +353,7 @@ It asks once, inline, and the confirm sentence between the slots says whether un
 An accepted Drop task closes the record, as an accepted Start does; the task stays dropped on its record, which the Tasks panel opens again with Start again.
 Tab reaches the buttons in the order shown.
 Continue and Start are the stall card's other host ops: `continue-task` (the ladder's nudge with the captain's authority) and `start-task`, which runs `startQueuedNow` - the first mate's `update_task start_now`, which also clears a hold.
-A click goes through `inf:task:run` (`window.infinitary.task.run`), lands on the task's history as the captain's with `via: "task-card"` (a Continue here reads apart from the stall card's), and wakes nobody: the first mate's next context block lists it beside his card choices (FI3-695, `docs/inbox.md`).
+A click goes through `inf:task:run` (`window.infinitary.task.run`), lands on the task's history as the captain's with `via: "task-card"` (a Continue here reads apart from the stall card's), and wakes nobody: the first mate's next context block lists it beside the captain's card choices (FI3-695, `docs/inbox.md`).
 On never-started work, open parts are refused and nothing is written; tasks waiting on it stay waiting, and the blocks edge stays.
 A refusal is inline text; a Start the host refuses at once also comes back inline beside its feed line, and stop and continue refuse as a feed line.
 The task board runs the same ops on a tile, plus its own `queue-task` and `unqueue-task` on never-started work (`docs/task-board.md`, "Moves").
@@ -437,7 +437,7 @@ The host stamps `source` (`yours` | `installed`) from the root it found the plug
 **Two roots, one scan** (item 2): `PersonalExtensions` scans `userData/plugins/<id>` from the `plugins` table (migration 43, `PluginRecords` its one writer: id, source, pinned version, installed-at, the consented capabilities).
 An added plugin is served only what the captain consented to: a tree on disk asking for anything else, or holding a `server.ts`, mounts nothing, with the reason named.
 
-**Install by talking** (item 3): `install_plugin` (the first mate's 25th tool) -> `PluginInstaller` (`src/core/plugins/`): fetch as plain files (npm `pack --ignore-scripts`, git with hooks off, or a folder; links refused; pinned) -> `checkPluginTree`, the same check the scan runs (the manifest, no server code, the tidy-up's refusals, a compile for the frame realm) -> one host consent card (`card-plugin-<id>`, host ops `add-plugin` / `decline-plugin` only the captain's click on card chrome runs; his dismissal declines) -> one feed line.
+**Install by talking** (item 3): `install_plugin` (the first mate's 25th tool) -> `PluginInstaller` (`src/core/plugins/`): fetch as plain files (npm `pack --ignore-scripts`, git with hooks off, or a folder; links refused; pinned) -> `checkPluginTree`, the same check the scan runs (the manifest, no server code, the tidy-up's refusals, a compile for the frame realm) -> one host consent card (`card-plugin-<id>`, host ops `add-plugin` / `decline-plugin` only the captain's click on card chrome runs; the captain's dismissal declines) -> one feed line.
 An update asks again only on a capability diff; `personalize remove` uninstalls.
 
 **One switch** (item 5): the `panels` preference and safe mode take back both roots in the same tick.
@@ -478,8 +478,8 @@ Their templates (`now.html`, `now.frame.js`, `activity.html`, `activity.frame.js
 ## A panel's cards (FI3-1014)
 
 The captain's words that started it: "a generic facility for plugins to render a card in the main card stack. ideally, this kanban board should be able to be fully migrated to the generic facility once it's done".
-His approved plan (FI3-1014) builds one way for any panel, whoever made it, to put up any number of cards on the main stack, in seven pieces that merged in order (each below); in piece 7 the task board moved onto them.
-The plan's answers: moving tasks is asked for once and agreed when the panel is added, a collapsed panel says what it holds from its own code in a page kept running, and a panel may put up a card without the captain's click, behind the card he is reading, marked new.
+The captain's approved plan (FI3-1014) builds one way for any panel, whoever made it, to put up any number of cards on the main stack, in seven pieces that merged in order (each below); in piece 7 the task board moved onto them.
+The plan's answers: moving tasks is asked for once and agreed when the panel is added, a collapsed panel says what it holds from its own code in a page kept running, and a panel may put up a card without the captain's click, behind the card the captain is reading, marked new.
 
 **One call.**
 `PanelProps.cards.emit({ id?, view, title, width?, height?, data? })` puts a card up and answers its id (`src/shared/personal/contracts.ts`); an open id is revised in place, its view hearing the new data, and `cards.close(id)` and `cards.open()` complete it.
@@ -499,7 +499,7 @@ A name that points at nothing the folder has is the panel's error: the captain's
 
 **On the stack.**
 A card is a shell-held entry, `OpenRecord`'s `{ panelCard: { panel, id, view, title, width, data } }` (`src/renderer/src/app/store.ts`), any number per panel, never saved.
-From the captain's own click or key - the app's header button or command, or inside the panel or a card - it comes to the front; otherwise it waits behind the entry he is reading, marked new (`emitPanelCard`).
+From the captain's own click or key - the app's header button or command, or inside the panel or a card - it comes to the front; otherwise it waits behind the entry the captain is reading, marked new (`emitPanelCard`).
 In the window that is the window's own gesture (`windowPanelCards`, `windowGesture`); in a frame it is the frame holding the window's focus (`framePanelCardAction`, `frameHoldsFocus`).
 The stage draws `PanelCardView`: the app's one row of chrome - the title, `yours` or the maker's name, Hide - and the panel binding's `CardBody` under it.
 A card runs where its panel runs: the captain's own in the window (`personalCardBody`, the module `cards/<view>.mjs` beside `panel.mjs`), one from elsewhere or the app's own in a frame of its own (`framedCardBody`, a `kind: "panel"` mount whose `panel.view` names the card view and whose config carries the card's id; its data rides view state).
@@ -508,7 +508,7 @@ Hide or an Escape nothing in the card used hides it (the window's own Escape for
 
 **What the frame realm gained.**
 A frame's action is now answered with its handler's plain data (`FrameController`; the bridge already resolved `inf.action` with the response's `result`, so its script and its hash are unchanged).
-Every panel mount from elsewhere declares only the actions its grants allow (`framePanelActions`, `plugins/panelActions.ts`): the three card actions, `card.keep` on a card's own page, `point.*` for one that reads `tasks.board`, `tasks.run` for one the captain agreed may move his tasks, and `rail.*` on the panel's own page.
+Every panel mount from elsewhere declares only the actions its grants allow (`framePanelActions`, `plugins/panelActions.ts`): the three card actions, `card.keep` on a card's own page, `point.*` for one that reads `tasks.board`, `tasks.run` for one the captain agreed may move the captain's tasks, and `rail.*` on the panel's own page.
 Its view state carries the presses of its header buttons, counted, with how the latest came, and F6's focus asks, counted, so the runtime hears only an ask made after the document was born, counted from `inf.birthState`, and the view, whether it is collapsed, and a card's data, revision and kept place (`frameRealm/panelProps.ts`).
 
 **Its commands are the window's.**
@@ -517,7 +517,7 @@ The app's own Tasks keeps ⌘B and ⇧⌘F that way (`panel:now/board`, `panel:n
 
 ### Each card's kept place (piece 2)
 
-Only the shown card runs a page, so a card the captain pages away from is born again when he pages back.
+Only the shown card runs a page, so a card the captain pages away from is born again when the captain pages back.
 `PanelProps.card.keep(value)` keeps the card's place - its scroll, a tab, its Find - on its stack entry (`PanelCardEntry.kept`), at most 4,096 bytes of JSON (`PANEL_CARD_KEPT_MAX_BYTES`), until Hide takes the card away; a revision of the card keeps it.
 `card.kept` is what the card last kept, as its page was born: in the window, the value when its compiled version loaded (`PersonalCardBody`); in a frame, the value in the first view state the host pushes, which the runtime waits for before it draws a card (`firstState`).
 A later `keep` is for the next page, never a re-render of this one.
@@ -532,7 +532,7 @@ A panel that reads `tasks.board` gets `PanelProps.point` (`src/renderer/src/plug
 - `peekTask({ taskId, box } | null)` rests on a task: the box is in the page's own pixels, the host adds where the page's frame sits, and the crew summary opens beside the panel on its rail, as a Tasks row's does, or on the stack beside the box itself, as the task board's tiles' always have (`PanelPeek` in `plugins/point/taskPeek.ts`, drawn by `PeekSummary` as `[data-point-summary]`).
 - `showCard(cardId)` brings a task's waiting card forward, by the `waitingCardId` the read gave, and answers whether it came forward.
 - `aim(taskId | null)`, in a card view only, aims the captain's next message: while that card is the shown entry, `submit` sends its aim as the turn's task, as a shown record does (`PanelCardEntry.aim`).
-- `draft(text)` starts the captain's next message: one line of at most 500 characters at the head of the main message field, the keyboard there and the caret after it, what he had typed kept after it (`beginDraft`, as the Create panel slot starts one); nothing is sent until he sends it.
+- `draft(text)` starts the captain's next message: one line of at most 500 characters at the head of the main message field, the keyboard there and the caret after it, what the captain had typed kept after it (`beginDraft`, as the Create panel slot starts one); nothing is sent until the captain sends it.
   It names nothing of the app's, so every panel has it, whatever it reads (`PANEL_DRAFT_ACTION`); it answers false while the message field is held, a recording for one.
   The Knowledge browser's Ask about this uses it (`docs/knowledge.md`).
 - `openSettings(section, item?)` opens Settings at a section this window offers, by its id, and hands that section `item`, at most 128 characters on one line, to show on arrival (the shell's `settingsItem`, which the section reads once and clears); it answers false for a section the window does not offer, a view's hidden sections among them.
@@ -540,8 +540,8 @@ A panel that reads `tasks.board` gets `PanelProps.point` (`src/renderer/src/plug
   The Automation panel's rows use it to open a rule's sheet, and its header's Open Automation, an ask, to open the full list (`docs/automation.md`).
 
 The host checks every id against the board it presented (`boardOnScreen`): a task or a card the board does not list does nothing - except a closed task the panel's own `tasks.search` found, which it may open and point at, so a board's Find reaches done and dropped work.
-Opening, bringing forward, aiming and drafting move the captain's focus or his words, so they count only from his own click or key in that page - the window's own gesture for a panel of his own (`windowGesture`), the frame holding the window's focus for one from elsewhere - and answer false otherwise; resting, and letting go of an aim with `aim(null)`, need no click.
-`PanelProps.view` is what he has open, pushed in for a panel that reads the board: `openTaskIds` (the records on the stack), `shownTaskId` (the task of the shown entry - a record, a task's browser, the board's selected tile, or a card's aim) and `litTaskId` (the task a rest anywhere in the window lights, or null; `plugins/point/litTask.ts`, `docs/crew-orbits.md` "The lit task").
+Opening, bringing forward, aiming and drafting move the captain's focus or the captain's words, so they count only from the captain's own click or key in that page - the window's own gesture for a panel of the captain's own (`windowGesture`), the frame holding the window's focus for one from elsewhere - and answer false otherwise; resting, and letting go of an aim with `aim(null)`, need no click.
+`PanelProps.view` is what the captain has open, pushed in for a panel that reads the board: `openTaskIds` (the records on the stack), `shownTaskId` (the task of the shown entry - a record, a task's browser, the board's selected tile, or a card's aim) and `litTaskId` (the task a rest anywhere in the window lights, or null; `plugins/point/litTask.ts`, `docs/crew-orbits.md` "The lit task").
 A panel draws `litTaskId` as its own rest, without the summary: the Tasks panel marks the row `data-now-lit` and lights its blocker edges, the board marks the tile `data-board-lit`, and `PanelTaskKeyText` takes `litTaskId` and lights its keys of that task (`litTaskIn` lets a memoized row hand it on only where it writes that key).
 A card body's and a record's frame hears the same through the bridge's host-to-frame `lit` message, the key of the lit task or null, pushed only to a mount whose `taskKeys` name that key and again to every new document: the bridge sets `data-inf-lit` on each `a[data-inf-task]` for that key, and the frame stylesheet draws it as the hover surface.
 A panel that does not read the board gets an empty view, and its `point` throws at the call - every call but `draft`.

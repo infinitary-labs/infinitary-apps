@@ -211,7 +211,7 @@ const CAPTURE_REASON_SHOWN = 120;
 /** A line of the outline that names a control's ref. */
 const REF_IN_OUTLINE = new RegExp(` \\[${REF_PATTERN}\\]`);
 
-const WITHHELD_WORDS = `What reads ${HIDDEN_VALUE_WORDS} holds a password, or text you did not type yourself since the captain handed this page back, which may be his - card details, a code: it is never read out.`;
+const WITHHELD_WORDS = `What reads ${HIDDEN_VALUE_WORDS} holds a password, or text you did not type yourself since the captain handed this page back, which may be theirs - card details, a code: it is never read out.`;
 
 /**
  * The captain's Reload on a page that answers a form (docs/task-browser.md,
@@ -1813,7 +1813,7 @@ export class TaskBrowsers {
         if (withheld.length > 0) {
           browser.did = "did not photograph the page";
           return refused(
-            `${this.takeNotice(browser)}Did not photograph the page: it holds text you did not type yourself since the captain handed it back, which may be his - ${clip(withheld.join(", "))}. A picture would show it. Read the page with ${browserCommand("snapshot")} instead, which says what is filled without its text, or ask the captain on a card.`,
+            `${this.takeNotice(browser)}Did not photograph the page: it holds text you did not type yourself since the captain handed it back, which may be theirs - ${clip(withheld.join(", "))}. A picture would show it. Read the page with ${browserCommand("snapshot")} instead, which says what is filled without its text, or ask the captain on a card.`,
           );
         }
       }

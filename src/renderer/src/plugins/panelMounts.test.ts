@@ -63,7 +63,7 @@ function answer(host: PluginHost, snapshot: PersonalSnapshot, layout: Layout = D
     said: (id) => panelRail.get(id),
     isCollapsed: (id) => id === "folded",
     room: (side) => railFolds.of(side),
-    slot: { shows: false, why: "it shows once his third task has finished" },
+    slot: { shows: false, why: "it shows once their third task has finished" },
   });
 }
 
@@ -160,7 +160,7 @@ describe("the window's answer about its panels", () => {
     expect(of(mounts, "create-panel", "app")).toMatchObject({
       state: "off",
       rail: "left",
-      why: "it shows once his third task has finished",
+      why: "it shows once their third task has finished",
     });
   });
 

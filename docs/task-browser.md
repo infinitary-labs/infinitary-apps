@@ -1,7 +1,7 @@
 # The task browser
 
 Each task may have a browser of its own, on the computer the task runs on, which its crewmate drives: it opens a public website or a page a project serves on that computer, reads it, uses it with real input, photographs it into its evidence folder, and closes it.
-The captain watches it drive in the task's browser view on the stage, takes control of it when the page needs a person, and makes every final submission on it himself.
+The captain watches it drive in the task's browser view on the stage, takes control of it when the page needs a person, and makes every final submission on it personally.
 The design is the captain's (rev-10 in `docs/architecture.md` §14, the isolated page in §4; the view's look is the design skill's `components/cards/TaskBrowser`).
 This page says how the browser works now, for a task on this Mac; "On another computer" says what changes for a task that runs on a computer that runs work.
 
@@ -21,12 +21,12 @@ One command in its shell, `infinitary-browser-axi`, on Pi and the Claude client 
 - `screenshot` photographs the visible page, the whole page, or with `--uid` one element's visible part, into the task's evidence folder, where the crewmate opens it with its read tool; once the captain has handed the browser back it needs `--reason` ("A signed-in page").
 - `stop` stops the browser, and `closepage` closes only a second page; `pages`, `console` and `network` read the browser's pages and the page's lists.
 
-Beside it, that crewmate's `emit_card` takes `browser_button`, the label of a card's door to the browser ("From a card" below), with `browser_page` when that door opens a page from the task's project ("A page from the project" below), and `browser_handoff` with an action whose effect opens the browser for the captain ("Asking for help" below), which is also how it asks him to make a final submission ("A final submission" below); no other crewmate's schema has either.
+Beside it, that crewmate's `emit_card` takes `browser_button`, the label of a card's door to the browser ("From a card" below), with `browser_page` when that door opens a page from the task's project ("A page from the project" below), and `browser_handoff` with an action whose effect opens the browser for the captain ("Asking for help" below), which is also how it asks the captain to make a final submission ("A final submission" below); no other crewmate's schema has either.
 
 The command is granted where the browser binds (`CrewSupervisor.browserHooks`): on this Mac when the host has a browser, and on a computer that runs work when that computer keeps task browsers ("On another computer").
 
 The browser stays open across the crewmate's turns.
-It stops on `infinitary-browser-axi stop`, on the captain's Stop browser, when its task closes done or dropped (except a browser the captain's own click on a page from the project started, which is his, below), after half an hour with no command while nobody watches it and the captain does not hold it, when its page stops working, or when the app quits.
+It stops on `infinitary-browser-axi stop`, on the captain's Stop browser, when its task closes done or dropped (except a browser the captain's own click on a page from the project started, which is the captain's, below), after half an hour with no command while nobody watches it and the captain does not hold it, when its page stops working, or when the app quits.
 Whatever stopped it is told to the crewmate once, and the next open is a fresh browser with nothing signed in.
 At most four task browsers run on this Mac at once; the next one is refused in words, and none is stopped to make room.
 One command runs at a time per task, in the order they came, and each answers within 30 seconds, in words when the page did not finish.
@@ -144,7 +144,7 @@ Closing a page or browser discards its diagnostics.
 The console includes log, debug, info, warning and error messages, and uncaught exceptions, with each message limited to 300 characters.
 Once the browser has been returned or uses a saved sign-in, the console retains and answers only counts by level, never message text.
 Taking or returning control clears both lists, and no diagnostics are collected while the captain holds the browser or control is changing.
-A late response to a request from his time cannot recreate that request in the list.
+A late response to a request from the captain's time cannot recreate that request in the list.
 
 The network list contains only method, address, resource type and pending, response status or failed outcome.
 Every network address omits credentials, query and fragment, even before a handback; non-web addresses are not quoted.
@@ -191,16 +191,16 @@ A second page that closes itself, as a bank's check does once answered, goes, an
 A page another page opened is its own hidden window, made the same way as the first (`drivePage`, `src/main/host/taskBrowser.ts`).
 
 The captain's view watches the current page, and the card's tab strip names each page Browser and its title ("The view").
-While the captain holds the browser, his pick of a page's tab makes that page current for his input, and for the crewmate's fresh look once he hands it back.
-What the second page says in his time, its opening and closing included, is kept for nobody.
+While the captain holds the browser, the captain's pick of a page's tab makes that page current for the captain's input, and for the crewmate's fresh look once the captain hands it back.
+What the second page says in the captain's time, its opening and closing included, is kept for nobody.
 
 ## A signed-in page
 
-Once the captain has handed a browser back it may hold his sign-in, so until it stops it keeps only what the task needs (`TaskBrowsers.signedIn`).
-The host reads that from the typed fact that he returned control, never from the page.
+Once the captain has handed a browser back it may hold the captain's sign-in, so until it stops it keeps only what the task needs (`TaskBrowsers.signedIn`).
+The host reads that from the typed fact that the captain returned control, never from the page.
 
 - Text typed into the page is read out only while it is just what the crewmate itself typed there since the captain last handed the page back (`OutlineOptions.typedOnly`, `RefBook.noteTyped`).
-  Any other - a typed field's value, the text of an editable part of the page - may be what he typed, such as a card number or a code, whether or not he sent it: the outline says the field holds something, `(value hidden)`, and never what, and a wait for words never finds it.
+  Any other - a typed field's value, the text of an editable part of the page - may be what the captain typed, such as a card number or a code, whether or not the captain sent it: the outline says the field holds something, `(value hidden)`, and never what, and a wait for words never finds it.
   A typed field is a text box, a search box, a number field, or anything the browser marks editable, read from the accessibility tree's own facts, never from the field's label; an option chosen from the site's own list reads as before.
 - A picture is taken only for a reason the crewmate gives: `infinitary-browser-axi screenshot` without `--reason` is refused in words, and with one the task's timeline gets one line naming the site and the reason.
   A page that holds hidden typed text is not photographed at all, since the picture would show it: the refusal names each such field, and the crewmate reads the page instead.
@@ -243,7 +243,7 @@ Only a window that watches the task may ask, and a size is between 320 by 240 an
 While any view watches a task's browser it does not stop for being unused; its half hour starts again when the last view goes.
 
 Each page the browser holds is a Browser tab on the card's strip, reading Browser and the page's title (`browserTabLabel`), the current one selected; the site stays in the view's row.
-Picking a page's tab is navigation, so it is the captain's only while he holds the browser (`{ kind: "page" }` on `inf:browser:input`); while he watches, the other pages' tabs are disabled.
+Picking a page's tab is navigation, so it is the captain's only while the captain holds the browser (`{ kind: "page" }` on `inf:browser:input`); while the captain watches, the other pages' tabs are disabled.
 
 More holds Fit or Actual size, Stop browser, Copy page address, and Report a problem, which starts the first mate input with "This task's browser has a problem: " for the captain to finish.
 Stop browser (`inf:browser:stop`) stops it at once, as the crewmate's own close would.
@@ -283,7 +283,7 @@ The server answers only GET and HEAD, only to a request that names its own addre
 It never opens the working copy's file, so before the work is merged the page is the project's current one or not there yet.
 A browser the task's crewmate has open is taken first, exactly as Take control takes it, then loads the page; Return control hands it back as usual.
 With none open - stopped, never opened, or its task closed - a fresh browser starts with the captain in control from the start.
-It is his own: its fact says so (`own`), its task's close leaves it running (only the task's removal stops it), and Open again starts it as his again from a fresh server.
+It is the captain's own: its fact says so (`own`), its task's close leaves it running (only the task's removal stops it), and Open again starts it as the captain's again from a fresh server.
 The view offers Close page in place of Return control, with no question, and it stops the browser rather than waking a crewmate that never opened it (`TaskBrowsers.returnControl`).
 The cap of four browsers counts it like any other.
 
@@ -301,22 +301,22 @@ While it is `taking` the view's row reads `finishing the crewmate's current acti
 While the captain holds it:
 
 - the crewmate's commands refuse in words, its stop too, saying the captain will hand it back and wake it once;
-- the captain's pointer, wheel and keys on the view's picture go to the page through `inf:browser:input`, a shell channel the core answers only for the captain's own browser (`TaskBrowsers.captainInput`), as the browser protocol's own input at the page's own pixels; a Mac's editing keys go as the page's editing commands, paste included, and Back, Forward and Reload move his page;
+- the captain's pointer, wheel and keys on the view's picture go to the page through `inf:browser:input`, a shell channel the core answers only for the captain's own browser (`TaskBrowsers.captainInput`), as the browser protocol's own input at the page's own pixels; a Mac's editing keys go as the page's editing commands, paste included, and Back, Forward and Reload move the captain's page;
 - nothing records any of it: no timeline line, no fact, no notice, no event, and nothing the IPC layer keeps;
 - what the page says - refused requests, errors, dialogs, popups and its moves - is kept for nobody, so the crewmate never hears of the captain's time;
 - the browser never stops for being unused, and its fact carries `control: "captain"`, which the record's Browser line reads as `you have control` and the view's row as `you have control · the crewmate cannot see this page`, tinted violet.
 
 Return control asks once in the view: `Return control? The crewmate will read this page as it is now, including what you signed in to.`, with Keep control and Return control, and under them the unticked `Remember my <site> sign-in on this computer`, which saves the site's sign-in as it goes back ("Saved sign-ins").
-`TaskBrowsers.returnControl` waits, at most ten seconds, for a load the captain started to finish, so a return during a reload hands back the loaded page; then every page starts a new book, so every older ref is refused, nothing from his time is kept, the crewmate's next answer leads with a line saying control came back, and its fact carries `returned`, which the view's caption reads as `temporary · keeps what you signed in to until it stops`.
+`TaskBrowsers.returnControl` waits, at most ten seconds, for a load the captain started to finish, so a return during a reload hands back the loaded page; then every page starts a new book, so every older ref is refused, nothing from the captain's time is kept, the crewmate's next answer leads with a line saying control came back, and its fact carries `returned`, which the view's caption reads as `temporary · keeps what you signed in to until it stops`.
 The crewmate is woken once through its task's durable lane: `CrewSupervisor.browserReturned` steers the typed `browser-returned` wake (`docs/inbox.md`), named by the run, the browser and its count of returns, so the inbox queues each return once.
 The wake names the site, says the old refs are gone and to take a fresh look with `infinitary-browser-axi`, the command's home view, repeats what the crewmate said it would do next, and says returning gives the task the signed-in site, never permission to buy, pay or submit anything that matters.
 It carries none of the page itself, so nothing the captain signed in to is written to the inbox or the timeline; the crewmate reads the page in its own turn.
 Until its first command after the return, and through its first read, the view's row reads `fresh look at the page`.
 
-A browser in the captain's hands - paused for his help, being taken, or his - is his turn: the idle ladder reads it as a witness (`browserWithCaptain`, `docs/report-sort.md`), so the crewmate is never nudged while he signs in, and its work posture reads as waiting for him.
+A browser in the captain's hands - paused for the captain's help, being taken, or the captain's - is the captain's turn: the idle ladder reads it as a witness (`browserWithCaptain`, `docs/report-sort.md`), so the crewmate is never nudged while the captain signs in, and its work posture reads as waiting for the captain.
 
-A page that crashes while he holds it stops as any crashed page does (`its page stopped working`), and its crewmate hears it on its next command; nothing is returned and nobody is woken.
-When the app quits or crashes while he holds it, nothing is kept: the next run has no browser, and a request card's strip says its browser stopped when Infinitary quit.
+A page that crashes while the captain holds it stops as any crashed page does (`its page stopped working`), and its crewmate hears it on its next command; nothing is returned and nobody is woken.
+When the app quits or crashes while the captain holds it, nothing is kept: the next run has no browser, and a request card's strip says its browser stopped when Infinitary quit.
 Open again starts a fresh browser that is the crewmate's.
 
 ## Asking for help
@@ -332,19 +332,19 @@ Its open-browser action is the card's one way into the browser, since a door bes
 The record's Browser line reads `paused for your help`, and the view's row tints ember with the crewmate's reason and Take control.
 Waiting on the captain, the browser never stops for being unused, and the crewmate may withdraw the request with `infinitary-browser-axi stop`, which stops the browser.
 
-The open-browser action is the captain's own click on the card's chrome: `CrewSupervisor.act` refuses it from a body's frame, takes control of the browser the card's attachment names - a newer or older one is never taken - and hands the shell an effect that opens the view, where the row reads `finishing the crewmate's current action…` and then his control.
-The card is answered by that click, as every action answers its card, and its crewmate is told nothing until he returns control.
+The open-browser action is the captain's own click on the card's chrome: `CrewSupervisor.act` refuses it from a body's frame, takes control of the browser the card's attachment names - a newer or older one is never taken - and hands the shell an effect that opens the view, where the row reads `finishing the crewmate's current action…` and then the captain's control.
+The card is answered by that click, as every action answers its card, and its crewmate is told nothing until the captain returns control.
 An app controlling this Mac from another never sends that click: the card stays on both Macs and says to do it on this Mac (`docs/view.md`, "A task's browser on a view").
 When the browser the card names is gone - it stopped, a newer one followed it, or it ended when the app quit - the click still answers the card and opens the view, whose line says so over whatever the task's browser is now ("From a card").
 `CrewSupervisor` reads that off the task's browser fact (`attachmentStanding`) once the take or the saved sign-in's grant is refused, never off the refusal's words.
-Its crewmate is then steered at once through its task's durable lane with his choice and that its browser was gone (`card-choice` with `browserGone`, `docs/inbox.md`), so it can open the site again and ask anew on a new card, and the feed says so.
+Its crewmate is then steered at once through its task's durable lane with the captain's choice and that its browser was gone (`card-choice` with `browserGone`, `docs/inbox.md`), so it can open the site again and ask anew on a new card, and the feed says so.
 The steer never names the action, so a saved sign-in the host offered stays unnamed.
 Leave waiting is an ordinary reply to the crewmate; it, a close and Hide leave the browser paused.
 
 The captain may take the browser from the record's Browser line instead, with Take control in the view, while the request card is still up.
-His Return control then takes that card down (`CrewSupervisor.browserReturned`), so he comes back to no card: it asked for what he has done.
-Only a request card naming the browser he returned goes, read off the task's browser fact (`attachmentStanding`); one naming an older browser stays, since its click tells its crewmate that browser is gone.
-Its crewmate hears only the return's one wake, never a choice he did not make.
+The captain's Return control then takes that card down (`CrewSupervisor.browserReturned`), so the captain comes back to no card: it asked for what the captain has done.
+Only a request card naming the browser the captain returned goes, read off the task's browser fact (`attachmentStanding`); one naming an older browser stays, since its click tells its crewmate that browser is gone.
+Its crewmate hears only the return's one wake, never a choice the captain did not make.
 
 ## Saved sign-ins
 
@@ -402,7 +402,7 @@ A saved sign-in is as safe as this Mac's own login and its disk.
 
 ## A final submission
 
-A purchase, a booking or any other submission that commits the captain is his to make, on the site's own page, under his control (the answer `submission: captain` on the FI3-835 design).
+A purchase, a booking or any other submission that commits the captain is the captain's to make, on the site's own page, under the captain's control (the answer `submission: captain` on the FI3-835 design).
 A crewmate prepares it up to its last step and stops there; it never presses that step itself.
 
 **The review.**
@@ -413,9 +413,9 @@ What a review names, and when one is needed, is the crewmate's knowledge, carrie
 The host handles the review card as any request ("Asking for help"): the browser pauses before it goes up, and the action's click hands the captain the page.
 
 **The captain's step.**
-He pays on the page with control, a bank's check opening as a second page where the site opens one; nothing he types is kept ("Taking control").
-His Return control wakes the crewmate once, and the wake (`browser-returned`) tells it to read what the page says happened and keep only the result, such as a reference.
-Whether he paid or not, the card details he typed stay his: a payment page handed back reads its card fields as filled, with their values hidden, and is not photographed ("A signed-in page").
+The captain pays on the page with control, a bank's check opening as a second page where the site opens one; nothing the captain types is kept ("Taking control").
+The captain's Return control wakes the crewmate once, and the wake (`browser-returned`) tells it to read what the page says happened and keep only the result, such as a reference.
+Whether the captain paid or not, the card details the captain typed stay the captain's: a payment page handed back reads its card fields as filled, with their values hidden, and is not photographed ("A signed-in page").
 If the page does not confirm it - an error, a page still processing, no answer, or a browser that is gone - the outcome is unknown: the crewmate never submits, reloads or resends it, checks where the site lists it, such as its bookings, and asks the captain on a card to check in the browser.
 Until the seller or its payment service shows what happened, the crewmate says plainly that it does not know whether it went through: a missing booking or charge proves nothing, so it never guesses either way and never suggests trying again.
 The handoff's description and both browser wakes that meet an unknown outcome carry these words from one constant, `UNKNOWN_OUTCOME_WORDS` (`src/shared/taskBrowser.ts`).
@@ -448,17 +448,17 @@ Its pages are that computer's.
 A page a project serves on that computer's own loopback is the one the crewmate opens, its connection guard resolves and checks every address from there, so a name that leads to that computer or its private network is refused at the connection, and its pictures land in the task's evidence folder there, where the crewmate reads them.
 That computer's own `TaskBrowsers` owns it, with every rule on this page, and its crewmate reaches it through that computer's own task channel (`ComputerBrowsers`, `src/core/helper/browsers.ts`; `docs/axi-commands.md`).
 
-The captain reads and drives it from the home as he does one here (`PlacedBrowsers` and `HomeBrowsers`, `src/core/placed/placedBrowsers.ts`):
+The captain reads and drives it from the home as the captain does one here (`PlacedBrowsers` and `HomeBrowsers`, `src/core/placed/placedBrowsers.ts`):
 
 - Its fact is the one that computer last said (`inf:work:browser`), sent once each time it changes and asked for whole each time that computer comes back into reach (`inf:task-browser:facts`).
   The record's Browser line, a card's door, the view and the idle ladder read it as they read a fact here.
 - While a view watches, that computer sends the page's pictures (`inf:work:browser-frame`), the newest one at a time, and the room a maximized view gives the page goes there.
-- Take control, his input, Return control, Stop browser, Open again, a request card's pause and the task's close are orders to that computer (`browserOrders`, `src/shared/work.ts`), answered there by the same rules.
+- Take control, the captain's input, Return control, Stop browser, Open again, a request card's pause and the task's close are orders to that computer (`browserOrders`, `src/shared/work.ts`), answered there by the same rules.
   Out of reach, each is refused in words and nothing is done.
 - What that computer has the home do once - a line on the task's timeline, the crewmate's wake on a return, a saved sign-in copied back - arrives as a work request that the conversation's ledger answers once (`inf:work:browser-event`, `docs/helper.md` "Holding a conversation").
 - A saved sign-in stays the home's (`WebSignIns`).
   The captain's click on a request card lends that one site's save to the browser there, which holds it in its site data in memory only and copies it back by the save's id as it stops.
-  His Remember tick brings what that browser holds of the site home in the answer to his Return control, saved under an id the home chose first, and only for the site his view showed him.
+  The captain's Remember tick brings what that browser holds of the site home in the answer to the captain's Return control, saved under an id the home chose first, and only for the site the captain's view showed the captain.
   Remove signs every browser there that uses it out of that site.
   Nothing on that computer writes a sign-in to a file.
 - The home's quit leaves a browser there running with its crewmate's turn; that computer's quit or restart ends it, and the home reads that it has none once that computer is back.
@@ -519,19 +519,19 @@ Its long-page journey has a crewmate open a changelog too long for one answer, r
 Its second journey has the captain open a crewmate's browser from the record and watch the page's own pixels while the crewmate drives, maximize the view and find the page laid out at the view's room and following the window's size, restore it to 1280 by 800, carry the task on the first mate input, see nobody driving once the turn ends, stop the browser from More, open it again fresh, and hide the view with the browser still running.
 Its third has a crewmate emit a decision whose door reads `Try it`: the card names the task's browser, the click shows the page with the card unanswered behind it (the same offer, no thread line, the task as it was), Hide returns to the card, and once the browser is stopped and opened again both the card and the view it opens say the card's browser has stopped.
 `cardTool.test.ts` holds that only a crewmate with a browser is offered `browser_button`, `crewSupervisor.test.ts` the attachment it writes and its refusals, `cardStore.test.ts` and `db.test.ts` the column, and `CardAttachment.test.tsx` and `store.test.ts` the door's line and the view's return to its card.
-`taskBrowsers.test.ts` holds taking and returning control against the stand-in page: a take while a command runs lets it finish and refuses the one queued behind it, the captain's input reaches the page and nothing records it, what the page said in his time never reaches the crewmate, a return during a reload waits for it and refuses every older ref, each return is one named wake, a stale handle is refused, a crash or a quit in his hands wakes nobody, and a request pauses the browser only on the site it names.
-`crewSupervisor.test.ts` holds that a request card pauses the browser before it goes up, that the captain's click takes the card's own browser and tells the crewmate nothing, that a click or a saved sign-in's grant whose browser ended with a quit, or stopped and was replaced, steers the crewmate once with that fact and the feed line and never names the saved sign-in, that a browser in his hands is never nudged, the request's refusals, and the one wake on return; `wakes.test.ts` its words, `reportSort.test.ts` the witness, `cardTool.test.ts` the parameter and the first mate's refusal, and `taskFacts.test.ts`, `CardAttachment.test.tsx` and `store.test.ts` the record's words, the strip's tint and its missing button, and the view the action opens.
+`taskBrowsers.test.ts` holds taking and returning control against the stand-in page: a take while a command runs lets it finish and refuses the one queued behind it, the captain's input reaches the page and nothing records it, what the page said in the captain's time never reaches the crewmate, a return during a reload waits for it and refuses every older ref, each return is one named wake, a stale handle is refused, a crash or a quit in the captain's hands wakes nobody, and a request pauses the browser only on the site it names.
+`crewSupervisor.test.ts` holds that a request card pauses the browser before it goes up, that the captain's click takes the card's own browser and tells the crewmate nothing, that a click or a saved sign-in's grant whose browser ended with a quit, or stopped and was replaced, steers the crewmate once with that fact and the feed line and never names the saved sign-in, that a browser in the captain's hands is never nudged, the request's refusals, and the one wake on return; `wakes.test.ts` its words, `reportSort.test.ts` the witness, `cardTool.test.ts` the parameter and the first mate's refusal, and `taskFacts.test.ts`, `CardAttachment.test.tsx` and `store.test.ts` the record's words, the strip's tint and its missing button, and the view the action opens.
 `crewSupervisor.test.ts` also holds that a return takes down the request card naming that browser, leaves a card that asked nothing and one naming an older browser, and wakes the crewmate only once.
-The fourth journey in `tests/e2e/task-browser.spec.ts` has a crewmate ask the captain to sign in on a local account page: its card's strip reads paused for your help with no button beside the card's action and its browser refuses the crewmate, the card's key opens the record, whose Open shows the paused page and says so, Open browser and sign in hands the captain the page with no word to the crewmate, he signs in with real clicks and typing on the view's picture while no file under the app's data and no model call holds his password, Hide and Keep control resume nothing, and Return control wakes the crewmate once - its old ref refused, its fresh look leading with the return, the page signed in, and nothing the page logged or asked for in his time reaching it - and its picture of the signed-in page is refused without a reason and taken with one, which its record names.
+The fourth journey in `tests/e2e/task-browser.spec.ts` has a crewmate ask the captain to sign in on a local account page: its card's strip reads paused for your help with no button beside the card's action and its browser refuses the crewmate, the card's key opens the record, whose Open shows the paused page and says so, Open browser and sign in hands the captain the page with no word to the crewmate, the captain signs in with real clicks and typing on the view's picture while no file under the app's data and no model call holds the captain's password, Hide and Keep control resume nothing, and Return control wakes the crewmate once - its old ref refused, its fresh look leading with the return, the page signed in, and nothing the page logged or asked for in the captain's time reaching it - and its picture of the signed-in page is refused without a reason and taken with one, which its record names.
 `webSignIns.test.ts` holds the store - its folder's and files' modes, one sign-in per site, a copy back only into the save it was given, a broken file read as nothing - and which cookies make up a site's sign-in.
 `taskBrowsers.test.ts` holds saved sign-ins against the stand-in page: the tick saves only the site's cookies, a request is offered one only on its site and only while the browser holds nothing of the captain's, the grant copies it in, reloads, wakes once and needs a reason for a picture, a grant is refused to a browser not waiting or stale or with nothing saved, a site that turned it away is offered nothing more, a stopping browser copies back, Remove signs out the browser using it and nothing copies back, and the app's quit copies nothing.
 `crewSupervisor.test.ts` holds the request card's added default and relabeled action, a card left as declared with nothing saved, a crewmate's declared saved sign-in never carried, the click's grant and its feed line when refused, and the saved wake; `wakes.test.ts` its words, `taskBrowser.test.ts` the foot line, `WebsiteSignInsSection.test.tsx` the Settings rows, and `core.test.ts` the gate.
 The sixth journey in `tests/e2e/task-browser.spec.ts` has the captain sign in to a club page whose server keeps its sign-in in a cookie, tick Remember while returning control, and find it in Settings; the browser copies the site's refreshed cookie back when it stops; a second task's request then offers `Use my saved <site> sign-in` as its default beside `Sign in myself`, on a page its empty browser shows signed out, and that one click signs the page in and wakes the crewmate, which reads it signed in while no file and no model call holds the password; Remove in Settings then signs that browser out, and stopping it writes nothing back.
 The fifth journey has a crewmate meet a site whose certificate no one trusts and read the refusal, then click Pay on a local shop whose bank's check opens as the browser's second page: the view names each page Browser and its title on the card's tabs, which watching cannot use, and draws the check's own pixels; once approved the check closes itself, the crewmate is back on the shop, which says it was paid, the second page's tab goes, and Stop browser closes it all.
-A journey in `tests/e2e/task-browser.spec.ts` has the captain take a browser from the view while its crewmate's wait on the page runs: that wait answers in full and the crewmate's next command refuses, he maximizes the view and signs in on the page at its new size with an invented account that no file and no model call holds, Hide resumes nothing, and Return control wakes the crewmate once.
+A journey in `tests/e2e/task-browser.spec.ts` has the captain take a browser from the view while its crewmate's wait on the page runs: that wait answers in full and the crewmate's next command refuses, the captain maximizes the view and signs in on the page at its new size with an invented account that no file and no model call holds, Hide resumes nothing, and Return control wakes the crewmate once.
 Another has one task's browser keep its own visits on a page this Mac serves, while a second task's page is refused that server's data and picture, its request to take over that server's site is refused with nothing paused, its own redirects to a public name that leads to this Mac and to a private address are refused, and its own open of the first task's page starts with none of that task's site data.
 `taskBrowsers.test.ts` holds that a form's answer is never reloaded - for the crewmate, the captain and a saved sign-in's grant - and that going back to one the browser did not keep is named; `wakes.test.ts` the return wake's words for an unconfirmed submission, and `cardTool.test.ts` the review knowledge in `browser_handoff`'s description.
 `tests/e2e/task-browser-booking.spec.ts` runs a final submission on an invented airline (`tests/e2e/fakeAirline.ts`) on a Pi crewmate and a Claude crewmate, each crewmate's calls checked to have come through its own runtime, and a Claude crewmate's local check too.
-Its booking journey compares fares on a decision whose door reads View search; asks for a sign-in on a card the captain closes, after which the request is still reachable from the record and he takes control from the view; fills in the passenger once woken; stops on a review card naming the trip, the passenger, the seller, the total and currency, the baggage, the fare rules and what is uncertain, marking a total that rose since the search, with nothing paid; and once the captain pays on the page and returns control, leaves a note with the reference, the airline paid once and nothing he typed in a file or a model call.
+Its booking journey compares fares on a decision whose door reads View search; asks for a sign-in on a card the captain closes, after which the request is still reachable from the record and the captain takes control from the view; fills in the passenger once woken; stops on a review card naming the trip, the passenger, the seller, the total and currency, the baggage, the fare rules and what is uncertain, marking a total that rose since the search, with nothing paid; and once the captain pays on the page and returns control, leaves a note with the reference, the airline paid once and nothing the captain typed in a file or a model call.
 Its unpaid journey has the captain type invented card details on the review's payment page and hand it back without paying: the crewmate reads each card field as filled with its value hidden, its picture of the page is refused, no model call holds the card number, expiry or code and no file under the app's data the card number or expiry, while the page still holds them and the airline is paid nothing.
-Its lost-answer journey has the captain pay on a page whose confirmation never comes, and his Reload say why it sends nothing; the crewmate's own reload is refused and it watches My bookings; the app quits while that turn runs, and the next run delivers the wake again, which finds the browser gone, checks My bookings afresh and asks the captain to check in the browser on a decision that says the outcome is unknown; the app quits once more before he answers, and his `Open browser and check` on that card tells the crewmate its browser is gone, so it opens My bookings again and asks anew on a card that names its fresh browser, where he then checks - the airline paid once throughout.
+Its lost-answer journey has the captain pay on a page whose confirmation never comes, and the captain's Reload say why it sends nothing; the crewmate's own reload is refused and it watches My bookings; the app quits while that turn runs, and the next run delivers the wake again, which finds the browser gone, checks My bookings afresh and asks the captain to check in the browser on a decision that says the outcome is unknown; the app quits once more before the captain answers, and the captain's `Open browser and check` on that card tells the crewmate its browser is gone, so it opens My bookings again and asks anew on a card that names its fresh browser, where the captain then checks - the airline paid once throughout.

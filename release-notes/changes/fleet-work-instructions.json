@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "fleet-work-instructions",
+      "reason": "Instruction-only: share the approved fleet-work principle and remove gender assumptions from agent guidance; no UI or host behavior changes."
+    }
+  ]
+}

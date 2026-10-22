@@ -24,7 +24,7 @@ A mark is `--fg-3`; it takes `--hot` on a call that is running and on the words 
   An error's first line is `--danger`; a call that has not answered reads `running…` in the running turn, else `no result`; one that answered nothing reads `no output`.
 - An edit or a write: the elbow reads what it changed, `Added 3 lines, removed 1 line`, and its fold opens the diff: a `--line-1` box at `--radius-s`, `--text-xs`, each line marked `+ ` in `--ok` on `--ok-dim`, `- ` in `--danger` on `--danger-dim`, or two spaces in `--fg-3` for a line it kept; separate edits sit a hairline apart, and past 80 lines the rest are counted.
 - A picture a call answered with, under its elbow: up to 240 px tall on `--bg-1` with a `--line-1` border at `--radius-s`, whole; a press shows it at its own size and another press brings it back.
-- A line it was sent, `>`: the captain's in `--fg-1` after a `--captain` mark, his words alone; the first mate's and the app's after the micro label `FIRST MATE` or `FROM THE APP`, their first line with a fold to the rest.
+- A line it was sent, `>`: the captain's in `--fg-1` after a `--captain` mark, the captain's words alone; the first mate's and the app's after the micro label `FIRST MATE` or `FROM THE APP`, their first line with a fold to the rest.
   A captain's line the crewmate has not taken yet ends in `queued`, `--text-xs` `--warn`.
 - The app's own tools as blocks, a dot then a `--line-1` box at `--radius-m`, `--space-2` by `--space-3`, in the UI face at `--text-sm`, its label the mono micro label in `--fg-3`:
   - `PLAN · 2 OF 4` with the note's words in `--fg-1` and each item with the record's own plan mark (a check, a lit ring, a hollow ring, a dash), or `PROGRESS` alone for a note with no plan;
@@ -36,7 +36,7 @@ A mark is `--fg-3`; it takes `--hot` on a call that is running and on the words 
 
 Nothing else shows: never its thinking, a system prompt, a sign-in, usage or token counts, or the client's own notices.
 Past 1,500 lines the earliest are counted in one quiet line at the top.
-It follows its end while the captain reads there, and stays where he scrolled otherwise; opening a fold keeps his place.
+It follows its end while the captain reads there, and stays where the captain scrolled otherwise; opening a fold keeps the captain's place.
 
 **Under the transcript**, a `--line-1` hairline, then:
 

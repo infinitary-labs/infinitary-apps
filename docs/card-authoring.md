@@ -110,7 +110,7 @@ On any card carrying a `settle` effect, the host appends its own fact strip (`Cr
 - what the session reported at dispatch, kept current when the backend moves the work to another model (`CrewSupervisor.recordServedModel`), review F1 - by its catalog display label), the task's effective care (Quick, Default or Careful, including a per-task ask), the PR number as a link when one is recorded on the task, and the CI state with a `StatusDot`-language dot and how long the checks have run or took by the host's own times (`running for 15m`, `passed in 14m · 5m ago`, `docs/forge.md` "The checks cell's time") - or "not read yet" on a direct-pr task no check has read yet.
   Since v3.6 it also carries the HOLDS the host placed on the task: the CI rounds and the review rounds it counted, each against its cap, with the head CI last went red on in the cell's title and a failed dot once the cap is standing.
   The prompts used to ask an agent to type out a round count it cannot see; here the captain reads it off the card.
-  An Override cell (`override`) names the holds the captain's recorded words pass, with his words and how long in its title, and says the merge goes without live proof when they pass it (`docs/delivery-rigor.md`, "The holds").
+  An Override cell (`override`) names the holds the captain's recorded words pass, with the captain's words and how long in its title, and says the merge goes without live proof when they pass it (`docs/delivery-rigor.md`, "The holds").
   When the checks started and when they were last read (`Started 9:01 PM · read 9:13 PM`) and a review's risk note ride the cells' `title` attributes, never lines of their own; the branch is deliberately not shown.
   It is rendered from the task record every time the card is emitted or revised; the host refreshes open strips on task changes and their running times on the shared tick.
   Host fact refreshes update both the shown and staged card without an author revision or thread message, so the card, record and paired view read the same delivery facts.
@@ -376,7 +376,7 @@ Public http, lookalikes such as `localhost.example.com` or `evillocalhost`, othe
 Write a link as an explicit `<a href>`; bare URL text inside HTML is not auto-linked.
 A link opens only from the captain's own click or Enter on it: a body's script that clicks its own link, or posts the bridge's `link` message, while focus is elsewhere opens nothing (`docs/keyboard.md`, "Cards and frames").
 
-A `<button data-inf-draft="words">` starts the captain's message for him: his press puts its words, one line of at most 500 characters, at the start of the message box under the card, with the caret after them and focus in the box, and sends nothing (FI3-1164; the welcome's starters).
+A `<button data-inf-draft="words">` starts the captain's message for the captain: the captain's press puts its words, one line of at most 500 characters, at the start of the message box under the card, with the caret after them and focus in the box, and sends nothing (FI3-1164; the welcome's starters).
 Words already typed stay after them, and a second such press replaces the first one's words while the box still starts with them.
 The bridge posts the press as its `draft` message, and the window takes it only as it opens a link: from the card on screen, its frame holding the window's focus, so a script that clicks the button or posts the message while focus is elsewhere moves nothing.
 While the message box is held - a recording, the dictation key's pick, the first-launch gate - a press does nothing, as Go to the main message does.
@@ -643,7 +643,7 @@ The captain's Approve and build chose the author's own row with the app checking
 ### Anything else?
 
 INF-680 (the captain: "every decision card has a "anything else?" input box at the bottom of the card body, so i can leave additional comments before clicking one of the action buttons").
-His Approve and build chose a box pinned between the body and the buttons, the label Anything else? with the hint "sent with the button you click", 4,000 characters, five lines, and every card with buttons whose author can read a reply, merge cards and previews included.
+The captain's Approve and build chose a box pinned between the body and the buttons, the label Anything else? with the hint "sent with the button you click", 4,000 characters, five lines, and every card with buttons whose author can read a reply, merge cards and previews included.
 
 - **Which cards.**
   A card draws the box when it has buttons and its author can read a reply (`cardTakesAnythingElse` in `src/shared/cards.ts`): a crewmate's card about its task and the first mate's card.
@@ -671,8 +671,8 @@ His Approve and build chose a box pinned between the body and the buttons, the l
 ## An answer task's card is its deliverable
 
 On a task whose deliverable is an ANSWER (`WorkShape.deliverable`, Task B of the crew-posture rationalization; `docs/delivery-rigor.md`), the card is the whole shipment: the brief says so, the task commits nothing, and a card carrying a `settle` effect is refused at the boundary the way the personal workspace's is.
-The captain's choice on it CLOSES the task `done/answered`, because the deliverable was produced and he answered it.
-His close control is not a choice: like every crewmate card's close it reaches the crewmate (FI3-435, captain's answer "Send it to the crewmate like every other card"), which reports `finished` once he has read it and nothing is left, and the first mate then closes the task with `settle_task answered`.
+The captain's choice on it CLOSES the task `done/answered`, because the deliverable was produced and the captain answered it.
+The captain's close control is not a choice: like every crewmate card's close it reaches the crewmate (FI3-435, captain's answer "Send it to the crewmate like every other card"), which reports `finished` once the captain has read it and nothing is left, and the first mate then closes the task with `settle_task answered`.
 So the card carries the answer itself rather than a pointer to it: a builder spawned with `basis` naming that task receives this body verbatim, saved whole in a file its brief names, and any agent can read it back with the `tasks` query by key.
 
 ## Replying to a card
@@ -710,7 +710,7 @@ Five sentence habits (contract 4.58, FI3-542): one fact per sentence in at most 
 The design skill's `copy/Vocabulary.prompt.md` ("How a line reads") is their home and says where they came from.
 They are scored by hand on recorded cards (`clear_copy_share`, `docs/replay-harness.md`) and never linted.
 
-A time of day is the captain's local time (FI3-1006): `CARD_AUTHORING` tells both personas that every time they write for him, on a card, in a reply or in a report, is in his time zone unless he asks for another, converted from UTC and never UTC alone.
+A time of day is the captain's local time (FI3-1006): `CARD_AUTHORING` tells both personas that every time they write for the captain, on a card, in a reply or in a report, is in the captain's time zone unless the captain asks for another, converted from UTC and never UTC alone.
 They are told the zone: the first mate's context block carries `captain_time_zone` each turn, and a crewmate's prompt ends with the same fact, named when its session opens.
 It is this Mac's zone with its offset from UTC at that moment, such as `America/Los_Angeles (UTC-07:00)` (`src/core/prompts/timeZone.ts`), so a model need not know the zone's daylight-saving rules.
 
@@ -757,9 +757,9 @@ Both retain shared authorization boundaries, submitted settings and merge consen
   In that turn the first mate reuses the plan's planned successor, or files one with `create_task` on request, titled "Build the saved plan: …", with the plan as `basis`, the implement constraint and the plan's original words; never a second, and with no card or reminder.
   The build waits in the Tasks backlog until the captain presses Start on its record (`docs/sequences.md`, "A plan saved for later").
   **Abandon** files nothing; either click closes the plan with its spec and answers kept, as every closing choice on an answer does.
-- The captain's Start on a saved build, or his words to build it, authorizes it, and its basis's Save and defer choice is not a refusal.
+- The captain's Start on a saved build, or the captain's words to build it, authorizes it, and its basis's Save and defer choice is not a refusal.
   The builder first checks the plan against the current code and asks one specific question on a card only when something the plan relied on changed or a question was left unanswered.
-- The captain's **Approve and build** submits the current values, including unchanged defaults, and authorizes implementation, not merging; his explicit build or ship words do the same, in a reply too, with no second approval.
+- The captain's **Approve and build** submits the current values, including unchanged defaults, and authorizes implementation, not merging; the captain's explicit build or ship words do the same, in a reply too, with no second approval.
   Selection, praise, finish/keep, dismissal, script-triggered actions, a preview's own report, settings capture and controls do not; feedback revises the preview.
 - A planner never edits product code: on an approval by reply it reports the approval words and current settings with needs_firstmate, and the first mate starts a builder grounded on that answer.
 - The first mate starts the builder without planning again, naming the answer's task as `basis`; the host carries its report, card, thread, choice and latest answers into the brief (`docs/sequences.md`).
@@ -847,7 +847,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
   A figure that moves by its own script is a part like any other, and the mount path draws its bars as srcdoc does; a change to the script alone is no change.
   A change only to the title or the buttons gets the line alone, and a change only to what the host itself rewrites gets nothing.
 - **What the crewmate is told (FI3-627).**
-  The captain's reply is best met by editing only the parts his words changed, so the comparison above can mark them; the `body_file` parameter and the card body folder note nudge toward that and allow a full rewrite when the answer itself changed shape (the opening sentence then says what changed).
+  The captain's reply is best met by editing only the parts the captain's words changed, so the comparison above can mark them; the `body_file` parameter and the card body folder note nudge toward that and allow a full rewrite when the answer itself changed shape (the opening sentence then says what changed).
   It is a nudge, never a rule.
   When a crewmate revises a card the captain has seen, the `emit_card` result also carries the app's own count (`CardService.revisionChanges`, the same comparison against the newest seen version, read on the newest write instead of the stage's): parts new and removed, and "Rewritten" with no change bars when over half is new.
   A playable preview gets the counts only, a card never seen gets none, and nothing is refused.

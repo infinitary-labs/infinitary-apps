@@ -109,7 +109,7 @@ The host judges nothing: no dispatch rule reads a row's children.
 ## The plan's final spec is on the record
 
 When a plan step finalizes, the implementer must start from what was agreed, not from the first proposal.
-The planning crewmate writes the final agreed spec into the task as its report each time the plan changes - the captain's tweaks and anything decided on the card included - before he chooses.
+The planning crewmate writes the final agreed spec into the task as its report each time the plan changes - the captain's tweaks and anything decided on the card included - before the captain chooses.
 Every answer task's brief says it (`renderAnswerShapeSection`: the report is the answer the task keeps).
 The captain's click is what closes the step, so it has no turn after the choice; the host records the chosen action on the close (`data.choice`), and the implementer's basis section carries the recorded spec ("Its report - the final answer it recorded"), the card, the thread and "The captain closed it by choosing ...".
 
@@ -120,7 +120,7 @@ Save and defer closes the plan like any choice on an answer, and the first mate'
 When the plan's step already has its build filed on request - an ask with a parent - the first mate reuses it and files nothing.
 A plan that stands alone has no build yet, so the first mate files one with `create_task`: on request, titled "Build the saved plan: …", with the plan as `basis`, the implement line as its constraint and the plan's original words as the captain's.
 It starts nothing and raises no card or reminder: its row in the Tasks backlog is where the build waits, and its record reads "Starts when you press Start."
-The captain's Start, or his words asking the first mate to build it, starts it; Drop task removes it.
+The captain's Start, or the captain's words asking the first mate to build it, starts it; Drop task removes it.
 The brief is minted at dispatch, so the builder gets the plan's recorded spec, card, thread, choice and answers as any builder grounded on a plan does, and checks the plan against the current code first.
 Abandon files nothing.
 
@@ -130,13 +130,13 @@ The reproduce step is an answer step (a real classifier sorts it `reproduce`): i
 On yes the first mate starts the fix step - its basis is the reproduce step, so the fix's brief carries the reproduction - and then closes the reproduce step with `settle_task` mode `answered`: `done/answered`, with the feed line "its answer carries on in KEY", never a discard.
 On no the reproduce crewmate raises its own decision card with the ways out, and the first mate starts nothing.
 
-That close is generic, not a reproduce rule, and it carries no host judgment (the captain's call C and his direction that what is inside a sequence is "intelligent judgments ... handled mostly through instructions").
+That close is generic, not a reproduce rule, and it carries no host judgment (the captain's call C and the captain's direction that what is inside a sequence is "intelligent judgments ... handled mostly through instructions").
 Whether an answer task is an internal step of a sequence the first mate runs, or something the captain asked for, is the first mate's own judgment under these instructions: it declares each step it adds as `internal_step` when it creates it (`spawn_crewmate` or `create_task`), and the host only stores and honours that - `settle_task answered` works on a declared step and on nothing else (`docs/task-graph.md`).
-An answer the captain asks for himself - a question, a plan, a reproduction - is never declared, and neither is a step whose result he asked to see ("fix it, but show me the repro first"): that repro shows its answer as a card, the first mate leaves it, and his choice closes it.
+An answer the captain asks for personally - a question, a plan, a reproduction - is never declared, and neither is a step whose result the captain asked to see ("fix it, but show me the repro first"): that repro shows its answer as a card, the first mate leaves it, and the captain's choice closes it.
 
 A cardless report from a declared internal step wakes the first mate on every backend, after any card, pending reply, or moving witness (`docs/report-sort.md`, row 4b); the host does not decide what follows.
 The brief follows the same declaration (`renderAnswerShapeSection`): an answer the captain asked for lands as one card, as every answer always has; a declared step is told its report is the answer handed to the next step verbatim, with a card, as any crewmate does, when the captain must decide or see something before the next step can start.
-His replies and choice reach the step there, not through the first mate; a clean report with nothing for him still goes directly to the next step.
+The captain's replies and choice reach the step there, not through the first mate; a clean report with nothing for the captain still goes directly to the next step.
 
 ## The proof
 
@@ -149,7 +149,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 - Sequences (captain-approved 2026-09-24, task `fm3000-opinionated-workflows-s1`; `docs/sequences.md` is the one home): opinionated ways of working (plan before an unclear feature, reproduce before a fix) are GUIDANCE the first mate follows, never a runner.
   The app-managed `userData/fleet/personal/.claude/skills/sequences/SKILL.md` is refreshed from the packaged seed on updates (`src/core/personal/sequencesSkill.ts`), served as Pi's appended prompt section after the byte-stable prompt and re-served only when it changed, at an idle boundary; its sha rides the `fm-contract` entry as `instructions_sha` while `prompt_sha` stays the prompt's alone.
-  An ask of more than one step is an ordinary parent task, left on request, with child steps built with the existing task tools, and an ask of one step is one spawn with no parent (contract v4.19); each step the first mate adds is declared `internal_step` at creation - its judgment, never inferred by the host - and closes with `settle_task answered` once the next step builds on it, while an answer the captain asked for himself (a step whose result he asked to see included) is never declared and stays his to close; the seeded document asks the first mate to relay a step's line word for word as a free constraint, so `create_task` takes `constraints` and `delivery_note` with `spawn_crewmate`'s schema; the host pieces are generic - `create_task` takes a `basis` verified at dispatch, a parent no crewmate holds completes with its children, the basis section names the basis task's branch or kept ref and quotes its card's thread, and the context index nests children.
+  An ask of more than one step is an ordinary parent task, left on request, with child steps built with the existing task tools, and an ask of one step is one spawn with no parent (contract v4.19); each step the first mate adds is declared `internal_step` at creation - its judgment, never inferred by the host - and closes with `settle_task answered` once the next step builds on it, while an answer the captain asked for personally (a step whose result the captain asked to see included) is never declared and stays the captain's to close; the seeded document asks the first mate to relay a step's line word for word as a free constraint, so `create_task` takes `constraints` and `delivery_note` with `spawn_crewmate`'s schema; the host pieces are generic - `create_task` takes a `basis` verified at dispatch, a parent no crewmate holds completes with its children, the basis section names the basis task's branch or kept ref and quotes its card's thread, and the context index nests children.
   Never add a host rule that knows the word "sequence"; "sequence" and "step" reach no user surface.
   `tests/e2e/sequences.spec.ts` is the binding test.
 

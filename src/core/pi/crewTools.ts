@@ -161,7 +161,7 @@ export type CrewDelegate = {
 
 /** What `internal_step` means, shared by spawn_crewmate and create_task. */
 export const INTERNAL_STEP_DESCRIPTION =
-  'True when you add this task yourself as an internal step of a sequence you run: its answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result himself ("show me the repro first"): that stays his to close.';
+  'True when you add this task yourself as an internal step of a sequence you run: its answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result themselves ("show me the repro first"): that stays theirs to close.';
 
 /**
  * What `basis` means, shared by spawn_crewmate and create_task: a planned

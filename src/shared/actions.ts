@@ -272,7 +272,7 @@ const actionLines = {
     change: "inf:repos:setup",
     current: "inf:repos:list",
     value: projectSetupProposalSchema,
-    line: "Propose a project at any time - on the captain's message, a crewmate's report, or your own judgment: app_change checks it, changes nothing, and puts up the captain's setup card, where only his Add project click adds it. clone needs origin (remote URL), init needs name (new local project), adopt needs path (absolute existing folder; a plain one gets git). clone and init go in the projects folder; adopt links in place, and the card also offers a fresh clone when the folder has a remote. Pass key (2-4 letters or digits, INF for INF-1) only when the captain chose the task key; otherwise the app derives one from the name, and it refuses a key another project has. Suggest delivery, autonomy, rigor and runsOn (a deviceId that runs work, or null) only when you know them; the card otherwise shows today's defaults. work names, in a few words, the waiting work you start once he adds it. You hear once how he answered. A project already on the list gets no card and is named instead. Settings adds its own projects at once.",
+    line: "Propose a project at any time - on the captain's message, a crewmate's report, or your own judgment: app_change checks it, changes nothing, and puts up the captain's setup card, where only their Add project click adds it. clone needs origin (remote URL), init needs name (new local project), adopt needs path (absolute existing folder; a plain one gets git). clone and init go in the projects folder; adopt links in place, and the card also offers a fresh clone when the folder has a remote. Pass key (2-4 letters or digits, INF for INF-1) only when the captain chose the task key; otherwise the app derives one from the name, and it refuses a key another project has. Suggest delivery, autonomy, rigor and runsOn (a deviceId that runs work, or null) only when you know them; the card otherwise shows today's defaults. work names, in a few words, the waiting work you start once they add it. You hear once how they answered. A project already on the list gets no card and is named instead. Settings adds its own projects at once.",
     toRequest: (v, _c, expandHome) => {
       const { delivery, autonomy, rigor, runsOn, work, ...spec } = v;
       return [
@@ -379,7 +379,7 @@ const actionLines = {
       how: z.enum(["link", "command", "another-user", "address"]).optional(),
       address: remoteLoginAddressSchema.optional(),
     }),
-    line: `Add a device when the captain asks: app_change offers the captain one card whose button makes it in Settings → Devices. When he has not said which way, never pick one for him: first ask him on one decision card, with every way as an option - a link, a command, the ${COMPUTER.one}'s address over Remote Login, or another user on ${HERE.this} - recommending the address, with a field for it, when he can name the ${COMPUTER.one}'s address; then pass his choice. how "link" (the default): a one-use link to paste into Infinitary on a ${COMPUTER.one} he sits at. how "command": a command he runs once in Terminal on a ${COMPUTER.one} with no screen, which gets Infinitary from ${HERE.this}. how "address" with the address he gave, such as sam@mini.local: ${HERE.this} sets that ${COMPUTER.one} up over Remote Login with his own SSH key. Each of those three adds a ${COMPUTER.one} that can control you from Infinitary opened there and can run the work of projects set to run on it. how "another-user": a command he runs once as another macOS user on ${HERE.this}, so work runs as that user, with sign-ins of its own, and cannot control you; like every user on a ${COMPUTER.one}, that user can still read files in his home folder outside private folders such as Documents. Only the captain's click makes a link or a command, or reaches a ${COMPUTER.one}, and you never see a link or a command. Pass the ${COMPUTER.one}'s name as the captain said it.`,
+    line: `Add a device when the captain asks: app_change offers the captain one card whose button makes it in Settings → Devices. When they have not said which way, never pick one for them: first ask them on one decision card, with every way as an option - a link, a command, the ${COMPUTER.one}'s address over Remote Login, or another user on ${HERE.this} - recommending the address, with a field for it, when they can name the ${COMPUTER.one}'s address; then pass their choice. how "link" (the default): a one-use link to paste into Infinitary on a ${COMPUTER.one} they sit at. how "command": a command they run once in Terminal on a ${COMPUTER.one} with no screen, which gets Infinitary from ${HERE.this}. how "address" with the address they gave, such as sam@mini.local: ${HERE.this} sets that ${COMPUTER.one} up over Remote Login with their own SSH key. Each of those three adds a ${COMPUTER.one} that can control you from Infinitary opened there and can run the work of projects set to run on it. how "another-user": a command they run once as another macOS user on ${HERE.this}, so work runs as that user, with sign-ins of its own, and cannot control you; like every user on a ${COMPUTER.one}, that user can still read files in their home folder outside private folders such as Documents. Only the captain's click makes a link or a command, or reaches a ${COMPUTER.one}, and you never see a link or a command. Pass the ${COMPUTER.one}'s name as the captain said it.`,
     alwaysTrail: true,
     toRequest: (v) =>
       v.how === "command" || v.how === "address"
@@ -498,7 +498,7 @@ const actionLines = {
     change: null,
     current: "inf:devices:list",
     value: z.strictObject({ deviceId: z.string().min(1) }),
-    line: `Update Infinitary on a computer that runs work when the captain asks: app_change offers him one card whose button brings it to ${HERE.this}'s version - over Remote Login for a ${COMPUTER.one} added by its address, otherwise over the network - or, for one too old to update from here, makes the command to run there once. Its running work stops for a moment and goes on after. A computer in reach on another version says so as otherVersion in app_state; the app raises the same card for an older one itself, so offering it then finds that card standing. Name it by its id from app_state.`,
+    line: `Update Infinitary on a computer that runs work when the captain asks: app_change offers them one card whose button brings it to ${HERE.this}'s version - over Remote Login for a ${COMPUTER.one} added by its address, otherwise over the network - or, for one too old to update from here, makes the command to run there once. Its running work stops for a moment and goes on after. A computer in reach on another version says so as otherVersion in app_state; the app raises the same card for an older one itself, so offering it then finds that card standing. Name it by its id from app_state.`,
     toRequest: () => [],
     readValue: (c) => ({
       devices: (c as DeviceView[]).map(
@@ -801,7 +801,7 @@ const actionLines = {
     change: "inf:knowledge:direction:set",
     current: "inf:knowledge:directions",
     value: directionValueSchema,
-    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what he wants, whatever began the turn: his words, his choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain, or a project id); revise takes id and text; retire takes id; expectedRevision is optional.",
+    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what they want, whatever began the turn: their words, their choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain, or a project id); revise takes id and text; retire takes id; expectedRevision is optional.",
     toRequest: (v, _current, _expandHome, evidence) => [{ ...v, reason: evidence }],
     readValue: (current) => {
       const read = current as KnowledgeDirections;
@@ -847,7 +847,7 @@ const actionLines = {
     current: "inf:integrations:list",
     // An MCP server is added from a form; a stand-in is a test run's own, never connected by hand.
     value: z.strictObject({ kind: integrationKindSchema.exclude(["mcp", "stand-in"]) }),
-    line: "Connect an integration (kind: github) when asked: app_change puts up the captain's card, and his click opens Settings → Integrations with the sign-in started. A sign-in is always his hands.",
+    line: "Connect an integration (kind: github) when asked: app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started. A sign-in is always their hands.",
     alwaysTrail: true,
     offer: (v, current) => {
       const kind = v.kind as keyof typeof INTEGRATION_KIND_NAMES;
@@ -877,7 +877,7 @@ const actionLines = {
     change: "inf:integrations:add",
     current: "inf:integrations:list",
     value: integrationMcpAddSchema,
-    line: "Add an MCP server when asked: name is the captain's word for it, runs is what it runs as he gave it - a program and its arguments (npx -y @scope/server), or its https address. The app connects, keeps the server's tools as actions (read-only ones run, the rest ask him) and answers the row; a server that cannot connect is refused with why. Never put a key or token in runs.",
+    line: "Add an MCP server when asked: name is the captain's word for it, runs is what it runs as they gave it - a program and its arguments (npx -y @scope/server), or its https address. The app connects, keeps the server's tools as actions (read-only ones run, the rest ask them) and answers the row; a server that cannot connect is refused with why. Never put a key or token in runs.",
     toRequest: (v) => [v],
     readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
     done: (v) => `Added MCP server ${v.name}`,
@@ -888,7 +888,7 @@ const actionLines = {
     change: "inf:integrations:remove",
     current: "inf:integrations:list",
     value: z.strictObject({ id: integrationIdSchema }),
-    line: "Remove an integration and forget its sign-in only on the captain's typed words. For GitHub it signs the app out of GitHub, so private clones and pull requests stop until he signs in again; an MCP server's program stops and its row goes.",
+    line: "Remove an integration and forget its sign-in only on the captain's typed words. For GitHub it signs the app out of GitHub, so private clones and pull requests stop until they sign in again; an MCP server's program stops and its row goes.",
     toRequest: (v) => [v.id],
     readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
     done: (v) => `Removed integration ${v.id}`,

@@ -377,12 +377,12 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a step you add yourself is declared internal, the captain's own ask never is",
     home: { tool: "spawn_crewmate", parameter: "shape" },
-    says: "internal_step: True when you add this task yourself as an internal step of a sequence you run: its answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result himself",
+    says: "internal_step: True when you add this task yourself as an internal step of a sequence you run: its answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result themselves",
   },
   {
     rule: "the same internal-step rule on a planned step",
     home: { tool: "create_task", parameter: "internal_step" },
-    says: "Omit it when the captain asked for this result himself",
+    says: "Omit it when the captain asked for this result themselves",
   },
   {
     rule: "an internal step is declared when it is created",
@@ -587,7 +587,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "the captain's Start applies his directions, then starts",
     home: { wake: "captain start" },
-    says: "Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id, then update_task start_now. Never decline his Start",
+    says: "Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id, then update_task start_now. Never decline their Start",
   },
   {
     rule: "a task the captain queued gets its directions and no start",

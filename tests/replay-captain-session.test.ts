@@ -1201,7 +1201,7 @@ describe("the captain's labels and surfaces in a recording", () => {
           at(4, 3),
           "f5",
           "install_plugin",
-          '"Weather" by weather-panel 1.0.0 is fetched and checked. The captain is asked on a card what it can read; it goes in only if he says yes there. Say nothing more about it.',
+          '"Weather" by weather-panel 1.0.0 is fetched and checked. The captain is asked on a card what it can read; it goes in only if they say yes there. Say nothing more about it.',
         ),
         said(at(4, 4), "Asked on its card."),
         user(at(5, 1), captain("Keep it known that releases leave on Thursdays.")),

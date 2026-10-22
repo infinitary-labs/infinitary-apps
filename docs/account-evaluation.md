@@ -178,7 +178,7 @@ Use the same approval, account, isolation and foreground-Claude boundaries as ab
 
 The INF-19 module is `scripts/evals/stepTitles.ts`, selected with `--module scripts/evals/stepTitles.ts` on `pnpm eval:accounts`.
 Its two first mate cases check how a plan's steps are titled when the first mate files them.
-The first is shaped like FI3-1780's rename plan, whose steps were filed as "Rename step N of 16": sixteen steps in six phases with long step bodies, the captain's answers, and his choice "File these steps, start none".
+The first is shaped like FI3-1780's rename plan, whose steps were filed as "Rename step N of 16": sixteen steps in six phases with long step bodies, the captain's answers, and the captain's choice "File these steps, start none".
 Its context asks for every step in one response and every link in the next, so sixteen fit within a case's request allowance.
 The second is a three-piece feature plan the captain closed with "Approve and build", whose prefiled build becomes the first piece and is the only one ready to start.
 The trace score reads the executed calls: every step filed once under the plan's parent, nothing started on "File these steps, start none", the reused build retitled and started alone, and no titles or goals that differ from a sibling's only by their numbers ("Rename step 5 of 16", "Step 5 of the 16-step ... plan").

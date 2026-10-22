@@ -157,8 +157,8 @@ Its tools follow the same stamped deliverable, so an answer is never told to ope
 A follow-up the classifier calls a change gets that line written again when it starts, from its own record's posture - the project's, or an ask made of the follow-up itself - which is the one its merge takes (`withDeliveryLine`, FI3-733).
 An ask made of the origin never reaches it, and a posture the project changed while it waited does.
 
-The captain's choice on that card is the CLOSE (captain F2 A): it closes the row `done/answered`, because the deliverable was produced and he answered it.
-His close control reaches the crewmate instead (FI3-435), which reports `finished` once he has read it, and the first mate closes the row with `settle_task answered`.
+The captain's choice on that card is the CLOSE (captain F2 A): it closes the row `done/answered`, because the deliverable was produced and the captain answered it.
+The captain's close control reaches the crewmate instead (FI3-435), which reports `finished` once the captain has read it, and the first mate closes the row with `settle_task answered`.
 The findings travel to a builder through `basis`: when `spawn_crewmate` names a verified basis, `renderBasisSection` carries that task's captain words and its report into the builder's brief, and names the file its card body is saved to whole (`docs/sequences.md`); any agent can read them back with the `tasks` query by key.
 
 One bound sits under the order, mechanical rather than judged: reviewed ships a pull request after its review passes, so a reviewed answer someone asked for on a local-only posture ships standard instead, the most care that posture can take, with the reason saying why.
@@ -193,7 +193,7 @@ Queued or waiting work does not start merely because a policy changed, and activ
 
 ### Raising care from a merge card
 
-Every merge card on a Quick or Default pull request the captain merges himself carries a Review carefully button between Discard and Merge, keyed ⌘2 (INF-562; Merge keeps ⌘1 and Discard moves to ⌘3).
+Every merge card on a Quick or Default pull request the captain merges personally carries a Review carefully button between Discard and Merge, keyed ⌘2 (INF-562; Merge keeps ⌘1 and Discard moves to ⌘3).
 Local merges, work that merges on its own, Careful tasks, requests to merge another pull request and the first mate's own cards get no button.
 The host adds it in `withCompletionActions` as an action with `care: reviewed` and no effect; the card lint does not count it among the author's two or three choices.
 The captain's click closes the card and mints no merge approval.
@@ -424,8 +424,8 @@ The captain's merge click on a completion card is an approval of that change, an
   The bound is a fact the tick reads: an `evidence` wait is timed, and an assessment that could not start, stopped without reporting, or is still open an hour after it started (`ASSESSMENT_BOUND_MS`) ends the approval the same way.
   A verdict about a repair the approval no longer waits on - a newer repair, a newer approval, an ended one - records nothing.
 - **The captain's newer words (FI3-662).**
-  While the approval stands, every steer of the captain's on the task is guidance that holds its merge: his reply under a crewmate's card, his choice on one or his ask to explain it, a line he types in the task's Crewmate tab, and the first mate's steer in a turn that carries his words (`isCaptainGuidance`, read from who sent the steer and its typed kind, never from his words).
-  His close of a card is not a choice and Continue is the host's own nudge, so neither holds anything, and neither does the first mate's steer on an operational wake.
+  While the approval stands, every steer of the captain's on the task is guidance that holds its merge: the captain's reply under a crewmate's card, the captain's choice on one or the captain's ask to explain it, a line the captain types in the task's Crewmate tab, and the first mate's steer in a turn that carries the captain's words (`isCaptainGuidance`, read from who sent the steer and its typed kind, never from the captain's words).
+  The captain's close of a card is not a choice and Continue is the host's own nudge, so neither holds anything, and neither does the first mate's steer on an operational wake.
   As the steer's row is recorded, `SettleService.holdForGuidance` gives it the approval's next mark (`guidance.latest`), with a timeline line and, when the hold begins, one feed line; the mark rides the message itself (`kept-merge-guidance`, `withGuidanceMark`), so the crewmate can declare only guidance it read.
   The crewmate declares the newest mark it read with `check_change captainGuidance` (`mark`, `impact`, `evidence`): `none` lifts the hold through that mark, and a later mark still holds; `changed-work` invalidates the approval with a hold, and the crewmate puts up a new completion card.
   A mark no message named is refused.
@@ -435,7 +435,7 @@ The captain's merge click on a completion card is an approval of that change, an
   The kept-merge line on a checks reading asks the crewmate to bring the branch up to date only when the merge waits on a conflict or a moved version.
   Then every page of the checks (`GitHubForge.checks`; a suite past the pages it reads keeps a pending item), and GitHub's own readiness for the pinned pull request (`GitHubForge.pull`): only `clean` merges, so a sign-in that could bypass a required review or another branch rule never does.
   The captain's own click keeps today's single attempt and reads readiness only to classify a refusal.
-  Right before the last look, the guard's `held` reads the approval again, so guidance that arrives while the gates are read - or while his own click waits for the crewmate's turn to end - stops the merge as a `guidance` wait and the approval stands.
+  Right before the last look, the guard's `held` reads the approval again, so guidance that arrives while the gates are read - or while the captain's own click waits for the crewmate's turn to end - stops the merge as a `guidance` wait and the approval stands.
 - **Waits.**
   A conflict, a moved head, checks, a review, GitHub's rules, GitHub not knowing yet, a draft, a sign-in, a hiccup, the captain's undeclared guidance or another refusal leaves the approval standing with `waiting` on that stop.
   A wait new for its head is a quiet timeline line, and one wake to the first mate where someone other than the crewmate the check watch wakes must move.
@@ -446,7 +446,7 @@ The captain's merge click on a completion card is an approval of that change, an
   A token that outlived its answer - a quit, a timeout - is read back by the pull request's number before anything is sent again: merged spends the approval and closes the task once, closed ends it, open at the same head runs every gate again.
 - **Ends.**
   Consumed by the merge; revoked by an interruption (the captain's interrupt = revoke) or the captain's own words through `update_task withdraw_merge`; invalidated by changed work, a closed or swapped pull request, or a changed project, host or delivery; superseded by a new completion card or click; ended with its task.
-  A revoked or work-changed end `holds` the task's merge for the captain: `autonomyRefusal` refuses a first mate merge whatever the project's autonomy, until his new click.
+  A revoked or work-changed end `holds` the task's merge for the captain: `autonomyRefusal` refuses a first mate merge whatever the project's autonomy, until the captain's new click.
   Contract 4.66's unversioned `delivery.mergeOrder` names no approved head, so the boot retires it and says so rather than carrying it forward.
 
 Not built: approvals on local-only and plain Git hosts or from first mate cards.
@@ -463,16 +463,16 @@ Observe's crewmate header renders the rigor beside the tier, a builder's review 
 
 Every hold the app places on work is one entry of `HOLDS` in `src/shared/holds.ts` (INF-242's plan, INF-473), and each entry has a level.
 A hold is `fixed` only when no word of the captain's changes what it rests on: a physical limit, or a fact outside the app.
-A hold that rests on a fact the app holds, on his own consent or on a number the app made up is `soft`, and his words pass it.
+A hold that rests on a fact the app holds, on the captain's own consent or on a number the app made up is `soft`, and the captain's words pass it.
 Which level a hold takes is a judgment by the four questions above, made by its author and its reviewer, never a lint.
 `scripts/holds.ts` in `pnpm check` only keeps the list, the sites that cite it and this table in step: a kind with no site, a hold sentence written outside the registry, or a row here that differs from the entry fails the check.
 
 | Kind | Level | Rests on | What it holds | What passes it |
 |---|---|---|---|---|
-| `asks-first` | soft | consent | a first mate merge while autonomy is off | his click on the completion card, or the override |
+| `asks-first` | soft | consent | a first mate merge while autonomy is off | the captain's click on the completion card, or the override |
 | `decisions` | soft | record | a first mate merge while another decision on the task is open | the override |
-| `repairs` | soft | made-up number | completion and merge after three unsuccessful own repairs | his answer to the cap card, or the override |
-| `rounds` | soft | made-up number | a re-review past `REVIEW_ROUND_CAP` | his answer to the cap card, or the override |
+| `repairs` | soft | made-up number | completion and merge after three unsuccessful own repairs | the captain's answer to the cap card, or the override |
+| `rounds` | soft | made-up number | a re-review past `REVIEW_ROUND_CAP` | the captain's answer to the cap card, or the override |
 | `review` | soft | record | a Careful change's pull request and merge until a review passed at this version | the override |
 | `live-proof` | soft | record | a Careful change's pull request and merge until live proof was accepted at this version | the override |
 | `waits` | soft | record | a close or completion card while a wait on other work stands | the override |
@@ -481,7 +481,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `story` | soft | consent | a GitHub or GitLab pull request opened without its saved story | the override |
 | `rerun` | soft | made-up number | a second flake rerun | the override |
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
-| `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on his words |
+| `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on the captain's words |
 | `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |
 | `nothing-to-merge` | fixed | physical limit | a merge or merge policy for work that has no merge | no one |
 | `sign-in` | fixed | outside fact | work where the app is not signed in | no one |
@@ -489,21 +489,21 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `recorded-path` | fixed | physical limit | a merge outside the merge card, and a wait that closes a cycle | no one |
 
 Every refusal ends with its hold's sentence.
-`softHoldWords(kind, audience)` names the override: to the first mate as the way he declares it, and to a crewmate as words only the captain gives, through the first mate.
+`softHoldWords(kind, audience)` names the override: to the first mate as the way the captain declares it, and to a crewmate as words only the captain gives, through the first mate.
 A soft hold with its own way (`escalation`, `start-waits`) names that way instead.
 `fixedHoldWords(kind)` says no one's word passes it.
 
 **The override.**
-The captain's words are one recorded override on the task (`delivery.override`, `HoldOverride`): his words, the soft holds the first mate declared they pass, and how long.
-How long is the first mate's reading of his words: `version`, the version it was declared at, or `task`, the rest of the task's life.
+The captain's words are one recorded override on the task (`delivery.override`, `HoldOverride`): the captain's words, the soft holds the first mate declared they pass, and how long.
+How long is the first mate's reading of the captain's words: `version`, the version it was declared at, or `task`, the rest of the task's life.
 The first mate declares it with `update_task override` (`holds`, `until`), only in a turn that carries the captain's own words, and the host keeps those words as its reason without reading them.
-The host refuses it in any other turn, and a crewmate never records one: its refusal tells it to report his words.
+The host refuses it in any other turn, and a crewmate never records one: its refusal tells it to report the captain's words.
 An override that names a fixed limit, or a soft hold with its own way, is refused whole before consent is read: nothing is recorded, and the refusal ends with each such hold's own sentence (`overrideRefusal`).
 Empty `holds` takes it back, and a new declaration replaces the old one.
-The row is a `note` event on the timeline with one feed line, quoting his words and naming the holds and how long; a new event kind would be a contract major.
+The row is a `note` event on the timeline with one feed line, quoting the captain's words and naming the holds and how long; a new event kind would be a contract major.
 Each site reads it with `overridePasses(delivery, kind, head)`: a task-long override always passes, and a version-long one passes only at the version it covers, so a new version brings the hold back.
-His merge click reads the same record, since the settle boundary is one function for his click and the first mate's merge.
-The completion card's fact strip shows an Override cell naming the holds his words pass, and says the merge goes without live proof when live proof is one of them.
+The captain's merge click reads the same record, since the settle boundary is one function for the captain's click and the first mate's merge.
+The completion card's fact strip shows an Override cell naming the holds the captain's words pass, and says the merge goes without live proof when live proof is one of them.
 
 **The counted caps are soft.**
 The repair limit, the re-review limit and the rerun limit are numbers the app made up.

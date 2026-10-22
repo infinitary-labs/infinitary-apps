@@ -44,16 +44,16 @@ Model changes still require the captain.
 `app_change` takes a top-level action enum, value, and evidence.
 The dispatcher enforces actor permissions independently.
 `asked` and `own-words` are the first mate's at any wake, with the captain's ask as evidence; the dispatcher refuses a change that gives none (INF-751).
-`asked` takes his ask in any form: his message, his choice on any card, or a schedule he set.
-`own-words` takes only his typed words.
-His ask reaches the first mate wherever it arrives: in his own turn, in a message he sends while a turn runs, or in a crewmate's report that relays his choice or his reply.
-Whether an ask is his, and whether it is his typed words, is the first mate's judgment; the host does not read the turn's wake for it, because a report or a scheduled turn can carry his ask and the host cannot tell when one does not.
-This follows the captain's ask to fix the rigidness, the same way INF-638 lets the first mate keep his directions on its own judgment.
+`asked` takes the captain's ask in any form: the captain's message, the captain's choice on any card, or a schedule the captain set.
+`own-words` takes only the captain's typed words.
+The captain's ask reaches the first mate wherever it arrives: in the captain's own turn, in a message the captain sends while a turn runs, or in a crewmate's report that relays the captain's choice or the captain's reply.
+Whether an ask is the captain's, and whether it is the captain's typed words, is the first mate's judgment; the host does not read the turn's wake for it, because a report or a scheduled turn can carry the captain's ask and the host cannot tell when one does not.
+This follows the captain's ask to fix the rigidness, the same way INF-638 lets the first mate keep the captain's directions on its own judgment.
 A message typed on a paired view is a captain message (the captain's pick on FI3-709, `docs/devices.md`).
 `hands` delegates to the captain, and `yours` is captain-only.
 `judgment` is the first mate's at any wake too, on its own judgment: its evidence is its reason, which the change keeps, never the captain's ask.
 `direction` (INF-638, `judgment`) adds, revises and retires one of the captain's standing directions through `inf:knowledge:direction:set`, and lists them as its current value from `inf:knowledge:directions`.
-The captain's ruling made it the first mate's judgment rather than a tier of his words: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?"
+The captain's ruling made it the first mate's judgment rather than a tier of the captain's words: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?"
 A direction is a setting like the rest, not a second store of its own: each change leaves the same feed line and operation, and `record_knowledge` refuses one (`docs/knowledge.md`, "Directions are the first mate's to keep").
 Sharing switches and purge stay the captain's.
 Panels and plugins gain no change ability.
@@ -74,7 +74,7 @@ Folder paths expand `~`; existing projects never move and missing folders are re
 Each applied catalog change leaves a feed line and an operation attributed to whoever acted, never a card: one per change the first mate makes, and one per run of the captain's own steps on one setting ("Settled runs" below); unchanged values and refusals leave no success trail (usage refresh records each successful refresh even when unchanged).
 A captain choice can request asked settings, but is not own words for the projects folder.
 Scheduled authority is persisted when a captain turn creates the schedule and travels as a typed wake fact.
-A turn a captain-set schedule began is stamped `scheduled`, and one an autonomous or legacy schedule began is stamped `other`; neither refuses an asked change, and the first mate never quotes a schedule it set itself as his ask.
+A turn a captain-set schedule began is stamped `scheduled`, and one an autonomous or legacy schedule began is stamped `other`; neither refuses an asked change, and the first mate never quotes a schedule it set itself as the captain's ask.
 A recurring schedule made outside a captain's own turn is saved as a draft that runs only once the captain turns it on, and `schedule_prompt`'s `draft` keeps an underspecified ask for the captain to finish (`docs/automation.md`, "Drafts").
 Catalog writes are ordered so overlapping Settings calls cannot duplicate a change or attribute the next value to the previous call.
 Before piece 3, other changing channels remained named in the shrinking parity inventory.

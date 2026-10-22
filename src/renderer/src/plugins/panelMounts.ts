@@ -176,8 +176,11 @@ function slotNow(layout: Layout): MountFacts["slot"] {
   }
   if (!panelsOn) return { shows: false, why: "the captain's own panels are switched off" };
   if (ownPanel !== false)
-    return { shows: false, why: "it shows only until he has a panel of his own" };
-  return { shows: false, why: "it shows once his third task has finished" };
+    return {
+      shows: false,
+      why: "it shows only until the captain has a panel of their own",
+    };
+  return { shows: false, why: "it shows once their third task has finished" };
 }
 
 let views: readonly PersonalExtensionView[] = [];

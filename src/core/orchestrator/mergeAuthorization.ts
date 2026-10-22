@@ -195,7 +195,7 @@ export function declareMergeGuidance(
     });
     return {
       read: true,
-      text: "Recorded: the captain's kept merge approval no longer covers this change. Do the work his guidance asks, drive the checks green and put up a new completion card; the captain decides again.",
+      text: "Recorded: the captain's kept merge approval no longer covers this change. Do the work their guidance asks, drive the checks green and put up a new completion card; the captain decides again.",
     };
   }
   if (input.mark > guidance.declared) {
@@ -659,11 +659,11 @@ export function keptNote(wait: MergeWait, head: string, place: string): string {
     case "draft":
       return `${kept} The pull request is a draft. For an approved prerequisite publication, the host marks it ready after current proof and independent review pass; otherwise the captain controls its draft status. Never ask the crewmate to change draft status through github_write.`;
     case "sign-in":
-      return `${kept} The captain's ${place} sign-in is needed; the merge runs once he signs in again.`;
+      return `${kept} The captain's ${place} sign-in is needed; the merge runs once they sign in again.`;
     case "refused":
       return `${kept} Steer the crewmate to fix the cause without changing the approved work; the host tries again when its turn ends. ${declare}`;
     case "guidance":
-      return `${kept} The captain gave the crewmate new guidance after his click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new completion card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
+      return `${kept} The captain gave the crewmate new guidance after their click, and the merge holds until it declares that guidance's impact with check_change captainGuidance: none keeps the approval; changed-work ends it and it puts up a new completion card. The message itself told the crewmate, so nothing is needed from you unless it ends its turn without declaring.`;
   }
 }
 

@@ -124,8 +124,8 @@ export const IDLE_THREAD_NUDGE_TEXT =
  */
 export const THREAD_STEER_PREAMBLE = [
   "The captain replied in the thread on your card.",
-  "Do the work his words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when his words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while he waits). Then report.",
-  "His reply takes your card off his screen until the answer, unless it is his only card or asked to stay; he sees your answer only when you report, so never acknowledge his words or say what you are about to do: he reads your answer, not your plan.",
+  "Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report.",
+  "Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when you report, so never acknowledge their words or say what you are about to do: they read your answer, not your plan.",
   "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.",
 ].join(" ");
 
@@ -138,7 +138,7 @@ export const GUIDANCE_MARK_WORDS = "check_change captainGuidance with mark";
 
 /** What the crewmate is told beside the captain's guidance that holds his kept merge. */
 function guidanceMarkNote(mark: number): string {
-  return `[kept merge] The captain's merge approval on this task stands, so these words of his hold its merge until you declare their impact: ${GUIDANCE_MARK_WORDS} ${mark} - none if they leave the approved work as it was, changed-work if they change it (then put up a new completion card when the work is ready).`;
+  return `[kept merge] The captain's merge approval on this task stands, so these words of theirs hold its merge until you declare their impact: ${GUIDANCE_MARK_WORDS} ${mark} - none if they leave the approved work as it was, changed-work if they change it (then put up a new completion card when the work is ready).`;
 }
 
 /**
@@ -1057,9 +1057,9 @@ function renderProjectSetup(facts: Extract<WakeFacts, { kind: "project-setup" }>
     case "added":
       return `[fm-op] the captain added ${facts.name} (repo_id ${facts.repoId ?? "unknown"}) on its setup card${facts.settings ? `: ${facts.settings}` : ""}.${facts.reason ? ` ${facts.reason}` : ""}${work ? `${work}. Start it now.` : ""}`;
     case "already":
-      return `[fm-op] ${facts.name} (repo_id ${facts.repoId ?? "unknown"}) was already on the captain's list when he clicked Add project on its setup card, so nothing changed.${work ? `${work}. Start it now.` : ""}`;
+      return `[fm-op] ${facts.name} (repo_id ${facts.repoId ?? "unknown"}) was already on the captain's list when they clicked Add project on its setup card, so nothing changed.${work ? `${work}. Start it now.` : ""}`;
     case "not-now":
-      return `[fm-op] the captain did not add ${facts.name}: he chose Not now on its setup card, or closed it. Nothing was added, so do not start work that needs it; ask again only if he does.`;
+      return `[fm-op] the captain did not add ${facts.name}: they chose Not now on its setup card, or closed it. Nothing was added, so do not start work that needs it; ask again only if they do.`;
     case "failed":
       return `[fm-op] the captain clicked Add project on the setup card for ${facts.name}, and ${SETUP_CARD_FAILED_WORDS}: ${facts.reason ?? "no reason was given"}. Nothing was added.`;
   }
@@ -1088,7 +1088,7 @@ const ASSESSED_FINDING: Record<Extract<WakeFacts, { kind: "repair-assessed" }>["
  * completion card for the change as it is now.
  */
 function renderRepairAssessed(facts: Extract<WakeFacts, { kind: "repair-assessed" }>): string {
-  return `${REPAIR_ASSESSED_OPENING} at ${facts.head} ${ASSESSED_FINDING[facts.verdict]}, so the captain's kept merge approval ended and he decides again. Drive the checks green on the change as it is now and put up a new completion card${facts.verdict === "changed-work" ? " that says what changed from the version he approved" : ""}; do not declare the repair again.${facts.excerpt ? `\n\nThe assessment's report:\n${facts.excerpt}` : ""}`;
+  return `${REPAIR_ASSESSED_OPENING} at ${facts.head} ${ASSESSED_FINDING[facts.verdict]}, so the captain's kept merge approval ended and they decide again. Drive the checks green on the change as it is now and put up a new completion card${facts.verdict === "changed-work" ? " that says what changed from the version they approved" : ""}; do not declare the repair again.${facts.excerpt ? `\n\nThe assessment's report:\n${facts.excerpt}` : ""}`;
 }
 
 /** A passing default-branch run's one steer, in the crewmate's words (INF-833 Fix 4). */
@@ -1465,8 +1465,8 @@ function threadReplyLead(facts: Extract<WakeFacts, { kind: "thread-reply" }>): s
  * guidance, answered by the work and the next report.
  */
 export const CREWMATE_TAB_STEER_LEAD = [
-  "The captain typed this to you in your task's Crewmate tab, where he reads your session as you work.",
-  "Treat it as his direct guidance: do what his words need, and answer through your work and your next report, never with an acknowledgement or a card about having read it.",
+  "The captain typed this to you in your task's Crewmate tab, where they read your session as you work.",
+  "Treat it as their direct guidance: do what their words need, and answer through your work and your next report, never with an acknowledgement or a card about having read it.",
   "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: report the captain's words verbatim with needs_firstmate, so the first mate runs it.",
   "The captain's words, verbatim:",
 ].join("\n");
@@ -1544,7 +1544,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return facts.step ? IDLE_STEP_NUDGE_TEXT : IDLE_NUDGE_TEXT;
     case "idle-stall": {
       const state = facts.thread
-        ? "since the captain wrote under its card, without answering him, and nothing queued will"
+        ? "since the captain wrote under its card, without answering them, and nothing queued will"
         : facts.note
           ? `with nothing running, nothing queued and only the note "${facts.note.title}" (${facts.note.id}) up, which asks the captain nothing`
           : "with nothing running, nothing queued and no card up";
@@ -1583,7 +1583,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
           facts.held,
           facts.task,
           wake.ways,
-          `[fm-op] task ${facts.task.id} "${facts.task.title}" is held for the captain${facts.reason ? (facts.held === "captain-gate" ? ` (its crewmate waits on him to ${facts.reason})` : ` by ${facts.reason}`) : ""} and has had no card up for ${formatDurationShort(facts.idleMs)}: its crewmate cannot move until the captain answers one.${repeat(facts.wakes)}`,
+          `[fm-op] task ${facts.task.id} "${facts.task.title}" is held for the captain${facts.reason ? (facts.held === "captain-gate" ? ` (its crewmate waits on them to ${facts.reason})` : ` by ${facts.reason}`) : ""} and has had no card up for ${formatDurationShort(facts.idleMs)}: its crewmate cannot move until the captain answers one.${repeat(facts.wakes)}`,
         ),
       );
     case "ci-cap":
@@ -1626,7 +1626,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "commit-failed":
       return `[fm-op] the host could not commit the personal workspace at the end of ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}", so the task stays open rather than closing as built in place. What it changed is saved in the workspace but not committed. Its crewmate's next report tries the commit again: steer it to look into the error and report again, or tell the captain. The error: ${facts.error}`;
     case "report":
-      return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on his screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}`;
+      return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on their screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}`;
     case "review-orphan":
       return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}", but the task it reviewed is no longer on record: ${facts.excerpt}`;
     case "review-unstated":
@@ -1666,7 +1666,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         : `[fm-op] queued task ${facts.task.id} "${facts.task.title}" could not start: ${facts.error}`;
     case "captain-start":
       return facts.move === "start"
-        ? `[fm-op] the captain pressed Start on task ${facts.task.id} ${facts.task.key} "${facts.task.title}". It shows Starting and waits for you. Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id, then update_task start_now. Never decline his Start; if no direction applies, just start_now.`
+        ? `[fm-op] the captain pressed Start on task ${facts.task.id} ${facts.task.key} "${facts.task.title}". It shows Starting and waits for you. Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id, then update_task start_now. Never decline their Start; if no direction applies, just start_now.`
         : `[fm-op] the captain queued task ${facts.task.id} ${facts.task.key} "${facts.task.title}". Apply every standing direction that bears on it with update_task (merging, delivery, care, model, runs_on), passing direction with each direction's id. Do not start it: the host starts it when its wait ends.`;
     case "dead-gate":
       return `[fm-op] queued task ${facts.task.id} ${facts.task.key} "${facts.task.title}" waits on ${facts.blocker.key} "${facts.blocker.title}", which was ${facts.closed}, so its wait can never end; the dead edge is blocks ${facts.blocker.key} -> ${facts.task.key}.`;

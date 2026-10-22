@@ -146,7 +146,7 @@ describe("personalize", () => {
     const refusal = await run({ action: "remove", surface: "tokyo-clock" });
     expect(refusal).toContain('No surface "tokyo-clock"');
     expect(refusal).toContain(
-      "The captain's panels - his own and the ones he added - are off right now",
+      "The captain's panels - their own and the ones they added - are off right now",
     );
     expect(refusal).toContain("the switch is in Settings");
     // An app panel is still nameable: the switch is about the captain's own.

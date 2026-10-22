@@ -287,12 +287,12 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       verdict: "routine",
       wake: false,
       reason: facts.captainWait
-        ? "its crewmate declared that it waits on the captain; the next move is his."
+        ? "its crewmate declared that it waits on the captain; the next move is theirs."
         : facts.browserWithCaptain
-          ? "its browser is in the captain's hands until he returns control; the next move is his."
+          ? "its browser is in the captain's hands until they return control; the next move is theirs."
           : facts.finishedCardUp
-            ? "its crewmate declared its work finished while its own card is still on the captain's screen; his close of that card is the next move."
-            : "a decision card for this task is on the captain's screen; the next move is his.",
+            ? "its crewmate declared its work finished while its own card is still on the captain's screen; their close of that card is the next move."
+            : "a decision card for this task is on the captain's screen; the next move is theirs.",
     };
   }
   if (facts.finished) {

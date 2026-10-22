@@ -45,7 +45,7 @@ A hold the captain's words pass often is the signal that it rests on a verdict: 
 
 An Automation rule (`docs/automation.md`) asks the first mate every week to start a task in the Infinitary project that runs this audit.
 The host knows nothing of it: the rule is the captain's, a saved prompt like any other, and this section is the procedure its crewmate follows.
-The first mate saves the rule as a draft, and the captain turns it on in Settings → Automation, where he can change any part of it:
+The first mate saves the rule as a draft, and the captain turns it on in Settings → Automation, where the captain can change any part of it:
 
 - Name: Weekly reach audit.
 - Schedule: every Monday at 9:00 AM, America/Los_Angeles (the captain chose every week on INF-484).

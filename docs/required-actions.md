@@ -1,6 +1,8 @@
 # Required captain actions
 
-A code merge finishes the code task, not the captain's required work.
+A code merge finishes the code task, not a captain-only contribution.
+Declare only a part the captain alone can give, following the fleet-work principle in `docs/principles.md`.
+Work the fleet can carry out after the merge is a `Continue: …` follow-up instead, not a required captain action.
 A newly authored completion offer declares `required_actions`, including `[]` when there are none.
 Old saved cards without the declaration remain historical unknowns.
 The declaration is display-only: it grants no execution permission.
@@ -11,7 +13,7 @@ The host draws “After merging, you need to…” outside the body's scroller, 
 Each action names its imperative, target and consequence of waiting.
 Several actions have a visible count and a keyboard-reachable disclosure; none is silently truncated.
 The source task keeps the declaration and offered version before the merge.
-A captain click carries the declaration from the version he actually chose, including when a newer revision is not yet shown.
+A captain click carries the declaration from the version the captain actually chose, including when a newer revision is not yet shown.
 
 ## Durable ownership
 

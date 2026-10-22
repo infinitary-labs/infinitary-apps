@@ -34,7 +34,7 @@ export function createInstallPluginTool(delegate: InstallPluginDelegate) {
       "Add a panel someone else made, on the captain's word: from npm (a package, optionally",
       `@version), a git address (optionally #tag, branch or commit), or a folder on ${HERE.this}`,
       "(a full path). The host fetches and pins it, checks it can be held, and asks the",
-      "captain on one card what it can read; it goes in only if he says yes there, with one",
+      "captain on one card what it can read; it goes in only if they say yes there, with one",
       "feed line. An unchanged ask updates a panel already added without asking again.",
       "Acts only on the captain's own turn.",
     ].join(" "),

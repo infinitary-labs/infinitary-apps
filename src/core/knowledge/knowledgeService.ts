@@ -1706,7 +1706,9 @@ export class KnowledgeService {
     const entry = this.writable(actor, input.id);
     if (entry.lifecycle === "retired") refuse(`${entry.id} is already retired.`);
     if (actor.kind === "crewmate") {
-      refuse("Removing an entry waits for the captain. The first mate retires it on his word.");
+      refuse(
+        "Removing an entry waits for the captain. The first mate retires it on the captain's word.",
+      );
     }
     const captainAsked = actor.kind === "firstmate" && actor.origin === "captain-turn";
     if (entry.author !== actorId(actor) && !captainAsked) {
@@ -1749,13 +1751,15 @@ export class KnowledgeService {
     input: RecordInput,
   ): Promise<() => { text: string; ids: string[] }> {
     if (actor.kind !== "firstmate" || actor.origin !== "captain-turn") {
-      refuse("Removing entries waits for the captain. The first mate retires them on his word.");
+      refuse(
+        "Removing entries waits for the captain. The first mate retires them on the captain's word.",
+      );
     }
     const ref = clean(input.task, "task", MAX.reason, true);
     const approval = this.deps.approvals?.of(ref);
     if (!approval) {
       refuse(
-        `${ref} has no card the captain resolved with a choice, so there is no approval to stand on. Retire one entry at a time, or ask him first.`,
+        `${ref} has no card the captain resolved with a choice, so there is no approval to stand on. Retire one entry at a time, or ask them first.`,
       );
     }
     if (approval.action === "close") {
@@ -2119,7 +2123,7 @@ export class KnowledgeService {
     }
     if (wanted && wanted !== PRIVATE_SCOPE) {
       refuse(
-        "Knowledge keeps what the captain says about himself, and sources he asks to save. How a project works stays in its code, documents and tests. What an investigation found stays on the task.",
+        "Knowledge keeps what the captain says about themselves, and sources they ask to save. How a project works stays in its code, documents and tests. What an investigation found stays on the task.",
       );
     }
     return PRIVATE_SCOPE;

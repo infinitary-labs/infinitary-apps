@@ -266,7 +266,9 @@ describe("the core, driven with no Electron in the process", () => {
       dispatch: core.dispatch,
       actor: () => ({ kind: "firstmate", wake: "captain" }),
     }).find((tool) => tool.name === "app_change");
-    const ownWords = change?.description.match(/; ([^;]+) need his typed words/)?.[1]?.split(", ");
+    const ownWords = change?.description
+      .match(/; ([^;]+) need their typed words/)?.[1]
+      ?.split(", ");
     expect(ownWords).toEqual([
       "project-remove",
       "panel-remove",

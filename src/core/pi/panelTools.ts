@@ -32,18 +32,18 @@ export const LINT_PANEL_TOOL_DESCRIPTION = [
 
 export const PLACE_PANEL_TOOL_DESCRIPTION = [
   "Put the version of a personal panel you are building on the captain's own rail now, and read back what the window did with it.",
-  "Until you place it or report, his rail keeps the panel's last commit and your version runs out of sight; a new panel is on no rail at all.",
+  "Until you place it or report, their rail keeps the panel's last commit and your version runs out of sight; a new panel is on no rail at all.",
   "Answers per panel with the window's own word: drawn on which rail, collapsed to its header, folded for room or gathered into its rail's More row when the rail is too short, still loading, stopped drawing, off its rail, hidden by the captain, or refused, with the window's reason.",
   "The placed version shows with the running dot until your report commits it; a save after placing runs out of sight again until you place again.",
   "Pass id (the extension's directory name) to place one; omit it to place every extension you changed. An id you did not change is only looked at.",
   "Run it before every report, then capture_panel to photograph the panel docked.",
-  "When the window did not draw it and the panel's own files cannot change that, such as a panel he hid or his panels switched off, say so in your report and wait on the captain instead of calling it done; never move or hide his other panels yourself.",
-  "Folded for room or in the More row, the panel is built and on his rail, which is only too short to show it all: say where it sits in your report, and never collapse, move or hide his other panels to make room.",
+  "When the window did not draw it and the panel's own files cannot change that, such as a panel they hid or their panels switched off, say so in your report and wait on the captain instead of calling it done; never move or hide their other panels yourself.",
+  "Folded for room or in the More row, the panel is built and on their rail, which is only too short to show it all: say where it sits in your report, and never collapse, move or hide their other panels to make room.",
 ].join(" ");
 
 export const CAPTURE_PANEL_TOOL_DESCRIPTION = [
   "Screenshot a personal panel at rail width, in the dark theme and the light theme.",
-  "While your saved files differ from what the captain's rail holds, it photographs your version drawn out of sight, and says so; once place_panel has put that version on his rail, it photographs the panel docked, as he sees it.",
+  "While your saved files differ from what the captain's rail holds, it photographs your version drawn out of sight, and says so; once place_panel has put that version on their rail, it photographs the panel docked, as they see it.",
   "Returns both images and the files they were written to, so you can look at what you built rather than guess.",
   "The panel must be drawable: compiled, and its presence rule satisfied (a store-keyed presence needs data in that key first).",
   "Pass id: the extension's directory name.",
@@ -59,7 +59,7 @@ export function renderCaptureText(result: PanelCaptureResult): string {
   const which =
     result.photographed === "draft"
       ? `This is your version of "${result.id}", drawn out of sight: the captain's rail does not show it yet. place_panel puts it there; capture again then to see it docked.`
-      : `This is "${result.id}" docked on the captain's rail, as he sees it.`;
+      : `This is "${result.id}" docked on the captain's rail, as they see it.`;
   const window =
     result.window && result.window.state !== "drawn"
       ? [`The window says it is ${mountLine(result.window)}.`]
@@ -80,7 +80,7 @@ export function renderPlaceText(result: PanelPlaceResult): string {
     .map((panel) => {
       const what = panel.placed
         ? `"${panel.id}" (${panel.title}): placed, so the captain's rail now takes it from your working files.`
-        : `"${panel.id}" (${panel.title}): nothing of it is uncommitted, so nothing was placed; this is the window's word on the version his rail holds.`;
+        : `"${panel.id}" (${panel.title}): nothing of it is uncommitted, so nothing was placed; this is the window's word on the version their rail holds.`;
       const answer = panel.mount
         ? `The window says it is ${mountLine(panel.mount)}.`
         : panel.last

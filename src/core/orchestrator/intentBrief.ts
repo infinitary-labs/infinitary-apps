@@ -202,7 +202,7 @@ export function renderIntentBrief(
 function renderFolderFacts(folder: FolderBriefFacts): string[] {
   return [
     `${IN_PLACE_OPENING}: your working directory is the folder of ${folder.project} at ${folder.folder} itself, on the computer that keeps it, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
-    "Uncommitted edits, unpushed commits and stashes in the folder are the captain's. Never discard or overwrite them, switch the folder's branch, push, or open a pull request without his word on a card; setting edits aside on a backup branch or a stash with a message naming this task is allowed.",
+    "Uncommitted edits, unpushed commits and stashes in the folder are the captain's. Never discard or overwrite them, switch the folder's branch, push, or open a pull request without their word on a card; setting edits aside on a backup branch or a stash with a message naming this task is allowed.",
     "Your completion is a report of what you did, never a completion card.",
   ];
 }
@@ -228,7 +228,7 @@ function renderPersonalFacts(personal: PersonalBriefFacts): string[] {
   return [
     `${BUILD_IN_PLACE_OPENING}: this task carries no delivery posture and no rigor tier, because nothing here ships through a gate. What that means concretely:`,
     `Workspace: ${personal.workspaceDir} - your working directory. There is no worktree, no branch, and no pull request: you edit these files in place. The app compiles what you save as you save it, apart from the captain's rails: they keep each panel as it was until place_panel puts your version there, and the host commits it with your report. Do not commit; the host commits at the end of each of your turns with your report as the message. Your completion is that report, never a completion card, and there is nothing to merge, land, or discard.`,
-    "Your session carries the workspace's AGENTS.md and lists its skills under .claude/skills/. Open personal-panel before you write or change a panel, and follow captain, when it is listed: standing instructions written on the captain's word. Before every report, lint_panel checks your files, place_panel puts your version on the captain's rail and says whether his window drew it, and capture_panel photographs it there.",
+    "Your session carries the workspace's AGENTS.md and lists its skills under .claude/skills/. Open personal-panel before you write or change a panel, and follow captain, when it is listed: standing instructions written on the captain's word. Before every report, lint_panel checks your files, place_panel puts your version on the captain's rail and says whether their window drew it, and capture_panel photographs it there.",
     `Surfaces now: ${surfaces}. A change to one of these is an edit of that directory, not a new one.`,
   ];
 }
@@ -494,8 +494,8 @@ export function renderAnswerShapeSection(internalStep = false): string {
     return [
       "Answer shape: this task's deliverable is an answer, not a change - a step whose answer the next step builds on.",
       "Your report is that answer and is handed to the next step verbatim, so put all of it there: what you found and the evidence, including paths, commands and a reproduction.",
-      "Show a card, as any crewmate does, when the captain must decide or see something before the next step can start; it then opens with the answer in a sentence and draws it, with a figure for each part of the explanation, and his replies and choice come to you there, not through the first mate.",
-      "When the captain's replies change the answer, report it again in full - the final agreed version, with his tweaks and anything decided on the card - before he chooses.",
+      "Show a card, as any crewmate does, when the captain must decide or see something before the next step can start; it then opens with the answer in a sentence and draws it, with a figure for each part of the explanation, and their replies and choice come to you there, not through the first mate.",
+      "When the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
       "Rigor: none - this task ships nothing.",
       "Your worktree is a laboratory: install, run, and edit there freely to find the answer, but commit nothing, push nothing, and open no pull request. Nothing in it ships; it is discarded when this task closes, and anything worth keeping goes in your report.",
       "Your report is what survives this task; the first mate closes it once the next step has started, unless a card of yours is waiting on the captain.",
@@ -507,7 +507,7 @@ export function renderAnswerShapeSection(internalStep = false): string {
     "Names, numbers, quotes and caveats are prose beside the figure they qualify; the evidence a reader who digs would want, including paths and commands, goes in <details>.",
     "When your findings warrant a concrete next move, identify it and put it in the card's actions with one recommended default; do not invent an action when the answer is a pure fact, which stays a note.",
     "Your report stays the short factual account; the card is where the answer is shown.",
-    "Your report is also the answer this task keeps, and work built on it starts from it: when the captain's replies change the answer, report it again in full - the final agreed version, with his tweaks and anything decided on the card - before he chooses.",
+    "Your report is also the answer this task keeps, and work built on it starts from it: when the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
     "Rigor: none - this task ships nothing; the card is the deliverable.",
     "Your worktree is a laboratory: install, run, and edit there freely to find the answer, but commit nothing, push nothing, and open no pull request. Nothing in it ships; it is discarded when this task closes, and anything worth keeping - paths, commands, a reproduction, a sketch of a fix - goes in the card.",
     "The card and your report are the only things that survive this task.",
@@ -793,7 +793,7 @@ export type CaptainCardFacts = {
 /** The reviewer's section on the merge card the captain read (INF-562). */
 function captainCardLines(card: CaptainCardFacts): string[] {
   return [
-    `The captain asked for this review from the merge card he was reading, "${card.title}": he pressed Review carefully because the work looked risky to him. Read that card - its story and its risk chart - and weigh what it says against the diff; it is the builder's account of the change, not proof of it.`,
+    `The captain asked for this review from the merge card they were reading, "${card.title}": they pressed Review carefully because the work looked risky to them. Read that card - its story and its risk chart - and weigh what it says against the diff; it is the builder's account of the change, not proof of it.`,
     ...(card.file
       ? [
           "It is saved whole - any script and style included - in this file on this machine; open it to read the card:",
@@ -968,7 +968,7 @@ export function renderFolderRepairBrief(
     `Judge whether it is safe to bring up to date. A clean folder on ${branch} only needs a fetch and a fast-forward.`,
     `Uncommitted edits or unpushed commits are the captain's: set them aside safely, on a backup branch or a stash with a message naming this task, then bring ${branch} up to date, and report exactly what you set aside and where.`,
     "Never do any of these without the captain's word on a card: discard or overwrite uncommitted edits or unpushed commits, switch the folder off its default branch, push, or open a pull request. Setting edits aside on a backup branch or a stash is allowed.",
-    "When something of the captain's would have to go, or you cannot tell whether it is safe, ask him on a card before you change anything.",
+    "When something of the captain's would have to go, or you cannot tell whether it is safe, ask them on a card before you change anything.",
     "If you can tell, say what put the folder in that state.",
     `Once ${facts.branch ? `the folder is clean, on ${branch}` : "origin's HEAD names the default branch and the folder is clean, on that branch"} and at or past the merged version, report what you did in a few sentences. Infinitary sees the folder up to date and closes this task itself; show a card only when you must ask the captain.`,
   ].join("\n");

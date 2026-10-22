@@ -138,7 +138,7 @@ export class ProjectSetups {
     this.options.raiseCard(setupCard(cardId, offer, checked, computers));
     return {
       cardId,
-      text: `The captain's setup card for ${offer.name} is up (${cardId}): where it comes from, how it lands, and its settings, with your suggestions selected. Nothing is added until he clicks ${WORDS.add} there, and you hear once how he answered; start work that needs it only once he has added it. Say nothing more about it now.`,
+      text: `The captain's setup card for ${offer.name} is up (${cardId}): where it comes from, how it lands, and its settings, with your suggestions selected. Nothing is added until they click ${WORDS.add} there, and you hear once how they answered; start work that needs it only once they have added it. Say nothing more about it now.`,
     };
   }
 

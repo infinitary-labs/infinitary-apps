@@ -1,6 +1,6 @@
 # Card evidence: what a card offered and what the captain did with it
 
-The local record of every card decision, kept so a later reader can tell exactly what the captain was shown, what he chose from it, what each question asked, and what the task looked like when he chose.
+The local record of every card decision, kept so a later reader can tell exactly what the captain was shown, what the captain chose from it, what each question asked, and what the task looked like when the captain chose.
 It is part of the card's own persistence: no switch, no collector, no network and no new question for the captain.
 Nothing leaves the Mac.
 Its readers are the opt-in export below and, since FI3-472's change marks, the stage's revised line, which reads the `seen` and `offer` observations back ("What the captain saw").
@@ -33,7 +33,7 @@ The seven kinds:
 | `offer` | a version of the card is written whose content differs from the last | the whole version: author, title, meta, model, where its task runs, body, actions, pictures, width, its live attachment, a declared asking or design-only fact, and its fingerprint |
 | `availability` | the stage's view of an offer changes | `available`, or `waiting` on `answer` or `close-out`, the cause, the offer it replaced, and whether this started or reopened the lifecycle |
 | `action` | an action is admitted | the action id and label as the offer declared them, closes / keeps open, the effect, the answers, the question definitions, the display fidelity and the task slice read before the choice |
-| `message_ref` | a thread line is written | the message id, who wrote it, and for a captain line the offer he was looking at |
+| `message_ref` | a thread line is written | the message id, who wrote it, and for a captain line the offer the captain was looking at |
 | `exit` | a lifecycle ends without an action | dismissed, author withdrawal, host withdrawal, task retired or duplicate |
 | `effect_receipt` | never, in capture 1 | the schema a D4 receipt will use |
 | `seen` | the window showed an offer on the stage, visible and focused - once per offer, only for the version the stage shows | nothing beyond the offer it names; source `stage`, actor `captain` |

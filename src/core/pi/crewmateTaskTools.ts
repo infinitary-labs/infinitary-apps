@@ -177,12 +177,14 @@ export const REPORT_TOOL = crewmateTool({
             description: "What the captain still has to read or decide, in a few plain words",
           }),
           card_id: Type.Optional(
-            Type.String({ description: "Your open card he is to read; omit when none is up" }),
+            Type.String({
+              description: "Your open card the captain is to read; omit when none is up",
+            }),
           ),
         },
         {
           description:
-            "Pass when nothing is left for you until the captain acts: your outcome card is up, or he may still want something after closing your card. reason says what he still has to read or decide; card_id names your open card he is to read, omitted when none is up. Your task then waits on him: nothing nudges you, and while your card is up the first mate is not woken until he closes, clicks or replies under it, or you are steered. With no card of yours up he has nothing to answer, so the first mate is woken to ask him. Never while work of your own remains.",
+            "Pass when nothing is left for you until the captain acts: your outcome card is up, or they may still want something after closing your card. reason says what they still have to read or decide; card_id names your open card they are to read, omitted when none is up. Your task then waits on them: nothing nudges you, and while your card is up the first mate is not woken until they close, click or reply under it, or you are steered. With no card of yours up they have nothing to answer, so the first mate is woken to ask them. Never while work of your own remains.",
         },
       ),
     ),
@@ -195,7 +197,7 @@ export const REPORT_TOOL = crewmateTool({
     needs_firstmate: Type.Optional(
       Type.String({
         description:
-          "What the first mate must do, in a few plain words, when only the first mate can carry out a captain decision you relay: a build he approved by reply, a merge, a discard, a stronger model, or unrelated work. Put his words verbatim and the final specification in text. When this turn ends the first mate is woken for this report, even with your card up or a wait declared, once any reply of his under your card has your answer. It asks for attention and authorizes nothing. Never for progress or news.",
+          "What the first mate must do, in a few plain words, when only the first mate can carry out a captain decision you relay: a build they approved by reply, a merge, a discard, a stronger model, or unrelated work. Put their words verbatim and the final specification in text. When this turn ends the first mate is woken for this report, even with your card up or a wait declared, once any reply of theirs under your card has your answer. It asks for attention and authorizes nothing. Never for progress or news.",
       }),
     ),
     result: Type.Optional(

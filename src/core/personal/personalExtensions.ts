@@ -1334,7 +1334,7 @@ export class PersonalExtensions {
       next.manifest = { title: checked.manifest.title ?? plugin.id };
       next.error = {
         stage: "manifest",
-        message: `${plugin.id}: its files now ask for something different from what the captain agreed to; add it again to ask him`,
+        message: `${plugin.id}: its files now ask for something different from what the captain agreed to; add it again to ask them`,
       };
     } else {
       next.manifest = checked.manifest;

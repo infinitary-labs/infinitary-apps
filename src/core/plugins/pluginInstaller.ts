@@ -220,7 +220,7 @@ export class PluginInstaller {
       }
       this.options.records.stage(id, staged);
       this.options.cards.raise(consentCard(id, staged, agreed));
-      return `"${staged.title}" by ${staged.name} ${staged.version} is fetched and checked. The captain is asked on a card what it can read; it goes in only if he says yes there. Say nothing more about it.`;
+      return `"${staged.title}" by ${staged.name} ${staged.version} is fetched and checked. The captain is asked on a card what it can read; it goes in only if they say yes there. Say nothing more about it.`;
     } finally {
       await rm(workDir, { recursive: true, force: true });
     }

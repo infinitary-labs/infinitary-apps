@@ -21,7 +21,7 @@ This page owns that data, who writes it, the checks on it, the version tracking,
   The release run writes them into the stable's catalog as its only ranks, so the alpha reviews' ranks reach alpha users alone.
 - **The workflow** checks declarations and packages the prose.
   It cannot tell whether a note is true or well written; that is the review above.
-  The captain is not the copywriter; a stable's highlights are his one editorial choice.
+  The captain is not the copywriter; a stable's highlights are the captain's one editorial choice.
 
 A release whose notes are ready makes no notes-only commit to assemble them.
 Editorial work is ordinary crewmate work at development and release time; the app makes no model request for notes.

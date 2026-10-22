@@ -69,7 +69,7 @@ A crewmate whose task closes while its spark is still flying leaves on the frame
 
 ## Multiple work computers
 
-With more than one configured work computer, the home stage keeps the home formation as it is and seats every other computer's crew beside it (the captain's FI3-1519 plan, 2026-10-10, built on his FI3-1406 Home constellation).
+With more than one configured work computer, the home stage keeps the home formation as it is and seats every other computer's crew beside it (the captain's FI3-1519 plan, 2026-10-10, built on the captain's FI3-1406 Home constellation).
 The home cluster contains the one first mate; each other computer's crew use an invisible local center.
 Spacing, local motion and quiet machine names establish the clusters, without plates, outlines, center markers or crew counts.
 A cluster shows its machine name only while it has crew and a computer other than home on the page has crew; an empty cluster never shows one (`ComputerOrbits.labeled`).
@@ -155,7 +155,7 @@ Reduced motion paints one settled frame.
 
 ## A task with parts
 
-A task split into parts draws as a branching constellation, the captain's INF-799 choice ("the branches are the program's own graph"), with the settings he staged on that plan: branches of 60 px, 70 degrees of spread, and a finished tree that folds into its root.
+A task split into parts draws as a branching constellation, the captain's INF-799 choice ("the branches are the program's own graph"), with the settings the captain staged on that plan: branches of 60 px, 70 degrees of spread, and a finished tree that folds into its root.
 The program's shape and the demo's parts and pace were the preview's only.
 `constellation.ts` reads it from the board alone (`programsOf`): a parent with work children and no crewmate of its own, and the recorded `blocks` links among those children, closed ones included.
 A part hangs from the siblings it waits on, and a part that waits on none hangs from the root, so parallel parts are siblings, a pipeline is a chain and a part after a barrier joins several branches.

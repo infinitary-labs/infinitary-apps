@@ -205,8 +205,8 @@ export function softHoldWords(
   const hold = HOLDS[kind];
   if ("way" in hold) return `Soft hold ${kind}: it passes when ${hold.way}.`;
   return audience === "firstmate"
-    ? `Soft hold ${kind}: the captain's own words pass it; when his words in this turn do, declare it with update_task override.`
-    : `Soft hold ${kind}: only the captain's words pass it, relayed by the first mate; if he gave them, report them.`;
+    ? `Soft hold ${kind}: the captain's own words pass it; when their words in this turn do, declare it with update_task override.`
+    : `Soft hold ${kind}: only the captain's words pass it, relayed by the first mate; if they gave them, report them.`;
 }
 
 /** The sentence a fixed limit's refusal ends with: no one's word passes it. */

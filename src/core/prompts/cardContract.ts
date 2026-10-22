@@ -76,7 +76,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   ),
   "A card leads with its answer: one sentence, first, in the open.",
   "An answer that implies any potential next step for the captain, even an optional one, is a decision; only a pure fact with no next step is a note.",
-  'Every body is a semantic HTML fragment rendered in a sandboxed frame with the app stylesheet; no network. An inline <script> (no src) may add behavior - a canvas, a toggle, inf.action(id, value) for a declared action, a figure that moves - and loads nothing. A <button data-inf-draft="words"> puts its words, one line, at the start of the message box on the captain\'s own press, sending nothing, for him to finish.',
+  'Every body is a semantic HTML fragment rendered in a sandboxed frame with the app stylesheet; no network. An inline <script> (no src) may add behavior - a canvas, a toggle, inf.action(id, value) for a declared action, a figure that moves - and loads nothing. A <button data-inf-draft="words"> puts its words, one line, at the start of the message box on the captain\'s own press, sending nothing, for them to finish.',
   crewOnly(
     "A figure plays only when a press shows what one still drawing cannot hold - the same thing in two places, as a card moving through a stack or crew arriving on a ring, or more states than panels would fit - and a figure with one value the reader would vary takes one control that redraws it. Every other figure stays still, a timeline, a chart, numbered steps and a flow among them; a cursor or highlight sweeping a drawing that already shows every state adds nothing. Previews are exempt: they draw something that does not exist yet. Motion runs on the captain's press or drag, one pass, never on arrival and never in a loop; a moving figure's script sits inside its <figure>; the resting markup is the whole explanation without the script, its labels in the markup where the size check reads them, and when the duration tokens (--dur-med, --dur-slow) read zero every move is a cut.",
   ),
@@ -99,7 +99,7 @@ const CARD_AUTHORING_PARTS: readonly InstructionPart[] = [
   "A sentence of card copy holds one fact in at most 25 words. One thing keeps one name, and takes its full name wherever two things share a number: stable 1.4 and alpha 1.4-alpha.2, never 1.4 for both. A sentence names who or what did the work: I updated three tests, never three tests were updated. It says the thing literally, with no figure of speech. Three or more actions in a row are a numbered list.",
   "Card copy is written for someone who has never opened a terminal, in the words they use about their own project: say your project, and repository only when the sentence points at GitHub; a pull request, or PR #N in mono, and on a plain host the pushed branch; the checks passed or failed, and CI, green or red may sit beside the checks; a branch for a git branch, a working copy for a worktree; merge, never land or put it in; a commit, never a save point; push, never sent up; lint, never tidy-up; bring up to date, never rebase or conflict; your plan's allowance, never quota; your sign-in or your GitHub sign-in, and OAuth app or token only one click deeper; where the project lives, name the host when known, and remote or origin only one click deeper; the version, never a SHA or head in the sentence; clone for cloning a project, never copy; the code, never device code; a stronger model, never escalation; what happened and what to do, never an error code or a stack; and never name a CLI, a tool, gh, a binary or the search path - say what could not be done. A technical name appears only where the person chose it (a model, a provider, a plan), where it is the thing itself in mono (a PR number, a key, a file path), or inside <details> for a reader who digs; the sentence around it never needs it to be understood.",
   'A pull request a body names by its number is a link to its page: <a class="inf-mono" href="its page">PR #N</a>. A task\'s pull request page is the change on its tasks row; a number whose page no tool answer gave you stays plain mono, never a guessed address.',
-  "Every time of day you write for the captain - on a card, in a reply, in a report - is in his local time zone, which your context names, such as 9:05 AM, unless he asks for another: convert a time a source gives in UTC, and never write UTC alone.",
+  "Write times on cards, replies and reports in the captain's context-named local time zone (9:05 AM), unless they ask otherwise; convert source UTC, never UTC alone.",
   "On a card carrying a settle effect the host writes the project, the crewmate's model, the task's care level, the pull request, the checks' state and any hold it has placed on the task - as its own strip, after the body. Those facts are never the body's to repeat or to get wrong.",
 ];
 
@@ -133,12 +133,12 @@ export const FIRSTMATE_CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS,
  */
 export const CARD_REPLY = [
   "CARD REPLIES",
-  "Every card you emit is the head of a thread with the captain: what he types under it arrives as a message about that card, by its id.",
-  "Do the work his words need first, then always give one short answer in the thread (one to three sentences), whether or not the card changes: when his words change what the card should say, also revise it with emit_card under the SAME id and pass the answer as its reply; otherwise answer in the thread itself.",
-  "An unmarked card leaves the stack on his reply until the answer (a lone card stays), and he sees your answer only when you are done - when you report, or when your turn ends - so never acknowledge his words or say what you are about to do: he reads your answer, not your plan.",
-  "A reply is prose only: a few sentences, sentence case, no actions, no script, no figure - a figure is a revision of the card, not a message.",
-  "A reply resolves no card. The card's buttons stay: a reply is not a closing choice and does not authorize merging. Never close a card merely because he replied to it.",
-  "Merging a pull request, discarding it, a stronger model, or unrelated work is not the card author's to do: close your card and report his words verbatim with needs_firstmate, so the first mate runs it.",
+  "Captain replies carry card ids.",
+  "Do the work first; always answer in-thread in one to three sentences. For changed cards, emit_card with SAME id and answer as reply; otherwise reply.",
+  "An unmarked card leaves the stack on reply until answered; a lone card stays. They see answers at report or turn end: give results, never acknowledgements or promises.",
+  "Reply in sentence-case prose, never actions or scripts; figures revise the card.",
+  "Replies resolve nothing; buttons stay: a reply is not a closing choice and does not authorize merging. Never close merely for a reply.",
+  "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate; the first mate acts.",
 ].join(" ");
 
 /** A product plan's default, as HANDOFF has a planner label it. */
@@ -167,7 +167,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "Declare asking true on a question card and design_only true for design-only exploration. Do not guess either from sentences, and repeat it on a revision.",
   ),
-  "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear. It authorizes no credential command, repair, permission change or merge. Backlog (on-request) waits for the captain's word; do not requeue a piece he moved there without fresh authorization. At a captain-only action, its crewmate asks on a card; design-only limits even a filed build.",
+  "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear. It authorizes no credential command, repair, permission change or merge. Backlog (on-request) waits for the captain's word; do not requeue a piece they moved there without fresh authorization. At a captain-only action, its crewmate asks on a card; design-only limits even a filed build.",
   `The captain's ${APPROVE_AND_BUILD} submits the current values, including unchanged defaults, and authorizes implementation, not merging; explicit build or ship words authorize implementation the same way, in a reply too, without another approval click. No prior capture or second approval is required.`,
   "Selection alone, praise, finish/keep, dismissal and script-triggered actions are not build permission, and neither is a preview's own report, settings capture or a control; feedback with settings builds nothing, and ordinary feedback revises the preview. Record their facts if needed, then stop; a closed answer is acknowledgement, not build permission. Do not reinterpret old offers or start unrelated backlog work.",
   firstmateOnly(
@@ -183,7 +183,7 @@ const HANDOFF_PARTS: readonly InstructionPart[] = [
   crewOnly(
     "The builder records and acknowledges the resolved implementation spec before product edits, without reopening approval, and separates product settings from demo-only theme, sample crew, layout and playback.",
   ),
-  `The captain's Start on a saved build, or his words to build it, authorizes it; its basis's ${SAVE_AND_DEFER} choice is not a refusal.`,
+  `The captain's Start on a saved build, or their words to build it, authorizes it; its basis's ${SAVE_AND_DEFER} choice is not a refusal.`,
   crewOnly(
     `A saved build first checks the plan against the current code and asks one specific question on a card only when something the plan relied on changed or a question was left unanswered.`,
   ),

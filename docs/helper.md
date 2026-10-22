@@ -1039,7 +1039,7 @@ A new join clears the note, and nothing tries again on its own; a join that find
 
 - A Linux computer's work while nobody is logged in as its user, except an Ubuntu 24.04 or 26.04 computer added by its address: that setup turns linger on for the account (`docs/devices.md`, "The Ubuntu package").
   Anywhere else the service runs only while they are logged in, and linger stays theirs to turn on.
-- The real check of a Linux computer joined by a link to the captain's own Mac, and of a Mac to a Linux home, on two computers of his: the journeys run both ends on one computer, and GitHub's machines cannot reach each other.
+- The real check of a Linux computer joined by a link to the captain's own Mac, and of a Mac to a Linux home, on two computers of the captain's: the journeys run both ends on one computer, and GitHub's machines cannot reach each other.
 
 - The priority launchd gives the agent's run: no test loads an agent, so `background.test.ts` holds only the file that asks for it.
 - Claude's allowance where macOS here would have to ask first: Infinitary reads it only with its own permission here, which only someone at this screen can give.

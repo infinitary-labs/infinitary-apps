@@ -50,7 +50,7 @@ Nothing reads a value back through the interface.
 A binding uses one in the two ways the saved secret plan names: `request` applies it as a header to one request and gives back the answer (brokered use), and `launchEnv` hands it to a program the integration starts as a named variable (protected launch).
 Every answer an action gives, and every refusal, leaves the service with each kept value replaced by "[a kept key]", so a place that echoes a key back cannot pass it to a caller.
 The view Settings and the first mate read, `integrations <name>` and a crewmate's `show` say only whether each slot is kept, and the roster line says when one is missing.
-The captain enters, replaces or removes a key in the open row in Settings -> Integrations, a write-only field that never shows a kept value; that one request, `inf:integrations:secret`, is the catalog's `integration-key` line, his hands only, and its trail records no value.
+The captain enters, replaces or removes a key in the open row in Settings -> Integrations, a write-only field that never shows a kept value; that one request, `inf:integrations:secret`, is the catalog's `integration-key` line, the captain's hands only, and its trail records no value.
 Removing an integration forgets its keys.
 
 ## GitHub
@@ -96,7 +96,7 @@ Like Projects, the tab does not show on a paired view.
 The first mate's context block carries one `integrations` line naming each connected integration and who it is signed in as, so an integration nobody uses costs one name.
 `integrations` lists them, or one's actions with their effect, rule and input schema; `use_integration` runs one action (`src/core/pi/integrationTools.ts`).
 Their words never change with what is connected, so a seat never starts over when an integration comes or goes.
-It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab (a sign-in is his to make), `integration-add-mcp` adds an MCP server he named, `integration-remove` needs his own words, and `integration-settings`, `integration-check` and `integration-add-mcp` are asked actions.
+It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab (a sign-in is the captain's to make), `integration-add-mcp` adds an MCP server the captain named, `integration-remove` needs the captain's own words, and `integration-settings`, `integration-check` and `integration-add-mcp` are asked actions.
 
 ## How a crewmate reaches them
 

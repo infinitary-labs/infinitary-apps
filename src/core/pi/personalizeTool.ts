@@ -172,7 +172,7 @@ export function panelsOffLine(panels: PersonalPanels): string | null {
     panels.offReason === "safe-mode"
       ? "the app closed twice just after starting, so it came up with them off"
       : "the captain turned them off";
-  return `the captain's panels are off right now (${because}). Nothing built for him and nothing he added is mounted, and a new one will not show until they are back on. Only the switch in Settings turns them on - you have no tool for it, so say where it is.`;
+  return `the captain's panels are off right now (${because}). Nothing built for them and nothing they added is mounted, and a new one will not show until they are back on. Only the switch in Settings turns them on - you have no tool for it, so say where it is.`;
 }
 
 /**
@@ -317,7 +317,7 @@ function resolveSurface(
   // typo.
   const off = preferences.panels.enabled
     ? ""
-    : " The captain's panels - his own and the ones he added - are off right now, so none of them is listed; the switch is in Settings.";
+    : " The captain's panels - their own and the ones they added - are off right now, so none of them is listed; the switch is in Settings.";
   if (!id?.trim()) return { refusal: `Name a surface by id. Your surfaces: ${ids}.${off}` };
   const wanted = id.trim();
   const surface =

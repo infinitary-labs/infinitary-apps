@@ -53,8 +53,8 @@ It is derived from the task's state, never a thread message, so it changes or le
 A message is a two-column grid: a mono `--fg-3` who at `34px`, then the text at `--text-sm` / `--leading-body` in `--fg-1`, its line breaks kept (`pre-wrap`), with the time trailing in mono `--fg-3` on one line.
 The captain's who takes `--captain`, the author's `--accent`.
 A host line - "revised: …", what the author changed instead of answering - is the whole row in `--fg-3` at one step down, with no accent: it is the app speaking, not a party to the conversation.
-The settings a card sent with a captain's reply are never shown as his words (the captain: "captain's message should not visibly show the appended settings value").
-Under his words sits one quiet line, collapsed by default: a mono `--fg-3` button at `--text-xs` with a right-pointing caret and "settings · N values", `--fg-2` on hover, the caret turning down when open.
+The settings a card sent with a captain's reply are never shown as the captain's words (the captain: "captain's message should not visibly show the appended settings value").
+Under the captain's words sits one quiet line, collapsed by default: a mono `--fg-3` button at `--text-xs` with a right-pointing caret and "settings · N values", `--fg-2` on hover, the caret turning down when open.
 It is a real button with `aria-expanded` and `aria-controls`.
 Opened, it shows a boxed panel below it - `--bg-1`, a `--line-1` border, `--radius-s` - labelled "Settings sent with your reply at" its time.
 The panel holds readable rows in mono `--text-xs`: the key in `--fg-3`, the value in `--fg-1`, and for a question " · changed" or " · as proposed" in `--fg-3`.

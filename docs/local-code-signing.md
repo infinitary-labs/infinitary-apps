@@ -150,7 +150,7 @@ rm -rf ~/.infinitary/local-codesign   # full reset (costs one fresh grant)
 ## After the Infinitary rename
 
 The certificate is "Infinitary Local Dev", in `~/.infinitary/local-codesign`, and the signing identifier is `com.getinfinitary.infinitary.dev`.
-The captain runs `pnpm codesign:local` once before his next `pnpm dev`, which makes Infinitary Local Dev in `~/.infinitary/local-codesign` and signs the dev Electron with it.
+The captain runs `pnpm codesign:local` once before the captain's next `pnpm dev`, which makes Infinitary Local Dev in `~/.infinitary/local-codesign` and signs the dev Electron with it.
 A new certificate is a new designated requirement, so macOS asks for the Claude credential once more.
 `~/.firstmate-3000/local-codesign` stays as it was, for a rollback: the signer never reads, moves or deletes it.
 

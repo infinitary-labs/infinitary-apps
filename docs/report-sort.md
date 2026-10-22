@@ -22,12 +22,12 @@ In order; the order IS the rule.
 | 0 | An open card currently waits for its author's answer (`cards.awaiting = answer`) | the crewmate's | no wake | `rule:thread-unanswered` |
 | 0a | The report declared `needs_firstmate`: a captain decision only the first mate can carry out (FI3-710) | the first mate's | wake, with what it must do | `rule:needs-firstmate` |
 | 0b | Started work waits on this task through a recorded wait: a `blocks` link from it with no must-merge-first mark (INF-735) | the first mate's, which passes on what that work waits for | wake, naming that work | `rule:waited-on` |
-| 1 | An open **decision** card for the task, a wait on the captain its crewmate declared in its report while a card of the task is on his screen (FI3-435), or work its crewmate declared finished while a card of its own is still on his screen (INF-731) | the captain's | no wake | `rule:captain-card` |
+| 1 | An open **decision** card for the task, a wait on the captain its crewmate declared in its report while a card of the task is on the captain's screen (FI3-435), or work its crewmate declared finished while a card of its own is still on the captain's screen (INF-731) | the captain's | no wake | `rule:captain-card` |
 | 1a | The report declared its work finished: the captain has read its outcome and nothing is left (FI3-435) | the first mate's, which closes the task | wake | `rule:finished` |
 | 2 | The report filed follow-ups this turn | the first mate's | wake | `rule:filed-followups` |
 | 2a | The task waits on work nobody has started: a task its standing baseline wait names, or a blocker holding its close, that only a start begins (FI3-671) | the first mate's, which starts it, folds the fix in or asks | wake, naming that work | `rule:waits-unstarted` |
 | 3 | A job running inside its bound, guidance its lane will still deliver, a captured settle, a timed wait on its gate, the host watching its change's checks or a named run (`docs/forge.md`), or a wait on work underway (FI3-250) | the crewmate's | no wake | `rule:still-moving` |
-| 4 | The gate holds it for the captain and no card is up (a captain-owned round cap before the first mate's card, or a wait its crewmate declared with nothing on his screen, INF-11) | the first mate's, which owes the card | wake | `rule:captain-gate` |
+| 4 | The gate holds it for the captain and no card is up (a captain-owned round cap before the first mate's card, or a wait its crewmate declared with nothing on the captain's screen, INF-11) | the first mate's, which owes the card | wake | `rule:captain-gate` |
 | 4a | A typed cut-off holds its account, or the computer that runs work it runs on is out of reach or not yet caught up (`docs/helper.md`, "The home's side") | the crewmate's, when the account serves again or that computer is back | no wake | `rule:still-moving` |
 | 4b | None of the above, and the first mate declared the task an internal step (`shape.internal_step`) | the first mate's, which decides the next step | wake on any backend | `rule:step-answered` |
 | 5 | None of the above, and the host can see all of this backend's work | nobody's | **wake now**, with the report's own words | `rule:stopped` |
@@ -44,13 +44,13 @@ Ordinary client-side work without this declaration sorts row 6, which wakes as w
 The report receipt describes this hand-off without asking an internal step to misuse `needs_firstmate`.
 
 **A current unanswered captain reply outranks the open card.**
-Row 0 is cards-as-threads phase 1 (`docs/card-threads.md`): a card is the head of a conversation with its author, so the captain replying under it means he has spoken SINCE that card went up.
-The card no longer holds the turn - the author owes him an answer - which is why row 0 sits above row 1 rather than beside it.
+Row 0 is cards-as-threads phase 1 (`docs/card-threads.md`): a card is the head of a conversation with its author, so the captain replying under it means the captain has spoken SINCE that card went up.
+The card no longer holds the turn - the author owes the captain an answer - which is why row 0 sits above row 1 rather than beside it.
 The persisted `answer` hold, not the newest historical message, is authoritative: withdrawal, resolution and same-id reopening retain the thread without retaining the old obligation.
 
 **A crewmate asks the first mate to act; the host never guesses it** (FI3-710, grounded on FI3-703, captain-approved 2026-10-03).
-Some captain decisions reach a crewmate that only the first mate can carry out: a build he approved by reply under an answer task's card, a merge, a discard, a stronger model, unrelated work.
-The crewmate relays his words verbatim and declares it: `report`'s top-level `needs_firstmate`, a few words on what the first mate must do.
+Some captain decisions reach a crewmate that only the first mate can carry out: a build the captain approved by reply under an answer task's card, a merge, a discard, a stronger model, unrelated work.
+The crewmate relays the captain's words verbatim and declares it: `report`'s top-level `needs_firstmate`, a few words on what the first mate must do.
 Row 0a wakes the first mate on any backend, above an open decision card, a declared wait and every moving witness, because each of those would otherwise hold the report quiet; a relay whose card was withdrawn also wakes at row 6, but without the request on the wake.
 It sits below row 0: the captain's reply is answered first (`HANDOFF`: one thread line naming who is next), and the report tool's receipt says so when that reply is still open.
 The wake carries the request beside the report's own words (`needsFirstmate` on the facts) and says it authorizes nothing by itself: the first mate checks the captain's words and starts the existing successor once (`HANDOFF`).
@@ -76,9 +76,9 @@ The record: of 133 card-up reports, 24 had only a note, and in 12 of those the c
 Under an all-cards reading, a crewmate that later stalled behind its own note would have been watched by nothing.
 
 **A crewmate declares its wait; the host never guesses it** (FI3-435, captain-approved 2026-10-01).
-A finished crewmate whose outcome is a note says so in its report: `report`'s top-level `waiting_on_captain` (a reason, and the open card of its own he is to read, if one is up) stores `delivery.captainWait` and places the task's `captain` gate (`IdleLadder.syncCaptainGate`, ref the card, reason the crewmate's).
-While a card of the task is on his screen - the one the wait names, or any other, a note included - that gate is row 1, so nothing nudges the crewmate and nothing wakes the first mate.
-With no card up he has nothing to answer, so the gate is a card the first mate owes (INF-11, the captain's "make this missed escalation structurally impossible", 2026-10-18): the report sorts row 4 and wakes the first mate, its wake says what the crewmate waits on him to do and that no card of its is on his screen (`captainWait` on the report's facts), and the idle ladder reads the task as `owed` - no nudge, since the crewmate already did its part, and the owed wakes and the host's card if the first mate takes no act.
+A finished crewmate whose outcome is a note says so in its report: `report`'s top-level `waiting_on_captain` (a reason, and the open card of its own the captain is to read, if one is up) stores `delivery.captainWait` and places the task's `captain` gate (`IdleLadder.syncCaptainGate`, ref the card, reason the crewmate's).
+While a card of the task is on the captain's screen - the one the wait names, or any other, a note included - that gate is row 1, so nothing nudges the crewmate and nothing wakes the first mate.
+With no card up the captain has nothing to answer, so the gate is a card the first mate owes (INF-11, the captain's "make this missed escalation structurally impossible", 2026-10-18): the report sorts row 4 and wakes the first mate, its wake says what the crewmate waits on the captain to do and that no card of its is on the captain's screen (`captainWait` on the report's facts), and the idle ladder reads the task as `owed` - no nudge, since the crewmate already did its part, and the owed wakes and the host's card if the first mate takes no act.
 The report's receipt tells the crewmate so when no card is up as it reports.
 Only a ready card lists the task under "waiting on you"; without one, its record shows the latest report as the reason it is paused (FI3-702, `docs/task-record.md`).
 An undeclared note still holds nothing.
@@ -87,11 +87,11 @@ The wait lasts until the crewmate's next turn starts (`TaskService.clearDeclarat
 The captain's close of a crewmate's card reaches its author as a steer (`card-closed`), and the author judges it (`buildCrewmateSystemPrompt`): read and finished, so `finished: true` (row 1a, which wakes the first mate to close it - `answered` for an answer, `released` with evidence, or discard with nothing to merge); still waiting, so `waiting_on_captain` again; or a passing note, so it carries on.
 Whether the captain read something is the crewmate's call, never the first mate's.
 
-**Finished wakes the first mate once, after his close** (INF-731, the captain's "Send the 'crewmate finished' wake once per task, not once per reply").
-`finished` means he closed the crewmate's card, and on an answer task the first mate's `settle_task answered` is refused while a card of the crewmate's is up (`closeAnswerUsedAsBasis`), so each such wake asked for a close it could not make.
-So a report that declares it while a card of its own is still on his screen, a note included, is row 1: the captain's turn, no wake (`finishedCardUp`, kept apart from `decisionCardOpen` so a personal workspace's report still closes its task past a note).
-His replies under that card each bring the crewmate a turn and a report, and none of them wakes the first mate; the receipt tells the crewmate so.
-His close reaches the crewmate as its next turn (`card-closed`), whose report declares `finished` again with the card gone: row 1a, the one wake, and the first mate closes the task.
+**Finished wakes the first mate once, after the captain's close** (INF-731, the captain's "Send the 'crewmate finished' wake once per task, not once per reply").
+`finished` means the captain closed the crewmate's card, and on an answer task the first mate's `settle_task answered` is refused while a card of the crewmate's is up (`closeAnswerUsedAsBasis`), so each such wake asked for a close it could not make.
+So a report that declares it while a card of its own is still on the captain's screen, a note included, is row 1: the captain's turn, no wake (`finishedCardUp`, kept apart from `decisionCardOpen` so a personal workspace's report still closes its task past a note).
+The captain's replies under that card each bring the crewmate a turn and a report, and none of them wakes the first mate; the receipt tells the crewmate so.
+The captain's close reaches the crewmate as its next turn (`card-closed`), whose report declares `finished` again with the card gone: row 1a, the one wake, and the first mate closes the task.
 A request beside it (`needs_firstmate`) still wakes at row 0a, so a reply that needs the first mate reaches it.
 
 **A wait on work nobody has started is the first mate's turn** (FI3-671, captain-approved 2026-10-03).
@@ -163,7 +163,7 @@ The order is the rule's own:
 4. A card with actions is up on the task - a crewmate's, a first mate's, or a host card such as the crewmate's sign-in card, which carries its task (`cardWord` counts any card with actions, whoever wrote it; every such card places the `captain` gate, `docs/card-authoring.md`): the captain's turn, nothing.
    Such a task gets no nudge, no wake and no timer however long it stays (FI3-81 "Leave as is").
    So does a wait its crewmate declared while any card of the task, a note included, is up (FI3-435), and work its crewmate declared finished while a card of its own is up (INF-731).
-   So does a task whose own browser is in the captain's hands - paused for his help, being taken, or his (`browserWithCaptain`, counted in `decisionCardOpen`; `docs/task-browser.md`, "Taking control"): his Return control is the crewmate's one wake, so the card behind it may already be answered.
+   So does a task whose own browser is in the captain's hands - paused for the captain's help, being taken, or the captain's (`browserWithCaptain`, counted in `decisionCardOpen`; `docs/task-browser.md`, "Taking control"): the captain's Return control is the crewmate's one wake, so the card behind it may already be answered.
 5. Moving, nothing: guidance that will still be delivered (including a row waiting out its backoff, `InboxStore.hasDeliverable`), a background job inside its bound, a captured settle, a timed wait on its gate (a due one is the sweep's, on the same tick).
    A streaming turn never reaches the reconciler; the quiet watchdog owns it.
 6. The gate holds it for the captain and no card is up - a captain-owned round cap before the first mate raised its card, or a wait its crewmate declared with no card of the task up (INF-11): the first mate's turn.
@@ -194,7 +194,7 @@ The ladder holds its clock at each tick the wake still waits (`InboxStore.holdsU
 **The host's stall card** (`card-stall-<task>`, author host, so it presents as attention): a captain decision of 2026-09-26 that revises the card rule
 - the first mate let two wakes go, so the work cannot move without the captain.
   Its title says how long ("<title> has been stuck for 1h 20m"), its body what the crewmate last said or the problem its last try ended in, what the ladder already did, and what each button does.
-  On a task a standing CI or captain-owned review cap holds, the body instead says it reached its limit of tries and needs the captain's call (try again, the eligible model retry, or discard), that the first mate has not asked him, and that Continue gives it no more tries - the Continue there, like the task card's own, is not the cap's answer.
+  On a task a standing CI or captain-owned review cap holds, the body instead says it reached its limit of tries and needs the captain's call (try again, the eligible model retry, or discard), that the first mate has not asked the captain, and that Continue gives it no more tries - the Continue there, like the task card's own, is not the cap's answer.
   **Continue** is the nudge again with the captain's authority (host op `continue-task`, naming a note up as rung 1 does), **Drop task** - the task record's own end verb - is `interrupt_crewmate` cancel (`stop-task`), which ends the task and keeps a copy of its unfinished work, **Discard** is the host's `settle discard` with the unlanded-work guard, whose refusal names its ways like any settle refusal.
   While it is up the task is the captain's turn and nothing repeats.
   It leaves on a click, on the captain's close (the keep: no more wakes or cards this episode, and the task's standing line stays), when the task moves (a new turn retires it), or when the task closes.
@@ -208,7 +208,7 @@ What the act was is never judged, only that one took effect, as answer delivery 
 The report's own wake counts as rung 2's first wake, sent when the crewmate asked, and the rung's rules run from there.
 The clock holds while a wake about the task waits on the first mate's lane.
 Each thirty minutes without an act bring a reminder, `idle-asked`, which says the request again in the crewmate's words beside its report (`rule:idle-repeat`), two in all (`ASKED_WAKES`).
-Nothing nudges the crewmate, and no card goes up: the captain chose on 2026-10-10 that the app reminds the first mate itself rather than ask him to send what it can send.
+Nothing nudges the crewmate, and no card goes up: the captain chose on 2026-10-10 that the app reminds the first mate itself rather than ask the captain to send what it can send.
 After the last reminder nothing more is sent, and the task's crew line carries its `stalled` fact, as it does from the first reminder on.
 An act of the first mate's ends all of it: the next reconcile restarts the clock, once, read off the record - the ladder's last act fell after the request and before the act (`endAnsweredAsk`).
 

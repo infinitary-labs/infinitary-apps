@@ -150,7 +150,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       internal_step: Type.Optional(
         Type.Boolean({
           description:
-            "As spawn_crewmate's shape.internal_step. Omit it when the captain asked for this result himself; it stays his to close.",
+            "As spawn_crewmate's shape.internal_step. Omit it when the captain asked for this result themselves; it stays theirs to close.",
         }),
       ),
       // Their rule is said once, in the served sequences guide (INF-799).
@@ -305,12 +305,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       correct_required_action: Type.Optional(
         Type.Boolean({
           description:
-            "On the captain's words that he confirmed a required action by mistake: reopen its durable operation and preserve the confirmation history. This does not reverse work that already continued. Cancel an unneeded action with drop and reason, never confirm it.",
+            "On the captain's words that they confirmed a required action by mistake: reopen its durable operation and preserve the confirmation history. This does not reverse work that already continued. Cancel an unneeded action with drop and reason, never confirm it.",
         }),
       ),
       withdraw_merge: Type.Optional(
         Type.Boolean({
-          description: "The captain takes back a merge he clicked; the work stays",
+          description: "The captain takes back a merge they clicked; the work stays",
         }),
       ),
       override: Type.Optional(
@@ -323,7 +323,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           },
           {
             description:
-              "Captain's words this turn pass soft holds refusals named, until as he means; empty holds takes it back.",
+              "Captain's words this turn pass soft holds refusals named, until as they mean; empty holds takes it back.",
           },
         ),
       ),

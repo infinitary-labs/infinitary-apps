@@ -71,15 +71,15 @@ The transcript's lines (`CrewLine`, `src/shared/crewTranscript.ts`):
 
 It never shows the crewmate's thinking, a system prompt, sign-ins, usage or token counts, nor the client's own notices (a background command finishing, `[Request interrupted by user]`); every string is redacted as an Observe line is (`redactObserveText`).
 The transcript keeps its newest 1,500 lines and counts the rest.
-It follows its end while the captain reads at its end, and stays where he scrolled otherwise.
+It follows its end while the captain reads at its end, and stays where the captain scrolled otherwise.
 
-The status line reads where the crewmate stands, from the task's typed state (`crewStateOf`, `src/renderer/src/cards/crewmateState.ts`): Working with the running turn's age, `⌃C to interrupt` and Stop; Paused while the captain holds its browser; Waiting on you while a card of its waits on him; Idle; or nothing on a closed task, which keeps its Crewmate tab as a read-only replay with no prompt.
+The status line reads where the crewmate stands, from the task's typed state (`crewStateOf`, `src/renderer/src/cards/crewmateState.ts`): Working with the running turn's age, `⌃C to interrupt` and Stop; Paused while the captain holds its browser; Waiting on you while a card of its waits on the captain; Idle; or nothing on a closed task, which keeps its Crewmate tab as a read-only replay with no prompt.
 
 ## Typing
 
-The boxed prompt is the captain's direct door to the crewmate: Enter sends the line as his steer on the crewmate's own lane (`window.infinitary.task.steer`, `inf:task:steer`), the path a reply under its card takes (`docs/card-threads.md`), never a first mate turn.
+The boxed prompt is the captain's direct door to the crewmate: Enter sends the line as the captain's steer on the crewmate's own lane (`window.infinitary.task.steer`, `inf:task:steer`), the path a reply under its card takes (`docs/card-threads.md`), never a first mate turn.
 `CrewSupervisor.steerFromCrewmateTab` refuses in words, writing nothing, when no crewmate can be told anything: an empty line, a task not started, a closed one.
-Otherwise the steer is a typed wake (`crewmate-tab-line`, `CREWMATE_TAB_STEER_LEAD` then his words verbatim), recorded as a `steered` event with `via: "crewmate-tab"` (`CREWMATE_TAB_VIA`, `src/shared/provenance.ts`) and the span of his words, which Activity reads as `You told the crewmate: ...`, and one task-less feed line (`toldInCrewmateTabLine`).
+Otherwise the steer is a typed wake (`crewmate-tab-line`, `CREWMATE_TAB_STEER_LEAD` then the captain's words verbatim), recorded as a `steered` event with `via: "crewmate-tab"` (`CREWMATE_TAB_VIA`, `src/shared/provenance.ts`) and the span of the captain's words, which Activity reads as `You told the crewmate: ...`, and one task-less feed line (`toldInCrewmateTabLine`).
 The first mate reads it on the task's timeline.
 A Pi or Claude crewmate takes it at its next step inside the running turn; an idle one takes it as a new turn.
 A refused line keeps its draft and says why under the prompt; a draft also survives the card hiding and showing again, in memory only.

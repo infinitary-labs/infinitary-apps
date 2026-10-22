@@ -131,7 +131,7 @@ What this does NOT do: no proxy, no Infinitary-held key, no decision catalog fet
 
 ## The surface
 
-Settings → **Intelligence** (retitled from "Subscriptions" on the captain's Q1 note: the tab holds accounts, the model board and this group, and only some of that is a subscription) → Models → **Decisions**, hint "Efficient decision making" (his words).
+Settings → **Intelligence** (retitled from "Subscriptions" on the captain's Q1 note: the tab holds accounts, the model board and this group, and only some of that is a subscription) → Models → **Decisions**, hint "Efficient decision making" (the captain's words).
 
 One row, by state: `auto · your cheapest slotted model` by default; a named offering when the captain pinned one ("Use a specific model" - naming a model is its own placement, so a premium offering, or one that is not in use, is allowed here as it is everywhere a user names one); `Jev · TypeSafe · on` with `last answer fix · 412 tokens` when the native option is ready; `key rejected · using one of your own models` after a vendor 401.
 The picker lists the listed models, and a pick binds from the whole signed-in pool, slot or no slot, so every model it offers can answer.

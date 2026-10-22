@@ -348,7 +348,7 @@ Read the named job's log on a failure wake; a release run outcome is not a pull 
    The crewmate puts up one decision card titled for the stable, with three required slots: 01, the lead, then 02 and 03.
    Each slot lists every one of those changes, the lead's only the ones with a picture, and the card shows each change's hero picture beside its title.
    It marks one recommendation per slot by the release review's rule (`docs/release-notes.md` "Who writes what"): a new feature most people will see, over a fix or a niche case.
-   It starts nothing until the captain picks, and his picks, lead first, are the run's `highlights`.
+   It starts nothing until the captain picks, and the captain's picks, lead first, are the run's `highlights`.
 2. **Start.**
    `gh workflow run release.yml --ref main -f channel=stable -f promote=<alpha version> -f highlights=<lead>,<second>,<third>` (for example `0.1.31-alpha.40`, and the picked changes' entry ids).
    The resolver refuses unless the alpha has a private tag `v<alpha>`, its numeric core is newer than the latest stable, and it carries a feat, fix or breaking change since that stable.

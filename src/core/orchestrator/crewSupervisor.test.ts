@@ -12297,20 +12297,20 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const opsBefore = ops.length;
       await endTurn(crewmate, taskId);
       expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "captain-gate" });
-      expect(receipt).toContain("No card of yours is up, so the first mate is woken to ask him");
+      expect(receipt).toContain("No card of yours is up, so the first mate is woken to ask them");
       expect(tasks.get(taskId)?.gate).toEqual({
         kind: "captain",
         reason: "decide whether to keep the old build",
       });
       expect(ops.slice(opsBefore)).toEqual([
-        `[fm-op] crewmate 1 reported on task ${taskId} "Release": ${words} It waits on the captain to decide whether to keep the old build, and no card of its is on his screen.`,
+        `[fm-op] crewmate 1 reported on task ${taskId} "Release": ${words} It waits on the captain to decide whether to keep the old build, and no card of its is on their screen.`,
       ]);
       const prompts = crewmate.promptCalls.length;
       await idleFor({ supervisor, tasks }, taskId, [minutes(10), minutes(20)]);
       // Nothing nudges the crewmate, which already did its part.
       expect(crewmate.promptCalls).toHaveLength(prompts);
       expect(ops.at(-1)).toContain(
-        `[fm-op] task ${taskId} "Release" is held for the captain (its crewmate waits on him to decide whether to keep the old build) and has had no card up for 20m`,
+        `[fm-op] task ${taskId} "Release" is held for the captain (its crewmate waits on them to decide whether to keep the old build) and has had no card up for 20m`,
       );
       // Two wakes let go, the app asks him itself, in the crewmate's words.
       await idleFor({ supervisor, tasks }, taskId, [minutes(50), minutes(80)]);
@@ -13252,7 +13252,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await at(minutes(21));
       await at(minutes(51));
       const state =
-        "since the captain wrote under its card, without answering him, and nothing queued will; the host's nudge did not move it.";
+        "since the captain wrote under its card, without answering them, and nothing queued will; the host's nudge did not move it.";
       expect(idleWakes(ops)).toEqual([
         `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 21m ${state} Its last report: Done with step one.${stallBlock(taskId)}`,
         `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 51m ${state}${SECOND} Its last report: Done with step one.${stallBlock(taskId)}`,
@@ -16284,7 +16284,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
       expect(h.sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "captain-gate" });
       expect(h.ops).toEqual([
         expect.stringContaining(
-          "It waits on the captain to check the time zone, and no card of its is on his screen.",
+          "It waits on the captain to check the time zone, and no card of its is on their screen.",
         ),
       ]);
     }
@@ -21875,8 +21875,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     supervisor.replyToCard(card ?? "", "see this", [pngImage]);
     await tick();
     expect(crewmate.promptCalls.slice(before)).toEqual([
-      `The captain replied in the thread on your card. Do the work his words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when his words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while he waits). Then report. His reply takes your card off his screen until the answer, unless it is his only card or asked to stay; he sees your answer only when you report, so never acknowledge his words or say what you are about to do: he reads your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
-      `The captain replied in the thread on your card. Do the work his words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when his words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while he waits). Then report. His reply takes your card off his screen until the answer, unless it is his only card or asked to stay; he sees your answer only when you report, so never acknowledge his words or say what you are about to do: he reads your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
+      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when you report, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
+      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when you report, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
     ]);
     expect(crewmate.promptImageCalls.at(-1)).toEqual([pngImage]);
   });

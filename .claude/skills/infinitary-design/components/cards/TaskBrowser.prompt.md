@@ -31,11 +31,11 @@ It works on a task that has closed, so a game's note can play it after its task 
 
 - Back, Forward and Reload, 28 px icon buttons (Lucide `chevron-left`, `chevron-right`, `rotate-cw`).
   Navigation belongs to whoever has control, and watching is not control, so while the captain watches all three are marked off (`../core/IconButton.prompt.md`): dimmed, still Tab stops, their labels saying why (`Back · the crewmate is driving`).
-  While he has control they are enabled and move his page.
+  While the captain has control they are enabled and move the captain's page.
 - The status line takes the rest of the row: a `StatusDot`, the site in mono `--fg-1` (the page's host and port, `localhost:5173`), then who is driving in `--fg-2`, then, while the crewmate drives, what it just did in `--fg-3` - each part after `·`; while the browser is paused for the captain, the crewmate's reason takes that place.
   It is one line and never wraps: the action gives way first with an ellipsis, then who is driving; the site never does.
   The whole line, with the page's title and address, is on hover.
-- The control button, a small Button before More: `Take control` (secondary) while the crewmate drives or nobody does, `Take control` (primary) while the browser is paused for the captain's help, `Return control` (primary) while he has control, and none while his Take control is finishing the crewmate's command or the return question is open.
+- The control button, a small Button before More: `Take control` (secondary) while the crewmate drives or nobody does, `Take control` (primary) while the browser is paused for the captain's help, `Return control` (primary) while the captain has control, and none while the captain's Take control is finishing the crewmate's command or the return question is open.
 - More, a small ghost Button, the size control (`ResponseCard.prompt.md`, "Maximize"), and Hide, the surface's own cross (`IconButton`, label `Hide`).
 
 **What the crewmate just did** is one short line at a time, replaced by the next, never a list: `opened /signup`, `read the page`, `waited for "Thanks"`, `typed into "Email"`, `typed into "Email" and pressed Enter`, `clicked "Create account"`, `chose "Economy" in "Class"`, `pressed Tab`, `scrolled down`, `went back`, `reloaded the page`, `photographed the page`.
@@ -44,17 +44,17 @@ A name is the control's own accessible name, cut at 40 characters; what was type
 **Taking control.**
 Take control is the only way the page becomes the captain's: never a click on the page, a sign-in, Hide, a card closing or a timer.
 The crewmate's new browser commands refuse from that click on, and the one it is running finishes or fails within its bound; until then the row reads `finishing the crewmate's current action…` with a `busy` dot and no control button.
-Then the row tints violet, his own color (`--captain-dim` behind the whole row, a `captain` dot), and reads `site · you have control · the crewmate cannot see this page`, with `Return control`.
-While he has control, the page takes his pointer, his wheel and his keys: a click on it puts the keyboard there, its cursor is the pointer's own, and Escape, Tab and every other key go to the page rather than the app, while the app's own window commands stay the app's.
-A Mac's editing keys reach the page as its editing commands - select all, undo, redo, cut, copy and paste - so he pastes on the page itself, never in a card or the first mate's input.
-Nothing he types is shown, logged or kept, and the crewmate sees none of it: its tools refuse, and what the page says while he holds it is never reported to it.
+Then the row tints violet, the captain's own color (`--captain-dim` behind the whole row, a `captain` dot), and reads `site · you have control · the crewmate cannot see this page`, with `Return control`.
+While the captain has control, the page takes the captain's pointer, the captain's wheel and the captain's keys: a click on it puts the keyboard there, its cursor is the pointer's own, and Escape, Tab and every other key go to the page rather than the app, while the app's own window commands stay the app's.
+A Mac's editing keys reach the page as its editing commands - select all, undo, redo, cut, copy and paste - so the captain pastes on the page itself, never in a card or the first mate's input.
+Nothing the captain types is shown, logged or kept, and the crewmate sees none of it: its tools refuse, and what the page says while the captain holds it is never reported to it.
 The foot line's caption reads `temporary · returning control shares this page`.
 
 **Returning control asks once.**
 `Return control` opens one row under the chrome, the same violet: `Return control? The crewmate will read this page as it is now, including what you signed in to.` in `--fg-1`, then `Keep control` (secondary) and `Return control` (primary).
 Under them, on a line of its own inside the same row, is one checkbox, never ticked when the row opens: `Remember my <site> sign-in on this computer`, the site as the status line names it, in `--text-xs` `--fg-2` (`--fg-1` once ticked), the box drawn with `accent-color: --accent` and `--space-2` from its words.
 Ticked, Return control also saves that site's sign-in on this computer ("Saved sign-ins"); nothing is saved without the tick.
-Keep control closes the row; Return control waits for a load he started to finish, hands the page back and wakes the crewmate once to take a fresh look - its old refs are gone.
+Keep control closes the row; Return control waits for a load the captain started to finish, hands the page back and wakes the crewmate once to take a fresh look - its old refs are gone.
 The row then reads `the crewmate is driving · fresh look at the page` once its turn runs, `nobody is driving` until then, and the caption reads `temporary · keeps what you signed in to until it stops`.
 Returning gives the task the signed-in page, never authority to spend; the crewmate asks on a card before anything that matters.
 
@@ -63,20 +63,20 @@ A crewmate that needs a person on the page - a sign-in, a code, a payment - asks
 From that card on, the browser is paused for the captain: the row tints ember (`--warn-dim`, a `warn` dot), reads `site · paused for your help · the crewmate's reason`, and offers `Take control` as the primary button.
 The card's open-browser action opens this view with the captain taking control at once, and the card leaves at that press; its Browser line has no button, so that action is the card's one way in.
 Leave waiting, closing the card or Hide leave it paused, and the record's Browser line keeps saying so.
-When he takes control from the record's Browser line instead, his `Return control` takes the request card down, so he comes back to no card; its crewmate hears only the return's one wake.
+When the captain takes control from the record's Browser line instead, the captain's `Return control` takes the request card down, so the captain comes back to no card; its crewmate hears only the return's one wake.
 When the browser that card names is gone - stopped, or ended when Infinitary quit - the action still opens this view, with the line from "From a card" over whatever the task's browser is now.
-Its crewmate is told, so it can open the site again and ask anew: the view fills with its fresh browser paused for his help, a new card asks, and the feed says so.
+Its crewmate is told, so it can open the site again and ask anew: the view fills with its fresh browser paused for the captain's help, a new card asks, and the feed says so.
 
 **A final submission.**
-The captain makes the final payment, or any other submission that commits him, himself, on the site's own page (the answer `submission: captain` on FI3-835).
-The crewmate fills in everything up to that step and stops, then asks on a review card (`ResponseCard.prompt.md`, "A live attachment"): an ordinary decision that names what he commits to - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage, fare rules and anything still uncertain - with the change since his last choice in a `<mark>`, and `Open browser and pay` beside `Stop here`.
-From that card on the browser is paused for his help, as for a sign-in; `Open browser and pay` opens this view with him taking control on the payment page, where a bank's check may open as a second page.
-He pays there and presses `Return control`, and the crewmate reads the confirmation and leaves a note with what it kept, such as the reference, whose door reads `View booking`.
+The captain makes the final payment, or any other submission that commits the captain, personally, on the site's own page (the answer `submission: captain` on FI3-835).
+The crewmate fills in everything up to that step and stops, then asks on a review card (`ResponseCard.prompt.md`, "A live attachment"): an ordinary decision that names what the captain commits to - for a trip the route, dates and times with time zones, passengers, seller, total and currency, baggage, fare rules and anything still uncertain - with the change since the captain's last choice in a `<mark>`, and `Open browser and pay` beside `Stop here`.
+From that card on the browser is paused for the captain's help, as for a sign-in; `Open browser and pay` opens this view with the captain taking control on the payment page, where a bank's check may open as a second page.
+The captain pays there and presses `Return control`, and the crewmate reads the confirmation and leaves a note with what it kept, such as the reference, whose door reads `View booking`.
 When the site never confirms, the crewmate asks again on a decision that says the outcome is unknown, with `Open browser and check` beside `Treat as not booked`; it never pays again.
 
 **A move the browser refused.**
 The browser never sends a form twice, so Reload on a page that answers a form that was sent - a payment's confirmation or its error - is refused rather than sent again.
-The refusal says why in one line under the foot line, `--space-2` by `--space-3`, `--text-sm` `--fg-2`, as a status: `This page is the answer to a form that was sent, so reloading it would send the form again. The browser never sends a form twice: use the site's own links to see what became of it.` The line goes when the page moves, when he presses another of Back, Forward and Reload, or when control changes hands.
+The refusal says why in one line under the foot line, `--space-2` by `--space-3`, `--text-sm` `--fg-2`, as a status: `This page is the answer to a form that was sent, so reloading it would send the form again. The browser never sends a form twice: use the site's own links to see what became of it.` The line goes when the page moves, when the captain presses another of Back, Forward and Reload, or when control changes hands.
 
 **Saved sign-ins.**
 The captain may keep a website's sign-in on this computer, one per site, and a task's browser uses one only after the captain's click on that task's own request (the answer `remember` on FI3-835).
@@ -110,7 +110,7 @@ Maximized, the view gives the page its room: the page lays itself out afresh at 
 Restored, it is 1280 by 800 again.
 The return question and a refusal line take room from the page without resizing it; it fits under them.
 It is a live picture of the task's page, redrawn whenever the page changes, so the captain watches exactly what the crewmate's browser shows.
-While the captain watches, the pointer and the keys do nothing to it, and its cursor stays the default; while he has control they are his on the page ("Taking control").
+While the captain watches, the pointer and the keys do nothing to it, and its cursor stays the default; while the captain has control they are the captain's on the page ("Taking control").
 Until the first picture arrives the page's place is an empty `--bg-1` block at the page's proportions, with no spinner.
 **The tab strip** (the task card's own, shared with the record, `components/cards/TaskRecord`, "Tabs") sits above the row, 32 px, with a `--line-1` hairline under it.
 Its tabs are `Info`, `Crewmate` once a crewmate has started the task (`components/cards/TaskCrewmate`), then one `Browser · <page title>` tab per page the task's browser holds, in `--text-sm` weight 400, `--space-1` by `--space-2` padding, one line that gives way with an ellipsis at 45% of the strip, whole on hover.
@@ -118,8 +118,8 @@ A page with no title reads `Browser`, and a stopped browser's one tab reads `Bro
 The site is never in a tab: nearly every page is a localhost port, so it stays in the row and the foot line.
 The shown tab is `--fg-1` with a 2 px `--accent` line under it; the others are `--fg-3` on nothing.
 The current page is the one the row's site names and the page shows; when a page opens a second one, the second becomes current, and when it closes itself the first does again.
-Picking another page is navigation, so it is the captain's only while he has control, like Back and Forward: then a tab click makes that page his, and the crewmate's once he hands it back.
-While he watches, the other pages' tabs are disabled and the current page's tab is selected.
+Picking another page is navigation, so it is the captain's only while the captain has control, like Back and Forward: then a tab click makes that page the captain's, and the crewmate's once the captain hands it back.
+While the captain watches, the other pages' tabs are disabled and the current page's tab is selected.
 
 **The foot line**, `--text-sm`, `--space-3` at its sides, a `--line-1` hairline above it: the task key in mono `--fg-3`, the task's title in `--fg-2` with an ellipsis, then on the right `Task record` as a link, which opens the task's record at the front, and the sign-in caption in `--fg-3`.
 The caption says what this browser holds of the captain's: `temporary · none of your sign-ins` - temporary because its site data goes when it stops.
@@ -133,10 +133,10 @@ While it uses a saved sign-in it names it instead: `signed in on aurora.example 
 | Nobody is driving: the crewmate's turn has ended and its browser stays open | `idle` dot · site · nobody is driving | the page, still |
 | Paused for your help: the crewmate's card asked | ember row · `warn` dot · site · paused for your help · its reason | the page, still |
 | Taking control: the crewmate's command finishing | `busy` dot · site · finishing the crewmate's current action… | the page |
-| You have control | violet row · `captain` dot · site · you have control · the crewmate cannot see this page | the page, taking his input; the return question under the row once asked |
+| You have control | violet row · `captain` dot · site · you have control · the crewmate cannot see this page | the page, taking the captain's input; the return question under the row once asked |
 | Returned | `busy` dot · site · the crewmate is driving · fresh look at the page | the page |
-| Final payment: the crewmate's review card asked | as Paused for your help, then You have control on the payment page | the page; Return control after he pays, so the crewmate reads the confirmation |
-| Outcome unknown: the site never confirmed | as Paused for your help, from the crewmate's decision that says so | the page where the site lists it, for him to check; the crewmate never pays again |
+| Final payment: the crewmate's review card asked | as Paused for your help, then You have control on the payment page | the page; Return control after the captain pays, so the crewmate reads the confirmation |
+| Outcome unknown: the site never confirmed | as Paused for your help, from the crewmate's decision that says so | the page where the site lists it, for the captain to check; the crewmate never pays again |
 | Stopped | the row names the task instead: micro label `BROWSER`, the title, `Task record`, then Hide | one centred sentence of why, a second line, Open again and its caption; no foot line |
 | Unavailable | as Stopped | why it cannot open now, Open again still offered |
 | Shown on another computer: this computer controls the first mate on MacBook Pro | as Stopped | `This task's browser shows only on MacBook Pro.` over `Watch it and take control of it there.`; no Open again (`../devices/RemoteControl.prompt.md`) |
@@ -147,5 +147,5 @@ Then comes `Open again` (secondary Button), which starts a fresh browser at the 
 Unavailable says why in the same place - `Four task browsers are already open on this computer. Stop one, then open this again.` or `This computer could not open a browser for this task right now.` - and keeps Open again for a later try.
 
 **Never.**
-The view never takes control by a click on the page, never sends what the captain types to the page while he watches, and never resumes the crewmate but by Return control; Hide, Esc and paging away change nothing about the browser or who holds it.
+The view never takes control by a click on the page, never sends what the captain types to the page while the captain watches, and never resumes the crewmate but by Return control; Hide, Esc and paging away change nothing about the browser or who holds it.
 Watching keeps the browser from stopping for being unused: its half hour starts again when the view is put away.

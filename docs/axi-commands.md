@@ -1,6 +1,6 @@
 # Task AXI commands
 
-A crewmate reaches some of its task's tools as commands in its own shell rather than as tools in its model's tool list: its task's browser, as `infinitary-browser-axi`, and the integrations, as `infinitary-integrations-axi` (`docs/integrations.md`) (the captain's approved design on FI3-1429, after his AXI principles and chrome-devtools-axi).
+A crewmate reaches some of its task's tools as commands in its own shell rather than as tools in its model's tool list: its task's browser, as `infinitary-browser-axi`, and the integrations, as `infinitary-integrations-axi` (`docs/integrations.md`) (the captain's approved design on FI3-1429, after the captain's AXI principles and chrome-devtools-axi).
 A command costs a crewmate nothing until it runs one, so the tools it replaces leave every crewmate's standing context.
 Every command answers in its task alone, through the app, and every rule its tool keeps stays with that tool's owner: the browser's with `TaskBrowsers` (`docs/task-browser.md`).
 

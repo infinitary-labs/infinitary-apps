@@ -134,7 +134,7 @@ export class ProjectChanges {
     });
     return {
       cardId,
-      text: `The app's exact-change card is up (${cardId}). Nothing changes until the captain clicks Apply change. Do not write another card or start work that needs the change; you hear how he answered.`,
+      text: `The app's exact-change card is up (${cardId}). Nothing changes until the captain clicks Apply change. Do not write another card or start work that needs the change; you hear how they answered.`,
     };
   }
 

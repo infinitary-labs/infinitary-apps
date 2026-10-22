@@ -55,7 +55,7 @@ export const CLOSE_CARD_TOOL_DESCRIPTION = [
   "Withdraw a card of YOUR OWN that is no longer valid or necessary, without waiting for the captain, by the id emit_card returned.",
   "A note you emitted as this turn's answer is current and must not be withdrawn during this turn.",
   "Close a decision only when the choice no longer applies - you are withdrawing it as obsolete, not answering for the captain.",
-  "Someone else's card is not yours to close - steer its author instead; the captain dismisses a card himself.",
+  "Someone else's card is not yours to close - steer its author instead; the captain dismisses a card themselves.",
 ].join(" ");
 
 const STABLE_CARD_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -319,7 +319,7 @@ function crewActionParam<Effect extends TSchema>(effect: Effect) {
  * tool's own description (`CARD_PARAMS`).
  */
 const REQUIRED_ACTIONS_DESCRIPTION =
-  "Required on a completion merge offer, including [] when none. Display-only obligations: id (stable kebab-case), optional sharedId (explicitly shared outstanding action), target, title (imperative), consequence, instructions (list), criterion, prerequisites (task IDs), completion (manual with label, or device-version with deviceId and minVersion). Merging never performs them. The first mate may declare immediately required actions on a non-merge card.";
+  "Required on a completion merge offer, including [] when none. Display-only obligations: id (stable kebab-case), optional sharedId (explicitly shared outstanding action), target, title (imperative), consequence, instructions (list), criterion, prerequisites (task IDs), completion (manual with label, or device-version with deviceId and minVersion). Merging never performs them. Captain-only parts; post-merge fleet work is a Continue: ... filing. The first mate may declare immediately required actions on a non-merge card.";
 
 const sharedCardParams = {
   required_actions: Type.Optional(
@@ -447,7 +447,7 @@ const crewmateCardParams = Type.Object({
   body_file: Type.Optional(
     Type.String({
       description:
-        "Write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path or relative to that folder). To revise, prefer editing the file in place - only the parts the captain's words changed, the rest word for word - so the app can mark what changed for him; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
+        "Write every card body as a UTF-8 HTML file in your task's card body folder, outside the working copy, then name it here (absolute path or relative to that folder). To revise, prefer editing the file in place - only the parts the captain's words changed, the rest word for word - so the app can mark what changed for them; a full rewrite is fine when the answer itself changed shape, and the opening sentence then says what changed. Then call emit_card again with the same id. Give exactly one of body_file or body; inline body is still accepted. The app reads the file only at this call and runs the usual checks; it does not watch edits.",
     }),
   ),
 });

@@ -889,7 +889,7 @@ export class CardService {
       );
     if (!existing && resolved && this.closedAwaitingAnswer.has(resolved)) {
       throw new Error(
-        `Card refused: the captain closed card "${resolved}" while it waited on your answer to his reply, so that answer does not open it again. Give the answer in your report instead.`,
+        `Card refused: the captain closed card "${resolved}" while it waited on your answer to their reply, so that answer does not open it again. Give the answer in your report instead.`,
       );
     }
     if (existing && resolved) {
@@ -900,7 +900,7 @@ export class CardService {
       if (waiting) {
         if (!answer) {
           throw new Error(
-            `Card refused: the captain's reply under card "${resolved}" waits on your answer, and a revision alone does not give it. Call emit_card again with the same id and the same card plus reply: one to three sentences answering him and saying what changed. The card and its thread are unchanged.`,
+            `Card refused: the captain's reply under card "${resolved}" waits on your answer, and a revision alone does not give it. Call emit_card again with the same id and the same card plus reply: one to three sentences answering them and saying what changed. The card and its thread are unchanged.`,
           );
         }
         if (answer.length > CARD_REPLY_MAX_CHARS) {
@@ -1365,7 +1365,7 @@ export class CardService {
       // its AUTHOR's withdrawal - so words about someone else's card are a
       // steer to that author, and the captain's × is the only dismissal.
       throw new Error(
-        `Card "${id}" is not yours to close: steer task ${card.taskId ?? "it"} to revise it under the same id, or to withdraw it. Only the captain dismisses a card he is looking at.`,
+        `Card "${id}" is not yours to close: steer task ${card.taskId ?? "it"} to revise it under the same id, or to withdraw it. Only the captain dismisses a card they are looking at.`,
       );
     }
     if (actor.kind === "crewmate" && card.taskId !== actor.taskId) {

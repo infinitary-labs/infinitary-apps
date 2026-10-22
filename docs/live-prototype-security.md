@@ -69,7 +69,7 @@ What changed is where a script-bearing body is served, not what the frame may do
 - Words for the message box (FI3-1164).
   A `data-inf-draft` button's press posts the `draft` message: one line of at most 500 characters, from the document the frame shows.
   The window takes it only from the card on screen whose frame holds its focus - the captain's own click or key, which a script cannot give - and only while the message box is not held, then puts the words at the start of the box with the caret after them.
-  It sends nothing: the worst a body can do is put words in front of the captain, who reads them in the box before anything leaves, as with text he pastes.
+  It sends nothing: the worst a body can do is put words in front of the captain, who reads them in the box before anything leaves, as with text the captain pastes.
   No `window.infinitary`, no parent DOM, no storage, no network, no top-level navigation, no popups, no forms.
 
 ## Project fonts in previews (INF-128)
@@ -193,13 +193,13 @@ Its gestures are declared from what it was granted (`framePanelActions`; `docs/u
 - The card actions every panel has (`cards.emit`, `cards.close`, `cards.open`) put up, take down and list that panel's own cards, each drawn by its own card view and changing nothing else; a card's own page also keeps its place (`card.keep`, at most 4,096 bytes on its stack entry, gone at Hide).
 - A panel granted `tasks.board` points (`point.openTask`, `point.openRecord`, `point.peekTask`, `point.showCard`, `point.aim`), only at a task or a waiting card that board lists, or a closed task its own granted `tasks.search` found: it opens a record, brings a card forward, rests the crew summary beside its own page or the row it names in a card's, or aims the captain's next message while its own card is shown.
   It reads nothing more by pointing, and letting go of an aim, which moves nothing, needs no click.
-- A panel the captain agreed may move his tasks - its consent card says so in its own line, and an update that adds it asks again - runs `tasks.run`, one of the task record's six moves through `inf:task:run` and its write-time checks, named on the task's record as coming from that panel.
+- A panel the captain agreed may move the captain's tasks - its consent card says so in its own line, and an update that adds it asks again - runs `tasks.run`, one of the task record's six moves through `inf:task:run` and its write-time checks, named on the task's record as coming from that panel.
   Merge and discard are never moves.
 - Its own page speaks to its rail (`rail.summarize`, `rail.show`): words in its own collapsed header, and whether it shows at all when its presence is its code's.
 
-A card it puts up comes to the front, and opening, bringing forward, aiming and moving count, only while its frame holds the window's focus, which only the captain's click or key gives it (`whenFrameHoldsFocus`); otherwise a card waits behind the one he is reading and the rest does nothing, so a script can neither take the stage from him, aim his words, nor move his work.
+A card it puts up comes to the front, and opening, bringing forward, aiming and moving count, only while its frame holds the window's focus, which only the captain's click or key gives it (`whenFrameHoldsFocus`); otherwise a card waits behind the one the captain is reading and the rest does nothing, so a script can neither take the stage from the captain, aim the captain's words, nor move the captain's work.
 Any other action id is refused (`action_not_declared`).
-Its view state is the count of presses of its own header buttons, with how the latest came, and of F6's focus asks (`asks`), the task ids of the records he has open and the shown entry's task when it reads the board (`view`), whether it is collapsed, and, in a card's frame, that card's data, revision and kept place.
+Its view state is the count of presses of its own header buttons, with how the latest came, and of F6's focus asks (`asks`), the task ids of the records the captain has open and the shown entry's task when it reads the board (`view`), whether it is collapsed, and, in a card's frame, that card's data, revision and kept place.
 The bridge keeps the first of these pushes, `inf.birthState`, so the page counts presses from its birth; it reads nothing the page was not already pushed, and `FRAME_BRIDGE_SHA256` moved with it.
 `inf.fetch` is refused (`capability_not_granted`; `net` is refused at install anyway), and it has no server code (a tree holding `server.ts` is refused at install and at every scan).
 No `window.infinitary`, no parent DOM, no storage, no network, no top-level navigation, no popups, no forms, no `eval`.
@@ -229,7 +229,7 @@ The pins protect the lib's integrity, not its correctness.
 - Focus: every frame also carries `allow="focus-without-user-activation 'none'"` (`FRAME_ALLOW`), which Chromium honours because the main process turns on `BlockingFocusWithoutUserActivation` (`docs/ui-plugins.md`, "Focus and the frames").
   A script cannot take focus from the main message, so the captain's typing cannot be pulled into a frame.
   Chromium lets a frame's script take focus for about five seconds after the captain's own click or key inside it, so the shell spends the page's user activation, which spends every frame's, each time focus comes back to the window's own page, while a frame holds focus each time the pointer moves over the page's own content, and each time it sees focus move from one frame to another (`guardFrameActivation`); `tests/e2e/frame-focus.spec.ts` proves it for the main message and for a panel's field.
-  Where the pointer never crossed the page (frames that touch, a pointer already resting on the frame clicked into, Tab from one frame straight into the next), a script may still take focus back in the task right after its frame lost it; the shell then gives focus back to the frame the captain moved to, unless a click or key of his holds the page again by then.
+  Where the pointer never crossed the page (frames that touch, a pointer already resting on the frame clicked into, Tab from one frame straight into the next), a script may still take focus back in the task right after its frame lost it; the shell then gives focus back to the frame the captain moved to, unless a click or key of the captain's holds the page again by then.
   Residual: on that path, a script that keeps its frame's thread busy until the captain has clicked or typed again, and only then takes focus back, keeps it.
 - Frame CSP: `default-src 'none'; style-src 'unsafe-inline'; font-src app-frame:; img-src data: app-frame:; script-src '<bridge hash>'` plus, for a mount that runs scripts, that mount's own script hashes; a card body on the srcdoc vehicle has `font-src app-frame://fonts` instead.
   The bridge hash permits exactly the injected bridge (v2: actions, reads, fetch, theme, resize, links, drafts, pictures, demos, task keys, watchdog pong, focus notices).

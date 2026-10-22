@@ -7592,7 +7592,7 @@ export class CrewSupervisor {
     return ended
       ? {
           ok: true,
-          text: `Withdrew the captain's kept merge approval on ${handle}. Its work stays; only his new merge click merges it.`,
+          text: `Withdrew the captain's kept merge approval on ${handle}. Its work stays; only their new merge click merges it.`,
         }
       : { ok: false, text: `${handle} has no kept merge approval to withdraw.` };
   }
@@ -7623,7 +7623,7 @@ export class CrewSupervisor {
     if (input.until === "version" && !head)
       return {
         ok: false,
-        text: `${handle} has no version yet, so an override for this version has nothing to cover. Declare until task if his words mean the whole task.`,
+        text: `${handle} has no version yet, so an override for this version has nothing to cover. Declare until task if their words mean the whole task.`,
       };
     const override: HoldOverride = {
       words: input.words,
@@ -7651,7 +7651,7 @@ export class CrewSupervisor {
     });
     return {
       ok: true,
-      text: `Recorded the captain's override on ${handle}: his words pass ${holdNames(holds)} ${overrideSpan(override)}. Every soft hold named reads it, his merge click included; go on as his words asked. override with empty holds takes it back.`,
+      text: `Recorded the captain's override on ${handle}: their words pass ${holdNames(holds)} ${overrideSpan(override)}. Every soft hold named reads it, their merge click included; go on as their words asked. override with empty holds takes it back.`,
     };
   }
 
@@ -8057,7 +8057,7 @@ export class CrewSupervisor {
       (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
     ) {
       throw new Error(
-        "Card refused: this task's deliverable is an answer, not a change - it commits nothing, pushes nothing, and opens no pull request, so there is nothing to merge or discard. Show the answer on this card without a settle action; the captain's choice on it, or your finished report after he closes it, is what closes the task.",
+        "Card refused: this task's deliverable is an answer, not a change - it commits nothing, pushes nothing, and opens no pull request, so there is nothing to merge or discard. Show the answer on this card without a settle action; the captain's choice on it, or your finished report after they close it, is what closes the task.",
       );
     }
     // A reviewed task's completion card waits on its review (delivery
@@ -8486,7 +8486,7 @@ export class CrewSupervisor {
   ): LiveAttachment {
     if (handoff) {
       throw new Error(
-        "Card refused: browser_page opens a page for the captain to use, and browser_handoff asks for his help in the browser as it is: give one, on a card of its own.",
+        "Card refused: browser_page opens a page for the captain to use, and browser_handoff asks for their help in the browser as it is: give one, on a card of its own.",
       );
     }
     const words = (given ?? "").replace(/\s+/g, " ").trim();
@@ -10338,12 +10338,12 @@ export class CrewSupervisor {
     const receipt = ["Reported."];
     if (declaration?.wait) {
       receipt.push(
-        "Your task now waits on the captain: nothing nudges you, and you hear when he acts or you are steered.",
+        "Your task now waits on the captain: nothing nudges you, and you hear when they act or you are steered.",
       );
       // He answers what is on his screen; with nothing there the Firstmate asks (INF-11).
       if (!declaration.wait.cardId && this.openCardsFor(task.id).length === 0) {
         receipt.push(
-          "No card of yours is up, so the first mate is woken to ask him unless one is up when this turn ends.",
+          "No card of yours is up, so the first mate is woken to ask them unless one is up when this turn ends.",
         );
       }
     }
@@ -10359,7 +10359,7 @@ export class CrewSupervisor {
     ) {
       // Finished means the captain closed its card; the first mate hears it then (INF-731).
       receipt.push(
-        "A card of yours is still on the captain's screen, so finished does not wake the first mate while it is up: his close comes back to you as a turn, and finished in that turn's report has the first mate close your task.",
+        "A card of yours is still on the captain's screen, so finished does not wake the first mate while it is up: their close comes back to you as a turn, and finished in that turn's report has the first mate close your task.",
       );
     } else if (declaration?.finished) {
       receipt.push("The first mate hears it when this turn ends and closes your task.");

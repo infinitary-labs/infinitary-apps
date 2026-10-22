@@ -54,7 +54,7 @@ It is called from Step 2's `seedPersonalWorkspace`, so a heal rides the same com
 | Skill | What it teaches |
 |---|---|
 | `personal-panel` | The one copy of a panel's shape, imports, store, actions, cards and presence, plus what a panel is (its title is host chrome), the library, tokens only and why, one accent per panel, sentence case, mono for data, no emoji, the shapes that stay calm, where a panel's data comes from, the checks before every report (lint, place, capture), what is refused, fixing forward |
-| `github-prs` | the app's own `forge.changes` read (the captain's open proposed changes, read with his in-app sign-in), the checks as one status dot, the honest empty and not-signed-in states |
+| `github-prs` | the app's own `forge.changes` read (the captain's open proposed changes, read with the captain's in-app sign-in), the checks as one status dot, the honest empty and not-signed-in states |
 | `quota` | `QuotaMicroMeter` and the honesty rules (unknown is never zero, stale says its age, only a proven sign-out says "sign in again", a no-window read renders what happened) |
 | `tasks-and-feed` | The row tones and the feed line, and not rebuilding the panels the app already ships |
 | `usage` | The crew's tokens through the read-only `sql` view `v_usage_v1`, and the honesty rules a number must keep; its fixture is `token-watch` |
@@ -71,7 +71,7 @@ A rule written in both would drift in one.
 ### The app's own data: the reads a panel declares
 
 The plan has a personal panel read the app's own data (the task board, the feed, quota) through the read catalog (captain decision Q3).
-Step 4 serves it: `manifest.json` `reads` names any of `quota.snapshot`, `tasks.board`, `feed.recent` and - since git integration PR 1.2 - `forge.changes`, the captain's open proposed changes read with his in-app sign-in (`PANEL_READ_NAMES`, `src/shared/personal/manifest.ts`), the core carries the declaration on the snapshot, and `PersonalPanelBody` hands the panel a `reads` prop (`bindReads`) whose `subscribe` rides the same read executor the built-in frames use - coalesced, pushed on change - for exactly the declared names: an undeclared name, or a catalog entry the panel contract does not list, throws, so the declaration is the grant and nothing else in the catalog (Observe, repos, cards) reaches a panel.
+Step 4 serves it: `manifest.json` `reads` names any of `quota.snapshot`, `tasks.board`, `feed.recent` and - since git integration PR 1.2 - `forge.changes`, the captain's open proposed changes read with the captain's in-app sign-in (`PANEL_READ_NAMES`, `src/shared/personal/manifest.ts`), the core carries the declaration on the snapshot, and `PersonalPanelBody` hands the panel a `reads` prop (`bindReads`) whose `subscribe` rides the same read executor the built-in frames use - coalesced, pushed on change - for exactly the declared names: an undeclared name, or a catalog entry the panel contract does not list, throws, so the declaration is the grant and nothing else in the catalog (Observe, repos, cards) reaches a panel.
 In every build `reads` may name `knowledge.collections`, `knowledge.graph`, `knowledge.concepts`, `knowledge.findings`, `knowledge.entry`, `knowledge.directions` and `knowledge.direction` (`docs/knowledge.md`, "The browser"), which take arguments as `tasks.detail` does.
 The value types a panel sees are the structural `PanelQuotaSnapshot`, `PanelTaskBoard` and `PanelFeedLine` in `src/shared/personal/contracts.ts` (so `infinitary-env.d.ts` stays self-contained), and `contracts.test.ts` pins that the wire schemas are assignable to them.
 The `quota` and `tasks-and-feed` skills teach the read beside the instrument and the honesty rules; their fixtures (`quota-glance`, `crew-reports`) are written on it, and the e2e feeds the quota one through the fixture seam (`INFINITARY_QUOTA_FIXTURE_DIR`).
@@ -93,7 +93,7 @@ The values are physical-system facts rather than process limits or scheduling ca
 
 `tasks.detail` (FI3-1014 piece 4) reads one task in full by the id the board gave it, `reads.subscribe("tasks.detail", { id }, listener)`: its row, brief, latest report, and while Drop task applies the `dropEffects` a drop sends back as its review.
 `tasks.search` (piece 7) is the app's own search over every task, closed ones included, `reads.subscribe("tasks.search", { query }, listener)`: the rows it found, so a panel's Find reaches done and dropped work the board no longer lists, and the panel may open and point at what it found.
-A live work row also says which of the six moves it allows now and why not (`PanelTaskRow.moves`), and whether its waiting card merges (`waitingCardMerges`); a panel that asked for `moves` makes one with `tasks.run` on the captain's click or key, and a panel that reads the board points at tasks with `point` and sees what he has open in `view` (`docs/ui-plugins.md`, "A panel's cards").
+A live work row also says which of the six moves it allows now and why not (`PanelTaskRow.moves`), and whether its waiting card merges (`waitingCardMerges`); a panel that asked for `moves` makes one with `tasks.run` on the captain's click or key, and a panel that reads the board points at tasks with `point` and sees what the captain has open in `view` (`docs/ui-plugins.md`, "A panel's cards").
 A row another computer runs says where (`PanelTaskRow.place`): that computer by name, where after its project ("on Mac mini"), and `outOfReach` while open or underway work's computer is out of reach (`docs/helper.md`, "Runs on").
 `connecting` comes with `outOfReach` while that computer's connection is being made, and a panel reads it first.
 
@@ -156,8 +156,8 @@ That read of what changed runs while the host commits the turn, so it never take
 Only a live crewmate holds `lint_panel`, `place_panel` and `capture_panel` (`src/core/pi/panelTools.ts`, entries of the crewmate tool spec both runtimes generate from; `CrewmateSpec.onLintPanel` / `onPlacePanel` / `onCapturePanel`, absent on every other workspace): the lint runs the real `pluginLint` over the extension's files and adds the compiler's verdict on the files as they are now; the place puts the working files on the captain's rail ("Placed on the rail", below); the capture asks the host (`HostCapabilities.capture`, Electron's `capturePage` of a hidden copy of the panel with that copy's token theme set, `stayHidden` so the copy never appears) for both themes - the draft while there is one, else the docked panel, and it says which - writes the PNGs under `crewmates/<taskId>/captures/`, and returns them as image content beside the paths.
 
 **Built apart.**
-The build runs apart from the captain's rails, and his panel takes the new version only when the build is ready (the captain, 2026-10-07: "it should work in isolation and flip it into my live panel only when it's ready").
-Ready is the crewmate's word: `place_panel` puts its version on his rail to be looked at there before the report ("Placed on the rail"), and the report's commit is the build's unit, so a turn's report keeps the new version whether or not the task then closes.
+The build runs apart from the captain's rails, and the captain's panel takes the new version only when the build is ready (the captain, 2026-10-07: "it should work in isolation and flip it into my live panel only when it's ready").
+Ready is the crewmate's word: `place_panel` puts its version on the captain's rail to be looked at there before the report ("Placed on the rail"), and the report's commit is the build's unit, so a turn's report keeps the new version whether or not the task then closes.
 While a crewmate is building an extension, the snapshot's `extensions` carry it as its last commit holds it - compiled from a copy of that commit under `userData/cache/personal/.committed/<id>/<tree>/` (`committedTrees`, `writeCommittedTree`), which compiles to the same version as the same files in place, so the rail's panel, its server module and its store do not move as files are saved.
 While any crewmate's session on the workspace is live, the rails take every panel from the last commit, or from the tree a crewmate placed, so a save landing mid-scan can never reach them; a new extension is on no rail until it is placed or committed.
 The working files ride the snapshot's `drafts`, each compiled and run apart: its own store slice (a copy of the panel's, taken as the build starts, so what the build writes never reaches the rails) and its own `server.ts` on that slice.
@@ -177,14 +177,14 @@ For the rest of the session the rails take that tree in place of the last commit
 The window answers for every panel it knows (`startPanelMounts`, `src/renderer/src/plugins/panelMounts.ts`), read from the records the rails draw from: the registered panels, the captain's layout, the panel's own `rail.show`, a refusal at registration (`railRefusals`: a real registration error, such as a panel of the captain's named after one of the app's whose id the app's panel already holds, kept with its words), each body's own word (`panelBodies`: imported and drawn, or stopped with the error's first line), and what each rail's room ladder did as the rail last measured it (`railFolds`, which `Rail.tsx` draws from too; `docs/ui-plugins.md`, "When a rail runs out of room").
 Its states are `drawn`, `collapsed`, `folded`, `gathered`, `loading`, `stopped`, `off`, `hidden` and `refused`, each with its version, its rail and the reason (`src/shared/personal/mounts.ts`).
 `folded` is a panel the rail folded to its header because it is too short for its body, and `gathered` one it gathered into its More row because it is too short even for its header; a gathered panel reads gathered whatever its collapse choice, since nothing of it is on the rail.
-Each panel is named by its kind - the app's own, the captain's own, or one he added - as well as its id, since a refused panel of the captain's and the app's panel holding its id share the id, and every reader matches both (`mountOf`).
+Each panel is named by its kind - the app's own, the captain's own, or one the captain added - as well as its id, since a refused panel of the captain's and the app's panel holding its id share the id, and every reader matches both (`mountOf`).
 The window sends the answer on `inf:plugins:personal:mounts` whenever it changes, and the core keeps the newest (`PanelMountsHolder`, `src/core/personal/panelMounts.ts`).
 `place_panel` waits for the window's word on the version it placed, one that is no longer loading, for at most `PLACE_WAIT_MS` (10 s, the window's time to import and draw a module, a physical limit), and answers with it, or with the window's last word and the fact that it did not answer.
 `capture_panel` then photographs the docked panel, and when it is not on screen it says why in the same words; a refused panel is never photographed, since what the rail holds under its id is another panel, and a gathered one has nothing on screen to photograph.
 The supervisor puts each place's answer on the task's timeline, never the feed.
-What the crewmate does with an answer is its judgment, written in the `personal-panel` skill: a reason in its own files it fixes and places again, renaming a folder whose id another panel holds; a reason outside them (the captain's layout, his panels switched off) it reports in plain words with `waiting_on_captain`, which keeps the task open ("Report, commit, close"), and it never moves or hides his other panels; a panel folded for room or gathered into More is built and on his rail, so it reports where the panel sits and never collapses, moves or hides another panel to make room.
+What the crewmate does with an answer is its judgment, written in the `personal-panel` skill: a reason in its own files it fixes and places again, renaming a folder whose id another panel holds; a reason outside them (the captain's layout, the captain's panels switched off) it reports in plain words with `waiting_on_captain`, which keeps the task open ("Report, commit, close"), and it never moves or hides the captain's other panels; a panel folded for room or gathered into More is built and on the captain's rail, so it reports where the panel sits and never collapses, moves or hides another panel to make room.
 The host holds no close of its own.
-The captain can see a placed version on his rail, with the running dot, before the report: that is the cost of checking it where he sees it.
+The captain can see a placed version on the captain's rail, with the running dot, before the report: that is the cost of checking it where the captain sees it.
 The first mate's "your surfaces" read the same answer ("Fix forward, remove").
 `personalExtensions.test.ts` ("places a build on the rail") pins the place, the wait, a refusal's words in the place and the capture, and the take-back at the task's end; `src/renderer/src/plugins/panelMounts.test.ts` pins the window's answer over the real host and reconciler; `tests/e2e/personal-panels.spec.ts` records the placed panel on the rail before the report and the window's word reaching the crewmate.
 
@@ -256,7 +256,7 @@ What differs is where it runs and what it is served, and that is the host's call
 
 **The manifest** is the same file with two more things a panel for others must carry: `name` (the maker, shown as the panel's attribution) and `version` (semver; an update is a new version).
 Its card views (`cards/<view>.tsx`) are checked and pinned with its panel when it is added, and a card, button or command its manifest names that the folder does not have refuses the whole folder.
-The capability keys are the grant it asks for and the consent card words: `reads` (the app's own reads, `PANEL_READ_NAMES`), `sql` (published views, by their exact versioned names: `v_usage_v1`), `storage` (a byte cap under the store's own), and `moves` (it queues, starts and drops the captain's tasks on his click or key, in a line of its own on the card).
+The capability keys are the grant it asks for and the consent card words: `reads` (the app's own reads, `PANEL_READ_NAMES`), `sql` (published views, by their exact versioned names: `v_usage_v1`), `storage` (a byte cap under the store's own), and `moves` (it queues, starts and drops the captain's tasks on the captain's click or key, in a line of its own on the card).
 `net` and `secrets` are refused by this version of the app for every panel.
 There is no `server.ts`: a tree holding one is refused.
 
@@ -266,25 +266,25 @@ In the frame realm: a sandboxed frame at a host of its own, loading the app's ow
 | `PanelProps` | In the captain's workspace | Added from elsewhere |
 |---|---|---|
 | `reads.subscribe(name, cb)` | the reads its manifest lists | the reads the captain agreed to |
-| `reads.subscribe("sql", query, cb)` | its manifest's views | the views he agreed to |
+| `reads.subscribe("sql", query, cb)` | its manifest's views | the views the captain agreed to |
 | `store` | its slice | its slice, bound by the host - a panel names keys, never whose slice |
 | `invoke` | its `server.ts` actions | rejects: no server code runs |
 | `theme` | the shell's theme | the same, pushed over the bridge |
-| `cards` | its cards on the stack (`docs/ui-plugins.md`, "A panel's cards"), at the front while the window holds the captain's click or key | the same, through the card actions, at the front only while its frame holds his focus |
+| `cards` | its cards on the stack (`docs/ui-plugins.md`, "A panel's cards"), at the front while the window holds the captain's click or key | the same, through the card actions, at the front only while its frame holds the captain's focus |
 | `asks` | its header buttons' presses, with how each came (`click` or `key`), and F6 into it (`onFocus`) | the same, counted in its view state |
 | `card` (a card view) | the card it draws, its data as last put up, how many times it was put up (`revision`), and the place it kept (`kept`, `keep`) | the same, its data, revision and kept place pushed as view state |
-| `point`, `view` | pointing at tasks and the stack's open tasks, with `tasks.board`; `point.draft`, starting his next message, whatever it reads | the same, through the actions declared for it, at work only while its frame holds his focus |
-| `tasks` | its moves, when its manifest asks | the moves he agreed to, the same way |
+| `point`, `view` | pointing at tasks and the stack's open tasks, with `tasks.board`; `point.draft`, starting the captain's next message, whatever it reads | the same, through the actions declared for it, at work only while its frame holds the captain's focus |
+| `tasks` | its moves, when its manifest asks | the moves the captain agreed to, the same way |
 | `rail` (the panel itself) | whether it is collapsed, what it says it holds, and with `presence` `{ "code": true }` whether it shows and, off its rail, why | the same, its page running while collapsed or off its rail |
 
 Nothing else is reachable, and the frame proves it rather than asks for it: no network (fetch, beacons, sockets, images or frames from a host), no `window.infinitary`, no parent page, no storage, no top-level navigation or popups, no `eval` or `new Function`, no module that is not its own or the lib's (`docs/live-prototype-security.md`, "The frame realm").
 A panel that wedges its event loop is torn down to a quiet line with a Retry; one that throws shows "This panel stopped drawing."
 
 **Shipping it.**
-The captain adds it by talking ("add the panel from ...") from an npm package (packed with its scripts never run), a git repository (hooks off, pinned to the commit) or a folder on his Mac; links are refused.
-The app checks it exactly as it checks its own - the manifest, the import allowlist, the tidy-up's refusals, a compile - and then asks him once, on its own card, in the words of what the panel can read.
-Nothing is added before his click.
-An update asks again only when what it can read or do changes - moves included; he takes it back with "remove my panel ...", and the one switch in Settings takes every panel back at once.
+The captain adds it by talking ("add the panel from ...") from an npm package (packed with its scripts never run), a git repository (hooks off, pinned to the commit) or a folder on the captain's Mac; links are refused.
+The app checks it exactly as it checks its own - the manifest, the import allowlist, the tidy-up's refusals, a compile - and then asks the captain once, on its own card, in the words of what the panel can read.
+Nothing is added before the captain's click.
+An update asks again only when what it can read or do changes - moves included; the captain takes it back with "remove my panel ...", and the one switch in Settings takes every panel back at once.
 
 **Writing and trying one.**
 Write it in the personal workspace first - the build loop, `lint_panel` and `capture_panel` all work there, in the app's window - then add the folder from elsewhere to see it contained: the same files, the same pixels, served only what the captain agrees to.

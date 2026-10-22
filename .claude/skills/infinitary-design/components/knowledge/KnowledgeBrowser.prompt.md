@@ -141,8 +141,8 @@ One inspector for all tabs, showing the one selected thing; with nothing selecte
 - **Used in**: the declared uses, each with the task, the revision it used and its purpose; "Declared use, not proof the reasoning was right."
   None reads "No work has declared it used this yet."
 - Show on graph, under a finding or a concept, selects it on the Graph tab.
-- **Ask about this**, a small quiet button under every section of every selection, over a `--line-1` hairline: it starts the captain's next message with one editable line about exactly what is shown - `What should I know about the finding “…” (f-ejtt2f, revision 1)? `, its words quoted short, its id and revision so the first mate reads that very record - and puts the keyboard there with the caret after it, keeping anything he had typed after it.
-  It sends nothing, files nothing and writes nothing: only his own send asks the first mate, and the live line says the question is ready.
+- **Ask about this**, a small quiet button under every section of every selection, over a `--line-1` hairline: it starts the captain's next message with one editable line about exactly what is shown - `What should I know about the finding “…” (f-ejtt2f, revision 1)? `, its words quoted short, its id and revision so the first mate reads that very record - and puts the keyboard there with the caret after it, keeping anything the captain had typed after it.
+  It sends nothing, files nothing and writes nothing: only the captain's own send asks the first mate, and the live line says the question is ready.
 
 
 ## Empty and unavailable

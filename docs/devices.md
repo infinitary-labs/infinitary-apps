@@ -191,7 +191,7 @@ The bundle is the installed app this runs from (`appBundleOf`): a Mac's `.app`, 
 
 ## Adding a computer by its address
 
-The captain may add a Mac, or a Linux computer with an x64 chip, by the address he reaches it at with SSH, such as `sam@mini.local` (design skill `components/devices/AddAMac`, "By its address").
+The captain may add a Mac, or a Linux computer with an x64 chip, by the address the captain reaches it at with SSH, such as `sam@mini.local` (design skill `components/devices/AddAMac`, "By its address").
 A Mac home or a Linux home then sets it up over SSH - a Mac's Remote Login, a Linux computer's SSH server - with the captain's own SSH key, and nothing needs to be open on it.
 The look there asks the other computer's system first, and that system's adapter sets it up (`FarSystem`, `src/core/devices/farSystems.ts`): a Mac exactly as before, and a Linux computer the same steps in its own folders.
 Its work may be in either spelling's data folder of the Infinitary rename, so the look reads the grant, and the removal and the controller start the copy kept there, from the first folder that holds one, Infinitary's first, and never from a folder that moved (`farFolderArgs`; `docs/helper.md`, "Under the other name").
@@ -199,7 +199,7 @@ When that computer does not let the captain's key in, Infinitary asks once for t
 An Ubuntu 24.04 or 26.04 computer is set up from Infinitary's Ubuntu package instead of the AppImage (below, "The Ubuntu package").
 It is the captain's own click: Settings -> Devices' "By its address", or Add it on the first mate's card (below, "Asking the first mate"), which asks `inf:devices:add` with the address (`RemoteLogin`, `src/core/devices/remoteLogin.ts`).
 The address is the one thing the captain supplies: one address, never an option, with no space and never a leading dash (`remoteLoginAddressSchema`, `src/shared/remoteLogin.ts`).
-An alias from his own SSH settings works, because his own SSH resolves it.
+An alias from the captain's own SSH settings works, because the captain's own SSH resolves it.
 
 ### Macs nearby
 
@@ -554,7 +554,7 @@ Closing the window does not end it; quitting does, and sleep pauses it.
    Its session runs the copy of Infinitary kept there - a Mac's bundle, or a Linux computer's AppImage, by what `uname -s` answers there (`CONNECT`, `src/core/devices/farSystems.ts`) - as `work connect --from-home --home <pin> --device <id>` (`docs/helper.md`, "Through the home's SSH"), which checks its folder runs work for this home as that computer, makes a fresh private socket folder and says the socket's path.
 3. **The forward.**
    `ClearAllForwardings` clears a forward on the command line too, so this Mac adds the one it needs afterwards, over the control socket alone: `ssh -F /dev/null -S <control> -O forward -R <socket>:127.0.0.1:<port>`, to wherever the paired connection listens now.
-   No setting of the captain's adds anything to it, and a forward his settings ask for stays closed.
+   No setting of the captain's adds anything to it, and a forward the captain's settings ask for stays closed.
 4. **The route.**
    Told the forward is in place, the controller checks this Mac answers through it with its own key, publishes the route the work there dials (`HomeRoute`), and says whether that work runs: `running`, `at-login` while nobody is logged in there as its user, or `failed`.
    Every 15 seconds this Mac sends a beat, which renews the route's 75-second lease.
@@ -940,7 +940,7 @@ The tab after Usage, built to the agreed design in the design skill's `component
 
 ## Asking the first mate
 
-Asked to add a Mac without being told which way, the first mate never picks one for the captain: the `device-invite` line tells it to ask him first on one decision card of its own, with every way as an option - a link, a command, the Mac's address, or another user on this Mac - and the address recommended, with a field for it, when he can name it.
+Asked to add a Mac without being told which way, the first mate never picks one for the captain: the `device-invite` line tells it to ask the captain first on one decision card of its own, with every way as an option - a link, a command, the Mac's address, or another user on this Mac - and the address recommended, with a field for it, when the captain can name it.
 Asked to connect a Mac, or to remove one, the first mate calls `app_change`, and the host files one card for the captain from typed facts, never the first mate's words (`HandoverOffer`, `src/shared/actions.ts`):
 
 | Asked | The card | Its button |
@@ -1004,7 +1004,7 @@ A link that expires with nothing paired stops the listener.
 | Something answers at an address in the other Mac's place | The captain's own SSH checks it is the Mac it reached before, in batch mode it trusts no Mac it never reached, and the app never loosens either, so it refuses before anything is sent. A link also checks the home's key from the other side before it is used. |
 | The link on its way to a Mac added by its address | It rides the captain's own SSH and reaches the work mode on its input, never in an argument that Mac's other users could read; it works once, for ten minutes, and is used within seconds or closed. |
 | An address made to read as something else | It is one address: no space, no leading dash, and it follows `--`, so it cannot be an option to SSH or a word to a shell. The remote command is a fixed script with every value its own quoted word. |
-| The captain's SSH key | It never leaves his agent or his key file: the app reads neither, forwards neither, types no passphrase and stores no password. |
+| The captain's SSH key | It never leaves the captain's agent or the captain's key file: the app reads neither, forwards neither, types no passphrase and stores no password. |
 | The password typed once to let Infinitary's own key in | It goes only to the Mac whose check line the captain said yes to, checked by SSH before it signs in, on a run that asks nothing else. It is never an argument, in the environment or in a file: it passes from Infinitary to its askpass on SSH's own input, only when that askpass asks with a word only that run knows, and its bytes are zeroed after. No feed line, log, saved file or task record holds it. |
 | Infinitary's own SSH key | Its private half stays in its own 0700 folder, 0600, is never added to an agent and never leaves this Mac; only its public half is placed there. |
 | A Mac added by its address claims to run this first mate's work already | The look only reads a pin and an id, both public, and decides what the feed says and whether a Mac in reach is left alone. Finding this Mac again still needs the key on the list, shown in the handshake; any other key is told `removed` and joins anew with the captain's one-use link, as Add it would have. |

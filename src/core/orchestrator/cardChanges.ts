@@ -83,6 +83,7 @@ export function revisionNotice(changes: (CardChanges & { preview: boolean }) | u
   const parts = (count: number) => `${count} ${count === 1 ? "part" : "parts"}`;
   const counts = `Compared with the version the captain last saw, the app found ${parts(changes.added)} new and ${changes.removed} removed.`;
   if (changes.preview) return ` ${counts}`;
-  if (!changes.rewritten) return ` ${counts} He will see a change bar beside each new part.`;
-  return ` ${counts} More than half is new, so he will see "Rewritten" with no change bars. That is fine when the answer itself changed shape. If you meant to change only a few parts, you can still edit those in place and call emit_card again before you close out.`;
+  if (!changes.rewritten)
+    return ` ${counts} The captain will see a change bar beside each new part.`;
+  return ` ${counts} More than half is new, so they will see "Rewritten" with no change bars. That is fine when the answer itself changed shape. If you meant to change only a few parts, you can still edit those in place and call emit_card again before you close out.`;
 }

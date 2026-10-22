@@ -1,8 +1,8 @@
 # Knowledge
 
-What the captain keeps so later work can reuse it: personal context, and references he asks to save.
+What the captain keeps so later work can reuse it: personal context, and references the captain asks to save.
 Concepts name and connect ideas, and findings say something about them with the evidence behind them.
-It is the captain's approved design from FI3-1110 ("can you properly design the verified findings thing? i feel we need a new primitive that models knowledge"), built by FI3-1141, with the user-owned boundary he saved on FI3-1338.
+It is the captain's approved design from FI3-1110 ("can you properly design the verified findings thing? i feel we need a new primitive that models knowledge"), built by FI3-1141, with the user-owned boundary the captain saved on FI3-1338.
 Tasks own work, instructions and approvals own authority, and knowledge owns reusable claims: a finding is evidence to weigh, never an instruction or a permission.
 How a project works stays in its code, documents and tests.
 What an investigation measured, found or decided stays on the task record.
@@ -42,8 +42,8 @@ Two kinds of entry live in the captain's collection.
 The host stamps the factual category from `lane` on publication: crewmates default to reference, and use personal only for context grounded in the captain's words.
 The first mate publishes personal context only; revision preserves the existing category.
 The category describes data, not who can read or write it.
-Personal context is what the captain states about himself, including where it applies.
-A saved reference is a source he asked to keep: its link, title, author and publication date when the page gives them, the date it was retrieved, and a short excerpt.
+Personal context is what the captain states about themselves, including where it applies.
+A saved reference is a source the captain asked to keep: its link, title, author and publication date when the page gives them, the date it was retrieved, and a short excerpt.
 The page itself is not archived.
 An entry may name the projects it applies to; with none, it applies generally.
 There is no historical actor or historical project collection in browser or tool reads.
@@ -113,7 +113,7 @@ Two tools serve the first mate and every crewmate on both runtimes from one decl
 - `record_knowledge` writes: `publish`, `revise`, `assess`, `relate`, `retire`, `retire_many` and `use`, which declares that work relied on an entry's current revision and keeps what its sources read like then.
   The first mate writes personal context on the captain's words and keeps standing directions on its own judgment.
   Every crewmate may record requested factual knowledge without a separate grant.
-  Removing an entry waits for the captain, and the first mate retires it on his word.
+  Removing an entry waits for the captain, and the first mate retires it on the captain's word.
   `text` is a concept's explanation, a finding's statement or a direction's wording, and a read-together link is `relate` with `related` and a reason.
 
 The `knowledge` description also says that a card cites each finding it relies on by writing its id, which the app links (below, "References in an answer").
@@ -140,10 +140,10 @@ A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/ipc.ts`
 
 ### Directions are the first mate's to keep
 
-The first mate adds, revises and retires the captain's standing directions on its own judgment of what he wants, whatever began the turn: his words, his choice on a card, a confirmation click and a message he sends while it works all count, and nothing checks which one it was (INF-638, the captain: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?").
+The first mate adds, revises and retires the captain's standing directions on its own judgment of what the captain wants, whatever began the turn: the captain's words, the captain's choice on a card, a confirmation click and a message the captain sends while it works all count, and nothing checks which one it was (INF-638, the captain: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?").
 It does so through the app action catalog, as it changes any setting: `app_change` with the `direction` line, whose `judgment` tier lets it act at any wake and keeps its evidence as the change's reason (`docs/orchestrator-contract.md`, "App action catalog").
 The line's channel, `inf:knowledge:direction:set`, runs `KnowledgeService.changeDirection` through the dispatcher, the same path a captain's own control takes, so each change leaves one feed line and one operation; Knowledge has no such control yet.
-Every direction it writes is stamped `captain-turn`, his instruction, and its history keeps the reason the first mate gave.
+Every direction it writes is stamped `captain-turn`, the captain's instruction, and its history keeps the reason the first mate gave.
 `record_knowledge` refuses a direction, pointing the first mate at `app_change`.
 A crewmate never writes a direction; it reports the captain's words or choice with `needs_firstmate`.
 
@@ -294,9 +294,9 @@ The record reads `knowledge.uses` only where the window has the Knowledge browse
 
 ### Ask about this
 
-Ask about this, under every section of the inspector, starts the captain's next message with one editable question about exactly what is shown - its words quoted short, and its id and revision (`askWords`, `src/panels/knowledge/words.ts`), so the first mate reads that record with `knowledge` `get` - and puts the keyboard in the message field with the caret after it, keeping what he had typed after it.
+Ask about this, under every section of the inspector, starts the captain's next message with one editable question about exactly what is shown - its words quoted short, and its id and revision (`askWords`, `src/panels/knowledge/words.ts`), so the first mate reads that record with `knowledge` `get` - and puts the keyboard in the message field with the caret after it, keeping what the captain had typed after it.
 It goes through the panel API's one generic way to start a message, `point.draft` (`docs/ui-plugins.md`), which counts only from the captain's own click or key and refuses while the message field is held.
-Nothing is sent, filed, recorded or approved until he sends it, and then the first mate handles it as any message.
+Nothing is sent, filed, recorded or approved until the captain sends it, and then the first mate handles it as any message.
 
 ## Not built yet
 
@@ -318,6 +318,6 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
   `tests/e2e/knowledge-gate.spec.ts` checks the same linked answer in stable and alpha.
 - `tests/e2e/knowledge-browser.spec.ts` (application lane): Open Knowledge by name and from the panel, the graph, its camera and a claim's evidence by keys, the pointer's orbit with either button, the wheel, the lists, Find and the filters, the inspector's sections, the kept place, the narrow card's Back, and Esc in its order, with no knowledge written and no task filed; its seed records through the real owner with pinned ids, so the graph lays out the same on every run (`tests/e2e/knowledgeSeed.ts`).
 - `tests/e2e/knowledge-directions.spec.ts`: directions stay distinct from personal facts in browsing and the first mate's served context; forty rendered directions arrive on an unrelated ask.
-  A direction the captain chose on a crewmate's card is saved by the first mate on that crewmate's report, as his instruction, through `app_change` with one Activity line, and he never types it.
+  A direction the captain chose on a crewmate's card is saved by the first mate on that crewmate's report, as the captain's instruction, through `app_change` with one Activity line, and the captain never types it.
   Eight active directions, five for one project, survive carryover and a stable restart; forget and purge remove influence without a notes fallback.
   This is scripted transport/use evidence, not a claim about live-model obedience.

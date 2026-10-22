@@ -51,7 +51,7 @@ export type PanelTheme = "dark" | "light";
  * The reads a panel may declare in `manifest.json` (`reads`) and subscribe
  * to through `PanelProps.reads`: the app's own quota reading, its live task
  * board, one task in full, closed work found by a key or title, its
- * activity feed, the captain's open pull requests where his projects
+ * activity feed, the captain's open pull requests where their projects
  * live, and - in alpha and development builds only - what the crew learned
  * (`knowledge.*`). Declared and least-privilege: a panel is served exactly
  * the reads its manifest names, and nothing it did not.
@@ -338,8 +338,8 @@ export type PanelFeedLine = {
 };
 
 /**
- * One of the captain's open pull requests where his projects live - a
- * merge request on GitLab - read by the app through his own sign-in: the
+ * One of the captain's open pull requests where their projects live - a
+ * merge request on GitLab - read by the app through their own sign-in: the
  * row a panel renders, already shaped. `checks` is the one reading the
  * row's status dot needs.
  */
@@ -960,7 +960,7 @@ export type PanelOpenCard = {
  * The cards this panel has on the main card stack, any number of them (at
  * most 50 open at once). A card put up from the captain's own click or key
  * inside the panel or the card comes to the front; one put up otherwise
- * waits behind the card he is reading, marked new. Nothing a card does is
+ * waits behind the card they are reading, marked new. Nothing a card does is
  * saved: Hide, a relaunch, or turning the panels off takes it away.
  */
 export type PanelCards = {
@@ -1000,7 +1000,7 @@ export type PanelAsks = {
 /**
  * The card a card view draws: its id, the data it was last put up with,
  * and the place it keeps. Only the shown card runs a page, so a card the
- * captain pages away from is born again when he pages back: `kept` is what
+ * captain pages away from is born again when they page back: `kept` is what
  * it last kept, handed back at that birth, and `keep` stores a new place.
  */
 export type PanelCard = {
@@ -1067,10 +1067,10 @@ export type PanelPoint = {
   aim: (taskId: string | null) => Promise<boolean>;
   /**
    * Puts words at the head of the captain's next message, in the main
-   * message field, with the keyboard there and the caret after them for him
-   * to finish or change; what he had typed stays after them, and nothing is
-   * sent until he sends it. Any panel may: one line of at most
-   * `PANEL_DRAFT_MAX` characters. Counts only from his own click or key in
+   * message field, with the keyboard there and the caret after them for them
+   * to finish or change; what they had typed stays after them, and nothing is
+   * sent until they send it. Any panel may: one line of at most
+   * `PANEL_DRAFT_MAX` characters. Counts only from their own click or key in
    * this panel or card, and answers false while the message field is held
    * (a recording, for one).
    */
@@ -1079,7 +1079,7 @@ export type PanelPoint = {
    * Opens Settings at one of its sections, by id (`automation`, say), and
    * hands that section `item` to show - an id the section knows, such as an
    * automation rule's - which the section reads once and ignores when it
-   * knows no such item. Any panel may; counts only from his own click or
+   * knows no such item. Any panel may; counts only from their own click or
    * key in this panel or card, and answers false for a section this window
    * does not offer.
    */
@@ -1117,9 +1117,9 @@ export type PanelMoveResult = { ok: true } | { ok: false; text: string };
 
 /**
  * The moves a panel that asked for them (`manifest.json` `"moves": true`)
- * makes on the captain's tasks. A move counts only from his own click or
+ * makes on the captain's tasks. A move counts only from their own click or
  * key in this panel or card, runs the same path and checks as the task
- * record's buttons, and lands on the task's record as his. Drop task on
+ * record's buttons, and lands on the task's record as theirs. Drop task on
  * never-started work sends the `review` its `tasks.detail` listed.
  */
 export type PanelTasks = {
@@ -1371,11 +1371,11 @@ export type PluginSecretSlot = {
 
 /**
  * `manifest.json`, every field optional: the ONE plugin manifest, whether
- * the panel is the captain's own (his personal workspace) or one he added
+ * the panel is the captain's own (their personal workspace) or one they added
  * (npm, a git address, a folder). Where it came from is the host's to
  * stamp and never a field here. `reads`, `sql`, `net`, `secrets` and
- * `storage` are its capabilities: what it is served, and - for one he
- * added - what he is asked to agree to. Undeclared is unserved.
+ * `storage` are its capabilities: what it is served, and - for one they
+ * added - what they are asked to agree to. Undeclared is unserved.
  */
 export type PersonalManifest = {
   /**
@@ -1385,7 +1385,7 @@ export type PersonalManifest = {
   api?: 1;
   /**
    * Who a plugin is by, at most 40 characters: the name on the header of a
-   * panel the captain added (his own always read "yours"). Required to add one.
+   * panel the captain added (their own always read "yours"). Required to add one.
    */
   name?: string;
   /** Semver (`1.2.0`). Required to add a plugin; an update is a new version. */
@@ -1414,8 +1414,8 @@ export type PersonalManifest = {
    */
   reads?: PanelReadName[];
   /**
-   * It moves the captain's tasks (`PanelProps.tasks`), each move only on his
-   * click or key in it. A panel from elsewhere asks him once, when he adds it.
+   * It moves the captain's tasks (`PanelProps.tasks`), each move only on their
+   * click or key in it. A panel from elsewhere asks them once, when they add it.
    */
   moves?: true;
   /**

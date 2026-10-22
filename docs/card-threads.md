@@ -1,10 +1,10 @@
 # Cards as threads
 
 Every card is the head of a thread between the captain and the card's AUTHOR.
-What he types under a card goes to that author, and the author always answers with one short message in the thread, whether or not the card changes.
+What the captain types under a card goes to that author, and the author always answers with one short message in the thread, whether or not the card changes.
 When the card should change too, the author revises it and passes the answer as `emit_card`'s `reply`: the head re-renders and the thread shows the host's `revised:` line, then the author's answer.
 
-Captain-approved on the Lavish board on 2026-09-20 ("cards-as-threads over a decision model - ship it"); the decided design is section R4 of `fm3000-card-close-decision-model-s1/report.md`, R1-R3 carry the review rounds in his own words, and `board/thread-prototype.html` is the shell prototype he reviewed.
+Captain-approved on the Lavish board on 2026-09-20 ("cards-as-threads over a decision model - ship it"); the decided design is section R4 of `fm3000-card-close-decision-model-s1/report.md`, R1-R3 carry the review rounds in the captain's own words, and `board/thread-prototype.html` is the shell prototype the captain reviewed.
 This file is the one home for the feature as built (phase 1 and phase 2).
 
 Only a card's own author withdraws it.
@@ -18,19 +18,19 @@ The first mate does not close someone else's card to relay the captain's words (
 
 `CardService.addMessage` is the single writer: the captain's reply, an author's prose answer and the host's own "revised" line all go through it, so nothing writes a thread row without the `inf:cards:thread` push that paints it.
 
-A captain reply on a crewmate's card is a captain STEER to that crewmate - the same control-plane path a card click takes - stamped `via: "thread"` (`steerViaSchema`) with the card's id, carrying `THREAD_STEER_PREAMBLE` and then his words verbatim.
+A captain reply on a crewmate's card is a captain STEER to that crewmate - the same control-plane path a card click takes - stamped `via: "thread"` (`steerViaSchema`) with the card's id, carrying `THREAD_STEER_PREAMBLE` and then the captain's words verbatim.
 Delivery is not awaited, exactly as a card click's round-trip is not: the message is on the record the moment it is typed, and a delivery failure is a feed line rather than a lost reply.
 
-A line the captain types in a task's Crewmate tab rides the same lane as his own steer, stamped `via: "crewmate-tab"`, with no card and no thread (`docs/task-card-tabs.md`, "Typing").
-While the captain's kept merge approval stands on the task, his reply, like his line in the Crewmate tab, is guidance that holds that merge until the crewmate declares its impact (`docs/delivery-rigor.md`, "A kept merge approval").
+A line the captain types in a task's Crewmate tab rides the same lane as the captain's own steer, stamped `via: "crewmate-tab"`, with no card and no thread (`docs/task-card-tabs.md`, "Typing").
+While the captain's kept merge approval stands on the task, the captain's reply, like the captain's line in the Crewmate tab, is guidance that holds that merge until the crewmate declares its impact (`docs/delivery-rigor.md`, "A kept merge approval").
 
 A reply resolves nothing.
 The buttons stay pinned, and a card still leaves the stage on a button, a settle, the captain's close, the author's withdrawal, or a note's seen-collapse - all host code.
 
 The captain's close of a crewmate's card on a live task reaches that crewmate the same way (FI3-435, captain-approved 2026-10-01): a captain steer stamped `via: "card"` with the card's id, the typed `card-closed` wake ("The captain closed your card ... without choosing.").
-A close is not a choice, so the author judges what it meant by instruction - read and finished, still waiting on him, or a passing note - and its report declares it (`waiting_on_captain` or `finished`, `docs/report-sort.md`).
+A close is not a choice, so the author judges what it meant by instruction - read and finished, still waiting on the captain, or a passing note - and its report declares it (`waiting_on_captain` or `finished`, `docs/report-sort.md`).
 The host reads none of it.
-The captain's close of a crewmate's card kept shown after his reply holds through the answer the crewmate is still writing (FI3-693): until that crewmate closes out, `emit_card` under the card's id is refused in words that send the answer to its report, so the answer does not open the card again.
+The captain's close of a crewmate's card kept shown after the captain's reply holds through the answer the crewmate is still writing (FI3-693): until that crewmate closes out, `emit_card` under the card's id is refused in words that send the answer to its report, so the answer does not open the card again.
 After the close-out the crewmate may raise the id again, a new card, as after any close.
 The first mate's own cards keep Q4a: their close wakes nobody and the next context block lists it.
 
@@ -103,7 +103,7 @@ Historical captain messages stay on the thread through withdrawal and same-id re
 The card's return is its own notice.
 The task timeline records each crewmate card's stage moment as its `card_raised` event, written at the close-out with the close-out that released it (`data.closeOut`: `report`, `idle`, `restart`), and again on a return after the captain's reply (`data.returned`), so the replay can count a late return.
 
-**The contract** (v4.14): the crewmate's thread steer preamble and `CARD_REPLY` say to do the work his words need first, answer once - revise the card, or reply when nothing on it changes - then report, because the card comes back when you are done; never acknowledge or announce.
+**The contract** (v4.14): the crewmate's thread steer preamble and `CARD_REPLY` say to do the work the captain's words need first, answer once - revise the card, or reply when nothing on it changes - then report, because the card comes back when you are done; never acknowledge or announce.
 
 ## The waiting line
 
@@ -200,11 +200,11 @@ Observe stays in development and alpha builds only (`docs/dev-observe.md`).
 
 "merge it", "land it", "discard it" typed under a crewmate's card is not the crewmate's to run, and **nothing in the host reads those words**.
 The crewmate's own instruction does the routing: it closes its card and carries the captain's words verbatim into its `report` and declares, in `needs_firstmate`, what the first mate must do.
-The whose-turn rule then wakes the first mate (`docs/report-sort.md`, row 0a) for the turn that runs the settle it would have run had he typed the same words in the main input.
-A build he approves by reply under an answer task's card is relayed the same way, with the card left up (`HANDOFF`).
+The whose-turn rule then wakes the first mate (`docs/report-sort.md`, row 0a) for the turn that runs the settle it would have run had the captain typed the same words in the main input.
+A build the captain approves by reply under an answer task's card is relayed the same way, with the card left up (`HANDOFF`).
 Without the declaration the report sorts like any other, and on a backend the host cannot watch it wakes nobody.
 
-That is the captain's Q2 as he corrected it: "crewmate should not answer the user with 'not mine'. it should just close the card and pass the decision to firstmate to execute."
+That is the captain's Q2 as the captain corrected it: "crewmate should not answer the user with 'not mine'. it should just close the card and pass the decision to firstmate to execute."
 
 ## How the first mate learns
 
@@ -300,10 +300,10 @@ Cancellation and terminal session failure retire the task's open cards through `
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
 
 - Cards as threads (phase 1, captain-approved 2026-09-20 "cards-as-threads over a decision model - ship it"; the decided design is R4 of `fm3000-card-close-decision-model-s1/report.md`, `docs/card-threads.md` is the one home).
-  Every card is the head of a thread between the captain and the card's AUTHOR: what he types under a card goes to that author, and the author always answers in the thread; a revision under the same id carries that answer as `reply`, after the host's one `revised: …` line.
+  Every card is the head of a thread between the captain and the card's AUTHOR: what the captain types under a card goes to that author, and the author always answers in the thread; a revision under the same id carries that answer as `reply`, after the host's one `revised: …` line.
   A reply RESOLVES NOTHING - the buttons stay pinned and a card still leaves on a button, a settle, the captain's close, the author's withdrawal or a note's seen-collapse.
   Sending takes the card off the stage until the author has answered and closed out - its report or its idle, the first mate's turn end - held in the core as `Card.awaiting` ("When a card reaches the stage", 2026-09-27).
-  The record is `card_messages` (migration 38, owned by `CardStore` beside `card_revisions`, dying with its card in `deleteForTask`'s transaction) and `CardService.addMessage` is its ONE writer, so no row lands without the `inf:cards:thread` push that paints it; a captain reply on a crewmate's card is a captain STEER to that crewmate - the path a card click already takes - stamped `via: "thread"` with `THREAD_STEER_PREAMBLE` and his words verbatim, delivered fire-and-forget the way a click's round-trip is.
+  The record is `card_messages` (migration 38, owned by `CardStore` beside `card_revisions`, dying with its card in `deleteForTask`'s transaction) and `CardService.addMessage` is its ONE writer, so no row lands without the `inf:cards:thread` push that paints it; a captain reply on a crewmate's card is a captain STEER to that crewmate - the path a card click already takes - stamped `via: "thread"` with `THREAD_STEER_PREAMBLE` and the captain's words verbatim, delivered fire-and-forget the way a click's round-trip is.
   `CARD_REPLY` (contract v4.2) is the shared contract, stated ONCE the way `CARD_AUTHORING` is and included by every persona (`piResources.test.ts` pins both directions); the crewmate's `reply(card_id, text)` is its prose half on Pi and Claude, and the first mate's tool count stays 24.
   The settle hand-off carries NO classifier: nothing in the host reads the captain's words - a crewmate asked to put a change in, discard it, route a stronger model or take on unrelated work closes its own card and reports those words verbatim, and the whose-turn rule routes that report to the first mate, which runs the settle.
   The first mate is never woken for a thread message; it reads the bounded "thread activity since your last turn" context section beside `renderCaptainResolutions` (8 lines, 6h, same watermark) and the `thread:` fact on each crew line.
@@ -318,9 +318,9 @@ Author-directed replies carry the current named form answers as context alongsid
 A partial reading is allowed for feedback; the same 64 KiB answer bound applies.
 Submitted values reach the durable thread, card observations and crew steer record and supersede earlier submissions in a basis handoff.
 The thread shows the captain's words alone, with the settings as one quiet collapsed line under them (FI3-617; the design skill's `CardThread.prompt.md`).
-A reply is saved as its author reads it - his words, then "Current settings (context, not permission):" and the `cardAnswerLines` lines (`replyWithSettings`) - and its `message_ref` observation records the answers.
-`CardStore.messages` reads the two apart: where the saved text holds exactly the app's own rendering of the recorded answers, `CardMessage.text` is his words and `CardMessage.answers` the settings, and anything else is shown whole with no `answers`.
-The author's wake, the first mate's own turn about its card and a basis brief's thread still read words and settings together; the first mate's thread-activity line quotes his words.
+A reply is saved as its author reads it - the captain's words, then "Current settings (context, not permission):" and the `cardAnswerLines` lines (`replyWithSettings`) - and its `message_ref` observation records the answers.
+`CardStore.messages` reads the two apart: where the saved text holds exactly the app's own rendering of the recorded answers, `CardMessage.text` is the captain's words and `CardMessage.answers` the settings, and anything else is shown whole with no `answers`.
+The author's wake, the first mate's own turn about its card and a basis brief's thread still read words and settings together; the first mate's thread-activity line quotes the captain's words.
 Changing how `cardAnswerLines` words an answer leaves replies saved before the change shown whole.
 Words written under a question's Something else row ride a reply like any pick: `written in: "…"` in the author's settings lines, and in curly quotes after the picks in the thread's settings rows (FI3-1002); a written answer is never sent as a reply on its own.
 Control changes alone start no turn and remain unsaved renderer-memory drafts, lost on restart.

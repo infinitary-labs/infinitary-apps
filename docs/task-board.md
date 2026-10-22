@@ -99,7 +99,7 @@ A click, Enter or a rest writes nothing; the moves below are the board's only wr
 
 A tile on the Board moves by dragging it onto a column or the Drop task tray, and any tile or list row by its ⋯ menu; a list's rows are never dragged, so a row of the Backlog list moves by its menu, and nothing is dragged between views.
 Each move is one of the panel API's moves (`tasks.run`, the Tasks folder asks for `moves`), which run the record's own path on `inf:task:run` (Start, Drop task, queue and unqueue), or a pointer at the task's card (`point.showCard`); none changes priority, order, project, parent or dependencies (`boardMoveOf`).
-A move counts only from the captain's own click or key in the board's page, and lands on the task's record as his, from the task card, as the record's own buttons' moves do: the app's own panels name no panel.
+A move counts only from the captain's own click or key in the board's page, and lands on the task's record as the captain's, from the task card, as the record's own buttons' moves do: the app's own panels name no panel.
 
 - Backlog, or Back to backlog on the menu, takes never-started work at once: `unqueue-task`, its blockers and holds kept.
 - Queued, or Queue it on a Backlog row's menu, takes never-started work with no parts: `queue-task`, at once while a blocker or hold stands, and after asking once when it could start at once.

@@ -422,7 +422,7 @@ export class PrCiService {
           ? " Declare the repair with conflictRepair from that head."
           : "";
     const keptLine = kept
-      ? `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${repairAsk}${mark === undefined ? "" : ` His guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`
+      ? `The captain's merge approval is kept and covers ${candidateHead(kept)}${kept.waiting ? ` (the merge waits: ${kept.waiting.on})` : ""}.${repairAsk}${mark === undefined ? "" : ` Their guidance through mark ${mark} holds the merge until you declare its impact with captainGuidance.`}`
       : "";
     return [declared, reading, keptLine].filter(Boolean).join("\n");
   }

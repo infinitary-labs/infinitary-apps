@@ -14,7 +14,7 @@ It names the project, where it comes from and how it lands on this computer, and
 Runs on defaults to Automatic for a project with a remote; an explicit This computer selection stays explicit.
 A folder with a remote is linked where it is by default, and the card offers a fresh clone into the projects folder instead.
 Add project and Not now carry host ops (`add-project`, `decline-project`) whose argument is the card's own offer; an effect is never declared to the body's frame, so only the captain's click on the card's own button adds a project.
-Add project runs, as the captain, the same dispatcher Settings uses: the setup, then the settings he chose that differ from the new row, then Runs on; each writes its own feed line and operation, and all are saved before the first mate hears.
+Add project runs, as the captain, the same dispatcher Settings uses: the setup, then the settings the captain chose that differ from the new row, then Runs on; each writes its own feed line and operation, and all are saved before the first mate hears.
 The first mate then hears once, as an `[fm-op]` `project-setup` wake: added with its settings and the work the card named, which it starts; already on the list; not now, which Not now and closing the card both mean; or failed with the reason, carrying a clone's typed sign-in refusal (`docs/forge.md`).
 That wake skips the inbox's coalescing window, so the first mate answers the click at once (`docs/inbox.md`).
 Settings' own Add project adds at once and shows no card.
@@ -33,14 +33,14 @@ A project already on the list is answered as it is, with the key it has.
 Settings and the first mate use the same action catalog and dispatcher for every project change.
 `project-settings` changes delivery, autonomy, rigor, display name, folder and approved hosting address; `project-runs-on` changes where its next task runs.
 The global `projects-folder` setting still changes where new projects go on typed captain words.
-The first mate applies an exact change the captain named in his words, quoting them as evidence, wherever they reach it: his message, one he sends while a turn runs, his reply a crewmate relays, or a schedule he set (INF-751).
+The first mate applies an exact change the captain named in the captain's words, quoting them as evidence, wherever they reach it: the captain's message, one the captain sends while a turn runs, the captain's reply a crewmate relays, or a schedule the captain set (INF-751).
 The first mate declares that judgment with `on_words: true`; an omitted declaration proposes instead.
 The exact-words judgment belongs to its tool guidance, not a host parser.
 Every other proposal, including an ordinary agent-card choice, reaches `ProjectChanges` (`src/core/workspace/projectChanges.ts`) and gets an app-written card showing the old and proposed values.
 Only that card's Apply change button applies the stored patch once; Not now or closing changes nothing.
 The host refuses a card if the saved project changed since the offer, and revalidates the folder, address and devices on applying.
 The first mate hears the outcome once through `project-change` and reads current values before starting work that needs it.
-Removal still needs his typed words, and adding still uses the setup card above.
+Removal still needs the captain's typed words, and adding still uses the setup card above.
 The personal workspace remains locked.
 
 Name changes keep the project's id, key, sequence and task history, and update its fleet index without moving its files.

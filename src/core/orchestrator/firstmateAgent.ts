@@ -2951,7 +2951,7 @@ export class FirstmateAgent {
           // captain's own words, which the row keeps and nothing reads.
           const words = this.turnOrigin === "captain-turn" ? this.turnAsked.join("\n").trim() : "";
           if (!words)
-            return "Override refused: only a turn that carries the captain's own words declares one. Relay his words when he gives them.";
+            return "Override refused: only a turn that carries the captain's own words declares one. Relay their words when they give them.";
           this.asks.attach(record.id, "update_task");
           const declared = supervisor.declareOverride(record.id, {
             words,

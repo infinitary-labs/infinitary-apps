@@ -407,7 +407,7 @@ After the shell's own move it rests on the frame element: `guardFrameFocus` sees
 After the captain's own click or key inside the frame it rests on nothing.
 So the window's page notes which frame holds focus each time it lets focus go, and again each time a frame posts it a message, because focus moves from one frame to another without the page hearing it; a message only makes the page look, and moves nothing.
 When the page takes focus onto nothing with no press in it, it gives focus back to that frame the same way, unless something else has taken focus by the next animation frame (`giveHandedFocusBack`).
-It gives that focus back through the frame's own window, as the captain's click had put it there, not by focusing the frame element: focus put on the element would stay the page's active element after his next click into another frame, so the window would go on naming the first frame, and F6, the window's gates and the frame guards would count from where he no longer is.
+It gives that focus back through the frame's own window, as the captain's click had put it there, not by focusing the frame element: focus put on the element would stay the page's active element after the captain's next click into another frame, so the window would go on naming the first frame, and F6, the window's gates and the frame guards would count from where the captain no longer is.
 The way back to the main message asks it first (`guardLostFocus`), so the main message never takes that focus in its place.
 A click in the window's own page is the captain's: it clears focus off the frame first, or calls off giving focus back, so focus stays where the click put it.
 

@@ -998,7 +998,7 @@ export class SettleService {
       ? `The completion card "${open.cardTitle}" is on the stack with its "${open.label}" button: that click is the merge, and it is the captain's to make. Nothing further is needed from you.`
       : "The captain merges it from the crewmate's completion card; steer the crewmate to emit one if it has not.";
     const why = hold
-      ? `the captain's merge approval ended because ${hold}, so the merge is his again`
+      ? `the captain's merge approval ended because ${hold}, so the merge is theirs again`
       : `autonomy is off for this task (${standing})`;
     return {
       refused: "autonomy-off",
@@ -1051,7 +1051,7 @@ export class SettleService {
     const finished = record.delivery?.finishedAt !== undefined;
     if (!record.shape?.internal_step && !finished) {
       return refuse(
-        "it was not opened as an internal step of yours - the captain asked for this answer, so it closes on his choice on its card, or once its crewmate reports it finished after he closes that card.",
+        "it was not opened as an internal step of yours - the captain asked for this answer, so it closes on their choice on its card, or once its crewmate reports it finished after they close that card.",
       );
     }
     if (record.status !== "active" || this.working(record.id)) {
@@ -1084,8 +1084,8 @@ export class SettleService {
     if (card) {
       return refuse(
         cardEmitter(card.id, record.id) === "crewmate"
-          ? `its answer card "${card.title}" is waiting on the captain, and his choice there is its close.`
-          : `its card "${card.title}" still asks the captain something, and closing now would take it down before he has answered it.`,
+          ? `its answer card "${card.title}" is waiting on the captain, and their choice there is its close.`
+          : `its card "${card.title}" still asks the captain something, and closing now would take it down before they have answered it.`,
       );
     }
     if (!carriedBy) {

@@ -72,3 +72,16 @@ Code that compensates for what a model cannot yet do is a ceiling: prefer the fa
 When a rule breaks on a case, the fix generalizes the primitive or the goal; it never adds the case.
 Instructions follow the same rule: they say goals and boundaries once, not a list of cases, and they are measured by replay, never enforced by a word list.
 This extends "Put ambiguous judgments in agent instructions" (2026-09-23) from what a person meant to every judgment about what should happen.
+
+## The captain decides and the fleet does the work (captain, 2026-10-22)
+
+INF-863, approved as one shared instruction in both prompts, with gender-neutral references as requested.
+The captain decides and the fleet does the work.
+Never ask the captain to do anything the fleet can do itself, with your own tools or a crewmate the first mate starts or steers, and check whether it is already done before you ask.
+Only the captain can choose what they want, give the consent the app holds for their click, use their own sign-in, password, approval or signing material, or reach a device the fleet cannot.
+Ask for exactly that, as one click where one exists; the fleet does everything before and after it.
+A step whose cost the captain should weigh is a yes they give, never work they do.
+
+The shared instruction lives in `src/core/prompts/fleetWork.ts`, served once after each persona core.
+A required action holds only a part the captain alone can give; work the fleet can do after a merge becomes a `Continue: …` filing instead (`docs/required-actions.md`).
+Consent gates, sign-in and signing boundaries remain unchanged.

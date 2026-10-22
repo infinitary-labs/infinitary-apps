@@ -19,6 +19,8 @@ Infinitary is an Electron desktop app: your own AI studio, a calm first mate and
 - **Build the agent's reach, never its verdicts (2026-10-19).** The host hard-codes only a typed fact it holds, consent for an effect, or a physical limit; everything else - what a person meant, what should happen next, how much is enough - is a verdict the agent decides from the fact, the primitive and the goal, and a number, category or order the host made up is a verdict too. It governs the host's code and the instructions it serves: a new hold, cap, constant or served sentence answers which of the four it is (`docs/delivery-rigor.md`).
 - **The two documents (F4c, F6b):** `DATA-TERMS.md`, `LICENSE` (Apache-2.0 + `NOTICE`) and `CONTRIBUTING.md` (no DCO) stay UNPUBLISHED until the public beta. A change to the terms is a new version of the file, never a silent edit; counsel reviews before publication (`docs/sharing.md`).
 
+- **The captain decides and the fleet does the work (2026-10-22).** Never ask the captain to do what the fleet can do, including through a crewmate; check whether it is already done first. Ask only for the captain-only part, as one click where available; post-merge fleet work is a `Continue: …` filing (`docs/principles.md`, `docs/required-actions.md`).
+
 ## Design system (mandatory)
 
 All UI work MUST follow the project skill `infinitary-design` (`.claude/skills/infinitary-design/`). It owns every visual and interaction rule: tokens, type, color, motion, components, character rendering, tone of copy. Never re-invent brand rules in code; if a rule is missing, extend the skill first, then implement. The package is offline-complete (fonts and mock runtime vendored; see its readme "Offline completeness").

@@ -180,6 +180,102 @@ describe("GitHubForge", () => {
     expect(conflicted.items[0]?.name).toContain("brought up to date");
   });
 
+  // INF-893: PR #328 read green at 19:07:01Z on its dispatched replay-gate
+  // alone, while GitHub was creating its ci, journeys and phone runs. The
+  // runs, check and project count below are #328's own, as GitHub gave them.
+  it("reads a pull request as not started while none of its own workflow runs is on the version (INF-893)", async () => {
+    const head = "21abc81254618e65ff72612b155f0aa261bc5372";
+    const replay = {
+      id: 39836971427,
+      name: "replay",
+      event: "workflow_dispatch",
+      run_number: 18,
+      workflow_id: 393063421,
+      check_suite_id: 107972720379,
+      status: "completed",
+      run_started_at: "2026-10-22T19:04:58Z",
+      head_sha: head,
+    };
+    const ci = {
+      id: 39837269252,
+      name: "ci",
+      event: "pull_request",
+      run_number: 819,
+      workflow_id: 386227718,
+      check_suite_id: 107973566509,
+      status: "queued",
+      run_started_at: "2026-10-22T19:07:00Z",
+      head_sha: head,
+    };
+    const replayGate = {
+      name: "replay-gate",
+      status: "completed",
+      conclusion: "success",
+      started_at: "2026-10-22T19:05:02Z",
+      completed_at: "2026-10-22T19:06:06Z",
+      check_suite: { id: replay.check_suite_id },
+    };
+    const replayGateRead = {
+      name: "replay-gate",
+      state: "success",
+      startedAt: Date.parse("2026-10-22T19:05:02Z"),
+      finishedAt: Date.parse("2026-10-22T19:06:06Z"),
+    };
+    let versionRuns: (typeof replay)[] = [replay];
+    let checkRuns: (typeof replayGate)[] = [replayGate];
+    let projectRuns = 1507;
+    const { forge } = await stub({
+      [`GET /repos/octo/meter/commits/${head}/check-runs`]: () => ({
+        json: { total_count: checkRuns.length, check_runs: checkRuns },
+      }),
+      [`GET /repos/octo/meter/commits/${head}/status`]: () => ({ json: { statuses: [] } }),
+      "GET /repos/octo/meter/actions/runs": (request) => ({
+        json: request.url.includes("head_sha=")
+          ? { total_count: versionRuns.length, workflow_runs: versionRuns }
+          : { total_count: projectRuns, workflow_runs: [] },
+      }),
+      "GET /repos/octo/meter/pulls/328": () => ({
+        json: { mergeable: true, mergeable_state: "clean" },
+      }),
+    });
+    const change = { number: 328, url: null, branch: "fm/task-7aa0123e", headSha: head };
+
+    // The reading #328 got: the project runs pull request workflows, and none is on the version yet.
+    expect(await forge.checks(change)).toEqual({
+      overall: "pending",
+      items: [replayGateRead, { name: "checks have not started yet", state: "pending" }],
+      notStarted: true,
+    });
+    // GitHub lists the run before its jobs have checks: still pending, now by the run.
+    versionRuns = [ci, replay];
+    expect(await forge.checks(change)).toEqual({
+      overall: "pending",
+      items: [
+        replayGateRead,
+        { name: "ci (run 819)", state: "pending", startedAt: Date.parse(ci.run_started_at) },
+      ],
+    });
+    // The pull request's own run finished with its checks: green.
+    versionRuns = [{ ...ci, status: "completed" }, replay];
+    checkRuns = [
+      {
+        name: "typecheck-lint-build",
+        status: "completed",
+        conclusion: "success",
+        started_at: "2026-10-22T19:08:50Z",
+        completed_at: "2026-10-22T19:10:44Z",
+        check_suite: { id: ci.check_suite_id },
+      },
+      replayGate,
+    ];
+    expect((await forge.checks(change)).overall).toBe("green");
+    // A project that has never run a pull request workflow reads the dispatched check as it is.
+    versionRuns = [replay];
+    checkRuns = [replayGate];
+    projectRuns = 0;
+    expect(await forge.checks(change)).toEqual({ overall: "green", items: [replayGateRead] });
+  });
+
   it("reads the default branch's own check runs, not a pull request's (INF-833 Fix 4)", async () => {
     const sha = "a".repeat(40);
     const { forge, seen } = await stub({

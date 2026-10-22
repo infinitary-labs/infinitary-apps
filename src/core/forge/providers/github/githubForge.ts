@@ -484,12 +484,10 @@ export class GitHubForge implements Forge {
       items.push({ name: "more checks than the app reads", state: "pending" });
     }
     let notStarted = false;
-    if (items.length === 0) {
-      const waiting = await this.notStarted(change, workflowRuns);
-      if (waiting) {
-        items.push({ name: waiting, state: "pending" });
-        notStarted = waiting === "checks have not started yet";
-      }
+    const waiting = await this.notStarted(change, workflowRuns, items.length === 0);
+    if (waiting) {
+      items.push({ name: waiting, state: "pending" });
+      notStarted = waiting === "checks have not started yet";
     }
     return {
       overall: overallOfChecks(items),
@@ -578,18 +576,28 @@ export class GitHubForge implements Forge {
   }
 
   /**
-   * Why an empty check list is not "no checks": GitHub already has a
-   * workflow run for the version, or has run workflows for this project's
-   * pull requests before, so the checks are queued or blocked rather than
-   * absent. Null (the list stays empty and reads green) for a project that
-   * runs none. A failed side read is no evidence, never a failed check
-   * read.
+   * Why the list is not every check the version will get: its checks are
+   * queued or blocked rather than absent. An empty list waits when GitHub
+   * already has a workflow run for the version, or has run workflows for
+   * this project's pull requests before. A pull request's list that holds
+   * other checks - a run started by hand on the version, another app's
+   * check - waits when the project has run pull request workflows before
+   * and none is on the version yet: GitHub creates them a moment after the
+   * pull request opens or moves (INF-893). Null (the list reads as it is)
+   * for a project that runs none, and for a list beside the pull request's
+   * own runs, which count as pending until they finish. A failed side read
+   * is no evidence, never a failed check read.
    */
   private async notStarted(
     change: ForgeChange,
     workflowRuns: { total_count?: number; workflow_runs?: SuiteRunJson[] } | null,
+    empty: boolean,
   ): Promise<string | null> {
     if (!workflowRuns) return null;
+    const onVersion = workflowRuns.workflow_runs ?? [];
+    const ownRunsAwaited =
+      change.number !== undefined && !onVersion.some((run) => run.event === "pull_request");
+    if (!empty && !ownRunsAwaited) return null;
     try {
       const total = async (query: string): Promise<number> =>
         (
@@ -597,10 +605,8 @@ export class GitHubForge implements Forge {
             total_count?: number;
           }
         ).total_count ?? 0;
-      if (
-        (workflowRuns.total_count ?? workflowRuns.workflow_runs?.length ?? 0) === 0 &&
-        (await total("event=pull_request")) === 0
-      ) {
+      const heldForVersion = empty && (workflowRuns.total_count ?? onVersion.length) > 0;
+      if (!heldForVersion && (await total("event=pull_request")) === 0) {
         return null;
       }
       if (change.number !== undefined) {

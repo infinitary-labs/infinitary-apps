@@ -112,9 +112,10 @@ export type ForgeChecks = {
   overall: ForgeOverall;
   items: ForgeCheck[];
   /**
-   * The list was empty and the host added its own "checks have not started
-   * yet" marker, not a real check. A head-bound absence declaration may
-   * waive only this marker.
+   * The host added its own "checks have not started yet" marker, not a real
+   * check: the list was empty, or a pull request's own workflow runs are
+   * not on the version yet. A head-bound absence declaration may waive only
+   * this marker, never a check beside it that has not passed.
    */
   notStarted?: boolean;
 };

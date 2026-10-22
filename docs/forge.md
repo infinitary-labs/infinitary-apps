@@ -451,6 +451,9 @@ The owner's verdict: git is bundled with the app, the GitHub Desktop model, beca
 One home: `overallOfChecks` in `src/core/forge/forge.ts`; GitLab's pipelines and jobs reach it as checks ("GitLab merge requests" above).
 Green when every check completed successfully or was skipped; terminal failures are red; anything else - queued, running, neutral - blocks green without being red; zero checks reads green, so a project with no checks can still put work in.
 On GitHub an empty list is not always "no checks": when GitHub holds a workflow run for the version, or has run workflows for the project's pull requests before, `checks()` returns one pending item ("checks have not started yet", or - when the change conflicts with the default branch, where GitHub starts no pull-request workflows - the need to bring it up to date), which arms the check watch and keeps the completion card's last check and the merge click from reading green in the seconds before checks start.
+A pull request's list that holds other checks is not always complete either (INF-893): PR #328 read green on its `replay.yml` check, a run started by hand on the version, a second before GitHub listed its `ci`, `journeys` and `phone` runs.
+So when the project has run workflows for its pull requests before and none of the version's workflow runs was started by the pull request (`event` `pull_request`), the same pending item joins the list.
+A reading of the default branch, and a project that has never run a pull request workflow, read their checks as they are.
 On GitHub both check runs and commit statuses count.
 Every unfinished workflow run on the version also counts as pending, even when every listed check passed: GitHub may not yet have created a job waiting on another job.
 This keeps a re-run of a prerequisite from briefly reading green before its dependent check appears.
@@ -461,7 +464,7 @@ When one version gets two runs of one workflow - PR #632's `e5cacebe` got two `c
 `checks()` sets a cancelled check run aside only when its workflow run has a later run (higher `run_number`) of the same workflow, started by the same event, on the same version.
 That later run's check of the same name decides; while the later run has not created it yet, the check reads pending.
 Nothing else is set aside: an earlier failure, time-out or unfinished check counts beside a later pass; another workflow or event with the same check name is a different check; and a check the app cannot place in a workflow run counts as it reads.
-The version's workflow runs (`GET /actions/runs?head_sha=`) are read once per check reading, shared by unfinished-run guarding, cancellation handling and the empty-list read.
+The version's workflow runs (`GET /actions/runs?head_sha=`) are read once per check reading, shared by unfinished-run guarding, cancellation handling and the not-started read.
 More runs than the list holds add a pending item rather than claiming the reading is complete.
 An unreadable run list leaves the existing check reading; a refused sign-in still fails the reading, as does a hiccup when cancellation handling needs the list.
 

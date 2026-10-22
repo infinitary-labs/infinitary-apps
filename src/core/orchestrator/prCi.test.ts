@@ -15,6 +15,7 @@ import {
   AttachmentUploadError,
   type Forge,
   type ForgeChange,
+  type ForgeCheck,
   type ForgeCheckState,
   ForgeError,
   type ForgePull,
@@ -2579,6 +2580,93 @@ describe("the captain's click on a pull request the task did not open, while Git
     expect(outcome).toMatchObject({ ok: false, stop: "moved" });
     expect(forge.reads).toBe(2);
     expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+  });
+});
+
+describe("an absence declaration beside a check GitHub reported (INF-893)", () => {
+  // INF-893: the "checks have not started yet" marker can now sit beside a
+  // real check, as PR #328's dispatched replay-gate did while GitHub created
+  // its pull request runs. A declaration waives only the marker
+  // (docs/forge.md, "A requested merge"), never a check that has not passed.
+  const PR328 = {
+    number: 328,
+    headSha: "21abc81254618e65ff72612b155f0aa261bc5372",
+    branch: "fm/task-7aa0123e",
+    title: "fix(validation): ask before sensitive or costly access",
+  };
+
+  /** PR #328 read by its number, with its replay-gate beside the marker. */
+  class NotStartedForge extends FakeForge {
+    replayGate: ForgeCheckState = "pending";
+    async pull(number: number): Promise<ForgePull> {
+      return {
+        number,
+        state: "open",
+        merged: false,
+        headSha: PR328.headSha,
+        base: "main",
+        branch: PR328.branch,
+        title: PR328.title,
+        headRepo: "infinitary-labs/infinitary",
+        readiness: "clean",
+      };
+    }
+    override async checks(change: ForgeChange) {
+      this.calls.push(`checks ${change.headSha}`);
+      const items: ForgeCheck[] = [
+        { name: "replay-gate", state: this.replayGate },
+        { name: "checks have not started yet", state: "pending" },
+      ];
+      return { overall: overallOfChecks(items), items, notStarted: true };
+    }
+  }
+
+  it("merges past the marker only once every check beside it has passed", async () => {
+    const forge = new NotStartedForge();
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    const review: MergeReview = {
+      id: "mrpr328absent",
+      relationship: "referenced",
+      kind: "github",
+      host: "github.com",
+      owner: "infinitary-labs",
+      name: "infinitary",
+      number: PR328.number,
+      headSha: PR328.headSha,
+      base: "main",
+      branch: PR328.branch,
+      method: "squash",
+      title: PR328.title,
+      absentChecks: {
+        headSha: PR328.headSha,
+        evidence: "No pull request workflow runs for this change; replay.yml ran by hand.",
+        localGate: "pnpm typecheck && pnpm check && pnpm lint:adherence passed at this version.",
+      },
+      at: Date.now(),
+    };
+    tasks.recordDelivery("ab12cd34", { mergeReviews: [review] });
+
+    // replay-gate still running: the declaration does not cover it.
+    expect(await service.mergeReview("ab12cd34", review.id)).toMatchObject({
+      ok: false,
+      stop: "checks",
+    });
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+    // A failed replay-gate is never waived either.
+    forge.replayGate = "failure";
+    expect(await service.mergeReview("ab12cd34", review.id)).toMatchObject({
+      ok: false,
+      stop: "checks",
+    });
+    expect(forge.calls.some((call) => call.startsWith("putIn"))).toBe(false);
+    // Passed, only the marker is left, and the declaration waives it.
+    forge.replayGate = "success";
+    expect(await service.mergeReview("ab12cd34", review.id)).toMatchObject({
+      ok: true,
+      relationship: "referenced",
+    });
+    expect(forge.calls).toContain(`putIn ${PR328.branch} ${PR328.headSha}`);
   });
 });
 

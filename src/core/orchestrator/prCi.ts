@@ -1155,10 +1155,12 @@ export class PrCiService {
         stop: isSignInForgeFailure(caught) ? "sign-in" : "checks",
       };
     }
+    // The marker is pending, so it is the one item that has not passed: a
+    // check beside it that has not passed is never waived.
     const waived =
       checks.notStarted === true &&
       review.absentChecks?.headSha === pull.headSha &&
-      checks.items.every((item) => item.state !== "failure" && item.state !== "error");
+      checks.items.filter((item) => !isAcceptedCheckState(item.state)).length === 1;
     if (checks.overall !== "green" && !waived) {
       return {
         ok: false,

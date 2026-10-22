@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "checks-wait-for-pull-request-runs",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A pull request's checks no longer read as passed before GitHub starts them",
+      "body": "When a check a crewmate started by hand had already passed, the app could read a new pull request's checks as passed in the moment before GitHub started the pull request's own checks, so a merge card could reach you too early. The app now reads them as running until GitHub has started them.",
+      "noPicture": "Nothing new appears on screen; the checks read as running a little longer, until GitHub starts the pull request's own checks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

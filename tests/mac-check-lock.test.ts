@@ -62,6 +62,8 @@ setInterval(() => {}, 60000);
   writeFileSync(
     join(bin, "node"),
     `#!/bin/bash
+# INF-800: the package script asks where the phone check runs before it waits; real Node answers.
+if [ "$1" = scripts/checks-mode.ts ]; then exec ${JSON.stringify(process.execPath)} "$@"; fi
 if [ -n "$CHECK_LEAVE" ]; then
   ${JSON.stringify(process.execPath)} -e 'setInterval(() => {}, 60000)' </dev/null >/dev/null 2>&1 &
   echo "left:$!"

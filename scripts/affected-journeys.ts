@@ -11,6 +11,7 @@ import { editedScreenText, screenRanges } from "./screen-journeys.ts";
  * after the change merged - surface on the change that caused them.
  *
  *   node scripts/affected-journeys.ts [--base <ref>] [--head <ref>] [--json]
+ *   node scripts/affected-journeys.ts --named "<journey> <journey>" [--json]
  *
  * prints the spec files, one per line (or a JSON object with the reason for
  * each), and exits 0 whether or not any file is affected. A journey is
@@ -562,13 +563,32 @@ export function affected(base: string, head: string): Reasons {
   return select({ changed, sourceDiff, specs, read, readBefore, declared });
 }
 
+/**
+ * The journeys a request on a branch names (docs/testing.md, "Journeys on
+ * request"), read as a trailer's names are. A name that is no journey
+ * refuses rather than silently running nothing for it.
+ */
+export function named(list: string): Reasons {
+  const specs = new Set(readdirSync(join(ROOT, E2E)).map((file) => `${E2E}/${file}`));
+  const requested = declaredJourneys(list);
+  if (requested.length === 0) throw new Error("Name at least one journey to run");
+  const reasons: Reasons = new Map();
+  for (const spec of requested) {
+    if (!specs.has(spec)) throw new Error(`The request names ${spec}, which is not a journey`);
+    reasons.set(spec, ["requested by name"]);
+  }
+  return reasons;
+}
+
 function main(): void {
   const args = process.argv.slice(2);
   const value = (flag: string, fallback: string) => {
     const at = args.indexOf(flag);
     return at >= 0 ? (args[at + 1] ?? fallback) : fallback;
   };
-  const reasons = affected(value("--base", "origin/main"), value("--head", "HEAD"));
+  const reasons = args.includes("--named")
+    ? named(value("--named", ""))
+    : affected(value("--base", "origin/main"), value("--head", "HEAD"));
   const files = [...reasons.keys()].sort();
   if (args.includes("--json"))
     console.log(JSON.stringify(Object.fromEntries(files.map((file) => [file, reasons.get(file)])), null, 2));

@@ -6,6 +6,7 @@ import {
   holdsHook,
   holdsPhrase,
   importsOf,
+  named,
   ownedHooks,
   select,
   symbolsOfDiff,
@@ -551,5 +552,27 @@ describe("journeys a change declares (INF-631)", () => {
       "tests/e2e/panel-tasks.spec.ts",
     ]);
     expect(declaredJourneys("")).toEqual([]);
+  });
+});
+
+/**
+ * INF-800: journeys on request run the files a branch names, through the
+ * same placement as a pull request's, so a computer in CI mode can send a
+ * journey it is working on through CI (docs/testing.md, "Journeys on request").
+ */
+describe("journeys a request names", () => {
+  it("runs each named journey, however it is named, and nothing else", () => {
+    const reasons = named("now-panel, tests/e2e/task-crewmate.spec.ts devices.spec.ts");
+    expect([...reasons.keys()].sort()).toEqual([
+      "tests/e2e/devices.spec.ts",
+      "tests/e2e/now-panel.spec.ts",
+      "tests/e2e/task-crewmate.spec.ts",
+    ]);
+    expect(reasons.get("tests/e2e/devices.spec.ts")).toEqual(["requested by name"]);
+  });
+
+  it("refuses a name that is no journey, and a request that names none", () => {
+    expect(() => named("now-pannel")).toThrow(/now-pannel\.spec\.ts, which is not a journey/);
+    expect(() => named(" , ")).toThrow("Name at least one journey to run");
   });
 });

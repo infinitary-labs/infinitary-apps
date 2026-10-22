@@ -2,9 +2,17 @@ name: journeys
 
 # INF-658: keep the closest six measured minutes on Mac; run overflow on
 # hosted Linux in parallel. Every alpha still runs the full Mac suite.
+# INF-800: on request, the journeys a branch names, placed the same way
+# (docs/testing.md, "Journeys on request").
 
 on:
   pull_request:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: Journey files to run, by name or path, separated by spaces or commas
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -17,6 +25,8 @@ concurrency:
 
 jobs:
   linux-source:
+    # The starter coverage belongs to a pull request; a request runs what it names.
+    if: github.event_name == 'pull_request'
     uses: ./.github/workflows/source-journeys.yml
   choose-journeys:
     runs-on: ubuntu-latest
@@ -62,9 +72,17 @@ jobs:
       - id: select
         name: Choose and place the journeys
         run: |
-          node scripts/affected-journeys.ts --base "origin/${{ github.base_ref }}" --head HEAD --json > "$RUNNER_TEMP/affected.json"
-          git diff --name-only "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/changed.txt"
+          if [ "$EVENT" = workflow_dispatch ]; then
+            node scripts/affected-journeys.ts --named "$NAMED" --json > "$RUNNER_TEMP/affected.json"
+            : > "$RUNNER_TEMP/changed.txt"
+          else
+            node scripts/affected-journeys.ts --base "origin/${{ github.base_ref }}" --head HEAD --json > "$RUNNER_TEMP/affected.json"
+            git diff --name-only "origin/${{ github.base_ref }}...HEAD" > "$RUNNER_TEMP/changed.txt"
+          fi
           node scripts/journey-budget.ts --selection "$RUNNER_TEMP/affected.json" --timings "$RUNNER_TEMP/journey-times/e2e-results.json" --changed "$RUNNER_TEMP/changed.txt" > "$RUNNER_TEMP/placement.json"
+        env:
+          EVENT: ${{ github.event_name }}
+          NAMED: ${{ inputs.files }}
       - uses: actions/upload-artifact@v4
         with:
           name: journey-placement

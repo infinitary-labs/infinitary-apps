@@ -105,6 +105,28 @@ Every alpha's own verification runs the full suite; no local full run precedes a
 The full-suite workload measurement (`scripts/test-workload.ts`) must also run in CI.
 Unit tests are unchanged.
 
+## Where the heavy checks run
+
+Anyone building Infinitary runs every check on their own computer by default.
+A computer opts into CI mode with one git setting, `git config --global infinitary.checks ci` (INF-800, the captain's approval: "Only the heavy checks: journeys, the phone check and the replay gate").
+In CI mode the three heavy checks refuse to start outside CI and name their route on request instead (`scripts/checks-mode.ts`):
+
+| Check | Command that refuses | Its route in CI mode |
+| --- | --- | --- |
+| Journeys | `pnpm exec playwright test` naming a committed journey (`playwright.config.ts`) | a pull request runs the journeys its change reaches; on request, `journeys.yml` with the `files` it names ("Journeys on request") |
+| The phone check | `pnpm test:phone`, before it waits for the Mac check lease, and `scripts/test-phone.ts` | `phone.yml` on request ("The phone check on request") |
+| The replay gate | `pnpm replay:gate` | `replay.yml` on request (`docs/replay-harness.md`, "The gate") |
+
+Crewmates start each route the way they start a full verification: `github_write` to `POST /repos/{owner}/{repo}/actions/workflows/<workflow>/dispatches` with `{"ref":"<branch>"}` and the route's inputs (`docs/forge.md`, "Verification workflow requests").
+An accepted request is not a passing check: find the run, confirm its version, then read it.
+Typecheck, lint and the unit tests stay local in both modes, and they already run on every pull request.
+Pictures and demos for a card stay local too: they are evidence, not checks, and take no lease.
+A throwaway picture or demo script is never committed, so the journey guard lets it run; an existing spec cannot take pictures in CI mode.
+Inside CI (`CI` is set) the heavy checks always run, because the Mac mini's runners run as the same user and read the same git settings.
+`INFINITARY_CHECKS=local` or `INFINITARY_CHECKS=ci` overrides the git setting for one run in a terminal; the app's crewmates do not see a shell profile's variables, which is why the setting is a git setting.
+A value other than `ci` or `local` refuses rather than guess.
+`tests/checks-mode.test.ts` runs each command with a scratch home's git settings.
+
 ## Native phone checks on the pull request
 
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
@@ -235,6 +257,13 @@ The Mac job refuses an empty file list, builds once, then runs exactly the chose
 It does not repeat the release's other stages: the run-alone pass, the replay gate, the package smoke and the full suite stay `verify.yml`'s, inside every alpha and on demand.
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.
 `tests/affected-journeys.test.ts` pins the selection and `tests/release-contract.test.ts` the workflow's shape.
+
+### Journeys on request
+
+`journeys.yml` also runs on request for any branch, with the journeys it names: `POST /repos/{owner}/{repo}/actions/workflows/journeys.yml/dispatches` with `{"ref":"<branch>","inputs":{"files":"now-panel task-crewmate.spec.ts"}}`.
+The names are read as a `Journeys:` trailer's are, separated by spaces or commas, and a name that is no journey fails the chooser (`scripts/affected-journeys.ts --named`).
+The chooser places the named files exactly as it places a pull request's, closest six minutes on the Mac mini and the rest on hosted Linux, and the run skips the pull request's Linux starter coverage.
+It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
 
 ## A journey's own scenarios
 

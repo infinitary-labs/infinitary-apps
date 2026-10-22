@@ -646,6 +646,39 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   });
 
   /**
+   * INF-800: a computer in CI mode sends its heavy checks through CI, so the
+   * journeys a branch names and the replay gate alone each run on request.
+   * Neither runs on a pull request it did not already, or on a schedule.
+   */
+  it("runs named journeys and the replay gate alone on request", () => {
+    const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
+      on: { workflow_dispatch: { inputs: Record<string, { required?: boolean }> } };
+      jobs: Record<string, { if?: string; steps?: Step[] }>;
+    };
+    expect(journeys.on.workflow_dispatch.inputs.files?.required).toBe(true);
+    const select = journeys.jobs["choose-journeys"]?.steps?.find((step) => step.id === "select");
+    expect(select?.run).toContain('scripts/affected-journeys.ts --named "$NAMED"');
+    expect(select?.env).toMatchObject({ NAMED: "${{ inputs.files }}" });
+    // The pull request's starter coverage does not ride along with a request.
+    for (const event of ["pull_request", "workflow_dispatch"])
+      expect(
+        workflowValue(journeys.jobs["linux-source"]?.if ?? "", { github: { event_name: event } }),
+      ).toBe(event === "pull_request");
+
+    const replay = loadYamlFile(".github/workflows/replay.yml") as {
+      on: Record<string, unknown>;
+      jobs: Record<string, { "runs-on": string; steps: Step[] }>;
+    };
+    expect(Object.keys(replay.on)).toEqual(["workflow_dispatch"]);
+    const gate = replay.jobs["replay-gate"];
+    expect(gate?.["runs-on"]).toBe("ubuntu-latest");
+    expect(gate?.steps.flatMap((step) => (step.run ? [step.run] : []))).toEqual([
+      "pnpm install --frozen-lockfile",
+      "pnpm replay:gate",
+    ]);
+  });
+
+  /**
    * FI3-262: a successful verify run cannot replace a skipped PR check.
    * Exercise the actual job condition with GitHub's expression evaluator,
    * including a release's own notes pull request, rather than looking for a

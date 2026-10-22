@@ -6,10 +6,17 @@ import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
 import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { scratchDir } from "../tests/helpers/scratchDirs.ts";
+import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { runEveryCheck } from "./phone-checks.ts";
 import { PHONE_PARTS, type PhoneDevice, partSelection, phoneJobs, runSideBySide, testHomeKeys } from "./phone-test-plan.ts";
 
+// INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
+const refusal = ciModeRefusal("phone");
+if (refusal) {
+  console.error(refusal);
+  process.exit(1);
+}
 const { values } = parseArgs({ options: {
   evidence: { type: "string" },
   ipad: { type: "boolean", default: false },

@@ -113,6 +113,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/run-evidence-playwright.test.ts` | two overlapping Playwright runs of a fixture config through the e2e global setup, its microphone check off; the build guard (node, `ps`) under one held run | 15 s |
 | `src/core/orchestrator/crewSupervisor.test.ts` | real git, at the run's own priority | 60 s on the real-git describe |
 | `tests/e2e-lanes.test.ts` | playwright --list over every spec, and the real runner over fixture specs | 60 s; 180 s on the listing (Linux fastest 35.7 s; it grows with the suite) |
+| `tests/checks-mode.test.ts` | git with a scratch home's settings, the `test:phone` and `replay:gate` package scripts, the real Playwright runner over one spec, each refusing before setup | 5 s default, 30 s on the runner |
 | `tests/e2e-contract-lint.test.ts` | Biome, with the repository's plugins, over a fixture spec | 5 s default |
 | `tests/replay-gate-catches-lock-refusal.test.ts` | the replay CLI, git | 60 s |
 | `src/core/claude/claudeRenewProbe.test.ts` | a recording client; the installed Claude client only with `INFINITARY_CLAUDE_RENEW_PROBE=1` on disposable Linux | 5 s default; 240 s on each opt-in leg |

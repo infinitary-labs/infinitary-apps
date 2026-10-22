@@ -3,7 +3,7 @@
 Interaction-system program P3 (WI-19, WI-21; plan `fm3000-interaction-sys-improve-s1/implementation-plan.md` sections 3 and 4).
 No prompt, lint, or report-sort change ships without a replayed eval: the harness replays recorded captain sessions against the current code and scores them.
 `verify.yml` runs that gate on its mac lane inside every alpha, and on demand (`workflow_call` and `workflow_dispatch` only); it has no pull-request trigger, so a pull request is not failed by CI for a replay regression.
-A pull request that touches the prompt, card lint, the whose-turn sort, routing, the first mate agent, or `src/renderer/src/cards/` runs `pnpm replay:gate` locally before pushing.
+A pull request that touches the prompt, card lint, the whose-turn sort, routing, the first mate agent, or `src/renderer/src/cards/` runs `pnpm replay:gate` before pushing, locally or, in CI mode, through `replay.yml` ("The gate").
 
 ## What it replays
 
@@ -208,6 +208,9 @@ It runs as a step of the `mac` lane in `.github/workflows/verify.yml` - inside e
 - the delivery rigor (`src/shared/rigor.ts`, `src/shared/cardHeadings.ts`)
 - `src/renderer/src/cards/`
 - the harness, its fixtures, or the workflow
+
+On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the heavy checks run") `pnpm replay:gate` refuses outside CI.
+Its route there is `replay.yml` on request, which runs the gate alone on hosted Linux and keeps `replay-report.json` as the `replay-report` artifact: `POST /repos/{owner}/{repo}/actions/workflows/replay.yml/dispatches` with `{"ref":"<branch>"}`.
 
 **The baseline changes only in a PR that explains it.**
 An improvement passes the gate as is.

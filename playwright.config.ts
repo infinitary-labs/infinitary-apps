@@ -1,8 +1,10 @@
+import { spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
 import { availableParallelism } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
+import { ciModeRefusal } from "./scripts/checks-mode.ts";
 import { E2E_MAX_WORKERS, E2E_PROJECTS } from "./tests/e2e/lanes";
 import { runDir } from "./tests/e2e/runEvidence";
 
@@ -55,6 +57,20 @@ if (process.argv[2] === "test" && !process.env.CI) {
         "test file: pnpm exec playwright test tests/e2e/<file>.spec.ts " +
         "(add --no-deps for renderer/application specs).",
     );
+  }
+  // INF-800: with CI mode on, a committed journey runs only through CI
+  // (docs/testing.md, "Where the heavy checks run"). A throwaway picture or
+  // demo script, which is never committed, still runs here.
+  const refusal = process.argv.includes("--list") ? undefined : ciModeRefusal("journeys");
+  if (
+    refusal &&
+    filters.some((arg) => {
+      const file = arg.replace(/:\d+(?::\d+)?$/, "");
+      const path = existsSync(file) ? file : join("tests/e2e", file);
+      return spawnSync("git", ["ls-files", "--error-unmatch", "--", path]).status === 0;
+    })
+  ) {
+    throw new Error(refusal);
   }
 }
 

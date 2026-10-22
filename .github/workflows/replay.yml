@@ -1,0 +1,47 @@
+name: replay
+
+# INF-800: the replay gate alone, on request for any branch
+# (docs/replay-harness.md, "The gate"). It reads no Mac, so it runs on hosted
+# Linux and takes no Mac mini runner. Every alpha still runs it inside
+# verify.yml's mac lane.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A newer request for the same branch replaces the older one.
+concurrency:
+  group: replay-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay-gate:
+    runs-on: ubuntu-latest
+    # The path every crewmate works under (journeys.yml says why).
+    defaults:
+      run:
+        working-directory: Application Support/firstmate
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: Application Support/firstmate
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: Application Support/firstmate/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm replay:gate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: replay-report
+          path: Application Support/firstmate/replay-report.json
+          if-no-files-found: ignore
+          retention-days: 14

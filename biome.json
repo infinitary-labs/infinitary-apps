@@ -408,6 +408,7 @@
         "!tests/cask-consumers.test.ts",
         "!tests/e2e-contract-lint.test.ts",
         "!tests/e2e-lanes.test.ts",
+        "!tests/checks-mode.test.ts",
         "!tests/ensure-electron-installed.test.ts",
         "!tests/typecheck.test.ts",
         "!tests/export-tasks.test.ts",

@@ -49,7 +49,7 @@ export type IntegrationSecretSlot = {
 };
 
 /**
- * Something a connection can tell (docs/integrations.md, "Events"): a rule
+ * Something a connection can tell (docs/integrations.md, "What an integration can tell"): a rule
  * listening to it looks every `every` minutes through the binding's `look`.
  */
 export type IntegrationEventSpec = {

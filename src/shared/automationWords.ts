@@ -81,9 +81,26 @@ export function automationZoneOf(spec: AutomationSpec): string | undefined {
   return spec.kind === "daily" || spec.kind === "weekly" ? spec.timeZone : undefined;
 }
 
-/** A schedule in a few words: "Every hour", "Sundays at 7:00 AM", "Once, Sun, Oct 11, 7:00 AM". */
-export function automationWhenWords(spec: AutomationSpec): string {
+/**
+ * What an event rule listens for, from its integration's own words for the
+ * event: "A message arrives" in Gmail reads "When a message arrives in Gmail".
+ */
+export function automationEventWords(label: string, integration: string): string {
+  return `When ${label.charAt(0).toLowerCase()}${label.slice(1)} in ${integration}`;
+}
+
+/** An event rule whose integration is not connected now. */
+export const AUTOMATION_EVENT_UNKNOWN =
+  "When something happens in an integration not connected now";
+
+/**
+ * A schedule in a few words: "Every hour", "Sundays at 7:00 AM", "Once, Sun,
+ * Oct 11, 7:00 AM"; an event rule's `when`, the core's words for it.
+ */
+export function automationWhenWords(spec: AutomationSpec, when?: string): string {
   switch (spec.kind) {
+    case "event":
+      return when ?? AUTOMATION_EVENT_UNKNOWN;
     case "every":
       return spec.minutes % 60 === 0
         ? spec.minutes === 60

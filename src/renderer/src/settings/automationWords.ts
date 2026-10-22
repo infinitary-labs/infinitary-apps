@@ -27,6 +27,8 @@ export type RuleForm = {
   /** An IANA zone; empty for a daily rule made before time zones, which follows this computer's clock. */
   timeZone: string;
   at: string;
+  /** An event rule's event, as `integration/event`; empty for none picked. */
+  event: string;
   prompt: string;
   /** Empty for none. */
   projectId: string;
@@ -51,6 +53,7 @@ export function blankForm(): RuleForm {
     days: [1],
     timeZone: hereZone(),
     at: "",
+    event: "",
     prompt: "",
     projectId: "",
   };
@@ -78,6 +81,7 @@ export function formOf(rule: AutomationRule): RuleForm {
     // A daily rule without a zone keeps following this computer's clock until one is picked.
     timeZone: calendar ? (spec.timeZone ?? "") : blank.timeZone,
     at: spec.kind === "once" ? localInput(spec.at) : "",
+    event: spec.kind === "event" ? `${spec.integration}/${spec.event}` : "",
     prompt: rule.prompt,
     projectId: rule.projectId ?? "",
   };
@@ -85,6 +89,11 @@ export function formOf(rule: AutomationRule): RuleForm {
 
 /** The schedule the form describes, or why it does not describe one yet. */
 export function specOf(form: RuleForm): AutomationSpec | string {
+  if (form.kind === "event") {
+    const at = form.event.lastIndexOf("/");
+    if (at < 0) return "Pick what happens.";
+    return { kind: "event", integration: form.event.slice(0, at), event: form.event.slice(at + 1) };
+  }
   if (form.kind === "every") {
     const minutes = Number.parseInt(form.minutes, 10);
     if (!Number.isFinite(minutes) || minutes < AUTOMATION_MIN_MINUTES) {
@@ -124,6 +133,8 @@ export function saveOf(form: RuleForm, enable = false): AutomationSave | string 
 }
 
 export function runWords(run: AutomationRun): string {
+  if (run.events !== undefined)
+    return `${run.events} ${run.events === 1 ? "event" : "events"}, sent ${automationDateWords(run.firedAt)}`;
   const extra =
     run.missed > 0
       ? `, catching up ${run.missed} missed ${run.missed === 1 ? "run" : "runs"}`
@@ -188,9 +199,29 @@ export const CANCEL_WORDS: Record<AutomationCancelReason, string> = {
 export const REVIEW_SENDS =
   "This prompt and its schedule details go to your AI subscription and stay in your first mate's conversation. Nothing else gets new access.";
 
+/** The review's word on what an event rule sends, in place of `REVIEW_SENDS`. */
+export const REVIEW_SENDS_EVENTS =
+  "This prompt and a short summary of each event go to your AI subscription and stay in your first mate's conversation. Nothing else gets new access.";
+
+/** An event rule's preview: what it does in place of its next dates. */
+export function eventPreviewWords(when: string, every: number | undefined): string {
+  return `${when}, your first mate gets this prompt with the events. ${lookWords(every)} Nothing is sent.`;
+}
+
+/** How often the app looks at an event: "Infinitary looks every minute." */
+export function lookWords(every: number | undefined): string {
+  if (every === undefined) return "";
+  return `Infinitary looks every ${every === 1 ? "minute" : `${every} minutes`}.`;
+}
+
+/** What the preview fills `{{events}}` with, before any event arrived. */
+export const EVENTS_PREVIEW = "- (a summary of each event that arrived)";
+
 /** The review's word on a time Firstmate is not open for. */
 export function reviewMissedWords(spec: AutomationSpec, where: string | null): string {
   const there = where ? ` on ${where}` : "";
+  if (spec.kind === "event")
+    return `If Infinitary is closed${there} or the computer is asleep, what arrived meanwhile is sent once when it returns.`;
   return spec.kind === "once"
     ? `If Infinitary is closed${there} at that time, it runs once Infinitary opens.`
     : `If Infinitary is closed${there} or the computer is asleep, the runs it missed happen once when it returns, with how many it missed.`;
@@ -209,6 +240,9 @@ export const WEEKDAY_TOGGLES = [
 
 export const SUBMITTED_NOTE =
   "Your first mate gets this prompt when the time comes. The prompt and time reach your AI subscription and stay in your first mate's conversation.";
+export const SUBMITTED_NOTE_EVENTS =
+  "Your first mate gets this prompt each time new events arrive, with a short summary of each. They reach your AI subscription and stay in your first mate's conversation.";
+
 /**
  * The time zone's note. `where` names the computer Firstmate lives on when
  * this one controls it, since the automation runs there.

@@ -845,7 +845,8 @@ const actionLines = {
     handover: "projects",
     change: null,
     current: "inf:integrations:list",
-    value: z.strictObject({ kind: integrationKindSchema.exclude(["mcp"]) }),
+    // An MCP server is added from a form; a stand-in is a test run's own, never connected by hand.
+    value: z.strictObject({ kind: integrationKindSchema.exclude(["mcp", "stand-in"]) }),
     line: "Connect an integration (kind: github) when asked: app_change puts up the captain's card, and his click opens Settings → Integrations with the sign-in started. A sign-in is always his hands.",
     alwaysTrail: true,
     offer: (v, current) => {

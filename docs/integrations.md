@@ -15,6 +15,20 @@ The row's own settings - a name of the person's choosing, paused, and which acti
 No sign-in is kept there: a kind's sign-in stays with its own owner, and a key it signs in with is kept apart ("Keys").
 The wire shape Settings draws and the first mate reads is `src/shared/integrations.ts`.
 
+## What an integration can tell
+
+A connection may declare events (`IntegrationEventSpec`): a name, a few plain words for what happens ("A message arrives"), a description, and `every`, how often the app looks, in the one tick's minutes.
+Events are per connection, since an MCP server's differ from server to server.
+Its binding's `look` answers what arrived since a cursor and the cursor to look from next; with no cursor it answers where now is and nothing else, and a cursor it lost answers `resynced`.
+Each item is its id there and the kind's one-line typed summary, never its body.
+Automation reads these to fire a rule (`docs/automation.md`, "Events"); `show` lists them, and the integrations view carries them for the When choice.
+GitHub declares none.
+
+## A stand-in
+
+An unpackaged run that names a folder in `INFINITARY_STAND_IN_INTEGRATION` connects the stand-in (`providers/standIn.ts`), which tells `item_arrived` for each line added to that folder's `items.jsonl`, `{"id": ..., "summary": ...}`.
+It has no actions and no sign-in, and a packaged build never connects it.
+
 ## The rules
 
 Until the secret manager's rules land, an action's rule follows from its effect (the captain's q5 on INF-775): a read is `allow` and runs, anything that changes or sends is `ask` and waits for the captain's click on a card, and an action turned off is `never`.
@@ -62,9 +76,8 @@ Its reads run, and a tool that changes asks the way every kind's does ("The rule
 The list is read again each time the program starts, and Check now starts it again.
 The servers, what each runs, its held network class and the lists it answered live in `userData/integrations/mcp.json`, 0600 in the same folder; what a server runs is never shown to the first mate or a crewmate.
 
-## Events
+## An MCP server's events
 
-A row may tell its events, which a rule in Automation listens to (INF-782).
 An MCP server that lets a client subscribe to its resources tells one event, `resource_changed` ("A resource changed"): the binding subscribes when a rule first looks, through the 2026-07-28 era's `subscriptions/listen` or the 2025 era's per-resource subscribe, and keeps each change it hears with its resource's address.
 A look (`IntegrationsService.look`) answers the changes since a cursor; a cursor from before the program last started, or older than the 500 changes kept, answers `resynced`, because nothing can say what changed while the program was down.
 
@@ -111,3 +124,4 @@ A computer without the change, or without a task channel, gives its crewmates ne
 `src/core/placed/placedSessions.test.ts`, "the integrations command on a computer that runs work", runs it from a real Pi crewmate's shell on a joined computer through that computer's launcher, command process and task channel and across the real connection to this Mac's integrations over a stand-in GitHub: list and show answer what is connected here, a read runs through this Mac's sign-in, a write is kept here as an ask and sends nothing, the instructions there carry the line, no file there holds the token, and a computer that does not list the change gets neither the command nor the line.
 `src/core/integrations/providers/mcp/mcpIntegration.test.ts` adds a stand-in notes server (`tests/helpers/mcpStandIn.ts`) in both protocol eras, over stdio and over HTTP: its own list becomes the row, reads run, a change is kept as an ask that runs once on the click, a changed resource is told, and an address leaving its class or redirecting is refused.
 `tests/e2e/integrations-mcp.spec.ts` adds the stand-in from Settings by keyboard and has a crewmate call one of its reads from its shell.
+`src/core/orchestrator/schedulerEvents.test.ts` fires Automation from the stand-in's events, and `tests/e2e/automation-events.spec.ts` saves an event rule by keys and reads the one first mate turn three items make.

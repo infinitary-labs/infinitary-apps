@@ -14964,7 +14964,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -15122,7 +15123,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -15204,7 +15206,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -15362,7 +15365,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -15413,7 +15417,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -15571,7 +15576,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -15622,7 +15628,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -15780,7 +15787,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -15847,7 +15855,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -16005,7 +16014,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -16079,7 +16089,8 @@
                       "type": "string",
                       "enum": [
                         "github",
-                        "mcp"
+                        "mcp",
+                        "stand-in"
                       ]
                     },
                     "name": {
@@ -16237,7 +16248,8 @@
                       "type": "string",
                       "enum": [
                         "github",
-                        "mcp"
+                        "mcp",
+                        "stand-in"
                       ]
                     },
                     "name": {
@@ -33135,6 +33147,30 @@
                             "kind",
                             "at"
                           ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "event"
+                            },
+                            "integration": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 48
+                            },
+                            "event": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 48
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "integration",
+                            "event"
+                          ]
                         }
                       ]
                     },
@@ -33171,6 +33207,9 @@
                     },
                     "captainRequested": {
                       "type": "boolean"
+                    },
+                    "when": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -33328,6 +33367,30 @@
                             "kind",
                             "at"
                           ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "const": "event"
+                            },
+                            "integration": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 48
+                            },
+                            "event": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 48
+                            }
+                          },
+                          "required": [
+                            "kind",
+                            "integration",
+                            "event"
+                          ]
                         }
                       ]
                     },
@@ -33364,6 +33427,9 @@
                     },
                     "captainRequested": {
                       "type": "boolean"
+                    },
+                    "when": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -33427,6 +33493,11 @@
               "type": "boolean"
             },
             "missed": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            },
+            "events": {
               "type": "integer",
               "minimum": -9007199254740991,
               "maximum": 9007199254740991
@@ -33640,6 +33711,31 @@
                   "at"
                 ],
                 "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "event"
+                  },
+                  "integration": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 48
+                  },
+                  "event": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 48
+                  }
+                },
+                "required": [
+                  "kind",
+                  "integration",
+                  "event"
+                ],
+                "additionalProperties": false
               }
             ]
           }
@@ -33788,6 +33884,31 @@
                     "required": [
                       "kind",
                       "at"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "event"
+                      },
+                      "integration": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 48
+                      },
+                      "event": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 48
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "integration",
+                      "event"
                     ],
                     "additionalProperties": false
                   }
@@ -33941,6 +34062,30 @@
                   "kind",
                   "at"
                 ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "event"
+                  },
+                  "integration": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 48
+                  },
+                  "event": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 48
+                  }
+                },
+                "required": [
+                  "kind",
+                  "integration",
+                  "event"
+                ]
               }
             ]
           },
@@ -33977,6 +34122,9 @@
           },
           "captainRequested": {
             "type": "boolean"
+          },
+          "when": {
+            "type": "string"
           }
         },
         "required": [
@@ -34137,6 +34285,30 @@
                   "kind",
                   "at"
                 ]
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "const": "event"
+                  },
+                  "integration": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 48
+                  },
+                  "event": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 48
+                  }
+                },
+                "required": [
+                  "kind",
+                  "integration",
+                  "event"
+                ]
               }
             ]
           },
@@ -34173,6 +34345,9 @@
           },
           "captainRequested": {
             "type": "boolean"
+          },
+          "when": {
+            "type": "string"
           }
         },
         "required": [
@@ -53039,7 +53214,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {
@@ -53197,7 +53373,8 @@
                   "type": "string",
                   "enum": [
                     "github",
-                    "mcp"
+                    "mcp",
+                    "stand-in"
                   ]
                 },
                 "name": {

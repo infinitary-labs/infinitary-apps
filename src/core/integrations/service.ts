@@ -98,6 +98,18 @@ export function isIntegrationAnswer(
   return "refused" in shown && typeof shown.text === "string";
 }
 
+/** An event an Automation rule may listen for, found by its integration's id or name. */
+export type IntegrationListen = {
+  /** The integration's id, which a rule keeps. */
+  integration: string;
+  /** Its name as the person reads it. */
+  name: string;
+  event: string;
+  label: string;
+  /** How often the app looks, in the tick's minutes. */
+  every: number;
+};
+
 /** A refusal the catalog line's caller reads as the reason. */
 export class IntegrationRefusal extends Error {}
 
@@ -159,7 +171,6 @@ export class IntegrationsService {
     const row = this.find(name);
     if (!row) return this.unknown(name);
     const view = this.viewOf(row);
-    const events = row.connection.events ?? [];
     return {
       integration: view.name,
       id: view.id,
@@ -177,19 +188,38 @@ export class IntegrationsService {
           input: spec.schema ?? spec.input.toJSONSchema(),
         };
       }),
-      ...(events.length > 0
-        ? {
-            events: events.map((spec) => ({
-              name: spec.name,
-              description: spec.description,
-              every: `${spec.every} min`,
-            })),
-          }
-        : {}),
       // Which keys are kept, never a value: one entered in Settings is used, never shown.
       ...(view.secrets
         ? { keys: view.secrets.map((slot) => ({ name: slot.label, kept: slot.kept })) }
         : {}),
+      ...(row.connection.events?.length
+        ? {
+            events: row.connection.events.map((spec) => ({
+              name: spec.name,
+              label: spec.label,
+              description: spec.description,
+              looks: spec.every === 1 ? "every minute" : `every ${spec.every} minutes`,
+              listen: `schedule_prompt on_event "${view.id}/${spec.name}": it runs as new ones arrive, their summaries at {{events}} in its prompt or after it`,
+            })),
+          }
+        : {}),
+    };
+  }
+
+  /**
+   * An event a rule may listen for, by its integration's id or name and
+   * the event's name; undefined when nothing connected declares it.
+   */
+  listenable(integration: string, event: string): IntegrationListen | undefined {
+    const row = this.find(integration);
+    const spec = row?.connection.events?.find((entry) => entry.name === event);
+    if (!row || !spec) return undefined;
+    return {
+      integration: row.connection.id,
+      name: this.viewOf(row).name,
+      event: spec.name,
+      label: spec.label,
+      every: spec.every,
     };
   }
 

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { fillScheduleDetails } from "@shared/automation";
+import { type AutomationEventItem, eventsWords, fillScheduleDetails } from "@shared/automation";
 import type { FmEvent } from "@shared/events";
 import type { DecisionRecord } from "@shared/provenance";
 import type { InboxRow } from "../storage/inboxStore";
@@ -39,6 +39,31 @@ export type SchedulerInbox = {
   revise(id: number, body: TypedWake): boolean;
 };
 
+/** An event a rule listens for, as the integrations find it by id or name. */
+export type ListenedEvent = {
+  /** The integration's id, which the rule keeps. */
+  integration: string;
+  /** Its name as the person reads it. */
+  name: string;
+  event: string;
+  label: string;
+  /** How often to look, in ticks. */
+  every: number;
+};
+
+/** One look's answer: where to look from next and what arrived. */
+export type EventLook = { cursor: string; items: AutomationEventItem[]; resynced?: boolean };
+
+/**
+ * The integrations as an event rule reaches them (docs/automation.md,
+ * "Events"): find the event a rule names, and look at it from a cursor.
+ */
+export type SchedulerEvents = {
+  find(integration: string, event: string): ListenedEvent | undefined;
+  /** Look from a cursor; throws when it cannot look now (paused, gone), and the rule waits. */
+  look(integration: string, event: string, cursor: string | null): Promise<EventLook>;
+};
+
 /** A run as the history shows it: where its delivery stands now. */
 export type RunView = RecordedRun & {
   state: "waiting" | "retrying" | "handled" | "cancelled" | "sent";
@@ -63,6 +88,8 @@ export type SchedulerOptions = {
    * live, undefined once it is gone or archived. Absent, any id is taken.
    */
   projectOf?: (id: string) => { key: string; name: string } | undefined;
+  /** Absent, no event rule can be made, and none looks. */
+  events?: SchedulerEvents;
 };
 
 const TICK_MS = 60 * 1000;
@@ -114,6 +141,8 @@ export const automationWords = {
   pausedAll: (count: number, recalled = 0) =>
     `Automation paused - ${count} ${count === 1 ? "rule" : "rules"}${recalledText(recalled)}`,
   cancelled: (prompt: string) => `Schedule cancelled - ${prompt.slice(0, PROMPT_EXCERPT)}`,
+  resynced: (rule: Pick<ScheduleRecord, "name" | "prompt">, integration: string) =>
+    `Automation lost its place in ${integration} and listens again from now; nothing was sent for the gap - ${label(rule)}`,
 };
 
 /**
@@ -162,7 +191,7 @@ function normalized(spec: ScheduleSpec): ScheduleSpec {
 
 /** Occurrences beyond the one that fires, folded in because `now` is late. */
 export function missedOccurrences(spec: ScheduleSpec, due: number, now: number): number {
-  if (spec.kind === "once") return 0;
+  if (spec.kind === "once" || spec.kind === "event") return 0;
   if (spec.kind === "every") return Math.max(0, Math.floor((now - due) / (spec.minutes * 60_000)));
   // A calendar's days are not all the same length: count them one by one.
   let missed = 0;
@@ -207,6 +236,9 @@ export function computeNextFire(spec: ScheduleSpec, from: number): number {
     }
     case "once":
       return spec.at;
+    case "event":
+      // An event rule has no time of its own: it looks on its cadence.
+      return from;
   }
 }
 
@@ -221,6 +253,8 @@ export function scheduleText(spec: ScheduleSpec): string {
       return `every ${weekdaysText(spec.days)} at ${clockText(spec.hour, spec.minute)} (${spec.timeZone})`;
     case "once":
       return `once at ${new Date(spec.at).toLocaleString()}`;
+    case "event":
+      return `on each ${spec.event} from ${spec.integration}`;
   }
 }
 
@@ -238,6 +272,12 @@ export class Scheduler {
   /** The registration on the host's ticker, undone at stop. */
   private unregister: (() => void) | undefined;
   private readonly now: () => number;
+  /** Ticks counted since start: an event rule looks every `every` of them. */
+  private ticks = 0;
+  /** The tick each event rule last looked at. */
+  private readonly looked = new Map<string, number>();
+  /** Looks still running, one per rule at most. */
+  private readonly looking = new Map<string, Promise<void>>();
 
   constructor(private readonly options: SchedulerOptions) {
     const now = options.now;
@@ -267,7 +307,12 @@ export class Scheduler {
   tick(now: number, options: { catchUp?: boolean } = {}): void {
     this.reconcile(now);
     this.retire();
+    this.ticks += 1;
     for (const record of this.options.store.list()) {
+      if (record.spec.kind === "event") {
+        this.listen(record);
+        continue;
+      }
       if (record.state !== "enabled" || record.nextFire > now) continue;
       const missed = missedOccurrences(record.spec, record.nextFire, now);
       const next =
@@ -304,6 +349,148 @@ export class Scheduler {
         },
       );
     }
+  }
+
+  /** Every look still running has answered and been acted on: for a test. */
+  async settled(): Promise<void> {
+    while (this.looking.size > 0) await Promise.all([...this.looking.values()]);
+  }
+
+  /**
+   * An enabled event rule looks at its event when its cadence comes round
+   * (docs/automation.md, "Events"), one look per rule at a time; the tick
+   * does not wait for it.
+   */
+  private listen(record: ScheduleRecord): void {
+    const events = this.options.events;
+    if (!events || record.state !== "enabled" || record.spec.kind !== "event") return;
+    if (this.looking.has(record.id)) return;
+    const found = events.find(record.spec.integration, record.spec.event);
+    if (!found) return;
+    const last = this.looked.get(record.id);
+    if (last !== undefined && this.ticks - last < found.every) return;
+    this.looked.set(record.id, this.ticks);
+    const look = this.look(record, found)
+      .catch((error: unknown) =>
+        console.warn(
+          `[automation] ${record.id} could not look at ${found.name}: ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      )
+      .finally(() => this.looking.delete(record.id));
+    this.looking.set(record.id, look);
+  }
+
+  /**
+   * One look from the rule's cursor. A first look only finds its place. A
+   * lost cursor starts again from now and sends nothing, with a feed line.
+   * An event a run of this rule already carried is never sent again. What
+   * is new is one run, recorded with the new cursor in one transaction with
+   * its delivery, or folded into the rule's delivery still waiting unsent.
+   * A rule changed, paused or deleted meanwhile drops the answer.
+   */
+  private async look(record: ScheduleRecord, found: ListenedEvent): Promise<void> {
+    const events = this.options.events;
+    if (!events || record.spec.kind !== "event") return;
+    let answer: EventLook;
+    try {
+      answer = await events.look(found.integration, found.event, record.cursor ?? null);
+    } catch {
+      return;
+    }
+    const current = this.options.store.get(record.id);
+    if (
+      !current ||
+      current.state !== "enabled" ||
+      current.revision !== record.revision ||
+      current.cursor !== record.cursor
+    )
+      return;
+    if (answer.resynced) {
+      this.options.store.setCursor(record.id, answer.cursor);
+      this.announce(automationWords.resynced(record, found.name), {});
+      return;
+    }
+    const carried = this.options.store.carried(record.id);
+    const fresh = record.cursor === undefined ? [] : newItems(answer.items, carried);
+    if (fresh.length === 0) {
+      if (answer.cursor !== record.cursor) this.options.store.setCursor(record.id, answer.cursor);
+      return;
+    }
+    const now = this.now();
+    const next = { nextFire: now, state: "enabled" as const, cursor: answer.cursor };
+    const project = record.projectId ? this.options.projectOf?.(record.projectId) : undefined;
+    const unsent = this.unsent(current);
+    if (unsent?.events && this.foldEvents(current, unsent, fresh, next, project, found)) return;
+    const prompt = fillScheduleDetails(record.prompt, {
+      plannedAt: now,
+      timeZone: localTimeZone(),
+      missed: 0,
+      events: eventsWords(fresh),
+    });
+    this.options.store.recordFire(
+      {
+        scheduleId: record.id,
+        revision: record.revision,
+        plannedAt: now,
+        firedAt: now,
+        catchUp: false,
+        missed: 0,
+        prompt,
+        events: fresh,
+      },
+      next,
+      now,
+      (run) => {
+        const queued = this.options.notify(
+          wakeOf(
+            record,
+            { prompt, catchUp: false, missed: 0, run, events: eventsFact(found, fresh.length) },
+            project,
+          ),
+          "scheduled",
+        );
+        return typeof queued === "number" ? queued : null;
+      },
+    );
+  }
+
+  /** New events join the rule's delivery still waiting unsent; false once a turn holds it. */
+  private foldEvents(
+    record: ScheduleRecord,
+    run: RecordedRun,
+    fresh: readonly AutomationEventItem[],
+    next: { nextFire: number; state: RuleState; cursor: string },
+    project: { key: string; name: string } | undefined,
+    found: ListenedEvent,
+  ): boolean {
+    const inbox = this.options.inbox;
+    if (!inbox || run.inboxId === null) return false;
+    const inboxId = run.inboxId;
+    const events = [...(run.events ?? []), ...fresh];
+    const prompt = fillScheduleDetails(record.prompt, {
+      plannedAt: run.plannedAt,
+      timeZone: localTimeZone(),
+      missed: 0,
+      events: eventsWords(events),
+    });
+    const wake = wakeOf(
+      record,
+      {
+        prompt,
+        catchUp: false,
+        missed: 0,
+        run: run.id,
+        waited: true,
+        events: eventsFact(found, events.length),
+      },
+      project,
+    );
+    return this.options.store.foldFire(
+      run.id,
+      { scheduleId: record.id, missed: 0, prompt, events },
+      next,
+      () => inbox.revise(inboxId, wake),
+    );
   }
 
   /**
@@ -445,7 +632,7 @@ export class Scheduler {
     projectId?: string,
     options: { draft?: boolean } & SaysChange = {},
   ): ScheduleRecord {
-    const spec = normalized(given);
+    const spec = this.checkEvent(normalized(given));
     const trimmed = prompt.trim();
     const now = this.now();
     validate(spec, trimmed, now);
@@ -483,7 +670,7 @@ export class Scheduler {
   ): ScheduleRecord {
     const record = this.require(id);
     const now = this.now();
-    const spec = normalized(changes.spec ?? record.spec);
+    const spec = changes.spec ? this.checkEvent(normalized(changes.spec)) : record.spec;
     const prompt = (changes.prompt ?? record.prompt).trim();
     validate(spec, prompt, now);
     const name = changes.name === undefined ? record.name : changes.name.trim() || undefined;
@@ -514,6 +701,11 @@ export class Scheduler {
       ...(projectId ? { projectId } : {}),
       state,
       revision: edited ? record.revision + 1 : record.revision,
+      // An event rule keeps its place while it runs on as it was; turned
+      // on, resumed or pointed elsewhere, it finds its place again from now.
+      ...(record.cursor !== undefined && !rescheduled && state === record.state
+        ? { cursor: record.cursor }
+        : {}),
     };
     const recalled = edited ? this.recall(id, "edited") : 0;
     this.options.store.save(next);
@@ -554,8 +746,10 @@ export class Scheduler {
     if (record.spec.kind === "once" && record.spec.at <= now) {
       throw new Error("That time has passed. Pick a new future date to run it again.");
     }
+    // An event rule listens again from now, so the paused time is not replayed.
+    const { cursor: _paused, ...kept } = record;
     const next: ScheduleRecord = {
-      ...record,
+      ...kept,
       state: "enabled",
       nextFire: resumeFire(record.spec, record.nextFire, now),
     };
@@ -584,6 +778,7 @@ export class Scheduler {
   /** The next dates a schedule would run, for the preview: no effect at all. */
   preview(spec: ScheduleSpec, count = PREVIEW_COUNT): number[] {
     const now = this.now();
+    if (spec.kind === "event") return [];
     if (spec.kind === "once") return spec.at > now ? [spec.at] : [];
     const dates: number[] = [];
     let from = now;
@@ -637,6 +832,28 @@ export class Scheduler {
     else this.options.broadcastEvent({ type: "firstmate_note", text });
   }
 
+  /**
+   * An event rule names an event something connected declares: kept by the
+   * integration's id, found by its id or its name.
+   */
+  private checkEvent(spec: ScheduleSpec): ScheduleSpec {
+    if (spec.kind !== "event") return spec;
+    const found = this.options.events?.find(spec.integration, spec.event);
+    if (!found) {
+      throw new Error(
+        `Nothing connected tells "${spec.event}" from "${spec.integration}". The integrations tool lists each one's events.`,
+      );
+    }
+    return { kind: "event", integration: found.integration, event: found.event };
+  }
+
+  /** What an event rule listens for, in its integration's words; undefined for a schedule. */
+  listening(spec: ScheduleSpec): ListenedEvent | undefined {
+    return spec.kind === "event"
+      ? this.options.events?.find(spec.integration, spec.event)
+      : undefined;
+  }
+
   private checkProject(projectId: string | undefined): void {
     if (projectId && this.options.projectOf && !this.options.projectOf(projectId)) {
       throw new Error("That project is not here any more. Pick another, or none.");
@@ -663,7 +880,14 @@ export class Scheduler {
 /** A rule's scheduled wake: its prompt as sent, its authority, the rule and its project. */
 function wakeOf(
   record: ScheduleRecord,
-  run: { prompt: string; catchUp: boolean; missed: number; run: number; waited?: true },
+  run: {
+    prompt: string;
+    catchUp: boolean;
+    missed: number;
+    run: number;
+    waited?: true;
+    events?: { integration: string; label: string; count: number };
+  },
   project: { key: string; name: string } | undefined,
 ): TypedWake {
   const facts: WakeFacts = {
@@ -673,9 +897,28 @@ function wakeOf(
     captainRequested: record.captainRequested === true,
     ...(run.missed > 0 ? { missed: run.missed } : {}),
     ...(run.waited ? { waited: true as const } : {}),
+    ...(run.events ? { events: run.events } : {}),
     run: run.run,
     rule: { id: record.id, ...(record.name ? { name: record.name } : {}) },
     ...(project ? { project } : {}),
   };
   return { facts };
+}
+
+/** The events a run carries, as its wake names them. */
+function eventsFact(found: ListenedEvent, count: number) {
+  return { integration: found.name, label: found.label, count };
+}
+
+/** The items not yet carried by a run of this rule, each once. */
+function newItems(
+  items: readonly AutomationEventItem[],
+  carried: ReadonlySet<string>,
+): AutomationEventItem[] {
+  const seen = new Set(carried);
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
 }

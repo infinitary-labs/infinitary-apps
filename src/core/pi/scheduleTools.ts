@@ -35,11 +35,11 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
     name: "schedule_prompt",
     label: "Schedule prompt",
     description: [
-      "Schedule a prompt back to you as an [fm-op]. Pass one of every_minutes (15",
-      "minimum), daily_at (HH:MM; days and an IANA time_zone optional, default this",
-      "computer's) or at_time (ISO 8601). The prompt carries all future-you needs.",
-      "Runs only while the app does; missed runs fold into one. Pass draft if the ask",
-      "leaves details open.",
+      "Schedule a prompt back to you as an [fm-op]. Pass one of every_minutes (min 15),",
+      "daily_at (HH:MM; optional days and IANA time_zone, default local), at_time (ISO",
+      "8601) or on_event (integration/event). The prompt carries all future-you needs.",
+      "Runs only while the app does; missed runs fold into one. Pass draft if details",
+      "are open.",
     ].join(" "),
     parameters: Type.Object({
       prompt: Type.String(),
@@ -48,6 +48,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
       days: Type.Optional(Type.Array(stringEnum(WEEKDAYS))),
       time_zone: Type.Optional(Type.String()),
       at_time: Type.Optional(Type.String()),
+      on_event: Type.Optional(Type.String()),
       name: Type.Optional(Type.String()),
       project: Type.Optional(Type.String({ description: "Project key" })),
       draft: Type.Optional(Type.Boolean()),
@@ -94,15 +95,27 @@ function specFrom(params: {
   days?: readonly (typeof WEEKDAYS)[number][];
   time_zone?: string;
   at_time?: string;
+  on_event?: string;
 }): ScheduleSpec {
-  const set = [params.every_minutes, params.daily_at, params.at_time].filter(
+  const set = [params.every_minutes, params.daily_at, params.at_time, params.on_event].filter(
     (value) => value !== undefined,
   );
   if (set.length !== 1) {
-    throw new Error("Pass exactly one of every_minutes, daily_at, at_time.");
+    throw new Error("Pass exactly one of every_minutes, daily_at, at_time, on_event.");
   }
   if ((params.days !== undefined || params.time_zone !== undefined) && !params.daily_at) {
     throw new Error("days and time_zone go with daily_at.");
+  }
+  if (params.on_event !== undefined) {
+    const at = params.on_event.lastIndexOf("/");
+    const integration = params.on_event.slice(0, at).trim();
+    const event = params.on_event.slice(at + 1).trim();
+    if (at < 0 || !integration || !event) {
+      throw new Error(
+        `on_event "${params.on_event}" is not integration/event, such as gmail/message_received.`,
+      );
+    }
+    return { kind: "event", integration, event };
   }
   if (params.every_minutes !== undefined) {
     return { kind: "every", minutes: Math.round(params.every_minutes) };

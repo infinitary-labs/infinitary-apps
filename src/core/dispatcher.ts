@@ -11,6 +11,7 @@ import {
   actionRefusal,
 } from "@shared/actions";
 import { AUTOMATION_UNREADABLE, type AutomationRule } from "@shared/automation";
+import { automationEventWords } from "@shared/automationWords";
 import {
   parseCardMediaFileName,
   parseCardPictureFileName,
@@ -106,6 +107,7 @@ async function refusalAsAnswer<T>(run: () => Promise<T>): Promise<T | RemoteLogi
  */
 /** A saved rule as Automation shows it (src/shared/automation.ts). */
 function automationRuleOf(scheduler: CoreServices["scheduler"], record: ScheduleRecord) {
+  const listened = scheduler.listening(record.spec);
   return {
     id: record.id,
     ...(record.name ? { name: record.name } : {}),
@@ -114,9 +116,11 @@ function automationRuleOf(scheduler: CoreServices["scheduler"], record: Schedule
     prompt: record.prompt,
     ...(record.projectId ? { projectId: record.projectId } : {}),
     revision: record.revision,
-    nextFire: record.state === "enabled" ? record.nextFire : null,
+    // An event rule has no next time: it runs when its event arrives.
+    nextFire: record.state === "enabled" && record.spec.kind !== "event" ? record.nextFire : null,
     lastFired: scheduler.history(record.id)[0]?.firedAt ?? null,
     captainRequested: record.captainRequested === true,
+    ...(listened ? { when: automationEventWords(listened.label, listened.name) } : {}),
   };
 }
 
@@ -1129,6 +1133,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         firedAt: run.firedAt,
         catchUp: run.catchUp,
         missed: run.missed,
+        ...(run.events ? { events: run.events.length } : {}),
         prompt: run.prompt,
         delivery: run.state,
         settledAt: run.settledAt,

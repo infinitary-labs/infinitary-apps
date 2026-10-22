@@ -24,6 +24,11 @@ export {
 } from "./providers/github";
 export { type McpIntegrationOptions, mcpIntegration } from "./providers/mcp/mcpIntegration";
 export {
+  STAND_IN_EVENT,
+  type StandInIntegrationOptions,
+  standInIntegration,
+} from "./providers/standIn";
+export {
   FileIntegrationSecrets,
   type IntegrationSecrets,
   MissingSecret,
@@ -33,6 +38,7 @@ export {
 export {
   type IntegrationAskSent,
   type IntegrationAskStore,
+  type IntegrationListen,
   IntegrationRefusal,
   IntegrationsService,
   type IntegrationsServiceOptions,

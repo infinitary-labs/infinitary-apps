@@ -29,6 +29,18 @@ export const automationSpecSchema = z.discriminatedUnion("kind", [
     timeZone: timeZoneSchema,
   }),
   z.strictObject({ kind: z.literal("once"), at: z.number().int() }),
+  /**
+   * When something happens (docs/automation.md, "Events"): each time one of
+   * the events an integration declares arrives. The app looks at that
+   * integration's declared cadence on its one tick.
+   */
+  z.strictObject({
+    kind: z.literal("event"),
+    /** The integration's id (src/shared/integrations.ts). */
+    integration: z.string().min(1).max(48),
+    /** One of the events its kind declares, by name. */
+    event: z.string().min(1).max(48),
+  }),
 ]);
 export type AutomationSpec = z.infer<typeof automationSpecSchema>;
 
@@ -56,6 +68,12 @@ export const automationRuleSchema = z.strictObject({
   lastFired: z.number().nullable(),
   /** Whether a captain request or edit stands behind the rule (its saved authority). */
   captainRequested: z.boolean(),
+  /**
+   * What an event rule listens for, in its integration's own words ("An
+   * item arrives in Stand-in"); absent on a schedule, or while its
+   * integration is not connected.
+   */
+  when: z.string().optional(),
 });
 export type AutomationRule = z.infer<typeof automationRuleSchema>;
 
@@ -107,6 +125,8 @@ export const automationRunSchema = z.strictObject({
   catchUp: z.boolean(),
   /** Further occurrences folded into this run, by downtime or while it waited. */
   missed: z.number().int(),
+  /** How many events an event rule's run carries; absent on a scheduled run. */
+  events: z.number().int().optional(),
   prompt: z.string(),
   delivery: automationDeliverySchema,
   /** When it was handled or cancelled; null while it waits, or for a run recorded before. */
@@ -147,7 +167,25 @@ export const SCHEDULE_DETAILS = [
   { id: "time", label: "Scheduled time", token: "{{scheduled time}}" },
   { id: "zone", label: "Time zone", token: "{{time zone}}" },
   { id: "missed", label: "Missed runs", token: "{{missed runs}}" },
+  { id: "events", label: "Events", token: "{{events}}" },
 ] as const;
+
+/** The details a rule of this kind fills: an event rule's events, a schedule's time. */
+export function scheduleDetailsFor(
+  kind: AutomationSpec["kind"],
+): (typeof SCHEDULE_DETAILS)[number][] {
+  return SCHEDULE_DETAILS.filter((detail) =>
+    kind === "event" ? detail.id !== "missed" : detail.id !== "events",
+  );
+}
+
+/** One event an integration told, as a run carries it: its id there and its typed summary. */
+export type AutomationEventItem = { id: string; summary: string };
+
+/** The events as `{{events}}` fills them: one line each, its summary and its id. */
+export function eventsWords(items: readonly AutomationEventItem[]): string {
+  return items.map((item) => `- ${item.summary} (id ${item.id})`).join("\n");
+}
 
 /** The planned moment as a prompt says it: "Sunday, October 11, 2026 at 7:00 AM PDT". */
 export function scheduledTimeWords(at: number, timeZone: string): string {
@@ -163,18 +201,26 @@ export function scheduledTimeWords(at: number, timeZone: string): string {
   });
 }
 
-/** The saved prompt with its schedule details filled in for one run. */
+/**
+ * The saved prompt with its schedule details filled in for one run. An
+ * event rule's run carries its events: where the prompt has no `{{events}}`
+ * they follow it, so the first mate always reads what arrived.
+ */
 export function fillScheduleDetails(
   prompt: string,
-  run: { plannedAt: number; timeZone: string; missed: number },
+  run: { plannedAt: number; timeZone: string; missed: number; events?: string },
 ): string {
   const values: Record<(typeof SCHEDULE_DETAILS)[number]["id"], string> = {
     time: scheduledTimeWords(run.plannedAt, run.timeZone),
     zone: run.timeZone,
     missed: String(run.missed),
+    events: run.events ?? "none",
   };
+  const events = SCHEDULE_DETAILS.find((detail) => detail.id === "events")?.token ?? "";
+  const placed =
+    run.events !== undefined && !prompt.includes(events) ? `${prompt}\n\n${events}` : prompt;
   return SCHEDULE_DETAILS.reduce(
     (text, detail) => text.split(detail.token).join(values[detail.id]),
-    prompt,
+    placed,
   );
 }

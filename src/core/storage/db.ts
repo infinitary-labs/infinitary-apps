@@ -1054,6 +1054,15 @@ const MIGRATIONS: readonly Migration[] = [
 
   // INF-476: presentation only; never changes card resolution or task gates.
   (db) => addColumn(db, "cards", "minimized", "INTEGER"),
+  // 89: an Automation rule that fires on an integration's event
+  // (docs/automation.md, "Events"): the integration and event it listens
+  // for and its cursor there, and the events each run carried, by id.
+  (db) => {
+    addColumn(db, "schedules", "event_integration", "TEXT");
+    addColumn(db, "schedules", "event_name", "TEXT");
+    addColumn(db, "schedules", "event_cursor", "TEXT");
+    addColumn(db, "schedule_runs", "events", "TEXT");
+  },
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

@@ -1,11 +1,12 @@
-import type { AutomationSpec } from "@shared/automation";
+import type { AutomationEventItem, AutomationSpec } from "@shared/automation";
 import type { AppDatabase } from "./db";
 
 /**
  * Persistent cron prompts (R3): each row is a schedule whose fires wake the
- * Firstmate agent with its prompt. Four spec shapes only - every N minutes,
- * daily at a time, on chosen weekdays at a time, once at a moment - parsed
- * by the agent from natural language; no cron expressions. A daily or
+ * Firstmate agent with its prompt. Five spec shapes only - every N minutes,
+ * daily at a time, on chosen weekdays at a time, once at a moment, or each
+ * time an integration's event arrives - parsed by the agent from natural
+ * language; no cron expressions. A daily or
  * weekly time keeps its IANA time zone; a daily rule made before time
  * zones has none and follows this computer's clock (docs/automation.md).
  */
@@ -31,6 +32,12 @@ export type ScheduleRecord = {
   state: RuleState;
   /** Counts saved edits; a delivery names the revision it was planned under. */
   revision: number;
+  /**
+   * An event rule's place at its integration: where its next look starts.
+   * Absent until its first look, and again after it is turned on, resumed
+   * or pointed at another event, so what came meanwhile never fires.
+   */
+  cursor?: string;
 };
 
 export type RuleState = "draft" | "enabled" | "paused" | "completed";
@@ -55,6 +62,8 @@ export type ScheduleRun = {
   /** Further occurrences folded into this one, by downtime or while it waited. */
   missed: number;
   prompt: string;
+  /** The events an event rule's run carries, each by its own id; absent on a scheduled run. */
+  events?: AutomationEventItem[];
 };
 
 /** A run as it is stored: its delivery and what that delivery led to. */
@@ -70,6 +79,9 @@ export type RecordedRun = ScheduleRun & {
   /** Card ids that turn showed. */
   cards: string[];
 };
+
+/** Where a fire leaves its rule: its next fire and state, and an event rule's cursor. */
+export type Advance = { nextFire: number; state: RuleState; cursor?: string };
 
 /** Completed history is kept this long and this many per rule (docs/automation.md). */
 export const RUN_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
@@ -96,6 +108,9 @@ type Row = {
   days: string | null;
   time_zone: string | null;
   project_id: string | null;
+  event_integration: string | null;
+  event_name: string | null;
+  event_cursor: string | null;
 };
 
 type RunRow = {
@@ -113,7 +128,23 @@ type RunRow = {
   cancel_reason: RunCancelReason | null;
   tasks: string | null;
   cards: string | null;
+  events: string | null;
 };
+
+function itemsOf(json: string | null): AutomationEventItem[] | undefined {
+  if (!json) return undefined;
+  try {
+    const parsed = JSON.parse(json) as unknown;
+    return Array.isArray(parsed)
+      ? parsed.filter(
+          (item): item is AutomationEventItem =>
+            typeof item?.id === "string" && typeof item?.summary === "string",
+        )
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 function idsOf(json: string | null): string[] {
   if (!json) return [];
@@ -135,6 +166,7 @@ function runOf(row: RunRow): RecordedRun {
     catchUp: row.catch_up === 1,
     missed: row.missed,
     prompt: row.prompt,
+    ...(itemsOf(row.events) ? { events: itemsOf(row.events) } : {}),
     inboxId: row.inbox_id,
     delivery: row.delivery,
     settledAt: row.settled_at,
@@ -165,6 +197,12 @@ function specOf(row: Row): ScheduleSpec {
       };
     case "once":
       return { kind: "once", at: row.at ?? row.next_fire };
+    case "event":
+      return {
+        kind: "event",
+        integration: row.event_integration ?? "",
+        event: row.event_name ?? "",
+      };
   }
 }
 
@@ -178,6 +216,8 @@ function specColumns(spec: ScheduleSpec) {
     spec.kind === "once" ? spec.at : null,
     spec.kind === "weekly" ? [...spec.days].sort((a, b) => a - b).join(",") : null,
     (spec.kind === "daily" || spec.kind === "weekly") && spec.timeZone ? spec.timeZone : null,
+    spec.kind === "event" ? spec.integration : null,
+    spec.kind === "event" ? spec.event : null,
   ] as const;
 }
 
@@ -193,6 +233,7 @@ function fromRow(row: Row): ScheduleRecord {
     ...(row.project_id ? { projectId: row.project_id } : {}),
     state: row.state,
     revision: row.revision,
+    ...(row.event_cursor !== null ? { cursor: row.event_cursor } : {}),
   };
 }
 
@@ -202,8 +243,8 @@ export class ScheduleStore {
   insert(record: ScheduleRecord): void {
     this.db
       .prepare(
-        `INSERT INTO schedules (id, spec_kind, interval_minutes, hour, minute, at, days, time_zone, prompt, next_fire, created_at, captain_requested, name, state, revision, project_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO schedules (id, spec_kind, interval_minutes, hour, minute, at, days, time_zone, event_integration, event_name, prompt, next_fire, created_at, captain_requested, name, state, revision, project_id, event_cursor)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         record.id,
@@ -216,6 +257,7 @@ export class ScheduleStore {
         record.state,
         record.revision,
         record.projectId ?? null,
+        record.cursor ?? null,
       );
   }
 
@@ -224,7 +266,8 @@ export class ScheduleStore {
     this.db
       .prepare(
         `UPDATE schedules SET spec_kind = ?, interval_minutes = ?, hour = ?, minute = ?, at = ?, days = ?, time_zone = ?,
-           prompt = ?, next_fire = ?, captain_requested = ?, name = ?, state = ?, revision = ?, project_id = ? WHERE id = ?`,
+           event_integration = ?, event_name = ?, prompt = ?, next_fire = ?, captain_requested = ?, name = ?, state = ?,
+           revision = ?, project_id = ?, event_cursor = ? WHERE id = ?`,
       )
       .run(
         ...specColumns(record.spec),
@@ -235,6 +278,7 @@ export class ScheduleStore {
         record.state,
         record.revision,
         record.projectId ?? null,
+        record.cursor ?? null,
         record.id,
       );
   }
@@ -250,15 +294,15 @@ export class ScheduleStore {
    */
   recordFire(
     run: ScheduleRun,
-    next: { nextFire: number; state: RuleState },
+    next: Advance,
     now: number,
     deliver: (runId: number) => number | null,
   ): boolean {
     return this.db.transaction(() => {
       const inserted = this.db
         .prepare(
-          `INSERT OR IGNORE INTO schedule_runs (schedule_id, revision, planned_at, fired_at, catch_up, missed, prompt, delivery)
-           VALUES (?, ?, ?, ?, ?, ?, ?, 'waiting')`,
+          `INSERT OR IGNORE INTO schedule_runs (schedule_id, revision, planned_at, fired_at, catch_up, missed, prompt, events, delivery)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'waiting')`,
         )
         .run(
           run.scheduleId,
@@ -268,6 +312,7 @@ export class ScheduleStore {
           run.catchUp ? 1 : 0,
           run.missed,
           run.prompt,
+          run.events ? JSON.stringify(run.events) : null,
         );
       this.advance(run.scheduleId, next);
       this.trim(run.scheduleId, now);
@@ -288,15 +333,21 @@ export class ScheduleStore {
    */
   foldFire(
     runId: number,
-    run: Pick<ScheduleRun, "scheduleId" | "missed" | "prompt">,
-    next: { nextFire: number; state: RuleState },
+    run: Pick<ScheduleRun, "scheduleId" | "missed" | "prompt" | "events">,
+    next: Advance,
     revise: () => boolean,
   ): boolean {
     return this.db.transaction(() => {
       if (!revise()) return false;
-      this.db
-        .prepare("UPDATE schedule_runs SET missed = ?, catch_up = 1, prompt = ? WHERE id = ?")
-        .run(run.missed, run.prompt, runId);
+      // An event rule's run gathers events, not missed times: it is no catch-up.
+      if (run.events)
+        this.db
+          .prepare("UPDATE schedule_runs SET events = ?, prompt = ? WHERE id = ?")
+          .run(JSON.stringify(run.events), run.prompt, runId);
+      else
+        this.db
+          .prepare("UPDATE schedule_runs SET missed = ?, catch_up = 1, prompt = ? WHERE id = ?")
+          .run(run.missed, run.prompt, runId);
       this.advance(run.scheduleId, next);
       return true;
     })();
@@ -356,11 +407,28 @@ export class ScheduleStore {
     return rows.map(runOf);
   }
 
-  /** The rule's next fire and state. */
-  private advance(id: string, next: { nextFire: number; state: RuleState }): void {
+  /** The rule's next fire and state, and an event rule's new cursor with them. */
+  private advance(id: string, next: Advance): void {
     this.db
       .prepare("UPDATE schedules SET next_fire = ?, state = ? WHERE id = ?")
       .run(next.nextFire, next.state, id);
+    if (next.cursor !== undefined) this.setCursor(id, next.cursor);
+  }
+
+  /** An event rule's place at its integration after a look that fired nothing. */
+  setCursor(id: string, cursor: string): void {
+    this.db.prepare("UPDATE schedules SET event_cursor = ? WHERE id = ?").run(cursor, id);
+  }
+
+  /**
+   * The ids of the events this rule's runs carried, as far back as its
+   * history keeps: an event is delivered once even when a look overlaps.
+   */
+  carried(scheduleId: string): Set<string> {
+    const rows = this.db
+      .prepare("SELECT events FROM schedule_runs WHERE schedule_id = ? AND events IS NOT NULL")
+      .all(scheduleId) as { events: string }[];
+    return new Set(rows.flatMap((row) => (itemsOf(row.events) ?? []).map((item) => item.id)));
   }
 
   /**

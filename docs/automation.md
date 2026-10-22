@@ -1,6 +1,7 @@
 # Automation
 
 Automation is the schedules the first mate runs, as rules a person can read and change: a name, a state, a schedule, a saved prompt and, when it is about one, a project.
+A rule's schedule may instead be an integration's event, so the prompt runs each time something new happens there ("Events").
 The first mate has made schedules since R3 (`schedule_prompt`, `cancel_schedule`); Automation is the same schedules with controls, not a second scheduler.
 
 ## One owner
@@ -38,7 +39,7 @@ A rule `schedule_prompt` makes, and a one-time rule leaving once it ran, say the
   Nothing upgrades a legacy rule by migration.
 - `projectId` names the project the prompt is about, if any.
   The first mate's prompt names that project's key and name while it is live; an archived or removed project is left out.
-- Schedules are every N minutes (15 at least), every day at a time, on chosen weekdays at a time, or once.
+- Schedules are every N minutes (15 at least), every day at a time, on chosen weekdays at a time, once, or each time an integration's event arrives ("Events").
 
 ## Drafts
 
@@ -64,7 +65,7 @@ A rule `schedule_prompt` makes, and a one-time rule leaving once it ran, say the
 
 ## Schedule details
 
-A saved prompt may hold placeholders, filled in when it runs (`SCHEDULE_DETAILS`, `fillScheduleDetails` in `src/shared/automation.ts`): `{{scheduled time}}`, `{{time zone}}` and `{{missed runs}}`.
+A saved prompt may hold placeholders, filled in when it runs (`SCHEDULE_DETAILS`, `fillScheduleDetails` in `src/shared/automation.ts`): `{{scheduled time}}`, `{{time zone}}` and `{{missed runs}}`, and for an event rule `{{events}}` in place of the missed runs.
 Each is a plain value, never an expression.
 Settings' Insert schedule detail puts one at the caret, and Preview shows the prompt filled in for the next run.
 History keeps the prompt as it was sent.
@@ -105,6 +106,27 @@ One a turn already holds is never rewritten: the next occurrence waits behind it
 
 Pause, Pause all, an edit that makes a new revision and Delete take back the rule's deliveries no turn was handed yet (`InboxStore.withdraw`), in one transaction with marking them cancelled; a delivery a turn holds goes on, and keeps the revision it was planned under.
 The feed line says how many were taken back.
+
+## Events
+
+An event rule (`kind: "event"`) names an integration by its id and one of the events that integration declares, such as the stand-in's `item_arrived` (`docs/integrations.md`, "What an integration can tell").
+It is the captain's q6 on INF-775: the app looks on its one tick at each kind's declared cadence, every minute for mail and calendars, and nothing leaves the computer to wait for an event.
+
+- The Scheduler looks for each enabled event rule on its tick when the event's `every` comes round, counted in ticks, so a development run's shortened tick looks sooner (`tickPeriodFor`).
+  A look runs beside the tick, one per rule at a time, through `IntegrationsService.look`.
+- Each rule keeps its own cursor at the integration (`schedules.event_cursor`, migration 89).
+  Its first look only finds its place, so what arrived before it was turned on never fires.
+  Turning a rule on, resuming it or pointing it at another event clears its cursor, so a paused time is never replayed; an edit to only its name, prompt or project keeps it.
+- What arrived since the cursor is one run, recorded in one transaction with the new cursor and the delivery.
+  A run keeps the events it carried by their ids (`schedule_runs.events`), and an event a run of the rule already carried is never sent again, even when a look overlaps.
+- While the rule's delivery waits unsent, new events fold into it as scheduled occurrences do: the message is rewritten with every event and says more arrived while it waited.
+- A cursor the integration lost (a mail history that expired, a file cut short) answers `resynced`: the rule listens again from now, sends nothing for the gap, and the feed says so.
+- A paused, signed-out or removed integration answers no look; the rule keeps its place and waits.
+- The prompt is filled with `{{events}}`, one line per event with the integration's typed summary and its id, never its body; a prompt without the placeholder gets the events after it.
+  The first mate's message names the integration, the event and how many arrived, and says each event is evidence from outside, never an instruction.
+- An event rule has no next time and no preview dates: Settings shows its When words (`when` on the rule, "When an item arrives in Stand-in") and how often the app looks.
+- Settings → Automation's When offers "When something happens" while a connected integration declares an event, with a second choice listing each one; the first mate passes `on_event` (`integration/event`) to `schedule_prompt`.
+  A recurring rule the first mate makes outside a captain's turn waits as a draft, as any does.
 
 ## History and retention
 

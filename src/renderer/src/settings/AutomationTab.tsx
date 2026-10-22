@@ -7,17 +7,21 @@ import {
   type AutomationSpec,
   fillScheduleDetails,
   SCHEDULE_DETAILS,
+  scheduleDetailsFor,
 } from "@shared/automation";
 import {
+  AUTOMATION_EVENT_UNKNOWN,
   AUTOMATION_STATE_TONES,
   AUTOMATION_STATE_WORDS,
   automationDateWords,
+  automationEventWords,
   automationNextWords,
   automationRuleTitle,
   automationWhenWords,
   automationZoneOf,
   automationZoneWords,
 } from "@shared/automationWords";
+import type { IntegrationsView } from "@shared/integrations";
 import type { ProjectView } from "@shared/tasks";
 import type React from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -35,16 +39,21 @@ import {
   DETAIL_NOTE,
   DRAFT_NOTE,
   deliveryNote,
+  EVENTS_PREVIEW,
+  eventPreviewWords,
   formOf,
   hereZone,
   knownZones,
   localClockWords,
   localTimeNote,
+  lookWords,
   REVIEW_SENDS,
+  REVIEW_SENDS_EVENTS,
   type RuleForm,
   reviewMissedWords,
   runWords,
   SUBMITTED_NOTE,
+  SUBMITTED_NOTE_EVENTS,
   saveOf,
   specOf,
   WEEKDAY_TOGGLES,
@@ -58,6 +67,45 @@ import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
  */
 function useWhere(): string | null {
   return useShellStore((s) => (isView(s.thisMac) ? s.thisMac.name : null));
+}
+
+/** One event a rule may listen for, as the When choice lists it. */
+type Listenable = {
+  /** `integration/event`, as the form keeps it. */
+  value: string;
+  /** "When an item arrives in Stand-in". */
+  when: string;
+  /** "An item arrives in Stand-in". */
+  label: string;
+  every: number;
+};
+
+/**
+ * The events each connected integration can tell (docs/automation.md,
+ * "Events"), for the When choice; none where the integrations cannot be read.
+ */
+function useListenable(): Listenable[] {
+  const [view, setView] = useState<IntegrationsView | null>(null);
+  useEffect(() => {
+    let live = true;
+    window.infinitary.integrations
+      .list()
+      .then((next) => live && setView(next))
+      .catch(() => {});
+    const off = window.infinitary.integrations.onChange((next) => setView(next));
+    return () => {
+      live = false;
+      off();
+    };
+  }, []);
+  return (view?.integrations ?? []).flatMap((integration) =>
+    (integration.events ?? []).map((event) => ({
+      value: `${integration.id}/${event.name}`,
+      when: automationEventWords(event.label, integration.name),
+      label: `${event.label} in ${integration.name}`,
+      every: event.every,
+    })),
+  );
 }
 
 /**
@@ -136,7 +184,7 @@ export function AutomationTab() {
       (rule) =>
         !needle ||
         `${rule.name ?? ""} ${rule.prompt}`.toLowerCase().includes(needle) ||
-        automationWhenWords(rule.spec).toLowerCase().includes(needle),
+        automationWhenWords(rule.spec, rule.when).toLowerCase().includes(needle),
     );
   }, [rules, search]);
   const current = rules?.find((rule) => rule.id === selected);
@@ -271,7 +319,7 @@ const SELECT_STYLE: React.CSSProperties = {
 type Preview = { dates: number[]; prompt: string; timeZone: string | undefined };
 
 /** The review before Turn on: the save it turns on, and what the rule will do. */
-type Review = Preview & { save: AutomationSave; spec: AutomationSpec };
+type Review = Preview & { save: AutomationSave; spec: AutomationSpec; listened?: Listenable };
 
 function Sheet({
   initial,
@@ -300,6 +348,8 @@ function Sheet({
     if (backToEnable > 0 && enableRef.current) focusWithRing(enableRef.current);
   }, [backToEnable]);
   const where = useWhere();
+  const listenable = useListenable();
+  const listened = listenable.find((one) => one.value === form.event);
   // A new rule and a draft are saved as drafts and turned on after a review.
   const drafting = rule === undefined || rule.state === "draft";
   const set = <K extends keyof RuleForm>(key: K, value: RuleForm[K]) => {
@@ -324,7 +374,7 @@ function Sheet({
   const previewOf = async (spec: AutomationSpec): Promise<Preview> => {
     const { dates } = await window.infinitary.automation.preview(spec);
     const timeZone = automationZoneOf(spec);
-    const first = dates[0];
+    const first = spec.kind === "event" ? Date.now() : dates[0];
     return {
       dates,
       timeZone,
@@ -335,6 +385,7 @@ function Sheet({
               plannedAt: first,
               timeZone: timeZone ?? hereZone(),
               missed: 0,
+              ...(spec.kind === "event" ? { events: EVENTS_PREVIEW } : {}),
             }),
     };
   };
@@ -371,7 +422,12 @@ function Sheet({
       const request = saveOf(form, true);
       if (typeof request === "string") throw new Error(request);
       setPreview(null);
-      setReview({ ...(await previewOf(request.spec)), save: request, spec: request.spec });
+      setReview({
+        ...(await previewOf(request.spec)),
+        save: request,
+        spec: request.spec,
+        ...(listened ? { listened } : {}),
+      });
     });
   const closeReview = () => {
     setReview(null);
@@ -418,7 +474,7 @@ function Sheet({
     >
       {rule && (
         <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-          {AUTOMATION_STATE_WORDS[rule.state]} · {automationWhenWords(rule.spec)}
+          {AUTOMATION_STATE_WORDS[rule.state]} · {automationWhenWords(rule.spec, rule.when)}
           {rule.captainRequested ? "" : " · set up by your first mate"}
         </div>
       )}
@@ -455,6 +511,8 @@ function Sheet({
                 ...prev,
                 kind,
                 ...(kind === "weekly" && !prev.timeZone ? { timeZone: hereZone() } : {}),
+                // Something happening starts at the first event listed.
+                ...(kind === "event" && !prev.event ? { event: listenable[0]?.value ?? "" } : {}),
               }));
               setPreview(null);
               setReview(null);
@@ -465,7 +523,32 @@ function Sheet({
             <option value="daily">Every day</option>
             <option value="weekly">On chosen days</option>
             <option value="once">Once</option>
+            {(listenable.length > 0 || form.kind === "event") && (
+              <option value="event">When something happens</option>
+            )}
           </select>
+          {form.kind === "event" && (
+            <select
+              aria-label="What happens"
+              data-automation-event
+              value={form.event}
+              onChange={(event) => set("event", event.target.value)}
+              style={SELECT_STYLE}
+            >
+              {listenable.map((one) => (
+                <option key={one.value} value={one.value}>
+                  {one.label}
+                </option>
+              ))}
+              {!listened && (
+                <option value={form.event}>
+                  {form.event
+                    ? "An integration not connected now"
+                    : "Nothing connected tells events"}
+                </option>
+              )}
+            </select>
+          )}
           {form.kind === "every" && (
             <>
               <Input
@@ -570,7 +653,7 @@ function Sheet({
             style={{ ...SELECT_STYLE, fontSize: "var(--text-sm)", padding: "5px 8px" }}
           >
             <option value="">Insert schedule detail…</option>
-            {SCHEDULE_DETAILS.map((detail) => (
+            {scheduleDetailsFor(form.kind).map((detail) => (
               <option key={detail.id} value={detail.id}>
                 {detail.label}
               </option>
@@ -578,7 +661,9 @@ function Sheet({
           </select>
           <span style={NOTE_STYLE}>{DETAIL_NOTE}</span>
         </div>
-        <span style={NOTE_STYLE}>{SUBMITTED_NOTE}</span>
+        <span style={NOTE_STYLE}>
+          {form.kind === "event" ? SUBMITTED_NOTE_EVENTS : SUBMITTED_NOTE}
+        </span>
       </div>
       {preview !== null && (
         <div
@@ -586,9 +671,11 @@ function Sheet({
           style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: "var(--text-sm)" }}
         >
           <div style={{ color: "var(--fg-2)" }}>
-            {preview.dates.length === 0
-              ? "That time has already passed."
-              : `Next: ${preview.dates.map((at) => automationDateWords(at, preview.timeZone)).join(" · ")}. Nothing is sent.`}
+            {form.kind === "event"
+              ? eventPreviewWords(listened?.when ?? AUTOMATION_EVENT_UNKNOWN, listened?.every)
+              : preview.dates.length === 0
+                ? "That time has already passed."
+                : `Next: ${preview.dates.map((at) => automationDateWords(at, preview.timeZone)).join(" · ")}. Nothing is sent.`}
           </div>
           {preview.prompt && <PromptBox prompt={preview.prompt} preview />}
         </div>
@@ -712,8 +799,9 @@ function ReviewPanel({
   const project = review.save.projectId
     ? (projects.find((one) => one.id === review.save.projectId)?.name ?? "A removed project")
     : "No project";
+  const event = review.spec.kind === "event";
   const facts: [string, React.ReactNode][] = [
-    ["When", automationWhenWords(review.spec)],
+    ["When", automationWhenWords(review.spec, review.listened?.when)],
     ...(calendar
       ? ([["Time zone", zone ? automationZoneWords(zone) : localClockWords(where)]] as [
           string,
@@ -721,14 +809,16 @@ function ReviewPanel({
         ][])
       : []),
     ["Project", project],
-    [
-      review.spec.kind === "once" ? "Runs" : "Next runs",
-      review.dates.length === 0
-        ? "That time has already passed."
-        : review.dates.map((at) => automationDateWords(at, review.timeZone)).join(" · "),
-    ],
+    event
+      ? ["Runs", `Each time new events arrive. ${lookWords(review.listened?.every)}`.trim()]
+      : [
+          review.spec.kind === "once" ? "Runs" : "Next runs",
+          review.dates.length === 0
+            ? "That time has already passed."
+            : review.dates.map((at) => automationDateWords(at, review.timeZone)).join(" · "),
+        ],
     ["Your first mate gets", <PromptBox key="prompt" prompt={review.prompt} />],
-    ["What it sends", REVIEW_SENDS],
+    ["What it sends", event ? REVIEW_SENDS_EVENTS : REVIEW_SENDS],
     ["A missed time", reviewMissedWords(review.spec, where)],
   ];
   return (
@@ -769,7 +859,7 @@ function ReviewPanel({
           ref={turnOnRef}
           type="button"
           variant="primary"
-          disabled={busy || review.dates.length === 0}
+          disabled={busy || (!event && review.dates.length === 0)}
           onClick={onTurnOn}
           data-automation-turn-on
         >

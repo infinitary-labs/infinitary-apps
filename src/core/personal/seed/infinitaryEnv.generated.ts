@@ -382,8 +382,9 @@ declare module "@infinitary/contracts" {
   /**
    * One automation rule, as \`automation.list\` gives it: a schedule Firstmate
    * runs with a saved prompt (docs/automation.md). A \`draft\` never runs until
-   * the captain turns it on. \`nextFire\` is null unless the rule is running;
-   * times are epoch milliseconds.
+   * the captain turns it on. \`nextFire\` is null unless the rule is running,
+   * and always for an \`event\` rule, which runs when an integration's event
+   * arrives and says so in \`when\`; times are epoch milliseconds.
    */
   export type PanelAutomationRule = {
     id: string;
@@ -394,13 +395,16 @@ declare module "@infinitary/contracts" {
       | { kind: "every"; minutes: number }
       | { kind: "daily"; hour: number; minute: number; timeZone?: string }
       | { kind: "weekly"; days: number[]; hour: number; minute: number; timeZone: string }
-      | { kind: "once"; at: number };
+      | { kind: "once"; at: number }
+      | { kind: "event"; integration: string; event: string };
     prompt: string;
     projectId?: string;
     revision: number;
     nextFire: number | null;
     lastFired: number | null;
     captainRequested: boolean;
+    /** What an event rule listens for, in plain words ("When an item arrives in Stand-in"). */
+    when?: string;
   };
 
   /**

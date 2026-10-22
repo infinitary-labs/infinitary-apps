@@ -19,15 +19,19 @@ import { forgeSignInStateSchema } from "./forges";
 
 /**
  * The kinds the app can connect: GitHub, and any MCP server the person
- * adds (each its own row). A new kind is one more binding.
+ * adds (each its own row). A new kind is one more binding. `stand-in` is
+ * a development or end-to-end run's stand-in that tells events from a
+ * folder (`INFINITARY_STAND_IN_INTEGRATION`), never connected in a
+ * packaged build.
  */
-export const integrationKindSchema = z.enum(["github", "mcp"]);
+export const integrationKindSchema = z.enum(["github", "mcp", "stand-in"]);
 export type IntegrationKind = z.infer<typeof integrationKindSchema>;
 
 /** What each kind is called on screen. */
 export const INTEGRATION_KIND_NAMES: Record<IntegrationKind, string> = {
   github: "GitHub",
   mcp: "MCP server",
+  "stand-in": "Stand-in",
 };
 
 /**
@@ -71,7 +75,7 @@ export const integrationActionViewSchema = z
 export type IntegrationActionView = z.infer<typeof integrationActionViewSchema>;
 
 /**
- * Something an integration can tell (docs/integrations.md, "Events"): an
+ * Something an integration can tell (docs/integrations.md, "What an integration can tell"): an
  * event a rule may listen to, looked for every `every` minutes.
  */
 export const integrationEventViewSchema = z

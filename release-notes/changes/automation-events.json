@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "automation-events",
+      "reason": "Internal until an integration tells events: an Automation rule can now fire on an integration's event, looked for on the app's tick, with Settings' When choice and the first mate's on_event. No integration in an installed app tells events yet (GitHub declares none), so nothing a person sees changes; the Gmail, Calendar and MCP pieces bring the first events and their note."
+    }
+  ]
+}

@@ -42,6 +42,7 @@ export const APPLICATION_SUITES = [
   "app-git.spec.ts",
   "appearance.spec.ts",
   "automation-panel.spec.ts",
+  "automation-events.spec.ts",
   "autonomy.spec.ts",
   "cap-gate.spec.ts",
   "card-action-feedback.spec.ts",

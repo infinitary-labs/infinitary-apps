@@ -119,6 +119,7 @@ import {
   IntegrationSettingsStore,
   IntegrationsService,
   mcpIntegration,
+  standInIntegration,
 } from "./integrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
 import { workingCopyFacts } from "./knowledge/gitFacts";
@@ -1711,7 +1712,12 @@ export async function createServices(
   // Integrations (docs/integrations.md): GitHub over the forge's own sign-in
   // and the gateway's calls through it, and the MCP servers the person adds,
   // each program a child with the host's environment, below the UI. A new
-  // kind is one more binding here.
+  // kind is one more binding here. An unpackaged run that names a folder
+  // connects the stand-in, which tells an event for each line added there
+  // (docs/automation.md, "Events").
+  const standInIntegrationDir = host.app.packaged
+    ? undefined
+    : settingFrom(process.env, "STAND_IN_INTEGRATION")?.trim();
   const integrations = new IntegrationsService({
     bindings: [
       githubIntegration({
@@ -1730,6 +1736,7 @@ export async function createServices(
         version: host.app.version,
         changed: () => integrationsChanged(),
       }),
+      ...(standInIntegrationDir ? [standInIntegration({ dir: standInIntegrationDir })] : []),
     ],
     store: new IntegrationSettingsStore(paths.integrationsDir),
     // The bridge until the secret manager takes the keys over (INF-775, q3).
@@ -2497,6 +2504,11 @@ export async function createServices(
     inbox,
     broadcastEvent,
     now: ticker.now,
+    // An event rule looks through the integrations (docs/automation.md, "Events").
+    events: {
+      find: (integration, event) => integrations.listenable(integration, event),
+      look: (integration, event, cursor) => integrations.look(integration, event, cursor),
+    },
     // A rule's project is named in its prompt while it is live (docs/automation.md).
     projectOf: (id) => {
       const project = tasks.projects.get(id);

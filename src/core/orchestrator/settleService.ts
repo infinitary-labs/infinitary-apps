@@ -2253,10 +2253,35 @@ export class SettleService {
           )
         : settleFeedLine(title, mode, result),
     });
+    // A merge that went through is the feed line above and nothing more,
+    // unless it freed work only a start begins (friction 7 of the
+    // captain's Oct 22 audit: 45 of 62 merge wakes were idle turns).
+    if (result.ok && mode !== "discard" && !this.freesWorkAwaitingStart(taskId)) return;
     this.wakeOnSettle(taskId, title, confirm ? `${mode} (confirmed)` : mode, {
       ...result,
       text: result.text + this.missingValidationBrief(taskId, mode, result),
     });
+  }
+
+  /**
+   * Whether this merged task held open work that now waits on nothing and
+   * that the ready sweep will not start - on request, or held by a gate
+   * (`TaskService.awaitsStart`). Only the Firstmate or the captain begins
+   * it, and a task the Firstmate linked to wait on this merge - one its
+   * report says it covers - is such work, so its after-merge check runs.
+   * An active waiter needs no wake: the ready sweep steers it when this
+   * task closes (`dependency-closed`).
+   */
+  private freesWorkAwaitingStart(taskId: string): boolean {
+    const tasks = this.host.tasks;
+    return tasks
+      .blocking(taskId)
+      .some(
+        (record) =>
+          record.status === "open" &&
+          tasks.waitingOn(record.id).length === 0 &&
+          tasks.awaitsStart(record),
+      );
   }
 
   /**
@@ -2265,14 +2290,14 @@ export class SettleService {
    * wake, exactly as a declared card choice would. The host answered on the
    * agent's behalf, so the agent hears the answer.
    *
-   * EVERY outcome wakes: success, refusal, and failure alike. There is
-   * deliberately no branch sorting the orchestratable outcomes from the
-   * rest, because that classification is what broke this path - a discard
+   * Every refusal and failure wakes, and every discard: there is
+   * deliberately no branch sorting the orchestratable ones from the rest,
+   * because that classification is what broke this path - a discard
    * refused for want of `confirm` reads "call again with confirm true
    * after the captain chooses", an instruction that reached only the feed,
-   * so no one could act on it. Waking on all of them costs a turn the agent
-   * may spend saying nothing; losing one costs the captain a course they
-   * cannot steer.
+   * so no one could act on it. A merge or land that went through wakes
+   * only when it freed work that only a start begins
+   * (`freesWorkAwaitingStart`); any other success is its feed line alone.
    *
    * Three things this must get right:
    * - It runs only once the settle has fully resolved and after any close

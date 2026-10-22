@@ -165,10 +165,11 @@ What counts is a judgment, so it lives in the crewmate's and the first mate's in
 On the report the first mate triages each filing.
 A repeat is dropped as covered (`update_task drop`, its reason naming the covering key) once anything it adds is in the kept task's goal.
 The rest start when ready, are dropped, or stay planned at the priority they deserve, with a verdict saying what waiting costs and who pays it, and what would start them.
-Optional ideas reach the captain only when they merit his choice: together, in one decision card once their task closes, and only the ones he picks become tasks.
+Optional ideas reach the captain only when they merit his choice: together, in one decision card after the report that names them, and only the ones he picks become tasks.
 
-After a merge succeeds - the settle wake the captain's click sends, or the first mate's own `settle_task` result - the first mate checks the open tasks the merged task's report says it covers.
-It drops one as covered only when it never started and the merge met its whole goal, removing that task's `blocks` links first so nothing is left waiting on a dropped row.
+When a report says its change covers open tasks nobody started, the first mate links each to wait on the reporting task (`link_tasks blocks`) and leaves it on request.
+A captain's merge that goes through wakes the first mate only when it frees open work that only a start begins (`settled`, `docs/inbox.md`), so such a covered task brings the first mate back once the merge is in, as the first mate's own `settle_task` result does.
+It then drops a covered task only when the merge met its whole goal, removing that task's `blocks` links first so nothing is left waiting on a dropped row.
 Partial or unsure ones stay, with a verdict; nothing cascades into children, and started work is never dropped this way.
 
 Nothing is dropped by age, and no queue, timer, expiry or count decides what stays.

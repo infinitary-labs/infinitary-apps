@@ -3078,7 +3078,7 @@ describe("CrewSupervisor", () => {
     expect(settleWakes(ops).join("\n")).not.toContain("already in progress");
   });
 
-  it("wakes on every settle response, success included, with no host-side sorting", async () => {
+  it("wakes on every settle refusal and failure, and on a discard, with no host-side sorting", async () => {
     const mergePullRequest = vi.fn(async () => ({
       ok: false,
       text: "PR merge blocked: CI is red.",
@@ -3114,12 +3114,87 @@ describe("CrewSupervisor", () => {
     await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(3));
     const wake = (taskId: string) =>
       settleWakes(ops).find((line) => line.includes(`for task ${taskId} `)) ?? "";
-    // A success is an outcome too: the agent is told what its crew's work
+    // A discard is an outcome too: the agent is told what its crew's work
     // became, and decides for itself whether that is worth a word.
     expect(wake("clean")).toContain('the outcome was: Discarded "Task clean".');
     expect(wake("land")).toContain("Cannot merge: The main worktree is dirty.");
     expect(wake("merge")).toContain("PR merge blocked: CI is red.");
   });
+
+  // Friction 7 of the captain's Oct 22 audit (INF-834), his words: "The
+  // merge-settled wake fires only when the merge failed or unblocked a
+  // decision". 45 of 62 merge wakes were turns that said nothing.
+  it.each(["land", "merge-pr"] as const)(
+    "a %s that goes through is a feed line, and wakes only when it frees work only a start begins",
+    async (mode) => {
+      const { supervisor, tasks, events, ops } = setup(fakeCrewmate(), {
+        mergePullRequest: async () => ({ ok: true, text: "Merged #9 on GitHub." }),
+      });
+      vi.spyOn(supervisor, "taskDelivery").mockReturnValue(
+        mode === "merge-pr" ? "direct-pr" : "local-only",
+      );
+      const merge = (taskId: string) =>
+        supervisor.act(
+          supervisor.addFirstmateCard({
+            requiredActions: [],
+            taskId,
+            title: "Merge it",
+            body: "<p>The change is ready.</p><p>Merging puts it on main.</p>",
+            actions: [{ id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE }],
+          }),
+          "merge",
+        );
+      const closed = (taskId: string) =>
+        vi.waitFor(() => expect(tasks.get(taskId)?.status).toBe("done"));
+      const feed = (title: string) =>
+        events.filter(
+          (event) => event.type === "firstmate_note" && event.text.includes(`"${title}"`),
+        );
+
+      // Nothing waits on it: the feed line is the whole receipt.
+      seedTask(tasks, { id: "plain", title: "Plain", status: "idle", worktreeDir: "/plain" });
+      merge("plain");
+      await closed("plain");
+      await tick();
+      expect(feed("Plain").length).toBeGreaterThan(0);
+      expect(settleWakes(ops)).toEqual([]);
+
+      // Work that starts by itself once it merges is no decision: the queue owns it.
+      seedTask(tasks, { id: "fix", title: "Fix", status: "idle", worktreeDir: "/fix" });
+      seedTask(tasks, {
+        id: "next",
+        title: "Continue: the rest",
+        status: "queued",
+        startPolicy: "when-ready",
+      });
+      tasks.link("fix", "next", "blocks", "firstmate");
+      merge("fix");
+      await closed("fix");
+      await tick();
+      expect(settleWakes(ops)).toEqual([]);
+
+      // Work that waits on another task too is still held: no decision yet.
+      seedTask(tasks, { id: "half", title: "Half", status: "idle", worktreeDir: "/half" });
+      seedTask(tasks, { id: "other", title: "Other", status: "queued", startPolicy: "on-request" });
+      seedTask(tasks, { id: "both", title: "Both", status: "queued", startPolicy: "on-request" });
+      tasks.link("half", "both", "blocks", "firstmate");
+      tasks.link("other", "both", "blocks", "firstmate");
+      merge("half");
+      await closed("half");
+      await tick();
+      expect(settleWakes(ops)).toEqual([]);
+
+      // A task the first mate linked to wait on it - one the merged report
+      // says it covers - now waits on a start alone: the merge wakes it once.
+      seedTask(tasks, { id: "covers", title: "Covers", status: "idle", worktreeDir: "/covers" });
+      seedTask(tasks, { id: "covered", title: "Covered", status: "queued", startPolicy: "on-request" });
+      tasks.link("covers", "covered", "blocks", "firstmate");
+      merge("covers");
+      await vi.waitFor(() => expect(settleWakes(ops)).toHaveLength(1));
+      expect(settleWakes(ops)[0]).toContain(`the captain chose ${mode} for task covers "Covers"`);
+      expect(tasks.get("covered")?.status).toBe("open");
+    },
+  );
 
   // INF-87 P1: the existing queue, not a first-mate continuation turn, owns later starts.
   it.each(

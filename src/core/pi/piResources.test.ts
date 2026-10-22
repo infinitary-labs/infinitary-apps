@@ -183,9 +183,12 @@ describe("selective filing reaches every agent that acts on it", () => {
     expect(core).toContain(
       "Optional ideas a report names stay there, unfiled, unless the captain picks them",
     );
-    expect(core).toContain("offer them in one decision card once that task closes");
+    expect(core).toContain("offer them in one decision card after that report");
+    // A captain's merge wakes the first mate only when it fails or frees work
+    // only a start begins (INF-834's friction 7), so a covered task is linked
+    // to wait on the merge that covers it.
     expect(core).toContain(
-      "After a merge succeeds, check the open tasks the merged task's report says it covers",
+      "Link each unstarted task a report says it covers to wait on it (link_tasks blocks, on request); once it merges, drop one as covered only when the merge met its whole goal",
     );
     expect(core).toContain("removing its blocks links first; partial or unsure ones stay");
     expect(core).toContain(

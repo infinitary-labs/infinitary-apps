@@ -108,7 +108,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/eval-auth-turn-taking.test.ts` | two processes on a scratch auth file and local fake OAuth server, for two provider ids | 5 s default |
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
 | `tests/mac-check-lock.test.ts` | actual workflow commands and the `test:phone` package script, held Node processes, `ps` and Python kernel-lock probes, on macOS/Linux | 5 s default |
-| `tests/virtual-mac-phone.test.ts` | the phone check's virtual Mac scripts against a stand-in tart, real git, bash and tar on a scratch working copy | 5 s default (Mac slowest per-case minimum 0.618 s) |
+| `tests/virtual-mac-phone.test.ts` | guest-service settings, clean shutdown, runtime import and phone scripts against stand-ins, real git, bash and tar on a scratch working copy | 5 s default |
 | `tests/phone-release-process.test.ts` | the dispatched release command, temporary key fixtures and stand-in Xcode/upload commands; no signing or network | 5 s default |
 | `tests/run-evidence-playwright.test.ts` | two overlapping Playwright runs of a fixture config through the e2e global setup, its microphone check off; the build guard (node, `ps`) under one held run | 15 s |
 | `src/core/orchestrator/crewSupervisor.test.ts` | real git, at the run's own priority | 60 s on the real-git describe |

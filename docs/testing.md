@@ -97,6 +97,8 @@ For `renderer` or `application` specs, add `--no-deps` to avoid pulling in the w
 
 For a full run, start `verify.yml` in GitHub Actions for your branch.
 Crewmates use `github_write` to POST `/repos/{owner}/{repo}/actions/workflows/verify.yml/dispatches` with `{"ref":"<branch-or-tag>"}` and any workflow inputs their task needs through the app's own GitHub sign-in (`docs/forge.md`, "Verification workflow requests").
+For an isolated Mac proof, pass the optional `mac_runner` input with a temporary runner label; it changes only that invocation's Mac lane, never `MAC_RUNNER` or the Linux jobs.
+The reusable workflow accepts the same input, and leaving it unset keeps the normal project runner and hosted fallback.
 An accepted request is not a passing check: find the run with `github_read`, confirm its version, then read `check_change`.
 CI sets `CI`; do not set it locally to bypass the guard.
 Every alpha's own verification runs the full suite; no local full run precedes a release.
@@ -508,8 +510,21 @@ Each part checks itself as the image is built, and the image is renamed into pla
 
 The Mac mini's placement service (`dotfiles-private`) runs every project's Mac jobs in fresh clones of this one image, two at a time, and deletes each clone after its job.
 It brings its own GitHub runner into each clone, so the image holds none.
-`provision.sh` fails the build unless the tools those jobs' workflows name are there: `git`, `gh`, `python3`, `perl`, `swift`, `xcodebuild` and `xcrun`, an Xcode 26 and an available iOS simulator runtime.
-It also fails when the image holds any code-signing identity, so nothing that signs as the captain is ever in a clone.
+`provision.sh` fails the build unless the tools those jobs' workflows name are there: `git`, `gh`, `python3`, `perl`, `swift`, `xcodebuild` and `xcrun`, an Xcode 26 and the iOS 26.1 runtime sshhip's full simulator suite explicitly requests.
+The Xcode 26.4 base provides iOS 26.4, not that pinned fixture.
+Provisioning also updates the guest's Homebrew and installs its Python and Bash, refusing an image without `tomllib`, Homebrew's tap-trust command or Bash 4+ on the job's path.
+The full Mac gate consumes Python and Homebrew, and sshhip's simulator admission wrapper uses Bash's `coproc`; macOS's Bash 3.2 is not sufficient.
+Both Tart services prepend the image's Node and Homebrew to their child process path and use launchd's `ProcessType Interactive`, so their children do not inherit background scheduling.
+`guest-services.sh` configures both plists without replacing or reloading the responsible agent, preserving its microphone grant.
+The builder requests shutdown inside the guest and waits for a successful VM process exit before rebooting or publishing; a failed or incomplete shutdown refuses the image.
+After a fresh boot, it checks both saved `ProcessType` values and both loaded services' `spawn type`, then Python's `tomllib`, Bash and Homebrew through a non-login `tart exec`, matching how the runner starts.
+It records the verification shell's actual priority without asserting a fixed scheduler value.
+The provisioning user's signing commands run only inside the disposable guest with an explicit scratch home and signing-material directory.
+`image.sh` finds an Apple-verified, ready iOS 26.1 disk installed on the build Mac, or accepts its Apple-supplied disk through `IOS_RUNTIME_DMG`.
+It shares that disk's folder read-only and imports the runtime inside the guest; it never copies simulator devices, host runtime state or signing material.
+`IOS_RUNTIME_VERSION` names the required version and defaults to 26.1, and the image is refused unless that runtime becomes available after import.
+The guest's imported runtime remains in the image, while the source disk stays untouched on the build Mac.
+The build also fails when the image holds any code-signing identity, so nothing that signs as the captain is ever in a clone.
 
 ### The real Mac's place
 

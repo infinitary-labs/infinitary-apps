@@ -237,3 +237,229 @@ describe.skipIf(process.platform === "win32")("the phone check in a virtual Mac"
     }
   });
 });
+
+// INF-719 and INF-621: preserve the responsible agents, but configure both
+// services as Interactive and verify their disk AND loaded launchd settings.
+// The plist keys and launchctl line follow U12's real guest readings.
+describe.skipIf(process.platform === "win32")("the image's guest services", () => {
+  it("configures both services and refuses missing, unsaved or unloaded Interactive settings", async () => {
+    const root = scratchDir("infinitary-guest-services-");
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    const labels = ["org.cirruslabs.tart-guest-daemon", "org.cirruslabs.tart-guest-agent"];
+    const services = labels.map((label, index) => ({
+      label,
+      domain: index === 0 ? "system" : `gui/${process.getuid?.()}`,
+      plist: {
+        EnvironmentVariables: { PATH: "/usr/bin:/bin" },
+        ...(index === 0 ? { ProcessType: "Background" } : {}),
+      },
+      loaded: "background",
+    }));
+    const state = join(root, "services.json");
+    writeFileSync(state, JSON.stringify(services));
+    // Stand in only for privileged system reads/writes, never run host sudo.
+    writeFileSync(
+      join(bin, "sudo"),
+      `#!/usr/bin/env python3
+import json, os, sys
+path = os.environ["GUEST_SERVICES_STATE"]
+with open(path) as f: services = json.load(f)
+args = sys.argv[2:]
+if args[0] == "/usr/libexec/PlistBuddy":
+    service = next(s for s in services if args[-1].endswith(s["label"] + ".plist"))
+    command = args[2].split(" ", 2)
+    action, key = command[:2]
+    target = service["plist"]
+    keys = key.strip(":").split(":")
+    for part in keys[:-1]: target = target[part]
+    key = keys[-1]
+    if action == "Print":
+        if key not in target: sys.exit(1)
+        print(target[key])
+    else:
+        if action == "Set" and key not in target: sys.exit(1)
+        target[key] = command[2].removeprefix("string ") if action == "Add" else command[2]
+        with open(path, "w") as f: json.dump(services, f)
+elif args[:2] == ["/bin/launchctl", "print"]:
+    service = next(s for s in services if args[2] == s["domain"] + "/" + s["label"])
+    print("\\tspawn type = " + service["loaded"])
+else: sys.exit(64)
+`,
+      { mode: 0o755 },
+    );
+    const run = async (mode: string) =>
+      execute("bash", ["scripts/virtual-mac/guest-services.sh", mode], {
+        env: {
+          ...hostEnv(),
+          PATH: `${bin}:${hostEnv().PATH}`,
+          HOME: root,
+          GUEST_SERVICES_STATE: state,
+        },
+      });
+    await expect(run("verify")).rejects.toMatchObject({ code: 1 });
+    await run("configure");
+    await run("configure"); // Existing keys must be safely updated too.
+    const configured = JSON.parse(readFileSync(state, "utf8")) as typeof services;
+    for (const service of configured) {
+      expect(service.plist.ProcessType).toBe("Interactive");
+      expect(service.plist.EnvironmentVariables.PATH).toBe(
+        `${root}/node/bin:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin`,
+      );
+    }
+    await expect(run("verify")).rejects.toMatchObject({ code: 1 });
+    // A fresh boot loads the saved properties; editing files alone is not enough.
+    for (const service of configured)
+      service.loaded = service.plist.ProcessType?.toLowerCase() ?? "background";
+    writeFileSync(state, JSON.stringify(configured));
+    await run("verify");
+    const [daemon, agent] = configured;
+    if (!daemon || !agent) throw new Error("Both guest services must remain in the fixture");
+    agent.loaded = "background";
+    writeFileSync(state, JSON.stringify(configured));
+    await expect(run("verify")).rejects.toMatchObject({ code: 1 });
+    agent.loaded = "interactive";
+    daemon.plist.ProcessType = "Background";
+    writeFileSync(state, JSON.stringify(configured));
+    await expect(run("verify")).rejects.toMatchObject({ code: 1 });
+    daemon.plist.ProcessType = "Interactive";
+    delete agent.plist.ProcessType;
+    writeFileSync(state, JSON.stringify(configured));
+    await expect(run("verify")).rejects.toMatchObject({ code: 1 });
+  });
+
+  it.each([0, 7])("only publishes after a clean VM process exit (exit %i)", async (exit) => {
+    const root = scratchDir("infinitary-guest-shutdown-");
+    const tart = join(root, "tart");
+    await execute("mkfifo", [join(root, "booted"), join(root, "shutdown")], { env: hostEnv() });
+    writeFileSync(
+      tart,
+      `#!/bin/bash
+case "$1" in
+  run)
+    touch "$SHUTDOWN_STATE/running"
+    printf 'ready\\n' > "$SHUTDOWN_STATE/booted"
+    read -r shutdown < "$SHUTDOWN_STATE/shutdown"
+    rm "$SHUTDOWN_STATE/running"
+    exit "$VM_EXIT" ;;
+  exec)
+    shift 2
+    if [ "$1" = test ]; then
+      # The owning fake VM publishes readiness, with no clock or retry.
+      read -r ready < "$SHUTDOWN_STATE/booted"
+      test "$ready" = ready; exit
+    fi
+    test "$*" = '/bin/bash -c sudo -n /sbin/shutdown -h now' || exit 64
+    touch "$SHUTDOWN_STATE/requested"
+    printf 'shutdown\\n' > "$SHUTDOWN_STATE/shutdown"
+    exit 1 ;; # The guest connection closed during shutdown.
+  stop)
+    touch "$SHUTDOWN_STATE/forced"
+    if [ -e "$SHUTDOWN_STATE/running" ]; then printf 'stop\\n' > "$SHUTDOWN_STATE/shutdown"; fi ;;
+  *) exit 64 ;;
+esac
+`,
+      { mode: 0o755 },
+    );
+    const result = await execute(
+      "bash",
+      [
+        "-c",
+        `set -euo pipefail
+source scripts/virtual-mac/vm.sh
+trap 'stop_vm image' EXIT
+start_vm image "$SHUTDOWN_STATE/run.log" /ready
+shutdown_vm image
+touch "$SHUTDOWN_STATE/published"
+`,
+      ],
+      { env: { ...hostEnv(), TART: tart, SHUTDOWN_STATE: root, VM_EXIT: String(exit) } },
+    ).then(
+      () => 0,
+      (error: { code: number }) => error.code,
+    );
+    expect(existsSync(join(root, "requested"))).toBe(true);
+    expect(result).toBe(exit);
+    expect(existsSync(join(root, "published"))).toBe(exit === 0);
+    expect(existsSync(join(root, "running"))).toBe(false);
+  });
+});
+
+// INF-621: the shared image must supply the iOS 26.1 fixture sshhip's full
+// suite explicitly requests. These runtime fields and available-runtime lines
+// follow simctl's real readings from the build Mac and the Xcode 26.4 guest.
+describe.skipIf(process.platform === "win32")("the shared image's pinned iOS runtime", () => {
+  function runtimeFixture() {
+    const root = scratchDir("infinitary-image-runtime-");
+    const bin = join(root, "bin");
+    mkdirSync(bin);
+    const disk = join(root, "Apple runtime.dmg");
+    writeFileSync(disk, "runtime disk boundary");
+    writeFileSync(
+      join(root, "available"),
+      "iOS 26.4 (26.4 - 23E244) - com.apple.CoreSimulator.SimRuntime.iOS-26-4\n",
+    );
+    const runtime = {
+      version: "26.1",
+      platformIdentifier: "com.apple.platform.iphonesimulator",
+      state: "Ready",
+      signatureState: "Verified",
+      path: disk,
+    };
+    writeFileSync(
+      join(root, "installed"),
+      JSON.stringify({ current: { ...runtime, version: "26.4" }, required: runtime }),
+    );
+    writeFileSync(
+      join(bin, "xcrun"),
+      `#!/bin/bash
+set -eu
+case "$*" in
+  'simctl runtime list -j') cat "$RUNTIME_FIXTURE/installed" ;;
+  'simctl list runtimes available') cat "$RUNTIME_FIXTURE/available" ;;
+  *)
+    [ "$1 $2 $3" = 'simctl runtime add' ] || exit 64
+    printf '%s\\n' "$4" >> "$RUNTIME_FIXTURE/imports"
+    if [ ! -e "$RUNTIME_FIXTURE/import-without-runtime" ]; then
+      echo 'iOS 26.1 (26.1 - 23B86) - com.apple.CoreSimulator.SimRuntime.iOS-26-1' >> "$RUNTIME_FIXTURE/available"
+    fi ;;
+esac
+`,
+      { mode: 0o755 },
+    );
+    const env = hostEnv();
+    return {
+      root,
+      disk,
+      runtime,
+      run: (...args: string[]) =>
+        execute("bash", ["scripts/virtual-mac/runtime.sh", ...args], {
+          env: { ...env, PATH: `${bin}:${env.PATH}`, RUNTIME_FIXTURE: root },
+        }),
+    };
+  }
+
+  it("locates the requested verified disk and refuses an unverified copy", async () => {
+    const f = runtimeFixture();
+    expect((await f.run("locate", "26.1")).stdout.trim()).toBe(f.disk);
+    writeFileSync(
+      join(f.root, "installed"),
+      JSON.stringify({ required: { ...f.runtime, signatureState: "Unverified" } }),
+    );
+    await expect(f.run("locate", "26.1")).rejects.toMatchObject({ code: 1 });
+  });
+
+  it("imports the exact shared disk, verifies availability and leaves an installed runtime alone", async () => {
+    const f = runtimeFixture();
+    await f.run("install", "26.1", f.disk);
+    expect(readFileSync(join(f.root, "imports"), "utf8")).toBe(`${f.disk}\n`);
+    await f.run("install", "26.1", f.disk);
+    expect(readFileSync(join(f.root, "imports"), "utf8")).toBe(`${f.disk}\n`);
+  });
+
+  it("refuses to publish an image when a successful import leaves the required runtime absent", async () => {
+    const f = runtimeFixture();
+    writeFileSync(join(f.root, "import-without-runtime"), "");
+    await expect(f.run("install", "26.1", f.disk)).rejects.toMatchObject({ code: 1 });
+  });
+});

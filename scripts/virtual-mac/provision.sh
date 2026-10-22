@@ -18,6 +18,25 @@ rm -rf "$HOME/node"
 mkdir -p "$HOME/node"
 tar -xJf "$WORK/$NODE_TAR" -C "$HOME/node" --strip-components 1
 export PATH="$HOME/node/bin:/opt/homebrew/bin:/usr/local/bin:$PATH" CI=true
+# The full Mac gate reads TOML through Python's standard library and checks
+# casks against the installed Homebrew, including its tap-trust command.
+# The Xcode base's system Python and old Homebrew do not supply these.
+brew update
+brew install python bash
+python3 -c 'import tomllib'
+brew help trust > /dev/null
+# The simulator admission wrappers use coproc (Bash 4+); macOS ships 3.2.
+# Jobs prepend /opt/homebrew/bin, so verify the Bash they will resolve.
+bash -c 'test "${BASH_VERSINFO[0]}" -ge 4'
+bash --version
+# Both Tart services otherwise select system Python and give their children
+# background scheduling. Keep the responsible agent and its microphone grant;
+# the builder verifies the saved and loaded settings after a clean reboot.
+/bin/bash "$SHARE/guest-services.sh" configure
+# The app also asks the user's login shell for its child-process path.
+for profile in "$HOME/.zprofile" "$HOME/.bash_profile"; do
+  printf '\nexport PATH="$HOME/node/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"\n' >> "$profile"
+done
 npm install -g "pnpm@$PNPM_VERSION"
 test "$(pnpm --version)" = "$PNPM_VERSION"
 
@@ -43,9 +62,16 @@ test -x /opt/homebrew/bin/claude
 # the agent is signed ad hoc and granted by its cdhash. The running agent
 # keeps its old signature until the image next starts.
 AGENT="$(readlink -f /opt/homebrew/bin/tart-guest-agent)"
-sudo -n codesign -f -s - "$AGENT"
-codesign -v "$AGENT"
-REQUIREMENT="$(codesign -d -r- "$AGENT" 2>&1 | sed -n 's/^# designated => //p')"
+SIGNING_HOME="$WORK/signing-home"
+mkdir -p "$SIGNING_HOME"
+# Even inside this disposable guest, signing tools get an explicit scratch
+# home and material folder, never the provisioning user's own home.
+signing_tool() {
+  /usr/bin/env HOME="$SIGNING_HOME" INFINITARY_LOCAL_CODESIGN_DIR="$SIGNING_HOME/material" "$@"
+}
+sudo -n /usr/bin/env HOME="$SIGNING_HOME" INFINITARY_LOCAL_CODESIGN_DIR="$SIGNING_HOME/material" codesign -f -s - "$AGENT"
+signing_tool codesign -v "$AGENT"
+REQUIREMENT="$(signing_tool codesign -d -r- "$AGENT" 2>&1 | sed -n 's/^# designated => //p')"
 [[ "$REQUIREMENT" == cdhash* ]]
 echo "$REQUIREMENT" | csreq -r- -b "$WORK/agent.req"
 TCC_DB="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
@@ -62,11 +88,13 @@ for tool in git gh python3 perl swift xcodebuild xcrun; do
   command -v "$tool"
 done
 xcodebuild -version | grep '^Xcode 26' > /dev/null
-xcrun simctl list runtimes available | grep '^iOS ' > /dev/null
+# sshhip's complete suite passes --runtime 26.1 explicitly. The Xcode 26.4
+# base has only iOS 26.4, which is not a substitute for that job's fixture.
+/bin/bash "$SHARE/runtime.sh" install "${IOS_RUNTIME_VERSION:?}" "${IOS_RUNTIME_DMG:?}"
 
 # Nothing that signs as the captain: a job that signs with his Apple
 # certificates asks for the real Mac, and the image holds no identity.
-security find-identity -v -p codesigning | grep '^ *0 valid identities found' > /dev/null
+signing_tool security find-identity -v -p codesigning | grep '^ *0 valid identities found' > /dev/null
 
 # A warm pnpm store and Playwright's window recorder, from the working copy
 # image.sh bundled, so each job's install only links.

@@ -36,6 +36,10 @@ on:
       - src/shared/userDataFolders.ts
   workflow_dispatch:
     inputs:
+      mac_runner:
+        description: Optional isolated runner label for a dry run; ignored for publication
+        required: false
+        type: string
       dry_run:
         description: Write the casks it would commit in a scratch clone of the tap, keep them on the run, and push nothing
         required: false
@@ -60,7 +64,7 @@ jobs:
     # Only main's generator in Infinitary's own repository writes the tap;
     # any other ref or repository may only rehearse.
     if: ${{ (github.ref == 'refs/heads/main' && github.repository == 'infinitary-labs/infinitary') || inputs.dry_run == true }}
-    runs-on: ${{ vars.MAC_RUNNER || 'macos-15' }}
+    runs-on: ${{ inputs.dry_run && inputs.mac_runner || vars.MAC_RUNNER || 'macos-15' }}
     timeout-minutes: 30
     steps:
       - name: Checkout

@@ -275,6 +275,7 @@ A publication writes the casks of the channels it moves with its own source comm
 - **When it runs.**
   On every push to main that changes a file the casks are written from (the workflow's `paths`), and on demand; only main writes the tap, so merging such a change republishes both casks.
   A dry run (`gh workflow run republish-casks.yml --ref <ref> -f dry_run=true`) writes the casks it would commit in a scratch clone of the tap, keeps them on the run as the `tap-republish-rehearsal` artifact and pushes nothing; `scripts/publish-tap.sh republish-rehearsal` does the same from a working copy.
+  Its optional `mac_runner` input selects a temporary runner for that dry run without changing `MAC_RUNNER`; publication ignores the override.
 - **After an older publication.**
   A stable promoted from an alpha cut before a generator change writes that alpha's older casks for the channels it moves; republish on demand after it.
 

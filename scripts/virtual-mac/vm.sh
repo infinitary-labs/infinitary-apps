@@ -38,6 +38,26 @@ start_vm() {
   return 1
 }
 
+# Image publication requires a guest shutdown, not just stopping the host's
+# Tart process: an abrupt stop can lose the launchd plist edits. Wait for the
+# VM process to exit cleanly; the EXIT trap still force-cleans a failed build.
+shutdown_vm() {
+  local name="$1" status=0
+  [ -n "${VM_PID:-}" ] || { echo "No running virtual Mac to shut down." >&2; return 1; }
+  # The connection may end during shutdown, before exec returns its status.
+  vm_exec "$name" 30 /bin/bash -c 'sudo -n /sbin/shutdown -h now' || true
+  for _ in $(seq 1 60); do
+    if ! kill -0 "$VM_PID" 2> /dev/null; then
+      wait "$VM_PID" || status=$?
+      VM_PID=
+      return "$status"
+    fi
+    sleep 2
+  done
+  echo "The virtual Mac $name did not shut down cleanly; refusing the image." >&2
+  return 1
+}
+
 stop_vm() {
   local name="$1"
   "$TART" stop "$name" --timeout 60 > /dev/null 2>&1 || true

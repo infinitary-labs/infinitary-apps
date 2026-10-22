@@ -31,6 +31,10 @@ on:
         description: Branch, tag or SHA to verify (default - the caller's ref)
         required: false
         type: string
+      mac_runner:
+        description: Optional isolated Mac runner label for a proof run; unset keeps the project's runner
+        required: false
+        type: string
       profile:
         description: Which lanes run - stable or alpha (both run the full checks)
         required: false
@@ -40,6 +44,10 @@ on:
     inputs:
       ref:
         description: Branch, tag or SHA to verify (default - the selected ref)
+        required: false
+        type: string
+      mac_runner:
+        description: Optional isolated Mac runner label for a proof run; unset keeps the project's runner
         required: false
         type: string
       profile:
@@ -83,7 +91,7 @@ jobs:
       fail-fast: false
       matrix:
         lane: ${{ fromJSON('["linux-checks","mac"]') }}
-    runs-on: ${{ matrix.lane == 'mac' && (vars.MAC_RUNNER || 'macos-15') || 'ubuntu-latest' }}
+    runs-on: ${{ matrix.lane == 'mac' && (inputs.mac_runner || vars.MAC_RUNNER || 'macos-15') || 'ubuntu-latest' }}
     # Every crewmate works under "Application Support". The gate here does
     # too, so a check that only fails from a path with a space fails here
     # instead of only in a working copy (FI3-152).

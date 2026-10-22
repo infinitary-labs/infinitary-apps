@@ -2108,6 +2108,27 @@ describe("the signed channel workflow", () => {
   const lanes = (profile?: string) =>
     workflowValue(lane.strategy?.matrix.lane ?? "", { inputs: profile ? { profile } : {} });
 
+  // INF-621: prove the full Mac job on a disposable runner without moving
+  // the live MAC_RUNNER variable or changing Linux's placement.
+  it("routes an isolated verification to its requested Mac without changing normal runs", () => {
+    for (const event of ["workflow_call", "workflow_dispatch"]) {
+      expect(verify.on[event]?.inputs?.mac_runner).toMatchObject({
+        required: false,
+        type: "string",
+      });
+    }
+    const runner = (name: string, macRunner: string, configuredRunner: string) =>
+      workflowValue(lane["runs-on"] ?? "", {
+        matrix: { lane: name },
+        inputs: { mac_runner: macRunner },
+        vars: { MAC_RUNNER: configuredRunner },
+      });
+    expect(runner("mac", "mini-mac-inf621-proof", "mini-mac")).toBe("mini-mac-inf621-proof");
+    expect(runner("mac", "", "mini-mac")).toBe("mini-mac");
+    expect(runner("mac", "", "")).toBe("macos-15");
+    expect(runner("linux-checks", "mini-mac-inf621-proof", "mini-mac")).toBe("ubuntu-latest");
+  });
+
   it("runs each profile's lanes as one matrix, so an omitted lane is absent from the run, never skipped", () => {
     expect(Object.keys(verify.jobs)).toEqual(["linux-e2e", "lane"]);
     expect(verify.jobs["linux-e2e"]).toMatchObject({
@@ -2123,7 +2144,7 @@ describe("the signed channel workflow", () => {
     expect(lane.if).toBeUndefined();
     expect(Object.keys(release.jobs)).toEqual(["resolve", "notes", "verify", "linux", "release"]);
     const runner = (name: string) =>
-      workflowValue(lane["runs-on"] ?? "", { matrix: { lane: name }, vars: {} });
+      workflowValue(lane["runs-on"] ?? "", { matrix: { lane: name }, inputs: {}, vars: {} });
     expect(runner("linux-checks")).toBe("ubuntu-latest");
     expect(runner("mac")).toBe("macos-15");
     // What each lane runs, by its own step conditions on a passing run: the
@@ -2797,9 +2818,9 @@ describe("the cask republication workflow", () => {
     };
     permissions: Record<string, string>;
     concurrency: Record<string, unknown>;
-    jobs: Record<string, { if: string; steps: Step[] }>;
+    jobs: Record<string, { if: string; "runs-on": string; steps: Step[] }>;
   };
-  const job = workflow.jobs.republish as { if: string; steps: Step[] };
+  const job = workflow.jobs.republish as { if: string; "runs-on": string; steps: Step[] };
   /** The steps a passing run on `ref` with `inputs` takes, in order; null when the job does not start. */
   const ranSteps = (
     ref: string,
@@ -2845,6 +2866,25 @@ describe("the cask republication workflow", () => {
     });
     expect(workflow.permissions).toEqual({ contents: "read" });
     expect(workflow.concurrency).toEqual({ group: "republish-casks", "cancel-in-progress": false });
+  });
+
+  // INF-621: a cask proof may use the disposable image, but the override
+  // must never move a publishing job away from its normal runner.
+  it("allows an isolated runner only for a dry run", () => {
+    expect(workflow.on.workflow_dispatch?.inputs.mac_runner).toMatchObject({
+      type: "string",
+      required: false,
+    });
+    const runner = (inputs: Record<string, unknown>, vars: Record<string, string>) =>
+      workflowValue(job["runs-on"], { inputs, vars });
+    expect(
+      runner({ dry_run: true, mac_runner: "mini-mac-inf621-proof" }, { MAC_RUNNER: "mini-mac" }),
+    ).toBe("mini-mac-inf621-proof");
+    expect(
+      runner({ dry_run: false, mac_runner: "mini-mac-inf621-proof" }, { MAC_RUNNER: "mini-mac" }),
+    ).toBe("mini-mac");
+    expect(runner({}, { MAC_RUNNER: "mini-mac" })).toBe("mini-mac");
+    expect(runner({ dry_run: true }, {})).toBe("macos-15");
   });
 
   it("republishes only from main, with the tap token in one step, and a dry run anywhere pushes nothing", () => {

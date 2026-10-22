@@ -11,7 +11,11 @@
 #
 # TART names tart (default: tart on PATH); tart keeps the image under its own
 # TART_HOME (default ~/.tart). BASE_IMAGE, CPUS, MEMORY_MB and
-# CLAUDE_CODE_VERSION override the defaults below. The image is rebuilt from
+# CLAUDE_CODE_VERSION override the defaults below. IOS_RUNTIME_VERSION defaults
+# to 26.1 (the simulator suite's pin). IOS_RUNTIME_DMG can name its Apple-supplied
+# disk; otherwise runtime.sh locates a verified installed copy on this Mac.
+# That disk is shared read-only, never copied into a host staging folder.
+# The image is rebuilt from
 # the base every time, so a fix lands here and in no image by hand.
 set -euo pipefail
 
@@ -20,6 +24,7 @@ BASE_IMAGE="${BASE_IMAGE:-ghcr.io/cirruslabs/macos-tahoe-xcode:26.4}"
 CPUS="${CPUS:-6}"
 MEMORY_MB="${MEMORY_MB:-16384}"
 NODE_MAJOR=24
+IOS_RUNTIME_VERSION="${IOS_RUNTIME_VERSION:-26.1}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 # shellcheck source=scripts/virtual-mac/vm.sh
 source "$ROOT/scripts/virtual-mac/vm.sh"
@@ -54,6 +59,12 @@ command -v "$TART" > /dev/null || {
   exit 2
 }
 
+IOS_RUNTIME_DMG="${IOS_RUNTIME_DMG:-$(/bin/bash "$ROOT/scripts/virtual-mac/runtime.sh" locate "$IOS_RUNTIME_VERSION")}"
+[ -f "$IOS_RUNTIME_DMG" ] || { echo "The required Apple-supplied iOS runtime disk is missing." >&2; exit 2; }
+RUNTIME_DIR="$(cd "$(dirname "$IOS_RUNTIME_DMG")" && pwd)"
+RUNTIME_DISK="$SHARED/ios-runtime/$(basename "$IOS_RUNTIME_DMG")"
+printf -v RUNTIME_ENV 'IOS_RUNTIME_VERSION=%q IOS_RUNTIME_DMG=%q' "$IOS_RUNTIME_VERSION" "$RUNTIME_DISK"
+
 # Built under another name and renamed only once provisioning passed, so a
 # failed build never leaves a half-made image under the lane's name.
 BUILDING="$NAME-building"
@@ -66,6 +77,8 @@ cleanup() {
 trap cleanup EXIT
 
 cp "$ROOT/scripts/virtual-mac/provision.sh" "$SHARE/provision.sh"
+cp "$ROOT/scripts/virtual-mac/guest-services.sh" "$SHARE/guest-services.sh"
+cp "$ROOT/scripts/virtual-mac/runtime.sh" "$SHARE/runtime.sh"
 # The working copy's own lockfile warms the image's pnpm store.
 git -C "$ROOT" bundle create -q "$SHARE/repo.bundle" HEAD
 
@@ -73,10 +86,19 @@ echo "Building $NAME from $BASE_IMAGE: Node $NODE_MAJOR, pnpm $PNPM_VERSION, Cla
 "$TART" delete "$BUILDING" > /dev/null 2>&1 || true
 "$TART" clone "$BASE_IMAGE" "$BUILDING"
 "$TART" set "$BUILDING" --cpu "$CPUS" --memory "$MEMORY_MB"
-start_vm "$BUILDING" "$SHARE/tart-run.log" "$SHARED/share/provision.sh" "--dir=share:$SHARE:ro"
+start_vm "$BUILDING" "$SHARE/tart-run.log" "$SHARED/share/provision.sh" "--dir=share:$SHARE:ro" "--dir=ios-runtime:$RUNTIME_DIR:ro"
 "$TART" exec "$BUILDING" /bin/bash -lc \
-  "NODE_MAJOR=$NODE_MAJOR PNPM_VERSION=$PNPM_VERSION CLAUDE_CODE_VERSION=$CLAUDE_CODE_VERSION /bin/bash '$SHARED/share/provision.sh'"
-stop_vm "$BUILDING"
+  "NODE_MAJOR=$NODE_MAJOR PNPM_VERSION=$PNPM_VERSION CLAUDE_CODE_VERSION=$CLAUDE_CODE_VERSION $RUNTIME_ENV /bin/bash '$SHARED/share/provision.sh'"
+shutdown_vm "$BUILDING"
+# The runner starts through tart exec without a login shell. Verify that
+# environment after a fresh boot, not the provisioner's exported PATH.
+start_vm "$BUILDING" "$SHARE/tart-check.log" "$SHARED/share/provision.sh" "--dir=share:$SHARE:ro"
+TOOL_CHECK='set -e; command -v python3; python3 -c "import tomllib"; bash -c '\''test "${BASH_VERSINFO[0]}" -ge 4'\''; brew help trust >/dev/null; openssl version; node --version; pnpm --version'
+"$TART" exec "$BUILDING" /bin/bash "$SHARED/share/guest-services.sh" verify
+"$TART" exec "$BUILDING" /bin/bash -c "$TOOL_CHECK"
+"$TART" exec "$BUILDING" /bin/zsh -ilc "$TOOL_CHECK"
+"$TART" exec "$BUILDING" /bin/bash -lc "$TOOL_CHECK"
+shutdown_vm "$BUILDING"
 "$TART" delete "$NAME" > /dev/null 2>&1 || true
 "$TART" rename "$BUILDING" "$NAME"
 echo "$NAME is ready."

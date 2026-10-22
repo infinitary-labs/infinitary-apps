@@ -1,0 +1,23 @@
+{
+  "entries": [
+    {
+      "id": "board-summary-stays-after-scroll",
+      "kind": "fix",
+      "title": "A task board tile's summary stays open until you move on",
+      "body": "When the arrows reach a tile on the task board, its summary no longer closes by itself a moment after it opens on a busy Mac. Esc then closes the summary first, and the next Esc clears Find.",
+      "area": "tasks",
+      "noPicture": "The summary looks as it did; it now stays open where it used to close by itself a moment after opening.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "board-keeps-keyboard-on-return",
+      "kind": "fix",
+      "title": "The task board keeps the keyboard when you come back to the window",
+      "body": "On a busy Mac, coming back to Infinitary while the task board was open could leave the arrows moving nothing until you clicked a tile. The tile that had the keyboard now keeps it.",
+      "area": "tasks",
+      "noPicture": "The board looks as it did; the keyboard now stays on its tile when the window comes forward.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -604,8 +604,10 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
 
   // Resting on a tile, with the pointer or the keyboard: the app opens the
   // crew summary beside it, level with the tile. The board lets it go when
-  // the pointer leaves, on a press, on Esc, when the body or a list
-  // scrolls, and when the tile moves or leaves.
+  // the pointer leaves, on a press, on Esc, and when the tile moves or
+  // leaves - a scroll of the body or a list among them. A scroll that left
+  // the tile where the summary was placed keeps it: the event can come a
+  // frame after the summary read the tile's box, which already held it.
   const peeked = useRef<{ taskId: string; tile: HTMLElement; box: string } | null>(null);
   const peek = (tile: HTMLElement | null, taskId?: string) => {
     if (!tile || !taskId) {
@@ -621,10 +623,11 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
   const letGo = (tile: HTMLElement) => {
     if (peeked.current?.tile === tile) peek(null);
   };
-  useLayoutEffect(() => {
+  const letGoIfMoved = () => {
     const at = peeked.current;
     if (at && (!at.tile.isConnected || boxKey(at.tile) !== at.box)) peek(null);
-  });
+  };
+  useLayoutEffect(letGoIfMoved);
 
   // An accepted move carries its tile to another lane, or off this view:
   // focus follows it there, or lands on the row now nearest where it was.
@@ -1283,7 +1286,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
           key={`${name}:${at.page}`}
           className="fm-board-rows fm-board-list-rows"
           data-board-list-rows=""
-          onScroll={() => peek(null)}
+          onScroll={letGoIfMoved}
         >
           {at.tiles.length > 0
             ? at.tiles.map((t) => tile(t, name, true))
@@ -1392,7 +1395,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
           };
           keepScroll();
           // The summary sits level with a tile that just moved: it lets go.
-          peek(null);
+          letGoIfMoved();
         }}
       >
         {view !== "waiting" && (

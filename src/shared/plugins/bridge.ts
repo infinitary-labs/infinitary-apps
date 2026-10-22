@@ -1596,6 +1596,13 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
   }, true);
   document.addEventListener("focusout", function (event) {
     var target = event.target;
+    // Focus that moved in a page whose process was not yet told it holds the
+    // window's focus fired no focusin (Chromium sends it on the page's focus,
+    // which a move to another page can pass by): the element focus leaves is
+    // the one the page held, unless a press in the body moved it.
+    if (target !== held.element && !pressing && target && target.nodeType === 1 && target !== document.body) {
+      held.element = target;
+    }
     if (target === held.element && typeof target.selectionStart === "number") {
       held.start = target.selectionStart;
       held.end = target.selectionEnd;
@@ -1608,9 +1615,13 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     if (link === keys.quiet) keys.quiet = null;
     if (link === keys.rested) leaveKey();
   }, true);
-  // A press elsewhere in the body leaves the field it held for whatever the press focuses.
+  // A press elsewhere in the body leaves the field it held for whatever the
+  // press focuses, in the same task as the press.
+  var pressing = false;
   document.addEventListener("pointerdown", function (event) {
     if (held.element && !held.element.contains(event.target)) held.element = null;
+    pressing = true;
+    setTimeout(function () { pressing = false; });
   }, true);
   // The host gave the frame focus back (an overlay over the window closed):
   // the field it held takes it again, its caret where it was - unless focus
@@ -1666,7 +1677,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-Vxn73dr4R6nVKDfx6tqlnVozyXyqiUpfH0eXMzYuuwc=";
+export const FRAME_BRIDGE_SHA256 = "sha256-W2vgMAsZn6oGteYOn9UYWV0kH2N/YgkkOuckdV/pLrk=";
 
 // --- the envelope, frame -> host -------------------------------------------
 

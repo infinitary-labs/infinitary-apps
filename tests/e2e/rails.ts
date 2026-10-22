@@ -280,6 +280,15 @@ export function rowSummary(page: Page): Locator {
   return page.locator(`[${POINT_SUMMARY}]`);
 }
 
+/**
+ * The panel task's summary while it is open: one still fading out after its
+ * rest ended is hidden (`aria-hidden`) and is not it, so a new rest's
+ * summary is never mistaken for the last one on the same task as it leaves.
+ */
+export function openRowSummary(page: Page): Locator {
+  return page.locator(`[${POINT_SUMMARY}]:not([aria-hidden])`);
+}
+
 /** The hairline that ties a panel task's summary to its panel or its card. */
 export function rowSummaryTie(page: Page): Locator {
   return rowSummary(page).locator("[data-point-summary-tie]");

@@ -12,7 +12,7 @@ import { launchApp } from "./launch";
 import { expectClearOf } from "./layout";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
-import { expandDock, POINT_SUMMARY, recordCard, rowSummary } from "./rails";
+import { expandDock, openRowSummary, POINT_SUMMARY, recordCard, rowSummary } from "./rails";
 import { clickInBody, SHOWN_ENTRY, stagePrepared } from "./stack";
 import {
   BOARD_PANEL,
@@ -327,7 +327,15 @@ test("the task board opens from the Tasks header and ⌘B, and the keyboard driv
       await expect(boardViewTab(page, "earlier")).toBeVisible();
       await page.keyboard.press("ArrowDown");
       await expect.poll(() => focusedTileKey(page)).toBe("FM3K-3");
-      await expect(rowSummary(page)).toHaveAttribute(POINT_SUMMARY, "history");
+      // This rest's own summary, not the last rest's on the same task as it fades out (INF-595).
+      await expect(openRowSummary(page)).toHaveAttribute(POINT_SUMMARY, "history");
+      // A list's scroll can be heard a frame after the summary read where its
+      // tile is; one that left the tile there keeps the summary (INF-595).
+      await boardTile(page, "FM3K-3").evaluate((tile) => {
+        const rows = tile.closest("[data-board-list-rows]");
+        if (!rows) throw new Error("FM3K-3 is not a list's row");
+        rows.dispatchEvent(new Event("scroll"));
+      });
       await page.keyboard.press("Escape");
       await expect(rowSummary(page)).toHaveCount(0);
       await expect(find).toHaveValue("history");

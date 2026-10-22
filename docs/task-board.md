@@ -90,6 +90,7 @@ A confirmed failure returns it to Backlog with Could not start, and the Backlog 
 A click or Enter opens the tile's or row's task exactly as a Tasks row does (`point.openTask`): its minimized cards or waiting decision come forward, or its record opens at the front.
 Resting on a tile, with the pointer or the keyboard's focus, opens the crew summary beside the tile, the same summary and beat as a Tasks row's (`point.peekTask`).
 Where neither side of the tile has room, as beside a list's full-width row in a narrow window, the summary sits under the tile or over it (`placeKeySummary`).
+The board lets the summary go when the pointer leaves the tile, on a press, on Esc, and when the tile moves or leaves; a scroll of the body or a list that left the tile where the summary was placed keeps it, since Chromium can deliver that scroll a frame after the summary read the tile's place.
 The tile focus is on is the selected one, tinted as an open row is; while the board is the shown entry, the selected tile is the turn's hint, as a shown record is (`point.aim`).
 A rest also lights the tile's task everywhere else it shows (the lit task, `docs/crew-orbits.md`), and a rest elsewhere lights its tile: the tile takes its hover surface as `data-board-lit`, and nothing about it changes size or moves.
 A click, Enter or a rest writes nothing; the moves below are the board's only writes.

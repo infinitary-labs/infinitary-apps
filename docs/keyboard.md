@@ -395,6 +395,7 @@ Inside a card's body the bridge completes the keyboard (`src/shared/plugins/brid
 
 Focus that leaves a frame for an overlay comes back into it.
 The bridge keeps the element that last had focus in its document, and a text field's caret, until a press elsewhere in the body.
+A page whose process has not yet been told it holds the window's focus moves focus inside itself without a `focusin`, which Chromium sends only once the page is told, so the bridge also keeps the element focus leaves, unless a press in the body moved it.
 When command search or the picture viewer closes and the frame had focus, `giveFocusBack` focuses the frame and sends its bridge `focus`, and that element takes focus again with its caret where it was, a card's or a panel's frame alike, unless focus has moved on from the frame by then.
 
 Focus the window's own page takes from a frame comes back into it too.

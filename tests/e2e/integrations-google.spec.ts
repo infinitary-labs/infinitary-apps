@@ -10,6 +10,7 @@ import {
   CALENDAR_ACTIONS,
   CALENDAR_CHANGED_EVENT,
   GMAIL_MESSAGE_EVENT,
+  GOOGLE_OAUTH_CLIENT,
 } from "../../src/core/integrations";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../helpers/calendarStandIn";
 import {
@@ -56,6 +57,82 @@ test.afterEach(async () => {
   launched = undefined;
   await google?.close();
   google = undefined;
+});
+
+/**
+ * INF-887: the captain asks this PR to match an unverified production audience
+ * for private testing, using stable for testers and alpha for personal development.
+ * Data: fresh isolated homes with the real registered public client, no account.
+ * Completion: development and packaged Settings offer one Google chip; keys open
+ * registered-client consent and cancel without saving a connection. Packaged
+ * setup also ignores development overrides. No external browser is opened.
+ * Prerequisites: hermetic launcher, including its inert packaged bootstrap.
+ * Shared resources: none beyond the desktop lane's packaged connection port.
+ */
+test("development and released builds offer the registered Google client by keys", async () => {
+  for (const packaged of [false, true]) {
+    await test.step(
+      packaged
+        ? "released Google ignores development overrides"
+        : "development uses the registered client",
+      async () => {
+        launched = await launchApp({
+          packaged,
+          withMockProvider: true,
+          ...(packaged
+            ? {
+                env: {
+                  INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+                  INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+                  INFINITARY_GOOGLE_URL: "http://127.0.0.1:1",
+                },
+              }
+            : {}),
+        });
+        const { app, page } = launched;
+        try {
+          await app.evaluate(({ shell }) => {
+            (globalThis as { googleOpened?: string[] }).googleOpened = [];
+            shell.openExternal = async (url) => {
+              (globalThis as { googleOpened?: string[] }).googleOpened?.push(url);
+            };
+          });
+          await runFromSearch(app, page, "settings.integrations");
+          const tab = settingsSection(page, "integrations");
+          const chip = tab.locator('[data-integration-add="google"] button');
+          await expect(chip).toHaveCount(1);
+          await pressKey(chip, "Enter");
+          await expect(tab.locator('[data-integration-signing-in="google"]')).toBeVisible();
+          const opened = await app.evaluate(
+            () => (globalThis as { googleOpened?: string[] }).googleOpened ?? [],
+          );
+          // A boolean failure cannot print the registered client configuration.
+          expect(
+            opened.length === 1 &&
+              new URL(opened[0] ?? "").origin === "https://accounts.google.com" &&
+              new URL(opened[0] ?? "").searchParams.get("client_id") === GOOGLE_OAUTH_CLIENT.id,
+          ).toBe(true);
+          await pressKey(
+            tab.locator('[data-integration-signing-in="google"]').getByRole("button", {
+              name: INTEGRATIONS_BROWSER_SIGN_IN_WORDS.cancel,
+              exact: true,
+            }),
+            "Enter",
+          );
+          await expect(tab.locator('[data-integration-signing-in="google"]')).toHaveCount(0);
+          await expect(chip).toHaveCount(1);
+          expect(
+            await page.evaluate(
+              async () => (await window.infinitary.integrations.list()).integrations.length,
+            ),
+          ).toBe(0);
+        } finally {
+          await launched.close();
+          launched = undefined;
+        }
+      },
+    );
+  }
 });
 
 test("one Google sign-in from Settings by keys, and a message arriving fires a rule", async () => {

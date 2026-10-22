@@ -553,18 +553,37 @@ describe("Google as an integration", () => {
     expect(() => statSync(join(dir, "google.json"))).toThrow();
   });
 
-  it("reaches only Google from a packaged build, and only as Infinitary's own client", () => {
+  it("keeps released Google on Infinitary's client and endpoints despite development overrides", () => {
+    // INF-887: the captain enables packaged private testing, not replacement clients or endpoints.
     const setup = googleSetup({
       packaged: true,
       env: {
         INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+        INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
         INFINITARY_GOOGLE_URL: "http://127.0.0.1:1",
       },
     });
-    // Until Infinitary registers its client there is none, and so no Google row.
-    expect(setup?.client ?? null).toBe(GOOGLE_OAUTH_CLIENT);
-    if (setup) expect(new URL(setup.endpoints.auth).host).toBe("accounts.google.com");
+    // Compare booleans so a failure never prints the desktop client configuration.
+    expect(setup.client === GOOGLE_OAUTH_CLIENT).toBe(true);
+    expect(setup.endpoints).toEqual(googleSetup({ packaged: true, env: {} }).endpoints);
   });
+
+  it.each([false, true])(
+    "uses the registered client and Google endpoints without a local handoff file (packaged: %s)",
+    (packaged) => {
+      // INF-887: "can you update this PR to reflect that?" enables both packaged channels for private testing.
+      const setup = googleSetup({ packaged, env: {} });
+      expect(setup.client === GOOGLE_OAUTH_CLIENT).toBe(true);
+      expect(Boolean(setup.client.id && setup.client.secret)).toBe(true);
+      expect(setup.endpoints).toEqual({
+        auth: "https://accounts.google.com/o/oauth2/v2/auth",
+        token: "https://oauth2.googleapis.com/token",
+        revoke: "https://oauth2.googleapis.com/revoke",
+        gmail: "https://gmail.googleapis.com",
+        calendar: "https://www.googleapis.com",
+      });
+    },
+  );
 });
 
 /** INF-786, accepted INF-775 piece 6 and captain's isolated-only go-ahead. */

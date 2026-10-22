@@ -123,8 +123,15 @@ The summary carries title, event id, calendar and times, or cancellation, never 
 A lost sync token (410), another account or another calendar discards the old cursor and re-baselines without firing; a failed or incomplete sync never advances the cursor.
 Both APIs share one renewal and backoff boundary; a Calendar rate limit holds Gmail too, and a read-only free/busy failure never claims an outward change happened.
 
-A packaged build signs in only as `GOOGLE_OAUTH_CLIENT`, which stays empty until Infinitary registers its client with Google and passes Google's verification and the security assessment Gmail's permissions need, so until then a packaged build has no Google row and offers no Google chip.
-An unpackaged run may name a client and a stand-in Google: `INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET` and `INFINITARY_GOOGLE_URL`, every address under that one (`googleSetup`).
+`GOOGLE_OAUTH_CLIENT` holds Infinitary's registered public Desktop app client, including the installed-app client secret that Google does not treat as confidential.
+`googleSetup` offers Google in development and packaged builds on both stable and alpha channels, for the captain's private experimental rollout.
+Stable is the private testers' distribution and alpha is the captain's development channel; neither channel label establishes Google's verification or a public launch.
+Packaged builds always use Infinitary's registered client and Google's HTTPS endpoints, ignoring development client and endpoint overrides.
+An unpackaged run uses those defaults, or may name a client and a stand-in Google: `INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET` and `INFINITARY_GOOGLE_URL`, every address under that one (`googleSetup`).
+Google Cloud's External / In production audience permits unverified access without an individual tester list, normally with a 100-user lifetime project cap and an unverified-app warning.
+Google or an account's administrator may still refuse access; offering the chip is not proof of verification, assessment or policy compliance.
+[Google verification material](google-verification.md) owns the draft privacy copy, permission justifications, real-consent demonstration script and CASA answer bank.
+It distinguishes registration from submission readiness, including downstream AI processing, storage and deletion obligations; a stand-in demonstration is not evidence of Google's approval.
 
 ## Settings -> Integrations
 

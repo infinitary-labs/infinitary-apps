@@ -2,8 +2,8 @@ import { settingFrom } from "@shared/envSettings";
 
 /**
  * Who Infinitary is to Google, and where Google answers (docs/integrations.md,
- * "Google"). The captain's q4 on INF-775: "Infinitary's own client from the
- * start, so the Gmail piece waits for verification and the assessment".
+ * "Google"). The captain's INF-887 rollout enables the registered client in
+ * both release channels for private testing; Google controls account access.
  *
  * A desktop client is public: Google gives it an id, and a secret that an
  * installed app carries and Google does not treat as confidential, so both
@@ -13,13 +13,11 @@ import { settingFrom } from "@shared/envSettings";
  */
 export type GoogleClient = { id: string; secret?: string };
 
-/**
- * Infinitary's own Google client: null until Infinitary registers it with
- * Google and passes Google's verification and the yearly security
- * assessment Gmail's permissions need, so a packaged build offers no
- * Google sign-in until then.
- */
-export const GOOGLE_OAUTH_CLIENT: GoogleClient | null = null;
+/** Infinitary's registered public Desktop app client, shared by development and released builds. */
+export const GOOGLE_OAUTH_CLIENT: GoogleClient = {
+  id: "634239586896-ucb4ehoc6m5o6ph8cer0n599u38m8mm1.apps.googleusercontent.com",
+  secret: "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",
+};
 
 /** Gmail: read, search, label, draft and send - everything but deleting for good. */
 export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
@@ -55,21 +53,20 @@ const GOOGLE_ENDPOINTS: GoogleEndpoints = {
 };
 
 /**
- * The client and the addresses a run signs in with, or undefined when it
- * has no client. An unpackaged run may name a stand-in Google
+ * The client and the addresses a run signs in with.
+ * An unpackaged run may name a stand-in Google
  * (`INFINITARY_GOOGLE_URL`, every address under it) and a client
  * (`INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET`); a
  * packaged build reaches only Google, and only as Infinitary's own client.
  */
-export function googleSetup(options: {
-  packaged: boolean;
-  env?: NodeJS.ProcessEnv;
-}): { client: GoogleClient; endpoints: GoogleEndpoints } | undefined {
+export function googleSetup(options: { packaged: boolean; env?: NodeJS.ProcessEnv }): {
+  client: GoogleClient;
+  endpoints: GoogleEndpoints;
+} {
   const env = options.env ?? process.env;
   const named = options.packaged ? undefined : settingFrom(env, "GOOGLE_CLIENT_ID")?.trim();
   const secret = options.packaged ? undefined : settingFrom(env, "GOOGLE_CLIENT_SECRET")?.trim();
   const client = named ? { id: named, ...(secret ? { secret } : {}) } : GOOGLE_OAUTH_CLIENT;
-  if (!client) return undefined;
   const base = options.packaged ? undefined : settingFrom(env, "GOOGLE_URL")?.trim();
   if (!base) return { client, endpoints: GOOGLE_ENDPOINTS };
   const root = base.replace(/\/+$/, "");

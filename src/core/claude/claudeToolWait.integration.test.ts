@@ -62,11 +62,14 @@ afterAll(async () => {
   await api.close();
 });
 
-/** The model calls the waiting tool once, then answers with what it got. */
-function callTheToolOnce(): void {
+/**
+ * The model calls the waiting tool once, then answers with what it got -
+ * once `beforeAnswer`, when given, has settled.
+ */
+function callTheToolOnce(beforeAnswer?: Promise<void>): void {
   api.answer((request: StubRequest, res: ServerResponse) => {
-    beginAnthropicStream(res, 50, request.n);
     if (!request.raw.includes('"tool_result"')) {
+      beginAnthropicStream(res, 50, request.n);
       const name =
         request.body.tools?.find((tool) => tool.name === TOOL || tool.name.endsWith(`__${TOOL}`))
           ?.name ?? TOOL;
@@ -74,8 +77,11 @@ function callTheToolOnce(): void {
       finishAnthropicStream(res, "tool_use", 5);
       return;
     }
-    writeAnthropicText(res, 0, "Done.");
-    finishAnthropicStream(res, "end_turn", 2);
+    void (beforeAnswer ?? Promise.resolve()).then(() => {
+      beginAnthropicStream(res, 50, request.n);
+      writeAnthropicText(res, 0, "Done.");
+      finishAnthropicStream(res, "end_turn", 2);
+    });
   });
 }
 
@@ -84,6 +90,7 @@ async function waitInATool(
   env: Record<string, string>,
   onSignal?: (signal?: AbortSignal) => void,
   stopTurn = false,
+  beforeAnswer?: Promise<void>,
 ): Promise<string> {
   const home = scratchDir("infinitary-claude-tool-wait-");
   const stub = writeMockClaudeClient(home, {
@@ -127,7 +134,7 @@ async function waitInATool(
     shape: { turns: "one" },
   };
   const first = api.requests.length;
-  callTheToolOnce();
+  callTheToolOnce(beforeAnswer);
   const session = await factory.open(spec);
   try {
     const turn = session.prompt("Wait for the home.");
@@ -157,11 +164,26 @@ describe("how long the Claude client lets an app tool wait", () => {
   // Intent: the captain's F2 backstop must hear Claude give up, including when our timer cannot run during sleep.
   it("passes Claude's give-up signal to the bound tool (INF-312 F2)", async () => {
     let received: AbortSignal | undefined;
-    await waitInATool({ MCP_TOOL_TIMEOUT: "1000" }, (signal) => {
-      received = signal;
+    // Claude answers the tool's error only once the bound tool has heard it
+    // give up, so the turn cannot end, and the session cannot close, before
+    // the cancel arrives (INF-821). A lost cancel holds the answer until the
+    // test times out.
+    let gaveUp!: () => void;
+    const heard = new Promise<void>((resolve) => {
+      gaveUp = resolve;
     });
+    await waitInATool(
+      { MCP_TOOL_TIMEOUT: "1000" },
+      (signal) => {
+        received = signal;
+        if (signal?.aborted) gaveUp();
+        else signal?.addEventListener("abort", () => gaveUp(), { once: true });
+      },
+      false,
+      heard,
+    );
     expect(received).toBeInstanceOf(AbortSignal);
-    await expect.poll(() => received?.aborted).toBe(true);
+    expect(received?.aborted).toBe(true);
   });
 
   // Intent: the captain narrowed F3 to Claude giving up, excluding an ordinary home stop.

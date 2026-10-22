@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-give-up-test-order",
+      "reason": "Test only: the Claude give-up test holds its stub's answer until the tool hears the cancel. No product change."
+    }
+  ]
+}

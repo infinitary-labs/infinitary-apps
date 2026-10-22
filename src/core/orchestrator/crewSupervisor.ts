@@ -317,6 +317,7 @@ import {
 } from "../tasks/liveValidation";
 import { modelMoveWords } from "../tasks/recordActivity";
 import { queryTasks, type TaskQueryInput, type TaskQueryRow } from "../tasks/taskQuery";
+import { resultRefusal, resultSchemaRefusal } from "../tasks/taskResult";
 import {
   type ReportDeclaration,
   type SettleRefusal,
@@ -331,6 +332,7 @@ import { projectPageFile } from "../workspace/projectPage";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 import {
   type DependencyInstall,
+  type DispatchBase,
   keptRefFor,
   nearestFolderAbove,
   type TaskWorkspace,
@@ -382,6 +384,7 @@ import {
   PULL_REPAIR_TITLE,
   type ReviewBriefFacts,
   renderAnswerShapeSection,
+  renderBranchFromLine,
   renderEscalationBrief,
   renderFolderRepairBrief,
   renderFollowupBrief,
@@ -389,6 +392,7 @@ import {
   renderPicturesSection,
   renderPullRepairBrief,
   renderRepairAssessmentBrief,
+  renderResultShapeSection,
   renderReviewBrief,
   renderRigorSection,
   type SpawnIntent,
@@ -2899,7 +2903,12 @@ export class CrewSupervisor {
     const runsOnRefused =
       runsOnAsk && this.placeRefusal(`"${title}"`, { repoId: boundRepoId }, runsOnAsk);
     if (runsOnRefused) throw new Error(`${NOTHING_SPAWNED} ${runsOnRefused}`);
-    const shape = this.withDeliverable(this.workShape(input.shape, escalation), input.intent);
+    const handOff = this.handOffShape(input.shape, boundRepoId);
+    if ("refused" in handOff) throw new Error(`${NOTHING_SPAWNED} ${handOff.refused}`);
+    const shape = this.withDeliverable(
+      { ...this.workShape(input.shape, escalation), ...handOff },
+      input.intent,
+    );
     const graph = {
       ...(placement.parentId ? { parentId: placement.parentId } : {}),
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
@@ -4003,7 +4012,12 @@ export class CrewSupervisor {
     );
     const taskId = randomUUID().slice(0, 8);
     const title = (input.title.trim() || input.intent.goal || "Task").slice(0, 64);
-    const shape = this.withDeliverable(this.workShape(input.shape), input.intent);
+    const handOff = this.handOffShape(input.shape, placement.repoId);
+    if ("refused" in handOff) throw new TaskGraphRefusal(`Nothing was filed. ${handOff.refused}`);
+    const shape = this.withDeliverable(
+      { ...this.workShape(input.shape), ...handOff },
+      input.intent,
+    );
     const record = this.options.tasks.create({
       id: taskId,
       kind: "work",
@@ -4573,6 +4587,7 @@ export class CrewSupervisor {
       title: basis.title,
       ...(basis.intent?.userWords ? { userWords: basis.intent.userWords } : {}),
       ...(basis.outcome ? { outcome: basis.outcome } : {}),
+      ...(basis.delivery?.result ? { result: basis.delivery.result.value } : {}),
       reports: timeline
         .filter((event) => event.kind === "report")
         .map((event) => ({ event_id: event.id, text: event.text })),
@@ -4673,6 +4688,83 @@ export class CrewSupervisor {
       file,
     );
     return { ...rest, cardFile: remoteFile };
+  }
+
+  /**
+   * Where a task that branches from another starts (INF-799 piece 1,
+   * `branch_from`): that task's branch head while its working copy is
+   * present on this Mac, else the kept ref its work was saved on. Answers a
+   * refusal in words when the named task is unknown, is this task, is in
+   * another project, or has neither, so a tool call reads it as text and a
+   * start fails with it.
+   */
+  private branchFromSource(
+    ref: string,
+    repoId: string | null,
+    selfId?: string,
+  ): { task: TaskRecord; ref: string } | { refused: string } {
+    const source = this.options.tasks.resolve(ref.trim());
+    if (!source) return { refused: `Unknown branch_from "${ref}": name a task by its key.` };
+    const key = source.key || source.id;
+    if (source.id === selfId) return { refused: "A task cannot branch from itself." };
+    if (source.repoId !== repoId)
+      return {
+        refused: `branch_from ${key} is in another project; a task branches only from work in its own project.`,
+      };
+    if (source.workspaceState === "present" && source.branch && !source.deviceId)
+      return { task: source, ref: source.branch };
+    const kept = this.keptRefOf(source.id);
+    if (kept) return { task: source, ref: kept };
+    if (source.workspaceState === "present" && source.deviceId)
+      return {
+        refused: `branch_from ${key}'s working copy is on another computer; branch from it once its work is home and saved.`,
+      };
+    return {
+      refused: `branch_from ${key} has no branch or saved work to start from: name a task that has started work in this project.`,
+    };
+  }
+
+  /**
+   * The typed hand-off a new task declares (INF-799 piece 1): its result
+   * shape, checked to be a JSON Schema with an object at its root, and the
+   * task it branches from, checked to hold a branch or saved work in the
+   * same project and stored by key. A refusal is words, nothing filed.
+   */
+  handOffShape(
+    ask: Pick<WorkShapeAsk, "result_schema" | "branch_from"> | undefined,
+    repoId: string | null,
+    selfId?: string,
+  ): Pick<WorkShape, "result_schema" | "branch_from"> | { refused: string } {
+    const refused = ask?.result_schema ? resultSchemaRefusal(ask.result_schema) : undefined;
+    if (refused) return { refused };
+    const ref = ask?.branch_from?.trim();
+    const source = ref ? this.branchFromSource(ref, repoId, selfId) : undefined;
+    // A step filed behind the step it continues names work that has not
+    // started yet: its branch is checked again when this one starts.
+    const named = ref ? this.options.tasks.resolve(ref) : undefined;
+    const unstarted = named?.status === "open" && named.workspaceState === "none";
+    if (
+      source &&
+      "refused" in source &&
+      !(unstarted && named.repoId === repoId && named.id !== selfId)
+    )
+      return source;
+    return {
+      ...(ask?.result_schema ? { result_schema: ask.result_schema } : {}),
+      ...(named ? { branch_from: named.key || named.id } : {}),
+    };
+  }
+
+  /** The commit a branching task's working copy starts at, or undefined when it names none. */
+  private async branchFromBase(
+    record: TaskRecord | undefined,
+    repoDir: string,
+  ): Promise<DispatchBase | undefined> {
+    const ref = record?.shape?.branch_from;
+    if (!record || !ref) return undefined;
+    const source = this.branchFromSource(ref, record.repoId, record.id);
+    if ("refused" in source) throw new Error(source.refused);
+    return this.options.workspace.baseAt(repoDir, source.ref);
   }
 
   /**
@@ -4886,6 +4978,14 @@ export class CrewSupervisor {
         const machines = this.options.machines;
         if (!machines?.folders(machine, taskId))
           throw new Error("The computer this task runs on is out of reach.");
+        if (record?.shape?.result_schema && !machines.takesResults?.(machine))
+          throw new Error(
+            `${this.options.machines?.placeOf(machine).who ?? "That computer"} must be updated before it runs a task whose report carries a typed result.`,
+          );
+        if (record?.shape?.branch_from)
+          throw new Error(
+            `This task branches from ${record.shape.branch_from}, whose work is on this Mac, so it starts only on this Mac: set its Runs on to this Mac.`,
+          );
         const builder = this.reviewBuilderOf(record);
         const headSha = builder ? record?.delivery?.headSha : undefined;
         this.options.tasks.beginPlacementPreparation(taskId);
@@ -4919,11 +5019,14 @@ export class CrewSupervisor {
           throw new Error(this.folderMissing(spec.repoId, "start", this.options.tasks.get(taskId)));
         }
         const headSha = this.reviewBuilderOf(record) ? record?.delivery?.headSha : undefined;
+        // A task that branches from another starts at that task's last commit (INF-799).
+        const branchFrom =
+          !headSha && repoDir ? await this.branchFromBase(record, repoDir) : undefined;
         this.options.tasks.beginPlacementPreparation(taskId);
         task.workspace = await this.options.workspace.createTaskWorktree(
           taskId,
           repoDir,
-          headSha ? { headSha } : undefined,
+          headSha ? { headSha } : branchFrom,
         );
       }
       cwd ??= task.workspace?.cwd ?? "";
@@ -5791,6 +5894,21 @@ export class CrewSupervisor {
     if (deliverable === "answer") {
       sections.push([renderAnswerShapeSection(record?.shape?.internal_step === true)]);
     }
+    // A typed hand-off (INF-799): the result shape the report must fit, and
+    // the task whose last commit the working copy began at.
+    if (record?.shape?.result_schema)
+      sections.push([renderResultShapeSection(record.shape.result_schema)]);
+    const branchFrom = record?.shape?.branch_from
+      ? this.branchFromSource(record.shape.branch_from, record.repoId, record.id)
+      : undefined;
+    if (branchFrom && !("refused" in branchFrom))
+      sections.push([
+        renderBranchFromLine({
+          key: branchFrom.task.key || branchFrom.task.id,
+          title: branchFrom.task.title,
+          ref: branchFrom.ref,
+        }),
+      ]);
     if (deliverable === "change") {
       const basis = this.basisFacts(record);
       if (basis) sections.push(basisSectionParts(await this.withCardFile(taskId, basis)));
@@ -6516,6 +6634,7 @@ export class CrewSupervisor {
         ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
         ...(finished ? { finished: true } : {}),
         ...(needsFirstmate ? { needsFirstmate } : {}),
+        ...(declared?.result ? { result: declared.result } : {}),
         ...(ci ? { ci } : {}),
         ...(review ? { review } : {}),
       },
@@ -10210,9 +10329,13 @@ export class CrewSupervisor {
         "Report refused: needs_firstmate needs a reason - what the first mate must do.",
       );
     }
-    const needs = ask ? { needsFirstmate: ask.slice(0, 300) } : {};
+    const result = this.checkResult(task, declared);
+    const needs = {
+      ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
+      ...(result ? { result } : {}),
+    };
     if (declared?.finished) return { finished: true, ...needs };
-    if (!wait) return ask ? needs : undefined;
+    if (!wait) return Object.keys(needs).length > 0 ? needs : undefined;
     const reason = wait.reason.replace(/\s+/g, " ").trim();
     if (!reason) {
       throw new Error(
@@ -10226,6 +10349,34 @@ export class CrewSupervisor {
       );
     }
     return { wait: { reason: reason.slice(0, 300), ...(cardId ? { cardId } : {}) }, ...needs };
+  }
+
+  /**
+   * A report's typed result against its task's declared shape (INF-799
+   * piece 1): a result that does not fit, or none where a shape stands, is
+   * refused naming the first failing field, so the crewmate reports again.
+   * A report that hands the turn to the captain or the first mate is taken
+   * without one. A task with no shape keeps whatever object it was given.
+   */
+  private checkResult(
+    task: TaskRuntime,
+    declared: ReportDeclaration | undefined,
+  ): Record<string, unknown> | undefined {
+    const schema = this.options.tasks.get(task.id)?.shape?.result_schema;
+    const result = declared?.result;
+    if (!schema) return result;
+    if (result === undefined) {
+      if (declared?.wait || declared?.needsFirstmate?.trim()) return undefined;
+      throw new Error(
+        "Report refused: result is missing. Your task declares a result shape (your brief prints it): pass result, a JSON object that fits it, or declare waiting_on_captain or needs_firstmate.",
+      );
+    }
+    const refusal = resultRefusal(schema, result);
+    if (refusal)
+      throw new Error(
+        `Report refused: ${refusal} Fix that field so result fits your task's result shape, and report again.`,
+      );
+    return result;
   }
 
   /**

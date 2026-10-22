@@ -2741,7 +2741,15 @@ export class FirstmateAgent {
     };
     return {
       plan: (input) => {
-        const record = supervisor.plan(input);
+        let record: TaskRecord;
+        try {
+          record = supervisor.plan(input);
+        } catch (caught) {
+          // A refused hand-off (INF-799) files nothing and reads as words.
+          if (caught instanceof TaskGraphRefusal)
+            return { taskId: "", key: "", text: caught.message };
+          throw caught;
+        }
         this.asks.attach(record.id, "create_task");
         this.replyFacts.app = `Filed ${record.key}: ${record.title}`;
         this.noteDelivery({
@@ -2780,6 +2788,27 @@ export class FirstmateAgent {
                 )
               : null;
             const runsOn = input.runsOn;
+            // A typed hand-off is checked as a new task's is (INF-799); empty clears it.
+            const handOff = (() => {
+              if (input.resultSchema === undefined && input.branchFrom === undefined) return {};
+              const checked = supervisor.handOffShape(
+                {
+                  ...(input.resultSchema ? { result_schema: input.resultSchema } : {}),
+                  ...(input.branchFrom?.trim() ? { branch_from: input.branchFrom } : {}),
+                },
+                record.repoId,
+                record.id,
+              );
+              if ("refused" in checked) throw new TaskGraphRefusal(checked.refused);
+              return {
+                ...(input.resultSchema !== undefined
+                  ? { resultSchema: checked.result_schema ?? null }
+                  : {}),
+                ...(input.branchFrom !== undefined
+                  ? { branchFrom: checked.branch_from ?? "" }
+                  : {}),
+              };
+            })();
             // What updateFields applies first - a reopening, a move to another
             // project or under another parent - lands before where it runs is
             // judged, in one transaction: it is judged, and its words written,
@@ -2792,6 +2821,7 @@ export class FirstmateAgent {
             const rest = {
               ...(input.title !== undefined ? { title: input.title.trim().slice(0, 64) } : {}),
               ...(input.basis !== undefined ? { basis: input.basis } : {}),
+              ...handOff,
               ...(input.speed !== undefined ? { speed: input.speed } : {}),
               ...(input.model !== undefined ? { model: input.model } : {}),
               ...(input.reasoning !== undefined ? { reasoning: input.reasoning } : {}),

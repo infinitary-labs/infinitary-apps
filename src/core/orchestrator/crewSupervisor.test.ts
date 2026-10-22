@@ -24327,3 +24327,249 @@ describe("the spark when something reaches a crewmate (INF-759)", () => {
     expect(sparks(events, planned.id)).toBe(0);
   });
 });
+
+// INF-799 piece 1, the captain's Approve and build on "Plan task-graph
+// programs, typed results first": answer 4, the host checks a step's result
+// and refuses a mismatch naming the first failing field; answer 3, a step
+// delivers its branch and its typed result, and the next one branches from it.
+describe("typed results and branch_from (INF-799 piece 1)", () => {
+  const REAL_GIT_WAIT = { timeout: 20_000, interval: 25 };
+  /** What a review program's finder hands on: the files it found and why. */
+  const FINDINGS = {
+    type: "object",
+    required: ["files", "summary"],
+    properties: {
+      files: { type: "array", items: { type: "string" } },
+      summary: { type: "string" },
+    },
+  };
+  const FOUND = {
+    files: ["src/core/tasks/taskResult.ts", "src/core/orchestrator/intentBrief.ts"],
+    summary: "Two modules render the result; neither caps its size.",
+  };
+
+  async function finder() {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId } = await harness.supervisor.commission({
+      title: "Find where results are rendered",
+      intent: intentOf("Find where a typed result is rendered."),
+      shape: { result_schema: FINDINGS },
+    });
+    await tick();
+    /** The report tool's answer, a refusal's words included. */
+    const report = async (declared?: Parameters<NonNullable<CrewmateSpec["onReport"]>>[2]) => {
+      try {
+        return await harness.specs[0]!.onReport!("Found the two renderers.", undefined, declared);
+      } catch (error) {
+        return (error as Error).message;
+      }
+    };
+    return { ...harness, crewmate, taskId, report };
+  }
+
+  it("prints the result shape in the brief and refuses a report that misses or misfits it, naming the first failing field", async () => {
+    const { crewmate, report } = await finder();
+    expect(crewmate.promptCalls[0]).toContain(
+      "Result shape: your report carries a typed result, the result field of the report tool",
+    );
+    expect(crewmate.promptCalls[0]).toContain(JSON.stringify(FINDINGS));
+    expect(await report()).toContain("Report refused: result is missing.");
+    expect(await report({ result: { files: [42], summary: FOUND.summary } })).toContain(
+      "Report refused: result.files[0] ",
+    );
+    expect(await report({ result: { files: FOUND.files } })).toContain(
+      "Report refused: result.summary is missing.",
+    );
+    // A report that hands the turn on to the first mate is taken without one.
+    expect(await report({ needsFirstmate: "start the verifier" })).toContain("Reported.");
+  });
+
+  it("takes a report waiting on the captain without a result", async () => {
+    const { report } = await finder();
+    expect(await report({ wait: { reason: "He picks which renderer to cap." } })).toContain(
+      "Reported.",
+    );
+  });
+
+  it("keeps a fitting result on the report and the record, reads it by key, and carries it on the wake", async () => {
+    const { crewmate, specs, tasks, ops, taskId, report } = await finder();
+    expect(await report({ result: FOUND })).toContain("Reported.");
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    const event = tasks
+      .timeline(taskId)
+      .filter((entry) => entry.kind === "report")
+      .at(-1);
+    expect(event?.data).toMatchObject({ result: FOUND });
+    const read = await specs[0]?.onQueryTasks?.({ key: tasks.get(taskId)?.key });
+    expect(read?.rows[0]).toMatchObject({ result: FOUND, result_schema: FINDINGS });
+    const wake = ops.find((line) => line.includes("reported on task")) ?? "";
+    expect(wake).toContain(`Its result, as declared: ${JSON.stringify(FOUND)}`);
+  });
+
+  it("prints a basis's result in the next brief, after its report", async () => {
+    const { supervisor, tasks, crewmate, taskId, report } = await finder();
+    await report({ result: FOUND });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    tasks.close(taskId, { status: "done", reason: "answered", actor: "host" });
+    await supervisor.commission({
+      title: "Cap the rendered result",
+      intent: intentOf("Cap what the brief renders."),
+      shape: { basis: tasks.get(taskId)!.key },
+    });
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain(
+      `Found the two renderers.\n\nIts result, as declared:\n${JSON.stringify(FOUND)}`,
+    );
+  });
+
+  it("refuses a result shape without an object at its root, filing nothing", async () => {
+    const { supervisor, tasks } = setup(fakeCrewmate());
+    expect(() =>
+      supervisor.plan({
+        title: "Count findings",
+        intent: intentOf("Count them."),
+        shape: { result_schema: { type: "array", items: { type: "string" } } },
+      }),
+    ).toThrow('result_schema must have an object at its root: give it "type": "object".');
+    expect(tasks.list()).toHaveLength(0);
+  });
+
+  describe("branch_from", () => {
+    function git(dir: string, ...args: string[]) {
+      return execFileSync(
+        "git",
+        ["-C", dir, "-c", "user.name=Test", "-c", "user.email=test@localhost", ...args],
+        { encoding: "utf8" },
+      ).trim();
+    }
+    function projectRepo() {
+      const dir = scratchDir("infinitary-branch-from-");
+      execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+      git(dir, "commit", "--allow-empty", "-m", "init");
+      return dir;
+    }
+
+    /** A first stage that committed its migration on its branch. */
+    async function firstStage() {
+      const crewmate = fakeCrewmate();
+      const harness = setup(crewmate, { realWorkspace: true });
+      const { repo } = await harness.repos.setup({
+        kind: "adopt",
+        path: projectRepo(),
+        name: "meterlab",
+      });
+      const { taskId } = await harness.supervisor.commission({
+        title: "Migrate the meter module",
+        intent: intentOf("Migrate the meter module."),
+        repoId: repo.id,
+      });
+      const first = await vi.waitFor(() => {
+        const current = harness.tasks.get(taskId);
+        if (!current?.worktreeDir || !existsSync(current.worktreeDir)) throw new Error("not yet");
+        return current;
+      }, REAL_GIT_WAIT);
+      await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+      crewmate.finishPrompt();
+      await vi.waitFor(() => expect(harness.tasks.get(taskId)?.activity).toBe("idle"), REAL_GIT_WAIT);
+      writeFileSync(join(first.worktreeDir, "meter.ts"), "export const meter = 2;\n");
+      git(first.worktreeDir, "add", "meter.ts");
+      git(first.worktreeDir, "commit", "-m", "refactor: migrate the meter");
+      const head = git(first.worktreeDir, "rev-parse", "HEAD");
+      return { ...harness, crewmate, repoId: repo.id, first, head };
+    }
+
+    async function startSecond(harness: Awaited<ReturnType<typeof firstStage>>, from: string) {
+      const second = harness.supervisor.plan({
+        title: "Migrate the meter's callers",
+        intent: intentOf("Migrate the callers."),
+        repoId: harness.repoId,
+        shape: { branch_from: from },
+      });
+      await harness.supervisor.startQueuedNow(second.key);
+      return vi.waitFor(() => {
+        const current = harness.tasks.get(second.id);
+        if (!current?.worktreeDir || !existsSync(current.worktreeDir)) throw new Error("not yet");
+        return current;
+      }, REAL_GIT_WAIT);
+    }
+
+    it("starts the next stage's working copy at the first stage's branch head", async () => {
+      const harness = await firstStage();
+      const { tasks, crewmate, first, head } = harness;
+      const second = await startSecond(harness, first.id);
+      expect(tasks.get(second.id)?.shape?.branch_from).toBe(first.key);
+      expect(git(second.worktreeDir, "rev-parse", "HEAD")).toBe(head);
+      await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(2), REAL_GIT_WAIT);
+      expect(crewmate.promptCalls[1]).toContain(
+        `Your working copy starts at ${first.key} "Migrate the meter module"'s last commit (${first.branch}), not at the default branch`,
+      );
+    });
+
+    it("starts at the kept ref once the first stage's working copy is gone", async () => {
+      const harness = await firstStage();
+      const { supervisor, tasks, first, head } = harness;
+      await supervisor.interruptCrewmate(first.id, "cancel");
+      await vi.waitFor(
+        () => expect(tasks.get(first.id)?.workspaceState).not.toBe("present"),
+        REAL_GIT_WAIT,
+      );
+      await harness.realWorkspace?.deletionsSettled();
+      expect(existsSync(first.worktreeDir)).toBe(false);
+      const second = await startSecond(harness, first.key);
+      // The save is a commit on top of the branch's work, so that work is beneath it.
+      expect(git(second.worktreeDir, "merge-base", "--is-ancestor", head, "HEAD")).toBe("");
+      expect(readFileSync(join(second.worktreeDir, "meter.ts"), "utf8")).toBe(
+        "export const meter = 2;\n",
+      );
+    });
+
+    it("refuses an unknown task, another project's task, and a finished task with no work, filing nothing", async () => {
+      const harness = await firstStage();
+      const { supervisor, tasks, repos, repoId, first } = harness;
+      const plan = (branch_from: string, project = repoId) => () =>
+        supervisor.plan({
+          title: "Migrate the callers",
+          intent: intentOf("Migrate the callers."),
+          repoId: project,
+          shape: { branch_from },
+        });
+      expect(plan("INF-404")).toThrow('Unknown branch_from "INF-404"');
+      const { repo: other } = await repos.setup({
+        kind: "adopt",
+        path: projectRepo(),
+        name: "otherlab",
+      });
+      expect(plan(first.key, other.id)).toThrow(`branch_from ${first.key} is in another project`);
+      const answered = supervisor.plan({
+        title: "Decide the callers' order",
+        intent: intentOf("Decide it."),
+        repoId,
+      });
+      tasks.close(answered.id, { status: "done", reason: "answered", actor: "host" });
+      const count = tasks.list().length;
+      expect(plan(answered.key)).toThrow(
+        `branch_from ${answered.key} has no branch or saved work to start from`,
+      );
+      expect(tasks.list()).toHaveLength(count);
+      // A spawn reads the same refusal, and spawns nothing.
+      await expect(
+        supervisor.commission({
+          title: "Migrate the callers now",
+          intent: intentOf("Migrate the callers."),
+          repoId,
+          shape: { branch_from: "INF-404" },
+        }),
+      ).rejects.toThrow('Nothing was spawned. Unknown branch_from "INF-404"');
+      // A started task's shape is the one its crewmate was briefed with.
+      expect(() =>
+        tasks.updateFields(first.id, { resultSchema: FINDINGS }, "firstmate"),
+      ).toThrow("A result shape or branch_from can only change on open work that has not started.");
+      expect(tasks.list()).toHaveLength(count);
+    });
+  });
+});

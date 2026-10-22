@@ -4,6 +4,7 @@ import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { Deliverable, InPlaceFacts, InPlacePull, WorkKind } from "@shared/routingPolicy";
 import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
+import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 
 /**
  * spawn_crewmate v2's structured intent and its fixed rendering (contract
@@ -515,6 +516,28 @@ export function renderAnswerShapeSection(internalStep = false): string {
 }
 
 /**
+ * The result shape a task declared (INF-799 piece 1), printed where the
+ * brief says what the task's answer looks like: the JSON Schema the host
+ * checks the report's `result` against, and the one sentence that says so.
+ */
+export function renderResultShapeSection(schema: Record<string, unknown>): string {
+  return [
+    "Result shape: your report carries a typed result, the result field of the report tool, and it must fit this JSON Schema; the host refuses a report whose result is missing or does not fit, naming the first failing field, unless that report declares waiting_on_captain or needs_firstmate.",
+    "The next task reads the result as data, so it holds the answer itself; the report's text stays the plain account.",
+    JSON.stringify(schema),
+  ].join("\n");
+}
+
+/**
+ * Where a task's working copy began when it branches from another task
+ * (INF-799 piece 1): that task's last commit, so its work is already on
+ * this task's branch.
+ */
+export function renderBranchFromLine(source: { key: string; title: string; ref: string }): string {
+  return `Your working copy starts at ${source.key} "${source.title}"'s last commit (${source.ref}), not at the default branch: its commits are already on your branch, so continue from them.`;
+}
+
+/**
  * What the host knows about the answer a change is built on (Task B, F3 A
  * and the captain's note on context): when `spawn_crewmate` named a basis
  * and the host verified it, the builder is handed that task's answer rather
@@ -537,6 +560,8 @@ export type BasisBriefFacts = {
   userWords?: string;
   /** Its report, verbatim. */
   outcome?: string;
+  /** Its latest typed result, as the host checked it (INF-799 piece 1). */
+  result?: Record<string, unknown>;
   /** Full reports in timeline order, including superseded reports, not inferred approvals. */
   reports?: { event_id: number; text: string }[];
   /**
@@ -633,6 +658,7 @@ export function basisSectionParts(
       latest?.text === facts.outcome ? report(latest.event_id, latest.text) : facts.outcome,
     );
   }
+  if (facts.result) lines.push("", RESULT_WORDS, resultText(facts.result));
   const earlier = latest?.text === facts.outcome ? facts.reports?.slice(0, -1) : facts.reports;
   if (earlier?.length) {
     lines.push(

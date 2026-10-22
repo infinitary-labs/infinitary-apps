@@ -56,6 +56,7 @@ type JsonSchema = {
   minItems?: number;
   maxItems?: number;
   additionalProperties?: boolean;
+  patternProperties?: Record<string, JsonSchema>;
 };
 
 /**
@@ -136,6 +137,10 @@ export function zodShapeOf(schema: JsonSchema, at = "parameters"): Record<string
 }
 
 function zodObjectOf(schema: JsonSchema, at: string): z.ZodObject {
+  // A bare `{"type":"object"}` is any JSON object, carried whole (INF-799's
+  // result_schema, served bare for the fixed-context budget).
+  if (!schema.properties && !schema.patternProperties && schema.additionalProperties !== false)
+    return z.object({}).passthrough();
   // A map (a record's pattern properties) has no fields to declare.
   if (!schema.properties) throw new Error(`${at}: an object without declared fields`);
   const object = z.object(zodShapeOf(schema, at));

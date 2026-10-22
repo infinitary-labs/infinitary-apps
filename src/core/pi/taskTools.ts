@@ -9,7 +9,7 @@ import { bindTool, boundTool, callWithSignal, crewmateTool, stringEnum } from ".
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskStartPolicy, TaskStatus } from "../storage/taskStore";
 import type { TaskQueryInput, TaskQueryRow } from "../tasks/taskQuery";
-import { CONSTRAINTS_PARAM, PLACEMENT_REQUIREMENTS_PARAM } from "./crewTools";
+import { CONSTRAINTS_PARAM, PLACEMENT_REQUIREMENTS_PARAM, RESULT_SCHEMA_PARAM } from "./crewTools";
 
 /**
  * The Firstmate agent's graph tools (task-system P2, design section 7):
@@ -50,6 +50,10 @@ export type TaskToolsDelegate = {
     declaredBlockers?: string[];
     verdict?: string | null;
     basis?: string;
+    /** The result shape its report must carry (INF-799); null clears it. */
+    resultSchema?: Record<string, unknown> | null;
+    /** The task whose last commit it starts at (INF-799); empty clears it. */
+    branchFrom?: string;
     /** The model the user named (override_model_id); empty clears it. */
     model?: string;
     speed?: import("@shared/crewSpeed").CrewSpeed | null;
@@ -149,6 +153,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "As spawn_crewmate's shape.internal_step. Omit it when the captain asked for this result himself; it stays his to close.",
         }),
       ),
+      // Their rule is said once, in the served sequences guide (INF-799).
+      result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
+      branch_from: Type.Optional(Type.String()),
     }),
     run: async (params) => {
       // Automatic creation must not turn an undeclared graph into independent work (INF-143).
@@ -161,6 +168,10 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           : {}),
         ...(basis ? { basis } : {}),
         ...(params.internal_step ? { internal_step: true } : {}),
+        ...(params.result_schema
+          ? { result_schema: params.result_schema as Record<string, unknown> }
+          : {}),
+        ...(params.branch_from?.trim() ? { branch_from: params.branch_from.trim() } : {}),
       };
       const intent = parseSpawnIntent({
         goal: params.goal,
@@ -229,6 +240,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "Attach the plan/spec task (key or id) to open work that has not started; empty clears it.",
         }),
       ),
+      result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
+      branch_from: Type.Optional(Type.String()),
       crew_speed: Type.Optional(
         Type.Union([stringEnum(["standard", "fast", "ultrafast"]), Type.Null()], {
           description:
@@ -397,6 +410,15 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         ...(Object.keys(policies).length ? { policies } : {}),
         ...(params.direction?.trim() ? { direction: params.direction.trim() } : {}),
         ...(params.basis !== undefined ? { basis: params.basis } : {}),
+        // An empty object clears the shape, as an empty branch_from clears it.
+        ...(params.result_schema !== undefined
+          ? {
+              resultSchema: Object.keys(params.result_schema).length
+                ? (params.result_schema as Record<string, unknown>)
+                : null,
+            }
+          : {}),
+        ...(params.branch_from !== undefined ? { branchFrom: params.branch_from } : {}),
         ...(params.crew_speed !== undefined ? { speed: params.crew_speed } : {}),
         ...(params.override_model_id !== undefined ? { model: params.override_model_id } : {}),
         ...(params.reasoning !== undefined ? { reasoning: params.reasoning } : {}),

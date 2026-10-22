@@ -140,6 +140,26 @@ it("Claude carries the catalog value intact to the strict action validator", asy
   expect(calls).toEqual([]);
 });
 
+// INF-799 piece 1: a step's result shape is a whole JSON Schema, served as a
+// bare object parameter, and a Claude seat must hand it on unchanged.
+it("Claude carries a declared result shape whole through create_task and spawn_crewmate", async () => {
+  const findings = {
+    type: "object",
+    required: ["files", "summary"],
+    properties: {
+      files: { type: "array", items: { type: "string" } },
+      summary: { type: "string" },
+    },
+  };
+  const tools = await firstmateTools();
+  for (const name of ["create_task", "spawn_crewmate", "update_task"]) {
+    const tool = tools.find((candidate) => candidate.name === name);
+    if (!tool) throw new Error(`Missing ${name}`);
+    const shape = zodShapeOf(tool.parameters as Parameters<typeof zodShapeOf>[0]);
+    expect(shape.result_schema?.parse(findings), name).toEqual(findings);
+  }
+});
+
 describe("the app's tool descriptions fit the Claude transport", () => {
   it("keeps every app-owned description under the client's 2,048-character cap", async () => {
     const descriptions = await appToolDescriptions();

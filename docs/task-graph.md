@@ -126,6 +126,8 @@ An already linked prerequisite is left as it is, including one whose task has cl
 On-request creation and updates still need no declaration, so the first mate can file related work safely, add its links, read back the graph, then start ready work within the captain's authorization.
 This is a generic input requirement, not a rule over plans, titles, parents or sequence labels; automatic scheduling and explicit independent work otherwise behave as before.
 `spawn_crewmate` gained `parent`, `blocked_by`, and `priority`; `after_task` stays as an alias of `blocked_by`.
+`spawn_crewmate`, `create_task` and `update_task` take `result_schema`, the JSON Schema a task's report `result` must fit, and `branch_from`, the task whose last commit its working copy starts at; both live on the shape, change only before the task starts, and are refused as tool text when they do not hold (`docs/task-record.md`, "A typed result and where a working copy starts").
+A parent still says only what a task is part of and moves no code; `branch_from` is the one relation that moves code, and the task it names is a sibling, never the parent.
 Every write attaches the turn's ask to the task it acts on (P1's attach-first).
 The prompt's class 4 is "spawn or plan"; the C5 dispatch extractor sorts `create_task` with spawn, the graph edits with operate, and `tasks` with the reads.
 

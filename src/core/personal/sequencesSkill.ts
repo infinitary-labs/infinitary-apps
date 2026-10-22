@@ -107,6 +107,9 @@ mine to close, and the next step starts on my choice there. The parent completes
 last step merges.
 Authorized steps that need nothing from each other run at the same time; a step that builds on another
 waits for it and names it as its basis.
+A step whose answer the next needs as data gets result_schema, a JSON Schema with an object
+root: its checked result reaches you and the next step's basis. A step that continues another's
+code names it in branch_from (update_task: {} or "" clears either).
 Skip the plan only when you can name
 one place the change touches, no rule, state transition, or meaning changes, and the
 result is checkable by looking. Declare why on the direct

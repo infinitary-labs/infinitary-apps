@@ -109,6 +109,28 @@ The card is already a file the brief names, so the receipt holds its path; a car
 Successor lookups can recover that pinned content even after source or builder reports change.
 This proves host delivery, not model compliance or how an agent reads an approval; that judgment is `HANDOFF`'s (`docs/card-authoring.md`, "The handoff").
 
+## A typed result and where a working copy starts
+
+A task's shape can carry `result_schema`, a JSON Schema with an object at its root, which the first mate declares on `spawn_crewmate`, `create_task` or `update_task` (INF-799 piece 1).
+The host refuses a schema without an object at its root, or one the validator cannot read, as tool text, and files nothing (`resultSchemaRefusal`, `src/core/tasks/taskResult.ts`).
+The brief prints it in a "Result shape" section with one sentence saying the report's `result` must fit it (`renderResultShapeSection`).
+The crewmate's `report` takes `result`, a JSON object, checked with the JSON Schema validator the app ships (typebox's `Schema`).
+A result that does not fit, or a missing one where a schema stands, is refused as tool text naming the first failing field, such as `result.files[0] must be string`, so the crewmate reports again; a report that declares `waiting_on_captain` or `needs_firstmate` is taken without one.
+A task with no schema keeps whatever object its report carried.
+A checked result is stored on the report's event (`data.result`) and, as the task's latest result, on its delivery facts (`delivery.result`), where it stands until a later report carries another.
+The report wake carries it as a typed fact after "Its result, as declared:", a by-key `tasks` read carries `result` and `result_schema`, and a brief whose basis carries one prints it after that task's report under the same words.
+A crewmate's report text that ends a turn without the tool carries no result.
+A task running on another computer carries its result home on the report order (`report-result.md`); the home starts a task with a schema there only when that computer lists the change.
+
+`branch_from` names, by key, the task whose last commit a task's working copy starts at: that task's branch head while its working copy is present on this Mac, else the kept ref its work was saved on.
+The host checks it when it is named and again when the task starts, and refuses as tool text an unknown task, the task itself, a task in another project, a working copy on another computer, or a task with neither a branch nor saved work (`CrewSupervisor.handOffShape`).
+A step filed behind open work that has not started yet may name it; a start that then finds nothing to branch from fails in those words.
+At dispatch the working copy is created at that commit (`WorkspaceService.baseAt`) instead of the dispatch base, and the brief says so in one line (`renderBranchFromLine`).
+A task that branches from another starts only on this Mac.
+Both fields change only on open work that has not started, like `basis`, and both are the first mate's own, so no host stamp writes them (`CAPTAIN_OWNED_SHAPE_FIELDS`).
+`update_task` clears either one with an empty value, `{}` or an empty string.
+The tools serve both parameters bare, with no description, and the served sequences guide's preamble says their rule once, to keep the first mate's fixed context inside its boundary (`tests/firstmate-fixed-context.test.ts`).
+
 ## Starting dropped work again
 
 The dropped work record offers Start again in its action bar's next slot, with no confirmation and the shared keyboard focus ring.

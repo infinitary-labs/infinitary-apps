@@ -158,6 +158,9 @@ export type PlacedHost = {
   toolsNow?(taskId: string): readonly string[] | undefined;
 };
 
+/** A typed result on a report (`report-result.md`). */
+const REPORT_RESULT = contractChange("report-result");
+
 /** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
 export type CrewMachines = {
   /** The factories that open a conversation there; undefined when no computer can. */
@@ -171,6 +174,11 @@ export type CrewMachines = {
   keepsBrowsers?(machine: string): boolean;
   /** The task's computer is in reach and caught up, so its lane may go on. */
   ready(machine: string, taskId: string): boolean;
+  /**
+   * Whether the computer's crewmates can report a typed result
+   * (`report-result.md`); false while the home cannot tell.
+   */
+  takesResults?(machine: string): boolean;
   /**
    * The task's working copy there, made now or found as it was: its
    * project cloned there once, then a working copy on the task's branch
@@ -535,6 +543,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   takesChangePresentations(machine: string): boolean {
     const version = this.options.devices.version(machine);
     return version ? speaksChangePresentations(version.contract) : false;
+  }
+
+  takesResults(machine: string): boolean {
+    return listsChange(this.options.devices.version(machine)?.changes, REPORT_RESULT);
   }
 
   takesKnowledge(machine: string): boolean {

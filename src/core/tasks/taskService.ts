@@ -258,6 +258,13 @@ export type UpdateTaskPatch = {
   /** Attach/recover a spec on unstarted work; empty clears it. */
   basis?: string;
   /**
+   * The result shape unstarted work's report must carry (INF-799), already
+   * checked by the supervisor; null clears it.
+   */
+  resultSchema?: Record<string, unknown> | null;
+  /** The task, by key, unstarted work starts from (INF-799), already checked; empty clears it. */
+  branchFrom?: string;
+  /**
    * The model the captain named for open work no crewmate holds yet - a bare
    * id or a provider-qualified key - stored as the shape's
    * `override_model_id`, so the task routes on it when it starts (R0).
@@ -372,6 +379,12 @@ export type ReportDeclaration = {
   wait?: { reason: string; cardId?: string };
   finished?: boolean;
   needsFirstmate?: string;
+  /**
+   * The report's typed result (INF-799 piece 1), already checked against
+   * the task's `result_schema` when it has one: kept on the report's event
+   * and, as the task's latest result, on its delivery facts.
+   */
+  result?: Record<string, unknown>;
 };
 
 function hasDeclaration(record: TaskRecord): boolean {
@@ -1648,6 +1661,17 @@ export class TaskService {
       ) {
         throw new TaskGraphRefusal("A basis can only change on open work that has not started.");
       }
+      if (
+        (patch.resultSchema !== undefined || patch.branchFrom !== undefined) &&
+        (record.status !== "open" ||
+          record.startedAt !== null ||
+          record.placement ||
+          record.kind !== "work")
+      ) {
+        throw new TaskGraphRefusal(
+          "A result shape or branch_from can only change on open work that has not started.",
+        );
+      }
 
       if (
         patch.speed !== undefined &&
@@ -1721,6 +1745,24 @@ export class TaskService {
             };
           update.shape = { ...shape, ...(ref ? { basis: ref } : {}) };
           changes.push(ref ? `basis ${ref}` : "basis cleared");
+        }
+      }
+      if (patch.resultSchema !== undefined) {
+        const { result_schema: _oldSchema, ...shape } = update.shape ??
+          record.shape ?? { kind: "unclear" as const };
+        update.shape = {
+          ...shape,
+          ...(patch.resultSchema ? { result_schema: patch.resultSchema } : {}),
+        };
+        changes.push(patch.resultSchema ? "result shape set" : "result shape cleared");
+      }
+      if (patch.branchFrom !== undefined) {
+        const branchFrom = patch.branchFrom.trim() || undefined;
+        const current = update.shape ?? record.shape;
+        if (branchFrom !== current?.branch_from) {
+          const { branch_from: _oldBranch, ...shape } = current ?? { kind: "unclear" as const };
+          update.shape = { ...shape, ...(branchFrom ? { branch_from: branchFrom } : {}) };
+          changes.push(branchFrom ? `branches from ${branchFrom}` : "branch_from cleared");
         }
       }
       if (patch.speed !== undefined) {
@@ -2836,15 +2878,18 @@ export class TaskService {
     const wait = input.declared?.wait;
     const finished = input.declared?.finished === true;
     const request = input.declared?.needsFirstmate;
+    const result = input.declared?.result;
     const run = this.write(() => {
       const record = this.mustGet(id);
       const declaring = Boolean(wait) || finished || Boolean(request);
       const delivery =
-        declaring || hasDeclaration(record)
+        declaring || hasDeclaration(record) || result
           ? this.mergeDelivery(record, {
               captainWait: wait ? { at, ...wait } : undefined,
               finishedAt: finished ? at : undefined,
               needsFirstmate: request ? { at, request } : undefined,
+              // The latest result stands until a later report carries another.
+              ...(result ? { result: { at, value: result } } : {}),
             })
           : undefined;
       this.patch(id, {
@@ -2867,6 +2912,7 @@ export class TaskService {
           ...(input.declared?.needsFirstmate
             ? { needsFirstmate: input.declared.needsFirstmate }
             : {}),
+          ...(result ? { result } : {}),
         },
       });
     });

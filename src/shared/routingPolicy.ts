@@ -185,6 +185,21 @@ export const workShapeSchema = z.object({
    * before it - is the captain's own ask, his to close.
    */
   internal_step: z.boolean().optional(),
+  /**
+   * The shape this task's report must carry as its typed result (INF-799
+   * piece 1): a JSON Schema object with an object at its root, declared by
+   * the first mate when it plans or spawns the task. The host prints it in
+   * the brief and checks each report's `result` against it, refusing a
+   * mismatch by naming the first failing field (`src/core/tasks/taskResult.ts`).
+   */
+  result_schema: z.record(z.string(), z.unknown()).optional(),
+  /**
+   * The task, by key, whose last commit this task's working copy starts at
+   * (INF-799 piece 1): its branch head while its working copy is present,
+   * else its kept ref. Declared by the first mate; the host checks it holds
+   * when it is named and again when the task starts.
+   */
+  branch_from: z.string().optional(),
   /** Legacy metadata kept readable for saved tasks; grants no different access. */
   knowledge_access: z.literal("references").optional(),
   /** Firstmate's stated reason for skipping a plan; the host does not judge it. */
@@ -327,6 +342,8 @@ export const CAPTAIN_OWNED_SHAPE_FIELDS = [
   "internal_step",
   "knowledge_access",
   "skipped_plan_because",
+  "result_schema",
+  "branch_from",
 ] as const satisfies readonly (keyof WorkShape)[];
 
 /** Fields a host stamp may write onto the shape as it stands. */
@@ -398,6 +415,8 @@ export const workShapeAskSchema = workShapeSchema
     internal_step: true,
     knowledge_access: true,
     skipped_plan_because: true,
+    result_schema: true,
+    branch_from: true,
   })
   .extend({
     /**

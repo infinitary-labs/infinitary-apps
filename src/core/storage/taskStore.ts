@@ -239,6 +239,11 @@ export type MergeAuthorization = {
 
 /** Delivery facts, as they become known (check_pr_ci, land, merge-pr, review). */
 export type TaskDelivery = {
+  /**
+   * The task's latest typed result (INF-799 piece 1): the newest report that
+   * carried one, as the host checked it against the task's `result_schema`.
+   */
+  result?: { at: number; value: Record<string, unknown> };
   /** Versioned public story and native-upload receipts; only TaskService writes them. */
   presentation?: import("@shared/changePresentation").ChangePresentationRecord;
   liveValidation?: LiveValidation;

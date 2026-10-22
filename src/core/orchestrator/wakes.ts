@@ -47,6 +47,7 @@ import { browserCommand } from "../browser/commandWords";
 import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import type { InboxRow, WAKE_ENVELOPE_VERSION } from "../storage/inboxStore";
 import type { CardRefusal } from "../storage/taskStore";
+import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import type { SettleRefusal } from "../tasks/taskService";
 import { type CiReadingFact, ciFactWords } from "./ciFact";
 import { type CrewmateRestart, crewmateRestartText } from "./crewSession";
@@ -462,6 +463,8 @@ export type WakeFacts =
       finished?: true;
       /** The report declared that the Firstmate must act, and what on (FI3-710). */
       needsFirstmate?: string;
+      /** The report's typed result, as the host checked it against the task's shape (INF-799). */
+      result?: Record<string, unknown>;
       /** The CI reading the app last recorded on its task, when there is one. */
       ci?: CiReadingFact;
       /** Its open review, when that review's last verdict was findings or blocked. */
@@ -1588,7 +1591,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "commit-failed":
       return `[fm-op] the host could not commit the personal workspace at the end of ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}", so the task stays open rather than closing as built in place. What it changed is saved in the workspace but not committed. Its crewmate's next report tries the commit again: steer it to look into the error and report again, or tell the captain. The error: ${facts.error}`;
     case "report":
-      return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on his screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${facts.review ? openReviewText(facts.review) : ""}`;
+      return `[fm-op] ${facts.crewmate} reported on task ${facts.task.id} "${facts.task.title}": ${facts.excerpt}${filedText(facts.filed)}${waitsText(facts.waits)}${waitingText(facts.waiting)}${refusedText(facts.refused, facts.cards)}${cardsText(facts.cards)}${facts.captainWait ? ` It waits on the captain to ${facts.captainWait}, and no card of its is on his screen.` : ""}${facts.ci ? ciFactWords(facts.ci) : ""}${facts.finished ? ` ${FINISHED_REPORT_WORDS}: the captain has read its outcome and nothing is left for it.` : ""}${facts.needsFirstmate ? ` It asks the first mate to act: ${facts.needsFirstmate}. The ask authorizes nothing by itself; the captain's own words do.` : ""}${facts.result ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.review ? openReviewText(facts.review) : ""}`;
     case "review-orphan":
       return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}", but the task it reviewed is no longer on record: ${facts.excerpt}`;
     case "review-unstated":

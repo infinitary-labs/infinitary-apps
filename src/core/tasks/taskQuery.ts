@@ -109,6 +109,12 @@ export type TaskQueryRow = {
   decisions?: { event_id: number; text: string; data: Record<string, unknown> | null }[];
   /** Explicitly named source, never guessed from the prose. */
   basis?: string;
+  /** The task whose last commit its working copy starts at (INF-799). */
+  branch_from?: string;
+  /** The JSON Schema its report's result must fit (INF-799). By-key only. */
+  result_schema?: Record<string, unknown>;
+  /** Its latest typed result, as the host checked it (INF-799). By-key only. */
+  result?: Record<string, unknown>;
   /**
    * The body of the task's newest card, open or resolved - an answer task's
    * card IS its deliverable. By-key only, for the same reason.
@@ -304,6 +310,11 @@ function toRow(
     ...(record.shape?.override_speed ? { crew_speed: record.shape.override_speed } : {}),
     ...(record.shape?.override_reasoning ? { reasoning: record.shape.override_reasoning } : {}),
     ...(record.shape?.basis ? { basis: record.shape.basis } : {}),
+    ...(record.shape?.branch_from ? { branch_from: record.shape.branch_from } : {}),
+    ...(cardBody && record.shape?.result_schema
+      ? { result_schema: record.shape.result_schema }
+      : {}),
+    ...(cardBody && record.delivery?.result ? { result: record.delivery.result.value } : {}),
     ...(cardBody ? { reports, decisions, ...(brief ? { brief } : {}) } : {}),
     ...(cardBody && record.outcome ? { outcome: record.outcome } : {}),
     ...(cardBody && record.outcomeSummary ? { outcome_summary: record.outcomeSummary } : {}),

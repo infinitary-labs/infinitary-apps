@@ -11,7 +11,7 @@ It opens an ask that takes more than one step as a parent task with each step a 
 The parent stays on request, so no crewmate starts on it; the first mate talks to each step's crewmate directly.
 Every hand-off is a decision the first mate makes on a wake it already receives.
 Nothing in the host advances a sequence: there is no new tool, no card effect, no settings record and no migration, and the words "sequence" and "step" reach no user surface.
-The task's shape gained two facts the first mate declares and the host only stores and honours - `internal_step` and `skipped_plan_because` (`src/shared/routingPolicy.ts`).
+The task's shape gained facts the first mate declares and the host only stores and honours - `internal_step` and `skipped_plan_because` - and two it declares and the host checks - `result_schema` and `branch_from` (`src/shared/routingPolicy.ts`).
 
 A bounded read-only fact lookup stays a lookup, with its question and source scope stated faithfully and the captain's words preserved verbatim; it is not broadened into an investigation by default.
 The classifier, not the first mate, owns the kind, and any required diagnosis or reproduction excludes retrieval.
@@ -94,6 +94,8 @@ The host judges nothing: no dispatch rule reads a row's children.
 
 - `create_task` takes `basis`, stored on the planned row's shape; its verdict is derived at every read and never stored (`TaskService.basisHolds`), because the task it names is usually still running when the step is planned.
   A step whose basis answered starts grounded (R4/R6).
+- A step whose answer the next step needs as data carries `result_schema`: its report's `result` is checked against it, reaches the first mate on the report wake, and reaches the next step through its basis section; a step that continues another's code names it in `branch_from`, so its working copy starts at that step's last commit (`docs/task-record.md`, "A typed result and where a working copy starts").
+  The preamble says both once; the host advances nothing and reads no loop.
 - `settle_task answered` closes an idle answer task the first mate declared an internal step (`internal_step`) once a live task names it as its basis or waits on it through a `blocks` link.
 - A container completes with its children (`docs/task-graph.md`, "The close rules"): a parent no crewmate holds closes done when its last child closes and any child is done, else dropped, with one feed line.
 - The basis section names the basis task's live branch, or the kept ref its unlanded work was saved on, and quotes the thread under its card (`renderBasisSection`, `src/core/orchestrator/intentBrief.ts`) - a branch or kept ref only for a basis that delivers a change: a plan or reproduce step is an answer task whose scratch copy holds nothing of its answer, so the brief carries the answer itself - report, card, thread and the captain's choice.

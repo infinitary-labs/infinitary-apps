@@ -435,6 +435,18 @@ export class WorkspaceService {
   }
 
   /**
+   * A dispatch base at a named ref of the repository (INF-799 `branch_from`):
+   * another task's branch or the kept ref its work was saved on. Throws in
+   * words when the ref names no commit here.
+   */
+  async baseAt(repo: string, ref: string): Promise<DispatchBase> {
+    const sha = await resolveCommit(repo, ref);
+    if (!sha)
+      throw new Error(`${ref} names no commit in this project, so there is nothing to start from.`);
+    return { sha, ref, fetch: "none" };
+  }
+
+  /**
    * Where a new task starts (captain's board answer, 2026-09-23: "fetch the
    * default branch at dispatch"). With an `origin`, its default branch is
    * fetched - bounded, never prompting - and the base is whichever of the

@@ -318,6 +318,13 @@ export function groupSpawnArgs(args: Record<string, unknown>): Record<string, un
 }
 
 /** How the refusal of an escalation the captain did not ask for opens. */
+/**
+ * A task's result shape (INF-799): any JSON object, checked by the host when
+ * it is named, written as the bare keyword so every seat reads a few
+ * characters of it on every request (the fixed-context budget).
+ */
+export const RESULT_SCHEMA_PARAM = Type.Unsafe<Record<string, unknown>>({ type: "object" });
+
 export const NOTHING_SPAWNED = "Nothing was spawned.";
 
 /** What steer_crewmate answers for guidance a held lane keeps until its account answers. */
@@ -404,6 +411,8 @@ export function createCrewTools(delegate: CrewDelegate) {
         ...PLACEMENT_REQUIREMENTS_PARAM,
         description: "As create_task's placement_requirements.",
       }),
+      result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
+      branch_from: Type.Optional(Type.String()),
       start_after: Type.Optional(
         Type.Object(
           {
@@ -450,6 +459,10 @@ export function createCrewTools(delegate: CrewDelegate) {
         ...(params.placement_requirements
           ? { placement_requirements: params.placement_requirements }
           : {}),
+        ...(params.result_schema
+          ? { result_schema: params.result_schema as Record<string, unknown> }
+          : {}),
+        ...(params.branch_from ? { branch_from: params.branch_from } : {}),
       });
       const intent = parseSpawnIntent({
         goal: params.goal,
@@ -628,6 +641,8 @@ function shapeAskFrom(params: {
   in_folder?: boolean;
   review_of?: string;
   skipped_plan_because?: string;
+  result_schema?: Record<string, unknown>;
+  branch_from?: string;
 }): WorkShapeAsk | undefined {
   const basis = params.basis?.trim();
   const override = params.override_model_id?.trim();
@@ -657,6 +672,8 @@ function shapeAskFrom(params: {
     ...(params.skipped_plan_because?.trim()
       ? { skipped_plan_because: params.skipped_plan_because.trim() }
       : {}),
+    ...(params.result_schema ? { result_schema: params.result_schema } : {}),
+    ...(params.branch_from?.trim() ? { branch_from: params.branch_from.trim() } : {}),
   };
   return Object.keys(ask).length > 0 ? ask : undefined;
 }

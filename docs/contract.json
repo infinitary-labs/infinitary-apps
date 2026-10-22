@@ -39622,6 +39622,13 @@
                   },
                   "needsFirstmate": {
                     "type": "string"
+                  },
+                  "result": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {}
                   }
                 }
               }

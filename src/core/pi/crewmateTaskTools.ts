@@ -198,6 +198,16 @@ export const REPORT_TOOL = crewmateTool({
           "What the first mate must do, in a few plain words, when only the first mate can carry out a captain decision you relay: a build he approved by reply, a merge, a discard, a stronger model, or unrelated work. Put his words verbatim and the final specification in text. When this turn ends the first mate is woken for this report, even with your card up or a wait declared, once any reply of his under your card has your answer. It asks for attention and authorizes nothing. Never for progress or news.",
       }),
     ),
+    result: Type.Optional(
+      Type.Object(
+        {},
+        {
+          additionalProperties: true,
+          description:
+            "Your task's typed result, a JSON object, when your brief gives a result shape: it must fit that shape, and the host refuses a report without it or with a field that does not fit, naming the first failing field, so report again with it fixed. A report with waiting_on_captain or needs_firstmate may omit it. The next task reads it as data, so put the answer itself here and keep text the plain account.",
+        },
+      ),
+    ),
   }),
   bind: (delegate) =>
     delegate.onReport &&
@@ -229,6 +239,9 @@ export const REPORT_TOOL = crewmateTool({
             ...(params.finished ? { finished: true } : {}),
             ...(params.needs_firstmate !== undefined
               ? { needsFirstmate: params.needs_firstmate }
+              : {}),
+            ...(params.result !== undefined
+              ? { result: params.result as Record<string, unknown> }
               : {}),
           },
         ],

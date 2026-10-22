@@ -536,6 +536,8 @@ export const workRequests = {
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
           needsFirstmate: z.string().optional(),
+          /** The report's typed result (`report-result.md`); the home checks it. */
+          result: z.record(z.string(), z.unknown()).optional(),
         })
         .optional(),
     }),

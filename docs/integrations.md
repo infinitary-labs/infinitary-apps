@@ -11,6 +11,8 @@ A row is one connection a kind's binding has now (`IntegrationBinding`, `src/cor
 Each action declares what it does to the world, `reads`, `changes` or `sends`, in its binding, never read off its name, and an input schema.
 A kind connects once, as GitHub does, or many times, as MCP servers do; a kind added from a form (`add`) answers the new row's id.
 The row's own settings - a name of the person's choosing, paused, and which actions are off - live in `userData/integrations/settings.json`, 0600 in a 0700 folder, written whole (`IntegrationSettingsStore`).
+An automatic name repair keeps its previous name and the connection whose name it conflicted with (`renamed`) in the same store's `name-repairs.json`, until the person chooses a name themselves.
+The explanation matches the resulting name; an older build still reads `settings.json` unchanged, and a name it changes cannot inherit stale words.
 No sign-in is kept there: a kind's sign-in stays with its own owner, and a key it signs in with is kept apart ("Keys").
 The wire shape Settings draws and the first mate reads is `src/shared/integrations.ts`.
 
@@ -58,6 +60,13 @@ Removing an integration forgets its keys.
 
 GitHub's row is the app's own github.com sign-in, made and kept by the forge (`ForgeSignIns`, `docs/forge.md`), seen through the binding in `src/core/integrations/providers/github.ts`.
 The row exists exactly while that sign-in does, and removing the row signs it out.
+The binding declares its permanent identity, so its id, GitHub and any saved custom name remain reserved even while signed out.
+Adding or renaming another connection to one of those names is refused, ignoring case and surrounding spaces; restoring a default name checks the same rule.
+An older connection already using a reserved name gets a distinct name automatically, as the captain chose on INF-882: for example GitHub MCP server, with a number if that name is taken.
+The service saves this repair before exposing any view, roster or lookup, including the first read after restart; it uses the published name size and avoids every current name and id.
+Settings explains the change directly below the renamed row, even while collapsed, and the crew's discovery and the first mate's roster carry the same explanation.
+Only the name changes: connection ids, paused state, disabled actions, keys, event rules and kept requests stay attached to the same connection.
+GitHub sign-in, clones and pull requests never wait on an integration rename.
 Its two actions are the gateway's two calls through that sign-in, whatever the caller's project is: `read` (GET or HEAD one REST path) runs, and `write` (POST, PATCH, PUT or DELETE) asks.
 A crewmate's write is kept on its task as a write ask, the way a write to another project is (`docs/forge.md`, "A write that asks"), and the captain's click on its card sends it through the same sign-in.
 The first mate has no task to keep an ask on, so its write is refused with a pointer to start a crewmate whose brief names the call; its reads count against its seat's own allowance.
@@ -154,7 +163,9 @@ A computer without the change, or without a task channel, gives its crewmates ne
 
 ## Tests
 
-`src/core/integrations/service.test.ts` holds the view drawn from the github.com sign-in, settings that hold across a restart, a paused integration refusing, and removal signing out.
+`src/core/integrations/service.test.ts` holds the view drawn from the github.com sign-in, settings that hold across a restart, a paused integration refusing, removal signing out, reserved names while signed out, automatic repairs and their explanations, custom names, case-insensitive conflicts and name-size boundaries.
+The GitHub naming journey in `tests/e2e/older-profile.spec.ts` upgrades a real MCP discovery saved under GitHub, checks the explanation and the signed-out name refusal by keys, signs in through the GitHub stand-in, reads projects, restarts, and has a crewmate read both connections by their distinct names.
+The kept-request case in `mcpIntegration.test.ts` approves an ask saved before the repair and observes exactly one change on the original server, with no GitHub write; the event's id stays the same too.
 `src/core/forge/providers/github/gateway.test.ts` holds GitHub through the integration against a stand-in GitHub: a crewmate's read runs, its write is kept as an ask even on its own project and sent by the captain's click, the first mate's read runs and its write is refused before any request, and an action turned off reaches nothing.
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
 `src/core/integrations/secrets.test.ts` holds the keys against a stand-in API that sends back the header it received: the file and folder modes, a view and discovery that never carry a value, a call refused while its key is missing, a key applied to one request and replaced in the answer, a program's variables, and a change kept as an ask that runs once on the click and not at all once its action is off.

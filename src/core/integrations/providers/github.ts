@@ -1,5 +1,5 @@
 import type { ForgeSignInState } from "@shared/forges";
-import { INTEGRATIONS_SIGN_IN_HOST } from "@shared/integrations";
+import { INTEGRATION_KIND_NAMES, INTEGRATIONS_SIGN_IN_HOST } from "@shared/integrations";
 import { z } from "zod";
 import type { GithubReadInput, GithubWriteInput } from "../../forge";
 import type { IntegrationActionSpec, IntegrationBinding } from "../binding";
@@ -67,6 +67,7 @@ export function githubIntegration(options: GithubIntegrationOptions): Integratio
   const host = INTEGRATIONS_SIGN_IN_HOST;
   return {
     kind: "github",
+    identity: { id: GITHUB_ID, name: INTEGRATION_KIND_NAMES.github },
     keepsAsks: true,
     connections: () => {
       const health = options.signIns.stateOf(host);

@@ -160,6 +160,13 @@ An older app drops the list when it reads the file, and its proofs no longer mat
 A public connection whose headers stand in for its key is refused by older policy.
 The format revision stays at 1.
 
+## Integration name repairs
+
+An automatic GitHub name repair saves the distinct name in the existing `integrations/settings.json` shape, preserving paused state and disabled actions.
+Its explanation lives separately in `integrations/name-repairs.json`, matched to the resulting name.
+Older builds ignore the new file and keep reading every setting; a later name change by an older build makes the explanation inapplicable.
+No persisted format revision changes.
+
 ## Card pictures with a demo recording
 
 A card picture may carry an optional `demo` (docs/card-authoring.md, "Demo recordings"): the recording its poster stands for - its id, kind, size, length, byte size and SHA-256.

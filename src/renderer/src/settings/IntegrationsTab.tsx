@@ -12,6 +12,7 @@ import {
   type IntegrationSettingsPatch,
   type IntegrationsView,
   type IntegrationView,
+  integrationRenameWords,
   isIntegrationSignIn,
 } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
@@ -207,6 +208,11 @@ export function IntegrationsTab() {
               onPause={(paused) => configure(integration.id, { paused })}
               onRemove={() => change(() => window.infinitary.integrations.remove(integration.id))}
             />
+            {integration.renamed && (
+              <p className="fm-integrations-renamed" data-integration-renamed={integration.id}>
+                {integrationRenameWords(integration.renamed)}
+              </p>
+            )}
             {open === integration.id && (
               <IntegrationActions
                 integration={integration}

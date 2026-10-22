@@ -3,10 +3,14 @@ import { expect, type Page, test } from "@playwright/test";
 import { GATED_CHECK_PLACEHOLDER } from "@shared/firstRun";
 import type { Slot } from "@shared/modelSlots";
 import { freshCheckTitle } from "../../src/renderer/src/app/firstRunGateWords";
+import { INTEGRATIONS_MCP_WORDS, integrationRenameWords } from "../../src/shared/integrations";
+import { SAMPLE_NOTES, serveNotesHttp } from "../helpers/mcpStandIn";
+import { scratchDir } from "../helpers/scratchDirs";
 import { startCustomApiFixture } from "./customApiFixture";
+import { STUB_LOGIN, startGitHubStub } from "./githubStub";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import { startMockProvider } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import {
   closeModelPanel,
   levelLane,
@@ -14,10 +18,17 @@ import {
   openModelsBoard,
   setLevelInPanel,
 } from "./modelsBoard";
-import { asSavedByOlderRelease } from "./olderProfile";
+import { asSavedByOlderRelease, seedLegacyGithubServer } from "./olderProfile";
 import { promptInput } from "./prompt";
+import {
+  GITHUB_NAMES_PROMPT,
+  GITHUB_NAMES_REPORT,
+  GITHUB_SERVER_NAME,
+  githubNames,
+} from "./scenarios/githubNames";
+import { settingsSection } from "./settings";
 import { closeOpenCards } from "./stack";
-import { pressKey } from "./windowKeys";
+import { pressKey, runFromSearch, typeInto } from "./windowKeys";
 
 // A profile an older release saved, opened in this build: the upgrade a
 // person makes (docs/saved-data-compatibility.md, "Profiles saved by an older
@@ -236,3 +247,110 @@ for (const protocol of ["openai-completions", "openai-responses"] as const) {
     });
   });
 }
+
+/**
+ * INF-882, captain's automatic-name choice: preserve GitHub sign-in and explain the server's new name.
+ * Promised result: an older server named GitHub gets a distinct name, the name is reserved while signed
+ * out, sign-in still completes, and the crew's reads by both names reach the right connections.
+ * Data: the real MCP binding's discovery from the notes stand-in and GitHub's device-flow stand-in.
+ * Completion: Settings and its explanation survive restart, project discovery works, and a real crew
+ * command reports GitHub's account and the server's notes. No outward write is made.
+ * Prerequisites: the hermetic launcher. Shared resources: none; folders, servers and ports are private.
+ */
+test("GitHub sign-in keeps distinct integration names and the crew reaches both", async () => {
+  const userDataDir = scratchDir("infinitary-integration-names-");
+  const notes = await serveNotesHttp("modern");
+  const github = await startGitHubStub();
+  let launched: LaunchedApp | undefined;
+  try {
+    await seedLegacyGithubServer(userDataDir, notes.url);
+    launched = await launchApp({
+      withMockProvider: true,
+      scenarios: [githubNames],
+      userDataDir,
+      env: github.env,
+    });
+    let { app, page } = launched;
+    await runFromSearch(app, page, "settings.integrations");
+    let tab = settingsSection(page, "integrations");
+    const explanation = integrationRenameWords({ from: "GitHub", for: "GitHub" });
+    await expect(tab.locator('[data-integration-row="mcp-github"]')).toContainText(
+      GITHUB_SERVER_NAME,
+    );
+    await expect(tab.locator('[data-integration-renamed="mcp-github"]')).toHaveText(explanation);
+    // A new server cannot reclaim GitHub, even before the person signs in.
+    await pressKey(tab.locator('[data-integration-add="mcp"] button'), "Enter");
+    const form = tab.locator("[data-integration-mcp-form]");
+    const name = form.getByLabel(INTEGRATIONS_MCP_WORDS.name);
+    await typeInto(name, "GitHub");
+    await pressKey(name, "Tab");
+    const runs = form.getByLabel(INTEGRATIONS_MCP_WORDS.runs);
+    await typeInto(runs, notes.url, { insert: true });
+    await pressKey(runs, "Enter");
+    await expect(form.getByRole("status")).toBeVisible();
+    await expect(form.getByRole("status")).toContainText("GitHub");
+    expect(
+      (await page.evaluate(() => window.infinitary.integrations.list())).integrations,
+    ).toHaveLength(1);
+    await pressKey(form.getByRole("button", { name: INTEGRATIONS_MCP_WORDS.cancel }), "Enter");
+    // The same GitHub device flow still serves project work.
+    await pressKey(tab.locator('[data-integration-add="github"] button'), "Enter");
+    await expect
+      .poll(async () => (await page.evaluate(() => window.infinitary.forges.list())).flow?.host)
+      .toBe("github.com");
+    github.device.approve();
+    await expect
+      .poll(async () =>
+        (await page.evaluate(() => window.infinitary.integrations.list())).integrations.map(
+          (row) => [row.name, row.account],
+        ),
+      )
+      .toEqual([
+        ["GitHub", STUB_LOGIN],
+        [GITHUB_SERVER_NAME, null],
+      ]);
+    await expect(tab.locator('[data-integration-row="github"]')).toContainText(`as ${STUB_LOGIN}`);
+    await page.evaluate(() => window.infinitary.forges.projects("github.com"));
+    expect(github.requests()).toContain("GET /user/repos");
+    await launched.close();
+    launched = await launchApp({
+      withMockProvider: true,
+      scenarios: [githubNames],
+      userDataDir,
+      env: github.env,
+    });
+    ({ app, page } = launched);
+    await runFromSearch(app, page, "settings.integrations");
+    tab = settingsSection(page, "integrations");
+    await expect(tab.locator('[data-integration-row="mcp-github"]')).toContainText(
+      GITHUB_SERVER_NAME,
+    );
+    await expect(tab.locator('[data-integration-renamed="mcp-github"]')).toHaveText(explanation);
+    await page.keyboard.press("Escape");
+    const title = GITHUB_NAMES_PROMPT;
+    const input = promptInput(page);
+    await input.click();
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
+    await input.press("Enter");
+    const outcome = () =>
+      page.evaluate(async (wanted) => {
+        const row = (await window.infinitary.tasks.board()).tasks.find(
+          (task) => task.title === wanted,
+        );
+        return row ? ((await window.infinitary.tasks.detail(row.id))?.outcome ?? "") : "";
+      }, title);
+    await expect.poll(outcome, { timeout: 60_000 }).toContain(GITHUB_NAMES_REPORT);
+    const report = await outcome();
+    expect(report).toContain(STUB_LOGIN);
+    expect(report).toContain(GITHUB_SERVER_NAME);
+    for (const note of SAMPLE_NOTES) expect(report).toContain(note);
+    await test
+      .info()
+      .attach("integration-read-answers", { body: report, contentType: "text/plain" });
+    console.log(`Integration read answers from the stand-ins:\n${report}`);
+  } finally {
+    await launched?.close();
+    await github.close();
+    await notes.close();
+  }
+});

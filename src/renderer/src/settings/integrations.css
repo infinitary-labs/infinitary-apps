@@ -19,6 +19,13 @@
   transition: transform var(--dur-fast) var(--ease-out);
 }
 
+.fm-integrations-renamed {
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-3) calc(var(--space-4) + var(--space-5));
+  font-size: var(--text-sm);
+  color: var(--fg-3);
+}
+
 .fm-integrations-actions {
   list-style: none;
   margin: 0;

@@ -103,6 +103,12 @@ export class IntegrationOutcomeUnknown extends Error {}
 
 export type IntegrationBinding = {
   kind: IntegrationKind;
+  /**
+   * A connection whose identity exists even while signed out (GitHub's
+   * project sign-in). Its id, default name and saved name belong to it;
+   * another connection cannot take them while it is absent.
+   */
+  identity?: { id: string; name: string };
   /** The keys its connections sign in with; none for a kind whose sign-in has its own owner. */
   secrets?: readonly IntegrationSecretSlot[];
   /**

@@ -15008,6 +15008,25 @@
                   "minLength": 1,
                   "maxLength": 64
                 },
+                "renamed": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "for": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "for"
+                  ]
+                },
                 "account": {
                   "anyOf": [
                     {
@@ -15273,6 +15292,25 @@
                   "minLength": 1,
                   "maxLength": 64
                 },
+                "renamed": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "for": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "for"
+                  ]
+                },
                 "account": {
                   "anyOf": [
                     {
@@ -15507,6 +15545,25 @@
                   "minLength": 1,
                   "maxLength": 64
                 },
+                "renamed": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "for": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "for"
+                  ]
+                },
                 "account": {
                   "anyOf": [
                     {
@@ -15740,6 +15797,25 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 64
+                },
+                "renamed": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "for": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "for"
+                  ]
                 },
                 "account": {
                   "anyOf": [
@@ -15990,6 +16066,25 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 64
+                },
+                "renamed": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "for": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "for"
+                  ]
                 },
                 "account": {
                   "anyOf": [
@@ -16248,6 +16343,25 @@
                       "minLength": 1,
                       "maxLength": 64
                     },
+                    "renamed": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "for": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "for"
+                      ]
+                    },
                     "account": {
                       "anyOf": [
                         {
@@ -16500,6 +16614,25 @@
                       "minLength": 1,
                       "maxLength": 64
                     },
+                    "renamed": {
+                      "type": "object",
+                      "properties": {
+                        "from": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        },
+                        "for": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 64
+                        }
+                      },
+                      "required": [
+                        "from",
+                        "for"
+                      ]
+                    },
                     "account": {
                       "anyOf": [
                         {
@@ -16732,6 +16865,25 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 64
+                },
+                "renamed": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "for": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "for"
+                  ]
                 },
                 "account": {
                   "anyOf": [
@@ -53937,6 +54089,25 @@
                   "type": "string",
                   "minLength": 1,
                   "maxLength": 64
+                },
+                "renamed": {
+                  "type": "object",
+                  "properties": {
+                    "from": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    },
+                    "for": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 64
+                    }
+                  },
+                  "required": [
+                    "from",
+                    "for"
+                  ]
                 },
                 "account": {
                   "anyOf": [

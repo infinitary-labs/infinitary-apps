@@ -6,6 +6,8 @@ import {
   type IntegrationsView,
   type IntegrationView,
   integrationKindSchema,
+  integrationNameSchema,
+  integrationRenameWords,
   integrationRule,
 } from "@shared/integrations";
 import type { IntegrationAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
@@ -146,6 +148,7 @@ export class IntegrationsService {
         const facts = [
           view.account ? `signed in as ${view.account}` : undefined,
           view.paused ? "paused" : undefined,
+          view.renamed ? integrationRenameWords(view.renamed) : undefined,
           view.health === "needs_reauth" ? "needs a sign-in again" : undefined,
           this.missingKeys(row).length > 0 ? "needs a key entered in Settings" : undefined,
         ].filter(Boolean);
@@ -162,6 +165,7 @@ export class IntegrationsService {
         name: view.name,
         id: view.id,
         kind: view.kind,
+        ...(view.renamed ? { renamed: view.renamed } : {}),
         ...(view.account ? { account: view.account } : {}),
         health: view.health,
         ...(view.paused ? { paused: true } : {}),
@@ -180,6 +184,7 @@ export class IntegrationsService {
       integration: view.name,
       id: view.id,
       kind: view.kind,
+      ...(view.renamed ? { renamed: view.renamed } : {}),
       ...(view.account ? { account: view.account } : {}),
       health: view.health,
       ...(view.paused ? { paused: true } : {}),
@@ -523,11 +528,15 @@ export class IntegrationsService {
     const all = this.options.store.read();
     const next: IntegrationSettings = { ...(all[id] ?? {}) };
     if (patch.name !== undefined) {
-      if (patch.name === null || patch.name === this.defaultName(row)) delete next.name;
-      else {
-        this.assertNameFree(patch.name, id);
-        next.name = patch.name;
+      const name = patch.name ?? this.defaultName(row);
+      if (name === this.defaultName(row)) {
+        this.assertReservedNameFree(name, id);
+        delete next.name;
+      } else {
+        this.assertNameFree(name, id);
+        next.name = name;
       }
+      delete next.renamed;
     }
     if (patch.paused !== undefined) {
       if (patch.paused) next.paused = true;
@@ -594,7 +603,7 @@ export class IntegrationsService {
   private rows(): Row[] {
     const settings = this.options.store.read();
     const order = integrationKindSchema.options;
-    return [...this.options.bindings]
+    const rows = [...this.options.bindings]
       .sort((a, b) => order.indexOf(a.kind) - order.indexOf(b.kind))
       .flatMap((binding) =>
         binding.connections().map((connection) => ({
@@ -603,13 +612,71 @@ export class IntegrationsService {
           settings: settings[connection.id] ?? {},
         })),
       );
+    this.repairReservedNames(rows, settings);
+    return rows;
+  }
+
+  /**
+   * A sign-in can arrive outside this service. Repair old clashes before
+   * any view, roster or lookup escapes, including the first read after a
+   * restart and while signed out. INF-882: the captain chose automatic
+   * distinct naming with an explanation, never blocking project sign-in.
+   * Only names change; ids keep asks, events, keys and settings attached.
+   */
+  private repairReservedNames(rows: Row[], settings: Record<string, IntegrationSettings>): void {
+    const reserved = this.reservedNames(settings);
+    const used = new Set([
+      ...reserved.map((entry) => this.nameKey(entry.name)),
+      ...rows.flatMap((row) => [row.connection.id, this.nameKey(this.rowName(row))]),
+    ]);
+    let changed = false;
+    for (const row of rows) {
+      const from = this.rowName(row);
+      const owner = reserved.find(
+        (entry) =>
+          entry.id !== row.connection.id && this.nameKey(entry.name) === this.nameKey(from),
+      );
+      if (!owner) continue;
+      const base = `${from} ${INTEGRATION_KIND_NAMES[row.binding.kind]}`;
+      let name: string;
+      let number = 1;
+      do {
+        const suffix = number === 1 ? "" : ` ${number}`;
+        name = `${base.slice(0, (integrationNameSchema.maxLength ?? base.length) - suffix.length)}${suffix}`;
+        number++;
+      } while (used.has(this.nameKey(name)));
+      used.add(this.nameKey(name));
+      row.settings = { ...row.settings, name, renamed: { from, for: owner.owner } };
+      settings[row.connection.id] = row.settings;
+      changed = true;
+    }
+    if (changed) this.options.store.write(settings);
+  }
+
+  /** The permanent identity and saved name of each binding that declares one. */
+  private reservedNames(settings = this.options.store.read()) {
+    return this.options.bindings.flatMap(({ identity }) => {
+      if (!identity) return [];
+      return [identity.id, identity.name, settings[identity.id]?.name ?? identity.name].map(
+        (name) => ({ id: identity.id, name, owner: identity.name }),
+      );
+    });
+  }
+
+  private nameKey(name: string): string {
+    return name.trim().toLowerCase();
+  }
+
+  private rowName(row: Row): string {
+    return row.settings.name ?? this.defaultName(row);
   }
 
   private viewOf(row: Row): IntegrationView {
     return {
       id: row.connection.id,
       kind: row.binding.kind,
-      name: row.settings.name ?? this.defaultName(row),
+      name: this.rowName(row),
+      ...(row.settings.renamed ? { renamed: row.settings.renamed } : {}),
       account: row.connection.account,
       health: row.connection.health,
       paused: row.settings.paused === true,
@@ -643,8 +710,20 @@ export class IntegrationsService {
     return row.connection.name ?? INTEGRATION_KIND_NAMES[row.binding.kind];
   }
 
+  /** A declared connection keeps its identity even while signed out. */
+  private assertReservedNameFree(name: string, except?: string): void {
+    const reserved = this.reservedNames().find(
+      (entry) => entry.id !== except && this.nameKey(entry.name) === this.nameKey(name),
+    );
+    if (reserved)
+      throw new IntegrationRefusal(
+        `${name.trim()} belongs to your ${reserved.owner} connection, even while signed out. Choose another name.`,
+      );
+  }
+
   /** Two rows never share a name: a name is how the crew and the first mate reach one. */
   private assertNameFree(name: string, except?: string): void {
+    this.assertReservedNameFree(name, except);
     const taken = this.holderOf(name, (row) => row.connection.id === except);
     if (taken)
       throw new IntegrationRefusal(
@@ -658,7 +737,7 @@ export class IntegrationsService {
     return this.rows().find(
       (row) =>
         !except(row) &&
-        (row.connection.id === wanted || this.viewOf(row).name.toLowerCase() === wanted),
+        (row.connection.id === wanted || this.nameKey(this.rowName(row)) === wanted),
     );
   }
 
@@ -681,7 +760,7 @@ export class IntegrationsService {
   private find(name: string): Row | undefined {
     const wanted = name.trim().toLowerCase();
     return this.rows().find(
-      (row) => row.connection.id === wanted || this.viewOf(row).name.toLowerCase() === wanted,
+      (row) => row.connection.id === wanted || this.nameKey(this.rowName(row)) === wanted,
     );
   }
 

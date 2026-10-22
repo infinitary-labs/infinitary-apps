@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "github-integration-names",
+      "kind": "fix",
+      "title": "GitHub keeps a distinct integration name",
+      "body": "Signing in to GitHub no longer leaves two connections named GitHub. Infinitary gives a conflicting server a distinct name and explains the change, without interrupting your project access or redirecting requests awaiting your approval.",
+      "area": "settings",
+      "picture": {
+        "dark": "github-integration-names-dark.webp",
+        "light": "github-integration-names-light.webp",
+        "alt": "Integrations shows GitHub beside GitHub MCP server, with an explanation of the server's new name."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

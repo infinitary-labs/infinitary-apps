@@ -10,6 +10,8 @@ Settings -> Integrations: what the first mate and the crew reach outside the per
 The tab's head is the Automation tab's: the title "Integrations" at `--text-md` weight 500, then one `--text-sm --fg-3` intro, "What your first mate and your crew can reach outside your projects.
 Each row is one connection, signed in as you."
 Then the one list box `ForgeRow` draws (`--bg-1`, `--line-1` hairline, `--radius-m`), on its grid and rhythm: a `StatusDot` by the sign-in's health (the forge rows' tones; `idle` while paused), the name at weight 500 as a button with a small chevron that turns over when open, a `Badge` "signed in" (outline "paused" while paused; the `--danger` mono words "sign in again" when the host refused it), and the mono `--text-xs --fg-3` line "as octo · 2 actions", "paused" first while paused.
+A connection the app renamed to avoid a GitHub name clash carries one quiet explanation directly below its row, in `--text-sm --fg-3`, aligned with the row's name, even while collapsed.
+It says "Renamed from “GitHub” to keep it distinct from your GitHub connection." and stays across restarts until the person chooses a name themselves.
 A refused sign-in carries one small primary "Sign in again", as a forge row does.
 Its `RowMenu` holds "Check now", "Pause" (detail "Nobody reaches it until you resume it") or "Resume", and, behind a separator, "Sign out and remove" (danger).
 With nothing connected the box holds one quiet line, "Nothing connected yet.", never a warning.

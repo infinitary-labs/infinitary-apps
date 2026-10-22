@@ -2,7 +2,11 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";
 import { CUSTOM_API_PROVIDER_PREFIX } from "@shared/customApi";
+import { hostEnv } from "../../src/core/hostEnv";
+import { mcpIntegration } from "../../src/core/integrations/providers/mcp/mcpIntegration";
 import { openDatabase } from "../../src/core/storage/db";
+import { atUtilityQos } from "../../src/core/utilityQos";
+import { INTEGRATION_KIND_NAMES } from "../../src/shared/integrations";
 
 /**
  * A profile as an older release saved it (docs/saved-data-compatibility.md,
@@ -112,5 +116,23 @@ export function saveKeepOpenCard(userDataDir: string, card: LegacyCard): void {
     );
   } finally {
     db.close();
+  }
+}
+
+/** INF-882's existing installation: keep the real server's discovery, under its old allowed name. */
+export async function seedLegacyGithubServer(userData: string, runs: string): Promise<void> {
+  const server = mcpIntegration({
+    root: join(userData, "integrations"),
+    env: () => hostEnv(),
+    belowUi: (file, args) => atUtilityQos(file, args),
+    cwd: () => userData,
+    version: "0.0.0-test",
+    changed: () => {},
+  });
+  try {
+    if (!server.add) throw new Error("MCP servers must support adding a connection");
+    await server.add({ name: INTEGRATION_KIND_NAMES.github, runs });
+  } finally {
+    await server.close?.();
   }
 }

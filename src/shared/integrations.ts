@@ -138,12 +138,27 @@ export const integrationSecretValueSchema = z
   .min(1)
   .max(16 * 1024);
 
+/** One name shared by saved settings, Settings and the crew's lookup. */
+export const integrationNameSchema = z.string().trim().min(1).max(64);
+
+/** Why the app gave an existing connection a distinct name (INF-882). */
+export const integrationRenameSchema = z.strictObject({
+  from: integrationNameSchema,
+  for: integrationNameSchema,
+});
+
+export function integrationRenameWords(rename: z.infer<typeof integrationRenameSchema>): string {
+  return `Renamed from “${rename.from}” to keep it distinct from your ${rename.for} connection.`;
+}
+
 export const integrationViewSchema = z
   .object({
     id: integrationIdSchema,
     kind: integrationKindSchema,
     /** The person's word for it; the kind's name until renamed. */
-    name: z.string().min(1).max(64),
+    name: integrationNameSchema,
+    /** An automatic name repair, kept until the person chooses a name themselves. */
+    renamed: integrationRenameSchema.optional(),
     /** Who it is signed in as there; null until it has answered once. */
     account: z.string().max(100).nullable(),
     /** The sign-in's health, through the five rules (`docs/quota.md`). */
@@ -181,7 +196,7 @@ export type IntegrationsView = z.infer<typeof integrationsViewSchema>;
  */
 export const integrationSettingsPatchSchema = z
   .object({
-    name: z.string().trim().min(1).max(64).nullable().optional(),
+    name: integrationNameSchema.nullable().optional(),
     paused: z.boolean().optional(),
     actions: z.record(integrationActionNameSchema, z.boolean()).optional(),
   })
@@ -195,7 +210,7 @@ export type IntegrationSettingsPatch = z.infer<typeof integrationSettingsPatchSc
  */
 export const integrationMcpAddSchema = z
   .object({
-    name: z.string().trim().min(1).max(64),
+    name: integrationNameSchema,
     runs: z.string().trim().min(1).max(2048),
   })
   .strict();

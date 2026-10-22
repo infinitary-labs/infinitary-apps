@@ -17,7 +17,12 @@ import { openInMemoryDatabase } from "../../../storage/db";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
-import { FileIntegrationSecrets, IntegrationSettingsStore, IntegrationsService } from "../../index";
+import {
+  FileIntegrationSecrets,
+  githubIntegration,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from "../../index";
 import { mcpIntegration } from "./mcpIntegration";
 
 /**
@@ -175,6 +180,90 @@ describe.each([
     expect(click.answer).toBe("Added note 5.");
     expect(served.notes()).toContain("Pay the electric bill");
   });
+});
+
+// INF-882: upgrading an existing connection must change only its name,
+// not a pending request's destination, its keys, settings or event identity.
+it("keeps an old MCP ask and its event on the server after the GitHub name repair", async () => {
+  const root = scratchDir("mcp-github-name-");
+  const legacy = serviceIn(root);
+  const http = await serveNotesHttp("modern");
+  const signedIn = { value: false };
+  const read = vi.fn(async () => JSON.stringify({ login: "octo" }));
+  const write = vi.fn(async () => {
+    throw new Error("the MCP ask must not reach GitHub");
+  });
+  let upgraded: IntegrationsService | undefined;
+  try {
+    await legacy.service.add("mcp", { name: "GitHub", runs: http.url });
+    await legacy.service.call(task, "GitHub", "add_note", {
+      text: "Return the library books by Friday",
+    });
+    const ask = legacy.tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
+    if (!ask) throw new Error("the old server's change must have been kept");
+    expect(ask).toMatchObject({ kind: "integration", integration: "mcp-github", place: "GitHub" });
+    await legacy.service.dispose();
+    upgraded = new IntegrationsService({
+      bindings: [
+        githubIntegration({
+          signIns: {
+            stateOf: () => (signedIn.value ? "ok" : undefined),
+            loginOf: () => (signedIn.value ? "octo" : null),
+            checkNow: async () => {},
+            signOut: () => {
+              signedIn.value = false;
+            },
+          },
+          gateway: { read, readAsSeat: read, write },
+        }),
+        mcpIntegration({
+          root,
+          env: () => hostEnv(),
+          belowUi: (file, args) => atUtilityQos(file, args),
+          cwd: () => root,
+          version: "0.0.0-test",
+          changed: () => upgraded?.changed(),
+        }),
+      ],
+      store: new IntegrationSettingsStore(root),
+      secrets: new FileIntegrationSecrets(join(root, "secrets")),
+      asks: {
+        keep: (taskId, kept) => legacy.tasks.keepWriteAsk(taskId, kept),
+        take: (taskId, askId) => legacy.tasks.takeWriteAsk(taskId, askId),
+        record: (taskId, askId, outcome) =>
+          legacy.tasks.recordWriteAskOutcome(taskId, askId, outcome),
+      },
+    });
+    expect(upgraded.show("GitHub")).toMatchObject({ refused: "invalid" });
+    expect(upgraded.show("GitHub MCP server")).toMatchObject({ id: "mcp-github" });
+    signedIn.value = true;
+    expect(upgraded.changed().integrations.map((row) => row.name)).toEqual([
+      "GitHub",
+      "GitHub MCP server",
+    ]);
+    const crew = upgraded.forTask(task.taskId);
+    expect((await crew.call("GitHub", "read", { path: "/user" })).text).toContain('"login":"octo"');
+    expect(read).toHaveBeenCalledOnce();
+    expect((await crew.call("GitHub MCP server", "list_notes", {})).text).toContain(
+      SAMPLE_NOTES[0],
+    );
+    expect(upgraded.listenable("GitHub MCP server", "resource_changed")).toMatchObject({
+      integration: "mcp-github",
+    });
+    expect(upgraded.rosterLine()).toContain("Renamed from “GitHub”");
+    const clicked = await upgraded.sendAsk(task.taskId, ask.id);
+    expect(clicked.outcome).toEqual({ kind: "ran" });
+    expect(
+      http.book.notes.filter((note) => note === "Return the library books by Friday"),
+    ).toHaveLength(1);
+    expect((await upgraded.sendAsk(task.taskId, ask.id)).ok).toBe(false);
+    expect(write).not.toHaveBeenCalled();
+  } finally {
+    await upgraded?.dispose();
+    await legacy.service.dispose();
+    await http.close();
+    legacy.close();
+  }
 });
 
 describe("an MCP server that drops a change it took", () => {

@@ -221,6 +221,8 @@ describe("integration keys", () => {
       input: JSON.stringify({ title: "Crash on open" }),
     });
     expect(kept.text).toContain(`{"kind":"request_write","ask":"${ask?.id}"}`);
+    // Kept is not run, so it answers as a refusal (the captain's INF-824 choice).
+    expect(kept.refused).toBe("refused");
     // The card's strip says what the click runs, with its input and never the key.
     const strip = ask ? writeAskStrip(ask) : "";
     expect(strip).toContain("Your click runs this on Linear, once");

@@ -748,6 +748,8 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     };
     const kept = await crewmate.call("github", "write", comment);
     expect(kept.text).toContain("Not sent: it goes through the GitHub integration");
+    // Kept is not sent, so it answers as a refusal (the captain's INF-824 choice).
+    expect(kept.refused).toBe("refused");
     expect(seen.filter((request) => request.method === "POST")).toEqual([]);
     const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(-1);
     expect(ask).toMatchObject({ method: "POST", path: comment.path, via: "account" });

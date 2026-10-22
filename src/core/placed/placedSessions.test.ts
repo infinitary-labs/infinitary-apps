@@ -2831,9 +2831,15 @@ describe("the integrations command on a computer that runs work", () => {
     expect(read.output).toContain('"login": "octo"');
     expect(github.seen).toEqual([{ method: "GET", path: "/user", auth: `Bearer ${GITHUB_TOKEN}` }]);
 
-    // A change is kept here as the captain's ask; nothing is sent.
+    // A change is kept here as the captain's ask; nothing is sent, so the
+    // command exits 1 and still names the ask (the captain's INF-824 choice:
+    // "Return exit 1: the change was not sent.").
     const write = shellAnswer(api.requests[requests + 4]);
+    expect(write.exit).toBe(1);
+    expect(write.output).toContain("REFUSED");
     expect(write.output).toContain("Not sent");
+    const kept = home.tasks.get("t-reach")?.delivery?.writeAsks?.[0];
+    expect(write.output).toContain(`Kept as ask ${kept?.id}`);
     expect(home.tasks.get("t-reach")?.delivery?.writeAsks).toEqual([
       expect.objectContaining({ method: "POST", path: issue.path, via: "account" }),
     ]);

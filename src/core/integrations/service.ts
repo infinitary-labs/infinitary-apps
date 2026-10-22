@@ -401,6 +401,8 @@ export class IntegrationsService {
         `To ask, emit_card with one action whose effect is {"kind":"request_write","ask":"${ask.id}"} and no label - the app adds the exact call and names the button - beside your own Not now, and say in the body why it is needed.`,
         "Only the captain's click runs it, once, and you then hear its answer. Never run it another way.",
       ].join("\n"),
+      // Kept is not run: the command exits 1 with these words (INF-824).
+      refused: "refused",
     };
   }
 

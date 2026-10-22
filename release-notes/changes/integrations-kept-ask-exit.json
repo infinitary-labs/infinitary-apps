@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "integrations-kept-ask-exit",
+      "reason": "Internal: a crewmate's integrations command now exits 1 when a change waits for the captain's approval, as its documentation promised; the approval card and what the captain's click sends are unchanged."
+    }
+  ]
+}

@@ -90,8 +90,11 @@ export function githubIntegration(options: GithubIntegrationOptions): Integratio
           text: "Not sent: a change on GitHub asks the captain on a card, and only a crewmate's card can carry the exact call. Start a crewmate whose brief names the call.",
           refused: "refused",
         };
+      // Every change through the integration is kept as the captain's ask or
+      // refused, never sent here, so the command's answer is a refusal (INF-824).
       return {
         text: await options.gateway.write(caller.taskId, input as GithubWriteInput, "account"),
+        refused: "refused",
       };
     },
   };

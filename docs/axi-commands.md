@@ -114,6 +114,7 @@ A refusal is typed by `TaskBrowsers`, never read off its words (`BrowserAnswer.r
 The bare command lists them with who each is signed in as and its actions, `show <name>` lists one's actions with what each does, its rule and its input's JSON Schema, and `call <name> <action> '<json input>'` runs one.
 The input is one JSON object, checked before it is sent, and a malformed one exits 2.
 Every decision stays `IntegrationsService`'s: a paused integration, an action turned off and a change that asks the captain each print the service's words as an error with exit 1 (`REFUSED`).
+For a change that asks the captain, `REFUSED` means it has not run yet: its ask is kept, and the words name it and the card that carries it.
 A task on this Mac is granted it whenever the host has a command process, and a task on a computer that runs work where the home says it reaches them (`docs/integrations.md`, "On a computer that runs work").
 Its kept answers follow the shell's limit as the browser's do.
 There, a call waits on this Mac at most until 750 milliseconds before the command process would be stopped, so the command always prints an answer, and a call not yet sent then is never sent.

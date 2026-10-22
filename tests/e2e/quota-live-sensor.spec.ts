@@ -17,7 +17,7 @@ import {
   EMPTY_QUOTA_TEXT,
 } from "../../src/renderer/src/settings/subscriptionsWords";
 import { needsReauthCopy } from "../../src/shared/credentialHealth";
-import { catalogEntry, providerSignInNote } from "../../src/shared/providers";
+import { catalogEntry } from "../../src/shared/providers";
 import { scratchDir } from "../helpers/scratchDirs";
 import { consumerConfigMessage, grpcWebOkBody } from "../support/grpcWebEncoder";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -841,9 +841,9 @@ process.exit(run.status ?? 0);
   });
 
   test("Copilot accounts from before load: one reads premium requests, a lapsed one asks to sign in again", async () => {
-    // INF-560, the captain's answers: Copilot comes back through Pi, its chip
-    // says it connects through Pi, and accounts stored before load again,
-    // their row saying to sign in again once the token has lapsed.
+    // INF-560, the captain's answers: Copilot comes back through Pi, and
+    // accounts stored before load again, their row saying to sign in again
+    // once the token has lapsed.
     const userDataDir = scratchDir("infinitary-e2e-");
     copilot = await startStubCopilot("gho_live");
     seedCopilotAccounts(userDataDir, {
@@ -867,11 +867,9 @@ process.exit(run.status ?? 0);
     // Copilot token Pi resolves for requests.
     expect(new Set(copilot.seen)).toEqual(new Set(["gho_live", "gho_lapsed"]));
 
-    // The chip to add another account says it connects through Pi.
+    // The chip to add another account names Copilot, with no note under it
+    // (INF-838, the captain's answer).
     const chip = app.page.locator('[data-connect-provider="github-copilot"]');
-    await expect(chip).toContainText(catalogEntry("github-copilot")?.name as string);
-    await expect(chip).toContainText(
-      providerSignInNote({ id: "github-copilot", tier: "subscription" }) as string,
-    );
+    await expect(chip).toHaveText(catalogEntry("github-copilot")?.name as string);
   });
 });

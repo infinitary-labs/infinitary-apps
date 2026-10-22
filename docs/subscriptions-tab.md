@@ -65,6 +65,18 @@ From the keyboard, Tab from the model's dropdown reaches the account's, which dr
 It is a setting chosen now and then rather than an action a person repeats, so it adds no command, as First mate model adds none.
 `SubscriptionsTab.test.ts` and `intelligenceBoard.test.tsx` own the choices and the picker's words; `tests/e2e/subscriptions-instruments.spec.ts` owns the journey, driven by keys, and `tests/e2e/phase5-quota.spec.ts` the crew pin's.
 
+## A code sign-in
+
+Copilot and Kimi Code sign in with a code the person enters on the provider's site (`codeSignIn` in `src/shared/providers.ts`; INF-842, the captain's answers on INF-838).
+Their chip asks no browser-or-key question and goes straight to the code step, which the first-run gate and this tab share (`CodeStep` in `src/renderer/src/accounts/ConnectChips.tsx`).
+The step shows the code with Copy code, a main button that copies the code and opens the site, Cancel, and a waiting line; its words come from `CODE_STEP_WORDS`.
+Copilot assumes github.com: Pi's Enterprise question is answered before it reaches the screen, and a Use GitHub Enterprise row opens an address field that refuses a bad address with one sentence beside it.
+Sign in again answers it from the account's stored Enterprise address, so it asks nothing the account already knows.
+The code lasts as long as the provider says (`expiresAt` on the notice), not the app's own five-minute limit; an expired code reads "The code expired." with Get a new code.
+Cancel ends the wait at once over `inf:auth:cancel` and shows no error, and an approved sign-in brings the window forward.
+A sign-in that fails shows its reason beside the row or chip it started from (`data-settings-error="sign-in"`), not at the foot of the tab.
+`src/shared/providers.test.ts` owns the Enterprise address check, and `tests/e2e/copilot-sign-in.spec.ts` the journey.
+
 ## A computer's own sign-ins
 
 Once a computer that runs work is on the list (`docs/helper.md`, "Its own sign-ins"), this Mac's accounts sit under the micro label `THIS COMPUTER`, and each computer gets a group of its own below them, as the design skill's `components/devices/SignInOnAMac` draws it (`settings/DeviceSignIns.tsx`).

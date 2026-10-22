@@ -1,14 +1,19 @@
 import type { AccountView } from "@shared/accounts";
 import type { FreshCheck } from "@shared/firstRun";
 import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers";
-import { useCallback, useEffect, useState } from "react";
+import { catalogEntry } from "@shared/providers";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AuthAside,
   AuthMethodChoice,
+  CodeExpired,
   connectMethods,
   ProviderChips,
+  signInEnd,
 } from "../accounts/ConnectChips";
 import {
+  answeredSignInPrompt,
+  lastSignInNotice,
   runAccountAdd,
   signInFlightSnapshot,
   subscribeSignInFlight,
@@ -119,14 +124,40 @@ export function FirstRunGate() {
     }
     start(provider, methods[0] ?? "api_key");
   };
-  const start = (provider: ProviderView, type: "oauth" | "api_key") => {
+  // The person's own Cancel ends the sign-in quietly (INF-838); a code
+  // step's Enterprise row starts it again on the chosen host.
+  const cancelled = useRef(false);
+  const restart = useRef<{ provider: ProviderView; host: string | undefined } | null>(null);
+  const [expired, setExpired] = useState<ProviderView | null>(null);
+  const [enterpriseHost, setEnterpriseHost] = useState<string | undefined>(undefined);
+  const start = (provider: ProviderView, type: "oauth" | "api_key", host?: string) => {
     setMethodChoice(null);
+    setExpired(null);
     setBusyProviderId(provider.id);
     setError(null);
     setNotice(null);
-    void runAccountAdd(provider.id, () => window.infinitary.accounts.add(provider.id, type))
+    setEnterpriseHost(host);
+    cancelled.current = false;
+    void runAccountAdd(provider.id, () =>
+      window.infinitary.accounts.add(
+        provider.id,
+        type,
+        host ? { enterpriseHost: host } : undefined,
+      ),
+    )
+      .then(() => {
+        // The sign-in finished in the browser: the window comes forward.
+        void window.infinitary.app.controlWindow("front").catch(() => {});
+      })
       .catch((caught) => {
-        setError(caught instanceof Error ? caught.message : String(caught));
+        const end = signInEnd({
+          cancelled: cancelled.current,
+          notice: lastSignInNotice(provider.id),
+          now: Date.now(),
+        });
+        if (end === "expired") setExpired(provider);
+        else if (end === "failed")
+          setError(caught instanceof Error ? caught.message : String(caught));
       })
       .finally(() => {
         setBusyProviderId(null);
@@ -137,7 +168,14 @@ export function FirstRunGate() {
         // caption dissolves; the quota snapshot that follows re-reads too.
         void loadFirstRun();
         void window.infinitary.quota.refresh().catch(() => {});
+        const next = restart.current;
+        restart.current = null;
+        if (next) start(next.provider, "oauth", next.host);
       });
+  };
+  const cancel = () => {
+    cancelled.current = true;
+    void window.infinitary.auth.cancel().catch(() => {});
   };
 
   useEffect(() => {
@@ -191,7 +229,9 @@ export function FirstRunGate() {
 
   const answerPrompt = (value: string | null) => {
     if (!prompt) return;
+    if (value === null) cancelled.current = true;
     void window.infinitary.auth.replyPrompt(prompt.promptId, value);
+    answeredSignInPrompt(prompt.promptId);
     setPrompt(null);
   };
 
@@ -200,11 +240,24 @@ export function FirstRunGate() {
   // provider's own flow, nothing else: the caption's sentence and the row
   // return with the next choice. The band never reaches the input below.
   const connecting =
-    methodChoice !== null || busyProviderId !== null || prompt !== null || notice !== null;
+    methodChoice !== null ||
+    busyProviderId !== null ||
+    prompt !== null ||
+    notice !== null ||
+    expired !== null;
   const connectingName =
-    methodChoice?.name ?? providers.find((entry) => entry.id === busyProviderId)?.name ?? null;
+    methodChoice?.name ??
+    expired?.name ??
+    providers.find((entry) => entry.id === busyProviderId)?.name ??
+    null;
+  const busyProvider = providers.find((entry) => entry.id === busyProviderId);
   return (
-    <div className="fm-gate" data-first-run-gate={open ? "open" : "closing"} data-open={open}>
+    <div
+      className="fm-gate"
+      data-first-run-gate={open ? "open" : "closing"}
+      data-open={open}
+      data-sign-in-step={methodChoice || notice || prompt || expired ? "" : undefined}
+    >
       <div className="fm-gate-inner">
         <p className="fm-gate-display" data-gate-title="">
           {fresh
@@ -277,7 +330,7 @@ export function FirstRunGate() {
             }
           />
         )}
-        {connecting && connectingName && !methodChoice && !prompt && !notice && (
+        {connecting && connectingName && !methodChoice && !prompt && !notice && !expired && (
           <p className="fm-gate-sub" data-connecting={connectingName}>
             Connecting {connectingName}
           </p>
@@ -303,6 +356,26 @@ export function FirstRunGate() {
             promptValue={promptValue}
             onPromptValue={setPromptValue}
             onAnswerPrompt={answerPrompt}
+            onCancel={cancel}
+            {...(busyProvider && catalogEntry(busyProvider.id)?.codeSignIn?.enterprise
+              ? {
+                  enterprise: {
+                    ...(enterpriseHost ? { host: enterpriseHost } : {}),
+                    onUse: (host: string | null) => {
+                      restart.current = { provider: busyProvider, host: host ?? undefined };
+                      cancel();
+                    },
+                  },
+                }
+              : {})}
+          />
+        )}
+        {expired && !notice && !prompt && (
+          <CodeExpired
+            framed
+            providerId={expired.id}
+            onNewCode={() => start(expired, "oauth", enterpriseHost)}
+            onClose={() => setExpired(null)}
           />
         )}
       </div>

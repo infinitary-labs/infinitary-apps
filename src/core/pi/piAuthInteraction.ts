@@ -9,6 +9,11 @@ export type AuthInteractionOptions = {
    * what left Connect stuck on "Connecting..." with no follow-up.
    */
   onFatal?: (error: Error) => void;
+  /**
+   * Answers a prompt the app already knows the answer to, so it never
+   * reaches the person: undefined lets it through.
+   */
+  answer?: (prompt: { type: string }) => string | undefined;
 };
 
 /**
@@ -27,6 +32,8 @@ export function buildAuthInteraction(
 ): Parameters<ModelRuntime["login"]>[2] {
   return {
     prompt: async (prompt) => {
+      const known = options.answer?.(prompt);
+      if (known !== undefined) return known;
       const reply = bridge.prompt({
         promptId: randomUUID(),
         providerId,
@@ -73,6 +80,9 @@ export function buildAuthInteraction(
           message: `Enter code at ${event.verificationUri}`,
           url: event.verificationUri,
           userCode: event.userCode,
+          ...(typeof event.expiresInSeconds === "number"
+            ? { expiresAt: Date.now() + event.expiresInSeconds * 1000 }
+            : {}),
         });
         return;
       }

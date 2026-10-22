@@ -3,13 +3,17 @@ import type { AuthNotice, AuthPromptView, ProviderView } from "@shared/providers
 import {
   API_KEY_LABEL,
   CLAUDE_PROVIDER_ID,
+  CODE_STEP_WORDS,
+  catalogEntry,
+  githubEnterpriseHost,
   providerServesRole,
   providerSignInNote,
 } from "@shared/providers";
 import type React from "react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Button, Input } from "../design";
 import { useRestLabel } from "../design/core/restLabel";
+import { CopyCodeButton, useCopyCode } from "./CopyCode";
 import { CustomApiDialog, CustomApiForm } from "./CustomApiForm";
 import "./connectChips.css";
 import { HERE } from "@shared/deviceNames";
@@ -296,9 +300,31 @@ export const CLAUDE_CHIP_INSTALL_THERE_NOTE = "install Claude Code there first";
 /** A Custom API chip on a computer that runs an older Firstmate. */
 export const CUSTOM_API_UPDATE_THERE_NOTE = "update Infinitary there first";
 
-/** The sign-in a provider offers; two means the person picks first. */
-export function connectMethods(provider: Pick<ProviderView, "authTypes">): ("oauth" | "api_key")[] {
-  return provider.authTypes.filter((type) => type === "oauth" || type === "api_key");
+/**
+ * The sign-in a provider offers; two means the person picks first. A
+ * provider that signs in with a code (Copilot, Kimi Code) starts it at once
+ * (INF-838).
+ */
+export function connectMethods(
+  provider: Pick<ProviderView, "id" | "authTypes">,
+): ("oauth" | "api_key")[] {
+  const methods = provider.authTypes.filter((type) => type === "oauth" || type === "api_key");
+  return catalogEntry(provider.id)?.codeSignIn && methods.includes("oauth") ? ["oauth"] : methods;
+}
+
+/**
+ * How a sign-in that did not finish ended: the person's own Cancel, which
+ * says nothing; a code that ran out, past the moment the provider's own
+ * answer gave (`expiresAt`); or a failure whose words the caller shows.
+ */
+export function signInEnd(input: {
+  cancelled: boolean;
+  notice: AuthNotice | null | undefined;
+  now: number;
+}): "cancelled" | "expired" | "failed" {
+  if (input.cancelled) return "cancelled";
+  const expiresAt = input.notice?.kind === "device_code" ? input.notice.expiresAt : undefined;
+  return expiresAt !== undefined && input.now >= expiresAt ? "expired" : "failed";
 }
 
 /**
@@ -424,6 +450,8 @@ export function AuthAside({
   promptValue,
   onPromptValue,
   onAnswerPrompt,
+  onCancel,
+  enterprise,
   framed = false,
 }: {
   notice?: AuthNotice;
@@ -431,11 +459,28 @@ export function AuthAside({
   promptValue: string;
   onPromptValue: (value: string) => void;
   onAnswerPrompt: (value: string | null) => void;
+  /** Stops the sign-in; a provider's code step shows it beside the code. */
+  onCancel: () => void;
+  /** The Use GitHub Enterprise row, on a new Copilot account's code step. */
+  enterprise?: EnterpriseChoice;
   framed?: boolean;
 }) {
+  const site = notice ? catalogEntry(notice.providerId)?.codeSignIn?.site : undefined;
+  const codeStep = notice?.kind === "device_code" && notice.userCode && site;
   const body = (
     <>
-      {notice && (
+      {codeStep && notice.userCode ? (
+        <CodeStep
+          key={`${notice.providerId}:${notice.userCode}`}
+          providerId={notice.providerId}
+          site={site}
+          code={notice.userCode}
+          {...(notice.url ? { url: notice.url } : {})}
+          onCancel={onCancel}
+          {...(enterprise ? { enterprise } : {})}
+        />
+      ) : null}
+      {notice && !codeStep && (
         <div
           className="fm-connect-aside"
           style={{ fontSize: "var(--text-sm)", color: "var(--fg-2)" }}
@@ -482,6 +527,178 @@ export function AuthAside({
         />
       )}
     </>
+  );
+  return framed ? (
+    <div className="fm-connect-aside-frame" data-connect-aside="">
+      {body}
+    </div>
+  ) : (
+    body
+  );
+}
+
+/** The host a new Copilot account signs in to, and the restart onto another. */
+export type EnterpriseChoice = {
+  /** The Enterprise host this attempt uses; absent is github.com. */
+  host?: string;
+  /** Start again on a GitHub Enterprise host, or on github.com with null. */
+  onUse: (host: string | null) => void;
+};
+
+/**
+ * A provider's code step (INF-838), after the GitHub sign-in in Settings ->
+ * Integrations: the code, Copy code, one button that copies the code and
+ * opens the provider's page, Cancel, and a line that says the app is
+ * waiting. Copilot adds that GitHub asks to approve a Copilot app, and a new
+ * account's row to use GitHub Enterprise instead.
+ */
+function CodeStep({
+  providerId,
+  site,
+  code,
+  url,
+  onCancel,
+  enterprise,
+}: {
+  providerId: string;
+  site: string;
+  code: string;
+  url?: string;
+  onCancel: () => void;
+  enterprise?: EnterpriseChoice;
+}) {
+  const { state, copy, status } = useCopyCode(code, true);
+  const [enterpriseOpen, setEnterpriseOpen] = useState(false);
+  const fieldId = useId();
+  const [host, setHost] = useState("");
+  const [hostError, setHostError] = useState<string | null>(null);
+  // An Enterprise sign-in names the address its code is entered at, even
+  // when signing in again took it from the account and not the field.
+  const page =
+    enterprise?.host ??
+    (url && catalogEntry(providerId)?.codeSignIn?.enterprise ? githubEnterpriseHost(url) : null) ??
+    site;
+  if (enterprise && enterpriseOpen) {
+    return (
+      <form
+        className="fm-connect-aside fm-code-step"
+        data-code-step={providerId}
+        data-enterprise-step=""
+        onSubmit={(event: React.FormEvent) => {
+          event.preventDefault();
+          const chosen = githubEnterpriseHost(host);
+          if (!chosen) {
+            setHostError(CODE_STEP_WORDS.badEnterprise);
+            return;
+          }
+          enterprise.onUse(chosen);
+        }}
+      >
+        <label htmlFor={fieldId} className="fm-code-step-line">
+          {CODE_STEP_WORDS.enterpriseLabel}
+        </label>
+        <div className="fm-code-step-actions">
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <Input
+              id={fieldId}
+              mono
+              value={host}
+              placeholder={CODE_STEP_WORDS.enterprisePlaceholder}
+              aria-invalid={hostError ? "true" : undefined}
+              aria-describedby={hostError ? `${fieldId}-error` : undefined}
+              onChange={(event) => {
+                setHost(event.target.value);
+                setHostError(null);
+              }}
+              autoFocus
+            />
+          </div>
+          <Button variant="primary" size="sm" type="submit">
+            {CODE_STEP_WORDS.getCode}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setEnterpriseOpen(false)}>
+            {CODE_STEP_WORDS.useGitHubCom}
+          </Button>
+        </div>
+        {hostError && (
+          <p id={`${fieldId}-error`} role="alert" className="fm-code-step-error">
+            {hostError}
+          </p>
+        )}
+      </form>
+    );
+  }
+  return (
+    <div className="fm-connect-aside fm-code-step" data-code-step={providerId}>
+      <div className="fm-code-step-line">
+        {CODE_STEP_WORDS.enter(page)}
+        <span className="fm-code-step-code" data-code-step-code="">
+          {code}
+        </span>
+        <CopyCodeButton state={state} onCopy={() => void copy()} />
+        {status}
+      </div>
+      <div className="fm-code-step-actions">
+        {url && (
+          <Button
+            variant="primary"
+            size="sm"
+            autoFocus
+            onClick={() => {
+              void copy();
+              void window.infinitary.app.openExternal(url).catch(() => {});
+            }}
+          >
+            {CODE_STEP_WORDS.copyAndOpen(page)}
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={onCancel}>
+          Cancel
+        </Button>
+        {enterprise && (
+          <Button
+            variant="ghost"
+            size="sm"
+            style={{ marginLeft: "auto" }}
+            onClick={() => (enterprise.host ? enterprise.onUse(null) : setEnterpriseOpen(true))}
+          >
+            {enterprise.host ? CODE_STEP_WORDS.useGitHubCom : CODE_STEP_WORDS.useEnterprise}
+          </Button>
+        )}
+      </div>
+      <p className="fm-code-step-waiting" data-code-step-waiting="">
+        {CODE_STEP_WORDS.waiting(page)}
+        {catalogEntry(providerId)?.codeSignIn?.enterprise ? ` ${CODE_STEP_WORDS.approve}` : ""}
+      </p>
+    </div>
+  );
+}
+
+/** A code that ran out: the step says so and offers a new one, as Integrations does. */
+export function CodeExpired({
+  providerId,
+  onNewCode,
+  onClose,
+  framed = false,
+}: {
+  providerId: string;
+  onNewCode: () => void;
+  /** Leaves the step, back to the chips. */
+  onClose: () => void;
+  framed?: boolean;
+}) {
+  const body = (
+    <div className="fm-connect-aside fm-code-step" data-code-expired={providerId}>
+      <div className="fm-code-step-line">{CODE_STEP_WORDS.expired}</div>
+      <div className="fm-code-step-actions">
+        <Button variant="secondary" size="sm" autoFocus onClick={onNewCode}>
+          {CODE_STEP_WORDS.newCode}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onClose}>
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
   return framed ? (
     <div className="fm-connect-aside-frame" data-connect-aside="">

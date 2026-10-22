@@ -11551,6 +11551,26 @@
         ]
       }
     },
+    "inf:auth:cancel": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
     "inf:accounts:custom:profiles": {
       "effect": "read",
       "reach": "home",
@@ -13563,6 +13583,20 @@
               "oauth",
               "api_key"
             ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "enterpriseHost": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 253
+              }
+            },
+            "required": [
+              "enterpriseHost"
+            ],
+            "additionalProperties": false
           }
         ],
         "minItems": 2,
@@ -45222,6 +45256,9 @@
                           },
                           "userCode": {
                             "type": "string"
+                          },
+                          "expiresAt": {
+                            "type": "number"
                           }
                         },
                         "required": [
@@ -48688,6 +48725,9 @@
           },
           "userCode": {
             "type": "string"
+          },
+          "expiresAt": {
+            "type": "number"
           }
         },
         "required": [
@@ -54792,6 +54832,9 @@
                       },
                       "userCode": {
                         "type": "string"
+                      },
+                      "expiresAt": {
+                        "type": "number"
                       }
                     },
                     "required": [

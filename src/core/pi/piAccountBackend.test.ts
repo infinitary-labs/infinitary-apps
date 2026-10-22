@@ -1,6 +1,6 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { AuthNotice, AuthPromptView } from "@shared/providers";
+import { type AuthNotice, type AuthPromptView, CODE_STEP_WORDS } from "@shared/providers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { appPathsFor } from "../paths";
@@ -221,6 +221,81 @@ describe("PiAccountBackend login hang", () => {
     await expect(
       vault(OUT_OF_PLAY_MS, OUT_OF_PLAY_MS).add("openai-codex", "oauth", capture),
     ).rejects.toThrow(/could not open the sign-in page/i);
+  });
+});
+
+// The captain's answers on INF-838: assume github.com, never ask what the
+// app already knows, and let GitHub's own expiry end the code.
+describe("PiAccountBackend code sign-in (INF-842)", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    fakes.login = undefined;
+  });
+
+  /** Pi's Copilot login: the Enterprise question, then a code GitHub says lasts 900 s. */
+  function copilotLogin(asked: string[]): LoginFn {
+    return async (_provider, _type, interaction) => {
+      asked.push(
+        await interaction.prompt({
+          type: "text",
+          message: "GitHub Enterprise URL/domain (blank for github.com)",
+        }),
+      );
+      interaction.notify({
+        type: "device_code",
+        userCode: "WDJB-MJHT",
+        verificationUri: "https://github.com/login/device",
+        expiresInSeconds: 900,
+      });
+      return new Promise(() => {});
+    };
+  }
+
+  it("answers Copilot's Enterprise question itself, with github.com or the chosen host", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    const asked: string[] = [];
+    fakes.login = copilotLogin(asked);
+    const capture = bridge();
+    void vault(OUT_OF_PLAY_MS, OUT_OF_PLAY_MS)
+      .add("github-copilot", "oauth", capture)
+      .catch(() => {});
+    void vault(OUT_OF_PLAY_MS, OUT_OF_PLAY_MS)
+      .add("github-copilot", "oauth", capture, { enterpriseHost: "https://Acme.ghe.com/" })
+      .catch(() => {});
+    await vi.waitFor(() => expect(asked).toHaveLength(2));
+    expect(asked.sort()).toEqual(["", "acme.ghe.com"]);
+    expect(capture.prompts).toEqual([]);
+    expect(capture.notices[0]).toMatchObject({ kind: "device_code", userCode: "WDJB-MJHT" });
+  });
+
+  it("refuses an address that is not a GitHub Enterprise one before any sign-in starts", async () => {
+    const asked: string[] = [];
+    fakes.login = copilotLogin(asked);
+    await expect(
+      vault().add("github-copilot", "oauth", bridge(), { enterpriseHost: "not a host!" }),
+    ).rejects.toThrow(CODE_STEP_WORDS.badEnterprise);
+    expect(asked).toEqual([]);
+  });
+
+  it("lets the code last as long as GitHub says, past the app's own limit", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    fakes.login = copilotLogin([]);
+    const capture = bridge();
+    let settled = false;
+    void vault(OUT_OF_PLAY_MS, 200)
+      .add("github-copilot", "oauth", capture)
+      .then(
+        () => (settled = true),
+        () => (settled = true),
+      );
+    await vi.waitFor(() => expect(capture.notices).toHaveLength(1));
+    const notice = capture.notices[0];
+    expect(notice?.kind === "device_code" ? notice.expiresAt : undefined).toBeGreaterThan(
+      Date.now() + 800_000,
+    );
+    await vi.advanceTimersByTimeAsync(400);
+    await turn();
+    expect(settled).toBe(false);
   });
 });
 

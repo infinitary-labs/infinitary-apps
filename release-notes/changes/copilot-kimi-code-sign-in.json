@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "copilot-kimi-code-sign-in",
+      "kind": "feature",
+      "title": "Signing in to Copilot and Kimi Code takes one step",
+      "body": "The Copilot and Kimi Code buttons now show your sign-in code right away. One button copies the code and opens the page where you enter it. Copilot assumes github.com, with a Use GitHub Enterprise option. Cancel stops the sign-in at once, and an expired code offers a new one. Signing in again to a GitHub Enterprise account no longer asks for its address.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "copilot-kimi-code-sign-in-dark.webp",
+        "light": "copilot-kimi-code-sign-in-light.webp",
+        "alt": "Settings, Intelligence, with a Copilot sign-in code, Copy code, a Copy code and open GitHub button, Cancel and Use GitHub Enterprise"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

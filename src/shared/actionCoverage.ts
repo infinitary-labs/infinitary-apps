@@ -21,6 +21,7 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
     "The captain's own line in a task's Crewmate tab; conversation, not an app setting",
   "inf:task:interrupt": "The captain's own key or click in a task's Crewmate tab; nothing is set",
   "inf:auth:prompt-reply": "Sign-in interaction",
+  "inf:auth:cancel": "Sign-in cancellation",
   "inf:accounts:custom:connect": "Sign-in preparation",
   "inf:accounts:custom:prepare": "Sign-in preparation",
   "inf:accounts:custom:check": "Sign-in check",

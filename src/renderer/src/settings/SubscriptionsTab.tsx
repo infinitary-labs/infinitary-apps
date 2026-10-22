@@ -16,11 +16,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   AuthAside,
   AuthMethodChoice,
+  CodeExpired,
   connectMethods,
   ProviderChips,
+  signInEnd,
 } from "../accounts/ConnectChips";
 import { CustomApiAccountsSection } from "../accounts/CustomApiForm";
 import {
+  answeredSignInPrompt,
+  forgetSignInNotice,
+  lastSignInNotice,
   runAccountAdd,
   signInFlightSnapshot,
   subscribeSignInFlight,
@@ -793,6 +798,17 @@ export function SubscriptionsTab() {
   const [modelsOpen, setModelsOpen] = useState(true);
   const [modelsFocus, setModelsFocus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // How a sign-in ended when it did not end signed in: its words, or a code
+  // that expired, beside the step it belongs to - the row signing in again,
+  // or the "Add account" foot (INF-838). The person's own Cancel says nothing.
+  const [signInEnded, setSignInEnded] = useState<{
+    anchor: { accountId: string } | { foot: string };
+    expired: boolean;
+    text: string;
+  } | null>(null);
+  const cancelled = useRef(false);
+  const restart = useRef<{ provider: ProviderView; host: string | undefined } | null>(null);
+  const [enterpriseHost, setEnterpriseHost] = useState<string | undefined>(undefined);
   const [refreshing, setRefreshing] = useState(false);
   const refreshInFlight = useRef(false);
   // A computer that runs work signs in on its own; once one is listed,
@@ -866,25 +882,50 @@ export function SubscriptionsTab() {
   const [methodChoice, setMethodChoice] = useState<ProviderView | null>(null);
   const addAccount = (provider: ProviderView) => {
     const methods = connectMethods(provider);
+    setSignInEnded(null);
     if (methods.length > 1) {
       setMethodChoice(provider);
-      setError(null);
       return;
     }
     startAdd(provider, methods[0] ?? "api_key");
   };
-  const startAdd = (provider: ProviderView, type: "oauth" | "api_key") => {
+  // Reads only a ref and setters, so it never changes.
+  const ended = useCallback(
+    (anchor: { accountId: string } | { foot: string }, providerId: string, caught: unknown) => {
+      const end = signInEnd({
+        cancelled: cancelled.current,
+        notice: lastSignInNotice(providerId),
+        now: Date.now(),
+      });
+      if (end === "cancelled") return;
+      setSignInEnded({
+        anchor,
+        expired: end === "expired",
+        text: caught instanceof Error ? caught.message : String(caught),
+      });
+    },
+    [],
+  );
+  const startAdd = (provider: ProviderView, type: "oauth" | "api_key", host?: string) => {
     setMethodChoice(null);
     setBusyProvider(provider.id);
-    setError(null);
-    void runAccountAdd(provider.id, () => window.infinitary.accounts.add(provider.id, type))
+    setSignInEnded(null);
+    setEnterpriseHost(host);
+    cancelled.current = false;
+    void runAccountAdd(provider.id, () =>
+      window.infinitary.accounts.add(
+        provider.id,
+        type,
+        host ? { enterpriseHost: host } : undefined,
+      ),
+    )
       .then((added) => {
+        // The sign-in finished in the browser: the window comes forward.
+        void window.infinitary.app.controlWindow("front").catch(() => {});
         // Invite a rename right away ("Personal", "Work #2" are editable).
         setRenamingId(added.id);
       })
-      .catch((caught) => {
-        setError(caught instanceof Error ? caught.message : String(caught));
-      })
+      .catch((caught) => ended({ foot: provider.id }, provider.id, caught))
       .finally(() => {
         setBusyProvider(null);
         clearAuthFlow(provider.id);
@@ -892,7 +933,14 @@ export function SubscriptionsTab() {
         // Same as signIn: ask the sensor now rather than wait for the tick,
         // so a sensed row leaves "reading…" once the first pass lands.
         void window.infinitary.quota.refresh().then(setSnapshot);
+        const next = restart.current;
+        restart.current = null;
+        if (next) startAdd(next.provider, "oauth", next.host);
       });
+  };
+  const cancelSignIn = () => {
+    cancelled.current = true;
+    void window.infinitary.auth.cancel().catch(() => {});
   };
 
   // Leaving this tab used to drop the busy flag while the sign-in kept
@@ -924,12 +972,15 @@ export function SubscriptionsTab() {
   const signIn = useCallback(
     (account: AccountView) => {
       setBusyAccount(account.id);
-      setError(null);
+      setSignInEnded(null);
+      cancelled.current = false;
+      forgetSignInNotice(account.providerId);
       void window.infinitary.accounts
         .signIn(account.id)
-        .catch((caught) => {
-          setError(caught instanceof Error ? caught.message : String(caught));
+        .then(() => {
+          void window.infinitary.app.controlWindow("front").catch(() => {});
         })
+        .catch((caught) => ended({ accountId: account.id }, account.providerId, caught))
         .finally(() => {
           setBusyAccount(null);
           clearAuthFlow(account.providerId);
@@ -939,7 +990,7 @@ export function SubscriptionsTab() {
           void window.infinitary.quota.refresh().then(setSnapshot);
         });
     },
-    [refresh, clearAuthFlow],
+    [refresh, clearAuthFlow, ended],
   );
 
   const pendingRestoreAccountId = useShellStore((s) => s.pendingRestoreAccountId);
@@ -996,7 +1047,9 @@ export function SubscriptionsTab() {
 
   const answerPrompt = (value: string | null) => {
     if (!prompt) return;
+    if (value === null) cancelled.current = true;
     void window.infinitary.auth.replyPrompt(prompt.promptId, value);
+    answeredSignInPrompt(prompt.promptId);
     setPrompt(null);
   };
 
@@ -1053,7 +1106,43 @@ export function SubscriptionsTab() {
       wanted(prompt.accountId)
         ? prompt
         : undefined;
-    if (!notice && !anchoredPrompt) return null;
+    const endedHere =
+      signInEnded &&
+      ("accountId" in anchor
+        ? "accountId" in signInEnded.anchor && signInEnded.anchor.accountId === anchor.accountId
+        : "foot" in signInEnded.anchor && signInEnded.anchor.foot === anchor.foot)
+        ? signInEnded
+        : null;
+    if (!notice && !anchoredPrompt) {
+      if (!endedHere) return null;
+      const retry = () => {
+        if ("accountId" in anchor) {
+          const account = accounts.find((row) => row.id === anchor.accountId);
+          if (account) signIn(account);
+          return;
+        }
+        const provider = providers.find((entry) => entry.id === anchor.foot);
+        if (provider) startAdd(provider, "oauth", enterpriseHost);
+      };
+      return endedHere.expired ? (
+        <CodeExpired
+          providerId={
+            "accountId" in anchor
+              ? (accounts.find((row) => row.id === anchor.accountId)?.providerId ?? "")
+              : anchor.foot
+          }
+          onNewCode={retry}
+          onClose={() => setSignInEnded(null)}
+        />
+      ) : (
+        <div className="fm-connect-aside">
+          <p role="alert" className="fm-code-step-error" data-settings-error="sign-in">
+            {endedHere.text}
+          </p>
+        </div>
+      );
+    }
+    const provider = "foot" in anchor ? providers.find((entry) => entry.id === anchor.foot) : null;
     return (
       <AuthAside
         {...(notice ? { notice } : {})}
@@ -1061,6 +1150,18 @@ export function SubscriptionsTab() {
         promptValue={promptValue}
         onPromptValue={setPromptValue}
         onAnswerPrompt={answerPrompt}
+        onCancel={cancelSignIn}
+        {...(provider && catalogEntry(provider.id)?.codeSignIn?.enterprise
+          ? {
+              enterprise: {
+                ...(enterpriseHost ? { host: enterpriseHost } : {}),
+                onUse: (host: string | null) => {
+                  restart.current = { provider, host: host ?? undefined };
+                  cancelSignIn();
+                },
+              },
+            }
+          : {})}
       />
     );
   };

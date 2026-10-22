@@ -22,6 +22,8 @@ import type { BackendId } from "@shared/providers";
 import {
   backendForProvider,
   CLAUDE_PROVIDER_ID,
+  CODE_STEP_WORDS,
+  githubEnterpriseHost,
   isOfferedProvider,
   isRetiredProvider,
 } from "@shared/providers";
@@ -312,10 +314,17 @@ export class AccountVault {
     providerId: string,
     type: "oauth" | "api_key",
     bridge: AuthInteractionBridge,
+    options: { enterpriseHost?: string } = {},
   ): Promise<AccountRecord> {
     if (!isOfferedProvider(providerId)) {
       throw new Error("This provider is not available to connect.");
     }
+    const enterpriseHost =
+      options.enterpriseHost === undefined
+        ? undefined
+        : githubEnterpriseHost(options.enterpriseHost);
+    if (options.enterpriseHost !== undefined && !enterpriseHost)
+      throw new Error(CODE_STEP_WORDS.badEnterprise);
     if (providerId === CLAUDE_PROVIDER_ID && this.list(providerId).length > 0) {
       throw new Error(`Claude uses the login already on ${HERE.this}.`);
     }
@@ -337,7 +346,12 @@ export class AccountVault {
       const dir = this.storeDir(providerId, id);
       mkdirSync(dir, { recursive: true, mode: 0o700 });
       const ref: AccountRef = { providerId, accountId: id, dir };
-      await backend.login({ ...ref, type, bridge });
+      await backend.login({
+        ...ref,
+        type,
+        bridge,
+        ...(enterpriseHost ? { enterpriseHost } : {}),
+      });
       const record: AccountRecord = {
         id,
         providerId,

@@ -438,6 +438,7 @@ const api: FirstmateApi = {
   auth: {
     providers: () => invoke("inf:auth:providers"),
     replyPrompt: (promptId, value) => invoke("inf:auth:prompt-reply", promptId, value),
+    cancel: () => invoke("inf:auth:cancel"),
     onPrompt: (listener) => subscribe("inf:auth:prompt", listener),
     onNotice: (listener) => subscribe("inf:auth:notice", listener),
   },
@@ -477,8 +478,10 @@ const api: FirstmateApi = {
       list: () => invoke("inf:accounts:custom:list"),
     },
     list: () => readableRequest("inf:accounts:list", () => invoke("inf:accounts:list")),
-    add: (providerId, type) =>
-      readableRequest("inf:accounts:add", () => invoke("inf:accounts:add", providerId, type)),
+    add: (providerId, type, options) =>
+      readableRequest("inf:accounts:add", () =>
+        invoke("inf:accounts:add", providerId, type, options),
+      ),
     signIn: (accountId) =>
       readableRequest("inf:accounts:sign-in", () => invoke("inf:accounts:sign-in", accountId)),
     remove: (accountId) =>

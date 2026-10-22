@@ -11,6 +11,7 @@ import {
   statusFromHealth,
 } from "../accounts/accountBackend";
 import type { CredentialHealth, RenewalOutcome, RenewReason } from "../accounts/credentialHealth";
+import { COPILOT_PROVIDER_ID, copilotEnterpriseHost } from "./copilotMeter";
 import { CustomApiAccountOwner } from "./customApiAccounts";
 import { createModelRuntime } from "./modelRuntime";
 import { buildAuthInteraction } from "./piAuthInteraction";
@@ -22,7 +23,11 @@ import { buildAuthInteraction } from "./piAuthInteraction";
  * failure, long enough that a slow catalog attach is not one.
  */
 export const LOGIN_IDLE_TIMEOUT_MS = 15_000;
-/** A human-paced browser / device-code flow; room to finish, not forever. */
+/**
+ * A human-paced browser flow; room to finish, not forever. A device code
+ * lasts as long as the provider's own answer says instead, and the flow
+ * ends itself then.
+ */
 export const LOGIN_TIMEOUT_MS = 5 * 60 * 1000;
 
 export type PiAccountBackendOptions = {
@@ -94,6 +99,14 @@ export class PiAccountBackend implements AccountBackend {
     const stopped = () => fail(new Error("Sign in cancelled"));
     if (request.bridge.signal?.aborted) stopped();
     request.bridge.signal?.addEventListener("abort", stopped, { once: true });
+    // Pi's Copilot sign-in first asks for a GitHub Enterprise host in a text
+    // prompt. The app answers it from the person's typed choice, or the host
+    // the account signed in to before; blank is github.com (INF-838).
+    let enterpriseAsked = false;
+    const enterpriseHost =
+      request.providerId === COPILOT_PROVIDER_ID
+        ? (request.enterpriseHost ?? copilotEnterpriseHost(authPathIn(request.dir)) ?? "")
+        : undefined;
     const interaction = buildAuthInteraction(
       request.providerId,
       request.accountId,
@@ -104,11 +117,23 @@ export class PiAccountBackend implements AccountBackend {
         },
         notify: (notice) => {
           mark();
+          // The code lasts as long as the provider said, and Pi's poll
+          // ends at that moment: the app's own limit no longer applies.
+          if (notice.kind === "device_code" && notice.expiresAt !== undefined) clearTimeout(total);
           request.bridge.notify(notice);
         },
         openExternal: request.bridge.openExternal,
       },
-      { onFatal: fail },
+      {
+        onFatal: fail,
+        answer: (prompt) => {
+          if (enterpriseHost === undefined || enterpriseAsked || prompt.type !== "text")
+            return undefined;
+          enterpriseAsked = true;
+          mark();
+          return enterpriseHost;
+        },
+      },
     );
     const work = (async () => {
       const runtime = await this.runtimeFor(request);

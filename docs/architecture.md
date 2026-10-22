@@ -235,7 +235,7 @@ A Pi-served session - the seat, a crewmate or a question - is a Pi `AgentSession
   The standing rule (captain, 2026-09-24): supported subscriptions are only those that run through Pi; Claude is the sole exception.
   Cursor was removed; a stored account for it is skipped on load (`isRetiredProvider`) and its files stay on disk.
   Kimi Code and GitHub Copilot were removed with it and came back through Pi on 2026-10-19 (INF-560): an account stored under `kimi-coding` or `github-copilot` before then loads again, and once its sign-in has lapsed its row says sign in again.
-  Pi's Copilot sign-in presents itself to GitHub as VS Code's Copilot Chat (its client id and editor headers are fixed inside Pi's provider); the captain chose to proceed through Pi, and the Copilot chip says it "connects through Pi".
+  Pi's Copilot sign-in presents itself to GitHub as VS Code's Copilot Chat (its client id and editor headers are fixed inside Pi's provider); the captain chose to proceed through Pi, and the code step says GitHub will ask to approve a GitHub Copilot app (INF-842 dropped the chip's "connects through Pi" note).
   Stored Anthropic auth must not crash the app; the bare `anthropic` Pi provider is not listed.
   **API-key providers are allowed** (decision D-6) - same auth file, same catalog - with UI emphasis staying on subscriptions.
 - **Claude billing (decision D-18)**: dormant while Anthropic is not offered.

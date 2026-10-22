@@ -73,6 +73,12 @@ export type LogoutOutcome = { login: MachineLoginOutcome };
 export type AccountLoginRequest = AccountRef & {
   type: "oauth" | "api_key";
   bridge: AuthInteractionBridge;
+  /**
+   * The GitHub Enterprise host a Copilot sign-in goes to, as the person
+   * chose it; absent is github.com, or the host the account signed in to
+   * before (INF-838). Other providers ignore it.
+   */
+  enterpriseHost?: string;
 };
 
 export interface AccountBackend {

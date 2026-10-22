@@ -699,7 +699,8 @@ export type ChannelReach = "views" | "home" | "work";
  * The window's own buttons where the app draws them (design skill readme,
  * "Linux desktop conventions"): minimize, maximize or restore, and close.
  */
-export const windowControlSchema = z.enum(["minimize", "maximize", "close"]);
+/** `front` brings the window ahead of other apps, as when a sign-in in the browser finishes (INF-838). */
+export const windowControlSchema = z.enum(["minimize", "maximize", "close", "front"]);
 export type WindowControl = z.infer<typeof windowControlSchema>;
 
 /** Whether the window fills the screen, so its middle button reads Restore. */
@@ -1437,6 +1438,16 @@ export const invokeContract = {
     request: z.tuple([z.string(), z.string().nullable()]),
     response: okSchema,
   },
+  // Stops every sign-in this Mac's window started and is still waiting on,
+  // wherever it waits: a prompt, a browser, or a code being polled. The
+  // stopped add or sign-in rejects, and nothing is added (INF-838).
+  "inf:auth:cancel": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: okSchema,
+  },
   // The account broker: N accounts per provider, each an isolated store.
   // Built-in sign-in runs the provider's own flow. Custom preparation sends
   // an opaque key once to its owner; no response schema returns credentials.
@@ -1529,11 +1540,17 @@ export const invokeContract = {
     request: z.tuple([]),
     response: z.array(accountViewSchema),
   },
+  // The third part is the GitHub Enterprise host a Copilot sign-in goes to,
+  // as typed; absent is github.com (INF-838).
   "inf:accounts:add": {
     effect: "change",
     surface: "core",
     reach: "home",
-    request: z.tuple([z.string(), z.enum(["oauth", "api_key"])]),
+    request: z.tuple([
+      z.string(),
+      z.enum(["oauth", "api_key"]),
+      z.strictObject({ enterpriseHost: z.string().min(1).max(253) }).optional(),
+    ]),
     response: accountViewSchema,
   },
   "inf:accounts:sign-in": {
@@ -3421,6 +3438,7 @@ export type FirstmateApi = {
   auth: {
     providers: () => Promise<ProviderView[]>;
     replyPrompt: (promptId: string, value: string | null) => Promise<{ ok: true }>;
+    cancel: () => Promise<{ ok: true }>;
     onPrompt: (listener: (prompt: AuthPromptView) => void) => () => void;
     onNotice: (listener: (notice: AuthNotice) => void) => () => void;
   };
@@ -3445,7 +3463,11 @@ export type FirstmateApi = {
     };
     list: () => Promise<AccountView[]>;
     /** Add an account: runs the provider's own sign-in into a fresh store. */
-    add: (providerId: string, type: "oauth" | "api_key") => Promise<AccountView>;
+    add: (
+      providerId: string,
+      type: "oauth" | "api_key",
+      options?: { enterpriseHost: string },
+    ) => Promise<AccountView>;
     /** Sign an existing account in again, into its own store; nothing else moves. */
     signIn: (accountId: string) => Promise<AccountView>;
     remove: (accountId: string) => Promise<{ ok: true }>;

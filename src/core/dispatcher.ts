@@ -194,6 +194,18 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     { resolve: (value: string) => void; reject: (error: Error) => void }
   >();
 
+  /** Each sign-in still running, stopped together by `inf:auth:cancel`. */
+  const signInsRunning = new Set<AbortController>();
+  const stoppable = async <T>(work: (bridge: AuthInteractionBridge) => Promise<T>): Promise<T> => {
+    const controller = new AbortController();
+    signInsRunning.add(controller);
+    try {
+      return await work({ ...authBridge, signal: controller.signal });
+    } finally {
+      signInsRunning.delete(controller);
+    }
+  };
+
   // Sign-in interactions relayed to whoever is attached; secrets never cross.
   const authBridge: AuthInteractionBridge = {
     prompt: (prompt) =>
@@ -950,8 +962,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:accounts:list": () => services.vault.views(),
 
-    "inf:accounts:add": async (providerId, type) => {
-      const record = await services.vault.add(providerId, type, authBridge);
+    "inf:accounts:add": async (providerId, type, options) => {
+      const record = await stoppable((bridge) =>
+        services.vault.add(providerId, type, bridge, options ?? {}),
+      );
       const views = await services.vault.views();
       const added = views.find((view) => view.id === record.id);
       if (!added) throw new Error("The account was not registered.");
@@ -964,7 +978,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     "inf:accounts:sign-in": async (accountId) => {
-      await services.vault.signIn(accountId, authBridge);
+      await stoppable((bridge) => services.vault.signIn(accountId, bridge));
       void services.servedModels.refresh(accountId);
       const view = (await services.vault.views()).find((entry) => entry.id === accountId);
       if (!view) throw new Error("The account is no longer registered.");
@@ -1099,6 +1113,15 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         } else {
           pending.resolve(value);
         }
+      }
+      return { ok: true as const };
+    },
+
+    "inf:auth:cancel": () => {
+      for (const controller of signInsRunning) controller.abort();
+      for (const [promptId, pending] of pendingAuthPrompts) {
+        pendingAuthPrompts.delete(promptId);
+        pending.reject(new Error("Sign in cancelled"));
       }
       return { ok: true as const };
     },

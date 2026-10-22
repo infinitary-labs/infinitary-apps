@@ -15,6 +15,7 @@ import {
 } from "@shared/forges";
 import { INTEGRATIONS_SIGN_IN_HOST, INTEGRATIONS_WORDS } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useState } from "react";
+import { CopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import {
   Badge,
@@ -515,50 +516,6 @@ function KeyAside({
 /** The design input in the mono face, for an address or a key. */
 function KeyFormInput(props: InputProps) {
   return <Input mono {...props} />;
-}
-
-/** Copy feedback belongs only to this code and this sign-in attempt. */
-function CopyCode({ code }: { code: string }) {
-  const [state, setState] = useState<"idle" | "copying" | "copied" | "failed">("idle");
-  const copy = async () => {
-    setState("copying");
-    try {
-      await navigator.clipboard.writeText(code);
-      setState("copied");
-    } catch {
-      setState("failed");
-    }
-  };
-  return (
-    <>
-      <Button
-        variant="secondary"
-        size="sm"
-        pending={state === "copying"}
-        pendingLabel="Copying..."
-        style={{ marginLeft: "var(--space-2)" }}
-        onClick={() => void copy()}
-      >
-        Copy code
-      </Button>
-      <span
-        role="status"
-        aria-live="polite"
-        aria-atomic="true"
-        style={{
-          display: "block",
-          fontSize: "var(--text-sm)",
-          color: state === "failed" ? "var(--danger)" : "var(--fg-2)",
-        }}
-      >
-        {state === "copied"
-          ? FORGE_SECTION_WORDS.copied
-          : state === "failed"
-            ? FORGE_SECTION_WORDS.copyFailed
-            : ""}
-      </span>
-    </>
-  );
 }
 
 /** The device-code aside: the code, the host's page, and how it ended. */

@@ -300,7 +300,8 @@ test("account connection and sign-in failures keep readable reasons and retryabl
     const { app, page } = launched;
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Intelligence" }).click();
-    const feedback = settingsFeedback(page, "subscriptions");
+    // A sign-in's refusal stands beside the step it belongs to (INF-838).
+    const feedback = settingsFeedback(page, "sign-in");
     const messages: Record<string, string | null> = {};
     for (const [channel, control, name] of [
       ["inf:accounts:add", page.getByRole("button", { name: "Connect Codex", exact: true }), "add"],

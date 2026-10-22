@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   backendForProvider,
   CLAUDE_PROVIDER_ID,
+  githubEnterpriseHost,
   isOfferedProvider,
   isPiProvider,
   isRetiredProvider,
@@ -68,15 +69,23 @@ describe("PROVIDER_CATALOG", () => {
     expect(isPiProvider("mystery")).toBe(false);
   });
 
-  it("says on the Copilot chip that it connects through Pi, the captain's words (INF-560)", () => {
+  it("puts no note on a subscription's chip, Copilot's included, the captain's answer (INF-838)", () => {
     expect(isPiProvider("github-copilot")).toBe(true);
     expect(isRetiredProvider("github-copilot")).toBe(false);
-    expect(providerSignInNote({ id: "github-copilot", tier: "subscription" })).toBe(
-      "connects through Pi",
-    );
-    // Every other subscription chip carries no note; a key carries "API key".
-    expect(providerSignInNote({ id: "xai", tier: "subscription" })).toBeUndefined();
-    expect(providerSignInNote({ id: "openrouter", tier: "key" })).toBe("API key");
+    expect(providerSignInNote({ tier: "subscription" })).toBeUndefined();
+    // A key carries "API key".
+    expect(providerSignInNote({ tier: "key" })).toBe("API key");
+  });
+
+  it("reads a typed GitHub Enterprise host as the sign-in uses it, and refuses what is not one (INF-838)", () => {
+    expect(githubEnterpriseHost("company.ghe.com")).toBe("company.ghe.com");
+    expect(githubEnterpriseHost(" https://github.example.org/login ")).toBe("github.example.org");
+    // Blank and github.com itself are github.com, never an Enterprise host.
+    expect(githubEnterpriseHost("")).toBeNull();
+    expect(githubEnterpriseHost("github.com")).toBeNull();
+    // A typo the sign-in library would end the attempt on.
+    expect(githubEnterpriseHost("not a host!")).toBeNull();
+    expect(githubEnterpriseHost("company")).toBeNull();
   });
 
   it("lets every offered provider run the Firstmate and crew, Claude included (W1)", () => {

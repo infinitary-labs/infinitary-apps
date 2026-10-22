@@ -93,3 +93,26 @@
     display: none;
   }
 }
+
+/* A sign-in step (INF-838) takes the held input's room as well: the input
+   is disabled while the gate is up, so the step's frame sits over it at the
+   band's foot rather than scrolling. A short window gives the step the
+   display line's room too; the step's own first line says what to do. */
+.fm-gate[data-sign-in-step] {
+  bottom: calc(var(--prompt-floor) + var(--last-turn-lane));
+}
+
+.fm-gate[data-sign-in-step] .fm-gate-inner {
+  margin: auto auto 0;
+}
+
+/* The held input steps aside for the step and returns with the chips. */
+html:has(.fm-gate[data-sign-in-step][data-open="true"]) [data-prompt-dock] {
+  visibility: hidden;
+}
+
+@media (max-height: 719px) {
+  .fm-gate[data-sign-in-step] .fm-gate-display {
+    display: none;
+  }
+}

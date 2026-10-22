@@ -63,7 +63,7 @@ export function settingRow(page: Page, id: string) {
 
 export function settingsFeedback(
   page: Page,
-  surface: "subscriptions" | "purge" | "model-slots" | "decisions" | "usage-unit",
+  surface: "subscriptions" | "sign-in" | "purge" | "model-slots" | "decisions" | "usage-unit",
 ) {
   return surface === "purge"
     ? settingRow(page, "purge-task-data")

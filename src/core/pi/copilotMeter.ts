@@ -1,8 +1,8 @@
 import { readStoredCredential } from "@earendil-works/pi-coding-agent";
+import { COPILOT_PROVIDER_ID } from "@shared/providers";
 import type { ResolvedProviderAuth } from "./piAuth";
 
-/** Pi's provider id for GitHub Copilot. */
-export const COPILOT_PROVIDER_ID = "github-copilot";
+export { COPILOT_PROVIDER_ID };
 
 /**
  * The credential Copilot's allowance is read with. Pi's request auth for
@@ -33,6 +33,21 @@ export function copilotMeterAuth(authPath: string): ResolvedProviderAuth | undef
     baseUrl: domain ? `https://api.${domain}` : "https://api.github.com",
     usingOAuth: true,
   };
+}
+
+/**
+ * The GitHub Enterprise host a Copilot account signed in to, read from Pi's
+ * stored credential through Pi's own read: signing in again answers Pi's
+ * Enterprise question with it rather than asking the person (INF-838).
+ * Undefined is github.com, or no readable credential.
+ */
+export function copilotEnterpriseHost(authPath: string): string | undefined {
+  try {
+    const credential = readStoredCredential(COPILOT_PROVIDER_ID, authPath);
+    return credential?.type === "oauth" ? enterpriseDomain(credential.enterpriseUrl) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function enterpriseDomain(value: unknown): string | undefined {

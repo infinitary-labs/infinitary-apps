@@ -74,6 +74,12 @@ export const authNoticeSchema = z.object({
   message: z.string(),
   url: z.string().optional(),
   userCode: z.string().optional(),
+  /**
+   * When a device code stops working, in epoch milliseconds, from the
+   * provider's own answer (`expires_in`): the code step says the code
+   * expired once a sign-in ends past it.
+   */
+  expiresAt: z.number().optional(),
 });
 export type AuthNotice = z.infer<typeof authNoticeSchema>;
 
@@ -95,8 +101,13 @@ export type ProviderCatalogEntry = {
   backend: BackendId;
   /** Roles this provider's accounts may be bound to. */
   roles: ReadonlyArray<ProviderRole>;
-  /** The mono note on the provider's chip, when the catalog has one to say. */
-  note?: string;
+  /**
+   * The provider signs in with a code the person types on its page, and the
+   * app offers no key for it: its chip starts that sign-in at once, with no
+   * browser-or-key question (INF-838). `site` names the page in the step's
+   * words; `enterprise` offers the Use GitHub Enterprise row.
+   */
+  codeSignIn?: { site: string; enterprise?: true };
 };
 
 /** Claude Max: a subscription Pi cannot reach, hence its own backend. */
@@ -129,25 +140,28 @@ export const PROVIDER_CATALOG: ReadonlyArray<ProviderCatalogEntry> = [
     roles: ["firstmate", "crewmate"],
   },
   {
-    // Pi's device code, or a pasted Kimi Code key: Pi offers both.
+    // Pi offers a device code or a pasted Kimi Code key; the chip starts
+    // the code (INF-838).
     id: "kimi-coding",
     name: "Kimi Code",
     tier: "subscription",
     backend: "pi",
     roles: ["firstmate", "crewmate"],
+    codeSignIn: { site: "Kimi" },
   },
   {
     // Pi's Copilot sign-in presents itself to GitHub as VS Code's Copilot
     // Chat: the client id and editor headers are fixed inside Pi's provider,
     // outside its login options. The captain chose to proceed through Pi
-    // knowing this, and to say on the chip that it connects through Pi
-    // (INF-560, 2026-10-19).
+    // knowing this (INF-560, 2026-10-19), and later chose a chip with no
+    // note and a code step that says GitHub asks to approve a Copilot app
+    // (INF-838, 2026-10-22).
     id: "github-copilot",
     name: "Copilot",
     tier: "subscription",
     backend: "pi",
     roles: ["firstmate", "crewmate"],
-    note: "connects through Pi",
+    codeSignIn: { site: "GitHub", enterprise: true },
   },
   {
     id: "openrouter",
@@ -172,14 +186,49 @@ export function isRetiredProvider(id: string): boolean {
   return (RETIRED_PROVIDER_IDS as readonly string[]).includes(id);
 }
 
+/** The mono note on a provider's chip: "API key" on a non-subscription, else none. */
+export function providerSignInNote(provider: Pick<ProviderView, "tier">): string | undefined {
+  return provider.tier === "subscription" ? undefined : API_KEY_LABEL;
+}
+
+/** Pi's provider id for GitHub Copilot. */
+export const COPILOT_PROVIDER_ID = "github-copilot";
+
 /**
- * The mono note on a provider's chip: "API key" on a non-subscription, the
- * catalog's own note on a subscription that has one, else none.
+ * The code step's words (INF-838), shared by the first screen and Settings,
+ * after the GitHub sign-in in Settings -> Integrations.
  */
-export function providerSignInNote(
-  provider: Pick<ProviderView, "id" | "tier">,
-): string | undefined {
-  return provider.tier === "subscription" ? catalogEntry(provider.id)?.note : API_KEY_LABEL;
+export const CODE_STEP_WORDS = {
+  enter: (site: string) => `Enter this code on ${site}:`,
+  copyAndOpen: (site: string) => `Copy code and open ${site}`,
+  waiting: (site: string) => `Waiting for ${site}...`,
+  /** GitHub names the app it asks to approve after VS Code's Copilot, never Infinitary. */
+  approve: "GitHub will ask you to approve a GitHub Copilot app. That is this sign-in.",
+  expired: "The code expired.",
+  newCode: "Get a new code",
+  useEnterprise: "Use GitHub Enterprise",
+  useGitHubCom: "Use github.com",
+  enterpriseLabel: "GitHub Enterprise address",
+  enterprisePlaceholder: "company.ghe.com",
+  getCode: "Get a code",
+  badEnterprise: "That is not a GitHub Enterprise address. It looks like company.ghe.com.",
+} as const;
+
+/**
+ * The GitHub Enterprise host a person typed, as the sign-in uses it: the
+ * host name alone, or null when it is not one. Blank is github.com, and
+ * github.com itself is not an Enterprise host.
+ */
+export function githubEnterpriseHost(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  try {
+    const host = new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`).hostname;
+    if (!host.includes(".") || host === "github.com") return null;
+    return host;
+  } catch {
+    return null;
+  }
 }
 
 /** True when `id` is in the offered catalog (connect UI, routing, login). */

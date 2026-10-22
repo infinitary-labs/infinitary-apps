@@ -1,5 +1,6 @@
 import type { WindowControl, WindowState } from "@shared/ipc";
-import type { BrowserWindow } from "electron";
+import { app, type BrowserWindow } from "electron";
+import { hostPlatform } from "../core/platform";
 
 /**
  * The window's own buttons where the app draws them (design skill readme,
@@ -15,7 +16,17 @@ export function windowState(win: BrowserWindow): WindowState {
 }
 
 export function controlWindow(win: BrowserWindow, control: WindowControl): WindowState {
-  if (control === "minimize") win.minimize();
+  if (control === "front") {
+    // A window kept hidden, as every e2e run's is, stays hidden and takes
+    // no focus from the person's own apps.
+    if (!win.isVisible() && !win.isMinimized()) return windowState(win);
+    if (win.isMinimized()) win.restore();
+    win.show();
+    // A Mac only hands focus to an app that asks for it while another app
+    // is in front, as the browser is when a sign-in finishes there.
+    if (hostPlatform() === "darwin") app.focus({ steal: true });
+    win.focus();
+  } else if (control === "minimize") win.minimize();
   else if (control === "maximize") {
     if (win.isMaximized()) win.unmaximize();
     else win.maximize();

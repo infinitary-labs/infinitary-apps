@@ -15,6 +15,8 @@ type Snapshot = {
 const flights = new Map<string, Promise<unknown>>();
 let notice: AuthNotice | null = null;
 let prompt: AuthPromptView | null = null;
+/** The latest notice of each provider's last sign-in, kept after it ends to say how it ended. */
+const lastNotices = new Map<string, AuthNotice>();
 const listeners = new Set<() => void>();
 let listening = false;
 
@@ -27,6 +29,7 @@ function ensure(): void {
   if (typeof window === "undefined" || !window.infinitary?.auth) return;
   listening = true;
   window.infinitary.auth.onNotice((incoming) => {
+    lastNotices.set(incoming.providerId, incoming);
     if (flights.size === 0) return;
     notice = incoming;
     emit();
@@ -46,6 +49,27 @@ export function signInFlightSnapshot(): Snapshot {
     notice,
     prompt,
   };
+}
+
+/**
+ * The person answered the prompt: a tab that comes back must not draw it
+ * again beside the next step (INF-838).
+ */
+export function answeredSignInPrompt(promptId: string): void {
+  if (prompt?.promptId !== promptId) return;
+  prompt = null;
+  emit();
+}
+
+/** The last notice `providerId`'s latest sign-in sent, after it ended too. */
+export function lastSignInNotice(providerId: string): AuthNotice | null {
+  ensure();
+  return lastNotices.get(providerId) ?? null;
+}
+
+/** A sign-in of `providerId` starts that is not an add (Sign in again): its old notice is gone. */
+export function forgetSignInNotice(providerId: string): void {
+  lastNotices.delete(providerId);
 }
 
 export function subscribeSignInFlight(listener: () => void): () => void {
@@ -71,6 +95,7 @@ export function runAccountAdd<T>(providerId: string, work: () => Promise<T>): Pr
     };
   });
   flights.set(providerId, promise);
+  lastNotices.delete(providerId);
   emit();
   start();
   void promise.finally(() => {

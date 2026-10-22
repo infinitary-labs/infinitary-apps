@@ -20,6 +20,7 @@ Your other devices need me awake."
 A subscription that is connected and still cannot answer keeps the older heading, "Set up your first mate on this computer", and its remaining-need line.
 The same provider chip row the Intelligence tab has sits below, in catalog order, one group.
 Sign-in happens right there: a chip runs the provider's own flow (Pi's select, a browser bounce or a device code, a pasted key) through the same aside the tab renders, anchored under the row.
+While a sign-in step is up (`data-sign-in-step`), the band takes the held input's room, the input is hidden, and a window under 720 pixels tall hides the heading, so a code step fits the smallest window without scrolling (INF-842).
 The input is disabled meanwhile, dimmed, with its own line ("connect a subscription first"), and hold-to-talk is ignored in the same state.
 Before the window's first read of the gate settles, nobody knows yet whether it is up, so the input is held the same way: no typing, files, focus or hold-to-talk (`mainInputHeld`, `src/renderer/src/app/store.ts`).
 Words sent in that moment would reach a first mate that cannot answer and skip the welcome.

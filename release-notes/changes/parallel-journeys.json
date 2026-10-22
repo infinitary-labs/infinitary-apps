@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "parallel-journeys",
+      "reason": "Internal test scheduling: journeys that passed under load run in the parallel part of the full check. No app surface changes."
+    }
+  ]
+}

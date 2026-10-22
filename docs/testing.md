@@ -46,11 +46,16 @@ This command is a batch check, not an editor, language-server or watch-mode migr
 ## E2E scheduling and launch diagnostics
 
 The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share at most `min(10, availableParallelism())` workers.
+The full Mac check (`verify.yml`) gives them half the processor (`--workers=50%`), because both Mac runner slots share one processor: with all of it, app launches starved past `firstWindow`'s 30 s while the other slot ran journeys too.
 Desktop is the one-worker lane and runs last, even after a failure.
 New spec files start in desktop.
-A file joins application once a review finds it needs no native focus, voice, paint budget or other one-at-a-time resource, and keeps its own HOME, userData, ports and service stand-ins.
+A file joins application once a review finds it needs no voice, paint budget, demo recording or other one-at-a-time resource, keeps its own HOME, userData, ports and service stand-ins, and passes under the parallel lanes' load in a full Mac and Linux run (`verify.yml`).
 Background work (`run-work.spec.ts`) and the browser booking journeys (`task-browser-booking.spec.ts`) are such files: scratch homes, loopback SSH fixtures, a `launchctl` stand-in and a local test airline.
+Desktop keeps the voice journeys (the dictation key and the microphone), the paint budgets tagged `@perf` (`tests/e2e/perf.ts`), and the demo recordings, which play at real speed.
 Devices (`devices.spec.ts`) stays in desktop: under the parallel lanes' load, adding a Mac by its address, which packs the app at background priority (`src/core/devices/appArchive.ts`), outlasts the journey's wait for the Mac to join.
+Automatic placement (`automatic-placement.spec.ts`) stays in desktop: it starts a task only once this computer's own processor has room, and the parallel lanes keep it busy for most of the journey's wait.
+The task board (`task-board.spec.ts`) stays in desktop: a tile's summary lets go when its window loses focus, and on Linux's shared screen another journey's window can take that focus.
+`tests/e2e-lanes.test.ts` pins the files named here to desktop.
 A full run never stops at its first failure: it reports every failure, later tests still run, and desktop still runs after a failure in the parallel lanes; `tests/e2e-lanes.test.ts` runs the real lanes over fixture specs to hold this.
 
 `INFINITARY_TEST_PROFILE=1` prints per-phase e2e launch timings (`tests/e2e/launch.ts`).

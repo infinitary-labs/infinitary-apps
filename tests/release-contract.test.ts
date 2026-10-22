@@ -917,7 +917,8 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     };
     const steps = verify.jobs.lane.steps;
     const e2e = steps.findIndex((step) => step.id === "e2e");
-    expect(steps[e2e]?.run).toBe("pnpm exec playwright test");
+    // Half the processor: both Mac runner slots share it (INF-741).
+    expect(steps[e2e]?.run).toBe("pnpm exec playwright test --workers=50%");
     const result = steps[e2e]?.env?.PLAYWRIGHT_JSON_OUTPUT_FILE ?? "";
     expect(result).not.toBe("");
     const upload = (path: string) =>
@@ -2211,7 +2212,7 @@ describe("the signed channel workflow", () => {
       expect.arrayContaining([
         "pnpm test",
         "pnpm build",
-        "pnpm exec playwright test",
+        "pnpm exec playwright test --workers=50%",
         "pnpm replay:gate",
       ]),
     );

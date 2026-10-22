@@ -178,9 +178,12 @@ jobs:
       # Electron (`pnpm test:e2e` is the same two commands in one).
       # A local run keeps its JSON result in its own run directory
       # (tests/e2e/runEvidence.ts); this one names the fixed path kept below.
+      # Both Mac runner slots share one processor, so the parallel lanes take
+      # half of it: with every processor, launches starved while the other
+      # slot ran journeys too (docs/testing.md, "E2E scheduling").
       - id: e2e
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.dev-signing.outcome == 'success' && steps.recorder.outcome == 'success' }}
-        run: pnpm exec playwright test
+        run: pnpm exec playwright test --workers=50%
         env:
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/e2e-results.json
       # What the e2e run leaves for whoever reads it (docs/testing.md):

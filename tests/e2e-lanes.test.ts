@@ -13,7 +13,7 @@ type Suite = {
 
 // `playwright --list` loads every spec and all it imports through a cold transform cache, so its
 // work grows with the suite: Linux fastest 35.7 s in an integration shard (docs/test-cohorts.md).
-it("collects every spec once, isolates app boundaries and serializes native focus and paint budgets", () => {
+it("collects every spec once, isolates app boundaries and serializes voice, paint budgets and load-sensitive journeys", () => {
   const report = JSON.parse(
     execFileSync(
       process.execPath,
@@ -48,16 +48,23 @@ it("collects every spec once, isolates app boundaries and serializes native focu
     ].sort(),
   );
   const serialFiles = [
-    "phase4-cards.spec.ts",
-    "personal-panels.spec.ts",
+    // Voice: the dictation key and the microphone.
     "phase1-shell.spec.ts",
     "phase6-voice.spec.ts",
     "first-launch.spec.ts",
-    "phase7-shellops.spec.ts",
+    "mic-access.spec.ts",
+    // Paint budgets, graded on a quiet host.
     "rail-panels.spec.ts",
     "now-panel.spec.ts",
+    // A demo recording, at real speed.
+    "card-demo.spec.ts",
     // Under the parallel lanes' load, adding a Mac by its address outlasts its wait.
     "devices.spec.ts",
+    // INF-741: it reads this computer's own processor load, which the parallel lanes raise.
+    "automatic-placement.spec.ts",
+    // INF-741: a tile's summary lets go when its window loses focus, which another
+    // window can take on Linux's shared screen.
+    "task-board.spec.ts",
   ];
   const applicationFiles = [
     "phase0-guardrails.spec.ts",
@@ -73,6 +80,10 @@ it("collects every spec once, isolates app boundaries and serializes native focu
     "phase2-crewmate.spec.ts",
     "run-work.spec.ts",
     "task-browser-booking.spec.ts",
+    // INF-741: reviewed and run under the parallel lanes' load.
+    "phase4-cards.spec.ts",
+    "personal-panels.spec.ts",
+    "phase7-shellops.spec.ts",
   ];
   for (const file of [...serialFiles, ...applicationFiles]) {
     const tests = collected.filter((test) => test.file === file);

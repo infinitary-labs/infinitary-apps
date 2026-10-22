@@ -17116,6 +17116,9 @@
                     },
                     "spendPriority": {
                       "type": "number"
+                    },
+                    "lastsThroughReset": {
+                      "type": "boolean"
                     }
                   },
                   "required": [

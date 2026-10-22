@@ -150,6 +150,9 @@ export class AccountSelector {
         ...(effective.spendPriority !== undefined
           ? { spendPriority: effective.spendPriority }
           : {}),
+        ...(effective.lastsThroughReset !== undefined
+          ? { lastsThroughReset: effective.lastsThroughReset }
+          : {}),
         ...score,
         ...(account.lastSelectedAt !== undefined ? { lastSelectedAt: account.lastSelectedAt } : {}),
       };

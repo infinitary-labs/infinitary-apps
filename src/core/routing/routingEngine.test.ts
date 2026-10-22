@@ -1,5 +1,8 @@
 import type { CatalogModelView } from "@shared/quota";
 import { describe, expect, it } from "vitest";
+import { buildModelsCatalog } from "../quota/catalog";
+import { parseClaudeUsage } from "../quota/providers/claude";
+import { parseCodexUsage } from "../quota/providers/codex";
 import { route } from "./routingEngine";
 
 const catalog: CatalogModelView[] = [
@@ -647,5 +650,139 @@ describe("checked connection-owned models without a quota catalog", () => {
         bucket: "medium",
       }).choice,
     ).toBeUndefined();
+  });
+});
+
+// INF-898, the captain: "our claude session quota is so tight, why aren't we
+// using codex models for more crewmates" - and "how come claude has higher
+// spending priority than codex in this case??". The readings are INF-898's
+// saved 12:23:29 PM (Pacific) snapshot: Claude's session 25% left with its
+// reset at 3:10 PM, its week 86% left until Tuesday 2:00 PM, Codex's week 99%
+// left until next Thursday 10:09 AM. They arrived stale; here they are read
+// as if fresh, the case the accepted plan changes.
+describe("route - a session projected to run out is conserved (INF-898)", () => {
+  const at = Date.parse("2026-10-22T19:23:29Z");
+  const claudeRow = (sessionUsed: number) => ({
+    provider: "claude",
+    label: "Claude",
+    accountId: "claude-personal",
+    status: "ok" as const,
+    stale: false,
+    windows: parseClaudeUsage(
+      {
+        five_hour: { utilization: sessionUsed, resets_at: "2026-10-22T22:10:00Z" },
+        seven_day: { utilization: 14, resets_at: "2026-10-27T21:00:00Z" },
+      },
+      at,
+    ).windows,
+  });
+  const codexRow = {
+    provider: "codex",
+    label: "Codex",
+    accountId: "codex-personal",
+    status: "ok" as const,
+    stale: false,
+    windows: parseCodexUsage(
+      {
+        plan_type: "pro",
+        rate_limit: {
+          primary_window: {
+            used_percent: 1,
+            reset_after_seconds: Date.parse("2026-10-29T17:09:00Z") / 1000 - at / 1000,
+            limit_window_seconds: 604_800,
+          },
+        },
+      },
+      at,
+    ).windows,
+  };
+  const models = [
+    { provider: "anthropic-claude", id: "claude-opus-5-5", name: "Claude Opus 5.5" },
+    { provider: "openai-codex", id: "gpt-6-astra", name: "GPT-6 Astra" },
+  ];
+  const high = models.map((model) => ({
+    provider: model.provider,
+    id: model.id,
+    slot: "high" as const,
+  }));
+  const decide = (sessionUsed: number) => {
+    const catalog = buildModelsCatalog(
+      models,
+      [claudeRow(sessionUsed), codexRow],
+      new Date(at).toISOString(),
+      at,
+    ).models;
+    return {
+      catalog,
+      decision: route({ catalog, available: models, slotted: high, pins: [], bucket: "high" }),
+    };
+  };
+
+  it("serves Codex when Claude's session runs out before its reset, though Claude's spend priority is higher", () => {
+    const { catalog, decision } = decide(75);
+    const claude = catalog.find((model) => model.provider === "claude");
+    const codex = catalog.find((model) => model.provider === "codex");
+    // The metric is kept: the weekly surplus still scores Claude higher.
+    expect(claude?.spendPriority).toBeCloseTo(0.6257, 4);
+    expect(claude?.spendPriority).toBeGreaterThan(codex?.spendPriority ?? Number.POSITIVE_INFINITY);
+    expect(claude?.lastsThroughReset).toBe(false);
+    expect(codex?.lastsThroughReset).toBe(true);
+    expect(decision.choice).toEqual({ provider: "openai-codex", id: "gpt-6-astra" });
+    expect(decision.reasons).toContain(
+      "claude/claude-opus-5-5 has a higher spend priority but is projected to run out before its reset",
+    );
+    expect(decision.candidates.find((fact) => fact.provider === "anthropic-claude")).toMatchObject({
+      lastsThroughReset: false,
+      status: "eligible at high",
+    });
+  });
+
+  it("keeps spend priority deciding when both are projected to last", () => {
+    // The same morning with a session only 20% used: nothing runs out.
+    const { catalog, decision } = decide(20);
+    expect(catalog.every((model) => model.lastsThroughReset === true)).toBe(true);
+    expect(decision.choice).toEqual({ provider: "anthropic-claude", id: "claude-opus-5-5" });
+  });
+
+  it("never lets a newer id of the same line bring back a model projected to run out", () => {
+    // A model-scoped window can leave one Codex model short while another lasts.
+    const decision = route({
+      catalog: [
+        {
+          provider: "codex",
+          id: "gpt-6-astra",
+          label: "GPT-6 Astra",
+          spendPriority: 0.25,
+          lastsThroughReset: true,
+          effectivePercentRemaining: 99,
+        },
+        {
+          provider: "codex",
+          id: "gpt-6.1-astra",
+          label: "GPT-6.1 Astra",
+          spendPriority: 0.6,
+          lastsThroughReset: false,
+          effectivePercentRemaining: 25,
+        },
+      ],
+      available: [
+        { provider: "openai-codex", id: "gpt-6-astra" },
+        { provider: "openai-codex", id: "gpt-6.1-astra" },
+      ],
+      pins: [],
+    });
+    expect(decision.choice).toEqual({ provider: "openai-codex", id: "gpt-6-astra" });
+    expect(decision.reasons.join(" ")).not.toContain("same-line recency");
+  });
+
+  it("keeps an unknown reading below one projected to run out", () => {
+    // INF-898's 12:25 PM decision: a stale Claude reading has no score.
+    const catalog = decide(75).catalog.map((model) =>
+      model.provider === "claude"
+        ? { provider: model.provider, id: model.id, label: model.label }
+        : { ...model, lastsThroughReset: false },
+    );
+    const decision = route({ catalog, available: models, slotted: high, pins: [], bucket: "high" });
+    expect(decision.choice).toEqual({ provider: "openai-codex", id: "gpt-6-astra" });
   });
 });

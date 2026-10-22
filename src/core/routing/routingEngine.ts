@@ -8,6 +8,7 @@ import {
   servedModelKey,
   servedProviderOf,
 } from "@shared/quota";
+import { compareSpendRank, spendGroup } from "@shared/quotaSignals";
 import type { RoutingCandidateFact } from "../storage/decisionStore";
 import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./capability";
 
@@ -21,9 +22,11 @@ import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./ca
  *    here; absent a class the request is medium.
  * 2. Candidates = slot ∩ Pi-available models, minus exhausted scopes.
  * 3. Within a slot, serveable candidates rank by spend priority
- *    (quota-axi semantics: highest first). Unmeasurable signals rank
- *    below any known one and keep runway order among themselves; a
- *    newer id of the same model line still overrides (recency within slot).
+ *    (quota-axi semantics: highest first), those projected to last through
+ *    every reset before those projected to run out (INF-898). Unmeasurable
+ *    signals rank below any known one and keep runway order among
+ *    themselves; a newer id of the same model line in the same group still
+ *    overrides (recency within slot).
  * 4. Pins always win. Unoffered providers never become a choice.
  *
  * Two boundaries sit outside the ladder:
@@ -244,6 +247,9 @@ export function route(input: RoutingInput): RoutingDecision {
         : {}),
       ...(model.paceStatus ? { pace: model.paceStatus } : {}),
       ...(typeof model.spendPriority === "number" ? { spendPriority: model.spendPriority } : {}),
+      ...(typeof model.lastsThroughReset === "boolean"
+        ? { lastsThroughReset: model.lastsThroughReset }
+        : {}),
       status: "not reached",
     });
   }
@@ -260,7 +266,7 @@ export function route(input: RoutingInput): RoutingDecision {
 
   for (const candidateSlot of BUCKET_FALLBACK[bucket]) {
     const inSlot: {
-      model: { provider: string; id: string; spendPriority?: number };
+      model: { provider: string; id: string; spendPriority?: number; lastsThroughReset?: boolean };
       ref: PiModelRef;
       slot: Slot;
     }[] = input.catalog.flatMap((model) => {
@@ -334,18 +340,22 @@ export function route(input: RoutingInput): RoutingDecision {
       }
     }
     const pool = elsewhere.length > 0 ? elsewhere : inSlot;
-    const ranked = [...pool].sort((a, b) => {
-      const aKnown = typeof a.model.spendPriority === "number";
-      const bKnown = typeof b.model.spendPriority === "number";
-      if (aKnown !== bKnown) return aKnown ? -1 : 1;
-      if (aKnown && bKnown) {
-        return (b.model.spendPriority as number) - (a.model.spendPriority as number);
-      }
-      return 0;
-    });
+    const ranked = [...pool].sort((a, b) => compareSpendRank(a.model, b.model));
     let chosen = ranked[0] as (typeof ranked)[number];
+    // Recency overrides only inside the leader's group, so a newer id never
+    // brings back a model projected to run out (or an unknown one).
+    const group = spendGroup(chosen.model);
+    const highest = ranked.reduce(
+      (best, entry) =>
+        (entry.model.spendPriority ?? Number.NEGATIVE_INFINITY) >
+        (best.model.spendPriority ?? Number.NEGATIVE_INFINITY)
+          ? entry
+          : best,
+      chosen,
+    );
     let recencyOverride = false;
     for (const entry of ranked) {
+      if (spendGroup(entry.model) !== group) continue;
       if (newerId(entry.model.id, chosen.model.id) === true) {
         chosen = entry;
         recencyOverride = true;
@@ -361,6 +371,11 @@ export function route(input: RoutingInput): RoutingDecision {
       : typeof chosen.model.spendPriority === "number"
         ? `spend priority ${chosen.model.spendPriority.toFixed(2)}`
         : "runway order";
+    if (highest !== ranked[0]) {
+      reasons.push(
+        `${highest.model.provider}/${highest.model.id} has a higher spend priority but is projected to run out before its reset`,
+      );
+    }
     reasons.push(`picked ${chosen.model.provider}/${chosen.model.id} by ${pickedBy}`);
     return {
       bucket,

@@ -1,12 +1,13 @@
 import type { CatalogModelView, ModelsCatalogView, QuotaProviderView } from "@shared/quota";
 import { allowanceProviderOf } from "@shared/quota";
-import { providerScopes, type ScopeSignals } from "@shared/quotaSignals";
+import { compareSpendRank, providerScopes, type ScopeSignals } from "@shared/quotaSignals";
 import type { QuotaCatalogModel } from "./auth";
 
 type EffectiveView = {
   effectivePercentRemaining?: number;
   paceStatus?: CatalogModelView["paceStatus"];
   spendPriority?: number;
+  lastsThroughReset?: boolean;
 };
 
 /**
@@ -77,6 +78,11 @@ export function effectiveFromProvider(
       : {}),
     ...(paceStatus ? { paceStatus } : {}),
     ...(scope.spendPriority !== undefined ? { spendPriority: scope.spendPriority } : {}),
+    ...(scope.runway.status === "through_reset"
+      ? { lastsThroughReset: true }
+      : scope.runway.status === "unknown"
+        ? {}
+        : { lastsThroughReset: false }),
   };
 }
 
@@ -85,8 +91,10 @@ export function effectiveFromProvider(
  * are the BEST account's - the routing engine picks the model, then the
  * account-selection step picks which account serves it. Best is the highest
  * spend priority when any account has one (that is the account with paid
- * allowance on track to expire unused), highest effective remaining
- * otherwise; an unmeasurable signal is never ranked as zero.
+ * allowance on track to expire unused), an account projected to last
+ * through its resets before one projected to run out, and highest
+ * effective remaining otherwise; an unmeasurable signal is never ranked as
+ * zero.
  */
 function effectiveAcrossAccounts(
   rows: QuotaProviderView[],
@@ -97,14 +105,12 @@ function effectiveAcrossAccounts(
   for (const row of rows) {
     const effective = effectiveFromProvider(row, nowMs, modelId);
     if (effective.effectivePercentRemaining === undefined) continue;
-    const bestPriority = best.spendPriority;
-    const priority = effective.spendPriority;
+    const order = compareSpendRank(effective, best);
     const wins =
       best.effectivePercentRemaining === undefined ||
-      (priority !== undefined && bestPriority === undefined) ||
-      (priority !== undefined && bestPriority !== undefined && priority > bestPriority) ||
-      (priority === undefined &&
-        bestPriority === undefined &&
+      order < 0 ||
+      (order === 0 &&
+        effective.spendPriority === undefined &&
         effective.effectivePercentRemaining > best.effectivePercentRemaining);
     if (wins) best = effective;
   }
@@ -146,16 +152,14 @@ export function buildModelsCatalog(
     ];
   });
   // Spend-priority order (quota-axi ranking semantics): the scope whose paid
-  // allowance is most on track to expire unused comes first. Models without
-  // a measurable signal keep runway order among themselves - unknown is not
-  // zero, and headroom is still real evidence.
+  // allowance is most on track to expire unused comes first, among models
+  // projected to last through their resets before those projected to run
+  // out (INF-898). Models without a measurable signal keep runway order
+  // among themselves - unknown is not zero, and headroom is still real
+  // evidence.
   catalog.sort((a, b) => {
-    const aKnown = typeof a.spendPriority === "number";
-    const bKnown = typeof b.spendPriority === "number";
-    if (aKnown !== bKnown) return aKnown ? -1 : 1;
-    if (aKnown && bKnown && a.spendPriority !== b.spendPriority) {
-      return (b.spendPriority as number) - (a.spendPriority as number);
-    }
+    const order = compareSpendRank(a, b);
+    if (order !== 0) return order;
     const rank = runwayRank(b) - runwayRank(a);
     if (rank !== 0) return rank;
     return `${a.provider}/${a.id}`.localeCompare(`${b.provider}/${b.id}`);

@@ -75,6 +75,11 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A resumed conversation retains its opening level.
   The session says what it opened at (`ModelSession.reasoning()`, FI3-439: the level after the cap and the Quick step, why it is lower - `quick` or `capped` - `off` for a model the runtime marks as not reasoning, `default` where Claude sends none), the supervisor records it on the `dispatched` timeline row beside the model, and `TaskDetail.reasoning` carries the newest one while the record still names that model; the crewmate summary shows it.
 - Same-tier routing order: spend priority first (quota-axi ranking semantics - the scope whose paid allowance is most on track to expire unused; a known signal, even negative, outranks an unmeasurable one, and unknown is NEVER zero), then a newer id within the same model line (dotted/dashed version tokens; the line is the id's prefix AND suffix around the version, so gpt-5.6-luna never outranks gpt-5.3-codex-spark) still overrides; unmeasurable candidates keep runway order (`newerId` + the ranked pool in `src/core/routing/routingEngine.ts`; the account pick in `accountPolicy.ts` ranks the same way).
+  Spend priority ranks inside three groups (INF-898, `compareSpendRank` in `src/shared/quotaSignals.ts`): a fresh, known score whose scope is projected to last through every reset (`lastsThroughReset`, the scope's runway at its observed burn), then a known score projected to run out first, then an unmeasurable one.
+  So a tight session outranks a weekly surplus: a model whose session runs out before its reset yields to one at the same level that lasts, whatever their scores.
+  Recency overrides only inside the leader's group, and the reasons name a higher-scored model passed over because it runs out.
+  Nothing becomes ineligible for it: pins, slots, capability, the reviewer's provider, the 0% exclusion and the fallback ladder are unchanged, and a running crewmate keeps its model.
+  The model catalog's best account per model, a computer's own pool and the account pick rank the same way.
 - A task on a computer that runs work routes among that computer's own subscriptions, never this Mac's (`docs/helper.md`, "A task's model"): `Router.decide` takes a `pool` in place of this Mac's models and quota catalog, the slot record, pins and the ladder read it as they read this Mac's own, and its reasons name it.
   No account of this Mac's is selected for such a task.
   A sign-in there with a typed cut-off standing on it, as its rows say, leaves that pool as a withheld account here leaves this Mac's; when nothing else there serves, the task waits for that sign-in rather than starting.
@@ -195,5 +200,5 @@ It includes open tasks with a committed routing choice, including an Automatic p
 The newest route's saved account identity attributes pre-attachment work to the login behind that score; an attached task's recorded account takes precedence.
 Older decisions without that identity fall back to the first observed sign-in for that provider on the task's computer.
 The first mate's own calls are not placed-task charges.
-The router recomputes spend priority over charged windows, but retains the raw headroom for all eligibility checks, so a negative projection never invents an exhaustion hold.
+The router recomputes spend priority and the runway over charged windows, so placed work can make a window run out before its reset, but retains the raw headroom for all eligibility checks, so a negative projection never invents an exhaustion hold.
 Automatic placement commits its chosen route in the existing transaction, so the next start sees that choice without an additional allowance reservation.

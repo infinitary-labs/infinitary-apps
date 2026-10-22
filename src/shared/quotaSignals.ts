@@ -360,6 +360,34 @@ export function providerScopes(row: QuotaProviderView, nowMs: number): ProviderS
   return { combined, ...(allModels ? { allModels } : {}), scopes };
 }
 
+/** The ranking facts of one candidate model or account. */
+export type SpendRank = { spendPriority?: number; lastsThroughReset?: boolean };
+
+/**
+ * The spend-ranking group (INF-898): a known score projected to last through
+ * every reset (0), a known score projected to run out first (1), then an
+ * unmeasurable score (2). Spend priority orders candidates within a group.
+ */
+export function spendGroup(rank: SpendRank): number {
+  if (typeof rank.spendPriority !== "number") return 2;
+  return rank.lastsThroughReset === true ? 0 : 1;
+}
+
+/**
+ * Highest spend priority first, but never above a candidate of an earlier
+ * group: conserving a scope that will run out before its reset outranks
+ * spending one whose allowance may go unused. Equal ranks compare 0, so
+ * the caller's own tiebreak decides.
+ */
+export function compareSpendRank(a: SpendRank, b: SpendRank): number {
+  const group = spendGroup(a) - spendGroup(b);
+  if (group !== 0) return group;
+  if (typeof a.spendPriority === "number" && typeof b.spendPriority === "number") {
+    return b.spendPriority - a.spendPriority;
+  }
+  return 0;
+}
+
 /** "3h 20m", "5d 19h", "40m" - the human form of a runway or reset horizon. */
 export function formatDurationShort(ms: number): string {
   const totalMinutes = Math.max(0, Math.round(ms / 60_000));

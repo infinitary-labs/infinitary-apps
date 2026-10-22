@@ -82,6 +82,8 @@ export type RoutingCandidateFact = {
   percentRemaining?: number;
   pace?: string;
   spendPriority?: number;
+  /** Projected to last through every reset (true) or to run out first (false). */
+  lastsThroughReset?: boolean;
   /** What became of it: picked, eligible (ranked, not picked), or why it was skipped. */
   status: string;
   charge?: ChargeFact;
@@ -94,6 +96,7 @@ export type AccountCandidateFact = {
   percentRemaining?: number;
   pace?: string;
   spendPriority?: number;
+  lastsThroughReset?: boolean;
   status: string;
   charge?: ChargeFact;
 };

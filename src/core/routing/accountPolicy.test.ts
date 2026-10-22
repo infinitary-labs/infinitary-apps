@@ -181,4 +181,33 @@ describe("selectAccount (the per-account selection policy)", () => {
     expect(decision.accountId).toBe("b");
     expect(decision.reasons.join(" ")).toContain("spend priority -0.40");
   });
+
+  it("prefers an account projected to last through its resets over a higher-priority one that runs out (INF-898)", () => {
+    // INF-898's Claude scores: 0.63 with the session running out, against a
+    // second sign-in at 0.25 that lasts.
+    const decision = selectAccount({
+      providerId: "anthropic-claude",
+      candidates: [
+        candidate({
+          accountId: "a",
+          label: "Personal",
+          effectivePercentRemaining: 25,
+          spendPriority: 0.6257,
+          lastsThroughReset: false,
+        }),
+        candidate({
+          accountId: "b",
+          label: "Work",
+          effectivePercentRemaining: 99,
+          spendPriority: 0.2498,
+          lastsThroughReset: true,
+        }),
+      ],
+    });
+    expect(decision.accountId).toBe("b");
+    expect(decision.candidates.find((fact) => fact.accountId === "a")).toMatchObject({
+      lastsThroughReset: false,
+      status: "eligible",
+    });
+  });
 });

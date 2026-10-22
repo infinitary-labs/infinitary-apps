@@ -240,6 +240,12 @@ export const catalogModelViewSchema = z.object({
    * Absent means unmeasurable - never rendered or ranked as zero.
    */
   spendPriority: z.number().optional(),
+  /**
+   * Whether every window bounding this scope is projected, at its observed
+   * burn, to last until its reset (INF-898): true lasts, false runs out
+   * first (or is spent). Absent means the runway is unknown.
+   */
+  lastsThroughReset: z.boolean().optional(),
 });
 export type CatalogModelView = z.infer<typeof catalogModelViewSchema>;
 

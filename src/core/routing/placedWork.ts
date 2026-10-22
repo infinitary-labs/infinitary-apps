@@ -1,6 +1,6 @@
 import type { CatalogModelView, QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
 import { allowanceProviderOf } from "@shared/quota";
-import { classifyProviderWindows } from "@shared/quotaSignals";
+import { classifyProviderWindows, compareSpendRank } from "@shared/quotaSignals";
 import { effectiveFromProvider, scopeAppliesToModel } from "../quota/catalog";
 import type { AppDatabase } from "../storage/db";
 import type { SettingsStore } from "../storage/settingsStore";
@@ -182,7 +182,7 @@ export class PlacedWorkScores {
     now: number,
     model?: string,
     data = { work: this.work(), samples: this.finished(now) },
-  ): { spendPriority?: number; charge?: ChargeFact } {
+  ): { spendPriority?: number; lastsThroughReset?: boolean; charge?: ChargeFact } {
     const original = effectiveFromProvider(row, now, model);
     if (row.status !== "ok" || row.stale || !row.accountId) return original;
     const reading =
@@ -248,6 +248,11 @@ export class PlacedWorkScores {
     );
     return {
       ...(adjusted.spendPriority !== undefined ? { spendPriority: adjusted.spendPriority } : {}),
+      // Placed work counts toward the runway too: a charge can bring a
+      // window's projected exhaustion before its reset.
+      ...(adjusted.lastsThroughReset !== undefined
+        ? { lastsThroughReset: adjusted.lastsThroughReset }
+        : {}),
       charge: {
         accountId: row.accountId,
         source: reading.source,
@@ -270,10 +275,8 @@ export class PlacedWorkScores {
         }))
         .filter((c) => c.raw.effectivePercentRemaining !== undefined);
       candidates.sort((a, b) => {
-        const ap = a.score.spendPriority;
-        const bp = b.score.spendPriority;
-        if (ap !== undefined && bp !== undefined) return bp - ap;
-        if (ap !== undefined || bp !== undefined) return ap !== undefined ? -1 : 1;
+        const order = compareSpendRank({ ...a.raw, ...a.score }, { ...b.raw, ...b.score });
+        if (order !== 0) return order;
         return (b.raw.effectivePercentRemaining ?? -1) - (a.raw.effectivePercentRemaining ?? -1);
       });
       const best = candidates[0];

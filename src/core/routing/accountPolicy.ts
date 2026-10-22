@@ -1,3 +1,4 @@
+import { compareSpendRank } from "@shared/quotaSignals";
 import type { AccountCandidateFact } from "../storage/decisionStore";
 import type { ChargeFact } from "./placedWork";
 
@@ -8,7 +9,8 @@ import type { ChargeFact } from "./placedWork";
  *
  * - Spend priority (quota-axi ranking semantics) is the primary measured
  *   axis: the account whose paid allowance is most on track to expire
- *   unused wins. Headroom (effective percent remaining, the min across the
+ *   unused wins, among accounts projected to last through their resets
+ *   before those projected to run out (INF-898). Headroom (effective percent remaining, the min across the
  *   account's bounding windows) breaks the remaining cases.
  * - Uncertainty and ineligibility are different findings: an account with
  *   unknown quota STAYS eligible and is never read as zero or as healthy -
@@ -50,6 +52,11 @@ export type AccountCandidate = {
    * absent means unmeasurable, which is never ranked as zero.
    */
   spendPriority?: number;
+  /**
+   * Whether the account scope is projected to last through every reset at
+   * its observed burn (INF-898); absent means unknown.
+   */
+  lastsThroughReset?: boolean;
   charge?: ChargeFact;
 };
 
@@ -87,6 +94,9 @@ export function selectAccount(input: AccountSelectionInput): AccountSelectionDec
       ...(candidate.paceStatus ? { pace: candidate.paceStatus } : {}),
       ...(typeof candidate.spendPriority === "number"
         ? { spendPriority: candidate.spendPriority }
+        : {}),
+      ...(typeof candidate.lastsThroughReset === "boolean"
+        ? { lastsThroughReset: candidate.lastsThroughReset }
         : {}),
       ...(candidate.charge ? { charge: candidate.charge } : {}),
       status: statusOf(candidate, picked, input),
@@ -216,16 +226,14 @@ function isExhausted(candidate: AccountCandidate): boolean {
 
 /**
  * Spend priority first (quota-axi ranking semantics: the account whose paid
- * allowance is most on track to expire unused); a known signal outranks an
- * unmeasurable one; then headroom beyond the tie delta; then LRU.
+ * allowance is most on track to expire unused), an account projected to
+ * last through its resets before one projected to run out (INF-898); a
+ * known signal outranks an unmeasurable one; then headroom beyond the tie
+ * delta; then LRU.
  */
 function compareMeasured(a: AccountCandidate, b: AccountCandidate): number {
-  const aKnown = typeof a.spendPriority === "number";
-  const bKnown = typeof b.spendPriority === "number";
-  if (aKnown && bKnown && a.spendPriority !== b.spendPriority) {
-    return (b.spendPriority as number) - (a.spendPriority as number);
-  }
-  if (aKnown !== bKnown) return aKnown ? -1 : 1;
+  const order = compareSpendRank(a, b);
+  if (order !== 0) return order;
   const remainingA = a.effectivePercentRemaining ?? 0;
   const remainingB = b.effectivePercentRemaining ?? 0;
   if (Math.abs(remainingA - remainingB) > TIE_DELTA) {

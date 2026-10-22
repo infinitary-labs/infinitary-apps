@@ -7,7 +7,7 @@ import { AutomaticPlacement } from "../placed/automaticPlacement";
 import { ComputerResourceFeed } from "../placed/computerResourceFeed";
 import { ComputerResources } from "../placed/computerResources";
 import type { WorkDevices } from "../placed/workDevices";
-import { buildModelsCatalog } from "../quota/catalog";
+import { buildModelsCatalog, effectiveFromProvider } from "../quota/catalog";
 import type { QuotaService } from "../quota/quotaService";
 import { DecisionStore } from "../storage/decisionStore";
 import { SettingsStore } from "../storage/settingsStore";
@@ -186,6 +186,22 @@ describe("INF-443 learned placed-work ranking", () => {
     reset.windows[0]!.resetsAtMs! += 604800000;
     restarted.observe("mini", snapshot(AT + 1000, [reset]));
     expect(restarted.score(reset, AT + 1000).charge!.windows[0]!.points).toBeGreaterThan(0);
+    w.db.close();
+  });
+
+  it("counts placed work toward the runway: a charge can make a window run out before its reset (INF-898)", () => {
+    const w = world();
+    w.learn();
+    // 22% of Grok's week left with 33.9 hours to go lasts at its observed burn.
+    const reading = row("grok", "mini-grok", 22);
+    expect(effectiveFromProvider(reading, AT).lastsThroughReset).toBe(true);
+    expect(w.scores.score(reading, AT).lastsThroughReset).toBe(true);
+    // One running task placed there brings the projection short of the reset.
+    w.seed("running", "mini");
+    w.route("running");
+    const scored = w.scores.score(reading, AT);
+    expect(scored.charge!.windows[0]!.points).toBeGreaterThan(2);
+    expect(scored.lastsThroughReset).toBe(false);
     w.db.close();
   });
 

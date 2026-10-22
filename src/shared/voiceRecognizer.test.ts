@@ -242,7 +242,9 @@ describe("createRecognizerHandler", () => {
   it("decodes a recording in the language Whisper hears in it, not the library's English (INF-608)", async () => {
     // A 40 s recording: its language comes from its first 30 s window, its words from all of it.
     const recording = new Float32Array(40 * WHISPER_SAMPLE_RATE);
-    const words = vi.fn(async () => ({ text: "请帮我检查语音输入的效果。" }));
+    const words = vi.fn<
+      (audio: Float32Array, options: WhisperTranscribeOptions) => Promise<unknown>
+    >(async () => ({ text: "请帮我检查语音输入的效果。" }));
     const whisper = whisperHearing(words, MANDARIN_READINGS);
     const handle = createRecognizerHandler(async () => whisper.asr);
     await expect(handle(transcribe(1, recording))).resolves.toEqual({
@@ -257,7 +259,12 @@ describe("createRecognizerHandler", () => {
         steps: 1,
       },
     ]);
-    expect(words).toHaveBeenCalledWith(recording, {
+    // The recording is checked by identity: toHaveBeenCalledWith compares a typed array one
+    // sample at a time even against itself, seconds for 640,000 samples on a loaded CI runner (INF-779).
+    expect(words).toHaveBeenCalledTimes(1);
+    const [decoded, options] = words.mock.calls[0] ?? [];
+    expect(decoded).toBe(recording);
+    expect(options).toEqual({
       ...WHISPER_TRANSCRIBE_OPTIONS,
       decoder_input_ids: [
         PINNED_TOKENS.decoder_start_token_id,

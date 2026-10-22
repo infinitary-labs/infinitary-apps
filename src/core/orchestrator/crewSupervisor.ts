@@ -89,12 +89,13 @@ import { forgeOf, forgePlace } from "@shared/forge";
 import { forgeSignInCardId } from "@shared/forges";
 import {
   fixedHoldWords,
-  HOLDS,
   type HoldOverride,
   holdNames,
   type OverridableHold,
+  overrideCellWords,
   overridePasses,
   overrideSpan,
+  overrideWords,
   softHoldWords,
 } from "@shared/holds";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
@@ -7446,7 +7447,7 @@ export class CrewSupervisor {
         kind: "note",
         actor: "firstmate",
         feed: true,
-        text: `Your words pass ${holdNames(holds)} ${overrideSpan(override)}: "${input.words}"`,
+        text: overrideWords(override),
         data: { news: true },
       },
     );
@@ -9158,8 +9159,8 @@ export class CrewSupervisor {
       cell(
         "override",
         "Override",
-        `${statusDot("warn")}${escapeCardText(override.holds.map((kind) => (kind === "live-proof" ? "without live proof" : HOLDS[kind].name)).join(" · "))}`,
-        `Your words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}"${override.holds.includes("live-proof") ? `. ${LIVE_VALIDATION_WORDS.exception}.` : ""}`,
+        `${statusDot("warn")}${escapeCardText(overrideCellWords(override.holds))}`,
+        `${overrideWords(override)}${override.holds.includes("live-proof") ? `. ${LIVE_VALIDATION_WORDS.exception}.` : ""}`,
       );
     }
     return `${SETTLE_FACTS_OPEN}${cells.join("")}</div>`;

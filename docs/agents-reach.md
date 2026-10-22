@@ -70,3 +70,12 @@ It runs five steps.
 5. **The answer.**
    Its card leads with the verdicts it found in code, each with its file, its line and the move it suggests, then the holds the captain's words passed most with the level each suggests, then the counts beside last week's, and what it could not read.
    It files each verdict in code as a follow-up, after searching the tasks for one already filed, so the first mate decides on it with the report.
+
+## The story end to end
+
+`tests/e2e/agents-reach.spec.ts` runs the three nets together through the hermetic launcher, on the GitHub stand-in and the mock models.
+A reviewed task at its review cap with failed checks hears the captain's words, records one override, and merges at the reviewed version with no re-review.
+Words that name GitHub's required review pass asking first, and GitHub's rule refuses the merge in the fixed limit's words.
+A crewmate refused its second rerun reports, and the captain's choice reopens the rerun limit for one more.
+The weekly audit rule, set to run once, starts one audit task, and the corpus export counts each override per hold.
+Every refusal an agent was served names its hold: a soft hold with its way out, a fixed limit as fixed.

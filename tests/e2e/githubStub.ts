@@ -107,6 +107,18 @@ export type GitHubStub = {
    */
   servePull: (pull: { number: number; title: string; body?: string; headSha?: string }) => void;
   /**
+   * Serve this change for the next branch the app asks about that has no
+   * change yet, in the order queued: a later task's change, in a journey
+   * whose earlier task already holds the one `servePull` serves. Its head is
+   * that branch's own commit (`headOf`).
+   */
+  serveNext: (pull: {
+    number: number;
+    title: string;
+    body?: string;
+    mergeableState?: string;
+  }) => void;
+  /**
    * Serve a pull request that is not the task's branch. `changeFor` of
    * another branch does not return it.
    */
@@ -138,6 +150,8 @@ export type GitHubStub = {
    * pull request workflow; the version's workflow runs list those runs.
    */
   setChecks: (runs: StubCheckRun[]) => void;
+  /** Every failed-job rerun GitHub accepted, `POST /path`, in order. */
+  reruns: () => string[];
   /** A completed measurement workflow on this exact disposable project version. */
   serveWorkflowEvidence: (headSha: string) => void;
   /** GitHub no longer accepts the sign-in: every API request answers 401. */
@@ -205,6 +219,8 @@ export async function startGitHubStub(
   const cancelledRuns = new Set<number>();
   let anyPull: StubPull | null = null;
   const opened = new Map<string, StubPull>();
+  const queued: StubPull[] = [];
+  const reruns: string[] = [];
   let nextNumber = 100;
   let checkRuns: StubCheckRun[] = [
     { name: "linux-checks", status: "completed", conclusion: "success" },
@@ -511,6 +527,15 @@ export async function startGitHubStub(
           }
           return;
         }
+        // GitHub's failed-job reruns answer 201 with an empty body.
+        if (
+          method === "POST" &&
+          /^\/actions\/(?:jobs\/\d+\/rerun|runs\/\d+\/rerun(?:-failed-jobs)?)$/.test(rest)
+        ) {
+          reruns.push(`${method} ${path}`);
+          send(201, {});
+          return;
+        }
         if (
           method === "GET" &&
           rest === "/actions/runs" &&
@@ -668,6 +693,10 @@ export async function startGitHubStub(
           ) {
             anyPull.branch = branch;
             send(200, [pullJson(anyPull, owner, name)]);
+          } else if (queued.length > 0 && !found && anyPull?.branch !== branch) {
+            const pull = { ...(queued.shift() as StubPull), branch };
+            opened.set(branch, pull);
+            send(200, [pullJson(pull, owner, name)]);
           } else {
             send(200, []);
           }
@@ -934,6 +963,9 @@ export async function startGitHubStub(
     servePull: (pull) => {
       anyPull = { ...pull };
     },
+    serveNext: (pull) => {
+      queued.push({ ...pull });
+    },
     serveNumbered(pull: {
       number: number;
       branch: string;
@@ -961,6 +993,7 @@ export async function startGitHubStub(
     setChecks: (runs) => {
       checkRuns = runs;
     },
+    reruns: () => [...reruns],
     serveWorkflowEvidence: (headSha) => {
       evidenceHead = headSha;
     },

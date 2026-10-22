@@ -29,6 +29,7 @@ export const RENDERER_SUITES = [
 export const APPLICATION_SUITES = [
   "activity-runs.spec.ts",
   "add-project.spec.ts",
+  "agents-reach.spec.ts",
   "allowance-pending-on-connect.spec.ts",
   "answer-delivery.spec.ts",
   "answer-task.spec.ts",

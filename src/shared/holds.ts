@@ -181,6 +181,18 @@ export function overrideSpan(override: Pick<HoldOverride, "until">): string {
   return override.until === "task" ? "for the rest of this task" : "for this version";
 }
 
+/** The override as its timeline row and the strip cell's title say it: what his words pass, for how long, and his words. */
+export function overrideWords(override: Pick<HoldOverride, "words" | "holds" | "until">): string {
+  return `Your words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}"`;
+}
+
+/** The facts strip's override cell: each hold his words pass, the live proof as going without it. */
+export function overrideCellWords(holds: readonly OverridableHold[]): string {
+  return holds
+    .map((kind) => (kind === "live-proof" ? "without live proof" : HOLDS[kind].name))
+    .join(" · ");
+}
+
 /**
  * The sentence a soft refusal ends with, naming the override for whoever
  * reads it: the first mate declares one on the captain's words; a crewmate

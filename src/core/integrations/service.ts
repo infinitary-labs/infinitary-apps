@@ -109,6 +109,7 @@ export type IntegrationListen = {
   label: string;
   /** How often the app looks, in the tick's minutes. */
   every: number;
+  filters?: readonly { name: string; label: string; defaultValue?: string }[];
 };
 
 /** A refusal the catalog line's caller reads as the reason. */
@@ -202,6 +203,7 @@ export class IntegrationsService {
               name: spec.name,
               label: spec.label,
               description: spec.description,
+              ...(spec.filters ? { filters: spec.filters } : {}),
               looks: spec.every === 1 ? "every minute" : `every ${spec.every} minutes`,
               listen: `schedule_prompt on_event "${view.id}/${spec.name}": it runs as new ones arrive, their summaries at {{events}} in its prompt or after it`,
             })),
@@ -224,6 +226,7 @@ export class IntegrationsService {
       event: spec.name,
       label: spec.label,
       every: spec.every,
+      ...(spec.filters ? { filters: [...spec.filters] } : {}),
     };
   }
 
@@ -484,7 +487,12 @@ export class IntegrationsService {
   }
 
   /** Look for one of an integration's events since the cursor (`IntegrationBinding.look`). */
-  async look(id: string, event: string, cursor: string | null): Promise<IntegrationLook> {
+  async look(
+    id: string,
+    event: string,
+    cursor: string | null,
+    filter?: Record<string, string>,
+  ): Promise<IntegrationLook> {
     const row = this.byId(id);
     const view = this.viewOf(row);
     if (view.paused) throw new IntegrationRefusal(`${view.name} is paused.`);
@@ -495,7 +503,10 @@ export class IntegrationsService {
           ? `${view.name} has no event "${event}". Its events: ${names.join(", ")}.`
           : `${view.name} tells of nothing.`,
       );
-    return row.binding.look(row.connection.id, event, cursor);
+    const fields = row.connection.events?.find((spec) => spec.name === event)?.filters ?? [];
+    if (Object.keys(filter ?? {}).some((key) => !fields.some((field) => field.name === key)))
+      throw new IntegrationRefusal("This event does not declare that filter.");
+    return row.binding.look(row.connection.id, event, cursor, filter);
   }
 
   /** Stop whatever a binding started, as the app quits. */
@@ -617,6 +628,7 @@ export class IntegrationsService {
               name: spec.name,
               label: spec.label,
               every: spec.every,
+              ...(spec.filters ? { filters: [...spec.filters] } : {}),
             })),
           }
         : {}),

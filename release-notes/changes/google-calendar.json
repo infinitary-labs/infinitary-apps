@@ -1,0 +1,7 @@
+{
+  "entries": [],
+  "exclusions": [{
+    "id": "google-calendar",
+    "reason": "Internal until Infinitary's own Google client is enabled: a released build still offers no Google row. Calendar shares Gmail's existing registration and verification prerequisite; the release enabling the row carries the user-facing note."
+  }]
+}

@@ -162,3 +162,11 @@ The rules run only there, so nothing runs twice and nothing moves when the compu
 The sheet names that computer where the clock matters: a rule that keeps no zone follows "the clock on MacBook Pro", and the review says a missed time is about the first mate on MacBook Pro.
 A new rule still takes the zone of the computer it is made on, shown in the sheet.
 While that computer is out of reach or too far apart, its rules stay as last read and a change is refused as any change is (`docs/view.md`, "Out of reach in the window").
+
+### Event filters
+
+An event may declare closed string filter fields in its integration's view.
+The shared rule editor labels each field with the integration's words and keeps the values in the event spec's optional `filter` object; the review shows them before Turn on.
+The first mate passes the same fields through `schedule_prompt`'s optional `event_filter`; discovery lists them only on request.
+The scheduler refuses undeclared fields, preserves the selected values on save and edit, and passes them to every look.
+Google Calendar declares `calendar`, an id read through `list_calendars`; an empty value uses the primary calendar.

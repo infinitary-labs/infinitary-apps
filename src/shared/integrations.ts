@@ -86,6 +86,15 @@ export const integrationEventViewSchema = z
     label: z.string().min(1).max(64),
     /** How often, in minutes, a listening rule looks for it. */
     every: z.number().int().min(1),
+    filters: z
+      .array(
+        z.strictObject({
+          name: z.string(),
+          label: z.string(),
+          defaultValue: z.string().optional(),
+        }),
+      )
+      .optional(),
   })
   .strict();
 export type IntegrationEventView = z.infer<typeof integrationEventViewSchema>;

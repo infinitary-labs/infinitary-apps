@@ -1,6 +1,13 @@
 import type { ForgeSignInState } from "@shared/forges";
 import { type IntegrationBinding, IntegrationOutcomeUnknown } from "../../binding";
 import { type IntegrationSecrets, MissingSecret } from "../../secrets";
+import {
+  CALENDAR_ACTIONS,
+  CALENDAR_CHANGED_EVENT,
+  type CalendarRequest,
+  lookForCalendar,
+  runCalendarAction,
+} from "./calendar";
 import { GMAIL_SCOPE, GOOGLE_SCOPES, type GoogleClient, type GoogleEndpoints } from "./client";
 import {
   GMAIL_ACTIONS,
@@ -84,6 +91,7 @@ function retryAfter(value: string | null, now: number): number | undefined {
 export function googleIntegration(options: GoogleIntegrationOptions): IntegrationBinding {
   const store = new GoogleSignInStore(options.root);
   const gmailRoot = `${options.endpoints.gmail.replace(/\/+$/, "")}/gmail/v1/users/me`;
+  const calendarRoot = `${options.endpoints.calendar.replace(/\/+$/, "")}/calendar/v3`;
   const client = {
     client_id: options.client.id,
     ...(options.client.secret ? { client_secret: options.client.secret } : {}),
@@ -142,9 +150,14 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     return renewing;
   };
 
-  const send = async (path: string, init?: Parameters<GmailRequest>[1]): Promise<Response> => {
+  const send = async (
+    root: string,
+    label: string,
+    path: string,
+    init?: Parameters<CalendarRequest>[1],
+  ): Promise<Response> => {
     try {
-      return await options.secrets.request(GOOGLE_ID, ACCESS, `${gmailRoot}${path}`, {
+      return await options.secrets.request(GOOGLE_ID, ACCESS, `${root}${path}`, {
         method: init?.method ?? "GET",
         redirect: "error",
         header: "authorization",
@@ -162,52 +175,57 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
         throw new Error(SIGN_IN_AGAIN);
       }
       setHealth("unavailable");
-      // A change that left may have reached Gmail: what came of it is not known.
-      if ((init?.method ?? "GET") !== "GET")
-        throw new IntegrationOutcomeUnknown("Gmail did not answer.");
-      throw new Error("Could not reach Gmail.");
+      // A change that left may have reached Google: what came of it is not known.
+      if (!init?.read && (init?.method ?? "GET") !== "GET")
+        throw new IntegrationOutcomeUnknown(`${label} did not answer.`);
+      throw new Error(`Could not reach ${label}.`);
     }
   };
 
-  const gmail: GmailRequest = async (path, init) => {
-    const wait = Math.ceil((waitUntil - options.now()) / 1000);
-    if (wait > 0) throw new Error(`Gmail asked the app to wait ${wait} more seconds.`);
-    const record = store.read();
-    if (!record) throw new Error(SIGN_IN_AGAIN);
-    if (record.expiresAt - options.now() < GOOGLE_REQUEST_TIMEOUT_MS) await renew();
-    let response = await send(path, init);
-    if (response.status === 401) {
-      await renew();
-      response = await send(path, init);
+  const api =
+    (root: string, label: string, allowsGone = false): CalendarRequest =>
+    async (path, init) => {
+      const wait = Math.ceil((waitUntil - options.now()) / 1000);
+      if (wait > 0) throw new Error(`${label} asked the app to wait ${wait} more seconds.`);
+      const record = store.read();
+      if (!record) throw new Error(SIGN_IN_AGAIN);
+      if (record.expiresAt - options.now() < GOOGLE_REQUEST_TIMEOUT_MS) await renew();
+      let response = await send(root, label, path, init);
       if (response.status === 401) {
-        setHealth("needs_reauth");
-        throw new Error(SIGN_IN_AGAIN);
+        await renew();
+        response = await send(root, label, path, init);
+        if (response.status === 401) {
+          setHealth("needs_reauth");
+          throw new Error(SIGN_IN_AGAIN);
+        }
       }
-    }
-    const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    if (response.ok || response.status === 404) {
-      setHealth("ok");
-      return { status: response.status, body } satisfies Answer;
-    }
-    const error = errorOf(body);
-    if (response.status === 429 || error.reasons.some((reason) => RATE_LIMITED.has(reason))) {
-      const after = retryAfter(response.headers.get("retry-after"), options.now());
-      if (after !== undefined) waitUntil = options.now() + after;
-      throw new Error(
-        `Gmail asked the app to slow down${after !== undefined ? ` for ${Math.ceil(after / 1000)} seconds` : ""}.`,
-      );
-    }
-    const said = `(status ${response.status})${error.message ? `: ${error.message}` : "."}`;
-    if (response.status < 500) {
-      setHealth("ok");
-      throw new Error(`Gmail refused ${said}`);
-    }
-    setHealth("unavailable");
-    // Gmail failed while it held a change: whether the change happened is not known.
-    if ((init?.method ?? "GET") !== "GET")
-      throw new IntegrationOutcomeUnknown(`Gmail failed ${said}`);
-    throw new Error(`Gmail failed ${said}`);
-  };
+      const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      if (response.ok || response.status === 404 || (allowsGone && response.status === 410)) {
+        setHealth("ok");
+        return { status: response.status, body } satisfies Answer;
+      }
+      const error = errorOf(body);
+      if (response.status === 429 || error.reasons.some((reason) => RATE_LIMITED.has(reason))) {
+        const after = retryAfter(response.headers.get("retry-after"), options.now());
+        if (after !== undefined) waitUntil = options.now() + after;
+        throw new Error(
+          `${label} asked the app to slow down${after !== undefined ? ` for ${Math.ceil(after / 1000)} seconds` : ""}.`,
+        );
+      }
+      const said = `(status ${response.status})${error.message ? `: ${error.message}` : "."}`;
+      if (response.status < 500) {
+        setHealth("ok");
+        throw new Error(`${label} refused ${said}`);
+      }
+      setHealth("unavailable");
+      // Google failed while it held a change: whether the change happened is not known.
+      if (!init?.read && (init?.method ?? "GET") !== "GET")
+        throw new IntegrationOutcomeUnknown(`${label} failed ${said}`);
+      throw new Error(`${label} failed ${said}`);
+    };
+
+  const gmail: GmailRequest = api(gmailRoot, "Gmail");
+  const calendar = api(calendarRoot, "Google Calendar", true);
 
   /** Tell Google to forget the sign-in, as far as it can be reached. */
   const revoke = async () => {
@@ -234,8 +252,8 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
           id: GOOGLE_ID,
           account: record.account,
           health: record.health,
-          actions: GMAIL_ACTIONS,
-          events: [GMAIL_MESSAGE_EVENT],
+          actions: [...GMAIL_ACTIONS, ...CALENDAR_ACTIONS],
+          events: [GMAIL_MESSAGE_EVENT, CALENDAR_CHANGED_EVENT],
         },
       ];
     },
@@ -261,6 +279,10 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       if (!issued.scopes.includes(GMAIL_SCOPE))
         return forget(
           "Google did not grant the Gmail permission. Sign in again and leave every box checked.",
+        );
+      if (!GOOGLE_SCOPES.every((scope) => issued.scopes.includes(scope)))
+        return forget(
+          "Google did not grant every Gmail and Calendar permission. Sign in again and leave every box checked.",
         );
       let profile: Answer | undefined;
       try {
@@ -308,11 +330,16 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
       store.remove();
       waitUntil = 0;
     },
-    call: (_id, action, input) => runGmailAction(gmail, action, input),
-    look: async (_id, _event, cursor) => {
+    call: (_id, action, input) =>
+      CALENDAR_ACTIONS.some((spec) => spec.name === action)
+        ? runCalendarAction(calendar, action, input)
+        : runGmailAction(gmail, action, input),
+    look: async (_id, event, cursor, filter) => {
       const record = store.read();
       if (!record) throw new Error(SIGN_IN_AGAIN);
-      return lookForMail(gmail, record.account, cursor);
+      return event === CALENDAR_CHANGED_EVENT.name
+        ? lookForCalendar(calendar, record.account, cursor, filter)
+        : lookForMail(gmail, record.account, cursor);
     },
   };
 }

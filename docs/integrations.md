@@ -22,6 +22,7 @@ Its binding's `look` answers what arrived since a cursor and the cursor to look 
 Each item is its id there and the kind's one-line typed summary, never its body.
 Automation reads these to fire a rule (`docs/automation.md`, "Events"); `show` lists them, and the integrations view carries them for the When choice.
 GitHub declares none.
+An event may declare closed string filter fields (`filters`), with a name, label and optional default value; discovery lists them, the shared Automation editor draws them, and the saved rule passes only declared fields back to the binding.
 
 ## A stand-in
 
@@ -84,12 +85,12 @@ A look (`IntegrationsService.look`) answers the changes since a cursor; a cursor
 ## Google
 
 Google is one row that signs in once for Gmail and Calendar, asking every permission up front (the captain's q8 on INF-775), as Infinitary's own Google client (q4 on the same task), in `src/core/integrations/providers/google/`.
-Its permissions are Gmail's `gmail.modify` and Calendar's `calendar.events` and `calendar.readonly` (`GOOGLE_SCOPES`, `client.ts`): an installed app cannot add a permission later, so Calendar's are asked now for the Calendar piece (INF-786).
+Its permissions are Gmail's `gmail.modify` and Calendar's `calendar.events` and `calendar.readonly` (`GOOGLE_SCOPES`, `client.ts`): an installed app cannot add a permission later, and the same sign-in reaches both APIs.
 Google's device flow does not reach Gmail or Calendar, so the sign-in is the installed-app flow (`signIn.ts`): the app listens on `127.0.0.1` at a port the system picks, opens Google's consent page in the person's browser with PKCE (S256), a state, offline access and consent every time, and trades the code the browser brings back for the sign-in.
 The listener turns away anything without the sign-in's state and closes once the browser answers or the sign-in is cancelled; a second sign-in ends the first.
 Two rows never share a name, so while another row has the name the Google row would take - its own, or Google for a new one - the sign-in is refused before the browser opens, naming that row.
-A sign-in in which the person unchecked Gmail's permission is handed back to Google and kept nowhere.
-The access key and the lasting key are kept in the integration's key store ("Keys") under `access_token` and `refresh_token` and used only through it: the access key as each Gmail request's bearer, the lasting key as the renewal's form field and, on removal, the revocation's.
+A sign-in in which the person unchecked any Gmail or Calendar permission is handed back to Google and kept nowhere.
+The access key and the lasting key are kept in the integration's key store ("Keys") under `access_token` and `refresh_token` and used only through it: the access key as each Gmail or Calendar request's bearer, the lasting key as the renewal's form field and, on removal, the revocation's.
 The row declares no key slots, so it has no key fields; who it is signed in as, what Google granted, when the access runs out and its health are `userData/integrations/google.json`, 0600 (`GoogleSignInStore`).
 The access renews when it has less than one request's time left, and once more when Gmail refuses it; health is `needs_reauth` only when Google refuses the lasting key or refuses a request again after a real renewal, and `unavailable` when Google cannot be reached or fails.
 When Gmail answers 429, or 403 for a rate limit, with Retry-After, no request goes to Gmail until then, and a rule's look tries again on its next minute; the sign-in's health stays as it was.
@@ -99,7 +100,19 @@ Gmail's actions (`gmail.ts`) are `search_mail` and `read_message`, which read, `
 A message read is its plain text, or its HTML read as text in one pass over it, so markup a sender never closes cannot slow the app's own process.
 A message is built as plain-text RFC 2822 with a subject outside ASCII in encoded words, a reply carries its thread and In-Reply-To, and an address or subject with a line break is refused before anything is asked.
 Gmail tells `message_received` ("A message arrives") from its history of messages added to the inbox: the cursor is the history id and the mailbox it belongs to, each item's summary is its sender and subject, and a history id Gmail no longer keeps (404) or a cursor from another mailbox answers `resynced`.
-Calendar's actions and events are INF-786.
+Calendar's actions (`calendar.ts`, INF-786) are `list_calendars`, `list_events`, `read_event` and `free_busy`, which read, and `create_event` and `update_event`, which change and ask on a card.
+Calendar ids come from `list_calendars`; actions use the primary calendar when none is named, and paged lists return `next_page`.
+Times are RFC 3339 instants with explicit offsets, or dates for all-day events whose end is exclusive; a start and end have the same shape, and the end follows the start.
+An update patches only the fields named, replacing the attendees list if supplied; changing times supplies both start and end.
+`send_updates` declares guest notifications (`none`, the default, `all` or `externalOnly`), and that choice stays in the exact input the captain approves.
+`free_busy` reads by POST but changes nothing, and preserves per-calendar errors alongside busy intervals.
+No action deletes an event.
+Calendar tells `event_changed` ("A calendar event changes") every minute, filtered by `calendar` (an id from `list_calendars`, primary by default).
+Its first full sync reads every page and fires nothing; subsequent looks keep the same calendar and use Google's sync token with no incompatible time range or query.
+Each changed event carries an id derived from its calendar, event id and revision, so two edits of the same event can both fire while a replay of one revision deduplicates.
+The summary carries title, event id, calendar and times, or cancellation, never its description or guests.
+A lost sync token (410), another account or another calendar discards the old cursor and re-baselines without firing; a failed or incomplete sync never advances the cursor.
+Both APIs share one renewal and backoff boundary; a Calendar rate limit holds Gmail too, and a read-only free/busy failure never claims an outward change happened.
 
 A packaged build signs in only as `GOOGLE_OAUTH_CLIENT`, which stays empty until Infinitary registers its client with Google and passes Google's verification and the security assessment Gmail's permissions need, so until then a packaged build has no Google row and offers no Google chip.
 An unpackaged run may name a client and a stand-in Google: `INFINITARY_GOOGLE_CLIENT_ID`, `INFINITARY_GOOGLE_CLIENT_SECRET` and `INFINITARY_GOOGLE_URL`, every address under that one (`googleSetup`).
@@ -151,3 +164,6 @@ A computer without the change, or without a task channel, gives its crewmates ne
 `src/core/integrations/providers/google/googleIntegration.test.ts` signs in to a stand-in Google (`tests/helpers/googleStandIn.ts`, answering in Google's documented shapes) through the loopback with PKCE and every permission: a declined or partial consent keeps nothing, a sign-in while an MCP server is named Google is refused before the browser opens, a cancel ends the wait, reads run, an HTML-only message full of markup that never closes reads as its words, a label, a draft and a send are kept as asks that run once on the click, a send Gmail took before the connection dropped or it failed is unknown and never sent again, the history cursor tells what arrived and resyncs on a 404 or another mailbox, a 429's Retry-After holds every request, the access renews before it runs out and after a refusal, Google refusing the lasting key asks for a new sign-in, removal revokes, and no key reaches the view, discovery or the facts file.
 `tests/e2e/integrations-google.spec.ts` signs in from the Google chip by keys against the stand-in and has a message arriving fire a rule to the first mate.
 `src/core/orchestrator/schedulerEvents.test.ts` fires Automation from the stand-in's events, and `tests/e2e/automation-events.spec.ts` saves an event rule by keys and reads the one first mate turn three items make.
+
+The Calendar cases in `googleIntegration.test.ts` exercise all six actions, single-consent access to both APIs, exact once-only write asks, disabled and invalid calls, unknown write outcomes, renewal, rate backoff, paged sync, revision ids, cancellation, calendar selection and 410 recovery against `tests/helpers/calendarStandIn.ts` through the same local Google sign-in.
+The Calendar journey in `integrations-google.spec.ts` opens the single row by keyboard, reads the action rules, saves a selected-calendar rule by keyboard, and observes only that calendar's later revision in the first mate's turn.

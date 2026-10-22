@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
+import { SHOOT_EVENT, STUDIO_CALENDAR } from "../../../../../tests/helpers/calendarStandIn";
 import {
   type GoogleStandIn,
   STAND_IN_ACCOUNT,
@@ -11,7 +12,12 @@ import {
 import { serveNotesHttp } from "../../../../../tests/helpers/mcpStandIn";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { hostEnv } from "../../../hostEnv";
+import { Scheduler } from "../../../orchestrator/scheduler";
+import { renderWake } from "../../../orchestrator/wakes";
+import { createScheduleTools } from "../../../pi/scheduleTools";
 import { openInMemoryDatabase } from "../../../storage/db";
+import { FIRSTMATE_RECIPIENT, InboxStore } from "../../../storage/inboxStore";
+import { ScheduleStore } from "../../../storage/scheduleStore";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
@@ -120,7 +126,7 @@ async function fixture(browser?: (url: string) => Promise<void>, withMcp = false
     push: (view) => pushed.push(JSON.stringify(view)),
   });
   cleanup.push(() => integrations?.dispose());
-  return { google, dir, tasks, clock, opened, pages, pushed, integrations };
+  return { google, dir, tasks, clock, opened, pages, pushed, integrations, db };
 }
 
 type Fixture = Awaited<ReturnType<typeof fixture>>;
@@ -178,8 +184,21 @@ describe("Google as an integration", () => {
           expect.objectContaining({ name: "label_message", effect: "changes", rule: "ask" }),
           expect.objectContaining({ name: "draft_message", effect: "changes", rule: "ask" }),
           expect.objectContaining({ name: "send_message", effect: "sends", rule: "ask" }),
+          expect.objectContaining({ name: "list_calendars", effect: "reads", rule: "allow" }),
+          expect.objectContaining({ name: "list_events", effect: "reads", rule: "allow" }),
+          expect.objectContaining({ name: "read_event", effect: "reads", rule: "allow" }),
+          expect.objectContaining({ name: "free_busy", effect: "reads", rule: "allow" }),
+          expect.objectContaining({ name: "create_event", effect: "changes", rule: "ask" }),
+          expect.objectContaining({ name: "update_event", effect: "changes", rule: "ask" }),
         ],
-        events: [expect.objectContaining({ name: "message_received", label: "A message arrives" })],
+        events: [
+          expect.objectContaining({ name: "message_received", label: "A message arrives" }),
+          expect.objectContaining({
+            name: "event_changed",
+            label: "A calendar event changes",
+            filters: [{ name: "calendar", label: "Calendar", defaultValue: "primary" }],
+          }),
+        ],
       }),
     ]);
     expect(view.addable).toEqual([]);
@@ -546,4 +565,294 @@ describe("Google as an integration", () => {
     expect(setup?.client ?? null).toBe(GOOGLE_OAUTH_CLIENT);
     if (setup) expect(new URL(setup.endpoints.auth).host).toBe("accounts.google.com");
   });
+});
+
+/** INF-786, accepted INF-775 piece 6 and captain's isolated-only go-ahead. */
+describe("Calendar on the shared Google row", () => {
+  it("lists and reads events and availability, and creates and patches only on the captain's once-only click", async () => {
+    const { google, integrations, tasks } = await signedIn();
+    const crew = integrations.forTask("task-1");
+    const existing = google.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
+    expect(parsed((await crew.call("Google", "list_calendars", {})).text)).toMatchObject({
+      calendars: expect.arrayContaining([expect.objectContaining({ id: STUDIO_CALENDAR })]),
+    });
+    const listed = parsed(
+      (await crew.call("Google", "list_events", { calendar: STUDIO_CALENDAR, max: 10 })).text,
+    );
+    expect(listed).toMatchObject({ events: [existing] });
+    expect(
+      parsed(
+        (await crew.call("Google", "read_event", { calendar: STUDIO_CALENDAR, id: existing.id }))
+          .text,
+      ),
+    ).toEqual(existing);
+    const availability = parsed(
+      (
+        await crew.call("Google", "free_busy", {
+          calendars: [STUDIO_CALENDAR, "missing"],
+          from: "2026-10-26T00:00:00-07:00",
+          to: "2026-10-27T00:00:00-07:00",
+        })
+      ).text,
+    );
+    expect(availability).toMatchObject({
+      calendars: {
+        [STUDIO_CALENDAR]: {
+          busy: [{ start: SHOOT_EVENT.start.dateTime, end: SHOOT_EVENT.end.dateTime }],
+        },
+        missing: { errors: [{ reason: "notFound" }] },
+      },
+    });
+    const before = google.seen.length;
+    await crew.call("Google", "create_event", {
+      calendar: STUDIO_CALENDAR,
+      event: {
+        summary: "Studio closed",
+        start: { date: "2026-10-30" },
+        end: { date: "2026-10-31" },
+      },
+    });
+    expect(google.seen).toHaveLength(before);
+    const create = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
+    const created = await integrations.sendAsk("task-1", create?.id ?? "");
+    expect(created.outcome).toEqual({ kind: "ran" });
+    const saved = parsed(created.answer ?? "{}");
+    expect(saved).toMatchObject({ summary: "Studio closed", start: { date: "2026-10-30" } });
+    expect((await integrations.sendAsk("task-1", create?.id ?? "")).ok).toBe(false);
+    await crew.call("Google", "update_event", {
+      calendar: STUDIO_CALENDAR,
+      id: existing.id,
+      changes: { summary: "October shoot confirmed" },
+      send_updates: "all",
+    });
+    expect(
+      parsed(
+        (await crew.call("Google", "read_event", { calendar: STUDIO_CALENDAR, id: existing.id }))
+          .text,
+      ),
+    ).toMatchObject({ summary: SHOOT_EVENT.summary });
+    const patch = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
+    expect((await integrations.sendAsk("task-1", patch?.id ?? "")).outcome).toEqual({
+      kind: "ran",
+    });
+    const readBack = parsed(
+      (await crew.call("Google", "read_event", { calendar: STUDIO_CALENDAR, id: existing.id }))
+        .text,
+    );
+    expect(readBack).toMatchObject({
+      summary: "October shoot confirmed",
+      description: SHOOT_EVENT.description,
+      attendees: SHOOT_EVENT.attendees,
+    });
+    expect(google.seen.filter((r) => r.path.includes("sendUpdates=all"))).toHaveLength(1);
+    // Both APIs received the very same access key; there was only one consent.
+    const profile = google.seen.find((r) => r.path === "/profile");
+    expect(google.seen.every((r) => r.authorization === profile?.authorization)).toBe(true);
+    expect(google.tokens.filter((t) => t.grant_type === "authorization_code")).toHaveLength(1);
+    console.info(
+      "Calendar read-back proof",
+      JSON.stringify({ listed, availability, created: saved, updated: readBack }),
+    );
+  });
+
+  it("keeps invalid, disabled and first-mate writes off the wire, and never repeats an unknown Calendar change", async () => {
+    const { google, integrations, tasks } = await signedIn();
+    const crew = integrations.forTask("task-1");
+    const before = google.seen.length;
+    expect(
+      (
+        await crew.call("Google", "create_event", {
+          event: { ...SHOOT_EVENT, end: SHOOT_EVENT.start },
+        })
+      ).refused,
+    ).toBe("invalid");
+    expect((await crew.call("Google", "read_event", { id: ".." })).refused).toBe("invalid");
+    expect(
+      (
+        await integrations.call({ kind: "firstmate" }, "Google", "create_event", {
+          event: SHOOT_EVENT,
+        })
+      ).refused,
+    ).toBe("refused");
+    expect(google.seen).toHaveLength(before);
+    await crew.call("Google", "create_event", { event: SHOOT_EVENT });
+    const held = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
+    integrations.configure("google", { actions: { create_event: false } });
+    expect((await integrations.sendAsk("task-1", held?.id ?? "")).outcome).toMatchObject({
+      kind: "refused",
+    });
+    expect(google.seen).toHaveLength(before);
+    integrations.configure("google", { actions: { create_event: true } });
+    for (const failure of ["drop", 500] as const) {
+      await crew.call("Google", "create_event", { event: SHOOT_EVENT });
+      const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
+      google.calendar.knobs.afterTaking.push(failure);
+      expect((await integrations.sendAsk("task-1", ask?.id ?? "")).outcome).toMatchObject({
+        kind: "unknown",
+      });
+      const count = google.seen.length;
+      expect((await integrations.sendAsk("task-1", ask?.id ?? "")).ok).toBe(false);
+      expect(google.seen).toHaveLength(count);
+    }
+  });
+
+  it("polls only the chosen calendar, pages every sync, reports later revisions and cancellations, and re-baselines on 410 or another calendar", async () => {
+    const { google, integrations } = await signedIn();
+    google.calendar.knobs.pageSize = 1;
+    const original = google.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
+    google.calendar.change(STUDIO_CALENDAR, { ...SHOOT_EVENT, summary: "Lighting setup" });
+    await expect(
+      integrations.look("google", "event_changed", null, { urgency: "high" }),
+    ).rejects.toThrow("does not declare that filter");
+    const filter = { calendar: STUDIO_CALENDAR };
+    const look = (cursor: string | null) =>
+      integrations.look("google", "event_changed", cursor, filter);
+    const initial = await look(null);
+    expect(initial.items).toEqual([]);
+    google.calendar.change("primary", { ...SHOOT_EVENT, summary: "Private appointment" });
+    const changed = google.calendar.change(STUDIO_CALENDAR, {
+      id: original.id,
+      summary: "Shot list confirmed",
+    });
+    google.calendar.change(STUDIO_CALENDAR, { ...SHOOT_EVENT, summary: "Lighting ready" });
+    const next = await look(initial.cursor);
+    expect(next.items).toHaveLength(2);
+    expect(next.items[0]?.summary).toContain(changed.summary);
+    expect(next.items[0]?.summary).not.toContain(SHOOT_EVENT.description);
+    expect((await look(initial.cursor)).items).toEqual(next.items);
+    expect((await look(next.cursor)).items).toEqual([]);
+    google.calendar.change(STUDIO_CALENDAR, { id: original.id, status: "cancelled" });
+    const cancelled = await look(next.cursor);
+    expect(cancelled.items[0]?.summary).toContain("Cancelled");
+    expect(cancelled.items[0]?.id).not.toBe(next.items[0]?.id);
+    google.calendar.forget();
+    const resync = await look(cancelled.cursor);
+    expect(resync).toMatchObject({ items: [], resynced: true });
+    google.calendar.change(STUDIO_CALENDAR, { ...SHOOT_EVENT, summary: "November planning" });
+    const resumed = await look(resync.cursor);
+    expect(resumed.items).toHaveLength(1);
+    expect(resumed.items[0]?.summary).toContain("November planning");
+    expect(
+      await integrations.look("google", "event_changed", resumed.cursor, { calendar: "primary" }),
+    ).toMatchObject({ items: [], resynced: true });
+    const syncRequests = google.seen.filter((r) => r.path.includes("syncToken="));
+    expect(syncRequests.every((r) => !/timeMin|timeMax|orderBy|singleEvents/.test(r.path))).toBe(
+      true,
+    );
+    console.info(
+      "Calendar polling proof",
+      JSON.stringify({ initial, changed: next, cancelled, resync, resumed }),
+    );
+  });
+
+  it("renews the shared access for Calendar and honors Calendar backoff without claiming the person signed out", async () => {
+    const { google, integrations, clock } = await signedIn();
+    google.lapse();
+    await integrations.forTask("task-1").call("Google", "list_calendars", {});
+    expect(google.tokens.filter((t) => t.grant_type === "refresh_token")).toHaveLength(1);
+    google.calendar.knobs.limited.push("60");
+    const crew = integrations.forTask("task-1");
+    expect((await crew.call("Google", "list_calendars", {})).text).toContain("slow down");
+    const count = google.seen.length;
+    expect((await crew.call("Google", "search_mail", { max: 10 })).text).toContain("wait");
+    expect(google.seen).toHaveLength(count);
+    expect(integrations.view().integrations[0]?.health).toBe("ok");
+    clock.now += 60_000;
+    expect((await crew.call("Google", "list_calendars", {})).refused).toBeUndefined();
+  });
+
+  it("keeps no sign-in when Calendar permission was unchecked", async () => {
+    const { google, integrations, dir } = await fixture();
+    google.knobs.consent.grant = GOOGLE_SCOPES.filter(
+      (scope) => !scope.endsWith("calendar.events"),
+    );
+    await expect(integrations.signIn("google")).rejects.toThrow(
+      "every Gmail and Calendar permission",
+    );
+    expect(integrations.view().integrations).toEqual([]);
+    expect(existsSync(join(dir, "google.json"))).toBe(false);
+    expect(google.issued()).toEqual([]);
+  });
+});
+
+it("carries the first mate's selected Calendar through the real tool, saved rule, tick and durable inbox", async () => {
+  // INF-786: the same event_filter as the keyboard editor, without any real account.
+  const { google, integrations, clock, db } = await signedIn();
+  const store = new ScheduleStore(db);
+  const inbox = new InboxStore(db);
+  const scheduler = new Scheduler({
+    store,
+    inbox,
+    notify: (wake, origin) => inbox.enqueue(FIRSTMATE_RECIPIENT, wake, undefined, origin),
+    broadcastEvent: () => {},
+    now: () => clock.now,
+    events: {
+      find: (integration, event) => integrations.listenable(integration, event),
+      look: (integration, event, cursor, filter) =>
+        integrations.look(integration, event, cursor, filter),
+    },
+  });
+  const tool = createScheduleTools({
+    create: (spec, prompt, extra) =>
+      scheduler.create(spec, prompt, true, extra.name, undefined, { draft: extra.draft }),
+    cancel: async (id) => {
+      scheduler.cancel(id);
+      return true;
+    },
+  }).find((one) => one.name === "schedule_prompt");
+  if (!tool) throw new Error("Missing scheduling tool");
+  await expect(
+    tool.run({
+      on_event: "google/event_changed",
+      event_filter: { urgency: "high" },
+      prompt: "Tell me what changed",
+    }),
+  ).rejects.toThrow("does not declare that filter");
+  await expect(
+    tool.run({
+      every_minutes: 60,
+      event_filter: { calendar: STUDIO_CALENDAR },
+      prompt: "Tell me what changed",
+    }),
+  ).rejects.toThrow("event_filter goes with on_event");
+  await expect(
+    tool.run({
+      on_event: "google/event_changed",
+      event_filter: { calendar: 42 },
+      prompt: "Tell me what changed",
+    }),
+  ).rejects.toThrow();
+  expect(store.list()).toEqual([]);
+  const event = google.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
+  await tool.run({
+    on_event: "google/event_changed",
+    event_filter: { calendar: STUDIO_CALENDAR },
+    prompt: "Tell me what changed: {{events}}",
+  });
+  const rule = store.list()[0];
+  expect(rule?.spec).toMatchObject({ filter: { calendar: STUDIO_CALENDAR } });
+  const tick = async () => {
+    clock.now += 60_000;
+    scheduler.tick(clock.now);
+    await scheduler.settled();
+  };
+  await tick();
+  expect(inbox.allFor(FIRSTMATE_RECIPIENT)).toEqual([]);
+  google.calendar.change("primary", { ...SHOOT_EVENT, summary: "Private appointment" });
+  google.calendar.change(STUDIO_CALENDAR, { id: event.id, summary: "Shot list confirmed" });
+  await tick();
+  const delivered = inbox.allFor(FIRSTMATE_RECIPIENT);
+  expect(delivered).toHaveLength(1);
+  if (!delivered[0]) throw new Error("The event did not reach the inbox");
+  expect(renderWake(delivered[0])).toContain("Shot list confirmed");
+  expect(renderWake(delivered[0])).not.toContain("Private appointment");
+  if (!rule) throw new Error("No saved rule");
+  // Replay the same revision through an old cursor: no second run or repeated item.
+  const saved = store.get(rule.id);
+  const parsedCursor = JSON.parse(saved?.cursor ?? "{}");
+  store.setCursor(rule.id, JSON.stringify({ ...parsedCursor, token: "sync-1" }));
+  await tick();
+  expect(scheduler.history(rule.id)).toHaveLength(1);
+  expect(scheduler.history(rule.id)[0]?.events).toHaveLength(1);
+  console.info("Calendar Automation proof", renderWake(delivered[0]));
 });

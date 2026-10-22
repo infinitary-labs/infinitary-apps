@@ -11,6 +11,8 @@ const minuteSchema = z.number().int().min(0).max(59);
 /** An IANA time zone name, such as America/Los_Angeles; the core checks it is one. */
 const timeZoneSchema = z.string().min(1).max(64);
 
+export const automationEventFilterSchema = z.record(z.string(), z.string());
+
 export const automationSpecSchema = z.discriminatedUnion("kind", [
   z.strictObject({ kind: z.literal("every"), minutes: z.number().int().min(1) }),
   z.strictObject({
@@ -40,6 +42,8 @@ export const automationSpecSchema = z.discriminatedUnion("kind", [
     integration: z.string().min(1).max(48),
     /** One of the events its kind declares, by name. */
     event: z.string().min(1).max(48),
+    /** Only fields the integration event declares; omitted means its defaults. */
+    filter: automationEventFilterSchema.optional(),
   }),
 ]);
 export type AutomationSpec = z.infer<typeof automationSpecSchema>;

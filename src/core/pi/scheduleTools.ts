@@ -1,3 +1,4 @@
+import { automationEventFilterSchema } from "@shared/automation";
 import { Type } from "typebox";
 import { localTimeZone } from "../orchestrator/calendar";
 import { scheduleText } from "../orchestrator/scheduler";
@@ -34,13 +35,8 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
   const schedule = boundTool({
     name: "schedule_prompt",
     label: "Schedule prompt",
-    description: [
-      "Schedule a prompt back to you as an [fm-op]. Pass one of every_minutes (min 15),",
-      "daily_at (HH:MM; optional days and IANA time_zone, default local), at_time (ISO",
-      "8601) or on_event (integration/event). The prompt carries all future-you needs.",
-      "Runs only while the app does; missed runs fold into one. Pass draft if details",
-      "are open.",
-    ].join(" "),
+    description:
+      "Schedule [fm-op]: one of every_minutes (min 15), daily_at (HH:MM; optional days, IANA time_zone; default local), at_time (ISO 8601), on_event (integration/event; event_filter from integrations). Include all context in prompt. Runs while app does; missed runs fold into one. Use draft for open details.",
     parameters: Type.Object({
       prompt: Type.String(),
       every_minutes: Type.Optional(Type.Number()),
@@ -49,6 +45,9 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
       time_zone: Type.Optional(Type.String()),
       at_time: Type.Optional(Type.String()),
       on_event: Type.Optional(Type.String()),
+      // Like result_schema: a bare object is supported by both tool runtimes;
+      // the binding declares its fields on discovery, not in standing context.
+      event_filter: Type.Optional(Type.Unsafe<Record<string, string>>({ type: "object" })),
       name: Type.Optional(Type.String()),
       project: Type.Optional(Type.String({ description: "Project key" })),
       draft: Type.Optional(Type.Boolean()),
@@ -96,6 +95,7 @@ function specFrom(params: {
   time_zone?: string;
   at_time?: string;
   on_event?: string;
+  event_filter?: Record<string, string>;
 }): ScheduleSpec {
   const set = [params.every_minutes, params.daily_at, params.at_time, params.on_event].filter(
     (value) => value !== undefined,
@@ -106,6 +106,7 @@ function specFrom(params: {
   if ((params.days !== undefined || params.time_zone !== undefined) && !params.daily_at) {
     throw new Error("days and time_zone go with daily_at.");
   }
+  if (params.event_filter && !params.on_event) throw new Error("event_filter goes with on_event.");
   if (params.on_event !== undefined) {
     const at = params.on_event.lastIndexOf("/");
     const integration = params.on_event.slice(0, at).trim();
@@ -115,7 +116,14 @@ function specFrom(params: {
         `on_event "${params.on_event}" is not integration/event, such as google/message_received.`,
       );
     }
-    return { kind: "event", integration, event };
+    return {
+      kind: "event",
+      integration,
+      event,
+      ...(params.event_filter
+        ? { filter: automationEventFilterSchema.parse(params.event_filter) }
+        : {}),
+    };
   }
   if (params.every_minutes !== undefined) {
     return { kind: "every", minutes: Math.round(params.every_minutes) };

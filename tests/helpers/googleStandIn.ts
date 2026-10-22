@@ -19,6 +19,8 @@ import { createHash, randomBytes } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 
+import { calendarStandIn } from "./calendarStandIn";
+
 export const STAND_IN_CLIENT_ID = "1084716423951-k2v7o3lq.apps.googleusercontent.com";
 export const STAND_IN_CLIENT_SECRET = "GOCSPX-stand-in-desktop-secret";
 
@@ -320,9 +322,21 @@ export async function startGoogleStandIn() {
     return json(response, 404, NOT_FOUND);
   };
 
+  const calendar = calendarStandIn();
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? "/", "http://127.0.0.1");
     const body = await read(request);
+    if (url.pathname.startsWith("/calendar/v3/")) {
+      seen.push({
+        method: request.method ?? "",
+        path: `${url.pathname}${url.search}`,
+        body,
+        ...(request.headers.authorization ? { authorization: request.headers.authorization } : {}),
+      });
+      const bearer = request.headers.authorization?.replace(/^Bearer /, "") ?? "";
+      if (!live.has(bearer)) return json(response, 401, UNAUTHENTICATED);
+      return calendar.handle(response, url, request.method ?? "GET", body);
+    }
     if (url.pathname.startsWith("/gmail/v1/users/me/")) return gmail(request, response, url, body);
     if (request.method === "GET" && url.pathname === "/o/oauth2/v2/auth") {
       const params = url.searchParams;
@@ -410,6 +424,7 @@ export async function startGoogleStandIn() {
 
   return {
     base,
+    calendar,
     seen,
     tokens,
     revoked,

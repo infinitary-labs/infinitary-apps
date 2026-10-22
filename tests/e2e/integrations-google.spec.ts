@@ -6,7 +6,12 @@ import {
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
 } from "@shared/integrations";
-import { GMAIL_MESSAGE_EVENT } from "../../src/core/integrations";
+import {
+  CALENDAR_ACTIONS,
+  CALENDAR_CHANGED_EVENT,
+  GMAIL_MESSAGE_EVENT,
+} from "../../src/core/integrations";
+import { SHOOT_EVENT, STUDIO_CALENDAR } from "../helpers/calendarStandIn";
 import {
   type GoogleStandIn,
   STAND_IN_ACCOUNT,
@@ -19,7 +24,7 @@ import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { readSavedData } from "./savedData";
 import { type AutomationEventsSeen, automationEvents } from "./scenarios/automationEvents";
 import { settingsSection } from "./settings";
-import { pressKey, runFromSearch } from "./windowKeys";
+import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
 
 /**
  * INF-784, piece 5 of the accepted integrations plan: "a journey on
@@ -155,4 +160,104 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     );
     expect(seen.turns[0]).toContain(`on 1 new event - ${GMAIL_MESSAGE_EVENT.label} in Google`);
   });
+});
+
+/**
+ * INF-786 / accepted INF-775 piece 6: one Google row, Calendar actions and
+ * selected-calendar changes fire Automation. The data is Calendar v3-shaped
+ * stand-in responses, with one event present before listening and a later
+ * revision of it. The completion signal is the persisted filter and cursor,
+ * then the first mate's turn containing that revision, not a private event
+ * in another calendar. No platform prerequisite or shared resource beyond
+ * the hermetic launcher: isolated HOME, data and Google, no real sign-in.
+ */
+test("Calendar shares the Google row and a calendar selected by keys fires Automation", async () => {
+  const userDataDir = scratchDir("infinitary-calendar-");
+  google = await startGoogleStandIn();
+  const stand = google;
+  const existing = stand.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
+  const seen: AutomationEventsSeen = { turns: [] };
+  launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [automationEvents(seen)],
+    env: {
+      ...SHORT_TICK,
+      INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+      INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+      INFINITARY_GOOGLE_URL: stand.base,
+    },
+  });
+  const { app, page } = launched;
+  await app.evaluate(({ shell }) => {
+    shell.openExternal = async (url: string) => {
+      await fetch(url);
+    };
+  });
+  await runFromSearch(app, page, "settings.integrations");
+  const connections = settingsSection(page, "integrations");
+  await pressKey(connections.locator('[data-integration-add="google"] button'), "Enter");
+  await expect(connections.locator('[data-integration-row="google"]')).toHaveCount(1);
+  const actions = connections.locator('[data-integration-actions="google"]');
+  for (const action of CALENDAR_ACTIONS) {
+    await expect(
+      actions.locator(`[data-integration-action="${action.name}"] [data-integration-rule]`),
+    ).toHaveText(INTEGRATION_RULE_WORDS[action.effect === "reads" ? "allow" : "ask"]);
+  }
+  await expect(
+    actions.locator(`[data-integration-event="${CALENDAR_CHANGED_EVENT.name}"]`),
+  ).toContainText(CALENDAR_CHANGED_EVENT.label);
+  expect(stand.tokens.filter((t) => t.grant_type === "authorization_code")).toHaveLength(1);
+
+  await runFromSearch(app, page, "settings.automation");
+  const tab = settingsSection(page, "automation");
+  await pressKey(tab.locator("[data-automation-new]"), "Enter");
+  const sheet = tab.locator('[data-automation-sheet="new"]');
+  await focusOn(sheet.locator("#automation-name"));
+  await typeInto(sheet.locator("#automation-name"), "Studio calendar changes");
+  await pressKey(sheet.locator("#automation-when"), "w");
+  const what = sheet.locator("[data-automation-event]");
+  await pressKey(what, "a");
+  await expect(what).toHaveValue(`google/${CALENDAR_CHANGED_EVENT.name}`);
+  const calendar = sheet.getByRole("textbox", { name: "Calendar", exact: true });
+  await focusOn(calendar);
+  await typeInto(calendar, STUDIO_CALENDAR);
+  await focusOn(sheet.locator("#automation-prompt"));
+  await typeInto(sheet.locator("#automation-prompt"), "Tell me what changed: {{events}}");
+  await pressKey(sheet.locator("[data-automation-enable]"), "Enter");
+  await expect(sheet.locator("[data-automation-review]")).toContainText(STUDIO_CALENDAR);
+  await pressKey(sheet.locator("[data-automation-turn-on]"), "Enter");
+  const rules = await page.evaluate(() => window.infinitary.automation.list());
+  const rule = rules.rules.find((one) => one.name === "Studio calendar changes");
+  expect(rule?.spec).toEqual({
+    kind: "event",
+    integration: "google",
+    event: CALENDAR_CHANGED_EVENT.name,
+    filter: { calendar: STUDIO_CALENDAR },
+  });
+  if (!rule) throw new Error("The calendar rule was not saved");
+  await expect
+    .poll(
+      () =>
+        readSavedData(
+          userDataDir,
+          (db) =>
+            (
+              db.prepare("SELECT event_cursor FROM schedules WHERE id = ?").get(rule.id) as
+                | { event_cursor: string | null }
+                | undefined
+            )?.event_cursor ?? null,
+        ),
+      { timeout: 30_000 },
+    )
+    .not.toBeNull();
+  expect(seen.turns).toEqual([]);
+  stand.calendar.change("primary", { ...SHOOT_EVENT, summary: "Private appointment" });
+  stand.calendar.change(STUDIO_CALENDAR, { id: existing.id, summary: "Shot list confirmed" });
+  await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(1);
+  expect(seen.turns[0]).toContain("Shot list confirmed");
+  expect(seen.turns[0]).toContain(SHOOT_EVENT.start.dateTime);
+  expect(seen.turns[0]).not.toContain("Private appointment");
+  expect(seen.turns[0]).not.toContain(SHOOT_EVENT.description);
+  expect(seen.turns[0]).toContain(CALENDAR_CHANGED_EVENT.label);
 });

@@ -49,6 +49,7 @@ export type ListenedEvent = {
   label: string;
   /** How often to look, in ticks. */
   every: number;
+  filters?: readonly { name: string; label: string; defaultValue?: string }[];
 };
 
 /** One look's answer: where to look from next and what arrived. */
@@ -61,7 +62,12 @@ export type EventLook = { cursor: string; items: AutomationEventItem[]; resynced
 export type SchedulerEvents = {
   find(integration: string, event: string): ListenedEvent | undefined;
   /** Look from a cursor; throws when it cannot look now (paused, gone), and the rule waits. */
-  look(integration: string, event: string, cursor: string | null): Promise<EventLook>;
+  look(
+    integration: string,
+    event: string,
+    cursor: string | null,
+    filter?: Record<string, string>,
+  ): Promise<EventLook>;
 };
 
 /** A run as the history shows it: where its delivery stands now. */
@@ -393,7 +399,12 @@ export class Scheduler {
     if (!events || record.spec.kind !== "event") return;
     let answer: EventLook;
     try {
-      answer = await events.look(found.integration, found.event, record.cursor ?? null);
+      answer = await events.look(
+        found.integration,
+        found.event,
+        record.cursor ?? null,
+        record.spec.filter,
+      );
     } catch {
       return;
     }
@@ -844,7 +855,18 @@ export class Scheduler {
         `Nothing connected tells "${spec.event}" from "${spec.integration}". The integrations tool lists each one's events.`,
       );
     }
-    return { kind: "event", integration: found.integration, event: found.event };
+    if (
+      Object.keys(spec.filter ?? {}).some(
+        (key) => !found.filters?.some((field) => field.name === key),
+      )
+    )
+      throw new Error("This event does not declare that filter.");
+    return {
+      kind: "event",
+      integration: found.integration,
+      event: found.event,
+      ...(spec.filter ? { filter: spec.filter } : {}),
+    };
   }
 
   /** What an event rule listens for, in its integration's words; undefined for a schedule. */

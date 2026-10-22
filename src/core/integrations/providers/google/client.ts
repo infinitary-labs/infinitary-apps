@@ -43,6 +43,7 @@ export type GoogleEndpoints = {
   revoke: string;
   /** Gmail's API, before `/gmail/v1/`. */
   gmail: string;
+  calendar: string;
 };
 
 const GOOGLE_ENDPOINTS: GoogleEndpoints = {
@@ -50,6 +51,7 @@ const GOOGLE_ENDPOINTS: GoogleEndpoints = {
   token: "https://oauth2.googleapis.com/token",
   revoke: "https://oauth2.googleapis.com/revoke",
   gmail: "https://gmail.googleapis.com",
+  calendar: "https://www.googleapis.com",
 };
 
 /**
@@ -78,6 +80,7 @@ export function googleSetup(options: {
       token: `${root}/token`,
       revoke: `${root}/revoke`,
       gmail: root,
+      calendar: root,
     },
   };
 }

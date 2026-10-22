@@ -1063,6 +1063,8 @@ const MIGRATIONS: readonly Migration[] = [
     addColumn(db, "schedules", "event_cursor", "TEXT");
     addColumn(db, "schedule_runs", "events", "TEXT");
   },
+  // INF-786: declared event filters survive a restart; null keeps older rules unchanged.
+  (db) => addColumn(db, "schedules", "event_filter", "TEXT"),
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

@@ -78,6 +78,7 @@ type Listenable = {
   /** "An item arrives in Stand-in". */
   label: string;
   every: number;
+  filters?: { name: string; label: string; defaultValue?: string }[];
 };
 
 /**
@@ -104,6 +105,7 @@ function useListenable(): Listenable[] {
       when: automationEventWords(event.label, integration.name),
       label: `${event.label} in ${integration.name}`,
       every: event.every,
+      filters: event.filters,
     })),
   );
 }
@@ -532,7 +534,9 @@ function Sheet({
               aria-label="What happens"
               data-automation-event
               value={form.event}
-              onChange={(event) => set("event", event.target.value)}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, event: event.target.value, filter: {} }))
+              }
               style={SELECT_STYLE}
             >
               {listenable.map((one) => (
@@ -549,6 +553,25 @@ function Sheet({
               )}
             </select>
           )}
+          {form.kind === "event" &&
+            listened?.filters?.map((field) => (
+              <label
+                key={field.name}
+                htmlFor={`automation-filter-${field.name}`}
+                style={LABEL_STYLE}
+              >
+                {field.label}
+                <Input
+                  id={`automation-filter-${field.name}`}
+                  aria-label={field.label}
+                  placeholder={field.defaultValue}
+                  value={form.filter[field.name] ?? ""}
+                  onChange={(event) =>
+                    set("filter", { ...form.filter, [field.name]: event.target.value })
+                  }
+                />
+              </label>
+            ))}
           {form.kind === "every" && (
             <>
               <Input
@@ -807,6 +830,17 @@ function ReviewPanel({
           string,
           React.ReactNode,
         ][])
+      : []),
+    ...(review.spec.kind === "event"
+      ? (review.listened?.filters ?? []).map(
+          (field) =>
+            [
+              field.label,
+              review.spec.kind === "event"
+                ? review.spec.filter?.[field.name] || field.defaultValue || "Not specified"
+                : "",
+            ] as [string, React.ReactNode],
+        )
       : []),
     ["Project", project],
     event

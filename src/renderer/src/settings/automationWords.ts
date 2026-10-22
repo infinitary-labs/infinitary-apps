@@ -29,6 +29,7 @@ export type RuleForm = {
   at: string;
   /** An event rule's event, as `integration/event`; empty for none picked. */
   event: string;
+  filter: Record<string, string>;
   prompt: string;
   /** Empty for none. */
   projectId: string;
@@ -54,6 +55,7 @@ export function blankForm(): RuleForm {
     timeZone: hereZone(),
     at: "",
     event: "",
+    filter: {},
     prompt: "",
     projectId: "",
   };
@@ -82,6 +84,7 @@ export function formOf(rule: AutomationRule): RuleForm {
     timeZone: calendar ? (spec.timeZone ?? "") : blank.timeZone,
     at: spec.kind === "once" ? localInput(spec.at) : "",
     event: spec.kind === "event" ? `${spec.integration}/${spec.event}` : "",
+    filter: spec.kind === "event" ? (spec.filter ?? {}) : {},
     prompt: rule.prompt,
     projectId: rule.projectId ?? "",
   };
@@ -92,7 +95,12 @@ export function specOf(form: RuleForm): AutomationSpec | string {
   if (form.kind === "event") {
     const at = form.event.lastIndexOf("/");
     if (at < 0) return "Pick what happens.";
-    return { kind: "event", integration: form.event.slice(0, at), event: form.event.slice(at + 1) };
+    return {
+      kind: "event",
+      integration: form.event.slice(0, at),
+      event: form.event.slice(at + 1),
+      ...(Object.keys(form.filter).length ? { filter: form.filter } : {}),
+    };
   }
   if (form.kind === "every") {
     const minutes = Number.parseInt(form.minutes, 10);

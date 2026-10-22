@@ -60,6 +60,8 @@ export type IntegrationEventSpec = {
   description: string;
   /** How often, in minutes, a listening rule looks. */
   every: number;
+  /** Closed string filters the kind accepts, drawn by the shared event editor. */
+  filters?: readonly { name: string; label: string; defaultValue?: string }[];
 };
 
 /** One thing that happened, by the place's own id, in one line. */
@@ -137,7 +139,12 @@ export type IntegrationBinding = {
     caller: IntegrationCaller,
   ) => Promise<IntegrationAnswer>;
   /** Look for one event since the cursor (null: start from now). */
-  look?: (id: string, event: string, cursor: string | null) => Promise<IntegrationLook>;
+  look?: (
+    id: string,
+    event: string,
+    cursor: string | null,
+    filter?: Record<string, string>,
+  ) => Promise<IntegrationLook>;
   /** Stop whatever the binding started (an MCP server's program) as the app quits. */
   close?: () => Promise<void>;
 };

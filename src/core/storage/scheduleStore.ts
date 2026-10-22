@@ -1,4 +1,8 @@
-import type { AutomationEventItem, AutomationSpec } from "@shared/automation";
+import {
+  type AutomationEventItem,
+  type AutomationSpec,
+  automationEventFilterSchema,
+} from "@shared/automation";
 import type { AppDatabase } from "./db";
 
 /**
@@ -110,6 +114,7 @@ type Row = {
   project_id: string | null;
   event_integration: string | null;
   event_name: string | null;
+  event_filter: string | null;
   event_cursor: string | null;
 };
 
@@ -202,6 +207,9 @@ function specOf(row: Row): ScheduleSpec {
         kind: "event",
         integration: row.event_integration ?? "",
         event: row.event_name ?? "",
+        ...(row.event_filter !== null
+          ? { filter: automationEventFilterSchema.parse(JSON.parse(row.event_filter)) }
+          : {}),
       };
   }
 }
@@ -218,6 +226,7 @@ function specColumns(spec: ScheduleSpec) {
     (spec.kind === "daily" || spec.kind === "weekly") && spec.timeZone ? spec.timeZone : null,
     spec.kind === "event" ? spec.integration : null,
     spec.kind === "event" ? spec.event : null,
+    spec.kind === "event" && spec.filter ? JSON.stringify(spec.filter) : null,
   ] as const;
 }
 
@@ -243,8 +252,8 @@ export class ScheduleStore {
   insert(record: ScheduleRecord): void {
     this.db
       .prepare(
-        `INSERT INTO schedules (id, spec_kind, interval_minutes, hour, minute, at, days, time_zone, event_integration, event_name, prompt, next_fire, created_at, captain_requested, name, state, revision, project_id, event_cursor)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO schedules (id, spec_kind, interval_minutes, hour, minute, at, days, time_zone, event_integration, event_name, event_filter, prompt, next_fire, created_at, captain_requested, name, state, revision, project_id, event_cursor)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         record.id,
@@ -266,7 +275,7 @@ export class ScheduleStore {
     this.db
       .prepare(
         `UPDATE schedules SET spec_kind = ?, interval_minutes = ?, hour = ?, minute = ?, at = ?, days = ?, time_zone = ?,
-           event_integration = ?, event_name = ?, prompt = ?, next_fire = ?, captain_requested = ?, name = ?, state = ?,
+           event_integration = ?, event_name = ?, event_filter = ?, prompt = ?, next_fire = ?, captain_requested = ?, name = ?, state = ?,
            revision = ?, project_id = ?, event_cursor = ? WHERE id = ?`,
       )
       .run(

@@ -114,7 +114,12 @@ Unknown allows one outstanding evidenced investigation gap; resolve it through a
 Only an exhausted repair allowance or a real decision/access/information only the captain can supply warrants a question.
 Every current check must still pass before completion.
 
-If a relevant scenario cannot run, first try disposable data/accounts, an isolated local instance or workspace-local tools where the project's gate allows it; never touch the person's real or shared state.
+Validation on every tier may use whatever it truly needs, preferring disposable data/accounts, isolated app homes, local instances or workspace-local tools when they prove the same boundary.
+Before sensitive or costly access, the crewmate asks on a card naming the resource, check and possible cost or changes: sign-ins/accounts, allowance or money, real data/production, keychain/signing or credential access, and anything others see.
+One approval covers the named sign-in for the rest of the task through its owning app or program; another sign-in or unrelated sensitive or costly resource needs consent of its own.
+Secrets stay off command lines and out of printed output.
+Asking for resource consent needs no reviewer clearance, and does not replace separate persistent-effect approval, browser handoff or merge consent.
+When a check needs something the builder cannot run itself, it reports `needs_firstmate` for coordination.
 Name attempted workarounds if still blocked.
 A supplied verification plan is a proposal, not proof or the user's intent: assess its expected outcomes and artifacts independently against the project gate.
 During fixes, avoid unrequested rewrites of `AGENTS.md`/`CLAUDE.md`, while still reviewing explicit edits, resolving conflicts and updating instructions made stale by the change.
@@ -601,7 +606,7 @@ The CI-counting lines below match the current ledger (`observeCheckRepair`, `CI_
 
 ## Careful live validation
 
-Careful change work uses the builder as its only runner and its existing independent review as the judge of coverage and proof (captain's accepted INF-125 plan, implemented by INF-100).
+Careful change work uses the builder to gather proof, with first-mate coordination when needed, and its existing independent review as the judge of coverage and proof (captain's accepted INF-125 plan, implemented by INF-100).
 Quick, Default, answer-only and personal-workspace work, and the local-delivery fallback keep their existing rules.
 The shared `CAREFUL_LIVE_VALIDATION` brief reaches both model families, on this computer or a work computer.
 A reviewer runs neither the product nor the tests: it reads the captain's words, the whole changed-file checklist, the scenario record and the kept proof.
@@ -609,7 +614,9 @@ A reviewer runs neither the product nor the tests: it reads the captain's words,
 Before editing, the builder records `report.validation` with `kind: plan`.
 Each scenario has a stable identity, the captain's words it serves, required or supplementary importance, an action, expected result, adverse case, environment, completion signal and the actual product, service or device boundary the claim requires.
 A plan revision compares its previous revision and gives a reason; difficulty never silently downgrades required proof.
-The builder runs the actual product with disposable data and accounts, using the real service or device when that boundary changes.
+The builder runs the actual product, using the real service or device when that boundary changes and following the general validation resource consent rule above.
+The reviewer treats unconsented sensitive or costly access as a finding, while respecting task-long approval for the named sign-in.
+A gap-exception card may also offer ordinary consent to the needed sign-in beside Proceed without live proof and Keep held; the consent choice grants no exception.
 A stand-in names exactly what it leaves unproven; a simulator cannot demonstrate device-specific behavior.
 
 A `run` reports its unique identity, committed version, scenario revision, completion state, verdict and one observation for every scenario, including those that could not run.

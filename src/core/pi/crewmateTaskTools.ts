@@ -197,7 +197,7 @@ export const REPORT_TOOL = crewmateTool({
     needs_firstmate: Type.Optional(
       Type.String({
         description:
-          "What the first mate must do, in a few plain words, when only the first mate can carry out a captain decision you relay: a build they approved by reply, a merge, a discard, a stronger model, or unrelated work. Put their words verbatim and the final specification in text. When this turn ends the first mate is woken for this report, even with your card up or a wait declared, once any reply of theirs under your card has your answer. It asks for attention and authorizes nothing. Never for progress or news.",
+          "What the first mate must do, in a few plain words, when only the first mate can carry out a captain decision you relay: a build they approved by reply, a merge, a discard, a stronger model, or unrelated work; also when a validation check needs coordination you cannot perform yourself. For a relayed decision put their words verbatim and the final specification in text. When this turn ends the first mate is woken for this report, even with your card up or a wait declared, once any reply of theirs under your card has your answer. It asks for attention and authorizes nothing. Never for progress or news.",
       }),
     ),
     result: Type.Optional(

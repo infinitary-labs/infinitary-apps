@@ -4,14 +4,15 @@ Status: **decided**, 2026-09-14.
 Scope: the two *local* forms of the app - `pnpm dev` and `pnpm package:mac`.
 Release signing is unchanged and is described in `docs/architecture.md` section 10.
 
-Crewmates keep off the person's keychains and signing material.
-The crewmate prompt and `spawn_crewmate`'s description never run a keychain or signing command against the real keychains, and reproduce keychain or signing behavior only under a scratch home.
+Keychain and signing access is sensitive and needs the captain's consent on a card before a crewmate uses it for validation (`docs/delivery-rigor.md`, the general validation resource rule).
+The crewmate prompt and `spawn_crewmate` guidance prefer reproductions under a scratch home with stand-in signing commands; a scratch home alone does not move the real keychain search list.
+Secrets remain off command lines and out of printed output.
 
 No install signs.
 An install often runs with nobody there: pnpm installs on its own before a `pnpm run` or `pnpm exec` whose packages are out of date (its `verifyDepsBeforeRun` default), so bringing a branch up to date with a new version is enough to start one, and the app installs every working copy it makes for a crewmate.
-Signing can unlock the signing keychain, rebuild it, or regenerate the certificate, and none of that may happen unattended.
+Signing can unlock the signing keychain, rebuild it, or regenerate the certificate, and none of that may happen without the captain’s consent.
 So run from any install stage (`preinstall`, `install`, `postinstall`, `prepare`, as `npm_lifecycle_event` names it), `scripts/prepare-local-codesign.mjs` only checks the dev Electron: it reads `designated-requirement.txt`, runs `codesign --verify`, and never calls `security`, signs, or writes the material.
-Signing waits for a command a person runs for it: `pnpm dev`, `pnpm codesign:local`, or `pnpm package:mac`.
+Signing waits for a command the captain runs or explicitly consents to for validation: `pnpm dev`, `pnpm codesign:local`, or `pnpm package:mac`.
 
 ## In a crewmate's working copy
 
@@ -23,11 +24,11 @@ A scratch `HOME` does not move macOS's keychain search list.
   Before the next `pnpm run` or `pnpm exec`, pnpm starts one whenever `package.json` or `pnpm-lock.yaml` differs from what it last installed.
   That happens after bringing a branch up to date with a dependency or version change, and after any edit to `package.json`, even one put back by copying the original over it.
   A `touch` that leaves the content alone starts none.
-- **Signing is the person's to run.**
+- **Real signing asks first.**
   `pnpm dev` and `pnpm codesign:local` can unlock, rebuild or regenerate the signing keychain and put it on the user search list.
   `pnpm package:mac` signs with the same material, after electron-builder lists the identities in the user's keychains.
   In a working copy, launch the app through the hermetic launcher instead (`docs/testing.md`, "Capturing pictures of a change").
-  Reproduce signing behavior only under a scratch `INFINITARY_LOCAL_CODESIGN_DIR`, with the stand-in `security` and `codesign` from `tests/fixtures/local-codesign/` named by `INFINITARY_SECURITY_BIN` and `INFINITARY_CODESIGN_BIN`, as `tests/local-codesign.test.ts` does.
+  Prefer reproducing signing behavior under a scratch `INFINITARY_LOCAL_CODESIGN_DIR`, with the stand-in `security` and `codesign` from `tests/fixtures/local-codesign/` named by `INFINITARY_SECURITY_BIN` and `INFINITARY_CODESIGN_BIN`, as `tests/local-codesign.test.ts` does.
 - **Never package with the release `electron-builder.yml` on this Mac.**
   To find its identity, electron-builder runs `/usr/bin/security find-identity -v` against the user's keychain search list, a fixed path that neither a scratch `HOME` nor a stand-in on `PATH` reaches.
   The release config has no `sign` hook, so electron-builder signs with whatever that lookup finds.

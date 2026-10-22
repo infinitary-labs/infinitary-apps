@@ -85,7 +85,13 @@ try {
     const after = JSON.parse(await readFile(join(out, name, "state.json"), "utf8"));
     results.push({ name, before, answer, after, question });
   }
-  console.log(JSON.stringify(results));
+  // INF-880: an ordinary resource question has no typed effect request.
+  const beforeConsent = JSON.parse(await bridge.callCarefulRun(out, "consent"));
+  const consentInput = join(out, "consent", "question.json");
+  await writeFile(consentInput, JSON.stringify({ tool: "offer", body: "May I use your Claude sign-in for the required real-model check and your real keychain for signing validation? The first consumes your plan allowance; signing can change keychain state. Neither has been used." }));
+  const consentAnswer = JSON.parse(await bridge.callCarefulRun(out, "consent", consentInput));
+  const afterConsent = JSON.parse(await bridge.callCarefulRun(out, "consent"));
+  console.log(JSON.stringify({ results, beforeConsent, consentAnswer, afterConsent }));
 } finally {
   await runner.close();
 }
@@ -114,13 +120,23 @@ try {
         }),
       ),
     );
-    const results = JSON.parse(stdout) as {
-      name: string;
-      before: State;
-      answer: unknown;
-      after: State;
-      question: string;
-    }[];
+    const { results, beforeConsent, consentAnswer, afterConsent } = JSON.parse(stdout) as {
+      beforeConsent: State;
+      consentAnswer: { held: boolean; body: string; permissionGranted: boolean };
+      afterConsent: State;
+      results: {
+        name: string;
+        before: State;
+        answer: unknown;
+        after: State;
+        question: string;
+      }[];
+    };
+    expect(consentAnswer).toMatchObject({ held: true, permissionGranted: false });
+    expect(afterConsent.validation).toEqual(beforeConsent.validation);
+    expect(afterConsent.refused).toBe(false);
+    expect(afterConsent.calls).toBe(beforeConsent.calls + 1);
+    expect(afterConsent.validation.permissions).toEqual([]);
     expect(results.map((item) => item.name)).toEqual(["shared", "unknown"]);
     for (const { name, before, answer, after, question } of results) {
       expect(answer).toEqual({

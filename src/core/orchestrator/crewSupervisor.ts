@@ -5349,25 +5349,33 @@ export class CrewSupervisor {
 
   /**
    * The task's commands in its crewmate's shell: its integrations, through
-   * `infinitary-integrations-axi` on this Mac (docs/integrations.md), and
-   * the task's own browser, through `infinitary-browser-axi` in its crewmate's
-   * shell (docs/axi-commands.md). It runs on the computer the task runs on,
-   * beside that shell, and reaches that computer's own pages: on this Mac
+   * `infinitary-integrations-axi` (docs/integrations.md), and the task's own
+   * browser, through `infinitary-browser-axi` (docs/axi-commands.md). They
+   * run on the computer the task runs on, beside that shell: on this Mac
    * through this Mac's task channel, and on a computer that runs work
    * through that computer's own, where its roster says it keeps browsers
-   * (docs/task-browser.md, "On another computer"). With no channel, or a
-   * computer that keeps none, there is no way to reach one.
+   * (docs/task-browser.md, "On another computer"). The browser there is that
+   * computer's own; the integrations stay this Mac's, and that computer asks
+   * this Mac each call where it lists the change for it ("On a computer that
+   * runs work"). With no channel, or a computer that keeps none, there is no
+   * way to reach either.
    */
   private taskCommandHooks(
     task: TaskRuntime,
     machine: string,
   ): Pick<CrewmateSpec, "browser" | "shell" | "integrations"> {
-    const { browsers, taskCommands, integrations } = this.options;
+    const { browsers, taskCommands, integrations, machines } = this.options;
     if (machine !== LOCAL_MACHINE_ID) {
-      // Its shell there is granted the command; this Mac reads its browser for the captain.
-      return browsers && this.options.machines?.keepsBrowsers?.(machine)
-        ? { browser: browsers.forTask(task.id) }
-        : {};
+      // Its shell there is granted the commands; this Mac reads its browser
+      // for the captain and answers its integrations' calls.
+      return {
+        ...(browsers && machines?.keepsBrowsers?.(machine)
+          ? { browser: browsers.forTask(task.id) }
+          : {}),
+        ...(integrations && machines?.takesIntegrations?.(machine)
+          ? { integrations: integrations.forTask(task.id) }
+          : {}),
+      };
     }
     if (!taskCommands) return {};
     const browser = browsers?.forTask(task.id);
@@ -5376,7 +5384,7 @@ export class CrewSupervisor {
     if (!browser && !reach) return {};
     return {
       ...(browser ? { browser } : {}),
-      ...(reach ? { integrations: true as const } : {}),
+      ...(reach ? { integrations: reach } : {}),
       shell: taskCommands.grant(task.id, {
         ...(browser ? { browser } : {}),
         ...(reach ? { integrations: reach } : {}),

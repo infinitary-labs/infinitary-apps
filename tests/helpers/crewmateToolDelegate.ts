@@ -87,5 +87,15 @@ export function crewmateToolDelegate(): Required<
       read: (input) => answer("knowledge.read", "knowledge read")(input),
       record: (input) => answer("knowledge.record", "knowledge recorded")(input),
     },
+    integrations: {
+      list: async () => {
+        calls.push({ callback: "integrations.list", input: undefined });
+        return [];
+      },
+      show: async (name) => ({ text: answer("integrations.show", "integration shown")(name) }),
+      call: async (name, action, input) => ({
+        text: answer("integrations.call", "integration called")({ name, action, input }),
+      }),
+    },
   };
 }

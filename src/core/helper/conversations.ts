@@ -285,9 +285,9 @@ export async function startConversations(options: {
     ...(options.homeVersion ? { homeVersion: options.homeVersion } : {}),
     ...(browsers
       ? {
-          browsers: {
-            grant: (task: string) => browsers.grant(task),
-            close: (task: string) => browsers.close(task),
+          commands: {
+            grant: (task, tools) => browsers.grant(task, tools),
+            close: (task) => browsers.close(task),
           },
         }
       : {}),

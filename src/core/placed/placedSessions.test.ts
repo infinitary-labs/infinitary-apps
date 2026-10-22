@@ -8,8 +8,9 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import type { ServerResponse } from "node:http";
-import { join, relative } from "node:path";
+import { createServer, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
+import { join, relative, resolve } from "node:path";
 import type { AccountView } from "@shared/accounts";
 import {
   deviceForgeGateRef,
@@ -43,6 +44,7 @@ import {
   writeAnthropicText,
   writeAnthropicToolUse,
 } from "../../../tests/helpers/anthropicDialect";
+import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
@@ -56,12 +58,14 @@ import {
 import type { ContractWorld } from "../../../tests/helpers/sessionContract";
 import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
+import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
 import { pathsOf } from "../folderMove/due";
 import { rewriteDatabases } from "../folderMove/rewrite";
 import { createForgeResolver, type Forge } from "../forge";
 import type { ComputerAccounts } from "../helper/accounts";
+import { ComputerBrowsers } from "../helper/browsers";
 import { cleanUp } from "../helper/cleanUp";
 import type { HeldForges } from "../helper/forges";
 import { removeFromHome } from "../helper/fromHome";
@@ -71,6 +75,7 @@ import { type HelperRun, startHelper } from "../helper/run";
 import { SessionHost } from "../helper/sessionHost";
 import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
+import { CREWMATE_INTEGRATIONS_LINE } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
@@ -82,6 +87,7 @@ import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
 import { Router } from "../routing/router";
 import type { CrewmateTool } from "../session/tools";
+import { forkChildProcess } from "../sql/forkChildProcess";
 import { SettingsStore } from "../storage/settingsStore";
 import { CrewTranscripts } from "../tasks/crewTranscript";
 import { seedTask } from "../tasks/seedTask";
@@ -123,6 +129,8 @@ vi.mock("../utilityQos", async (importOriginal) =>
 );
 
 const PROVIDER = "fm-placed";
+/** The task commands' launcher (`resources/axi-bin`), which a granted shell finds on its path. */
+const AXI_BIN_DIR = resolve(__dirname, "../../../resources/axi-bin");
 const MODEL = "stub-1";
 const BUILDER = { name: "builder", uid: 502 };
 
@@ -225,7 +233,10 @@ function startHome(
   port: number,
   pairing: () => DevicePairing,
   forgeFor?: ForgeFor,
-  extra: Pick<Parameters<typeof startPlacedHome>[0], "routing" | "runsForAnotherFirstmate"> & {
+  extra: Pick<
+    Parameters<typeof startPlacedHome>[0],
+    "routing" | "runsForAnotherFirstmate" | "github"
+  > & {
     claude?: ContractWorld;
     scheduleCopy?: Parameters<typeof startPlacedHome>[0]["scheduleCopy"];
   } = {},
@@ -248,6 +259,7 @@ function startHome(
     ...(extra.runsForAnotherFirstmate
       ? { runsForAnotherFirstmate: extra.runsForAnotherFirstmate }
       : {}),
+    ...(extra.github ? { github: extra.github } : {}),
     log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[home] ${line}\n`),
   });
   stops.push(home.quit);
@@ -333,7 +345,17 @@ async function world(
     jobs?: boolean;
     /** The contract the computer's hello names; this build's own unless a test stands in an older one. */
     protocolVersion?: string;
+    /** The contract changes the computer's hello lists; this build's own unless a test stands in an older one. */
+    changes?: readonly string[];
     tools?: readonly CrewmateTool[];
+    /** The home's github.com sign-in, whose integrations its crew there reaches through its task channel. */
+    github?: Parameters<typeof startPlacedHome>[0]["github"];
+    /**
+     * The computer's task channel, as the work mode opens it
+     * (`ComputerBrowsers`), over the command process bundled at this path;
+     * otherwise it keeps none, and its roster says so.
+     */
+    taskChannel?: string;
   } = {},
 ) {
   const userData = scratchDir("infinitary-placed-home-");
@@ -388,12 +410,13 @@ async function world(
       say: () => {},
       retryMs: [20],
       ...(version ? { protocolVersion: version } : {}),
+      ...(options.changes ? { changes: options.changes } : {}),
       ...(options.signedInTo
         ? { signIns: signedInTo(options.signedInTo, options.forges, options.served) }
         : {}),
       // Removed, it removes what Firstmate set up here; no agent was set up.
       cleanUp: () => cleanUp({ dataDir, background: null }),
-      conversations: async ({ dataDir: dir, ask }) => {
+      conversations: async ({ dataDir: dir, ask, tell }) => {
         const copies = new WorkingCopies(dir, { pool: false });
         if (options.refuseClone) {
           // GitHub refuses the clone for want of this computer's own sign-in,
@@ -413,6 +436,27 @@ async function world(
               onChange: () => host?.jobsChanged(),
               onExit: (exit) => host?.jobExit(exit),
               belowUi: false,
+            })
+          : undefined;
+        // Its task channel, as `startConversations` opens it; no page opens here.
+        const entry = options.taskChannel;
+        const channel = entry
+          ? await ComputerBrowsers.open({
+              host: {
+                open: async () => {
+                  throw new Error("No page opens on this computer here.");
+                },
+              },
+              spawner: forkChildProcess(entry),
+              binDir: AXI_BIN_DIR,
+              version: "9.9.9-test",
+              keysDir: join(dir, "task-channel"),
+              evidenceDir: (task) => tasks.folders(task).evidence,
+              ...(jobs ? { answering: (shell: string) => jobs.answering(shell) } : {}),
+              tell,
+              ask,
+              log: (line) =>
+                process.env.PLACED_DEBUG && process.stderr.write(`[channel] ${line}\n`),
             })
           : undefined;
         host = new SessionHost({
@@ -439,6 +483,14 @@ async function world(
             return { backend: "pi", runtime: options.runtime ?? runtime };
           },
           ...(tools ? { tools } : {}),
+          ...(channel
+            ? {
+                commands: {
+                  grant: (task, granted) => channel.grant(task, granted),
+                  close: (task) => channel.close(task),
+                },
+              }
+            : {}),
           log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[computer] ${line}\n`),
         });
         const held = host;
@@ -446,6 +498,7 @@ async function world(
           host: held,
           close: async () => {
             await held.close();
+            channel?.closeAll();
             jobs?.disposeAll();
           },
         };
@@ -2718,6 +2771,196 @@ describe("a task that runs on a computer that runs work", () => {
  * reach and says so once, and never runs here instead; moving the project
  * leaves a started task where it is.
  */
+// INF-795: "A crewmate on a computer that runs work gets
+// infinitary-integrations-axi, whose list, show and call are forwarded to the
+// home ... so no sign-in leaves the home." The command runs in the
+// crewmate's shell there through the real launcher, command process and
+// task channel, and each call crosses the real connection to this Mac's
+// own integrations, over a stand-in GitHub.
+describe("the integrations command on a computer that runs work", () => {
+  let entry: string;
+  beforeAll(async () => {
+    entry = await bundleAxiProcess();
+  }, 60_000);
+
+  it("lists, shows and calls this Mac's integrations from the crewmate's shell there, with the sign-in and the ask kept here", async () => {
+    const github = await standInGitHub();
+    const at = await world(undefined, {
+      jobs: true,
+      taskChannel: entry,
+      github: { apiBaseUrl: github.base, token: GITHUB_TOKEN, login: "octo" },
+    });
+    const issue = {
+      method: "POST",
+      path: "/repos/acme/site/issues",
+      body: JSON.stringify({ title: "The footer overlaps on phones" }),
+    };
+    model([
+      { tools: [shellCommand("infinitary-integrations-axi")] },
+      { tools: [shellCommand("infinitary-integrations-axi show GitHub")] },
+      { tools: [shellCommand(`infinitary-integrations-axi call GitHub read '{"path":"/user"}'`)] },
+      {
+        tools: [
+          shellCommand(`infinitary-integrations-axi call GitHub write '${JSON.stringify(issue)}'`),
+        ],
+      },
+      { text: "The issue waits for the captain." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-reach");
+    const home = at.home();
+    await expect
+      .poll(() => home.tasks.get("t-reach")?.outcome)
+      .toBe("The issue waits for the captain.");
+    // Its instructions there name the command.
+    expect(systemOf(api.requests[requests])).toContain(CREWMATE_INTEGRATIONS_LINE);
+
+    // List and show answer what this Mac has connected.
+    const listed = shellAnswer(api.requests[requests + 1]);
+    expect(listed.exit).toBe(0);
+    expect(listed.output).toContain("GitHub");
+    expect(listed.output).toContain("octo");
+    const shown = shellAnswer(api.requests[requests + 2]);
+    expect(shown.exit).toBe(0);
+    expect(shown.output).toContain("read");
+    expect(shown.output).toContain("write");
+
+    // A read runs here, through this Mac's sign-in, and its answer reaches the shell there.
+    const read = shellAnswer(api.requests[requests + 3]);
+    expect(read.exit).toBe(0);
+    expect(read.output).toContain('"login": "octo"');
+    expect(github.seen).toEqual([{ method: "GET", path: "/user", auth: `Bearer ${GITHUB_TOKEN}` }]);
+
+    // A change is kept here as the captain's ask; nothing is sent.
+    const write = shellAnswer(api.requests[requests + 4]);
+    expect(write.output).toContain("Not sent");
+    expect(home.tasks.get("t-reach")?.delivery?.writeAsks).toEqual([
+      expect.objectContaining({ method: "POST", path: issue.path, via: "account" }),
+    ]);
+    expect(github.seen).toHaveLength(1);
+    // The call is kept by its id, so one asked again after a drop is answered once.
+    const calls = readFileSync(
+      join(crewmatePlacedDir(home.paths, "t-reach"), "calls.jsonl"),
+      "utf8",
+    )
+      .trim()
+      .split("\n")
+      .map((line) => (JSON.parse(line) as { channel: string }).channel);
+    expect(calls.filter((channel) => channel === "inf:work:use-integration")).toHaveLength(2);
+
+    // Nothing of the sign-in is on that computer, while the answer it read is in its record there.
+    expect(filesHolding(at.dataDir, GITHUB_TOKEN)).toEqual([]);
+    expect(filesHolding(at.dataDir, "The Octocat")).toContainEqual(
+      expect.stringMatching(/^tasks\/t-reach\/sessions\//),
+    );
+  });
+
+  it("gives a crewmate on a computer without the change neither the command nor its line", async () => {
+    const github = await standInGitHub();
+    const at = await world(undefined, {
+      jobs: true,
+      taskChannel: entry,
+      github: { apiBaseUrl: github.base, token: GITHUB_TOKEN, login: "octo" },
+      changes: CONTRACT_CHANGES.names.filter((name) => name !== "integrations-there"),
+    });
+    model([
+      { tools: [shellCommand("infinitary-integrations-axi")] },
+      { text: "No integrations here." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-older");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-older")?.outcome).toBe("No integrations here.");
+    expect(systemOf(api.requests[requests])).not.toContain(CREWMATE_INTEGRATIONS_LINE);
+    expect(shellAnswer(api.requests[requests + 1]).exit).toBe(127);
+    expect(github.seen).toEqual([]);
+  });
+});
+
+/** The invented token this Mac's github.com sign-in holds in these cases. */
+const GITHUB_TOKEN = "gho_fixture_owned_by_app";
+
+/**
+ * A stand-in GitHub API: `/user` answers as GitHub's does for the signed-in
+ * account (trimmed), and every other path is Not Found. Every request is recorded.
+ */
+async function standInGitHub() {
+  const seen: { method: string; path: string; auth: string | undefined }[] = [];
+  const server = createServer((req, res) => {
+    seen.push({ method: req.method ?? "", path: req.url ?? "", auth: req.headers.authorization });
+    const found = req.method === "GET" && req.url === "/user";
+    res.writeHead(found ? 200 : 404, {
+      "Content-Type": "application/json",
+      "x-github-request-id": "REQ-1",
+      "x-ratelimit-remaining": "4999",
+    });
+    res.end(
+      JSON.stringify(
+        found
+          ? {
+              login: "octo",
+              id: 583231,
+              node_id: "MDQ6VXNlcjU4MzIzMQ==",
+              type: "User",
+              html_url: "https://github.com/octo",
+              name: "The Octocat",
+              public_repos: 8,
+            }
+          : { message: "Not Found", documentation_url: "https://docs.github.com/rest" },
+      ),
+    );
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  stops.push(() => {
+    server.closeAllConnections();
+    return new Promise<void>((resolve) => server.close(() => resolve()));
+  });
+  return { base: `http://127.0.0.1:${(server.address() as AddressInfo).port}`, seen };
+}
+
+/** The model runs one command in its shell, in the foreground. */
+function shellCommand(command: string) {
+  return { name: "bash", args: { command, description: "Reach the integrations" } };
+}
+
+/** The crewmate's instructions as a request carried them. */
+function systemOf(request: StubRequest | undefined): string {
+  return (request?.body.system ?? []).map((block) => block.text ?? "").join("\n");
+}
+
+/** What the shell answered the model's last command, as its next request carries it. */
+function shellAnswer(request: StubRequest | undefined): { exit: number; output: string } {
+  const content = request?.body.messages?.at(-1)?.content;
+  const result = Array.isArray(content)
+    ? (content as { type?: string; content?: unknown }[]).findLast(
+        (block) => block.type === "tool_result",
+      )?.content
+    : undefined;
+  const text =
+    typeof result === "string"
+      ? result
+      : Array.isArray(result)
+        ? (result as { text?: string }[]).map((block) => block.text ?? "").join("")
+        : "";
+  const [first = "", ...rest] = text.split("\n");
+  return { exit: Number(/^exit (\d+)$/.exec(first)?.[1] ?? Number.NaN), output: rest.join("\n") };
+}
+
+/** Every file under `root` whose bytes hold `text`. */
+function filesHolding(root: string, text: string): string[] {
+  const found: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.isFile() && readFileSync(path).includes(text))
+        found.push(relative(root, path));
+    }
+  };
+  walk(root);
+  return found;
+}
+
 describe("a project that runs on a computer that runs work", () => {
   it("waits for that computer, says so once and again after a day, and starts its next task there once it is back", async () => {
     const project = await gitProject();

@@ -32,6 +32,7 @@ export {
   IntegrationRefusal,
   IntegrationsService,
   type IntegrationsServiceOptions,
+  isIntegrationAnswer,
   type TaskIntegrations,
 } from "./service";
 export { IntegrationSettingsStore } from "./store";

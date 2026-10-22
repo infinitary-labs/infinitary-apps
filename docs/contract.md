@@ -212,6 +212,9 @@ A `device_update` event may carry `copy` and `run`, a computer's `otherVersion` 
 A task's browser on a computer that runs work (`docs/task-browser.md`, "On another computer") uses the `browserOrders`, the `inf:work:browser`, `inf:work:browser-frame` and `inf:work:browser-event` requests, the roster's `browsers`, the placed spec's `browser`, and a placed card's `browserButton` and `browserHandoff`.
 The home gives a task there a browser only when that computer's roster says `browsers`.
 
+A crewmate there runs the integrations command (`docs/integrations.md`, "On a computer that runs work") over the `inf:work:integrations` read, its list and show, and the `inf:work:use-integration` change, its call, and the placed spec's `integrations`.
+The home sends `integrations` only to a computer whose roster says `browsers`, since the command rides the same task channel, and that lists the `integrations-there` change.
+
 A placed card carries the optional `riskDeclaration`, `asking`, `designOnly` and `request_write` effects, and a placed `check_change` the optional `pull`, `absentChecks` and `skipRules` declarations of a merge review.
 `PlacedToolFieldCoverage` (`src/core/session/tools.ts`) fails the build when a crewmate-declared top-level field of a card, `check_change`, knowledge read or knowledge record has no place in its work request; host-resolved card fields (`attachment`, `risk`) and the first mate's `taskId` and `reviewTaskId` are left out.
 A placed crewmate's `inf:work:read-workflow` may leave out `jobId` for the run's short read, which saves the home's run watch (`docs/forge.md`, "The run watch").

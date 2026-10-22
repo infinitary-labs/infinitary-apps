@@ -14,6 +14,7 @@ import type {
   GithubWriteInput,
   ReadWorkflowInput,
 } from "../forge";
+import type { TaskIntegrations } from "../integrations";
 import type { RecordInput } from "../knowledge/knowledgeService";
 import type { PanelCaptureResult, PanelPlaceResult } from "../personal/personalExtensions";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
@@ -369,6 +370,13 @@ export type CrewmateToolDelegate = {
    * whose task runs on this Mac when the host has one.
    */
   browser?: CrewmateBrowser;
+  /**
+   * The integrations this task's crewmate reaches through
+   * `infinitary-integrations-axi` (docs/integrations.md): on this Mac
+   * through its task channel; on a computer that runs work, through that
+   * computer's own, which asks the home each time.
+   */
+  integrations?: TaskIntegrations;
   /**
    * The captain's factual knowledge (docs/knowledge.md), handed to every crewmate, in every build: on a
    * computer that runs work, each call asks the home.

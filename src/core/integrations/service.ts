@@ -50,11 +50,25 @@ type Row = {
   settings: IntegrationSettings;
 };
 
-/** One task's reach, as its crewmate's command asks it (`infinitary-integrations-axi`). */
+/**
+ * One task's reach, as its crewmate's command asks it
+ * (`infinitary-integrations-axi`): this service's `forTask` on this Mac, and
+ * on a computer that runs work the home asked each time (`SessionHost`,
+ * docs/integrations.md "On a computer that runs work"). `signal` ends a wait
+ * the command could no longer answer.
+ */
 export type TaskIntegrations = {
-  list: () => Record<string, unknown>[];
-  show: (name: string) => Record<string, unknown> | IntegrationAnswer;
-  call: (name: string, action: string, input: unknown) => Promise<IntegrationAnswer>;
+  list: (signal?: AbortSignal) => Promise<Record<string, unknown>[]>;
+  show: (
+    name: string,
+    signal?: AbortSignal,
+  ) => Promise<Record<string, unknown> | IntegrationAnswer>;
+  call: (
+    name: string,
+    action: string,
+    input: unknown,
+    signal?: AbortSignal,
+  ) => Promise<IntegrationAnswer>;
 };
 
 /** Where a task's asks are kept: the task's own write asks. */
@@ -74,6 +88,13 @@ export type IntegrationAskSent = {
   outcome: WriteAskOutcome;
   answer?: string;
 };
+
+/** Whether `show` answered a refusal's words rather than an integration's actions. */
+export function isIntegrationAnswer(
+  shown: Record<string, unknown> | IntegrationAnswer,
+): shown is IntegrationAnswer {
+  return "refused" in shown && typeof shown.text === "string";
+}
 
 /** A refusal the catalog line's caller reads as the reason. */
 export class IntegrationRefusal extends Error {}
@@ -336,8 +357,8 @@ export class IntegrationsService {
   /** What one task's crewmate reaches: every integration, under that task's rules. */
   forTask(taskId: string): TaskIntegrations {
     return {
-      list: () => this.roster(),
-      show: (name) => this.show(name),
+      list: async () => this.roster(),
+      show: async (name) => this.show(name),
       call: (name, action, input) => this.call({ kind: "task", taskId }, name, action, input),
     };
   }

@@ -7,7 +7,7 @@ import { HERE } from "../../shared/deviceNames";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import type { HostChildProcess, HostChildSpawner } from "../host";
-import { INTEGRATIONS_COMMAND, type TaskIntegrations } from "../integrations";
+import { INTEGRATIONS_COMMAND, isIntegrationAnswer, type TaskIntegrations } from "../integrations";
 import { ownTaskCommand } from "./names";
 import type {
   AxiCallMessage,
@@ -371,6 +371,8 @@ export class AxiChannel {
     grant: Grant,
     command: { tool: string; argv: string[]; bin: string; cwd: string; deadline?: number },
   ): Promise<Outcome> {
+    // An operation that waits on another computer answers before this is stopped.
+    const stopsAt = Date.now() + PROCESS_BOUND_MS;
     return new Promise((resolve) => {
       let child: HostChildProcess;
       try {
@@ -405,7 +407,7 @@ export class AxiChannel {
           return;
         }
         if (message?.type === "call") {
-          void this.call(grant, command.tool, message, command.deadline).then((reply) => {
+          void this.call(grant, command.tool, message, command.deadline, stopsAt).then((reply) => {
             if (!finished) child.postMessage({ type: "result", id: message.id, reply });
           });
         }
@@ -431,6 +433,7 @@ export class AxiChannel {
     tool: string,
     message: AxiCallMessage,
     deadline: number | undefined,
+    stopsAt: number,
   ): Promise<ChannelReply<OpAnswer>> {
     const parked = grant.parked.get(tool);
     if (parked) {
@@ -440,7 +443,13 @@ export class AxiChannel {
       return { kind: "earlier", command: parked.command, answer: settled };
     }
     const work: Promise<OpAnswer> =
-      tool === INTEGRATIONS_COMMAND ? this.integrate(grant, message) : this.operate(grant, message);
+      tool === INTEGRATIONS_COMMAND
+        ? this.integrate(
+            grant,
+            message,
+            AbortSignal.timeout(Math.max(0, stopsAt - CAP_MARGIN_MS - Date.now())),
+          )
+        : this.operate(grant, message);
     const settled = await within(work, deadline);
     if (settled === TIMEOUT) {
       grant.parked.set(tool, { command: message.command, work });
@@ -449,35 +458,39 @@ export class AxiChannel {
     return { kind: "answer", answer: settled };
   }
 
-  /** One of the integrations' operations, for this task alone (`IntegrationsService.forTask`). */
+  /**
+   * One of the integrations' operations, for this task alone
+   * (`TaskIntegrations`). `signal` ends, before its command process is
+   * stopped, a wait on the home a computer that runs work asks for each.
+   */
   private async integrate(
     grant: Grant,
     message: AxiCallMessage,
+    signal: AbortSignal,
   ): Promise<IntegrationChannelAnswer> {
     const integrations = grant.tools.integrations;
     if (!integrations) return { text: "This task has no integrations.", refused: "refused" };
     try {
       switch (message.op) {
         case "integrations.list":
-          return { data: { integrations: integrations.list() } };
+          return { data: { integrations: await integrations.list(signal) } };
         case "integrations.show": {
           const { name } = (message.input ?? {}) as IntegrationOpInput["integrations.show"];
-          const shown = integrations.show(String(name ?? ""));
-          return "refused" in shown && typeof shown.text === "string"
-            ? { text: shown.text, refused: shown.refused as "refused" | "invalid" }
-            : { data: shown as Record<string, unknown> };
+          const shown = await integrations.show(String(name ?? ""), signal);
+          return isIntegrationAnswer(shown) ? shown : { data: shown };
         }
         case "integrations.call": {
           const { name, action, input } = (message.input ??
             {}) as IntegrationOpInput["integrations.call"];
-          return await integrations.call(String(name ?? ""), String(action ?? ""), input);
+          return await integrations.call(String(name ?? ""), String(action ?? ""), input, signal);
         }
         default:
           return { text: "That is not an integrations operation.", refused: "invalid" };
       }
     } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
       return {
-        text: `The integration could not do that: ${error instanceof Error ? error.message : String(error)}.`,
+        text: `The integration could not do that: ${reason.replace(/\.$/, "")}.`,
         refused: "refused",
       };
     }

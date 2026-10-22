@@ -336,9 +336,10 @@ describe("ipc contract", () => {
    * What a computer that runs work asks about a conversation it holds
    * (src/shared/work.ts): one request per tool callback - the change and
    * artifact tools among them, which the home does with its own sign-in,
-   * and the knowledge pair, which reads and writes the home's knowledge -
-   * a card picture, a job's end, the numbered events and what a task's
-   * browser there tells the home, and nothing a view or the window asks.
+   * the knowledge pair, which reads and writes the home's knowledge, and
+   * the integrations pair, which the integrations command asks - a card
+   * picture, a job's end, the numbered events and what a task's browser
+   * there tells the home, and nothing a view or the window asks.
    */
   it("lets a computer that runs work ask only the work requests", () => {
     expect([...WORK_INVOKE_CHANNELS].sort()).toEqual([
@@ -354,6 +355,7 @@ describe("ipc contract", () => {
       "inf:work:followup",
       "inf:work:github-read",
       "inf:work:github-write",
+      "inf:work:integrations",
       "inf:work:job-exit",
       "inf:work:knowledge",
       "inf:work:media",
@@ -371,6 +373,7 @@ describe("ipc contract", () => {
       "inf:work:speed-note",
       "inf:work:tasks",
       "inf:work:typeface",
+      "inf:work:use-integration",
     ]);
     for (const channel of WORK_INVOKE_CHANNELS)
       expect(VIEW_INVOKE_CHANNELS as readonly string[]).not.toContain(channel);

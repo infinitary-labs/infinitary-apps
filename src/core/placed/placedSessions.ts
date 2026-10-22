@@ -46,6 +46,8 @@ import {
 } from "@shared/work";
 import { z } from "zod";
 import type { WorkDeviceContact } from "../connection/connection";
+import { contractChange, listsChange } from "../connection/contractChanges";
+import { isIntegrationAnswer } from "../integrations";
 import type { JobExit } from "../jobs/jobManager";
 import { crewmateResumeToken } from "../orchestrator/crewSession";
 import {
@@ -110,6 +112,13 @@ import type { WorkDevices } from "./workDevices";
  * Nothing here reaches a computer before the shell attaches the connection
  * (`WorkDevices`).
  */
+
+/**
+ * The change a computer lists when it gives its crewmates the home's
+ * integrations (`integrations-there.md`; docs/integrations.md, "On a
+ * computer that runs work").
+ */
+const INTEGRATIONS_THERE = contractChange("integrations-there");
 
 /** How long a computer with work is out of reach before the feed says so. */
 export const OUT_OF_REACH_LINE_MS = 60_000;
@@ -200,6 +209,12 @@ export type CrewMachines = {
    * home cannot tell.
    */
   takesKnowledge?(machine: string): boolean;
+  /**
+   * Whether the computer gives its crewmates the home's integrations
+   * through `infinitary-integrations-axi` (docs/integrations.md, "On a
+   * computer that runs work"); false while the home cannot tell.
+   */
+  takesIntegrations?(machine: string): boolean;
   takesChangePresentations?(machine: string): boolean;
   /** The working copy's dependencies, installed there; a failure is an outcome. */
   install(machine: string, taskId: string): Promise<DependencyInstall>;
@@ -527,6 +542,18 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return version ? speaksKnowledge(version.contract) : false;
   }
 
+  /**
+   * The integrations command rides the computer's task channel, which it has
+   * where its roster says it keeps task browsers, and its calls ride the
+   * work requests of `INTEGRATIONS_THERE`.
+   */
+  takesIntegrations(machine: string): boolean {
+    return (
+      this.keepsBrowsers(machine) &&
+      listsChange(this.options.devices.version(machine)?.changes, INTEGRATIONS_THERE)
+    );
+  }
+
   prepare(
     machine: string,
     taskId: string,
@@ -826,6 +853,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       tools: spec.tools.map((tool) => tool.name),
       // Its own browser, there beside its shell (docs/task-browser.md, "On another computer").
       ...(spec.callbacks?.browser && device.roster.browsers ? { browser: true } : {}),
+      // Its integrations, asked of this Mac (docs/integrations.md, "On a computer that runs work").
+      ...(spec.callbacks?.integrations && this.takesIntegrations(deviceId)
+        ? { integrations: true }
+        : {}),
       ...(resume ? { resume } : {}),
       ...(spec.bounds?.request?.retries !== undefined
         ? { retries: spec.bounds.request.retries }
@@ -1254,6 +1285,19 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       case "inf:work:record-knowledge": {
         const { input } = request as InvokeRequest<"inf:work:record-knowledge">[0];
         return { text: await (callbacks?.knowledge ?? missing()).record(input) };
+      }
+      // The integrations command there, answered by this Mac's own integrations under the task's rules.
+      case "inf:work:integrations": {
+        const { input } = request as InvokeRequest<"inf:work:integrations">[0];
+        const integrations = callbacks?.integrations ?? missing();
+        if (input.name === undefined) return { data: { integrations: await integrations.list() } };
+        const shown = await integrations.show(input.name);
+        return isIntegrationAnswer(shown) ? shown : { data: shown };
+      }
+      case "inf:work:use-integration": {
+        const { input } = request as InvokeRequest<"inf:work:use-integration">[0];
+        const integrations = callbacks?.integrations ?? missing();
+        return await integrations.call(input.name, input.action, input.input);
       }
       default:
         throw new Error(`${channel} is not a request ${HERE.this} answers.`);

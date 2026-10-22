@@ -8,6 +8,7 @@ Every command answers in its task alone, through the app, and every rule its too
 
 A crewmate gets a command where the tool it replaces would bind: `infinitary-browser-axi` where its task has a browser, which is a task on this Mac when the host has a browser engine and a command process (`HostCapabilities.axiProcess`), or a task on a computer that runs work that keeps task browsers (`docs/task-browser.md`, "On another computer").
 That computer runs its own channel and command process, the same way, for the tasks it holds: its keys live in its work folder's `task-channel/` (`docs/helper.md`), and its commands reach only the browsers there.
+`infinitary-integrations-axi` goes to every task on this Mac when the host has a command process, and to a task on a computer that runs work whose channel there carries it, where each call is asked of this Mac (`docs/integrations.md`, "On a computer that runs work").
 The crewmate's instructions carry one line for it, `CREWMATE_BROWSER_LINE` (`src/core/pi/piResources.ts`), the captain's approved words: "This task has its own browser: run `infinitary-browser-axi` to see or use a web page.
 Never press the last step of a purchase or booking; ask the captain on a card."
 Its `emit_card` keeps `browser_button` and `browser_handoff`, which carry the sign-in and payment rules (`docs/task-browser.md`, "Asking for help").
@@ -113,8 +114,9 @@ A refusal is typed by `TaskBrowsers`, never read off its words (`BrowserAnswer.r
 The bare command lists them with who each is signed in as and its actions, `show <name>` lists one's actions with what each does, its rule and its input's JSON Schema, and `call <name> <action> '<json input>'` runs one.
 The input is one JSON object, checked before it is sent, and a malformed one exits 2.
 Every decision stays `IntegrationsService`'s: a paused integration, an action turned off and a change that asks the captain each print the service's words as an error with exit 1 (`REFUSED`).
-A task on this Mac is granted it whenever the host has a command process; a computer that runs work does not grant it yet.
+A task on this Mac is granted it whenever the host has a command process, and a task on a computer that runs work where the home says it reaches them (`docs/integrations.md`, "On a computer that runs work").
 Its kept answers follow the shell's limit as the browser's do.
+There, a call waits on this Mac at most until 750 milliseconds before the command process would be stopped, so the command always prints an answer, and a call not yet sent then is never sent.
 
 ## Tests
 
@@ -128,4 +130,5 @@ A command whose app is held up from before the channel's deadline until after Pi
 When the shell itself becomes a background job, the helper ends the turn until that job's exit wake supplies its output, ignoring the receipt's partial output and unrelated or repeated job exits rather than running the browser action again.
 `tests/mockProvider.test.ts` exercises those answers through the provider's request interface using the shell tool's receipt and the host's rendered exit wake, including a job whose output itself asks for the next look.
 `channel.test.ts` also runs `infinitary-integrations-axi`: list, show and call reach only the integrations the task was granted, a refusal exits 1, a malformed input exits 2 before reaching them, and a task without the command is answered `NO_TOOL`.
+`placedSessions.test.ts` runs it from a Pi crewmate's shell on a computer that runs work, across the connection to this Mac's integrations (`docs/integrations.md`, "Tests").
 `tests/release-contract.test.ts` holds the launcher and its links shipped outside the archive.

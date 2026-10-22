@@ -434,8 +434,10 @@ describe("the infinitary-integrations-axi command", () => {
     const github = { name: "GitHub", id: "github", kind: "github", account: "octo", health: "ok" };
     return {
       calls,
-      list: () => [{ ...github, actions: "read (reads, Allowed), write (changes, Asks you)" }],
-      show: (name) =>
+      list: async () => [
+        { ...github, actions: "read (reads, Allowed), write (changes, Asks you)" },
+      ],
+      show: async (name) =>
         name === "GitHub"
           ? { integration: "GitHub", actions: [{ name: "read", effect: "reads", rule: "allow" }] }
           : ({ text: `No integration is named ${name}.`, refused: "refused" } as IntegrationAnswer),

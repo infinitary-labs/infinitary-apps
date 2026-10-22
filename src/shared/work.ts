@@ -196,6 +196,16 @@ export const placedSpecSchema = z.object({
    * only to a computer whose roster says it keeps task browsers.
    */
   browser: z.boolean().optional(),
+  /**
+   * The task's crewmate reaches the home's integrations through
+   * `infinitary-integrations-axi` in its shell there, each list, show and
+   * call asked of the home (`inf:work:integrations`,
+   * `inf:work:use-integration`; docs/integrations.md, "On a computer that
+   * runs work"). The home sends it only to a computer that lists the
+   * `integrations-there` change and keeps task browsers, whose task channel
+   * the command rides.
+   */
+  integrations: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
 
@@ -396,6 +406,18 @@ const knowledgeReadInputSchema = z.object({
   revision: z.number().int().min(1).optional(),
   scope: z.string().optional(),
   cursor: z.string().optional(),
+});
+
+/**
+ * One answer of the home's integrations, as a crewmate's
+ * `infinitary-integrations-axi` prints it (docs/integrations.md, "On a
+ * computer that runs work"): structured rows, a call's words, or a
+ * refusal's. It is what the home's integrations said, never a sign-in.
+ */
+const integrationAnswerSchema = z.object({
+  data: z.record(z.string(), z.unknown()).optional(),
+  text: z.string().optional(),
+  refused: z.enum(["refused", "invalid"]).optional(),
 });
 
 /** One source a write cites, as the tool names it; the home keeps or refuses it. */
@@ -637,6 +659,29 @@ export const workRequests = {
     repeats: "safe",
     request: asked({ input: recordKnowledgeInputSchema }),
     response: toolTextSchema,
+  },
+  /**
+   * The integrations command's list, with no name, and its show: the home
+   * reads its own integrations for the crewmate, as for a crewmate of its
+   * own (docs/integrations.md, "On a computer that runs work"), from the
+   * `integrations-there` change on.
+   */
+  "inf:work:integrations": {
+    effect: "read",
+    request: asked({ input: z.object({ name: z.string().optional() }) }),
+    response: integrationAnswerSchema,
+  },
+  /**
+   * The integrations command's call: the home runs one action with its own
+   * sign-in under the task's rules - a read runs, a change is kept as an ask
+   * the captain's click sends - and answers with its words.
+   */
+  "inf:work:use-integration": {
+    effect: "change",
+    request: asked({
+      input: z.object({ name: z.string(), action: z.string(), input: z.unknown() }),
+    }),
+    response: integrationAnswerSchema,
   },
   /** One card picture's verified copy, asked before the card that names it. */
   "inf:work:picture": {

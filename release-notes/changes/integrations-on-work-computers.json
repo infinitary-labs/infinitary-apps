@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "integrations-on-work-computers",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Crewmates on another computer can reach your integrations too",
+      "body": "A crewmate working on a computer that runs work for you can now reach your integrations, such as GitHub, the way crewmates on this computer do. It reads through your GitHub sign-in on this computer, which never leaves it, and a change it asks for still waits for your click on a card. Before, only crewmates on this computer had them.",
+      "noPicture": "Nothing new appears on screen: a crewmate on another computer reaches the same integrations, and a change it asks for arrives as a card as before.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

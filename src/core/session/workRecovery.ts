@@ -89,6 +89,11 @@ export const CHANGE_RECOVERY: Partial<
     "the action may already have happened",
     "Check the task's browser before asking for the action again.",
   ],
+  "inf:work:use-integration": [
+    "running this integration's action",
+    "it may already have run, or be kept as an ask",
+    "Check your task with tasks and read what the action changes before calling it again.",
+  ],
 };
 
 /** The operation's reachable check, shared by crash and unanswered-request recovery. */

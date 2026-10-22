@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import type { ComputerReach } from "@shared/devices";
 import { devicePlace } from "@shared/signIns";
 import { type HomeConnection, startConnection } from "../../src/core/connection/connection";
@@ -7,9 +8,17 @@ import type { DevicePairing } from "../../src/core/devices/pairing";
 import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import type { Forge, ForgeRepo, ReadWorkflowInput } from "../../src/core/forge";
+import { GitHubForge } from "../../src/core/forge/providers/github/githubForge";
+import {
+  FileIntegrationSecrets,
+  githubIntegration,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from "../../src/core/integrations";
 import { jobExitWake } from "../../src/core/jobs/jobManager";
 import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
 import { CrewSupervisor } from "../../src/core/orchestrator/crewSupervisor";
+import { GithubGatewayService } from "../../src/core/orchestrator/githubGateway";
 import { PrCiService } from "../../src/core/orchestrator/prCi";
 import type { TypedWake } from "../../src/core/orchestrator/wakes";
 import { WorkflowEvidenceService } from "../../src/core/orchestrator/workflowEvidence";
@@ -56,6 +65,8 @@ import { type CatalogModelView, servedProviderOf } from "../../src/shared/quota"
  * Given a forge, the crew's open_change, check_change, read_workflow and
  * download_artifact, and the run watch, are the home's own (`PrCiService`,
  * `WorkflowEvidenceService`), composed as `createServices` composes them.
+ * Given a github.com sign-in, the integrations are the home's own too, and
+ * a crewmate's integrations command there is answered by them here.
  * A restart is a new one over the same folder and port.
  */
 
@@ -122,6 +133,13 @@ export function startPlacedHome(options: {
   profiles: { pi: ControlProfile; claude?: ControlProfile };
   /** Where each project lives, for the crew's change and artifact tools. */
   forgeFor?: (repo: ForgeRepo | undefined, fallbackDir?: string) => Forge;
+  /**
+   * This Mac's github.com sign-in, signed in as `login` with `token`, at a
+   * stand-in GitHub API: its integrations are composed as `createServices`
+   * composes them, GitHub over the gateway's calls through that sign-in
+   * (docs/integrations.md). Absent, the crew has no integrations.
+   */
+  github?: { apiBaseUrl: string; token: string; login: string };
   /**
    * This Mac's own subscriptions, for a home that routes as `createServices`
    * composes it: the models its own sign-ins serve, their allowance as read
@@ -269,6 +287,46 @@ export function startPlacedHome(options: {
         now,
       })
     : undefined;
+  // This Mac's integrations, as `createServices` composes them.
+  const github = options.github;
+  const accountForge = github
+    ? () =>
+        new GitHubForge(
+          { kind: "github", host: "github.com", dir: "" },
+          { apiBaseUrl: github.apiBaseUrl, token: async () => github.token },
+        )
+    : undefined;
+  const integrations =
+    github && accountForge
+      ? new IntegrationsService({
+          bindings: [
+            githubIntegration({
+              signIns: {
+                stateOf: () => "ok",
+                loginOf: () => github.login,
+                checkNow: async () => {},
+                signOut: () => {},
+              },
+              gateway: new GithubGatewayService({
+                tasks,
+                repos,
+                forgeFor: forgeFor ?? accountForge,
+                accountForge,
+                readChecks: async (taskId) => prCi?.checkForCrew(taskId) ?? "No checks here.",
+                now,
+              }),
+            }),
+          ],
+          store: new IntegrationSettingsStore(paths.integrationsDir),
+          secrets: new FileIntegrationSecrets(join(paths.integrationsDir, "secrets")),
+          asks: {
+            keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+            take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
+            record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+          },
+          now,
+        })
+      : undefined;
   const supervisor = new CrewSupervisor({
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     sessions: {
@@ -277,6 +335,7 @@ export function startPlacedHome(options: {
     },
     machines: placed,
     ...(options.reachOf ? { reachOf: options.reachOf } : {}),
+    ...(integrations ? { integrations } : {}),
     bind: async () => options.binding,
     ...(router ? { router } : {}),
     workspace,

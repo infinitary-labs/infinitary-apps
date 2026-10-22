@@ -37,6 +37,7 @@ import {
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
+import type { TaskIntegrations } from "../integrations";
 import type { JobExit } from "../jobs/jobManager";
 import {
   crewmateContractStamp,
@@ -83,7 +84,8 @@ import type { WorkingCopies } from "./workingCopies";
  * body file or a picture is read where it was written; each tool's callback
  * - a card, a report, a follow-up, a progress note, a reply, a look at the
  * tasks, a read or write of the home's knowledge - asks the home, which does
- * it exactly as for a crewmate of its own.
+ * it exactly as for a crewmate of its own. So does each list, show and call
+ * of its integrations' command, whose sign-ins stay the home's.
  *
  * Each task's conversation runs in its own working copy here, which the
  * home has made first (`WorkingCopies`, docs/helper.md "Its working
@@ -145,14 +147,20 @@ export type SessionHostOptions = {
    */
   copies?: WorkingCopies;
   /**
-   * This computer's task browsers (docs/task-browser.md, "On another
-   * computer"): a conversation whose task the home says has a browser is
-   * given it, through `infinitary-browser-axi` in its shell, and the browser goes
-   * when the conversation closes for good. Absent, this computer keeps none,
-   * and its roster says so.
+   * This computer's task channel and its task browsers (docs/task-browser.md,
+   * "On another computer"): a conversation whose task the home says has a
+   * browser is given it, through `infinitary-browser-axi` in its shell, and
+   * one the home says reaches its integrations is given
+   * `infinitary-integrations-axi`, each call asked of the home
+   * (docs/integrations.md, "On a computer that runs work"); both go when
+   * the conversation closes for good. Absent, this computer keeps no
+   * browsers, and its roster says so.
    */
-  browsers?: {
-    grant: (task: string) => { browser: CrewmateBrowser; shell: TaskShell };
+  commands?: {
+    grant: (
+      task: string,
+      tools: { browser: boolean; integrations?: TaskIntegrations },
+    ) => { browser?: CrewmateBrowser; shell: TaskShell };
     close: (task: string) => void;
   };
   /**
@@ -196,6 +204,8 @@ const FORWARDED_TOOLS = new Set([
 const RETRIES = 2;
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
+const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
+type IntegrationWireAnswer = ReturnType<typeof integrationAnswerSchema.parse>;
 const tasksAnswerSchema = workRequests["inf:work:tasks"].response;
 
 type Flush = { seq: number; resolve: () => void };
@@ -239,8 +249,10 @@ type Held = {
   copying: Map<string, Promise<unknown>>;
   /** Its folder was removed (`inf:session:remove`): nothing of it is written again. */
   removed: boolean;
-  /** The tool names and instructions this conversation was opened with. */
-  opened: { tools: readonly string[]; instructions: string; browser: boolean } | undefined;
+  /** The tool names, instructions and commands this conversation was opened with. */
+  opened:
+    | { tools: readonly string[]; instructions: string; browser: boolean; integrations: boolean }
+    | undefined;
 };
 
 export class SessionHost {
@@ -563,7 +575,7 @@ export class SessionHost {
     return {
       tasksDir: this.options.tasks.tasksDir,
       ...(copies ? { worktreesDir: copies.worktreesDir } : {}),
-      ...(this.options.browsers ? { browsers: true } : {}),
+      ...(this.options.commands ? { browsers: true } : {}),
       tasks: [...tasks].sort().map((task) => {
         const held = this.hold(task);
         const state = held.session ? this.stateOf(held) : undefined;
@@ -736,15 +748,22 @@ export class SessionHost {
           ? join(folders.sessions, basename(spec.resume))
           : spec.resume;
       const resume = crewmateResume(token, binding.backend);
-      // Its own browser, here beside its shell, when the home says it has one.
-      const granted = spec.browser ? this.options.browsers?.grant(held.task) : undefined;
+      // Its own browser, here beside its shell, when the home says it has
+      // one, and its integrations, asked of the home, when it says it reaches them.
+      const granted =
+        spec.browser || spec.integrations
+          ? this.options.commands?.grant(held.task, {
+              browser: spec.browser === true,
+              ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
+            })
+          : undefined;
       const tools = bindTools(
         (
           this.options.tools ?? CREWMATE_TOOLS.filter((tool) => FORWARDED_TOOLS.has(tool.name))
         ).filter((tool) => spec.tools.includes(tool.name)),
         {
           ...this.delegate(held, folders),
-          ...(granted ? { browser: granted.browser } : {}),
+          ...(granted?.browser ? { browser: granted.browser } : {}),
         },
       );
       const sessionSpec: SessionSpec = {
@@ -806,6 +825,7 @@ export class SessionHost {
         tools: spec.tools,
         instructions: spec.instructions,
         browser: spec.browser === true,
+        integrations: spec.integrations === true,
       };
       held.backend = binding.backend;
       held.account = this.options.accounts?.of(binding);
@@ -843,7 +863,8 @@ export class SessionHost {
     return (
       !sameNames(opened.tools, spec.tools) ||
       opened.instructions !== spec.instructions ||
-      opened.browser !== (spec.browser === true)
+      opened.browser !== (spec.browser === true) ||
+      opened.integrations !== (spec.integrations === true)
     );
   }
 
@@ -925,8 +946,9 @@ export class SessionHost {
     this.options.killJobs?.(held.task);
     // Its client's background tasks end with it, and nobody waits on them.
     this.keepClientTasks(held, []);
-    // Its browser goes with it, copying a saved sign-in back as any stop does.
-    this.options.browsers?.close(held.task);
+    // Its browser goes with it, copying a saved sign-in back as any stop
+    // does, and its commands answer nothing more.
+    this.options.commands?.close(held.task);
     if (session) {
       session.dispose();
       await session.closed();
@@ -1210,6 +1232,48 @@ export class SessionHost {
         read: (input, signal) => ask("inf:work:knowledge", { input }, signal),
         record: (input, signal) => ask("inf:work:record-knowledge", { input }, signal),
       },
+    };
+  }
+
+  /**
+   * The integrations a task's command reaches here (docs/integrations.md,
+   * "On a computer that runs work"): each list, show and call is asked of
+   * the home, which answers it with its own integrations and sign-ins under
+   * the task's rules, and keeps the answer, so one asked again after a drop
+   * is answered once. Nothing of a sign-in is here. The command's `signal`
+   * ends a wait it could no longer answer: one never sent then is not sent
+   * when the home returns.
+   */
+  private integrationsOf(held: Held): TaskIntegrations {
+    const ask = async (
+      channel: "inf:work:integrations" | "inf:work:use-integration",
+      input: object,
+      signal?: AbortSignal,
+    ): Promise<IntegrationWireAnswer> =>
+      integrationAnswerSchema.parse(
+        await this.withDeadline(
+          channel,
+          (deadline) => this.call(held, channel, { callId: randomUUID(), input }, deadline),
+          signal,
+        ),
+      );
+    const words = (answer: IntegrationWireAnswer) => ({
+      text: answer.text ?? `${HOME.The} answered nothing.`,
+      ...(answer.refused ? { refused: answer.refused } : {}),
+    });
+    return {
+      list: async (signal) => {
+        const answer = await ask("inf:work:integrations", {}, signal);
+        const rows = answer.data?.integrations;
+        if (!Array.isArray(rows)) throw new Error(words(answer).text);
+        return rows as Record<string, unknown>[];
+      },
+      show: async (name, signal) => {
+        const answer = await ask("inf:work:integrations", { name }, signal);
+        return answer.data ?? words(answer);
+      },
+      call: async (name, action, input, signal) =>
+        words(await ask("inf:work:use-integration", { name, action, input }, signal)),
     };
   }
 

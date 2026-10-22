@@ -22,6 +22,7 @@ import {
   storageOfSite,
 } from "../browser/webSignIns";
 import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../host";
+import type { TaskIntegrations } from "../integrations";
 
 /**
  * The browsers of the tasks a computer that runs work holds
@@ -32,6 +33,9 @@ import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../hos
  * folder here. `TaskBrowsers` owns them here as it owns the home's own, with
  * every rule it keeps; the crewmate reaches its browser through this
  * computer's own task channel (`infinitary-browser-axi`, docs/axi-commands.md).
+ * The same channel carries `infinitary-integrations-axi` to the home's
+ * integrations, which the home answers (docs/integrations.md, "On a
+ * computer that runs work"); none of them is here.
  *
  * The captain's side is the home's: it asks the orders in
  * `browserOrders` (src/shared/work.ts) - his view's pictures and room, his
@@ -207,13 +211,21 @@ export class ComputerBrowsers {
   }
 
   /**
-   * A task's crewmate is given its browser: the browser its command
-   * reaches, and what its shell carries to reach it. A task granted again
-   * keeps its key, so a shell already given it still answers.
+   * A task's crewmate is given its commands: its browser, when the home says
+   * it has one, and the integrations it reaches through the home, with what
+   * its shell carries to reach them. A task granted again keeps its key, so
+   * a shell already given it still answers, and takes the tools granted now.
    */
-  grant(task: string): { browser: CrewmateBrowser; shell: TaskShell } {
-    const browser = this.browsers.forTask(task);
-    return { browser, shell: this.channel.grant(task, { browser }) };
+  grant(
+    task: string,
+    tools: { browser: boolean; integrations?: TaskIntegrations },
+  ): { browser?: CrewmateBrowser; shell: TaskShell } {
+    const browser = tools.browser ? this.browsers.forTask(task) : undefined;
+    const shell = this.channel.grant(task, {
+      ...(browser ? { browser } : {}),
+      ...(tools.integrations ? { integrations: tools.integrations } : {}),
+    });
+    return { ...(browser ? { browser } : {}), shell };
   }
 
   /** The task's conversation closed for good here: its browser goes, and its command answers nothing more. */

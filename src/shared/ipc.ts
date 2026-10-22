@@ -2719,6 +2719,17 @@ export const invokeContract = {
     surface: "core",
     reach: "work",
   },
+  // The home's integrations (docs/integrations.md, "On a computer that runs work").
+  "inf:work:integrations": {
+    ...workRequests["inf:work:integrations"],
+    surface: "core",
+    reach: "work",
+  },
+  "inf:work:use-integration": {
+    ...workRequests["inf:work:use-integration"],
+    surface: "core",
+    reach: "work",
+  },
   "inf:work:picture": {
     ...workRequestWire("inf:work:picture"),
     surface: "core",

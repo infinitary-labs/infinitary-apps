@@ -41636,6 +41636,135 @@
         ]
       }
     },
+    "inf:work:integrations": {
+      "effect": "read",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "text": {
+            "type": "string"
+          },
+          "refused": {
+            "type": "string",
+            "enum": [
+              "refused",
+              "invalid"
+            ]
+          }
+        }
+      }
+    },
+    "inf:work:use-integration": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "input": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string"
+                  },
+                  "input": {}
+                },
+                "required": [
+                  "name",
+                  "action",
+                  "input"
+                ]
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "input"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {}
+          },
+          "text": {
+            "type": "string"
+          },
+          "refused": {
+            "type": "string",
+            "enum": [
+              "refused",
+              "invalid"
+            ]
+          }
+        }
+      }
+    },
     "inf:work:picture": {
       "effect": "change",
       "reach": "work",
@@ -55327,6 +55456,9 @@
                       "maximum": 16
                     },
                     "browser": {
+                      "type": "boolean"
+                    },
+                    "integrations": {
                       "type": "boolean"
                     }
                   },

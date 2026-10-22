@@ -109,6 +109,11 @@ export type StartHelperOptions = {
   interfaces?: () => NodeJS.Dict<NetworkInterfaceInfo[]>;
   /** The contract version it speaks to the home; this build's own unless a test stands in another. */
   protocolVersion?: string;
+  /**
+   * The contract changes its hello lists by name; this build's own unless a
+   * test stands in a computer from before one (`HomeLinkOptions.changes`).
+   */
+  changes?: readonly string[];
   /** The version of Firstmate it runs, which its hello tells the home; unsaid when absent. */
   appVersion?: string;
   /**
@@ -471,6 +476,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     // A Mac that also controls its home says this connection is its work.
     as: "work",
     ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
+    ...(options.changes ? { changes: options.changes } : {}),
     ...(options.appVersion ? { appVersion: options.appVersion } : {}),
     // A home that reaches this computer through its own SSH connection is
     // dialed at the route its connection keeps now, never at the grant's

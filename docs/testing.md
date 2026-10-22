@@ -585,6 +585,7 @@ The build also fails when the image holds any code-signing identity, so nothing 
 A job that signs with the captain's Apple certificates asks for the real Mac through the repository variable `REAL_MAC_RUNNER`: `release.yml`'s signing job and `ios-release.yml`'s TestFlight job.
 Each reads `${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || <its fallback> }}`, so until the switch sets `REAL_MAC_RUNNER` it runs where it ran before.
 Every other Mac job reads `MAC_RUNNER` alone and may run in any place, a virtual one or the real Mac's.
+One job asks for a virtual Mac by the placement service's `mini-mac-virtual` label: `old-cask-upgrade.yml`, whose check writes `/Applications` and quits apps by their bundle id, which only a throwaway clone may take (`docs/alpha.md`, "The old-cask switch").
 `tests/release-contract.test.ts` holds which jobs ask for the real Mac.
 
 ### The runner's microphone access

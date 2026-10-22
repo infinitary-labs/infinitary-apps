@@ -31,6 +31,10 @@ name: release
 # Linux files under Firstmate 3000's names on its tap, and moves Firstmate
 # 3000's cask and frozen-schema update files to it, so the usual Firstmate
 # 3000 update installs Infinitary. A rehearsal writes what that switch would, always.
+# After a live release that switched the cask, the old-cask-upgrade job runs
+# that update in a throwaway virtual Mac, from Firstmate 3000 with saved work
+# to the Infinitary just published (old-cask-upgrade.yml); the linux job has
+# already installed the Ubuntu and Fedora packages over Firstmate 3000's.
 #
 # A dry run rehearses a channel's whole profile on any ref and publishes
 # nothing - no tag, no release on either repository, no tap commit: the
@@ -953,3 +957,17 @@ jobs:
         if: always()
         continue-on-error: true
         run: node scripts/with-search-list-lock.mjs -- security delete-keychain "${{ steps.developer_id_cert.outputs.keychain_path }}" || true
+
+  # The person's side of the old-cask switch, once it is published: their
+  # usual brew update && brew upgrade, in a throwaway virtual Mac, lands on
+  # this release with the saved work Firstmate 3000 made. A failure here
+  # comes after the publication, which it does not undo: it says the
+  # switched cask needs a fix before people meet it.
+  old-cask-upgrade:
+    needs: [resolve, release]
+    if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
+    uses: ./.github/workflows/old-cask-upgrade.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source_commit }}
+      channel: ${{ needs.resolve.outputs.channel }}
+      version: ${{ needs.resolve.outputs.version }}

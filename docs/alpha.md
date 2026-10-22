@@ -301,6 +301,16 @@ So the switch publishes Infinitary under exactly those names.
   A Linux installation always reads Infinitary's own builds file: the app installs its own updates there, and Infinitary's packages replace, conflict with and provide `firstmate-3000` (`docs/linux-packages.md`).
 - **A rehearsal writes it anyway.**
   Every dry run also writes, in a scratch clone of Firstmate 3000's tap read without a credential, the casks and update files a switched release of its channel would commit, and keeps them on the run beside Infinitary's (`old-cask-switch/` in the `tap-rehearsal` artifact).
+- **The person's upgrade is checked.**
+  After a live switched release, `release.yml`'s `old-cask-upgrade` job runs the person's own update in a throwaway virtual Mac, the placement service's `mini-mac-virtual` (`old-cask-upgrade.yml`, `scripts/check-old-cask-upgrade.sh`).
+  It installs the cask as it stood before the switch and opens Firstmate 3000 once, so it makes saved work, then runs `brew update && brew upgrade --cask firstmate-3000@alpha`, or `firstmate-3000` for stable.
+  `Firstmate 3000.app` must be gone and `Infinitary.app` there with the marker above, and Infinitary's first launch must move the saved work and keep the marker (`scripts/check-saved-work-move.sh`).
+  The app must report the version the release published.
+  A failure comes after the publication and does not undo it: it says the switched cask needs a fix before people meet it.
+  A pull request that changes the check or the switch's writer runs its rehearsal: the writer switches the tapped cask in a commit never pushed, to the newest Infinitary of the channel on Infinitary's tap, whose download goes where Homebrew caches the cask's address.
+  The check runs on demand too, live or as a rehearsal.
+  The script refuses outside a virtual Mac, since it writes `/Applications` and Homebrew quits `Firstmate 3000.app` by its bundle id.
+  Every release's Linux checks install the Ubuntu and Fedora packages over Firstmate 3000's published ones, with the same saved-work check (`docs/linux-packages.md`, "The checks").
 - **Republishing stays Infinitary's.**
   `republish-casks.yml` writes Infinitary's tap only, and only from Infinitary's own repository's main; Firstmate 3000's casks move only with a switched release.
 

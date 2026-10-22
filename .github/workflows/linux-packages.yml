@@ -4,8 +4,11 @@ name: linux-packages
 # package, a Fedora package and an AppImage for x64, the Arch recipe for
 # Arch and Omarchy, and the Nix package for NixOS. Each is installed on a
 # clean copy of its system, opened with Chromium's sandbox on, and runs a
-# crew turn with the system's git (scripts/check-linux-package.sh). The
-# packages stay on the run; nothing here uploads them anywhere else.
+# crew turn with the system's git (scripts/check-linux-package.sh); the
+# Ubuntu and Fedora packages are also installed over Firstmate 3000's last
+# published one, as its own update installs them, and move the saved work
+# it made. The packages stay on the run; nothing here uploads them anywhere
+# else.
 #
 # It runs on demand and on a pull request that changes how the packages are
 # made, for the captain to try, and inside every release (release.yml), at
@@ -35,6 +38,7 @@ on:
       - electron-builder.linux.yml
       - packaging/linux/**
       - scripts/check-linux-package.sh
+      - scripts/check-saved-work-move.sh
       - scripts/linux-recipes.ts
       - src/main/linuxStartup.ts
       - tests/installed/**
@@ -126,17 +130,21 @@ jobs:
           retention-days: 30
 
   check:
-    name: check (${{ matrix.system }}${{ matrix.image && format(' {0}', matrix.image) || '' }})
+    name: check (${{ matrix.system }}${{ matrix.image && format(' {0}', matrix.image) || '' }}${{ matrix.over && format(' over Firstmate 3000 {0}', matrix.over) || '' }})
     needs: build
     strategy:
       fail-fast: false
       matrix:
+        # over: Firstmate 3000's last published version, whose package this
+        # one replaces (docs/linux-packages.md, "The old program path").
         include:
           - { system: ubuntu-host, runner: ubuntu-24.04 }
           - { system: ubuntu-host, runner: ubuntu-26.04 }
           - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:24.04" }
           - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:26.04" }
           - { system: fedora, runner: ubuntu-24.04, image: "fedora:latest" }
+          - { system: ubuntu, runner: ubuntu-24.04, image: "ubuntu:24.04", over: "0.4.1" }
+          - { system: fedora, runner: ubuntu-24.04, image: "fedora:latest", over: "0.4.1" }
           - { system: arch, runner: ubuntu-24.04, image: "archlinux:latest" }
           - { system: appimage, runner: ubuntu-24.04, image: "fedora:latest" }
           - { system: nix, runner: ubuntu-24.04 }
@@ -167,6 +175,7 @@ jobs:
           scripts/check-linux-package.sh "${{ matrix.system }}" "$RUNNER_TEMP/linux-packages" "$RUNNER_TEMP/evidence"
         env:
           IMAGE: ${{ matrix.image }}
+          OVER: ${{ matrix.over }}
           NIXPKGS: https://channels.nixos.org/nixos-26.05/nixexprs.tar.xz
           VERSION: ${{ needs.build.outputs.version }}
       - name: Keep the pictures and results

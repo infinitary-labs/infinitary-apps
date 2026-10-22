@@ -136,6 +136,7 @@ Saved work is protected from stable 0.1.25 onward (`docs/alpha.md`, "Activating 
   Screenshots go to the run's own results folder.
 - `older-profile.spec.ts`: a profile an older release saved opens in this build and works ("Profiles saved by an older release", below).
 - `src/core/folderMove/move.test.ts`: the one-time move on real git and SQLite - a whole move whose newest rows are only in the write-ahead log, with Claude's sessions of the home's and the work's working copies, both names of a folder, both folders holding work, an interrupted copy, a copy that does not match, resuming after the check and after the commit, a full disk, the older app open, another move and newer saved work.
+- `scripts/check-saved-work-move.sh`: the one-time move between the real installed apps, with the database and folder Firstmate 3000's own first launch made, after a Homebrew upgrade in a throwaway virtual Mac (`docs/alpha.md`, "The old-cask switch") and after the Ubuntu and Fedora packages replace Firstmate 3000's (`docs/linux-packages.md`, "The checks").
 
 ## Profiles saved by an older release
 

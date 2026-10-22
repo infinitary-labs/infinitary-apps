@@ -19,13 +19,20 @@
 #   nix          the Nix package built with nix-build against NIXPKGS and run
 #                from the Nix store on this runner
 #
+# With OVER set to a Firstmate 3000 version, ubuntu and fedora first install
+# Firstmate 3000's published package of that version and open it once as the
+# person, then install the package over it as Firstmate 3000's own update
+# does (src/core/update/linuxInstall.ts): Firstmate 3000's package must be
+# gone and its saved work moved on Infinitary's first launch
+# (scripts/check-saved-work-move.sh) before the crew turn.
+#
 # A container stands in for a clean copy of its system. It runs privileged,
 # so Chromium can make its sandbox's namespaces there, and the runner lifts
 # Ubuntu's restriction on user namespaces for it, as Fedora, Arch and NixOS
 # have none; ubuntu-host keeps that restriction and the package's own
 # AppArmor profile. The window is the runner's virtual screen, DISPLAY.
 # Environment: IMAGE, NIXPKGS, VERSION (the version the app must report),
-# DISPLAY.
+# DISPLAY, OVER.
 set -euo pipefail
 
 SYSTEM="${1:-}"
@@ -67,7 +74,30 @@ OLD_PATH='for old in /opt/firstmate-3000/firstmate-3000 /usr/bin/firstmate-3000;
   [ "$to" = /opt/infinitary/infinitary ] || { echo "$old leads to ${to:-nothing}, not /opt/infinitary/infinitary" >&2; exit 1; }
 done'
 
+# Firstmate 3000's published package of OVER, fetched from its tap's
+# release and checked against the release's own checksum, for the box to
+# install before this package.
+OLDER=""
+if [[ -n "${OVER:-}" ]]; then
+  OLDER="$(mktemp -d)"
+fi
+older() {
+  local base="https://github.com/kunchenguid/homebrew-tap/releases/download/firstmate-3000-v$OVER"
+  curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLDER/$1" "$base/$1"
+  curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$OLDER/$1.sha256" "$base/$1.sha256"
+  (cd "$OLDER" && sha256sum -c "$1.sha256") >&2
+  echo "$OLDER/$1"
+}
+
 # As a person, never root: Chromium refuses to run as root with its sandbox on.
+as_person() {
+  docker exec -u "$(id -u):$(id -g)" -e HOME=/tmp/person -e DISPLAY="$DISPLAY" "$NAME" "$@"
+}
+
+# The person's saved work, made by Firstmate 3000 and moved by Infinitary.
+SAVED_WORK="$WORKSPACE/scripts/check-saved-work-move.sh"
+OLDER_FOLDER=/tmp/person/.config/firstmate-3000
+
 journey_in_box() {
   docker exec -u "$(id -u):$(id -g)" -w "$WORKSPACE" \
     -e HOME=/tmp/person -e DISPLAY="$DISPLAY" -e CI=1 \
@@ -78,10 +108,13 @@ journey_in_box() {
 
 start_box() {
   sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0 >/dev/null 2>&1 || true
-  docker run -d --name "$NAME" --privileged --network host \
-    -v /tmp/.X11-unix:/tmp/.X11-unix \
-    -v "$WORKSPACE:$WORKSPACE" -v "$PACKAGES:$PACKAGES:ro" -v "$EVIDENCE:$EVIDENCE" \
-    -v "$NODE_DIR:$NODE_DIR:ro" \
+  local mounts=(
+    -v /tmp/.X11-unix:/tmp/.X11-unix
+    -v "$WORKSPACE:$WORKSPACE" -v "$PACKAGES:$PACKAGES:ro" -v "$EVIDENCE:$EVIDENCE"
+    -v "$NODE_DIR:$NODE_DIR:ro"
+  )
+  [[ -z "$OLDER" ]] || mounts+=(-v "$OLDER:$OLDER:ro")
+  docker run -d --name "$NAME" --privileged --network host "${mounts[@]}" \
     "$IMAGE" sleep infinity >/dev/null
   in_box "mkdir -p /tmp/person && chown $(id -u):$(id -g) /tmp/person"
   in_box "cat /etc/os-release" | tee "$EVIDENCE/os-release.txt"
@@ -99,16 +132,42 @@ case "$SYSTEM" in
     ;;
   ubuntu)
     start_box
-    in_box "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y '$DEB'"
+    in_box "apt-get update -qq"
+    if [[ -n "$OLDER" ]]; then
+      OLDER_DEB="$(older "firstmate-3000-$OVER-linux-amd64.deb")"
+      in_box "DEBIAN_FRONTEND=noninteractive apt-get install -y '$OLDER_DEB' sqlite3 procps"
+      in_box "dpkg-query -W firstmate-3000" | tee "$EVIDENCE/older-package.txt"
+      as_person "$SAVED_WORK" make /usr/bin/firstmate-3000 "$OLDER_FOLDER" "$EVIDENCE"
+      # Firstmate 3000's own update (src/core/update/linuxInstall.ts).
+      in_box "DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-downgrades '$DEB'"
+      in_box "dpkg -l firstmate-3000 infinitary || true" | tee "$EVIDENCE/packages.txt"
+      in_box "! dpkg-query -W -f='\${Status}' firstmate-3000 2>/dev/null | grep -q 'install ok installed'" \
+        || fail "Firstmate 3000's package is still installed"
+    else
+      in_box "DEBIAN_FRONTEND=noninteractive apt-get install -y '$DEB'"
+    fi
     in_box "$OLD_PATH" || fail "the package left no link at Firstmate 3000's program path"
     in_box "command -v git"
+    [[ -z "$OLDER" ]] || as_person "$SAVED_WORK" moved /usr/bin/infinitary "$OLDER_FOLDER" /tmp/person/.config/infinitary "$EVIDENCE"
     journey_in_box /usr/bin/infinitary
     ;;
   fedora)
     start_box
-    in_box "dnf install -y '$(one '*.rpm')'"
+    if [[ -n "$OLDER" ]]; then
+      OLDER_RPM="$(older "firstmate-3000-$OVER-linux-x86_64.rpm")"
+      in_box "dnf install -y '$OLDER_RPM' sqlite procps-ng"
+      in_box "rpm -q firstmate-3000" | tee "$EVIDENCE/older-package.txt"
+      as_person "$SAVED_WORK" make /usr/bin/firstmate-3000 "$OLDER_FOLDER" "$EVIDENCE"
+      # Firstmate 3000's own update (src/core/update/linuxInstall.ts).
+      in_box "dnf install -y '$(one '*.rpm')'"
+      in_box "rpm -q firstmate-3000 infinitary || true" | tee "$EVIDENCE/packages.txt"
+      in_box "! rpm -q firstmate-3000" || fail "Firstmate 3000's package is still installed"
+    else
+      in_box "dnf install -y '$(one '*.rpm')'"
+    fi
     in_box "$OLD_PATH" || fail "the package left no link at Firstmate 3000's program path"
     in_box "command -v git"
+    [[ -z "$OLDER" ]] || as_person "$SAVED_WORK" moved /usr/bin/infinitary "$OLDER_FOLDER" /tmp/person/.config/infinitary "$EVIDENCE"
     journey_in_box /usr/bin/infinitary
     ;;
   arch)

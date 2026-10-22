@@ -2270,7 +2270,14 @@ describe("the signed channel workflow", () => {
     // conditional. The lane jobs themselves never turn a skip into a pass.
     expect(jobOf(release, "resolve").if).toBeUndefined();
     expect(lane.if).toBeUndefined();
-    expect(Object.keys(release.jobs)).toEqual(["resolve", "notes", "verify", "linux", "release"]);
+    expect(Object.keys(release.jobs)).toEqual([
+      "resolve",
+      "notes",
+      "verify",
+      "linux",
+      "release",
+      "old-cask-upgrade",
+    ]);
     const runner = (name: string) =>
       workflowValue(lane["runs-on"] ?? "", { matrix: { lane: name }, inputs: {}, vars: {} });
     expect(runner("linux-checks")).toBe("ubuntu-latest");
@@ -2930,6 +2937,69 @@ describe("the jobs that ask for the real Mac", () => {
   });
 });
 
+/**
+ * INF-884: once a release has switched Firstmate 3000's cask, a person's usual
+ * brew update && brew upgrade runs for real, in a throwaway virtual Mac,
+ * because it installs into /Applications and Homebrew quits Firstmate 3000
+ * by its bundle id (scripts/check-old-cask-upgrade.sh). A release checks the
+ * tap it just published; a pull request rehearses the switch, never pushed.
+ */
+describe("the old-cask upgrade check (INF-884)", () => {
+  type Job = {
+    needs?: string[];
+    if?: string;
+    uses?: string;
+    with?: Record<string, string>;
+    "runs-on"?: string;
+    env?: Record<string, string>;
+  };
+  const release = loadYamlFile(".github/workflows/release.yml") as { jobs: Record<string, Job> };
+  const upgrade = loadYamlFile(".github/workflows/old-cask-upgrade.yml") as {
+    jobs: Record<string, Job>;
+  };
+  const call = release.jobs["old-cask-upgrade"] as Job;
+  const check = upgrade.jobs.upgrade as Job;
+
+  it("runs after a live release that switched the cask, at that release, and after no other", () => {
+    const runs = (outputs: Record<string, string>) =>
+      workflowValue(call.if ?? "", {
+        needs: { resolve: { outputs }, release: { result: "success" } },
+      });
+    expect(call.needs).toEqual(["resolve", "release"]);
+    expect(call.uses).toBe("./.github/workflows/old-cask-upgrade.yml");
+    expect(runs({ dry_run: "false", old_cask: "true" })).toBe(true);
+    expect(runs({ dry_run: "true", old_cask: "true" })).toBe(false);
+    expect(runs({ dry_run: "false", old_cask: "false" })).toBe(false);
+    const passed = (name: string) =>
+      workflowValue(call.with?.[name] ?? "", {
+        needs: {
+          resolve: {
+            outputs: { source_commit: "a".repeat(40), channel: "alpha", version: "0.5.1-alpha.1" },
+          },
+        },
+      });
+    expect([passed("ref"), passed("channel"), passed("version")]).toEqual([
+      "a".repeat(40),
+      "alpha",
+      "0.5.1-alpha.1",
+    ]);
+  });
+
+  it("checks the published tap from a release and rehearses from a pull request", () => {
+    const mode = (event: string, inputs: Record<string, string>) =>
+      workflowValue(check.env?.MODE ?? "", { github: { event_name: event }, inputs });
+    // A release is dispatched, and its call carries no mode of its own.
+    expect(mode("workflow_dispatch", { channel: "alpha", version: "0.5.1-alpha.1" })).toBe("live");
+    expect(mode("pull_request", {})).toBe("rehearsal");
+    expect(mode("workflow_dispatch", { channel: "alpha", mode: "rehearsal" })).toBe("rehearsal");
+  });
+
+  it("runs only in a throwaway virtual Mac", () => {
+    expect(Object.keys(upgrade.jobs)).toEqual(["upgrade"]);
+    expect(check["runs-on"]).toBe("mini-mac-virtual");
+  });
+});
+
 describe("the cask republication workflow", () => {
   type Step = {
     id?: string;
@@ -3441,7 +3511,8 @@ describe("the Linux packages", () => {
     );
     expect(upload?.with).toMatchObject({ name: "linux-packages", "retention-days": 30 });
     const systems = (workflow.jobs.check?.strategy?.matrix.include ?? []).map(
-      (entry) => `${entry.system} ${entry.image ?? entry.runner}`,
+      (entry) =>
+        `${entry.system} ${entry.image ?? entry.runner}${entry.over ? ` over ${entry.over}` : ""}`,
     );
     expect(systems).toEqual([
       "ubuntu-host ubuntu-24.04",
@@ -3449,6 +3520,8 @@ describe("the Linux packages", () => {
       "ubuntu ubuntu:24.04",
       "ubuntu ubuntu:26.04",
       "fedora fedora:latest",
+      "ubuntu ubuntu:24.04 over 0.4.1",
+      "fedora fedora:latest over 0.4.1",
       "arch archlinux:latest",
       "appimage fedora:latest",
       "nix ubuntu-24.04",

@@ -130,13 +130,61 @@ async function crewOnPlanes(page: Page): Promise<string[][]> {
   return (placed ?? "").split("|").map((plane) => plane.split(" ").filter(Boolean));
 }
 
+/** The task ids a task with parts draws at its own node, off every orbit. */
+async function crewAtNodes(page: Page): Promise<string[]> {
+  const seated = await page
+    .locator('canvas[data-crew-layer="near"]')
+    .getAttribute("data-constellation-crew");
+  return (seated ?? "").split(" ").filter(Boolean);
+}
+
+/**
+ * Point at a crewmate the constellation seats at its node: its name is drawn
+ * above it and is part of it, so the pointer goes to the name, and finds it
+ * only while the stage shows names. The seat glides with its task's mark, so
+ * the pointer follows the name until the crewmate is the one being read.
+ */
+async function pointAtSeatedCrewmate(
+  page: Page,
+  id: string,
+): Promise<{ id: string; x: number; y: number }> {
+  const name = crewModelName(page, id);
+  let point = { x: 0, y: 0 };
+  await expect
+    .poll(
+      async () => {
+        // Read where the name is now without waiting for it: a name still
+        // folded up is hidden, and the next try reads it again.
+        const [centre] = await name.evaluateAll((elements) =>
+          elements.map((element) => {
+            const { x, y, width, height } = element.getBoundingClientRect();
+            return { x: x + width / 2, y: y + height / 2 };
+          }),
+        );
+        if (!centre) return null;
+        point = centre;
+        await page.mouse.move(point.x, point.y);
+        await nextFrame(page);
+        return crewInspecting(page);
+      },
+      {
+        message: `Crewmate ${id} at its constellation node is not under the pointer`,
+        timeout: 15_000,
+      },
+    )
+    .toBe(id);
+  return { id, ...point };
+}
+
 /**
  * Point at a crewmate the way a person does: once the orbit has placed it
  * (`wanted`, when a task id is given, or any crewmate), sweep the pointer
  * along the occupied orbits until it lands on it. A start the record already
  * names can reach the orbit a moment later, so the sweep never begins on an
- * orbit that has nobody to find (INF-745). Works at every crew size, labels
- * or not, and returns the task id the pointer is on and where the pointer
+ * orbit that has nobody to find (INF-745). A part of a task with parts is
+ * drawn at its own node instead, off every orbit, so the pointer goes to it
+ * there (INF-870). Works at every crew size, labels or not, for a crewmate on
+ * an orbit, and returns the task id the pointer is on and where the pointer
  * was left resting on it.
  */
 export async function pointAtCrewmate(
@@ -144,11 +192,13 @@ export async function pointAtCrewmate(
   wanted?: string,
 ): Promise<{ id: string; x: number; y: number }> {
   let placed: string[][] = [];
+  let seated: string[] = [];
   await expect
     .poll(
       async () => {
         placed = await crewOnPlanes(page);
-        return placed.flat().some((id) => !wanted || id === wanted);
+        seated = await crewAtNodes(page);
+        return [...placed.flat(), ...seated].some((id) => !wanted || id === wanted);
       },
       {
         message: `Crewmate${wanted ? ` ${wanted}` : ""} is not placed on the orbit`,
@@ -156,9 +206,17 @@ export async function pointAtCrewmate(
       },
     )
     .toBe(true);
+  // A seated crewmate is still listed on its plane, but never on its path.
+  const orbiting = placed.map((plane) => plane.filter((id) => !seated.includes(id)));
+  const atNode = wanted
+    ? seated.find((id) => id === wanted)
+    : orbiting.flat().length
+      ? undefined
+      : seated[0];
+  if (atNode) return pointAtSeatedCrewmate(page, atNode);
   const { x, y, scale } = await crewFormation(page);
   for (let plane = 0; plane < CROWDED_PLANES.length; plane++) {
-    if (!placed[plane]?.length) continue;
+    if (!orbiting[plane]?.length) continue;
     for (let degrees = 0; degrees < 360; degrees += 2) {
       const at = projectPlane(plane, (degrees * Math.PI) / 180);
       const point = { x: x + at.x * scale, y: y + at.y * scale };

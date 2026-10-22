@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "point-at-seated-crewmate",
+      "reason": "The journeys' pointer helper finds a part of a task with parts, which the constellation draws at its own node off every orbit, by pointing at its name; test only, nothing a person notices."
+    }
+  ]
+}

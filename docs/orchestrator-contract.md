@@ -52,6 +52,9 @@ This follows the captain's ask to fix the rigidness, the same way INF-638 lets t
 A message typed on a paired view is a captain message (the captain's pick on FI3-709, `docs/devices.md`).
 `hands` delegates to the captain, and `yours` is captain-only.
 `judgment` is the first mate's at any wake too, on its own judgment: its evidence is its reason, which the change keeps, never the captain's ask.
+`direction` (INF-638, `judgment`) adds, revises and retires one of the captain's standing directions through `inf:knowledge:direction:set`, and lists them as its current value from `inf:knowledge:directions`.
+The captain's ruling made it the first mate's judgment rather than a tier of his words: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?"
+A direction is a setting like the rest, not a second store of its own: each change leaves the same feed line and operation, and `record_knowledge` refuses one (`docs/knowledge.md`, "Directions are the first mate's to keep").
 Sharing switches and purge stay the captain's.
 Panels and plugins gain no change ability.
 `show-card` (`asked`) brings a card forward when the captain asks: `inf:cards:show` restores an open minimized card or shows a closed card read-only.
@@ -97,7 +100,7 @@ Piece 3 makes parity strict: every changing core channel is a catalog line, an e
 There is no pending inventory.
 Project configuration was an explicit exception until piece 4.
 Login/dock now use core dispatch with field-scoped permissions.
-Release-page opening records every successful request; GitHub sign-out needs typed captain words.
+Release-page opening records every successful request; signing out of a project host needs typed captain words, and reaches any host the app is signed in to, as Settings does.
 Sharing, its ask, purge, panels consent, recovery and ask-first merge remain captain-owned.
 Hand-over actions offer a card opening the relevant Settings section, never submit credentials.
 Voice download runs through core dispatch over a host capability; model-file serving remains desktop-owned, and a host without that capability refuses the request.

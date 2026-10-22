@@ -67,6 +67,7 @@ export async function actionRequest(
   dispatch: CoreDispatch,
   action: ActionName,
   raw: unknown,
+  evidence?: string,
 ): Promise<unknown[]> {
   const line: ActionLine = ACTIONS[action];
   const value = line.value.parse(raw) as Record<string, unknown>;
@@ -86,8 +87,12 @@ export async function actionRequest(
       );
     current = { layout: current, surface };
   }
-  return line.toRequest(value, current, (path) =>
-    path === "~" ? homedir() : path.startsWith("~/") ? join(homedir(), path.slice(2)) : path,
+  return line.toRequest(
+    value,
+    current,
+    (path) =>
+      path === "~" ? homedir() : path.startsWith("~/") ? join(homedir(), path.slice(2)) : path,
+    evidence,
   );
 }
 export function actionValue(action: ActionName, current: unknown): Record<string, unknown> {
@@ -187,7 +192,12 @@ export function createAppTools(delegate: AppToolsDelegate) {
           }
           const line = ACTIONS[action];
           if (!line.change || !line.current) return { text: line.line };
-          const args = await actionRequest(delegate.dispatch, action, params.value);
+          const args = await actionRequest(
+            delegate.dispatch,
+            action,
+            params.value,
+            params.evidence as string,
+          );
           await delegate.dispatch(line.change, args, actor);
           const result = await delegate.dispatch(line.current, []);
           return { text: JSON.stringify({ action, current: actionValue(action, result) }) };

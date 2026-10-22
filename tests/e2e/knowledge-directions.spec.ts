@@ -1,6 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { ACTIONS } from "@shared/actions";
 import Database from "better-sqlite3";
 import { KnowledgeService } from "../../src/core/knowledge/knowledgeService";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
@@ -22,6 +23,7 @@ import {
 import { HARBOR, seedKnowledge } from "./knowledgeSeed";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { panelCardChrome, panelHeaderButton } from "./panelCards";
 import {
   holdsSegment,
@@ -31,6 +33,16 @@ import {
   served,
 } from "./providerRequest";
 import { readSavedData } from "./savedData";
+import {
+  RELAYED_DIRECTION,
+  RELAYED_DIRECTION_CARD,
+  RELAYED_DIRECTION_CHOICE,
+  RELAYED_DIRECTION_MARKER,
+  RELAYED_DIRECTION_REASON,
+  type RelayedDirectionSeen,
+  relayedDirection,
+} from "./scenarios/relayedDirection";
+import { showCard, shownEntry } from "./stack";
 import { pressKey, runFromSearch } from "./windowKeys";
 
 const DIRECTION = {
@@ -60,34 +72,29 @@ test("directions stay distinct from personal facts in the browser and in Firstma
   let fact = "";
   let beforeHistory: unknown;
   try {
-    await knowledge.record(actor, {
-      action: "publish",
-      requestId: "direction-first",
-      kind: "direction",
+    knowledge.changeDirection({
+      op: "add",
       id: DIRECTION.id,
       scope: HARBOR.id,
-      statement: DIRECTION.first,
+      text: DIRECTION.first,
       reason: DIRECTION.first,
     });
     // Forty short directions exceed the former budget once labels are rendered.
     for (let i = 0; i < 39; i += 1) {
-      await knowledge.record(actor, {
-        action: "publish",
-        requestId: `extra-${i}`,
-        kind: "direction",
+      knowledge.changeDirection({
+        op: "add",
         id: `z-rule-${i}`,
         scope: HARBOR.id,
-        statement: `Standing project direction ${i}: `.padEnd(99, "x"),
+        text: `Standing project direction ${i}: `.padEnd(99, "x"),
         reason: "The captain set this direction.",
       });
     }
     // The direction inspected below is the newest instruction on the first page.
-    await knowledge.record(actor, {
-      action: "revise",
-      requestId: "direction-next",
+    knowledge.changeDirection({
+      op: "revise",
       id: `d:${DIRECTION.id}`,
       expectedRevision: 1,
-      statement: DIRECTION.text,
+      text: DIRECTION.text,
       reason: DIRECTION.evidence,
     });
     const concept = await knowledge.record(actor, {
@@ -223,6 +230,97 @@ test("directions stay distinct from personal facts in the browser and in Firstma
   }
 });
 
+/**
+ * INF-638, the captain's words: "btw that was another example of rigidness
+ * in our logic". On INF-626 he chose a direction on a crewmate's card; the
+ * first mate, woken by that crewmate's report rather than by his words, was
+ * refused, and he had to type the rule twice more. His ruling: "why not just
+ * give first mate a tool to freely read and write standing directions, and
+ * then rely on the agent's judgment on when/how to do it?" The first mate
+ * saves it on that report, as his instruction, through the same app action
+ * catalog as every setting: one Activity line, and its reason kept.
+ */
+test("a direction the captain chose on a crewmate's card is saved without him typing it", async () => {
+  const userDataDir = scratchDir("infinitary-relayed-direction-");
+  const seen: RelayedDirectionSeen = { results: [] };
+  const app = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [relayedDirection(seen)],
+  });
+  const evidence = process.env.INFINITARY_KNOWLEDGE_EVIDENCE;
+  try {
+    await waitForFirstmateIdle(app.page);
+    await askFirstmate(app.page, `${SPAWN_PROMPT_MARKER} ${RELAYED_DIRECTION_MARKER}`);
+    await expect
+      .poll(
+        async () =>
+          (await app.page.evaluate(() => window.infinitary.cards.list())).some(
+            (card) => card.title === RELAYED_DIRECTION_CARD && !card.awaiting,
+          ),
+        { timeout: 45_000 },
+      )
+      .toBe(true);
+    await showCard(app.page, RELAYED_DIRECTION_CARD);
+    // His one act: the card's default, by key. He types nothing.
+    await pressKey(
+      shownEntry(app.page).getByRole("button", {
+        name: RELAYED_DIRECTION_CHOICE.label,
+        exact: true,
+      }),
+      "Enter",
+    );
+    // The crewmate relays the choice and the first mate acts on the report.
+    await expect.poll(() => seen.results.length, { timeout: 45_000 }).toBeGreaterThan(0);
+    await waitForFirstmateIdle(app.page);
+    // One Activity line, the trail every catalog change writes.
+    const kept = ACTIONS.direction.done({ op: "add", text: RELAYED_DIRECTION });
+    expect(
+      (await app.page.evaluate(() => window.infinitary.feed.recent())).filter((line) =>
+        line.text.endsWith(kept),
+      ),
+    ).toHaveLength(1);
+    if (evidence) {
+      writeFileSync(join(evidence, "relayed-direction-result.txt"), `${seen.results.join("\n")}\n`);
+      await app.page.screenshot({ path: join(evidence, "relayed-direction-window.png") });
+    }
+    const listed = await app.page.evaluate(() =>
+      window.infinitary.plugins.read("knowledge.directions", { scope: "captain" }),
+    );
+    expect(listed.state === "ready" && listed.rows.map(({ text }) => text)).toEqual([
+      RELAYED_DIRECTION,
+    ]);
+    const saved = listed.state === "ready" ? listed.rows[0] : undefined;
+    expect(saved).toMatchObject({ authority: "instruction", origin: "captain-turn" });
+    const direction = await app.page.evaluate(
+      (id) => window.infinitary.plugins.read("knowledge.direction", { id }),
+      saved?.id ?? "",
+    );
+    const history = direction.state === "ready" ? direction.direction.history : [];
+    expect(history.map((row) => row.evidence)).toEqual([RELAYED_DIRECTION_REASON]);
+
+    await runFromSearch(app.app, app.page, OPEN_KNOWLEDGE);
+    // With no concept to draw the graph takes no focus; the browser still
+    // holds the keyboard once it lands.
+    await expect.poll(() => focusInBrowser(app.page)).not.toBeNull();
+    await pressKey(tab(app.page, "directions"), "Enter");
+    await pressKey(row(app.page, saved?.id ?? ""), "Enter");
+    await expect.poll(() => focusInBrowser(app.page)).toBe("section:overview");
+    await expect(inspector(app.page)).toContainText(RELAYED_DIRECTION);
+    await pressKey(section(app.page, "history"), "Enter");
+    // The reason the first mate gave, as the direction's history keeps it.
+    await expect(inspector(app.page)).toContainText(RELAYED_DIRECTION_REASON);
+    if (evidence) {
+      await inspector(app.page).getByText(RELAYED_DIRECTION_REASON).scrollIntoViewIfNeeded();
+      await browserCard(app.page).screenshot({
+        path: join(evidence, "relayed-direction-history.png"),
+      });
+    }
+  } finally {
+    await app.close();
+  }
+});
+
 /** The captain has eight current directions, five for this project; no archive is needed. */
 test("eight active directions survive carryover, stable restart, forget and purge without an old writer", async () => {
   const userDataDir = scratchDir("infinitary-active-directions-");
@@ -344,13 +442,11 @@ test("eight active directions survive carryover, stable restart, forget and purg
     });
     const answer = again.mockProvider.scriptFirstmateTurn(input, [
       {
-        name: "record_knowledge",
+        name: "app_change",
         args: {
-          action: "retire",
-          request_id: "forget-zero",
-          id: "d:current-direction-0",
-          expected_revision: 1,
-          reason: words,
+          action: "direction",
+          value: { op: "retire", id: "d:current-direction-0", expectedRevision: 1 },
+          evidence: words,
         },
       },
       {

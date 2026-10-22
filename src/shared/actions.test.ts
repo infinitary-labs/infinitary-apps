@@ -162,7 +162,8 @@ describe("action permissions and channel parity", () => {
   // INF-752: a judgment line is the first mate's at any wake too, on the
   // reason it gives. Pausing, resuming and deleting a schedule are its
   // judgment, as making one is (docs/automation.md, "Drafts"); turning a
-  // draft on is asked.
+  // draft on is asked. Keeping the captain's directions is its judgment
+  // too (INF-638).
   it("takes asked, own-words and judgment lines at any wake with evidence, never the captain's own", () => {
     for (const name of ACTION_NAMES) {
       const line = ACTIONS[name];
@@ -175,6 +176,7 @@ describe("action permissions and channel parity", () => {
       }
     }
     expect(ACTION_NAMES.filter((name) => ACTIONS[name].tier === "judgment")).toEqual([
+      "direction",
       "automation-state",
       "automation-pause-all",
       "automation-delete",

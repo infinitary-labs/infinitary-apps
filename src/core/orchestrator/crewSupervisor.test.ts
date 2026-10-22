@@ -13413,18 +13413,13 @@ describe("CrewSupervisor direction context", () => {
         },
       });
       const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
-      await knowledge?.record(
-        { kind: "firstmate", origin: "captain-turn", canCreate: true },
-        {
-          action: "publish",
-          requestId: "direction",
-          id: "smoke-check",
-          kind: "direction",
-          scope: repo.id,
-          statement: "Check package smoke before publishing.",
-          reason: "captain said so",
-        },
-      );
+      knowledge?.changeDirection({
+        op: "add",
+        id: "smoke-check",
+        scope: repo.id,
+        text: "Check package smoke before publishing.",
+        reason: "captain said so",
+      });
       await supervisor.commission({
         title: "Fix smoke",
         intent: intentOf("Fix the flaky package-smoke."),
@@ -13470,17 +13465,12 @@ describe("CrewSupervisor direction context", () => {
       },
     });
     const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "firstmate-3000" });
-    await knowledge?.record(
-      { kind: "firstmate", origin: "captain-turn", canCreate: true },
-      {
-        action: "publish",
-        requestId: "direction",
-        kind: "direction",
-        scope: repo.id,
-        statement: "Always squash-merge smoke fixes.",
-        reason: "told",
-      },
-    );
+    knowledge?.changeDirection({
+      op: "add",
+      scope: repo.id,
+      text: "Always squash-merge smoke fixes.",
+      reason: "told",
+    });
     const recorded = await knowledge?.record(
       { kind: "firstmate", origin: "captain-turn", canCreate: true },
       {

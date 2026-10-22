@@ -36,7 +36,8 @@ export async function startCore(host: HostCapabilities): Promise<Core> {
     services,
     host,
     emit: events.emit,
-    onActionRecorded: (id) => services.firstmate.appActionRecorded(id),
+    onActionRecorded: (id, action, value) =>
+      services.firstmate.appActionRecorded(id, action, value),
   });
   services.firstmate.bindAppDispatch(dispatch);
   // What the system starts at login, remembered in the folder for an app

@@ -53,7 +53,7 @@ export const REACH_RULE_WORDS =
 export const REACH_RULE_HOLDS: OverridableHold[] = ["asks-first"];
 /**
  * The first mate's words once GitHub's rule refused the merge, its reply
- * line (an emote's few words): its builder's completion card is up, so it
+ * line (the turn's closing words): its builder's completion card is up, so it
  * adds no card of its own.
  */
 export const REACH_RULE_REPLY = "GitHub's rule holds it; merge it there";
@@ -130,8 +130,11 @@ function firstmateMove({ body }: ScenarioRequest): ScenarioAnswer | undefined {
           { name: "settle_task", args: { task_id: task, mode: "merge-pr" } },
         ],
       };
-    if (results.length === 2 && results[1]?.includes(fixedHoldWords("host-rules")))
-      return { calls: [{ name: "emote", args: { emote: "confused", text: REACH_RULE_REPLY } }] };
+    // The emote is motion only; the closing words are the reply line (INF-772).
+    if (results[1]?.includes(fixedHoldWords("host-rules"))) {
+      if (results.length === 2) return { calls: [{ name: "emote", args: { emote: "confused" } }] };
+      if (results.length === 3) return { text: REACH_RULE_REPLY };
+    }
     return { text: "The merge did not go through." };
   }
 

@@ -43,12 +43,12 @@ export const KNOWLEDGE_TOOL_DESCRIPTION = [
 ].join(" ");
 
 export const RECORD_KNOWLEDGE_TOOL_DESCRIPTION = [
-  "Record user-owned knowledge only: personal context, a source the captain asked to save, or a standing direction.",
-  "Project facts stay in the project; an investigation stays on the task; a direction is not a fact.",
-  "The first mate records a direction or personal statement only on the captain's words, never an import.",
-  "A direction is an imperative directive, not an observation. Revise an existing direction, never duplicate it. Skip trivia, raw dumps, task progress and TODOs. Intentions belong in schedule_prompt or a queued task.",
+  "Record user-owned knowledge only: personal context or a source the captain asked to save.",
+  "Project facts stay in the project; an investigation stays on the task.",
+  "The first mate records a personal statement only on the captain's words, never an import.",
+  "Standing directions are the first mate's app_change direction. A direction is an imperative directive, not an observation. Revise an existing direction, never duplicate it. Skip trivia, raw dumps, task progress and TODOs. Intentions belong in schedule_prompt or a queued task.",
   "Every crewmate can write facts: save sources on request; personal context only from the captain's words. Crewmates cannot change directions or retire.",
-  "publish a direction (text, scope, reason), concept (title, aliases, text) or finding (text, basis, about, conditions, sources). Revise or retire a direction by d: id and expected_revision, with reason. An article source is {url, title, excerpt, author, published}, a short excerpt. Reuse that url's concept.",
+  "publish a concept (title, aliases, text) or finding (text, basis, about, conditions, sources). An article source is {url, title, excerpt, author, published}, a short excerpt. Reuse that url's concept.",
   "revise your own finding or any concept you may write (expected_revision). To disagree, assess or relate. Grants no permission.",
 ].join(" ");
 
@@ -108,7 +108,7 @@ export const RECORD_KNOWLEDGE_TOOL = crewmateTool({
   parameters: Type.Object({
     action: stringEnum(RECORD_ACTIONS),
     request_id: Type.String({ description: "New per write; same only to retry" }),
-    kind: Type.Optional(stringEnum(["concept", "finding", "direction"])),
+    kind: Type.Optional(stringEnum(["concept", "finding"])),
     lane: Type.Optional(
       stringEnum(["personal", "reference"], {
         description:
@@ -127,7 +127,7 @@ export const RECORD_KNOWLEDGE_TOOL = crewmateTool({
     title: Type.Optional(Type.String()),
     aliases: Type.Optional(Type.Array(Type.String())),
     text: Type.Optional(
-      Type.String({ description: "concept: its explanation; finding or direction: its text" }),
+      Type.String({ description: "concept: its explanation; finding: its text" }),
     ),
     basis: Type.Optional(stringEnum(["observation", "inference"])),
     about: Type.Optional(

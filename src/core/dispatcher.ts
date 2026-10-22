@@ -161,7 +161,8 @@ export type CoreDispatcherOptions = {
   services: CoreServices;
   host: HostCapabilities;
   emit: CoreEventSink;
-  onActionRecorded?: (id: string) => void;
+  /** The first mate's change recorded: its operation, its catalog line, and what it says. */
+  onActionRecorded?: (id: string, action: ActionName, value: Record<string, unknown>) => void;
 };
 
 export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispatch {
@@ -665,8 +666,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:knowledge:concepts": (args) => knowledgeOf(services).concepts(args),
     "inf:knowledge:findings": (args) => knowledgeOf(services).findings(args),
     "inf:knowledge:entry": (args) => knowledgeOf(services).entry(args),
-    "inf:knowledge:directions": (args) => knowledgeOf(services).directions(args),
+    "inf:knowledge:directions": (args = { scope: "all" }) => knowledgeOf(services).directions(args),
     "inf:knowledge:direction": (args) => knowledgeOf(services).direction(args),
+    "inf:knowledge:direction:set": (change) => knowledgeOf(services).changeDirection(change),
     "inf:knowledge:refs": (args) => knowledgeOf(services).refs(args),
     "inf:knowledge:uses": (args) => knowledgeOf(services).taskUses(args),
 
@@ -1299,7 +1301,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         ? { repoId: (value.repo as RepoView).id }
         : {}),
     });
-    if (actor.kind === "firstmate") options.onActionRecorded?.(row.id);
+    if (actor.kind === "firstmate") options.onActionRecorded?.(row.id, name, value);
     if (name === "project-remove") {
       const repo = value.repo as RepoView;
       services.broadcastEvent({
@@ -1553,6 +1555,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           from: prior?.speed ?? "standard",
           to: args[1],
         });
+      } else if (name === "forge-sign-out") {
+        trail(name, { host: args[0] }, actor);
+      } else if (name === "direction") {
+        const { op, direction } = result as InvokeResponse<"inf:knowledge:direction:set">;
+        trail(name, { op, text: direction.text }, actor);
       } else if (name === "crew-reasoning") {
         trail(name, { key: args[0], slot: args[1], level: args[2] }, actor);
       } else if (name === "crew-slots-reset") {

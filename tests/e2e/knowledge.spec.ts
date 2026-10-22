@@ -121,27 +121,19 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
     }),
     [
       {
-        name: "record_knowledge",
+        name: "app_change",
         args: {
-          action: "publish",
-          request_id: "project-direction",
-          kind: "direction",
-          id: "harbor-review",
-          scope: repo.id,
-          text: directionText,
-          reason: directionWords,
+          action: "direction",
+          value: { op: "add", id: "harbor-review", scope: repo.id, text: directionText },
+          evidence: directionWords,
         },
       },
       {
-        name: "record_knowledge",
+        name: "app_change",
         args: {
-          action: "publish",
-          request_id: "private-direction",
-          kind: "direction",
-          id: "private-rule",
-          scope: "captain",
-          text: privateText,
-          reason: directionWords,
+          action: "direction",
+          value: { op: "add", id: "private-rule", scope: "captain", text: privateText },
+          evidence: directionWords,
         },
       },
       {
@@ -178,14 +170,11 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
     served({ kind: "user", origin: "captain", body: renderWake(captainTurn(steerWords, false)) }),
     [
       {
-        name: "record_knowledge",
+        name: "app_change",
         args: {
-          action: "revise",
-          request_id: "revise-direction",
-          id: "d:harbor-review",
-          expected_revision: 1,
-          text: revisedText,
-          reason: steerWords,
+          action: "direction",
+          value: { op: "revise", id: "d:harbor-review", expectedRevision: 1, text: revisedText },
+          evidence: steerWords,
         },
       },
       {

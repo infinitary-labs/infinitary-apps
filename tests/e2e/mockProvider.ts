@@ -5889,14 +5889,11 @@ export async function startMockProvider(
           if (!hasToolResults && latestUserTail.includes(REMEMBER_PROMPT_MARKER)) {
             streamToolCalls([
               {
-                name: "record_knowledge",
+                name: "app_change",
                 args: {
-                  action: "publish",
-                  request_id: "remember-direction",
-                  id: MOCK_NOTE.id,
-                  kind: "direction",
-                  text: MOCK_NOTE.content,
-                  reason: "captain said always squash-merge",
+                  action: "direction",
+                  value: { op: "add", id: MOCK_NOTE.id, text: MOCK_NOTE.content },
+                  evidence: "captain said always squash-merge",
                 },
               },
             ]);
@@ -5909,13 +5906,11 @@ export async function startMockProvider(
           if (!hasToolResults && latestUserTail.includes(FORGET_PROMPT_MARKER)) {
             streamToolCalls([
               {
-                name: "record_knowledge",
+                name: "app_change",
                 args: {
-                  action: "retire",
-                  request_id: "forget-direction",
-                  id: `d:${MOCK_NOTE.id}`,
-                  expected_revision: 1,
-                  reason: "captain said to forget it",
+                  action: "direction",
+                  value: { op: "retire", id: `d:${MOCK_NOTE.id}`, expectedRevision: 1 },
+                  evidence: "captain said to forget it",
                 },
               },
             ]);

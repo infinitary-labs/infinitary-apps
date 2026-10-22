@@ -2,12 +2,14 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { ACTIONS, actionRefusal } from "@shared/actions";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
 import { type Card, onStage } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import { AUTOMATIC_EMOTE_WORDS } from "@shared/emotes";
 import { type FmEvent, type FmUsage, fmEventSchema } from "@shared/events";
+import type { KnowledgeDirectionChange, KnowledgeDirectionsArgs } from "@shared/knowledge";
 import type { PersonalSnapshot } from "@shared/personal/manifest";
 import type { PanelMounts } from "@shared/personal/mounts";
 import { AUTOMATIC_WORD } from "@shared/placement";
@@ -3519,50 +3521,116 @@ describe("FirstmateAgent", () => {
     expect(supervisor.cardsSnapshot()).toHaveLength(1);
   });
 
-  it("renders authoritative directions and refuses every scheduled direction write", async () => {
+  it("renders authoritative directions and keeps them from a scheduled turn too", async () => {
     const { agent, db, session, specs, knowledge } = setup({ knowledge: true });
+    if (!knowledge) throw new Error("No knowledge.");
+    bindDirections(agent, knowledge);
     await agent.converse("hello");
-    const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as Array<{
-      name: string;
-      execute: (
-        id: string,
-        params: Record<string, unknown>,
-      ) => Promise<{ content: { text?: string }[] }>;
-    }>;
-    const record = tools.find((tool) => tool.name === "record_knowledge");
-    const noted = await record?.execute("c1", {
-      action: "publish",
-      request_id: "direction",
-      id: "squash-merges",
-      kind: "direction",
-      text: "Always squash-merge when landing work.",
-      reason: "captain said so",
+    const change = toolsOf(specs).get("app_change");
+    const noted = await change?.execute("c1", {
+      action: "direction",
+      value: { op: "add", id: "squash-merges", text: "Always squash-merge when landing work." },
+      evidence: "captain said so",
     });
-    expect(noted?.content[0]?.text).toContain("Recorded direction d:squash-merges");
+    expect(directionsIn(noted)).toMatchObject([{ id: "d:squash-merges", revision: 1 }]);
     expect(agent.buildContextBlock()).toContain("Always squash-merge when landing work.");
     session.emitTurnEnd("done");
     session.resolveNextPrompt();
     await tick();
     notifyProse(db, agent, "scheduled: review directions", "scheduled");
     await tick();
-    for (const action of ["publish", "revise", "retire"]) {
-      const refused = await record?.execute(`c-${action}`, {
-        action,
-        request_id: action,
+    // INF-638 (the captain: "why not just give first mate a tool to freely
+    // read and write standing directions, and then rely on the agent's
+    // judgment"): whatever wake began the turn, the first mate keeps them.
+    const revised = await change?.execute("c-revise", {
+      action: "direction",
+      value: {
+        op: "revise",
         id: "d:squash-merges",
-        kind: "direction",
-        expected_revision: 1,
-        text: "Replace the direction.",
-        reason: "scheduled thought",
-      });
-      expect(refused?.content[0]?.text).toContain("only on the captain's words");
-    }
+        text: "Always squash-merge when merging work.",
+      },
+      evidence: "The captain's wording, kept as he said it.",
+    });
+    expect(directionsIn(revised)).toMatchObject([{ id: "d:squash-merges", revision: 2 }]);
     expect(
-      knowledge?.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false })[0]
-        ?.text,
-    ).toBe("Always squash-merge when landing work.");
+      knowledge.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false }),
+    ).toMatchObject([{ text: "Always squash-merge when merging work.", authority: "instruction" }]);
+  });
+
+  /**
+   * INF-626: the captain chose a fix on a crewmate's card, and the first
+   * mate, woken by that crewmate's report, was refused the direction; his
+   * typed rule, arriving mid-turn, was refused again.
+   */
+  it("keeps a direction on its own judgment in a turn a crewmate's report began", async () => {
+    const { agent, db, session, specs, knowledge } = setup({ knowledge: true });
+    if (!knowledge) throw new Error("No knowledge.");
+    bindDirections(agent, knowledge);
+    notifyProse(
+      db,
+      agent,
+      "[fm-op] crewmate 1 reported on task t1: the captain chose Fix 3.",
+      "crewmate-report",
+      "t1",
+    );
+    await tick();
+    expect(session.prompts).toHaveLength(1);
+    const saved = await toolsOf(specs)
+      .get("app_change")
+      ?.execute("fix-merge", {
+        action: "direction",
+        value: { op: "add", id: "fix-merge", text: FIX_MERGE_RULE },
+        evidence: "The captain checked Fix 3 on the crewmate's card.",
+      });
+    expect(directionsIn(saved)).toMatchObject([{ id: "d:fix-merge", text: FIX_MERGE_RULE }]);
+    expect(
+      knowledge.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false }),
+    ).toMatchObject([{ text: FIX_MERGE_RULE, origin: "captain-turn", authority: "instruction" }]);
+    expect(knowledge.direction({ id: "fix-merge" })).toMatchObject({
+      direction: { history: [{ evidence: "The captain checked Fix 3 on the crewmate's card." }] },
+    });
+    session.emitTurnEnd("Saved.");
+    session.resolveNextPrompt();
+    await tick();
   });
 });
+
+/** d:d-9yi5fx, the rule the captain had to type three times (INF-626, INF-638). */
+const FIX_MERGE_RULE =
+  "In Infinitary, a fix for a broken main or a failed alpha merges on its own once all checks pass: set that task's autonomy on and cite this direction.";
+
+/**
+ * The core's catalog path for the `direction` line, as the dispatcher runs
+ * it for the first mate (src/core/dispatcher.ts): the line's permission for
+ * the wake the agent stamps, the knowledge service's change, and the
+ * trail's word back to the agent.
+ */
+function bindDirections(agent: FirstmateAgent, knowledge: KnowledgeService): void {
+  let operations = 0;
+  agent.bindAppDispatch(async (channel, args, actor) => {
+    if (channel === "inf:knowledge:directions")
+      return knowledge.directions(
+        (args as [KnowledgeDirectionsArgs?])[0] ?? { scope: "all" },
+      ) as never;
+    if (channel !== "inf:knowledge:direction:set") throw new Error(`Not a direction: ${channel}`);
+    const refusal = actor?.kind === "firstmate" && actionRefusal(ACTIONS.direction, actor);
+    if (refusal) throw new Error(refusal);
+    const changed = knowledge.changeDirection((args as [KnowledgeDirectionChange])[0]);
+    operations += 1;
+    agent.appActionRecorded(`op-${operations}`, "direction", {
+      op: changed.op,
+      text: changed.direction.text,
+    });
+    return changed as never;
+  });
+}
+
+/** The directions app_change answers with, as its current value. */
+function directionsIn(
+  result: { content: { text?: string }[] } | undefined,
+): { id: string; revision: number; text: string }[] {
+  return JSON.parse(result?.content[0]?.text ?? "{}").current?.directions;
+}
 
 type FlagshipAccount = {
   id: string;
@@ -5798,13 +5866,13 @@ describe("FirstmateAgent capture", () => {
     const noted = await remember?.execute("m1", {
       action: "publish",
       request_id: "m1",
-      id: "squash-merges",
-      kind: "direction",
-      text: "Always squash-merge when landing work.",
-      reason: "captain said always squash-merge",
+      kind: "concept",
+      lane: "personal",
+      title: "Squash merges",
+      text: "The captain always squash-merges when landing work.",
     });
     const operation = tasks.list().find((record) => record.kind === "operation");
-    expect(operation?.title).toBe("Knowledge publish: squash-merges");
+    expect(operation?.title).toBe("Knowledge publish: Squash merges");
     expect(operation?.status).toBe("done");
     expect(operation?.closedReason).toBe("settled");
     expect(operation?.outcome).toBe(noted?.content[0]?.text);
@@ -7305,26 +7373,24 @@ describe("FirstmateAgent reply emotes", () => {
   });
 
   it("tucks when a captain turn keeps a note, and not when it forgets one", async () => {
-    const { agent, specs, events } = setup({ silent: true });
+    const { agent, specs, events, knowledge } = setup({ silent: true });
+    if (!knowledge) throw new Error("No knowledge.");
+    bindDirections(agent, knowledge);
     await agent.converse("remember that I always squash-merge");
-    const tools = toolsOf(specs);
-    await tools.get("record_knowledge")?.execute("r1", {
-      action: "publish",
-      request_id: "r1",
-      id: "squash-merges",
-      kind: "direction",
-      text: "Always squash-merge when landing work.",
-      reason: "captain said so",
+    const change = toolsOf(specs).get("app_change");
+    await change?.execute("r1", {
+      action: "direction",
+      value: { op: "add", id: "squash-merges", text: "Always squash-merge when landing work." },
+      evidence: "captain said so",
     });
     expect(emotes(events)).toEqual(["tuck"]);
-    await tools.get("record_knowledge")?.execute("r2", {
-      action: "retire",
-      request_id: "r2",
-      id: "d:squash-merges",
-      expected_revision: 1,
-      reason: "no longer true",
+    await change?.execute("r2", {
+      action: "direction",
+      value: { op: "retire", id: "d:squash-merges", expectedRevision: 1 },
+      evidence: "no longer true",
     });
-    expect(emotes(events)).toEqual(["tuck"]);
+    // Forgetting one is a setting applied, never a note kept.
+    expect(emotes(events)).toEqual(["tuck", "tick"]);
   });
 
   it("ticks when a captain turn's personalize applies, never on a refusal or a schedule", async () => {
@@ -7441,7 +7507,7 @@ describe("FirstmateAgent answer delivery", () => {
       ["update_task", { task: "t1", title: "Renamed" }],
       [
         "record_knowledge",
-        { action: "publish", request_id: "x", kind: "direction", text: "y", reason: "told" },
+        { action: "publish", request_id: "x", kind: "concept", title: "y", text: "told" },
       ],
     ] as const) {
       const refused = await tools.get(name)?.execute(`r-${name}`, params);
@@ -7743,10 +7809,10 @@ describe("FirstmateAgent emote", () => {
     await tools.get("record_knowledge")?.execute("r1", {
       action: "publish",
       request_id: "r1",
-      id: "squash-merges",
-      kind: "direction",
-      text: "Always squash-merge when landing work.",
-      reason: "captain said so",
+      kind: "concept",
+      lane: "personal",
+      title: "Squash merges",
+      text: "The captain always squash-merges when landing work.",
     });
     await tools.get("personalize")?.execute("p1", {
       action: "remove",
@@ -8021,10 +8087,10 @@ describe("FirstmateAgent reply line", () => {
     await tools.get("record_knowledge")?.execute("note", {
       action: "publish",
       request_id: "note",
-      id: "squash-merges",
-      kind: "direction",
-      text: "Always squash-merge",
-      reason: "captain said so",
+      kind: "concept",
+      lane: "personal",
+      title: "Squash merges",
+      text: "The captain always squash-merges.",
     });
     await finish(f, "Kept your squash-merge rule.");
     expect(heard(f)).toEqual([
@@ -8118,10 +8184,10 @@ describe("FirstmateAgent reply line", () => {
     await toolsOf(f.specs).get("record_knowledge")?.execute("r1", {
       action: "publish",
       request_id: "r1",
-      id: "squash-merges",
-      kind: "direction",
-      text: "Always squash-merge when landing work.",
-      reason: "captain said so",
+      kind: "concept",
+      lane: "personal",
+      title: "Squash merges",
+      text: "The captain always squash-merges when landing work.",
     });
     await finish(f);
     expect(f.tasks.lastTurn()).toEqual({
@@ -8246,17 +8312,12 @@ describe("FirstmateAgent with knowledge", () => {
 
   it("leads a turn with matching Knowledge and carries standing directions separately", async () => {
     const f = setup({ knowledge: true });
-    await f.knowledge?.record(
-      { kind: "firstmate", origin: "captain-turn", canCreate: true },
-      {
-        action: "publish",
-        requestId: "direction",
-        kind: "direction",
-        id: "squash-merges",
-        statement: "Always squash-merge when landing work.",
-        reason: "captain said so",
-      },
-    );
+    f.knowledge?.changeDirection({
+      op: "add",
+      id: "squash-merges",
+      text: "Always squash-merge when landing work.",
+      reason: "captain said so",
+    });
     const recorded = await f.knowledge?.record(
       { kind: "firstmate", origin: "captain-turn", canCreate: true },
       {

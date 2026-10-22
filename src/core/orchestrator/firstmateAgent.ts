@@ -596,10 +596,11 @@ export class FirstmateAgent {
   private appDispatch?: CoreDispatch;
   private appWake: "captain" | "captain-choice" | "scheduled" | "other" = "other";
 
-  appActionRecorded(id: string): void {
+  /** A change the first mate made through the catalog: a direction kept tucks, the rest tick. */
+  appActionRecorded(id: string, action?: ActionName, value?: Record<string, unknown>): void {
     this.asks.attach(id, "app_change");
     this.noteDelivery({ outcome: "action", kind: "record", tool: "app_change", ref: id });
-    this.replyEmote("tick");
+    this.replyEmote(action === "direction" && value?.op !== "retire" ? "tuck" : "tick");
   }
 
   /**

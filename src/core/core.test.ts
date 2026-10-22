@@ -687,6 +687,50 @@ describe("the core, driven with no Electron in the process", () => {
               ACTIONS[line.action].proposes === true),
       ),
     ).toBe(true);
+    // INF-638, the captain: "why not just give first mate a tool to freely
+    // read and write standing directions, and then rely on the agent's
+    // judgment". A direction is a catalog line like any setting, so a turn a
+    // crewmate's report began keeps one, with one trail and its reason kept.
+    wake = "other";
+    const rule = "A fix for a broken main merges on its own once all of its checks pass.";
+    const kept = await change.run({
+      action: "direction",
+      value: { op: "add", id: "fix-merge", text: rule },
+      evidence: "The captain chose Save the direction on the crewmate's card.",
+    });
+    expect(JSON.parse(kept.text).current.directions).toContainEqual(
+      expect.objectContaining({ id: "d:fix-merge", text: rule, revision: 1 }),
+    );
+    expect(
+      (await core.dispatch("inf:feed:recent", [])).filter(
+        (line) => line.text === `First mate · saved the standing direction "${rule}"`,
+      ),
+    ).toHaveLength(1);
+    expect(await core.dispatch("inf:knowledge:direction", [{ id: "fix-merge" }])).toMatchObject({
+      direction: {
+        origin: "captain-turn",
+        history: [{ evidence: "The captain chose Save the direction on the crewmate's card." }],
+      },
+    });
+    const listed = JSON.parse((await state.run({ area: "general" })).text).find(
+      (line: { action: string }) => line.action === "direction",
+    );
+    expect(listed).toMatchObject({ tier: "judgment", firstmateAllowed: true, allowedNow: true });
+    expect(listed.current.directions).toContainEqual(
+      expect.objectContaining({ id: "d:fix-merge" }),
+    );
+    await change.run({
+      action: "direction",
+      value: { op: "retire", id: "d:fix-merge", expectedRevision: 1 },
+      evidence: "The captain retired it.",
+    });
+    const after = JSON.parse((await state.run({ area: "general" })).text).find(
+      (line: { action: string }) => line.action === "direction",
+    );
+    expect(after.current.directions).not.toContainEqual(
+      expect.objectContaining({ id: "d:fix-merge" }),
+    );
+    wake = "captain";
     const personalBefore = await core.dispatch("inf:settings:personal-resources:get", []);
     const personal = await change.run({
       action: "personal-resources",
@@ -936,6 +980,24 @@ describe("the core, driven with no Electron in the process", () => {
     wake = "captain";
     await ask("forge-sign-out", { host: "github.com" });
     expect(forgeStore.read("github.com")).toBeUndefined();
+    // Settings signs out of any host the app is signed in to, and so may the
+    // first mate on the captain's typed words (INF-638's audit).
+    forgeStore.write("gitlab.example.com", {
+      token: "disposable-forge-sign-in",
+      scopes: [],
+      login: "fixture",
+      createdAt: 1,
+    });
+    expect((await ask("forge-sign-out", { host: "git.example.org" })).text).toContain(
+      "No sign-in to git.example.org",
+    );
+    await ask("forge-sign-out", { host: "gitlab.example.com" });
+    expect(forgeStore.read("gitlab.example.com")).toBeUndefined();
+    expect(
+      (await core.dispatch("inf:feed:recent", [])).some(
+        (line) => line.text === "First mate · gitlab.example.com signed out",
+      ),
+    ).toBe(true);
     const lines = JSON.parse((await state.run({ area: "general" })).text);
     expect(lines.find((l: { action: string }) => l.action === "purge")).toMatchObject({
       captainAllowed: true,

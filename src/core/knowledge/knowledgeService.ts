@@ -9,6 +9,8 @@ import {
   type KnowledgeConceptsArgs,
   type KnowledgeConnection,
   type KnowledgeDirectionArgs,
+  type KnowledgeDirectionChange,
+  type KnowledgeDirectionChanged,
   type KnowledgeDirectionRead,
   type KnowledgeDirectionRow,
   type KnowledgeDirections,
@@ -1274,6 +1276,60 @@ export class KnowledgeService {
   // -- writes --------------------------------------------------------------
 
   /**
+   * One change to a standing direction, the app action catalog's `direction`
+   * line (`inf:knowledge:direction:set`): the captain's window and the first
+   * mate's app_change ask it alike, through the dispatcher's one path, which
+   * checks who may and writes the feed line (INF-638, the captain: "why not
+   * just give first mate a tool to freely read and write standing
+   * directions, and then rely on the agent's judgment on when/how to do
+   * it?"). Every direction is his instruction, and its history keeps the
+   * reason. A refusal throws, as every catalog change's does.
+   */
+  changeDirection(change: KnowledgeDirectionChange): KnowledgeDirectionChanged {
+    const store = this.open();
+    const id = change.id?.replace(/^d:/, "") ?? this.newId("d");
+    const previous = store.directions().find((row) => row.id === id);
+    if (change.op === "add" && previous)
+      refuse("This direction already exists; revise it instead.");
+    if (change.op !== "add" && !previous) refuse(`No direction d:${id} exists.`);
+    if (
+      previous &&
+      change.op !== "add" &&
+      change.expectedRevision !== undefined &&
+      change.expectedRevision !== previous.revision
+    )
+      refuse(`d:${id} is at revision ${previous.revision} now; read it again before changing it.`);
+    const scope =
+      change.op === "add"
+        ? this.directionScope(change.scope ?? PRIVATE_SCOPE)
+        : (previous?.scope ?? PRIVATE_SCOPE);
+    const text =
+      change.op === "retire"
+        ? (previous?.text ?? "")
+        : clean(change.text, "text", MAX.explanation, true);
+    const reason = clean(change.reason, "reason", MAX.reason, true);
+    const at = this.now();
+    const next: DirectionRow = {
+      id,
+      scope,
+      text,
+      origin: "captain-turn",
+      revision: (previous?.revision ?? 0) + 1,
+      retired: change.op === "retire",
+      createdAt: previous?.createdAt ?? at,
+      updatedAt: at,
+    };
+    store.transaction(() => {
+      const current = store.directions().find((row) => row.id === id);
+      if (current?.revision !== previous?.revision)
+        refuse("The direction changed. Read it again before writing.");
+      store.saveDirection(next, change.op === "add" ? "publish" : change.op, reason);
+    });
+    this.deps.changed?.();
+    return { op: change.op, direction: this.directionRow(next) };
+  }
+
+  /**
    * One write, all or nothing. A refusal is the answer's words, never a
    * throw: the caller hands it back to the model as guidance.
    */
@@ -1350,10 +1406,14 @@ export class KnowledgeService {
     actor: KnowledgeActor,
     input: RecordInput,
   ): Promise<() => { text: string; ids: string[] }> {
+    // A direction changes through the app action catalog (`changeDirection`).
+    if (input.kind === "direction" || input.id?.startsWith("d:"))
+      refuse(
+        actor.kind === "firstmate"
+          ? "Change a standing direction with app_change direction."
+          : "Directions are the first mate's to keep: report the captain's words or choice with needs_firstmate.",
+      );
     if (input.action !== "use") this.assertRecorder(actor);
-    if (input.kind === "direction" || input.id?.startsWith("d:")) {
-      return this.prepareDirection(store, actor, input);
-    }
     switch (input.action) {
       case "publish":
         return this.preparePublish(store, actor, input);
@@ -1372,54 +1432,6 @@ export class KnowledgeService {
       default:
         refuse("action must be publish, revise, assess, relate, retire, retire_many or use.");
     }
-  }
-
-  private prepareDirection(
-    store: KnowledgeStore,
-    actor: KnowledgeActor,
-    input: RecordInput,
-  ): () => { text: string; ids: string[] } {
-    if (actor.kind !== "firstmate" || actor.origin !== "captain-turn" || !actor.canCreate)
-      refuse("Only the first mate on the captain's own words may change a direction.");
-    if (!["publish", "revise", "retire"].includes(input.action))
-      refuse("A direction supports publish, revise or retire.");
-    const id = input.id?.replace(/^d:/, "") ?? this.newId("d");
-    if (!/^[a-z0-9][a-z0-9-]{0,63}$/.test(id)) refuse("Give a valid direction id.");
-    const previous = store.directions().find((row) => row.id === id);
-    if (input.action === "publish" && previous)
-      refuse("This direction already exists; revise it instead.");
-    if (input.action !== "publish" && !previous) refuse("No direction with that id exists.");
-    if (previous && input.expectedRevision !== previous.revision)
-      refuse("Read the direction's current revision before changing it.");
-    const scope = this.directionScope(input.scope ?? previous?.scope ?? PRIVATE_SCOPE);
-    if (previous && previous.scope !== scope) refuse("A direction cannot move to another project.");
-    const text =
-      input.action === "retire"
-        ? (previous?.text ?? "")
-        : clean(input.statement, "text", MAX.explanation, true);
-    const reason = clean(input.reason, "reason", MAX.reason, true);
-    const at = this.now();
-    const next: DirectionRow = {
-      id,
-      scope,
-      text,
-      origin: actor.origin,
-      revision: (previous?.revision ?? 0) + 1,
-      retired: input.action === "retire",
-      createdAt: previous?.createdAt ?? at,
-      updatedAt: at,
-    };
-    const op = input.action as "publish" | "revise" | "retire";
-    return () => {
-      const current = store.directions().find((row) => row.id === id);
-      if (current?.revision !== previous?.revision)
-        refuse("The direction changed. Read it again before writing.");
-      store.saveDirection(next, op, reason);
-      return {
-        text: `${op === "retire" ? "Retired" : "Recorded"} direction d:${id}, revision ${next.revision}.`,
-        ids: [`d:${id}`],
-      };
-    };
   }
 
   private async preparePublish(

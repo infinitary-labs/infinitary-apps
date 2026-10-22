@@ -12,7 +12,9 @@ import {
   deviceWords,
   userDisplayName,
 } from "./devices";
+import type { ForgesView } from "./forges";
 import { type CoreInvokeChannel, invokeContract } from "./ipc";
+import { type KnowledgeDirections, knowledgeDirectionChangeSchema } from "./knowledge";
 import { reasoningChoiceSchema, slotSchema } from "./modelSlots";
 import { AUTOMATIC_COMPUTER } from "./placement";
 import {
@@ -89,6 +91,8 @@ export type ActionLine = {
     value: Record<string, unknown>,
     current: unknown,
     expandHome: (path: string) => string,
+    /** The first mate's evidence, for a line whose request keeps it. */
+    evidence?: string,
   ) => unknown[];
   readValue: (current: unknown) => Record<string, unknown>;
   done: (value: Record<string, unknown>) => string;
@@ -222,6 +226,14 @@ function guidance(
     done: () => auditText,
   };
 }
+/** A direction change as app_change takes it: its evidence is the reason kept. */
+const [addDirection, reviseDirection, retireDirection] = knowledgeDirectionChangeSchema.options;
+const directionValueSchema = z.discriminatedUnion("op", [
+  addDirection.omit({ reason: true }),
+  reviseDirection.omit({ reason: true }),
+  retireDirection.omit({ reason: true }),
+]);
+const DIRECTION_DONE = { add: "saved", revise: "revised", retire: "retired" } as const;
 const actionLines = {
   "project-setup": {
     area: "projects",
@@ -752,6 +764,35 @@ const actionLines = {
     }),
     done: (v) => `showed the release note for ${v.version}`,
   },
+  direction: {
+    area: "general",
+    tier: "judgment",
+    alwaysTrail: true,
+    change: "inf:knowledge:direction:set",
+    current: "inf:knowledge:directions",
+    value: directionValueSchema,
+    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what he wants, whatever began the turn: his words, his choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain, or a project id); revise takes id and text; retire takes id; expectedRevision is optional.",
+    toRequest: (v, _current, _expandHome, evidence) => [{ ...v, reason: evidence }],
+    readValue: (current) => {
+      const read = current as KnowledgeDirections;
+      return read.state === "ready"
+        ? {
+            directions: read.rows.map((row) => ({
+              id: `d:${row.id}`,
+              scope: row.scope,
+              project: row.scopeName,
+              revision: row.revision,
+              text: row.text,
+            })),
+            total: read.total,
+          }
+        : { unavailable: read.reason };
+    },
+    done: (v) => {
+      const text = String(v.text);
+      return `${DIRECTION_DONE[v.op as keyof typeof DIRECTION_DONE]} the standing direction "${text.length > 120 ? `${text.slice(0, 119)}…` : text}"`;
+    },
+  },
   "start-at-login": presence("startAtLogin", "start at login"),
   "show-in-dock": presence("showInDock", "show in dock"),
   "release-page": {
@@ -770,11 +811,17 @@ const actionLines = {
     tier: "own-words",
     change: "inf:forges:sign-out",
     current: "inf:forges:list",
-    value: z.strictObject({ host: z.literal("github.com") }),
-    line: "Sign out of GitHub only on the captain's typed words.",
-    toRequest: (v) => [v.host],
+    value: z.strictObject({ host: z.string().trim().toLowerCase().min(1).max(253) }),
+    line: "Sign out of one project host the app is signed in to (github.com, a GitHub Enterprise or GitLab host) only on the captain's typed words.",
+    toRequest: (v, c) => {
+      if (!(c as ForgesView).signIns.some((signIn) => signIn.host === v.host))
+        throw new Error(
+          `No sign-in to ${v.host}. Signed in: ${(c as ForgesView).signIns.map((signIn) => signIn.host).join(", ") || "none"}.`,
+        );
+      return [v.host];
+    },
     readValue: (c) => ({ hosts: c }),
-    done: () => "GitHub signed out",
+    done: (v) => (v.host === "github.com" ? "GitHub signed out" : `${v.host} signed out`),
   },
   diagnostics: {
     fields: ["diagnostics"],

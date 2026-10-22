@@ -169,11 +169,12 @@ The home still writes `firstTaskDoneAt`, which nothing in this version reads, fo
 
 ### Knowledge
 
-The home-only `inf:knowledge:directions` read lists standing directions, `inf:knowledge:direction` reads one, and each knowledge collection carries an optional `directions` count.
+The home-only `inf:knowledge:directions` read lists standing directions, the first page across every scope when it is given no arguments, `inf:knowledge:direction` reads one, and each knowledge collection carries an optional `directions` count.
+The home-only `inf:knowledge:direction:set` change adds, revises or retires one, as the app action catalog's `direction` line (`docs/orchestrator-contract.md`, "App action catalog").
 `knowledge.directions` is a member of the closed read-name enum panel manifests carry (`PANEL_READ_NAMES`).
 A crewmate on a computer that runs work reads and writes the home's knowledge through the `inf:work:knowledge` and `inf:work:record-knowledge` work requests (`docs/knowledge.md`, "The tools").
 The placed write request carries the `direction` kind and an optional `lane`, which separates captain-stated personal context from saved references without granting different access; the home defaults a crewmate's omitted lane to reference.
-Carrying a direction write does not let a crewmate make one: only the first mate, on the captain's own words, changes a direction.
+Carrying a direction write does not let a crewmate make one: the work request refuses it, and only the first mate, on its own judgment of what the captain wants, changes a direction (`docs/knowledge.md`, "Directions are the first mate's to keep").
 Every crewmate has equal factual access, including a task with no project, and saved task shapes read the legacy `knowledge_access` as inert metadata.
 Knowledge runs in every build, and a profile carried to Knowledge refuses an older notes-writing build (`docs/saved-data-compatibility.md`).
 

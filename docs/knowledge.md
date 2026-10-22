@@ -55,7 +55,7 @@ Schema 4 removes them while keeping captain-owned personal context and saved ref
 Personal context and saved references live in the captain's collection (`captain`).
 Standing directions use the captain's global scope or an exact project identifier.
 The Collection picker lists the captain's collection and projects for their directions; it does not expose old project facts.
-The first mate reads all active directions and writes a personal statement or direction only on the captain's own turn.
+The first mate reads all active directions and keeps them on its own judgment of what the captain wants, on any turn (below, "Directions are the first mate's to keep"); it writes a personal statement only on the captain's own turn.
 It does not import an article or reconcile a saved reference; that is a crewmate's write.
 Every crewmate can read and write personal context and saved references, including a task without a project.
 Use applicability as relevance, not an access restriction.
@@ -111,7 +111,7 @@ Two tools serve the first mate and every crewmate on both runtimes from one decl
 
 - `knowledge` reads: `search` (names, aliases and text, ten a page), `get` (up to five entries or an earlier revision, source summaries and checks without kept text; kept text by `s-` id, standing directions by `d:` id), `neighbors` (one hop of links: claimed relationships, read-together links, findings about a concept, disagreements) and `history` (earlier revisions).
 - `record_knowledge` writes: `publish`, `revise`, `assess`, `relate`, `retire`, `retire_many` and `use`, which declares that work relied on an entry's current revision and keeps what its sources read like then.
-  The first mate writes only on the captain's words, for personal context or standing directions.
+  The first mate writes personal context on the captain's words and keeps standing directions on its own judgment.
   Every crewmate may record requested factual knowledge without a separate grant.
   Removing an entry waits for the captain, and the first mate retires it on his word.
   `text` is a concept's explanation, a finding's statement or a direction's wording, and a read-together link is `relate` with `related` and a reason.
@@ -119,7 +119,7 @@ Two tools serve the first mate and every crewmate on both runtimes from one decl
 The `knowledge` description also says that a card cites each finding it relies on by writing its id, which the app links (below, "References in an answer").
 Their words are short on purpose: the pair is part of every first mate request, so it counts against the fixed-context ceiling a small local model's window is held to (`tests/firstmate-fixed-context.test.ts`).
 
-The first mate publishes only on a turn that carries the captain's own words.
+The first mate publishes personal context only on a turn that carries the captain's own words.
 Only a write that changed the collection is the turn's action for answer delivery (`docs/task-capture.md`); a read, a refusal and a repeated request are not, and the output-only retry refuses `record_knowledge` like any other change.
 Recording edits no project file, commits nothing and grants no permission.
 
@@ -137,6 +137,15 @@ A computer on a contract older than `KNOWLEDGE_THERE_SINCE` (`src/shared/ipc.ts`
 | One kept source | 32 KB |
 | The words an automatic lookup reads | 1 KB |
 | An automatic shortlist | 5 entries within 2 KB |
+
+### Directions are the first mate's to keep
+
+The first mate adds, revises and retires the captain's standing directions on its own judgment of what he wants, whatever began the turn: his words, his choice on a card, a confirmation click and a message he sends while it works all count, and nothing checks which one it was (INF-638, the captain: "why not just give first mate a tool to freely read and write standing directions, and then rely on the agent's judgment on when/how to do it?").
+It does so through the app action catalog, as it changes any setting: `app_change` with the `direction` line, whose `judgment` tier lets it act at any wake and keeps its evidence as the change's reason (`docs/orchestrator-contract.md`, "App action catalog").
+The line's channel, `inf:knowledge:direction:set`, runs `KnowledgeService.changeDirection` through the dispatcher, the same path a captain's own control takes, so each change leaves one feed line and one operation; Knowledge has no such control yet.
+Every direction it writes is stamped `captain-turn`, his instruction, and its history keeps the reason the first mate gave.
+`record_knowledge` refuses a direction, pointing the first mate at `app_change`.
+A crewmate never writes a direction; it reports the captain's words or choice with `needs_firstmate`.
 
 ## Knowledge as needed
 
@@ -252,7 +261,7 @@ Directions lists all registered projects and Everywhere, with a Project filter; 
 Find and keyboard navigation remain; the Project filter never changes the graph.
 The inspector shows wording, applicability, origin and lifecycle, plus paged edit history.
 Ask about this drafts a question naming `d:<id>` for the Knowledge tool.
-`record_knowledge` publishes a `direction` with `text`, `scope` and `reason`, or revises/retires one by `d:` identifier and `expected_revision`.
+The first mate's `app_change` `direction` adds one with `text` and `scope`, or revises or retires one by `d:` identifier, with an optional `expectedRevision`; its evidence is the reason the history keeps.
 Retiring removes active influence while retaining edits made in Knowledge; it is not secure erasure.
 
 ### Carrying the active directions
@@ -295,7 +304,8 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
 
 ## Tests
 
-- `src/core/knowledge/knowledgeService.test.ts`: reuse in other words through a link, scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data, purge and the shortlist.
+- `src/core/knowledge/knowledgeService.test.ts`: reuse in other words through a link, scope isolation, idempotent and stale writes, checks and disputes, relations, retirement, declared use, unreadable data, purge and the shortlist; a direction's add, revise and retire through `changeDirection`, its kept reasons and a stale revision refused, and `record_knowledge` refusing one.
+- `src/core/core.test.ts` ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line, its reason in the history, and `app_state` listing it.
 - `src/core/knowledge/knowledgeTools.test.ts`, `knowledgeContext.test.ts` and `availability.test.ts`: what the tools and the context say, and the gate.
 - `src/core/knowledge/knowledgeSources.integration.test.ts`: evidence from a real git working copy.
 - `tests/e2e/knowledge.spec.ts`: a crewmate's knowledge outlives its discarded task and a restart, and the next crewmate finds it in other words through its brief; a stated fact goes to knowledge, not notes.
@@ -308,5 +318,6 @@ Proactive correction notices, cross-project reads, binary evidence, automatic ex
   `tests/e2e/knowledge-gate.spec.ts` checks the same linked answer in stable and alpha.
 - `tests/e2e/knowledge-browser.spec.ts` (application lane): Open Knowledge by name and from the panel, the graph, its camera and a claim's evidence by keys, the pointer's orbit with either button, the wheel, the lists, Find and the filters, the inspector's sections, the kept place, the narrow card's Back, and Esc in its order, with no knowledge written and no task filed; its seed records through the real owner with pinned ids, so the graph lays out the same on every run (`tests/e2e/knowledgeSeed.ts`).
 - `tests/e2e/knowledge-directions.spec.ts`: directions stay distinct from personal facts in browsing and the first mate's served context; forty rendered directions arrive on an unrelated ask.
+  A direction the captain chose on a crewmate's card is saved by the first mate on that crewmate's report, as his instruction, through `app_change` with one Activity line, and he never types it.
   Eight active directions, five for one project, survive carryover and a stable restart; forget and purge remove influence without a notes fallback.
   This is scripted transport/use evidence, not a claim about live-model obedience.

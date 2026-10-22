@@ -300,6 +300,49 @@ export const knowledgeDirectionReadSchema = z.discriminatedUnion("state", [
 ]);
 export type KnowledgeDirectionRead = z.infer<typeof knowledgeDirectionReadSchema>;
 
+/**
+ * One change to a standing direction (`inf:knowledge:direction:set`), the
+ * app action catalog's `direction` line (src/shared/actions.ts): the
+ * captain's window and the first mate's app_change ask this one channel
+ * (INF-638). revise and retire check `expectedRevision` when it is given;
+ * the reason is kept in the direction's history.
+ */
+const directionChangeIdSchema = z.string().regex(/^(d:)?[a-z0-9][a-z0-9-]{0,63}$/);
+const directionChangeTextSchema = z.string().min(1).max(4000);
+const directionChangeReasonSchema = z.string().min(1).max(400);
+const directionChangeRevisionSchema = z.number().int().positive().optional();
+export const knowledgeDirectionChangeSchema = z.discriminatedUnion("op", [
+  z.strictObject({
+    op: z.literal("add"),
+    /** A new id of the caller's choosing; the app makes one when it is absent. */
+    id: directionChangeIdSchema.optional(),
+    text: directionChangeTextSchema,
+    /** `captain` for everywhere, or one project's id. */
+    scope: scopeSchema.optional(),
+    reason: directionChangeReasonSchema,
+  }),
+  z.strictObject({
+    op: z.literal("revise"),
+    id: directionChangeIdSchema,
+    text: directionChangeTextSchema,
+    expectedRevision: directionChangeRevisionSchema,
+    reason: directionChangeReasonSchema,
+  }),
+  z.strictObject({
+    op: z.literal("retire"),
+    id: directionChangeIdSchema,
+    expectedRevision: directionChangeRevisionSchema,
+    reason: directionChangeReasonSchema,
+  }),
+]);
+export type KnowledgeDirectionChange = z.infer<typeof knowledgeDirectionChangeSchema>;
+/** The direction as the change left it. */
+export const knowledgeDirectionChangedSchema = z.object({
+  op: z.enum(["add", "revise", "retire"]),
+  direction: knowledgeDirectionRowSchema,
+});
+export type KnowledgeDirectionChanged = z.infer<typeof knowledgeDirectionChangedSchema>;
+
 // -- one entry ---------------------------------------------------------------
 
 export const knowledgeEntryArgsSchema = z.strictObject({

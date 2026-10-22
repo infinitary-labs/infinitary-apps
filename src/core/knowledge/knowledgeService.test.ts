@@ -705,3 +705,106 @@ describe("KnowledgeService", () => {
     expect(f.service.shortlist([ALPHA.id], "?? !!")).toEqual([]);
   });
 });
+
+/**
+ * INF-638. On INF-626's card the captain chose the fixes, one of them a
+ * standing direction; the first mate, woken by the crewmate's report, was
+ * refused, and only his third typed message saved it (d:d-9yi5fx). His
+ * ruling: "why not just give first mate a tool to freely read and write
+ * standing directions, and then rely on the agent's judgment on when/how to
+ * do it?" A direction now changes through the app action catalog's
+ * `direction` line, the one path the captain's window and the first mate's
+ * app_change share; `changeDirection` is what that line runs.
+ */
+describe("a standing direction changes through the app action catalog", () => {
+  // d:d-9yi5fx, the direction he finally typed.
+  const RULE =
+    "In Infinitary, a fix for a broken main or a failed alpha merges on its own once all checks pass: set that task's autonomy on and cite this direction.";
+  let clock = 1_792_512_100_000;
+  const service = () =>
+    new KnowledgeService({
+      projects: { get: () => undefined, list: () => [] },
+      gitFacts: async () => ({ commit: null, dirty: false }),
+      now: () => (clock += 1000),
+    });
+  const scheduled: KnowledgeActor = { kind: "firstmate", origin: "agent", canCreate: false };
+
+  it("adds, revises and retires a direction as the captain's instruction, keeping each reason", () => {
+    const knowledge = service();
+    const saved = knowledge.changeDirection({
+      op: "add",
+      id: "fix-merge",
+      text: RULE,
+      reason: "The captain checked Fix 3 on INF-626's card.",
+    });
+    expect(saved).toMatchObject({ op: "add", direction: { id: "fix-merge", revision: 1 } });
+    // His instruction, not the first mate's advice.
+    expect(knowledge.standingDirections(scheduled)).toMatchObject([
+      { id: "fix-merge", text: RULE, origin: "captain-turn", authority: "instruction" },
+    ]);
+    knowledge.changeDirection({
+      op: "revise",
+      id: "d:fix-merge",
+      text: `${RULE} Product changes stay ask-first.`,
+      reason: "Fix 3 keeps product changes ask-first.",
+    });
+    // A stale revision is refused, so a change never overwrites one it did not read.
+    expect(() =>
+      knowledge.changeDirection({
+        op: "retire",
+        id: "d:fix-merge",
+        expectedRevision: 1,
+        reason: "The captain chose to stop it.",
+      }),
+    ).toThrow("revision 2");
+    knowledge.changeDirection({
+      op: "retire",
+      id: "d:fix-merge",
+      expectedRevision: 2,
+      reason: "The captain chose to stop it.",
+    });
+    expect(knowledge.standingDirections(scheduled)).toEqual([]);
+    const read = knowledge.direction({ id: "fix-merge" });
+    expect(read.state === "ready" && read.direction.history.map((row) => row.evidence)).toEqual([
+      "The captain chose to stop it.",
+      "Fix 3 keeps product changes ask-first.",
+      "The captain checked Fix 3 on INF-626's card.",
+    ]);
+  });
+
+  it("refuses adding a direction twice and changing one that does not exist", () => {
+    const knowledge = service();
+    knowledge.changeDirection({ op: "add", id: "fix-merge", text: RULE, reason: "asked" });
+    expect(() =>
+      knowledge.changeDirection({ op: "add", id: "fix-merge", text: RULE, reason: "asked" }),
+    ).toThrow("already exists");
+    expect(() =>
+      knowledge.changeDirection({ op: "retire", id: "d:nothing", reason: "asked" }),
+    ).toThrow("No direction d:nothing");
+  });
+
+  it("refuses a direction through record_knowledge, pointing each caller at its own way", async () => {
+    const knowledge = service();
+    const crewmate: KnowledgeActor = { kind: "crewmate", taskId: "82437b56", repoId: "infinitary" };
+    const refused = await knowledge.record(crewmate, {
+      action: "publish",
+      requestId: "crew",
+      kind: "direction",
+      statement: RULE,
+      reason: "The captain checked Fix 3.",
+    });
+    expect(refused.text).toContain("needs_firstmate");
+    const firstmate = await knowledge.record(
+      { kind: "firstmate", origin: "captain-turn", canCreate: true },
+      {
+        action: "publish",
+        requestId: "firstmate",
+        kind: "direction",
+        statement: RULE,
+        reason: "The captain checked Fix 3.",
+      },
+    );
+    expect(firstmate.text).toContain("app_change direction");
+    expect(knowledge.standingDirections(scheduled)).toEqual([]);
+  });
+});

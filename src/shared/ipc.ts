@@ -142,6 +142,8 @@ import {
   knowledgeConceptsArgsSchema,
   knowledgeConceptsSchema,
   knowledgeDirectionArgsSchema,
+  knowledgeDirectionChangedSchema,
+  knowledgeDirectionChangeSchema,
   knowledgeDirectionReadSchema,
   knowledgeDirectionsArgsSchema,
   knowledgeDirectionsSchema,
@@ -1906,11 +1908,13 @@ export const invokeContract = {
     request: z.tuple([knowledgeEntryArgsSchema]),
     response: knowledgeEntryReadSchema,
   },
+  // With no arguments, every scope's first page: the catalog's `direction`
+  // line reads its current value so.
   "inf:knowledge:directions": {
     effect: "read",
     surface: "core",
     reach: "home",
-    request: z.tuple([knowledgeDirectionsArgsSchema]),
+    request: z.tuple([knowledgeDirectionsArgsSchema.optional()]),
     response: knowledgeDirectionsSchema,
   },
   "inf:knowledge:direction": {
@@ -1919,6 +1923,17 @@ export const invokeContract = {
     reach: "home",
     request: z.tuple([knowledgeDirectionArgsSchema]),
     response: knowledgeDirectionReadSchema,
+  },
+  // One change to a standing direction, the app action catalog's
+  // `direction` line (src/shared/actions.ts): the captain's window and the
+  // first mate's app_change ask it alike (docs/knowledge.md, "Directions are
+  // the first mate's to keep").
+  "inf:knowledge:direction:set": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([knowledgeDirectionChangeSchema]),
+    response: knowledgeDirectionChangedSchema,
   },
 
   // The entries a card body names, for its references, and what one task's

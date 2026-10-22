@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-check-off-lease-in-virtual-mac",
+      "reason": "Internal CI only: a phone check running in a virtual Mac takes no Mac check lease. No product change."
+    }
+  ]
+}

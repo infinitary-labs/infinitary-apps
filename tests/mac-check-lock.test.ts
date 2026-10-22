@@ -50,6 +50,12 @@ setInterval(() => {}, 60000);
 `;
   // tart stands in for the virtual Mac a switched-on phone gate runs in (INF-524).
   for (const name of ["pnpm", "tart"]) writeFileSync(join(bin, name), workload, { mode: 0o755 });
+  // sysctl answers whether the job runs in a virtual Mac, as macOS reports it (INF-658).
+  writeFileSync(
+    join(bin, "sysctl"),
+    `#!/bin/bash\n[ "$*" = "-n kern.hv_vmm_present" ] || exit 1\necho "\${CHECK_VMM:-0}"\n`,
+    { mode: 0o755 },
+  );
   writeFileSync(join(root, "workload"), workload);
   // INF-648: INF-599's script started node scripts/phone-test-home.ts in the background from
   // a shell, and the helper outlived the run. The node stand-in can do the same.
@@ -88,7 +94,7 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
   const children: Work[] = [];
   function launch(
     name: string,
-    kind: "desktop" | "phone" | "package" | "virtual-phone",
+    kind: "desktop" | "phone" | "package" | "virtual-phone" | "placed-phone",
     {
       fail = false,
       args = "",
@@ -131,6 +137,8 @@ exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(root, "workload")
         CHECK_NAME: name,
         CHECK_FAIL: fail ? "yes" : "",
         PHONE_VIRTUAL_MAC: virtual,
+        // A placed phone is the same step on a runner inside a virtual Mac.
+        CHECK_VMM: kind === "placed-phone" ? "1" : "0",
         ...(slowHolder ? { PATH: `${slow}:${env.PATH}`, CHECK_RECORDS: records } : {}),
         ...extra,
       },
@@ -474,6 +482,32 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
       expect(await desktop.result).toBe(0);
       expect(await next.result).toBe(0);
       const failed = f.launch("failed-virtual-phone", "virtual-phone", { fail: true });
+      expect(await failed.result).toBe(7);
+    } finally {
+      await f.close();
+    }
+  });
+  // INF-658 (captain: "Move phone checks off the Mac check lock once the virtual Mac runner
+  // works"): a phone job placed in a fresh virtual Mac shares it with no journeys, so its gate
+  // starts beside running journeys and takes no lease; on the real Mac it still waits.
+  it("starts a placed virtual Mac's device gate beside running journeys, taking no lease", async () => {
+    const f = fixture();
+    try {
+      const desktop = f.launch("desktop-a", "desktop");
+      await desktop.wait("started:desktop-a");
+      const placed = f.launch("placed-phone", "placed-phone");
+      await placed.wait("started:placed-phone");
+      expect(await f.probe("exclusive")).toBe("busy");
+      expect(await f.probe("exclusive", true)).toBe("free");
+      const real = f.launch("real-phone", "phone");
+      await real.wait(queued("exclusive"));
+      for (const work of [placed, desktop]) work.release();
+      expect(await placed.result).toBe(0);
+      expect(await desktop.result).toBe(0);
+      await real.wait("started:real-phone");
+      real.release();
+      expect(await real.result).toBe(0);
+      const failed = f.launch("failed-placed-phone", "placed-phone", { fail: true });
       expect(await failed.result).toBe(7);
     } finally {
       await f.close();

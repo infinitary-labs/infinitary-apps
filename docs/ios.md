@@ -370,7 +370,7 @@ No simulator exists right before the gate, so there a replaced version cancels i
 That check also stops a manual rerun of a replaced version, which no newer run cancels, about a minute after it reaches the Mac mini.
 Only native jobs share the repository-wide `mac-mini-phone` concurrency group, with `queue: max` and cancellation disabled at the job level; GitHub keeps up to 100 pending phone jobs.
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
-On the Mac, `scripts/with-mac-check.py` gives the desktop build/test command a shared kernel file lease and the native device gate an exclusive one, taken once for both devices.
+On the Mac, `scripts/with-mac-check.py` gives the desktop build/test command a shared kernel file lease and the native device gate an exclusive one, taken once for both devices; a gate inside a virtual Mac takes none ("A phone check the placement service puts in a virtual Mac").
 The `test:phone` package script takes that lease around `scripts/test-phone.ts`, and the script never takes it, because CI already wraps the script and a nested exclusive lease waits forever; the script also swaps `HOME` for a scratch home before anything else runs.
 The runner slots and a crewmate's `pnpm test:phone` use the same account and `$HOME/Library/Caches/infinitary-ci/checks.lock`; active desktop commands finish before a phone enters, and a waiting phone prevents new desktops passing it.
 The helper holds the lease as the command's parent and never passes it on, so it ends when the command exits, even if the command leaves background processes running; lock files are never unlinked.
@@ -400,6 +400,14 @@ The image and its base image's download take about 80 GB together in tart's own 
 Set the variable only once that runner is registered, finds `tart` on its search path and the image is built; otherwise every phone check waits for the runner or fails at its first step.
 The Mac mini's idle watchdog counts a running `tart run` process as work for up to three hours, so it does not restart the Mac under a phone check.
 While the variable is set, a crewmate's own `pnpm test:phone` stays on the Mac mini under the lease and checks the iPhone alone, leaving both devices to the pull request's phone check; `github_read` of `/repos/{owner}/{repo}/actions/variables` lists the variable when it is set.
+
+### A phone check the placement service puts in a virtual Mac
+
+Once `MAC_RUNNER` names the placement service's label (`docs/testing.md`, "One image for every project"), `native-phone` runs on whichever place the service gives it, usually a fresh virtual Mac of its own.
+The gate step asks macOS whether it runs in a virtual Mac (`sysctl -n kern.hv_vmm_present`); there it runs `scripts/test-phone.ts --both --simulators 2` directly and takes no Mac check lease, because no journeys share that Mac (the captain's choice on INF-658: "Move phone checks off the Mac check lock once the virtual Mac runner works").
+Two simulators at a time match the virtual Mac's 6 CPUs and 16 GB, as `phone-job.sh` runs them, and INF-621's two complete iPhone and iPad proofs passed in that image.
+On the real Mac's place, as on today's Mac mini runners, the gate still takes the exclusive lease, which a crewmate's `pnpm test:phone` and journeys on that Mac share.
+Leave `PHONE_VIRTUAL_MAC` unset with the placement service: a job already inside a virtual Mac cannot start another one.
 
 ## Generated and bundled assets
 

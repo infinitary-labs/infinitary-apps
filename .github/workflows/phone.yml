@@ -146,12 +146,17 @@ jobs:
       # side, each on its own simulator and test home; either failing fails it. On the Mac
       # mini it takes the Mac check lease once for both. In the virtual Mac it takes no
       # lease: phone checks wait only for each other.
+      # INF-658 (captain: "Move phone checks off the Mac check lock once the virtual Mac
+      # runner works"): a job the placement service put in a fresh virtual Mac shares that
+      # Mac with no journeys, so it takes no lease either, with the 2 simulators at a time
+      # its 6 cores hold, as phone-job.sh runs them. The real Mac's place still takes it.
       # 40m is over twice the longest measured gate for both devices, 15 minutes.
       - id: both
         name: Read and recover on iPhone and iPad at once
         if: ${{ steps.start.outputs.replaced != 'true' }}
         run: |
           if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi
+          if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
           python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both --evidence "$RUNNER_TEMP/phone"
       - name: Delete the virtual Mac
         if: ${{ always() && steps.vm.outcome != 'skipped' }}

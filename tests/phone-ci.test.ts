@@ -300,6 +300,8 @@ describe("the native pull-request gate", () => {
     ).toEqual([
       [
         'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
+        // INF-658: a job placed in a virtual Mac runs the gate there without the lease.
+        'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi',
         'python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both --evidence "$RUNNER_TEMP/phone"',
         "",
       ].join("\n"),

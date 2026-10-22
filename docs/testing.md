@@ -145,6 +145,7 @@ No desktop work runs between the iPhone and the iPad.
 Setup, evidence uploads, Linux jobs and the Linux choosers do not take the lease.
 `tests/mac-check-lock.test.ts` runs the actual workflow command strings and the `test:phone` package script with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure, cancellation, the waiting lines, a leftover background process, a command that starts only once its lease is recorded, a killed holder, a holder that outlived its command and a lease held past its limit.
 With the repository variable `PHONE_VIRTUAL_MAC` set, the device gate runs in a fresh virtual Mac on its own runner and takes no lease (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
+A job the placement service runs inside a virtual Mac takes no lease either, because no journeys share that Mac (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac"); `tests/mac-check-lock.test.ts` starts it beside running journeys.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ### The phone check on request

@@ -7,6 +7,7 @@ import { intersects, minimumWindowSize, type Rect, resizeWindow, settled, within
 import { FM_THREAD_CARD_TITLE, FM_THREAD_PROMPT_MARKER } from "./mockProvider";
 import { pastePictures, promptInput } from "./prompt";
 import { cardSurface, shownCard } from "./stack";
+import { MAC_ONLY_TAG } from "./tags";
 import { focusOn, typeInto } from "./windowKeys";
 
 /**
@@ -196,7 +197,9 @@ test("Up in an empty composer brings the last message back", async () => {
   await input.fill("");
 });
 
-test("shell keys edit the draft, undo like typing, and send the words as edited", async () => {
+test("shell keys edit the draft, undo like typing, and send the words as edited", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   // Linux gives the shell keys no key and has no macOS Ctrl+A and Ctrl+E
   // (docs/composer.md, "Shell keys").
   test.skip(process.platform !== "darwin", "the shell keys' default keys are the Mac's");

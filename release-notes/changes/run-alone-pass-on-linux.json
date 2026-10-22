@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "run-alone-pass-on-linux",
+      "reason": "CI only: the full check's run-alone pass moves to a Linux machine, and only the Mac-only tests run alone on the Mac. Nothing in the app changes."
+    }
+  ]
+}

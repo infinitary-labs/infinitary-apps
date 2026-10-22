@@ -73,6 +73,7 @@ import {
   shownCard,
   shownEntry,
 } from "./stack";
+import { MAC_ONLY_TAG } from "./tags";
 import { focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -543,7 +544,9 @@ test("a card reply takes multiple lines without hiding their text", async () => 
   await reply.field.fill("");
 });
 
-test("a card reply takes the shell keys and undoes typing by the run, but never brings back the main message", async () => {
+test("a card reply takes the shell keys and undoes typing by the run, but never brings back the main message", {
+  tag: MAC_ONLY_TAG,
+}, async () => {
   // Linux gives the shell keys no key (docs/composer.md, "Shell keys").
   test.skip(process.platform !== "darwin", "the shell keys' default keys are the Mac's");
   const { page } = launched;

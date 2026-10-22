@@ -5,6 +5,7 @@ import { basename, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { stripVTControlCharacters } from "node:util";
 import { RUNS_DIR, runName } from "../tests/e2e/runEvidence.ts";
+import { MAC_ONLY_TAG } from "../tests/e2e/tags.ts";
 
 /**
  * The run-alone pass (docs/testing.md, "Each test owns its prerequisites"):
@@ -16,11 +17,15 @@ import { RUNS_DIR, runName } from "../tests/e2e/runEvidence.ts";
  *
  * `node scripts/e2e-alone.ts tests/e2e/<file>.spec.ts ...` runs the pass over
  * the named files; with none it covers every spec file, which, like a full
- * e2e run, only CI does (verify.yml's mac lane). It runs against the current
- * build (`pnpm build` first), prints one line per test, writes
+ * e2e run, only CI does (source-journeys.yml's `journeys (run alone)` job on
+ * Linux). `--tag <tag>` keeps only the tests that carry it: verify.yml's mac
+ * lane runs the MAC_ONLY_TAG tests, which skip on Linux. It runs against the
+ * current build (`pnpm build` first), prints one line per test, writes
  * `ALONE_RESULTS` and each test's output, trace and picture to its
  * directory (`--out <dir>`, else this pass's own run directory under
- * test-results/runs/), and exits 1 when any test failed alone.
+ * test-results/runs/), and exits 1 when any test failed alone, or skipped
+ * where it was meant to run: anywhere but a Mac-only test off a Mac.
+ * `--summarize <dir>` prints that directory's result for a run's page.
  */
 
 const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
@@ -33,10 +38,10 @@ export const ALONE_RESULTS = "alone-results.json";
 const PARALLEL_LANES = new Set(["renderer", "application"]);
 
 /** One test the pass runs by itself. */
-export type AloneTest = { file: string; line: number; lane: string; title: string };
+export type AloneTest = { file: string; line: number; lane: string; title: string; tags: string[] };
 
 export type AloneResult = AloneTest & {
-  status: "passed" | "failed";
+  status: "passed" | "failed" | "skipped";
   /** The first error Playwright reported, or the end of the run's output when it reported none. */
   error?: string;
   seconds: number;
@@ -50,6 +55,7 @@ type ListSuite = {
     title: string;
     file: string;
     line: number;
+    tags?: string[];
     tests: Array<{ projectName: string }>;
   }>;
   suites?: ListSuite[];
@@ -72,7 +78,9 @@ export function laterTests(report: ListReport): AloneTest[] {
       for (const test of spec.tests) {
         const tests = byFile.get(spec.file) ?? [];
         const title = [...titles, spec.title].join(" › ");
-        tests.push({ file: spec.file, line: spec.line, lane: test.projectName, title });
+        // The JSON listing writes a tag without its "@"; the pass names it as a test does.
+        const tags = (spec.tags ?? []).map((tag) => (tag.startsWith("@") ? tag : `@${tag}`));
+        tests.push({ file: spec.file, line: spec.line, lane: test.projectName, title, tags });
         byFile.set(spec.file, tests);
       }
     for (const child of suite.suites ?? []) visit(child, [...titles, child.title]);
@@ -91,6 +99,48 @@ export function laterTests(report: ListReport): AloneTest[] {
     }
   }
   return later.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
+}
+
+/** The tests that carry `tag`, or every test when none is named. */
+export function withTag(tests: AloneTest[], tag: string | undefined): AloneTest[] {
+  return tag ? tests.filter((test) => test.tags.includes(tag)) : tests;
+}
+
+/** Whether a run's JSON result says its tests skipped and none ran. */
+export function skippedAll(report: { stats?: { expected?: number; skipped?: number } }): boolean {
+  return (report.stats?.skipped ?? 0) > 0 && (report.stats?.expected ?? 0) === 0;
+}
+
+/**
+ * A test that skipped alone: recorded as skipped when it is Mac-only and this
+ * computer is not a Mac, which runs it, and otherwise a failure that says so,
+ * since a skip there is a test the pass never checked.
+ */
+export function skipped(test: AloneTest, platform: NodeJS.Platform, seconds: number): AloneResult {
+  if (platform !== "darwin" && test.tags.includes(MAC_ONLY_TAG)) {
+    return { ...test, status: "skipped", seconds };
+  }
+  const where = platform === "darwin" ? "on a Mac" : `without the ${MAC_ONLY_TAG} tag`;
+  return { ...test, status: "failed", error: `It skipped ${where}, so it never ran alone.`, seconds };
+}
+
+/**
+ * The pass's result for a run's page (`--summarize <dir>`): its counts and
+ * each test that failed alone, read from `ALONE_RESULTS`. A report, never a gate.
+ */
+export function summary(results: AloneResult[]): string {
+  const failed = results.filter((result) => result.status === "failed");
+  const skips = results.filter((result) => result.status === "skipped");
+  const lines = [
+    `Run alone: ${results.length - failed.length - skips.length} passed, ${failed.length} failed, ` +
+      `${skips.length} skipped as ${MAC_ONLY_TAG}, each a later test of a file that shares one app, selected by itself.`,
+  ];
+  if (failed.length > 0) {
+    lines.push("", "Failed alone (each error is in the e2e-alone artifact):");
+    for (const result of failed)
+      lines.push(`- \`${result.file}:${result.line}\` ${result.title} (${result.lane})`);
+  }
+  return lines.join("\n");
 }
 
 /** The files the pass covers: the named ones, or every spec file on CI. */
@@ -128,6 +178,14 @@ function listLater(files: string[]): AloneTest[] {
     throw new Error(`Listing the tests failed:\n${listed.stderr || listed.stdout}`);
   }
   return laterTests(JSON.parse(listed.stdout) as ListReport);
+}
+
+function readReport(json: string): { stats?: { expected?: number; skipped?: number } } {
+  try {
+    return JSON.parse(readFileSync(json, "utf8"));
+  } catch {
+    return {};
+  }
 }
 
 /** The first error a run's JSON result names, whether a test's or the run's own. */
@@ -179,6 +237,10 @@ function runAlone(test: AloneTest, out: string): Promise<AloneResult> {
       mkdirSync(dir, { recursive: true });
       writeFileSync(join(dir, "output.log"), output);
       const seconds = Math.round((Date.now() - started) / 100) / 10;
+      if (code === 0 && skippedAll(readReport(json))) {
+        done(skipped(test, process.platform, seconds));
+        return;
+      }
       if (code === 0) {
         done({ ...test, status: "passed", seconds });
         return;
@@ -201,7 +263,7 @@ async function pool(
     while (next < tests.length) {
       const test = tests[next++] as AloneTest;
       const result = await run(test);
-      const mark = result.status === "passed" ? "passed" : "FAILED";
+      const mark = result.status === "failed" ? "FAILED" : result.status;
       console.log(`${mark} ${test.file}:${test.line} (${test.lane}, ${result.seconds}s)`);
       results.push(result);
     }
@@ -212,12 +274,23 @@ async function pool(
 
 async function main(args: string[]): Promise<number> {
   const named: string[] = [];
+  let tag: string | undefined;
   // A run directory named for this process reads as a live run while the pass
   // goes, so `pnpm build` waits for it and no Playwright run's tidying removes it.
   let out = join(REPO_ROOT, RUNS_DIR, runName(new Date(), process.pid));
+  if (args[0] === "--summarize") {
+    const file = join(resolve(args[1] ?? "."), ALONE_RESULTS);
+    if (!existsSync(file)) {
+      console.log("No run-alone result: the pass did not run to its end.");
+      return 0;
+    }
+    console.log(summary((JSON.parse(readFileSync(file, "utf8")) as { results: AloneResult[] }).results));
+    return 0;
+  }
   for (let index = 0; index < args.length; index++) {
     const arg = args[index] as string;
     if (arg === "--out") out = resolve(args[++index] ?? ".");
+    else if (arg === "--tag") tag = args[++index];
     else named.push(arg);
   }
   const files = specFiles(named).filter((file) =>
@@ -230,9 +303,9 @@ async function main(args: string[]): Promise<number> {
     );
   }
   mkdirSync(out, { recursive: true });
-  const tests = listLater(files);
+  const tests = withTag(listLater(files), tag);
   console.log(
-    `The run-alone pass: ${tests.length} later tests of ${files.length} files that share one app; ` +
+    `The run-alone pass: ${tests.length} later tests${tag ? ` tagged ${tag}` : ""} of ${files.length} files that share one app; ` +
       `evidence in ${relative(process.cwd(), out)}/`,
   );
   const parallel = tests.filter((test) => PARALLEL_LANES.has(test.lane));
@@ -243,7 +316,7 @@ async function main(args: string[]): Promise<number> {
   ].sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line);
   const failed = results.filter((result) => result.status === "failed");
   writeFileSync(join(out, ALONE_RESULTS), `${JSON.stringify({ results }, null, 2)}\n`);
-  console.log(`\nRun alone: ${results.length - failed.length} passed, ${failed.length} failed.`);
+  console.log(`\n${summary(results).split("\n")[0]}`);
   for (const result of failed) {
     console.log(`\n${result.file}:${result.line} ${result.title} (${result.lane})`);
     console.log((result.error ?? "").split("\n").slice(0, 12).join("\n"));

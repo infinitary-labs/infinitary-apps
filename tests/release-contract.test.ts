@@ -39,6 +39,7 @@ import {
 } from "../src/core/update/updateChannels";
 import { packagedFlavor } from "../src/main/userDataDir";
 import vitestConfig from "../vitest.config";
+import { MAC_ONLY_TAG } from "./e2e/tags.ts";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // Eight-worker Mac measurement: slowest default-budget case 1.854 s; brew keeps its explicit budget.
@@ -1249,18 +1250,21 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
 
   /**
    * The run-alone pass (docs/testing.md "Each test owns its prerequisites"):
-   * the mac lane runs each later test of a spec file that shares one app by
-   * itself, on the suite's build, whether the suite passed or failed and
-   * after every other stage, keeps its result, and the summary lists its
-   * failures apart from the suite's.
+   * the mac lane runs each later Mac-only test of a spec file that shares
+   * one app by itself (INF-873: the rest run alone on Linux), on the suite's
+   * build, whether the suite passed or failed and after every other stage,
+   * keeps its result, and the summary lists its failures apart from the
+   * suite's.
    */
-  it("runs each later test of a file that shares one app alone, and lists its failures apart", () => {
+  it("runs each later Mac-only test of a file that shares one app alone, and lists its failures apart", () => {
     const verify = loadYamlFile(".github/workflows/verify.yml") as {
       jobs: { lane: { steps: Step[] } };
     };
     const steps = verify.jobs.lane.steps;
     const alone = steps.find((step) => step.id === "alone");
-    const out = /^node scripts\/e2e-alone\.ts --out (\S+)$/.exec(alone?.run ?? "")?.[1];
+    const [, tag, out] =
+      /^node scripts\/e2e-alone\.ts --tag (\S+) --out (\S+)$/.exec(alone?.run ?? "") ?? [];
+    expect(tag, "the mac lane runs the tests that skip on Linux").toBe(MAC_ONLY_TAG);
     expect(out, "the pass writes its result where the job keeps it").toBeTruthy();
     // After every other stage, so a test failing alone hides none of them.
     expect(steps.flatMap((step) => (step.id ? [step.id] : [])).at(-1)).toBe("alone");
@@ -3456,23 +3460,41 @@ describe("the Linux packages", () => {
 // source-text pin. Disposable command stand-ins record the selected interface.
 describe("budgeted pull-request journey workflow (INF-658)", () => {
   type Job = {
-    strategy: { matrix: { lane: string; shard: string } };
-    steps: { name?: string; run?: string }[];
+    name: string;
+    strategy: { matrix: { lane: string; shard: string; include: string } };
+    steps: {
+      name?: string;
+      run?: string;
+      if?: string;
+      uses?: string;
+      with?: Record<string, string>;
+    }[];
   };
   const source = loadYamlFile(".github/workflows/source-journeys.yml") as {
     jobs: Record<string, Job>;
   };
   const job = source.jobs["source-desktop"];
-  it("splits starters into disjoint lane projects and leaves the full alpha at eight machines", () => {
+  // INF-873's approved plan: the full alpha's run-alone pass is a ninth machine.
+  it("splits starters into disjoint lane projects and gives the full alpha eight machines and a ninth that runs alone", () => {
     const lanes = (suite: string, lane = "parallel") =>
       workflowValue(job?.strategy.matrix.lane ?? "", { inputs: { suite, lane } });
     const shards = (suite: string) =>
       workflowValue(job?.strategy.matrix.shard ?? "", { inputs: { suite } });
+    const extra = (suite: string) =>
+      workflowValue(job?.strategy.matrix.include ?? "", { inputs: { suite } });
     expect(lanes("starter")).toEqual(["parallel", "desktop"]);
     expect(shards("starter")).toEqual([1]);
+    expect(extra("starter")).toEqual([]);
     expect(lanes("full")).toEqual(["parallel", "desktop"]);
     expect(shards("full")).toEqual([1, 2, 3, 4]);
+    expect(extra("full")).toEqual([{ lane: "alone", shard: 1 }]);
     expect(lanes("affected", "desktop")).toEqual(["desktop"]);
+    expect(extra("affected")).toEqual([]);
+    // A release's stable promotion reads every `verify / linux-e2e / …` job by name.
+    const name = (lane: string, shard: number) =>
+      workflowString(job?.name ?? "", { inputs: { suite: "full" }, matrix: { lane, shard } });
+    expect(name("alone", 1)).toBe("journeys (run alone)");
+    expect(name("desktop", 2)).toBe("journeys (desktop 2/4)");
   });
   it.each(["parallel", "desktop"])(
     "runs the %s starter and overflow files through their lane",
@@ -3531,4 +3553,58 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
       }
     },
   );
+  // INF-873's approved plan: the ninth machine runs the run-alone pass on the
+  // virtual screen, keeps its result and lists it on the run's page.
+  it("runs the run-alone pass on the full alpha's ninth machine and keeps its result", () => {
+    const dir = scratchDir("infinitary-journey-alone-");
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    const commands: Record<string, string> = {
+      "xvfb-run": '#!/bin/sh\nshift 3\nexec "$@"\n',
+      xdotool:
+        '#!/bin/sh\nif [ "$1" = getmouselocation ]; then echo "x:2559 y:1599 screen:0 window:0"; fi\n',
+      node: '#!/bin/sh\nprintf "node %s\\n" "$*" >> "$COMMAND_LOG"\n',
+      pnpm: '#!/bin/sh\nprintf "pnpm %s\\n" "$*" >> "$COMMAND_LOG"\n',
+    };
+    for (const [name, body] of Object.entries(commands)) {
+      const path = join(bin, name);
+      writeFileSync(path, body);
+      chmodSync(path, 0o755);
+    }
+    const command = job?.steps.find((step) => step.name?.startsWith("Run the journeys with"))?.run;
+    const log = join(dir, "alone.log");
+    const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", command ?? ""], {
+      env: {
+        ...process.env,
+        PATH: `${bin}:${process.env.PATH}`,
+        COMMAND_LOG: log,
+        RUNNER_OS: "Linux",
+        SUITE: "full",
+        LANE: "alone",
+        SCREEN: "2560x1600x24",
+        SHARD: "1",
+      },
+      encoding: "utf8",
+    });
+    expect(result.status, result.stderr).toBe(0);
+    const out = /^node scripts\/e2e-alone\.ts --out (\S+)$/.exec(
+      readFileSync(log, "utf8").trim(),
+    )?.[1];
+    expect(out, "the job runs the pass alone, over every spec file").toBeTruthy();
+    const onAlone = (step: { if?: string } | undefined) =>
+      workflowValue(step?.if ?? "", { matrix: { lane: "alone" } }) === true &&
+      workflowValue(step?.if ?? "", { matrix: { lane: "desktop" } }) === false;
+    const kept = job?.steps.find(
+      (step) =>
+        step.uses === "actions/upload-artifact@v4" &&
+        step.with?.path === `Application Support/firstmate/${out}/`,
+    );
+    expect(kept?.with?.name).toBe("e2e-alone");
+    expect(onAlone(kept)).toBe(true);
+    const summarize = job?.steps.find((step) => step.run?.includes("--summarize"));
+    expect(summarize?.run).toBe(
+      `node scripts/e2e-alone.ts --summarize ${out} | tee -a "$GITHUB_STEP_SUMMARY"`,
+    );
+    expect(onAlone(summarize)).toBe(true);
+  });
 });

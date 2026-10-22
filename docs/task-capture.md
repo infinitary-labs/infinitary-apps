@@ -22,7 +22,7 @@ A task of its own exists only for a genuinely standalone one-off, and only when 
      Nothing parks it and nothing brings the card back (cards/tasks/agents P0; migration 28 closed every park row and logged it in `park_row_backfill`).
    - `emit_card` note without `task_id` requires `standalone: true` (lint refusal otherwise, `NOTE_NEEDS_TASK_REFUSAL` in `src/core/pi/cardLint.ts`); it files a `question` task born `done/answered` with the body as outcome.
      Revising the card in place revises the same row.
-   - The operate tools that still file through `filingOperations` in `firstmateAgent.ts` are `schedule_prompt`, `cancel_schedule`, `record_knowledge` (`docs/knowledge.md`), `flag_missed_escalation`, `flag_duplicate`, `personalize` and `install_plugin` (`setup_repo` and `unregister_repo` are retired); each files an `operation` task `done/settled` with the tool result as outcome, in the repo's project or Scratch.
+   - The operate tools that still file through `filingOperations` in `firstmateAgent.ts` are `schedule_prompt`, `record_knowledge` (`docs/knowledge.md`), `flag_missed_escalation`, `flag_duplicate`, `personalize` and `install_plugin` (`setup_repo` and `unregister_repo` are retired); each files an `operation` task `done/settled` with the tool result as outcome, in the repo's project or Scratch.
 3. At turn end (`AskCapture.endTurn`) every open ask the backend read closes, apart from one whose words wait on the lane for a retry.
    One nothing attached goes to the hinted task, else becomes a standalone `question` task in Scratch titled by the ask's first sentence with the turn's closing text as outcome; either way `attached_via = host:fallback`.
    A turn that failed at the provider or paused on a cut-off puts the captain's words it read back on the lane, so their messages stay open, and the turn that serves those words again attaches and closes them.
@@ -61,7 +61,7 @@ What counts, recorded where the call succeeds (a typed result, never the words) 
 - a card shown or revised (`emit_card`, the Settings hand-over card);
 - the closing words written into the card's replies, for a reply under a first mate card or a done task's kept note (`CardService.recordFirstmateThreadAnswer` returns whether it wrote);
 - work started, steered, stopped or settled (`spawn_crewmate`, `steer_crewmate` - including a steer the app only saved because the crewmate's account is held, which FI3-592 owns the status of - `interrupt_crewmate`, `settle_task`, a task dropped or started, a link changed);
-- a setting or operation recorded (`create_task`, `update_task`, `schedule_prompt`, `cancel_schedule`, `remember`, `forget`, a `record_knowledge` write that changed the collection, `personalize`, `install_plugin`, a flag, an applied `app_change`);
+- a setting or operation recorded (`create_task`, `update_task`, `schedule_prompt`, `remember`, `forget`, a `record_knowledge` write that changed the collection, `personalize`, `install_plugin`, a flag, an applied `app_change`, which `cancel_schedule` is);
 - a card closed (`close_card`), and a reaction (`emote`).
 
 Never counted: a refused or thrown call, a lookup (`crew_status`, `tasks`, `locate_project`, `app_state`, `supervision_log`, `knowledge`), a `record_knowledge` call repeating an earlier request, a graph refusal returned as text, and a reaction after a refused card (a refused `emit_card` is saved as an attempt with its typed reason, `crewmate-owns` or `card-refused`, and voids a later reaction).

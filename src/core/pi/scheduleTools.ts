@@ -24,7 +24,8 @@ export type ScheduleDelegate = {
     prompt: string,
     extra: { name?: string; project?: string; draft?: boolean },
   ): ScheduleRecord;
-  cancel(id: string): boolean;
+  /** Settings → Automation's Delete, by the catalog's automation-delete. */
+  cancel(id: string): Promise<boolean>;
 };
 
 const WEEKDAYS = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
@@ -61,7 +62,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
       return {
         text:
           record.state === "draft"
-            ? `Saved ${record.id} as a draft - ${scheduleText(record.spec)}. It runs only once the captain turns it on in Settings → Automation; new recurring schedules need the captain. Cancel with cancel_schedule.`
+            ? `Saved ${record.id} as a draft - ${scheduleText(record.spec)}. It runs only once turned on, which needs the captain: in Settings → Automation, or app_change automation-edit enable when asked. Cancel with cancel_schedule.`
             : `Scheduled ${record.id} - ${scheduleText(record.spec)}. Cancel with cancel_schedule.`,
       };
     },
@@ -75,7 +76,7 @@ export function createScheduleTools(delegate: ScheduleDelegate) {
       schedule_id: Type.String(),
     }),
     run: async (params) => {
-      const cancelled = delegate.cancel(params.schedule_id);
+      const cancelled = await delegate.cancel(params.schedule_id);
       return {
         text: cancelled
           ? `Cancelled schedule ${params.schedule_id}.`

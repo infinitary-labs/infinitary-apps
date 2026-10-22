@@ -226,6 +226,39 @@ describe("Scheduler (R3)", () => {
     expect(scheduler.list()).toEqual([]);
   });
 
+  // INF-752: a change the dispatcher runs (Settings → Automation, or the
+  // first mate's catalog line) says its words as the dispatcher's trail, so
+  // Activity shows one line naming who made it, never a second of its own.
+  it("gives a change's words to a caller that keeps its trail, and adds no line of its own", () => {
+    const { scheduler, events } = setup();
+    const said: string[] = [];
+    const say = (text: string) => {
+      said.push(text);
+    };
+    const rule = scheduler.create(
+      { kind: "every", minutes: 60 },
+      "hourly check",
+      false,
+      "Hourly",
+      undefined,
+      { say },
+    );
+    scheduler.update(rule.id, {}, { enable: true, say });
+    scheduler.pause(rule.id, { say });
+    scheduler.resume(rule.id, { say });
+    scheduler.pauseAll({ say });
+    scheduler.cancel(rule.id, { say });
+    expect(said).toEqual([
+      "Automation saved as a draft - every 60 minutes: hourly check",
+      "Automation turned on - every 60 minutes: hourly check",
+      "Automation paused - Hourly",
+      "Automation resumed - Hourly",
+      "Automation paused - 1 rule",
+      "Schedule cancelled - hourly check",
+    ]);
+    expect(events).toEqual([]);
+  });
+
   it("runs on the host's ticker and clock: one catch-up at start, then each tick, until stopped", () => {
     const { store } = setup();
     let clock = Date.UTC(2026, 8, 26, 12);

@@ -7926,6 +7926,23 @@ describe("FirstmateAgent reply line", () => {
     const store = new ScheduleStore(openInMemoryDatabase());
     const scheduler = new Scheduler({ store, notify: () => {}, broadcastEvent: () => {} });
     const f = setup({ silent: true, scheduler });
+    // cancel_schedule is Settings → Automation's Delete (INF-752): the
+    // catalog's automation-delete, whose trail records the delivery.
+    const deletes: unknown[] = [];
+    f.agent.bindAppDispatch(async (channel, args, actor) => {
+      deletes.push([channel, args, actor]);
+      const [id] = args as [string];
+      scheduler.cancel(id, { say: () => {} });
+      const row = f.tasks.fileOperation({
+        id: "cancel-1",
+        title: "Schedule cancelled",
+        outcome: "Schedule cancelled",
+        tool: "app_change",
+        actor: "firstmate",
+      });
+      f.agent.appActionRecorded(row.id);
+      return { id } as never;
+    });
     await f.agent.converse("remind me to check the panel");
     const tools = toolsOf(f.specs);
     await tools
@@ -7938,10 +7955,23 @@ describe("FirstmateAgent reply line", () => {
     await tools.get("cancel_schedule")?.execute("cancel", { schedule_id: schedule?.id });
     await finish(f);
     expect(f.tasks.lastTurn()?.reply?.text).toBe("Cancelled schedule: Check the panel");
+    expect(deletes).toEqual([
+      [
+        "inf:automation:delete",
+        [schedule?.id],
+        {
+          kind: "firstmate",
+          wake: "captain",
+          action: "automation-delete",
+          evidence: "cancel_schedule",
+        },
+      ],
+    ]);
     await f.agent.converse("cancel it again");
     await tools.get("cancel_schedule")?.execute("noop", { schedule_id: schedule?.id });
     await finish(f);
     expect(f.tasks.lastTurn()?.reply).toBeNull();
+    expect(deletes).toHaveLength(1);
   });
 
   it.each(["spawn", "start"])(

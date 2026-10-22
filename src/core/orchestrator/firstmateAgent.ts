@@ -2351,27 +2351,26 @@ export class FirstmateAgent {
                 });
                 return record;
               },
-              cancel: (id) => {
-                const record = scheduler.list().find((schedule) => schedule.id === id);
-                const cancelled = scheduler.cancel(id);
-                if (cancelled) {
-                  this.replyFacts.app = `Cancelled schedule: ${record?.prompt ?? id}`;
-                  this.noteDelivery({
-                    outcome: "action",
-                    kind: "record",
-                    tool: "cancel_schedule",
-                    ref: id,
-                  });
-                }
-                return cancelled;
+              // Settings → Automation's Delete, through the same catalog
+              // line (docs/automation.md, "One owner"): its trail is the
+              // operation and the feed line, and records the delivery.
+              cancel: async (id) => {
+                const record = scheduler.rules().find((schedule) => schedule.id === id);
+                if (!record) return false;
+                if (!this.appDispatch) throw new Error("App actions are not connected.");
+                await this.appDispatch("inf:automation:delete", [id], {
+                  kind: "firstmate",
+                  wake: this.appWake,
+                  action: "automation-delete",
+                  evidence: "cancel_schedule",
+                });
+                this.replyFacts.app = `Cancelled schedule: ${record.prompt}`;
+                return true;
               },
             }),
             {
               schedule_prompt: (params) => ({
                 title: `Scheduled: ${clipTitle(stringParam(params.prompt) ?? "a prompt")}`,
-              }),
-              cancel_schedule: (params) => ({
-                title: `Cancelled schedule ${stringParam(params.schedule_id) ?? ""}`.trim(),
               }),
             },
           )

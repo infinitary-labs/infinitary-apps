@@ -51,6 +51,7 @@ Whether an ask is his, and whether it is his typed words, is the first mate's ju
 This follows the captain's ask to fix the rigidness, the same way INF-638 lets the first mate keep his directions on its own judgment.
 A message typed on a paired view is a captain message (the captain's pick on FI3-709, `docs/devices.md`).
 `hands` delegates to the captain, and `yours` is captain-only.
+`judgment` is the first mate's at any wake too, on its own judgment: its evidence is its reason, which the change keeps, never the captain's ask.
 Sharing switches and purge stay the captain's.
 Panels and plugins gain no change ability.
 `show-card` (`asked`) brings a card forward when the captain asks: `inf:cards:show` restores an open minimized card or shows a closed card read-only.
@@ -62,6 +63,8 @@ It is no tool of its own, raises no card and runs no effect; see `docs/card-evid
 They stay the captain's own on the home Mac's window: words typed on a paired view reach the first mate as the captain's, and a link never enters a conversation (`docs/devices.md`).
 Asked for one, `app_change` files a card the host writes from typed facts - "Connect your MacBook Air" with Make a link, or "Remove Mac mini?" with a danger Remove Mac mini - whose click opens Settings -> Devices and acts there.
 `project-setup` (FI3-1532, `hands`) proposes: any wake may call it, it changes nothing, and the host puts up its own setup card, whose Add project alone adds the project with the settings chosen there; the first mate hears the answer once as a `project-setup` wake (`docs/fleet.md` "Asking the first mate to add a project").
+Settings → Automation's changes are four lines over `inf:automation:list` (INF-752, `docs/automation.md` "One owner"): `automation-edit` (`asked`) edits a rule by id and turns a draft or a paused rule on with `enable`, and `automation-state`, `automation-pause-all` and `automation-delete` (`judgment`) pause, resume, pause all and delete, as making a schedule is the first mate's judgment (captain decision Q4).
+`cancel_schedule` is `automation-delete`; `schedule_prompt` stays the one way the first mate makes a rule.
 
 Piece 1 covers projects folder (own-words), notifications, window wash, crew model names and panel collapse (asked).
 Folder paths expand `~`; existing projects never move and missing folders are refused, not created.

@@ -169,6 +169,16 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
   /** The automation rules as last read: what an unreadable list answers with (docs/automation.md). */
   let lastRules: AutomationRule[] = [];
+  /**
+   * What the Scheduler says of a change to a rule this dispatcher runs: the
+   * words of its trail, in place of a feed line of the Scheduler's own
+   * (docs/automation.md, "Where it shows"). Only a catalog change sets it,
+   * and those run one at a time (`catalogTail`).
+   */
+  let automationSaid: string | undefined;
+  const say = (text: string) => {
+    automationSaid = text;
+  };
 
   /**
    * Pending login prompts: the auth bridge parks a resolver here while the
@@ -1136,21 +1146,24 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
               prompt: rule.prompt,
               projectId: rule.projectId ?? null,
             },
-            { enable: rule.enable === true },
+            { enable: rule.enable === true, say },
           )
         : services.scheduler.create(rule.spec, rule.prompt, true, rule.name, rule.projectId, {
             draft: rule.enable !== true,
+            say,
           });
       return automationRuleOf(services.scheduler, record);
     },
     "inf:automation:state": (id, change) =>
       automationRuleOf(
         services.scheduler,
-        change === "pause" ? services.scheduler.pause(id) : services.scheduler.resume(id),
+        change === "pause"
+          ? services.scheduler.pause(id, { say })
+          : services.scheduler.resume(id, { say }),
       ),
-    "inf:automation:pause-all": () => ({ paused: services.scheduler.pauseAll() }),
+    "inf:automation:pause-all": () => ({ paused: services.scheduler.pauseAll({ say }) }),
     "inf:automation:delete": (id) => {
-      services.scheduler.cancel(id);
+      services.scheduler.cancel(id, { say });
       return { id };
     },
     "inf:usage:summary": (query) => services.usage.summary(query),
@@ -1431,6 +1444,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         }
       }
     }
+    if (names.length) automationSaid = undefined;
     const result = await handler(...args);
     for (const name of names) {
       const after = ACTIONS[name].current
@@ -1512,6 +1526,9 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
               to: !!next[surface],
             });
         }
+      } else if (ACTIONS[name].area === "automation") {
+        // The Scheduler's own words of the change, as its trail.
+        if (automationSaid) trail(name, { text: automationSaid }, actor);
       } else if (name === "show-card") {
         // The captain's own click on the Cards row is not news; Firstmate's
         // pointing is, as one feed line and never a card.

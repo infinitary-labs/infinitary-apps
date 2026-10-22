@@ -7,13 +7,6 @@ const WORK_REQUEST =
 
 /** Operations which are not app settings, with the reason they stay outside the table. */
 export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
-  "inf:automation:save":
-    "The captain's own edit of a schedule in Settings → Automation; the first mate makes schedules with schedule_prompt",
-  "inf:automation:state":
-    "The captain's own Pause or Resume of a schedule in Settings → Automation; nothing else is set",
-  "inf:automation:pause-all": "The captain's own Pause all in Settings → Automation",
-  "inf:automation:delete":
-    "The captain's own Delete in Settings → Automation; the first mate cancels with cancel_schedule",
   "inf:converse": "Conversation, not an app setting",
   "inf:cards:act": "Captain card clicks",
   "inf:cards:close": "Captain card clicks",

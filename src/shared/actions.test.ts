@@ -159,7 +159,11 @@ describe("action permissions and channel parity", () => {
   // INF-751, on the captain's ask to fix the rigidness: his choice relayed in
   // a crewmate's report, or his message sent while a turn runs, reaches the
   // first mate at a wake his own words did not begin, and still applies.
-  it("takes asked and own-words lines at any wake with the captain's evidence, never the captain's own", () => {
+  // INF-752: a judgment line is the first mate's at any wake too, on the
+  // reason it gives. Pausing, resuming and deleting a schedule are its
+  // judgment, as making one is (docs/automation.md, "Drafts"); turning a
+  // draft on is asked.
+  it("takes asked, own-words and judgment lines at any wake with evidence, never the captain's own", () => {
     for (const name of ACTION_NAMES) {
       const line = ACTIONS[name];
       expect(actionRefusal(line, { kind: "captain" })).toBeNull();
@@ -170,6 +174,12 @@ describe("action permissions and channel parity", () => {
         expect(actionRefusal(line, { kind: "firstmate", wake })).toBeTruthy();
       }
     }
+    expect(ACTION_NAMES.filter((name) => ACTIONS[name].tier === "judgment")).toEqual([
+      "automation-state",
+      "automation-pause-all",
+      "automation-delete",
+    ]);
+    expect(ACTIONS["automation-edit"].tier).toBe("asked");
   });
 });
 

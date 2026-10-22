@@ -50,6 +50,7 @@ import { SETTLE_MS } from "./dispatcher";
 import { ForgeSignInStore } from "./forge/signIns";
 import { absentKeychain, type HostCapabilities, type HostTaskBrowser } from "./host";
 import { type Core, startCore } from "./index";
+import { automationWords } from "./orchestrator/scheduler";
 import { renderWake } from "./orchestrator/wakes";
 import { appPathsFor } from "./paths";
 import { actionValue, createAppTools } from "./pi/appTools";
@@ -682,7 +683,7 @@ describe("the core, driven with no Electron in the process", () => {
         }) =>
           line.captainAllowed &&
           line.firstmateAllowed ===
-            (["asked", "own-words"].includes(ACTIONS[line.action].tier) ||
+            (["asked", "own-words", "judgment"].includes(ACTIONS[line.action].tier) ||
               ACTIONS[line.action].proposes === true),
       ),
     ).toBe(true);
@@ -708,6 +709,137 @@ describe("the core, driven with no Electron in the process", () => {
     await core.dispatch("inf:settings:layout:set", [
       { collapsedPanels: {}, hiddenPanels: {}, placements: {} },
     ]);
+    detach();
+  });
+
+  // INF-752: everything Settings → Automation does to a schedule, the first
+  // mate does through the same catalog path, and each change leaves one
+  // trail - an operation and one feed line naming who changed it - in place
+  // of the Scheduler's own unattributed line.
+  it("runs Automation's changes and the first mate's through one path, with one trail each", async () => {
+    const events: FmEvent[] = [];
+    const detach = core.events.subscribe((channel, payload) => {
+      if (channel === "inf:event") events.push(payload as FmEvent);
+    });
+    const tools = createAppTools({
+      dispatch: core.dispatch,
+      actor: () => ({ kind: "firstmate", wake: "other" }),
+    });
+    const change = tools.find((tool) => tool.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    const scheduler = core.services.scheduler;
+    const audit = scheduler.create(
+      { kind: "daily", hour: 9, minute: 0, timeZone: "America/Los_Angeles" },
+      "Audit the dependencies and report anything out of date.",
+      true,
+      "Weekly dependency audit",
+    );
+    const digest = scheduler.create(
+      { kind: "daily", hour: 8, minute: 0, timeZone: "America/Los_Angeles" },
+      "Summarize what the crew finished overnight.",
+      false,
+      "Morning digest",
+    );
+    expect(digest.state).toBe("draft");
+    const operations = () => core.services.tasks.list().filter((task) => task.kind === "operation");
+    const trailOf = async (actor: "captain" | "firstmate", text: string) => {
+      const line = feedLineFrom({ type: "personalized", text, actor });
+      return (await core.dispatch("inf:feed:recent", [])).filter(
+        (entry) => entry.text === line?.text,
+      );
+    };
+    const notes = () => events.filter((event) => event.type === "firstmate_note");
+    const notesBefore = notes().length;
+
+    // The captain's Pause in Settings: one operation and one line, the captain's.
+    const before = operations().length;
+    await core.dispatch("inf:automation:state", [audit.id, "pause"]);
+    expect(operations()).toHaveLength(before + 1);
+    expect(operations().at(-1)).toMatchObject({ title: automationWords.paused(audit) });
+    expect(await trailOf("captain", automationWords.paused(audit))).toHaveLength(1);
+
+    // A turn a report began: pausing and resuming are the first mate's judgment.
+    const resumed = JSON.parse(
+      (
+        await change.run({
+          action: "automation-state",
+          value: { id: audit.id, change: "resume" },
+          evidence: "The crewmate's report says the audit is needed again.",
+        })
+      ).text,
+    );
+    expect(resumed.current.rules).toContainEqual({
+      id: audit.id,
+      label: "Weekly dependency audit",
+      state: "enabled",
+    });
+    expect(await trailOf("firstmate", automationWords.resumed(audit))).toHaveLength(1);
+    expect(operations()).toHaveLength(before + 2);
+
+    // Turning a draft on stays the captain's to direct: it takes his words,
+    // whatever began the turn, and a draft never resumes.
+    expect(
+      (await change.run({ action: "automation-edit", value: { id: digest.id, enable: true } }))
+        .text,
+    ).toMatch(/captain's words/);
+    expect(
+      (
+        await change.run({
+          action: "automation-state",
+          value: { id: digest.id, change: "resume" },
+          evidence: "resume it",
+        })
+      ).text,
+    ).toMatch(/automation-edit/);
+    expect(scheduler.rules().find((rule) => rule.id === digest.id)?.state).toBe("draft");
+    const asked = (value: Record<string, unknown>) =>
+      change.run({ action: "automation-edit", value, evidence: "Turn the morning digest on." });
+    const edited = JSON.parse((await asked({ id: digest.id, enable: true })).text);
+    expect(
+      edited.current.rules.find((rule: { id: string }) => rule.id === digest.id),
+    ).toMatchObject({
+      state: "enabled",
+      prompt: digest.prompt,
+      name: "Morning digest",
+      captainRequested: true,
+    });
+    expect(
+      await trailOf("firstmate", automationWords.saved(true, digest.spec, digest.prompt)),
+    ).toHaveLength(1);
+    await asked({ id: digest.id, name: "Overnight digest" });
+    expect(scheduler.rules().find((rule) => rule.id === digest.id)).toMatchObject({
+      name: "Overnight digest",
+      prompt: digest.prompt,
+      state: "enabled",
+    });
+    expect((await asked({ id: "missing" })).text).toMatch(/No automation missing/);
+
+    // Pause all, and a pause that changes nothing leaves no trail.
+    const running = scheduler.rules().filter((rule) => rule.state === "enabled").length;
+    await change.run({ action: "automation-pause-all", value: {}, evidence: "Quiet week." });
+    expect(scheduler.rules().every((rule) => rule.state !== "enabled")).toBe(true);
+    expect(await trailOf("firstmate", automationWords.pausedAll(running))).toHaveLength(1);
+    const quiet = operations().length;
+    await change.run({
+      action: "automation-state",
+      value: { id: audit.id, change: "pause" },
+      evidence: "Already paused.",
+    });
+    expect(operations()).toHaveLength(quiet);
+
+    // Delete: the first mate's and the captain's.
+    await change.run({
+      action: "automation-delete",
+      value: { id: audit.id },
+      evidence: "The audit moved to CI.",
+    });
+    expect(await trailOf("firstmate", automationWords.cancelled(audit.prompt))).toHaveLength(1);
+    await core.dispatch("inf:automation:delete", [digest.id]);
+    expect(await trailOf("captain", automationWords.cancelled(digest.prompt))).toHaveLength(1);
+    expect(scheduler.rules().filter((rule) => [audit.id, digest.id].includes(rule.id))).toEqual([]);
+    // Every change above said its words once, as its trail; the Scheduler
+    // added no line of its own beside them.
+    expect(notes()).toHaveLength(notesBefore);
     detach();
   });
 

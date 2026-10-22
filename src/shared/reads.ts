@@ -203,13 +203,17 @@ export const readCatalog = {
     description: "One session's in-flight turn: text and tool calls not yet in its file.",
   }),
   // Settings → Automation (docs/automation.md): a rule changes by a feed
-  // line (create, save, pause, resume, delete); next runs and history move
-  // with the clock, so the read also refreshes while the section is open.
+  // line (create, save, pause, resume, delete), the Scheduler's own or the
+  // trail of a catalog change; next runs and history move with the clock,
+  // so the read also refreshes while the section is open.
   "automation.list": entry({
     channel: "inf:automation:list",
     args: noArgs,
     toRequest: () => [],
-    invalidate: { events: (event) => event.type === "firstmate_note", pollMs: 30_000 },
+    invalidate: {
+      events: (event) => event.type === "firstmate_note" || event.type === "personalized",
+      pollMs: 30_000,
+    },
     description: "Every automation rule: its name, state, schedule, prompt and next run.",
   }),
   // A delivery is handled when a Firstmate turn ends, which no feed line says.
@@ -218,7 +222,10 @@ export const readCatalog = {
     args: z.strictObject({ id: z.string().min(1) }),
     toRequest: (args) => [args.id],
     invalidate: {
-      events: (event) => event.type === "firstmate_note" || event.type === "firstmate_state",
+      events: (event) =>
+        event.type === "firstmate_note" ||
+        event.type === "personalized" ||
+        event.type === "firstmate_state",
       pollMs: 30_000,
     },
     description:

@@ -90,7 +90,7 @@ const WEEKDAY_NAMES = [
 /** Most occurrences a catch-up counts one by one before it stops counting. */
 const MISSED_COUNT_CAP = 10_000;
 
-function label(record: ScheduleRecord): string {
+function label(record: Pick<ScheduleRecord, "name" | "prompt">): string {
   return record.name ?? record.prompt.slice(0, PROMPT_EXCERPT);
 }
 
@@ -98,6 +98,30 @@ function label(record: ScheduleRecord): string {
 function recalledText(count: number): string {
   return count > 0 ? ` (${count} unsent ${count === 1 ? "prompt" : "prompts"} taken back)` : "";
 }
+
+/**
+ * What each change to a rule says (docs/automation.md, "Where it shows"):
+ * its own feed line, or the words of the trail a caller leaves for it.
+ */
+export const automationWords = {
+  created: (draft: boolean, spec: ScheduleSpec, prompt: string) =>
+    `${draft ? "Automation saved as a draft" : "Scheduled"} - ${scheduleText(spec)}: ${prompt.slice(0, PROMPT_EXCERPT)}`,
+  saved: (turnedOn: boolean, spec: ScheduleSpec, prompt: string, recalled = 0) =>
+    `${turnedOn ? "Automation turned on" : "Automation saved"} - ${scheduleText(spec)}: ${prompt.slice(0, PROMPT_EXCERPT)}${recalledText(recalled)}`,
+  paused: (rule: Pick<ScheduleRecord, "name" | "prompt">, recalled = 0) =>
+    `Automation paused - ${label(rule)}${recalledText(recalled)}`,
+  resumed: (rule: Pick<ScheduleRecord, "name" | "prompt">) => `Automation resumed - ${label(rule)}`,
+  pausedAll: (count: number, recalled = 0) =>
+    `Automation paused - ${count} ${count === 1 ? "rule" : "rules"}${recalledText(recalled)}`,
+  cancelled: (prompt: string) => `Schedule cancelled - ${prompt.slice(0, PROMPT_EXCERPT)}`,
+};
+
+/**
+ * Who says a change's words: absent, the change is its own feed line; a
+ * caller that leaves its own trail for the change (the dispatcher's, for
+ * Settings → Automation and the first mate) takes them instead.
+ */
+export type SaysChange = { say?: (text: string) => void };
 
 function validate(spec: ScheduleSpec, prompt: string, now: number): void {
   if (!prompt) throw new Error("The schedule needs a prompt.");
@@ -419,7 +443,7 @@ export class Scheduler {
     captainRequested = false,
     name?: string,
     projectId?: string,
-    options: { draft?: boolean } = {},
+    options: { draft?: boolean } & SaysChange = {},
   ): ScheduleRecord {
     const spec = normalized(given);
     const trimmed = prompt.trim();
@@ -440,10 +464,7 @@ export class Scheduler {
       revision: 1,
     };
     this.options.store.insert(record);
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text: `${draft ? "Automation saved as a draft" : "Scheduled"} - ${scheduleText(spec)}: ${trimmed.slice(0, PROMPT_EXCERPT)}`,
-    });
+    this.announce(automationWords.created(draft, spec, trimmed), options);
     return record;
   }
 
@@ -455,7 +476,11 @@ export class Scheduler {
    * so. `enable` is the review's Turn on: a draft runs from now, a paused
    * rule resumes.
    */
-  update(id: string, changes: RuleChanges, options: { enable?: boolean } = {}): ScheduleRecord {
+  update(
+    id: string,
+    changes: RuleChanges,
+    options: { enable?: boolean } & SaysChange = {},
+  ): ScheduleRecord {
     const record = this.require(id);
     const now = this.now();
     const spec = normalized(changes.spec ?? record.spec);
@@ -492,27 +517,26 @@ export class Scheduler {
     };
     const recalled = edited ? this.recall(id, "edited") : 0;
     this.options.store.save(next);
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text:
-        state === "enabled" && record.state !== "enabled"
-          ? `Automation turned on - ${scheduleText(spec)}: ${prompt.slice(0, PROMPT_EXCERPT)}${recalledText(recalled)}`
-          : `Automation saved - ${scheduleText(spec)}: ${prompt.slice(0, PROMPT_EXCERPT)}${recalledText(recalled)}`,
-    });
+    this.announce(
+      automationWords.saved(
+        state === "enabled" && record.state !== "enabled",
+        spec,
+        prompt,
+        recalled,
+      ),
+      options,
+    );
     return next;
   }
 
   /** Stop new runs, and take back the deliveries no turn was handed yet. */
-  pause(id: string): ScheduleRecord {
+  pause(id: string, options: SaysChange = {}): ScheduleRecord {
     const record = this.require(id);
     if (record.state !== "enabled") return record;
     const next = { ...record, state: "paused" as const };
     const recalled = this.recall(id, "paused");
     this.options.store.save(next);
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text: `Automation paused - ${label(record)}${recalledText(recalled)}`,
-    });
+    this.announce(automationWords.paused(record, recalled), options);
     return next;
   }
 
@@ -520,7 +544,7 @@ export class Scheduler {
    * Back to enabled at the next FUTURE occurrence: the paused interval is
    * not replayed, and an interval keeps its anchor.
    */
-  resume(id: string): ScheduleRecord {
+  resume(id: string, options: SaysChange = {}): ScheduleRecord {
     const record = this.require(id);
     if (record.state === "enabled") return record;
     if (record.state === "draft") {
@@ -536,10 +560,7 @@ export class Scheduler {
       nextFire: resumeFire(record.spec, record.nextFire, now),
     };
     this.options.store.save(next);
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text: `Automation resumed - ${label(record)}`,
-    });
+    this.announce(automationWords.resumed(record), options);
     return next;
   }
 
@@ -547,7 +568,7 @@ export class Scheduler {
    * Pause every enabled rule, taking back their deliveries no turn was
    * handed yet; drafts, paused and completed ones stay as they are.
    */
-  pauseAll(): number {
+  pauseAll(options: SaysChange = {}): number {
     let count = 0;
     let recalled = 0;
     for (const record of this.options.store.list()) {
@@ -556,12 +577,7 @@ export class Scheduler {
       this.options.store.save({ ...record, state: "paused" });
       count += 1;
     }
-    if (count > 0) {
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Automation paused - ${count} ${count === 1 ? "rule" : "rules"}${recalledText(recalled)}`,
-      });
-    }
+    if (count > 0) this.announce(automationWords.pausedAll(count, recalled), options);
     return count;
   }
 
@@ -600,7 +616,7 @@ export class Scheduler {
    * once. Its deliveries no turn was handed yet are taken back; one a turn
    * holds goes on.
    */
-  cancel(id: string): boolean {
+  cancel(id: string, options: SaysChange = {}): boolean {
     const record = this.options.store.get(id);
     if (!record) return false;
     const inbox = this.options.inbox;
@@ -612,11 +628,13 @@ export class Scheduler {
       );
     }
     this.options.store.delete(id);
-    this.options.broadcastEvent({
-      type: "firstmate_note",
-      text: `Schedule cancelled - ${record.prompt.slice(0, PROMPT_EXCERPT)}`,
-    });
+    this.announce(automationWords.cancelled(record.prompt), options);
     return true;
+  }
+
+  private announce(text: string, options: SaysChange): void {
+    if (options.say) options.say(text);
+    else this.options.broadcastEvent({ type: "firstmate_note", text });
   }
 
   private checkProject(projectId: string | undefined): void {

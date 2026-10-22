@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "automation-actions",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Ask Firstmate to change, pause or delete an automation",
+      "body": "Firstmate can now do anything to an automation that you can in Settings → Automation: edit it, pause or resume it, pause them all, or delete it. It turns on an automation waiting as a draft only when you ask. Activity now names who made each change, you or Firstmate, such as \"Captain · Automation paused - Weekly dependency audit\".",
+      "picture": {
+        "dark": "automation-actions-dark.webp",
+        "light": "automation-actions-light.webp",
+        "alt": "Settings → Automation after asking Firstmate to turn on Morning digest: it reads Running, every day at 8:00 AM, beside Weekly dependency audit, which is paused"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

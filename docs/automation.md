@@ -10,6 +10,19 @@ The first mate's tools, Settings → Automation (`src/renderer/src/settings/Auto
 The `inf:automation:*` channels (`src/shared/ipc.ts`, reach `views`) are Settings' door, here and on a computer that controls this one; the reads `automation.list`, `automation.history` and `automation.preview` feed it, and `automation.list` feeds the Automation panel too.
 `automation.list` answers `ready` with every rule, or `unavailable` with the app's words when the rules cannot be read, never an empty list in its place.
 
+Settings and the first mate change a rule through one path: each change channel is a line of the app action catalog (`src/shared/actions.ts`, `docs/orchestrator-contract.md` "App action catalog"), run by the dispatcher.
+`automation-edit` is Save in the sheet and its Turn on, `automation-state` is Pause and Resume, `automation-pause-all` is Pause all and `automation-delete` is Delete.
+The first mate runs them with `app_change`, and its `cancel_schedule` is `automation-delete`.
+Pausing, resuming, pausing all and deleting are its own judgment at any turn, as making a schedule is (captain decision Q4); it edits a rule, or turns one on, when the captain asks.
+
+## Who changed it
+
+A change the dispatcher runs, the captain's in Settings or the first mate's, leaves the catalog's trail: an operation on the task record and one Activity line that names who made it, such as "Captain · Automation paused - Weekly dependency audit".
+Its words are the Scheduler's (`automationWords`), handed to the dispatcher in place of a line of the Scheduler's own (`SaysChange`).
+A change that changes nothing leaves no line.
+A rule `schedule_prompt` makes, and a one-time rule leaving once it ran, say their own line with no name before it (`firstmate_note`).
+`automation.list` and `automation.history` read again on either line.
+
 ## A rule
 
 - `state` is `draft`, `enabled`, `paused` or `completed`.
@@ -36,7 +49,7 @@ The `inf:automation:*` channels (`src/shared/ipc.ts`, reach `views`) are Setting
 - `schedule_prompt` saves a draft when the first mate passes `draft`, which it does when the captain's ask leaves something open; a complete ask runs at once.
 - A recurring rule the first mate makes outside a captain's own turn is saved as a draft whatever it passes: new ongoing rules need the captain (`Scheduler.create`).
   A one-time reminder it sets for itself still runs, and rules made before drafts keep running as they did.
-- Resume and Pause all leave a draft alone; a draft is turned on only by its review.
+- Resume and Pause all leave a draft alone; a draft is turned on only by its review, or by the first mate's `automation-edit` with `enable` when the captain asks for it.
 
 ## Calendars
 

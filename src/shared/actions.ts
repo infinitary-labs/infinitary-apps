@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { AccountView } from "./accounts";
+import { type AutomationList, type AutomationRule, automationSpecSchema } from "./automation";
 import type { DeviceMake } from "./cards";
 import { crewSpeedSchema, SPEED_NAMES } from "./crewSpeed";
 import { type DecisionAnswerer, type DecisionsView, decisionAnswererSchema } from "./decisions";
@@ -41,14 +42,16 @@ import { type DeviceSignIns, signInPlace } from "./signIns";
  * Stable permissions, independent of Settings tabs. Captain can run every
  * line. `asked` and `own-words` are the first mate's at any wake, on its
  * judgment that the captain asked - in any form for `asked`, in his typed
- * words for `own-words` - with that evidence (INF-751).
+ * words for `own-words` - with that evidence (INF-751). `judgment` is the
+ * first mate's own judgment of what the captain wants, whatever began its
+ * turn (INF-638), with its reason as evidence.
  */
-export type ActionTier = "asked" | "own-words" | "hands" | "yours";
+export type ActionTier = "asked" | "own-words" | "hands" | "yours" | "judgment";
 export type ActionLine = {
   alwaysTrail?: boolean;
   /** Settings owned inside a shared request object (or its selector enum). */
   fields?: string[];
-  area: "projects" | "appearance" | "general" | "panels" | "intelligence";
+  area: "projects" | "appearance" | "general" | "panels" | "intelligence" | "automation";
   tier: ActionTier;
   change: CoreInvokeChannel | null;
   channels?: CoreInvokeChannel[];
@@ -133,6 +136,36 @@ function cardSlug(id: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "");
 }
+/** The rule an automation action names by id; the refusal says why there is none. */
+function automationRule(current: unknown, id: unknown): AutomationRule {
+  const list = current as AutomationList;
+  if (list.state === "unavailable") throw new Error(list.reason);
+  const rule = list.rules.find((entry) => entry.id === id);
+  if (!rule) throw new Error(`No automation ${id}. Its id is in this action's current value.`);
+  return rule;
+}
+/** Every rule as an edit reads it, or, `brief`, by id, label and state alone. */
+function automationValue(current: unknown, brief = false): Record<string, unknown> {
+  const list = current as AutomationList;
+  return {
+    rules: list.rules.map((rule) =>
+      brief
+        ? { id: rule.id, label: rule.name ?? rule.prompt.slice(0, 80), state: rule.state }
+        : {
+            id: rule.id,
+            name: rule.name,
+            state: rule.state,
+            spec: rule.spec,
+            prompt: rule.prompt,
+            projectId: rule.projectId,
+            nextFire: rule.nextFire,
+            captainRequested: rule.captainRequested,
+          },
+    ),
+    ...(list.state === "unavailable" ? { unavailable: list.reason } : {}),
+  };
+}
+const automationIdSchema = z.string().trim().min(1).max(64);
 function presence(field: "startAtLogin" | "showInDock", label: string): ActionLine {
   return {
     area: "general",
@@ -1090,6 +1123,80 @@ const actionLines = {
     readValue: (current) => ({ collapsedPanels: (current as Layout).collapsedPanels }),
     done: (v) => `${v.surface} ${v.collapsed ? "collapsed" : "expanded"}`,
   },
+  // Settings → Automation's own changes (docs/automation.md, "One owner").
+  // The words are the Scheduler's, and the trail is the dispatcher's.
+  "automation-edit": {
+    area: "automation",
+    tier: "asked",
+    change: "inf:automation:save",
+    current: "inf:automation:list",
+    value: z.strictObject({
+      id: automationIdSchema,
+      name: z.string().max(80).optional(),
+      spec: automationSpecSchema.optional(),
+      prompt: z.string().trim().min(1).optional(),
+      projectId: z.string().min(1).nullable().optional(),
+      enable: z.boolean().optional(),
+    }),
+    line: "Edit one automation by id when asked: its name, spec, prompt or projectId (null takes it off); what you leave out stays. enable true turns a draft or a paused one on.",
+    toRequest: (v, current) => {
+      const rule = automationRule(current, v.id);
+      const projectId =
+        v.projectId === undefined ? rule.projectId : ((v.projectId as string | null) ?? undefined);
+      return [
+        {
+          id: rule.id,
+          name: (v.name as string | undefined) ?? rule.name ?? "",
+          spec: v.spec ?? rule.spec,
+          prompt: (v.prompt as string | undefined) ?? rule.prompt,
+          ...(projectId ? { projectId } : {}),
+          ...(v.enable === true ? { enable: true } : {}),
+        },
+      ];
+    },
+    readValue: (current) => automationValue(current),
+    done: (v) => String(v.text),
+  },
+  "automation-state": {
+    area: "automation",
+    tier: "judgment",
+    change: "inf:automation:state",
+    current: "inf:automation:list",
+    value: z.strictObject({ id: automationIdSchema, change: z.enum(["pause", "resume"]) }),
+    line: "Pause or resume one automation by id on your own judgment: a paused one sends nothing, and its unsent prompts are taken back. A draft turns on only through automation-edit.",
+    toRequest: (v, current) => {
+      const rule = automationRule(current, v.id);
+      if (v.change === "resume" && rule.state === "draft")
+        throw new Error(
+          "This automation is a draft: turn it on with automation-edit, enable true.",
+        );
+      return [rule.id, v.change];
+    },
+    readValue: (current) => automationValue(current, true),
+    done: (v) => String(v.text),
+  },
+  "automation-pause-all": {
+    area: "automation",
+    tier: "judgment",
+    change: "inf:automation:pause-all",
+    current: "inf:automation:list",
+    value: z.strictObject({}),
+    line: "Pause every running automation at once on your own judgment; drafts and paused ones stay as they are.",
+    toRequest: () => [],
+    readValue: (current) => automationValue(current, true),
+    done: (v) => String(v.text),
+  },
+  "automation-delete": {
+    area: "automation",
+    tier: "judgment",
+    change: "inf:automation:delete",
+    current: "inf:automation:list",
+    value: z.strictObject({ id: automationIdSchema }),
+    line: "Delete one automation and its run history by id on your own judgment, as cancel_schedule does.",
+    toRequest: (v, current) => [automationRule(current, v.id).id],
+    readValue: (current) => automationValue(current, true),
+    done: (v) => String(v.text),
+  },
 } as const satisfies Record<string, ActionLine>;
 export type ActionName = keyof typeof actionLines;
 /** The value an action accepts, as its line's schema reads it (unknown where a line is built generically). */
@@ -1115,6 +1222,10 @@ export function actionRefusal(line: ActionLine, actor: ActionActor): string | nu
     return "Propose the project change through app_change, or declare the exact captain words with on_words true.";
   if (actor.action && isProjectChange(actor.action) && actor.wake === "captain-choice")
     return "Only the app’s exact-change card applies a project change from a click.";
+  // A judgment line is the first mate's to run at any wake; its evidence is
+  // the reason the record keeps.
+  if (line.tier === "judgment")
+    return actor.evidence?.trim() ? null : "Give the reason for this change.";
   if (line.tier === "hands" || line.tier === "yours")
     return "This action stays with the captain in Settings.";
   // Whatever began the turn: his choice relayed in a crewmate's report, or a
@@ -1134,7 +1245,11 @@ export function actionActors(line: ActionLine): {
 } {
   return {
     captainAllowed: true,
-    firstmateAllowed: line.tier === "asked" || line.tier === "own-words" || line.proposes === true,
+    firstmateAllowed:
+      line.tier === "asked" ||
+      line.tier === "own-words" ||
+      line.tier === "judgment" ||
+      line.proposes === true,
   };
 }
 

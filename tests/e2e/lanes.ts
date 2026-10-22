@@ -35,6 +35,7 @@ export const APPLICATION_SUITES = [
   "answer-task.spec.ts",
   "app-actions.spec.ts",
   "app-close.spec.ts",
+  "automation-actions.spec.ts",
   "autonomy.spec.ts",
   "cap-gate.spec.ts",
   "card-action-feedback.spec.ts",

@@ -66,10 +66,13 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
 2. It takes the move locks beside both folders, so the older app and a second launch both wait.
 3. It counts the older folder and checks the disk has room: the bytes it copies, plus a margin of a twentieth (at least 256 MB), or the margin alone on APFS, where the copy clones its files.
 4. It copies the older folder into `<folder>.moving-<process>`, a private folder beside the app's own, keeping permissions, times and links as links; a Mac clones each file with `cp -c`, elsewhere Node's copy asks for a reflink.
+   It copies four entries at once: each top-level entry, each entry of `worktrees/`, `crewmates/`, `fleet/` and `work/`, and each spare working copy of the warm pool, `worktree-pool/<project>/<slot>` (`copyUnits`, `src/core/folderMove/copy.ts`).
    Each attempt builds in a folder of its own, because a Mac's copier outlives an app that was stopped hard and keeps writing where it was told.
    Chromium's locks and caches, `worktree-trash` and `task-channel` stay behind (`LEFT_BEHIND`, `src/core/folderMove/tree.ts`), and so do sockets and pipes.
    In `work/`, what a live run, its service manager or a controller may still write while the copy is made stays behind too: Electron's own `chromium/`, `service.log`, `work.log`, the route and its lock, `running.lock`, the display's key, `worktree-trash` and `task-channel` (`WORK_LEFT_BEHIND`); the next run makes each again.
-5. It checks the copy file by file: the same names, kinds, sizes, permissions and link targets, and every file's SHA-256.
+5. It checks the copy file by file: the same names, kinds, sizes, permissions and link targets.
+   A file the disk cloned shares its source's bytes, so the same modification time, to the nanosecond, proves it unchanged since the clone.
+   A file written byte by byte - Node's copy, a Mac whose copy cannot clone, or one whose copier refused - is checked by its SHA-256.
 6. It rewrites the app's own paths in the copy, only where a whole value is a path into the older folder, by either name of it (as the app named it, and as the disk resolves it): the projects' and tasks' folders, a Pi crewmate's session file and the settings' JSON in the database, `work/installed.json` and `work/left.json`, links whose target is absolute, and git's links between working copies and repositories in the folder.
    A task held on another computer keeps its conversation file, which names that computer's file.
    Its project folder and working copy name this Mac's, and the move rewrites them with every other task's.

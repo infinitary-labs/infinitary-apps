@@ -12,6 +12,7 @@ import {
   realpathSync,
   statSync,
   symlinkSync,
+  utimesSync,
   writeFileSync,
 } from "node:fs";
 import { hostname, uptime } from "node:os";
@@ -398,6 +399,120 @@ describe("the one-time move of a data folder", () => {
     });
     expect(isProfileRetired(world.from)).toBe(false);
     expect(existsSync(world.to)).toBe(false);
+  });
+
+  // INF-967's accepted plan: a clone is checked by its size and time, so a
+  // file the older app changed after its clone must still stop the move.
+  it.runIf(process.platform === "darwin")(
+    "refuses a cloned file that changed during the copy, before anything changes",
+    async () => {
+      const world = olderFolder();
+      const units: [string, boolean][] = [];
+      const outcome = await runMove(world.move, {
+        ...world.deps,
+        copy: async (root, staged, options) => {
+          await copyTree(root, staged, {
+            ...options,
+            done: (unit, cloned) => {
+              units.push([unit, cloned]);
+              options.done?.(unit, cloned);
+            },
+          });
+          // The same size, written after the clone was made.
+          writeFileSync(join(root, "fleet", "inside", "README.md"), "jello\n");
+        },
+      });
+      expect(units.length).toBeGreaterThan(0);
+      expect(units.filter(([, cloned]) => !cloned)).toEqual([]);
+      expect(outcome).toMatchObject({
+        kind: "refused",
+        refusal: { reason: "failed", committed: false },
+      });
+      expect(outcome.kind === "refused" && outcome.refusal).toMatchObject({
+        detail: expect.stringContaining("a different time"),
+      });
+      expect(isProfileRetired(world.from)).toBe(false);
+      expect(existsSync(world.to)).toBe(false);
+    },
+  );
+
+  // INF-967's accepted plan: a file written byte by byte is the one copy that
+  // can silently differ, so its bytes are checked even when its size and time agree.
+  it("refuses a written file whose bytes differ though its size and time agree", async () => {
+    const world = olderFolder();
+    const outcome = await runMove(world.move, {
+      ...world.deps,
+      // Node's copy writes every file's bytes, as it does on every system but a Mac.
+      platform: "linux",
+      copy: async (root, staged, options) => {
+        await copyTree(root, staged, options);
+        const file = join(staged, "fleet", "inside", "README.md");
+        writeFileSync(file, "jello\n");
+        const source = statSync(join(root, "fleet", "inside", "README.md"));
+        utimesSync(file, source.atime, source.mtime);
+      },
+    });
+    expect(outcome).toMatchObject({
+      kind: "refused",
+      refusal: { reason: "failed", committed: false },
+    });
+    expect(outcome.kind === "refused" && outcome.refusal).toMatchObject({
+      detail: expect.stringContaining("different contents"),
+    });
+    expect(existsSync(world.to)).toBe(false);
+  });
+
+  // INF-967's accepted plan: the warm pool's spare working copies land one at
+  // a time, so the bar moves as each one is copied.
+  it("copies each spare working copy of the warm pool as a unit of its own", async () => {
+    const world = olderFolder();
+    const project = join(world.from, "worktree-pool", "0123abcd");
+    for (const slot of ["1700000000000-a", "1700000000001-b"]) {
+      mkdirSync(join(project, slot, "node_modules", "left-pad"), { recursive: true });
+      writeFileSync(join(project, slot, "node_modules", "left-pad", "index.js"), slot);
+    }
+    chmodSync(project, 0o750);
+    const copying: { done: number; total: number }[] = [];
+    const units: string[] = [];
+    const afterPool: number[] = [];
+    const outcome = await runMove(world.move, {
+      ...world.deps,
+      progress: (progress) => {
+        if (progress.phase === "copying") copying.push(progress);
+      },
+      copy: (root, staged, options) =>
+        copyTree(root, staged, {
+          ...options,
+          done: (unit, cloned) => {
+            units.push(unit);
+            options.done?.(unit, cloned);
+            if (unit.startsWith("worktree-pool")) afterPool.push(copying.at(-1)?.done ?? 0);
+          },
+        }),
+    });
+    expect(outcome).toMatchObject({ kind: "moved" });
+    expect(units.filter((unit) => unit.startsWith("worktree-pool")).sort()).toEqual([
+      join("worktree-pool", "0123abcd", "1700000000000-a"),
+      join("worktree-pool", "0123abcd", "1700000000001-b"),
+    ]);
+    // Each spare working copy moved the bar by its own share, and the copy ended full.
+    expect(new Set(afterPool).size).toBe(2);
+    expect(copying.at(-1)?.done).toBe(copying.at(-1)?.total);
+    expect(
+      readFileSync(
+        join(
+          world.to,
+          "worktree-pool",
+          "0123abcd",
+          "1700000000001-b",
+          "node_modules",
+          "left-pad",
+          "index.js",
+        ),
+        "utf8",
+      ),
+    ).toBe("1700000000001-b");
+    expect(statSync(join(world.to, "worktree-pool", "0123abcd")).mode & 0o7777).toBe(0o750);
   });
 
   it("resumes a move stopped after its copy was checked, without copying again", async () => {

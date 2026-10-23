@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { Dirent, Stats } from "node:fs";
+import type { BigIntStats, Dirent, Stats } from "node:fs";
 import { isAbsolute, join, sep } from "node:path";
 import { createReadStream, lstat, readdir, readlink } from "./plainFs";
 
@@ -74,12 +74,25 @@ export const COPIED_ONE_BY_ONE: ReadonlySet<string> = new Set([
   "work",
 ]);
 
-/** The unit a path relative to the folder is copied in (./copy.ts `copyUnits`). */
+/**
+ * Folders copied one by one whose folders are copied one entry at a time in
+ * turn: the warm pool keeps each project's spare working copies in a folder
+ * of its own (`worktree-pool/<project>/<slot>`), so each spare working copy
+ * is a unit of its own.
+ */
+export const COPIED_TWO_DEEP: ReadonlySet<string> = new Set(["worktree-pool"]);
+
+/**
+ * The unit a file, by its path relative to the folder, is copied in
+ * (./copy.ts `copyUnits`). A folder of a folder copied two deep is split
+ * there, so only a file inside it names a unit three parts deep.
+ */
 export function unitOf(parts: readonly string[]): string {
-  const [top, child] = parts;
-  return top !== undefined && child !== undefined && COPIED_ONE_BY_ONE.has(top)
-    ? join(top, child)
-    : (top ?? "");
+  const [top, child, grandchild] = parts;
+  if (top === undefined || child === undefined || !COPIED_ONE_BY_ONE.has(top)) return top ?? "";
+  return grandchild !== undefined && COPIED_TWO_DEEP.has(top)
+    ? join(top, child, grandchild)
+    : join(top, child);
 }
 
 /** A git working copy's link to its repository, or a repository's link back to one. */
@@ -119,7 +132,7 @@ export type TreeSurvey = {
 /** Called as a walk goes, with the work counted or checked so far. */
 export type TreeProgress = (work: number) => void;
 
-function kindOf(stats: Stats | Dirent): "dir" | "file" | "link" | "other" {
+function kindOf(stats: Stats | BigIntStats | Dirent): "dir" | "file" | "link" | "other" {
   if (stats.isSymbolicLink()) return "link";
   if (stats.isDirectory()) return "dir";
   if (stats.isFile()) return "file";
@@ -260,13 +273,18 @@ async function hashFile(path: string): Promise<string> {
 /**
  * Checks that `copy` holds exactly what the move copies from `root`: the
  * same names, kinds, sizes and permission bits, the same link targets, and
- * every file the same bytes by its hash. Throws `CopyMismatchError` on the
- * first difference; answers the work checked (`workOf`).
+ * every file the same bytes. A file in a unit the disk cloned (`cloned`, by
+ * `unitOf`) shares its source's bytes, so the same size and modification
+ * time, to the nanosecond, prove it unchanged since the clone; every other
+ * file, written byte by byte, is checked by its hash. Throws
+ * `CopyMismatchError` on the first difference; answers the work checked
+ * (`workOf`).
  */
 export async function compareTrees(
   root: string,
   copy: string,
   progress?: TreeProgress,
+  cloned: (unit: string) => boolean = () => false,
 ): Promise<number> {
   let checked = 0;
   await walkFolders(async (parts) => {
@@ -288,7 +306,10 @@ export async function compareTrees(
       const at = [...parts, entry.name];
       const source = join(root, ...at);
       const target = join(copy, ...at);
-      const [a, b] = await Promise.all([lstat(source), lstat(target)]);
+      const [a, b] = await Promise.all([
+        lstat(source, { bigint: true }),
+        lstat(target, { bigint: true }),
+      ]);
       const kind = kindOf(a);
       if (kindOf(b) !== kind) throw new CopyMismatchError(relative(at), "a different kind");
       if (kind === "link") {
@@ -296,16 +317,20 @@ export async function compareTrees(
           throw new CopyMismatchError(relative(at), "a different link target");
         return;
       }
-      if ((a.mode & 0o7777) !== (b.mode & 0o7777))
+      if ((a.mode & 0o7777n) !== (b.mode & 0o7777n))
         throw new CopyMismatchError(relative(at), "different permissions");
       if (kind === "dir") {
         inside.push(at);
         return;
       }
       if (a.size !== b.size) throw new CopyMismatchError(relative(at), "a different size");
-      const [left, right] = await Promise.all([hashFile(source), hashFile(target)]);
-      if (left !== right) throw new CopyMismatchError(relative(at), "different contents");
-      checked += workOf(a.size);
+      if (cloned(unitOf(at))) {
+        if (a.mtimeNs !== b.mtimeNs) throw new CopyMismatchError(relative(at), "a different time");
+      } else {
+        const [left, right] = await Promise.all([hashFile(source), hashFile(target)]);
+        if (left !== right) throw new CopyMismatchError(relative(at), "different contents");
+      }
+      checked += workOf(Number(a.size));
       progress?.(checked);
     });
     return inside;

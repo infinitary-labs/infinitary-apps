@@ -49,7 +49,8 @@ import { compareTrees, LEFT_BEHIND, surveyTree } from "./tree";
  * after Firstmate 3000 - finds an older folder of its flavor holding saved
  * work and brings it over before anything opens it: it checks, locks both
  * folders, copies the older one into a staged folder beside its own, checks
- * the copy file by file, rewrites the app's own paths in the copy, retires
+ * the copy file by file - a clone by its size and time, a file written
+ * byte by byte by its hash - rewrites the app's own paths in the copy, retires
  * the older folder - which stays as it was, the recovery copy - and renames
  * the staged folder into place. Firstmate 3000's own folders have no older
  * spelling, so in this build the move never wakes.
@@ -309,17 +310,22 @@ export async function stageMove(move: FolderMove, deps: MoveDeps): Promise<MoveO
       return { kind: "refused", refusal: { reason: "no-space", needed, free } };
     }
     let copied = 0;
+    const cloned = new Set<string>();
     progress?.({ phase: "copying", done: 0, total: survey.work });
     await (deps.copy ?? copyTree)(from, staged, {
       ...copyOptions,
-      done: (unit) => {
+      done: (unit, clone) => {
+        if (clone) cloned.add(unit);
         copied += survey.unitWork.get(unit) ?? 0;
         progress?.({ phase: "copying", done: copied, total: survey.work });
       },
     });
     progress?.({ phase: "verifying", done: 0, total: survey.work });
-    await compareTrees(from, staged, (work) =>
-      progress?.({ phase: "verifying", done: work, total: survey.work }),
+    await compareTrees(
+      from,
+      staged,
+      (work) => progress?.({ phase: "verifying", done: work, total: survey.work }),
+      (unit) => cloned.has(unit),
     );
     const froms = pathsOf(from);
     const outside: OutsideChange[] = outsideGitLinks(from, survey.gitLinks, froms, to);

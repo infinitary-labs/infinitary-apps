@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "faster-move-check",
+      "kind": "improvement",
+      "area": "updates",
+      "title": "Moving from Firstmate 3000 checks its copy faster",
+      "body": "On a Mac, the move from Firstmate 3000 now checks each copied file by its name, size, time and permissions instead of reading it again, and reads only the files it had to write. Its check takes seconds instead of minutes, and each spare working copy now moves the progress bar on its own. Firstmate 3000's folder still stays as it was, as your recovery copy.",
+      "noPicture": "The move's window looks the same; it reaches each step sooner.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

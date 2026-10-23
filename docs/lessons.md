@@ -24,7 +24,7 @@ On the personal workspace a report normally commits the turn and closes the task
 For a teach task every finished turn is committed, with the report as the message or `lesson turn` when there is none, and none closes the task or wakes the first mate.
 A commit that fails is the one exception: it wakes the first mate with git's words, as on any personal task (`docs/personal-panels.md`, "Report, commit, close").
 A report that asks the first mate for something, or declares the work finished, routes as any other report; finishing closes the task and keeps the files.
-`lessons/` is a record folder: a panel build never stamps or lints it (`RECORD_FOLDERS`, `src/core/personal/liveWorkspace.ts`).
+`lessons/` is a record folder: it holds no `panel.tsx` or `server.ts`, so a panel build never loads, stamps, lints, places or copies it (`isPanel`, `src/core/personal/liveWorkspace.ts`).
 An active task that builds in place and has a recorded conversation survives a restart; boot recovery returns to the queue only an active task with neither a working copy nor a conversation (`TaskService.releaseUnstartedDispatches`).
 
 ## Files

@@ -235,6 +235,22 @@ describe("PersonalExtensions", () => {
     }
   });
 
+  it("finds a panel whose manifest.json is not JSON, and names the manifest's error on it", async () => {
+    // INF-1055: the entry file makes the panel, whatever its manifest holds.
+    const h = await harness();
+    h.write("clock/panel.tsx", PANEL);
+    h.write("clock/manifest.json", "{ not json");
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      const [clock] = service.snapshot().extensions;
+      expect(clock?.id).toBe("clock");
+      expect(clock?.error).toMatchObject({ stage: "manifest" });
+      expect(clock?.error?.message).toMatch(/^clock\/manifest\.json is not JSON: /);
+    } finally {
+      service.dispose();
+    }
+  });
+
   it("loads server.ts, clamps a fast background task, answers invoke, and reloads on edit", async () => {
     const h = await harness();
     h.write(
@@ -406,6 +422,28 @@ describe("PersonalExtensions live build loop (Step 4)", () => {
         execFileSync("git", ["-C", h.workspaceDir, ...args], { encoding: "utf8" });
       expect(workspace("show", "HEAD:lessons/chess/progress.md")).toBe(progress(reports.length));
       expect(workspace("status", "--porcelain")).toBe("");
+    } finally {
+      service.dispose();
+    }
+  });
+
+  it("leaves lesson files alone in a live build: no manifest written, nothing touched, no committed copy", async () => {
+    // INF-1055: only a folder holding panel.tsx or server.ts is a panel.
+    const h = await harness();
+    seedTask(h.tasks, { id: "t-lesson", title: "Chess", status: "running" });
+    const service = await PersonalExtensions.start({ ...h, watch: false });
+    try {
+      h.write("lessons/learner.md", "# Learner\nLikes short rounds.\n");
+      h.write("lessons/chess/record.json", JSON.stringify({ goal: "beat my dad at chess" }));
+      commitAll(h.workspaceDir);
+      service.beginLiveTask("t-lesson");
+      h.write("lessons/chess/progress.md", "# Chess\nGoal: beat my dad at chess\n");
+      await service.refresh();
+      expect(await service.touched()).toEqual([]);
+      expect(existsSync(join(h.workspaceDir, "lessons/manifest.json"))).toBe(false);
+      expect(existsSync(join(h.cacheRoot, ".committed", "lessons"))).toBe(false);
+      expect(service.snapshot().extensions).toEqual([]);
+      expect(service.snapshot().drafts).toBeUndefined();
     } finally {
       service.dispose();
     }

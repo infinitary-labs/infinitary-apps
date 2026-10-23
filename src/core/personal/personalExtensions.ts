@@ -14,7 +14,6 @@ import {
   DEFAULT_PERSONAL_PLACEMENT,
   manifestCapabilities,
   PANEL_READ_NAMES,
-  PERSONAL_ID_PATTERN,
   PERSONAL_STORE_MAX_BYTES,
   type PersonalError,
   type PersonalExtensionView,
@@ -61,6 +60,7 @@ import {
   committedTrees,
   commitWorkspace,
   extensionSources,
+  isPanelFolder,
   readStamp,
   stampOrigin,
   workingTree,
@@ -680,7 +680,9 @@ export class PersonalExtensions {
     const placing = new Set<string>();
     for (const extensionId of asked) {
       if (!touched.includes(extensionId)) continue;
-      if (!(await isExtensionDir(join(this.options.workspaceDir, extensionId)))) continue;
+      if (!(await isPanelFolder(extensionId, join(this.options.workspaceDir, extensionId)))) {
+        continue;
+      }
       const tree = await workingTree(this.options.workspaceDir, extensionId, this.placeIndex());
       if (!tree) continue;
       this.placed.set(extensionId, { tree, taskId });
@@ -1033,7 +1035,7 @@ export class PersonalExtensions {
       if (live.has(id)) continue;
       if (this.liveTasks.size === 0 && !building.has(id) && !this.placed.has(id)) continue;
       const dir = await this.committedCopy(id, tree);
-      if (dir && (await isExtensionDir(dir))) live.set(id, dir);
+      if (dir && (await isPanelFolder(id, dir))) live.set(id, dir);
     }
     // A draft runs while a crewmate's session does: its capture is the
     // draft's one reader. One whose files are on the rails as they are now
@@ -1084,7 +1086,7 @@ export class PersonalExtensions {
     this.pushIfChanged();
   }
 
-  /** Every `<id>/` directory holding a `panel.tsx` or a `server.ts`, sorted. */
+  /** Every panel folder in the workspace (`isPanel`), sorted. */
   private async discover(): Promise<string[]> {
     let entries: import("node:fs").Dirent[];
     try {
@@ -1094,8 +1096,10 @@ export class PersonalExtensions {
     }
     const ids: string[] = [];
     for (const entry of entries) {
-      if (!entry.isDirectory() || !PERSONAL_ID_PATTERN.test(entry.name)) continue;
-      if (await isExtensionDir(join(this.options.workspaceDir, entry.name))) ids.push(entry.name);
+      if (!entry.isDirectory()) continue;
+      if (await isPanelFolder(entry.name, join(this.options.workspaceDir, entry.name))) {
+        ids.push(entry.name);
+      }
     }
     return ids.sort();
   }
@@ -1532,14 +1536,6 @@ function compileError(
 ): PersonalError {
   if (error instanceof PersonalCompileError) return { stage, message: error.message };
   return { stage, message: `${id}/${entry}: ${errorText(error)}` };
-}
-
-/** A directory holding a `panel.tsx` or a `server.ts`. */
-async function isExtensionDir(dir: string): Promise<boolean> {
-  return (
-    (await isFile(join(dir, PERSONAL_ENTRY_FILES.panel))) ||
-    (await isFile(join(dir, PERSONAL_ENTRY_FILES.server)))
-  );
 }
 
 async function isFile(path: string): Promise<boolean> {

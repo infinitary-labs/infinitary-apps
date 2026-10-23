@@ -4,6 +4,7 @@ import { PERSONAL_ID_PATTERN } from "@shared/personal/manifest";
 import type { PanelSourceFile } from "../plugins/pluginLint";
 import { requireConventional } from "../workspace/conventional";
 import { APP_GIT_IDENTITY, git } from "../workspace/git";
+import { PERSONAL_ENTRY_FILES } from "./compiler";
 
 /**
  * The personal workspace as a LIVE build site (talk-to-personalize Step 4,
@@ -13,9 +14,12 @@ import { APP_GIT_IDENTITY, git } from "../workspace/git";
  * worktree, no branch, no PR. The host does the bookkeeping git would
  * otherwise get from a settle, and this module is that bookkeeping:
  *
- * - which extensions a turn touched (`changedExtensionIds`): the
- *   uncommitted paths, by their first segment, so a stamp or a lint knows
- *   what the crewmate is working on without the crewmate saying so;
+ * - what a panel is (`isPanel`): the one rule every reader here and in
+ *   `PersonalExtensions` calls;
+ * - which panels a turn touched (`changedExtensionIds`): the uncommitted
+ *   paths, by their first segment, kept when that folder is a panel now or
+ *   in the last commit, so a stamp or a lint knows what the crewmate is
+ *   working on without the crewmate saying so;
  * - the provenance stamp (`stampOrigin`): `manifest.json` `origin.taskId`
  *   names the task that built (or last revised) the extension, which is
  *   what lights the running dot while that task is active and what the
@@ -72,19 +76,53 @@ export async function changedPaths(workspaceDir: string): Promise<string[]> {
 }
 
 /**
- * Top-level folders that hold records, never an extension: `lessons/` keeps a
- * learner's files (`.claude/skills/lessons`), which a panel build never stamps or lints.
+ * The one rule for what a panel is in the personal workspace
+ * (docs/personal-panels.md, "Build, live"): a top-level folder named like
+ * a panel id that holds `panel.tsx` or `server.ts`. `topFiles` names the
+ * files at the folder's top, from the disk or from a commit. Any other
+ * folder - `lessons/`, notes, a half-built folder with no entry file yet -
+ * holds records, and nothing loads, stamps, lints or places it.
  */
-const RECORD_FOLDERS: ReadonlySet<string> = new Set([".claude", "lessons"]);
+export function isPanel(id: string, topFiles: Iterable<string>): boolean {
+  if (!PERSONAL_ID_PATTERN.test(id)) return false;
+  const entries = Object.values(PERSONAL_ENTRY_FILES);
+  for (const name of topFiles) if (entries.includes(name)) return true;
+  return false;
+}
 
-/** The extension ids among the changed paths: a first segment that is a valid id. */
+/** `isPanel` over a folder on disk: `id` is the panel id it would have, `dir` where its files sit. */
+export async function isPanelFolder(id: string, dir: string): Promise<boolean> {
+  const present: string[] = [];
+  for (const name of Object.values(PERSONAL_ENTRY_FILES)) {
+    try {
+      if ((await stat(join(dir, name))).isFile()) present.push(name);
+    } catch {
+      // Absent: not this entry.
+    }
+  }
+  return isPanel(id, present);
+}
+
+/**
+ * The panels among the changed paths, by first segment: a folder that is a
+ * panel now or in the last commit, so a deleted or renamed panel, or one
+ * whose entry file is mid-rewrite, stays attributed until the turn's commit.
+ */
 export async function changedExtensionIds(workspaceDir: string): Promise<string[]> {
-  const ids = new Set<string>();
+  const heads = new Set<string>();
   for (const path of await changedPaths(workspaceDir)) {
     const head = path.split(/[\\/]/)[0] ?? "";
-    if (PERSONAL_ID_PATTERN.test(head) && !RECORD_FOLDERS.has(head)) ids.add(head);
+    if (PERSONAL_ID_PATTERN.test(head)) heads.add(head);
   }
-  return [...ids].sort();
+  if (heads.size === 0) return [];
+  const committed = await committedTrees(workspaceDir);
+  const ids: string[] = [];
+  for (const head of heads) {
+    if (committed.has(head) || (await isPanelFolder(head, join(workspaceDir, head)))) {
+      ids.push(head);
+    }
+  }
+  return ids.sort();
 }
 
 /**
@@ -138,21 +176,34 @@ export async function readStamp(workspaceDir: string, extensionId: string): Prom
 }
 
 /**
- * The tree each extension directory has in the last commit, by id: empty
- * for a workspace with no commit yet, and without a new extension. Reads
- * objects only, never the index, so it never meets the turn's commit.
+ * The tree each panel has in the last commit, by id (`isPanel` over the
+ * commit's files): empty for a workspace with no commit yet, and without a
+ * new panel. Reads objects only, never the index, so it never meets the
+ * turn's commit.
  */
 export async function committedTrees(workspaceDir: string): Promise<Map<string, string>> {
   const trees = new Map<string, string>();
   let listing: string;
+  let files: string;
   try {
     listing = await git(workspaceDir, ["ls-tree", "-z", "HEAD"], { trim: false });
+    files = await git(workspaceDir, ["ls-tree", "-r", "-z", "--name-only", "HEAD"], {
+      trim: false,
+    });
   } catch {
     return trees;
   }
+  const topFiles = new Map<string, string[]>();
+  for (const path of files.split("\0")) {
+    const parts = path.split("/");
+    if (parts.length !== 2 || !parts[0] || !parts[1]) continue;
+    topFiles.set(parts[0], [...(topFiles.get(parts[0]) ?? []), parts[1]]);
+  }
   for (const entry of listing.split("\0")) {
     const match = /^040000 tree ([0-9a-f]{40,64})\t(.+)$/s.exec(entry);
-    if (match?.[1] && match[2] && PERSONAL_ID_PATTERN.test(match[2])) trees.set(match[2], match[1]);
+    if (match?.[1] && match[2] && isPanel(match[2], topFiles.get(match[2]) ?? [])) {
+      trees.set(match[2], match[1]);
+    }
   }
   return trees;
 }

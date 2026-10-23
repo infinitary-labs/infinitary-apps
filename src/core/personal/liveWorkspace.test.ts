@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -70,6 +70,45 @@ describe("liveWorkspace", () => {
     mkdirSync(join(dir, "tokyo-clock"));
     writeFileSync(join(dir, "tokyo-clock", "panel.tsx"), "export default () => null;");
     expect(await changedExtensionIds(dir)).toEqual(["open-prs", "tokyo-clock"]);
+  });
+
+  // INF-1055: a panel is a folder named like a panel id holding panel.tsx or
+  // server.ts, now or in the last commit; a record folder is never one.
+  it("attributes only panels: never lesson files or notes, a deleted or renamed panel through its last commit, a half-built one once its panel.tsx lands", async () => {
+    const dir = repo();
+    const write = (path: string, text: string) => {
+      mkdirSync(join(dir, path, ".."), { recursive: true });
+      writeFileSync(join(dir, path), text);
+    };
+    // Real lesson files (docs/lessons.md, "Files") and a folder of notes.
+    write("lessons/learner.md", "# Learner\nLikes short rounds.\n");
+    write("lessons/chess/progress.md", "# Chess\nGoal: beat my dad at chess\n");
+    write("lessons/chess/record.json", JSON.stringify({ goal: "beat my dad at chess" }));
+    write("recipes/soup.md", "# Soup\n");
+    write("clock/panel.tsx", "export default () => null;");
+    write("weather/server.ts", "export const actions = {};");
+    expect(await changedExtensionIds(dir)).toEqual(["clock", "weather"]);
+    await commitWorkspace(dir, "feat: panels and records");
+    expect([...(await committedTrees(dir)).keys()].sort()).toEqual(["clock", "weather"]);
+
+    write("lessons/chess/record.json", JSON.stringify({ goal: "win a game" }));
+    write("recipes/soup.md", "# Soup, spicier\n");
+    expect(await changedExtensionIds(dir)).toEqual([]);
+
+    // Deleted, renamed, and an entry file removed mid-rewrite.
+    rmSync(join(dir, "clock"), { recursive: true });
+    renameSync(join(dir, "weather"), join(dir, "forecast"));
+    expect(await changedExtensionIds(dir)).toEqual(["clock", "forecast", "weather"]);
+    await commitWorkspace(dir, "chore: rename");
+    rmSync(join(dir, "forecast", "server.ts"));
+    expect(await changedExtensionIds(dir)).toEqual(["forecast"]);
+    await commitWorkspace(dir, "chore: forecast emptied");
+
+    // A half-built folder is no panel until its entry file lands.
+    write("half/manifest.json", JSON.stringify({ title: "Half" }));
+    expect(await changedExtensionIds(dir)).toEqual([]);
+    write("half/panel.tsx", "export default () => null;");
+    expect(await changedExtensionIds(dir)).toEqual(["half"]);
   });
 
   it("stamps origin.taskId onto the manifest, creating one, leaving broken JSON alone, and is idempotent", async () => {

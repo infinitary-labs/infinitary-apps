@@ -68,8 +68,9 @@ A registration refusal is logged, kept in its own words and reported to the core
 Two launches that never settled turn the switch off with reason `safe-mode`; off disposes every server host, forgets every compiled panel and pushes one empty snapshot.
 The store refuses a write over its cap with the cap named.
 
-Current fact, not the intended pattern: change attribution in `src/core/personal/liveWorkspace.ts` (`changedExtensionIds`) recognizes extension folders by name (a first path segment matching `PERSONAL_ID_PATTERN`, excluding `.claude` and `lessons`), while loading (`PersonalExtensions` `discover` and `isExtensionDir`) recognizes a folder by its panel entry files (`panel.tsx` or `server.ts`).
-This is a known divergence that a separate plan is to consolidate.
+In the personal workspace one rule decides what a panel is: a top-level folder named like a panel id that holds `panel.tsx` or `server.ts`, in the working files or in the last commit (`isPanel`, `src/core/personal/liveWorkspace.ts`).
+Loading (`discover`), change attribution (`changedExtensionIds`, which feeds the stamp, the lint and the place), and the last-commit copy (`committedTrees`) all call it, so a record folder such as `lessons/` is never loaded, stamped or copied.
+The install name check is wider on purpose: every workspace folder name is taken, so an unfinished build keeps its name.
 
 ## Uses
 

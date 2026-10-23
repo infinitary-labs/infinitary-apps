@@ -306,7 +306,7 @@ describe("the plan-to-build handoff reaches every agent that acts on it", () => 
     const firstmateOnly = [
       "reuses the plan's planned successor, or else files one with create_task",
       "Once implementation is authorized, the first mate starts the builder",
-      "Before any start call, the first mate finds the existing successor",
+      "Before filing or starting, the first mate reconciles the built-on work",
       "record link_tasks blocks from it to the successor",
       "the first mate emits the question on the open parent or successor",
       "then call update_task start_now separately in this same turn",
@@ -1571,7 +1571,8 @@ it("keeps the full authoring and handoff sources word for word", () => {
     "03f13e13a8b2d51b93f8583b77555399bfbe58a084e097844af8f733c0648e4e",
   );
   // INF-416 piece H drops HANDOFF's restatement of reading the saved plan by key; the core still says it.
-  expect(hash(HANDOFF)).toBe("f287b04eb24a403c032b06f115f7a5a4ce1bfdfe934de82316023b0a1842a0eb");
+  // INF-976 widens the first mate's check before a start to filing, read off the built-on work.
+  expect(hash(HANDOFF)).toBe("cae3bf8b4f3a2f5c9d8ebd8bde26894721f1acc3cf9d74095c868b7471b56b6b");
 });
 
 // INF-880: the submitted words-only rule must survive procedure filtering on every tier.

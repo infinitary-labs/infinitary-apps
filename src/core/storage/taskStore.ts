@@ -1047,6 +1047,22 @@ export class TaskStore {
     return oldestFirst(rows);
   }
 
+  /**
+   * Every row, whatever its status, whose work shape names this task as its
+   * basis - by id or by key, as `TaskService.resolve` reads one - oldest
+   * first (INF-976: the work built on a task, closed work included).
+   */
+  listBuiltOn(id: string, key: string | null): TaskRecord[] {
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM tasks WHERE id != ? AND (
+         trim(json_extract(shape_json, '$.basis')) = ?
+         OR (? != '' AND upper(trim(json_extract(shape_json, '$.basis'))) = ?)
+       )`,
+    ).all(id, id, key ?? "", (key ?? "").toUpperCase()) as Row[];
+    return oldestFirst(rows);
+  }
+
   /** Every descendant, deepest last (a recursive walk down parent_id). */
   listDescendants(id: string): TaskRecord[] {
     const rows = this.db

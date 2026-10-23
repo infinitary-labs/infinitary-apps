@@ -109,6 +109,13 @@ export type TaskQueryRow = {
   decisions?: { event_id: number; text: string; data: Record<string, unknown> | null }[];
   /** Explicitly named source, never guessed from the prose. */
   basis?: string;
+  /**
+   * Every task that names this one as its basis, open or closed, with its
+   * status, closing reason, short outcome and change (INF-976): the work
+   * already built on an answer, read before filing or starting more on it.
+   * By-key only.
+   */
+  built_on_by?: TaskQueryBuiltOn[];
   /** The task whose last commit its working copy starts at (INF-799). */
   branch_from?: string;
   /** The JSON Schema its report's result must fit (INF-799). By-key only. */
@@ -131,6 +138,40 @@ export type TaskQueryRow = {
   validation_assignment?: TaskDelivery["validationAssignment"];
   updated_at: string;
 };
+
+/** One task built on the read task, as a by-key read names it (INF-976). */
+export type TaskQueryBuiltOn = {
+  key: string;
+  task_id: string;
+  title: string;
+  status: string;
+  closed_reason?: string;
+  outcome_summary?: string;
+  change?: { label?: string; url?: string };
+};
+
+/** The work built on a task, open or closed, as the by-key read and the wakes name it. */
+export function builtOnRows(tasks: TaskService, id: string): TaskQueryBuiltOn[] {
+  return tasks.builtOn(id).map((record) => {
+    const change = record.delivery ? taskChangeOf(record.delivery) : null;
+    return {
+      key: record.key || record.id,
+      task_id: record.id,
+      title: record.title,
+      status: statusText(record),
+      ...(record.closedReason ? { closed_reason: record.closedReason } : {}),
+      ...(record.outcomeSummary ? { outcome_summary: record.outcomeSummary } : {}),
+      ...(change && (change.label || change.url)
+        ? {
+            change: {
+              ...(change.label ? { label: change.label } : {}),
+              ...(change.url ? { url: change.url } : {}),
+            },
+          }
+        : {}),
+    };
+  });
+}
 
 export const TASK_QUERY_DEFAULT_LIMIT = 30;
 export const TASK_QUERY_MAX_LIMIT = 100;
@@ -268,6 +309,7 @@ function toRow(
       : undefined;
   const policies = tasks.policiesOf(record);
   const pictures = cardBody ? picturesOf(tasks, record.id) : [];
+  const builtOnBy = cardBody ? builtOnRows(tasks, record.id) : [];
   return {
     key: record.key || record.id,
     task_id: record.id,
@@ -310,6 +352,7 @@ function toRow(
     ...(record.shape?.override_speed ? { crew_speed: record.shape.override_speed } : {}),
     ...(record.shape?.override_reasoning ? { reasoning: record.shape.override_reasoning } : {}),
     ...(record.shape?.basis ? { basis: record.shape.basis } : {}),
+    ...(builtOnBy.length > 0 ? { built_on_by: builtOnBy } : {}),
     ...(record.shape?.branch_from ? { branch_from: record.shape.branch_from } : {}),
     ...(cardBody && record.shape?.result_schema
       ? { result_schema: record.shape.result_schema }

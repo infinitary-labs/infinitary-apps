@@ -172,6 +172,7 @@ Every `answer-closed` receipt carries a `read` naming the exact `tasks` key; onl
 That instruction covers any choice that files, starts or saves work by meaning, not by label: Approve and build, Start the next step and Save and defer are examples, not an allowlist.
 The first mate judges what the choice authorizes under HANDOFF.
 Before filing or starting authorized work it reads the saved plan with tasks by key, the standing rule in the core.
+That read names the work already built on the plan (`built_on_by`), merged and dropped work included, and HANDOFF has the first mate reconcile it before filing or starting more (INF-976).
 The answer-closed wake names that read when a choice just closed.
 Routine acknowledgements and Abandon need no read.
 The host does not parse action ids or labels into authorization.

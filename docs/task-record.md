@@ -91,6 +91,7 @@ The captain's verbatim words, constraints, delivery and escalation context are n
 Queued intent tasks render from saved intent at dispatch (escalations retain their host-authored context).
 
 A by-key `tasks` read carries the latest `outcome` and `card`, complete chronological `reports` with event ids, saved timeline `decisions`, the explicit `basis`, and the most recent pinned `brief`.
+It also carries `built_on_by`: every task whose basis names this one, by key or id, open, done or dropped alike, each with its status, closing reason, short outcome and change (`TaskService.builtOn`, INF-976); the host's delivery machinery, such as a review, is not among them.
 Lists carry no bodies.
 A short closure report still replaces the latest outcome but cannot hide earlier full specifications.
 Reports, closing choices and exact first-turn briefs are exempt from timeline compaction alongside existing provenance; no historical approval is inferred and no historical builder is restarted.
@@ -279,13 +280,13 @@ A line whose fact the record already holds - the captain's reply or a line the c
 ## Whom an event concerns
 
 An event is written once, on its own task, and names the other tasks it concerns (FI3-1189's rule 1).
-`TaskService` derives them in the transaction that writes the event, only from the typed links as they stand then, and keeps them in `task_event_concerns` (migration 71): the event, the other task, how the event's task stands to it, and the task a replacement carried it through (`via`).
+`TaskService` derives them in the transaction that writes the event, only from the typed links and the declared basis as they stand then, and keeps them in `task_event_concerns` (migration 71): the event, the other task, how the event's task stands to it, and the task a replacement carried it through (`via`).
 `TaskService.concerning` reads them, and that task's Activity shows each as a row naming the task that wrote it (`TaskActivityLine.from`), whose key at the line's end is a link to that task.
 Such a row takes no fold, and it never stands as the task's Now line ("The Now line" below).
 
 | Event | Concerns | How it reads there |
 | --- | --- | --- |
-| A milestone: `created`, `dispatched`, `pr_opened`, `merged`, `landed`, and a `status` or `failed` that closes the task | its parent; each task it blocks; the origin it was filed from; the task it replaced, and through it every task that one concerns | `SCR-5, a part of this task, merged pull request #977.` and `SCR-6, which replaced SCR-3, merged pull request #977.` |
+| A milestone: `created`, `dispatched`, `pr_opened`, `merged`, `landed`, and a `status` or `failed` that closes the task | its parent; each task it blocks; the origin it was filed from; the task its basis names (INF-976); the task it replaced, and through it every task that one concerns | `SCR-5, a part of this task, merged pull request #977.`, `SCR-7, built on this task, merged pull request #977.` and `SCR-6, which replaced SCR-3, merged pull request #977.` |
 | `linked` and `unlinked` | the link's other end | `SCR-4 waits for this task.`; the far end of a filing folds under the filing's own note |
 | A refused merge (`note` with `data.refused`) | each task the refusal names that a link or a parent edge joins to it | `SCR-1, which waits for this task, could not merge.` |
 

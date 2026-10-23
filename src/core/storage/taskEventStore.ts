@@ -60,7 +60,8 @@ export type InsertTaskEvent = Omit<TaskEvent, "id" | "data" | "ref" | "feed"> &
  * the typed links when the event was written (docs/task-record.md, "Whom an
  * event concerns"): it is a `part` of that task, its `parent`, a `follow-up`
  * filed from it, its `origin`, a `blocker` it waits for, a `waiter` waiting
- * for it, its `replacement`, the task it `replaced`, or `related` to it.
+ * for it, its `replacement`, the task it `replaced`, work `built-on` it (the
+ * event's task names it as its basis), or `related` to it.
  */
 export const TASK_CONCERN_RELATIONS = [
   "part",
@@ -71,6 +72,7 @@ export const TASK_CONCERN_RELATIONS = [
   "waiter",
   "replacement",
   "replaced",
+  "built-on",
   "related",
 ] as const;
 export type TaskConcernRelation = (typeof TASK_CONCERN_RELATIONS)[number];

@@ -1204,6 +1204,21 @@ export class TaskService {
   }
 
   /**
+   * Every task built on this one - each whose basis names it, by key or id
+   * - open, active, done or dropped, oldest first (INF-976). Several may
+   * stand on one basis; which of them covers a request is the reader's
+   * judgment, never the host's. The host's delivery machinery (a review,
+   * whose basis is its builder) is a part of the task, never work on it.
+   */
+  builtOn(id: string): TaskRecord[] {
+    const record = this.store.get(id);
+    if (!record) return [];
+    return this.store
+      .listBuiltOn(record.id, record.key)
+      .filter((other) => !TaskService.isDeliveryChild(other));
+  }
+
+  /**
    * The review whose verdict a builder's delivery facts carry, read off the
    * parent edge: the newest review child opened at or before the verdict
    * was recorded. A review opened after it has not answered yet, so it
@@ -4760,8 +4775,9 @@ export class TaskService {
    * The other tasks an event concerns (docs/task-record.md, "Whom an event
    * concerns"), read only from the typed links as they stand when it is
    * written: a link's other end; for a milestone (`isMilestone`), the
-   * parent, the tasks it blocks, the origin it was filed from, and the task
-   * it replaced together with that one's own (`via`); and the tasks a
+   * parent, the tasks it blocks, the origin it was filed from, the task
+   * its basis names, and the task it replaced together with that one's own
+   * (`via`); and the tasks a
    * writer names (`about`, such as the blockers a refused merge waits on),
    * each by the link that joins it to the event's task.
    */
@@ -4795,6 +4811,11 @@ export class TaskService {
         }
       };
       walk(event.taskId, null);
+      // The task it names as its basis reads what became of the work built
+      // on it (INF-976), closed or not.
+      const basis = this.store.get(event.taskId)?.shape?.basis;
+      const built = basis ? this.resolve(basis) : undefined;
+      if (built) add(built.id, "built-on", null);
     }
     for (const taskId of about) {
       const relation = this.relationBetween(event.taskId, taskId);

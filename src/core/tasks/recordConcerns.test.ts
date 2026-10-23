@@ -192,6 +192,51 @@ describe("whom an event concerns (FI3-1189's rule 1)", () => {
     ]);
   });
 
+  // INF-976: INF-926 built INF-797's answer and merged, and nothing on
+  // INF-797's record said so, so the same build was filed again.
+  it("basis: the milestones of work built on an answer reach the answer, by key or id", () => {
+    const { tasks, keyOf, fromOthers } = setup();
+    seedTask(tasks, {
+      id: "answer",
+      kind: "question",
+      title: "Why it sat idle",
+      status: "idle",
+      outcome: "Use the same task facts everywhere.",
+    });
+    tasks.create({
+      id: "builder",
+      title: "Build the plan",
+      prompt: "p",
+      repoId: null,
+      actor: "firstmate",
+      shape: { kind: "implement", basis: keyOf("answer") },
+    });
+    tasks.dispatch("builder", {
+      workspace: { repoDir: "", worktreeDir: "/w/builder", branch: "fm/task-builder" },
+      accountId: null,
+      assignee: "crewmate builder",
+    });
+    merge(tasks, "builder", 364);
+    tasks.create({
+      id: "again",
+      title: "Build the plan again",
+      prompt: "p",
+      repoId: null,
+      actor: "firstmate",
+      shape: { kind: "implement", basis: "answer" },
+    });
+    tasks.close("again", { status: "dropped", reason: "cancelled", actor: "firstmate" });
+    const [builder, again] = [keyOf("builder"), keyOf("again")];
+    expect(fromOthers("answer")).toEqual([
+      [builder, `${builder}, built on this task, was filed.`],
+      [builder, `${builder}, built on this task, started.`],
+      [builder, `${builder}, built on this task, opened pull request #364.`],
+      [builder, `${builder}, built on this task, merged pull request #364.`],
+      [again, `${again}, built on this task, was filed.`],
+      [again, `${again}, built on this task, was dropped.`],
+    ]);
+  });
+
   it("refuses a replacement that is the task itself, under it, or dropped, writing nothing", () => {
     const { tasks } = setup();
     seedTask(tasks, { id: "a", title: "A", status: "queued" });

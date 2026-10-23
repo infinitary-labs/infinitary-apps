@@ -247,3 +247,74 @@ it.each(["matching", "later", "absent"] as const)(
     }
   },
 );
+
+describe("the tasks query's work built on a task (INF-976)", () => {
+  // INF-976's incident: INF-926 built INF-797's answer and merged PR #364,
+  // and INF-971 was filed again on the same basis because no read of
+  // INF-797 named the closed work standing on it.
+  it("names every task built on an answer by key or id, merged and dropped work included, and leaves reviews and lists out", () => {
+    const { tasks, query } = setup();
+    tasks.create({
+      id: "answer",
+      kind: "question",
+      title: "Why it sat idle",
+      prompt: "p",
+      repoId: null,
+    });
+    tasks.recordReport("answer", { text: "Use the same task facts everywhere." });
+    const answerKey = tasks.get("answer")?.key ?? "";
+    tasks.create({
+      id: "builder",
+      title: "Build the plan",
+      prompt: "p",
+      repoId: null,
+      shape: { kind: "implement", basis: answerKey },
+    });
+    tasks.recordDelivery(
+      "builder",
+      { prNumber: 364, changeLabel: "#364", prUrl: "https://github.com/o/r/pull/364" },
+      { kind: "pr_opened", text: "PR #364" },
+    );
+    tasks.close("builder", { status: "done", reason: "merged", actor: "captain", text: "merged" });
+    // A second filing names the basis by id, lower-cased key aside: the same task.
+    tasks.create({
+      id: "again",
+      title: "Build the plan again",
+      prompt: "p",
+      repoId: null,
+      shape: { kind: "implement", basis: "answer" },
+    });
+    tasks.close("again", { status: "dropped", reason: "cancelled", actor: "firstmate" });
+    tasks.create({
+      id: "review",
+      title: "Review: Build the plan",
+      prompt: "p",
+      repoId: null,
+      parentId: "answer",
+      shape: { kind: "review", kind_source: "host:review", basis: "answer" },
+    });
+    tasks.create({ id: "other", title: "Unrelated", prompt: "p", repoId: null });
+
+    const [row] = query({ key: answerKey.toLowerCase() }).rows;
+    expect(row?.built_on_by).toEqual([
+      {
+        key: tasks.get("builder")?.key,
+        task_id: "builder",
+        title: "Build the plan",
+        status: "done",
+        closed_reason: "merged",
+        change: { label: "#364", url: "https://github.com/o/r/pull/364" },
+      },
+      {
+        key: tasks.get("again")?.key,
+        task_id: "again",
+        title: "Build the plan again",
+        status: "dropped",
+        closed_reason: "cancelled",
+      },
+    ]);
+    // The list stays the compact index.
+    expect(query({}).rows.find((entry) => entry.task_id === "answer")?.built_on_by).toBeUndefined();
+    expect(query({ key: "other" }).rows[0]?.built_on_by).toBeUndefined();
+  });
+});

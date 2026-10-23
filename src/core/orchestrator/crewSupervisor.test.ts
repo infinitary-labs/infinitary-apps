@@ -12872,6 +12872,68 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     });
   });
 
+  // INF-976: INF-926 had already built INF-797's answer and merged when
+  // INF-797 asked again, and the reminders said only that nothing was
+  // started since, so the same build was filed again as INF-971.
+  describe("a request the first mate is reminded of reads the work built on its task (INF-976)", () => {
+    const ASK = "Build the plan the captain approved.";
+    const askedWakes = (ops: string[]) => ops.filter((line) => line.includes("ago to act:"));
+
+    /** The stopped crewmate asks the first mate to act, on the host's clock. */
+    async function asks(harness: Awaited<ReturnType<typeof stopped>>) {
+      const { supervisor, crewmate, specs, tasks, taskId } = harness;
+      await supervisor.steerCrewmate(taskId, "the captain approved it");
+      await tick();
+      specs.at(-1)?.onReport?.("The captain approved the plan.", undefined, {
+        needsFirstmate: ASK,
+      });
+      await endTurn(crewmate, taskId);
+      return tasks.get(taskId)?.idleSince ?? hostNow;
+    }
+
+    /** A builder the first mate starts on the task, merged and closed. */
+    function mergedBuilder(harness: Awaited<ReturnType<typeof stopped>>, id: string, basis: string) {
+      const { tasks } = harness;
+      tasks.create({ id, title: "Build the plan", prompt: "p", repoId: null, shape: { kind: "implement", basis } });
+      tasks.recordDelivery(id, { prNumber: 364, changeLabel: "#364" }, { kind: "pr_opened", text: "PR #364" });
+      tasks.close(id, { status: "done", reason: "merged", actor: "captain", text: "merged" });
+      return tasks.get(id)?.key ?? id;
+    }
+
+    it("names merged work built on it in the report and in each reminder, and an older build answers no newer request", async () => {
+      const harness = await stopped();
+      const { supervisor, ops, tasks, taskId } = harness;
+      const key = tasks.get(taskId)?.key ?? taskId;
+      const builder = mergedBuilder(harness, "builder", key);
+      hostNow += 1000;
+      const askedAt = await asks(harness);
+      const built = ` Work built on this task, open or closed: ${builder} "Build the plan" (done: merged, #364).`;
+      expect(ops.find((line) => line.includes(`It asks the first mate to act: ${ASK}`))).toContain(built);
+
+      hostNow = askedAt + minutes(31);
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+      const [reminder] = askedWakes(ops);
+      expect(reminder).toContain(`no task built on it or under it was created or started.${built}`);
+    });
+
+    it("keeps a build started after the request as the first mate's act once it merged and closed, by id or key", async () => {
+      for (const by of ["id", "key"] as const) {
+        const harness = await stopped();
+        const { supervisor, ops, tasks, taskId } = harness;
+        const askedAt = await asks(harness);
+        hostNow += 1000;
+        mergedBuilder(harness, `builder-${by}`, by === "id" ? taskId : (tasks.get(taskId)?.key ?? ""));
+        for (const idle of [31, 62]) {
+          hostNow = askedAt + minutes(idle);
+          supervisor.reconcileIdle(hostNow);
+          await tick();
+        }
+        expect(askedWakes(ops), by).toEqual([]);
+      }
+    });
+  });
+
   it("the FI3-83 strand: a provider outage keeps the captain's reply and delivers it on recovery", async () => {
     const harness = await stopped();
     const { supervisor, crewmate, specs, taskId, inbox, ops, cards } = harness;

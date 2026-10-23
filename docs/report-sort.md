@@ -207,11 +207,13 @@ It carries the first mate's own sentence, has no actions, places no gate, and no
 A crewmate's request that the first mate act wakes it once, at the report (row 0a).
 A woken turn that ends without acting on it used to leave the request with the crewmate's open card holding the turn, which nothing climbs past.
 So while the request stands - from the report that asked until the crewmate's next turn starts - and the first mate has not acted on the task since, the reconciler reads the first mate's turn (step 3).
-The first mate has acted when an event of its own lands on the task's timeline after the request - a steer, an interrupt, a card, an answer, a change, a link, a close - never the `decided` record each of its turns about the task leaves, or when a task built on it (its basis) or under it (its parent) is created or started since (`IdleLadder.firstmateActedSince`).
+The first mate has acted when an event of its own lands on the task's timeline after the request - a steer, an interrupt, a card, an answer, a change, a link, a close - never the `decided` record each of its turns about the task leaves, or when a task built on it (its basis, by key or id) or under it (its parent) is created or started since, whether that task is still open or has merged or been dropped (`IdleLadder.firstmateActedSince`, INF-976).
+A task created or started before the request answers no later one.
 What the act was is never judged, only that one took effect, as answer delivery judges a captain message (`docs/task-capture.md`).
 The report's own wake counts as rung 2's first wake, sent when the crewmate asked, and the rung's rules run from there.
 The clock holds while a wake about the task waits on the first mate's lane.
 Each thirty minutes without an act bring a reminder, `idle-asked`, which says the request again in the crewmate's words beside its report (`rule:idle-repeat`), two in all (`ASKED_WAKES`).
+The report's wake and each reminder name the work already built on the task, open or closed, with its status, closing reason and change (`TaskService.builtOn`), so the first mate reconciles them before it files or starts more (INF-976).
 Nothing nudges the crewmate, and no card goes up: the captain chose on 2026-10-10 that the app reminds the first mate itself rather than ask the captain to send what it can send.
 After the last reminder nothing more is sent, and the task's crew line carries its `stalled` fact, as it does from the first reminder on.
 An act of the first mate's ends all of it: the next reconcile restarts the clock, once, read off the record - the ladder's last act fell after the request and before the act (`endAnsweredAsk`).

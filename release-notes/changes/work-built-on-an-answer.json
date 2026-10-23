@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "work-built-on-an-answer",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Your first mate no longer starts work again that was already done",
+      "body": "When you approve an answer and its work is built and merged, your first mate now sees that work before it files or starts anything more on the same answer, so the same build is not started twice. The answer's Activity lists what became of the work built on it, and a reminder about a crewmate's request no longer forgets work that already finished.",
+      "picture": {
+        "dark": "work-built-on-an-answer-dark.webp",
+        "light": "work-built-on-an-answer-light.webp",
+        "alt": "A task record titled Why the build was filed twice, its Activity listing SCR-2, built on this task, was filed, started, opened pull request #364 and merged pull request #364"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

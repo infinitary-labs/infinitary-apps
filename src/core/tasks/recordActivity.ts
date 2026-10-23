@@ -354,6 +354,7 @@ const RELATION_WORDS: Record<TaskConcernRelation, (key: string) => string> = {
   waiter: (key) => `${key}, which waits for this task,`,
   replacement: (key) => `${key}, which replaced this task,`,
   replaced: (key) => `${key}, which this task replaced,`,
+  "built-on": (key) => `${key}, built on this task,`,
   related: (key) => `${key}, related to this task,`,
 };
 

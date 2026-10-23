@@ -18,6 +18,7 @@ import {
   type TaskRecord,
 } from "../storage/taskStore";
 import { type DependencyWait, standingDependencyWaits } from "../tasks/dependencyWaits";
+import { builtOnRows } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { cardEmitter } from "./cardService";
 import { escapeCardText } from "./cardText";
@@ -44,6 +45,7 @@ import {
   type WakeFacts,
   type WakeNote,
   type WakeTask,
+  wakeBuiltOn,
 } from "./wakes";
 
 /**
@@ -324,23 +326,22 @@ export class IdleLadder {
    * (FI3-714): an event of its own on the task's timeline - a steer, an
    * interrupt, a card, a change, a link, a close - never the `decided`
    * record each of its turns about the task leaves; or a task built on it
-   * (its basis) or under it (its parent) created or started since. What
-   * the act was is never judged, only that one took effect.
+   * (its basis) or under it (its parent) created or started since, open or
+   * closed alike, so a successor that already merged or was dropped still
+   * stands as the act it was (INF-976). An act before the request answers
+   * no later one. What the act was is never judged, only that one took
+   * effect.
    */
   private firstmateActedSince(record: TaskRecord, since: number): number | undefined {
     let first: number | undefined;
     const take = (at: number | null | undefined) => {
       if (at != null && at > since && (first === undefined || at < first)) first = at;
     };
-    for (const event of this.host.tasks.timeline(record.id)) {
+    const tasks = this.host.tasks;
+    for (const event of tasks.timeline(record.id)) {
       if (event.actor === "firstmate" && event.kind !== "decided") take(event.at);
     }
-    const tasks = this.host.tasks;
-    for (const other of tasks.listLive()) {
-      if (other.id === record.id) continue;
-      const basis = other.shape?.basis;
-      const builtOn = basis !== undefined && tasks.resolve(basis)?.id === record.id;
-      if (!builtOn && other.parentId !== record.id) continue;
+    for (const other of [...tasks.builtOn(record.id), ...tasks.children(record.id)]) {
       take(other.createdAt);
       take(other.startedAt);
     }
@@ -1005,6 +1006,7 @@ export class IdleLadder {
   ): TypedWake {
     const ask = record.delivery?.needsFirstmate;
     const last = this.lastWords(record);
+    const builtOn = wakeBuiltOn(builtOnRows(this.host.tasks, record.id));
     const facts: WakeFacts = {
       kind: "idle-asked",
       task: { id: record.id, title: record.title },
@@ -1013,6 +1015,7 @@ export class IdleLadder {
       request: ask?.request ?? "",
       askedMs: now - (ask?.at ?? now),
       wakes,
+      ...(builtOn ? { builtOn } : {}),
       ...(last ? { last } : {}),
     };
     return { facts };

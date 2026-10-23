@@ -324,7 +324,12 @@ import {
   StaleValidationDecisionError,
 } from "../tasks/liveValidation";
 import { modelMoveWords } from "../tasks/recordActivity";
-import { queryTasks, type TaskQueryInput, type TaskQueryRow } from "../tasks/taskQuery";
+import {
+  builtOnRows,
+  queryTasks,
+  type TaskQueryInput,
+  type TaskQueryRow,
+} from "../tasks/taskQuery";
 import { resultRefusal, resultSchemaRefusal } from "../tasks/taskResult";
 import {
   type ReportDeclaration,
@@ -445,6 +450,7 @@ import {
   type WakeChoice,
   type WakeFacts,
   type WakeOpenReview,
+  wakeBuiltOn,
   withAttachmentsDropped,
   withAttachmentsKept,
   withGuidanceMark,
@@ -7040,6 +7046,7 @@ export class CrewSupervisor {
       title: held.title,
     }));
     const review = record ? this.reviewToReread(record) : undefined;
+    const builtOn = wakeBuiltOn(builtOnRows(this.options.tasks, task.id));
     const witnesses = this.ladder.witnesses(task.id, this.now());
     // A wait it declared with nothing on the captain's screen to answer is
     // the card the Firstmate owes (INF-11): the wake says what he must decide.
@@ -7058,6 +7065,7 @@ export class CrewSupervisor {
         ...(unseenWait ? { captainWait: unseenWait.reason } : {}),
         ...(finished ? { finished: true } : {}),
         ...(needsFirstmate ? { needsFirstmate } : {}),
+        ...(builtOn ? { builtOn } : {}),
         ...(declared?.result ? { result: declared.result } : {}),
         ...(ci ? { ci } : {}),
         ...(review ? { review } : {}),

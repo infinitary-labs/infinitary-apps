@@ -88,6 +88,12 @@ export type RouteOptions = {
    */
   avoidProvider?: string;
   /**
+   * A provider left out entirely, with no fallback to it: a started task
+   * moved off the provider that failed it (INF-849) routes only among the
+   * others, and finds nothing when none can serve.
+   */
+  withoutProvider?: string;
+  /**
    * The models to route among instead of this Mac's own: a task that
    * runs on a computer that runs work takes only what that computer's
    * own sign-ins serve (docs/helper.md, "Its own sign-ins").
@@ -186,6 +192,11 @@ export class Router {
   preview(prompt: string, shape: WorkShape, options: RouteOptions = {}): RoutePreview | undefined {
     const settings = this.options.settings.getRoutingSettings();
     if (!settings.dynamicRouting) return undefined;
+    // What the router may pick: the catalog only describes, so leaving a
+    // provider out of what serves leaves it out of the pick.
+    const without = options.withoutProvider;
+    const kept = <T extends { provider: string }>(models: T[]): T[] =>
+      without ? models.filter((model) => model.provider !== without) : models;
     const rawCatalog = options.pool
       ? options.pool.catalog
       : (this.options.quota.latestModels()?.models ?? []);
@@ -197,7 +208,7 @@ export class Router {
           : (this.options.quota.latest()?.providers ?? []),
         Date.now(),
       ) ?? rawCatalog;
-    const available = options.pool?.available ?? this.options.availableModels();
+    const available = kept(options.pool?.available ?? this.options.availableModels());
     const routable = this.options.slots?.routable(available);
     const tier = tierFor(shape);
     const modelId = tier.pin;
@@ -215,8 +226,8 @@ export class Router {
       catalog,
       available,
       ...(routable ? { slotted: routable.models, slotNote: routable.note } : {}),
-      ...(options.pool?.unowned ? { unowned: options.pool.unowned } : {}),
-      pins: askPin ? [askPin, ...settings.pins] : settings.pins,
+      ...(options.pool?.unowned ? { unowned: kept(options.pool.unowned) } : {}),
+      pins: kept(askPin ? [askPin, ...settings.pins] : settings.pins),
       ...(bucket ? { bucket } : {}),
       ...(this.options.capabilityFor ? { capabilityFor: this.options.capabilityFor } : {}),
       ...(options.avoidProvider ? { avoidProvider: options.avoidProvider } : {}),
@@ -249,6 +260,7 @@ export class Router {
         ? `rule R9: reviewer placement away from ${options.avoidProvider}; tier from ${tier.reason}`
         : tier.reason,
       ...(options.pool ? [`routed among ${options.pool.note}`] : []),
+      ...(without ? [`left out ${without}, the provider the task moved off`] : []),
     );
     const result: RouteResult = {
       bucket: decision.bucket,

@@ -1167,7 +1167,9 @@ export type TypedWake = { facts: WakeFacts; ways?: HoldWay[]; once?: string };
 /** The once-name of one renewal: a later renewal, from a different conversation, is a new fact. */
 export function conversationRestartOnce(restart: CrewmateRestart): string {
   const changed =
-    restart.changed === "unopenable" ? "unopenable" : [...restart.changed].sort().join("+");
+    restart.changed === "unopenable" || restart.changed === "moved"
+      ? restart.changed
+      : [...restart.changed].sort().join("+");
   return `conversation-restart:${restart.from}:${changed}`;
 }
 
@@ -1182,7 +1184,7 @@ export function conversationRestartWake(input: {
   earlier?: string;
 }): TypedWake {
   const restart =
-    input.restart.changed === "unopenable"
+    input.restart.changed === "unopenable" || input.restart.changed === "moved"
       ? input.restart
       : { from: input.restart.from, changed: [...input.restart.changed] };
   return {

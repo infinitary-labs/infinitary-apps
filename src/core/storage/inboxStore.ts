@@ -599,6 +599,22 @@ export class InboxStore {
   }
 
   /**
+   * The lane's task moved to another provider (INF-849): what waits on it
+   * is due now, with the attempts and failures the provider it left spent
+   * given back, so the new provider gets the whole budget. Rows already set
+   * aside stay set aside.
+   */
+  movedProvider(recipient: string): void {
+    this.changed();
+    this.db
+      .prepare(
+        `UPDATE inbox SET attempts = 0, failures = 0, failing_since = NULL, next_attempt_at = NULL
+         WHERE recipient = ? AND delivered_at IS NULL AND escalated_at IS NULL`,
+      )
+      .run(recipient);
+  }
+
+  /**
    * Whether the lane holds guidance that will still be delivered: not in
    * flight, not set aside, budget not spent - due now or waiting out its
    * grace or backoff. The idle ladder's "moving" witness.

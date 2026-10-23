@@ -398,7 +398,22 @@ Before it, a model could be chosen only on a new spawn, so a filed task was drop
 A model or basis named or cleared while a queued task starts decides that start (INF-83).
 The classifier's verdict is stamped on the row as it stands when the classifier answers, so the edit stays and the tier is computed from it.
 A start whose model or basis moved while it waited on a computer, to place the task or to route it, starts over from the record as it now stands.
-Once the start claims the row it is no longer open work, so both edits are refused in words.
+Once the start claims the row it is no longer open work, so a basis is refused in words, and a named model moves the task instead.
+
+## Moving a started task to another provider
+
+A started task moves to another provider in place (INF-849): it keeps its key, branch, working copy, record, pull request and waiting messages, and only its model, account and sometimes its conversation change.
+Two things ask for it, and both run `CrewSupervisor.requestMove`.
+The crewmate sign-in card's default, "Move to" the app's pick, is the captain's: the router evaluates the task's own shape with the failed provider left out (`withoutProvider`, `docs/routing.md`), and the card offers it only when a model serves; otherwise the card keeps only Open settings.
+The button names that model by its Settings name (`ModelSlots.nameOf`), the model the task would run on.
+Its `move-task` effect names the task, the provider it moves off and the model offered, so a card left up after another move, or after the app's pick changed, refuses in a feed line rather than move somewhere the card did not name.
+`update_task override_model_id` on started work is the first mate's, on the captain's words: the router pins the named model as R0 does, and a model that cannot serve is refused as text.
+A crewmate mid-turn moves once that turn ends; a turn is never cut short.
+The move commits the routing decision with who asked, selects the account (`selectForSpawn`), lets go of the old session, and writes the record's model and account with one timeline row and feed line naming who moved it (`TaskService.recordMove`).
+The sign-in card comes down, the lane's waiting rows are due at once with their spent attempts given back (`InboxStore.movedProvider`), and the task reopens in the same working copy.
+Between two Pi providers the same conversation resumes on the new model.
+To or from Claude, the new backend cannot reopen the conversation, so a new one starts and is told it moved (`CrewmateRestart` `moved`), with the brief and the earlier transcript's path, as an unopenable one is.
+A task on another computer does not move: it stays on that computer's own subscriptions.
 
 ## Requested crew speed
 

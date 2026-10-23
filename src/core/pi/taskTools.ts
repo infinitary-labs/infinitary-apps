@@ -208,8 +208,8 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       "Replacement: replaced_by. Started work: settle_task.",
       "start_now: queued work on available model despite allowance waits; edits first, refusals",
       "block it.",
-      "When the user names a model for a filed task, pass override_model_id - with start_now",
-      "to start it now: it keeps its key and links, so never drop it and spawn a replacement.",
+      "When the user names a model, pass override_model_id (start_now starts it now):",
+      "it keeps its key and links; never drop it to spawn a replacement.",
       "delivery/autonomy/rigor: explicit captain requests only, already consent; never re-ask.",
       "project resets overrides; omission keeps them. Policy edits never start/restart work.",
       "Local Careful = Default; keep request.",
@@ -256,7 +256,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       override_model_id: Type.Optional(
         Type.String({
           description:
-            "As spawn_crewmate.shape.override_model_id; routes when this open task starts. Empty clears it.",
+            "As spawn_crewmate.shape.override_model_id; routes open work at start, moves started work between turns. Empty clears it.",
         }),
       ),
       reasoning: Type.Optional(

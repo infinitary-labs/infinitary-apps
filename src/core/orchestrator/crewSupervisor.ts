@@ -275,7 +275,12 @@ import {
   resolveKind,
 } from "../routing/kindClassifier";
 import { escalationFloor, legacyShapeFromDifficulty, tierFor } from "../routing/policy";
-import { type RouteResult, type Router, requiresReasoningWait } from "../routing/router";
+import {
+  type RoutePreview,
+  type RouteResult,
+  type Router,
+  requiresReasoningWait,
+} from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
 import {
   type ClientBackgroundTask,
@@ -848,6 +853,8 @@ export type CrewSupervisorOptions = {
   broadcastCards: (cards: Card[]) => void;
   presentationChanged?: () => void;
   crewSpeed?: (model: { provider: string; id: string }) => import("@shared/crewSpeed").CrewSpeed;
+  /** A model by the name Settings → Models gives it (`ModelSlots.nameOf`); its id when absent. */
+  modelName?: (model: { provider: string; id: string }) => string;
   /** One card's thread, whole, after any message lands on it (phase 1). */
   broadcastThread?: (thread: CardThread) => void;
 };
@@ -917,6 +924,24 @@ export type InterruptSource = {
   decision: string | null;
   /** The panel the captain moved it from, by its title (a panel's Drop task on started work). */
   panel?: string;
+};
+
+/**
+ * A move of a started task to another provider (INF-849): who asked, the
+ * model they named (update_task's override_model_id), or none for the app's
+ * pick with the current provider left out; `from` is the provider the card
+ * offered to move off, so a card left up after another move does nothing;
+ * `offered` is the model the card named, which the move takes or refuses,
+ * never another in its place.
+ */
+type MoveAsk = { by: "captain" | "firstmate"; model?: string; from?: string; offered?: string };
+
+/** Where a moving task reopens: the routed model, its account and effort, and its provider's name. */
+type MoveTarget = {
+  model: { provider: string; id: string };
+  accountId?: string;
+  thinkingLevel: NonNullable<CrewmateSpec["thinkingLevel"]>;
+  providerName: string;
 };
 
 type TaskRuntime = {
@@ -1001,6 +1026,8 @@ type TaskRuntime = {
   lastTurnError?: string;
   /** The typed cut-off behind `lastTurnError`, when the backend reported one. */
   lastTurnCutOff?: CutOff;
+  /** A move asked for mid-turn, run once the turn ends (INF-849). */
+  pendingMove?: MoveAsk;
 };
 
 /**
@@ -1365,6 +1392,8 @@ export class CrewSupervisor {
 
   /** Charted starts requested and not yet claimed. A drop in that window refuses. */
   private readonly starting = new Set<string>();
+  /** Tasks moving to another provider now (INF-849). */
+  private readonly moving = new Set<string>();
   /** The card stack: the open cards and every write to them. */
   private readonly cards: CardService;
   /** Settling and closing: land, merge-pr, discard, and every close's teardown. */
@@ -5590,12 +5619,15 @@ export class CrewSupervisor {
    * fresh, and the task's timeline says so. `servedModel` is the model a
    * resumed conversation's record names ("provider/id"), so a task on
    * another computer binds the account there that served it at its start.
+   * `movedTo` names the provider a moved task now runs on (INF-849): a
+   * conversation that provider's client cannot reopen restarts as moved.
    */
   private async openCrewmate(
     task: TaskRuntime,
     crewmate: CrewmateSpec,
     accountId: string | undefined,
     servedModel?: string,
+    movedTo?: string,
   ): Promise<ModelSession> {
     const binding =
       crewmate.machineId === LOCAL_MACHINE_ID
@@ -5652,7 +5684,9 @@ export class CrewSupervisor {
     if (unopenable) {
       this.options.tasks.note(
         task.id,
-        "its earlier conversation could not be reopened, so it starts a fresh one",
+        movedTo
+          ? `it moved to a new conversation on ${movedTo}, which cannot reopen its earlier one; the earlier one is kept`
+          : "its earlier conversation could not be reopened, so it starts a fresh one",
         { news: true },
       );
     }
@@ -5661,6 +5695,7 @@ export class CrewSupervisor {
       crewmate.machineId,
       session,
       unopenable ? crewmate.resumeToken : undefined,
+      movedTo,
     );
     return session;
   }
@@ -5679,6 +5714,7 @@ export class CrewSupervisor {
     machine: string,
     session: ModelSession,
     unopenable?: string,
+    movedTo?: string,
   ): void {
     const renewal = session.takeRenewal();
     if (renewal) {
@@ -5690,7 +5726,12 @@ export class CrewSupervisor {
       if (token) this.options.tasks.setSessionFile(task.id, token);
     }
     const restart: CrewmateRestart | undefined =
-      renewal ?? (unopenable ? { from: unopenable, changed: "unopenable" } : undefined);
+      renewal ??
+      (unopenable
+        ? movedTo
+          ? { from: unopenable, changed: "moved", to: movedTo }
+          : { from: unopenable, changed: "unopenable" }
+        : undefined);
     if (restart) this.recordRestart(task, machine, restart);
   }
 
@@ -6891,11 +6932,21 @@ export class CrewSupervisor {
         // decision card offers the way back to a signed-in provider. Its
         // head reads the task's key and title, never the crewmate counter a
         // restart renumbers.
+        // Its default moves the task to the app's pick when another
+        // provider serves (INF-849); Open settings stays beside it.
+        const plan = this.planMove(task.id);
+        const move =
+          "refused" in plan || !plan.from
+            ? undefined
+            : {
+                arg: `${task.id}:${plan.from}:${offeringKey(plan.choice)}`,
+                modelName: this.modelName(plan.choice),
+              };
         this.cards.addAuthDecisionCard(
           crewSignInCardId(task.id),
           task.title,
           this.signInCardBody(task),
-          { taskId: task.id },
+          { taskId: task.id, ...(move ? { move } : {}) },
         );
       } else if (firstFailure && !accountTells) {
         this.routeCrewEvent(task.id, failedOp, "agent");
@@ -6922,8 +6973,14 @@ export class CrewSupervisor {
     }
     // A captured settle owns this idle boundary. Do not start another queued
     // guidance turn before its normal close/CI gates run.
+    const move = task.pendingMove;
+    task.pendingMove = undefined;
     if (this.options.tasks.get(task.id)?.pendingSettle) {
       this.settle.releaseSettleBoundary(task.id);
+    } else if (move) {
+      // A move asked for mid-turn runs at this boundary, and delivers what
+      // waits once the task reopens on its new provider (INF-849).
+      void this.runMove(task.id, move);
     } else {
       this.deliverPendingToTask(task, { announce: true });
     }
@@ -7689,8 +7746,13 @@ export class CrewSupervisor {
     return provider && isRetiredProvider(provider) ? provider : undefined;
   }
 
-  /** Reopen the session of an idle task left by a previous process. */
-  private async resumeTask(taskId: string): Promise<TaskRuntime> {
+  /**
+   * Reopen the session of an idle task left by a previous process, or of
+   * one moving to another provider (`move`, INF-849): it opens on the
+   * move's model and account in the same working copy, resuming the same
+   * conversation when the new backend can reopen it.
+   */
+  private async resumeTask(taskId: string, move?: MoveTarget): Promise<TaskRuntime> {
     const record = this.options.tasks.get(taskId);
     if (!record) throw new Error(`Unknown task "${taskId}".`);
     if (!record.sessionFile) {
@@ -7712,8 +7774,9 @@ export class CrewSupervisor {
       );
     // A task on a computer that runs work binds that computer's own
     // account again there; no account of this Mac's is chosen for it.
-    const attachment: { accountId?: string; changed: boolean } =
-      machine !== LOCAL_MACHINE_ID
+    const attachment: { accountId?: string; changed: boolean } = move
+      ? { ...(move.accountId ? { accountId: move.accountId } : {}), changed: false }
+      : machine !== LOCAL_MACHINE_ID
         ? { changed: false }
         : custom
           ? { accountId: record.accountId ?? undefined, changed: false }
@@ -7788,10 +7851,12 @@ export class CrewSupervisor {
           machineId: machine,
           cwd,
           resumeToken: record.sessionFile,
+          ...(move ? { model: move.model, thinkingLevel: move.thinkingLevel } : {}),
           ...this.crewmateHooks(task, livePersonal),
         },
         attachment.accountId,
         record.model ?? undefined,
+        move?.providerName,
       );
     } catch (caught) {
       if (this.tasks.get(record.id) === task) this.tasks.delete(record.id);
@@ -7799,6 +7864,10 @@ export class CrewSupervisor {
     }
     task.session = session;
     task.unsubscribe = this.follow(task, session);
+    // A moved task's record names the conversation it opened now, so a quit
+    // before its first turn ends reopens this one.
+    const token = move ? crewmateResumeToken(session.resume()) : undefined;
+    if (token) this.options.tasks.setSessionFile(record.id, token);
     livePersonal?.beginLiveTask(record.id);
     // A conversation on another computer may be in a turn this Mac follows
     // from here (`continuation_started`), which is no idle boundary.
@@ -7811,6 +7880,190 @@ export class CrewSupervisor {
     }
     this.broadcastCrewCounts();
     return task;
+  }
+
+  /** The name a person knows a provider by: its catalog name, else its id. */
+  private providerName(provider: string): string {
+    return PROVIDER_CATALOG.find((entry) => entry.id === provider)?.name ?? provider;
+  }
+
+  /** Why a move refuses the model its card offered, when the app would now pick another. */
+  private offerGone(
+    plan: { record: TaskRecord; choice: { provider: string; id: string } },
+    ask: MoveAsk,
+  ): string | undefined {
+    if (!ask.offered || offeringKey(plan.choice) === ask.offered) return undefined;
+    const handle = `${plan.record.key || plan.record.id} "${plan.record.title}"`;
+    return `${handle} did not move: the app would now pick ${this.modelName(plan.choice)}, not the model its card offered.`;
+  }
+
+  /** A model by its Settings name, as the sign-in card's Move names it. */
+  private modelName(model: { provider: string; id: string }): string {
+    return this.options.modelName?.(model) ?? model.id;
+  }
+
+  /**
+   * Where a move would take a started task now (INF-849): the router's
+   * evaluation for its own shape, with its current provider left out - or
+   * the model named, as R0 pins one - never recorded. A refusal is text:
+   * a task not started or closed, one on another computer, none that serves.
+   */
+  private planMove(
+    taskId: string,
+    model?: string,
+  ):
+    | { refused: string }
+    | {
+        record: TaskRecord;
+        from: string | undefined;
+        preview: RoutePreview;
+        choice: { provider: string; id: string };
+      } {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return { refused: `Unknown task "${taskId}".` };
+    const handle = `${record.key || record.id} "${record.title}"`;
+    if (record.kind !== "work" || record.status !== "active")
+      return { refused: `${handle} is ${describeStatus(record)}; only started work moves.` };
+    if (this.machineOf(taskId) !== LOCAL_MACHINE_ID)
+      return {
+        refused: `${handle} runs on another computer, so it stays on that computer's own subscriptions.`,
+      };
+    const router = this.options.router;
+    const from =
+      router?.servedProvider(taskId) ??
+      (record.model ? parseOfferingKey(record.model).provider || undefined : undefined);
+    if (!model && !from) return { refused: `${handle} has no provider on its record to move off.` };
+    const { override_model_id: _named, ...shape } = this.queuedShape(record);
+    const preview = router?.preview(
+      record.prompt,
+      model ? { ...shape, override_model_id: model } : shape,
+      model || !from ? {} : { withoutProvider: from },
+    );
+    if (!preview)
+      return { refused: "Automatic model choice is off, so the app cannot pick another model." };
+    const choice = preview.result.choice;
+    const named =
+      choice && model
+        ? model.includes("/")
+          ? offeringKey(choice) === model
+          : choice.id === model
+        : true;
+    if (!choice || !named)
+      return {
+        refused: model
+          ? `${model} cannot take ${handle} now, so it stays where it runs.`
+          : `No other signed-in provider can take ${handle} now, so it stays on ${this.providerName(from ?? "")}.`,
+      };
+    if (record.model === offeringKey(choice))
+      return { refused: `${handle} already runs on ${offeringKey(choice)}.` };
+    return { record, from, preview, choice: { provider: choice.provider, id: choice.id } };
+  }
+
+  /**
+   * Move a started task to another provider (INF-849): the sign-in card's
+   * Move, or update_task's model on started work. It keeps its key, branch,
+   * working copy and record. A crewmate mid-turn moves once that turn ends,
+   * and is never cut short. A refusal is text and changes nothing.
+   */
+  requestMove(taskId: string, ask: MoveAsk): { ok: boolean; text: string } {
+    const plan = this.planMove(taskId, ask.model);
+    if ("refused" in plan) return { ok: false, text: plan.refused };
+    const { record, from, choice } = plan;
+    const handle = `${record.key || record.id} "${record.title}"`;
+    if (ask.from && from !== ask.from)
+      return { ok: false, text: `${handle} already moved off ${this.providerName(ask.from)}.` };
+    const gone = this.offerGone(plan, ask);
+    if (gone) return { ok: false, text: gone };
+    if (this.moving.has(taskId)) return { ok: false, text: `${handle} is already moving.` };
+    const to = `${this.modelName(choice)} on ${this.providerName(choice.provider)}`;
+    const runtime = this.tasks.get(taskId);
+    if (runtime && runtime.state !== "idle") {
+      runtime.pendingMove = ask;
+      return { ok: true, text: `${handle} moves to ${to} once its crewmate's turn ends.` };
+    }
+    void this.runMove(taskId, ask);
+    return {
+      ok: true,
+      text: `Moving ${handle} to ${to}; it keeps its key, branch and working copy.`,
+    };
+  }
+
+  /**
+   * The move itself, between turns: route again and record why, pick the
+   * account, let go of the old session, write the record, take the sign-in
+   * card down, end the lane's outage, and reopen in the same working copy -
+   * the same conversation between two Pi providers, a new one told it moved
+   * otherwise - then deliver what waited. A failure is a feed line and a
+   * timeline row; the record then reopens on its new provider when next asked.
+   */
+  private async runMove(taskId: string, ask: MoveAsk): Promise<void> {
+    if (this.moving.has(taskId)) return;
+    this.moving.add(taskId);
+    try {
+      const runtime = this.tasks.get(taskId);
+      if (runtime && runtime.state !== "idle") {
+        runtime.pendingMove = ask;
+        return;
+      }
+      const plan = this.planMove(taskId, ask.model);
+      const refused = "refused" in plan ? plan.refused : this.offerGone(plan, ask);
+      if (refused || "refused" in plan) {
+        this.options.broadcastEvent({ type: "firstmate_note", text: refused ?? "", taskId });
+        return;
+      }
+      const { record, from, preview, choice } = plan;
+      const who = ask.by === "captain" ? "the captain" : "the first mate";
+      preview.reasons.push(
+        ask.model
+          ? `moved by ${who} to the model named`
+          : `moved by ${who} off ${from ?? "its provider"}`,
+      );
+      this.options.router?.commit(taskId, preview);
+      const accountId = this.options.accounts?.selectForSpawn(taskId, choice.provider);
+      if (runtime) {
+        this.releaseSession(runtime);
+        this.tasks.delete(taskId);
+      }
+      const fromName = from ? this.providerName(from) : "its provider";
+      const toName = this.providerName(choice.provider);
+      this.options.tasks.recordMove(taskId, {
+        model: choice,
+        accountId: accountId ?? null,
+        actor: ask.by,
+        text: `${who} moved it from ${fromName} to ${this.modelName(choice)} on ${toName}`,
+        data: {
+          moved: {
+            from: record.model,
+            to: offeringKey(choice),
+            ...(accountId ? { accountId } : {}),
+          },
+        },
+      });
+      this.cards.clearAuthDecisionCard(crewSignInCardId(taskId));
+      this.options.inbox.movedProvider(taskId);
+      const level = preview.result.servedBucket ?? preview.result.bucket;
+      const resumed = await this.resumeTask(taskId, {
+        model: choice,
+        ...(accountId ? { accountId } : {}),
+        thinkingLevel:
+          record.shape?.override_reasoning ??
+          this.options.router?.reasoningChoice(choice, level) ??
+          levelDefaultReasoning(level),
+        providerName: toName,
+      });
+      this.deliverPendingToTask(resumed);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      this.options.tasks.note(taskId, `its move could not reopen it: ${message}`, { news: true });
+      this.options.broadcastEvent({
+        type: "firstmate_note",
+        text: `Task ${this.options.tasks.get(taskId)?.title ?? taskId} could not move: ${message}`,
+        taskId,
+      });
+    } finally {
+      this.moving.delete(taskId);
+      this.broadcastCrewCounts();
+    }
   }
 
   /**
@@ -12410,6 +12663,20 @@ export class CrewSupervisor {
       case "decline-project":
         this.projectSetup?.decline(effect.arg);
         return {};
+      case "move-task": {
+        // The sign-in card's Move (INF-849): `arg` is the task, the
+        // provider it moves off and the model the card offered.
+        const [taskId, from, ...offered] = effect.arg?.split(":") ?? [];
+        if (!taskId || !from) return {};
+        const moved = this.requestMove(taskId, {
+          by: "captain",
+          from,
+          ...(offered.length > 0 ? { offered: offered.join(":") } : {}),
+        });
+        if (!moved.ok)
+          this.options.broadcastEvent({ type: "firstmate_note", text: moved.text, taskId });
+        return {};
+      }
       case "continue-task":
         // The stall card's Continue: the ladder's nudge again, now with the
         // captain's authority - a new turn, which ends the episode.

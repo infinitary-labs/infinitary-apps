@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect } from "@playwright/test";
+import type { CatalogModelView } from "../../src/shared/quota";
 import { scratchDir } from "../helpers/scratchDirs";
 import { NO_CLAUDE_LOGIN_USER } from "./claudeSeat";
 import { type LaunchedApp, type LaunchOptions, launchApp } from "./launch";
@@ -29,7 +30,8 @@ import { MOCK_KEY_PROVIDER_ID, mockProviderOverrideModelsJson } from "./mockProv
 
 export const CLAUDE_CREW_ACCOUNT = "acct_claude_crew";
 const FIRSTMATE_ACCOUNT = "acct_openrouter_crew";
-const FIRSTMATE_MODEL_KEY = `${MOCK_KEY_PROVIDER_ID}/~openai/gpt-luna-latest`;
+/** The OpenRouter model the Firstmate runs on, slotted medium. */
+export const FIRSTMATE_MODEL_KEY = `${MOCK_KEY_PROVIDER_ID}/~openai/gpt-luna-latest`;
 
 /**
  * The two accounts. The Firstmate's runtime reads the app-scoped
@@ -82,8 +84,13 @@ function seedAccounts(userDataDir: string): void {
  * Claude's allowance, from a fixture: the live sensor would read the
  * machine's own login to ask Anthropic, and this run must not.
  */
-function writeQuotaFixture(now: number): string {
+function writeQuotaFixture(now: number, catalog?: CatalogModelView[]): string {
   const dir = scratchDir("infinitary-quota-fixture-");
+  if (catalog)
+    writeFileSync(
+      join(dir, "models.json"),
+      JSON.stringify({ generatedAt: new Date(now).toISOString(), models: catalog }),
+    );
   const HOUR = 3600 * 1000;
   writeFileSync(
     join(dir, "snapshot.json"),
@@ -152,7 +159,13 @@ export async function launchClaudeCrew(
     | "prepareHome"
     | "claudeTurns"
     | "env"
-  > = {},
+  > & {
+    /**
+     * The model catalog routing walks, from the allowance fixture; absent,
+     * there is none, and only a named model routes.
+     */
+    catalog?: CatalogModelView[];
+  } = {},
 ): Promise<LaunchedApp> {
   const userDataDir = options.userDataDir ?? scratchDir("infinitary-e2e-");
   const relaunch = existsSync(join(userDataDir, "accounts", "registry.json"));
@@ -179,7 +192,7 @@ export async function launchClaudeCrew(
     env: {
       USER: NO_CLAUDE_LOGIN_USER,
       ...options.env,
-      INFINITARY_QUOTA_FIXTURE_DIR: writeQuotaFixture(Date.now()),
+      INFINITARY_QUOTA_FIXTURE_DIR: writeQuotaFixture(Date.now(), options.catalog),
     },
   });
   if (relaunch) {

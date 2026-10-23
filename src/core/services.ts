@@ -2039,6 +2039,7 @@ export async function createServices(
     answerJson: (caller, instruction, text, signal) =>
       decisions.answerJson(caller, instruction, text, signal),
     crewSpeed: (model) => slots.speed(model),
+    modelName: (model) => slots.nameOf(model),
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     build: host.app.version,
     sessions: sessionFactories,

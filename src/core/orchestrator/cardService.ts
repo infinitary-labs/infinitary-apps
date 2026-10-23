@@ -203,6 +203,14 @@ export type FirstmatePauseCard = {
   move?: { providerId: string; providerName: string };
 };
 
+/** A crewmate's sign-in card's title, and the Firstmate's own on a 401. */
+export const PROVIDER_SIGN_IN_TITLE = "A provider needs sign in";
+
+/** A move's button: a paused seat's names a provider, a crewmate's sign-in card the model. */
+export function moveLabel(to: string): string {
+  return `Move to ${to}`;
+}
+
 /** A paused seat's card title: what stopped it, never how. */
 export function firstmatePauseTitle(pause: SeatPauseClass, providerName: string): string {
   switch (pause) {
@@ -1771,7 +1779,7 @@ export class CardService {
       ? [
           {
             id: "move-flagship",
-            label: `Move to ${input.move.providerName}`,
+            label: moveLabel(input.move.providerName),
             variant: "primary",
             default: true,
             effect: { kind: "host", op: "move-flagship", arg: input.move.providerId },
@@ -1854,12 +1862,19 @@ export class CardService {
    * An app-raised auth decision card (also used by the Firstmate agent). A
    * crewmate's own sign-in card carries its task, so it holds that task's
    * turn through the gate like any card; an account's files its own row.
+   * With `move`, its default moves the task to the model the app picked,
+   * by that model's name (INF-849), `arg` being the task, the provider it
+   * moves off and the model offered; Open settings stays beside it.
    */
   addAuthDecisionCard(
     id: string,
     meta: string,
     body: string,
-    options?: { restoreAccountId?: string; taskId?: string },
+    options?: {
+      restoreAccountId?: string;
+      taskId?: string;
+      move?: { arg: string; modelName: string };
+    },
   ): void {
     if (this.cards.has(id)) return;
     const restoreAccountId = options?.restoreAccountId;
@@ -1868,10 +1883,21 @@ export class CardService {
       ...(options?.taskId ? { taskId: options.taskId } : {}),
       author: "host",
       priority: HOST_CARD_PRIORITY,
-      title: restoreAccountId ? body : "A provider needs sign in",
+      title: restoreAccountId ? body : PROVIDER_SIGN_IN_TITLE,
       meta,
       body: restoreAccountId ? NEEDS_REAUTH_CONSEQUENCE : body,
       actions: [
+        ...(options?.move && !restoreAccountId
+          ? [
+              {
+                id: "move-task",
+                label: moveLabel(options.move.modelName),
+                variant: "primary" as const,
+                default: true,
+                effect: { kind: "host" as const, op: "move-task" as const, arg: options.move.arg },
+              },
+            ]
+          : []),
         restoreAccountId
           ? {
               id: "sign-in",
@@ -1882,7 +1908,7 @@ export class CardService {
           : {
               id: "open-settings",
               label: "Open settings",
-              variant: "primary",
+              variant: options?.move ? "secondary" : "primary",
               // Sign-in lives on the Intelligence tab, so that is where the
               // card lands - never the General tab one click short of it.
               effect: { kind: "open", target: "subscriptions" },

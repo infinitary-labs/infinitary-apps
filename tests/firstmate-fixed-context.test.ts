@@ -370,9 +370,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "Only when the user named one; it wins when available, else normal routing.",
   },
   {
-    rule: "a model named for a filed task keeps that task",
+    rule: "a model named for a task, filed or started, keeps that task (INF-849)",
     home: { tool: "update_task" },
-    says: "When the user names a model for a filed task, pass override_model_id - with start_now to start it now: it keeps its key and links, so never drop it and spawn a replacement.",
+    says: "When the user names a model, pass override_model_id (start_now starts it now): it keeps its key and links; never drop it to spawn a replacement.",
   },
   {
     rule: "a step you add yourself is declared internal, the captain's own ask never is",

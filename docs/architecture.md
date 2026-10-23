@@ -283,7 +283,7 @@ A Pi-served session - the seat, a crewmate or a question - is a Pi `AgentSession
   It has no account, no quota window, no role and no slot.
 - **Premium** (captain decision A): a premium-slot model is reached only by a premium request - which the first mate may make only because the user asked - or by an escalation rung, or by a pin.
   `premium` sits on its own fallback row alone, so no other class can fall into it.
-- **Degradation**: stale → route with stale badge; unknown → conservative bucket; auth-required → decision card, never silent.
+- **Degradation**: stale → route with stale badge; unknown → conservative bucket; auth-required → decision card, never silent; a crewmate's card offers to move its task to another provider when one serves (`docs/task-record.md`, "Moving a started task to another provider").
   A premium ask that cannot be served queues behind one decision card instead of downgrading silently; any other tier falls back with a feed line.
 
 ## 7. Work substrate and persistence

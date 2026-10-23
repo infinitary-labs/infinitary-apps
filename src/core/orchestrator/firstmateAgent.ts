@@ -2814,6 +2814,12 @@ export class FirstmateAgent {
                 )
               : null;
             const runsOn = input.runsOn;
+            // A model named for started work moves it there between turns,
+            // keeping its key, branch and working copy (INF-849).
+            const moveTo =
+              record.kind === "work" && record.status === "active"
+                ? input.model?.trim()
+                : undefined;
             // A typed hand-off is checked as a new task's is (INF-799); empty clears it.
             const handOff = (() => {
               if (input.resultSchema === undefined && input.branchFrom === undefined) return {};
@@ -2855,7 +2861,7 @@ export class FirstmateAgent {
               ...(input.basis !== undefined ? { basis: input.basis } : {}),
               ...handOff,
               ...(input.speed !== undefined ? { speed: input.speed } : {}),
-              ...(input.model !== undefined ? { model: input.model } : {}),
+              ...(input.model !== undefined && !moveTo ? { model: input.model } : {}),
               ...(input.reasoning !== undefined ? { reasoning: input.reasoning } : {}),
               ...(input.placementRequirements !== undefined
                 ? { placementRequirements: input.placementRequirements }
@@ -2902,7 +2908,21 @@ export class FirstmateAgent {
               },
               () => {},
             );
-            if (changes.length === 0) return `${record.key || record.id} is unchanged.`;
+            const move = moveTo
+              ? supervisor.requestMove(record.id, { by: "firstmate", model: moveTo })
+              : undefined;
+            if (move?.ok)
+              this.noteDelivery({
+                outcome: "action",
+                kind: "work",
+                tool: "update_task",
+                ref: record.id,
+              });
+            if (changes.length === 0) {
+              if (move && !move.ok) throw new TaskGraphRefusal(move.text);
+              if (move) return move.text;
+              return `${record.key || record.id} is unchanged.`;
+            }
             const updated = tasks.get(record.id) ?? record;
             if (input.speed) supervisor.noteUnsupportedSpeed(updated.id, input.speed);
             this.replyFacts.app = `Updated ${updated.key}: ${updated.title}`;
@@ -2931,7 +2951,7 @@ export class FirstmateAgent {
               supervisor.graphChanged();
             }
             const now = tasks.get(record.id);
-            return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}`;
+            return `Updated ${now?.key || record.id}: ${changes.join(", ")}.${policyNote ? ` ${policyNote}` : ""}${move ? ` ${move.text}` : ""}`;
           })();
           return { text, ok: true };
         } catch (caught) {

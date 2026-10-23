@@ -2637,6 +2637,43 @@ export class TaskService {
     run();
   }
 
+  /**
+   * A started task moved to another provider between turns (INF-849): the
+   * record names the model and account that serve it from here on, and one
+   * timeline row and feed line, written as whoever asked, says so. Its key,
+   * branch, working copy and history stay.
+   */
+  recordMove(
+    id: string,
+    input: {
+      model: { provider: string; id: string };
+      accountId: string | null;
+      actor: "captain" | "firstmate";
+      text: string;
+      data: Record<string, unknown>;
+    },
+  ): void {
+    const at = this.now();
+    const run = this.write(() => {
+      this.mustGet(id);
+      this.patch(id, {
+        model: `${input.model.provider}/${input.model.id}`,
+        accountId: input.accountId,
+        updatedAt: at,
+      });
+      this.addEvent({
+        taskId: id,
+        at,
+        actor: input.actor,
+        kind: "note",
+        text: input.text,
+        data: { ...input.data, news: true },
+        feed: true,
+      });
+    });
+    run();
+  }
+
   /** A dispatch that failed returns the row to the queue behind a gate. */
   requeue(id: string, gate: TaskGate, reason: string): void {
     const at = this.now();

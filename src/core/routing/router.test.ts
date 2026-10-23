@@ -554,6 +554,38 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
     );
   });
 
+  // INF-849: a started task moves off the provider that failed it, never
+  // back onto it, where R9's preference would fall back.
+  it("leaves a provider out entirely for a move, and finds nothing when only it serves", () => {
+    const db = openInMemoryDatabase();
+    const settings = new SettingsStore(db);
+    let available = [
+      { provider: "github-copilot", id: "gpt-5.5" },
+      { provider: "openai-codex", id: "gpt-5.5" },
+    ];
+    const router = new Router({
+      decisions: new DecisionStore(db),
+      settings,
+      quota: fakeQuota({
+        generatedAt: "now",
+        models: [
+          { provider: "codex", id: "gpt-5.5", label: "gpt-5.5", effectivePercentRemaining: 80 },
+        ],
+      }),
+      availableModels: () => available,
+    });
+    const moved = router.preview("promote the alpha", UNCLEAR, {
+      withoutProvider: "github-copilot",
+    });
+    expect(moved?.result.choice).toEqual({ provider: "openai-codex", id: "gpt-5.5" });
+    expect(moved?.reasons).toContain("left out github-copilot, the provider the task moved off");
+    available = [{ provider: "github-copilot", id: "gpt-5.5" }];
+    expect(
+      router.preview("promote the alpha", UNCLEAR, { withoutProvider: "github-copilot" })?.result
+        .choice,
+    ).toBeUndefined();
+  });
+
   it("routes a task among the pool it is given - another computer's own sign-ins - and never this Mac's", () => {
     const db = openInMemoryDatabase();
     const settings = new SettingsStore(db);

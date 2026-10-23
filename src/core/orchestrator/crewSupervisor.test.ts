@@ -314,7 +314,17 @@ type SetupExtras = {
     avoidProvider?: string;
   }) => void;
   recordUsage?: (input: RecordUsageInput) => void;
+  /**
+   * What the router evaluates for a move (INF-849): the model it would pick
+   * for the shape with `withoutProvider` left out. Absent, nothing serves.
+   */
+  movePick?: (
+    shape: WorkShape,
+    options: { withoutProvider?: string },
+  ) => { provider: string; id: string } | undefined;
   noteCutOff?: (accountId: string, cutOff: import("@shared/authFailure").CutOff) => void;
+  /** A model's Settings name (`ModelSlots.nameOf`). */
+  modelName?: (model: { provider: string; id: string }) => string;
   serveability?: AccountServeability;
   quotaGateCleared?: (ref: string) => boolean;
   quotaGateRefValid?: (ref: string) => boolean;
@@ -441,6 +451,17 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
               }
             );
           },
+          // A move's evaluation, never recorded until it is committed.
+          preview: (_prompt: string, shape: WorkShape, options: { withoutProvider?: string }) => {
+            const choice = extras.movePick?.(shape, options);
+            return {
+              result: { bucket: "high" as const, rule: "R8" as const, ...(choice ? { choice } : {}) },
+              reasons: [],
+              preferenceRank: 0,
+              requiresReasoningWait: false,
+            };
+          },
+          commit: vi.fn(),
           // The builder's served provider (R9): the routed model's, as the
           // real router reads it off routing_decisions.
           servedProvider: () => extras.routedModel?.provider,
@@ -477,6 +498,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
     ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),
+    ...(extras.modelName ? { modelName: extras.modelName } : {}),
     ...(extras.serveability ? { serveability: extras.serveability } : {}),
     ...(extras.quotaGateCleared ? { quotaGateCleared: extras.quotaGateCleared } : {}),
     ...(extras.quotaGateRefValid ? { quotaGateRefValid: extras.quotaGateRefValid } : {}),
@@ -833,6 +855,177 @@ describe("CrewSupervisor", () => {
     expect(result.effect).toEqual({ kind: "open", target: "subscriptions" });
     await tick();
     expect(cards().find((card) => card.actions.length > 0)).toBeUndefined();
+  });
+
+  // INF-849: the captain's "it should offer an option to swap the crewmate to
+  // a different provider" - the sign-in card's default moves the task to the
+  // app's pick, with the failed provider left out, keeping its key, branch
+  // and working copy; between two Pi providers the conversation goes on.
+  it("offers Move to the app's pick on a crewmate's sign-in card, and the click moves the task in place", async () => {
+    const copilot = { provider: "github-copilot", id: "gpt-5.1" };
+    const codex = { provider: "openai-codex", id: "gpt-6.1-sol" };
+    const crewmate = fakeCrewmate({ model: copilot });
+    const moved = fakeCrewmate({ model: codex });
+    const left: (string | undefined)[] = [];
+    const { supervisor, cards, tasks, sessionSpecs, specs, workspace, events } = setup(crewmate, {
+      routedModel: copilot,
+      crewmates: [moved],
+      accounts: {
+        selectForSpawn: (_taskId, provider) =>
+          provider === "openai-codex" ? "acct_codex" : "acct_copilot",
+        reselectForResume: () => ({ changed: false }),
+        labelOf: () => undefined,
+      },
+      movePick: (_shape, options) => {
+        left.push(options.withoutProvider);
+        return options.withoutProvider === "github-copilot" ? codex : undefined;
+      },
+      modelName: (model) => (model.id === codex.id ? "GPT-6.1 Sol" : model.id),
+    });
+    const { taskId } = await supervisor.commission({
+      title: "Promote the latest alpha",
+      intent: intentOf("do something"),
+    });
+    const before = tasks.get(taskId);
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    // INF-839's own words, thrown as its turn started.
+    crewmate.failPrompt("No API key found for github-copilot");
+    await vi.waitFor(() =>
+      expect(cards().find((card) => card.id === `card-auth-${taskId}`)).toBeDefined(),
+    );
+    const card = cards().find((card) => card.id === `card-auth-${taskId}`);
+    expect(left).toContain("github-copilot");
+    expect(card?.actions.map((action) => [action.label, action.default === true])).toEqual([
+      // The captain's words: show "Move to <model>", the model it would run on.
+      ["Move to GPT-6.1 Sol", true],
+      ["Open settings", false],
+    ]);
+    // A message the captain sent meanwhile is tried again on Copilot, and the
+    // click waits for that turn to end: a turn is never cut short.
+    await supervisor.steerCrewmate(taskId, "the release run finished");
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(2));
+    supervisor.act(card?.id ?? "", "move-task");
+    await tick();
+    expect(specs).toHaveLength(1);
+    crewmate.failPrompt("No API key found for github-copilot");
+    await vi.waitFor(() => expect(moved.promptCalls.length).toBeGreaterThan(0));
+    const after = tasks.get(taskId);
+    expect(after).toMatchObject({
+      key: before?.key,
+      status: "active",
+      branch: before?.branch,
+      worktreeDir: before?.worktreeDir,
+      model: "openai-codex/gpt-6.1-sol",
+      accountId: "acct_codex",
+    });
+    expect(workspace.removeTaskWorktree).not.toHaveBeenCalled();
+    // The same conversation, reopened in the same working copy on the new model.
+    expect(specs.at(-1)).toMatchObject({
+      resumeToken: "/tmp/s1.jsonl",
+      model: codex,
+      cwd: before?.worktreeDir,
+    });
+    expect(sessionSpecs.at(-1)?.binding).toMatchObject({ accountId: "acct_codex" });
+    expect(crewmate.dispose).toHaveBeenCalled();
+    expect(moved.promptCalls.join("\n")).toContain("the release run finished");
+    // The history says who moved it, and the card is down.
+    expect(tasks.timeline(taskId).map((event) => [event.actor, event.text])).toContainEqual([
+      "captain",
+      "the captain moved it from Copilot to GPT-6.1 Sol on Codex",
+    ]);
+    await tick();
+    expect(cards().find((entry) => entry.id === `card-auth-${taskId}`)).toBeUndefined();
+    expect(events.some((event) => event.type === "task_finished")).toBe(false);
+  });
+
+  // INF-849: a card left up after the task moved does nothing again.
+  it("refuses a second Move from a card whose task already left that provider", async () => {
+    const copilot = { provider: "github-copilot", id: "gpt-5.1" };
+    const crewmate = fakeCrewmate({ model: copilot });
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: copilot,
+      movePick: () => ({ provider: "openai-codex", id: "gpt-6.1-sol" }),
+    });
+    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    crewmate.finishPrompt();
+    await tick();
+    expect(supervisor.requestMove(taskId, { by: "captain", from: "xai" })).toEqual({
+      ok: false,
+      text: `${tasks.get(taskId)?.key} "t" already moved off Grok.`,
+    });
+  });
+
+  // INF-849, the captain: "it's better if we can show "Move to <model>"" - a
+  // click moves to the model its card named, or does not move.
+  it("refuses a Move whose card named a model the app would no longer pick", async () => {
+    const copilot = { provider: "github-copilot", id: "gpt-5.1" };
+    const crewmate = fakeCrewmate({ model: copilot });
+    const { supervisor, tasks } = setup(crewmate, {
+      routedModel: copilot,
+      movePick: () => ({ provider: "openai-codex", id: "gpt-6.1-sol" }),
+      modelName: (model) => (model.id === "gpt-6.1-sol" ? "GPT-6.1 Sol" : model.id),
+    });
+    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    crewmate.finishPrompt();
+    await tick();
+    expect(
+      supervisor.requestMove(taskId, {
+        by: "captain",
+        from: "github-copilot",
+        offered: "xai/grok-5",
+      }),
+    ).toEqual({
+      ok: false,
+      text: `${tasks.get(taskId)?.key} "t" did not move: the app would now pick GPT-6.1 Sol, not the model its card offered.`,
+    });
+    expect(tasks.get(taskId)?.model).toBe("github-copilot/gpt-5.1");
+  });
+
+  // INF-849: "A turn is never cut short" - a move asked for mid-turn waits
+  // for the turn to end; from a Claude conversation, which Pi cannot reopen,
+  // the crewmate starts a new conversation told it moved.
+  it("moves a crewmate mid-turn once its turn ends, and tells a new conversation it moved", async () => {
+    const claude = { provider: "anthropic-claude", id: "claude-fable-5" };
+    const codex = { provider: "openai-codex", id: "gpt-6.1-sol" };
+    const crewmate = fakeCrewmate({
+      model: claude,
+      resume: { backend: "claude", sessionId: "0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b" },
+    });
+    const moved = fakeCrewmate({ model: codex });
+    const { supervisor, tasks, specs, sessionSpecs } = setup(crewmate, {
+      routedModel: claude,
+      crewmates: [moved],
+      movePick: (shape) => (shape.override_model_id === "openai-codex/gpt-6.1-sol" ? codex : undefined),
+    });
+    const { taskId } = await supervisor.commission({ title: "t", intent: intentOf("work") });
+    await vi.waitFor(() => expect(crewmate.promptCalls).toHaveLength(1));
+    const asked = supervisor.requestMove(taskId, {
+      by: "firstmate",
+      model: "openai-codex/gpt-6.1-sol",
+    });
+    expect(asked.ok).toBe(true);
+    expect(asked.text).toContain("once its crewmate's turn ends");
+    expect(specs).toHaveLength(1);
+    expect(crewmate.aborts).toEqual([]);
+    crewmate.finishPrompt();
+    await vi.waitFor(() => expect(specs).toHaveLength(2));
+    // The next message reaches the new conversation after what it is told first.
+    await supervisor.steerCrewmate(taskId, "carry on");
+    await vi.waitFor(() => expect(moved.promptCalls.length).toBeGreaterThan(0));
+    expect(moved.promptCalls[0]).toContain("carry on");
+    expect(specs.at(-1)).toMatchObject({ model: codex });
+    const shape = sessionSpecs.at(-1)?.shape;
+    expect(shape?.turns === "rolling" && shape.record.resume).toBe(undefined);
+    expect(moved.promptCalls[0]).toContain(
+      "your task moved to Codex, which cannot reopen a conversation another provider held",
+    );
+    expect(tasks.get(taskId)?.model).toBe("openai-codex/gpt-6.1-sol");
+    expect(tasks.timeline(taskId).map((event) => [event.actor, event.text])).toContainEqual([
+      "firstmate",
+      "the first mate moved it from Claude to gpt-6.1-sol on Codex",
+    ]);
   });
 
   it("never mints the sign-in card for a failure that only sounds auth-shaped", async () => {

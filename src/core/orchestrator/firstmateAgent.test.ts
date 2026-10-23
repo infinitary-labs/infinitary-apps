@@ -6623,10 +6623,12 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       expect.objectContaining({ fromId: tasks.byKey("SCR-3")?.id, type: "related" }),
     ]);
     expect(tasks.list()).toHaveLength(before);
-    // Once it is under way the model is not the record's to change: a refusal as text.
-    expect(
-      await text("update_task", { task: "SCR-2", override_model_id: "gpt-6-astra" }),
-    ).toContain("only be named on open work");
+    // Once it is under way a named model moves it (INF-849); with automatic
+    // model choice off here, the move is refused as text and nothing changes.
+    expect(await text("update_task", { task: "SCR-2", override_model_id: "gpt-6-astra" })).toBe(
+      "Automatic model choice is off, so the app cannot pick another model.",
+    );
+    expect(tasks.get(filed.id)?.shape?.override_model_id).toBe("claude-fable-5-1");
   });
 
   it("answers a spawn on a named model through native tools without confirming a model nothing recorded (FI3-444)", async () => {

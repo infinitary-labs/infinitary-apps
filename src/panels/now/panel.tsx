@@ -76,16 +76,22 @@ import {
  * or the keyboard rests on goes to the app with its box (`point.peekTask`),
  * and the app opens the crew summary beside the panel, level with it. The
  * panel lets it go when the pointer or the keyboard leaves that row, on a
- * press, on Esc, and when the list moves under it. Leaving another row lets
- * nothing go: focus leaving the row a click opened keeps the summary of the
- * row the pointer rests on, so Esc in the window still closes it alone.
+ * press, on Esc, and when the list moves under the pointer. Leaving another
+ * row lets nothing go: focus leaving the row a click opened keeps the
+ * summary of the row the pointer rests on, so Esc in the window still
+ * closes it alone. The keyboard's rest goes where its row goes (INF-902):
+ * a row that moves takes its summary along, and a task that moves to another
+ * group keeps focus, the list's Tab stop and an open summary on its row there.
  *
  * The keyboard moves through the list as through a tree of groups
  * (./nav.ts; docs/keyboard.md, "Lists and Settings"): the list is one Tab
  * stop, ↑ ↓ Home End move between the rows and the headers that open and
  * close, → and ← open and close a group, Enter opens a row, and ↓ in the
  * search goes to the first match. F6 brings focus here (`asks.onFocus`),
- * onto the row it last had.
+ * onto the row it last had. A row's stop is its task's, so a task that moves
+ * to another group keeps it, and focus resting on a row that leaves the page
+ * goes to the list's stop as it then stands: the task's row in its new
+ * group, or the header of the closed group it moved into.
  *
  * Two User Timing measures make the paint observable from outside the
  * page: `now:render` (one paint of the groups) and `now:lag` (from the
@@ -111,10 +117,16 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
   // The row the pointer or the keyboard rests on. Edges light up; the stage does not slow.
   const [restedId, setRestedId] = useState<string | null>(null);
   const [placed, setPlaced] = useState<ReadonlyMap<string, number>>(() => new Map());
-  // The row the pointer rests on, and where it was when the app was told.
-  const peeked = useRef<{ row: HTMLElement; box: string } | null>(null);
+  // The row the pointer or the keyboard rests on, where it was when the app
+  // was told, and whether the keyboard's focus put it there.
+  const peeked = useRef<{
+    row: HTMLElement;
+    task: PanelTaskRow;
+    box: string;
+    keyboard: boolean;
+  } | null>(null);
   const peek = useCallback(
-    (row: HTMLElement | null, task?: PanelTaskRow) => {
+    (row: HTMLElement | null, task?: PanelTaskRow, keyboard = false) => {
       setRestedId(task?.id ?? null);
       if (!row || !task) {
         if (!peeked.current) return;
@@ -123,7 +135,7 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
         return;
       }
       const { top, right, bottom, left } = row.getBoundingClientRect();
-      peeked.current = { row, box: boxKey(row) };
+      peeked.current = { row, task, box: boxKey(row), keyboard };
       point.peekTask({ taskId: task.id, box: { top, right, bottom, left } });
     },
     [point],
@@ -134,12 +146,29 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
     },
     [peek],
   );
-  // A row arriving or leaving, or a group opening, moves the list under a
-  // still pointer: the row it rested on is no longer there, so it lets go.
-  useLayoutEffect(() => {
-    const at = peeked.current;
-    if (at && (!at.row.isConnected || boxKey(at.row) !== at.box)) peek(null);
-  });
+  // The row focus rests on, and whether it shows the ring. A row React
+  // removes while it has focus hears no blur, so this still names it once
+  // its task's row is drawn again in another group.
+  const focused = useRef<{ row: HTMLElement; task: PanelTaskRow; ring: boolean } | null>(null);
+  // Set while focus follows a row that left: its summary was closed, so the
+  // row focus lands on keeps it closed.
+  const quiet = useRef(false);
+  const focusRow = useCallback(
+    (row: HTMLElement, task: PanelTaskRow) => {
+      const ring = row.matches(":focus-visible");
+      focused.current = { row, task, ring };
+      // The keyboard rests on a row as the pointer does: its summary opens beside it.
+      if (ring && !quiet.current) peek(row, task, true);
+    },
+    [peek],
+  );
+  const blurRow = useCallback(
+    (row: HTMLElement) => {
+      if (focused.current?.row === row) focused.current = null;
+      leave(row);
+    },
+    [leave],
+  );
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || !peeked.current) return;
@@ -327,14 +356,47 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
   const navItems = useMemo(() => nowNavItems(shownGroups), [shownGroups]);
   const stop = rovingKey(navItems, lastStop);
   // A stop F6 lands on shows the ring: the key was the app's, not this page's.
-  const focusStop = (key: string | null, landing = false) => {
+  // So does the one focus follows to from a row that showed it.
+  const focusStop = (key: string | null, ring = false) => {
     if (key === null) return;
     const stopElement = groupsRef.current?.querySelector<HTMLElement>(
       `[data-now-nav="${CSS.escape(key)}"]`,
     );
-    if (stopElement && landing) focusWithRing(stopElement);
+    if (stopElement && ring) focusWithRing(stopElement);
     else stopElement?.focus();
   };
+
+  // The rows as just drawn. A row focus rested on that left the page - its
+  // task moved to another group, or off the list - took focus with it:
+  // focus goes to the list's stop as it now stands, the task's row where
+  // the list draws it now, else the header of the closed group holding it,
+  // else the first stop. A summary open on it moves with it; one closed
+  // stays closed. Then a row arriving or leaving, or a group opening, moves
+  // the list under a still pointer, so the row it rested on lets go; the
+  // keyboard's rest goes with its row.
+  useLayoutEffect(() => {
+    const was = focused.current;
+    const active = document.activeElement;
+    if (was && !was.row.isConnected && (!active || active === document.body)) {
+      focused.current = null;
+      if (document.hasFocus()) {
+        const at = peeked.current;
+        quiet.current = !(at?.keyboard && at.task.id === was.task.id);
+        try {
+          focusStop(stop, was.ring);
+        } finally {
+          quiet.current = false;
+        }
+      }
+    }
+    const at = peeked.current;
+    if (!at || (at.row.isConnected && boxKey(at.row) === at.box)) return;
+    if (at.keyboard && at.row.isConnected && at.row === document.activeElement) {
+      peek(at.row, at.task, true);
+    } else {
+      peek(null);
+    }
+  });
   const onListKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
     const from = (event.target as HTMLElement)
@@ -510,6 +572,8 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
                 onOpen={openTask}
                 onPeek={peek}
                 onLeave={leave}
+                onFocusRow={focusRow}
+                onBlurRow={blurRow}
               />
             ))}
         </div>
@@ -539,6 +603,8 @@ export function Group({
   onOpen,
   onPeek,
   onLeave,
+  onFocusRow,
+  onBlurRow,
 }: {
   group: PanelGroup;
   rows: NowRow[];
@@ -559,6 +625,10 @@ export function Group({
   onPeek?: (row: HTMLElement | null, task?: PanelTaskRow) => void;
   /** The pointer or the keyboard left this row: what rests on it, and only that, goes. */
   onLeave?: (row: HTMLElement) => void;
+  /** Focus reached a row: the keyboard rests on it. */
+  onFocusRow?: (row: HTMLElement, task: PanelTaskRow) => void;
+  /** Focus left a row for somewhere else; a row removed while focused hears none. */
+  onBlurRow?: (row: HTMLElement) => void;
 }) {
   const collapsible = !OPEN_BY_DEFAULT.has(group);
   const reveal = useInPlaceReveal(open);
@@ -611,16 +681,17 @@ export function Group({
               key={task.id}
               task={task}
               depth={depth}
-              group={group}
               board={board}
               singleProject={singleProject}
               selected={selectedTaskIds.includes(task.id)}
               lit={litTaskId === task.id}
-              isStop={stop === rowNavKey(group, task.id)}
+              isStop={stop === rowNavKey(task.id)}
               onStop={onStop}
               onOpen={onOpen}
               onPeek={onPeek}
               onLeave={onLeave}
+              onFocusRow={onFocusRow}
+              onBlurRow={onBlurRow}
             />
           ))}
         </div>
@@ -633,7 +704,6 @@ export function Group({
 const Row = memo(function Row({
   task,
   depth,
-  group,
   board,
   singleProject,
   selected,
@@ -643,10 +713,11 @@ const Row = memo(function Row({
   onOpen,
   onPeek,
   onLeave,
+  onFocusRow,
+  onBlurRow,
 }: {
   task: PanelTaskRow;
   depth: number;
-  group: PanelGroup;
   board: PanelTaskBoard;
   singleProject: boolean;
   selected: boolean;
@@ -656,6 +727,8 @@ const Row = memo(function Row({
   onOpen: (task: PanelTaskRow) => void;
   onPeek?: (row: HTMLElement | null, task?: PanelTaskRow) => void;
   onLeave?: (row: HTMLElement) => void;
+  onFocusRow?: (row: HTMLElement, task: PanelTaskRow) => void;
+  onBlurRow?: (row: HTMLElement) => void;
 }) {
   const word = wordOf(task);
   const trailing = trailingOf(board, task, singleProject);
@@ -674,7 +747,7 @@ const Row = memo(function Row({
       data-now-trailing={trailing.name || trailing.place ? "" : undefined}
       data-now-out-of-reach={trailing.outOfReach ? "" : undefined}
       data-now-connecting={trailing.connecting ? "" : undefined}
-      data-now-nav={rowNavKey(group, task.id)}
+      data-now-nav={rowNavKey(task.id)}
       tabIndex={isStop ? 0 : -1}
       style={{ "--depth": String(depth) } as CSSProperties}
       aria-label={label}
@@ -682,12 +755,11 @@ const Row = memo(function Row({
       onPointerEnter={(event) => onPeek?.(event.currentTarget, task)}
       onPointerLeave={(event) => onLeave?.(event.currentTarget)}
       onPointerDown={() => onPeek?.(null)}
-      // The keyboard rests on a row as the pointer does: its summary opens beside it.
       onFocus={(event: FocusEvent<HTMLButtonElement>) => {
-        onStop?.(rowNavKey(group, task.id));
-        if (event.currentTarget.matches(":focus-visible")) onPeek?.(event.currentTarget, task);
+        onStop?.(rowNavKey(task.id));
+        onFocusRow?.(event.currentTarget, task);
       }}
-      onBlur={(event) => onLeave?.(event.currentTarget)}
+      onBlur={(event) => onBlurRow?.(event.currentTarget)}
     >
       <span data-now-dot="">
         <TaskStatusMark reading={taskStatusOf(task)} nativeTitle={false} />

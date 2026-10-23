@@ -1,12 +1,17 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
+import { openDatabase } from "../../src/core/storage/db";
+import { seedTask, type TaskSeed } from "../../src/core/tasks/seedTask";
+import { TaskService } from "../../src/core/tasks/taskService";
+import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
+import { within } from "./layout";
 import {
   KEYBOARD_CARD_TITLES,
   KEYBOARD_CARDS_PROMPT_MARKER,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { expandDock, nowFrame, rowSummary } from "./rails";
+import { expandDock, nowFrame, openRowSummary, POINT_SUMMARY, rowSummary } from "./rails";
 import { pager, showCard, shownCardFrame } from "./stack";
 import {
   commandSearch,
@@ -24,8 +29,10 @@ import {
  * ⇧F6 move between the window's parts from wherever focus is, a card's
  * frame included, and the main message keeps its words and caret; in the
  * Tasks list the arrows move between rows, the keyboard's rest opens a
- * row's summary as the pointer's does, and Enter opens the task; Settings'
- * tabs follow the arrows; and the parts' keys can be changed like any other.
+ * row's summary as the pointer's does, Enter opens the task, and focus,
+ * the Tab stop and the summary stay with a row whose task moves to another
+ * group; Settings' tabs follow the arrows; and the parts' keys can be
+ * changed like any other.
  *
  * A key typed into a panel's frame goes through Playwright's keyboard: the
  * window's own input path (`pressWindowKey`) reaches the main process, which
@@ -42,6 +49,23 @@ function focusedRowKey(page: Page): Promise<string | null> {
     .locator("[data-now-row]:focus")
     .getAttribute("data-now-key", { timeout: 5_000 })
     .catch(() => null);
+}
+
+/**
+ * Whether the open summary sits beside `row` where it is now: its hairline
+ * leaves the panel's edge at the row's middle (`placeRowSummary`), so a
+ * summary still placed for where the row was is not level with it.
+ */
+async function summaryLevelWith(page: Page, row: Locator): Promise<boolean> {
+  const tie = openRowSummary(page).locator("[data-point-summary-tie]");
+  const [line, box] = await Promise.all([
+    tie.boundingBox({ timeout: 1_000 }).catch(() => null),
+    row.boundingBox({ timeout: 1_000 }).catch(() => null),
+  ]);
+  if (!line || !box) return false;
+  // The row's middle, drawn across the hairline, lies within it.
+  const middle = { x: line.x, y: box.y + box.height / 2, width: line.width, height: 0 };
+  return within(middle, line).length === 0;
 }
 
 test("F6 and Shift+F6 go round the window's parts, and the arrows move through the Tasks list", async () => {
@@ -136,6 +160,106 @@ test("F6 and Shift+F6 go round the window's parts, and the arrows move through t
       await expect(
         nowFrame(page).locator(`[data-now-row][data-now-key="${second}"]`),
       ).toHaveAttribute("data-now-selected", "");
+    });
+  } finally {
+    await launched.close();
+  }
+});
+
+/**
+ * INF-902: a task moves to another group under the keyboard's rest - it
+ * starts, finishes, gets a card, or another surface moves it - and the
+ * panel draws its row anew there. Focus, the list's one Tab stop and the
+ * open summary go with it; a task that moves into a closed group leaves
+ * them on that group's header, never on the frame's body. Here another
+ * surface moves it: the task board's Back to backlog, through the record's
+ * own path (`task.run`), while the keyboard stays in the Tasks list.
+ */
+test("a task the keyboard rests on keeps focus, the Tab stop and its summary as it moves to another group", async () => {
+  const userDataDir = scratchDir("infinitary-keyboard-moves-");
+  const db = openDatabase(userDataDir);
+  try {
+    const now = Date.now();
+    let clock = now - 60 * 60_000;
+    const tasks = new TaskService({ db, strict: true, now: () => clock });
+    // Held until next month, so the queued tasks wait without starting.
+    const held = { kind: "at-time" as const, until: now + 30 * 24 * 60 * 60_000 };
+    const seed = (value: TaskSeed) => {
+      clock += 60_000;
+      seedTask(tasks, value);
+    };
+    seed({ id: "launch", title: "Plan the spring launch email", status: "queued", gate: held });
+    seed({ id: "venue", title: "Book the venue for the offsite", status: "queued", gate: held });
+    seed({ id: "notes", title: "Sort the release notes by area", status: "queued", gate: held });
+    seed({
+      id: "icons",
+      title: "Retire the old app icons",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+  } finally {
+    db.close();
+  }
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    const list = nowFrame(page);
+    const row = (id: string) => list.locator(`[data-now-row="${id}"]`);
+    const backlog = list.locator('[data-now-group-header="backlog"]');
+    const focused = (target: string) => list.locator(`${target}:focus`);
+    const toBacklog = (id: string) =>
+      page.evaluate((taskId) => window.infinitary.task.run(taskId, "unqueue-task"), id);
+    const f6AwayAndBack = async () => {
+      let at = await regionAfter(app, page, "panel:now", "F6");
+      while (at !== "panel:now") at = await regionAfter(app, page, at, "F6");
+    };
+    await expandDock(page, "now");
+    await expect(list.locator("[data-now-row]")).toHaveCount(3);
+    await promptInput(page).click();
+    let at = await focusedRegion(page);
+    while (at !== "panel:now") at = await regionAfter(app, page, at, "F6");
+    await expect.poll(() => focusedRowKey(page)).not.toBeNull();
+
+    await test.step("a row that moves to an open group keeps focus, the Tab stop and its summary there", async () => {
+      // End reaches the backlog's header, → opens it, ↑ rests on the last queued row.
+      await page.keyboard.press("End");
+      await expect(focused('[data-now-group-header="backlog"]')).toHaveCount(1);
+      await page.keyboard.press("ArrowRight");
+      await expect(row("icons")).toBeVisible();
+      await page.keyboard.press("ArrowUp");
+      await expect(focused('[data-now-group="queued"] [data-now-row="notes"]')).toHaveCount(1);
+      await expect(openRowSummary(page)).toHaveAttribute(POINT_SUMMARY, "notes");
+      await expect.poll(() => summaryLevelWith(page, row("notes"))).toBe(true);
+
+      await toBacklog("notes");
+      await expect(focused('[data-now-group="backlog"] [data-now-row="notes"]')).toHaveCount(1);
+      await expect(openRowSummary(page)).toHaveAttribute(POINT_SUMMARY, "notes");
+      await expect.poll(() => summaryLevelWith(page, row("notes"))).toBe(true);
+      // The keys go on from the row where it is now.
+      await page.keyboard.press("ArrowDown");
+      await expect(focused('[data-now-row="icons"]')).toHaveCount(1);
+      await page.keyboard.press("ArrowUp");
+      await expect(focused('[data-now-row="notes"]')).toHaveCount(1);
+      // One Tab stop: F6 away and back lands on the row in its new group.
+      const notes = await row("notes").getAttribute("data-now-key");
+      await f6AwayAndBack();
+      await expect.poll(() => focusedRowKey(page)).toBe(notes);
+    });
+
+    await test.step("a row that moves into a closed group leaves focus and the Tab stop on that group's header", async () => {
+      // ← goes up to the backlog's header and ← closes it; ↑ rests on the last queued row.
+      await page.keyboard.press("ArrowLeft");
+      await expect(focused('[data-now-group-header="backlog"]')).toHaveCount(1);
+      await page.keyboard.press("ArrowLeft");
+      await expect(backlog).toHaveAttribute("aria-expanded", "false");
+      await page.keyboard.press("ArrowUp");
+      await expect(focused('[data-now-row="venue"]')).toHaveCount(1);
+
+      await toBacklog("venue");
+      await expect(row("venue")).toHaveCount(0);
+      await expect(focused('[data-now-group-header="backlog"]')).toHaveCount(1);
+      await f6AwayAndBack();
+      await expect(focused('[data-now-group-header="backlog"]')).toHaveCount(1);
     });
   } finally {
     await launched.close();

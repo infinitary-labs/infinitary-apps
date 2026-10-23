@@ -376,7 +376,8 @@ Under reduced motion the summary works against the still frame.
 
 **From a Tasks row** (FI3-565 piece 3, the design skill's NowPanel "Row hover").
 Resting on any Tasks row opens the same `CrewSummary` for that row's task, after the same beat (`CREW_HOVER.dwellMs`); a row the board no longer lists (the filter's `earlier` group) takes its first facts from the record's read instead.
-The Tasks panel is a frame, so it reports the row it rests on with the panel API's `point.peekTask` and the row's box (`src/panels/now/panel.tsx`), and `null` when the pointer or the keyboard leaves that row, presses it, or Escs, or the list moves under it.
+The Tasks panel is a frame, so it reports the row it rests on with the panel API's `point.peekTask` and the row's box (`src/panels/now/panel.tsx`), and `null` when the pointer or the keyboard leaves that row, presses it, or Escs, or the list moves under the pointer.
+The keyboard's rest goes with its row instead: a focused row that moves reports its new box, and one whose task moves to another group keeps focus and its summary there (INF-902).
 Leaving any other row lets nothing go: focus leaving the row a click opened keeps the summary of the row the pointer rests on, so an Esc in the window then closes that summary and not the record the click opened.
 The host adds the frame's offset and keeps the row in a small view-state store (`plugins/point/taskPeek.ts`); `plugins/point/PeekSummary.tsx` draws the summary in a window-wide layer above the rails and the cards.
 A task board tile rests the same way from the board's card, and its summary sits beside the tile itself.

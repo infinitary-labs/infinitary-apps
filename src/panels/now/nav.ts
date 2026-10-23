@@ -11,7 +11,7 @@ import type { PanelGroup } from "./rows";
  */
 
 export type NowNavItem =
-  | { kind: "group"; key: string; group: PanelGroup; open: boolean }
+  | { kind: "group"; key: string; group: PanelGroup; open: boolean; taskIds: readonly string[] }
   | { kind: "row"; key: string; group: PanelGroup };
 
 /** A painted group, as the list draws it. */
@@ -25,26 +25,34 @@ export type NavGroup = {
 };
 
 export const groupNavKey = (group: PanelGroup): string => `group:${group}`;
-export const rowNavKey = (group: PanelGroup, taskId: string): string => `row:${group}:${taskId}`;
+/**
+ * A row's stop is its task's, whatever group lists it: a task that moves to
+ * another group (queued to working as its crewmate begins) keeps its stop.
+ */
+export const rowNavKey = (taskId: string): string => `row:${taskId}`;
 
 /** Every stop in the list, in the order the arrows move through them. */
 export function nowNavItems(groups: readonly NavGroup[]): NowNavItem[] {
   const items: NowNavItem[] = [];
   for (const { group, open, collapsible, taskIds } of groups) {
-    if (collapsible) items.push({ kind: "group", key: groupNavKey(group), group, open });
-    if (open)
-      for (const id of taskIds) items.push({ kind: "row", key: rowNavKey(group, id), group });
+    if (collapsible) items.push({ kind: "group", key: groupNavKey(group), group, open, taskIds });
+    if (open) for (const id of taskIds) items.push({ kind: "row", key: rowNavKey(id), group });
   }
   return items;
 }
 
 /**
  * The stop that holds the list's one Tab stop: the one focus was last on,
- * while it is still listed, or else the first.
+ * while it is still listed - a row whose task moved to another open group
+ * included - or the header of the closed group its task moved into, or
+ * else the first.
  */
 export function rovingKey(items: readonly NowNavItem[], last: string | null): string | null {
   if (last !== null && items.some((item) => item.key === last)) return last;
-  return items[0]?.key ?? null;
+  const holder = items.find(
+    (item) => item.kind === "group" && item.taskIds.some((id) => rowNavKey(id) === last),
+  );
+  return holder?.key ?? items[0]?.key ?? null;
 }
 
 /** What a key does from one stop: move focus to another, open or close a group, or nothing. */

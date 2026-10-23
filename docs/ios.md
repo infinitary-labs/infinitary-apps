@@ -368,7 +368,7 @@ Every pull request still checks on Linux that the generated file is current, thr
 Its Linux chooser reads the full git comparison with `scripts/affected-phone.ts`; an unreadable comparison runs the gate, and an unrelated change explicitly skips the native job.
 A run on request (`workflow_dispatch`, such as the nightly check of `main`) skips the chooser and runs every part on both devices, then keeps each part's minutes as `part-times.json` in `phone-logs`; it has no pull request, so nothing replaces or cancels it, and it starts no release step (`docs/testing.md`, "The phone check on request").
 Inside a gate, a failed generator check or Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
-The native job uses `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results`.
+The native job uses `VIRTUAL_MAC_RUNNER` when it is set, otherwise `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results`.
 It also uploads command logs separately as `phone-logs`, so an Xcode failure can be read without downloading screenshot-heavy result bundles.
 A failed part adds to its command logs what the app, its card pages and Photos logged on its simulator, and names its failing lines in the job log.
 It also keeps, in a log of its own, what the simulator's system logged from the part's first test: SpringBoard, backboardd, the accessibility server, the keyboard and the test runner, which answer XCUITest's check for interrupting elements.
@@ -419,6 +419,14 @@ The gate step asks macOS whether it runs in a virtual Mac (`sysctl -n kern.hv_vm
 Two simulators at a time match the virtual Mac's 6 CPUs and 16 GB, as `phone-job.sh` runs them, and INF-621's two complete iPhone and iPad proofs passed in that image.
 On the real Mac's place, as on today's Mac mini runners, the gate still takes the exclusive lease, which a crewmate's `pnpm test:phone` and journeys on that Mac share.
 Leave `PHONE_VIRTUAL_MAC` unset with the placement service: a job already inside a virtual Mac cannot start another one.
+
+The repository variable `VIRTUAL_MAC_RUNNER`, which `native-phone` reads before `MAC_RUNNER`, names the service's virtual-Mac label, `mini-mac-virtual`, so the phone check never takes the real Mac's place (INF-897).
+GitHub hands a scale set's new runner whichever of that set's waiting jobs it picks, not the one the service started it for, so in the scale set the other Mac jobs share, the service's choice does not hold.
+Under the virtual-Mac label the phone check shares its scale set only with `old-cask-upgrade.yml`'s check, which runs after a release that switched the old cask, on request, or for a pull request that changes it.
+Phone checks come one at a time through the `mac-mini-phone` queue, so the runner the service starts for one takes it, unless that rarer check waits in the same set.
+GitHub assigns a phone check to the scale set only once the queue releases it, with no earlier time, so the service ranks it from that release.
+The service gives a free virtual place first to the oldest job that asks for a virtual Mac (`Plan` in dotfiles-private's `pkgs/fm-placer/schedule.go`), so a released phone check starts on the next free virtual place instead of behind every Mac job already waiting.
+Unset, the job runs where `MAC_RUNNER` sends it, as before; `tests/phone-ci.test.ts` evaluates the job's runner for each setting.
 
 ## Generated and bundled assets
 

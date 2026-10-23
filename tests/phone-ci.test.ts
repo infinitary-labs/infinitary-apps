@@ -347,16 +347,25 @@ describe("the native pull-request gate", () => {
   });
   it("runs the device gates in a fresh virtual Mac on its own runner when the switch is on", () => {
     const expression = workflow.jobs[NATIVE_JOB]["runs-on"];
-    const runner = (virtualMac: string, macRunner: string) =>
-      [virtualMac && "mini-mac-vm", macRunner, "mini-mac"].find(Boolean);
+    // INF-897: VIRTUAL_MAC_RUNNER puts the job in the placement service's
+    // virtual-Mac scale set, which no journey or full check shares; unset, the job
+    // runs where MAC_RUNNER sends it, as before. The values are the repository's.
+    const runner = (virtualMac: string, virtualRunner: string, macRunner: string) =>
+      [virtualMac && "mini-mac-vm", virtualRunner, macRunner, "mini-mac"].find(Boolean);
     for (const virtualMac of [OFF, IN_TURN, TOGETHER])
-      for (const macRunner of ["", "mini-mac"]) {
-        const vars = { PHONE_VIRTUAL_MAC: virtualMac, MAC_RUNNER: macRunner };
-        for (const label of ["mini-mac", "mini-mac-vm"])
-          expect(
-            holds(`(${expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "")}) == '${label}'`, { vars }),
-          ).toBe(runner(virtualMac, macRunner) === label);
-      }
+      for (const virtualRunner of ["", "mini-mac-virtual"])
+        for (const macRunner of ["", "mini-mac", "mini-mac-any"]) {
+          const vars = {
+            PHONE_VIRTUAL_MAC: virtualMac,
+            VIRTUAL_MAC_RUNNER: virtualRunner,
+            MAC_RUNNER: macRunner,
+            REAL_MAC_RUNNER: "mini-mac-real",
+          };
+          for (const label of ["mini-mac", "mini-mac-vm", "mini-mac-any", "mini-mac-virtual"])
+            expect(
+              holds(`(${expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "")}) == '${label}'`, { vars }),
+            ).toBe(runner(virtualMac, virtualRunner, macRunner) === label);
+        }
     const inTurn = names(stepsThatRun(IN_TURN));
     const together = names(stepsThatRun(TOGETHER));
     // INF-662 piece 1: every value of the switch runs both devices at once from one build.

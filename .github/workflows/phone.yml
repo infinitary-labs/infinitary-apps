@@ -111,7 +111,11 @@ jobs:
     # a fresh virtual Mac, through the phone check's own runner, which takes no
     # Mac mini slot (docs/ios.md, "The phone check in a virtual Mac"). Unset, the
     # job runs exactly as before.
-    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || vars.MAC_RUNNER || 'mini-mac' }}
+    # INF-897: VIRTUAL_MAC_RUNNER names the placement service's virtual-Mac label.
+    # No journey or full check shares that scale set, so the runner the service
+    # starts for it takes it, and the service gives it the next free virtual place
+    # (docs/ios.md, "A phone check the placement service puts in a virtual Mac").
+    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
     # Reading the pull request's latest version and cancelling this run, if replaced.
     permissions:
       actions: write

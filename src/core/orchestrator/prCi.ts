@@ -53,6 +53,7 @@ import {
   declareCheckAction,
   observeCheckRepair,
   outstandingRepair,
+  supersedeCheckRepair,
 } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
 import type { MainBranchReading } from "./mainCheckWake";
@@ -2576,7 +2577,9 @@ export class PrCiService {
    * any attempt it spends - so the change's own reading stays at its
    * current head. A version that cannot be read (a host that reads checks
    * only through a pull request says so), is still running or never ran
-   * the check is no result: the attempt stays outstanding. Answers one line
+   * the check is no result: the attempt stays outstanding. A version an
+   * open change moved past with no check at all there is superseded and
+   * spends nothing, since the host starts none for it now (INF-988). Answers one line
    * for the reading, or nothing when no such attempt is open.
    */
   private async settleEarlierRepair(
@@ -2592,15 +2595,22 @@ export class PrCiService {
     let checks: ForgeCheck[];
     try {
       checks = (
-        await forge.checks(
-          change
-            ? { ...change, headSha: attempt.headSha }
-            : { branch, headSha: attempt.headSha, url: null },
-        )
+        change
+          ? await forge.checks(change, attempt.headSha)
+          : await forge.checks({ branch, headSha: attempt.headSha, url: null })
       ).items;
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       return `${name}: its checks could not be read there (${message}), so it has no result yet.`;
+    }
+    if (change && checks.length === 0) {
+      // The open change moved past a version the host ran nothing on, and it
+      // starts nothing there now: no reading can settle it (INF-988).
+      this.options.tasks.recordDelivery(taskId, supersedeCheckRepair(delivery, attempt.headSha), {
+        kind: "ci",
+        text: `Repair ${attempt.id} superseded at earlier head ${attempt.headSha}: no check ran there`,
+      });
+      return `${name}: no check ran there and none will start now that the change moved past it, so it is superseded and spent no attempt.`;
     }
     const round = observeCheckRepair(delivery, attempt.headSha, checks, this.now());
     const outcome = round.ciRepair?.repairs.find((r) => r.id === attempt.id)?.outcome;

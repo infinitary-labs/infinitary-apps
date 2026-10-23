@@ -190,6 +190,10 @@ export type CheckRepairLedger = {
   runs?: ObservedRun[];
   /** `at`: when the host recorded it (absent on rows from before FI3-250). */
   diagnoses: (CheckDiagnosis & { at?: number })[];
-  repairs: (CheckRepair & { outcome?: "passed" | "failed" })[];
+  /**
+   * `superseded`: the change moved past the attempt's version before the host
+   * ran any check there, so it can never have a result and spends nothing (INF-988).
+   */
+  repairs: (CheckRepair & { outcome?: "passed" | "failed" | "superseded" })[];
   rerun?: CheckRerun;
 };

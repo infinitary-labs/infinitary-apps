@@ -258,9 +258,9 @@ export class GitLabForge implements Forge {
     return open ? this.changeOf(open) : null;
   }
 
-  async checks(change: ForgeChange) {
+  async checks(change: ForgeChange, movedPast?: string) {
     const iid = numbered(change, this.place);
-    const head = change.headSha;
+    const head = movedPast ?? change.headSha;
     const ofRequest = await this.pipelines(`${this.mergeRequestPath(iid)}/pipelines?per_page=100`);
     const onHead = await this.pipelines(
       `${this.projectPath()}/pipelines?sha=${encodeURIComponent(head)}&per_page=100`,
@@ -270,7 +270,8 @@ export class GitLabForge implements Forge {
     for (const pipeline of counted) {
       items.push(...(await this.pipelineChecks(pipeline, counted.length > 1)));
     }
-    const waiting = await this.notStarted(ofRequest, counted, iid);
+    // A merge request's pipelines start only on its head: one it moved past waits on none (INF-988).
+    const waiting = movedPast === undefined ? await this.notStarted(ofRequest, counted, iid) : null;
     if (waiting) items.push({ name: waiting, state: "pending" });
     return { overall: overallOfChecks(items), items };
   }

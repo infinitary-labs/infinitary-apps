@@ -314,6 +314,22 @@ export function observeCheckRepair(
   };
 }
 
+/**
+ * The open attempt at `headSha`, a version the change has moved past where
+ * the host holds no check at all (INF-988): no reading can ever settle it,
+ * so it closes as superseded. It spends nothing - no result was seen - and
+ * the next repair may be declared.
+ */
+export function supersedeCheckRepair(
+  delivery: TaskDelivery | null | undefined,
+  headSha: string,
+): Partial<TaskDelivery> {
+  const ledger = structuredClone(delivery?.ciRepair ?? empty());
+  const attempt = ledger.repairs.find((r) => r.headSha === headSha && r.outcome === undefined);
+  if (attempt) attempt.outcome = "superseded";
+  return { ciRepair: ledger };
+}
+
 export function checkRepairWords(delivery: TaskDelivery | null | undefined): string[] {
   if (delivery?.ciCapAt !== undefined && !overridePasses(delivery, "repairs", delivery.headSha))
     return [

@@ -155,10 +155,11 @@ class FakeForge implements Forge {
     this.change = { ...change, draft: false, title: change.title?.replace(/^Draft: /, "") };
     return this.change;
   }
-  async checks(change: ForgeChange) {
-    this.calls.push(`checks ${change.headSha}`);
+  async checks(change: ForgeChange, movedPast?: string) {
+    const headSha = movedPast ?? change.headSha;
+    this.calls.push(`checks ${headSha}`);
     if (this.fail.checks) throw this.fail.checks;
-    const held = this.atHead[change.headSha];
+    const held = this.atHead[headSha];
     if (held instanceof Error) throw held;
     const items =
       held ??
@@ -1497,6 +1498,33 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
       });
       expect(onCap).toHaveBeenCalledTimes(1);
       expect(onCap).toHaveBeenCalledWith("ab12cd34", { rounds: 3, headSha: PR203.repaired });
+    });
+
+    // INF-988: INF-643's repair was declared at a version GitHub never ran
+    // anything on (PR #203 conflicted there), and the pull request moved on.
+    it("supersedes it when its version holds no check at all, spending nothing and accepting the next repair", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      await declareSigningRepair(service, forge);
+      forge.atHead[PR203.repaired] = [];
+      at(forge, PR203.current, PR203.atCurrent);
+      const answer = await service.checkForCrew("ab12cd34", { repair: quarantineRepair });
+      expect(answer).toContain(
+        `Repair ${signingRepair.id} at ${PR203.repaired} (the change is now at ${PR203.current}): no check ran there and none will start now that the change moved past it, so it is superseded and spent no attempt.`,
+      );
+      expect(answer).not.toContain("Repair refused");
+      const delivery = tasks.get("ab12cd34")?.delivery;
+      expect(delivery?.ciRounds).toBeUndefined();
+      expect(delivery?.ciRepair?.repairs.map((repair) => [repair.id, repair.outcome])).toEqual([
+        [signingRepair.id, "superseded"],
+        [quarantineRepair.id, undefined],
+      ]);
+      expect(delivery).toMatchObject({ headSha: PR203.current });
+      expect(
+        tasks
+          .timeline("ab12cd34")
+          .some((event) => event.text?.includes(`Repair ${signingRepair.id} superseded`)),
+      ).toBe(true);
     });
 
     it.each([

@@ -428,8 +428,8 @@ export class GitHubForge implements Forge {
     return pull ? changeOf(pull, branch) : null;
   }
 
-  async checks(change: ForgeChange) {
-    const sha = encodeURIComponent(change.headSha);
+  async checks(change: ForgeChange, movedPast?: string) {
+    const sha = encodeURIComponent(movedPast ?? change.headSha);
     const runs = await this.pages<CheckRunJson>(
       `${this.repoPath()}/commits/${sha}/check-runs`,
       (page) => (page as { check_runs?: CheckRunJson[] }).check_runs ?? [],
@@ -484,7 +484,12 @@ export class GitHubForge implements Forge {
       items.push({ name: "more checks than the app reads", state: "pending" });
     }
     let notStarted = false;
-    const waiting = await this.notStarted(change, workflowRuns, items.length === 0);
+    // GitHub starts a pull request's workflows only on its head: a version it
+    // moved past gets none, so nothing there is waiting to start (INF-988).
+    const waiting =
+      movedPast === undefined
+        ? await this.notStarted(change, workflowRuns, items.length === 0)
+        : null;
     if (waiting) {
       items.push({ name: waiting, state: "pending" });
       notStarted = waiting === "checks have not started yet";

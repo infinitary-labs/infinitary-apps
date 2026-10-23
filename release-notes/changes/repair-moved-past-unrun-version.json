@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "repair-moved-past-unrun-version",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A crewmate's fix no longer stalls on a version GitHub never checked",
+      "body": "When a crewmate fixed a failing check on a version GitHub never ran checks on, such as while its pull request needed bringing up to date, and the pull request then moved on, the app kept saying that version's checks were still running and refused every later fix. The app now sets that fix aside without counting it against the crewmate's three tries, so its next fix goes ahead.",
+      "noPicture": "Nothing new appears on screen; the crewmate's next fix is accepted instead of refused.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

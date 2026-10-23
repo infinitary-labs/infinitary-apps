@@ -180,6 +180,41 @@ describe("GitHubForge", () => {
     expect(conflicted.items[0]?.name).toContain("brought up to date");
   });
 
+  // INF-988: INF-643's repair was declared at 93355db9 while PR #203
+  // conflicted, so GitHub never ran anything there; the pull request then
+  // moved on, clean. These are GitHub's answers on 2026-10-23.
+  it("reads a version the pull request moved past as it is, with no marker of the pull request's own (INF-988)", async () => {
+    const declared = "93355db9d04e964513879db74d068a7789cb4c16";
+    const { forge, seen } = await stub({
+      [`GET /repos/octo/meter/commits/${declared}/check-runs`]: () => ({
+        json: { total_count: 0, check_runs: [] },
+      }),
+      [`GET /repos/octo/meter/commits/${declared}/status`]: () => ({ json: { statuses: [] } }),
+      "GET /repos/octo/meter/actions/runs": (request) => ({
+        json: request.url.includes("head_sha=")
+          ? { total_count: 0, workflow_runs: [] }
+          : { total_count: 1812, workflow_runs: [] },
+      }),
+      "GET /repos/octo/meter/pulls/203": () => ({
+        json: { mergeable: true, mergeable_state: "clean" },
+      }),
+    });
+    const change = { number: 203, url: null, branch: "fm/task-643", headSha: "c7f9d964" };
+    // Read as the pull request's own head, the empty list waits on its workflows.
+    expect(await forge.checks({ ...change, headSha: declared })).toMatchObject({
+      overall: "pending",
+      notStarted: true,
+    });
+    // Read as a version it moved past, nothing will start there: the list is what it is.
+    seen.length = 0;
+    expect(await forge.checks(change, declared)).toEqual({ overall: "green", items: [] });
+    expect(seen.map((call) => call.url.split("?")[0])).toEqual([
+      `/repos/octo/meter/commits/${declared}/check-runs`,
+      `/repos/octo/meter/commits/${declared}/status`,
+      "/repos/octo/meter/actions/runs",
+    ]);
+  });
+
   // INF-893: PR #328 read green at 19:07:01Z on its dispatched replay-gate
   // alone, while GitHub was creating its ci, journeys and phone runs. The
   // runs, check and project count below are #328's own, as GitHub gave them.

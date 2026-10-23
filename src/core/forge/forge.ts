@@ -287,10 +287,14 @@ export interface Forge {
   /** Host-owned readiness transition for this version, never the public write gateway. */
   markReady?(change: ForgeChange, beforeSend: () => void): Promise<ForgeChange>;
   /**
-   * The checks on `change.headSha`: the change's head version, read by the one
-   * green rule, or an earlier version of it an open repair was declared at (INF-685).
+   * The checks on `change.headSha`, the change's head version, read by the one
+   * green rule; or, given `movedPast`, on that earlier version of the change an
+   * open repair was declared at (INF-685). The host starts nothing for a
+   * version the change has moved past, so that reading carries no marker of
+   * the change's own checks not having started (INF-988): an empty list there
+   * is every check the version will get.
    */
-  checks(change: ForgeChange): Promise<ForgeChecks>;
+  checks(change: ForgeChange, movedPast?: string): Promise<ForgeChecks>;
   /**
    * Put the change in, only while its head is still `headSha`. A host that
    * confirms the merge answers its commit; one that cannot says nothing.

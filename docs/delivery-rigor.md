@@ -341,6 +341,8 @@ A repair declared at a version the pull request has since moved past is read at 
 A repair declared while its branch has no open pull request is read the same way at its own version (INF-970), so a repair of a workflow run's failed job gets its result before any pull request opens.
 That read writes only the repair ledger - the failures seen there, the attempt's result and any attempt it spends - so the change's own reading, its version and its check watch stay at the current head.
 A version still running, one that never ran the repaired check, or one the host cannot read is no result: the attempt stays outstanding and the next repair is refused with the reason.
+A version the open change moved past where the host holds no check at all - no check run, status or workflow run, as when the change conflicted until it moved on - can never have a result, because the host starts checks only on the change's head (INF-988).
+That attempt is closed as `superseded`, spends nothing, and the next repair may be declared.
 A repaired check cancelled at its own version, by a time limit or a newer push, is unsuccessful like any other cancellation.
 
 The third unsuccessful repair stamps `ciCapAt` and sends one cap wake; completion stays held pending the captain's answer and relaying steer.

@@ -93,6 +93,13 @@ export type ComputersOptions = {
   /** Every closed task's work there comes here (`PlacedSessions.bringHome`); rejects when some could not. */
   bringHome: (deviceId: string) => Promise<void>;
   /**
+   * The computer's crew pauses for its update, resolving once each running
+   * turn there stopped (`CrewSupervisor.pauseForUpdate`); `resumeTasks`
+   * carries it on once the update is over, whatever came of it.
+   */
+  pauseTasks?: (deviceId: string) => Promise<void>;
+  resumeTasks?: (deviceId: string) => void;
+  /**
    * Removes what Firstmate set up on a computer added by its address, over
    * Remote Login (`RemoteLogin.removeThere`): true once nothing is left there
    * for it to hear. Absent, a computer removed out of reach always hears it
@@ -107,7 +114,7 @@ export type ComputersOptions = {
   /** Updates Firstmate on a computer added by its address, over Remote Login (`RemoteLogin.update`). */
   updateOverRemoteLogin?: (
     deviceId: string,
-    options?: { password?: string },
+    options?: { password?: string; pause?: () => Promise<void> },
   ) => Promise<DeviceView | RemoteLoginPasswordQuestion>;
   /**
    * Whether this computer has a Firstmate for that computer's system: its own,
@@ -290,9 +297,20 @@ export class Computers {
     if (device.remoteLogin) {
       const update = this.options.updateOverRemoteLogin;
       if (!update) throw new Error(`${deviceLabel(device)} cannot be reached over Remote Login.`);
-      const updated = await update(deviceId, options);
-      if ("asks" in updated) return updated;
-      return this.viewOf(deviceId) ?? updated;
+      // Its crew pauses only once the update goes ahead there, past every
+      // refusal and the password question.
+      let paused = false;
+      const pause = async () => {
+        paused = true;
+        await this.options.pauseTasks?.(deviceId);
+      };
+      try {
+        const updated = await update(deviceId, { ...options, pause });
+        if ("asks" in updated) return updated;
+        return this.viewOf(deviceId) ?? updated;
+      } finally {
+        if (paused) this.options.resumeTasks?.(deviceId);
+      }
     }
     return this.updateOverConnection(device);
   }
@@ -420,6 +438,8 @@ export class Computers {
     const back = this.backOnThisVersion(device);
     try {
       say("updating", remoteLoginWords.updating(device));
+      // Its crew pauses before anything there stops, and carries on after.
+      await this.options.pauseTasks?.(device.id);
       let starting = false;
       const start = () => {
         if (starting) return;
@@ -499,6 +519,7 @@ export class Computers {
     } finally {
       back.cancel();
       this.updating.delete(device.id);
+      this.options.resumeTasks?.(device.id);
     }
   }
 

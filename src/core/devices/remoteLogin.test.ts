@@ -732,8 +732,15 @@ describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Lo
     const device = await addChecked(at.remote, sshd.address);
     at.said.splice(0);
 
-    // Update: this Mac's Firstmate goes there again and starts as `work update`.
-    expect(await at.remote.update(device.id)).toMatchObject({ id: device.id });
+    // Update: this Mac's Firstmate goes there again and starts as `work update`,
+    // its crew paused first, before anything there stops (INF-721 friction 9).
+    const startedWhenPaused: string[] = [];
+    const pause = async () => {
+      startedWhenPaused.push(existsSync(record) ? readFileSync(record, "utf8") : "");
+    };
+    expect(await at.remote.update(device.id, { pause })).toMatchObject({ id: device.id });
+    expect(startedWhenPaused).toHaveLength(1);
+    expect(startedWhenPaused[0]).not.toContain("work update");
     expect(at.lines()).toEqual([
       remoteLoginWords.updating(device),
       remoteLoginWords.starting(deviceLabel(device)),

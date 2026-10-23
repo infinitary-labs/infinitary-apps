@@ -10284,6 +10284,51 @@ describe("the durable inbox (design A)", () => {
     await fresh.disposeAll();
   });
 
+  // INF-721 friction 9: an update of this Mac quits it under a Claude
+  // client's own continuation, which no lane row carried, and the next
+  // launch carries the crewmate on with no message from the captain.
+  it("carries on, at the next launch, a turn the quit cut that no message was serving (INF-721 friction 9)", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);
+    const { taskId } = await supervisor.commission({ title: "Suite", intent: intentOf("Start") });
+    await tick();
+    crewmate.finishPrompt();
+    await tick();
+    // The client went on by itself once its background work ended.
+    crewmate.emit({ type: "continuation_started" });
+    await tick();
+
+    await supervisor.disposeAll();
+    const bootCrewmate = fakeCrewmate();
+    const inbox = new InboxStore(db, { now: hostClock });
+    const fresh = new CrewSupervisor({
+      now: hostClock,
+      ...crewSessions(
+        paths,
+        vi.fn(async () => bootCrewmate),
+      ),
+      workspace,
+      repos: new RepoRegistry(db, paths.fleetDir),
+      tasks: new TaskService({ db, strict: true, now: hostClock }),
+      cardStore,
+      inbox,
+      paths,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    inbox.resetInFlight();
+    await fresh.sweepInbox(hostNow);
+    await tick();
+
+    expect(bootCrewmate.promptCalls).toEqual([
+      renderWake({ facts: { kind: "turn-resumed", stopped: "quit" } }),
+    ]);
+    bootCrewmate.finishPrompt();
+    await tick();
+    expect(inbox.allFor(taskId)).toEqual([]);
+    await fresh.disposeAll();
+  });
+
   it("replays a turn the app closed under at every launch, saying so, and never sets it aside", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, db, paths, workspace, cardStore } = clockedSetup(crewmate);

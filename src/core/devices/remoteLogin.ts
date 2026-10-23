@@ -374,11 +374,12 @@ export class RemoteLogin {
    * runs work for this home as that computer, stops the running one, keeps
    * the new copy in place of the old, and starts it again. This Mac's SSH
    * connection to it waits while it is updated, and is made again after, to
-   * the new copy.
+   * the new copy. `pause` runs once the update goes ahead, before anything
+   * there stops: past every refusal here and the password question.
    */
   async update(
     deviceId: string,
-    options: { password?: string } = {},
+    options: { password?: string; pause?: () => Promise<void> } = {},
   ): Promise<DeviceView | RemoteLoginPasswordQuestion> {
     const device = this.device(deviceId);
     const address = device.remoteLogin;
@@ -406,10 +407,10 @@ export class RemoteLogin {
         if (far.system === "linux" && this.builds.readsPublished()) {
           const looked = await this.look(address, "");
           if ("refusal" in looked) return step.refuse(looked.refusal);
-          if (ubuntuPackageRelease(looked))
-            return this.updateUbuntu(device, looked, options.password, step);
+          if (ubuntuPackageRelease(looked)) return this.updateUbuntu(device, looked, options, step);
         }
         if (!this.builds.canSend(far, chip)) return step.refuse("cannot-send");
+        await options.pause?.();
         const name = deviceLabel(device);
         const download = device.onThisMac ? null : await this.builds.downloadFor(far, chip);
         const idleTimeoutMs = this.options.idleTimeoutMs ?? IDLE_TIMEOUT_MS;
@@ -1113,12 +1114,12 @@ export class RemoteLogin {
   private async updateUbuntu(
     device: DeviceView,
     look: Look,
-    password: string | undefined,
+    options: { password?: string; pause?: () => Promise<void> },
     step: ReturnType<RemoteLogin["stepper"]>,
   ): Promise<DeviceView | RemoteLoginPasswordQuestion> {
     if (ubuntuInstallNeed(look, this.options.version ?? "") === "ready")
       return step.refuse("current");
-    const secret = password ? Buffer.from(password, "utf8") : null;
+    const secret = options.password ? Buffer.from(options.password, "utf8") : null;
     try {
       const installed = await this.installUbuntu(look, {
         address: device.remoteLogin ?? "",
@@ -1132,6 +1133,7 @@ export class RemoteLogin {
         if ("asks" in installed && installed.asks === "password") return installed;
         return step.refuse("failed");
       }
+      await options.pause?.();
       const onHomeMac = onHomeMacWord(device);
       const ran = await runSsh({
         ...this.sshFor(device.remoteLogin ?? ""),

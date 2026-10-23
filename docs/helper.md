@@ -344,7 +344,8 @@ On any version from `WORK_UPDATE_SINCE` on, the run answers its home's update or
 3. Its run then ends as `updated`: every conversation lets go, as when it quits, and the command exits 0.
    The background keeps the run alive while the grant is in the folder, so launchd starts it again at once, now from this version; a run started by hand is not started again.
 
-A turn running here is cut off, as when this computer restarts (below, "That computer restarts").
+The home pauses this computer's crew before it asks (`CrewSupervisor.pauseForUpdate`, `docs/devices.md`, "Updating"): each turn running here is stopped first, its end there is a pause and never a failed turn, and nothing is handed to the crew until the update is over and this computer is back and caught up.
+A turn the update still cuts off here, one the home could not ask to stop or that had not ended once the home stopped waiting, ends as `interrupted` as when this computer restarts (below, "That computer restarts"), and the home reads that end as the pause too.
 The order's name and shape never change across majors, so a home on any later major can still ask it.
 
 From `WORK_DOWNLOAD_SINCE` on, on any major, a Mac's run also answers the download order, `fm:firstmate:update-download`, which names where the home's version is published and its SHA-256 (`downloadHere`, `src/core/helper/update.ts`; `docs/devices.md`, "Downloading over the connection"):
@@ -546,6 +547,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
   The roster's running turn is followed as a continuation that delivers its rows, and a report it gave before the restart is given to that turn again from the kept answers.
 - **That computer restarts.**
   A turn it cut off ends as `interrupted`, which the home reads as a failed turn in its own words; its rows go back for the honest retry, and the lane runs them again there in the conversation reopened from its record.
+  An update the home asked is the exception: the home paused the turn for it, so its end is a pause, its rows go back due at once with no attempt spent, and the `turn-resumed` row its pause left carries the crewmate on once the update is over (`docs/devices.md`, "Updating").
   The computer records an errored `continuation_ended` before detaching a continuation at shutdown, or on recovery if a crash cut it off, so the home ends its autonomous turn and stops repeat copies after reconnect.
   Its optional `interrupted` fact lets the home use its own interruption wording with that computer's name, without interpreting the helper's error text; a closed task records no extra ending.
   The task's local state keeps an optional `continuing` boundary across acknowledged outbox trimming; older state without it is recovered from the typed continuation events still in its outbox.

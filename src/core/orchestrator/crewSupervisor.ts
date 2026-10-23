@@ -1044,6 +1044,12 @@ type TaskRuntime = {
   lastTurnCutOff?: CutOff;
   /** A move asked for mid-turn, run once the turn ends (INF-849). */
   pendingMove?: MoveAsk;
+  /**
+   * The app stopped this turn because the computer it runs on is updated
+   * (`pauseForUpdate`): its end is a pause, never a failed turn, and `row`
+   * is the lane row that carries it on once that computer is back.
+   */
+  paused?: { computer: string; row: number };
 };
 
 /**
@@ -1246,7 +1252,11 @@ function worktreeText(acquired: WorktreeAcquisition, where?: string): string {
 }
 
 /** Lane rows that are the crewmate's own work, sent by nobody: they draw no spark (INF-759). */
-const OWN_LANE_KINDS: ReadonlySet<string> = new Set(["job-exit", "conversation-restart"]);
+const OWN_LANE_KINDS: ReadonlySet<string> = new Set([
+  "job-exit",
+  "conversation-restart",
+  "turn-resumed",
+]);
 
 /** The idle ladder's rule ids: its wakes are the host's own, never a report's. */
 const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
@@ -1433,6 +1443,12 @@ export class CrewSupervisor {
   private readonly releasing = new Set<Promise<void>>();
   /** The app is quitting: a turn that settles now is not the crew's to act on. */
   private disposed = false;
+  /**
+   * The computers being updated now, each by its device id with its name:
+   * their crewmates wait as for a computer out of reach (`outOfReach`)
+   * until the update is over and the computer is back and caught up.
+   */
+  private readonly updating = new Map<string, string>();
   private readonly now: () => number;
   /** Serializes inbox sweeps: a resume-heavy pass must not overlap itself. */
   private sweepingInbox = false;
@@ -1667,9 +1683,16 @@ export class CrewSupervisor {
   /** A task lane's due rows. */
   private deliverableRows(taskId: string, now: number): InboxRow[] {
     const rows = this.options.inbox.pending(taskId, now, { maxAttempts: INBOX_ATTEMPT_MAX });
+    const task = this.tasks.get(taskId);
+    const running = task !== undefined && task.state !== "idle";
     // A renewed conversation's reason rides the next full turn (`runTurn`),
-    // never a turn of its own and never a mid-turn steer.
-    const rest = rows.filter((row) => row.facts?.kind !== "conversation-restart");
+    // never a turn of its own and never a mid-turn steer; why the app
+    // stopped a turn part way is a turn of its own, never a mid-turn steer.
+    const rest = rows.filter(
+      (row) =>
+        row.facts?.kind !== "conversation-restart" &&
+        !(running && row.facts?.kind === "turn-resumed"),
+    );
     // A policy notice alone is guidance, not permission to resume or start.
     if (
       this.tasks.get(taskId)?.state !== "streaming" &&
@@ -2530,6 +2553,8 @@ export class CrewSupervisor {
   private outOfReach(taskId: string): boolean {
     const machine = this.machineOf(taskId);
     if (machine === LOCAL_MACHINE_ID) return false;
+    // Being updated, it stops for a moment: nothing is handed to it meanwhile.
+    if (this.updating.has(machine)) return true;
     return this.options.machines?.ready(machine, taskId) !== true;
   }
 
@@ -6017,6 +6042,12 @@ export class CrewSupervisor {
         task.turnReport = event.text?.trim() ? event.text : undefined;
         return;
       }
+      // A turn its computer's update cut is paused, never failed: its end
+      // carries it on (`turnComplete`), and the feed says no failure.
+      if (event.type === "turn_failed" && task.paused) {
+        task.lastTurnError ??= event.error;
+        return;
+      }
       if (!isBroadcastEvent(event)) return;
       this.noteTaskActivity(task);
       this.applyEvent(task, event);
@@ -6636,6 +6667,10 @@ export class CrewSupervisor {
       } else if (task.interruptRequested) {
         task.interruptRequested = false;
         this.turnComplete(task, { interrupted: true });
+      } else if (task.paused) {
+        // The update the app stopped it for ended it there: a pause.
+        task.lastTurnError ??= message;
+        this.turnComplete(task);
       } else if (isSignInFailure(task.session?.controlProfile, message)) {
         // A sign-in the provider refused as the turn started (Pi's "No API
         // key found") is the captain's to fix, like one a turn reports: the
@@ -6785,6 +6820,9 @@ export class CrewSupervisor {
     if (this.tasks.get(task.id) !== task || task.cancelled || task.state !== "idle") return;
     task.autonomousTurn = true;
     this.beginTurn(task, inboxIds);
+    // Its computer is being updated: the turn it began there stops too.
+    const computer = this.updating.get(this.machineOf(task.id));
+    if (computer !== undefined) void this.pauseTurn(task, computer);
   }
 
   /**
@@ -6818,8 +6856,14 @@ export class CrewSupervisor {
     const placement = this.options.tasks.get(task.id)?.placement;
     if (placement)
       this.options.tasks.releasePlacement(task.id, placement.snapshot.orderId, "ended");
-    const providerError = task.lastTurnError;
-    let cutOff = task.lastTurnCutOff;
+    // A turn the app stopped for its computer's update ends as a pause
+    // (`pauseForUpdate`): whatever cut it there is the update, never the
+    // provider, so it fails nothing and wakes nobody.
+    const paused = task.paused;
+    task.paused = undefined;
+    const cutByUpdate = paused !== undefined && task.lastTurnError !== undefined;
+    const providerError = paused ? undefined : task.lastTurnError;
+    let cutOff = paused ? undefined : task.lastTurnCutOff;
     task.lastTurnError = undefined;
     task.lastTurnCutOff = undefined;
     // A cut-off is a fact about the account, not only this turn: it stands
@@ -6839,7 +6883,12 @@ export class CrewSupervisor {
     }
     const finalText =
       task.turnReport ?? (task.currentTurnText.trim() ? task.currentTurnText : undefined);
-    const candidate = providerError ? undefined : (task.explicitReport ?? finalText);
+    // A paused turn's last words are where it stopped, never its report.
+    const candidate = providerError
+      ? undefined
+      : paused
+        ? task.explicitReport
+        : (task.explicitReport ?? finalText);
     // The tool's own headline belongs to the tool's report, never to a
     // final text that stood in for it.
     const candidateSummary = task.explicitReport !== undefined ? task.explicitSummary : undefined;
@@ -6885,6 +6934,10 @@ export class CrewSupervisor {
         );
       } else if (providerError) {
         this.options.inbox.release(inFlight);
+      } else if (cutByUpdate) {
+        // Cut before it ended there: its words go again, due once its
+        // computer is back, with no attempt spent.
+        this.options.inbox.reparkUndelivered(inFlight);
       } else {
         // A steer no turn took in never reached the transcript: its rows
         // go back on the lane, due now, and the delivery below serves them
@@ -6900,7 +6953,10 @@ export class CrewSupervisor {
     // is reported as it always was.
     const retrying = providerError !== undefined && !signInFailure && inFlight.length > 0;
     const firstFailure = !retrying || outage.failures === 0;
-    if (!providerError && outage.failures > 0) this.ladder.endOutage(task, outage.failures);
+    if (!providerError && !paused && outage.failures > 0)
+      this.ladder.endOutage(task, outage.failures);
+    // A paused turn that reported needs no carrying on: its report stands.
+    if (paused && report) this.options.inbox.withdraw([paused.row]);
     task.state = "idle";
     if (report) task.lastCompleteText = report;
     // The record carries the report (task-system P0): crew_status reads the
@@ -7042,6 +7098,13 @@ export class CrewSupervisor {
       this.options.broadcastEvent({
         type: "firstmate_note",
         text: `Task ${task.title} interrupted: it can still be told what to do`,
+      });
+    } else if (paused && !report) {
+      // Nobody has anything to act on: the lane carries it on once the
+      // computer is back, and the feed says so once.
+      this.options.broadcastEvent({
+        type: "firstmate_note",
+        text: `${task.title} paused while Infinitary on ${paused.computer} is updated. It carries on once ${paused.computer} is back.`,
       });
     } else if (report && isRepairAssessment(this.options.tasks.get(task.id)?.shape)) {
       // An independent repair assessment's one report decides the kept
@@ -10642,6 +10705,67 @@ export class CrewSupervisor {
     this.broadcastCrewCounts();
   }
 
+  /**
+   * The computer is about to be updated (docs/helper.md, "Updated by its
+   * home"): each crewmate turn running there stops, as a pause and never a
+   * failure, and nothing is handed to its crew until the update is over
+   * and the computer is back and caught up (`outOfReach`). The update
+   * waits, at most `QUIT_SETTLE_MS`, for the stopped turns to end there,
+   * so each conversation is written down before its computer stops.
+   */
+  async pauseForUpdate(deviceId: string): Promise<void> {
+    if (this.disposed || this.updating.has(deviceId)) return;
+    const computer = this.options.machines?.nameOf(deviceId) ?? deviceId;
+    this.updating.set(deviceId, computer);
+    const stopping = [...this.tasks.values()]
+      .filter((task) => task.state === "streaming" && this.machineOf(task.id) === deviceId)
+      .map((task) => this.pauseTurn(task, computer));
+    if (stopping.length === 0) return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const bound = new Promise<void>((resolve) => {
+      timer = setTimeout(resolve, QUIT_SETTLE_MS);
+    });
+    await Promise.race([Promise.all(stopping), bound]).finally(() => clearTimeout(timer));
+  }
+
+  /**
+   * The update is over, whatever came of it: the computer's crew carries
+   * on, each paused crewmate with the lane row its pause left - once the
+   * computer is back and caught up (`placedCaughtUp`), or now when it
+   * never stopped.
+   */
+  resumeAfterUpdate(deviceId: string): void {
+    if (!this.updating.delete(deviceId) || this.disposed) return;
+    const now = this.now();
+    for (const taskId of this.options.inbox.recipientsWithRows())
+      if (this.machineOf(taskId) === deviceId) void this.sweepTaskLane(taskId, now);
+    void this.sweepGates(now);
+    this.broadcastCrewCounts();
+  }
+
+  /**
+   * One crewmate's turn stops for its computer's update: a lane row says
+   * why, for the turn that carries it on, and the turn's end there is a
+   * pause (`turnComplete`). No interrupt is recorded, so a kept merge
+   * approval stands.
+   */
+  private async pauseTurn(task: TaskRuntime, computer: string): Promise<void> {
+    if (task.paused || task.cancelled || !task.session) return;
+    const row = this.options.inbox.enqueue(task.id, {
+      facts: { kind: "turn-resumed", stopped: "update", computer },
+    });
+    task.paused = { computer, row };
+    this.options.tasks.note(task.id, `paused while Infinitary on ${computer} is updated`, {
+      news: true,
+    });
+    try {
+      await task.session.abort();
+    } catch (caught) {
+      // Its end comes with the update instead, and is read as the pause.
+      console.warn("[crew] a paused turn could not be stopped:", caught);
+    }
+  }
+
   /** The idle reconciler over every live idle record (docs/report-sort.md; idleLadder.ts). */
   reconcileIdle(now: number): void {
     this.ladder.reconcileIdle(now);
@@ -13410,6 +13534,16 @@ export class CrewSupervisor {
         for (const [id, run] of task.clientTasks)
           this.options.inbox.enqueue(task.id, this.clientTaskEnd(task, id, run, "quit"));
       task.clientTasks.clear();
+      // A turn this quit cuts here with no lane row to deliver again - a
+      // Claude client's own continuation - is carried on by the next
+      // start's sweep; a turn's rows go again on their own (`resetInFlight`).
+      if (
+        !task.cancelled &&
+        task.state === "streaming" &&
+        task.inFlightInboxIds.length === 0 &&
+        this.machineOf(task.id) === LOCAL_MACHINE_ID
+      )
+        this.options.inbox.enqueue(task.id, { facts: { kind: "turn-resumed", stopped: "quit" } });
       this.releaseSession(task);
     }
     this.tasks.clear();

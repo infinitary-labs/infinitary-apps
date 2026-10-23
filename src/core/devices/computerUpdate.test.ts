@@ -158,6 +158,8 @@ async function world(
   const said: DeviceUpdateEvent[] = [];
   const overRemoteLogin: string[] = [];
   const pushed: DeviceView[][] = [];
+  /** The computer's crew, paused and carried on around its update, in order. */
+  const crew: string[] = [];
   const computers = new Computers({
     pairing,
     work,
@@ -165,6 +167,12 @@ async function world(
     repos,
     stopTasks: async () => {},
     bringHome: async () => {},
+    pauseTasks: async (deviceId) => {
+      crew.push(`paused ${deviceId}`);
+    },
+    resumeTasks: (deviceId) => {
+      crew.push(`resumed ${deviceId}`);
+    },
     home: { app: HOME_APP, contract: PROTOCOL_VERSION },
     canSend: () => homeApp !== null,
     download: async () => options.download ?? null,
@@ -173,9 +181,11 @@ async function world(
     emitUpdate: (event) => said.push(event),
     updateWaitMs: options.waitMs ?? 5_000,
     // Remote Login's own update is RemoteLogin's (remoteLogin.test.ts); this
-    // records that the list hands it a Mac added by its address.
-    updateOverRemoteLogin: async (deviceId) => {
+    // records that the list hands it a Mac added by its address, which goes
+    // ahead there, pausing its crew, as RemoteLogin does once nothing refused.
+    updateOverRemoteLogin: async (deviceId, asked) => {
       overRemoteLogin.push(deviceId);
+      await asked?.pause?.();
       return pairing.list().find((device) => device.id === deviceId) as DeviceView;
     },
     emit: (list) => pushed.push(list),
@@ -255,6 +265,7 @@ async function world(
     appData,
     dataDir,
     overRemoteLogin,
+    crew,
     lines,
     said,
     pushed,
@@ -334,6 +345,8 @@ describe("a computer that runs work on another version of Firstmate", () => {
     // It kept this Mac's copy in place of its own, then its run ended.
     expect(await before.ended).toBe("updated");
     expect(at.kept()).toBe("the home's own copy");
+    // Its crew paused before its run ended, and waits for it to be back (INF-721 friction 9).
+    expect(at.crew).toEqual([`paused ${at.deviceId}`]);
     expect(at.lines).toEqual(
       expect.arrayContaining(helperWords.updated({ thisMac: true, host: "127.0.0.1" }, null, true)),
     );
@@ -343,6 +356,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
     if ("asks" in updated) throw new Error("Update asked for a password.");
     expect(updated).toMatchObject({ id: at.deviceId, inReach: true });
     expect(updated.otherVersion).toBeUndefined();
+    expect(at.crew).toEqual([`paused ${at.deviceId}`, `resumed ${at.deviceId}`]);
     const builder = { name: "Mac mini", user: "builder", onThisMac: true };
     const label = deviceLabel(builder);
     // What this Mac sent it is counted as it goes, in one line rewritten in place.
@@ -406,6 +420,7 @@ describe("a computer that runs work on another version of Firstmate", () => {
     await expect.poll(() => running.state().contact).toBe("in-reach");
     await at.computers.update(at.deviceId);
     expect(at.overRemoteLogin).toEqual([at.deviceId]);
+    expect(at.crew).toEqual([`paused ${at.deviceId}`, `resumed ${at.deviceId}`]);
     expect(at.said).toEqual([]);
     expect(at.kept()).toBe("the copy it kept");
     expect(running.state().contact).toBe("in-reach");
@@ -444,6 +459,8 @@ describe("a computer that runs work on another version of Firstmate", () => {
     ]);
     expect(at.said.every(({ stage, tone }) => stage === "refused" && tone === "warn")).toBe(true);
     expect(at.kept()).toBe("the copy it kept");
+    // Refused before anything there stops, its crew never paused.
+    expect(at.crew).toEqual([]);
 
     // This Mac has no Firstmate to send: the computer could not get it, kept
     // its own, and runs on.
@@ -454,6 +471,8 @@ describe("a computer that runs work on another version of Firstmate", () => {
     expect(none.feed()).toEqual([remoteLoginWords.updating(builder), ...refused("failed")]);
     expect(none.kept()).toBe("the copy it kept");
     expect(running.state().contact).toBe("in-reach");
+    // Its crew paused as the update went ahead, and carries on once it failed.
+    expect(none.crew).toEqual([`paused ${none.deviceId}`, `resumed ${none.deviceId}`]);
   });
 });
 

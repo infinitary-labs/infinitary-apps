@@ -754,6 +754,19 @@ export type WakeFacts =
     }
   | {
       /**
+       * The app stopped the crewmate's turn part way and nothing else on
+       * its lane carries it on (docs/inbox.md, "A turn a quit or crash
+       * cut"): the computer it runs on was updated, or this Mac quit. Its
+       * own turn, served once the crewmate can run again, never a mid-turn
+       * steer.
+       */
+      kind: "turn-resumed";
+      stopped: "update" | "quit";
+      /** The computer that was updated, as Devices names it. */
+      computer?: string;
+    }
+  | {
+      /**
        * The captain returned the task's browser (docs/task-browser.md,
        * "Taking control"): its crewmate's one steer, to take a fresh look.
        */
@@ -1800,6 +1813,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       ].join("\n");
     case "timed-wait-over":
       return `The time this task was waiting for has come${facts.reason ? ` (${facts.reason})` : ""}. Carry on from where you stopped.`;
+    case "turn-resumed":
+      return `${facts.stopped === "update" ? `Your last turn stopped part way while Infinitary${facts.computer ? ` on ${facts.computer}` : ""} was updated; it is back now.` : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`;
     case "merge-continued":
       return facts.ok
         ? `[fm-op] ${MERGE_CONTINUED_LEAD} ${facts.change}${facts.head ? ` at ${facts.head}` : ""}. The task stays open. Continue from that result. Dropping this task does not close that pull request. ${facts.text}`
@@ -1965,6 +1980,10 @@ export function drainWakes(rows: readonly InboxRow[]): DrainedWake[] {
 export const RESTART_REPLAY_NOTE =
   "Delivered again after a restart: the app closed - a quit or a crash - while your turn on the message below was running, so that turn may already have done part of it. Before you repeat a step, check what already took effect - your working copy and branch, a push, a pull request, a job or workflow you started, a card you showed - and carry on from there rather than doing it twice.";
 
+/** What a crewmate whose turn the app stopped part way checks before it carries on. */
+const RESUME_CHECK =
+  "Carry on where you left off. Before you repeat a step, check what already took effect - your working copy and branch, a push, a pull request, a job or workflow you started, a card you showed - rather than doing it twice.";
+
 /**
  * A crewmate lane's rows as the words they carry, joined by a space: the
  * guidance a feed line or a wake quotes. The turn that serves them is
@@ -1976,16 +1995,19 @@ export function laneText(rows: readonly InboxRow[]): string {
     .join(" ");
 }
 
+/** The rows a lane's turn opens with: why its conversation is new, then why its last turn stopped. */
+const LEADING_KINDS: readonly string[] = ["conversation-restart", "turn-resumed"];
+
 /**
  * A crewmate lane's rows as the turn that serves them: a renewed
  * conversation's reason comes first, so it rides the message that brought
- * the crewmate back, and each row a quit or crash cut a turn on opens with
- * `RESTART_REPLAY_NOTE`, so the crewmate reads a replay as one, never as
- * new work.
+ * the crewmate back, then why the app stopped its last turn part way, and
+ * each row a quit or crash cut a turn on opens with `RESTART_REPLAY_NOTE`,
+ * so the crewmate reads a replay as one, never as new work.
  */
 export function laneTurnText(rows: readonly InboxRow[]): string {
-  const leading = rows.filter((row) => row.facts?.kind === "conversation-restart");
-  const rest = rows.filter((row) => row.facts?.kind !== "conversation-restart");
+  const leading = LEADING_KINDS.flatMap((kind) => rows.filter((row) => row.facts?.kind === kind));
+  const rest = rows.filter((row) => !LEADING_KINDS.includes(row.facts?.kind ?? ""));
   return [...leading, ...rest]
     .map((row) => {
       const body = renderWake(row);

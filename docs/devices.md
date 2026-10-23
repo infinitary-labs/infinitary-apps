@@ -612,6 +612,21 @@ One that takes no work is still connected, so it reads "seen just now" and "no n
 - **Any other computer that takes the update order** (`takesUpdate`, a contract from `WORK_UPDATE_SINCE` on, whatever its major): over the connection, below.
 - **One too old to take it**: refused as `not-updatable`; Devices' Update makes the command for it instead, which run there once finds this Mac again and keeps this Mac's version (above, "Finding the home again").
 
+Its crew pauses for the update and carries on after, with no message from the captain and no failed turn (INF-721 friction 9; `pauseTasks` and `resumeTasks`, `CrewSupervisor.pauseForUpdate` and `resumeAfterUpdate`):
+
+- **When it pauses.**
+  Once the update goes ahead there, past every refusal and the password question, and before anything there stops: over the connection after the checks that refuse it, over Remote Login once nothing refused it here (`RemoteLogin.update`'s `pause`).
+- **What pausing does.**
+  Each crewmate turn running there is asked to stop, and the update waits for those turns to end there, at most `QUIT_SETTLE_MS`.
+  Each paused task gets one `turn-resumed` row on its lane, which says its last turn stopped part way while Infinitary there was updated and asks it to check what already took effect before it repeats a step.
+  The task's Activity says it paused, and the feed says once that it paused while Infinitary there is updated and carries on once that computer is back.
+  No interrupt is recorded, so a kept merge approval stands.
+- **While it is updated.**
+  Its crew is held as for a computer out of reach (`outOfReach`): nothing is handed to it, a steer waits on its lane, a task set to start there waits, and the idle ladder reads it as moving.
+  A turn's end there is a pause: the words it was serving are acknowledged when it stopped clean, and go again, due at once with no attempt spent, when the update cut it off there instead; its last words are never its report, and a report it gave stands, withdrawing its `turn-resumed` row.
+- **When it is over.**
+  Whatever came of the update, each paused crewmate carries on once that computer is back and caught up, or at once when it never stopped, with its `turn-resumed` row as the turn's first words.
+
 Device update and change-address requests always answer Remote Login refusals as typed data; Devices shows the two lines in one error line above the list.
 A refusal that says the computer did not answer (`unreachable`, `out-of-reach`, `refusalIsAboutReach`) goes once that computer's row says connected again (`reachRefusalAfter`, `src/renderer/src/settings/DevicesTab.tsx`): the row's `connectedAt` is later than the refusal, after the row had said it was not.
 For Change address the row has to reconnect at the address that was tried.

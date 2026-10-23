@@ -81,6 +81,7 @@ import { CREWMATE_INTEGRATIONS_LINE } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
+import { renderWake } from "../orchestrator/wakes";
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
@@ -1375,6 +1376,151 @@ describe("a task that runs on a computer that runs work", () => {
       .toBe("Picked the footer up again.");
     expect(api.requests.length - requests).toBe(2);
     expect(said(api.requests.at(-1))).toContain("Fix the footer.");
+  });
+
+  // INF-721 friction 9: the captain asked three times to pause and resume
+  // the crew around an update, and two turns still failed; the update now
+  // pauses the crew on that computer and carries it on by itself.
+  it("pauses a turn running on a computer for its update and carries it on once it is back, with no failed turn (INF-721 friction 9)", async () => {
+    const at = await world();
+    const never = gate();
+    model([{ held: never.held, text: "Never said." }, { text: "Picked the footer up again." }]);
+    const requests = api.requests.length;
+    await at.start("t-update");
+    await expect.poll(() => api.openRequests()).toBe(1);
+    const home = at.home();
+    const wakes = home.wakes.length;
+    const computer = at
+      .pairing()
+      .list()
+      .find((device) => device.id === at.deviceId)?.name;
+    expect(computer).toBeDefined();
+
+    // The update pauses its crew first: the turn there stops before it restarts.
+    await home.supervisor.pauseForUpdate(at.deviceId);
+    await expect.poll(() => home.tasks.get("t-update")?.activity).toBe("idle");
+    expect(api.openRequests()).toBe(0);
+    await at.restartComputer();
+    await at.inReach("t-update");
+    // Back and caught up, it waits for the update to be over.
+    expect(api.requests.length - requests).toBe(1);
+    home.supervisor.resumeAfterUpdate(at.deviceId);
+
+    await expect
+      .poll(() => home.tasks.get("t-update")?.outcome)
+      .toBe("Picked the footer up again.");
+    expect(api.requests.length - requests).toBe(2);
+    expect(said(api.requests.at(-1))).toContain(
+      renderWake({ facts: { kind: "turn-resumed", stopped: "update", computer } }),
+    );
+    // No turn failed, and the Firstmate heard only the crewmate's report.
+    expect(home.tasks.timeline("t-update").some((event) => event.kind === "failed")).toBe(false);
+    expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
+    expect(home.wakes.slice(wakes).map((wake) => wake.facts?.kind)).not.toEqual(
+      expect.arrayContaining(["turn-failed", "outage-failed"]),
+    );
+    expect(JSON.stringify(home.wakes)).not.toContain("quit before this turn finished");
+    expect(home.inbox.allFor("t-update")).toEqual([]);
+    never.open();
+  });
+
+  // INF-721 friction 9: a computer updated over Remote Login while out of
+  // reach of its connection cannot be asked to stop its turn first; the
+  // turn the update cut there is a pause too, and its words go again.
+  it("reads a turn its computer's update cut out of reach as a pause, and sends its words again once the update is over (INF-721 friction 9)", async () => {
+    const at = await world();
+    const never = gate();
+    model([{ held: never.held, text: "Never said." }, { text: "Picked the footer up again." }]);
+    const requests = api.requests.length;
+    await at.start("t-update-away");
+    await expect.poll(() => api.openRequests()).toBe(1);
+    const home = at.home();
+    const wakes = home.wakes.length;
+
+    await at.stopComputer();
+    await home.supervisor.pauseForUpdate(at.deviceId);
+    await at.restartComputer();
+    await at.inReach("t-update-away");
+    await expect.poll(() => home.tasks.get("t-update-away")?.activity).toBe("idle");
+    // Its words wait on the lane for the update to be over.
+    expect(home.inbox.allFor("t-update-away").map((row) => row.facts?.kind)).toContain(
+      "turn-resumed",
+    );
+    expect(api.requests.length - requests).toBe(1);
+    home.supervisor.resumeAfterUpdate(at.deviceId);
+
+    await expect
+      .poll(() => home.tasks.get("t-update-away")?.outcome)
+      .toBe("Picked the footer up again.");
+    expect(api.requests.length - requests).toBe(2);
+    expect(said(api.requests.at(-1))).toContain("Fix the footer.");
+    expect(home.tasks.timeline("t-update-away").some((event) => event.kind === "failed")).toBe(
+      false,
+    );
+    expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
+    expect(
+      home.wakes
+        .slice(wakes)
+        .some((wake) => wake.facts?.kind === "turn-failed" || wake.facts?.kind === "outage-failed"),
+    ).toBe(false);
+    expect(home.inbox.allFor("t-update-away")).toEqual([]);
+    never.open();
+  });
+
+  // INF-721 friction 9: the turns that failed were Claude clients' own
+  // continuations, which a computer's restart cuts with no message to send
+  // again; paused for the update, each is carried on once it is back.
+  it("pauses a Claude continuation running on a computer for its update and carries it on after, with no failed turn (INF-721 friction 9)", async () => {
+    const heldCall = gate();
+    const claude = await scriptedClaudeWorld({ beforeToolRecord: () => heldCall.held });
+    stops.push(scriptedClaudeCleanup);
+    const at = await world(undefined, { claude });
+    const home = at.home();
+    const taskId = "t-continuation-update";
+    const computer = at
+      .pairing()
+      .list()
+      .find((device) => device.id === at.deviceId)?.name;
+    claude.answer({ text: "The background check started." });
+    try {
+      await at.start(taskId);
+      await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+      const wakes = home.wakes.length;
+      claude.answer({ tool: "note_progress", answer: "Not reached while held." });
+      claude.continueTurn();
+      await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("running");
+      await expect
+        .poll(() =>
+          home.events.some((event) => event.type === "tool_start" && event.taskId === taskId),
+        )
+        .toBe(true);
+
+      await home.supervisor.pauseForUpdate(at.deviceId);
+      await at.restartComputer();
+      await at.inReach(taskId);
+      await expect.poll(() => home.tasks.get(taskId)?.activity).toBe("idle");
+      heldCall.open();
+      claude.answer({ text: "Carried on after the update." });
+      home.supervisor.resumeAfterUpdate(at.deviceId);
+
+      await expect.poll(() => home.tasks.get(taskId)?.outcome).toBe("Carried on after the update.");
+      expect(claude.served().at(-1)?.said).toContain(
+        renderWake({ facts: { kind: "turn-resumed", stopped: "update", computer } }),
+      );
+      expect(home.tasks.timeline(taskId).some((event) => event.kind === "failed")).toBe(false);
+      expect(home.events.some((event) => event.type === "turn_failed")).toBe(false);
+      expect(
+        home.wakes
+          .slice(wakes)
+          .some(
+            (wake) => wake.facts?.kind === "turn-failed" || wake.facts?.kind === "outage-failed",
+          ),
+      ).toBe(false);
+      expect(home.inbox.allFor(taskId)).toEqual([]);
+    } finally {
+      claude.endClient();
+      heldCall.open();
+    }
   });
 
   // INF-367: a computer's restart reports each background job it cut off

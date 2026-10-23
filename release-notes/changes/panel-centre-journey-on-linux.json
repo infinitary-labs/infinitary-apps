@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "panel-centre-journey-on-linux",
+      "reason": "Test only: the panel line centring journey measures the letters' heights at 64 times their size, because Chromium on Linux rounds a glyph's canvas bounds to whole pixels; the app is unchanged."
+    }
+  ]
+}

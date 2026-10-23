@@ -41,9 +41,15 @@ type Centres = Record<string, number>;
  * a box's own centre, and a text run's letters - its baseline less half its
  * x-height, or half its cap height for an uppercase run. The baseline is
  * read from a zero-size inline-block set on it; the letters' heights from
- * the run's own font, drawn by the app's canvas.
+ * the run's own font, drawn by the app's canvas at 64 times its size.
+ *
+ * Chromium on Linux gives a glyph's canvas bounds in whole pixels: at the
+ * run's own size a 12.5px "x", 6.07 px tall, read 6 px at 1x and 7 px at 2x,
+ * so the measured centre sat up to half a pixel from letters a picture shows
+ * on the dot (INF-969). At 64 times the size, that rounding is under 0.01 px.
  */
 function readCentres(row: Element, pieces: Piece[]): Centres {
+  const enlarged = 64;
   const top = row.getBoundingClientRect().top;
   const canvas = document.createElement("canvas").getContext("2d") as CanvasRenderingContext2D;
   const centres: Centres = {};
@@ -61,8 +67,10 @@ function readCentres(row: Element, pieces: Piece[]): Centres {
     const baseline = probe.getBoundingClientRect().bottom - top;
     probe.remove();
     const style = getComputedStyle(element);
-    canvas.font = `${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-    centres[name] = baseline - canvas.measureText(letters).actualBoundingBoxAscent / 2;
+    const size = Number.parseFloat(style.fontSize) * enlarged;
+    canvas.font = `${style.fontWeight} ${size}px ${style.fontFamily}`;
+    const height = canvas.measureText(letters).actualBoundingBoxAscent / enlarged;
+    centres[name] = baseline - height / 2;
   }
   return centres;
 }

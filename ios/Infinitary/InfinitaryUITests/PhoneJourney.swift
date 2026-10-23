@@ -533,7 +533,9 @@ import XCTest
         XCTAssertTrue(cardHeading(choice).waitForExistence(timeout: 10))
         _ = try await home("capture-stop")
         // Paging remounts the document; the named answers and staged value still leave together.
+        // INF-1086: the remounted card's footer stays disabled until its document reports drawn.
         let settings = app.buttons["card-action-settings"]
+        waitUntilEnabled(settings)
         reveal(settings); settings.tap()
         XCTAssertTrue(app.staticTexts["Do this on Test Mac mini."].waitForExistence(timeout: 10))
         let unsent = try await home("card-state", method: "GET")

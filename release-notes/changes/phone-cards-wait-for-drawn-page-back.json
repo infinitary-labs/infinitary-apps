@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-cards-wait-for-drawn-page-back",
+      "reason": "Test only: the phone journey waits for a paged-back card to report drawn before tapping Open Settings, so the settings notice check cannot miss its own tap under load."
+    }
+  ]
+}

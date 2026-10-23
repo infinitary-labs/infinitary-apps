@@ -43,6 +43,8 @@ export type SchedulerInbox = {
 export type ListenedEvent = {
   /** The integration's id, which the rule keeps. */
   integration: string;
+  /** Which connection the id stands for now, which the rule keeps beside it. */
+  connection: string;
   /** Its name as the person reads it. */
   name: string;
   event: string;
@@ -61,12 +63,16 @@ export type EventLook = { cursor: string; items: AutomationEventItem[]; resynced
  */
 export type SchedulerEvents = {
   find(integration: string, event: string): ListenedEvent | undefined;
-  /** Look from a cursor; throws when it cannot look now (paused, gone), and the rule waits. */
+  /**
+   * Look from a cursor, only while the id stands for `connection`; throws
+   * when it cannot look now (paused, gone, replaced), and the rule waits.
+   */
   look(
     integration: string,
     event: string,
     cursor: string | null,
-    filter?: Record<string, string>,
+    filter: Record<string, string> | undefined,
+    connection: string,
   ): Promise<EventLook>;
 };
 
@@ -105,6 +111,12 @@ const PREVIEW_COUNT = 3;
 /** `projectId` null takes the project off; undefined keeps it. */
 export type RuleChanges = {
   name?: string;
+  /**
+   * An event rule listens to whatever its integration's id stands for now:
+   * the person picked it again (docs/automation.md, "Events"). Without it,
+   * an edit that keeps the integration keeps the connection the rule had.
+   */
+  reconnect?: boolean;
   spec?: ScheduleSpec;
   prompt?: string;
   projectId?: string | null;
@@ -372,7 +384,7 @@ export class Scheduler {
     if (!events || record.state !== "enabled" || record.spec.kind !== "event") return;
     if (this.looking.has(record.id)) return;
     const found = events.find(record.spec.integration, record.spec.event);
-    if (!found) return;
+    if (!found || found.connection !== record.connection) return;
     const last = this.looked.get(record.id);
     if (last !== undefined && this.ticks - last < found.every) return;
     this.looked.set(record.id, this.ticks);
@@ -404,6 +416,7 @@ export class Scheduler {
         found.event,
         record.cursor ?? null,
         record.spec.filter,
+        found.connection,
       );
     } catch {
       return;
@@ -643,7 +656,7 @@ export class Scheduler {
     projectId?: string,
     options: { draft?: boolean } & SaysChange = {},
   ): ScheduleRecord {
-    const spec = this.checkEvent(normalized(given));
+    const { spec, connection } = this.checkEvent(normalized(given));
     const trimmed = prompt.trim();
     const now = this.now();
     validate(spec, trimmed, now);
@@ -660,6 +673,7 @@ export class Scheduler {
       ...(projectId ? { projectId } : {}),
       state: draft ? "draft" : "enabled",
       revision: 1,
+      ...(connection ? { connection } : {}),
     };
     this.options.store.insert(record);
     this.announce(automationWords.created(draft, spec, trimmed), options);
@@ -681,14 +695,29 @@ export class Scheduler {
   ): ScheduleRecord {
     const record = this.require(id);
     const now = this.now();
-    const spec = changes.spec ? this.checkEvent(normalized(changes.spec)) : record.spec;
+    const checked = changes.spec ? this.checkEvent(normalized(changes.spec)) : undefined;
+    const spec = checked?.spec ?? record.spec;
+    // The rule keeps its connection unless the person pointed it at an
+    // event again, so an edit never moves it onto a replacement unasked.
+    const repointed =
+      changes.reconnect === true ||
+      (record.spec.kind === "event" &&
+        spec.kind === "event" &&
+        (record.spec.integration !== spec.integration || record.spec.event !== spec.event));
+    const connection =
+      spec.kind !== "event"
+        ? undefined
+        : repointed || record.spec.kind !== "event"
+          ? (checked?.connection ?? this.checkEvent(spec).connection)
+          : record.connection;
     const prompt = (changes.prompt ?? record.prompt).trim();
     validate(spec, prompt, now);
     const name = changes.name === undefined ? record.name : changes.name.trim() || undefined;
     const projectId =
       changes.projectId === undefined ? record.projectId : changes.projectId || undefined;
     if (projectId !== record.projectId) this.checkProject(projectId);
-    const rescheduled = JSON.stringify(spec) !== JSON.stringify(record.spec);
+    const rescheduled =
+      JSON.stringify(spec) !== JSON.stringify(record.spec) || connection !== record.connection;
     const edited = rescheduled || prompt !== record.prompt || projectId !== record.projectId;
     const state: RuleState =
       options.enable === true ||
@@ -717,6 +746,7 @@ export class Scheduler {
       ...(record.cursor !== undefined && !rescheduled && state === record.state
         ? { cursor: record.cursor }
         : {}),
+      ...(connection ? { connection } : {}),
     };
     const recalled = edited ? this.recall(id, "edited") : 0;
     this.options.store.save(next);
@@ -847,8 +877,8 @@ export class Scheduler {
    * An event rule names an event something connected declares: kept by the
    * integration's id, found by its id or its name.
    */
-  private checkEvent(spec: ScheduleSpec): ScheduleSpec {
-    if (spec.kind !== "event") return spec;
+  private checkEvent(spec: ScheduleSpec): { spec: ScheduleSpec; connection?: string } {
+    if (spec.kind !== "event") return { spec };
     const found = this.options.events?.find(spec.integration, spec.event);
     if (!found) {
       throw new Error(
@@ -862,18 +892,42 @@ export class Scheduler {
     )
       throw new Error("This event does not declare that filter.");
     return {
-      kind: "event",
-      integration: found.integration,
-      event: found.event,
-      ...(spec.filter ? { filter: spec.filter } : {}),
+      spec: {
+        kind: "event",
+        integration: found.integration,
+        event: found.event,
+        ...(spec.filter ? { filter: spec.filter } : {}),
+      },
+      connection: found.connection,
     };
   }
 
-  /** What an event rule listens for, in its integration's words; undefined for a schedule. */
-  listening(spec: ScheduleSpec): ListenedEvent | undefined {
-    return spec.kind === "event"
-      ? this.options.events?.find(spec.integration, spec.event)
-      : undefined;
+  /**
+   * What an event rule listens for, in its integration's words; undefined
+   * for a schedule, and for a rule whose integration is not connected or
+   * whose id stands for another connection now.
+   */
+  listening(record: Pick<ScheduleRecord, "spec" | "connection">): ListenedEvent | undefined {
+    const spec = record.spec;
+    const found =
+      spec.kind === "event" ? this.options.events?.find(spec.integration, spec.event) : undefined;
+    return found && found.connection === record.connection ? found : undefined;
+  }
+
+  /**
+   * Why an event rule waits though its integration's id is connected
+   * (docs/automation.md, "Events"): the id stands for another connection
+   * now, or the rule was saved before the app could tell. Undefined for a
+   * rule that listens, a schedule, or an integration not connected now.
+   */
+  stopped(record: Pick<ScheduleRecord, "spec" | "connection">): string | undefined {
+    const spec = record.spec;
+    if (spec.kind !== "event") return undefined;
+    const found = this.options.events?.find(spec.integration, spec.event);
+    if (!found || found.connection === record.connection) return undefined;
+    return record.connection === undefined
+      ? "It was saved before the app could tell one connection from another, so it waits until its integration is picked again."
+      : "Its integration was removed or replaced, so it waits until its integration is picked again.";
   }
 
   private checkProject(projectId: string | undefined): void {

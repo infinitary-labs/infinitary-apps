@@ -107,7 +107,8 @@ async function refusalAsAnswer<T>(run: () => Promise<T>): Promise<T | RemoteLogi
  */
 /** A saved rule as Automation shows it (src/shared/automation.ts). */
 function automationRuleOf(scheduler: CoreServices["scheduler"], record: ScheduleRecord) {
-  const listened = scheduler.listening(record.spec);
+  const listened = scheduler.listening(record);
+  const stopped = scheduler.stopped(record);
   return {
     id: record.id,
     ...(record.name ? { name: record.name } : {}),
@@ -121,6 +122,7 @@ function automationRuleOf(scheduler: CoreServices["scheduler"], record: Schedule
     lastFired: scheduler.history(record.id)[0]?.firedAt ?? null,
     captainRequested: record.captainRequested === true,
     ...(listened ? { when: automationEventWords(listened.label, listened.name) } : {}),
+    ...(stopped ? { stopped } : {}),
   };
 }
 
@@ -1189,6 +1191,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
               spec: rule.spec,
               prompt: rule.prompt,
               projectId: rule.projectId ?? null,
+              ...(rule.reconnect === true ? { reconnect: true } : {}),
             },
             { enable: rule.enable === true, say },
           )

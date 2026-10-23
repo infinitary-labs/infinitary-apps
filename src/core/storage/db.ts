@@ -1065,6 +1065,9 @@ const MIGRATIONS: readonly Migration[] = [
   },
   // INF-786: declared event filters survive a restart; null keeps older rules unchanged.
   (db) => addColumn(db, "schedules", "event_filter", "TEXT"),
+  // INF-947: which connection an event rule's integration id stood for. Null
+  // is a rule saved before, which waits until its integration is picked again.
+  (db) => addColumn(db, "schedules", "event_connection", "TEXT"),
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

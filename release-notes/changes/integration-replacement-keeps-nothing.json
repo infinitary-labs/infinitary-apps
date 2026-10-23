@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "integration-replacement-keeps-nothing",
+      "kind": "fix",
+      "area": "settings",
+      "title": "A replaced integration no longer takes over old requests and automations",
+      "body": "Removing an integration and adding another with the same name used to let the new one run a request you had not approved yet, or receive an automation made for the old one. Now that request is refused and the automation waits until you pick its integration again. Automations made before this version wait the same way once.",
+      "noPicture": "The only new words appear on an automation whose integration was replaced, which a fresh install has none of.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

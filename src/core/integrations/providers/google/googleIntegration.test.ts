@@ -537,6 +537,41 @@ describe("Google as an integration", () => {
     expect(integrations.view().integrations[0]).toMatchObject({ health: "ok" });
   });
 
+  it("keeps a request on the Google account it was asked for through a renewal and a new sign-in, never on another account (INF-947)", async () => {
+    const { google, clock, tasks, integrations } = await signedIn();
+    const id = google.deliver(ARRIVING);
+    const crew = integrations.forTask("task-1");
+    const label = async () => {
+      await crew.call("Google", "label_message", { id, add: ["receipts"] });
+      const ask = tasks.get("task-1")?.delivery?.writeAsks?.[0];
+      if (!ask) throw new Error("the label must have been kept as an ask");
+      return ask.id;
+    };
+    const modified = () => google.seen.filter((request) => request.path.endsWith("/modify"));
+
+    // A renewal and signing in again as the same person keep the connection.
+    const renewed = await label();
+    clock.now += 3_599_000;
+    await crew.call("Google", "search_mail", { max: 1 });
+    await integrations.signIn("google");
+    expect((await integrations.sendAsk("task-1", renewed)).outcome).toEqual({ kind: "ran" });
+    expect(modified()).toHaveLength(1);
+
+    // Signed in as someone else under the same row, the request is not theirs to send.
+    const asked = await label();
+    google.knobs.account = "ada.park.studio@gmail.com";
+    await integrations.signIn("google");
+    expect(integrations.view().integrations[0]).toMatchObject({
+      id: "google",
+      account: "ada.park.studio@gmail.com",
+    });
+    expect((await integrations.sendAsk("task-1", asked)).outcome).toEqual({
+      kind: "refused",
+      why: "Google was removed or replaced since it was asked; ask again",
+    });
+    expect(modified()).toHaveLength(1);
+  });
+
   it("tells Google to forget the sign-in when the row is removed, and forgets it here", async () => {
     const { google, dir, integrations } = await signedIn();
     const keys = google.issued();

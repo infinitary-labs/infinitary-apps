@@ -33,6 +33,11 @@ export type RuleForm = {
   prompt: string;
   /** Empty for none. */
   projectId: string;
+  /**
+   * A stopped event rule (`AutomationRule.stopped`): saving it listens to
+   * the integration picked in the sheet, the person's own choice.
+   */
+  reconnect: boolean;
 };
 
 /** The zone this computer's clock follows now: a new rule's default. */
@@ -58,6 +63,7 @@ export function blankForm(): RuleForm {
     filter: {},
     prompt: "",
     projectId: "",
+    reconnect: false,
   };
 }
 
@@ -87,6 +93,7 @@ export function formOf(rule: AutomationRule): RuleForm {
     filter: spec.kind === "event" ? (spec.filter ?? {}) : {},
     prompt: rule.prompt,
     projectId: rule.projectId ?? "",
+    reconnect: rule.stopped !== undefined,
   };
 }
 
@@ -137,6 +144,7 @@ export function saveOf(form: RuleForm, enable = false): AutomationSave | string 
     prompt: form.prompt.trim(),
     ...(form.projectId ? { projectId: form.projectId } : {}),
     ...(enable ? { enable: true } : {}),
+    ...(form.reconnect && spec.kind === "event" ? { reconnect: true } : {}),
   };
 }
 
@@ -275,4 +283,8 @@ export function localClockWords(where: string | null): string {
 
 /** What a draft says at the top of its sheet. */
 export const DRAFT_NOTE = "A draft never runs. Choose Enable to check it and turn it on.";
+/** A stopped event rule's When, at the top of its sheet. */
+export const STOPPED_WHEN = "Waiting for its integration to be picked again";
+/** What saving a stopped event rule does, after why it stopped: it listens to what is picked. */
+export const STOPPED_NOTE = "Saving it listens to the one picked under When.";
 export const DETAIL_NOTE = "Each detail is filled in when the prompt is sent.";

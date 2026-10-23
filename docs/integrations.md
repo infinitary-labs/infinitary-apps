@@ -14,7 +14,19 @@ The row's own settings - a name of the person's choosing, paused, and which acti
 An automatic name repair keeps its previous name and the connection whose name it conflicted with (`renamed`) in the same store's `name-repairs.json`, until the person chooses a name themselves.
 The explanation matches the resulting name; an older build still reads `settings.json` unchanged, and a name it changes cannot inherit stale words.
 No sign-in is kept there: a kind's sign-in stays with its own owner, and a key it signs in with is kept apart ("Keys").
+Which connection each id stands for is the same store's `connections.json` ("Which connection").
 The wire shape Settings draws and the first mate reads is `src/shared/integrations.ts`.
+
+## Which connection
+
+An id names a slot, not a connection: an MCP server's id comes from its name, and Google's and GitHub's are fixed, so a connection added after another was removed can have the same id.
+The service gives each connection a reference the first time it sees it (`c-` and a random id) and keeps it in `userData/integrations/connections.json` beside the account the connection first answered for (INF-947, piece 1 of the INF-946 plan).
+A rename, a renewal, a restart or signing in again as the same account keeps the reference.
+Removing the connection through the service forgets it, so whatever comes next under that id gets a new one, and so does a connection that answers for another account than the one it was first signed in as.
+An unreadable file reads as none, so every connection gets a new reference and nothing kept before is sent.
+A kept ask carries the reference as `connection` (`IntegrationAsk`), and the captain's click runs it only while its id still stands for that connection: otherwise it is refused as removed or replaced, and an ask kept before references existed is refused as kept before the app could tell connections apart.
+An Automation rule keeps it the same way (`docs/automation.md`, "Events").
+The reference is the service's own fact; no caller looks a connection up by it yet.
 
 ## What an integration can tell
 
@@ -173,6 +185,8 @@ A computer without the change, or without a task channel, gives its crewmates ne
 `src/core/integrations/service.test.ts` holds the view drawn from the github.com sign-in, settings that hold across a restart, a paused integration refusing, removal signing out, reserved names while signed out, automatic repairs and their explanations, custom names, case-insensitive conflicts and name-size boundaries.
 The GitHub naming journey in `tests/e2e/older-profile.spec.ts` upgrades a real MCP discovery saved under GitHub, checks the explanation and the signed-out name refusal by keys, signs in through the GitHub stand-in, reads projects, restarts, and has a crewmate read both connections by their distinct names.
 The kept-request case in `mcpIntegration.test.ts` approves an ask saved before the repair and observes exactly one change on the original server, with no GitHub write; the event's id stays the same too.
+Its INF-947 cases remove a stand-in notes server and add another under the same name and id: the ask kept for the first is refused and neither server changes, an ask kept for the replacement runs after a rename and a restart, an ask kept by an older build is refused, and a rule on the removed server never looks at the replacement until it is pointed there with `reconnect`, nor does a rule saved by an older build.
+The Google case of the same number keeps an ask through a renewal and a sign-in as the same person, and refuses it once the row signs in as another account.
 `src/core/forge/providers/github/gateway.test.ts` holds GitHub through the integration against a stand-in GitHub: a crewmate's read runs, its write is kept as an ask even on its own project and sent by the captain's click, the first mate's read runs and its write is refused before any request, and an action turned off reaches nothing.
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
 `src/core/integrations/secrets.test.ts` holds the keys against a stand-in API that sends back the header it received: the file and folder modes, a view and discovery that never carry a value, a call refused while its key is missing, a key applied to one request and replaced in the answer, a program's variables, and a change kept as an ask that runs once on the click and not at all once its action is off.

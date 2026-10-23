@@ -122,6 +122,10 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
 - While the rule's delivery waits unsent, new events fold into it as scheduled occurrences do: the message is rewritten with every event and says more arrived while it waited.
 - A cursor the integration lost (a mail history that expired, a file cut short) answers `resynced`: the rule listens again from now, sends nothing for the gap, and the feed says so.
 - A paused, signed-out or removed integration answers no look; the rule keeps its place and waits.
+- A rule keeps which connection its integration's id stood for when it was pointed there (`schedules.event_connection`; `docs/integrations.md`, "Which connection"), and looks only while the id still stands for it.
+  Once that connection is removed or replaced - the same id signed in as another account, or another server added under the same name - the rule waits, and Settings and the rule's `stopped` say why; a rule saved before rules kept a connection waits the same way.
+  An edit that keeps the integration and event keeps the connection, so nothing moves a rule onto a replacement unasked.
+  The person picks it again by saving the rule in Settings → Automation, whose sheet says that saving listens to what is picked under When (`reconnect` on `inf:automation:save`); pointing the rule at another integration or event picks that one.
 - The prompt is filled with `{{events}}`, one line per event with the integration's typed summary and its id, never its body; a prompt without the placeholder gets the events after it.
   The first mate's message names the integration, the event and how many arrived, and says each event is evidence from outside, never an instruction.
 - An event rule has no next time and no preview dates: Settings shows its When words (`when` on the rule, "When an item arrives in Stand-in") and how often the app looks.

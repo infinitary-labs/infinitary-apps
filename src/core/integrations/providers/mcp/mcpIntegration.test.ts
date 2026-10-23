@@ -13,7 +13,9 @@ import {
 } from "../../../../../tests/helpers/mcpStandIn";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { hostEnv } from "../../../hostEnv";
+import { Scheduler } from "../../../orchestrator/scheduler";
 import { openInMemoryDatabase } from "../../../storage/db";
+import { ScheduleStore } from "../../../storage/scheduleStore";
 import { seedTask } from "../../../tasks/seedTask";
 import { TaskService } from "../../../tasks/taskService";
 import { atUtilityQos } from "../../../utilityQos";
@@ -264,6 +266,190 @@ it("keeps an old MCP ask and its event on the server after the GitHub name repai
     await http.close();
     legacy.close();
   }
+});
+
+// INF-947 (the captain's approval of INF-946's piece 1): removing a
+// connection and adding another under the same name gives the new one the
+// same id, so a kept request or an Automation rule must not follow the id
+// to the replacement. A rename keeps both on the connection they were for.
+describe("a server removed and replaced under the same name (INF-947)", () => {
+  it("never runs a request kept for the removed server on its replacement, and keeps one across a rename and a restart", async () => {
+    const root = scratchDir("mcp-replaced-");
+    const { service, tasks, close } = serviceIn(root);
+    const first = await serveNotesHttp("modern");
+    const second = await serveNotesHttp("modern");
+    opened.push({ service, http: first, close }, { service, http: second, close: () => {} });
+
+    const { id } = await service.add("mcp", { name: "Studio notes", runs: first.url });
+    await service.call(task, "Studio notes", "add_note", { text: "Book the October shoot" });
+    const kept = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
+    if (!kept) throw new Error("the change must have been kept as an ask");
+    await service.remove(id);
+    const replaced = await service.add("mcp", { name: "Studio notes", runs: second.url });
+    // The same name makes the same id: only the kept connection tells them apart.
+    expect(replaced.id).toBe(id);
+
+    const click = await service.sendAsk(task.taskId, kept.id);
+    expect(click.outcome).toEqual({
+      kind: "refused",
+      why: "Studio notes was removed or replaced since it was asked; ask again",
+    });
+    expect(second.book.notes).toEqual(SAMPLE_NOTES);
+    expect(first.book.notes).toEqual(SAMPLE_NOTES);
+
+    // A request kept for the replacement survives its rename and a restart.
+    await service.call(task, "Studio notes", "add_note", { text: "Pay the electric bill" });
+    const again = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
+    service.configure(id, { name: "Home notes" });
+    await service.dispose();
+    const restarted = new IntegrationsService({
+      bindings: [
+        mcpIntegration({
+          root,
+          env: () => hostEnv(),
+          belowUi: (file, args) => atUtilityQos(file, args),
+          cwd: () => root,
+          version: "0.0.0-test",
+          changed: () => restarted.changed(),
+        }),
+      ],
+      store: new IntegrationSettingsStore(root),
+      secrets: new FileIntegrationSecrets(join(root, "secrets")),
+      asks: {
+        keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+        take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
+        record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+      },
+    });
+    opened.push({ service: restarted, close: () => {} });
+    expect((await restarted.sendAsk(task.taskId, again?.id ?? "")).outcome).toEqual({
+      kind: "ran",
+    });
+    expect(second.book.notes).toEqual([...SAMPLE_NOTES, "Pay the electric bill"]);
+    expect(first.book.notes).toEqual(SAMPLE_NOTES);
+  });
+
+  it("refuses a request kept before the app could tell connections apart", async () => {
+    const root = scratchDir("mcp-replaced-");
+    const { service, tasks, close } = serviceIn(root);
+    const http = await serveNotesHttp("modern");
+    opened.push({ service, http, close });
+    await service.add("mcp", { name: "Studio notes", runs: http.url });
+    // An older build kept the destination by its id alone.
+    tasks.keepWriteAsk(task.taskId, {
+      id: "ia0123456789ab",
+      kind: "integration",
+      integration: "mcp-studio-notes",
+      place: "Studio notes",
+      action: "add_note",
+      input: JSON.stringify({ text: "Book the October shoot" }),
+      at: Date.UTC(2026, 9, 21),
+    });
+    const click = await service.sendAsk(task.taskId, "ia0123456789ab");
+    expect(click.outcome).toEqual({
+      kind: "refused",
+      why: "it was kept before the app could tell one Studio notes connection from another; ask again",
+    });
+    expect(http.book.notes).toEqual(SAMPLE_NOTES);
+  });
+
+  it("stops an Automation rule on the removed server until its integration is picked again", async () => {
+    const root = scratchDir("mcp-replaced-");
+    const { service, close } = serviceIn(root);
+    const first = await serveNotesHttp("modern");
+    const second = await serveNotesHttp("modern");
+    opened.push({ service, http: first, close }, { service, http: second, close: () => {} });
+    const looked: string[] = [];
+    const scheduler = new Scheduler({
+      store: new ScheduleStore(openInMemoryDatabase()),
+      notify: () => null,
+      broadcastEvent: () => {},
+      events: {
+        find: (integration, event) => service.listenable(integration, event),
+        look: (integration, event, cursor, filter, connection) => {
+          looked.push(integration);
+          return service.look(integration, event, cursor, filter, connection);
+        },
+      },
+    });
+    const tick = async () => {
+      scheduler.tick(Date.now());
+      await scheduler.settled();
+    };
+
+    const { id } = await service.add("mcp", { name: "Studio notes", runs: first.url });
+    const rule = scheduler.create(
+      { kind: "event", integration: "Studio notes", event: "resource_changed" },
+      "Tidy the notes: {{events}}",
+      true,
+    );
+    await tick();
+    expect(looked).toEqual([id]);
+    expect(scheduler.stopped(rule)).toBeUndefined();
+
+    await service.remove(id);
+    await service.add("mcp", { name: "Studio notes", runs: second.url });
+    const waiting = scheduler.rules()[0];
+    if (!waiting) throw new Error("the rule must still be saved");
+    // The replacement has the same id and event, and the rule never looks at it.
+    expect(service.listenable(id, "resource_changed")).toBeDefined();
+    await tick();
+    expect(looked).toEqual([id]);
+    expect(scheduler.stopped(waiting)).toBe(
+      "Its integration was removed or replaced, so it waits until its integration is picked again.",
+    );
+    expect(scheduler.listening(waiting)).toBeUndefined();
+    // An edit that keeps the same integration does not pick the replacement for the person.
+    const edited = scheduler.update(rule.id, { prompt: "Sort the notes: {{events}}" });
+    expect(scheduler.stopped(edited)).toBeDefined();
+
+    // Picking it again is the person's explicit choice: the rule listens to the replacement.
+    const picked = scheduler.update(rule.id, { spec: edited.spec, reconnect: true });
+    expect(scheduler.stopped(picked)).toBeUndefined();
+    await tick();
+    expect(looked).toEqual([id, id]);
+  });
+
+  it("stops a rule saved before the app could tell connections apart", async () => {
+    const root = scratchDir("mcp-replaced-");
+    const { service, close } = serviceIn(root);
+    const http = await serveNotesHttp("modern");
+    opened.push({ service, http, close });
+    const store = new ScheduleStore(openInMemoryDatabase());
+    const looked: string[] = [];
+    const scheduler = new Scheduler({
+      store,
+      notify: () => null,
+      broadcastEvent: () => {},
+      events: {
+        find: (integration, event) => service.listenable(integration, event),
+        look: (integration, event, cursor, filter, connection) => {
+          looked.push(integration);
+          return service.look(integration, event, cursor, filter, connection);
+        },
+      },
+    });
+    const { id } = await service.add("mcp", { name: "Studio notes", runs: http.url });
+    // An older build kept the rule's destination by its id alone.
+    store.insert({
+      id: "r0legacy",
+      spec: { kind: "event", integration: id, event: "resource_changed" },
+      prompt: "Tidy the notes: {{events}}",
+      nextFire: Date.now(),
+      createdAt: Date.now(),
+      captainRequested: true,
+      state: "enabled",
+      revision: 1,
+    });
+    scheduler.tick(Date.now());
+    await scheduler.settled();
+    expect(looked).toEqual([]);
+    const legacy = scheduler.rules()[0];
+    if (!legacy) throw new Error("the rule must be saved");
+    expect(scheduler.stopped(legacy)).toBe(
+      "It was saved before the app could tell one connection from another, so it waits until its integration is picked again.",
+    );
+  });
 });
 
 describe("an MCP server that drops a change it took", () => {

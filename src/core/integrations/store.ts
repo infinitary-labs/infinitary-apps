@@ -15,6 +15,7 @@ import { z } from "zod";
 
 const SETTINGS_FILE = "settings.json";
 const REPAIRS_FILE = "name-repairs.json";
+const CONNECTIONS_FILE = "connections.json";
 
 const entrySchema = z
   .object({
@@ -36,6 +37,17 @@ const repairsSchema = z.record(
     renamed: integrationRenameSchema,
   }),
 );
+
+/**
+ * Which connection an id stands for now (docs/integrations.md, "Which
+ * connection"): a reference made once for each connection and never
+ * reused, and the account it was first signed in as, if any.
+ */
+const connectionsSchema = z.record(
+  idSchema,
+  z.strictObject({ ref: z.string().min(1).max(64), account: z.string().max(320).nullable() }),
+);
+export type IntegrationConnectionRefs = z.infer<typeof connectionsSchema>;
 
 export class IntegrationSettingsStore {
   constructor(readonly root: string) {}
@@ -83,6 +95,21 @@ export class IntegrationSettingsStore {
     // corresponding atomic settings write, and the old name can be repaired again.
     this.writeFile(REPAIRS_FILE, repairs);
     this.writeFile(SETTINGS_FILE, settings);
+  }
+
+  /** Each id's connection reference; an unreadable file reads as none, so every one is made again. */
+  connections(): IntegrationConnectionRefs {
+    try {
+      return connectionsSchema.parse(
+        JSON.parse(readFileSync(join(this.root, CONNECTIONS_FILE), "utf8")),
+      );
+    } catch {
+      return {};
+    }
+  }
+
+  writeConnections(refs: IntegrationConnectionRefs): void {
+    this.writeFile(CONNECTIONS_FILE, refs);
   }
 
   /** Write whole, never readable by anyone else even mid-write. */

@@ -78,6 +78,13 @@ export const automationRuleSchema = z.strictObject({
    * integration is not connected.
    */
   when: z.string().optional(),
+  /**
+   * Why an event rule waits though its integration's id is connected: that
+   * id stands for another connection now, or the rule was saved before the
+   * app could tell (docs/automation.md, "Events"). Saving it with
+   * `reconnect` picks what is connected now.
+   */
+  stopped: z.string().optional(),
 });
 export type AutomationRule = z.infer<typeof automationRuleSchema>;
 
@@ -156,6 +163,12 @@ export const automationSaveSchema = z.strictObject({
    * is saved as a draft, and an existing one keeps its state.
    */
   enable: z.boolean().optional(),
+  /**
+   * The person picked the event rule's integration again: it listens to
+   * what that id stands for now, even when the id stands for another
+   * connection than the one it was saved for.
+   */
+  reconnect: z.boolean().optional(),
 });
 export type AutomationSave = z.infer<typeof automationSaveSchema>;
 

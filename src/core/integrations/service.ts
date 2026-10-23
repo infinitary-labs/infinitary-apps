@@ -48,11 +48,15 @@ export type IntegrationsServiceOptions = {
   push?: (view: IntegrationsView) => void;
 };
 
-/** A connection with its kind's binding and its settings. */
+/**
+ * A connection with its kind's binding, its settings and its reference:
+ * which connection its id stands for now ("Which connection").
+ */
 type Row = {
   binding: IntegrationBinding;
   connection: IntegrationConnection;
   settings: IntegrationSettings;
+  ref: string;
 };
 
 /**
@@ -105,6 +109,8 @@ export function isIntegrationAnswer(
 export type IntegrationListen = {
   /** The integration's id, which a rule keeps. */
   integration: string;
+  /** Which connection the id stands for now, which a rule keeps beside it. */
+  connection: string;
   /** Its name as the person reads it. */
   name: string;
   event: string;
@@ -227,6 +233,7 @@ export class IntegrationsService {
     if (!row || !spec) return undefined;
     return {
       integration: row.connection.id,
+      connection: row.ref,
       name: this.viewOf(row).name,
       event: spec.name,
       label: spec.label,
@@ -310,6 +317,17 @@ export class IntegrationsService {
     };
     const row = this.rows().find((entry) => entry.connection.id === ask.integration);
     if (!row) return done({ kind: "refused", why: `${ask.place} is no longer connected` });
+    // The id alone can name a connection added after this one was removed.
+    if (ask.connection === undefined)
+      return done({
+        kind: "refused",
+        why: `it was kept before the app could tell one ${ask.place} connection from another; ask again`,
+      });
+    if (ask.connection !== row.ref)
+      return done({
+        kind: "refused",
+        why: `${ask.place} was removed or replaced since it was asked; ask again`,
+      });
     const view = this.viewOf(row);
     const spec = row.connection.actions.find((entry) => entry.name === ask.action);
     if (view.paused) return done({ kind: "refused", why: `${view.name} is paused` });
@@ -394,6 +412,7 @@ export class IntegrationsService {
       id: `ia${randomUUID().replace(/-/g, "").slice(0, 12)}`,
       kind: "integration",
       integration: row.connection.id,
+      connection: row.ref,
       place: name,
       action,
       input: JSON.stringify(input),
@@ -493,15 +512,24 @@ export class IntegrationsService {
     this.signingIn = undefined;
   }
 
-  /** Look for one of an integration's events since the cursor (`IntegrationBinding.look`). */
+  /**
+   * Look for one of an integration's events since the cursor
+   * (`IntegrationBinding.look`); with `connection`, only while the id
+   * still stands for that connection.
+   */
   async look(
     id: string,
     event: string,
     cursor: string | null,
     filter?: Record<string, string>,
+    connection?: string,
   ): Promise<IntegrationLook> {
     const row = this.byId(id);
     const view = this.viewOf(row);
+    if (connection !== undefined && connection !== row.ref)
+      throw new IntegrationRefusal(
+        `${view.name} was removed or replaced since the rule was saved.`,
+      );
     if (view.paused) throw new IntegrationRefusal(`${view.name} is paused.`);
     const names = (row.connection.events ?? []).map((spec) => spec.name);
     if (!row.binding.look || !names.includes(event))
@@ -583,6 +611,12 @@ export class IntegrationsService {
       delete all[id];
       this.options.store.write(all);
     }
+    // A connection added later under the same id is another one.
+    const refs = this.options.store.connections();
+    if (refs[id]) {
+      delete refs[id];
+      this.options.store.writeConnections(refs);
+    }
     return this.changed();
   }
 
@@ -610,10 +644,38 @@ export class IntegrationsService {
           binding,
           connection,
           settings: settings[connection.id] ?? {},
+          ref: "",
         })),
       );
     this.repairReservedNames(rows, settings);
+    this.referenceConnections(rows);
     return rows;
+  }
+
+  /**
+   * Which connection each id stands for (docs/integrations.md, "Which
+   * connection"), so a kept request or rule never follows a reused id to
+   * another connection (INF-947). A connection first seen gets a new
+   * reference; a rename or a renewal keeps it, and a removal through this
+   * service forgets it. A connection that answers for an account other
+   * than the one it was first signed in as is another connection.
+   */
+  private referenceConnections(rows: Row[]): void {
+    const refs = this.options.store.connections();
+    let changed = false;
+    for (const row of rows) {
+      const { id, account } = row.connection;
+      const known = refs[id];
+      if (!known || (known.account !== null && account !== null && known.account !== account)) {
+        refs[id] = { ref: `c-${randomUUID()}`, account };
+        changed = true;
+      } else if (known.account === null && account !== null) {
+        refs[id] = { ...known, account };
+        changed = true;
+      }
+      row.ref = refs[id]?.ref ?? "";
+    }
+    if (changed) this.options.store.writeConnections(refs);
   }
 
   /**

@@ -46,6 +46,12 @@ export type IntegrationAsk = {
   kind: "integration";
   /** The integration's id, such as `google`. */
   integration: string;
+  /**
+   * Which connection the id stood for when it was asked
+   * (docs/integrations.md, "Which connection"); absent on an ask kept
+   * before connections had one, which is never sent.
+   */
+  connection?: string;
   /** Its name when it was asked, as the card says it. */
   place: string;
   action: string;

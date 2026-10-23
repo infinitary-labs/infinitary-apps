@@ -136,6 +136,8 @@ export async function startGoogleStandIn() {
      * connection drops before it answers, or it answers 500.
      */
     afterTaking: [] as ("drop" | 500)[],
+    /** The Gmail address the person signs in as on the consent page. */
+    account: STAND_IN_ACCOUNT,
   };
 
   const issue = (refresh: string) => {
@@ -194,7 +196,7 @@ export async function startGoogleStandIn() {
     const method = request.method ?? "GET";
     if (method === "GET" && path === "/profile")
       return json(response, 200, {
-        emailAddress: STAND_IN_ACCOUNT,
+        emailAddress: knobs.account,
         messagesTotal: messages.size,
         threadsTotal: messages.size,
         historyId: String(historyId),

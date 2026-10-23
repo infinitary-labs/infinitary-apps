@@ -52,6 +52,8 @@ import {
   type RuleForm,
   reviewMissedWords,
   runWords,
+  STOPPED_NOTE,
+  STOPPED_WHEN,
   SUBMITTED_NOTE,
   SUBMITTED_NOTE_EVENTS,
   saveOf,
@@ -476,8 +478,14 @@ function Sheet({
     >
       {rule && (
         <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>
-          {AUTOMATION_STATE_WORDS[rule.state]} · {automationWhenWords(rule.spec, rule.when)}
+          {AUTOMATION_STATE_WORDS[rule.state]} ·{" "}
+          {rule.stopped ? STOPPED_WHEN : automationWhenWords(rule.spec, rule.when)}
           {rule.captainRequested ? "" : " · set up by your first mate"}
+        </div>
+      )}
+      {rule?.stopped && (
+        <div data-automation-stopped role="status" style={NOTE_STYLE}>
+          {rule.stopped} {STOPPED_NOTE}
         </div>
       )}
       {drafting && (

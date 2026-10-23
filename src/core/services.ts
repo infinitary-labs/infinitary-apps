@@ -2538,8 +2538,8 @@ export async function createServices(
     // An event rule looks through the integrations (docs/automation.md, "Events").
     events: {
       find: (integration, event) => integrations.listenable(integration, event),
-      look: (integration, event, cursor, filter) =>
-        integrations.look(integration, event, cursor, filter),
+      look: (integration, event, cursor, filter, connection) =>
+        integrations.look(integration, event, cursor, filter, connection),
     },
     // A rule's project is named in its prompt while it is live (docs/automation.md).
     projectOf: (id) => {

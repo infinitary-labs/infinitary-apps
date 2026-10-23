@@ -34027,6 +34027,9 @@
                     },
                     "when": {
                       "type": "string"
+                    },
+                    "stopped": {
+                      "type": "string"
                     }
                   },
                   "required": [
@@ -34255,6 +34258,9 @@
                       "type": "boolean"
                     },
                     "when": {
+                      "type": "string"
+                    },
+                    "stopped": {
                       "type": "string"
                     }
                   },
@@ -34768,6 +34774,9 @@
               },
               "enable": {
                 "type": "boolean"
+              },
+              "reconnect": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -34977,6 +34986,9 @@
             "type": "boolean"
           },
           "when": {
+            "type": "string"
+          },
+          "stopped": {
             "type": "string"
           }
         },
@@ -35209,6 +35221,9 @@
             "type": "boolean"
           },
           "when": {
+            "type": "string"
+          },
+          "stopped": {
             "type": "string"
           }
         },

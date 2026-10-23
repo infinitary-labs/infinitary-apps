@@ -339,6 +339,9 @@ export type OrbitFrame = {
 
 type Packet = { direction: PacketDirection; at: number };
 
+/** A live part's node, and every part of its parent, whose waits are branches. */
+type Seat = { x: number; y: number; z: number; siblings: ReadonlySet<string> };
+
 /** A result riding a constellation's branches: node ids from where it starts, the program's id at the root. */
 type RoutePacket = { route: string[]; at: number; home: boolean };
 
@@ -1258,13 +1261,14 @@ export class CrewOrbit {
     for (const id of gone) this.crew.delete(id);
     if (gone.length > 0) this.bump();
     const layouts = this.layoutPrograms(slotTime, ringR, mix);
-    const seats = new Map<string, { x: number; y: number; z: number }>();
+    const seats = new Map<string, Seat>();
     for (const layout of layouts) {
       if (layout.program.leaving) continue;
+      const siblings = new Set(layout.program.parts.map((part) => part.id));
       for (const part of layout.program.parts) {
         const place = layout.places.get(part.id);
         if (part.state === "live" && place)
-          seats.set(part.id, { x: place.x, y: place.y, z: layout.root.z });
+          seats.set(part.id, { x: place.x, y: place.y, z: layout.root.z, siblings });
       }
     }
     const links = this.applyCompanions(crewFrames, scenes, now, settled, dt, seats);
@@ -1552,14 +1556,19 @@ export class CrewOrbit {
     now: number,
     settled: boolean,
     dt: number,
-    seats: ReadonlyMap<string, { x: number; y: number; z: number }> = new Map(),
+    seats: ReadonlyMap<string, Seat> = new Map(),
   ): DependencyLink[] {
     const links: DependencyLink[] = [];
     const cues = this.withReviewCues();
-    // A part is seated at its node, and its branches replace any arrow to it.
+    // A part is seated at its node and never circles. Its branches replace a
+    // wait arrow to a sibling part; a wait outside its parent keeps its arrow.
     for (const [id, cue] of cues) {
-      if (seats.has(id)) cues.delete(id);
-      else if (cue.mode === "satellite" && seats.has(cue.blockerId))
+      const seat = seats.get(id);
+      if (seat) {
+        const arrows = cue.arrows.filter((to) => !seat.siblings.has(to));
+        if (arrows.length > 0) cues.set(id, { ...cue, mode: "tether", index: 0, count: 1, arrows });
+        else cues.delete(id);
+      } else if (cue.mode === "satellite" && seats.has(cue.blockerId))
         cues.set(id, { ...cue, mode: "tether", index: 0, count: 1 });
     }
     if (
@@ -1619,7 +1628,12 @@ export class CrewOrbit {
     for (const [id, seat] of seats) {
       const slot = scenes.get(id);
       if (!slot) continue;
-      wanted.set(id, { x: seat.x - slot.x, y: seat.y - slot.y, z: seat.z - slot.z, arrows: [] });
+      wanted.set(id, {
+        x: seat.x - slot.x,
+        y: seat.y - slot.y,
+        z: seat.z - slot.z,
+        arrows: cues.get(id)?.arrows ?? [],
+      });
     }
     for (const frame of frames) {
       const mate = this.crew.get(frame.id);

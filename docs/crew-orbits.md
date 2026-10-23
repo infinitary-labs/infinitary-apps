@@ -168,6 +168,7 @@ The root is a small hollow ring on the inner orbit at the widest gap when the pr
 `layoutProgram` lays the parts in layers outward from it: the first layer 60 px out and each later one 0.82 of the one before, each layer spread evenly across 70 degrees round the root's outward direction and ordered by its parents' mean angle, so a chain stays straight and a barrier's join sits between its branches.
 When a node would leave the stage the whole graph scales about its root, and a layer wider than nine shrinks its glyphs as the preview did.
 A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its node on the springs a waiting crewmate's circle uses, with its slot reserved, and any wait arrow between two parts gives way to their branch.
+A seated part never circles a blocker, but its wait arrow to a task outside its parent stays, so the arrows into a busy blocker count every live waiter.
 A finished part is a small filled node, an unstarted one a hollow node, a live part on another computer a filled accent node; a dropped part leaves no node.
 A branch has the wait arrow's weight, `--fg-3` at 0.28 and 1 px, and lights in the accent at 0.7 and 1.4 px while a result rides it.
 

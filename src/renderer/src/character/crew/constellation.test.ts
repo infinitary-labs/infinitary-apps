@@ -225,6 +225,48 @@ describe("the constellation on the orbit", () => {
     ]);
   });
 
+  // INF-979, from INF-977's board: INF-869, a live part of INF-867 (open, no
+  // crewmate), waits on INF-886 outside its parent and on a sibling part.
+  it("keeps a part's wait arrow to a blocker outside its parent, and only a sibling's gives way", () => {
+    const waiting = { state: "idle", reason: "dependency" } as const;
+    const tasks = [
+      view({ id: "867", parentId: null, status: "open", activity: null, startedAt: null }),
+      view({ id: "868", parentId: "867", createdAt: 1 }),
+      view({
+        id: "869",
+        parentId: "867",
+        createdAt: 2,
+        activity: "idle",
+        blockedBy: ["INF-868", "INF-886"],
+        workPosture: waiting,
+      }),
+      view({ id: "886", parentId: null, createdAt: 3 }),
+      view({
+        id: "911",
+        parentId: null,
+        createdAt: 4,
+        activity: "idle",
+        blockedBy: ["INF-886"],
+        workPosture: waiting,
+      }),
+    ];
+    const links = [blocks("868", "869"), blocks("886", "869"), blocks("886", "911")];
+    const model = adaptive();
+    seedCrew(model, tasks, 0, links);
+    const frame = model.update(0, true);
+    const [program] = frame.programs;
+    expect(program?.branches.map((b) => `${b.fromId}>${b.toId}`)).toEqual(["867>868", "868>869"]);
+    expect(frame.links.map((l) => `${l.kind}:${l.fromId}>${l.toId}`).sort()).toEqual([
+      "wait:869>886",
+      "wait:911>886",
+    ]);
+    // The part stays seated at its node rather than circling its blocker.
+    const node = program?.nodes.find((n) => n.id === "869");
+    const mate = frame.crew.find((c) => c.id === "869");
+    expect(mate?.x).toBeCloseTo(node?.x ?? Number.NaN);
+    expect(mate?.y).toBeCloseTo(node?.y ?? Number.NaN);
+  });
+
   it("sends a part's report up its branches to the mark, never into the core", () => {
     const { tasks, links } = reviewBoard();
     const model = adaptive();

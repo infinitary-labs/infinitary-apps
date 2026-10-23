@@ -175,8 +175,7 @@
   gap: var(--space-3);
 }
 
-/* A column's foot: where its page sits and Previous and Next, or Backlog's
-   first five and Browse all. */
+/* A column's foot: where its page sits and Previous and Next. */
 .fm-board-column-foot {
   display: flex;
   flex-wrap: wrap;
@@ -190,8 +189,8 @@
   margin-right: auto;
 }
 
-/* Previous, Next, Browse all and Show all: quiet text buttons. One at a
-   lane's end stays, dim, so focus stays on it. */
+/* Previous, Next and Show all: quiet text buttons. One at a lane's end
+   stays, dim, so focus stays on it. */
 .fm-board-pager {
   display: inline-flex;
   gap: var(--space-1);

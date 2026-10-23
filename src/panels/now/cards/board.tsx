@@ -117,7 +117,7 @@ type Place = {
   query: string;
   view: BoardView;
   /** Each lane's page, from 0, as its view last showed it. */
-  pages: Partial<Record<BoardLane, number>>;
+  pages: Partial<Record<PageKey, number>>;
   /** The tinted tile: the turn's hint while the board is shown. */
   selectedTaskId: string | null;
   scroll: { top: number; left: number };
@@ -136,6 +136,15 @@ const LANES: readonly BoardLane[] = [
   "earlier",
 ];
 
+/**
+ * Where a lane's page is kept: by its lane, but the Board's Backlog column
+ * apart from the Backlog list, whose pages are four times as long.
+ */
+type PageKey = BoardLane | "board-backlog";
+const PAGE_KEYS: readonly PageKey[] = [...LANES, "board-backlog"];
+const pageKeyOf = (view: BoardView, lane: BoardLane): PageKey =>
+  view === "board" && lane === "backlog" ? "board-backlog" : lane;
+
 const FRESH: Place = {
   projectId: null,
   query: "",
@@ -152,10 +161,10 @@ function placeOf(kept: StoreValue): Place {
   const k = kept as Record<string, unknown>;
   const scroll = (k.scroll ?? {}) as Record<string, unknown>;
   const keptPages = (k.pages ?? {}) as Record<string, unknown>;
-  const pages: Partial<Record<BoardLane, number>> = {};
-  for (const lane of LANES) {
-    const page = keptPages[lane];
-    if (typeof page === "number" && page > 0) pages[lane] = page;
+  const pages: Partial<Record<PageKey, number>> = {};
+  for (const key of PAGE_KEYS) {
+    const page = keptPages[key];
+    if (typeof page === "number" && page > 0) pages[key] = page;
   }
   return {
     projectId: typeof k.projectId === "string" ? k.projectId : null,
@@ -419,25 +428,18 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
 
   // What this view draws: up to three of Waiting on you above it (none in
   // its own list), then its lanes, a page each. A lane turns to the page
-  // that holds a move asking on it; the Board's Backlog shows its first five.
+  // that holds a move asking on it.
   const band = view === "waiting" ? [] : lane("waiting").slice(0, BOARD_WAITING_SHOWN);
   const drawn: DrawnLane[] = columnsOfView.map((name) => {
     const size = view === "board" ? BOARD_COLUMN_PAGE : BOARD_LIST_PAGE;
     const whole = lane(name);
     const asking = pending ? whole.findIndex((tile) => tile.task.id === pending.taskId) : -1;
     const page =
-      asking >= 0
-        ? Math.floor(asking / size)
-        : view === "board" && name === "backlog"
-          ? 0
-          : (place.pages[name] ?? 0);
+      asking >= 0 ? Math.floor(asking / size) : (place.pages[pageKeyOf(view, name)] ?? 0);
     return { lane: name, page: boardPageOf(whole, page, size), size };
   });
-  /** A lane's tiles the keys walk: the whole lane, or the Board's Backlog as drawn. */
-  const walkOf = (entry: DrawnLane) =>
-    view === "board" && entry.lane === "backlog"
-      ? entry.page.tiles.map((tile) => tile.task.id)
-      : lane(entry.lane).map((tile) => tile.task.id);
+  /** A lane's tiles the keys walk: the whole lane, its other pages too. */
+  const walkOf = (entry: DrawnLane) => lane(entry.lane).map((tile) => tile.task.id);
   const layout: BoardNavLayout = {
     row: band.map((tile) => tile.task.id),
     columns: drawn.map(walkOf),
@@ -513,7 +515,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
   const setPage = (name: BoardLane, page: number) => {
     focusedAt.current = null;
     follow.current = null;
-    patch({ pages: { ...place.pages, [name]: page } });
+    patch({ pages: { ...place.pages, [pageKeyOf(view, name)]: page } });
   };
 
   const say = (text: string, tone: LiveLine["tone"] = "said") => setLive({ text, tone });
@@ -530,7 +532,9 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
       const index = walkOf(entry).indexOf(taskId);
       if (index < 0) continue;
       const page = Math.floor(index / entry.size);
-      if (page !== entry.page.page) patch({ pages: { ...place.pages, [entry.lane]: page } });
+      if (page !== entry.page.page) {
+        patch({ pages: { ...place.pages, [pageKeyOf(view, entry.lane)]: page } });
+      }
       break;
     }
     backTo(taskId);
@@ -1223,19 +1227,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
     >
       {laneHead(name)}
       {at.tiles.length > 0 ? at.tiles.map((t) => tile(t, name)) : empty(name)}
-      {name === "backlog" && at.total > at.tiles.length ? (
-        <div className="fm-board-column-foot" data-board-column-foot={name}>
-          <span className="fm-board-n">{`first ${at.tiles.length} of ${at.total}`}</span>
-          <button
-            type="button"
-            className="fm-board-page"
-            data-board-browse="backlog"
-            onClick={() => showView("backlog")}
-          >
-            {`Browse all ${at.total}`}
-          </button>
-        </div>
-      ) : at.pages > 1 ? (
+      {at.pages > 1 ? (
         <div className="fm-board-column-foot" data-board-column-foot={name}>
           <span className="fm-board-n" data-board-range={name}>
             {range(at)}

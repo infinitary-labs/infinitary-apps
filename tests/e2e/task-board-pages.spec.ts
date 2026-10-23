@@ -208,13 +208,29 @@ test("with 60 in the backlog and 300 done this week, the board pages every lane 
       await expect(boardViewCount(page, "backlog")).toHaveText(String(BACKLOG));
       await expect(boardViewCount(page, "landed")).toHaveText(String(DONE));
       await expect(boardPager(page, "waiting").browse).toBeVisible();
-      await expect(boardPager(page, "backlog").browse).toBeVisible();
-      // Queued turns to its second page; Backlog opens its list, a page at a time.
+      // Backlog pages five at a time as Queued and Working do (the captain's
+      // ask: "the backlog column in our kanban board should have pagination
+      // just like the other columns"), and the arrows walk on past its page.
+      const backlogFrom = (from: number) =>
+        Promise.all([0, 1, 2, 3, 4].map((i) => keyOf(page, `b-${from + i}`)));
+      expect(await laneKeys(page, "backlog")).toEqual(await backlogFrom(0));
+      await pressInBoard(boardPager(page, "backlog").next);
+      await expect.poll(() => laneKeys(page, "backlog")).toEqual(await backlogFrom(5));
+      await pressInBoard(boardPager(page, "backlog").previous);
+      await expect.poll(() => laneKeys(page, "backlog")).toEqual(await backlogFrom(0));
+      await focusOn(boardTile(page, await keyOf(page, "b-4")));
+      await press("ArrowDown", await keyOf(page, "b-5"));
+      expect(await laneKeys(page, "backlog")).toEqual(await backlogFrom(5));
+      await press("End", last);
+      expect(await laneKeys(page, "backlog")).toContain(last);
+      // Queued turns to its second page; the Backlog view opens the backlog
+      // as a list on its own first page, twenty a page.
       await pressInBoard(boardPager(page, "queued").next);
       expect(await laneKeys(page, "queued")).toHaveLength(2);
-      await pressInBoard(boardPager(page, "backlog").browse);
+      await pressInBoard(boardViewTab(page, "backlog"));
       await expect(boardViewTab(page, "backlog")).toHaveAttribute("aria-pressed", "true");
       expect(await laneKeys(page, "backlog")).toHaveLength(20);
+      expect((await laneKeys(page, "backlog"))[0]).toBe(first);
       // Done · 7d is a list of its own, a page at a time.
       await pressInBoard(boardViewTab(page, "landed"));
       await expect(boardViewTab(page, "landed")).toHaveAttribute("aria-pressed", "true");

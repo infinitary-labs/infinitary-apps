@@ -29,14 +29,14 @@ The surface is the card stack's own, as tall as a card may be, under the panel c
   Show all N opens its own list, where these rows are not drawn again.
 - A `--line-1` hairline.
 - **Board**: three columns, Backlog, Queued and Working, `--space-3` apart, each after the first with a `--line-1` rule on its left: a micro label and mono count, then a page of five tiles `--space-2` apart, or one quiet line: "Nothing in the backlog", "Nothing queued", "Nothing working".
-  Over a hairline at a column's foot: Queued and Working, once they have a second page, their range ("6–10 of 12") in mono `--text-xs` `--fg-3` and Previous and Next; Backlog, past five, "first 5 of N" and Browse all N, which opens the Backlog list.
+  Over a hairline at a column's foot, once it has a second page: its range ("6–10 of 12") in mono `--text-xs` `--fg-3` and Previous and Next.
   Five is a page, never a limit on running work.
   Columns sort by priority then oldest first.
   Done · 7d is not a column; its view button opens it as a list, newest first.
   A child sits under its parent, indented `--space-3` per level, only when both are in the same lane.
 - **A list** - Backlog, Done · 7d, Waiting on you, Dropped · 7d (with "Read-only"), Earlier matches: its micro label and count with Previous and Next at the right, a page of twenty one-line rows, then over a hairline its range ("21–40 of 300") and Previous and Next again; the rows scroll between head and foot while the list has the room.
   Earlier matches may carry one `--text-sm` `--fg-3` line under its head: looking for earlier tasks, that the search stops at its newest matches and narrower words help, or that earlier results are unavailable right now.
-- Previous, Next, Browse all and Show all are small quiet buttons, `--text-sm` `--fg-2` with a `--line-1` border and `--radius-m`, `--bg-3` on hover; at a lane's end Previous or Next stays, at half opacity, so focus stays on it.
+- Previous, Next and Show all are small quiet buttons, `--text-sm` `--fg-2` with a `--line-1` border and `--radius-m`, `--bg-3` on hover; at a lane's end Previous or Next stays, at half opacity, so focus stays on it.
 - **Foot**, over a hairline: Dropped · N at the left (a quiet text button, `--fg-1` while its list is shown), the Drop task tray beside it only while a tile is in the air, and the key hint at the right, "Arrows move · `Enter` opens · `Space` menu", in `--text-sm` `--fg-3`.
 - **Live line**, under the foot: what the last move did or why it was refused, `--text-sm` `--fg-2`, `--warn` for a refusal (`role="status"`, read once); no height while empty.
 

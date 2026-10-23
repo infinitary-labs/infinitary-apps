@@ -76,9 +76,9 @@ export function boardView(page: Page, panel = BOARD_PANEL): Promise<string | nul
 
 /**
  * A lane's pages on the shown board: its range ("21–40 of 300"), its
- * Previous and Next, and Browse all or Show all where a lane opens its
- * list. A list draws Previous and Next above and below its rows; these are
- * the first of each.
+ * Previous and Next, and Show all where Waiting on you opens its list. A
+ * list draws Previous and Next above and below its rows; these are the
+ * first of each.
  */
 export function boardPager(page: Page, lane: string, panel = BOARD_PANEL) {
   const board = boardEntry(page, panel);

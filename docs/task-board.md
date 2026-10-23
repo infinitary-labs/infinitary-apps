@@ -31,6 +31,7 @@ It is a wide card: up to 800 px, giving way to the docks, the docks folding only
 Under about 700 px the columns scroll sideways with the rest of the body; text never shrinks.
 
 While it is open the card keeps its project chip, Find, its view, each lane's page, the selected tile and its scroll (`card.keep`), so paging away and back finds it as it was.
+The Board's Backlog column keeps its page apart from the Backlog list's, since their pages are five and twenty long.
 Hide or Esc closes it and lets all of that go: the next board starts fresh on All projects and the Board view.
 There is no setting for any of it.
 
@@ -58,7 +59,7 @@ The pressed one is the view shown; Board opens first.
 Every view draws Waiting on you above it, at most three of its tasks as one-line rows, and Show all N when there are more, which opens Waiting on you as a list of its own.
 
 - **Board**: the work not yet done in three columns, Backlog, Queued and Working, five tiles a page.
-  Queued and Working show their range ("6–10 of 12") and Previous and Next in their foot once they have a second page; Backlog shows its first five, and Browse all N opens the Backlog list.
+  Each column shows its range ("6–10 of 12") and Previous and Next in its foot once it has a second page; the Backlog view opens the whole backlog as a list.
   Done · 7d is not a column: its view button, with its count, opens it.
   Five is a page, never a limit on how much work runs.
 - **Backlog**, **Done · 7d**, Waiting on you's own list, **Dropped · 7d** (the foot's Dropped · N) and **Earlier matches**: one lane as a list, twenty one-line rows a page - the key, the title and the status - with Previous and Next above the rows and the range with Previous and Next below them, the rows scrolling between while the list has the room.
@@ -136,8 +137,8 @@ When a live change takes the focused tile away - another surface moved its task,
 
 - ⌘B opens or focuses the board; Find on task board opens it with focus in Find, and Show the backlog, Show done tasks and Show dropped tasks open it on that list with focus on its rows.
   Each puts the same card up with the place in its data (`{ "focus": "find" }`), and the board answers each time it is put up once (`card.revision`), keeping the one it answered with its place, so a board paged back to moves no focus.
-- F6 lands on it like any shown card, giving its page focus, and Tab goes through its own row, the views, then the tiles as one stop among the lanes' Show all, Browse all, Previous and Next, then the foot.
-- ↑ ↓ move within a lane and onto its other pages, Home and End to the lane's real first and last task, turning its page and bringing the tile into view, where the Board's Backlog walks only its first five; ← → go to the nearest drawn tile in the next column that has one; ↓ from Waiting on you's last row goes to the first column's top, and ↑ from any lane's top back to it (`boardNavMove`).
+- F6 lands on it like any shown card, giving its page focus, and Tab goes through its own row, the views, then the tiles as one stop among the lanes' Show all, Previous and Next, then the foot.
+- ↑ ↓ move within a lane and onto its other pages, Home and End to the lane's real first and last task, turning its page and bringing the tile into view; ← → go to the nearest drawn tile in the next column that has one; ↓ from Waiting on you's last row goes to the first column's top, and ↑ from any lane's top back to it (`boardNavMove`).
 - Enter opens the tile's task; Space opens its ⋯ menu, where ↑ ↓ move, Enter picks and Esc closes; ↓ in Find goes to the tiles.
 - Move the selected task, chosen by name in command search, opens the board with the selected tile's menu open.
 - Esc closes the menu or the summary, then lets go of a move that asks, then clears Find, then hides the board: the board's page hears it first, and an Escape it did not use hides the card.

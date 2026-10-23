@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "task-board-backlog-pages",
+      "kind": "improvement",
+      "title": "Page through your backlog on the task board",
+      "body": "The task board's Backlog column now pages like Queued and Working: Previous and Next show five tasks at a time, with where you are in the backlog beside them, and the arrow keys walk on to the next page. The Backlog button still opens the whole backlog as a list.",
+      "area": "tasks",
+      "picture": {
+        "dark": "task-board-backlog-pages-dark.webp",
+        "light": "task-board-backlog-pages-light.webp",
+        "alt": "The task board's Backlog column on its second page, showing 6–10 of 12 with Previous and Next, beside Queued showing 1–5 of 7 with Previous and Next"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

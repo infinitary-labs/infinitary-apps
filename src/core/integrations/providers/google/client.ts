@@ -25,13 +25,18 @@ export const GMAIL_SCOPE = "https://www.googleapis.com/auth/gmail.modify";
 /**
  * Every permission the one Google row asks, up front (the captain's q8:
  * "One Google row that signs in once for both, asking every permission up
- * front"): Gmail's, and Calendar's for its events and its calendars, since
- * an installed app cannot add a permission later.
+ * front"): Gmail's, and Calendar's for its events, its calendar list and
+ * availability, since an installed app cannot add a permission later.
+ * The calendar list and availability take the narrowest scope Google
+ * accepts for `calendarList.list` and `freeBusy.query` (INF-953), in place
+ * of `calendar.readonly`; a sign-in that granted `calendar.readonly` keeps
+ * working, since Google accepts it for both calls.
  */
 export const GOOGLE_SCOPES: readonly string[] = [
   GMAIL_SCOPE,
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+  "https://www.googleapis.com/auth/calendar.events.freebusy",
 ];
 
 export type GoogleEndpoints = {

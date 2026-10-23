@@ -23,6 +23,38 @@ export const SHOOT_EVENT = {
   end: { dateTime: "2026-10-26T11:00:00-07:00", timeZone: "America/Los_Angeles" },
   attendees: [{ email: "lena@ortiz-studio.com" }],
 };
+/**
+ * The permissions Google accepts for each method that `calendar.events`
+ * does not cover, from the method's Authorization section in the reference
+ * above (read 2026-10-22); a key granted none of them answers 403.
+ */
+const ACCEPTED: Record<string, string[]> = {
+  "/users/me/calendarList": [
+    "calendar.readonly",
+    "calendar",
+    "calendar.calendarlist",
+    "calendar.calendarlist.readonly",
+  ],
+  "/freeBusy": ["calendar.readonly", "calendar", "calendar.events.freebusy", "calendar.freebusy"],
+};
+const INSUFFICIENT = {
+  error: {
+    code: 403,
+    message: "Request had insufficient authentication scopes.",
+    errors: [
+      { message: "Insufficient Permission", domain: "global", reason: "insufficientPermissions" },
+    ],
+    status: "PERMISSION_DENIED",
+    details: [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        reason: "ACCESS_TOKEN_SCOPE_INSUFFICIENT",
+        domain: "googleapis.com",
+        metadata: { service: "calendar-json.googleapis.com", method: "calendar.v3" },
+      },
+    ],
+  },
+};
 export function calendarStandIn() {
   const calendars = new Map<string, Map<string, CalendarEvent>>([
     ["primary", new Map()],
@@ -62,7 +94,8 @@ export function calendarStandIn() {
       revision += 1;
       keptFrom = revision;
     },
-    handle(res: ServerResponse, url: URL, method: string, body: string) {
+    /** `granted`: the permissions the request's key carries. */
+    handle(res: ServerResponse, url: URL, method: string, body: string, granted: string[] = []) {
       const limited = knobs.limited.shift();
       if (limited !== undefined)
         return json(
@@ -72,6 +105,12 @@ export function calendarStandIn() {
           { "retry-after": limited },
         );
       const path = url.pathname.slice("/calendar/v3".length);
+      const accepted = ACCEPTED[path];
+      if (
+        accepted &&
+        !accepted.some((scope) => granted.includes(`https://www.googleapis.com/auth/${scope}`))
+      )
+        return json(res, 403, INSUFFICIENT);
       if (path === "/users/me/calendarList")
         return json(res, 200, {
           kind: "calendar#calendarList",

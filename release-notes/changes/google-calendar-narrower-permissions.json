@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "google-calendar-narrower-permissions",
+      "kind": "improvement",
+      "title": "Google asks for less Calendar access",
+      "body": "Signing in to Google now asks only to see your list of calendars and when you are busy, instead of seeing every calendar's details, alongside the existing permission for events. A Google account already connected keeps working as it is.",
+      "area": "settings",
+      "noPicture": "The difference shows on Google's own sign-in page in your browser, not in Infinitary.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

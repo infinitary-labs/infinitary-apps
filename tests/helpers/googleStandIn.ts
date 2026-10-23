@@ -76,7 +76,8 @@ const LABELS = [
 const SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
   "https://www.googleapis.com/auth/calendar.events",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  "https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+  "https://www.googleapis.com/auth/calendar.events.freebusy",
 ];
 
 function googleError(code: number, message: string, reason: string, status: string) {
@@ -336,8 +337,9 @@ export async function startGoogleStandIn() {
         ...(request.headers.authorization ? { authorization: request.headers.authorization } : {}),
       });
       const bearer = request.headers.authorization?.replace(/^Bearer /, "") ?? "";
-      if (!live.has(bearer)) return json(response, 401, UNAUTHENTICATED);
-      return calendar.handle(response, url, request.method ?? "GET", body);
+      const refresh = live.get(bearer);
+      if (!refresh) return json(response, 401, UNAUTHENTICATED);
+      return calendar.handle(response, url, request.method ?? "GET", body, grants.get(refresh));
     }
     if (url.pathname.startsWith("/gmail/v1/users/me/")) return gmail(request, response, url, body);
     if (request.method === "GET" && url.pathname === "/o/oauth2/v2/auth") {
@@ -433,6 +435,15 @@ export async function startGoogleStandIn() {
     drafts,
     sent,
     knobs,
+    /**
+     * A sign-in an earlier version made, granting these permissions: its
+     * keys, as that version kept them.
+     */
+    grantEarlier(scopes: string[]) {
+      const refresh = `1//0g${randomBytes(30).toString("base64url")}`;
+      grants.set(refresh, scopes);
+      return { access: issue(refresh), refresh };
+    },
     /** The keys Google issued and has not revoked; a test asserts none reaches a reader. */
     issued: () => [...live.keys(), ...grants.keys()],
     /** A message arrives in the inbox; answers its id. */

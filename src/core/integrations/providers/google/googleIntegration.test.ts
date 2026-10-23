@@ -31,6 +31,7 @@ import {
   IntegrationsService,
   mcpIntegration,
 } from "../..";
+import { GoogleSignInStore } from "./store";
 
 /**
  * INF-784, piece 5 of the accepted integrations plan (INF-775): "one Google
@@ -77,12 +78,12 @@ async function fixture(
   browser?: (url: string) => Promise<void>,
   withMcp = false,
   /** What an older version saved in the integrations folder before this one opens it. */
-  older?: (dir: string) => Promise<void>,
+  older?: (dir: string, google: GoogleStandIn) => Promise<void>,
 ) {
   const google: GoogleStandIn = await startGoogleStandIn();
   cleanup.push(() => google.close());
   const dir = join(scratchDir("fm-google-"), "integrations");
-  await older?.(dir);
+  await older?.(dir, google);
   const secrets = new FileIntegrationSecrets(join(dir, "secrets"));
   const db = openInMemoryDatabase();
   cleanup.push(() => {
@@ -671,6 +672,59 @@ describe("Google as an integration", () => {
 
 /** INF-786, accepted INF-775 piece 6 and captain's isolated-only go-ahead. */
 describe("Calendar on the shared Google row", () => {
+  it("keeps a sign-in that granted calendar.readonly listing calendars and availability after the narrower permissions", async () => {
+    // INF-953: GOOGLE_SCOPES asks calendar.calendarlist.readonly and
+    // calendar.events.freebusy in place of calendar.readonly, and "existing
+    // connections keep working". The stand-in answers 403 to a key Google
+    // would refuse for calendarList.list or freeBusy.query.
+    const earlier = [
+      "https://www.googleapis.com/auth/gmail.modify",
+      "https://www.googleapis.com/auth/calendar.events",
+      "https://www.googleapis.com/auth/calendar.readonly",
+    ];
+    const { google, integrations, clock } = await fixture(undefined, false, async (dir, google) => {
+      const keys = google.grantEarlier(earlier);
+      const secrets = new FileIntegrationSecrets(join(dir, "secrets"));
+      secrets.put("google", "access_token", keys.access);
+      secrets.put("google", "refresh_token", keys.refresh);
+      new GoogleSignInStore(dir).write({
+        account: STAND_IN_ACCOUNT,
+        scopes: earlier,
+        // Its access ran out, so the first call renews it.
+        expiresAt: Date.UTC(2026, 9, 22, 15),
+        health: "ok",
+        signedInAt: Date.UTC(2026, 9, 1),
+      });
+    });
+    expect(earlier).not.toEqual(GOOGLE_SCOPES);
+    google.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
+    const crew = integrations.forTask("task-1");
+
+    expect(parsed((await crew.call("Google", "list_calendars", {})).text)).toMatchObject({
+      calendars: expect.arrayContaining([expect.objectContaining({ id: STUDIO_CALENDAR })]),
+    });
+    expect(google.tokens).toEqual([expect.objectContaining({ grant_type: "refresh_token" })]);
+    clock.now += 2 * 60 * 60_000;
+    expect(
+      parsed(
+        (
+          await crew.call("Google", "free_busy", {
+            calendars: [STUDIO_CALENDAR],
+            from: "2026-10-26T00:00:00-07:00",
+            to: "2026-10-27T00:00:00-07:00",
+          })
+        ).text,
+      ),
+    ).toMatchObject({
+      calendars: {
+        [STUDIO_CALENDAR]: {
+          busy: [{ start: SHOOT_EVENT.start.dateTime, end: SHOOT_EVENT.end.dateTime }],
+        },
+      },
+    });
+    expect(integrations.view().integrations[0]).toMatchObject({ health: "ok" });
+  });
+
   it("lists and reads events and availability, and creates and patches only on the captain's once-only click", async () => {
     const { google, integrations, tasks } = await signedIn();
     const crew = integrations.forTask("task-1");

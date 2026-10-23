@@ -117,7 +117,8 @@ A look (`IntegrationsService.look`) answers the changes since a cursor; a cursor
 ## Google
 
 Google is one row that signs in once for Gmail and Calendar, asking every permission up front (the captain's q8 on INF-775), as Infinitary's own Google client (q4 on the same task), in `src/core/integrations/providers/google/`.
-Its permissions are Gmail's `gmail.modify` and Calendar's `calendar.events` and `calendar.readonly` (`GOOGLE_SCOPES`, `client.ts`): an installed app cannot add a permission later, and the same sign-in reaches both APIs.
+Its permissions are Gmail's `gmail.modify` and Calendar's `calendar.events`, `calendar.calendarlist.readonly` and `calendar.events.freebusy` (`GOOGLE_SCOPES`, `client.ts`): an installed app cannot add a permission later, and the same sign-in reaches both APIs.
+The calendar list and availability take the narrowest scope Google accepts for `calendarList.list` and `freeBusy.query`; a sign-in an earlier version made with `calendar.readonly` keeps working, since Google accepts that for both calls and the app never rechecks a kept sign-in's permissions.
 Google's device flow does not reach Gmail or Calendar, so the sign-in is the installed-app flow (`signIn.ts`): the app listens on `127.0.0.1` at a port the system picks, opens Google's consent page in the person's browser with PKCE (S256), a state, offline access and consent every time, and trades the code the browser brings back for the sign-in.
 The listener turns away anything without the sign-in's state and closes once the browser answers or the sign-in is cancelled; a second sign-in ends the first.
 The binding declares its identity, so Google and a saved custom name stay its own while signed out ("Names"): a server an older version let take the name Google is renamed Google MCP server with the explanation, and Google signs in beside it.

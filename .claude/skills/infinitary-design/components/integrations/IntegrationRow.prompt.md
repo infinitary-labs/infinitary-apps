@@ -33,4 +33,10 @@ The words are `INTEGRATION_NOTICES` in `src/shared/integrations.ts`; the notice 
 Google signs in in the browser, so once the notice is accepted its aside, in the same place and box, is one `--text-sm --fg-2` line, "Finish signing in to Google in your browser.", over a small secondary "Open the page again" and a ghost "Cancel"; its chip reads "Connecting..." while it waits, and the new row opens on its actions once the browser is back.
 Its last chip, "+ MCP server", is always there, and opens the add form under the chips in the same aside box: a "Name" field (placeholder "Linear"), a mono "Runs" field (placeholder "npx -y @example/mcp-server, or https://example.com/mcp") with the `--text-sm --fg-3` hint "A program and its arguments, started on this computer when someone uses it, or the server's https address.", one `--danger` `--text-sm` status line for why it could not connect, and a small primary "Connect" ("Connecting…" while it connects; disabled until both fields hold words) beside a ghost "Cancel".
 Connect opens the new row on the tools the server listed.
-Settings -> Projects' "Where your projects live" ends with one pointer line, "Your GitHub sign-in is in Integrations.", in `--text-sm --fg-3`, with a small secondary "Open Integrations".
+Settings -> Projects' "Where your projects live" ends with one pointer line, "Your GitHub, GitLab and GitHub Enterprise sign-ins are in Integrations.", in `--text-sm --fg-3`, with a small secondary "Open Integrations".
+
+GitLab and GitHub Enterprise each draw one row per signed-in host, named GitLab for gitlab.com and by address for a server.
+Their rows use the same health, action switches and menu as GitHub, with two actions, Read and Change.
+The GitLab and GitHub Enterprise chips remain available to add another server; GitLab's public chip and server chip never duplicate the same label.
+The browser/application guide and both key forms described in `components/projects/ForgeRow` render here, under the row signing in again or under the chips for a new host.
+Projects keeps only its pointer and other computers' own GitHub rows.

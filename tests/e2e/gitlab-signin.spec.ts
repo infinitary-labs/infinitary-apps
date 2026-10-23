@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { projectSignInWords } from "../../src/renderer/src/settings/addProjectWords";
 import {
   FORGE_BROWSER_WORDS,
   FORGE_SECTION_WORDS,
@@ -56,14 +57,24 @@ for (const host of ["gitlab.com", "gitlab.example.com"]) {
       const { page } = launched;
       await resizeWindow(launched.app, page, { width: 1280, height: 800 });
       await page.getByRole("button", { name: "Settings", exact: true }).click();
-      await page.getByRole("tab", { name: "Projects", exact: true }).click();
-      const section = page.locator("[data-forges]");
+      if (host === "gitlab.com") {
+        await pressKey(page.getByRole("tab", { name: "Projects", exact: true }), "Enter");
+        const add = page.locator("[data-add-project]");
+        await pressKey(add.getByRole("button", { name: "GitLab repo", exact: true }), "Enter");
+        await pressKey(
+          add.getByRole("button", { name: projectSignInWords(GITLAB.name), exact: true }),
+          "Enter",
+        );
+      } else {
+        await page.getByRole("tab", { name: "Integrations", exact: true }).click();
+        await pressKey(
+          page.getByRole("button", { name: `Sign in to ${GITLAB.name}`, exact: true }),
+          "Enter",
+        );
+      }
+      const section = page.locator("[data-integrations]");
       if (evidence && host === "gitlab.com")
         await regionShot(section, join(evidence, "projects-after.png"));
-      await pressKey(
-        section.getByRole("button", { name: `Sign in to ${GITLAB.name}`, exact: true }),
-        "Enter",
-      );
       await pressKey(section.getByRole("button", { name: FORGE_BROWSER_WORDS.useKey }), "Enter");
       const form = section.locator("[data-forge-key-form]");
       // The public chip starts on gitlab.com; its address also accepts a self-hosted server.
@@ -113,9 +124,14 @@ for (const host of ["gitlab.com", "gitlab.example.com"]) {
         if (host === "gitlab.com")
           await heroShot(launched.app, page, { region: section, name: "gitlab-sign-in" });
       }
+      await pressKey(page.getByRole("tab", { name: "Projects", exact: true }), "Enter");
+      await expect(
+        page.locator("[data-forges] [data-forge-row], [data-forges] [data-forge-chip]"),
+      ).toHaveCount(0);
       const add = page.locator("[data-add-project]");
       const name = host === "gitlab.com" ? "GitLab" : host;
-      await pressKey(add.getByRole("button", { name: `${name} repo`, exact: true }), "Enter");
+      const choose = add.getByRole("button", { name: `${name} repo`, exact: true });
+      if ((await choose.getAttribute("aria-expanded")) !== "true") await pressKey(choose, "Enter");
       await expect(add.getByText(GITLAB_STUB_PROJECT, { exact: false })).toBeVisible();
       if (evidence) await regionShot(add, join(evidence, `${host}-projects.png`));
       await pressKey(add.getByRole("button", { name: "Add", exact: true }).first(), "Enter");

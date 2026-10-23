@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { forgeSignInStateSchema } from "./forges";
+import { forgeSignInStateSchema, isForgeHostName } from "./forges";
 
 /**
  * Integrations (docs/integrations.md): a connection to something outside
@@ -18,18 +18,27 @@ import { forgeSignInStateSchema } from "./forges";
  */
 
 /**
- * The kinds the app can connect: GitHub, Google (one row for Gmail and
+ * The kinds the app can connect: GitHub, per-host GitLab and GitHub Enterprise, Google (one row for Gmail and
  * Calendar, signed in once), and any MCP server the person adds (each its
  * own row). A new kind is one more binding. `stand-in` is a development or
  * end-to-end run's stand-in that tells events from a folder
  * (`INFINITARY_STAND_IN_INTEGRATION`), never connected in a packaged build.
  */
-export const integrationKindSchema = z.enum(["github", "google", "mcp", "stand-in"]);
+export const integrationKindSchema = z.enum([
+  "github",
+  "gitlab",
+  "github-enterprise",
+  "google",
+  "mcp",
+  "stand-in",
+]);
 export type IntegrationKind = z.infer<typeof integrationKindSchema>;
 
 /** What each kind is called on screen. */
 export const INTEGRATION_KIND_NAMES: Record<IntegrationKind, string> = {
   github: "GitHub",
+  gitlab: "GitLab",
+  "github-enterprise": "GitHub Enterprise",
   google: "Google",
   mcp: "MCP server",
   "stand-in": "Stand-in",
@@ -155,6 +164,8 @@ export const integrationViewSchema = z
   .object({
     id: integrationIdSchema,
     kind: integrationKindSchema,
+    /** The host whose existing forge sign-in this row manages. */
+    host: z.string().optional(),
     /** The person's word for it; the kind's name until renamed. */
     name: integrationNameSchema,
     /** An automatic name repair, kept until the person chooses a name themselves. */
@@ -222,7 +233,7 @@ export const INTEGRATIONS_WORDS = {
   intro:
     "What your first mate and your crew can reach outside your projects. Each row is one connection, signed in as you.",
   quiet: "Nothing connected yet.",
-  pointer: "Your GitHub sign-in is in Integrations.",
+  pointer: "Your GitHub, GitLab and GitHub Enterprise sign-ins are in Integrations.",
   open: "Open Integrations",
 } as const;
 
@@ -275,7 +286,21 @@ export const INTEGRATION_RULE_WORDS: Record<IntegrationRule, string> = {
 export const INTEGRATIONS_SIGN_IN_HOST = "github.com";
 
 /** The kinds that sign in in the person's browser rather than by a code or a form. */
-const browserSignInKindSchema = integrationKindSchema.exclude(["github", "mcp", "stand-in"]);
+const browserSignInKindSchema = z.enum(["google"]);
+
+/** A typed arrival for a newly named server, before the forge knows its kind. */
+export function integrationHostArrival(
+  value: string,
+): { kind: "gitlab" | "github"; host: string } | undefined {
+  for (const [prefix, kind] of [
+    ["gitlab:", "gitlab"],
+    ["github-enterprise:", "github"],
+  ] as const) {
+    if (value.startsWith(prefix) && isForgeHostName(value.slice(prefix.length)))
+      return { kind, host: value.slice(prefix.length) };
+  }
+  return undefined;
+}
 
 /**
  * Whether a card's `signIn` names a sign-in Settings -> Integrations starts
@@ -283,7 +308,14 @@ const browserSignInKindSchema = integrationKindSchema.exclude(["github", "mcp", 
  * by its own name (`google`).
  */
 export function isIntegrationSignIn(signIn: string | null | undefined): boolean {
-  return signIn === INTEGRATIONS_SIGN_IN_HOST || browserSignInKindSchema.safeParse(signIn).success;
+  return (
+    !!signIn &&
+    (isForgeHostName(signIn) ||
+      integrationHostArrival(signIn) !== undefined ||
+      signIn === "gitlab" ||
+      signIn === "github-enterprise" ||
+      browserSignInKindSchema.safeParse(signIn).success)
+  );
 }
 
 /**

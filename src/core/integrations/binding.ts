@@ -77,6 +77,8 @@ export type IntegrationLook = { cursor: string; items: IntegrationEventItem[]; r
 /** One connection of a kind that exists now: a sign-in there, or a server it runs. */
 export type IntegrationConnection = {
   id: string;
+  /** The forge sign-in this connection manages, when it has one. */
+  host?: string;
   /** Who it is signed in as; null until it has answered once, or where nothing signs in. */
   account: string | null;
   health: ForgeSignInState;

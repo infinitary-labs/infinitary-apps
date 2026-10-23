@@ -803,6 +803,7 @@ export class IntegrationsService {
     return {
       id: row.connection.id,
       kind: row.binding.kind,
+      ...(row.connection.host ? { host: row.connection.host } : {}),
       name: this.rowName(row),
       ...(row.settings.renamed ? { renamed: row.settings.renamed } : {}),
       account: row.connection.account,

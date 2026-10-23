@@ -15000,10 +15000,15 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
                   ]
+                },
+                "host": {
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",
@@ -15200,6 +15205,8 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
@@ -15284,10 +15291,15 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
                   ]
+                },
+                "host": {
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",
@@ -15484,6 +15496,8 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
@@ -15537,10 +15551,15 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
                   ]
+                },
+                "host": {
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",
@@ -15737,6 +15756,8 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
@@ -15790,10 +15811,15 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
                   ]
+                },
+                "host": {
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",
@@ -15990,6 +16016,8 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
@@ -16059,10 +16087,15 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
                   ]
+                },
+                "host": {
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",
@@ -16259,6 +16292,8 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
@@ -16335,10 +16370,15 @@
                       "type": "string",
                       "enum": [
                         "github",
+                        "gitlab",
+                        "github-enterprise",
                         "google",
                         "mcp",
                         "stand-in"
                       ]
+                    },
+                    "host": {
+                      "type": "string"
                     },
                     "name": {
                       "type": "string",
@@ -16535,6 +16575,8 @@
                       "type": "string",
                       "enum": [
                         "github",
+                        "gitlab",
+                        "github-enterprise",
                         "google",
                         "mcp",
                         "stand-in"
@@ -16573,6 +16615,8 @@
             "type": "string",
             "enum": [
               "github",
+              "gitlab",
+              "github-enterprise",
               "google",
               "mcp",
               "stand-in"
@@ -16619,10 +16663,15 @@
                       "type": "string",
                       "enum": [
                         "github",
+                        "gitlab",
+                        "github-enterprise",
                         "google",
                         "mcp",
                         "stand-in"
                       ]
+                    },
+                    "host": {
+                      "type": "string"
                     },
                     "name": {
                       "type": "string",
@@ -16819,6 +16868,8 @@
                       "type": "string",
                       "enum": [
                         "github",
+                        "gitlab",
+                        "github-enterprise",
                         "google",
                         "mcp",
                         "stand-in"
@@ -16871,10 +16922,15 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
                   ]
+                },
+                "host": {
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",
@@ -17071,6 +17127,8 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
@@ -54454,10 +54512,15 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"
                   ]
+                },
+                "host": {
+                  "type": "string"
                 },
                 "name": {
                   "type": "string",
@@ -54654,6 +54717,8 @@
                   "type": "string",
                   "enum": [
                     "github",
+                    "gitlab",
+                    "github-enterprise",
                     "google",
                     "mcp",
                     "stand-in"

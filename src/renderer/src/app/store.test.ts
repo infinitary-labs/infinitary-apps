@@ -1323,21 +1323,24 @@ describe("card action receipts", () => {
     });
   });
 
-  // The GitHub sign-in lives in Settings -> Integrations (INF-775, the
-  // captain's q2: "Move the GitHub sign-in to Integrations and leave Projects
-  // a pointer to it"); any other host's sign-in stays in Projects.
-  it("routes a GitHub sign-in card into Integrations, another host's into Projects, and starts that sign-in", async () => {
-    for (const [host, section] of [
-      ["github.com", "integrations"],
-      ["gitlab.com", "projects"],
-    ] as const) {
+  // INF-1007 direction A: every forge host sign-in lives in Integrations;
+  // older cards still naming Projects retain the host to start on arrival.
+  it("routes every forge host sign-in card into Integrations and starts that host's sign-in", async () => {
+    for (const host of [
+      "github.com",
+      "gitlab.com",
+      "gitlab.example.com",
+      "github.example.com",
+      "gitlab:code.example.com",
+      "github-enterprise:code.example.com",
+    ]) {
       const ipc = request();
       const sent = useShellStore.getState().actOnCard("choice", "sign-in");
       ipc.resolve({ effect: { kind: "open", target: "projects", signIn: host } });
       await sent;
       expect(useShellStore.getState()).toMatchObject({
         view: "settings",
-        settingsSection: section,
+        settingsSection: "integrations",
         pendingForgeSignIn: host,
       });
     }

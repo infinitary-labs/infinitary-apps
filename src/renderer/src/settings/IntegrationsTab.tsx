@@ -16,14 +16,13 @@ import {
   type IntegrationsView,
   type IntegrationView,
   integrationRenameWords,
-  isIntegrationSignIn,
   NOTICE_ACCEPTED,
 } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
 import "./integrations.css";
-import { forgeRowView, HostChip, plusIcon, SignInAside } from "./ForgeSection";
+import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
 import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
 import "../accounts/connectChips.css";
 import "./forges.css";
@@ -71,6 +70,7 @@ export function IntegrationsTab() {
   /** The kind whose notice is open, and what had the focus when it opened. */
   const [notice, setNotice] = useState<IntegrationKind | null>(null);
   const noticeFrom = useRef<HTMLElement | null>(null);
+  const hostSignIn = useForgeHostSignIn();
   const pending = useShellStore((s) => s.pendingForgeSignIn);
 
   useEffect(() => {
@@ -161,7 +161,7 @@ export function IntegrationsTab() {
   // the code is on screen when the tab opens; a card's Google sign-in opens
   // Google's notice, and its accept opens Google's page.
   useEffect(() => {
-    if (!loaded || !isIntegrationSignIn(pending)) return;
+    if (!loaded || (pending !== "github.com" && pending !== "google")) return;
     if (pending === INTEGRATIONS_SIGN_IN_HOST) {
       useShellStore.getState().clearPendingForgeSignIn();
       signIn();
@@ -251,7 +251,11 @@ export function IntegrationsTab() {
                 setOpen((current) => (current === integration.id ? null : integration.id))
               }
               onSignIn={
-                integration.kind === "github" ? signIn : () => startBrowserSignIn(integration.kind)
+                integration.kind === "github"
+                  ? signIn
+                  : integration.host
+                    ? () => hostSignIn.connect(integration.host ?? "")
+                    : () => startBrowserSignIn(integration.kind)
               }
               onCheck={() => change(() => window.infinitary.integrations.check(integration.id))}
               onPause={(paused) => configure(integration.id, { paused })}
@@ -278,6 +282,7 @@ export function IntegrationsTab() {
                 }
               />
             )}
+            {integration.host && hostSignIn.asideFor(integration.host)}
             {integration.kind === "github" && aside}
             {notice === integration.kind && noticeAside}
             {browser === integration.kind && browserAside}
@@ -286,42 +291,45 @@ export function IntegrationsTab() {
         {view.addable.length > 0 && (
           <div className="fm-forges-add">
             <div className="fm-connect-chips" data-connect-chips="foot">
-              {view.addable.map((kind) => (
-                <span
-                  key={kind.kind}
-                  data-integration-add={kind.kind}
-                  style={{ display: "contents" }}
-                >
-                  {kind.kind === "mcp" ? (
-                    <button
-                      ref={addChip}
-                      type="button"
-                      className="fm-connect-chip"
-                      aria-label={INTEGRATIONS_MCP_WORDS.title}
-                      aria-expanded={adding}
-                      onClick={() => {
-                        setError(null);
-                        setAdding(true);
-                      }}
-                    >
-                      {plusIcon}
-                      <span>{INTEGRATIONS_MCP_WORDS.add}</span>
-                    </button>
-                  ) : kind.kind === "github" ? (
-                    <HostChip
-                      host={{ host: INTEGRATIONS_SIGN_IN_HOST, name: kind.name }}
-                      busy={starting || forges.flow?.host === INTEGRATIONS_SIGN_IN_HOST}
-                      onConnect={signIn}
-                    />
-                  ) : (
-                    <HostChip
-                      host={{ host: kind.kind, name: kind.name }}
-                      busy={browser === kind.kind}
-                      onConnect={() => startBrowserSignIn(kind.kind)}
-                    />
-                  )}
-                </span>
-              ))}
+              {view.addable
+                .filter((entry) => entry.kind !== "gitlab" && entry.kind !== "github-enterprise")
+                .map((kind) => (
+                  <span
+                    key={kind.kind}
+                    data-integration-add={kind.kind}
+                    style={{ display: "contents" }}
+                  >
+                    {kind.kind === "mcp" ? (
+                      <button
+                        ref={addChip}
+                        type="button"
+                        className="fm-connect-chip"
+                        aria-label={INTEGRATIONS_MCP_WORDS.title}
+                        aria-expanded={adding}
+                        onClick={() => {
+                          setError(null);
+                          setAdding(true);
+                        }}
+                      >
+                        {plusIcon}
+                        <span>{INTEGRATIONS_MCP_WORDS.add}</span>
+                      </button>
+                    ) : kind.kind === "github" ? (
+                      <HostChip
+                        host={{ host: INTEGRATIONS_SIGN_IN_HOST, name: kind.name }}
+                        busy={starting || forges.flow?.host === INTEGRATIONS_SIGN_IN_HOST}
+                        onConnect={signIn}
+                      />
+                    ) : (
+                      <HostChip
+                        host={{ host: kind.kind, name: kind.name }}
+                        busy={browser === kind.kind}
+                        onConnect={() => startBrowserSignIn(kind.kind)}
+                      />
+                    )}
+                  </span>
+                ))}
+              {hostSignIn.chips}
             </div>
             {adding && (
               <McpAddForm
@@ -335,6 +343,7 @@ export function IntegrationsTab() {
                 }}
               />
             )}
+            {hostSignIn.foot}
             {!github && aside}
             {notice && !view.integrations.some((row) => row.kind === notice) && noticeAside}
             {browser && !view.integrations.some((row) => row.kind === browser) && browserAside}
@@ -418,7 +427,15 @@ export function integrationRowSub(integration: IntegrationView): string {
   const on = integration.actions.filter((action) => action.enabled).length;
   const actions = on === 1 ? "1 action" : `${on} actions`;
   const who = integration.account ? `as ${integration.account}` : null;
-  return [integration.paused ? "paused" : null, who, integration.runs, actions]
+  return [
+    integration.paused ? "paused" : null,
+    integration.host && integration.host !== "gitlab.com"
+      ? INTEGRATION_KIND_NAMES[integration.kind]
+      : null,
+    who,
+    integration.runs,
+    actions,
+  ]
     .filter(Boolean)
     .join(" · ");
 }
@@ -472,8 +489,11 @@ function IntegrationRow({
       data-integration-row={integration.id}
       data-integration-state={integration.health}
       // GitHub's row is the github.com sign-in's own row, marked as the forge rows are.
-      {...(integration.kind === "github"
-        ? { "data-forge-row": INTEGRATIONS_SIGN_IN_HOST, "data-forge-state": integration.health }
+      {...(integration.kind === "github" || integration.host
+        ? {
+            "data-forge-row": integration.host ?? INTEGRATIONS_SIGN_IN_HOST,
+            "data-forge-state": integration.health,
+          }
         : {})}
     >
       <span className="fm-forges-dot">

@@ -30,3 +30,8 @@ export function taskKeyTyped(typed: string): string {
     .replace(/[^A-Z0-9]/g, "")
     .slice(0, 4);
 }
+
+/** The signed-out host selector opens the same sign-in as its Integration chip. */
+export function projectSignInWords(host: string): string {
+  return `Sign in to ${host}`;
+}

@@ -3,8 +3,15 @@ import { writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { GITLAB } from "@shared/forges";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
+import {
+  FileIntegrationSecrets,
+  forgeHostIntegration,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from "../../../integrations";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
 import { writeAskStrip } from "../../../orchestrator/requestStrips";
 import { GITHUB_READ_TOOL, GITHUB_WRITE_TOOL } from "../../../pi/forgeTools";
@@ -259,6 +266,14 @@ async function fixture(
     tasks,
     repos: new RepoRegistry(db, join(dir, "fleet")),
     forgeFor: () => forge,
+    accountForge: (askedHost) =>
+      new GitLabForge(
+        { kind: "gitlab", host: askedHost ?? host, dir: "" },
+        {
+          apiBaseUrl: `${base}/api/v4`,
+          token: async () => KEY,
+        },
+      ),
     readChecks,
     ...(options.watchRun ? { watchRun: options.watchRun } : {}),
     now: () => 1234,
@@ -270,6 +285,7 @@ async function fixture(
     onGithubWrite: (i) => service.write("task-3", i),
   });
   return {
+    service,
     dir,
     read,
     write,
@@ -342,6 +358,95 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     expect(result.text).toContain("saved story with open_change");
     expect(f.seen).toEqual([]);
   });
+
+  // INF-1007 direction A: another project's crewmate and the first mate reach each host;
+  // every integration write waits for the captain, even on the caller's own project.
+  it.each(["gitlab.com", "gitlab.example.com"])(
+    "reaches %s through its integration and keeps writes for one click",
+    async (host) => {
+      const { service, tasks, seen } = await fixture({ host });
+      const integrations = new IntegrationsService({
+        bindings: [
+          forgeHostIntegration("gitlab", {
+            signIns: {
+              view: () => ({
+                signIns: [
+                  {
+                    host,
+                    name: host,
+                    login: "octo",
+                    state: "ok",
+                    projects: 1,
+                    since: 1,
+                    server: GITLAB,
+                  },
+                ],
+                hosts: [],
+                flow: null,
+                ended: null,
+              }),
+              stateOf: () => "ok",
+              loginOf: () => "octo",
+              checkNow: async () => {},
+              signOut: () => {},
+            },
+            gateway: (host) => ({
+              read: (task, input) => service.read(task, input, { host }),
+              write: (task, input) => service.write(task, input, { host }),
+              readAsSeat: (input) => service.readAsSeat(input, host),
+            }),
+          }),
+        ],
+        store: new IntegrationSettingsStore(join(scratchDir("fm-host-integrations-"), "settings")),
+        secrets: new FileIntegrationSecrets(join(scratchDir("fm-host-secrets-"), "secrets")),
+      });
+      const id = integrations.view().integrations[0]!.id;
+      expect(integrations.view().integrations[0]).toMatchObject({
+        host,
+        kind: "gitlab",
+        name: host === "gitlab.com" ? "GitLab" : host,
+      });
+      const crew = integrations.forTask("task-1");
+      expect(JSON.parse((await crew.call(id, "read", { path: "/projects" })).text)).toMatchObject({
+        status: 200,
+        body: [{ path_with_namespace: "acme/site" }],
+      });
+      const change = {
+        method: "POST",
+        path: `${OWN}/merge_requests/1/notes`,
+        body: JSON.stringify({ body: "Thanks" }),
+      };
+      const before = seen.length;
+      expect(await crew.call(id, "write", change)).toMatchObject({ refused: "refused" });
+      expect(seen).toHaveLength(before);
+      const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(-1);
+      expect(ask).toMatchObject({ host, kind: "gitlab", via: "account" });
+      expect(await service.sendAsk("task-1", ask?.id ?? "")).toMatchObject({
+        ok: true,
+        outcome: { kind: "answered", status: 201 },
+      });
+      await service.sendAsk("task-1", ask?.id ?? "");
+      expect(seen.filter((request) => request.method === "POST")).toHaveLength(1);
+      expect(
+        JSON.parse(
+          (await integrations.call({ kind: "firstmate" }, id, "read", { path: "/user" })).text,
+        ),
+      ).toMatchObject({ body: { username: "octo" } });
+      const readCount = seen.length;
+      expect(await integrations.call({ kind: "firstmate" }, id, "write", change)).toMatchObject({
+        refused: "refused",
+      });
+      integrations.configure(id, { actions: { read: false } });
+      expect(await crew.call(id, "read", { path: "/user" })).toMatchObject({ refused: "refused" });
+      expect(seen).toHaveLength(readCount);
+      const merge = await crew.call(id, "write", {
+        method: "PUT",
+        path: `${OWN}/merge_requests/1/merge`,
+      });
+      expect(merge.text).toContain("merge card");
+      expect(seen).toHaveLength(readCount);
+    },
+  );
 
   it("keeps a gitlab.com merge request's other writes and a server's own merge requests writable", async () => {
     const f = await fixture();

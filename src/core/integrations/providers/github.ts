@@ -63,16 +63,34 @@ const ACTIONS: readonly IntegrationActionSpec[] = [
   },
 ];
 
-export function githubIntegration(options: GithubIntegrationOptions): IntegrationBinding {
-  const host = INTEGRATIONS_SIGN_IN_HOST;
+export function githubIntegration(
+  options: GithubIntegrationOptions,
+  target = {
+    host: INTEGRATIONS_SIGN_IN_HOST,
+    id: GITHUB_ID,
+    name: INTEGRATION_KIND_NAMES.github,
+    label: "GitHub",
+  },
+): IntegrationBinding {
+  const { host, id, name, label } = target;
+  const actions = ACTIONS.map((action) => ({
+    ...action,
+    label: action.label.replaceAll("GitHub", label),
+    description:
+      label === "GitLab"
+        ? action.name === "read"
+          ? "GET or HEAD one relative GitLab REST API path (the part after /api/v4), such as /projects?membership=true or /user. JSON only; nextPath reads the next page."
+          : "POST, PATCH, PUT or DELETE one relative GitLab REST API path, with body as JSON text. Every write asks the captain; put its ask on a card with request_write. Merges and default-branch moves require the merge card."
+        : action.description.replaceAll("GitHub", label),
+  }));
   return {
     kind: "github",
-    identity: { id: GITHUB_ID, name: INTEGRATION_KIND_NAMES.github },
+    identity: { id, name },
     keepsAsks: true,
     connections: () => {
       const health = options.signIns.stateOf(host);
       if (health === undefined) return [];
-      return [{ id: GITHUB_ID, account: options.signIns.loginOf(host), health, actions: ACTIONS }];
+      return [{ id, account: options.signIns.loginOf(host), health, actions }];
     },
     check: () => options.signIns.checkNow(host),
     remove: () => options.signIns.signOut(host),
@@ -88,7 +106,7 @@ export function githubIntegration(options: GithubIntegrationOptions): Integratio
       }
       if (caller.kind !== "task")
         return {
-          text: "Not sent: a change on GitHub asks the captain on a card, and only a crewmate's card can carry the exact call. Start a crewmate whose brief names the call.",
+          text: `Not sent: a change on ${label} asks the captain on a card, and only a crewmate's card can carry the exact call. Start a crewmate whose brief names the call.`,
           refused: "refused",
         };
       // Every change through the integration is kept as the captain's ask or

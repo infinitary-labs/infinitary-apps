@@ -12,51 +12,24 @@ import {
   forgeKeyPage,
   forgeKeyProblemText,
   GITHUB_ENTERPRISE,
+  GITLAB,
 } from "@shared/forges";
 import {
   INTEGRATIONS_SIGN_IN_HOST,
   INTEGRATIONS_WORDS,
-  isIntegrationSignIn,
+  integrationHostArrival,
 } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useState } from "react";
 import { CopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
-import {
-  Badge,
-  Button,
-  Input,
-  type InputProps,
-  RowMenu,
-  StatusDot,
-  type StatusDotTone,
-} from "../design";
+import { Button, Input, type InputProps, type StatusDotTone } from "../design";
 import { DeviceForgeRows } from "./DeviceForgeRows";
-import { THIS_MAC_FORGE_ROLE } from "./deviceForgeWords";
 import { ForgeBrowserAside } from "./ForgeBrowserAside";
-import { LABEL_GAP, ROW_GAP } from "./settingRows";
 import "../accounts/connectChips.css";
 import "./forges.css";
-import { HERE } from "@shared/deviceNames";
 
-/**
- * "Where your projects live" (git integration PR 1.2; design skill
- * `components/projects/ForgeRow`): the optional section at the top of
- * Settings -> Projects where the person signs the app in to the place their
- * projects live - GitHub or GitLab. Optional by the captain's standing
- * constraint: with nothing signed in it is one quiet line and a chip, never
- * a warning, and a project kept on this Mac never needs it.
- *
- * The sign-in is the host's device flow, run by the core: this section
- * shows the code, opens the host's page on the person's click, and follows
- * the `inf:forges` push for how it ends. GitLab first guides a per-host
- * public application registration and offers the existing key form as an
- * alternative. GitHub Enterprise keeps its key form. No stored sign-in
- * secret comes back to the renderer (`docs/forge.md`).
- *
- * With a computer that runs work, each computer's own sign-in follows this
- * Mac's (`DeviceForgeRows`, design skill `components/devices/SignInOnAMac`),
- * and this Mac's row says its own part: it opens, checks and merges pull
- * requests.
+/** Projects keeps the pointer and other computers' own sign-ins (INF-1007 direction A).
+ * This module also owns the shared host sign-in forms drawn by Integrations.
  */
 
 /** The add chip's plus, shared with Settings -> Integrations' MCP server chip. */
@@ -95,25 +68,12 @@ export function forgeRowView(signIn: Pick<ForgeSignInView, "state" | "name">): {
   }
 }
 
-/** "as octo · 3 projects here"; a host on the person's own server says what it runs first. */
-export function forgeRowSub(signIn: ForgeSignInView): string {
-  const who = signIn.login ? `as ${signIn.login}` : null;
-  const projects =
-    signIn.projects === 0
-      ? "no projects here yet"
-      : signIn.projects === 1
-        ? "1 project here"
-        : `${signIn.projects} projects here`;
-  return [signIn.server?.name, who, projects].filter(Boolean).join(" · ");
-}
-
 /** Server sign-in setup on screen: the host it is for ("" for a new address) and the kind of server. */
 type KeyForm = { host: string; server: ForgeServerView; method?: "key" };
 
 /**
- * The forges view without GitHub itself, whose sign-in Settings ->
- * Integrations owns (INF-775, the captain's q2): Projects keeps GitHub
- * Enterprise and GitLab, and a pointer to Integrations.
+ * The host forms other than github.com, whose device-code flow the
+ * Integrations tab draws directly.
  */
 export function withoutIntegrationHost(view: ForgesView): ForgesView {
   const other = (host: string) => host !== INTEGRATIONS_SIGN_IN_HOST;
@@ -127,12 +87,32 @@ export function withoutIntegrationHost(view: ForgesView): ForgesView {
 }
 
 export function ForgeSection() {
+  return (
+    <section data-forges="" style={{ marginBottom: "var(--space-6)" }}>
+      <div className="fm-forges-box" data-forges-list="">
+        <div className="fm-forges-pointer" data-integrations-pointer="">
+          <span>{INTEGRATIONS_WORDS.pointer}</span>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => useShellStore.setState({ settingsSection: "integrations" })}
+          >
+            {INTEGRATIONS_WORDS.open}
+          </Button>
+        </div>
+        <DeviceForgeRows />
+      </div>
+    </section>
+  );
+}
+
+/** Host chips and their original sign-in forms, now owned by Integrations. */
+export function useForgeHostSignIn() {
   const [whole, setView] = useState<ForgesView>(EMPTY_VIEW);
   const view = withoutIntegrationHost(whole);
   const [loaded, setLoaded] = useState(false);
   const [starting, setStarting] = useState<string | null>(null);
   const [keyForm, setKeyForm] = useState<KeyForm | null>(null);
-  const [devices, setDevices] = useState(false);
   const pending = useShellStore((s) => s.pendingForgeSignIn);
 
   useEffect(() => {
@@ -168,8 +148,23 @@ export function ForgeSection() {
   // the code - or, for a host on the person's own server, its key form - is
   // on screen when the section opens.
   useEffect(() => {
-    if (!pending || !loaded || isIntegrationSignIn(pending)) return;
+    if (!pending || !loaded || pending === "github.com" || pending === "google") return;
     useShellStore.getState().clearPendingForgeSignIn();
+    if (pending === "gitlab" || pending === "github-enterprise") {
+      openKeyForm({
+        host: pending === "gitlab" ? "gitlab.com" : "",
+        server: pending === "gitlab" ? GITLAB : GITHUB_ENTERPRISE,
+      });
+      return;
+    }
+    const arrival = integrationHostArrival(pending);
+    if (arrival) {
+      openKeyForm({
+        host: arrival.host,
+        server: arrival.kind === "gitlab" ? GITLAB : GITHUB_ENTERPRISE,
+      });
+      return;
+    }
     const known = [...view.hosts, ...view.signIns].find((entry) => entry.host === pending);
     if (view.hosts.some((entry) => entry.host === pending && !entry.server)) signIn(pending);
     else
@@ -218,150 +213,49 @@ export function ForgeSection() {
       />
     ));
 
-  return (
-    <section data-forges="" style={{ marginBottom: "var(--space-6)" }}>
-      <div
-        style={{
-          fontSize: "var(--text-xs)",
-          fontWeight: 500,
-          letterSpacing: "var(--tracking-label)",
-          textTransform: "uppercase",
-          color: "var(--fg-3)",
-          marginBottom: LABEL_GAP,
-        }}
-      >
-        Where your projects live
-      </div>
-      <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)", marginBottom: ROW_GAP }}>
-        Optional. Sign in once and your first mate can clone your projects and merge changes for
-        you; projects kept on {HERE.this} need no sign-in.
-      </div>
-      <div className="fm-forges-box" data-forges-list="">
-        {view.signIns.length === 0 && (
-          <div className="fm-forges-quiet" data-forges-quiet="">
-            {FORGE_SECTION_WORDS.quiet}
-          </div>
-        )}
-        {view.signIns.map((row) => (
-          <div key={row.host}>
-            <ForgeRow
-              signIn={row}
-              beside={devices}
-              busy={starting === row.host}
-              onSignIn={() =>
-                row.server ? openKeyForm({ host: row.host, server: row.server }) : signIn(row.host)
-              }
-              onSignOut={() => void window.infinitary.forges.signOut(row.host).then(setView)}
-            />
-            {flowUnderRow(row.host) && <SignInAside view={view} onRetry={signIn} />}
-            {keyUnderRow(row.host) && keyAside}
-          </div>
+  return {
+    connect: (host: string) => {
+      const known = [...view.hosts, ...view.signIns].find((entry) => entry.host === host);
+      openKeyForm({
+        host,
+        server: known?.server ?? (host === "gitlab.com" ? GITLAB : GITHUB_ENTERPRISE),
+      });
+    },
+    asideFor: (host: string) => (
+      <>
+        {flowUnderRow(host) && <SignInAside view={view} onRetry={signIn} />}
+        {keyUnderRow(host) && keyAside}
+      </>
+    ),
+    chips: (
+      <>
+        {chips.map((host) => (
+          <HostChip
+            key={host.host}
+            host={host}
+            busy={starting === host.host || view.flow?.host === host.host}
+            onConnect={() => openKeyForm({ host: host.host, server: host.server ?? GITLAB })}
+          />
         ))}
-        {(chips.length > 0 || servers.length > 0) && (
-          <div className="fm-forges-add">
-            <div className="fm-connect-chips" data-connect-chips="foot">
-              {chips.map((host) => (
-                <HostChip
-                  key={host.host}
-                  host={host}
-                  busy={starting === host.host || view.flow?.host === host.host}
-                  onConnect={() =>
-                    host.server
-                      ? openKeyForm({ host: host.host, server: host.server })
-                      : signIn(host.host)
-                  }
-                />
-              ))}
-              {servers.map((server) => (
-                <HostChip
-                  key={`server:${server.kind}`}
-                  host={{ host: "", name: server.name }}
-                  busy={false}
-                  onConnect={() => openKeyForm({ host: "", server })}
-                />
-              ))}
-            </div>
-            {!keyForm && flowHost && !signedIn.has(flowHost) && (
-              <SignInAside view={view} onRetry={signIn} />
-            )}
-            {keyForm && !signedIn.has(keyForm.host) && keyAside}
-          </div>
+        {servers.map((server) => (
+          <HostChip
+            key={server.kind}
+            host={{ host: "", name: server.name }}
+            busy={false}
+            onConnect={() => openKeyForm({ host: "", server })}
+          />
+        ))}
+      </>
+    ),
+    foot: (
+      <>
+        {!keyForm && flowHost && !signedIn.has(flowHost) && (
+          <SignInAside view={view} onRetry={signIn} />
         )}
-        <div className="fm-forges-pointer" data-integrations-pointer="">
-          <span>{INTEGRATIONS_WORDS.pointer}</span>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => useShellStore.setState({ settingsSection: "integrations" })}
-          >
-            {INTEGRATIONS_WORDS.open}
-          </Button>
-        </div>
-        <DeviceForgeRows onAny={setDevices} />
-      </div>
-    </section>
-  );
-}
-
-function ForgeRow({
-  signIn,
-  beside,
-  busy,
-  onSignIn,
-  onSignOut,
-}: {
-  signIn: ForgeSignInView;
-  /** Computers' own sign-ins follow it: it names its login and its own part. */
-  beside: boolean;
-  busy: boolean;
-  onSignIn: () => void;
-  onSignOut: () => void;
-}) {
-  const row = forgeRowView(signIn);
-  return (
-    <div className="fm-forges-row" data-forge-row={signIn.host} data-forge-state={signIn.state}>
-      <span className="fm-forges-dot">
-        <StatusDot
-          tone={row.tone}
-          label={row.label}
-          nativeTitle={row.label !== "signed in" && row.label !== "sign in again"}
-          focusable
-        />
-      </span>
-      <span className="fm-forges-name">
-        {beside && signIn.login ? `${signIn.name} · ${signIn.login}` : signIn.name}
-      </span>
-      <span className="fm-forges-who">
-        {row.reauth ? (
-          <span className="fm-forges-state" data-tone="danger">
-            {FORGE_SECTION_WORDS.reauth}
-          </span>
-        ) : (
-          <Badge tone="ok">signed in</Badge>
-        )}
-        <span className="fm-forges-sub">{beside ? THIS_MAC_FORGE_ROLE : forgeRowSub(signIn)}</span>
-      </span>
-      <span className="fm-forges-action">
-        {row.reauth && (
-          <Button
-            variant="primary"
-            size="sm"
-            pending={busy}
-            pendingLabel="Starting..."
-            onClick={onSignIn}
-          >
-            Sign in again
-          </Button>
-        )}
-      </span>
-      <span className="fm-forges-menu">
-        <RowMenu
-          label={`${signIn.name} actions`}
-          items={[{ id: "sign-out", label: "Sign out", tone: "danger", onSelect: onSignOut }]}
-        />
-      </span>
-    </div>
-  );
+        {keyForm && !signedIn.has(keyForm.host) && keyAside}
+      </>
+    ),
+  };
 }
 
 export function HostChip({

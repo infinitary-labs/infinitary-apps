@@ -12,6 +12,28 @@ import { CORE_INVOKE_CHANNELS, type CoreInvokeChannel, invokeContract } from "./
 import { remoteLoginWords } from "./remoteLogin";
 
 describe("action permissions and channel parity", () => {
+  it("INF-1007: integration-add carries each named server kind into its sign-in form", () => {
+    const add = ACTIONS["integration-add"];
+    const view = {
+      integrations: [],
+      addable: [
+        { kind: "gitlab", name: "GitLab" },
+        { kind: "github-enterprise", name: "GitHub Enterprise" },
+        { kind: "google", name: "Google" },
+      ],
+    };
+    for (const kind of ["gitlab", "github-enterprise"]) {
+      const value = { kind, host: "code.example.com" };
+      expect(add.value.parse(value)).toEqual(value);
+      expect(add.offer?.(value, view, { platform: "darwin" })).toMatchObject({
+        arrival: { signIn: `${kind}:code.example.com` },
+        label: "Open Integrations",
+      });
+    }
+    expect(() =>
+      add.offer?.({ kind: "google", host: "code.example.com" }, view, { platform: "darwin" }),
+    ).toThrow("host is used only");
+  });
   it("changes an OpenRouter decision pick without creating outbound consent", () => {
     const answerer = { kind: "openrouter" as const, model: "jaredpalmer/kev-4b" };
     const current = {

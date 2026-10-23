@@ -2,11 +2,13 @@ import { forgeOf } from "@shared/forge";
 import type { ForgeProject, ForgesView } from "@shared/forges";
 import type { RepoSetupSpec, RepoView } from "@shared/repos";
 import { useEffect, useState } from "react";
+import { useShellStore } from "../app/store";
 import { Button, Input } from "../design";
 import {
   FOLDER_HERE_WORDS,
   newProjectWords,
   OTHER_HOST_WORDS,
+  projectSignInWords,
   STARTED_GIT_WORDS,
   TASK_KEY_WORDS,
   taskKeyTyped,
@@ -292,6 +294,20 @@ export function AddProject({
           ) : (
             host && (
               <>
+                {!signedIn && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() =>
+                      useShellStore.setState({
+                        settingsSection: "integrations",
+                        pendingForgeSignIn: host.host,
+                      })
+                    }
+                  >
+                    {projectSignInWords(host.name)}
+                  </Button>
+                )}
                 {signedIn && (
                   <div>
                     <p>Your {host.name} repos</p>

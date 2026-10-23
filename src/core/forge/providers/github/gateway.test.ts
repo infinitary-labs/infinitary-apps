@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import {
   FileIntegrationSecrets,
+  forgeHostIntegration,
   githubIntegration,
   IntegrationSettingsStore,
   IntegrationsService,
@@ -503,9 +504,9 @@ async function fixture(
     tasks,
     repos: new RepoRegistry(db, join(dir, "fleet")),
     forgeFor: () => forge,
-    accountForge: () =>
+    accountForge: (host = "github.com") =>
       new GitHubForge(
-        { kind: "github", host: "github.com", dir: "" },
+        { kind: "github", host, dir: "" },
         {
           apiBaseUrl: base,
           token: async () => "gho_fixture_owned_by_app",
@@ -715,6 +716,81 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       ).text,
     ).toContain("Not sent: this task has no project");
     expect(seen).toHaveLength(1);
+  });
+
+  it("INF-1007: an unrelated project's crew and first mate reach Enterprise through its own row", async () => {
+    const { service, seen, tasks } = await fixture();
+    const host = "github.example.com";
+    const integrations = new IntegrationsService({
+      bindings: [
+        forgeHostIntegration("github-enterprise", {
+          signIns: {
+            view: () => ({
+              signIns: [
+                {
+                  host,
+                  name: host,
+                  login: "octo",
+                  state: "ok",
+                  projects: 0,
+                  since: 1,
+                  server: { kind: "github", name: "GitHub Enterprise" },
+                },
+              ],
+              hosts: [],
+              flow: null,
+              ended: null,
+            }),
+            stateOf: () => "ok",
+            loginOf: () => "octo",
+            checkNow: async () => {},
+            signOut: () => {},
+          },
+          gateway: (host) => ({
+            read: (task, input) => service.read(task, input, { host }),
+            write: (task, input) => service.write(task, input, { host }),
+            readAsSeat: (input) => service.readAsSeat(input, host),
+          }),
+        }),
+      ],
+      store: new IntegrationSettingsStore(
+        join(scratchDir("fm-enterprise-integrations-"), "settings"),
+      ),
+      secrets: new FileIntegrationSecrets(join(scratchDir("fm-enterprise-secrets-"), "secrets")),
+    });
+    const row = integrations.view().integrations[0];
+    if (!row) throw new Error("Enterprise row missing");
+    expect(row).toMatchObject({ host, kind: "github-enterprise", name: host });
+    const crew = integrations.forTask("task-1");
+    expect(
+      JSON.parse((await crew.call(row.id, "read", { path: "/user/repos" })).text),
+    ).toMatchObject({ status: 200 });
+    const change = {
+      method: "POST",
+      path: "/repos/octo/meter/issues/1/comments",
+      body: JSON.stringify({ body: "Thanks" }),
+    };
+    const before = seen.length;
+    expect(await crew.call(row.id, "write", change)).toMatchObject({ refused: "refused" });
+    expect(seen).toHaveLength(before);
+    const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(-1);
+    expect(ask).toMatchObject({ host, kind: "github", via: "account" });
+    expect(await service.sendAsk("task-1", ask?.id ?? "")).toMatchObject({ ok: true });
+    expect(
+      JSON.parse(
+        (await integrations.call({ kind: "firstmate" }, row.id, "read", { path: "/user/repos" }))
+          .text,
+      ),
+    ).toMatchObject({ status: 200 });
+    const count = seen.length;
+    expect(await integrations.call({ kind: "firstmate" }, row.id, "write", change)).toMatchObject({
+      refused: "refused",
+    });
+    integrations.configure(row.id, { paused: true });
+    expect(await crew.call(row.id, "read", { path: "/user/repos" })).toMatchObject({
+      refused: "refused",
+    });
+    expect(seen).toHaveLength(count);
   });
 
   // INF-775 piece 1: GitHub as an integration, every caller through the github.com sign-in;

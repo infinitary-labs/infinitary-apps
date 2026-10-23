@@ -94,7 +94,7 @@ export class GithubGatewayService {
       repos: RepoRegistry;
       forgeFor: (repo: ForgeRepo | undefined, fallbackDir?: string) => Forge;
       /** The github.com sign-in's forge, for a task whose project has no API, or none at all. */
-      accountForge?: () => Forge;
+      accountForge?: (host?: string) => Forge;
       /** The crewmate's check reading (`check_change` with no declaration). */
       readChecks: (taskId: string) => Promise<string>;
       now: () => number;
@@ -115,7 +115,11 @@ export class GithubGatewayService {
    * allowance. Every try asks for fewer items than the last, so the tries
    * end; an answer no smaller page would shrink is refused, saying why.
    */
-  read(taskId: string, input: GithubReadInput, through?: "account"): Promise<string> {
+  read(
+    taskId: string,
+    input: GithubReadInput,
+    through?: "account" | { host: string },
+  ): Promise<string> {
     return this.answer(taskId, ({ api }) => this.readOn(taskId, api, input), through);
   }
 
@@ -124,9 +128,9 @@ export class GithubGatewayService {
    * integration, docs/integrations.md): it has no task, so its calls count
    * against the seat's own allowance, under the same shape checks and caps.
    */
-  readAsSeat(input: GithubReadInput): Promise<string> {
+  readAsSeat(input: GithubReadInput, host?: string): Promise<string> {
     return this.answerWith(
-      () => this.accountTarget(),
+      () => this.accountTarget(host),
       ({ api }) => this.readOn(SEAT_CALLS, api, input),
     );
   }
@@ -158,7 +162,11 @@ export class GithubGatewayService {
     }
   }
 
-  write(taskId: string, input: GithubWriteInput, through?: "account"): Promise<string> {
+  write(
+    taskId: string,
+    input: GithubWriteInput,
+    through?: "account" | { host: string },
+  ): Promise<string> {
     return this.answer(
       taskId,
       async (target) => {
@@ -188,7 +196,10 @@ export class GithubGatewayService {
         if (!route.write)
           throw new ForgeError("refused", "github_write sends POST, PATCH, PUT or DELETE only.");
         // Merges and default-branch moves keep the merge card, asked or not (piece 1).
-        if (route.own && (forge.kind === "github" || forge.kind === "gitlab")) {
+        if (
+          (route.own || target.via === "account") &&
+          (forge.kind === "github" || forge.kind === "gitlab")
+        ) {
           await guardApiWrite(forge.kind, route, parsed, () => forge.defaultBranch());
         }
         this.guardPresentationWrite(taskId, forge, route, parsed);
@@ -233,7 +244,10 @@ export class GithubGatewayService {
     }
     const located = this.locateFile(taskId, input.file ?? "");
     const route = this.releaseRoute(api, input.path, located.filename);
-    if (route.own && (forge.kind === "github" || forge.kind === "gitlab")) {
+    if (
+      (route.own || target.via === "account") &&
+      (forge.kind === "github" || forge.kind === "gitlab")
+    ) {
       await guardApiWrite(forge.kind, route, undefined, () => forge.defaultBranch());
     }
     const why = this.askReason(taskId, route, target);
@@ -281,7 +295,7 @@ export class GithubGatewayService {
       // A write asked through the github.com sign-in goes through it, as
       // asked - the GitHub integration's included, whatever the task's
       // project became (docs/integrations.md).
-      target = ask.via === "account" ? this.accountTarget() : this.targetOf(taskId);
+      target = ask.via === "account" ? this.accountTarget(ask.host) : this.targetOf(taskId);
       if (
         target.via !== ask.via ||
         target.forge.kind !== ask.kind ||
@@ -307,7 +321,10 @@ export class GithubGatewayService {
       }
       if (!route.write) throw new ForgeError("refused", "only a write is asked for.");
       const { forge } = target;
-      if (route.own && (forge.kind === "github" || forge.kind === "gitlab")) {
+      if (
+        (route.own || target.via === "account") &&
+        (forge.kind === "github" || forge.kind === "gitlab")
+      ) {
         await guardApiWrite(
           forge.kind,
           route,
@@ -403,7 +420,7 @@ export class GithubGatewayService {
    */
   private askReason(taskId: string, route: ApiRoute, target: Target): string | undefined {
     if (target.integration) {
-      return "it goes through the GitHub integration, and every change there asks the captain";
+      return `it goes through the ${target.forge.kind === "gitlab" ? "GitLab" : target.forge.host && target.forge.host !== GITHUB_HOST ? "GitHub Enterprise" : "GitHub"} integration, and every change there asks the captain`;
     }
     if (target.via === "account") {
       return this.options.tasks.get(taskId)?.repoId
@@ -461,11 +478,15 @@ export class GithubGatewayService {
    * lives where the app has no JSON API - kept on this computer, or on a
    * plain Git host (FI3-1571 pieces 3 and 4).
    */
-  private targetOf(taskId: string, through?: "account"): Target {
+  private targetOf(taskId: string, through?: "account" | { host: string }): Target {
     const task = this.options.tasks.get(taskId);
     if (!task) throw new ForgeError("not-found", "The task is no longer available.");
     // The GitHub integration reaches GitHub itself, whatever the task's project is.
-    if (through === "account") return { ...this.accountTarget(), integration: true };
+    if (through)
+      return {
+        ...this.accountTarget(through === "account" ? undefined : through.host),
+        integration: true,
+      };
     const repo = task.repoId ? this.options.repos.get(task.repoId) : undefined;
     if (task.repoId && !repo) {
       throw new ForgeError("not-found", "The task's project is no longer registered.");
@@ -478,8 +499,8 @@ export class GithubGatewayService {
   }
 
   /** The github.com sign-in's own target. */
-  private accountTarget(): Target {
-    const account = this.options.accountForge?.();
+  private accountTarget(host?: string): Target {
+    const account = this.options.accountForge?.(host);
     if (account?.api) return { api: account.api, forge: account, via: "account" };
     throw new ForgeError("unsupported", "The app has no GitHub connection to call.");
   }
@@ -700,7 +721,7 @@ export class GithubGatewayService {
   private answer(
     taskId: string,
     run: (target: Target) => Promise<string>,
-    through?: "account",
+    through?: "account" | { host: string },
   ): Promise<string> {
     return this.answerWith(() => this.targetOf(taskId, through), run);
   }

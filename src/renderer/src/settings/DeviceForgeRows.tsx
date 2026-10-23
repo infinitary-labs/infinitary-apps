@@ -92,7 +92,7 @@ export function deviceForgeRowView(row: DeviceForgeRow): {
  * The computers' rows, below this Mac's own. `onAny` says whether any draws,
  * so this Mac's row names its own part.
  */
-export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void }) {
+export function DeviceForgeRows({ onAny }: { onAny?: (any: boolean) => void } = {}) {
   const [shown, setShown] = useState(false);
   const [devices, setDevices] = useState<DeviceSignIns[]>([]);
   const [flows, setFlows] = useState<Record<string, Flow>>({});

@@ -117,7 +117,8 @@ test("adds folders and new projects in Settings without waking Firstmate, opens 
     await assertReadableSettingsFeedback(add.getByRole("status"), "name");
     await add.getByRole("button", { name: "GitHub repo", exact: true }).click();
     await expect(add.getByText("Your GitHub repos", { exact: true })).toHaveCount(0);
-    await expect(add.getByRole("button", { name: /sign in/i })).toHaveCount(0);
+    // INF-1007: a signed-out project host opens its sign-in in Integrations.
+    await expect(add.getByRole("button", { name: "Sign in to GitHub", exact: true })).toBeVisible();
     await add.getByLabel("Paste a GitHub link").fill("https://gitlab.com/octo/notes");
     await add.getByRole("button", { name: "Add", exact: true }).click();
     await expect(add.getByRole("status")).toContainText(OTHER_HOST_WORDS);

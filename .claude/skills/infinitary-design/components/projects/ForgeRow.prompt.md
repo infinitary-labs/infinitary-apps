@@ -1,5 +1,7 @@
-"Where your projects live": the optional section at the top of Settings -> Projects where the person signs the app in to the place their projects live (git integration PR 1.2; GitHub Enterprise on the person's own server, and GitLab on gitlab.com or the person's own server).
-GitHub on github.com has moved to Settings -> Integrations (`components/integrations/IntegrationRow`, INF-775): its row and its chip draw there, and this section ends with a pointer line to it; the examples below that show github.com draw the same row and aside there.
+The shared host sign-in forms support GitHub Enterprise on the person's own server, and GitLab on gitlab.com or the person's own server.
+All this computer's host rows, chips and sign-in forms live in Settings -> Integrations (`components/integrations/IntegrationRow`, INF-1007 direction A).
+Projects keeps only the all-host pointer to Integrations and other computers' own GitHub sign-ins (`components/devices/SignInOnAMac`).
+The host row and form specifications below describe the shared primitives used in Integrations, not additional Projects controls.
 ```jsx
 <ForgeSection signIns={[]} hosts={[{host:"github.com",name:"GitHub"}]} servers={[{kind:"github",name:"GitHub Enterprise"}]}/>  // nothing signed in
 <ForgeSection signIns={[{host:"github.com",name:"GitHub",login:"octo",state:"ok",projects:3}]} hosts={HOSTS} servers={SERVERS}/>

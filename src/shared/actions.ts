@@ -12,7 +12,7 @@ import {
   deviceWords,
   userDisplayName,
 } from "./devices";
-import type { ForgesView } from "./forges";
+import { FORGE_HOST_NAME, type ForgesView } from "./forges";
 import {
   INTEGRATION_KIND_NAMES,
   INTEGRATIONS_SIGN_IN_HOST,
@@ -708,14 +708,6 @@ const actionLines = {
     toRequest: () => [],
     readValue: (c) => ({ ready: (c as { modelReady: boolean }).modelReady }),
   },
-  "forge-sign-in": guidance(
-    "projects",
-    "hands",
-    "Sign in to GitHub Enterprise or GitLab in Settings → Projects; GitHub itself is integration-add.",
-    ["inf:forges:sign-in", "inf:forges:sign-in-key", "inf:forges:sign-in-browser"],
-    "projects",
-    "Project sign-in started",
-  ),
   "account-sign-in": guidance(
     "intelligence",
     "hands",
@@ -845,16 +837,31 @@ const actionLines = {
     handover: "projects",
     change: null,
     current: "inf:integrations:list",
-    channels: ["inf:integrations:sign-in"],
+    channels: [
+      "inf:integrations:sign-in",
+      "inf:forges:sign-in",
+      "inf:forges:sign-in-key",
+      "inf:forges:sign-in-browser",
+    ],
     // An MCP server is added from a form; a stand-in is a test run's own, never connected by hand.
-    value: z.strictObject({ kind: integrationKindSchema.exclude(["mcp", "stand-in"]) }),
-    line: "Connect an integration (kind: github, or google for Gmail and Calendar in one sign-in) when asked: app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started. A sign-in is always their hands.",
+    value: z.strictObject({
+      kind: integrationKindSchema.exclude(["mcp", "stand-in"]),
+      host: z.string().regex(FORGE_HOST_NAME).optional(),
+    }),
+    line: "Connect an integration (kind: github, gitlab, github-enterprise, or google for Gmail and Calendar; optional host for a server) when asked: app_change puts up the captain's card, and their click opens Settings → Integrations with the sign-in started. A sign-in is always their hands.",
     alwaysTrail: true,
     offer: (v, current) => {
       const kind = v.kind as keyof typeof INTEGRATION_KIND_NAMES;
       const name = INTEGRATION_KIND_NAMES[kind];
       const view = current as IntegrationsView;
-      if (view.integrations.some((row) => row.kind === kind))
+      if (v.host && kind !== "gitlab" && kind !== "github-enterprise")
+        throw new Error("A host is used only for GitLab or GitHub Enterprise.");
+      if (
+        !v.host &&
+        kind !== "gitlab" &&
+        kind !== "github-enterprise" &&
+        view.integrations.some((row) => row.kind === kind)
+      )
         throw new Error(`${name} is already connected; integrations lists it.`);
       if (!view.addable.some((entry) => entry.kind === kind))
         throw new Error(`${name} cannot be signed in to in this version of the app.`);
@@ -868,7 +875,13 @@ const actionLines = {
         label: "Open Integrations",
         decline: "Not now",
         // GitHub's sign-in is the forge's, by its host; any other kind signs in by its kind.
-        arrival: { signIn: kind === "github" ? INTEGRATIONS_SIGN_IN_HOST : kind },
+        arrival: {
+          signIn: v.host
+            ? `${kind}:${v.host}`
+            : kind === "github"
+              ? INTEGRATIONS_SIGN_IN_HOST
+              : kind,
+        },
       };
     },
     toRequest: () => [],

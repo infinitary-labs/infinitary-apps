@@ -958,14 +958,9 @@ describe("the core, driven with no Electron in the process", () => {
       expect((await ask(action, {})).text).toContain("stays with the captain");
     expect(await core.dispatch("inf:settings:sharing:get", [])).toEqual(sharing);
     expect(operationCount()).toBe(count + 3);
-    for (const action of [
-      "forge-sign-in",
-      "account-sign-in",
-      "custom-connection",
-      "decision-key",
-      "device-address",
-    ])
+    for (const action of ["account-sign-in", "custom-connection", "decision-key", "device-address"])
       expect((await ask(action, {})).text).toBe("button offered");
+    expect((await ask("integration-add", { kind: "gitlab" })).text).toBe("button offered");
     expect(handed).toHaveLength(5);
     expect(JSON.parse((await ask("voice-model", {})).text).current.ready).toBe(true);
     const forgeStore = new ForgeSignInStore(core.paths.forgesDir);

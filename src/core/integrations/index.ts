@@ -17,6 +17,7 @@ export type {
   IntegrationSecretSlot,
 } from "./binding";
 export { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "./commandWords";
+export { forgeHostIntegration, forgeIntegrationId } from "./providers/forgeHosts";
 export {
   type GithubIntegrationGateway,
   type GithubIntegrationOptions,

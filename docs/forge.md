@@ -42,7 +42,7 @@ Bitbucket is recognised by name and behaves as a plain host.
 ## The app's own sign-in (PR 1.2)
 
 The owner's verdicts: an OAuth App with the device flow; ignore any GitHub sign-in already on the Mac; and nothing ever makes a host look required.
-The github.com sign-in is shown in Settings -> Integrations as the GitHub integration (INF-775, the captain's q2; `docs/integrations.md`), and Settings -> Projects keeps GitHub Enterprise and GitLab and a pointer to it.
+GitHub, each GitLab host and each GitHub Enterprise host are shown in Settings -> Integrations (`docs/integrations.md`); Projects keeps the pointer and other computers' own GitHub sign-ins.
 
 - **The flow** (`providers/github/oauth.ts`): `POST /login/device/code` with the registered client id `GITHUB_OAUTH_CLIENT_ID` (public; there is no secret) and the scopes `repo workflow read:org`, then `POST /login/oauth/access_token` every `interval` seconds - `authorization_pending` waits, `slow_down` adds five seconds (or takes GitHub's new interval), `expired_token` ends as "The code expired." with a fresh code on request, `access_denied` ends quietly.
   The Settings aside shows the current code with a keyboard-accessible "Copy code" button; a polite live status confirms clipboard success or honestly reports failure, resetting for each code/sign-in attempt.
@@ -69,7 +69,7 @@ The github.com sign-in is shown in Settings -> Integrations as the GitHub integr
   A renewal fires `onRenewed`, which takes down a card a git refusal raised and dispatches the work held behind `forge-sign-in:<host>`.
   The health log dates each renewal (`sign-in renewed, short-lived until <ISO>`) and each refusal.
   A sign-in GitHub issues without a refresh token behaves as before.
-- **The one host card**: `card-forge-<host>`, "Sign in to GitHub again", raised only on `needs_reauth`, naming how many proposed changes wait on it; its one action is `open projects` with `signIn`, which lands on Settings -> Integrations, where the github.com sign-in lives, with the code already on screen (`openedSection`, `docs/integrations.md`).
+- **The one host card**: `card-forge-<host>`, "Sign in to GitHub again", raised only on `needs_reauth`, naming how many proposed changes wait on it; its one action is `open projects` with `signIn`, which lands on Settings -> Integrations, where the host sign-ins live, with the code already on screen (`openedSection`, `docs/integrations.md`).
   It takes itself down when GitHub answers again.
   An unreachable GitHub is one feed line ("Could not reach GitHub - trying again."); a 403 on opening a change is one feed line asking for write access.
   No card for either.
@@ -85,7 +85,7 @@ The github.com sign-in is shown in Settings -> Integrations as the GitHub integr
   `GIT_CONFIG_PARAMETERS` empties the credential helpers for `https://github.com` and each host on the person's own server with a sign-in here, read at each spawn - so neither the keychain's helper nor another program's GitHub sign-in ever answers for them under the app, while a plain host keeps the person's own helpers - and an SSH origin is the person's own agent, untouched.
   The username `x-access-token` is the plan's choice; the helper's answer is proven against a local HTTPS host (`hostEnv.gitSignIn.test.ts`), and it is NOT yet verified against a private repository on github.com with a real sign-in (the plan's open item; no real sign-in exists on the machines that built this).
 - **Dispatch-time sign-in refusal** (`src/core/workspace/forgeAuth.ts`): before a task starts, a failed `origin` fetch on an HTTPS remote of a host the app signs in to - github.com, or a known host on the person's own server - is held only when Git reports the askpass username prompt could not be answered or explicitly reports authentication failure (`ForgeAuthRequiredError`, carrying the host and its name).
-  The worktree is not created and the task returns to the queue behind `forge-sign-in:<host>`; a host card opens Projects with that host's sign-in started.
+  The worktree is not created and the task returns to the queue behind `forge-sign-in:<host>`; a host card opens Integrations with that host's sign-in started.
   When the host's existing sign-in reports `ok`, the gate is cleared and the task is dispatched again, re-fetching its base.
   DNS, connection, SSH, other-host and unstructured text failures continue through the ordinary stale-ref fallback; they never trigger GitHub sign-in.
 - **The crewmate's pair** (`src/core/pi/forgeTools.ts`, entries of the crewmate tool spec both runtimes generate from, `docs/claude-client.md`): `open_change({ title, body })` offers the task's branch as a proposed change (on GitHub the crewmate sends the branch up first; on a plain host the forge sends it) and records `pr_opened`; `check_change({ diagnosis?, repair?, rerun?, conflictRepair?, captainGuidance? })` records explicit evidenced failure classifications, stable own repair ids/results, the one flake reservation, a repair of a change the captain's kept merge approval covers, or what the captain's newer words do to that change (`docs/delivery-rigor.md`) - a baseline-blocked diagnosis is answered with where its dependency stands: not started, underway or queued, or done (FI3-671) - and reads the same checks the completion card's gate does, recorded through the same service so the fact strip and the repair ledger see it.
@@ -95,8 +95,8 @@ The github.com sign-in is shown in Settings -> Integrations as the GitHub integr
   A host that cannot be read makes the read unreachable this time, never a guessed row; a GitLab 401 counts as a sign-in only once GitLab no longer answers for the key.
   The `github-prs` authoring skill teaches it; no panel shells out for it.
   `tests/gitlabStub.test.ts` reads GitLab's rows on both kinds of host, and `tests/e2e/ui-kit-panel.spec.ts` shows a GitLab merge request as `!1` beside GitHub's pull requests in the panel that skill teaches.
-- **Where it shows**: github.com in Settings -> Integrations as the GitHub row (`src/renderer/src/settings/IntegrationsTab.tsx`; design skill `components/integrations/IntegrationRow`), and every other host in Settings -> Projects, section "Where your projects live" (`src/renderer/src/settings/ForgeSection.tsx`; design skill `components/projects/ForgeRow`), which ends with a pointer line to Integrations.
-  With nothing signed in it is one quiet line and a chip.
+- **Where it shows**: all this computer's host sign-ins in Settings -> Integrations (`src/renderer/src/settings/IntegrationsTab.tsx`; design skill `components/integrations/IntegrationRow`), one row per host.
+  Projects keeps the pointer to Integrations and other computers' own sign-ins; with no integrations, the tab shows its quiet line and connect chips.
   The first launch never shows it.
 
 ## Hosts on your own server
@@ -124,8 +124,8 @@ The app's OAuth App lives on github.com alone and does not exist there, so such 
 - **Its git**: the helper answers the host's name from the file (`resources/git-askpass` reads `gitUser`, else `x-access-token`), and the credential helpers are emptied for each such host with a sign-in on file, read at each spawn (`ForgeSignIns.gitHosts`), so only the app's key answers it.
   One the app holds no key for keeps the person's own helpers, as before the app knew it.
 - **A refused fetch** waits for that host's sign-in (`forgeAuthRequired`, below), keyed `forge-sign-in:<host>`.
-- **Settings** (`ForgeSection.tsx`, design skill `components/projects/ForgeRow`): "+ GitHub Enterprise" opens the key form; a known host's chip, its row's "Sign in again" and a card's sign-in open it filled in for that host.
-  The row reads "github.example.com" over "GitHub Enterprise · as mona · 2 projects here".
+- **Settings -> Integrations** (`IntegrationsTab.tsx`, with forms in `ForgeSection.tsx`, design skill `components/integrations/IntegrationRow`): "+ GitHub Enterprise" opens the key form; a known host's chip, its row's "Sign in again" and a card's sign-in open it filled in for that host.
+  The row reads "github.example.com" over "GitHub Enterprise · as mona · 2 actions".
 - **How GitLab fits**: a self-hosted GitLab is one more `ForgeServer` (kind `gitlab`, git user `oauth2`, its own `whoAmI`), one more binding for `gitlab`, and its kind in `forgeAuthRequired`'s list; the known hosts, the stamping, the key form, the store's `kind`/`gitUser`, the helper and the host-keyed waits are already its.
 - **Not yet**: a computer that runs work signs in to github.com alone (`docs/helper.md`), so a GitHub Enterprise project set to run there is tried with that computer's own git setup; a host whose certificate comes from a company's own authority is not trusted by the app's requests; a workflow artifact a server keeps on storage other than its own host or GitHub's is refused as an unsafe download; and only the captain's own words sign the first mate out of github.com, not another host.
 
@@ -234,7 +234,7 @@ A computer that runs work (`docs/helper.md`) signs in to GitHub for its own clon
   Every child the computer starts carries the app's own helper pointed at its `forges/` (`configureComputerGit`; "Git that never prompts" above), so its git answers GitHub with the computer's own sign-in, never prompts, and never reaches another sign-in on that Mac.
   Its clones and pushes themselves are piece 10.
 - **Where it shows.**
-  "Where your projects live" lists a row per computer and host under this Mac's own (`settings/DeviceForgeRows.tsx`): "GitHub · octo" over "Mac mini · clones and pushes its own work", or the computer's name over "not signed in to GitHub" with a secondary Sign in, whose code to read shows in the aside under the row.
+  Projects lists a row per computer and host under the pointer to Integrations (`settings/DeviceForgeRows.tsx`): "GitHub · octo" over "Mac mini · clones and pushes its own work", or the computer's name over "not signed in to GitHub" with a secondary Sign in, whose code to read shows in the aside under the row.
   This Mac's row then reads "GitHub · octo" over "this computer · opens, checks and merges pull requests".
   A computer older than `FORGE_SIGN_INS_SINCE` says no hosts, so it gets no row.
 - **The card, and the typed refusal** (the captain's picks on FI3-1350).

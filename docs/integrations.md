@@ -168,6 +168,23 @@ The accept covers one sign-in and is never saved, so every way into Google's sig
 Open the page again, while that sign-in waits, reuses the accept it followed.
 Cancel, closing Settings or leaving the tab asks nothing of Google.
 
+## GitLab and GitHub Enterprise
+
+Each signed-in GitLab host (`gitlab`) and GitHub Enterprise host (`github-enterprise`) is its own integration (`providers/forgeHosts.ts`), over `ForgeSignIns` and its existing locked per-host files, health and renewal.
+The public GitLab row is named GitLab; self-hosted rows use their address, with the existing server-name fallback for an address too long for a row.
+Both kinds are always addable and reserve no signed-out identity; the ordinary integration name repair keeps their names distinct from other connections.
+Ids are derived from the host with a hash so addresses that differ only in punctuation, or exceed the id shape, remain distinct.
+Each row has `read` and `write`, action switches, Check now, Pause or Resume, and Sign out and remove, using the same gateway and captain approval as GitHub.
+A task reaches the named host through the gateway's account route with no project, so even a write to its own project asks; a kept ask records that host and is sent through it rather than the task's current project.
+The first mate reads as its seat and cannot write; the existing integration relay gives crewmates on other computers the same rows without transferring a sign-in.
+GitLab paths are relative to `/api/v4`; Enterprise paths are relative to its REST API.
+The GitLab chip opens the existing browser registration guide or key alternative; GitHub Enterprise opens its existing key form.
+A signed-in host's form opens below its row, while a new host's form opens below the chips.
+Older host sign-in cards still name the host in `signIn`; a new `integration-add` handoff can name a kind and host before the forge knows that server, carried as a typed `gitlab:<host>` or `github-enterprise:<host>` arrival.
+Add project's signed-out host selector offers Sign in to that host, opening Integrations with its form ready; signed-in hosts keep their project listing in Projects.
+Project cloning, change requests, checks and merges continue through the project forge, unchanged.
+These kinds declare no Automation events and do not move keys into the integration secret store.
+
 ## Settings -> Integrations
 
 The tab sits between Automation and Devices (`IntegrationsTab.tsx`; design skill `components/integrations/IntegrationRow`), and opens from command search as Open Integrations (`settings.integrations`).
@@ -175,8 +192,8 @@ Each row shows its health dot, its name, who it is signed in as or what it runs,
 The chips at the foot connect a kind not yet connected; for GitHub that starts the device flow and shows the code in the tab.
 For Google it shows Google's notice in the same place ("Google's notice"), and its accept opens Google's page in the browser (`inf:integrations:sign-in`); an aside then says to finish there, with Open the page again and Cancel (`inf:integrations:sign-in-cancel`); the new row opens once the browser is back, and a sign-in that did not finish says why in the tab.
 The "MCP server" chip is always there: its form takes a name and what the server runs, and Connect opens the new row on the server's tools, or says in the form why it could not.
-GitHub's sign-in moved here from Settings -> Projects (the captain's q2), which keeps GitHub Enterprise and GitLab and a pointer line to Integrations.
-A card's `open` effect that names `projects` with `signIn: "github.com"` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives; one with `signIn: "google"` lands here and opens Google's notice, whose accept opens Google's page.
+GitHub, GitLab and GitHub Enterprise sign-ins live here; Projects keeps a pointer line and other computers' own GitHub sign-ins.
+A card's `open` effect that names `projects` with a forge host in `signIn` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives; one with `signIn: "google"` lands here and opens Google's notice, whose accept opens Google's page.
 Like Projects, the tab does not show on a paired view.
 
 ## How the first mate reaches them
@@ -184,7 +201,7 @@ Like Projects, the tab does not show on a paired view.
 The first mate's context block carries one `integrations` line naming each connected integration and who it is signed in as, so an integration nobody uses costs one name.
 `integrations` lists them, or one's actions with their effect, rule and input schema; `use_integration` runs one action (`src/core/pi/integrationTools.ts`).
 Their words never change with what is connected, so a seat never starts over when an integration comes or goes.
-It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab for GitHub or Google (a sign-in is the captain's to make), refusing a kind this build cannot sign in to, `integration-add-mcp` adds an MCP server the captain named, `integration-remove` needs the captain's own words, and `integration-settings`, `integration-check` and `integration-add-mcp` are asked actions.
+It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab for GitHub, GitLab, GitHub Enterprise or Google, with an optional host for either server kind (a sign-in is the captain's to make), refusing a kind this build cannot sign in to, `integration-add-mcp` adds an MCP server the captain named, `integration-remove` needs the captain's own words, and `integration-settings`, `integration-check` and `integration-add-mcp` are asked actions.
 
 ## How a crewmate reaches them
 

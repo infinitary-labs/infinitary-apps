@@ -3,8 +3,8 @@ import { HERE } from "./deviceNames";
 
 /**
  * The app's own sign-ins where projects live (git integration PR 1.2,
- * `docs/forge.md`): the wire shape Settings -> Projects renders in its
- * section "Where your projects live". One sign-in per host: github.com
+ * `docs/forge.md`): the wire shape Settings -> Integrations renders in its
+ * host sign-in forms. One sign-in per host: github.com
  * signs in with a code, and GitHub Enterprise with a key made there (`docs/forge.md`,
  * "Hosts on your own server"). GitLab offers browser sign-in or a key on its public
  * host or the person's server. The row is a chip row so a later host, or a

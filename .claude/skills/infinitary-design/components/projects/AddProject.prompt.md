@@ -15,7 +15,7 @@ A ghost Close hides the form without cancelling an addition.
 
 A signed-in host lists “Your {host name} repos”, newest first, with “Find a repo” and an Add button per row (or “added” for existing projects).
 Below: “Or paste a {host name} link”.
-Without sign-in only the link field shows, with no sign-in nudge.
+Without sign-in, the host selector offers a small secondary Sign in to <host> button above the link field; it opens Integrations with that host's form ready.
 Link accepts only this host; other hosts are added by asking the first mate.
 New project has Name and Start project.
 A quiet line names the projects folder and says new projects merge on this computer.

@@ -1224,9 +1224,9 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   // Before the app knows the host, its projects are a plain Git host's.
   expect(await servedLives(page)).toEqual([`meterlab: git (${ENTERPRISE})`, "ledger: git"]);
 
-  // The captain signs in from Settings -> Projects, by keys alone: the
+  // The captain signs in from Settings -> Integrations, by keys alone: the
   // chip, the address, the page where the key is made, and the key.
-  await openProjects(page);
+  await openIntegrations(page);
   await pressKey(
     page.getByRole("button", { name: `Sign in to ${GITHUB_ENTERPRISE.name}` }),
     "Enter",

@@ -115,6 +115,7 @@ import type { HostCapabilities } from "./host";
 import { captureLoginPath, configureGitSignIn, hostEnv } from "./hostEnv";
 import {
   FileIntegrationSecrets,
+  forgeHostIntegration,
   githubIntegration,
   googleIntegration,
   googleSetup,
@@ -1705,7 +1706,15 @@ export async function createServices(
     tasks,
     repos,
     forgeFor,
-    accountForge: () => githubForge({ kind: "github", host: GITHUB_COM, dir: "" }),
+    accountForge: (host = GITHUB_COM) => {
+      const kind =
+        host === "gitlab.com"
+          ? "gitlab"
+          : (forgeSignIns.knownHosts().find((entry) => entry.host === host)?.kind ?? "github");
+      return kind === "gitlab"
+        ? gitlabForge({ kind, host, dir: "" })
+        : githubForge({ kind: "github", host, dir: "" });
+    },
     readChecks: (taskId) => prCi.checkForCrew(taskId),
     beforeValidationWrite: (taskId, request, write): Promise<void> =>
       supervisor.consumeValidationEffect(taskId, request, write),
@@ -1737,6 +1746,16 @@ export async function createServices(
           readAsSeat: (input) => githubGateway.readAsSeat(input),
         },
       }),
+      ...(["gitlab", "github-enterprise"] as const).map((kind) =>
+        forgeHostIntegration(kind, {
+          signIns: forgeSignIns,
+          gateway: (host) => ({
+            read: (taskId, input) => githubGateway.read(taskId, input, { host }),
+            write: (taskId, input) => githubGateway.write(taskId, input, { host }),
+            readAsSeat: (input) => githubGateway.readAsSeat(input, host),
+          }),
+        }),
+      ),
       ...(google
         ? [
             googleIntegration({

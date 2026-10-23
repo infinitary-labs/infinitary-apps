@@ -92,6 +92,8 @@ const isolatedUnit = [
   "tests/extract-dispatch-corpus.test.ts",
   // Its observer lifecycle checks replace child_process.spawn with owned streams.
   "tests/phone-keyboard.test.ts",
+  // Its Photos readiness checks replace child_process.spawn with an owned stream.
+  "tests/phone-photos.test.ts",
   // Its fixed-clock migration comparison must not inherit a warmed template.
   "tests/helpers/database.test.ts",
   // It loads the Claude SDK through the seat's harness.

@@ -301,6 +301,7 @@ The build is `xcodebuild build-for-testing` for any simulator, and each part run
 No part stops another, and any part failing fails the gate.
 A part that chooses a library photo (`talk` and `rest`) starts its tests only after the simulator's Photos says it has opened its shared-with-you library, because Photos hands over no chosen photo before then.
 With simulators booting side by side that took up to six minutes after boot, so the part waits while its home gets ready, and fails if Photos has not opened it fifteen minutes after boot.
+The part keeps that wait's own log output in `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs, before deleting the simulator.
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character and task-start recordings with their posters beside the test results.
 The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
 Each retains real speed and holds the final frame for five seconds, within a fifteen-second cap.

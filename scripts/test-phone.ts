@@ -4,6 +4,7 @@ import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } fro
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
+import { logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
 import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
@@ -83,41 +84,6 @@ const SIMULATOR_LOG = 'process == "Infinitary" OR process BEGINSWITH "com.apple.
 // "Check for interrupting elements"; on a few iPhone talk parts they stopped answering after a keyboard switch.
 const SYSTEM_LOG = 'process IN {"SpringBoard", "backboardd", "AccessibilityUIServer", "testmanagerd", "kbd"}'
   + ' OR process ENDSWITH "-Runner" OR subsystem BEGINSWITH[c] "com.apple.accessibility"';
-// INF-804: on a fresh simulator Photos hands over a chosen photo only once it has opened its shared-with-you
-// library, which took up to six minutes after boot with simulators booting side by side. A part that chooses a
-// photo waits for Photos to say so, and fails rather than wait past fifteen minutes after boot.
-const PHOTOS_LOG = 'process == "assetsd" AND eventMessage CONTAINS "opened syndication photo library"';
-const PHOTOS_OPENED = /\sassetsd\[[^\]]*\].* opened syndication photo library/;
-const logTime = (date: Date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")} `
-  + `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}:${String(date.getSeconds()).padStart(2, "0")}`;
-const photosOpened = async (device: string, booting: Date) => {
-  const stream = spawn("xcrun", ["simctl", "spawn", device, "log", "stream", "--style", "compact", "--predicate", PHOTOS_LOG],
-    { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "ignore"] });
-  children.add(stream);
-  let listening!: () => void;
-  const started = new Promise<void>((resolve) => { listening = resolve; });
-  const opened = new Promise<void>((resolve, reject) => {
-    const deadline = setTimeout(() => reject(new Error("Photos had not opened its shared-with-you library fifteen minutes after boot,"
-      + " and a part that chooses a photo needs it")), booting.getTime() + 15 * 60_000 - Date.now());
-    stream.once("error", (error) => { clearTimeout(deadline); reject(error); });
-    stream.once("close", () => {
-      clearTimeout(deadline); children.delete(stream);
-      reject(new Error("The simulator's Photos log stopped before Photos opened its shared-with-you library"));
-    });
-    createInterface({ input: stream.stdout }).on("line", (line) => {
-      if (line.startsWith("Filtering the log data using ")) listening();
-      else if (PHOTOS_OPENED.test(line)) resolve();
-    });
-  });
-  opened.catch(() => {});
-  try {
-    await Promise.race([started, opened]);
-    // The stream sees only what follows its start; the kept log covers the time from boot until then.
-    if (!PHOTOS_OPENED.test(await run("xcrun", ["simctl", "spawn", device, "log", "show", "--style", "compact",
-      "--start", logTime(booting), "--predicate", PHOTOS_LOG]))) await opened;
-    console.log(`Photos had opened its shared-with-you library ${Math.round((Date.now() - booting.getTime()) / 1000)} seconds after boot`);
-  } finally { stream.kill("SIGTERM"); }
-};
 let keyboard: Awaited<ReturnType<typeof observePhoneKeyboard>> | undefined;
 let recorder: ChildProcess | undefined;
 let recorded: Promise<void> | undefined;
@@ -249,7 +215,8 @@ const onePart = async () => {
   await run("xcrun", ["simctl", "bootstatus", simulator, "-b"]);
   await run("xcrun", ["simctl", "addmedia", simulator, join(REPO_ROOT, "release-notes/pictures/activity-settles-setting-runs-light.png")]);
   // Photos opens its libraries while the rest of the part gets ready; the part's tests start once it has.
-  const photos = PHONE_PARTS.find((part) => part.name === values.part![0])?.photos ? photosOpened(simulator, booting) : undefined;
+  const photos = PHONE_PARTS.find((part) => part.name === values.part![0])?.photos
+    ? photosOpened({ device: simulator, booting, env, evidence, children, run, failureLog: SIMULATOR_LOG }) : undefined;
   photos?.catch(() => {});
   keyboard = await observePhoneKeyboard({ simulator, env, evidence, children });
   const { startPhoneHome } = await runner.import<typeof import("../tests/helpers/phoneHome")>(join(REPO_ROOT, "tests/helpers/phoneHome.ts"));

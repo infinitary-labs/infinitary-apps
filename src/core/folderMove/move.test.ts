@@ -16,7 +16,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { hostname, uptime } from "node:os";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import Database from "better-sqlite3";
 import { build } from "vite";
 import { describe, expect, it, vi } from "vitest";
@@ -31,7 +31,7 @@ import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { copyTree } from "./copy";
 import { dueMove, type FolderMove, stagedFolderFor, stagedFolders } from "./due";
-import { type MoveDeps, runMove, stageMove } from "./move";
+import { type MoveDeps, type MoveItem, runMove, stageMove } from "./move";
 import { readMoveRecord, writeMoveRecord } from "./record";
 
 // Integration budget (docs/test-cohorts.md): real git, the system's copier,
@@ -475,10 +475,12 @@ describe("the one-time move of a data folder", () => {
     const copying: { done: number; total: number }[] = [];
     const units: string[] = [];
     const afterPool: number[] = [];
+    const items: MoveItem[] = [];
     const outcome = await runMove(world.move, {
       ...world.deps,
       progress: (progress) => {
         if (progress.phase === "copying") copying.push(progress);
+        if (progress.item && progress.item !== items.at(-1)) items.push(progress.item);
       },
       copy: (root, staged, options) =>
         copyTree(root, staged, {
@@ -498,6 +500,12 @@ describe("the one-time move of a data folder", () => {
     // Each spare working copy moved the bar by its own share, and the copy ended full.
     expect(new Set(afterPool).size).toBe(2);
     expect(copying.at(-1)?.done).toBe(copying.at(-1)?.total);
+    // The window names each by its kind and its place among them, and a task's working copy by its short name.
+    expect(items.filter((item) => item.kind === "spare-working-copy")).toEqual([
+      { kind: "spare-working-copy", index: 1, of: 2, files: 1 },
+      { kind: "spare-working-copy", index: 2, of: 2, files: 1 },
+    ]);
+    expect(items).toContainEqual(expect.objectContaining({ kind: "working-copy", name: "one" }));
     expect(
       readFileSync(
         join(
@@ -513,6 +521,43 @@ describe("the one-time move of a data folder", () => {
       ),
     ).toBe("1700000000001-b");
     expect(statSync(join(world.to, "worktree-pool", "0123abcd")).mode & 0o7777).toBe(0o750);
+  });
+
+  // INF-967's accepted plan: "Quit, continue later" while the move counts, copies or checks
+  // leaves nothing changed, and the next launch starts the move again.
+  it("stops when asked before its copy is checked, puts the app's own work back, and moves on the next launch", async () => {
+    const world = olderFolder();
+    mkdirSync(join(world.to, "crewmates", "mine"), { recursive: true });
+    for (const phase of ["checking", "copying", "verifying"] as const) {
+      const stop = new AbortController();
+      const outcome = await runMove(
+        world.move,
+        {
+          ...world.deps,
+          signal: stop.signal,
+          progress: (progress) => {
+            if (progress.phase === phase && progress.done > 0)
+              stop.abort(new Error("The move was stopped to continue later."));
+          },
+        },
+        "bring",
+      );
+      expect(outcome).toEqual({
+        kind: "refused",
+        refusal: {
+          reason: "failed",
+          detail: "The move was stopped to continue later.",
+          committed: false,
+        },
+      });
+      expect(stagedFolders(world.to)).toEqual([]);
+      expect(readdirSync(dirname(world.to)).sort()).toEqual(["firstmate-3000", "infinitary"]);
+      expect(existsSync(join(world.to, "crewmates", "mine"))).toBe(true);
+      expect(isProfileRetired(world.from)).toBe(false);
+      expect(moveLockHeld(moveLockPathFor(world.from))).toBe(false);
+    }
+    expect(await runMove(world.move, world.deps)).toMatchObject({ kind: "ask" });
+    expect(await runMove(world.move, world.deps, "bring")).toMatchObject({ kind: "moved" });
   });
 
   it("resumes a move stopped after its copy was checked, without copying again", async () => {

@@ -60,12 +60,37 @@ export function freeBytes(dir: string): number {
   return Number(stats.bavail) * Number(stats.bsize);
 }
 
-function systemCopy(cpPath: string, source: string, target: string): Promise<boolean> {
+/** How one copy says how it goes, and how it stops. */
+type CopyProgress = { signal?: AbortSignal; copied?: (entries: number) => void };
+
+/**
+ * Runs the Mac's copier on one unit; answers whether it copied. With `-v` it
+ * names each entry it copies, one line each, which costs it nothing
+ * measurable and lets the move count entries as they go. Stopped by
+ * `signal`, it answers once the copier has ended, so nothing still writes.
+ */
+function systemCopy(
+  cpPath: string,
+  source: string,
+  target: string,
+  progress: CopyProgress,
+): Promise<boolean> {
   return new Promise((resolve) => {
-    const command = atUtilityQos(cpPath, ["-c", "-p", "-R", source, target]);
-    const child = spawn(command.file, command.args, { env: hostEnv(), stdio: "ignore" });
-    child.once("error", () => resolve(false));
-    child.once("exit", (code) => resolve(code === 0));
+    const command = atUtilityQos(cpPath, ["-c", "-p", "-R", "-v", source, target]);
+    const child = spawn(command.file, command.args, {
+      env: hostEnv(),
+      stdio: ["ignore", "pipe", "ignore"],
+      ...(progress.signal ? { signal: progress.signal } : {}),
+    });
+    child.stdout.on("data", (chunk: Buffer) => {
+      let lines = 0;
+      for (const byte of chunk) if (byte === 10) lines++;
+      if (lines > 0) progress.copied?.(lines);
+    });
+    child.once("error", () => {
+      if (!progress.signal?.aborted) resolve(false);
+    });
+    child.once("close", (code) => resolve(code === 0));
   });
 }
 
@@ -79,7 +104,7 @@ async function liveEndpoint(path: string): Promise<boolean> {
   return stats.isSocket() || stats.isFIFO() || stats.isBlockDevice() || stats.isCharacterDevice();
 }
 
-async function nodeCopy(source: string, target: string): Promise<void> {
+async function nodeCopy(source: string, target: string, signal?: AbortSignal): Promise<void> {
   await cp(source, target, {
     recursive: true,
     verbatimSymlinks: true,
@@ -87,7 +112,10 @@ async function nodeCopy(source: string, target: string): Promise<void> {
     errorOnExist: true,
     force: false,
     mode: constants.COPYFILE_FICLONE,
-    filter: async (from) => !(await liveEndpoint(from)),
+    filter: async (from) => {
+      signal?.throwIfAborted();
+      return !(await liveEndpoint(from));
+    },
   });
 }
 
@@ -143,24 +171,39 @@ export async function copyUnits(root: string): Promise<string[]> {
  * Copies one entry of the data folder into the staged folder, answering
  * whether the system's copier made it (`clonesFrom` says whether that is a
  * clone). A failure throws with the system's own code (`ENOSPC` when the
- * disk is full).
+ * disk is full), and a stop with `signal`'s reason.
  */
 export async function copyEntry(
   source: string,
   target: string,
-  options: CopyOptions,
+  options: CopyOptions & CopyProgress,
 ): Promise<boolean> {
   if (options.platform === "darwin") {
-    if (await systemCopy(options.cp ?? "/bin/cp", source, target)) return true;
+    const copied = await systemCopy(options.cp ?? "/bin/cp", source, target, options);
+    options.signal?.throwIfAborted();
+    if (copied) return true;
     await rm(target, { recursive: true, force: true });
   }
-  await nodeCopy(source, target);
+  await nodeCopy(source, target, options.signal);
   return false;
 }
 
+/** What `copyTree` says as it goes, and how it stops. */
+export type CopyTreeOptions = CopyOptions & {
+  /** A unit is under way. */
+  started?: (unit: string) => void;
+  /** The Mac's copier made this many more entries of a unit under way. */
+  copied?: (unit: string, entries: number) => void;
+  /** A unit is in, and whether the disk cloned it. */
+  done?: (unit: string, cloned: boolean) => void;
+  /** Stops the copy: every copy under way ends, and the copy throws its reason. */
+  signal?: AbortSignal;
+};
+
 /**
  * Copies everything the move copies from `root` into `staged`, which exists
- * and is empty, saying each unit done (`copyUnits`) and whether the disk
+ * and is empty, saying each unit as it starts, as it goes and once done
+ * (`copyUnits`), and whether the disk
  * cloned it: only a clone is the source's own bytes, and a unit the copier
  * wrote is checked by its bytes (`tree.ts` `compareTrees`). A folder copied
  * entry by entry takes its permissions once its entries are in.
@@ -168,7 +211,7 @@ export async function copyEntry(
 export async function copyTree(
   root: string,
   staged: string,
-  options: CopyOptions & { done?: (unit: string, cloned: boolean) => void },
+  options: CopyTreeOptions,
 ): Promise<void> {
   const split = await splitFolders(root);
   for (const path of split) await mkdir(join(staged, path), { mode: 0o700 });
@@ -184,7 +227,12 @@ export async function copyTree(
     while (!failed && next < units.length) {
       const unit = units[next++] as string;
       try {
-        const system = await copyEntry(join(root, unit), join(staged, unit), options);
+        options.signal?.throwIfAborted();
+        options.started?.(unit);
+        const system = await copyEntry(join(root, unit), join(staged, unit), {
+          ...options,
+          copied: (entries) => options.copied?.(unit, entries),
+        });
         options.done?.(unit, clones && system);
       } catch (error) {
         failed = true;

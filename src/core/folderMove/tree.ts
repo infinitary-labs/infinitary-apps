@@ -95,20 +95,43 @@ export function unitOf(parts: readonly string[]): string {
     : join(top, child);
 }
 
+/**
+ * Whether the folder at these parts of the path holds units rather than
+ * being in one (./copy.ts `splitFolders`): the copy makes it before its
+ * units, so it is in no unit.
+ */
+function holdsUnits(parts: readonly string[]): boolean {
+  const [top] = parts;
+  if (top === undefined) return false;
+  if (parts.length === 1) return COPIED_ONE_BY_ONE.has(top);
+  return parts.length === 2 && COPIED_TWO_DEEP.has(top);
+}
+
 /** A git working copy's link to its repository, or a repository's link back to one. */
 export type GitLink = { path: string; kind: "worktree" | "admin" };
 
 /**
- * How much work a file is, beside its bytes: opening, copying and checking a
- * small file costs about what reading a quarter of a megabyte does, so a
- * working copy's thousands of small files move the progress as their time
- * passes, not only the big files' bytes.
+ * What a unit is, in the terms the move's window names it with: a task's
+ * working copy, a spare working copy of the warm pool, a task's records or
+ * a project's clone, each with its folder's name where it has one - a
+ * task's short name, a project's name - and the rest of the saved work.
  */
-export const FILE_WORK = 256 * 1024;
+export type UnitKind =
+  | "working-copy"
+  | "spare-working-copy"
+  | "task-records"
+  | "project"
+  | "saved-work";
 
-/** The work a file of this size is (`FILE_WORK`). */
-export function workOf(size: number): number {
-  return size + FILE_WORK;
+/** The kind of a unit (`unitOf`), and its folder's name where the kind has one. */
+export function unitKindOf(unit: string): { kind: UnitKind; name?: string } {
+  const [top, child, grandchild] = unit.split(sep);
+  if (child === undefined) return { kind: "saved-work" };
+  if (top === "worktrees" && grandchild === undefined) return { kind: "working-copy", name: child };
+  if (top === "worktree-pool" && grandchild !== undefined) return { kind: "spare-working-copy" };
+  if (top === "crewmates" && grandchild === undefined) return { kind: "task-records", name: child };
+  if (top === "fleet" && grandchild === undefined) return { kind: "project", name: child };
+  return { kind: "saved-work" };
 }
 
 /** What a walk of the folder found, beyond its counts. */
@@ -117,10 +140,15 @@ export type TreeSurvey = {
   dirs: number;
   links: number;
   bytes: number;
-  /** The work the whole copy is (`workOf` each file). */
-  work: number;
-  /** The work of each unit the copy goes by (`unitOf`). */
-  unitWork: Map<string, number>;
+  /** Every entry the copy makes: its files, folders and links. */
+  entries: number;
+  /**
+   * The entries of each unit the copy goes by (`unitOf`), the unit's own
+   * folder included; the folders that hold units are in none.
+   */
+  unitEntries: Map<string, number>;
+  /** The files of each unit. */
+  unitFiles: Map<string, number>;
   /** Sockets and pipes: live endpoints, never copied. Relative paths. */
   skipped: string[];
   /** Relative paths of symbolic links whose target is an absolute path. */
@@ -129,8 +157,8 @@ export type TreeSurvey = {
   gitLinks: GitLink[];
 };
 
-/** Called as a walk goes, with the work counted or checked so far. */
-export type TreeProgress = (work: number) => void;
+/** Called as a walk goes, with the entries counted or checked so far. */
+export type TreeProgress = (entries: number) => void;
 
 function kindOf(stats: Stats | BigIntStats | Dirent): "dir" | "file" | "link" | "other" {
   if (stats.isSymbolicLink()) return "link";
@@ -163,9 +191,12 @@ async function inBatches<T>(items: readonly T[], run: (item: T) => Promise<void>
  * Visits every folder under the top, several at once: `visit` reads one
  * folder and answers the folders inside it to visit next. Only the queue of
  * folders still to visit is held, never the tree. The first failure stops
- * the walk and is thrown.
+ * the walk and is thrown, and so does `signal` aborting it.
  */
-async function walkFolders(visit: (parts: string[]) => Promise<string[][]>): Promise<void> {
+async function walkFolders(
+  visit: (parts: string[]) => Promise<string[][]>,
+  signal?: AbortSignal,
+): Promise<void> {
   const queue: string[][] = [[]];
   let active = 0;
   let failed: unknown;
@@ -179,17 +210,22 @@ async function walkFolders(visit: (parts: string[]) => Promise<string[][]>): Pro
       while (active < FOLDERS_AT_ONCE && queue.length > 0) {
         const parts = queue.pop() as string[];
         active++;
-        visit(parts).then(
-          (inside) => {
-            active--;
-            queue.push(...inside);
-            pump();
-          },
-          (error: unknown) => {
-            failed = error;
-            reject(error);
-          },
-        );
+        Promise.resolve()
+          .then(() => {
+            signal?.throwIfAborted();
+            return visit(parts);
+          })
+          .then(
+            (inside) => {
+              active--;
+              queue.push(...inside);
+              pump();
+            },
+            (error: unknown) => {
+              failed = error;
+              reject(error);
+            },
+          );
       }
     };
     pump();
@@ -206,14 +242,19 @@ async function sortedEntries(dir: string): Promise<Dirent[]> {
  * (`leftBehind`), with the sockets and pipes it skips, the absolute symbolic
  * links and git's link files it rewrites after.
  */
-export async function surveyTree(root: string, progress?: TreeProgress): Promise<TreeSurvey> {
+export async function surveyTree(
+  root: string,
+  progress?: (entries: number, bytes: number) => void,
+  signal?: AbortSignal,
+): Promise<TreeSurvey> {
   const survey: TreeSurvey = {
     files: 0,
     dirs: 0,
     links: 0,
     bytes: 0,
-    work: 0,
-    unitWork: new Map(),
+    entries: 0,
+    unitEntries: new Map(),
+    unitFiles: new Map(),
     skipped: [],
     absoluteLinks: [],
     gitLinks: [],
@@ -227,6 +268,10 @@ export async function surveyTree(root: string, progress?: TreeProgress): Promise
       const at = [...parts, entry.name];
       const path = join(root, ...at);
       const kind = kindOf(entry);
+      const unit = unitOf(at);
+      if (kind !== "other") survey.entries++;
+      if (kind !== "other" && !(kind === "dir" && holdsUnits(at)))
+        survey.unitEntries.set(unit, (survey.unitEntries.get(unit) ?? 0) + 1);
       if (kind === "dir") {
         survey.dirs++;
         inside.push(at);
@@ -237,18 +282,16 @@ export async function surveyTree(root: string, progress?: TreeProgress): Promise
         survey.files++;
         const { size } = await lstat(path);
         survey.bytes += size;
-        survey.work += workOf(size);
-        const unit = unitOf(at);
-        survey.unitWork.set(unit, (survey.unitWork.get(unit) ?? 0) + workOf(size));
+        survey.unitFiles.set(unit, (survey.unitFiles.get(unit) ?? 0) + 1);
         const link = isGitLink(at);
         if (link) survey.gitLinks.push({ path: relative(at), kind: link });
-        progress?.(survey.work);
       } else {
         survey.skipped.push(relative(at));
       }
+      progress?.(survey.entries, survey.bytes);
     });
     return inside;
-  });
+  }, signal);
   return survey;
 }
 
@@ -277,14 +320,15 @@ async function hashFile(path: string): Promise<string> {
  * `unitOf`) shares its source's bytes, so the same size and modification
  * time, to the nanosecond, prove it unchanged since the clone; every other
  * file, written byte by byte, is checked by its hash. Throws
- * `CopyMismatchError` on the first difference; answers the work checked
- * (`workOf`).
+ * `CopyMismatchError` on the first difference; answers the entries checked.
+ * `signal` aborting stops it.
  */
 export async function compareTrees(
   root: string,
   copy: string,
   progress?: TreeProgress,
   cloned: (unit: string) => boolean = () => false,
+  signal?: AbortSignal,
 ): Promise<number> {
   let checked = 0;
   await walkFolders(async (parts) => {
@@ -312,6 +356,8 @@ export async function compareTrees(
       ]);
       const kind = kindOf(a);
       if (kindOf(b) !== kind) throw new CopyMismatchError(relative(at), "a different kind");
+      checked++;
+      progress?.(checked);
       if (kind === "link") {
         if ((await readlink(source)) !== (await readlink(target)))
           throw new CopyMismatchError(relative(at), "a different link target");
@@ -330,10 +376,8 @@ export async function compareTrees(
         const [left, right] = await Promise.all([hashFile(source), hashFile(target)]);
         if (left !== right) throw new CopyMismatchError(relative(at), "different contents");
       }
-      checked += workOf(Number(a.size));
-      progress?.(checked);
     });
     return inside;
-  });
+  }, signal);
   return checked;
 }

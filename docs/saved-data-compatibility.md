@@ -67,6 +67,7 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
 3. It counts the older folder and checks the disk has room: the bytes it copies, plus a margin of a twentieth (at least 256 MB), or the margin alone on APFS, where the copy clones its files.
 4. It copies the older folder into `<folder>.moving-<process>`, a private folder beside the app's own, keeping permissions, times and links as links; a Mac clones each file with `cp -c`, elsewhere Node's copy asks for a reflink.
    It copies four entries at once: each top-level entry, each entry of `worktrees/`, `crewmates/`, `fleet/` and `work/`, and each spare working copy of the warm pool, `worktree-pool/<project>/<slot>` (`copyUnits`, `src/core/folderMove/copy.ts`).
+   The Mac's copier runs with `-v`, naming each entry it copies, so the window counts the copy as it goes.
    Each attempt builds in a folder of its own, because a Mac's copier outlives an app that was stopped hard and keeps writing where it was told.
    Chromium's locks and caches, `worktree-trash` and `task-channel` stay behind (`LEFT_BEHIND`, `src/core/folderMove/tree.ts`), and so do sockets and pipes.
    In `work/`, what a live run, its service manager or a controller may still write while the copy is made stays behind too: Electron's own `chromium/`, `service.log`, `work.log`, the route and its lock, `running.lock`, the display's key, `worktree-trash` and `task-channel` (`WORK_LEFT_BEHIND`); the next run makes each again.
@@ -95,7 +96,9 @@ Bringing the older work moves the app's own folder aside first, to `<folder>-set
 Keeping the app's own work records `kept-own` in its folder, so the question is not asked again, and leaves the older folder as it is.
 
 The hand-over window (`src/main/handOver.ts`, its page in `src/main/handOverPage.ts`) is a standalone page like the refusal windows: no preload and no script of its own, its buttons a form whose navigation the window reads and stops.
-It shows the move as it goes, the question, or why the move stopped with Try again; once the work is in it says so, turns on start at login where the older app had it, and starts the app again on its own folder.
+It shows the move as it goes: the four steps - counting, copying, checking the copy, finishing - with the current one lit, the unit being copied by its kind and its place among its kind, with the task's short name (`the working copy of task 1a5a170a, 3 of 7`), the files and folders done of the total, the time so far and an estimate for the step at its pace so far, and why it takes this long.
+While it counts, copies and checks, Quit, continue later stops the move, which leaves nothing changed as above, and quits; closing the window does the same.
+It also shows the question, or why the move stopped with Try again; once the work is in it says so, turns on start at login where the older app had it, and starts the app again on its own folder.
 A development run opens `infinitary-dev` and first moves `firstmate-3000-dev` into it, so the move is rehearsed on a throwaway home whose `CFFIXED_USER_HOME` and `HOME` are scratch folders; the work mode makes its own move the same way.
 It may stand in Firstmate 3000's folders instead with `INFINITARY_FOLDER_SPELLING=fm` (`folderSpellingFor`, `src/main/userDataDir.ts`), which opens `firstmate-3000-dev` and moves nothing, to make an older profile to move.
 A packaged app ignores it, and a development run's hand-over leaves the computer's login items alone.
@@ -138,7 +141,7 @@ Saved work is protected from stable 0.1.25 onward (`docs/alpha.md`, "Activating 
 - `saved-data-refusal.spec.ts`: isolated Electron journeys for future database and incompatible non-database format; each sees the explanation with no normal bridge and verifies protected files unchanged after quit.
   Screenshots go to the run's own results folder.
 - `older-profile.spec.ts`: a profile an older release saved opens in this build and works ("Profiles saved by an older release", below).
-- `src/core/folderMove/move.test.ts`: the one-time move on real git and SQLite - a whole move whose newest rows are only in the write-ahead log, with Claude's sessions of the home's and the work's working copies, both names of a folder, both folders holding work, an interrupted copy, a copy that does not match, resuming after the check and after the commit, a full disk, the older app open, another move and newer saved work.
+- `src/core/folderMove/move.test.ts`: the one-time move on real git and SQLite - a whole move whose newest rows are only in the write-ahead log, with Claude's sessions of the home's and the work's working copies, both names of a folder, both folders holding work, an interrupted copy, a copy that does not match, a stop before the copy is checked, resuming after the check and after the commit, a full disk, the older app open, another move and newer saved work.
 - `scripts/check-saved-work-move.sh`: the one-time move between the real installed apps, with the database and folder Firstmate 3000's own first launch made, after a Homebrew upgrade in a throwaway virtual Mac (`docs/alpha.md`, "The old-cask switch") and after the Ubuntu and Fedora packages replace Firstmate 3000's (`docs/linux-packages.md`, "The checks").
 
 ## Profiles saved by an older release

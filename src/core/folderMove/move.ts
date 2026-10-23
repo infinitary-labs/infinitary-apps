@@ -40,7 +40,14 @@ import {
   rewriteLinks,
   rewritePathFiles,
 } from "./rewrite";
-import { compareTrees, LEFT_BEHIND, surveyTree } from "./tree";
+import {
+  compareTrees,
+  LEFT_BEHIND,
+  surveyTree,
+  type TreeSurvey,
+  type UnitKind,
+  unitKindOf,
+} from "./tree";
 
 /**
  * The one-time move of a data folder into an app's own (the Infinitary
@@ -63,12 +70,43 @@ import { compareTrees, LEFT_BEHIND, surveyTree } from "./tree";
 
 export type MovePhase = "checking" | "copying" | "verifying" | "finishing";
 
+/** What a move carries, once counted: what the window says it is copying and why it takes long. */
+export type MoveCount = {
+  /** Its files, folders and links. */
+  entries: number;
+  files: number;
+  bytes: number;
+  /** Task working copies and the warm pool's spare ones. */
+  workingCopies: number;
+  /** The files inside those working copies. */
+  workingCopyFiles: number;
+};
+
+/** One unit the copy goes by, as the window names it (`tree.ts` `unitKindOf`). */
+export type MoveItem = {
+  kind: UnitKind;
+  /** The task's short name, or the project's, where the kind has one. */
+  name?: string;
+  /** Its place among the units of its kind, from 1, and how many there are. */
+  index: number;
+  of: number;
+  files: number;
+};
+
 /**
- * How far a move is: the work done of the phase's total (`tree.ts`
- * `workOf`, a file's bytes and a fixed cost each), the total 0 while not
- * yet known.
+ * How far a move is: the files, folders and links done of the phase's
+ * total, the total 0 while not yet known. While counting, `bytes` is the
+ * bytes counted so far; once counted, `counted` says what the move
+ * carries, and while copying `item` is the unit started last.
  */
-export type MoveProgress = { phase: MovePhase; done: number; total: number };
+export type MoveProgress = {
+  phase: MovePhase;
+  done: number;
+  total: number;
+  bytes?: number;
+  counted?: MoveCount;
+  item?: MoveItem;
+};
 
 /** One folder as the both-folders question shows it: when it was last opened. */
 export type FolderSummary = { path: string; lastOpened: number | undefined };
@@ -116,6 +154,12 @@ export type MoveDeps = {
   clones?: (dir: string, platform: NodeJS.Platform) => boolean;
   /** The staged copy itself (`copy.ts` `copyTree`). */
   copy?: typeof copyTree;
+  /**
+   * Stops a move before its copy is checked: the count, the copy or the
+   * check ends, the staged copy goes and the app's own work is put back, so
+   * nothing in either folder changed and the next launch starts again.
+   */
+  signal?: AbortSignal;
 };
 
 /**
@@ -181,6 +225,39 @@ function errorCode(error: unknown): string | undefined {
 
 function said(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+/** The units of each kind, in the order the copy takes them. */
+function unitsByKind(survey: TreeSurvey): Map<UnitKind, string[]> {
+  const kinds = new Map<UnitKind, string[]>();
+  for (const unit of [...survey.unitEntries.keys()].sort()) {
+    const { kind } = unitKindOf(unit);
+    kinds.set(kind, [...(kinds.get(kind) ?? []), unit]);
+  }
+  return kinds;
+}
+
+function countOf(survey: TreeSurvey, kinds: Map<UnitKind, string[]>): MoveCount {
+  const copies = [...(kinds.get("working-copy") ?? []), ...(kinds.get("spare-working-copy") ?? [])];
+  return {
+    entries: survey.entries,
+    files: survey.files,
+    bytes: survey.bytes,
+    workingCopies: copies.length,
+    workingCopyFiles: copies.reduce((sum, unit) => sum + (survey.unitFiles.get(unit) ?? 0), 0),
+  };
+}
+
+function itemOf(unit: string, survey: TreeSurvey, kinds: Map<UnitKind, string[]>): MoveItem {
+  const { kind, name } = unitKindOf(unit);
+  const same = kinds.get(kind) ?? [unit];
+  return {
+    kind,
+    ...(name ? { name } : {}),
+    index: same.indexOf(unit) + 1,
+    of: same.length,
+    files: survey.unitFiles.get(unit) ?? 0,
+  };
 }
 
 /**
@@ -299,9 +376,13 @@ export async function stageMove(move: FolderMove, deps: MoveDeps): Promise<MoveO
     }
     mkdirSync(staged, { mode: 0o700 });
     progress?.({ phase: "checking", done: 0, total: 0 });
-    const survey = await surveyTree(from, () =>
-      progress?.({ phase: "checking", done: 0, total: 0 }),
+    const survey = await surveyTree(
+      from,
+      (entries, bytes) => progress?.({ phase: "checking", done: entries, total: 0, bytes }),
+      deps.signal,
     );
+    const kinds = unitsByKind(survey);
+    const counted = countOf(survey, kinds);
     const clones = (deps.clones ?? copyClones)(dirname(to), deps.platform);
     needed = (clones ? 0 : survey.bytes) + marginFor(survey.bytes);
     const free = (deps.free ?? freeBytes)(dirname(to));
@@ -309,25 +390,52 @@ export async function stageMove(move: FolderMove, deps: MoveDeps): Promise<MoveO
       undoStage(staged, to, setAside);
       return { kind: "refused", refusal: { reason: "no-space", needed, free } };
     }
-    let copied = 0;
+    // The folders that hold units are made first; each unit is credited as
+    // its copier names its entries, and in full once it is in.
+    let copied = survey.entries;
+    for (const entries of survey.unitEntries.values()) copied -= entries;
+    let item: MoveItem | undefined;
+    const credited = new Map<string, number>();
+    const credit = (unit: string, entries: number) => {
+      const was = credited.get(unit) ?? 0;
+      const now = Math.min(entries, survey.unitEntries.get(unit) ?? 0);
+      credited.set(unit, now);
+      copied += now - was;
+      progress?.({
+        phase: "copying",
+        done: copied,
+        total: survey.entries,
+        counted,
+        ...(item ? { item } : {}),
+      });
+    };
     const cloned = new Set<string>();
-    progress?.({ phase: "copying", done: 0, total: survey.work });
+    progress?.({ phase: "copying", done: copied, total: survey.entries, counted });
     await (deps.copy ?? copyTree)(from, staged, {
       ...copyOptions,
+      ...(deps.signal ? { signal: deps.signal } : {}),
+      started: (unit) => {
+        item = itemOf(unit, survey, kinds);
+        credit(unit, credited.get(unit) ?? 0);
+      },
+      copied: (unit, entries) => credit(unit, (credited.get(unit) ?? 0) + entries),
       done: (unit, clone) => {
         if (clone) cloned.add(unit);
-        copied += survey.unitWork.get(unit) ?? 0;
-        progress?.({ phase: "copying", done: copied, total: survey.work });
+        credit(unit, survey.unitEntries.get(unit) ?? 0);
       },
     });
-    progress?.({ phase: "verifying", done: 0, total: survey.work });
+    progress?.({ phase: "verifying", done: 0, total: survey.entries, counted });
     await compareTrees(
       from,
       staged,
-      (work) => progress?.({ phase: "verifying", done: work, total: survey.work }),
+      (entries) =>
+        progress?.({ phase: "verifying", done: entries, total: survey.entries, counted }),
       (unit) => cloned.has(unit),
+      deps.signal,
     );
     const froms = pathsOf(from);
+    // A stop asked before the copy is checked and rewritten still changes nothing.
+    deps.signal?.throwIfAborted();
     const outside: OutsideChange[] = outsideGitLinks(from, survey.gitLinks, froms, to);
     const rewritten = [
       ...rewriteDatabases(staged, froms, to),

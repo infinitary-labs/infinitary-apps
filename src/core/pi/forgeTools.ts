@@ -55,7 +55,7 @@ export const CHECK_CHANGE_TOOL_DESCRIPTION = [
   "For your regression pass repair with a stable id, sourceHead, new headSha, check and evidence of the fix; only unsuccessful own repairs spend the three attempts. For an evidenced flake reserve rerun before rerunning the failed job once with github_write; proceed only if this call authorizes it. A duplicate reservation is not permission. A failed rerun is diagnosis, not another rerun.",
   "A reading is only good for the version it read: after you push a fix, read the new version.",
   "When the captain's merge is kept after a refusal, declare each new version you push with conflictRepair; impact none automatically republishes the unchanged story before merging. While it is kept, their new words hold the merge until you declare their impact with captainGuidance.",
-  "Pass pull, a pull request number in this project, to prepare a merge review, including one this task did not open. The answer's review id is what request_merge references. That request grants no approval and merges nothing. Pass absentChecks only for that exact head, with workflow evidence and the local gate; it cannot waive a failed, pending or unreadable check.",
+  "Pass pull to review any PR in this project, including one this task did not open, such as a Release Please PR. Put its returned review id in request_merge on a decision card; only the captain's Merge click merges it. Merge or approve only if explicitly asked; who may merge does not change. For a no-check release PR, pass absentChecks for that head with workflow evidence and the local gate; it waives no failed, pending or unreadable check.",
 ].join(" ");
 
 /** The conflictRepair parameter's own words: the rule a Claude crewmate must see is here. */

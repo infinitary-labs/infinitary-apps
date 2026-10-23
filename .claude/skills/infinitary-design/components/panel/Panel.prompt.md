@@ -49,6 +49,7 @@ Mono `--text-xs` `--fg-3`, right-aligned, one line that gives way with an ellips
 A count or two, never a sentence; nothing at all rather than "0 items".
 A panel whose news is a stream (Activity) may instead say its newest line, which takes the title's place: a `FeedLine` row - a 5 px dot in its tone, the task key in mono `--fg-3`, the words in `--text-sm` `--fg-2` cut with an ellipsis - and the short parts after it at the right.
 The header stays one row tall; the line is a chromeless button that opens the panel, and resting the pointer reads it whole.
+The title, the line's words, its age and the short parts each centre their letters on the dot and the chevron (readme, Type: one line beside a dot or an icon).
 A new line rises in over `--dur-med` by `--move-stack` as the one it replaces lifts out over `--dur-fast`; with no line, the title is back.
 
 **Pointing at a task.**

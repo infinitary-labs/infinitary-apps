@@ -172,6 +172,9 @@ The product feeling: **calm, peaceful, confident, futuristic, a bit of space-tra
   One accent at a time within each thing being read - a screen's chrome, and inside a card each figure on its own, so a card with several figures may light one element per figure; large areas are the tint over the desktop - `--material-tint`, the void at 0% by default - and read against the blurred desktop rather than as a fixed opaque color.
 - **Type:** Space Grotesk (UI/display, weights 300–600); JetBrains Mono (data).
   Display is light (300–400) and large with tight tracking; labels are 11px uppercase tracked +0.09em.
+  **One line beside a dot or an icon centres its letters, never its line box:** in a one-line row (a panel header, a feed line), every run of words is trimmed to its letters with `text-box: trim-both ex alphabetic` - an uppercase title with `cap alphabetic` - so each run's x-height (an uppercase title's cap height) sits on the same centre as the dot and the chevron at every Size and screen density.
+  A line box centred by its box puts the baseline where that font's metrics round at device pixels, so 12.5px words drift below an 11px mono age and the dot on a 2x screen.
+  A trimmed run that cuts with an ellipsis clips only sideways (`overflow-x: clip`), so its descenders stay whole, and a row of trimmed runs keeps its height with a `min-height` of one line.
 - **Spacing:** 4px scale, generous by default (`--space-5..8` between regions).
   Emptiness is a feature — the null state is ~90% empty.
   Settings has two gaps, owned by `settingRows.tsx` (`SECTION_GAP` 32 above a section, `ROW_GAP` 12 between rows and from a label or intro line to its first row) plus `LABEL_GAP` 8 from a label to its intro line; a tab never writes its own.

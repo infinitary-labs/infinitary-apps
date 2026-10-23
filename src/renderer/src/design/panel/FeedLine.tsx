@@ -51,6 +51,9 @@ export function FeedLine({
         gridTemplateColumns: "5px minmax(0, 1fr) 32px",
         columnGap: "var(--space-3)",
         alignItems: "center",
+        // The words and the age are trimmed to their letters, so the row
+        // keeps one line's height itself.
+        minHeight: "calc(var(--text-sm) * var(--leading-body))",
         ...style,
       }}
     >
@@ -65,10 +68,15 @@ export function FeedLine({
           background: toneColors[tone],
         }}
       />
+      {/* Each run is trimmed to its x-height, so the grid centres its
+          letters on the dot rather than its line box (design skill readme,
+          Type: one line beside a dot or an icon). Cut sideways only, so
+          the descenders below the trimmed box stay drawn. */}
       <span
         style={{
           minWidth: 0,
-          overflow: "hidden",
+          overflowX: "clip",
+          textBox: "trim-both ex alphabetic",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
           fontSize: "var(--text-sm)",
@@ -96,6 +104,7 @@ export function FeedLine({
             fontFamily: "var(--font-mono)",
             fontSize: "var(--text-xs)",
             lineHeight: "var(--leading-body)",
+            textBox: "trim-both ex alphabetic",
             textAlign: "right",
           }}
         >

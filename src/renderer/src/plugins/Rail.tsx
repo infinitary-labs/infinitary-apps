@@ -353,6 +353,8 @@ function SaidSummary({
             color: "var(--fg-3)",
             whiteSpace: "nowrap",
             flexShrink: 0,
+            // Trimmed to its x-height, as the line's words are (FeedLine).
+            textBox: "trim-both ex alphabetic",
           }}
         >
           {shortParts}

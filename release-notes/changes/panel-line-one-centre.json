@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "panel-line-one-centre",
+      "kind": "fix",
+      "area": "other",
+      "title": "Panel headers and Activity lines sit on one centre",
+      "body": "A collapsed panel's line, its age, its dot and its arrow now line up on one centre at every Size, on Retina and standard screens. The same goes for the lines in the open Activity panel and the panel titles.",
+      "picture": {
+        "dark": "panel-line-one-centre-dark.webp",
+        "light": "panel-line-one-centre-light.webp",
+        "alt": "The collapsed Activity header with its dot, words, age and arrow centred on one line"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

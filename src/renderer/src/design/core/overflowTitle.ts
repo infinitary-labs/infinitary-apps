@@ -7,14 +7,17 @@ const CLIP_PX = 1;
 /**
  * Whether this node's own text is not readable: hidden, or cut by its box.
  * A node that cannot be measured is treated as hidden, so a tooltip fact
- * stays until a real layout shows the words.
+ * stays until a real layout shows the words. A box that cuts only sideways
+ * cuts nothing above or below: a line trimmed to its letters (`text-box`)
+ * draws past its box there, whole.
  */
 export function textIsHidden(node: HTMLElement): boolean {
   if (typeof node.scrollWidth !== "number" || typeof getComputedStyle !== "function") return true;
   const style = getComputedStyle(node);
   if (style.display === "none" || style.visibility === "hidden") return true;
   return (
-    node.scrollWidth - node.clientWidth > CLIP_PX || node.scrollHeight - node.clientHeight > CLIP_PX
+    node.scrollWidth - node.clientWidth > CLIP_PX ||
+    (style.overflowY !== "visible" && node.scrollHeight - node.clientHeight > CLIP_PX)
   );
 }
 

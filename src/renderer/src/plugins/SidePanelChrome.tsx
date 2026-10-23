@@ -109,6 +109,11 @@ export function SidePanelChrome({
               textTransform: "uppercase",
               color: "var(--fg-2)",
               whiteSpace: "nowrap",
+              // Each text run in the header is trimmed to its letters - this
+              // uppercase title to its cap height, the rest to their
+              // x-height - so the row centres them on the chevron (design
+              // skill readme, Type: one line beside a dot or an icon).
+              textBox: "trim-both cap alphabetic",
               flex: showCompact ? undefined : attribution === null ? 1 : undefined,
             }}
           >
@@ -129,7 +134,8 @@ export function SidePanelChrome({
               fontSize: "var(--text-xs)",
               color: "var(--fg-3)",
               whiteSpace: "nowrap",
-              overflow: "hidden",
+              textBox: "trim-both ex alphabetic",
+              overflowX: "clip",
               textOverflow: "ellipsis",
               minWidth: 0,
               // Collapsed with a summary, the maker's name stays beside the
@@ -157,7 +163,8 @@ export function SidePanelChrome({
                     fontSize: "var(--text-xs)",
                     color: "var(--fg-3)",
                     whiteSpace: "nowrap",
-                    overflow: "hidden",
+                    textBox: "trim-both ex alphabetic",
+                    overflowX: "clip",
                     textOverflow: "ellipsis",
                     minWidth: 0,
                     flex: 1,

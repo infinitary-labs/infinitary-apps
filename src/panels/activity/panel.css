@@ -63,11 +63,15 @@
   margin-left: 2px;
   transform: scaleX(-1);
 }
+/* The line and the age are trimmed to their x-height, so the grid centres
+   their letters on the dot, never their line boxes (design skill readme,
+   Type: one line beside a dot or an icon); the row keeps one line's height. */
 [data-feed-row] {
   display: grid;
   grid-template-columns: var(--feed-dot) minmax(0, 1fr) var(--feed-time);
   column-gap: var(--space-3);
   align-items: center;
+  min-height: calc(var(--text-sm) * var(--leading-body));
 }
 .dot {
   width: var(--feed-dot);
@@ -95,11 +99,14 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   line-height: var(--leading-body);
+  text-box: trim-both ex alphabetic;
   text-align: right;
 }
+/* Cut sideways only: the descenders below the trimmed box stay drawn. */
 .line {
   min-width: 0;
-  overflow: hidden;
+  overflow-x: clip;
+  text-box: trim-both ex alphabetic;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--text-sm);

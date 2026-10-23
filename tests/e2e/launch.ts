@@ -196,6 +196,13 @@ export type LaunchOptions = {
    * is, where Playwright's mouse goes straight to the frame under the point.
    */
   gpuBenchmarking?: boolean;
+  /**
+   * Draw the window at this many device pixels per CSS pixel, as a Retina
+   * screen does (2) or a plain one (1). Chromium's own switch, so layout
+   * rounds at device pixels the way a real screen's does; the DevTools
+   * device-metrics override leaves layout at 1x.
+   */
+  deviceScaleFactor?: number;
   env?: Record<string, string>;
   /**
    * Seed files into the throwaway HOME before Electron starts. Claude's
@@ -450,6 +457,9 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       "--use-fake-device-for-media-stream",
       ...(options.useAppMediaPermissions ? [] : ["--use-fake-ui-for-media-stream"]),
       ...(options.gpuBenchmarking ? ["--enable-gpu-benchmarking"] : []),
+      ...(options.deviceScaleFactor !== undefined
+        ? [`--force-device-scale-factor=${options.deviceScaleFactor}`]
+        : []),
       // Text antialiased in grey, as macOS draws it: Chromium on Linux draws
       // subpixel (LCD) text only on an opaque layer of its own, so the same
       // component would draw different pixels in and out of a panel.

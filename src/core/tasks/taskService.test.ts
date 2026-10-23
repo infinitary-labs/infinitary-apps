@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { DECISION_RECORD_SCHEMA, type DecisionRecord } from "../../shared/provenance";
+import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "./seedTask";
 import { TaskService, TIMELINE_CAP, TIMELINE_KEEP } from "./taskService";
 
@@ -907,4 +908,101 @@ it("INF-203 F4: keeps transcript bytes out of delivery rewrites and validation t
       transcriptBytes: evidence.bytes,
     }),
   );
+});
+
+/** Each statement `read` ran through `all`, with its arguments, as SQLite received it. */
+function statementsRun(
+  db: ReturnType<typeof freshDatabase>,
+  read: () => void,
+): { source: string; args: unknown[] }[] {
+  const statement = Object.getPrototypeOf(db.prepare("SELECT 1")) as {
+    all: (this: { source: string }, ...args: unknown[]) => unknown[];
+  };
+  const { all } = statement;
+  const ran: { source: string; args: unknown[] }[] = [];
+  statement.all = function (this: { source: string }, ...args: unknown[]) {
+    ran.push({ source: this.source, args });
+    return all.apply(this, args);
+  };
+  try {
+    read();
+  } finally {
+    statement.all = all;
+  }
+  return ran;
+}
+
+// INF-940: macOS reported the app's main thread writing 549.76 GB in a day,
+// nearly all of it SQLite's sorter writing an ORDER BY over every task row
+// to a temporary file, once per read of a 3,411-task record.
+describe("reading many tasks (INF-940)", () => {
+  it("reads rows oldest first without SQLite sorting them", () => {
+    const { db, tasks, tick } = setup();
+    const plan = tasks.create({
+      id: "plan",
+      title: "Plan the meter export",
+      prompt: "p",
+      repoId: "r1",
+    });
+    tick();
+    tasks.create({
+      id: "piece",
+      title: "Export the meter readings",
+      prompt: "p",
+      repoId: "r1",
+      parentId: plan.id,
+    });
+    tasks.create({ id: "shipped", title: "Fix the meter rounding", prompt: "p", repoId: "r1" });
+    // The same instant in another project: its first key orders it before nimbus-api's third.
+    tasks.create({ id: "scratch", title: "Sketch the meter icon", prompt: "p", repoId: null });
+    tick(1_000);
+    tasks.close("shipped", { status: "done", reason: "merged", actor: "captain" });
+    const closedAt = tasks.get("shipped")?.closedAt as number;
+    // The computer's clock stepped back: written last, created first.
+    tick(-1_500);
+    tasks.create({
+      id: "stepped",
+      title: "Rename the meter tab",
+      prompt: "p",
+      repoId: "r1",
+      parentId: plan.id,
+      status: "active",
+    });
+
+    const reads: [string, () => TaskRecord[], string[]][] = [
+      ["list", () => tasks.list(), ["stepped", "plan", "scratch", "piece", "shipped"]],
+      ["listLive", () => tasks.listLive(), ["stepped", "plan", "scratch", "piece"]],
+      [
+        "listLiveOrClosedSince",
+        () => tasks.listLiveOrClosedSince(closedAt),
+        ["stepped", "plan", "scratch", "piece", "shipped"],
+      ],
+      [
+        "getMany",
+        () => tasks.getMany(["shipped", "stepped", "piece"]),
+        ["stepped", "piece", "shipped"],
+      ],
+      ["children", () => tasks.children(plan.id), ["stepped", "piece"]],
+    ];
+    for (const [name, read, oldestFirst] of reads) {
+      let rows: TaskRecord[] = [];
+      const ran = statementsRun(db, () => {
+        rows = read();
+      });
+      expect(
+        rows.map((row) => row.id),
+        name,
+      ).toEqual(oldestFirst);
+      expect(ran, name).not.toHaveLength(0);
+      for (const { source, args } of ran) {
+        const steps = db.prepare(`EXPLAIN QUERY PLAN ${source}`).all(...args) as {
+          detail: string;
+        }[];
+        expect(
+          steps.map((step) => step.detail).filter((detail) => detail.includes("TEMP B-TREE")),
+          `${name}: ${source}`,
+        ).toEqual([]);
+      }
+    }
+  });
 });

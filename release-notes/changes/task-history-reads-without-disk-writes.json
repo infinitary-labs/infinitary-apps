@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "task-history-reads-without-disk-writes",
+      "kind": "fix",
+      "area": "other",
+      "title": "A long task history no longer fills your disk with writes",
+      "body": "With thousands of tasks, the app wrote about 30 MB to your computer's disk each time it read your task history, up to hundreds of gigabytes a day. It now reads them without writing anything, in about a third of the time, so the app pauses less.",
+      "noPicture": "Nothing on screen changes: the app reads the task history without writing a temporary copy of it to disk.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

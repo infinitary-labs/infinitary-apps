@@ -721,6 +721,17 @@ function fromRow(row: Row): TaskRecord {
   };
 }
 
+/**
+ * Oldest first: created, then key number (a missing one first). Sorted here,
+ * never by an ORDER BY over these rows: SQLite's sorter copies every column
+ * of every row, and once that copy outgrows its cache it writes it to a
+ * temporary file, tens of megabytes per read of a long record, on the main
+ * thread (INF-940).
+ */
+function oldestFirst(rows: Row[]): TaskRecord[] {
+  return rows.map(fromRow).sort((a, b) => a.createdAt - b.createdAt || a.seq - b.seq);
+}
+
 /** The columns a patch may touch, mapped from record field to column. */
 const PATCH_COLUMNS = {
   key: "key",
@@ -949,18 +960,16 @@ export class TaskStore {
   }
 
   list(): TaskRecord[] {
-    const rows = prepared(this.db, "SELECT * FROM tasks ORDER BY created_at, seq").all() as Row[];
-    return rows.map(fromRow);
+    return oldestFirst(prepared(this.db, "SELECT * FROM tasks").all() as Row[]);
   }
 
   listByStatus(...statuses: TaskStatus[]): TaskRecord[] {
     if (statuses.length === 0) return [];
     const marks = statuses.map(() => "?").join(", ");
-    const rows = prepared(
-      this.db,
-      `SELECT * FROM tasks WHERE status IN (${marks}) ORDER BY created_at, seq`,
-    ).all(...statuses) as Row[];
-    return rows.map(fromRow);
+    const rows = prepared(this.db, `SELECT * FROM tasks WHERE status IN (${marks})`).all(
+      ...statuses,
+    ) as Row[];
+    return oldestFirst(rows);
   }
 
   /**
@@ -971,10 +980,9 @@ export class TaskStore {
   listLiveOrClosedSince(since: number): TaskRecord[] {
     const rows = prepared(
       this.db,
-      `SELECT * FROM tasks WHERE status IN ('open', 'active') OR closed_at >= ?
-       ORDER BY created_at, seq`,
+      "SELECT * FROM tasks WHERE status IN ('open', 'active') OR closed_at >= ?",
     ).all(since) as Row[];
-    return rows.map(fromRow);
+    return oldestFirst(rows);
   }
 
   /**
@@ -1013,10 +1021,9 @@ export class TaskStore {
     if (ids.length === 0) return [];
     const rows = prepared(
       this.db,
-      `SELECT * FROM tasks WHERE id IN (SELECT value FROM json_each(?))
-       ORDER BY created_at, seq`,
+      "SELECT * FROM tasks WHERE id IN (SELECT value FROM json_each(?))",
     ).all(JSON.stringify(ids)) as Row[];
-    return rows.map(fromRow);
+    return oldestFirst(rows);
   }
 
   /** How many children each of these parents has, and how many of them closed. */
@@ -1036,10 +1043,8 @@ export class TaskStore {
 
   /** A parent's direct children, oldest first. */
   listChildren(parentId: string): TaskRecord[] {
-    const rows = this.db
-      .prepare("SELECT * FROM tasks WHERE parent_id = ? ORDER BY created_at, seq")
-      .all(parentId) as Row[];
-    return rows.map(fromRow);
+    const rows = this.db.prepare("SELECT * FROM tasks WHERE parent_id = ?").all(parentId) as Row[];
+    return oldestFirst(rows);
   }
 
   /** Every descendant, deepest last (a recursive walk down parent_id). */

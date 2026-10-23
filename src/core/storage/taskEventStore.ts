@@ -296,7 +296,12 @@ export class TaskEventStore {
  * task's Activity reads (a `task_event_concerns` row), which stays verbatim.
  * Only compaction passes `except`.
  */
+/**
+ * What compaction leaves alone: the exempt kinds, events another task
+ * reads, and events whose data marks them `journal: true` - a record a
+ * replay reads back, such as a program's ask answers and its start.
+ */
 function exclusion(except: readonly TaskEventKind[]): string {
   if (except.length === 0) return "";
-  return ` AND kind NOT IN (${except.map(() => "?").join(", ")}) AND id NOT IN (SELECT event_id FROM task_event_concerns)`;
+  return ` AND kind NOT IN (${except.map(() => "?").join(", ")}) AND id NOT IN (SELECT event_id FROM task_event_concerns) AND CASE WHEN json_valid(data_json) THEN coalesce(json_extract(data_json, '$.journal'), 0) ELSE 0 END != 1`;
 }

@@ -167,7 +167,8 @@ import { liveWaitCycle, waitCycleWords } from "./waitCycles";
  * Prospective provenance is exempt, so a provenance-heavy timeline may
  * exceed the target rather than discard its evidence, and so is every
  * event another task's Activity reads (docs/task-record.md, "Whom an event
- * concerns").
+ * concerns"), and so is every event whose data marks it `journal: true`,
+ * a record a replay reads back (docs/programs.md, "The journal and replay").
  */
 export const TIMELINE_CAP = 500;
 export const TIMELINE_KEEP = 400;
@@ -188,6 +189,14 @@ export type CompactedEventData = {
   firstAt: number;
   lastAt: number;
   kinds: Record<string, number>;
+  /**
+   * The newest plan among the folded events, and when it was written, so a
+   * reader of the newest plan still finds it (docs/task-record.md).
+   */
+  plan?: unknown[];
+  planAt?: number;
+  /** The highest folded program line number per op (docs/programs.md). */
+  programLines?: Partial<Record<"log" | "phase", number>>;
 };
 
 /** A graph rule refused the write; the message is meant for the agent. */
@@ -264,6 +273,8 @@ export type UpdateTaskPatch = {
   resultSchema?: Record<string, unknown> | null;
   /** The task, by key, unstarted work starts from (INF-799), already checked; empty clears it. */
   branchFrom?: string;
+  /** A program's new bound on its task() calls (INF-799), on the captain's words. */
+  programBound?: number;
   /**
    * The model the captain named for open work no crewmate holds yet - a bare
    * id or a provider-qualified key - stored as the shape's
@@ -697,7 +708,31 @@ function asCompacted(data: Record<string, unknown> | null): CompactedEventData |
     firstAt: typeof data.firstAt === "number" ? data.firstAt : Number.POSITIVE_INFINITY,
     lastAt: typeof data.lastAt === "number" ? data.lastAt : 0,
     kinds,
+    ...(Array.isArray(data.plan) && typeof data.planAt === "number"
+      ? { plan: data.plan, planAt: data.planAt }
+      : {}),
+    ...(data.programLines && typeof data.programLines === "object"
+      ? { programLines: data.programLines as CompactedEventData["programLines"] }
+      : {}),
   };
+}
+
+/** Keep the folded events' newest plan and highest program line numbers on the fold. */
+function keepLatest(
+  data: CompactedEventData,
+  plan: unknown,
+  planAt: number,
+  lines: CompactedEventData["programLines"],
+): void {
+  if (Array.isArray(plan) && planAt >= (data.planAt ?? Number.NEGATIVE_INFINITY)) {
+    data.plan = plan;
+    data.planAt = planAt;
+  }
+  for (const op of ["log", "phase"] as const) {
+    const n = lines?.[op];
+    if (typeof n === "number" && n > (data.programLines?.[op] ?? 0))
+      data.programLines = { ...data.programLines, [op]: n };
+  }
 }
 
 function defaultCloseText(input: CloseInput): string {
@@ -1674,6 +1709,17 @@ export class TaskService {
       }
 
       if (
+        patch.programBound !== undefined &&
+        (record.status !== "open" ||
+          !record.shape?.program ||
+          !Number.isInteger(patch.programBound) ||
+          patch.programBound < 1)
+      ) {
+        throw new TaskGraphRefusal(
+          "program_bound changes only an open program's bound, to a whole number of at least 1.",
+        );
+      }
+      if (
         patch.speed !== undefined &&
         (record.kind !== "work" || record.status === "done" || record.status === "dropped")
       ) {
@@ -1763,6 +1809,13 @@ export class TaskService {
           const { branch_from: _oldBranch, ...shape } = current ?? { kind: "unclear" as const };
           update.shape = { ...shape, ...(branchFrom ? { branch_from: branchFrom } : {}) };
           changes.push(branchFrom ? `branches from ${branchFrom}` : "branch_from cleared");
+        }
+      }
+      if (patch.programBound !== undefined) {
+        const current = update.shape ?? record.shape;
+        if (current?.program && current.program.bound !== patch.programBound) {
+          update.shape = { ...current, program: { ...current.program, bound: patch.programBound } };
+          changes.push(`bound ${patch.programBound}`);
         }
       }
       if (patch.speed !== undefined) {
@@ -2038,6 +2091,8 @@ export class TaskService {
     text: string,
     actor: TaskEventActor = "crewmate",
     plan?: readonly PlanItem[],
+    /** Facts the line's writer reads back, such as a program's count of its lines. */
+    facts?: Record<string, unknown>,
   ): void {
     const at = this.now();
     const run = this.write(() => {
@@ -2049,7 +2104,9 @@ export class TaskService {
         actor,
         kind: "progress",
         text,
-        ...(plan ? { data: { plan: plan.map((item) => ({ ...item })) } } : {}),
+        ...(plan || facts
+          ? { data: { ...facts, ...(plan ? { plan: plan.map((item) => ({ ...item })) } : {}) } }
+          : {}),
         feed: false,
       });
     });
@@ -2418,6 +2475,35 @@ export class TaskService {
       });
     });
     run();
+  }
+
+  /**
+   * A program began running in the host's runner (INF-799). It stays open,
+   * since no crewmate holds it, and its first run is one event on its
+   * timeline - never startedAt, which says a crewmate started and draws the
+   * Crewmate tab - so a Start on request reads as started and the sweep
+   * runs it again after a quit.
+   */
+  markProgramStarted(id: string): void {
+    const run = this.write(() => {
+      this.mustGet(id);
+      if (this.programStarted(id)) return;
+      const at = this.now();
+      this.addEvent({
+        taskId: id,
+        at,
+        actor: "host",
+        kind: "status",
+        text: "program started",
+        data: { programStarted: true, journal: true },
+      });
+    });
+    run();
+  }
+
+  /** Whether the host's runner has run this program task (markProgramStarted). */
+  programStarted(id: string): boolean {
+    return this.timeline(id).some((event) => event.data?.programStarted === true);
   }
 
   /**
@@ -4597,11 +4683,21 @@ export class TaskService {
         for (const [kind, n] of Object.entries(prior.kinds)) {
           data.kinds[kind] = (data.kinds[kind] ?? 0) + n;
         }
+        keepLatest(data, prior.plan, prior.planAt ?? 0, prior.programLines);
         continue;
       }
       data.folded += 1;
       data.firstAt = Math.min(data.firstAt, event.at);
       data.kinds[event.kind] = (data.kinds[event.kind] ?? 0) + 1;
+      const line = event.data?.programLine as { op?: unknown; n?: unknown } | undefined;
+      keepLatest(
+        data,
+        event.kind === "progress" ? event.data?.plan : undefined,
+        event.at,
+        (line?.op === "log" || line?.op === "phase") && typeof line.n === "number"
+          ? { [line.op]: line.n }
+          : undefined,
+      );
     }
     this.events.deleteIds(folded.map((event) => event.id));
     const compacted: InsertTaskEvent = {

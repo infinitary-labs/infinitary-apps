@@ -436,6 +436,13 @@ export type HostCapabilities = {
    * given a command, and so no crewmate has a browser.
    */
   readonly axiProcess?: HostChildSpawner;
+  /**
+   * Starts the process that runs one program's script
+   * (src/core/program/programProcess.ts, docs/programs.md). Electron spawns
+   * a utility process; a test forks the same entry with Node. Absent, a
+   * program cannot be filed.
+   */
+  readonly programProcess?: HostChildSpawner;
 };
 
 /** A child process the core talks to by messages and may kill at any moment. */

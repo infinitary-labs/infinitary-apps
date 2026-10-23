@@ -381,8 +381,8 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   },
   {
     rule: "the same internal-step rule on a planned step",
-    home: { tool: "create_task", parameter: "internal_step" },
-    says: "Omit it when the captain asked for this result themselves",
+    home: "sequences",
+    says: "An answer I ask for myself is never an internal step",
   },
   {
     rule: "an internal step is declared when it is created",
@@ -411,8 +411,8 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   },
   {
     rule: "what an escalation spawn carries over",
-    home: { tool: "spawn_crewmate", parameter: "shape" },
-    says: "The host stops that attempt, keeps its branch and report, and runs this one a tier up. Pass the user's words verbatim as user_words and the original goal.",
+    home: "core",
+    says: "spawn_crewmate again with escalate_from naming that task, their words verbatim as user_words, and the original goal",
   },
   {
     rule: "who merges a reviewed task once it passes and is green",

@@ -200,6 +200,33 @@ export const workShapeSchema = z.object({
    * when it is named and again when the task starts.
    */
   branch_from: z.string().optional(),
+  /**
+   * The program this task runs (INF-799 piece 2, docs/programs.md): a plain
+   * JavaScript script the first mate declared, the args it reads, and the
+   * upper bound it proposed on the script's task() calls. A task with a
+   * program has no crewmate and no working copy: the host's runner
+   * evaluates the script in its own process and files each task() call as
+   * a part, a child task. The host checks that the script compiles and
+   * imports nothing, and reads nothing of what it means.
+   */
+  program: z
+    .object({
+      script: z.string(),
+      args: z.unknown().optional(),
+      bound: z.number().int().positive(),
+    })
+    .optional(),
+  /**
+   * Which call of its parent's program filed this part (INF-799 piece 2):
+   * the call's number in the order the script made them, a digest of the
+   * call's prompt and options, and its label. The runner's journal: after
+   * a quit it replays the script, and a call equal to a recorded one takes
+   * that part's result instead of filing another. Written by the host when
+   * it files the part.
+   */
+  program_part: z
+    .object({ call: z.number().int().nonnegative(), hash: z.string(), label: z.string() })
+    .optional(),
   /** Legacy metadata kept readable for saved tasks; grants no different access. */
   knowledge_access: z.literal("references").optional(),
   /** Firstmate's stated reason for skipping a plan; the host does not judge it. */
@@ -344,6 +371,7 @@ export const CAPTAIN_OWNED_SHAPE_FIELDS = [
   "skipped_plan_because",
   "result_schema",
   "branch_from",
+  "program",
 ] as const satisfies readonly (keyof WorkShape)[];
 
 /** Fields a host stamp may write onto the shape as it stands. */
@@ -365,6 +393,7 @@ export const HOST_STAMP_FIELDS = [
 export const HOST_KEPT_SHAPE_FIELDS = [
   "placement_fallback_accepted",
   "placement_wait",
+  "program_part",
 ] as const satisfies readonly (keyof WorkShape)[];
 
 /** Derived at every read and never stored. */
@@ -417,6 +446,7 @@ export const workShapeAskSchema = workShapeSchema
     skipped_plan_because: true,
     result_schema: true,
     branch_from: true,
+    program: true,
   })
   .extend({
     /**

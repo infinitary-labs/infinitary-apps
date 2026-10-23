@@ -262,6 +262,9 @@ import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { PlacedCopy } from "../placed/placedCopies";
 import { PreparationUnknown } from "../placed/placedCopies";
 import type { CrewMachines } from "../placed/placedSessions";
+import { askJson } from "../program/programAsk";
+import { type ProgramEnd, type ProgramPartAsk, ProgramRunner } from "../program/programRunner";
+import { programRefusal } from "../program/programScript";
 import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import { CLASSIFY_TIMEOUT_MS } from "../routing/decisionKindClassifier";
 import {
@@ -382,6 +385,7 @@ import {
   joinParts,
   type PersonalBriefFacts,
   PULL_REPAIR_TITLE,
+  parseSpawnIntent,
   type ReviewBriefFacts,
   renderAnswerShapeSection,
   renderBranchFromLine,
@@ -390,6 +394,7 @@ import {
   renderFollowupBrief,
   renderIntentBrief,
   renderPicturesSection,
+  renderProgramPartSection,
   renderPullRepairBrief,
   renderRepairAssessmentBrief,
   renderResultShapeSection,
@@ -551,6 +556,22 @@ export type AccountAttachment = {
 
 export type CrewSupervisorOptions = {
   automaticPlacement?: AutomaticPlacement;
+  /**
+   * Starts the process a program's script runs in (docs/programs.md).
+   * Absent, a program is refused when it is filed.
+   */
+  programProcess?: import("../host").HostChildSpawner;
+  /**
+   * One JSON answer through the decision models' one-question session
+   * (`DecisionModels.answerJson`), for a program's ask(). Absent, ask()
+   * answers null.
+   */
+  answerJson?: (
+    caller: { purpose: string; taskId?: string },
+    instruction: string,
+    text: string,
+    signal: AbortSignal,
+  ) => Promise<{ text: string } | { failed: string }>;
   /** The app build every card observation is stamped with (docs/card-evidence.md). */
   build?: string;
   /**
@@ -1367,6 +1388,10 @@ export class CrewSupervisor {
   private readonly mainCheckWake: MainCheckWatcher | undefined;
   private readonly runWatch: RunWatcher | undefined;
   private recoveredPendingSettles = false;
+  /** Every running program (INF-799 piece 2, docs/programs.md). */
+  private readonly programs: ProgramRunner;
+  /** The bound each program last told the first mate it reached, so it hears it once per bound. */
+  private readonly programBoundTold = new Map<string, number>();
 
   constructor(private readonly options: CrewSupervisorOptions) {
     const now = options.now;
@@ -1423,6 +1448,15 @@ export class CrewSupervisor {
       sweepGates: (at) => this.sweepGates(at),
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
       broadcastEvent: options.broadcastEvent,
+    });
+    this.programs = new ProgramRunner({
+      tasks: options.tasks,
+      spawner: options.programProcess,
+      filePart: (program, part) => this.fileProgramPart(program, part),
+      closePart: (partId) => this.closeProgramPart(partId),
+      ask: (program, prompt, schema) => this.programAsk(program, prompt, schema),
+      finish: (program, end) => this.finishProgram(program, end),
+      bounded: (program, calls) => this.programBounded(program, calls),
     });
     const serveability = this.serveability();
     this.ladder = new IdleLadder({
@@ -4048,8 +4082,12 @@ export class CrewSupervisor {
     const title = (input.title.trim() || input.intent.goal || "Task").slice(0, 64);
     const handOff = this.handOffShape(input.shape, placement.repoId);
     if ("refused" in handOff) throw new TaskGraphRefusal(`Nothing was filed. ${handOff.refused}`);
+    const program = input.shape?.program
+      ? this.programShape(input.shape, placement.repoId, placement.personal)
+      : undefined;
+    if (typeof program === "string") throw new TaskGraphRefusal(`Nothing was filed. ${program}`);
     const shape = this.withDeliverable(
-      { ...this.workShape(input.shape), ...handOff },
+      { ...this.workShape(input.shape), ...handOff, ...(program ? { program } : {}) },
       input.intent,
     );
     const record = this.options.tasks.create({
@@ -4787,6 +4825,275 @@ export class CrewSupervisor {
       ...(ask?.result_schema ? { result_schema: ask.result_schema } : {}),
       ...(named ? { branch_from: named.key || named.id } : {}),
     };
+  }
+
+  /**
+   * The program a new task declares (INF-799 piece 2, docs/programs.md):
+   * its script checked for imports and that it compiles, its bound a
+   * positive whole number. A refusal is words, nothing filed. A program
+   * runs in a project's working copies, so it needs a project that is not
+   * the personal workspace, and it has none of its own to branch.
+   */
+  private programShape(
+    ask: WorkShapeAsk,
+    repoId: string | null,
+    personal: boolean,
+  ): NonNullable<WorkShape["program"]> | string {
+    const program = ask.program;
+    if (!program) return "No program was given.";
+    if (!this.options.programProcess) return "This app cannot run a program.";
+    if (!repoId || personal)
+      return "A program runs its parts in a project: give it a repo_id or a parent in one, not the personal workspace.";
+    if (ask.branch_from)
+      return "A program has no working copy of its own; give branch_from to its parts.";
+    const refused = programRefusal(program);
+    if (refused) return refused;
+    return {
+      script: program.script,
+      bound: program.bound,
+      ...(program.args !== undefined ? { args: program.args } : {}),
+    };
+  }
+
+  /**
+   * One task() call of a program, filed as a part (INF-799 piece 2): a
+   * child of the program, when-ready, an internal step that delivers its
+   * branch and its result (local-only, never a pull request), with the
+   * script's schema as its result shape, the part it starts from as its
+   * branch_from, and a `blocks` link from each part whose result it builds
+   * on. It carries the captain's words the program was filed with.
+   */
+  private fileProgramPart(
+    program: TaskRecord,
+    part: ProgramPartAsk,
+  ): TaskRecord | { refused: string } {
+    const from = part.from ? this.options.tasks.get(part.from) : undefined;
+    const ask: WorkShapeAsk = {
+      internal_step: true,
+      delivery_ask: "local-only",
+      ...(part.schema ? { result_schema: part.schema } : {}),
+      ...(from ? { branch_from: from.key || from.id } : {}),
+    };
+    const handOff = this.handOffShape(ask, program.repoId);
+    if ("refused" in handOff) return { refused: handOff.refused };
+    let intent: SpawnIntent;
+    try {
+      intent = parseSpawnIntent({
+        goal: part.prompt,
+        user_words: program.intent?.userWords || program.title,
+        ...(program.intent?.constraints ? { constraints: program.intent.constraints } : {}),
+      });
+    } catch (caught) {
+      return { refused: caught instanceof Error ? caught.message : String(caught) };
+    }
+    const placement = this.resolveGraphPlacement({
+      parent: program.id,
+      blockedBy: part.after,
+      intent,
+      shape: ask,
+    });
+    const shape = this.withDeliverable(
+      {
+        ...this.workShape(ask),
+        ...handOff,
+        program_part: { call: part.call, hash: part.hash, label: part.label },
+      },
+      intent,
+    );
+    const title = (part.prompt.trim().split("\n")[0] ?? part.label).slice(0, 64);
+    const record = this.options.tasks.create({
+      id: randomUUID().slice(0, 8),
+      kind: "work",
+      title,
+      prompt: renderIntentBrief(intent, placement.delivery),
+      intent,
+      repoId: placement.repoId,
+      difficulty: tierFor(shape).bucket ?? null,
+      shape,
+      parentId: program.id,
+      ...(placement.blockedBy.length > 0 ? { blockedBy: placement.blockedBy } : {}),
+      startPolicy: "when-ready",
+      status: "open",
+    });
+    this.options.broadcastEvent({
+      type: "firstmate_note",
+      text: `The program "${program.title}" (${program.key}) filed part ${record.key}: "${title}".`,
+    });
+    this.broadcastCrewCounts();
+    void this.sweepGates(this.now());
+    return record;
+  }
+
+  /**
+   * A part reported the answer its program waits for: it closes done,
+   * answered, its working copy retired with its work saved on its kept ref
+   * so a later part or the shipping task can branch from it. After the
+   * turn's own idle boundary, never inside it.
+   */
+  private closeProgramPart(partId: string): Promise<void> {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        const part = this.options.tasks.get(partId);
+        if (!part || TaskService.isClosed(part)) return resolve();
+        void this.settle
+          .closeTask(partId, {
+            status: "done",
+            reason: "answered",
+            actor: "host",
+            text: "answered - its program read its result",
+          })
+          .catch((caught: unknown) => console.warn("[program] a part did not close:", caught))
+          .finally(resolve);
+      }, 0);
+    });
+  }
+
+  /** A program's ask(): the question session's JSON answer, checked, or null. */
+  private async programAsk(
+    program: TaskRecord,
+    prompt: string,
+    schema: Record<string, unknown> | null,
+  ): Promise<unknown> {
+    const answer = this.options.answerJson;
+    if (!answer) return null;
+    return askJson(
+      (instruction, text) =>
+        answer(
+          { purpose: "program-ask", taskId: program.id },
+          instruction,
+          text,
+          new AbortController().signal,
+        ),
+      prompt,
+      schema,
+    );
+  }
+
+  /**
+   * A program's call reached the bound the first mate proposed (the
+   * `program-bound` hold, resting on the captain's consent): nothing more
+   * is filed, and the first mate hears it once per bound, to ask the captain.
+   */
+  private programBounded(program: TaskRecord, calls: number): void {
+    const bound = program.shape?.program?.bound ?? 0;
+    if (this.programBoundTold.get(program.id) === bound) return;
+    this.programBoundTold.set(program.id, bound);
+    this.options.tasks.note(program.id, `held at its bound of ${bound} parts`, {
+      news: true,
+      actor: "host",
+      feed: true,
+    });
+    this.hooks.notifyOp(
+      {
+        facts: {
+          kind: "program-bound",
+          task: { id: program.id, title: program.title },
+          key: program.key || program.id,
+          bound,
+          calls,
+        },
+      },
+      "agent",
+      program.id,
+    );
+  }
+
+  /**
+   * A program's script ended (INF-799 piece 2). Parts it never waited for
+   * are dropped. A returned value is its typed result - checked against
+   * the program's own result shape when it declared one - recorded as its
+   * report, and the program closes done. Its branch is only the part its
+   * script names by label in the returned object's `branch`, whose saved
+   * work a shipping task branches from; a script that names none - or an
+   * empty one, null or "" - leaves nothing to ship. A thrown error, a result that does not fit, or a
+   * `branch` naming no part that finished done closes it dropped as failed.
+   * Either way the first mate hears it once.
+   */
+  private async finishProgram(program: TaskRecord, end: ProgramEnd): Promise<void> {
+    const tasks = this.options.tasks;
+    for (const part of tasks.children(program.id)) {
+      if (TaskService.isClosed(part)) continue;
+      await this.settle.closeTask(part.id, {
+        status: "dropped",
+        reason: "superseded",
+        actor: "host",
+        text: "superseded - its program ended without waiting for it",
+        feed: false,
+      });
+    }
+    const parts = tasks
+      .children(program.id)
+      .filter((part) => part.shape?.program_part)
+      .sort((a, b) => (a.shape?.program_part?.call ?? 0) - (b.shape?.program_part?.call ?? 0));
+    const task = { id: program.id, title: program.title };
+    const schema = program.shape?.result_schema;
+    const value = "value" in end ? end.value : undefined;
+    const misfit = schema && "value" in end ? resultRefusal(schema, value) : undefined;
+    const returned =
+      value && typeof value === "object" ? (value as { branch?: unknown }).branch : undefined;
+    // An empty branch is no branch: nothing to ship (the captain's N2 answer).
+    const named =
+      returned === null || (typeof returned === "string" && !returned.trim())
+        ? undefined
+        : returned;
+    const branch =
+      typeof named === "string"
+        ? parts.find((part) => part.status === "done" && part.shape?.program_part?.label === named)
+        : undefined;
+    const error =
+      "error" in end
+        ? end.error
+        : misfit
+          ? `its script returned a result that does not fit its result shape: ${misfit}`
+          : named !== undefined && !branch
+            ? `its script returned branch ${JSON.stringify(named)}, which names no part's label that finished done`
+            : undefined;
+    const current = tasks.get(program.id);
+    if (!current || TaskService.isClosed(current)) return;
+    if (error) {
+      tasks.close(program.id, {
+        status: "dropped",
+        reason: "failed",
+        actor: "host",
+        text: `its script stopped: ${error}`,
+        error,
+      });
+    } else {
+      const result =
+        value && typeof value === "object" && !Array.isArray(value)
+          ? (value as Record<string, unknown>)
+          : value === null
+            ? undefined
+            : { value };
+      tasks.recordReport(program.id, {
+        text: programReportText(parts.length, result, branch),
+        actor: "host",
+        ...(result ? { declared: { result } } : {}),
+      });
+      tasks.close(program.id, {
+        status: "done",
+        reason: "finished",
+        actor: "host",
+        text: "its script finished",
+      });
+    }
+    this.programBoundTold.delete(program.id);
+    this.broadcastCrewCounts();
+    this.hooks.notifyOp(
+      {
+        facts: {
+          kind: "program-ended",
+          task,
+          key: program.key || program.id,
+          parts: parts.length,
+          ...(error ? { error } : {}),
+          ...(!error && value !== undefined && value !== null ? { result: value } : {}),
+          ...(!error && branch ? { branch: branch.key || branch.id } : {}),
+        },
+      },
+      "agent",
+      program.id,
+    );
   }
 
   /** The commit a branching task's working copy starts at, or undefined when it names none. */
@@ -5932,6 +6239,14 @@ export class CrewSupervisor {
     // the task whose last commit the working copy began at.
     if (record?.shape?.result_schema)
       sections.push([renderResultShapeSection(record.shape.result_schema)]);
+    const program =
+      record?.shape?.program_part && record.parentId
+        ? this.options.tasks.get(record.parentId)
+        : undefined;
+    if (program)
+      sections.push([
+        renderProgramPartSection({ key: program.key || program.id, title: program.title }),
+      ]);
     const branchFrom = record?.shape?.branch_from
       ? this.branchFromSource(record.shape.branch_from, record.repoId, record.id)
       : undefined;
@@ -6684,7 +6999,12 @@ export class CrewSupervisor {
         ...(review ? { review } : {}),
       },
     };
-    if (this.bypassesSupervision(task.id)) {
+    // A program's part answering its call is the program's to read (INF-799).
+    const programPart =
+      this.programs.awaits(task.id) &&
+      (declared?.result !== undefined ||
+        (!record?.shape?.result_schema && !declared?.wait && !declared?.needsFirstmate));
+    if (this.bypassesSupervision(task.id) && !programPart) {
       this.hooks.notifyOp(wake, "crewmate-report", task.id);
       return;
     }
@@ -6695,6 +7015,7 @@ export class CrewSupervisor {
       finished,
       needsFirstmate: needsFirstmate !== undefined,
       waitedOn: waiting.length > 0,
+      programPart,
       // A session that is gone cannot prove anything either; the record
       // keeps that the host could not tell, and the report still wakes.
       workObservable: task.session?.controlProfile.backgroundWork === "host",
@@ -6702,6 +7023,9 @@ export class CrewSupervisor {
     this.recordSort(task.id, task.title, wake, sort.verdict, sort.reason, sort.rule, () => {
       if (sort.wake) this.hooks.notifyOp(wake, "crewmate-report", task.id);
     });
+    // Follow-ups it filed wake the first mate; the program still reads its answer.
+    if (programPart && (sort.rule === "program-part" || sort.rule === "filed-followups"))
+      void this.closeProgramPart(task.id);
   }
 
   /**
@@ -9969,6 +10293,8 @@ export class CrewSupervisor {
     for (const record of this.options.tasks.listOpen()) {
       if (record.kind !== "work" || record.startPolicy !== "on-request") continue;
       if (record.startedAt !== null || record.worktreeDir || this.tasks.has(record.id)) continue;
+      // A program closes when its script ends, not when its parts so far have.
+      if (record.shape?.program) continue;
       const children = this.options.tasks.children(record.id);
       if (children.length === 0 || children.some((child) => !TaskService.isClosed(child))) {
         continue;
@@ -10064,6 +10390,28 @@ export class CrewSupervisor {
     const started = this.options.tasks
       .descendants(record.id)
       .filter((child) => child.status === "active");
+    if (record.shape?.program) {
+      // With no part started, the close below may refuse for its open parts: then the program runs on.
+      const refusal = started.length === 0 ? this.options.tasks.closeRefusal(record.id) : undefined;
+      if (refusal && !input.confirm) return refusal.text;
+      // A dropped program stops at once and files nothing more; its started
+      // parts close first, their work saved, and then it drops (INF-799).
+      this.programs.halt(record.id);
+      if (started.length > 0) {
+        void (async () => {
+          for (const part of started)
+            await this.settle.closeTask(part.id, {
+              status: "dropped",
+              reason: "superseded",
+              actor: "firstmate",
+              text: "superseded - its program was dropped",
+            });
+          this.dropTask(record.id, { ...input, confirm: true });
+        })().catch((caught: unknown) => console.warn("[program] drop did not finish:", caught));
+        const names = started.map((child) => child.key || child.id).join(", ");
+        return `Dropping ${handle}: its program stopped, and its started ${started.length === 1 ? "part" : "parts"} ${names} close first, their work saved.`;
+      }
+    }
     if (started.length > 0) {
       const names = started.map((child) => `${child.key || child.id} "${child.title}"`).join(", ");
       return `Cannot drop ${handle}: ${started.length === 1 ? "its child has" : "children have"} started (${names}). Settle them first.`;
@@ -10515,7 +10863,9 @@ export class CrewSupervisor {
       this.options.tasks
         .timeline(task.id)
         .some(
-          (event) => event.kind === "progress" && !("refusal" in readPlanItems(event.data?.plan)),
+          (event) =>
+            (event.kind === "progress" || event.kind === "compacted") &&
+            !("refusal" in readPlanItems(event.data?.plan)),
         );
     this.options.tasks.noteProgress(task.id, line.slice(0, 500), "crewmate", items);
     this.noteTaskActivity(task);
@@ -10642,6 +10992,11 @@ export class CrewSupervisor {
     if (this.pendingStarts.has(taskId)) return;
     let record = this.options.tasks.get(taskId);
     if (record?.status !== "open" || record.kind !== "work") return;
+    // A program runs in the host's runner, never on a model; a running one is left alone.
+    if (record.shape?.program) {
+      this.programs.run(taskId);
+      return;
+    }
     const originalTitle = record.title;
     const gate = record.gate;
     const blockers = this.options.tasks.blockers(taskId);
@@ -10783,8 +11138,9 @@ export class CrewSupervisor {
       });
       // Only a start whose wait ended wakes the Firstmate. Its own start_now
       // already answered "Started", and the captain's Start reaches its next
-      // context block the way his card choices do (FI3-695).
-      if (!options.requested) {
+      // context block the way the captain's card choices do (FI3-695). A program's
+      // part was started by its program, which is what waits on it (INF-799).
+      if (!options.requested && !record.shape?.program_part) {
         const started = this.options.tasks.get(taskId);
         const model = started && namedModelOf(started);
         this.routeCrewEvent(
@@ -10951,6 +11307,15 @@ export class CrewSupervisor {
         ...(panel ? { panel } : {}),
       },
     });
+    // A program stays open while the runner holds it; its first run is recorded on its timeline.
+    const program = this.options.tasks.get(record.id);
+    if (program?.shape?.program) {
+      if (this.options.tasks.startAttemptOf(record.id))
+        this.options.tasks.clearStartAttempt(record.id);
+      return this.options.tasks.programStarted(record.id)
+        ? `Started ${handle}.`
+        : `${handle} could not start.`;
+    }
     await this.settleStartAttempt(record, asCaptain ? "captain" : "tool");
     const now = this.options.tasks.get(record.id);
     if (this.options.tasks.startAttemptOf(record.id)?.phase === "checking") {
@@ -12594,6 +12959,8 @@ export class CrewSupervisor {
   disposeAll(): Promise<void> {
     this.disposed = true;
     this.cards.dispose();
+    // Each program runs again from its record at the next start.
+    this.programs.dispose();
     for (const unregister of this.watchdog ?? []) unregister();
     this.watchdog = undefined;
     for (const task of this.tasks.values()) {
@@ -12757,4 +13124,19 @@ function writeSentLine(sent: WriteAskSent): string {
     default:
       return `The captain's click on ${sent.call} sent nothing: ${sent.outcome.why}`;
   }
+}
+
+/** A finished program's report: how many parts ran, its result and the branch it leaves. */
+function programReportText(
+  parts: number,
+  result: Record<string, unknown> | undefined,
+  branch: TaskRecord | undefined,
+): string {
+  return [
+    `The program finished after ${parts} ${parts === 1 ? "part" : "parts"}.`,
+    ...(result ? [`Its result: ${JSON.stringify(result)}`] : []),
+    branch
+      ? `Its branch: the last commit of ${branch.key || branch.id} "${branch.title}".`
+      : "Its script returned no branch, so there is nothing to ship.",
+  ].join(" ");
 }

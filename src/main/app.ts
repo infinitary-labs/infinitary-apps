@@ -322,6 +322,7 @@ export function startApp(mainDir: string): void {
         keychainUnlockHelperPath: join(mainDir, "keychainUnlockHelper.js"),
         sqlProcessPath: join(mainDir, "sqlProcess.js"),
         axiProcessPath: join(mainDir, "axiProcess.js"),
+        programProcessPath: join(mainDir, "programProcess.js"),
         ...(desktop.closeToIcon ? { openWindow: () => reopen() } : {}),
       });
       const voiceModel = new VoiceModelService(join(host.app.userDataDir, "models"));

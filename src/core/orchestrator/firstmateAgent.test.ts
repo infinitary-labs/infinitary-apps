@@ -8581,3 +8581,52 @@ describe("the captain's override", () => {
     f.db.close();
   });
 });
+
+/**
+ * INF-799 piece 2, the captain's bounds answer: "if the program exceeds the
+ * proposed upperbound, also ask user via a card". The bound rests on the
+ * captain's consent, so the first mate raises it only in a turn that carries their words.
+ */
+describe("a program's bound", () => {
+  it("is raised in a turn that carries the captain's words, and refused in one without them", async () => {
+    const f = setup({ silent: true });
+    seedTask(f.tasks, {
+      id: "pr0g",
+      title: "Cap the meter's rendered results",
+      status: "queued",
+      shape: { kind: "unclear", program: { script: 'return task("Cap it.");', bound: 4 } },
+    });
+    const finish = async () => {
+      f.session.emitTurnEnd("Noted.");
+      f.session.resolveNextPrompt();
+      await tick();
+    };
+    const raise = () =>
+      toolsOf(f.specs).get("update_task")?.execute("bound", { task: "pr0g", program_bound: 8 });
+    f.agent.notifyOp(
+      {
+        facts: {
+          kind: "program-bound",
+          task: { id: "pr0g", title: "Cap the meter's rendered results" },
+          key: "SCR-1",
+          bound: 4,
+          calls: 4,
+        },
+      },
+      "agent",
+      "pr0g",
+    );
+    await tick();
+    expect(JSON.stringify(await raise())).toContain(
+      "program_bound is raised only on the captain's words",
+    );
+    expect(f.tasks.get("pr0g")?.shape?.program?.bound).toBe(4);
+    await finish();
+    await f.agent.converse("Yes, let it run up to 8 parts.");
+    await raise();
+    expect(f.tasks.get("pr0g")?.shape?.program?.bound).toBe(8);
+    await finish();
+    f.agent.dispose();
+    f.db.close();
+  });
+});

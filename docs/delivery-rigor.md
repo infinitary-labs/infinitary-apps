@@ -487,6 +487,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `story` | soft | consent | a GitHub or GitLab pull request opened without its saved story | the override |
 | `rerun` | soft | made-up number | a second flake rerun | the override |
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
+| `program-bound` | soft | consent | a program's task() call past the bound the first mate proposed | the first mate raises the bound with `update_task program_bound` on the captain's words |
 | `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on the captain's words |
 | `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |
 | `nothing-to-merge` | fixed | physical limit | a merge or merge policy for work that has no merge | no one |
@@ -496,7 +497,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 
 Every refusal ends with its hold's sentence.
 `softHoldWords(kind, audience)` names the override: to the first mate as the way the captain declares it, and to a crewmate as words only the captain gives, through the first mate.
-A soft hold with its own way (`escalation`, `start-waits`) names that way instead.
+A soft hold with its own way (`escalation`, `program-bound`, `start-waits`) names that way instead.
 `fixedHoldWords(kind)` says no one's word passes it.
 
 **The override.**

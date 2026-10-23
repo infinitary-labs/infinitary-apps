@@ -2844,8 +2844,14 @@ export class FirstmateAgent {
               ...(input.project !== undefined ? { project: input.project } : {}),
               ...(input.parent !== undefined ? { parent: input.parent } : {}),
             };
+            // A program's bound is the captain's consent (INF-799): raised only on the captain's turn.
+            if (input.programBound !== undefined && this.turnOrigin !== "captain-turn")
+              throw new TaskGraphRefusal(
+                "program_bound is raised only on the captain's words: ask the captain on a card first.",
+              );
             const rest = {
               ...(input.title !== undefined ? { title: input.title.trim().slice(0, 64) } : {}),
+              ...(input.programBound !== undefined ? { programBound: input.programBound } : {}),
               ...(input.basis !== undefined ? { basis: input.basis } : {}),
               ...handOff,
               ...(input.speed !== undefined ? { speed: input.speed } : {}),

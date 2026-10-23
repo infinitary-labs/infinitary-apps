@@ -1,5 +1,6 @@
 import { HERE } from "@shared/deviceNames";
 import type { DeviceSystem } from "@shared/devices";
+import { softHoldWords } from "@shared/holds";
 import type { PlacementSystem } from "@shared/placement";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import {
@@ -427,6 +428,33 @@ export type WakeFacts =
       crewmate: string;
       /** The failure's first meaningful line, git's own words (`gitFailure`). */
       error: string;
+    }
+  | {
+      /**
+       * A program's next task() call reached the bound the first mate
+       * proposed and is held, nothing filed (INF-799 piece 2; the
+       * `program-bound` hold): the captain's word raises it.
+       */
+      kind: "program-bound";
+      task: WakeTask;
+      key: string;
+      bound: number;
+      /** The parts it filed so far. */
+      calls: number;
+    }
+  | {
+      /**
+       * A program's script ended (INF-799 piece 2): its typed result and the
+       * part its script returned as its branch, or why it stopped.
+       */
+      kind: "program-ended";
+      task: WakeTask;
+      key: string;
+      parts: number;
+      error?: string;
+      result?: unknown;
+      /** The part, by key, whose saved work a shipping task branches from. */
+      branch?: string;
     }
   | {
       /** A crewmate reported (the report's whose-turn sort said nobody's, or it bypasses the sort). */
@@ -1623,6 +1651,12 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return `[fm-op] task ${facts.task.id} "${facts.task.title}" has had a background job running for ${Math.round((facts.runMs / 3_600_000) * 10) / 10} hours: "${facts.command}". It no longer counts as the task moving, so the idle ladder now watches the task; the job itself keeps running.`;
     case "turn-failed":
       return `[fm-op] ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}" failed: ${facts.error}. The crewmate is still steerable; you can retry, steer, or interrupt it.`;
+    case "program-bound":
+      return `[fm-op] the program on task ${facts.key} "${facts.task.title}" filed ${facts.calls} parts and reached the bound you proposed, ${facts.bound} task() calls: its next call is held and nothing more is filed. Ask the captain on a card whether it may go on, saying what has run and the new bound you propose; on the captain's words raise it with update_task program_bound, or drop the program. ${softHoldWords("program-bound", "firstmate")}`;
+    case "program-ended":
+      return facts.error
+        ? `[fm-op] the program on task ${facts.key} "${facts.task.title}" stopped after ${facts.parts} parts: ${facts.error}. Nothing more of it runs; tell the captain what stopped it.`
+        : `[fm-op] the program on task ${facts.key} "${facts.task.title}" finished after ${facts.parts} parts.${facts.result !== undefined ? ` ${RESULT_WORDS} ${resultText(facts.result)}` : ""}${facts.branch ? ` Its branch is ${facts.branch}'s last commit: work that ships it names ${facts.branch} in branch_from.` : " Its script returned no branch, so there is nothing to ship."}`;
     case "commit-failed":
       return `[fm-op] the host could not commit the personal workspace at the end of ${facts.crewmate}'s turn on task ${facts.task.id} "${facts.task.title}", so the task stays open rather than closing as built in place. What it changed is saved in the workspace but not committed. Its crewmate's next report tries the commit again: steer it to look into the error and report again, or tell the captain. The error: ${facts.error}`;
     case "report":

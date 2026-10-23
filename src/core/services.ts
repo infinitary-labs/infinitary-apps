@@ -2034,6 +2034,10 @@ export async function createServices(
   });
   const supervisor = new CrewSupervisor({
     automaticPlacement,
+    // A program's script runs in a process of its own; its ask() is one typed read.
+    ...(host.programProcess ? { programProcess: host.programProcess } : {}),
+    answerJson: (caller, instruction, text, signal) =>
+      decisions.answerJson(caller, instruction, text, signal),
     crewSpeed: (model) => slots.speed(model),
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     build: host.app.version,

@@ -1,0 +1,16 @@
+{
+  "entries": [
+    {
+      "id": "task-graph-programs",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Your first mate can run a series of tasks as one program",
+      "body": "When work repeats over many files, or each piece depends on the last one's result, the first mate can write it as one program. Each piece shows as a task of its own under the program, and the program passes each result on to the next. Before a large program starts, the first mate asks you how many tasks it may run, and asks again before it runs more.",
+      "noPicture": "A program shows as an ordinary task with its pieces as child tasks, and its questions are cards the first mate writes, so there is no new view.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

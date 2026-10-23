@@ -93,6 +93,7 @@ A by-key `tasks` read carries the latest `outcome` and `card`, complete chronolo
 Lists carry no bodies.
 A short closure report still replaces the latest outcome but cannot hide earlier full specifications.
 Reports, closing choices and exact first-turn briefs are exempt from timeline compaction alongside existing provenance; no historical approval is inferred and no historical builder is restarted.
+So is any event whose data marks it `journal: true`, a record a replay reads back, such as a program's ask answers and its start (`docs/programs.md`).
 
 At dispatch the named verified basis carries its latest report once, as the answer, and every report before it as history, the full card and its full thread, plus the existing saved choice/answer reader.
 No card or thread tail is cut from the implementation handoff.
@@ -290,6 +291,7 @@ Such a row takes no fold, and it never stands as the task's Now line ("The Now l
 A drop reads with its reason, and a drop for a replacement names it (`SCR-3, filed by this task, was dropped: SCR-6 replaces it.`).
 The first mate declares the replacement with `update_task`'s `replaced_by` beside `drop`, which writes a `replaced-by` link from the dropped task to its replacement before the close, or with `link_tasks` type `replaced-by` (`docs/task-graph.md`).
 An event another task reads is exempt from timeline compaction, so the row it makes there never folds away.
+A `compacted` row keeps the newest plan it folded (`plan`, written at `planAt`) and the highest program line number per op it folded (`programLines`), so the task's plan and a program's replay still read them.
 The task export carries each event's concerns on its line (`concerns`), and an import writes them back with the event.
 
 ## Other tasks' keys in the record

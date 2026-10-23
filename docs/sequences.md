@@ -11,6 +11,7 @@ It opens an ask that takes more than one step as a parent task with each step a 
 The parent stays on request, so no crewmate starts on it; the first mate talks to each step's crewmate directly.
 Every hand-off is a decision the first mate makes on a wake it already receives.
 Nothing in the host advances a sequence: there is no new tool, no card effect, no settings record and no migration, and the words "sequence" and "step" reach no user surface.
+A program (`docs/programs.md`) is the agent's reach, not a sequence runner: the first mate may write the steps a script can decide as one script the host runs, and sequences themselves stay guidance.
 The task's shape gained facts the first mate declares and the host only stores and honours - `internal_step` and `skipped_plan_because` - and two it declares and the host checks - `result_schema` and `branch_from` (`src/shared/routingPolicy.ts`).
 
 A bounded read-only fact lookup stays a lookup, with its question and source scope stated faithfully and the captain's words preserved verbatim; it is not broadened into an investigation by default.

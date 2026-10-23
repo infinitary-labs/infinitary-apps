@@ -1091,16 +1091,21 @@ function planOf(
 ): TaskPlan | null {
   let plan: TaskPlan | null = null;
   for (const event of timeline) {
-    if (event.kind !== "progress") continue;
+    // A `compacted` row keeps the newest plan it folded, with when it was written.
+    if (event.kind !== "progress" && event.kind !== "compacted") continue;
     const parsed = planItemsSchema.safeParse(event.data?.plan);
     if (!parsed.success) continue;
+    const at =
+      event.kind === "compacted" && typeof event.data?.planAt === "number"
+        ? event.data.planAt
+        : event.at;
     const before = new Map<string, TaskPlanItem>();
     for (const item of plan?.items ?? []) before.set(item.label, item);
     const items: TaskPlanItem[] = parsed.data.map((item): TaskPlanItem => {
       const earlier = before.get(item.label);
-      return { ...item, since: earlier?.state === item.state ? earlier.since : event.at };
+      return { ...item, since: earlier?.state === item.state ? earlier.since : at };
     });
-    plan = { at: event.at, items };
+    plan = { at, items };
   }
   return plan;
 }

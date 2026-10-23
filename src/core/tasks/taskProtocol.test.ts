@@ -27,7 +27,7 @@ import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
 import { recentFeed } from "./taskFeed";
 import { TaskProtocol } from "./taskProtocol";
-import { type TaskChange, TaskService } from "./taskService";
+import { type TaskChange, TaskService, TIMELINE_CAP } from "./taskService";
 
 /**
  * The task protocol (task-system P3, design section 9). The acceptance the
@@ -284,6 +284,31 @@ describe("the task protocol (task-system P3)", () => {
     });
     expect(first).toBeLessThan(second);
     expect(taskDetailSchema.safeParse(detail).success).toBe(true);
+    f.protocol.dispose();
+    f.db.close();
+  });
+
+  it("keeps the newest plan when compaction folds the note that carried it (INF-866 K2)", () => {
+    const f = setup();
+    f.tasks.create({ id: "t", title: "Work", prompt: "p", repoId: "r1" });
+    const plan = [
+      { label: "Find", short: "Find", state: "done" as const },
+      { label: "Check", short: "Check", state: "current" as const },
+    ];
+    f.tick();
+    f.tasks.noteProgress("t", "Phase: check", "host", plan);
+    const at = f.tasks.timeline("t").at(-1)?.at ?? 0;
+    // A long run of plain lines follows, enough that the plan's own note folds.
+    for (let index = 0; index < TIMELINE_CAP; index += 1) {
+      f.tick();
+      f.tasks.noteProgress("t", `checked file ${index}`);
+    }
+    const timeline = f.tasks.timeline("t");
+    expect(timeline.some((event) => event.text === "Phase: check")).toBe(false);
+    expect(f.protocol.detail("t").plan).toEqual({
+      at,
+      items: plan.map((item) => ({ ...item, since: at })),
+    });
     f.protocol.dispose();
     f.db.close();
   });

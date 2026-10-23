@@ -529,6 +529,21 @@ export function renderResultShapeSection(schema: Record<string, unknown>): strin
 }
 
 /**
+ * A part of a program (INF-799 piece 2, docs/programs.md): the host's
+ * runner filed it from one task() call of a script, and reads its report's
+ * result as that call's answer. It delivers its branch and its result,
+ * never a pull request: the program's own report names the branch a
+ * change ships from.
+ */
+export function renderProgramPartSection(program: { key: string; title: string }): string {
+  return [
+    `Program part: this task is one part of the program ${program.key} "${program.title}", which the host runs; your report's result is what the program reads next, and nobody else is woken by it.`,
+    "Commit what you change on your branch - a later part may start from your last commit - but push nothing, open no pull request and show no completion card: this part delivers its branch and its result, and the program closes it once it has read your report, keeping your work.",
+    "Run the checks that prove your part works. Show a card only when the captain must decide something before you can go on, and then report with waiting_on_captain.",
+  ].join(" ");
+}
+
+/**
  * Where a task's working copy began when it branches from another task
  * (INF-799 piece 1): that task's last commit, so its work is already on
  * this task's branch.

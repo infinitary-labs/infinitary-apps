@@ -243,7 +243,7 @@ const SHAPE_FIELD_RULES = {
   override_model_id:
     "The model the user named: an exact model id (e.g. gpt-6-astra), or a provider-qualified key (e.g. anthropic-claude/claude-fable-5-1) when the provider matters. Only when the user named one; it wins when available, else normal routing.",
   escalate_from:
-    "The task (id or key) whose result the user rejected: only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up. Pass the user's words verbatim as user_words and the original goal.",
+    "The task (id or key) whose result the user rejected: only under the escalation rule. The host stops that attempt, keeps its branch and report, and runs this one a tier up.",
   rigor_ask: "Only when the user said in words how careful to be.",
   autonomy_ask:
     "Only when the user said in words whether this task merges its green work itself (true) or asks first (false). The repository's default is unchanged.",

@@ -10,6 +10,7 @@ import { createAxiProcessSpawner } from "./axiProcess";
 import { createDarwinKeychain } from "./darwinKeychain";
 import { createKeychainUnlocker } from "./keychainUnlock";
 import { captureDockedPanel } from "./panelCapture";
+import { createProgramProcessSpawner } from "./programProcess";
 import { readResourceMemory } from "./resourceMemory";
 import { createSqlProcessSpawner } from "./sqlProcess";
 import { createTaskBrowserHost } from "./taskBrowser";
@@ -37,6 +38,8 @@ export type ElectronHostOptions = {
   sqlProcessPath?: string | undefined;
   /** The built `axiProcess` entry: the process that runs one task command. */
   axiProcessPath?: string | undefined;
+  /** The built `programProcess` entry: the process that runs one program's script. */
+  programProcessPath?: string | undefined;
   /** The Linux autostart entry's name: this run's data folder's name (`startAtLoginFor`). */
   autostartName?: string | undefined;
   /**
@@ -114,6 +117,7 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     keychainUnlockHelperPath,
     sqlProcessPath,
     axiProcessPath,
+    programProcessPath,
     openWindow,
   } = options;
   const startAtLogin = startAtLoginFor(options.autostartName ?? ownAutostartName());
@@ -182,5 +186,8 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     browser: createTaskBrowserHost(),
     ...(sqlProcessPath ? { sqlProcess: createSqlProcessSpawner(sqlProcessPath) } : {}),
     ...(axiProcessPath ? { axiProcess: createAxiProcessSpawner(axiProcessPath) } : {}),
+    ...(programProcessPath
+      ? { programProcess: createProgramProcessSpawner(programProcessPath) }
+      : {}),
   };
 }

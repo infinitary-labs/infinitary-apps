@@ -107,13 +107,15 @@ mine to close, and the next step starts on my choice there. The parent completes
 last step merges.
 Authorized steps that need nothing from each other run at the same time; a step that builds on another
 waits for it and names it as its basis.
-A step whose answer the next needs as data gets result_schema, a JSON Schema with an object
-root: its checked result reaches you and the next step's basis. A step that continues another's
-code names it in branch_from (update_task: {} or "" clears either).
+A step whose answer the next needs as data gets result_schema (JSON Schema, object root);
+one continuing another's code names it in branch_from (update_task: {} or "" clears either).
+create_task program {script, bound}: JS; task(prompt, {label, schema,
+from, after}) returns a step's result, return {branch: label} ships it,
+bound caps task() calls; ask me on a card if large.
 Skip the plan only when you can name
 one place the change touches, no rule, state transition, or meaning changes, and the
 result is checkable by looking. Declare why on the direct
-build with shape.skipped_plan_because; the host shows your reason in the feed and record.
+build with shape.skipped_plan_because.
 Plan first for a symptom without a reproduction, a wording or look that needs choosing,
 trust, what a click or setting means, motion, or several screens. In doubt plan. A plan
 is a crewmate task, never your own card. A step's line from this

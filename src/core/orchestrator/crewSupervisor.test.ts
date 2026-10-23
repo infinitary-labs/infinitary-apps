@@ -12,6 +12,7 @@ import {
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import type { AttachmentRef } from "@shared/attachments";
 import type { CutOff } from "@shared/authFailure";
 import {
@@ -44,7 +45,7 @@ import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import type { RiskDeclaration } from "@shared/risk";
-import { isFolderRepair, type WorkShape } from "@shared/routingPolicy";
+import { isFolderRepair, type WorkShape, type WorkShapeAsk } from "@shared/routingPolicy";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { queueStartedRefusal } from "@shared/taskQueue";
@@ -121,9 +122,10 @@ import { UsageStore } from "../storage/usageStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { taskFeedLine } from "../tasks/taskFeed";
 import { TaskProtocol } from "../tasks/taskProtocol";
-import { TaskService } from "../tasks/taskService";
+import { TaskService, TIMELINE_CAP } from "../tasks/taskService";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
+import { forkChildProcess } from "../sql/forkChildProcess";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import {
   WorkspaceService as RealWorkspaceService,
@@ -361,6 +363,8 @@ type SetupExtras = {
   savedCards?: Card[];
   /** The computers that run work for this one, as the crew reads them. */
   machines?: CrewMachines;
+  /** The process a program's script runs in (docs/programs.md). */
+  programProcess?: CrewSupervisorOptions["programProcess"];
 };
 
 function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
@@ -470,6 +474,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
       : {}),
     ...(extras.accounts ? { accounts: extras.accounts } : {}),
     ...(extras.machines ? { machines: extras.machines } : {}),
+    ...(extras.programProcess ? { programProcess: extras.programProcess } : {}),
     ...(extras.recordUsage ? { recordUsage: extras.recordUsage } : {}),
     ...(extras.noteCutOff ? { noteCutOff: extras.noteCutOff } : {}),
     ...(extras.serveability ? { serveability: extras.serveability } : {}),
@@ -11387,6 +11392,28 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await harness.supervisor.sweepInbox(hostNow);
     await tick();
   }
+
+  it("still says the last plan stands after compaction folds the note that carried it (INF-866 K2)", async () => {
+    const h = clockedSetup(fakeCrewmate());
+    const { taskId } = await h.supervisor.commission({
+      title: "Long check",
+      intent: intentOf("Check every fixture library"),
+    });
+    await tick();
+    const progress = h.specs[0]?.onProgress;
+    if (!progress) throw new Error("Missing production progress callback");
+    progress("Starting the check.", [
+      { label: "Check libraries", short: "Check", state: "current" },
+    ]);
+    for (let index = 0; index < TIMELINE_CAP; index += 1) {
+      progress(`Checked library ${index}.`);
+    }
+    const timeline = h.tasks.timeline(taskId);
+    expect(timeline.some((event) => event.text === "Starting the check.")).toBe(false);
+    expect(progress("Checked the last library.")).toBe(
+      "Noted on your task's timeline; your last plan stands.",
+    );
+  });
 
   it("keeps the last plan when a note omits it, through provider failure recovery", async () => {
     const crewmate = fakeCrewmate();
@@ -25060,5 +25087,301 @@ describe("typed results and branch_from (INF-799 piece 1)", () => {
       ).toThrow("A result shape or branch_from can only change on open work that has not started.");
       expect(tasks.list()).toHaveLength(count);
     });
+  });
+});
+
+// INF-799 piece 2, the captain's Approve and build on "Plan task-graph
+// programs, typed results first": the runner files each part as a child
+// task and each part's checked result resolves the script's await; the
+// program returns its branch and typed result; a call past the bound the
+// first mate proposed is held until the captain says so (answer "bounds").
+describe("programs (INF-799 piece 2)", () => {
+  const PROGRAM_WAIT = { timeout: 20_000, interval: 25 };
+  const programProcess = forkChildProcess(
+    fileURLToPath(new URL("../program/programProcess.ts", import.meta.url)),
+  );
+  /** What the finder part hands on: the files that render a result. */
+  const FILES = {
+    type: "object",
+    required: ["files"],
+    properties: { files: { type: "array", items: { type: "string" } } },
+  };
+
+  async function programHarness(
+    script: string,
+    bound: number,
+    options: { startPolicy?: "when-ready" | "on-request"; spawns?: { count: number } } = {},
+  ) {
+    const sessions = [fakeCrewmate(), fakeCrewmate(), fakeCrewmate(), fakeCrewmate()];
+    const counted = options.spawns;
+    const harness = setup(sessions[0] as FakeCrewmate, {
+      crewmates: sessions.slice(1),
+      programProcess: counted
+        ? {
+            spawn: () => {
+              counted.count += 1;
+              return programProcess.spawn();
+            },
+          }
+        : programProcess,
+    });
+    const dir = scratchDir("infinitary-program-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    const { repo } = await harness.repos.setup({ kind: "adopt", path: dir, name: "meterlab" });
+    const program = harness.supervisor.plan({
+      title: "Cap the meter's rendered results",
+      intent: intentOf("Cap what the meter renders."),
+      repoId: repo.id,
+      startPolicy: options.startPolicy ?? "when-ready",
+      shape: { program: { script, bound } },
+    });
+    harness.supervisor.graphChanged();
+    /** The part a task() call filed, once its crewmate is working on it. */
+    const part = (call: number) =>
+      vi.waitFor(() => {
+        const found = harness.tasks
+          .children(program.id)
+          .find((child) => child.shape?.program_part?.call === call);
+        if (found?.status !== "active" || !sessions[call]?.promptCalls.length)
+          throw new Error(`part ${call} has not started`);
+        return found;
+      }, PROGRAM_WAIT);
+    /** The part's crewmate reports, and its turn ends. */
+    const report = async (call: number, text: string, result?: Record<string, unknown>) => {
+      const found = await part(call);
+      const spec = harness.specs[call];
+      await spec?.onReport?.(text, undefined, result ? { result } : undefined);
+      sessions[call]?.emit({ type: "turn_end", taskId: found.id });
+      sessions[call]?.finishPrompt();
+      return found;
+    };
+    return { ...harness, open: harness.sessions.open, sessions, program, part, report };
+  }
+
+  it("files each task() call as a part, resolves its await with the part's result, and returns the program's result and branch", async () => {
+    const h = await programHarness(
+      `
+      const found = await task("Find where the meter renders a result.", { label: "find", schema: ${JSON.stringify(FILES)} });
+      const capped = await Promise.all(found.files.map((file) => task("Cap the result rendered in " + file + ".", { after: ["find"] })));
+      return { files: found.files, capped, branch: "part 2" };
+      `,
+      3,
+    );
+    const finder = await h.part(0);
+    expect(finder).toMatchObject({ parentId: h.program.id, title: "Find where the meter renders a result." });
+    expect(finder.shape).toMatchObject({ internal_step: true, result_schema: FILES });
+    // The part carries the captain's words and is told how a part ships.
+    expect(h.sessions[0]?.promptCalls[0]).toContain("Cap what the meter renders.");
+    expect(h.sessions[0]?.promptCalls[0]).toContain(
+      `Program part: this task is one part of the program ${h.program.key} "Cap the meter's rendered results"`,
+    );
+    const files = ["src/meter.ts", "src/gauge.ts"];
+    await h.report(0, "Found two renderers.", { files });
+    // The program reads the answer: no wake, and the part closes done, answered.
+    await vi.waitFor(() => expect(h.tasks.get(finder.id)?.status).toBe("done"), PROGRAM_WAIT);
+    expect(h.sorts.find((sort) => sort.taskId === finder.id)?.rule).toBe("program-part");
+    expect(h.ops.filter((line) => line.includes(finder.id))).toEqual([]);
+
+    // Both capping parts run at once, each waiting on the finder's result.
+    const meter = await h.part(1);
+    const gauge = await h.part(2);
+    expect(h.tasks.blockers(meter.id).map((row) => row.id)).toEqual([finder.id]);
+    await h.report(2, "Capped src/gauge.ts at 4 KiB.");
+    await h.report(1, "Capped src/meter.ts at 4 KiB.");
+
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+    const result = {
+      files,
+      capped: ["Capped src/meter.ts at 4 KiB.", "Capped src/gauge.ts at 4 KiB."],
+      branch: "part 2",
+    };
+    expect(h.tasks.get(h.program.id)?.delivery?.result?.value).toEqual(result);
+    const ended = h.ops.find((line) => line.includes(`the program on task ${h.program.key}`)) ?? "";
+    expect(ended).toContain("finished after 3 parts.");
+    expect(ended).toContain(JSON.stringify(result));
+    // The branch is the part the script returned by label, not the last to finish (captain, F5).
+    expect(ended).toContain(`Its branch is ${meter.key}'s last commit`);
+    expect(ended).not.toContain(gauge.key);
+  });
+
+  it("holds a call past the proposed bound, telling the first mate once, and goes on when the bound is raised", async () => {
+    const h = await programHarness(
+      `
+      for (const file of ["meter.ts", "gauge.ts"]) await task("Cap the result rendered in " + file + ".");
+      return "capped";
+      `,
+      1,
+    );
+    await h.report(0, "Capped meter.ts.");
+    await vi.waitFor(
+      () => expect(h.ops.some((line) => line.includes("reached the bound you proposed, 1 task() calls"))).toBe(true),
+      PROGRAM_WAIT,
+    );
+    const bound = h.ops.filter((line) => line.includes("reached the bound you proposed"));
+    expect(bound).toHaveLength(1);
+    expect(bound[0]).toContain("on the captain's words raise it with update_task program_bound, or drop the program");
+    expect(h.tasks.children(h.program.id)).toHaveLength(1);
+    expect(h.tasks.updateFields(h.program.id, { programBound: 2 }, "firstmate")).toEqual(["bound 2"]);
+    await h.report(1, "Capped gauge.ts.");
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+    expect(h.tasks.get(h.program.id)?.delivery?.result?.value).toEqual({ value: "capped" });
+    // A script that returns no branch leaves nothing to ship; the host picks no part for it (captain, F5).
+    const ended = h.ops.find((line) => line.includes("finished after 2 parts.")) ?? "";
+    expect(ended).toContain("Its script returned no branch, so there is nothing to ship.");
+    expect(ended).not.toContain("Its branch is");
+  });
+
+  it("fails a program whose returned branch names no part that finished done", async () => {
+    const h = await programHarness(
+      `
+      await task("Cap the meter.", { label: "cap" });
+      return { branch: "ship" };
+      `,
+      1,
+    );
+    await h.report(0, "Capped the meter.");
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("dropped"), PROGRAM_WAIT);
+    const ended = h.ops.find((line) => line.includes(`the program on task ${h.program.key}`)) ?? "";
+    expect(ended).toContain(
+      'its script returned branch "ship", which names no part\'s label that finished done',
+    );
+  });
+
+  it.each([
+    ["a null", null],
+    ["an empty", ""],
+  ])("reads %s returned branch as no branch, keeping the result (captain's N2 answer)", async (_name, empty) => {
+    const h = await programHarness(
+      `
+      await task("Cap the meter.", { label: "cap" });
+      return { capped: 1, branch: ${JSON.stringify(empty)} };
+      `,
+      1,
+    );
+    await h.report(0, "Capped the meter.");
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+    expect(h.tasks.get(h.program.id)?.delivery?.result?.value).toEqual({ capped: 1, branch: empty });
+    const ended = h.ops.find((line) => line.includes(`the program on task ${h.program.key}`)) ?? "";
+    expect(ended).toContain("Its script returned no branch, so there is nothing to ship.");
+  });
+
+  it("finishes once with one process when its end drops a part it never waited for (F3)", async () => {
+    const spawns = { count: 0 };
+    const h = await programHarness(
+      `
+      const meter = task("Cap the meter.");
+      task("Cap the gauge.");
+      return await meter;
+      `,
+      2,
+      { spawns },
+    );
+    await h.part(1);
+    await h.report(0, "Capped the meter.");
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+    const gauge = h.tasks.children(h.program.id).find((part) => part.shape?.program_part?.call === 1);
+    expect(gauge?.status).toBe("dropped");
+    // The dropped part's close swept the graph while the program finished: no second runner.
+    await tick();
+    expect(spawns.count).toBe(1);
+    expect(h.ops.filter((line) => line.includes(`the program on task ${h.program.key}`))).toHaveLength(1);
+  });
+
+  /** A one-part program whose part's crewmate could not open, so the part is back in the queue. */
+  async function unstartedPart() {
+    const h = await programHarness(`return await task("Cap the meter.");`, 1);
+    h.open.mockRejectedValueOnce(new Error("the provider did not answer"));
+    const part = await vi.waitFor(() => {
+      const found = h.tasks.children(h.program.id)[0];
+      if (!found || !h.tasks.timeline(found.id).some((event) => event.text.includes("could not start")))
+        throw new Error("the part has not been returned to the queue");
+      return found;
+    }, PROGRAM_WAIT);
+    expect(h.tasks.get(part.id)?.status).toBe("open");
+    return { h, part };
+  }
+
+  it("keeps running when its drop is refused for a part that has not started (F8)", async () => {
+    const { h, part } = await unstartedPart();
+    expect(h.supervisor.dropTask(h.program.key, { reason: "changed course" })).toMatch(
+      /^Cannot close/,
+    );
+    expect(h.tasks.get(h.program.id)?.status).toBe("open");
+    // Still running: the captain starts the held part, and its answer ends the script.
+    expect(await h.supervisor.startQueuedNow(part.key)).toBe(`Started ${part.key} "Cap the meter.".`);
+    // The failed open took the first crewmate spec; the started crewmate's is the last.
+    await h.specs.at(-1)?.onReport?.("Capped the meter.");
+    h.sessions[0]?.emit({ type: "turn_end", taskId: part.id });
+    h.sessions[0]?.finishPrompt();
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+    expect(h.tasks.get(h.program.id)?.delivery?.result?.value).toEqual({
+      value: "Capped the meter.",
+    });
+  });
+
+  it("stops on a confirmed drop of a part that has not started (F8)", async () => {
+    const { h, part } = await unstartedPart();
+    expect(
+      h.supervisor.dropTask(h.program.key, { reason: "changed course", confirm: true }),
+    ).toMatch(/^Dropped/);
+    expect(h.tasks.get(h.program.id)?.status).toBe("dropped");
+    expect(h.tasks.get(part.id)?.status).toBe("dropped");
+  });
+
+  it("starts an on-request program on Start, and runs it again from its record after a quit (F1)", async () => {
+    const h = await programHarness(`return await task("Cap the meter.");`, 1, {
+      startPolicy: "on-request",
+    });
+    await tick();
+    expect(h.tasks.children(h.program.id)).toHaveLength(0);
+    expect(await h.supervisor.startQueuedNow(h.program.key)).toBe(
+      `Started ${h.program.key} "Cap the meter's rendered results".`,
+    );
+    expect(h.tasks.get(h.program.id)).toMatchObject({ status: "open" });
+    expect(h.tasks.programStarted(h.program.id)).toBe(true);
+    // No crewmate holds a program: its start is not the crewmate fact that draws the Crewmate tab (INF-866 N3).
+    expect(h.tasks.get(h.program.id)?.startedAt).toBeNull();
+    const part = await h.part(0);
+    // The part reports, and the app quits before the program reads it.
+    h.tasks.recordReport(part.id, { text: "Capped the meter." });
+    await h.supervisor.disposeAll();
+
+    const restartedTasks = new TaskService({ db: h.db, strict: true });
+    const restarted = new CrewSupervisor({
+      ...crewSessions(h.paths, vi.fn(async () => fakeCrewmate())),
+      workspace: h.workspace,
+      repos: new RepoRegistry(h.db, h.paths.fleetDir),
+      tasks: restartedTasks,
+      cardStore: new CardStore(h.db),
+      inbox: new InboxStore(h.db),
+      paths: h.paths,
+      programProcess,
+      broadcastEvent: () => {},
+      broadcastCards: () => {},
+    });
+    restarted.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+    try {
+      restarted.graphChanged();
+      await vi.waitFor(
+        () => expect(restartedTasks.get(h.program.id)?.status).toBe("done"),
+        PROGRAM_WAIT,
+      );
+      expect(restartedTasks.get(h.program.id)?.delivery?.result?.value).toEqual({
+        value: "Capped the meter.",
+      });
+      expect(restartedTasks.children(h.program.id)).toHaveLength(1);
+    } finally {
+      await restarted.disposeAll();
+    }
+  });
+
+  it("refuses a program outside a project, filing nothing", () => {
+    const { supervisor, tasks } = setup(fakeCrewmate(), { programProcess });
+    const plan = (shape: WorkShapeAsk) => () =>
+      supervisor.plan({ title: "Cap results", intent: intentOf("Cap them."), shape });
+    expect(plan({ program: { script: "return 1;", bound: 1 } })).toThrow(
+      "A program runs its parts in a project",
+    );
+    expect(tasks.list()).toHaveLength(0);
   });
 });

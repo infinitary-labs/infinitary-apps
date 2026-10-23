@@ -235,6 +235,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     PLUGIN_FILE_CAP: physical("install refused in words naming both caps; ship a smaller panel"),
     PLUGIN_BYTES_CAP: physical("install refused in words naming both caps; ship a smaller panel"),
   },
+  "src/core/program/programRunner.ts": {
+    PROGRAM_PARTS_CAP: physical("a call past it waits until one of the program's open parts closes"),
+  },
   "src/core/prompts/cardContract.ts": {
     CLAUDE_TOOL_DESCRIPTION_CAP: outside("none needed: the client's own cap; tests keep descriptions under it"),
   },

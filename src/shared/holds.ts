@@ -78,6 +78,12 @@ export const HOLDS = {
     name: "the stronger-model limit",
     way: "the captain names the model",
   },
+  "program-bound": {
+    level: "soft",
+    restsOn: "consent",
+    name: "the program's bound",
+    way: "the first mate raises it with update_task program_bound on the captain's words",
+  },
   "start-waits": {
     level: "soft",
     restsOn: "record",

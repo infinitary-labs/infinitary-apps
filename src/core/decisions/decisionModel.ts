@@ -88,6 +88,13 @@ export interface DecisionModel {
     questions: Record<string, DecisionQuestion>,
     signal: AbortSignal,
   ): Promise<DecisionRun>;
+  /** A free JSON answer (a program's ask()); only a chat model gives one. */
+  answerJson?(
+    caller: DecisionCaller,
+    instruction: string,
+    text: string,
+    signal: AbortSignal,
+  ): Promise<{ text: string; usage?: DecisionUsage } | { failed: string; usage?: DecisionUsage }>;
 }
 
 /**
@@ -302,12 +309,68 @@ export class AdaptedDecisionModel implements DecisionModel {
   ): Promise<{ answer: DecisionAnswer; usage?: DecisionUsage }> {
     const instruction = renderAdapterInstruction(question);
     const version = questionVersion(question, instruction);
-    if (signal.aborted) return { answer: failedAnswer(question, stopReason(signal), version) };
+    const turn = await this.turn(caller, instruction, renderAdapterState(state), signal);
+    if ("failed" in turn)
+      return {
+        answer: failedAnswer(question, turn.failed, version, turn.source),
+        ...wrap(turn.usage),
+      };
+    const value = parseOption(turn.text, adapterOptions(question));
+    if (!value) {
+      return {
+        answer: failedAnswer(question, "unparsed", version, turn.source),
+        ...wrap(turn.usage),
+      };
+    }
+    return {
+      answer: {
+        value,
+        outcome: value === question.abstain ? "abstained" : "answered",
+        source: turn.source,
+        version,
+      },
+      ...wrap(turn.usage),
+    };
+  }
+
+  /**
+   * One JSON answer to a program's ask() (INF-799 piece 2): the same
+   * bounded one-question session, its answer the model's own text for the
+   * caller to parse and check. Never throws; a failure says why.
+   */
+  async answerJson(
+    caller: DecisionCaller,
+    instruction: string,
+    text: string,
+    signal: AbortSignal,
+  ): Promise<{ text: string; usage?: DecisionUsage } | { failed: string; usage?: DecisionUsage }> {
+    const turn = await this.turn(caller, instruction, text, signal, true);
+    return "failed" in turn
+      ? { failed: turn.failed, ...wrap(turn.usage) }
+      : { text: turn.text, ...wrap(turn.usage) };
+  }
+
+  /**
+   * One bounded turn of the question session: its answer's text, or why
+   * there was none - `no-model`, a bound (`timeout`, `aborted`), `provider`
+   * or `error`.
+   */
+  private async turn(
+    caller: DecisionCaller,
+    instruction: string,
+    text: string,
+    signal: AbortSignal,
+    json = false,
+  ): Promise<
+    | { text: string; source: string; usage?: DecisionUsage }
+    | { failed: string; source?: string; usage?: DecisionUsage }
+  > {
+    if (signal.aborted) return { failed: stopReason(signal) };
     const bound = await this.resolveBinding(caller.taskId ?? caller.purpose);
-    if (!bound) return { answer: failedAnswer(question, "no-model", version) };
+    if (!bound) return { failed: "no-model" };
     const { model, binding } = bound;
     const factory = this.sessions[binding.backend];
-    if (!factory) return { answer: failedAnswer(question, "no-model", version) };
+    if (!factory) return { failed: "no-model" };
     const source = `${model.provider}/${model.id}`;
     let burned: DecisionUsage | undefined;
     let session: ModelSession | undefined;
@@ -329,12 +392,16 @@ export class AdaptedDecisionModel implements DecisionModel {
     try {
       // The caller's signal can fire while the binding resolves, and a
       // listener added after the fact never runs.
-      if (signal.aborted) {
-        return { answer: failedAnswer(question, stopReason(signal), version, source) };
-      }
+      if (signal.aborted) return { failed: stopReason(signal), source };
       await this.options.prepareHome?.();
       const creating = factory.open(
-        questionSessionSpec({ homeDir: this.options.homeDir, binding, model, instruction }),
+        questionSessionSpec({
+          homeDir: this.options.homeDir,
+          binding,
+          model,
+          instruction,
+          ...(json ? { json } : {}),
+        }),
       );
       session = await Promise.race([creating, stopped]);
       if (!session) {
@@ -343,17 +410,17 @@ export class AdaptedDecisionModel implements DecisionModel {
           (late) => late.dispose(),
           () => {},
         );
-        return { answer: failedAnswer(question, ended, version, source) };
+        return { failed: ended, source };
       }
       // Asking before the prompt is the only way to honor a bound without
       // spending the call: an abort() lands on a request not yet made.
-      if (ended) return { answer: failedAnswer(question, ended, version, source) };
+      if (ended) return { failed: ended, source };
       let answer = "";
       let failure = "";
       unsubscribe = session.subscribe((event) => {
         if (event.type === "turn_closed") {
-          const text = event.text?.trim();
-          if (text) answer = text;
+          const closed = event.text?.trim();
+          if (closed) answer = closed;
           return;
         }
         // A provider-failed turn RESOLVES rather than throwing, so the
@@ -376,38 +443,21 @@ export class AdaptedDecisionModel implements DecisionModel {
           };
         }
       });
-      const prompting = session.prompt(renderAdapterState(state));
+      const prompting = session.prompt(text);
       // A session whose abort does not settle its turn still cannot hold the
       // caller past the bound.
       prompting.catch(() => {});
       await Promise.race([prompting, stopped]);
-      if (ended) return { answer: failedAnswer(question, ended, version, source), ...wrap(burned) };
-      if (failure) {
-        return { answer: failedAnswer(question, failure, version, source), ...wrap(burned) };
-      }
-      const value = parseOption(answer, adapterOptions(question));
-      if (!value) {
-        return { answer: failedAnswer(question, "unparsed", version, source), ...wrap(burned) };
-      }
-      return {
-        answer: {
-          value,
-          outcome: value === question.abstain ? "abstained" : "answered",
-          source,
-          version,
-        },
-        ...wrap(burned),
-      };
+      if (ended) return { failed: ended, source, ...wrap(burned) };
+      if (failure) return { failed: failure, source, ...wrap(burned) };
+      return { text: answer, source, ...wrap(burned) };
     } catch (caught) {
       // Session creation and the prompt itself both land here; the reason is
       // recorded rather than the message, which can carry a provider's prose.
       return {
-        answer: failedAnswer(
-          question,
+        failed:
           ended || (caught instanceof Error && caught.name === "AbortError" ? "timeout" : "error"),
-          version,
-          source,
-        ),
+        source,
         ...wrap(burned),
       };
     } finally {
@@ -672,6 +722,35 @@ export class DecisionModels {
       };
     }
     return answers;
+  }
+
+  /**
+   * One JSON answer for a program's ask() (INF-799 piece 2), from the
+   * adapter: a native model answers from a closed option set, so it has no
+   * JSON to give. Never throws; the burn lands under the caller's task.
+   */
+  async answerJson(
+    caller: DecisionCaller,
+    instruction: string,
+    text: string,
+    signal: AbortSignal,
+  ): Promise<{ text: string } | { failed: string }> {
+    const answer = this.options.adapted.answerJson;
+    if (!answer) return { failed: "no-model" };
+    let run: Awaited<ReturnType<typeof answer>>;
+    try {
+      run = await answer.call(this.options.adapted, caller, instruction, text, signal);
+    } catch {
+      run = { failed: "error" };
+    }
+    if (run.usage)
+      this.options.recordUsage?.({
+        taskId: caller.taskId ?? caller.purpose,
+        ...(run.usage.accountId ? { accountId: run.usage.accountId } : {}),
+        ...(run.usage.model ? { model: run.usage.model } : {}),
+        usage: run.usage.usage,
+      });
+    return "failed" in run ? { failed: run.failed } : { text: run.text };
   }
 
   /** What the Decisions group renders. Never carries a key or part of one. */

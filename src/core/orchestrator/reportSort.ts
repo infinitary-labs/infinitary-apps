@@ -47,6 +47,11 @@
  *     standing baseline wait names, or a blocker holding its close, that
  *     only a start begins. Wake on any backend: only the Firstmate (or the
  *     captain) can start it, and the wake names it.
+ *  2b. The task is a running program's part and the report carries the
+ *     answer its call waits for - its checked result, or its report where
+ *     it declared no shape (INF-799 piece 2, docs/programs.md): the
+ *     PROGRAM's turn. No wake; the runner reads the answer and closes the
+ *     part. The runner's own typed fact, never a reading of the words.
  *  3. The crewmate is provably still moving - a job running inside its
  *     bound, guidance its lane will still deliver, a captured settle, a
  *     timed wait on its gate, or a wait on work underway (FI3-250) whose
@@ -95,6 +100,7 @@ export type ReportSortRule =
   | "finished"
   | "filed-followups"
   | "waits-unstarted"
+  | "program-part"
   | "still-moving"
   | "captain-gate"
   | "step-answered"
@@ -242,6 +248,11 @@ export type ReportSortFacts = Witnesses & {
   workObservable: boolean;
   /** The Firstmate declared this task an internal step (`shape.internal_step`). */
   internalStep?: boolean;
+  /**
+   * The task is a running program's part and the report carries the answer
+   * its call waits for (`ProgramRunner.awaits`, INF-799 piece 2).
+   */
+  programPart?: boolean;
 };
 
 export type ReportSortResult = {
@@ -318,6 +329,14 @@ export function sortReport(facts: ReportSortFacts): ReportSortResult {
       verdict: "captain",
       wake: true,
       reason: "it waits on work nobody has started; only the first mate or the captain starts it.",
+    };
+  }
+  if (facts.programPart) {
+    return {
+      rule: "program-part",
+      verdict: "routine",
+      wake: false,
+      reason: "a program's part reported the answer its program waits for; the program reads it.",
     };
   }
   if (stillMoving(facts)) {

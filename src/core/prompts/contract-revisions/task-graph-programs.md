@@ -1,0 +1,9 @@
+# Task-graph programs
+
+INF-799 piece 2, from the captain's Approve and build on the plan "Plan task-graph programs, typed results first" (answers: the dialect uses Infinitary's own names; consent is like a spawn; delivery is a branch and a result; the host checks results; a program is the agent's reach; bounds: the first mate proposes an upper bound on the total task() calls before the program starts, asks the captain on a card when it is large, and asks again when the program would exceed it).
+`create_task` takes `program`, a bare object `{script, args?, bound}`: plain JavaScript whose `task(prompt, {label, schema, from, after})` files a part and resolves to its result, with `ask(prompt, schema)`, `log(text)`, `phase(name)` and `args`, and `bound`, the first mate's proposed upper bound on its `task()` calls.
+`update_task` takes `program_bound`, a bare integer, which raises an open program's bound only on a turn that carries the captain's words.
+The rule has one home, the served sequences guide's preamble; a malformed program is refused as tool text and nothing is filed.
+Two new wakes: `program-bound` (a call reached the bound and is held, nothing filed; ask the captain on a card, then raise it or drop the program) and `program-ended` (the program returned or failed, with its result and the part whose branch it delivers).
+To keep the fixed context inside its boundary, three sentences said twice lose one copy: create_task's `internal_step` keeps its pointer to spawn_crewmate's and the sequences guide says the captain's own ask is never an internal step; spawn_crewmate's `escalate_from` drops the words the core's escalation rule already carries; the guide's skip rule drops that the host shows the reason, which `skipped_plan_because` itself says.
+The fixed context ends at the boundary in the app's count.

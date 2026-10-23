@@ -337,6 +337,28 @@ describe("sortReport", () => {
     );
   });
 
+  // INF-799 piece 2, the captain's Approve and build on "Plan task-graph
+  // programs": each part's checked result resolves the script's await, so a
+  // part answering its program is the program's to read, never a wake; it is
+  // an internal step, and its row sits before the internal step's own.
+  it("a program's part answering its call is the program's turn, after filings and before a crewmate still moving", () => {
+    expect(sortReport(facts({ programPart: true, internalStep: true }))).toMatchObject({
+      rule: "program-part",
+      verdict: "routine",
+      wake: false,
+    });
+    expect(sortReport(facts({ programPart: true, filedFollowups: true })).rule).toBe(
+      "filed-followups",
+    );
+    expect(sortReport(facts({ programPart: true, decisionCardOpen: true })).rule).toBe(
+      "captain-card",
+    );
+    expect(sortReport(facts({ programPart: true, needsFirstmate: true })).rule).toBe(
+      "needs-firstmate",
+    );
+    expect(sortReport(facts({ programPart: true, jobsRunning: true })).rule).toBe("program-part");
+  });
+
   it("a wait on work underway reads after a card, filings and a wait on unstarted work", () => {
     expect(sortReport(facts({ waitsOnUnderway: true, decisionCardOpen: true })).rule).toBe(
       "captain-card",

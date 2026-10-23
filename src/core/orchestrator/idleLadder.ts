@@ -1518,6 +1518,15 @@ export class IdleLadder {
     for (const record of tasks.listReady()) {
       await this.host.dispatchQueuedTask(record.id);
     }
+    // A program a Start ran is started: after a quit it runs again from its record.
+    for (const record of tasks.listOpen()) {
+      if (
+        record.shape?.program &&
+        record.startPolicy === "on-request" &&
+        tasks.programStarted(record.id)
+      )
+        await this.host.dispatchQueuedTask(record.id);
+    }
     this.host.completeContainers();
   }
 

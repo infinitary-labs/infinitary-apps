@@ -243,15 +243,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "cards.previous-tab": () => toTab("cards.previous-tab"),
   "settings.open": () => useShellStore.getState().setView("settings"),
   // Settings → Keyboard, with the caret in its search.
-  "settings.keyboard": () => {
-    useShellStore.setState({ view: "settings", settingsSection: "keyboard" });
-    whenReady(
-      () => document.querySelector(KEYBOARD_SEARCH) !== null,
-      () => {
-        document.querySelector<HTMLElement>(KEYBOARD_SEARCH)?.focus({ preventScroll: true });
-      },
-    );
-  },
+  "settings.keyboard": () =>
+    openSettingsAt("keyboard", KEYBOARD_SEARCH, (search) => search.focus({ preventScroll: true })),
   "whats-new.show": () => showReleaseNote(null),
   "settings.usage": openUsage,
   "settings.automation": openAutomation,
@@ -276,43 +269,47 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   },
 };
 
-/** Settings → Automation, with focus on New automation, from anywhere, Settings included. */
-function openAutomation(): void {
-  useShellStore.setState({ view: "settings", settingsSection: "automation" });
+/**
+ * Opens Settings at `section`, from anywhere, Settings included, and puts
+ * focus on the first `place` there once the section draws it. A window that
+ * paints late draws it many frames on, after a person may already have
+ * pressed into the section: focus they moved there since stays where they
+ * put it (INF-963).
+ */
+function openSettingsAt(
+  section: string,
+  place: string,
+  enter: (found: HTMLElement) => void = focusWithRing,
+): void {
+  const from = document.activeElement;
+  useShellStore.setState({ view: "settings", settingsSection: section });
   whenReady(
-    () => document.querySelector("[data-automation-new]") !== null,
+    () => document.querySelector(place) !== null,
     () => {
-      const first = document.querySelector<HTMLElement>("[data-automation-new]");
-      if (first) focusWithRing(first);
+      const now = document.activeElement;
+      if (now !== from && now?.closest(`[data-settings-section="${CSS.escape(section)}"]`)) return;
+      const found = document.querySelector<HTMLElement>(place);
+      if (found) enter(found);
     },
   );
 }
 
-/** Settings → Integrations, with focus on its first row or add chip, from anywhere. */
+/** Settings → Automation, with focus on New automation. */
+function openAutomation(): void {
+  openSettingsAt("automation", "[data-automation-new]");
+}
+
+/** Settings → Integrations, with focus on its first row or add chip. */
 function openIntegrations(): void {
-  useShellStore.setState({ view: "settings", settingsSection: "integrations" });
-  whenReady(
-    () => document.querySelector(INTEGRATIONS_FIRST) !== null,
-    () => {
-      const first = document.querySelector<HTMLElement>(INTEGRATIONS_FIRST);
-      if (first) focusWithRing(first);
-    },
-  );
+  openSettingsAt("integrations", INTEGRATIONS_FIRST);
 }
 
 /** The tab's first control: a row's disclosure, or an add chip with nothing connected. */
 const INTEGRATIONS_FIRST = "[data-integration-toggle], [data-integration-add]";
 
-/** Settings → Usage, with focus on its unit switch, from anywhere, Settings included. */
+/** Settings → Usage, with focus on its unit switch. */
 function openUsage(): void {
-  useShellStore.setState({ view: "settings", settingsSection: "usage" });
-  whenReady(
-    () => document.querySelector(USAGE_UNIT) !== null,
-    () => {
-      const unit = document.querySelector<HTMLElement>(USAGE_UNIT);
-      if (unit) focusWithRing(unit);
-    },
-  );
+  openSettingsAt("usage", USAGE_UNIT);
 }
 
 /** The window's own facts a refusal reads, as they stand now. */

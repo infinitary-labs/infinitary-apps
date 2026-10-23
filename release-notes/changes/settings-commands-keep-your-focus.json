@@ -1,0 +1,19 @@
+{
+  "entries": [
+    {
+      "id": "settings-commands-keep-your-focus",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Opening a Settings tab no longer pulls back your place in it",
+      "body": "Open Integrations, Open Automation, Open Usage and Open Keyboard settings put you on the tab's first control. On a busy computer that could happen after you had already moved on in the tab, so what you typed next went to the first row. Now the place you moved to stays.",
+      "noPicture": "Only where focus ends after a moment on a slow window changes; no view looks different.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "github-names-stand-in-collects-answers",
+      "reason": "Test only: the stand-in crewmate in the GitHub-names journey reads one integration per command and collects an answer kept past the command's time limit, and the knowledge browser's held frames move into a shared journey helper."
+    }
+  ]
+}

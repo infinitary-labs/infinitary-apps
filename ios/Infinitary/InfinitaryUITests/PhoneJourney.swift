@@ -651,6 +651,23 @@ import XCTest
         XCTAssertNotNil(closed["note"] as? [String: Any])
         XCTAssertEqual(closed["leaks"] as? Int, 0)
         picture("cards-answered-and-closed")
+        // INF-1059, the captain's "why images couldn't render inline?": a picture card already in the stack when the
+        // phone comes back is drawn from the first cards read while the board read is still out, so its picture is asked
+        // before the computer is in reach. The phone asks for it once it is in reach, rather than keeping a broken box.
+        _ = try await home("offline")
+        XCTAssertTrue(app.staticTexts["Out of reach"].waitForExistence(timeout: 20))
+        let late = try await home("late-picture-card")
+        let lateTitle = try XCTUnwrap(late["title"] as? String)
+        _ = try await home("online")
+        XCTAssertTrue(cardHeading(lateTitle).waitForExistence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.webViews.staticTexts[try XCTUnwrap(late["words"] as? String)].waitForExistence(timeout: 10))
+        _ = try await home("board-read-held")
+        _ = try await home("release-board-read")
+        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        _ = try await home("late-picture-asked")
+        picture("card-picture-after-reaching")
+        app.buttons["close-card"].tap()
+        XCTAssertTrue(cardHeading(lateTitle).waitForNonExistence(timeout: 10))
         // The same after view in both themes supplies the release note's native hero pair.
         let hero = try await home("hero-card")
         showCard(try XCTUnwrap(hero["title"] as? String))

@@ -120,6 +120,7 @@ A native watchdog removes a body that stops answering without removing its nativ
 The watchdog counts only while the body is on screen, loaded and in front, since WebKit pauses a card behind another tab or in the background, and any answer since its last look counts, however slow.
 A native collection timeout also releases a waiting footer or reply when the web process cannot run its own timer.
 `CardAssets` serves bundled fonts and minted picture, project-font and recording names through the pinned connection; it never opens an arbitrary URL or filesystem path.
+It asks through `ReadOnlySession.read`, which waits until the computer is in reach and asks again after a reconnect, so a card drawn from the first cards read, before the other first reads answer, still gets its pictures.
 A separate script-free, nonpersistent web view shows pictures and GIFs, with no native message handler.
 Both web views disable system link previews as well as refusing navigation.
 MP4 recordings use the native player, whose resource loader serves only bounded bytes read through the pinned connection and writes nothing to disk.
@@ -321,7 +322,7 @@ The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables r
 It first verifies the independent published-contract client can join and read the sample card.
 The join part covers a wrong Mac pin, joining, cards and feed, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
 Every other part first joins its own home, and reaches the state the single journey had reached before it: the talk part puts the hero card on the stage and relaunches the app.
-The cards part drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
+The cards part drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, a picture card drawn while the phone is still reaching after a reconnect, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
 It checks both immediate script stalls and a stall during answer collection, and captures both appearances and the largest standard Dynamic Type size.
 A scripted card attempts network access, parent access, direct native messages, injected scripts and a footer effect; the test home records whether any forbidden request reaches it.
 The runner keeps the card interaction recording separately from the reconnect recording when `--demo` is selected.

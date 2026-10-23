@@ -77,6 +77,9 @@ public struct PhoneNotice: Equatable, Sendable {
     @ObservationIgnored private var awaited = Set<String>()
     @ObservationIgnored private var primed = false
     @ObservationIgnored private var missed = false
+    /// How many times contact became in-reach, and the card reads waiting for the next time.
+    @ObservationIgnored private var reaches = 0
+    @ObservationIgnored private var reachWaiters: [UUID: CheckedContinuation<Void, Error>] = [:]
     private let initialReads = [PhoneContract.cards, PhoneContract.feed, PhoneRequest.board.rawValue, PhoneRequest.lastTurn.rawValue]
 
     /// No write is queued or retried. A lost reply is explicitly an unknown outcome.
@@ -117,6 +120,40 @@ public struct PhoneNotice: Equatable, Sendable {
         }
     }
 
+    /// INF-1059: a card's own file (a picture, typeface or part of a recording) waits for contact rather than failing
+    /// for good. The stage draws a card from the first cards read while the other first reads are still out, and a
+    /// reconnect or a trip to the background fails every ask in flight; such an ask is sent again once in reach.
+    public func read(_ channel: PhoneCardRequest, _ args: [PhoneJSON]) async throws -> PhoneJSON {
+        guard !channel.changes else { return try await ask(channel, args) }
+        var asked = -1
+        while true {
+            try await inReach(after: asked)
+            asked = reaches
+            do { return try await ask(channel, args) }
+            catch PhoneError.unavailable { continue }
+        }
+    }
+
+    /// Returns once contact is in-reach on a reach other than `asked`; throws if cancelled or this phone was removed.
+    private func inReach(after asked: Int) async throws {
+        while contact != "in-reach" || reaches == asked {
+            if removed { throw PhoneError.unavailable }
+            let id = UUID()
+            try await withTaskCancellationHandler {
+                try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                    if Task.isCancelled { continuation.resume(throwing: CancellationError()) } else { reachWaiters[id] = continuation }
+                }
+            } onCancel: {
+                Task { @MainActor in self.reachWaiters.removeValue(forKey: id)?.resume(throwing: CancellationError()) }
+            }
+        }
+    }
+
+    private func wakeReachWaiters() {
+        let waiters = reachWaiters; reachWaiters = [:]
+        for continuation in waiters.values { continuation.resume() }
+    }
+
     public func readThread(_ id: String) async throws {
         let revision = threadRevisions[id, default: 0]
         let thread = try await ask(.thread, [.string(id)])
@@ -143,6 +180,7 @@ public struct PhoneNotice: Equatable, Sendable {
         cards = []; activity = []; board = nil; lastTurn = nil; notice = nil; firstmateBusy = false
         threads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
         notified = [:]; awaited = []; primed = false; workRevision += 1
+        wakeReachWaiters()
     }
 
     /// Reading a card ends the notice about it.
@@ -430,8 +468,10 @@ public struct PhoneNotice: Equatable, Sendable {
     private func markReady(_ channel: String) {
         ready.insert(channel)
         guard initialReads.allSatisfy({ ready.contains($0) }) else { return }
+        let reached = contact != "in-reach"
         contact = "in-reach"
         if missed { missed = false; returns += 1 }
+        if reached { reaches += 1; wakeReachWaiters() }
     }
 
     private func refresh(_ channel: String, on socket: URLSessionWebSocketTask) async throws {

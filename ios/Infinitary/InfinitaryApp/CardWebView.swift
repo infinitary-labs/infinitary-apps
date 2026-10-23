@@ -274,7 +274,7 @@ struct CardWebView: UIViewRepresentable {
                 var size = 1
                 while bytes.count < size {
                     try Task.checkCancellation()
-                    let part = try await session.ask(.media, [.string(name), .number(Double(bytes.count)), .number(1_048_576)])
+                    let part = try await session.read(.media, [.string(name), .number(Double(bytes.count)), .number(1_048_576)])
                     guard let total = part["size"].numeric, total > 0, total <= 16 * 1024 * 1024,
                           let data = Data(base64Encoded: part["data"].text ?? ""), !data.isEmpty else { throw PhoneError.invalidReply }
                     if bytes.count > 0 && size != Int(total) { throw PhoneError.invalidReply }
@@ -282,7 +282,7 @@ struct CardWebView: UIViewRepresentable {
                     guard bytes.count <= size else { throw PhoneError.invalidReply }
                 }
             } else {
-                let file = try await session.ask(kind, [.string(name)])
+                let file = try await session.read(kind, [.string(name)])
                 guard let data = Data(base64Encoded: file["data"].text ?? ""), data.count <= 8 * 1024 * 1024 else { throw PhoneError.invalidReply }
                 bytes = data; contentType = file["contentType"].text ?? ""
             }

@@ -101,6 +101,19 @@ export async function startPhoneHome(
       }, 30_000);
     });
   };
+  const within = async (promise: Promise<void>, failure: string) => {
+    let timer: NodeJS.Timeout | undefined;
+    try {
+      await Promise.race([
+        promise,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(failure)), 30_000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
   const views = new Set<string>();
   const cardRequests: { channel: string; args: unknown }[] = [];
   let leaks = 0;
@@ -115,6 +128,15 @@ export async function startPhoneHome(
   let cardHold:
     | { entered: ReturnType<typeof cardBarrier>; released: ReturnType<typeof cardBarrier> }
     | undefined;
+  // INF-1059: the phone's next board read is held, so a card from its first cards read is drawn while it is still reaching.
+  let boardHold:
+    | {
+        taken: boolean;
+        entered: ReturnType<typeof cardBarrier>;
+        released: ReturnType<typeof cardBarrier>;
+      }
+    | undefined;
+  let latePicture: { name: string; asked: ReturnType<typeof cardBarrier> } | undefined;
   // A real TCP endpoint that never answers TLS: no HTTP response can reset a refusal.
   const stalledSockets = new Set<Socket>();
   const stalledServer = createTCPServer((socket) => {
@@ -161,6 +183,19 @@ export async function startPhoneHome(
           );
           writes.push({ channel, actor, args: safe });
         }
+        if (channel === "inf:tasks:board" && boardHold && !boardHold.taken) {
+          const held = boardHold;
+          held.taken = true;
+          held.entered.resolve();
+          await held.released.promise;
+        }
+        if (
+          channel === "inf:cards:picture" &&
+          latePicture &&
+          Array.isArray(args) &&
+          args[0] === latePicture.name
+        )
+          latePicture.asked.resolve();
         if (channel === "inf:cards:act" && cardHold) {
           const held = cardHold;
           held.entered.resolve();
@@ -431,6 +466,46 @@ export async function startPhoneHome(
               ).find((card) => card.id === heroId) ?? null,
           };
           break;
+        // INF-1059: a picture card waits in the stack while the phone is away, and its next board read is held.
+        case "POST late-picture-card": {
+          const directory = join(userData, "crewmates", task.id, "cards");
+          mkdirSync(directory, { recursive: true });
+          const name = `${task.id}-${"c".repeat(32)}.png`;
+          writeFileSync(
+            join(directory, name),
+            encodePng(240, 120, (x, y) => (y < 60 ? [190, 150, 30] : [110, 70, 40 + x / 4])),
+          );
+          const title = "The late harbour survey";
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-late-picture",
+            title,
+            body: `<p>The survey arrived while your phone was away.</p><img src="app-frame://images/${name}" alt="Late harbour survey">`,
+            actions: [],
+          });
+          latePicture = { name, asked: cardBarrier() };
+          boardHold = { taken: false, entered: cardBarrier(), released: cardBarrier() };
+          result = { title, words: "The survey arrived while your phone was away." };
+          break;
+        }
+        case "POST board-read-held": {
+          const held = boardHold;
+          if (!held) throw new Error("No board read is held");
+          await within(held.entered.promise, "The phone never read the board");
+          result = { ok: true };
+          break;
+        }
+        case "POST release-board-read":
+          boardHold?.released.resolve();
+          boardHold = undefined;
+          result = { ok: true };
+          break;
+        case "POST late-picture-asked": {
+          const late = latePicture;
+          if (!late) throw new Error("No late picture card was posted");
+          await within(late.asked.promise, "The phone never asked for the late card's picture");
+          result = { ok: true };
+          break;
+        }
         // INF-499 #9: hold the real request before dispatch so a competing input has an observable window.
         case "POST hold-card-action":
           cardHold = { entered: cardBarrier(), released: cardBarrier() };
@@ -920,6 +995,8 @@ export async function startPhoneHome(
     close: async () => {
       cardHold?.released.resolve();
       cardHold = undefined;
+      boardHold?.released.resolve();
+      boardHold = undefined;
       await new Promise<void>((resolve) => control.close(() => resolve()));
       await connection.close();
       for (const socket of stalledSockets) socket.destroy();

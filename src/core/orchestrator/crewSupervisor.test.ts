@@ -6740,18 +6740,28 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       published: publication,
     }));
     tasks.recordDelivery(taskId, { headSha: head, prNumber: 1, ci: "green" });
-    const note = { title: "Ignored", body: "", presentationRevision: 1, actions: [] };
+    // INF-968: reach the supervisor through the same tool Pi and Claude bind,
+    // not onCard directly, which missed the tool's refusal of every story note.
+    const emitCard = bindTool(EMIT_CARD_TOOL, specs[0] as CrewmateSpec);
+    const note = { title: "Ignored", presentation: 1, actions: [] };
     // A task that asks first gets the story only as its merge offer.
     const autonomy = vi.spyOn(supervisor, "taskAutonomy").mockReturnValue(false);
-    await expect(Promise.resolve().then(() => specs[0]?.onCard?.(note))).rejects.toThrow(
+    await expect(emitCard.run(note)).rejects.toThrow(
       /or its note when the task merges on its own/,
     );
+    expect(cards()).toHaveLength(0);
+    expect(completionPresentation).not.toHaveBeenCalled();
     autonomy.mockReturnValue(true);
-    const id = await specs[0]?.onCard?.(note);
+    const result = await emitCard.run(note);
     await tick();
-    const card = cards().find((entry) => entry.id === id);
+    const card = cards().find((entry) => entry.taskId === taskId);
+    expect(result.text).toBe(`Card shown from presentation 1 (${card?.id})`);
+    expect(completionPresentation).toHaveBeenCalledWith(taskId, note.presentation);
     expect(card).toMatchObject({ author: "crewmate", title: story.title, actions: [] });
     expect(card?.body).toContain(presentationCardBody(story));
+    expect(card?.risk).toBeUndefined();
+    expect(card?.requiredActions).toBeUndefined();
+    expect(tasks.get(taskId)?.delivery?.completionOffers).toBeUndefined();
   });
 
   it("publishes the completion card, with a fresh CI reading, once CI is green", async () => {

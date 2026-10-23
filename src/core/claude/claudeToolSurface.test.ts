@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type McpSdkServerConfigWithInstance, query } from "@anthropic-ai/claude-agent-sdk";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
   acceptedPlanCase,
@@ -28,11 +28,12 @@ import { readPagedTaskQuery } from "../../../tests/helpers/taskQueryText";
 import { crewmateSessionSpec } from "../orchestrator/crewSession";
 import { appPathsFor } from "../paths";
 import { createAppTools } from "../pi/appTools";
-import { EMIT_CARD_TOOL_DESCRIPTION } from "../pi/cardTool";
+import { EMIT_CARD_TOOL, EMIT_CARD_TOOL_DESCRIPTION } from "../pi/cardTool";
 import { createTasksQueryTool, parseTasksFieldPage, parseTasksQueryText } from "../pi/taskTools";
+import { piToolOf } from "../pi/toolSpec";
 import { CLAUDE_TOOL_DESCRIPTION_CAP } from "../prompts/cardContract";
 import { LOCAL_MACHINE_ID } from "../session/session";
-import { type BoundTool, FIRSTMATE_TOOLS } from "../session/tools";
+import { type BoundTool, bindTool, FIRSTMATE_TOOLS } from "../session/tools";
 import {
   CLAUDE_SEAT_TOOL_PREFIX,
   CLAUDE_SEAT_TOOL_SERVER,
@@ -40,7 +41,7 @@ import {
 } from "../storage/sessionReader";
 import { resolveClaudeExecutable } from "./claudeCli";
 import { resetStoreLeasesForTest } from "./claudeStoreLease";
-import { claudeToolServer, claudeToolsOf, zodShapeOf } from "./claudeTaskTools";
+import { claudeToolOf, claudeToolServer, claudeToolsOf, zodShapeOf } from "./claudeTaskTools";
 import { locateClaudeTranscript } from "./claudeTranscript";
 import { CLAUDE_FIRSTMATE_TOOL_RESULT_CHARACTERS } from "./session";
 
@@ -110,6 +111,51 @@ async function appToolDescriptions(): Promise<Map<string, string>> {
   }
   return descriptions;
 }
+
+// INF-968: the served saved-story rule promises no-action notes to autonomous tasks.
+// Both session backends must reach the home, which alone knows the task's autonomy.
+it.each(["Pi", "Claude"] as const)(
+  "forwards saved-story notes through %s without accepting competing content",
+  async (backend) => {
+    const onCard = vi.fn(() => "card-task-story");
+    const bound = bindTool(EMIT_CARD_TOOL, { onCard });
+    const run = (params: Record<string, unknown>) =>
+      backend === "Pi"
+        ? piToolOf(bound).execute("note", params, undefined, undefined, {} as never)
+        : claudeToolOf(bound).handler(params, {} as never);
+    for (const actions of [undefined, []]) {
+      const params = {
+        title: "The story is ready",
+        presentation: 2,
+        ...(actions ? { actions } : {}),
+      };
+      const result = await run(params);
+      expect(result.content).toEqual([
+        { type: "text", text: "Card shown from presentation 2 (card-task-story)" },
+      ]);
+      expect(onCard).toHaveBeenLastCalledWith({
+        title: params.title,
+        body: "",
+        presentationRevision: 2,
+        actions: [],
+      });
+      for (const competing of [
+        { body: "A different story" },
+        { body_file: "story.html" },
+        { risk: {} },
+        { required_actions: [] },
+        { browser_button: "View" },
+        { browser_page: "index.html" },
+        { browser_handoff: { site: "example.com", reason: "Sign in", after: "Check" } },
+        { asking: true },
+        { design_only: true },
+      ]) {
+        await expect(run({ ...params, ...competing })).rejects.toThrow(/without body/);
+      }
+    }
+    expect(onCard).toHaveBeenCalledTimes(2);
+  },
+);
 
 it("Claude carries the catalog value intact to the strict action validator", async () => {
   const calls: unknown[] = [];

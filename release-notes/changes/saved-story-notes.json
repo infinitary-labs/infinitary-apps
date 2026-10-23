@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "saved-story-notes",
+      "kind": "fix",
+      "title": "Work that merges on its own can show its story",
+      "body": "A crewmate can now show the same story as its pull request on a note before your first mate merges it. Tasks that ask you before merging still require a merge decision.",
+      "area": "cards",
+      "picture": {
+        "dark": "saved-story-notes-dark.webp",
+        "light": "saved-story-notes-light.webp",
+        "alt": "A completion story shown as a note with its checked result and no merge button"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

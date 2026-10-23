@@ -799,7 +799,8 @@ A home before `STORY_AROUND_SINCE` (10.1.0) would drop `around` and answer as if
 Evidence: `presentation.test.ts` and `changePresentations.test.ts` ("the words around a published story"), `prCi.test.ts` (open_change's answers) and `sessionHost.test.ts` (the older home).
 
 Missing or mismatched evidence holds the completion offer and the final own-task merge boundary independently of checks and merge authority.
-The completion call gives `emit_card presentation` and one merge action, without a second body, risk declaration or required-action list.
+The completion call gives `emit_card presentation` and one merge action, or omits actions for a note when the task merges on its own, without a second body, risk declaration or required-action list.
+The shared Pi and Claude tool forwards either shape; the supervisor checks the task's autonomy before accepting a note (INF-968).
 CardService still owns cards, the risk chart, requirements and merge controls; checks, independent review, autonomy and the captain's merge click retain their existing owners.
 
 ### On gitlab.com

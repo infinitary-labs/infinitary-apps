@@ -259,9 +259,14 @@ describe("createEmitCardTool", () => {
       /without body/,
     );
     await expect(tool.execute("t3", { ...params, risk: {} })).rejects.toThrow(/without body/);
-    await expect(tool.execute("t4", { ...params, actions: [] })).rejects.toThrow(
-      /one settle merge/,
-    );
+    for (const actions of [
+      [{ id: "reply", label: "Reply", default: true }],
+      [{ id: "discard", effect: { kind: "settle", mode: "discard" } }],
+      [...params.actions, { id: "reply", label: "Reply" }],
+      [...params.actions, { ...params.actions[0], id: "merge-again" }],
+    ]) {
+      await expect(tool.execute("t4", { ...params, actions })).rejects.toThrow(/one settle merge/);
+    }
     expect(onCard).toHaveBeenCalledTimes(1);
   });
 

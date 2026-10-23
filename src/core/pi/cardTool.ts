@@ -587,8 +587,10 @@ async function emitCard(
       actions.length === 1 &&
       actions[0]?.effect?.kind === "settle" &&
       actions[0].effect.mode === "merge";
+    // The home checks task autonomy before accepting a no-action story note (INF-968).
+    const note = actions.length === 0;
     if (
-      !merges ||
+      (!merges && !note) ||
       params.body !== undefined ||
       params.body_file !== undefined ||
       params.risk !== undefined ||
@@ -600,7 +602,7 @@ async function emitCard(
       params.design_only
     )
       throw new Error(
-        "A saved-story completion gives presentation and one settle merge action, without body, risk, required_actions or browser controls; those facts come from its published version.",
+        "A saved-story completion gives presentation and one settle merge action, or no actions for a note when the task merges on its own, without body, risk, required_actions or browser controls; those facts come from its published version.",
       );
     const id = parseStableCardId(params.id);
     const cardId = await options.onCard({

@@ -430,6 +430,7 @@ import { implausibleReport } from "./reportPlausibility";
 import { type IdleRule, type ReportSortRule, sortReport } from "./reportSort";
 import { skipRulesStrip, writeAskStrip } from "./requestStrips";
 import { reviewCoversHead } from "./reviewCarry";
+import { earlierHistory, reviewHistory } from "./reviewHistory";
 import { type RunReading, RunWatcher } from "./runWatch";
 import { describeStatus, isRoutineMergeCard, SettleService, type TaskClose } from "./settleService";
 import { folderMissingText } from "./settleWords";
@@ -1809,6 +1810,7 @@ export class CrewSupervisor {
       changedFiles,
       ...(changeReading ? { changeReading } : {}),
       ...(captainCard ? { captainCard } : {}),
+      history: reviewHistory(this.options.tasks, builder),
       proofFiles,
       validation: validation
         ? {
@@ -7338,6 +7340,9 @@ export class CrewSupervisor {
       reviewCapReached(rounds) &&
       builder.delivery?.reviewCapAt === undefined &&
       !overridePasses(builder.delivery, "rounds", builder.delivery?.headSha);
+    const history = earlierHistory(
+      reviewHistory(this.options.tasks, this.options.tasks.get(builder.id) ?? builder),
+    );
     const verdict: ReviewVerdictFacts = {
       kind: "review-verdict",
       task: reviewTask,
@@ -7353,6 +7358,7 @@ export class CrewSupervisor {
         ? {}
         : { liveValidationBriefed: false }),
       ...(blockedReason ? { validationReason: blockedReason } : {}),
+      ...(history.length > 0 ? { history } : {}),
     };
     this.hooks.notifyOp(
       capped

@@ -160,6 +160,7 @@ import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
 import { PrCiService, type PrOutcome } from "./prCi";
 import { closingNoteTitle, droppedLine } from "./settleWords";
 import { Ticker } from "./ticker";
+import { renderReviewHistory } from "./reviewHistory";
 import {
   CAREFUL_NOTICE,
   ciCapWake,
@@ -19205,7 +19206,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(ops.slice(before)).toEqual([
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with no verdict line, so no verdict was recorded: Standing by for the new head, nothing to say yet. ${REVIEWER_IDLE_NEXT}`,
         `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict findings: verdict: findings\nF1 error src/meter.test.ts:12 racy - auto-fix\nrisk: medium - one line moves. Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext(true)}`,
-        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict blocked: verdict: blocked\nno access to the branch Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext(true)}`,
+        `[fm-op] crewmate 2 reported on review task ${reviewId} "Review: Fix the meter test" - the review of task ${builderId} "Fix the meter test" - with verdict blocked: verdict: blocked\nno access to the branch\n${renderReviewHistory([{ kind: "round", at: 0, review: reviewKey ?? "", verdict: "findings", head: HEAD, findings: ["F1 error src/meter.test.ts:12 racy - auto-fix"] }])}\n Its card on the captain's screen: card-${reviewId}-1 (note) "A finding to look at". ${reviewFindingsNext(true)}`,
         `[fm-op] the review of task ${builderId} "Fix the meter test" passed at 0123456 (risk unstated) (info-only findings; derived pass); the hold is released and review task ${reviewKey} is closed. crewmate 2's report: verdict: findings\nF1 info src/meter.ts:1 a note - no-op ${REVIEW_PASSED_NEXT}`,
       ]);
       const { taskId: r2 } = await supervisor.commission({

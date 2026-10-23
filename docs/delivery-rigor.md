@@ -9,7 +9,7 @@ Rigor derives from the user's words and the repository's configured rigor alone 
 The review runs before the pull request, on the builder's branch.
 A verdict-less reviewer report records nothing and spends no round.
 Info-only findings derive a pass.
-Declined findings converge through `user_chose_to_ignore`.
+Declined findings converge through the review history the app writes into every reviewer turn ("The review history").
 Validation is agent-driven and evidence-first; no configured command is mandated in the pipeline.
 The reviewer is a crewmate, never an external pipeline.
 Autonomy on is consent to merge at any risk: there is no risk-high captain card.
@@ -296,7 +296,7 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
    Info findings never block and need no steer.
    It decides an ask-user finding itself when the user's own words already settle it; the rest are ONE decision card per round on the builder's task, listing them verbatim with the step it would take as the default.
    The builder's next report names its open review, that review's last verdict and the head it read (`review` on the `report` wake, while no cap holds the re-reviews).
-   When that report brings a new head, evidence revision or validation state, the first mate steers the reviewer to re-review those assigned facts, listing findings the captain declined under `user_chose_to_ignore` with the instruction not to re-report them unless the code genuinely introduces a new, materially different problem - and it never steers the reviewer otherwise: an idle reviewer needs no stand-by and no status, which the findings wake and a reviewer's verdict-less report also say.
+   When that report brings a new head, evidence revision or validation state, the first mate steers the reviewer to re-review those assigned facts without retyping the captain's declined findings, which the review history carries - and it never steers the reviewer otherwise: an idle reviewer needs no stand-by and no status, which the findings wake and a reviewer's verdict-less report also say.
 6. **A pass closes the review task** (done / finished, the host's actor), which releases the hold.
    The one feed line is the builder's own event - `review passed at <sha>, risk <level>: <note> - <builder title>` - and the review's close is silent.
    The wake to the first mate refs the builder, whose move is next, and names it: a steer to push, open the PR and drive CI green; then with autonomy on, `settle_task merge-pr`, otherwise the builder's completion card is the decision.
@@ -306,6 +306,15 @@ Since FI3-566 (cut C) those instructions sit where each step arises, the way `CH
 
 **Risk never holds (Q4).**
 The reviewer's risk is recorded on the builder and rendered beside CI; autonomy on is consent to merge at any risk, so a green reviewed PR on an autonomy-on repository merges like any other, and the first mate settles after a pass without reading it.
+
+### The review history
+
+The app writes what was decided so far on a reviewed change into every reviewer turn's brief and into the first mate's findings wake (INF-993, the captain's direction B: "the app writes the history only"; `src/core/orchestrator/reviewHistory.ts`).
+It reads only typed facts the record already keeps, oldest first: each review report with a verdict, its head and its finding lines verbatim; each answer the captain chose on a card on the builder's task, with the card's answers word for word; each reply the captain typed under a crewmate's card on that task; and each live-validation request with its answer and, for an approved gap, whether that approval covers the latest run.
+The section is metadata, after no-mistakes' round history and settled questions: a later entry supersedes an earlier one, a declined finding is not re-reported unless the code introduces a new, materially different problem, and a settled question is not asked again in any wording.
+The host never decides which answer settles which finding; the reviewer and the first mate judge that.
+Because the brief is written again on every reviewer turn, the history survives the reviewer's conversation being summarized, and the first mate never retypes declined findings into a re-review steer.
+It adds no size limit.
 
 Where the review stands is on every surface the fleet already has: `crew_status` and the context block's crew lines carry `rigor` and the review state (`awaiting review`, `review open (<key>)`, `review: findings`, `review passed`, and `reviews <key>` on the reviewer's own row), the task detail carries `rigor` and the review facts in `delivery`, and Details shows current Care separately from Delivery, with the verdict and its risk beside CI.
 Nothing new reaches a user surface: no card kind, no setting, no control.
@@ -592,7 +601,7 @@ The CI-counting lines below match the current ledger (`observeCheckRepair`, `CI_
   A report with NO verdict line records nothing and spends no round - a reviewer's acknowledgment is not a verdict (the phantom rounds of 2026-09-19), and the merge stays held regardless; a stated findings verdict whose findings are all info/no-op derives a PASS, because info never blocks (the no-mistakes rule; blocking = error/warning severity or an ask-user action, `findingsBlock`).
   Findings/blocked leave the reviewer idle and steerable, a pass records verdict, head and risk on the BUILDER's delivery facts as a feed-worthy `review` event, closes the review task silently (done/finished) and wakes the first mate with the builder as ref.
   Risk never holds (Q4); a completion card with a merge effect before the pass is refused; `settleFacts`, `crewStatus` and the context crew lines carry `rigor` and the review state.
-  The first mate routes findings by instruction only (contract v3.5): auto-fix findings are relayed verbatim and fixed by the ported fixer preamble (double-check legitimacy, smallest root-cause fix, never revert intent), ask-user findings are ONE decision card per round, declined findings ride re-review steers as `user_chose_to_ignore` and are never re-reported, and a reviewer is steered only to re-review at a named new head, evidence revision or validation state - never to stand by; since FI3-566 the preamble is in the builder's reviewed brief and the other steps ride the review wakes ("The reviewed sequence").
+  The first mate routes findings by instruction only (contract v3.5): auto-fix findings are relayed verbatim and fixed by the ported fixer preamble (double-check legitimacy, smallest root-cause fix, never revert intent), ask-user findings are ONE decision card per round, declined findings ride the review history the app writes and are never re-reported, and a reviewer is steered only to re-review at a named new head, evidence revision or validation state - never to stand by; since FI3-566 the preamble is in the builder's reviewed brief and the other steps ride the review wakes ("The reviewed sequence").
   `tests/e2e/rigor-reviewed.spec.ts` is the binding test.
 - The tier as a record, with host holds (delivery rigor phase 3; `docs/delivery-rigor.md` "The record and its holds"): a repository's standing rigor is `repos.rigor` (migration 36; null = derive), set by talking through `app_change project-settings` with `changes.rigor` of `quick`, `standard`, `reviewed`, or `default` (`configure_repo` is retired) or Settings → Projects - the `project settings` feed line names the care only when set.
   The round caps are RECORDS on the builder's delivery facts: `observeCheckRepair` counts one CI round only for an unsuccessful declared own repair (`ciRounds`; a passing repair spends nothing, and a legacy uncapped red-head count is archived rather than charged; a crewmate's `check_change` and the host's watch write the same ledger), stamps `ciCapAt` once at `CI_ROUND_CAP` (3) and tells `CrewSupervisor.holdForCiCap` through the `onCap` seam - ONE `[fm-op]`, and `pendingCiGate` refuses the completion card while the cap holds, even on a green reading, before any gh call; every stated `findings` verdict at a head not yet counted is a `reviewRounds` round (`reviewRoundSha` is the last counted head - a repeat at the same head records the verdict and spends nothing) and the third is one past `REVIEW_ROUND_CAP` (2): that findings wake carries the cap (never a second wake), `reviewCapAt` holds, and a steer to the review task is refused as text naming the door.

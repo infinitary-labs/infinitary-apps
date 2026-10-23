@@ -383,7 +383,7 @@ describe("renderWake", () => {
       `[fm-op] crewmate 1 reported on task t1 "Fix the pin": Fixed F1; committed 89abcde. Its open review FI3-9 last returned findings at 0123456. ${REVIEW_NEW_HEAD_NEXT}`,
     );
     expect(REVIEW_NEW_HEAD_NEXT).toBe(
-      "When this report brings a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request), steer that reviewer to re-review those exact facts, listing findings the captain declined under user_chose_to_ignore with: do not re-report these unless the code genuinely introduces a new, materially different problem. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.",
+      "When this report brings a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request), steer that reviewer to re-review those exact facts. The app writes what was decided so far, the captain's answers included, into every reviewer turn, so never retype declined findings into the steer. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.",
     );
     expect(report({ key: "FI3-9", verdict: "blocked" })).toContain(
       "Its open review FI3-9 last returned blocked at an unrecorded head.",

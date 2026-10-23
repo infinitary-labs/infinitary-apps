@@ -56,6 +56,7 @@ import { type CrewmateRestart, crewmateRestartText } from "./crewSession";
 import { crewHoldWays, type HoldRefusal, type HoldWay, renderHold } from "./holds";
 import { REVIEW_FIX_RULES } from "./intentBrief";
 import { type NamedModel, namedModelWords } from "./namedModel";
+import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 import type { SeatPauseClass } from "./seat";
 import type { SeatDigestTurn } from "./seatDigest";
 
@@ -231,6 +232,8 @@ export type ReviewVerdictFacts = {
   briefed?: boolean;
   liveValidationBriefed?: boolean;
   validationReason?: string;
+  /** What was decided so far on the reviewed change, oldest first (INF-993). */
+  history?: ReviewHistoryEntry[];
 };
 
 /**
@@ -252,7 +255,7 @@ export function reviewFindingsNext(briefed: boolean): string {
 
 /** What a builder's report asks of its open review, which last returned findings or blocked. */
 export const REVIEW_NEW_HEAD_NEXT =
-  "When this report brings a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request), steer that reviewer to re-review those exact facts, listing findings the captain declined under user_chose_to_ignore with: do not re-report these unless the code genuinely introduces a new, materially different problem. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.";
+  "When this report brings a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request), steer that reviewer to re-review those exact facts. The app writes what was decided so far, the captain's answers included, into every reviewer turn, so never retype declined findings into the steer. Never steer the reviewer otherwise - an idle reviewer needs no stand-by and no status.";
 
 /** What a passed review asks of the Firstmate next. */
 export const REVIEW_PASSED_NEXT =
@@ -2051,7 +2054,7 @@ function unknownWake(facts: unknown, ways: HoldWay[] | undefined): string {
  * review cap rides a findings one without them: its own words name the way.
  */
 function renderReviewVerdict(facts: ReviewVerdictFacts, next = true): string {
-  return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.validationReason ? ` The host held the reported pass: ${facts.validationReason} Steer the builder to address this reason, then re-review the changed validation state.` : ""}${cardsText(facts.cards)}${facts.liveValidationBriefed === false ? ` Relay the missing Careful contract to the builder: ${CAREFUL_LIVE_VALIDATION}` : ""}${next ? ` ${reviewFindingsNext(facts.briefed === true)}` : ""}`;
+  return `[fm-op] ${facts.crewmate} reported on review task ${facts.task.id} "${facts.task.title}" - the review of task ${facts.builder.id} "${facts.builder.title}" - with verdict ${facts.verdict}: ${facts.excerpt}${facts.validationReason ? ` The host held the reported pass: ${facts.validationReason} Steer the builder to address this reason, then re-review the changed validation state.` : ""}${facts.history?.length ? `\n${renderReviewHistory(facts.history)}\n` : ""}${cardsText(facts.cards)}${facts.liveValidationBriefed === false ? ` Relay the missing Careful contract to the builder: ${CAREFUL_LIVE_VALIDATION}` : ""}${next ? ` ${reviewFindingsNext(facts.briefed === true)}` : ""}`;
 }
 
 /** A builder report's open review, and the re-review it may ask for. */

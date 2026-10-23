@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { dirname, isAbsolute, join, resolve as resolvePath } from "node:path";
-import { type AttachmentRef, attachmentWords } from "@shared/attachments";
+import { type AttachmentRef, attachmentWords, fileSizeWords } from "@shared/attachments";
 import { type CutOff, type CutOffClass, isAuthFailureMessage } from "@shared/authFailure";
 import { cardPictureFiles } from "@shared/cardPictures";
 import {
@@ -208,6 +208,7 @@ import {
   SKIP_RULES_MERGE_WORDS,
   sendWriteWords,
 } from "@shared/vocabulary";
+import type { HandoverFile } from "@shared/work";
 import type { AccountHold } from "@shared/workPosture";
 import { NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
@@ -238,6 +239,7 @@ import {
   crewmateCardBodiesDir,
   crewmateCardPicturesDir,
   crewmateEvidenceDir,
+  crewmateHandoverDir,
   crewmateSessionsDir,
   crewmateSourceCardsDir,
   crewmateTempDir,
@@ -320,6 +322,12 @@ import type {
   TaskStartPolicy,
 } from "../storage/taskStore";
 import {
+  deliverHandoverFile,
+  HANDOVER_IN_DIR_NAME,
+  keptHandoverFiles,
+  verifyHandoverFiles,
+} from "../tasks/handoverFiles";
+import {
   recordValidation as checkValidationTransition,
   StaleValidationDecisionError,
 } from "../tasks/liveValidation";
@@ -365,6 +373,7 @@ import { escapeCardText } from "./cardText";
 import { CheckWatcher, type WatchedReading } from "./checkWatch";
 import { ciFactOf } from "./ciFact";
 import {
+  type CrewmateComputers,
   type CrewmateRestart,
   type CrewmateSpec,
   crewmateProcedureFor,
@@ -1352,6 +1361,18 @@ function placedCutOffStartRefusal(
 }
 
 /**
+ * A report's handed files in the words the first mate reads (INF-992):
+ * kept names and sizes, never content, and the task its steer names.
+ */
+function handedFilesLine(
+  task: { id: string; key: string },
+  files: readonly HandoverFile[],
+): string {
+  const named = files.map((file) => `${file.file} (${fileSizeWords(file.size)})`).join(", ");
+  return `Files handed on, kept for steer_crewmate files_from ${task.key || task.id}: ${named}.`;
+}
+
+/**
  * The sign-in card a crewmate's turn raises when its provider no longer
  * accepts the sign-in: one per task, taken down once the account it was held
  * on serves again (`IdleLadder.checkCutOffs`).
@@ -2198,6 +2219,34 @@ export class CrewSupervisor {
         : "in-reach",
       ...(older ? { noNewWork: true as const } : {}),
     };
+  }
+
+  /** Whether a computer that runs work is listed, so the captain has more than one (INF-992). */
+  computersListed(): boolean {
+    return (this.options.machines?.computers().length ?? 0) > 0;
+  }
+
+  /**
+   * The captain's computers as a crewmate's prompt names them (INF-992):
+   * every computer that runs work, and the one this crewmate runs on.
+   * Nothing while none is listed, when there is no other computer to know.
+   */
+  private computersFor(machineId: string): { computers?: CrewmateComputers } {
+    const machines = this.options.machines;
+    if (!machines || machines.computers().length === 0) return {};
+    const workers = machines.computers().map((device) => {
+      const place = machines.placeOf(device);
+      return place.where.startsWith("as ")
+        ? { name: place.who, sameComputer: true }
+        : { name: machines.nameOf(device) };
+    });
+    const here =
+      machineId === LOCAL_MACHINE_ID
+        ? undefined
+        : machines.placeOf(machineId).where.startsWith("as ")
+          ? machines.placeOf(machineId).who
+          : machines.nameOf(machineId);
+    return { computers: { workers, ...(here ? { here } : {}) } };
   }
 
   /**
@@ -5667,10 +5716,8 @@ export class CrewSupervisor {
     const briefed = {
       ...crewmate,
       procedure: crewmateProcedureFor(this.policiesOf(this.options.tasks.get(task.id))),
-      // A crewmate on another computer is told which one (INF-567).
-      ...(crewmate.machineId !== LOCAL_MACHINE_ID && this.options.machines
-        ? { computer: this.options.machines.nameOf(crewmate.machineId) }
-        : {}),
+      // Every crewmate is told the captain's computers and which one it runs on (INF-992).
+      ...this.computersFor(crewmate.machineId),
     };
     const spec = this.options.sessionSpec
       ? this.options.sessionSpec(briefed, binding)
@@ -5820,6 +5867,10 @@ export class CrewSupervisor {
       cardBodiesDir: there?.cardBodies ?? crewmateCardBodiesDir(this.options.paths, task.id),
       evidenceDir: there?.evidence ?? crewmateEvidenceDir(this.options.paths, task.id),
       tempDir: there?.temp ?? crewmateTempDir(this.options.paths, task.id),
+      // A task on another computer keeps its reported files there and sends them home.
+      ...(machine === LOCAL_MACHINE_ID
+        ? { handoverDir: crewmateHandoverDir(this.options.paths, task.id) }
+        : {}),
       // A task held on another computer checks its recordings and fonts where it runs.
       ...(machine === LOCAL_MACHINE_ID && this.options.probeMedia
         ? { probeMedia: this.options.probeMedia }
@@ -6693,6 +6744,24 @@ export class CrewSupervisor {
     declared?: ReportDeclaration,
   ): string | Promise<string> {
     if (task.state === "idle") this.startAutonomousTurn(task);
+    // Handed files are checked whole here before the report counts, and
+    // named in it by kept name and size only, never content (INF-992).
+    if (declared?.files && declared.files.length > 0) {
+      const { files, ...rest } = declared;
+      return verifyHandoverFiles(crewmateHandoverDir(this.options.paths, task.id), files).then(() =>
+        this.recordReportBody(task, `${text}\n\n${handedFilesLine(task, files)}`, summary, rest),
+      );
+    }
+    return this.recordReportBody(task, text, summary, declared);
+  }
+
+  /** A report whose handed files, if any, are already checked. */
+  private recordReportBody(
+    task: TaskRuntime,
+    text: string,
+    summary?: string,
+    declared?: ReportDeclaration,
+  ): string | Promise<string> {
     if (declared?.validation)
       return this.recordValidationReport(task, text, summary, declared).then((receipt) => {
         this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
@@ -7538,6 +7607,50 @@ export class CrewSupervisor {
    * was the supervision claim's outcome; nothing produces it since S7c
    * retired the claim, and it stays in the vocabulary for the record.)
    */
+  /**
+   * Delivers the files a task's reports handed on into another task's
+   * hand-over folder on the computer it runs on (INF-992, direction B): a
+   * verified local copy here, or the source-file order there, each 0600 in
+   * its temporary folder, so it goes when that task closes. Answers the
+   * words the steer carries: paths and sizes, never content.
+   */
+  async handFiles(fromTask: string, toTask: string): Promise<string> {
+    const from = this.options.tasks.resolve(fromTask);
+    const to = this.options.tasks.resolve(toTask);
+    if (!from) throw new Error(`There is no task ${fromTask} to hand files from.`);
+    if (!to) throw new Error(`There is no task ${toTask} to hand files to.`);
+    const handle = (record: TaskRecord) => record.key || record.id;
+    const kept = await keptHandoverFiles(crewmateHandoverDir(this.options.paths, from.id));
+    if (kept.length === 0)
+      throw new Error(
+        `${handle(from)} has no reported files to hand on: its crewmate passes them in report files.`,
+      );
+    if (to.status !== "active")
+      throw new Error(
+        `${handle(to)} has not started, so there is no folder to hand files into yet.`,
+      );
+    const machine = to.deviceId;
+    const machines = this.options.machines;
+    if (machine && !machines?.takesHandover?.(machine))
+      throw new Error(
+        `${handle(to)} runs on ${machines?.nameOf(machine) ?? `another ${COMPUTER.one}`}, which needs an update to Infinitary before it can take handed files.`,
+      );
+    const lines: string[] = [];
+    for (const file of kept) {
+      const path =
+        machine && machines?.sourceFile
+          ? await machines.sourceFile(machine, to.id, file.file, file.path, "handover")
+          : await deliverHandoverFile(
+              file.path,
+              join(crewmateTempDir(this.options.paths, to.id), HANDOVER_IN_DIR_NAME),
+              file.file,
+            );
+      lines.push(`${path} (${fileSizeWords(file.size)})`);
+    }
+    // Paths and sizes only: a handed file may hold secrets (the captain's words on INF-992).
+    return `Files handed to you from ${handle(from)}, verified byte for byte, in your hand-over folder: ${lines.join(", ")}. They may hold secrets: never print, quote or paste their content anywhere, and read only what your work needs. They are removed when this task closes.`;
+  }
+
   async steerCrewmate(
     taskId: string,
     message: WakeBody,
@@ -8399,6 +8512,7 @@ export class CrewSupervisor {
               : (this.waitingOnBlockers(record) ??
                 (record.startPolicy === "on-request" ? "starts on request" : undefined))
             : undefined;
+        const computer = this.taskComputer(record);
         const rigor = this.policiesOf(record)?.rigor.value;
         const review = this.reviewState(record);
         const thread = this.cards.threadFact(record.id);
@@ -8431,6 +8545,7 @@ export class CrewSupervisor {
           repoName: repo?.name ?? "default workspace",
           branch: record.branch,
           ...(gate ? { gate } : {}),
+          ...(computer ? { computer } : {}),
           ...(lastReport ? { lastReport } : {}),
           premiumRetryEligible: premiumRetryPossible(record),
           ...(rigor ? { rigor } : {}),
@@ -8459,6 +8574,19 @@ export class CrewSupervisor {
             : { autonomy: autonomyForRecord(record, repo?.autonomy) }),
         };
       });
+  }
+
+  /**
+   * The computer a task runs on, for the first mate (INF-992): the one its
+   * place names, else this computer once it started here. Absent while no
+   * computer that runs work is listed, and for an unstarted task whose
+   * computer is not chosen yet.
+   */
+  private taskComputer(record: TaskRecord): string | undefined {
+    if (!this.options.machines || this.options.machines.computers().length === 0) return undefined;
+    const place = this.taskPlace(record);
+    if (place) return place.name;
+    return record.status === "open" ? undefined : HERE.this;
   }
 
   /** An open row's wait on its blockers, phrased; empty when none remain. */

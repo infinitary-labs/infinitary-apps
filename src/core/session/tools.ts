@@ -273,6 +273,12 @@ export type CrewmateToolDelegate = {
    */
   evidenceDir?: string;
   /**
+   * Where this crewmate's reported files are kept on the computer it runs
+   * on (INF-992): `crewmates/<taskId>/handover-out` here, its temporary
+   * folder's `handover-out` there. Absent, a report naming files is refused.
+   */
+  handoverDir?: string;
+  /**
    * The host's isolated decoder for demo recordings (docs/card-authoring.md
    * "Demo recordings"). Absent, a card that names a recording is refused.
    */

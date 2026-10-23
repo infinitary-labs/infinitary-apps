@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import type { AppPaths } from "../paths";
 import type { TaskRecord } from "../storage/taskStore";
+import { HANDOVER_OUT_DIR_NAME, removeHandoverFiles } from "./handoverFiles";
 import { TaskService } from "./taskService";
 
 /**
@@ -282,7 +283,11 @@ export class TaskTempFiles {
     }
   }
 
-  private remove(record: TaskRecord): Promise<TempRemoval> {
+  private async remove(record: TaskRecord): Promise<TempRemoval> {
+    // The files its reports handed on go at the close too, wherever it ran (INF-992).
+    await removeHandoverFiles(
+      join(this.options.paths.crewmatesDir, record.id, HANDOVER_OUT_DIR_NAME),
+    );
     if (record.deviceId) {
       if (!this.options.removePlaced)
         return Promise.resolve(pending("its computer is out of reach"));

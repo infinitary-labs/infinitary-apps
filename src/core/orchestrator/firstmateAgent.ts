@@ -511,6 +511,15 @@ export function maybeCardContextLine(card: Card): string {
 export const OPEN_CARD_DIGEST_CHARS = 200;
 
 /**
+ * The context block's rule while another computer runs work (INF-992,
+ * direction B): each crew line's `runs_on`, and a crewmate's need on
+ * another computer coordinated, never relayed. Its one home; the fixed
+ * context carries only `files_from`'s name.
+ */
+export const COMPUTERS_RULE =
+  "Each crew line's runs_on is its task's computer. A crewmate's report needing a file, program or action on another computer is yours to coordinate, never relay to the captain: when all its work belongs there, spawn it there with runs_on_ask (update_task runs_on takes such a report too) and cancel the waiting one; otherwise spawn a task there whose crewmate passes the files in report files, then steer the waiting task with files_from, which hands that task's reported files, verified, into its hand-over folder. Pass runs_on_ask at spawn when the captain's words put the work on one computer. Never quote a handed file's content: it may hold secrets.";
+
+/**
  * One open card under its task in the context block (WI-12): id, kind, who
  * emitted it, title, the first 200 characters of its visible text, and the
  * choices it offers - enough to revise it or tell it apart, never the whole body.
@@ -2174,6 +2183,7 @@ export class FirstmateAgent {
         this.replyEmote("nod");
         return delivery;
       },
+      handFiles: (fromTask, toTask) => supervisor.handFiles(fromTask, toTask),
       interruptCrewmate: async (taskId, mode, closingSentence) => {
         this.asks.attach(taskId, "interrupt_crewmate");
         await supervisor.interruptCrewmate(
@@ -3406,6 +3416,8 @@ export class FirstmateAgent {
         status: entry.status,
         title: entry.title,
         repo: entry.repoName ?? "default workspace",
+        // The computer it runs on, while another computer runs work (INF-992).
+        ...(entry.computer ? { runs_on: entry.computer } : {}),
         ...(entry.gate ? { gate: entry.gate } : {}),
         ...(entry.rigor ? { rigor: entry.rigor } : {}),
         ...(entry.autonomy === undefined ? {} : { autonomy: entry.autonomy }),
@@ -3413,6 +3425,8 @@ export class FirstmateAgent {
         ...(entry.thread ? { thread: entry.thread } : {}),
         ...(entry.stalled ? { stalled: entry.stalled } : {}),
       })),
+      // Served only while another computer runs work, so one computer pays nothing (INF-992).
+      ...(this.options.supervisor.computersListed() ? { computers: COMPUTERS_RULE } : {}),
       task_index: this.renderTaskIndex(),
       ...(introduction && introductionId
         ? {

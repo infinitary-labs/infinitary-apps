@@ -824,7 +824,9 @@ The first mate sets it only from the captain's words, never by judging, and only
   Work the first mate declares on a project's folder itself runs here, where the folder is, and has none (`docs/task-record.md`, "A folder a merge left behind").
 - **What each side is told** (INF-567).
   Once a computer that runs work is on the list, the first mate's context names, for each project, the computer keeping its folder (`folder_on`, always this computer) and where its tasks start (`tasks_run_on`: a computer's name, Automatic, or this computer) (`CrewSupervisor.projectPlaces`).
-  A crewmate on a computer that runs work reads one line naming that computer and saying a project folder's path names nothing there (`crewmateComputerNote`); a crewmate here reads none.
+  Every crewmate, here or on a computer that runs work, reads one paragraph naming this computer, which keeps the record and every project's folder, each computer that runs work, and the one its task runs on (`crewmateComputersNote`, INF-992); a computer that is another user on this Mac is named by that user.
+  The paragraph says a file, folder, program or action on another computer goes to the first mate through a report that needs it, naming the computer, what is needed and where the result is needed, and that a handed file's content is never printed, quoted or pasted.
+  The first mate's crew lines carry each task's computer (`runs_on`), and its context carries the `computers` rule (`COMPUTERS_RULE`): it coordinates such a report itself rather than relaying it to the captain, starting a task on that computer or one that finds the files and hands them on.
 - **Kept until it starts.**
   An edit, or a move under another parent or into another project, re-points the task and each part of it that has not started (`runsOnChanged`), and a project that moves re-points only its tasks that have none of their own (`projectMoved`).
   A move made while a queued task's start waits on a computer - reading its sign-ins or the models it serves, or Automatic comparing computers - starts that start over from the record (`CrewSupervisor.startPlace`, INF-409).
@@ -1069,6 +1071,16 @@ Its account catalogs refresh without holding up work, and its sign-in model rows
 A computer with a contract older than 5.2 keeps Standard and the home explains that it cannot use the faster choice.
 
 `src/core/pi/placedMigration.test.ts` checks recovered Pi turn order with and without newer turns, an unchanged recovery copy, a missing current copy, a mismatched conversation refused, and replay after a lost completion marker.
+
+### Handed files
+
+A task hands files to another task in two steps (INF-992).
+Its crewmate's report names files by absolute path (`files`); the computer it runs on keeps verified 0600 copies in a 0700 folder, and a computer that runs work sends each to this computer over `inf:work:handover-file` in pieces before the report, into `crewmates/<task>/handover-out/`.
+The home verifies each declared name, size and sha256 before recording the report, and the report's outcome names the kept files.
+The first mate's `steer_crewmate` with `files_from` then delivers them into the waiting task's `temp/handover/` folder at 0600, here by a verified copy or there through `inf:session:source-file` with `into: handover`.
+A handed file may hold secrets: no side reads its content into a string, logs it or names more than its kept name, size and sha256.
+A computer that runs work refuses to send when this computer does not list the `handover-files` change, and the first mate is refused in words when the waiting task's computer does not.
+Both folders go when their task closes (`docs/task-retention.md`).
 
 ### Kept validation proof
 

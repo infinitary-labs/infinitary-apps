@@ -83,6 +83,7 @@ The app does not point every process's temporary directory there, and it does no
 Selected proof still goes in evidence.
 Deliverables go in the project, the chosen output location, the report, or a verified card copy.
 
+Files another task hands this one arrive in its `handover/` folder inside it (`docs/helper.md`, "Handed files"), and the files this task hands on are kept in `crewmates/<taskId>/handover-out/` on this computer, removed first when the task closes.
 The folder stays while the task is working, idle, paused, or waiting for review or a merge.
 A failure that leaves the task resumable does not remove it.
 When the task is done or dropped, including a merge, a discard, an answered task, or a cancellation or failure that closes the record, removal starts after the task's writers have stopped.

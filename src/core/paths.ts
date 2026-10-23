@@ -187,6 +187,15 @@ export function crewmateTempDir(paths: AppPaths, taskId: string): string {
 }
 
 /**
+ * The verified copies of the files a task's reports hand on (INF-992):
+ * `crewmates/<taskId>/handover-out/`, each 0600, kept until the first
+ * mate's steer delivers them and removed when the task closes.
+ */
+export function crewmateHandoverDir(paths: AppPaths, taskId: string): string {
+  return join(paths.crewmatesDir, taskId, "handover-out");
+}
+
+/**
  * What the home keeps about a crewmate's conversation held on a computer that
  * runs work (src/core/placed/): `crewmates/<taskId>/placed/`, with the answer
  * to every callback it asked (`calls.jsonl`), change ids synced before their

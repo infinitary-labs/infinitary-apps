@@ -2,15 +2,17 @@ import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { createServer, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { join, relative, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import type { AccountView } from "@shared/accounts";
 import {
   deviceForgeGateRef,
@@ -82,7 +84,7 @@ import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSe
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
-import { crewmateComputerNote } from "../pi/piResources";
+import { crewmateComputersNote } from "../pi/piResources";
 import { createPiSessionFactory } from "../pi/sessionFactory";
 import type { ModelRuntime } from "../pi/types";
 import { Router } from "../routing/router";
@@ -416,7 +418,7 @@ async function world(
         : {}),
       // Removed, it removes what Firstmate set up here; no agent was set up.
       cleanUp: () => cleanUp({ dataDir, background: null }),
-      conversations: async ({ dataDir: dir, ask, tell }) => {
+      conversations: async ({ dataDir: dir, ask, tell, homeChanges }) => {
         const copies = new WorkingCopies(dir, { pool: false });
         if (options.refuseClone) {
           // GitHub refuses the clone for want of this computer's own sign-in,
@@ -463,6 +465,7 @@ async function world(
           tasks,
           copies,
           ask,
+          ...(homeChanges ? { homeChanges } : {}),
           factories: {
             pi: createPiSessionFactory({
               agentDir: join(dir, "pi-agent"),
@@ -984,6 +987,57 @@ describe("a task that runs on a computer that runs work", () => {
       sent.mockRestore();
     }
   });
+  it("hands a file one task there reports to another task there, and never puts its content anywhere else", async () => {
+    // INF-992, direction B: "a second task can hand files to the waiting
+    // task"; the captain's words on it: "make sure file content never gets
+    // printed or leaked because it's possible the file can contain secrets".
+    const at = await world();
+    const secret = `client_secret=${createHash("sha256").update("INF-992").digest("hex")}`;
+    const found = join(scratchDir("infinitary-placed-found-"), "client secret.json");
+    writeFileSync(found, `{"installed":{"${secret}"}}\n`);
+    model([{ text: "Waiting for the client file." }]);
+    await at.start("t-wait", "Build with the Google client file.");
+    const home = at.home();
+    await expect.poll(() => home.tasks.get("t-wait")?.activity).toBe("idle");
+    model([
+      { tools: [{ name: "report", args: { text: "Found the client file.", files: [found] } }] },
+      { text: "Reported." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-find", "Find the Google client file.");
+    await expect.poll(() => home.tasks.get("t-find")?.activity).toBe("idle");
+    // The home holds it whole, and its report names it by kept name and size alone.
+    const sha256 = createHash("sha256").update(readFileSync(found)).digest("hex");
+    const kept = `${sha256.slice(0, 16)}-client_secret.json`;
+    const atHome = join(home.paths.crewmatesDir, "t-find", "handover-out", kept);
+    expect(readFileSync(atHome)).toEqual(readFileSync(found));
+    expect(statSync(atHome).mode & 0o777).toBe(0o600);
+    expect(home.tasks.get("t-find")?.outcome).toContain(
+      `Files handed on, kept for steer_crewmate files_from ${home.tasks.get("t-find")?.key}: ${kept}`,
+    );
+    // The first mate's steer hands it to the waiting task, in its hand-over folder there.
+    model([{ text: "Using it." }]);
+    const words = await home.supervisor.handFiles("t-find", "t-wait");
+    const delivered = join(at.folders("t-wait").temp, "handover", kept);
+    expect(words).toContain(delivered);
+    expect(readFileSync(delivered)).toEqual(readFileSync(found));
+    expect(statSync(delivered).mode & 0o777).toBe(0o600);
+    // Nothing but the handed copies holds its content: no record, transcript,
+    // feed line, journal or model request on either computer.
+    const holders = (dir: string): string[] =>
+      readdirSync(dir, { recursive: true, encoding: "utf8" }).flatMap((name) => {
+        const path = join(dir, name);
+        return lstatSync(path).isFile() && readFileSync(path).includes(secret) ? [path] : [];
+      });
+    expect(holders(home.paths.crewmatesDir)).toEqual([atHome]);
+    expect(holders(dirname(home.paths.crewmatesDir)).filter((path) => path !== atHome)).toEqual([]);
+    expect(holders(at.dataDir).sort()).toEqual(
+      [join(at.folders("t-find").temp, "handover-out", kept), delivered].sort(),
+    );
+    expect(JSON.stringify(api.requests.slice(requests))).not.toContain(secret);
+    expect(words).not.toContain(secret);
+  });
+
   it("starts there, does each callback once here, and keeps its report and a copy of its record", async () => {
     const at = await world();
     model([
@@ -1008,7 +1062,14 @@ describe("a task that runs on a computer that runs work", () => {
     // It is told which computer it is on (INF-567: "hmm this is because we
     // set this up on my macbook?"), so a folder path from the home reads as
     // naming nothing there.
-    expect(JSON.stringify(brief?.body.system)).toContain(crewmateComputerNote("Mac mini"));
+    expect(JSON.stringify(brief?.body.system)).toContain(
+      JSON.stringify(
+        crewmateComputersNote({
+          here: "Builder",
+          workers: [{ name: "Builder", sameComputer: true }],
+        }),
+      ).slice(1, -1),
+    );
     // Each callback had its effect here once, and the brief left the lane.
     expect(kinds(home, "t-first").filter((kind) => kind === "progress")).toHaveLength(1);
     expect(home.inbox.allFor("t-first")).toEqual([]);

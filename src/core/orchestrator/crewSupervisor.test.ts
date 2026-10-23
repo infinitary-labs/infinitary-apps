@@ -97,7 +97,7 @@ import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import { createModelRuntime } from "../pi/modelRuntime";
 import { piSessionEvents } from "../pi/piEvents";
-import { CREWMATE_BROWSER_LINE, crewmateComputerNote } from "../pi/piResources";
+import { CREWMATE_BROWSER_LINE, crewmateComputersNote } from "../pi/piResources";
 import { createPiSessionFactory, holdingRecoverableAttempt } from "../pi/session";
 import type { AutomaticPlacement } from "../placed/automaticPlacement";
 import type { CrewMachines } from "../placed/placedSessions";
@@ -488,7 +488,8 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.automatic
       ? {
           automaticPlacement: extras.automatic as AutomaticPlacement,
-          machines: {} as CrewMachines,
+          // Automatic compares no computers of its own here; a crewmate's brief reads the list.
+          machines: { computers: () => [] } as unknown as CrewMachines,
           // This Mac's routing, for a task that starts here once it no longer runs on Automatic.
           router: {
             ...router,
@@ -25200,11 +25201,17 @@ describe("work the first mate declares in a project's folder (INF-567, real git)
     expect(brief).not.toContain("Delivery:");
     expect(h.specs.at(-1)?.procedure).toEqual({ delivery: "none", rigor: "none" });
     expect(h.specs.at(-1)?.onOpenChange).toBeUndefined();
-    // A crewmate on the computer keeping the folder is told no computer's name.
-    expect(h.specs.at(-1)?.computer).toBeUndefined();
-    expect(h.sessionSpecs.at(-1)?.instructions.base).not.toContain(
-      crewmateComputerNote("Kun's Mac mini"),
+    // A crewmate on the computer keeping the folder is told the captain's
+    // computers and that it runs there (INF-992: "make sure crewmates are
+    // aware of the machines the user has").
+    expect(h.specs.at(-1)?.computers).toEqual({ workers: [{ name: "Kun's Mac mini" }] });
+    expect(h.sessionSpecs.at(-1)?.instructions.base).toContain(
+      crewmateComputersNote({ workers: [{ name: "Kun's Mac mini" }] }),
     );
+    // The first mate reads each task's computer (INF-992), the one the
+    // queued task waits for and this one for the folder work.
+    expect(h.supervisor.crewStatus(ordinary.taskId)[0]?.computer).toBe("Kun's Mac mini");
+    expect(h.supervisor.crewStatus(folder.taskId)[0]?.computer).toBe("this computer");
 
     // The host's folder-repair closing never reads this task.
     await h.supervisor.closeCurrentFolders();

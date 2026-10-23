@@ -76,14 +76,41 @@ export function crewmateTimeZoneNote(timeZone: string): string {
   return `The captain's local time zone is ${timeZone}.`;
 }
 
+/** The captain's computers, as a crewmate's prompt names them (INF-992). */
+export type CrewmateComputers = {
+  /** The computer that runs work this task runs on; absent on the computer where the first mate lives. */
+  here?: string;
+  /**
+   * Every computer that runs work on the list: its name, and whether it is
+   * another user on the computer where the first mate lives.
+   */
+  workers: readonly { name: string; sameComputer?: boolean }[];
+};
+
+/** A crewmate's word for a computer that runs work, with its role. */
+function workerWords(worker: CrewmateComputers["workers"][number]): string {
+  return worker.sameComputer
+    ? `${worker.name}, another user on ${HOME.the}, which runs work`
+    : `${worker.name}, which runs work`;
+}
+
 /**
- * The one line a crewmate on a computer that runs work for another reads
- * (INF-567): which computer it is on, so "this computer" in its brief and a
- * project folder's path are read against the right one. A crewmate on the
- * computer where the first mate lives reads none.
+ * The paragraph every crewmate reads once a computer that runs work is
+ * listed (INF-992, direction B; it grew from INF-567's one line): the
+ * captain's computers by name and role, the one this task runs on, the
+ * rule that a need on another of them goes to the first mate, and that a
+ * file handed between tasks is never printed. Names and roles only, never
+ * reach: the prompt is stamped, so a change starts a new conversation.
  */
-export function crewmateComputerNote(computer: string): string {
-  return `You run on ${computer}, which runs work for ${HOME.the}; that computer keeps the task record and every project's folder, so a project folder's path names nothing on ${computer}.`;
+export function crewmateComputersNote(computers: CrewmateComputers): string {
+  const listed = [
+    `${HOME.the}, which keeps the task record and every project's folder`,
+    ...computers.workers.map(workerWords),
+  ];
+  const here = computers.here
+    ? `This task runs on ${computers.here}, so a project folder's path names nothing on ${computers.here}.`
+    : `This task runs on ${HOME.the}.`;
+  return `The captain's computers: ${listed.join("; ")}. ${here} A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate, naming the computer, what is needed - a path, or how to recognize it - and where you need the result, then keep working on the rest; never ask the captain to move it. The first mate coordinates it, and a file another task finds reaches you as a steer naming its verified copy in your hand-over folder. To hand files to another task, pass their paths in report files. A handed file may hold secrets: never print, quote or paste its content in a report, card, note, commit, command line or output, and read only what your work needs.`;
 }
 
 export function crewmateCardBodiesNote(cardBodiesDir: string): string {
@@ -197,7 +224,7 @@ export function buildCrewmateSystemPrompt(
   browser?: boolean,
   procedure?: CrewmateProcedureFacts,
   tempDir?: string,
-  computer?: string,
+  computers?: CrewmateComputers,
   integrations?: boolean,
 ): string {
   const full = `You are a crewmate: a background worker aboard Infinitary, working for the first mate, the captain's calm desktop first officer.
@@ -234,7 +261,7 @@ The user sees cards and their threads, never a chat of your own; emit_card shows
     ...(tempDir ? [crewmateTempNote(tempDir)] : []),
     ...(cardBodiesDir ? [crewmateCardBodiesNote(cardBodiesDir)] : []),
     ...(timeZone ? [crewmateTimeZoneNote(timeZone)] : []),
-    ...(computer ? [crewmateComputerNote(computer)] : []),
+    ...(computers && computers.workers.length > 0 ? [crewmateComputersNote(computers)] : []),
     ...(browser ? [CREWMATE_BROWSER_LINE] : []),
     ...(integrations ? [CREWMATE_INTEGRATIONS_LINE] : []),
   ].join("\n\n");

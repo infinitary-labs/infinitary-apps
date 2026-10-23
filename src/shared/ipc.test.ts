@@ -357,6 +357,7 @@ describe("ipc contract", () => {
       "inf:work:followup",
       "inf:work:github-read",
       "inf:work:github-write",
+      "inf:work:handover-file",
       "inf:work:integrations",
       "inf:work:job-exit",
       "inf:work:knowledge",

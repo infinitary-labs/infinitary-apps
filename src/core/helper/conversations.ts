@@ -176,6 +176,8 @@ export async function startConversations(options: {
   probeTypeface?: TypefaceProbe;
   /** The contract the home said in its welcome, while it is known. */
   homeVersion?: () => string | null;
+  /** The contract changes its home listed, while known (`handover-files.md`). */
+  homeChanges?: () => readonly string[] | null;
   /**
    * Whether a crewmate's builds and tests here stay below the UI: on the
    * home's own Mac, whose window draws the character (`separateMac`).
@@ -283,6 +285,7 @@ export async function startConversations(options: {
     ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
     ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
     ...(options.homeVersion ? { homeVersion: options.homeVersion } : {}),
+    ...(options.homeChanges ? { homeChanges: options.homeChanges } : {}),
     ...(browsers
       ? {
           commands: {

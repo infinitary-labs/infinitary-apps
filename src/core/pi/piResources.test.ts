@@ -1285,6 +1285,42 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain("Keep any secret off the command line and out of what you print.");
   });
 
+  it("names the captain's computers to every crewmate once one runs work (INF-992)", () => {
+    // The captain on INF-992: "make sure crewmates are aware of the machines
+    // the user has, and would escalate to first mate when the task requires
+    // touching another machine".
+    const prompt = (computers?: Parameters<typeof buildCrewmateSystemPrompt>[7]) =>
+      buildCrewmateSystemPrompt(
+        "claude",
+        undefined,
+        undefined,
+        undefined,
+        false,
+        undefined,
+        undefined,
+        computers,
+      );
+    const mini = { name: "Kun's Mac mini" };
+    const atHome = prompt({ workers: [mini] });
+    expect(atHome).toContain(
+      "The captain's computers: the computer where your first mate lives, which keeps the task record and every project's folder; Kun's Mac mini, which runs work. This task runs on the computer where your first mate lives.",
+    );
+    expect(atHome).toContain(
+      "A file, folder, program or action on another of these computers is out of your reach: report it with needs_firstmate",
+    );
+    expect(atHome).toContain("never ask the captain to move it");
+    expect(atHome).toContain("never print, quote or paste its content");
+    expect(prompt({ here: mini.name, workers: [mini] })).toContain(
+      "This task runs on Kun's Mac mini, so a project folder's path names nothing on Kun's Mac mini.",
+    );
+    expect(prompt({ workers: [{ name: "Builder", sameComputer: true }] })).toContain(
+      "Builder, another user on the computer where your first mate lives, which runs work.",
+    );
+    // With one computer there is no other to know of.
+    expect(prompt({ workers: [] })).not.toContain("The captain's computers");
+    expect(prompt()).not.toContain("The captain's computers");
+  });
+
   it("briefs itself on the record, not in message text (ruling D5)", () => {
     const prompt = buildCrewmateSystemPrompt();
     expect(prompt).toContain("Your task arrives as a structured intent");

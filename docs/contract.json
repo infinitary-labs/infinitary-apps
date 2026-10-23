@@ -41175,6 +41175,32 @@
                       "type": "string"
                     },
                     "additionalProperties": {}
+                  },
+                  "files": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "file": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{16}-[A-Za-z0-9_-]{1,100}\\.[A-Za-z0-9]{1,16}$"
+                        },
+                        "size": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 1073741824
+                        },
+                        "sha256": {
+                          "type": "string",
+                          "pattern": "^[0-9a-f]{64}$"
+                        }
+                      },
+                      "required": [
+                        "file",
+                        "size",
+                        "sha256"
+                      ]
+                    }
                   }
                 }
               }
@@ -43437,6 +43463,75 @@
               "extension",
               "offset",
               "size",
+              "data"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          }
+        },
+        "required": [
+          "ok"
+        ]
+      }
+    },
+    "inf:work:handover-file": {
+      "effect": "change",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "callId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "file": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{16}-[A-Za-z0-9_-]{1,100}\\.[A-Za-z0-9]{1,16}$"
+              },
+              "size": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 1073741824
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "offset": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "data": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 5592408
+              }
+            },
+            "required": [
+              "task",
+              "callId",
+              "file",
+              "size",
+              "sha256",
+              "offset",
               "data"
             ]
           }
@@ -56806,6 +56901,12 @@
                 "data": {
                   "type": "string",
                   "maxLength": 5592408
+                },
+                "into": {
+                  "type": "string",
+                  "enum": [
+                    "handover"
+                  ]
                 }
               },
               "required": [

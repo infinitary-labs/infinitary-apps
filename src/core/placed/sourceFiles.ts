@@ -10,6 +10,7 @@ export async function sendSourceFile(
   task: string,
   name: string,
   file: string,
+  into?: "handover",
 ): Promise<string> {
   const size = statSync(file).size;
   const fd = openSync(file, "r");
@@ -29,6 +30,7 @@ export async function sendSourceFile(
             sha256,
             offset,
             data: bytes.subarray(0, read).toString("base64"),
+            ...(into ? { into } : {}),
           },
         ]),
       );

@@ -281,6 +281,25 @@ export type PlacedEventsAnswer = z.infer<typeof placedEventsAnswerSchema>;
 const toolTextSchema = z.object({ text: z.string() });
 const doneSchema = z.object({ ok: z.literal(true) });
 
+/**
+ * A file one task hands another, by its kept name (`handover-files.md`,
+ * INF-992): its sha256's first sixteen digits, then its own name reduced
+ * to letters, digits, `_` and `-`, with one extension.
+ */
+export const HANDOVER_FILE_NAME = /^[0-9a-f]{16}-[A-Za-z0-9_-]{1,100}\.[A-Za-z0-9]{1,16}$/;
+
+/** A handed file as a report declares it: never its content, only its kept name, size and sha256. */
+export const handoverFileSchema = z.object({
+  file: z.string().regex(HANDOVER_FILE_NAME),
+  size: z
+    .number()
+    .int()
+    .positive()
+    .max(1024 * 1024 * 1024),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+});
+export type HandoverFile = z.infer<typeof handoverFileSchema>;
+
 /** One callback's request: its task, its call, and what the tool handed over. */
 function asked<T extends z.ZodRawShape>(shape: T) {
   return z.tuple([z.object({ task: placedTaskIdSchema, callId: workCallIdSchema, ...shape })]);
@@ -538,6 +557,8 @@ export const workRequests = {
           needsFirstmate: z.string().optional(),
           /** The report's typed result (`report-result.md`); the home checks it. */
           result: z.record(z.string(), z.unknown()).optional(),
+          /** Files it hands on (`handover-files.md`), sent home before the report. */
+          files: z.array(handoverFileSchema).optional(),
         })
         .optional(),
     }),
@@ -710,6 +731,31 @@ export const workRequests = {
       offset: z.number().int().nonnegative(),
       size: z.number().int().positive().max(RECORDING_MAX_BYTES),
       data: z.string().min(1).max(RECORDING_PIECE_MAX_CHARS),
+    }),
+    response: doneSchema,
+  },
+  /**
+   * One piece of a file a crewmate's report hands on (`handover-files.md`,
+   * INF-992), asked in order before that report: the home keeps the file
+   * once its last piece arrives whole, checked against its sha256. Its
+   * content is never logged or printed on either side.
+   */
+  "inf:work:handover-file": {
+    effect: "change",
+    repeats: "safe",
+    request: asked({
+      file: z.string().regex(HANDOVER_FILE_NAME),
+      size: z
+        .number()
+        .int()
+        .positive()
+        .max(1024 * 1024 * 1024),
+      sha256: z.string().regex(/^[0-9a-f]{64}$/),
+      offset: z.number().int().nonnegative(),
+      data: z
+        .string()
+        .min(1)
+        .max(Math.ceil(PLACED_COPY_CHUNK_BYTES / 3) * 4),
     }),
     response: doneSchema,
   },
@@ -935,6 +981,11 @@ export const workOrders = {
         sha256: z.string().regex(/^[0-9a-f]{64}$/),
         offset: z.number().int().nonnegative(),
         data: z.string().max(Math.ceil(PLACED_COPY_CHUNK_BYTES / 3) * 4),
+        /**
+         * `handover`: a file another task handed this one, kept in its
+         * temporary folder's hand-over folder (`handover-files.md`).
+         */
+        into: z.enum(["handover"]).optional(),
       }),
     ]),
     response: z.object({ file: z.string(), complete: z.boolean() }),

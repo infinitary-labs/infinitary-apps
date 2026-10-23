@@ -73,6 +73,7 @@ import {
 import type { DropEffects } from "@shared/tasks";
 import { isUnstartedWork } from "@shared/tasks";
 import { CARE_WORDS } from "@shared/vocabulary";
+import type { HandoverFile } from "@shared/work";
 import {
   NEVER_SENT_AGAIN,
   WRITE_ASK_CAP,
@@ -397,6 +398,11 @@ export type ReportDeclaration = {
    * and, as the task's latest result, on its delivery facts.
    */
   result?: Record<string, unknown>;
+  /**
+   * Files the report hands on (INF-992), as kept and verified: kept name,
+   * size and sha256, never content. The first mate's steer delivers them.
+   */
+  files?: HandoverFile[];
 };
 
 function hasDeclaration(record: TaskRecord): boolean {

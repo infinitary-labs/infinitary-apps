@@ -5,6 +5,7 @@ import { type AppPaths, crewmateSessionsDir } from "../paths";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import {
   buildCrewmateSystemPrompt,
+  type CrewmateComputers,
   type CrewmateProcedureFacts,
   crewmateProcedureFor,
   toolFingerprints,
@@ -24,7 +25,7 @@ import {
 } from "../session/session";
 import { type BoundTool, bindTools, type CrewmateToolDelegate } from "../session/tools";
 
-export { type CrewmateProcedureFacts, crewmateProcedureFor };
+export { type CrewmateComputers, type CrewmateProcedureFacts, crewmateProcedureFor };
 
 /**
  * The crewmate's preset on the one session contract (`src/core/session/`):
@@ -42,8 +43,11 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   machineId: string;
   /** The task worktree the crewmate operates in. */
   cwd: string;
-  /** The name of the other computer it runs on, absent on this one (INF-567). */
-  computer?: string;
+  /**
+   * The captain's computers and the one it runs on (INF-992); absent while
+   * no computer that runs work is listed.
+   */
+  computers?: CrewmateComputers;
   /**
    * The task's temporary folder on the computer it runs on. Bulk working
    * material goes here and is removed when the task closes.
@@ -201,7 +205,7 @@ export function crewmateSessionSpec(
     spec.browser !== undefined && (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
     spec.procedure,
     spec.tempDir,
-    spec.computer,
+    spec.computers,
     // Its integrations' command rides the same channel, here or there.
     spec.integrations !== undefined &&
       (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),

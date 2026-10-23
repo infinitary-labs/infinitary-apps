@@ -50,6 +50,12 @@ export type CrewStatusEntry = {
   branch: string;
   /** A queued row's wait, in plain words (R1). */
   gate?: string;
+  /**
+   * The computer this task runs on, by name, or "this computer" (INF-992);
+   * absent while no computer that runs work is listed, or before an
+   * unstarted task's computer is known.
+   */
+  computer?: string;
   lastReport?: string;
   /** Whether this task has a higher escalation rung left (separate from model/quota availability). */
   premiumRetryEligible?: boolean;
@@ -133,6 +139,11 @@ export type CrewDelegate = {
     model?: NamedModel;
   }>;
   steerCrewmate(taskId: string, message: string): Promise<SteerDelivery>;
+  /**
+   * Delivers the files `fromTask`'s reports handed on into `toTask`'s
+   * hand-over folder (INF-992); answers the words its steer carries.
+   */
+  handFiles?(fromTask: string, toTask: string): Promise<string>;
   interruptCrewmate(
     taskId: string,
     mode: "interrupt" | "cancel",
@@ -345,6 +356,11 @@ export const RESULT_SCHEMA_PARAM = Type.Unsafe<Record<string, unknown>>({ type: 
 
 export const NOTHING_SPAWNED = "Nothing was spawned.";
 
+/** A first mate with no way to hand files on refuses files_from in words. */
+function missingHandFiles(): Promise<string> {
+  return Promise.reject(new Error("Handing files between tasks is not available here."));
+}
+
 /** What steer_crewmate answers for guidance a held lane keeps until its account answers. */
 export function heldSteerText(taskId: string): string {
   return `Task ${taskId}'s account is not answering right now, so your message is kept and goes out when it answers again; you will hear when it does. Do not resend.`;
@@ -519,15 +535,22 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Steer crewmate",
     description:
       "Send guidance, feedback, or a follow-up to a crewmate's running or idle task. " +
-      "The data plane only - use interrupt_crewmate for lifecycle control. Some " +
-      "crewmates cannot take guidance mid-turn; the result says so when the message " +
-      "was queued for their next turn instead.",
+      "The data plane only - use interrupt_crewmate for lifecycle control. The result " +
+      "says when a message was queued for the crewmate's next turn instead.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from the context block or spawn" }),
       message: Type.String({ description: "What the crewmate should know or do next" }),
+      // Its meaning rides the context block's computers rule (INF-992).
+      files_from: Type.Optional(Type.String()),
     }),
     run: async (params) => {
-      const delivery = await delegate.steerCrewmate(params.task_id, params.message);
+      const handed = params.files_from?.trim()
+        ? await (delegate.handFiles ?? missingHandFiles)(params.files_from.trim(), params.task_id)
+        : undefined;
+      const delivery = await delegate.steerCrewmate(
+        params.task_id,
+        handed ? `${params.message}\n\n${handed}` : params.message,
+      );
       // A queued steer is reported as queued. The crewmate this task runs on
       // cannot take guidance mid-turn, so saying "steered" would tell the
       // user their correction had landed on work that never heard it.

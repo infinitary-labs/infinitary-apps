@@ -401,6 +401,37 @@ describe("crew tools", () => {
     ).rejects.toThrow(/no longer steerable/);
   });
 
+  it("steer hands another task's reported files on before the guidance, and refuses when that fails (INF-992)", async () => {
+    // INF-992 direction B: "a second task can hand files to the waiting task".
+    const handFiles = vi.fn(
+      async () => "Files handed to you from INF-1: /t/temp/handover/a.pdf (2 KB).",
+    );
+    const { delegate, byName } = toolset({ handFiles });
+    await byName.get("steer_crewmate")?.execute("t1", {
+      task_id: "ab12",
+      message: "Use the W-9 from INF-1.",
+      files_from: "INF-1",
+    });
+    expect(handFiles).toHaveBeenCalledWith("INF-1", "ab12");
+    expect(delegate.steerCrewmate).toHaveBeenCalledWith(
+      "ab12",
+      "Use the W-9 from INF-1.\n\nFiles handed to you from INF-1: /t/temp/handover/a.pdf (2 KB).",
+    );
+    const refused = toolset({
+      handFiles: vi.fn(async () => {
+        throw new Error("INF-1 has no reported files to hand on.");
+      }),
+    });
+    await expect(
+      refused.byName.get("steer_crewmate")?.execute("t1", {
+        task_id: "ab12",
+        message: "x",
+        files_from: "INF-1",
+      }),
+    ).rejects.toThrow(/no reported files/);
+    expect(refused.delegate.steerCrewmate).not.toHaveBeenCalled();
+  });
+
   it("steer says a message queued behind in-flight handling is recorded, not lost", async () => {
     const { byName } = toolset({ steerCrewmate: vi.fn(async () => "recorded-queued" as const) });
     const result = await byName

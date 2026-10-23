@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { closeSync, openSync, readFileSync, readSync } from "node:fs";
 import { basename, isAbsolute, join, relative, sep } from "node:path";
 import type { CutOff } from "@shared/authFailure";
 import {
@@ -20,6 +20,7 @@ import {
 } from "@shared/ipc";
 import {
   isWorkOrderChannel,
+  PLACED_COPY_CHUNK_BYTES,
   PLACED_EVENTS_MAX_PER_REQUEST,
   type PlacedEvent,
   type PlacedEventRecord,
@@ -35,6 +36,7 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
+import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import type { TaskIntegrations } from "../integrations";
@@ -67,6 +69,7 @@ import {
   OutcomeUnknownError,
 } from "../session/tools";
 import { changeRecoveryCheck, sameNames } from "../session/workRecovery";
+import { HANDOVER_OUT_DIR_NAME } from "../tasks/handoverFiles";
 import type { TaskQueryRow } from "../tasks/taskQuery";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import type { PlacedJob, PlacedTaskState, PlacedTasks } from "./placedTasks";
@@ -142,6 +145,11 @@ export type SessionHostOptions = {
    */
   homeVersion?: () => string | null;
   /**
+   * The contract changes the home listed in its welcome, while known: a
+   * report hands files on only to a home that keeps them (`handover-files.md`).
+   */
+  homeChanges?: () => readonly string[] | null;
+  /**
    * This computer's working copies, which a conversation runs in. Absent,
    * a conversation runs in an empty folder of its task's own.
    */
@@ -202,6 +210,9 @@ const FORWARDED_TOOLS = new Set([
 
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
+
+/** Files one task hands another (`handover-files.md`). */
+const HANDOVER_FILES = contractChange("handover-files");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -1062,6 +1073,8 @@ export class SessionHost {
       picturesDir: folders.cards,
       cardBodiesDir: folders.cardBodies,
       evidenceDir: folders.evidence,
+      // Reported files are kept in the temporary folder, which goes when the task closes.
+      handoverDir: join(folders.temp, HANDOVER_OUT_DIR_NAME),
       ...(this.options.probeMedia ? { probeMedia: this.options.probeMedia } : {}),
       ...(this.options.probeTypeface ? { probeTypeface: this.options.probeTypeface } : {}),
       onCard: (card, toolSignal) =>
@@ -1155,6 +1168,40 @@ export class SessionHost {
                       signal,
                     );
                   }
+                }
+              }
+            }
+            // Each handed file goes home whole, a piece at a time, before the
+            // report that names it; its content is never logged here.
+            if (declared?.files && declared.files.length > 0) {
+              if (!listsChange(this.options.homeChanges?.(), HANDOVER_FILES))
+                throw new Error(
+                  `Handing files refused: ${HOME.the} runs an older Infinitary that cannot keep them; report without files and name where they are until it is updated.`,
+                );
+              const piece = Buffer.alloc(PLACED_COPY_CHUNK_BYTES);
+              for (const handed of declared.files) {
+                const fd = openSync(join(folders.temp, HANDOVER_OUT_DIR_NAME, handed.file), "r");
+                try {
+                  for (let offset = 0; offset < handed.size; ) {
+                    const read = readSync(fd, piece, 0, piece.length, offset);
+                    if (!read) throw new Error("A handed file changed before it was sent.");
+                    await this.call(
+                      held,
+                      "inf:work:handover-file",
+                      {
+                        callId: randomUUID(),
+                        file: handed.file,
+                        size: handed.size,
+                        sha256: handed.sha256,
+                        offset,
+                        data: piece.subarray(0, read).toString("base64"),
+                      },
+                      signal,
+                    );
+                    offset += read;
+                  }
+                } finally {
+                  closeSync(fd);
                 }
               }
             }

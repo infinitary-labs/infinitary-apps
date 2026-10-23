@@ -287,7 +287,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       runs_on: Type.Optional(
         Type.String({
           description:
-            "Captain-only, before start, for it and its parts: deviceId from device-remove, this-mac, or automatic (choose once, fresh compatibility and room); project resets it.",
+            "Before start, for it and its parts: deviceId from device-remove, this-mac, or automatic (choose once, fresh compatibility and room); project resets it.",
         }),
       ),
       direction: Type.Optional(

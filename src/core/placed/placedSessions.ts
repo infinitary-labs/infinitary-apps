@@ -8,6 +8,7 @@ import {
   readdirSync,
   readFileSync,
   renameSync,
+  rmSync,
   statSync,
   writeFileSync,
   writeSync,
@@ -53,6 +54,7 @@ import { crewmateResumeToken } from "../orchestrator/crewSession";
 import {
   type AppPaths,
   crewmateCardPicturesDir,
+  crewmateHandoverDir,
   crewmatePlacedDir,
   crewmateSessionsDir,
 } from "../paths";
@@ -76,6 +78,7 @@ import type {
 import { CardRefusedError, type DeclaredCardInput } from "../session/tools";
 import { CHANGE_RECOVERY, changeRecoveryCheck, sameNames } from "../session/workRecovery";
 import type { TaskRecord } from "../storage/taskStore";
+import { sha256OfFile } from "../tasks/handoverFiles";
 import { TaskService } from "../tasks/taskService";
 import type { DependencyInstall } from "../workspace/workspaceService";
 import { PlacedCopies, type PlacedCopy } from "./placedCopies";
@@ -161,6 +164,9 @@ export type PlacedHost = {
 /** A typed result on a report (`report-result.md`). */
 const REPORT_RESULT = contractChange("report-result");
 
+/** Files one task hands another (`handover-files.md`). */
+const HANDOVER_FILES = contractChange("handover-files");
+
 /** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
 export type CrewMachines = {
   /** The factories that open a conversation there; undefined when no computer can. */
@@ -190,8 +196,22 @@ export type CrewMachines = {
     repoId: string | null,
     base?: WorkingCopyBase,
   ): Promise<PlacedCopy>;
-  /** Copy a source file to the task folder, returning its verified path there. */
-  sourceFile?(machine: string, taskId: string, name: string, file: string): Promise<string>;
+  /**
+   * Copy a source file to the task folder, returning its verified path
+   * there; `handover` keeps it in the task's hand-over folder instead.
+   */
+  sourceFile?(
+    machine: string,
+    taskId: string,
+    name: string,
+    file: string,
+    into?: "handover",
+  ): Promise<string>;
+  /**
+   * Whether the computer takes files one task hands another
+   * (`handover-files.md`); false while the home cannot tell.
+   */
+  takesHandover?(machine: string): boolean;
   /** Carry a home ref into the destination repository before naming it in the brief. */
   sourceRef?(
     machine: string,
@@ -579,8 +599,18 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return this.copies.prepare(machine, taskId, repoId, base);
   }
 
-  sourceFile(machine: string, taskId: string, name: string, file: string): Promise<string> {
-    return sendSourceFile(this.options.devices, machine, taskId, name, file);
+  sourceFile(
+    machine: string,
+    taskId: string,
+    name: string,
+    file: string,
+    into?: "handover",
+  ): Promise<string> {
+    return sendSourceFile(this.options.devices, machine, taskId, name, file, into);
+  }
+
+  takesHandover(machine: string): boolean {
+    return listsChange(this.options.devices.version(machine)?.changes, HANDOVER_FILES);
   }
 
   sourceRef(
@@ -1195,6 +1225,8 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         return this.picture(placed, request as InvokeRequest<"inf:work:picture">[0]);
       case "inf:work:media":
         return this.recordingPiece(placed, request as InvokeRequest<"inf:work:media">[0]);
+      case "inf:work:handover-file":
+        return this.handoverPiece(placed, request as InvokeRequest<"inf:work:handover-file">[0]);
       case "inf:work:typeface":
         return this.typeface(placed, request as InvokeRequest<"inf:work:typeface">[0]);
       case "inf:work:job-exit": {
@@ -1381,6 +1413,41 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       closeSync(handle);
     }
     if (request.offset + piece.length === request.size) renameSync(partial, file);
+    return { ok: true };
+  }
+
+  /**
+   * A piece of a file the task's report hands on (`handover-files.md`),
+   * written at its place in a 0600 partial file; the last piece, checked
+   * against its sha256, makes it the kept file the report names. Its
+   * content is never logged or put in an answer.
+   */
+  private async handoverPiece(
+    placed: Placed,
+    request: InvokeRequest<"inf:work:handover-file">[0],
+  ): Promise<{ ok: true }> {
+    const piece = Buffer.from(request.data, "base64");
+    if (request.offset + piece.length > request.size)
+      throw new Error("That piece runs past the handed file's end.");
+    const dir = crewmateHandoverDir(this.options.paths, placed.task);
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    const file = join(dir, request.file);
+    const partial = `${file}.partial`;
+    const handle = openSync(partial, request.offset === 0 ? "w" : "r+", 0o600);
+    try {
+      writeSync(handle, piece, 0, piece.length, request.offset);
+    } finally {
+      closeSync(handle);
+    }
+    if (request.offset + piece.length < request.size) return { ok: true };
+    if (
+      statSync(partial).size !== request.size ||
+      (await sha256OfFile(partial)) !== request.sha256
+    ) {
+      rmSync(partial, { force: true });
+      throw new Error("The handed file did not arrive unchanged.");
+    }
+    renameSync(partial, file);
     return { ok: true };
   }
 

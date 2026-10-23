@@ -2798,6 +2798,11 @@ export const invokeContract = {
     reach: "work",
   },
   "inf:work:media": { ...workRequestWire("inf:work:media"), surface: "core", reach: "work" },
+  "inf:work:handover-file": {
+    ...workRequestWire("inf:work:handover-file"),
+    surface: "core",
+    reach: "work",
+  },
   "inf:work:typeface": {
     ...workRequestWire("inf:work:typeface"),
     surface: "core",

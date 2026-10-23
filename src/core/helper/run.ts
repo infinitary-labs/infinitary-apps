@@ -139,6 +139,7 @@ export type StartHelperOptions = {
     probeMedia?: MediaProbe;
     probeTypeface?: TypefaceProbe;
     homeVersion?: () => string | null;
+    homeChanges?: () => readonly string[] | null;
     /** Whether its crewmates' builds and tests stay below the UI: on the home's own Mac (`separateMac`). */
     belowUi: boolean;
   }) => Promise<Conversations>;
@@ -317,6 +318,8 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),
           // The contract its home said in its welcome, which decides whether it keeps project fonts.
           homeVersion: () => link.state().homeVersion,
+          // The changes its home listed, which decide whether a report hands files on.
+          homeChanges: () => link.state().homeChanges,
           belowUi: !separateMac(dataDir, options.interfaces),
         }),
       )

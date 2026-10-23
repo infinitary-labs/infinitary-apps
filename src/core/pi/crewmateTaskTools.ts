@@ -8,6 +8,7 @@ import {
   stringEnum,
   zodParameter,
 } from "../session/tools";
+import { keepHandoverFiles } from "../tasks/handoverFiles";
 import { cardPictureRoot } from "./cardImages";
 import { CLOSE_CARD_TOOL, EMIT_CARD_TOOL } from "./cardTool";
 import {
@@ -197,7 +198,13 @@ export const REPORT_TOOL = crewmateTool({
     needs_firstmate: Type.Optional(
       Type.String({
         description:
-          "What the first mate must do, in a few plain words, when only the first mate can carry out a captain decision you relay: a build they approved by reply, a merge, a discard, a stronger model, or unrelated work; also when a validation check needs coordination you cannot perform yourself. For a relayed decision put their words verbatim and the final specification in text. When this turn ends the first mate is woken for this report, even with your card up or a wait declared, once any reply of theirs under your card has your answer. It asks for attention and authorizes nothing. Never for progress or news.",
+          "What the first mate must do, in a few plain words, when only the first mate can carry out a captain decision you relay: a build they approved by reply, a merge, a discard, a stronger model, or unrelated work; also when a validation check needs coordination you cannot perform yourself, or your work needs a file, folder, program or action on another of the captain's computers - name the computer, what is needed and where you need the result. For a relayed decision put their words verbatim and the final specification in text. When this turn ends the first mate is woken for this report, even with your card up or a wait declared, once any reply of theirs under your card has your answer. It asks for attention and authorizes nothing. Never for progress or news.",
+      }),
+    ),
+    files: Type.Optional(
+      Type.Array(Type.String(), {
+        description:
+          "Absolute paths of files on your computer this report hands to another task, such as a file the first mate asked you to find. The app keeps verified copies; the first mate's steer delivers them. Never paste a file's content anywhere: it may hold secrets.",
       }),
     ),
     result: Type.Optional(
@@ -245,12 +252,22 @@ export const REPORT_TOOL = crewmateTool({
             ...(params.result !== undefined
               ? { result: params.result as Record<string, unknown> }
               : {}),
+            ...(params.files && params.files.length > 0
+              ? { files: await keepReportedFiles(params.files, delegate.handoverDir) }
+              : {}),
           },
         ],
         signal,
       ),
     })),
 });
+
+/** A report's files, kept as verified copies where this crewmate runs (INF-992). */
+function keepReportedFiles(paths: readonly string[], dir: string | undefined) {
+  if (!dir)
+    throw new Error("This task has no folder to keep handed files in, so it cannot hand files on.");
+  return keepHandoverFiles(paths, dir);
+}
 
 export const NOTE_PROGRESS_TOOL = crewmateTool({
   name: NOTE_PROGRESS_TOOL_NAME,

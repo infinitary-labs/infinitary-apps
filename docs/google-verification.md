@@ -98,52 +98,147 @@ Backups, exported files, another computer's saved copies and AI-provider retenti
 
 ## Permission justifications
 
-Use the exact scope list in `GOOGLE_SCOPES` for the build being submitted.
+Google's verification form asks, for each sensitive or restricted scope, a scope justification, the intended data usage and a link to a demo video ([Manage app data access](https://support.google.com/cloud/answer/15549135), [Verification requirements](https://support.google.com/cloud/answer/13464321)).
+The copy below is written from the calls the code makes, named by Google's method names so a reviewer can check it against the source; change it in the same pull request as `GOOGLE_SCOPES`, `gmail.ts` or `calendar.ts`.
+Submit the exact scope list in `GOOGLE_SCOPES` for the build being submitted and nothing else: Google requires every listed scope to be used and shown in the video, so a scope the code never requests is removed from the Data access page with its delete icon, never justified.
 Google's installed-app guide says incremental authorization is unsupported; it does **not** waive Google's rule against asking for permissions for unimplemented features.
-The accepted single-row sign-in is demonstrated with Gmail and Calendar together before submission.
+One demo video serves every scope; its recording script is in "Demonstration script" below.
+
+### What each scope does in the code
+
+| Scope | Calls | Where |
+| --- | --- | --- |
+| `gmail.modify` | `users.messages.list`, `users.messages.get`, `users.labels.list`, `users.messages.modify`, `users.drafts.create`, `users.messages.send`, `users.getProfile`, `users.history.list` | `gmail.ts` |
+| `calendar.events` | `events.list` (with a time range or search words, and with a sync token for a rule), `events.get`, `events.insert`, `events.patch` | `calendar.ts` |
+| `calendar.readonly` | `calendarList.list`, `freeBusy.query` | `calendar.ts` |
+| `calendar.calendarlist.readonly` (in place of `calendar.readonly`, INF-953) | `calendarList.list` | `calendar.ts` |
+| `calendar.events.freebusy` (in place of `calendar.readonly`, INF-953) | `freeBusy.query` | `calendar.ts` |
+| `gmail.settings.basic` | none; not in `GOOGLE_SCOPES` | remove it from the Data access page |
+
+The two calls `calendar.readonly` serves each accept a narrower scope, and `calendar.events` covers neither of them.
+Google directs an app to a narrower scope when the requested one goes beyond its use, so the captain chooses before submitting: switch `GOOGLE_SCOPES` and the Data access page to `calendar.calendarlist.readonly` and `calendar.events.freebusy` (INF-953; a grant of `calendar.readonly` keeps covering both calls, and a new sign-in asks the narrower pair), or keep `calendar.readonly` and submit its text.
 
 ### Gmail: `https://www.googleapis.com/auth/gmail.modify`
 
-**Draft submission text:** Infinitary helps the signed-in person find, read and organize their email, prepare replies, send messages they approve, and run a rule when a new inbox message arrives.
-The person asks an AI assistant for this work and reads its answers in the application.
-Search and message reads return mail to the assistant; labelling, archiving, drafting and sending each require the person's approval of the exact action on a card.
-The integration uses message listing and retrieval, label listing and message modification, draft creation, message sending, the mailbox profile and mailbox history.
-It does not expose permanent message deletion or mailbox settings management.
+**Scope justification:**
 
-**Why narrower access does not provide these features:** `gmail.readonly` cannot label, archive, draft or send.
-`gmail.send` cannot read or organize the inbox; `gmail.compose` does not provide general inbox reading and label modification.
-`gmail.metadata` does not provide the full message text needed for reading and drafting a reply.
-`gmail.labels` manages labels themselves, not applying and removing labels on messages.
-For the person's mailbox, the message-modification endpoint accepts `gmail.modify` or the broader `mail.google.com` scope; the latter additionally permits permanent deletion and is not requested.
-The endpoint also lists `gmail.modify.restricted` for administrators impersonating users through a service account with domain-wide delegation, not this desktop user's sign-in.
-Do not justify this permission as necessary for sending alone.
+```text
+Infinitary is a desktop AI assistant that runs on the user's own computer (macOS and Linux). The user connects their Google account in Settings → Integrations, then asks the assistant in plain words for help with their own mail. With gmail.modify the app:
 
-**Evidence required:** Show a search, a message read, a label/archive, a saved draft, a send approved on its card and the resulting sent message, and a new-mail rule.
-Use a disposable mailbox and only messages intended for demonstration.
+1. Searches the mailbox with the user's Gmail search words and lists each result's sender, recipients, subject, date, labels and snippet (users.messages.list; users.messages.get with format=metadata; users.labels.list to show label names).
+2. Reads one chosen message in full to summarize it or answer questions about it, reporting attachment names, types and sizes without downloading any attachment (users.messages.get with format=full).
+3. Adds or removes labels on a message, including archiving by removing INBOX (users.messages.modify).
+4. Saves a reply draft (users.drafts.create).
+5. Sends a message (users.messages.send).
+6. When the user turns on an automation rule for new mail, checks the inbox every minute for messages added since the last check and gives the rule each new message's sender and subject (users.getProfile for the starting history id; users.history.list).
+
+Every label change, draft and send runs only after the user approves that exact action, with its full content, on a confirmation card in the app, and runs once. The app never deletes messages, never reads or changes Gmail settings, and has no feature beyond the six above.
+
+Why narrower scopes do not work: gmail.readonly cannot label, archive, draft or send. gmail.send cannot search or read mail, so the assistant could not find the message the user is asking about. gmail.compose can draft and send but cannot search or read the inbox or change labels. gmail.metadata cannot read message text, so the assistant could not summarize a message or write a reply to it. gmail.labels manages the label list but cannot apply a label to a message. Google's reference accepts only https://mail.google.com/, gmail.modify and gmail.modify.restricted (domain-wide delegation) for users.messages.modify. gmail.modify is the narrowest scope that covers reading, labelling, drafting and sending together, and it excludes the permanent deletion that https://mail.google.com/ would add and the app does not offer.
+```
+
+**Intended data usage:**
+
+```text
+Gmail data (message headers, labels, snippets, message text, attachment names, types and sizes, inbox history ids and the account's email address) is used only to carry out the request the user made in the app: find, read, summarize, organize, draft and send their own mail, and run the mail rules they turn on. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
+
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+
+Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
+```
 
 ### Calendar: `https://www.googleapis.com/auth/calendar.events`
 
-**Draft submission text:** Infinitary lets the person list and read events and create or update an event in an existing calendar they can access.
-Every modification requires their approval; the approved input also specifies guest notifications, which default to none.
-It supports a calendar selected by its identifier, including a shared calendar subject to Google's access rules.
-It also supports rules reacting to events created, changed or cancelled in a selected calendar.
-No action deletes events, changes calendar sharing or creates calendars.
-Read-only event or free/busy access cannot create or update events.
-The owned-events scope excludes events on shared calendars where the person has editing rights.
-The app-created-calendar scope excludes the person's existing calendars.
-The full `calendar` permission also permits calendar and sharing management that this feature does not need.
+**Scope justification:**
 
-### Calendar: `https://www.googleapis.com/auth/calendar.readonly`
+```text
+Infinitary is a desktop AI assistant that runs on the user's own computer. With calendar.events the app, when the user asks:
 
-**Draft submission text:** Infinitary lists the person's calendars so they can choose which calendar an action or rule uses, and reads busy intervals to answer availability questions without changing events.
-The implementation calls `GET /users/me/calendarList` and `POST /freeBusy`; the read-only grant covers both without calendar-management permission.
-Event read, create and update operations use the separate event permission above.
+1. Lists events in a calendar the user can access, over a time range or by search words, expanding recurring events into occurrences (events.list with timeMin, timeMax, q and singleEvents).
+2. Reads one event with its times, location, description, guests and recurrence (events.get).
+3. Creates an event with a title, times and optional description, location and guests (events.insert).
+4. Updates only the named fields of an existing event (events.patch).
+5. When the user turns on an automation rule for calendar changes, checks one calendar the user chose every minute with Google's sync token and gives the rule the title and times of each created, changed or cancelled event (events.list with syncToken and showDeleted).
 
-**Least-privilege review:** the [calendar-list endpoint](https://developers.google.com/workspace/calendar/api/v3/reference/calendarList/list) also accepts `calendar.calendarlist.readonly`.
-The [free/busy endpoint](https://developers.google.com/workspace/calendar/api/v3/reference/freebusy/query) also accepts `calendar.events.freebusy` and `calendar.freebusy`, but does not list `calendar.events`.
-A combination of calendar-list and availability grants may replace `calendar.readonly`; do not claim it is the only possible grant.
-The one-row/all-permissions decision determines the sign-in experience, not an exemption from least privilege.
-The registered client preserves the accepted three-scope set; a later scope change also updates the consent configuration and demonstration.
+Creating or updating an event runs only after the user approves that exact event on a confirmation card in the app, including whether guests are notified (sendUpdates, none by default), and runs once. The app never deletes events, never changes sharing, and never creates or deletes calendars.
+
+Why narrower scopes do not work: calendar.events.readonly cannot create or update events. calendar.events.owned excludes shared calendars the user can edit, such as a family or team calendar the user names by its id. calendar.app.created reaches only calendars this app created, never the user's existing calendars. The full calendar scope adds calendar creation, sharing changes and permanent deletion, which the app does not need.
+```
+
+**Intended data usage:**
+
+```text
+Event data (titles, descriptions, locations, times, guests, recurrence and status) and the ids of the calendars it belongs to is used only to answer the user's schedule questions, create or change the events they approve, and run the calendar rules they turn on. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
+
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+
+Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
+```
+
+### Calendar: `https://www.googleapis.com/auth/calendar.calendarlist.readonly` (in place of `calendar.readonly`)
+
+**Scope justification:**
+
+```text
+Infinitary is a desktop AI assistant that runs on the user's own computer. With calendar.calendarlist.readonly the app lists the calendars the user is subscribed to, with their ids, names, time zones and access roles (calendarList.list), when the user asks, so the user and the assistant can choose which calendar an event action, an availability question or a change rule works on. Nothing is changed with this scope.
+
+Why narrower scopes do not work: this is the narrowest scope that reads the calendar list. calendar.events does not cover calendarList.list, and calendar.calendarlist would add subscribing and unsubscribing, which the app does not do.
+```
+
+**Intended data usage:**
+
+```text
+The calendar list (each calendar's id, name, time zone and the user's access role) is used only to let the user and the assistant choose which calendar a request works on. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
+
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+
+Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
+```
+
+### Calendar: `https://www.googleapis.com/auth/calendar.events.freebusy` (in place of `calendar.readonly`)
+
+**Scope justification:**
+
+```text
+Infinitary is a desktop AI assistant that runs on the user's own computer. With calendar.events.freebusy the app reads busy intervals for up to 50 calendars the user names, over a time range the user asks about (freeBusy.query), to answer availability questions such as when the user is free on a given day, without reading the events themselves. Nothing is changed with this scope.
+
+Why narrower scopes do not work: calendar.events does not cover freeBusy.query. calendar.events.freebusy is the narrowest scope that reads availability on calendars the user has access to, including shared calendars the user names by id.
+```
+
+**Intended data usage:**
+
+```text
+Busy intervals (start and end times with no event details) for the calendars and time range the user named is used only to answer the availability question the user asked. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
+
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+
+Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
+```
+
+### Calendar: `https://www.googleapis.com/auth/calendar.readonly` (only while it stays requested)
+
+**Scope justification:**
+
+```text
+Infinitary is a desktop AI assistant that runs on the user's own computer. It uses calendar.readonly for two read-only calls, when the user asks: listing the calendars the user is subscribed to, with their ids, names, time zones and access roles (calendarList.list), so the user and the assistant can choose which calendar an action or rule works on; and reading busy intervals for calendars the user names over a time range (freeBusy.query) to answer availability questions without reading event details. It downloads no calendar and changes nothing with this scope. Event reads and changes use calendar.events, which covers neither of these two calls.
+
+Why narrower scopes do not work: each call also accepts a narrower scope, calendar.calendarlist.readonly for the list and calendar.events.freebusy for availability. The app requests calendar.readonly as one read-only scope covering both, because an installed app cannot add a permission after sign-in. If Google prefers the two narrower scopes, the app will request those instead.
+```
+
+**Intended data usage:**
+
+```text
+The calendar list (each calendar's id, name, time zone and the user's access role) and busy intervals (start and end times with no event details) is used only to let the user choose which calendar a request works on and answer the availability question the user asked. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
+
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+
+Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
+```
+
+### Gmail: `https://www.googleapis.com/auth/gmail.settings.basic`
+
+Not requested: `GOOGLE_SCOPES` does not hold it and no code under `src/core/integrations/providers/google/` calls a Gmail settings method.
+It is removed from the Data access page rather than justified; a restricted scope the app never uses would fail the video check and widen the security assessment.
 
 ## Privacy policy draft
 
@@ -229,42 +324,88 @@ A change to these practices requires updated disclosures and any new consent Goo
 
 ## Demonstration script
 
-The submission video must show the same registered application, the complete real OAuth grant in English, and functionality using every requested permission ([Google's video requirements](https://support.google.com/cloud/answer/13464321)).
-A stand-in recording proves only the local UI and rehearsal flow; never submit it as Google's real consent page or evidence of verification.
-Do not stitch a simulated consent screen into a real recording without a clear label.
-The fleet operates the app and prepares the capture; the captain signs in and grants permissions personally.
-Passwords, verification codes, client downloads, authorization codes and tokens must not enter the published video.
-Use the task browser's handoff for captain-only input where supported; it deliberately does not expose or record that input for the crewmate.
-If that privacy boundary prevents a complete real consent capture, arrange a captain-controlled recording of the consent segment rather than bypassing it.
+The submission video shows the same registered application, the complete real OAuth grant in English, and every requested permission in use ([Demo video](https://support.google.com/cloud/answer/13804565), [Verification requirements](https://support.google.com/cloud/answer/13464321)).
+Google's restricted-scope guide asks for the video on YouTube as Unlisted, showing that the consent screen names the app; one video covers every scope and every OAuth client of the project.
+A stand-in recording proves only the local UI and is never submitted as Google's real consent page.
+The captain records it on a Mac of their own, since Google's consent page runs in the person's own browser and the task browser keeps its typing private; passwords, verification codes, authorization codes and tokens never enter the published video.
 
-### Recording environment
+### Before recording
 
-Use the hermetic launcher with a disposable home, disposable mailbox, a dedicated demonstration calendar and sample messages containing no real correspondence.
-Use the actual registered Desktop app client only after the captain supplies it; a test client is never the production identity.
-Use a disposable demonstration account that can authorize under the project's actual audience configuration; a project in Testing requires a listed test user.
-Do not change the shared project's audience merely to record a demonstration.
-Use the real APIs for the final capture and a model/account configuration whose Google-data handling has been checked.
-The existing `startDemo` helper can capture local app segments; it does not capture the external browser.
-An actual verification video may be longer than an Infinitary card demo; keep the submission deliverable separate from short review-card clips.
+- Use a Google account that holds only demo mail and a demo calendar, since Google's reviewers watch the video.
+  Before recording, send that account two messages with the subject "Infinitary demo: invoice", and make a calendar named "Infinitary demo" with two events this week.
+- On the Mac that records, run the Infinitary build whose permission list you are submitting: today's stable build if Calendar keeps calendar.readonly, or the alpha that carries the two narrower Calendar permissions.
+  Settings → Integrations must show the Google chip and no Google row; if a row is there, use its menu's Sign out and remove first.
+- Set your browser to English and keep its address bar visible.
+  Press Shift-Command-5, choose Record Entire Screen, and turn the microphone on if you narrate; Google says voice or text narration speeds its review.
 
-### Scenes and suggested narration
+### Recording
 
-| Scene | Action and result to show | Narration |
-| --- | --- | --- |
-| Introduction and disclosure | Show Infinitary, the Google feature and the actual privacy/AI-transfer disclosure before connecting. | “Infinitary helps me read and organize email and manage my calendar. My chosen AI provider receives the information needed for this work.” |
-| Grant | Open Settings → Integrations → Google. Show the actual app identity, policy link and complete Google consent page in English; the captain grants the requested scopes. Return to the signed-in row. | “One Google connection authorizes the permissions shown here. I can pause it, turn off actions or disconnect it.” |
-| Search and read | Ask for the disposable message by a distinctive subject; show its sender, subject and text in the app's answer. | “I can find and read a message without copying it into a prompt.” |
-| Organize | Ask to archive that message or apply an existing demo label. Show the approval card and then the change in Gmail. | “A mailbox change waits for my approval.” |
-| Draft | Ask for a reply draft. Show approval and the draft saved in Gmail, with nothing sent. | “A draft remains a draft until I choose to send a message.” |
-| Send | Ask for one harmless message to the same disposable account. Show recipients, subject and body on the approval card; approve once and show the resulting sent message. | “This card shows the exact message. Infinitary sends it only after I approve.” |
-| Incoming mail | Enable a new-mail rule, deliver a new disposable message and show the assistant's response to its sender and subject. | “A rule can react to a new inbox message while Infinitary is running.” |
-| Calendar | Show calendar discovery, event and availability reads, approved create/update operations and a change rule using only the demo calendar; disclose any guest notifications. No event-deletion action exists. | “The same connection supports these calendar actions. Changes wait for my approval.” |
-| Controls | Pause the row and show a request refused; resume, then disconnect and show the row gone. Explain retained history without claiming it was deleted. | “Disconnecting removes the sign-in here. It does not erase earlier task records or copies already sent elsewhere.” |
+1. Start recording with Infinitary open.
+   Say: "Infinitary is a desktop AI assistant that runs on my computer.
+   I'm connecting my Google account."
+2. Open Settings → Integrations and click the Google chip.
+   Your browser opens Google's sign-in; choose the demo account.
+3. If Google says it has not verified this app, click Advanced, then Go to Infinitary (unsafe).
+   That warning is what this verification removes.
+4. On the consent page, check that the language at the bottom left is English and the title names Infinitary.
+   Leave the page still for three seconds so every permission can be read, then click Continue.
+5. Back in Infinitary, the Google row shows the demo address.
+   Click its chevron to show its actions: searches and reads run, while labels, drafts, sends and event changes ask you first.
+6. Gmail, search and read: in the message box type "Search my Gmail for messages about Infinitary demo and read me the newest one."
+   Wait for the answer with the sender, subject and text.
+7. Gmail, label: type "Archive that message."
+   Your first mate hands the change to a crewmate, which puts up a card showing the exact change; click its button.
+   In the browser, open Gmail and show the message is no longer in Inbox.
+8. Gmail, draft: type "Draft a reply to it saying thanks, I'll send the invoice on Friday."
+   Click the card's button.
+   Show Gmail's Drafts holding the reply.
+9. Gmail, send: type "Send an email to <the demo address> with the subject Infinitary demo: sent from Infinitary and the text Hello from Infinitary."
+   The card shows the recipient, subject and text; click its button.
+   Show the message in Gmail's Sent and in Inbox.
+10. Calendar list: type "List my Google calendars."
+    The answer names each calendar with its access role.
+11. Availability: type "When am I busy tomorrow between 9 and 5 on the Infinitary demo calendar?"
+    The answer lists busy intervals.
+12. Calendar events, read: type "What's on the Infinitary demo calendar this week?" then "Read the details of the first one."
+13. Calendar events, create: type "Create an event called Infinitary demo call tomorrow from 10 to 10:30 on the Infinitary demo calendar, without notifying anyone."
+    Click the card's button.
+    Show the event in Google Calendar in the browser.
+14. Calendar events, update: type "Move the Infinitary demo call to 11."
+    Click the card's button.
+    Show the change in Google Calendar.
+15. Controls: in Settings → Integrations open the Google row's menu and click Pause; say that nothing reaches Google while it is paused; click Resume.
+    Say: "Sign out and remove deletes the sign-in from this computer and revokes the app's access at Google."
+16. Stop recording.
+    Watch it once: every permission on the consent page readable, the page in English, no password or code on screen.
+    Trim the start and end if needed.
+17. Upload it to YouTube from your account as Unlisted, not Private, and copy the link.
 
-Record each operation's actual outcome, not only the button press.
-If a send's outcome is unknown, do not repeat it; inspect Gmail and resolve that uncertainty before making any claim in the video.
-Review every frame for private data, stale app identity and readable permissions.
-The final link must be accessible to Google's reviewer; uploading or submitting with the captain's account requires the corresponding permission, never an inferred approval from this script.
+Optional, not needed for any scope: show a mail rule.
+Settings → Automation, new rule, under When choose Google's "A message arrives", prompt "Tell me who wrote and what about", Enable.
+Send the demo account a message and wait up to a minute for your first mate's note.
+
+### Submitting
+
+1. Sign in to the Google Cloud console with the account that owns the project named infinitary, at https://console.cloud.google.com/auth/verification?project=infinitary.
+2. Open Google Auth Platform → Data access.
+   Click the delete icon beside https://www.googleapis.com/auth/gmail.settings.basic, then Save.
+   The app's code never asks for it and nothing in Infinitary reads or changes Gmail settings; Google requires every listed scope to be used and shown in the video.
+3. Once the alpha with the two narrower Calendar permissions is installed on the Mac you record with, on the same Data access page delete https://www.googleapis.com/auth/calendar.readonly, click Add or remove scopes, tick calendar.calendarlist.readonly and calendar.events.freebusy under Google Calendar API, click Update, then Save.
+4. Add this sentence to https://getinfinitary.com/privacy, under its Google section, or ask your first mate to have the website's crewmate add it: "Infinitary's use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements."
+   Google's Workspace policy requires that statement on the website or in the app, and reviewers look for it.
+5. Record and upload the demo video with the script below.
+6. Open Verification Center → Data access.
+   For each scope Google lists, paste its Scope justification and Intended data usage from below, and the YouTube link into Demo video.
+   If Intended data usage is a set of choices rather than a box, choose that the data provides user-facing features and that the app does not use it to train AI models, and put the text in any comment box.
+7. On the Branding page, confirm the app name is Infinitary, the home page is https://getinfinitary.com, the privacy policy is https://getinfinitary.com/privacy, the authorized domain getinfinitary.com is verified in Search Console under your sign-in, and the branding status is published.
+8. Click Submit for verification.
+
+The third step applies only when Calendar moves to the narrower pair.
+Google answers by email to the project's owners; keep that address watched.
+Google's estimate for restricted-scope review is six weeks, and for gmail.modify Google then points you to the yearly security assessment (INF-905).
+Forward each question Google sends to your first mate, so a crewmate drafts the answer from the code.
+
+Google's Workspace policy also asks for things the app does not do yet, which a reviewer may raise: an in-app disclosure and accept before the sign-in starts (INF-949), confirming each agent read (INF-950), prompt-injection protection (INF-951), tokens encrypted at rest (INF-30, INF-785) and a deletion route for Google-derived data (INF-952).
 
 ## CASA questionnaire answer bank
 

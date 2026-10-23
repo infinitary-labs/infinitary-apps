@@ -56,6 +56,7 @@ import {
   MERGE_WORDS,
   REVIEW_CAREFULLY_WORDS,
 } from "@shared/vocabulary";
+import { DomUtils, parseDocument } from "htmlparser2";
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { overrideHoldsFrom } from "../../../scripts/interaction-metrics";
 import { DEMO_POSTER, DEMO_RECORDING } from "../../../tests/e2e/demoFixtures";
@@ -17069,7 +17070,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
     try {
       const builder = fakeCrewmate();
       const reviewer = fakeCrewmate();
-      const { supervisor, tasks, repos, workspace, specs, ops, events } = setup(builder, {
+      const { supervisor, tasks, repos, workspace, specs, ops, events, cards } = setup(builder, {
         crewmates: [reviewer],
       });
       const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
@@ -17147,8 +17148,15 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
                 attempted: "Isolated simulator",
                 result: "It cannot demonstrate the actual device input.",
               },
+              {
+                attempted: "Local keyboard check",
+                result: "It cannot reach the target device.",
+              },
             ],
-            remedies: ["Connect a disposable target device and run the check."],
+            remedies: [
+              "Connect a disposable target device and run the check.",
+              "Keep the task held until a target device is available.",
+            ],
           },
         },
       });
@@ -17164,6 +17172,36 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         }),
       );
       await reportTurn(builder, taskId, "The device check stays held until the captain answers.");
+      // INF-878, approved B: consent stays open; the record starts closed with separate items.
+      const gapBody = parseDocument(cards().find((card) => card.id === cardId)!.body);
+      const panel = DomUtils.findOne(
+        (node) => node.attribs["data-inf-call"] === "gap",
+        gapBody.children,
+      )!;
+      const details = DomUtils.getElementsByTagName("details", panel)[0]!;
+      expect(details.attribs.open).toBeUndefined();
+      expect(DomUtils.textContent(DomUtils.getElementsByTagName("summary", details)[0]!)).toBe(
+        "The recorded gap",
+      );
+      expect(DomUtils.getElementsByTagName("li", details).map(DomUtils.textContent)).toEqual([
+        "Isolated simulator: It cannot demonstrate the actual device input.",
+        "Local keyboard check: It cannot reach the target device.",
+        "Connect a disposable target device and run the check.",
+        "Keep the task held until a target device is available.",
+      ]);
+      expect(DomUtils.textContent(details)).toContain(head.slice(0, 7));
+      expect(DomUtils.textContent(details)).toContain("No target device is connected.");
+      expect(DomUtils.textContent(details)).toContain("Target device");
+      const openText = panel.children
+        .filter((node) => node !== details)
+        .map(DomUtils.textContent)
+        .join("");
+      expect(openText).toContain("Accept this gap lets this go ahead without live proof of");
+      expect(openText).toContain("Press the keyboard control on the target device");
+      expect(openText).toContain("It records no live pass and merges nothing.");
+      expect(DomUtils.textContent(details)).not.toContain(
+        "Press the keyboard control on the target device",
+      );
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");
       expect(() => supervisor.act(cardId, "accept", "frame")).toThrow(CardChoiceUnavailableError);
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("requested");

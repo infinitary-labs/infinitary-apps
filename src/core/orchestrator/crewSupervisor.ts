@@ -8810,7 +8810,12 @@ export class CrewSupervisor {
     const strip =
       (this.requestStrip(task.id, shown.actions) ?? "") +
       (input.validationDecision
-        ? this.validationRequestStrip(task.id, input.validationDecision.request)
+        ? this.validationRequestStrip(
+            task.id,
+            input.validationDecision.request,
+            shown.actions.find((action) => action.id === input.validationDecision?.action)?.label ??
+              input.validationDecision.action,
+          )
         : "");
     const card = strip ? { ...shown, body: `${shown.body}${strip}` } : shown;
     // A request for the captain's help pauses the browser before the card
@@ -10748,41 +10753,46 @@ export class CrewSupervisor {
     return `Filed follow-up ${record.key} "${title}", discovered from your task${input.blocksMe ? " and blocking it: your task cannot land until this one closes" : " and not holding it up"}. The first mate hears about it with your report and decides when it runs; keep going on your own task.`;
   }
 
-  private validationRequestStrip(taskId: string, requestId: string): string {
+  private validationRequestStrip(taskId: string, requestId: string, approvalLabel: string): string {
     const permission = this.options.tasks
       .get(taskId)
       ?.delivery?.liveValidation?.permissions.find((item) => item.request.id === requestId);
     if (!permission) throw new Error("That validation request is not on this task.");
     const request = permission.request;
+    if (request.kind === "gap") {
+      const list = (items: string[]) =>
+        `<ul>${items.map((item) => `<li>${escapeCardText(item)}</li>`).join("")}</ul>`;
+      return [
+        '<section class="inf-call inf-call-gap" data-inf-call="gap">',
+        `<div class="inf-call-k">${escapeCardText(approvalLabel)} lets this go ahead without live proof of</div>`,
+        `<div class="inf-call-line" data-inf-call-line>${escapeCardText(permission.scenario.action)}</div>`,
+        '<p class="inf-muted">This version and later ones while this gap stays the same. It records no live pass and merges nothing.</p>',
+        "<details><summary>The recorded gap</summary><dl>",
+        `<dt>Version</dt><dd class="inf-mono">${escapeCardText(request.head.slice(0, 7))}</dd>`,
+        `<dt>Missing</dt><dd>${escapeCardText(request.missingCapability)}</dd>`,
+        `<dt>Why it cannot run</dt><dd>${escapeCardText(request.reason)}</dd>`,
+        `<dt>Tried instead</dt><dd>${list(request.alternatives.map((item) => `${item.attempted}: ${item.result}`))}</dd>`,
+        `<dt>Ways to close it</dt><dd>${list(request.remedies)}</dd>`,
+        "</dl></details></section>",
+      ].join("");
+    }
     const entries: [string, string][] = [
       ["Version", request.head.slice(0, 7)],
       ["Scenario", permission.scenario.action],
     ];
-    if (request.kind === "effect")
-      entries.push(
-        ["Action", request.action],
-        ["Destination", request.destination],
-        ["Who can see it", request.audience],
-        ["Purpose", request.purpose],
-        ["Lasting effects", request.lastingEffects],
-        ["Cleanup", request.cleanup],
-        ["Access", request.access],
-      );
-    else
-      entries.push(
-        ["Missing access", request.missingCapability],
-        ["Reason", request.reason],
-        [
-          "Safe alternatives tried",
-          request.alternatives.map((item) => `${item.attempted}: ${item.result}`).join("\n"),
-        ],
-        ["Ways to close the gap", request.remedies.join("\n")],
-      );
-    const exact =
-      request.kind === "effect" && request.forgeWrite
-        ? `<details><summary>Exact request</summary><pre>${escapeCardText(`${request.forgeWrite.host} ${request.forgeWrite.method} ${request.forgeWrite.path}\nBody SHA-256: ${request.forgeWrite.bodyDigest ?? "No body"}`)}</pre></details>`
-        : "";
-    return `<section class="inf-panel"><h3>${request.kind === "gap" ? "Missing required proof" : "Validation action"}</h3><dl>${entries.map(([name, value]) => `<dt>${escapeCardText(name)}</dt><dd>${escapeCardText(value)}</dd>`).join("")}</dl>${exact}<p>This choice grants no merge permission${request.kind === "gap" ? " and never records a live pass" : " and covers only this action"}.</p></section>`;
+    entries.push(
+      ["Action", request.action],
+      ["Destination", request.destination],
+      ["Who can see it", request.audience],
+      ["Purpose", request.purpose],
+      ["Lasting effects", request.lastingEffects],
+      ["Cleanup", request.cleanup],
+      ["Access", request.access],
+    );
+    const exact = request.forgeWrite
+      ? `<details><summary>Exact request</summary><pre>${escapeCardText(`${request.forgeWrite.host} ${request.forgeWrite.method} ${request.forgeWrite.path}\nBody SHA-256: ${request.forgeWrite.bodyDigest ?? "No body"}`)}</pre></details>`
+      : "";
+    return `<section class="inf-panel"><h3>Validation action</h3><dl>${entries.map(([name, value]) => `<dt>${escapeCardText(name)}</dt><dd>${escapeCardText(value)}</dd>`).join("")}</dl>${exact}<p>This choice grants no merge permission and covers only this action.</p></section>`;
   }
 
   verifyValidationEvidence(taskId: string): void {

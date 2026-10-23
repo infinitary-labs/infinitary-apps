@@ -219,6 +219,10 @@ export const FRAME_BASE_STYLE = `
   .inf-call pre { margin: var(--space-1) 0 0; padding: var(--space-2); background: var(--bg-1); border-radius: var(--radius-s); max-height: 240px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
   .inf-call ul { margin: var(--space-1) 0 0; }
   .inf-call li[data-inf-skip="check"] { color: var(--warn); }
+  .inf-call-gap details { border: 0; padding: 0; margin: var(--space-2) 0 0; }
+  .inf-call-gap dt { font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; margin-top: var(--space-2); }
+  .inf-call-gap dd { margin: var(--space-1) 0 0; color: var(--fg-2); }
+  .inf-call-gap dd.inf-mono { color: var(--fg-1); }
   .inf-call p { margin: var(--space-1) 0 0; font-size: var(--text-sm); }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: var(--space-2); border-bottom: 1px solid var(--line-1); text-align: left; }

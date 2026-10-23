@@ -120,6 +120,13 @@ At the end of the body on a card whose button merges, the host draws "Filed whil
 At the end of the body on a card whose button sends something where the project lives, the host draws what the click sends, once (`.inf-call`): a `--line-1` / `--radius-m` panel with the `h6` micro label naming where it goes, the call in `--font-mono`, and one `--text-sm` line in `--fg-3`.
 For a merge past the branch rules it reads the pull request, its version and squash, then one row per rule it may skip with its rule set in `--fg-3` and one `--warn` row per failed check, and the host names the button `Merge, skipping the rules`; the author's `Not now` stays beside it.
 For a write a crewmate asks to send (`request_write`) it reads the method and path, then the JSON body in a `pre` on `--bg-1` with `--radius-s`, at most 240 px tall and scrolled inside, and the host names the button `Send it to GitHub` after the host's own name; the author's `Not now` stays beside it.
+A live validation gap decision ends in the same `.inf-call` panel, without a heading: its micro label reads “<approval button label> lets this go ahead without live proof of”, followed by the scenario in the call line.
+The muted line reads “This version and later ones while this gap stays the same.
+It records no live pass and merges nothing.”
+A closed native disclosure, “The recorded gap”, holds Version, Missing, Why it cannot run, Tried instead and Ways to close it.
+Each alternative and each way to close is its own list item, with record labels in the micro-label style and the version in mono.
+The disclosure is reachable by Tab and toggles with Enter or Space using the frame's existing focus ring.
+The Validation action panel for approving effects stays unchanged and fully open.
 A body's own inline script may add behavior (a canvas, a toggle, a figure that moves on a press, `components/viz/Viz.prompt.md` Motion) but loads nothing; if it stops answering, the body becomes one `--fg-3` / `--text-sm` line, "This card stopped responding.", with a `secondary` `sm` Retry Button on the same row - no icon, no danger color, chrome unchanged.
 A card defaults to wide (800 px).
 Only a text-only body under 600 visible characters stays regular (560 px): paragraphs, lists, headings, links and folded details, with no drawing, picture, table, code block or question.

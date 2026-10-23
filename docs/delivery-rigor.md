@@ -694,6 +694,10 @@ After safe alternatives fail, the builder first records a `run` at the current v
 That observation names the attempted alternatives, `missingCapability` and `reason`.
 Only then does the builder record a `request` of kind `gap`, matching that scenario, missing capability and reason in the latest run; a request before the run is refused.
 The builder promptly asks through the same decision binding, giving the alternatives and their results, and ways to close the gap.
+The builder addresses the captain as “you” in the gap record and its card, never “the captain”.
+The host appends a send-style panel whose open line names the approval button and untested scenario, followed by the exception's scope and that it records no live pass and merges nothing.
+A closed “The recorded gap” disclosure holds the version, missing capability, reason, alternatives and remedies, with each alternative and remedy in its own list item.
+The Validation action panel for effects stays fully open and unchanged.
 Only the captain can permit proceeding without this proof; neither the builder nor reviewer grants an exception.
 The exception carries to later versions only while the scenario, missing capability and reason are identical.
 A changed scenario or gap, or access becoming available, expires it; a later recurrence needs a fresh answer.

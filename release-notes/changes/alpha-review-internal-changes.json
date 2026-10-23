@@ -1,0 +1,15 @@
+{
+  "exclusions": [
+    {
+      "id": "alpha-review-internal-changes",
+      "reason": "Internal work a person does not notice: crew guidance for referenced pull request merges, retaken release picture files, a phone-check log kept with a failed part, task results and branch_from for task-graph steps (a result the host checks for crew reports, with no new view), and one test made to meet its deadline.",
+      "covers": [
+        "63fd25b591c30c1761c6d6c2d43e5b9585a9884e",
+        "96b5433e3613fe4ae8ff5aed1600c6ea8b8c5d97",
+        "288becd16ea49970b0ee453ea9286e0dcc486ab7",
+        "800a97c27f040a5ece8752db898a8c63ea5ea4af",
+        "0c68c58257563dedc6d1c952024e94b0117f0d08"
+      ]
+    }
+  ]
+}

@@ -24,7 +24,7 @@ A program task stays open, on the graph like any task, and starts when its start
 The script's host functions use Infinitary's own names; a Claude workflow script is not promised to run unchanged.
 
 - `task(prompt, {label, schema, from, after})` files one part and resolves to its answer: its checked result when `schema` declared a result shape, its report text when not, or `null` when the part was dropped.
-  `label` names the part (default `part N`); `from` names an earlier part whose last commit its working copy starts at; `after` names earlier parts whose results it builds on, each a `blocks` link.
+  `label` names the part (default `part N`); `from` names an earlier part whose last commit its working copy starts at, and `null` or no `from` starts at the default branch, so a chain's first call may pass its empty `previous`; `after` names earlier parts whose results it builds on, each a `blocks` link.
   `from` and `after` may name a call that is still waiting for a free slot or the bound; the link is made when that call's part is filed, and a call naming one that was refused is refused too.
   A label no earlier call used is refused, and the script's await throws, as does a call whose part cannot be filed.
 - `ask(prompt, schema)` is one tool-less typed read through the decision models' one-question session (`DecisionModels.answerJson`, `src/core/program/programAsk.ts`): the answer is JSON the host checks against the schema, asked once more with why when it does not parse or fit, then `null`.
@@ -33,6 +33,20 @@ The script's host functions use Infinitary's own names; a Claude workflow script
 - Parallel parts are ordinary JavaScript: `Promise.all` over `task()` calls.
 
 The script returns the program's result, and its `branch`, a part's label, names the program's branch (see "The end").
+
+## The shapes the first mate is served
+
+The served sequences guide's `programs` section (`src/core/personal/sequencesSkill.ts`) is the one home of the dialect's rule and of four shapes written in it (INF-799 piece 3).
+It names the asks that are programs - "use a workflow", a loop, iteration or "keep at it" until a stop condition, an audit, deep research (never a research step) and a migration of each item or one at a time - and says each is one `create_task program` in the project, when-ready with no parent, never a spawn even when one crewmate could try.
+The script's globals are named there too, since a script that reads `bound` or another name `args` does not carry fails when it runs.
+The first mate adapts a shape to the ask; the host learns no shape's name and reads nothing of the script beyond what "Filing a program" refuses.
+
+- The loop: one part a round up to `args.rounds`, awaited, each `from` the last round's label so it continues that round's commits, its schema a `done` flag and what it `learned`; each round's prompt carries the last round's learned note, and earlier rounds' reports stay on their parts for a round to look up, until a round reports done; it returns the last round as its `branch`.
+- Audit: finders in parallel, one per area or angle, then a verifier per finding; it is named apart from the crew's own adversarial review of a change.
+- Deep research: a part per question in parallel, then one writer `after` them all.
+- Migrate: a part per item, each `from` the previous item's label, returning the last as its `branch`.
+
+The guide is served in the first mate's fixed context, whose size is bounded (`tests/firstmate-fixed-context.test.ts`), so each shape is one line; a longer shape is paid for by trimming a repeat elsewhere, recorded in that test's ledger, or by saying a rule in fewer words.
 
 ## The runner
 
@@ -84,5 +98,6 @@ Dropping a program with `update_task drop` stops its process, drops its started 
 
 ## Tests
 
-`src/core/program/programScript.test.ts` (what is refused, the digest), `programRunner.test.ts` (through the forked process: answers, the realm's missing clock, replay after a quit, the bound and its raise), `programAsk.test.ts` (parse and the retry), `src/core/orchestrator/reportSort.test.ts` (row 2b), and `crewSupervisor.test.ts` (a program files its parts, reads their results, finishes and wakes the first mate; the bound wake).
+`src/core/program/programScript.test.ts` (what is refused, the digest), `programRunner.test.ts` (through the forked process: answers, the realm's missing clock, replay after a quit, the bound and its raise, `from: null`), `programAsk.test.ts` (parse and the retry), `src/core/orchestrator/reportSort.test.ts` (row 2b), and `crewSupervisor.test.ts` (a program files its parts, reads their results, finishes and wakes the first mate; the bound wake).
 `tests/e2e/program-run.spec.ts` runs a program in the launched app: the first mate files it in a project, its three parts run as child tasks, and it closes done with the script's result.
+The replay fixture `oct22-program` (`tests/fixtures/replay/README.md`) holds the first mate answering a loop ask with the loop shape, and `tests/replay-captain-session.test.ts` replays it as one program task the runner starts; the replay runs no script (`docs/replay-harness.md`).

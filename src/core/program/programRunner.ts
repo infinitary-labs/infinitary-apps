@@ -205,7 +205,8 @@ class RunningProgram {
       this.refuse(call, "task() takes the part's prompt as a string first.");
       return;
     }
-    const opts = options ?? {};
+    // A chain's first call often says from: null (no earlier part yet): null is no from.
+    const opts: Record<string, unknown> = { ...options, from: options?.from ?? undefined };
     const number = this.calls++;
     const explicit =
       typeof opts.label === "string" && opts.label.trim() ? opts.label.trim() : undefined;

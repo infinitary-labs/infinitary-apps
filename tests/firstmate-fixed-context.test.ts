@@ -615,6 +615,58 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: { tool: "settle_task", parameter: "proceed_with_open" },
     says: "Settle and keep open children planned, after the captain chose",
   },
+  // INF-799 piece 3: the program shapes took the guide's repeats of a tool,
+  // the handoff or its own preamble.
+  {
+    rule: "a queued update adds prerequisites and removes none",
+    home: { tool: "update_task", parameter: "blocked_by" },
+    says: "Adds any not yet linked; never removes.",
+  },
+  {
+    rule: "the queue starts approved pieces as their prerequisites clear",
+    home: "handoff",
+    says: "Acceptance queues approved plan pieces (when-ready); the host starts each as its prerequisites clear.",
+  },
+  {
+    rule: "autonomy is read to report who merges",
+    home: "handoff",
+    says: "Read the task’s current autonomy fact",
+  },
+  {
+    rule: "a piece's basis is the approved answer whatever its kind",
+    home: "handoff",
+    says: "naming the answer's task as basis - the chosen plan or investigation",
+  },
+  {
+    rule: "a step's crewmate gets the captain's words verbatim, outranking its line",
+    home: { tool: "spawn_crewmate", parameter: "user_words" },
+    says: "The user's request verbatim; outranks every elaboration downstream",
+  },
+  {
+    rule: "the project line reaches its crewmate word for word",
+    home: "sequences",
+    says: "A step's line from this document reaches its crewmate word for word",
+  },
+  {
+    rule: "a project setup uses the settings the captain submits",
+    home: "handoff",
+    says: "Actual submissions override proposal defaults",
+  },
+  {
+    rule: "the first mate chooses no tier or model for a lookup",
+    home: "core",
+    says: "You choose no model and no reasoning class; you report facts and the host routes.",
+  },
+  {
+    rule: "a panel is removed only on the captain's own ask",
+    home: { tool: "personalize" },
+    says: "Remove a surface or append a standing instruction, only on the captain's own turn",
+  },
+  {
+    rule: "a skipped plan is declared on the direct build",
+    home: { tool: "spawn_crewmate", parameter: "shape" },
+    says: "skipped_plan_because: On a direct build with no chosen basis",
+  },
 ];
 
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {

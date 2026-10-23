@@ -59,6 +59,7 @@ let sep04Real: SessionReport;
 let sep26Claude: SessionReport;
 let sep30HandoffAgree: SessionReport;
 let oct01HandoffStart: SessionReport;
+let oct22Program: SessionReport;
 
 function fixture(name: string) {
   const found = discoverFixtures(FIXTURES).find((sources) => sources.name === name);
@@ -85,6 +86,7 @@ beforeAll(async () => {
   sep26Claude = await replaySession(fixture("sep26-claude"));
   sep30HandoffAgree = await replaySession(fixture("sep30-handoff-agree"));
   oct01HandoffStart = await replaySession(fixture("oct01-handoff-start"));
+  oct22Program = await replaySession(fixture("oct22-program"));
 }, 240_000);
 
 describe("the fixtures replay against the current code", () => {
@@ -224,6 +226,7 @@ describe("the fixtures replay against the current code", () => {
         "sep26-claude": sep26Claude.metrics,
         "sep30-handoff-agree": sep30HandoffAgree.metrics,
         "oct01-handoff-start": oct01HandoffStart.metrics,
+        "oct22-program": oct22Program.metrics,
       },
       readBaseline(BASELINE).sessions,
     );
@@ -249,6 +252,32 @@ describe("the fixtures replay against the current code", () => {
       unrecorded_firstmate_wakes: 0,
       skipped_card_resolutions: 0,
     });
+  });
+});
+
+/**
+ * INF-799 piece 3: a loop toward a goal lands as one program task. The
+ * recording (`tests/fixtures/replay/README.md`, `oct22-program`) holds the
+ * first mate answering that ask with the served guide's loop shape in
+ * one `create_task program`; the replay files it through today's tool and
+ * the host's runner starts it, with no parent.
+ */
+describe("a program the first mate files", () => {
+  it("replays the loop ask as one program task the runner starts", () => {
+    expect(oct22Program.fidelity).toMatchObject({
+      recorded_captain_turns: 1,
+      replayed_captain_turns: 1,
+      missing_tools: [],
+      settle_timeouts: 0,
+    });
+    expect(oct22Program.details.programs).toEqual([
+      {
+        title: "Fix the flaky checkout tests until the suite passes",
+        parent: false,
+        bound: 8,
+        started: true,
+      },
+    ]);
   });
 });
 
@@ -1526,7 +1555,7 @@ describe("the CLI", () => {
     const out = join(dir, "report.json");
     // beforeAll owns these real replays even when this case is selected alone.
     // Exercise the CLI's discovery, annotation, baseline and disk output here,
-    // without replaying the same seven recordings a second time for formatting.
+    // without replaying the same eight recordings a second time for formatting.
     const replayed = [
       sep14,
       sep04,
@@ -1535,6 +1564,7 @@ describe("the CLI", () => {
       sep26Claude,
       sep30HandoffAgree,
       oct01HandoffStart,
+      oct22Program,
     ];
     const unchanged = structuredClone(replayed);
     const replay = vi.fn<Engine["replaySession"]>(async (sources) => {
@@ -1551,6 +1581,7 @@ describe("the CLI", () => {
     // one has a baseline row.
     expect(report.sessions.map((session) => session.session)).toEqual([
       "oct01-handoff-start",
+      "oct22-program",
       "sep04",
       "sep04-real",
       "sep14",

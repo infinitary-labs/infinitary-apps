@@ -203,6 +203,31 @@ describe("the program runner", () => {
     });
   });
 
+  // The captain's ask to eval the served shapes (INF-799 piece 3): Haiku 5.5
+  // wrote this migrate script, starting its chain at from: null, and the
+  // runner refused its first call.
+  it("reads from: null as no earlier part, so a chain's first call starts at the default branch", async () => {
+    const h = harness(
+      `
+      let prev = null;
+      for (const s of ["settings", "checkout"]) {
+        await task("Migrate the " + s + " screen to the new Button.", { label: s, from: prev });
+        prev = s;
+      }
+      return { branch: prev };
+      `,
+      2,
+    );
+    h.start();
+    await vi.waitFor(() => expect(h.filed).toHaveLength(1), WAIT);
+    expect(h.filed[0]).not.toHaveProperty("from");
+    h.answer(0, "Migrated settings.");
+    await vi.waitFor(() => expect(h.filed).toHaveLength(2), WAIT);
+    expect(h.filed[1]).toMatchObject({ label: "checkout", from: "part0000" });
+    h.answer(1, "Migrated checkout.");
+    expect(await h.end).toEqual({ value: { branch: "checkout" } });
+  });
+
   it("replays parallel parts with default labels in a new order without filing any twice (F2)", async () => {
     const h = harness(
       `

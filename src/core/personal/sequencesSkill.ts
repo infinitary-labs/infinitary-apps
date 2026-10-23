@@ -93,7 +93,7 @@ const PLAN_STEP = `a read-only step. Research the code and the field, then propo
 /** The built-in text: the document's body as seeded, and the fallback when the file is unusable. */
 export const SEQUENCES_SEED = `# Sequences
 
-An ask that takes one step is that step alone, without a parent.
+An ask that takes one step is that step alone, without a parent; a programs ask is a program.
 Open an ask that takes more than one step as a parent task, left on
 request, and its steps as child tasks: spawn the step that runs now under it, and file the
 next step on request pending approval; approved pieces follow feature/pieces. Each step is one kind (plan, retrieval, research,
@@ -105,22 +105,18 @@ for myself is never an internal step - a plan, a reproduction, some research, or
 result I asked to see ("show me the repro first"): it shows its answer as a card, it is
 mine to close, and the next step starts on my choice there. The parent completes when its
 last step merges.
-Authorized steps that need nothing from each other run at the same time; a step that builds on another
+Authorized steps that need nothing from each other run at once; one that builds on another
 waits for it and names it as its basis.
 A step whose answer the next needs as data gets result_schema (JSON Schema, object root);
 one continuing another's code names it in branch_from (update_task: {} or "" clears either).
-create_task program {script, bound}: JS; task(prompt, {label, schema,
-from, after}) returns a step's result, return {branch: label} ships it,
-bound caps task() calls; ask me on a card if large.
 Skip the plan only when you can name
 one place the change touches, no rule, state transition, or meaning changes, and the
-result is checkable by looking. Declare why on the direct
-build with shape.skipped_plan_because.
+result is checkable by looking. Declare why in shape.skipped_plan_because.
 Plan first for a symptom without a reproduction, a wording or look that needs choosing,
 trust, what a click or setting means, motion, or several screens. In doubt plan. A plan
 is a crewmate task, never your own card. A step's line from this
 document reaches its crewmate word for word: put it in the step's constraints when you
-spawn or create it, under my words, which outrank it.
+spawn or create it.
 
 Ask me only what nothing else can settle. A question whose answer is a fact - what the code
 does, what happens when it runs, how it looks - is the step's to answer by reading or by
@@ -143,14 +139,12 @@ you proved it: pointed at it, reasoned it through, or ran it.
   recorded spec and my choice - from the plan's branch if it has one; on Save and defer it
   waits on request until I press Start or ask. The simplest change that meets the accepted
   plan.
-- pieces: siblings under the approved answer's parent, that answer as basis regardless
-  of kind; reuse successors. File Queued (when-ready) with every blocker in blocked_by.
-  A queued update adds unlinked prerequisites and removes none. Read all pieces by
-  parent in a later request after filing; correct/re-read only blockers or start policy.
-  The queue starts ready work now and after merges. Backlog waits for my word;
-  never bypass it with start_now.
-  Read autonomy to report who merges; never edit it without explicit captain words, even to match another task.
-  One successor per change; parent ends after last merge.
+- pieces: siblings under the approved answer's parent, that answer as basis; reuse
+  successors. File Queued (when-ready) with every blocker in blocked_by.
+  Read all pieces by parent in a later request after filing; correct/re-read only
+  blockers or start policy. Backlog waits for my word; never bypass it with start_now.
+  Never edit autonomy without my explicit words, even to match another task.
+  One successor per change.
 
 ## bugfix - something is broken
 - reproduce: a read-only step. Reproduce it as reported, in a clean setup, and put the
@@ -167,24 +161,37 @@ you proved it: pointed at it, reasoned it through, or ran it.
   same check, write down what both attempts assumed and question it before a third.
 
 ## refactor - changing structure, not behaviour
-- implement: one step. First establish the right guardrails: prove the coverage of what the
-  refactor touches and add what is missing until it passes; then do the refactoring under
-  them.
-  A guardrail is a check that fails when behaviour changes; a type check or a lint is
-  not one. Move every caller and delete the old path in the same change - no compatibility
-  layer. Prefer deleting to adding, and if the result is not simpler to read than before,
-  it does not ship.
+- implement: one step. First prove the coverage of what the refactor touches and add the
+  guardrails missing until it passes; then refactor under them.
+  A guardrail fails when behaviour changes; a type check or lint is not one. Move every
+  caller and delete the old path in the same change - no compatibility layer. Prefer
+  deleting to adding; a result no simpler to read than before does not ship.
 
 ## explainer - understanding something
 - retrieval: a bounded read-only lookup, extraction, factual summary or mechanical
   comparison of existing evidence. Any required non-retrieval work excludes it;
   diagnosis, conflict explanation and reproduction remain research or reproduce.
-  State the question and sources faithfully, keep user_words verbatim and pass typed
-  read-only; choose no kind, tier or model yourself.
+  State the question and sources faithfully and pass typed read-only; choose no kind
+  yourself.
 - research: investigation beyond that boundary.
 For either: one drawn card with citations, revised on my questions. Separate fact from
 inference; my premise is not fact. "Not established" names missing or conflicting
 evidence, not permission to broaden.
+
+## programs
+"Use a workflow", "loop/iterate/keep at it until <stop condition>", "audit", "deep
+research" (never a research step), "migrate each / one at a time": one create_task program
+{script, args, bound}, never a spawn, even when one crewmate could try; start_policy
+when-ready, no parent; bound (integer) caps task() calls, ask me on a card first if large.
+script: JS with task, ask, log, phase, args (= program.args). task(prompt, {label, schema,
+from, after}) returns a part's result or null; from: a part's label to continue; after:
+labels to await; ask(prompt, schema); return {branch: label} ships that part.
+- loop: per round i < args.rounds, r = await task(args.goal + "\\nLast round learned: " +
+  learned, {label: "r" + i, from: previous label, schema {done, learned}}); learned =
+  r.learned; stop when r.done; return {branch: last label}.
+- audit: Promise.all finders per area or angle, then a verifier per finding.
+- deep research: Promise.all a part per question, then one writer after all.
+- migrate: a part per item, each from the previous item's label; return {branch: its label}.
 
 ## personal asks - lessons, projects and panels
 Learning or practising a subject, like a math quiz or flash cards, is a lesson. A game or
@@ -193,26 +200,20 @@ project of its own.
 Something to glance at beside your work on the app's rails, like a clock, is a panel.
 When an ask could be either, choose a lesson when the words name something to learn,
 otherwise a project, and say which in the activity line; do not ask an extra question.
-Leave existing quiz and piano panels alone; remove one only on my own ask.
-- teach: personal_ui true, my words verbatim, one task per subject; steer its open one. Return lesson cards using the lessons skill, never a panel.
-- project: in an existing project, ordinary work there with no setup card. For a new
-  game, toy, page or small app, propose its own project with app_change project-setup;
-  only Add project adds it. A casual project is made for fun or for yourself: the ask
-  names who it is for or how small it is, and nothing to ship. A serious project names
-  a framework, engine or build step, hosting or a store, a sign-in or a database, a
-  team or a customer, or a release or a launch. When the ask does not say, treat it as
-  casual and write the reason in the setup card's work text. For a casual project,
-  propose delivery local-only, autonomy true, rigor quick, with work naming the project
-  and why it is assumed casual; for a serious one, propose autonomy false, rigor
-  standard and a plan first. Use the settings the captain submits, not the proposal.
-  Relay this line word for word to its crewmate. For a casual project, build plain
-  HTML, CSS and JavaScript with an index.html that opens without installation or a
-  server, not a panel; serious work follows the chosen stack and agreed plan instead.
-  Plan skipping follows the rule above, not this line. Play-test and photograph a
-  casual web project in your task browser through a local server. When done, emit a
-  note beside the completion decision with that picture, browser_button Open, and
-  browser_page index.html; never wait on that note.
-- panel: personal_ui true, my words verbatim; name the existing surface for an edit.
+Leave existing quiz and piano panels alone.
+- teach: personal_ui true, one task per subject; steer its open one. Return lesson cards using the lessons skill, never a panel.
+- project: in an existing project, ordinary work there, no setup card. A new game, toy,
+  page or small app: its own project via app_change project-setup; only Add project
+  adds it. Serious: the ask names a framework, engine or build step, hosting or a store, a
+  sign-in or database, a team or customer, or a release or launch; propose autonomy false,
+  rigor standard, a plan first, and follow the chosen stack. Otherwise casual (for fun or
+  yourself, small, nothing to ship): propose local-only, autonomy true, rigor quick, work
+  naming the project and why it is assumed casual; build plain HTML, CSS and JavaScript
+  whose index.html opens with no install or server, not a panel. Plan skipping
+  is the rule above. Play-test and photograph a casual web project in your task
+  browser via a local server; when done, emit a note beside the completion decision
+  with that picture, browser_button Open and browser_page index.html; never wait on it.
+- panel: personal_ui true.
 
 `;
 

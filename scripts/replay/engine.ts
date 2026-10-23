@@ -52,6 +52,7 @@ import {
 } from "../../src/core/pi/piResources.ts";
 import { PI_CONTROL_PROFILE } from "../../src/core/pi/session.ts";
 import type { BoundTool } from "../../src/core/session/tools.ts";
+import type { HostChildProcess, HostChildSpawner } from "../../src/core/host.ts";
 import type { ModelRuntime } from "../../src/core/pi/types.ts";
 import type {
   ModelSession,
@@ -266,6 +267,13 @@ export type SessionReport = {
       plan: string | null;
       grounded_starts: number;
     }[];
+    /**
+     * Every program the replayed first mate filed (INF-799 piece 3), in
+     * filing order: its title, whether it sits under a parent, the bound it
+     * proposed, and whether the host's runner started it. Its script never
+     * runs here (`unplayedProgram`), so it has no parts.
+     */
+    programs: { title: string; parent: boolean; bound: number; started: boolean }[];
   };
 };
 
@@ -283,6 +291,33 @@ export type SessionReport = {
  * pair, which reaches GitHub through the captain's sign-in. `check_pr_ci` is
  * retired and answers as recorded for the same reason.
  */
+/**
+ * A program's script, never run (INF-799 piece 3): the recording holds only
+ * models, and a script's parts are crewmates the recording holds no turns
+ * for, so playing it would only add turns nobody recorded. This process
+ * takes the script and answers nothing, so a recorded `create_task program`
+ * files and starts its program as the live host would, and no part is filed.
+ */
+const unplayedProgram: HostChildSpawner = {
+  spawn: (): HostChildProcess => {
+    const exits: ((code: number | null) => void)[] = [];
+    let ended = false;
+    return {
+      pid: undefined,
+      postMessage: () => {},
+      onMessage: () => {},
+      onExit: (listener) => {
+        exits.push(listener);
+      },
+      kill: () => {
+        if (ended) return;
+        ended = true;
+        for (const listener of exits) listener(null);
+      },
+    };
+  },
+};
+
 const RECORDED_ANSWER_TOOLS = new Set([
   "crew_status",
   "supervision_log",
@@ -1330,6 +1365,7 @@ class Replay {
       inbox: this.inbox,
       paths: this.paths,
       mergePullRequest: async () => ({ ok: true, text: "merged (replay)" }),
+      programProcess: unplayedProgram,
       hasRunningJobs: (taskId) => (this.runningJobs.get(taskId)?.size ?? 0) > 0,
       // The whose-turn sort's record (S7c), exactly as services.ts wires
       // it, plus the set the escalation metric reads: an escalation is a
@@ -2493,6 +2529,18 @@ class Replay {
           plan: approval.plan,
           grounded_starts: approval.groundedStarts,
         })),
+        programs: records.flatMap((record) =>
+          record.shape?.program
+            ? [
+                {
+                  title: record.title,
+                  parent: record.parentId !== null,
+                  bound: record.shape.program.bound,
+                  started: this.tasks.programStarted(record.id),
+                },
+              ]
+            : [],
+        ),
       },
     };
   }

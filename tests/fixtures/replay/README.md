@@ -70,6 +70,10 @@ It replays 4/4 captain turns and 1/1 op turns. The two crewmates carry no record
 
 To re-record it (a client update that changes what the transcript holds, say), run `INFINITARY_WRITE_CLAUDE_FIXTURE=1 pnpm exec vitest run --project integration tests/replay-claude-session.test.ts`: the recording goes through the replay's own export and its scrub pass, with the throwaway HOME written as `/Users/captain/Library/Application Support/firstmate-3000`. Its card's plain-language label is keyed by its words, so a re-recording keeps it; then `pnpm replay:gate --write-baseline` and explain every moved number. Nothing in it came from a person: the words are the script's, and no credential, token or machine path survives.
 
+## The program reconstruction: `oct22-program`
+
+`oct22-program/` is one first mate turn written by hand for INF-799 piece 3, like the reconstructions below: the captain says "Loop on the flaky checkout tests: keep fixing them until the whole suite passes." in a local-only project, and the first mate answers with one `create_task` whose `program` is the served guide's loop shape in the program's own names (`task()` a round, each `from` the last, its schema a `done` flag), with a bound of 8. The tool answer is written in the live host's words with a made-up key and id. Its tables are empty. `tests/replay-captain-session.test.ts` replays it as one program task with no parent, filed and started by the runner; the replay runs no script (`docs/replay-harness.md`). It has a baseline row like the others. It shows the host takes the shape the guide serves; it is not evidence that a live model writes it.
+
 ## The reconstructions: `sep14` and `sep04`
 
 The raw Sep 4-5 and Sep 14 dogfood sessions were not on the machine when the harness was built, so these two were reconstructed from the evidence in `fm3000-interaction-sys-improve-s1/report.md` (sections 2.2 and 7), the same way the P0 crewmate replays were. They are kept beside the real exports above because the F1-F9 mode tests assert on them:

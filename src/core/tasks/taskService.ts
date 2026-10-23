@@ -117,6 +117,7 @@ import {
   type TaskGate,
   type TaskKind,
   type TaskRecord,
+  type TaskSearchFields,
   type TaskStartPolicy,
   type TaskStatus,
   TaskStore,
@@ -854,6 +855,11 @@ export class TaskService {
   /** The live set and every row closed at or after `since`, oldest first. */
   listLiveOrClosedSince(since: number): TaskRecord[] {
     return this.store.listLiveOrClosedSince(since);
+  }
+
+  /** Each closed row's search fields, oldest first, without reading the rest of it. */
+  listClosedSearchFields(): TaskSearchFields[] {
+    return this.store.listClosedSearchFields();
   }
 
   /** How many rows of this kind hold this status, counted without reading them. */

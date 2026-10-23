@@ -946,6 +946,103 @@ describe("the task protocol (task-system P3)", () => {
     expect(long.rows).toBe(short.rows);
   });
 
+  // INF-939: each open of a record's Info read the whole history several
+  // times over, and so did the search for each older key a record names.
+  it("reads a record and searches older keys without reading the rest of the history (INF-939)", () => {
+    const read = (history: number) => {
+      const f = setup();
+      // The rows the record names: its parent, its filing's origin, a
+      // blocker, the work its baseline wait names, and a part whose close
+      // concerns it.
+      f.tasks.create({ id: "parent", title: "Parent", prompt: "p", repoId: "r1" });
+      f.tasks.create({ id: "origin", title: "Gauge origin", prompt: "p", repoId: "r1" });
+      f.tasks.create({ id: "blocker", title: "Blocker", prompt: "p", repoId: "r1" });
+      seedTask(f.tasks, {
+        id: "owner",
+        title: "Fix main",
+        status: "running",
+        worktreeDir: "/wt/o",
+      });
+      f.tasks.fileFollowup({
+        id: "subject",
+        originId: "origin",
+        title: "Meter follow-up",
+        goal: "g",
+        why: "the meter test failed",
+        prompt: "p",
+      });
+      f.tasks.setParent("subject", "parent", "firstmate");
+      f.tasks.link("blocker", "subject", "blocks", "firstmate");
+      f.tasks.create({ id: "part", title: "Part", prompt: "p", repoId: "r1", parentId: "subject" });
+      f.tasks.close("part", { status: "done", reason: "settled", actor: "host" });
+      f.tasks.close("origin", { status: "dropped", reason: "cancelled", actor: "host" });
+      // The rest of the history: a chain of closed crew filings, none of them named.
+      f.tasks.create({ id: "old-root", title: "Earlier work", prompt: "p", repoId: "r1" });
+      let from = "old-root";
+      for (let i = 0; i < history; i++) {
+        const { record } = f.tasks.fileFollowup({
+          id: `old-${i}`,
+          originId: from,
+          title: `Earlier follow-up ${i}`,
+          goal: "g",
+          why: "found while working",
+          prompt: "p",
+        });
+        f.tasks.close(record.id, { status: "dropped", reason: "cancelled", actor: "host" });
+        from = record.id;
+      }
+      seedTask(f.tasks, { id: "waiting", title: "Ship", status: "idle", worktreeDir: "/wt/w" });
+      f.tasks.recordDelivery("waiting", {
+        headSha: "head-1",
+        ci: "red",
+        ciRepair: {
+          failures: [{ headSha: "head-1", checks: ["linux-checks"] }],
+          diagnoses: [
+            {
+              headSha: "head-1",
+              check: "linux-checks",
+              classification: "baseline-blocked",
+              evidence: "fails on untouched main",
+              dependencyTask: "owner",
+              at: 1,
+            },
+          ],
+          repairs: [],
+        },
+      });
+      const scan = rowsRead(f.db, () => f.tasks.listClosedSearchFields());
+      const rows = {
+        subject: rowsRead(f.db, () => f.protocol.detail("subject")),
+        waiting: rowsRead(f.db, () => f.protocol.detail("waiting")),
+        // The search scans each closed row's searched fields once, and reads only what it found.
+        search: rowsRead(f.db, () => f.protocol.search("gauge")) - scan,
+      };
+      const subject = f.protocol.detail("subject");
+      const waiting = f.protocol.detail("waiting");
+      const found = f.protocol.search("gauge");
+      return { rows, subject, waiting, found, f };
+    };
+    const short = read(0);
+    const long = read(200);
+    const keyOf = (id: string) => long.f.tasks.get(id)?.key;
+    expect(long.subject).toMatchObject({
+      parentId: "parent",
+      blockedBy: [keyOf("blocker")],
+      children: { total: 1, closed: 1 },
+      foundOn: keyOf("origin"),
+      filing: { originKey: keyOf("origin"), why: "the meter test failed" },
+    });
+    expect(
+      new Set(long.subject.activityLog.flatMap((row) => (row.from ? [row.from.key] : []))),
+    ).toEqual(new Set([keyOf("part")]));
+    expect(long.waiting.blockedBy).toEqual([keyOf("owner")]);
+    expect(long.found.map((task) => task.id)).toEqual(["origin"]);
+    // The same record reads the same, however long the history behind it.
+    expect(long.subject).toEqual(short.subject);
+    expect(long.found).toEqual(short.found);
+    expect(long.rows).toEqual(short.rows);
+  });
+
   it("shows only live blockers while retaining closed edges and the dropped-start gate", () => {
     const { tasks, protocol } = setup();
     for (const id of ["merged", "dropped", "discarded", "planned", "working"]) {

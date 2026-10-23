@@ -587,6 +587,12 @@ export type TaskRecord = {
   startNotice?: string | null;
 };
 
+/** What a search of closed work reads of each row (`TaskStore.listClosedSearchFields`). */
+export type TaskSearchFields = Pick<
+  TaskRecord,
+  "id" | "key" | "kind" | "status" | "title" | "goal" | "closedAt"
+>;
+
 type Row = {
   id: string;
   key: string | null;
@@ -969,6 +975,28 @@ export class TaskStore {
        ORDER BY created_at, seq`,
     ).all(since) as Row[];
     return rows.map(fromRow);
+  }
+
+  /**
+   * Each closed row's status, kind, close time and the fields a search
+   * matches on, oldest first, without reading the rest of the row
+   * (`TaskProtocol.search`).
+   */
+  listClosedSearchFields(): TaskSearchFields[] {
+    const rows = prepared(
+      this.db,
+      `SELECT id, key, kind, status, title, goal, closed_at FROM tasks
+       WHERE status NOT IN ('open', 'active') ORDER BY created_at, seq`,
+    ).all() as Pick<Row, "id" | "key" | "kind" | "status" | "title" | "goal" | "closed_at">[];
+    return rows.map((row) => ({
+      id: row.id,
+      key: row.key ?? "",
+      kind: row.kind,
+      status: row.status,
+      title: row.title,
+      goal: row.goal,
+      closedAt: row.closed_at,
+    }));
   }
 
   /** How many rows of this kind hold this status, counted without reading them. */

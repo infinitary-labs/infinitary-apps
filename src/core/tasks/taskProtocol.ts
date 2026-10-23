@@ -347,11 +347,11 @@ export class TaskProtocol {
     if (!needle) return [];
     const { tasks } = this.options;
     const cutoff = this.now() - BOARD_RECENT_MS;
-    const all = tasks.list();
-    const found = all
+    // The match reads only the searched fields; whole rows only for what it found.
+    const matched = tasks
+      .listClosedSearchFields()
       .filter(
         (record) =>
-          TaskService.isClosed(record) &&
           (record.status === "dropped" ||
             record.kind !== "work" ||
             (record.closedAt ?? 0) < cutoff) &&
@@ -361,8 +361,11 @@ export class TaskProtocol {
       )
       .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))
       .slice(0, SEARCH_LIMIT);
-    if (found.length === 0) return [];
-    const graph = this.graphOf(all, tasks.allLinks());
+    if (matched.length === 0) return [];
+    const rows = new Map(tasks.getMany(matched.map((row) => row.id)).map((row) => [row.id, row]));
+    const found = matched.flatMap((row) => rows.get(row.id) ?? []);
+    // Closed rows wait on nothing, so the graph around them is all a view reads.
+    const graph = this.graphFor(found);
     const tiers = this.tiersOf(found);
     return found.map((record) => this.viewOf(record, graph, tiers));
   }
@@ -371,8 +374,24 @@ export class TaskProtocol {
     const { tasks } = this.options;
     const record = tasks.get(id);
     if (!record) throw new Error(`Unknown task "${id}".`);
-    const all = tasks.list();
-    const graph = this.graphOf(all, tasks.allLinks());
+    // The graph around the record and the rows it names - those its
+    // concerning events were written by or name, those its standing waits
+    // name, and the task of the card its gate names - never the whole
+    // history (INF-939).
+    const concerning = tasks.concerning(id);
+    const named = new Set<string>();
+    for (const event of concerning) {
+      named.add(event.taskId);
+      if (event.via) named.add(event.via);
+    }
+    for (const wait of standingDependencyWaits(tasks, record.delivery)) named.add(wait.task.id);
+    const gateRef = record.gate?.kind === "captain" ? record.gate.ref : undefined;
+    const gateTask = gateRef
+      ? this.options.cards.snapshot().find((card) => card.id === gateRef)?.taskId
+      : undefined;
+    if (gateTask) named.add(gateTask);
+    named.delete(id);
+    const graph = this.graphFor([record, ...tasks.getMany([...named])]);
     const view = this.viewOf(record, graph, this.tiersOf([record]));
     const origin = crewFilingOrigin(record, graph);
     const timeline = tasks.timeline(id);
@@ -409,13 +428,22 @@ export class TaskProtocol {
     const cardTitle = (cardId: string) => cards.find((card) => card.id === cardId)?.title;
     // Other tasks' events that concern this one, each naming the task that
     // wrote it (docs/task-record.md, "Whom an event concerns").
-    const byId = new Map(all.map((row) => [row.id, row]));
+    // A row the graph does not hold, such as a replacement a closing names,
+    // is read once on its own.
+    const elsewhere = new Map<string, TaskRecord | undefined>();
+    const rowOf = (taskId: string) => {
+      const row = graph.byId.get(taskId);
+      if (row || elsewhere.has(taskId)) return row ?? elsewhere.get(taskId);
+      const read = tasks.get(taskId);
+      elsewhere.set(taskId, read);
+      return read;
+    };
     const keyOf = (taskId: string) => {
-      const row = byId.get(taskId);
+      const row = rowOf(taskId);
       return row ? row.key || row.id : undefined;
     };
-    const concerned = tasks.concerning(id).flatMap((event): ConcernedEventView[] => {
-      const from = byId.get(event.taskId);
+    const concerned = concerning.flatMap((event): ConcernedEventView[] => {
+      const from = rowOf(event.taskId);
       if (!from) return [];
       const change =
         from.delivery?.changeLabel ??
@@ -635,7 +663,7 @@ export class TaskProtocol {
    * them, the rows at those edges' other ends, and each row's child counts.
    * Holds every fact `viewOf` reads for these rows while they include the
    * whole live set (a gate, a ready decision and a standing wait name live
-   * work).
+   * work), or the rows' own standing waits (`detail`) or none (closed rows).
    */
   private graphFor(rows: readonly TaskRecord[]): Graph {
     const { tasks } = this.options;

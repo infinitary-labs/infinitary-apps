@@ -1,0 +1,99 @@
+# Projects and working copies
+
+A project binds work to its files and to its delivery rules, and a working copy gives each task an isolated place to change those files that is retired when the task closes.
+
+## Intended use
+
+Register every repository the fleet works in as one project with a stable id, a task key, a workspace kind, where it lives (its approved hosting address and forge kind) and its standing delivery, autonomy and rigor.
+Give each task that changes code its own git worktree and branch, started from the default branch fetched at dispatch, so tasks never share a checkout.
+Let the personal workspace be the one project kind that builds in place, with no worktree and no delivery.
+Ship a change through the project's posture: a pull or merge request through the forge seam, or a local land, and retire the working copy when the task closes.
+
+## When to use it, and when not
+
+Use a project whenever work touches a folder of files, and read its delivery, autonomy and rigor through the shared derivations rather than storing a copy on the feature's own row.
+Do not build a second registry, a feature-named project list, or a per-feature folder convention: add a field to the project record or a new workspace kind to `repoKindSchema`.
+Do not add a new delivery posture as a flag elsewhere: new postures extend `repoDeliverySchema` in `src/shared/repos.ts`, the seam a future validation pipeline plugs into.
+Do not call a forge's API, run `gh`, or reach a provider file directly: go through the forge seam.
+Do not keep a task's worktree alive after close for a later feature to reuse: unlanded work goes to the kept ref, and a later task starts from it with `branch_from` or a basis ([tasks.md](tasks.md)).
+Work that changes no files (an answer, a question) needs no working copy.
+
+## Owner and entry points
+
+- Project identity, setup and removal: `RepoRegistry` in [`../src/core/workspace/repoRegistry.ts`](../src/core/workspace/repoRegistry.ts) (`setup`, `check`, `configure`, `unregister`, `ensurePersonal`, `setRunsOn`, `setProjectsFolder`).
+- The project shape and the derivations: `repoSetupSpecSchema`, `repoKindSchema`, `repoDeliverySchema`, `repoPolicyPatchSchema`, `RepoView`, `deliveryFor` / `deliveryForRecord` and `autonomyFor` / `autonomyForRecord` in [`../src/shared/repos.ts`](../src/shared/repos.ts); `rigorFor` in [`../src/shared/rigor.ts`](../src/shared/rigor.ts).
+- Working copies: `WorkspaceService` in [`../src/core/workspace/workspaceService.ts`](../src/core/workspace/workspaceService.ts) (`createTaskWorktree`, `dispatchBase`, `landTaskWork`, `retireTaskWorktree`, `keepUnlandedWork`, `removeTaskWorktree`, `KEPT_REF_PREFIX`), with the warm pool `WorktreePool` in [`../src/core/workspace/worktreePool.ts`](../src/core/workspace/worktreePool.ts).
+- Proposals the captain approves: `ProjectSetups` in [`../src/core/workspace/projectSetups.ts`](../src/core/workspace/projectSetups.ts) and `ProjectChanges` in [`../src/core/workspace/projectChanges.ts`](../src/core/workspace/projectChanges.ts).
+- The forge seam: `createForgeResolver` in [`../src/core/forge/index.ts`](../src/core/forge/index.ts); `forgeOf` in [`../src/shared/forge.ts`](../src/shared/forge.ts).
+- On a computer that runs work: `WorkingCopies` in [`../src/core/helper/workingCopies.ts`](../src/core/helper/workingCopies.ts).
+
+## Operations and lifecycle
+
+Setup is `clone` (with `origin`), `init` (with `name`) or `adopt` (with `path`), each with an optional task key; adopt links an existing folder in place and never moves it.
+A key is chosen once at setup, normalized to capitals, 2-4 letters or digits, and never reused by another project, removed ones included.
+Delivery is `direct-pr` or `local-only`, defaulted by whether the project has a remote; autonomy is a flag (on means the agent may land green work itself); rigor is `quick`, `standard` or `reviewed`, with `standard` every project's standing value ([delivery rigor](../docs/delivery-rigor.md)).
+Each of the three is a repository default with a per-task ask on the captain's own words, derived live by its one function, so changing a project's default reaches work already in flight.
+A dispatch starts the task's worktree from `origin`'s default branch fetched at dispatch, from the last fetched commit when the fetch fails, and from the repository's own commit when it has no `origin`.
+A personal-workspace task has no worktree (its directory is the workspace), takes no rigor tier, refuses every settle mode, and closes as "built in place" when its report is committed.
+
+A done/dropped close always retires the worktree and branch (captain: "cleaned up period. no exceptions"), saving unlanded work to `refs/infinitary/kept/<task-id>` first.
+Git ancestry decides only whether a save is needed, never whether the tree goes, because a squash-merged change reads as unlanded forever.
+The one exception is a save that fails, which keeps the tree exactly as it was and says so in the feed.
+Retiring a worktree never happens on the settle path: `removeTaskWorktree` moves the tree aside by rename (into the warm pool, or the trash) and returns, and deleting its files runs in the background and at boot (`sweepPool`, `sweepTrash`).
+Boot hygiene applies the same rule to closed rows still holding a tree and to record-less directories under `userData/worktrees`, and reports leftover `fm/task-*` branches as one feed line without deleting them.
+A task on a computer that runs work keeps its working copy there; its close saves the same commit there and brings it home as a bundle before deleting the copy ([running work for another Mac](../docs/helper.md), "Its working copies").
+
+## Authority
+
+**Settings → Projects (2026-09-19)** may expose delivery, autonomy, and standing rigor (accordion with a row chevron).
+Setup and removal are shared by Settings and `app_change` (`project-setup`, `project-remove`); the first mate removes a project only on the captain's own words.
+The personal workspace's row is locked and reads "builds in place".
+Settings writes through the same action-catalog dispatcher as `app_change` ([app-actions.md](app-actions.md)).
+Fleet management is agent-operated (`docs/fleet.md`): Settings may add and remove projects through `app_change`'s dispatcher (`project-setup`, `project-remove`); removal never deletes repo data.
+The first mate's `project-setup` only proposes: the host's setup card adds a project only on the captain's Add project click, and a proposed settings change that is not the captain's exact words applies only from its own card.
+Removal is refused while tasks are planned or working on the project, naming them by key.
+The host enforces autonomy on merges: `SettleService` refuses a first-mate `merge-pr` or `land` on an autonomy-off task with the `autonomy-off` `SettleRefusal`, whose one way out is the open completion card's merge action, and a captain click is never refused.
+Forge providers are fenced to `src/core/forge/index.ts`: the provider files under `src/core/forge/providers/` are importable only by the seam and the composition root (Biome `noRestrictedImports`).
+The app never runs `gh` or reads another program's sign-in; forge work goes through the forge seam and the app's own sign-in (`docs/forge.md`).
+When the captain's own words ask a crewmate to run a program, that rule is in the crewmate prompt, not a reason to refuse.
+Crewmate isolation is social (system prompt + git worktree), not a filesystem jail.
+It is a captain KEEP call (`docs/architecture.md` §4; the 2026-08-14 architecture review): a crewmate's stock tools, `bash` included, run with its worktree as `cwd` and can leave it, and crewmates are not to be over-rigidified.
+The first mate's steer-only turns, the other half of that call, stay with the model sessions foundation in `AGENTS.md`.
+
+## Compositions
+
+- Tasks name their project and repository and inherit them from a parent ([tasks.md](tasks.md)); a task key is the project's key plus a sequence.
+- Project setup, settings, Runs on and removal are app actions with feed lines and operations ([app-actions.md](app-actions.md)).
+- Pull and merge requests, their checks and the merge are forge operations over the seam, gated by the green rule ([forge](../docs/forge.md), "The green rule").
+- Panels built in the personal workspace ([panels.md](panels.md)).
+- Placement on another computer through Runs on ([running work for another Mac](../docs/helper.md), "Runs on").
+
+## Failure and recovery
+
+A setup refusal (a taken key, a folder already managed, a clone's typed sign-in refusal) comes before anything is cloned, created or linked, in words the caller relays.
+A "Not signed in" forge answer is a refusal whose ways are the sign-in and keeping the project on this Mac; a forge is never required.
+A failed kept-work save keeps the tree; a discard of unlanded work is refused without `confirm`.
+Kept work stays on its hidden ref, outside `refs/heads`, never named on a surface; nothing expires it yet.
+
+## Uses
+
+- Every code task's worktree and branch, and its pull request through the forge seam (`direct-pr`) or its local land (`local-only`).
+- The personal workspace (`RepoRegistry.ensurePersonal`), where personal panels build in place.
+- The first mate's setup card and Settings → Projects' Add project, sharing one dispatcher ([fleet](../docs/fleet.md)).
+- Tasks placed on a computer that runs work, whose working copies `WorkingCopies` holds there.
+
+## Checks
+
+- [`../src/core/workspace/repoRegistry.test.ts`](../src/core/workspace/repoRegistry.test.ts), [`../src/shared/repos.test.ts`](../src/shared/repos.test.ts), [`../src/shared/rigor.test.ts`](../src/shared/rigor.test.ts) and [`../src/core/workspace/projectChanges.test.ts`](../src/core/workspace/projectChanges.test.ts).
+- [`../src/core/workspace/workspaceService.test.ts`](../src/core/workspace/workspaceService.test.ts) and [`../src/core/workspace/worktreePool.test.ts`](../src/core/workspace/worktreePool.test.ts): dispatch base, kept refs and retirement.
+- [`../src/core/orchestrator/settleService.test.ts`](../src/core/orchestrator/settleService.test.ts): the `autonomy-off` refusal.
+- The Biome fence on `src/core/forge/providers/` in `biome.json`.
+- End to end: [`add-project.spec.ts`](../tests/e2e/add-project.spec.ts), [`project-setup-card.spec.ts`](../tests/e2e/project-setup-card.spec.ts), [`remove-project.spec.ts`](../tests/e2e/remove-project.spec.ts), [`autonomy.spec.ts`](../tests/e2e/autonomy.spec.ts), [`task-card-retirement.spec.ts`](../tests/e2e/task-card-retirement.spec.ts), and the direct-pr specs `rigor-standard`, `rigor-reviewed`, `settle-effects` and `honest-settles`.
+
+## Where the detail lives
+
+- [Fleet management](../docs/fleet.md): "Asking the first mate to add a project", "Choosing a task key", "Changing a project", "Notes".
+- [The forge seam](../docs/forge.md): "What it is", "The app's own sign-in (PR 1.2)", "The green rule", "The fence".
+- [Architecture](../docs/architecture.md) §4 "Process and security model" (crewmate isolation) and §7 "Work substrate and persistence".
+- [Delivery rigor](../docs/delivery-rigor.md): "The three tiers", "How a task's tier is derived".
+- [The task record](../docs/task-record.md): "Notes" (fleet hygiene); [running work for another Mac](../docs/helper.md): "Its working copies".

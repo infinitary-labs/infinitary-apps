@@ -3,7 +3,7 @@ import { join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * One sentence per line for the project's prose: `docs/` and the design
+ * One sentence per line for the project's prose: `docs/`, `primitives/` and the design
  * skill. Git merges line by line, so a paragraph kept on one line made two
  * edits to different sentences of it collide; with a line per sentence they
  * merge. Markdown renders a line break inside a paragraph as a space, so
@@ -22,7 +22,7 @@ import { fileURLToPath } from "node:url";
 const REPO_ROOT = resolve(fileURLToPath(new URL("..", import.meta.url)));
 
 /** The folders held to one sentence per line. */
-export const SENTENCE_LINE_ROOTS = ["docs", ".claude/skills/infinitary-design"] as const;
+export const SENTENCE_LINE_ROOTS = ["docs", "primitives", ".claude/skills/infinitary-design"] as const;
 
 /** Folders inside those that hold someone else's files. */
 const SKIPPED_FOLDERS = new Set(["vendor", "node_modules"]);

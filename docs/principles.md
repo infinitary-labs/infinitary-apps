@@ -38,6 +38,7 @@ A guided way of working is the case words alone leave easy to overbuild.
 It is a parent task with child tasks on the task graph the app already has.
 It is not its own runner, stamp, or card effect.
 The host never learns the feature's name.
+The primitives and their intended use are catalogued in [`primitives/README.md`](../primitives/README.md).
 
 **Put ambiguous judgments in agent instructions.**
 When a decision is ambiguous and needs judgment, teach it in the instructions the agent already follows.

@@ -6,9 +6,10 @@ import { reflowMarkdown, sentenceLineFiles } from "../scripts/reflow-docs.ts";
 const REPO_ROOT = resolve(__dirname, "..");
 
 describe("one sentence per line", () => {
-  it("holds the docs and the design skill to it", () => {
+  it("holds the docs, the primitives and the design skill to it", () => {
     const files = sentenceLineFiles(REPO_ROOT);
     expect(files).toContain("docs/testing.md");
+    expect(files).toContain("primitives/README.md");
     expect(files).toContain(".claude/skills/infinitary-design/readme.md");
     expect(files.some((file) => file.includes("/vendor/"))).toBe(false);
     const unfinished = files.filter((file) => {

@@ -559,7 +559,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       ).toEqual([]);
 
       // Settings -> Projects shows that workspace as what it is: one locked
-      // row that reads "builds in place" (the captain's words, AGENTS.md)
+      // row that reads "builds in place" (the captain's words, primitives/projects-and-working-copies.md)
       // instead of a delivery posture, an autonomy switch or a rigor tier.
       await page.getByRole("button", { name: "Settings", exact: true }).click();
       await page.getByRole("tab", { name: "Projects" }).click();

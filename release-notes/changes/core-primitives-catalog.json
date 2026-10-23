@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "core-primitives-catalog",
+      "reason": "Internal documentation: a new primitives/ folder documents the app's reusable building blocks and their intended use, one page per primitive, and takes over the matching guidance from AGENTS.md; the sentence-per-line documentation check now covers it. Nothing in the app changed."
+    }
+  ]
+}

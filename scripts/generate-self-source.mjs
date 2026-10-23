@@ -97,6 +97,16 @@ export function buildSelfMap({ version, commit, trackedFiles, sources, tools }) 
   };
 }
 
+// The version the packaged app reports. A release packages its logical
+// version through `-c.extraMetadata.version` and never commits it, so the
+// repository's package.json stopped at stable 0.1.30 (docs/alpha.md,
+// "Versions"); the release workflows name it here so the map says which
+// build a reader holds. Every other build reports the repository's version.
+export function selfMapVersion(repoVersion, env = process.env) {
+  const release = env.INFINITARY_RELEASE_VERSION?.trim();
+  return release ? release : repoVersion;
+}
+
 export async function generateSelfSource({ outDir, writeRepoMap = false } = {}) {
   const dest = outDir ?? join(repoRoot, "packaging", "generated");
   const selfSourceDir = join(dest, "self-source");
@@ -109,7 +119,7 @@ export async function generateSelfSource({ outDir, writeRepoMap = false } = {}) 
     .filter((file) => file.length > 0);
 
   const map = buildSelfMap({
-    version: pkg.version,
+    version: selfMapVersion(pkg.version),
     commit,
     trackedFiles,
     sources: {

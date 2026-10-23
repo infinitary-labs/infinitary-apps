@@ -385,6 +385,8 @@ jobs:
         env:
           INFINITARY_UMAMI_HOST: ${{ vars.INFINITARY_UMAMI_HOST || vars.FM3000_UMAMI_HOST }}
           INFINITARY_UMAMI_WEBSITE_ID: ${{ vars.INFINITARY_UMAMI_WEBSITE_ID || vars.FM3000_UMAMI_WEBSITE_ID }}
+          # The self-map names the version the running app reports.
+          INFINITARY_RELEASE_VERSION: ${{ needs.resolve.outputs.version }}
         run: pnpm build
 
       # The notes job's catalog replaces the development placeholder `pnpm

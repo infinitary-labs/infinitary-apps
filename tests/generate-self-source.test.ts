@@ -129,4 +129,26 @@ describe("generate-self-source", () => {
     // The real script archives the whole tracked tree: seconds of real I/O
     // that ran past the 5s default under a full parallel run (5.9s).
   }, 60_000);
+
+  // SCR-527: an installed 0.5.1-alpha.14 shipped a self-map saying 0.1.30,
+  // the repository's frozen version, while the app reported its logical one.
+  // The release build names that version, and both copies of the map carry it.
+  it("names the release's logical version when the release build passes one", () => {
+    outDir = scratchDir("infinitary-self-source-");
+    const releaseVersion = "0.5.1-alpha.14";
+    const result = spawnSync(process.execPath, [scriptPath, "--out", "."], {
+      cwd: outDir,
+      encoding: "utf8",
+      env: { ...process.env, INFINITARY_RELEASE_VERSION: releaseVersion },
+    });
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    for (const mapPath of ["self-map.json", "self-source/self-map.json"]) {
+      const map = JSON.parse(readFileSync(join(outDir, mapPath), "utf8")) as { version: string };
+      expect(map.version, mapPath).toBe(releaseVersion);
+    }
+    // The archived tree stays the commit's own: its package.json is untouched.
+    expect(readFileSync(join(outDir, "self-source/package.json"), "utf8")).toBe(
+      readFileSync(join(repoRoot, "package.json"), "utf8"),
+    );
+  }, 60_000);
 });

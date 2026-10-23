@@ -79,6 +79,9 @@ jobs:
         env:
           INFINITARY_UMAMI_HOST: ${{ inputs.version && (vars.INFINITARY_UMAMI_HOST || vars.FM3000_UMAMI_HOST) || '' }}
           INFINITARY_UMAMI_WEBSITE_ID: ${{ inputs.version && (vars.INFINITARY_UMAMI_WEBSITE_ID || vars.FM3000_UMAMI_WEBSITE_ID) || '' }}
+          # The self-map names the version the running app reports; a
+          # package made to try reports the repository's.
+          INFINITARY_RELEASE_VERSION: ${{ inputs.version }}
       # A release packages the notes job's verified catalog and its hero
       # pictures, as its Mac build does, never the development placeholder
       # `pnpm build` leaves (docs/release-notes.md).

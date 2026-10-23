@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "self-map-release-version",
+      "reason": "Internal: the packaged self-map now names the release's own version instead of the repository's frozen one, so a crewmate reading the bundled source knows which build it holds; nothing on screen changes."
+    }
+  ]
+}

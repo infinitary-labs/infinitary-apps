@@ -628,8 +628,10 @@ A run counts only at the change's current version, or at any version while the t
 A flake rerun reservation is current at the change's current failed head, as before, or else while the newest reading of a run that counts still lists the job failed.
 The second kind is bound to that run (`ciRepair.rerun.runId`), and only an accepted rerun of that run or of one of its jobs dates it.
 A baseline-blocked diagnosis at a run's version stands while the newest reading of a run that counts still lists the job failed (`baselineStands` in `src/core/tasks/dependencyWaits.ts`), so the crewmate is resumed when the default branch's own run of that check passes, and still when the separately owned task closes, as on a pull request.
-A repair is still settled only by a pull request's checks, so it still needs one.
-A task whose work never has a pull request still declares a run's diagnosis or rerun with `check_change`, without a check reading after it.
+A repair declared while its branch has no open pull request is settled at its own version, like one a pull request moved past (INF-970; `docs/delivery-rigor.md`, "CI rounds").
+`check_change` reads that version's checks before the next repair is declared and on every plain reading, and settles the attempt from them by the usual rules.
+GitLab reads checks only through a merge request, so there the attempt has no result until one opens.
+A task whose work never has a pull request still declares a run's diagnosis or rerun with `check_change`, without a check reading after it, and declares no repair.
 
 ## Failures are typed
 

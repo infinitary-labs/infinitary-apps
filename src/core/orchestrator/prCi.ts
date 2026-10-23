@@ -394,8 +394,9 @@ export class PrCiService {
       let id: string;
       let earlier: string | undefined;
       if ("said" in located) {
-        // Only a repair is settled by a pull request's checks: a diagnosis or
-        // rerun reservation for a workflow run the task read needs none (INF-688).
+        // Only a repair is settled by its version's checks, which a task that
+        // never has a pull request does not read: a diagnosis or rerun
+        // reservation for a workflow run the task read needs none (INF-688).
         const record = checkInput.repair ? undefined : this.options.tasks.get(taskId.trim());
         if (!record) return located.said;
         id = record.id;
@@ -2028,17 +2029,25 @@ export class PrCiService {
           this.merged.set(record.id, { pull, forge });
           return { text: mergedWords(forge, pull, audience), recorded: true };
         }
+        // A repair declared before any pull request opened is read at its
+        // own version, as one a pull request moved past is (INF-970).
+        const earlier = await this.settleEarlierRepair(record.id, forge, branch, null);
         this.record(record.id, "no-pr");
+        const after = this.options.tasks.get(record.id)?.delivery;
         return {
-          text: hasChangeRequests(forge.kind)
-            ? `overall: no-pr\nNo open PR found for branch ${branch}.${pull ? ` ${numberLabel(forge, pull.number)} was closed without merging.` : ""}`
-            : `overall: no-pr\nNothing pushed for branch ${branch}${forge.place ? ` on ${forge.place}` : ""} yet.`,
+          text: [
+            hasChangeRequests(forge.kind)
+              ? `overall: no-pr\nNo open PR found for branch ${branch}.${pull ? ` ${numberLabel(forge, pull.number)} was closed without merging.` : ""}`
+              : `overall: no-pr\nNothing pushed for branch ${branch}${forge.place ? ` on ${forge.place}` : ""} yet.`,
+            ...(earlier ? [earlier] : []),
+            ...(after?.ciCapAt === undefined ? [] : checkRepairWords(after)),
+          ].join("\n"),
           recorded: true,
         };
       }
       change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
-      const earlier = await this.settleEarlierRepair(record.id, forge, change);
+      const earlier = await this.settleEarlierRepair(record.id, forge, branch, change);
       const stillRunning = running(checks.items);
       this.record(
         record.id,
@@ -2558,28 +2567,37 @@ export class PrCiService {
 
   /**
    * An own repair declared at a version the change is no longer at
-   * (INF-685): no reading of the newer head can settle it, and while it is
-   * outstanding no further repair may be declared. Read that exact
-   * version's checks and settle the attempt from them alone, never from the
-   * newer head's. Only the repair ledger is written - the failures seen
-   * there, the attempt's result and any attempt it spends - so the change's
-   * own reading stays at its current head. A version that cannot be read,
-   * is still running or never ran the check is no result: the attempt stays
-   * outstanding. Answers one line for the reading, or nothing when no such
-   * attempt is open.
+   * (INF-685), or while the branch has no open pull request at all, as a
+   * repair of a workflow run's failed job may be (INF-970): no reading of
+   * the change's head can settle it, and while it is outstanding no further
+   * repair may be declared. Read that exact version's checks and settle the
+   * attempt from them alone, never from another head's. Only the repair
+   * ledger is written - the failures seen there, the attempt's result and
+   * any attempt it spends - so the change's own reading stays at its
+   * current head. A version that cannot be read (a host that reads checks
+   * only through a pull request says so), is still running or never ran
+   * the check is no result: the attempt stays outstanding. Answers one line
+   * for the reading, or nothing when no such attempt is open.
    */
   private async settleEarlierRepair(
     taskId: string,
     forge: Forge,
-    change: ForgeChange,
+    branch: string,
+    change: ForgeChange | null,
   ): Promise<string | undefined> {
     const delivery = this.options.tasks.get(taskId)?.delivery;
     const attempt = outstandingRepair(delivery?.ciRepair);
-    if (!attempt || attempt.headSha === change.headSha) return undefined;
-    const name = `Repair ${attempt.id} at ${attempt.headSha} (the change is now at ${change.headSha})`;
+    if (!attempt || attempt.headSha === change?.headSha) return undefined;
+    const name = `Repair ${attempt.id} at ${attempt.headSha} (${change ? `the change is now at ${change.headSha}` : "with no open pull request"})`;
     let checks: ForgeCheck[];
     try {
-      checks = (await forge.checks({ ...change, headSha: attempt.headSha })).items;
+      checks = (
+        await forge.checks(
+          change
+            ? { ...change, headSha: attempt.headSha }
+            : { branch, headSha: attempt.headSha, url: null },
+        )
+      ).items;
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       return `${name}: its checks could not be read there (${message}), so it has no result yet.`;
@@ -2616,7 +2634,11 @@ export class PrCiService {
       : `${name}: no check named ${attempt.check} reported there, so it has no result.`;
   }
 
-  /** Before a repair is declared: the open change, then any earlier attempt's own version. */
+  /**
+   * Before a repair is declared: the open change, then any earlier
+   * attempt's own version - with no open pull request too (INF-970). A
+   * change that could not be read settles nothing.
+   */
   private async settleBeforeRepair(located: {
     record: { id: string };
     branch: string;
@@ -2625,8 +2647,13 @@ export class PrCiService {
     if (!outstandingRepair(this.options.tasks.get(located.record.id)?.delivery?.ciRepair)) {
       return undefined;
     }
-    const change = await located.forge.changeFor(located.branch).catch(() => null);
-    return change ? this.settleEarlierRepair(located.record.id, located.forge, change) : undefined;
+    const change = await located.forge.changeFor(located.branch).then(
+      (found) => ({ found }),
+      () => undefined,
+    );
+    return change
+      ? this.settleEarlierRepair(located.record.id, located.forge, located.branch, change.found)
+      : undefined;
   }
 
   /**

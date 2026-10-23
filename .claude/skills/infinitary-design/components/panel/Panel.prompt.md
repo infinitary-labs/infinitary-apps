@@ -35,6 +35,7 @@ Everything richer hides behind a click.
 ```
 
 A panel's title, collapse and attribution are the HOST's chrome, rendered from the manifest - a panel never draws its own title bar, border or card.
+That chrome has no fill or border either, so it clips the panel to a plain rectangle, never rounded corners.
 
 **Header buttons.**
 A panel may name up to three buttons for its header; the host draws them beside the chevron.

@@ -83,9 +83,10 @@ export function SidePanelChrome({
       aria-label={title}
       // One of the window's parts F6 moves between (app/regions.ts).
       data-window-region="panel"
+      // No fill and no border, so the clip is a plain rectangle: a rounded
+      // one cuts the scrollbar and the rows at corners nothing draws.
       style={{
         background: "transparent",
-        borderRadius: "var(--radius-l)",
         overflow: "hidden",
         display: hidden ? "none" : "flex",
         flexDirection: "column",

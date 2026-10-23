@@ -9,9 +9,10 @@ export type StageMark = Pick<
 
 /**
  * Every mark the stage paints, each by the task it stands for (INF-999): a
- * crewmate, a program's root ring and a part's own node where no crewmate
- * sits on it. Each is pointed at, summarised and opened the same way, so
- * nothing painted is a mark without a name.
+ * crewmate and a program's root ring. A program's running parts are its
+ * crewmates and nothing else of it is painted (INF-1037). Each is pointed
+ * at, summarised and opened the same way, so nothing painted is a mark
+ * without a name.
  */
 export function stageMarks(frame: Pick<OrbitFrame, "crew" | "programs">): StageMark[] {
   const marks: StageMark[] = [...frame.crew];
@@ -27,24 +28,46 @@ export function stageMarks(frame: Pick<OrbitFrame, "crew" | "programs">): StageM
       phase,
       unfold: 1,
     });
-    for (const node of program.nodes) {
-      if (node.crewed) continue;
-      marks.push({
-        id: node.id,
-        x: node.x,
-        y: node.y,
-        size: CONSTELLATION.rootMarkPx,
-        depth: program.depth,
-        phase,
-        unfold: 1,
-      });
-    }
   }
   return marks;
 }
 
-/** The marks that are not crewmates: the ones the crew's own names do not reach. */
+/**
+ * The marks that are not crewmates: the ones the crew's own names do not
+ * reach. A program running parts on several computers has a ring in each
+ * group (INF-1037); the keyboard reaches its first, since every copy opens
+ * the same task.
+ */
 export function programMarks(frame: Pick<OrbitFrame, "crew" | "programs">): StageMark[] {
   const crew = new Set(frame.crew.map((c) => c.id));
-  return stageMarks(frame).filter((mark) => !crew.has(mark.id));
+  const seen = new Set<string>();
+  return stageMarks(frame).filter((mark) => {
+    if (crew.has(mark.id) || seen.has(mark.id)) return false;
+    seen.add(mark.id);
+    return true;
+  });
+}
+
+/**
+ * The painted mark for a task: the one nearest `near` when a program's ring
+ * is drawn on more than one computer, so a summary opens beside the copy
+ * pointed at; otherwise the first.
+ */
+export function markOf(
+  marks: readonly StageMark[],
+  id: string | null,
+  near?: { x: number; y: number } | null,
+): StageMark | undefined {
+  let best: StageMark | undefined;
+  let bestD = Number.POSITIVE_INFINITY;
+  for (const mark of marks) {
+    if (mark.id !== id) continue;
+    if (!near) return mark;
+    const d = Math.hypot(mark.x - near.x, mark.y - near.y);
+    if (d < bestD) {
+      best = mark;
+      bestD = d;
+    }
+  }
+  return best;
 }

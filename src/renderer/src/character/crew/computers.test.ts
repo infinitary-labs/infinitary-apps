@@ -7,6 +7,8 @@ import {
 import type { DeviceView } from "@shared/devices";
 import { describe, expect, it } from "vitest";
 import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER, outerPlaneRadius } from "./computers";
+import { crewHit } from "./hover";
+import { markOf, programMarks, stageMarks } from "./marks";
 import { CrewOrbit, DEFAULT_ORBIT, remoteTripMs } from "./orbit";
 
 const device = (id: string, patch: Partial<DeviceView> = {}): DeviceView => ({
@@ -478,10 +480,94 @@ describe("a program on another computer", () => {
     ] as const) {
       const node = required(program(parent).nodes.find((n) => n.id === part));
       const mate = required(frame.crew.find((c) => c.id === part));
-      expect(node.crewed).toBe(true);
       expect(mate.x).toBeCloseTo(node.x);
       expect(mate.y).toBeCloseTo(node.y);
     }
+  });
+});
+
+// INF-1037, the captain's choice A: "a copy of the ring on each computer that
+// runs parts, each with its own crewmates". INF-1017 at 11:13 AM: 20 finished
+// parts, 5 verifiers running here and 3 on the Mac mini.
+describe("a program running parts on two computers", () => {
+  function inf1017() {
+    const model = new ComputerOrbits(0);
+    model.configure([device("mini")]);
+    const here = ["1042", "1043", "1044", "1045", "1046"];
+    const mini = ["1039", "1040", "1041"];
+    for (const id of here) seed(model, id, null);
+    for (const id of mini) seed(model, id, "mini");
+    const finished = Array.from({ length: 20 }, (_, i) => ({
+      id: String(1018 + i),
+      parents: [],
+      state: "done" as const,
+    }));
+    const running = [...mini, ...here].map((id) => ({
+      id,
+      parents: [],
+      state: "live" as const,
+    }));
+    model.setPrograms([{ id: "1017", state: "live", parts: [...finished, ...running] }], 0);
+    model.settleBootRoster(0);
+    return { model, here, mini };
+  }
+
+  it("draws a ring in each computer's group, each with only the crewmates running there", () => {
+    const { model, here, mini } = inf1017();
+    const frame = model.update(0, true);
+    const rings = frame.programs.filter((p) => p.id === "1017");
+    expect(rings).toHaveLength(2);
+    const cluster = required(model.clusters().find((c) => c.id === "mini"));
+    const near = (p: { x: number; y: number }) =>
+      Math.hypot(p.x - cluster.x, p.y - cluster.y) < cluster.radius + 1;
+    const atMini = required(rings.find(near));
+    const atHome = required(rings.find((p) => !near(p)));
+    // Nothing but the running crewmates: no finished part has a node.
+    expect(atHome.nodes.map((n) => n.id).sort()).toEqual([...here].sort());
+    expect(atMini.nodes.map((n) => n.id).sort()).toEqual([...mini].sort());
+    for (const ring of [atHome, atMini]) {
+      expect(ring.branches.every((b) => b.fromId === "1017")).toBe(true);
+      for (const node of ring.nodes) {
+        const mate = required(frame.crew.find((c) => c.id === node.id));
+        expect(mate.x).toBeCloseTo(node.x);
+        expect(mate.y).toBeCloseTo(node.y);
+      }
+    }
+    // Every crewmate stays where its work runs.
+    for (const id of mini) expect(frame.crew.find((c) => c.id === id)?.computerId).toBe("mini");
+  });
+
+  it("opens the ring's summary beside the copy pointed at, and gives the keyboard one ring", () => {
+    const { model } = inf1017();
+    const frame = model.update(0, true);
+    const cluster = required(model.clusters().find((c) => c.id === "mini"));
+    const rings = stageMarks(frame).filter((mark) => mark.id === "1017");
+    expect(rings).toHaveLength(2);
+    for (const ring of rings) {
+      expect(crewHit(stageMarks(frame), ring.x, ring.y)).toBe("1017");
+      expect(markOf(stageMarks(frame), "1017", ring)).toEqual(ring);
+    }
+    const a = required(rings[0]);
+    const b = required(rings[1]);
+    expect(Math.hypot(a.x - b.x, a.y - b.y)).toBeGreaterThan(cluster.radius);
+    expect(programMarks(frame).filter((mark) => mark.id === "1017")).toHaveLength(1);
+  });
+
+  it("keeps a ring where it was drawn between stages, and lets a computer's copy go once its parts finish", () => {
+    const { model, here, mini } = inf1017();
+    model.update(0, true);
+    const parts = (live: readonly string[]) =>
+      [...here, ...mini].map((id) => ({
+        id,
+        parents: [],
+        state: live.includes(id) ? ("live" as const) : ("done" as const),
+      }));
+    model.setPrograms([{ id: "1017", state: "live", parts: parts(here) }], 0);
+    expect(model.update(0, true).programs.filter((p) => p.id === "1017")).toHaveLength(1);
+    model.setPrograms([{ id: "1017", state: "live", parts: parts([]) }], 0);
+    const between = model.update(0, true).programs.filter((p) => p.id === "1017");
+    expect(between).toHaveLength(1);
+    expect(between[0]?.nodes).toEqual([]);
   });
 });
 

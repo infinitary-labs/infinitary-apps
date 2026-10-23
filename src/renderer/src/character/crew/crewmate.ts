@@ -508,16 +508,15 @@ export function drawPacket(
   ctx.fill();
 }
 
-/** How far a branch keeps clear of what it joins: a crewmate, a part's node, the mark. */
-const BRANCH = { crewPx: 14, nodePx: 4, markPx: CONSTELLATION.rootMarkPx + 2 } as const;
+/** How far a branch keeps clear of what it joins: a crewmate, the mark. */
+const BRANCH = { crewPx: 14, markPx: CONSTELLATION.rootMarkPx + 2 } as const;
 
 /**
  * A task with parts as its constellation (INF-799): a branch for every link
- * a part hangs from, at the wait arrow's weight and lit in the accent while a
- * result rides it; a small node for a part with no crewmate drawn there -
- * filled once done, hollow while unstarted; and the program's mark, a
- * hollow ring that lights as a result lands. A live part's crewmate is
- * painted by `drawCrewmate` at its node.
+ * a running part hangs from, at the wait arrow's weight and lit in the
+ * accent while a result rides it, and the program's mark, a hollow ring that
+ * lights as a result lands. Each running part is its crewmate, painted by
+ * `drawCrewmate`; a finished or unstarted part draws nothing (INF-1037).
  */
 export function drawConstellation(
   ctx: CanvasRenderingContext2D,
@@ -531,7 +530,7 @@ export function drawConstellation(
   const ends = new Map<string, { x: number; y: number; clear: number }>();
   ends.set(program.id, { x: program.x, y: program.y, clear: BRANCH.markPx });
   for (const node of program.nodes)
-    ends.set(node.id, { x: node.x, y: node.y, clear: node.crewed ? BRANCH.crewPx : BRANCH.nodePx });
+    ends.set(node.id, { x: node.x, y: node.y, clear: BRANCH.crewPx });
   ctx.save();
   ctx.globalAlpha = program.alpha;
   for (const branch of program.branches) {
@@ -550,19 +549,6 @@ export function drawConstellation(
     ctx.moveTo(cx + a.x + dx * a.clear, cy + a.y + dy * a.clear);
     ctx.lineTo(cx + b.x - dx * b.clear, cy + b.y - dy * b.clear);
     ctx.stroke();
-  }
-  for (const node of program.nodes) {
-    if (node.crewed) continue;
-    ctx.beginPath();
-    ctx.arc(cx + node.x, cy + node.y, 2.2, 0, TAU);
-    if (node.state === "open") {
-      ctx.strokeStyle = rgba(quiet, 0.45);
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = rgba(node.state === "live" ? colors.accent : quiet, 0.6);
-      ctx.fill();
-    }
   }
   const x = cx + program.x;
   const y = cy + program.y;

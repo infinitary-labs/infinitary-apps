@@ -35,7 +35,7 @@ import {
   placeCrewSummary,
   type SummaryRoom,
 } from "./hover";
-import { programMarks, stageMarks } from "./marks";
+import { markOf, programMarks, stageMarks } from "./marks";
 import { CREW_MODEL_LABEL, crewModelLabelPlacement, crewModelLabelsVisible } from "./modelLabels";
 import type { CrewOrbit as CrewOrbitModel, OrbitFrame } from "./orbit";
 import { crewRush } from "./rush";
@@ -455,7 +455,7 @@ export function CrewOrbit({
     const target = targetRef.current;
     const line = lineRef.current;
     const panel = panelRef.current;
-    const cm = view && stageMarks(view.frame).find((c) => c.id === shownRef.current);
+    const cm = view && markOf(stageMarks(view.frame), shownRef.current, pointerRef.current);
     if (!view || !cm || !wrap || !layer || !target || !line || !panel) return;
     const rect = wrap.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
@@ -521,7 +521,11 @@ export function CrewOrbit({
     const target = litTargetRef.current;
     const cm =
       view &&
-      stageMarks(view.frame).find((c) => c.id === litCrewRef.current && c.phase !== "leaving");
+      markOf(
+        stageMarks(view.frame).filter((c) => c.phase !== "leaving"),
+        litCrewRef.current,
+        pointerRef.current,
+      );
     const present = Boolean(view && cm);
     if (root) {
       if (present && root.getAttribute("data-crew-lit") !== litCrewRef.current)
@@ -853,9 +857,7 @@ export function CrewOrbit({
       .join("|");
     if (near.canvas.dataset.constellation !== constellation)
       near.canvas.dataset.constellation = constellation;
-    const seated = frame.programs
-      .flatMap((p) => p.nodes.filter((n) => n.crewed).map((n) => n.id))
-      .join(" ");
+    const seated = frame.programs.flatMap((p) => p.nodes.map((n) => n.id)).join(" ");
     if (near.canvas.dataset.constellationCrew !== seated)
       near.canvas.dataset.constellationCrew = seated;
     // Each wait and review arrow drawn, both ends on the stage as `paintFrame`

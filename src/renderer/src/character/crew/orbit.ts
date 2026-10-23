@@ -40,12 +40,11 @@ import { clamp01, easeInOut, easeOut, Spring, TAU } from "../face";
 import { flickerEnvelope, flickerMerge } from "../flicker";
 import {
   CONSTELLATION,
-  layerGlyphShare,
   layoutProgram,
   type NodePlace,
-  type PartState,
   type Program,
   type ProgramPart,
+  runningParts,
 } from "./constellation";
 import { CROWDED_PLANES, planePhase, projectPlane } from "./orbitalPlanes";
 import { CREW_RUSH, streakArc } from "./rush";
@@ -281,9 +280,9 @@ export type DependencyLink = { fromId: string; toId: string; kind: "wait" | "rev
 
 /**
  * A task with parts as a branching constellation (./constellation.ts): the
- * program's mark on the inner orbit, a node for every part and a branch for
- * every link it hangs from. A live part's crewmate is drawn at its node; a
- * finished or unstarted part is a small node of its own. Px from the
+ * program's mark on the inner orbit, a node for every running part whose
+ * crewmate is drawn there, and a branch for every link it hangs from. A
+ * finished or unstarted part draws nothing (INF-1037). Px from the
  * Firstmate's center, like a crewmate.
  */
 export type ProgramFrame = {
@@ -294,7 +293,8 @@ export type ProgramFrame = {
   alpha: number;
   /** 0..1: a result has just landed on the mark. */
   lit: number;
-  nodes: Array<{ id: string; x: number; y: number; state: PartState; crewed: boolean }>;
+  /** Each running part, where its crewmate is drawn. */
+  nodes: Array<{ id: string; x: number; y: number }>;
   /** `fromId` is the program's own id at the root. */
   branches: Array<{ fromId: string; toId: string; lit: boolean }>;
 };
@@ -573,9 +573,11 @@ export class CrewOrbit {
   }
 
   /**
-   * The board's tasks with parts (./constellation.ts). A program first
-   * draws once one of its parts is underway; a part filed from finished
-   * parts' results takes a packet down each branch it hangs from; the
+   * The board's tasks with parts (./constellation.ts), of which only the
+   * running parts draw (INF-1037). A program first draws once one of its
+   * parts is underway and keeps its mark while it is open, even with none
+   * running; a part that starts under another running part's released wait
+   * takes a packet down that branch; the
    * parent's close folds the tree into its mark (done), which then falls
    * home, or fades it (dropped). A closed program the stage never drew
    * draws nothing.
@@ -587,13 +589,13 @@ export class CrewOrbit {
     for (const program of list) {
       seen.add(program.id);
       const had = this.programs.get(program.id);
+      const parts = runningParts(program.parts);
       if (!had) {
-        if (program.state !== "live" || !program.parts.some((part) => part.state === "live"))
-          continue;
+        if (program.state !== "live" || parts.length === 0) continue;
         const rootSlot = this.openPlaneSlot(0);
         this.programs.set(program.id, {
           id: program.id,
-          parts: program.parts,
+          parts,
           rootSlot,
           rootAngle: new Spring(rootSlot, 0.7, 1),
           leaving: null,
@@ -607,15 +609,15 @@ export class CrewOrbit {
       }
       if (had.leaving) continue;
       const before = new Set(had.parts.map((part) => part.id));
-      for (const part of program.parts) {
+      for (const part of parts) {
         if (before.has(part.id)) continue;
         for (const parent of part.parents)
           had.packets.push({ route: [parent, part.id], at: now, home: false });
       }
       const key = (parts: readonly ProgramPart[]) =>
         parts.map((part) => `${part.id}:${part.state}:${part.parents.join("+")}`).join();
-      if (key(had.parts) !== key(program.parts)) {
-        had.parts = program.parts;
+      if (key(had.parts) !== key(parts)) {
+        had.parts = parts;
         changed = true;
       }
       if (program.state !== "live") {
@@ -1390,11 +1392,21 @@ export class CrewOrbit {
   }> {
     if (this.formation !== "adaptive" || mix < 0.999) return [];
     const radius = ringR + ((CROWDED_PLANES[0]?.radius ?? ringR) - ringR) * mix;
+    // A remote computer's group draws at a share of the scene's size, its
+    // glyphs at nearly full size: the gap between crewmates is kept on screen.
+    const a = this.projectScene({ x: 0, y: 0, depth: 0.5 }, radius);
+    const b = this.projectScene({ x: 1, y: 0, depth: 0.5 }, radius);
+    const share = Math.hypot(b.x - a.x, b.y - a.y) || 1;
     return [...this.programs.values()].map((program) => {
       const angle = program.rootAngle.x + planePhase(0, slotTime);
       const scene = this.scenePoint(0, angle, radius);
       const root = { ...scene, radius };
-      const places = layoutProgram(program.parts, root, SCENE_REACH_PX);
+      const places = layoutProgram(
+        program.parts,
+        root,
+        SCENE_REACH_PX,
+        CONSTELLATION.crewGapPx / share,
+      );
       return { program, root, places };
     });
   }
@@ -1414,6 +1426,8 @@ export class CrewOrbit {
   ): ProgramFrame[] {
     const frames: ProgramFrame[] = [];
     const drawn = new Map(crew.filter((c) => c.phase !== "leaving").map((c) => [c.id, c]));
+    // A result that climbs from a part just finished starts at its crewmate, going or not.
+    const anywhere = new Map(crew.map((c) => [c.id, c]));
     const ended: string[] = [];
     for (const { program, root, places } of layouts) {
       const tuning = this.tuning;
@@ -1440,21 +1454,12 @@ export class CrewOrbit {
       const rootPoint = this.projectScene(root, root.radius);
       const at = new Map<string, Point>();
       const nodes: ProgramFrame["nodes"] = [];
-      const share = layerGlyphShare(program.parts, places);
+      // Only a part whose crewmate is drawn here is a node: nothing else is painted.
       for (const part of program.parts) {
-        const place = places.get(part.id);
-        if (!place) continue;
-        const scene = {
-          x: place.x + (root.x - place.x) * fold,
-          y: place.y + (root.y - place.y) * fold,
-          depth: root.depth,
-        };
-        const point = this.projectScene(scene, root.radius);
-        const mate = part.state === "live" ? drawn.get(part.id) : undefined;
-        if (mate) mate.size *= share;
-        const where = mate ? { x: mate.x, y: mate.y } : { x: point.x, y: point.y };
-        at.set(part.id, where);
-        nodes.push({ id: part.id, ...where, state: part.state, crewed: Boolean(mate) });
+        const mate = places.has(part.id) ? drawn.get(part.id) : undefined;
+        if (!mate) continue;
+        at.set(part.id, { x: mate.x, y: mate.y });
+        nodes.push({ id: part.id, x: mate.x, y: mate.y });
       }
       // The mark falls home over the last stretch of a done close.
       const fall = home ? easeIn(clamp01((t - foldMs) / (1 - foldMs))) : 0;
@@ -1463,7 +1468,9 @@ export class CrewOrbit {
       const lit = new Set<string>();
       const keep: RoutePacket[] = [];
       for (const packet of program.packets) {
-        const points = packet.route.map((id) => at.get(id)).filter((p): p is Point => !!p);
+        const points = packet.route
+          .map((id) => at.get(id) ?? anywhere.get(id))
+          .filter((p): p is Point => !!p);
         if (packet.home) points.push({ x: 0, y: 0 });
         const legs = Math.max(1, points.length - 1);
         const dur = tuning.packetMs * (0.6 + 0.4 * legs);

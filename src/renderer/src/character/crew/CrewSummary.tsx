@@ -3,6 +3,8 @@ import { TaskFactRows } from "../../design/core/TaskFacts";
 import { TaskStatusMark } from "../../design/core/TaskStatusMark";
 import { TaskKey } from "../../design/panel/TaskKey";
 import { openTaskFromKey } from "../../plugins/point/openTask";
+import { programProgress } from "./constellation";
+import { partsCountWords } from "./programWords";
 import { type CrewFacts, useBoardTasks, useCrewRecord, useProjectName } from "./useCrewBoard";
 import "./summary.css";
 
@@ -40,6 +42,7 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
       {facts.task.reviewOf && <Reviewing builderId={facts.task.reviewOf} />}
       {facts.task.parentId && <PartOf parentId={facts.task.parentId} />}
       {(facts.task.blockedBy?.length ?? 0) > 0 && <BlockedBy keys={facts.task.blockedBy} />}
+      {facts.task.program && <ProgramParts programId={taskId} />}
       <TaskFactRows
         facts={shown}
         withTask
@@ -85,6 +88,51 @@ function PartOf({ parentId }: { parentId: string }) {
       <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(program)}>
         {program.key}
       </TaskKey>
+    </div>
+  );
+}
+
+/**
+ * How far a program has got, on its ring's summary (INF-1037): the stage
+ * draws only its running parts, so the ring counts every part by state,
+ * shows the share of each on one bar, and names each running part by its
+ * key with the computer it runs on, as a Tasks row says it.
+ */
+function ProgramParts({ programId }: { programId: string }) {
+  const { finished, running, waiting } = programProgress(useBoardTasks(), programId);
+  const total = finished + running.length + waiting;
+  if (total === 0) return null;
+  const counts = partsCountWords(finished, running.length, waiting);
+  return (
+    <div className="fm-task-facts parts" data-crew-program-parts="">
+      <div className="row">
+        <div className="label" data-task-fact-label="">
+          Parts
+        </div>
+        <div data-crew-parts-count="">{counts}</div>
+      </div>
+      <div className="parts-bar" aria-hidden="true">
+        {finished > 0 && <i data-part="finished" style={{ flexGrow: finished }} />}
+        {running.length > 0 && <i data-part="running" style={{ flexGrow: running.length }} />}
+        {waiting > 0 && <i data-part="waiting" style={{ flexGrow: waiting }} />}
+      </div>
+      {running.length > 0 && (
+        <div className="row">
+          <div className="label" data-task-fact-label="">
+            Running
+          </div>
+          <div className="running" data-crew-program-running="">
+            {running.map((part) => (
+              <span key={part.id} className="part">
+                <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(part)}>
+                  {part.key}
+                </TaskKey>
+                {part.place?.where && <span className="where"> {part.place.where}</span>}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

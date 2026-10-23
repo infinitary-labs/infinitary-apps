@@ -1,6 +1,12 @@
 import type { TaskLinkView, TaskView } from "@shared/tasks";
 import { describe, expect, it } from "vitest";
-import { CONSTELLATION, layoutProgram, programsOf } from "./constellation";
+import {
+  CONSTELLATION,
+  layoutProgram,
+  type ProgramPart,
+  programProgress,
+  programsOf,
+} from "./constellation";
 import { applyCrewDependencies, seedCrew } from "./crewSignal";
 import { crewHit } from "./hover";
 import { stageMarks } from "./marks";
@@ -12,8 +18,10 @@ import { crewFacts } from "./useCrewBoard";
  * The captain's INF-799 choice, "Branching constellation": a program the
  * host runs draws on the stage from the graph's own links, "a part hangs from the
  * parts whose results it builds on", a finished part's result climbs to the
- * root, the tree folds into the root, and one result falls home. The board
- * below is a review program as the task graph records one.
+ * root, the tree folds into the root, and one result falls home. INF-1037
+ * then drew only the running parts: "i feel 'not started' and 'finished'
+ * parts should not be rendered there". The board below is a review program
+ * as the task graph records one.
  */
 
 function view(patch: Partial<TaskView> & { id: string }): TaskView {
@@ -163,6 +171,35 @@ describe("layoutProgram", () => {
     expect(reach("synthesize")).toBeGreaterThan(reach("verify-a"));
   });
 
+  // INF-1037: "Running crewmates keep full size and stay at least 25 px
+  // apart, so the fan widens instead of shrinking them." INF-1017 ran 5
+  // verifiers at once; a bigger program may run many more.
+  it("keeps neighbours a glyph apart: the fan widens, then the layer moves out", () => {
+    const fan = (n: number): ProgramPart[] =>
+      Array.from({ length: n }, (_, i) => ({ id: `p${i}`, parents: [], state: "live" }));
+    const gaps = (n: number) => {
+      const places = [...layoutProgram(fan(n), root, 1000).values()];
+      return places.slice(1).map((p, i) => {
+        const q = places[i];
+        return Math.hypot(p.x - (q?.x ?? 0), p.y - (q?.y ?? 0));
+      });
+    };
+    for (const n of [2, 5, 12, 30])
+      for (const gap of gaps(n)) expect(gap).toBeGreaterThanOrEqual(CONSTELLATION.crewGapPx - 1e-9);
+    // Two neighbours keep the approved 70 degree fan; five open it wider.
+    const angles = (n: number) =>
+      [...layoutProgram(fan(n), root, 1000).values()].map((p) => p.angle);
+    const width = (n: number) => Math.max(...angles(n)) - Math.min(...angles(n));
+    expect(width(2)).toBeCloseTo((CONSTELLATION.spreadDeg * Math.PI) / 180);
+    expect(width(5)).toBeGreaterThan((CONSTELLATION.spreadDeg * Math.PI) / 180);
+    expect(width(30)).toBeLessThanOrEqual((CONSTELLATION.widestSpreadDeg * Math.PI) / 180 + 1e-9);
+    // A remote computer's group, at half the scene's size, asks for twice the room.
+    const half = [...layoutProgram(fan(5), root, 1000, CONSTELLATION.crewGapPx * 2).values()];
+    expect(
+      Math.hypot((half[1]?.x ?? 0) - (half[0]?.x ?? 0), (half[1]?.y ?? 0) - (half[0]?.y ?? 0)),
+    ).toBeGreaterThanOrEqual(CONSTELLATION.crewGapPx * 2 - 1e-9);
+  });
+
   it("scales the whole graph about its root when a node would leave the stage", () => {
     const { tasks, links } = reviewBoard();
     const [program] = programsOf(tasks, links);
@@ -181,24 +218,19 @@ describe("layoutProgram", () => {
 });
 
 describe("the constellation on the orbit", () => {
-  it("draws one branch per recorded link and seats each live part's crewmate at its node", () => {
+  it("draws only the running parts, each a crewmate on a branch from the root", () => {
     const { tasks, links } = reviewBoard();
     const model = adaptive();
     seedCrew(model, tasks, 0, links);
     const frame = model.update(0, true);
     const [program] = frame.programs;
+    // The finished finders and the unstarted synthesis draw nothing, so each
+    // verifier hangs from the root.
     expect(program?.branches.map((b) => `${b.fromId}>${b.toId}`)).toEqual([
-      "review>find-a",
-      "review>find-b",
-      "find-a>verify-a",
-      "find-b>verify-b",
-      "verify-a>synthesize",
-      "verify-b>synthesize",
+      "review>verify-a",
+      "review>verify-b",
     ]);
-    expect(program?.nodes.filter((n) => n.crewed).map((n) => n.id)).toEqual([
-      "verify-a",
-      "verify-b",
-    ]);
+    expect(program?.nodes.map((n) => n.id)).toEqual(["verify-a", "verify-b"]);
     for (const id of ["verify-a", "verify-b"]) {
       const node = program?.nodes.find((n) => n.id === id);
       const mate = frame.crew.find((c) => c.id === id);
@@ -304,8 +336,7 @@ describe("the constellation on the orbit", () => {
     const lit = riding.programs[0]?.branches
       .filter((b) => b.lit)
       .map((b) => `${b.fromId}>${b.toId}`);
-    expect(lit?.length).toBe(1);
-    expect(["find-a>verify-a", "review>find-a"]).toContain(lit?.[0]);
+    expect(lit).toEqual(["review>verify-a"]);
     const landed = run(model, 1716, 3000);
     expect(landed.packets).toEqual([]);
     expect(model.takeCues().filter((cue) => cue.kind === "receive")).toEqual([]);
@@ -313,7 +344,7 @@ describe("the constellation on the orbit", () => {
     expect(landed.programs[0]?.lit).toBe(0);
   });
 
-  it("feeds a part filed from finished results with a packet down each branch it hangs from", () => {
+  it("hangs a part that starts after its finished parts from the root, with nothing to feed it", () => {
     const { tasks, links } = reviewBoard();
     const model = adaptive();
     seedCrew(
@@ -336,12 +367,12 @@ describe("the constellation on the orbit", () => {
       [...links, blocks("verify-a", "write-up"), blocks("verify-b", "write-up")],
       1000,
     );
-    const frame = run(model, 1000, 1200);
-    expect(frame.packets).toHaveLength(2);
-    expect(frame.programs[0]?.branches.filter((b) => b.lit).map((b) => b.toId)).toEqual([
-      "write-up",
-      "write-up",
+    model.spawn("write-up", "working", 1000);
+    const frame = run(model, 1000, 4000);
+    expect(frame.programs[0]?.branches.map((b) => `${b.fromId}>${b.toId}`)).toEqual([
+      "review>write-up",
     ]);
+    expect(frame.programs[0]?.branches.filter((b) => b.lit)).toEqual([]);
   });
 
   it("folds into its mark on a done close, which then falls home as the one result", () => {
@@ -357,12 +388,8 @@ describe("the constellation on the orbit", () => {
     );
     applyCrewDependencies(model, closed, links, 1000);
     const folding = run(model, 1000, 1000 + DEFAULT_ORBIT.homeMs * 0.5);
-    const [program] = folding.programs;
-    const toMark = (id: string) => {
-      const node = program?.nodes.find((n) => n.id === id);
-      return Math.hypot((node?.x ?? 0) - (program?.x ?? 0), (node?.y ?? 0) - (program?.y ?? 0));
-    };
-    expect(toMark("synthesize")).toBeGreaterThan(1);
+    // Its parts have finished, so only the mark is left to fold away.
+    expect(folding.programs.map((p) => [p.id, p.nodes])).toEqual([["review", []]]);
     const end = 1000 + DEFAULT_ORBIT.homeMs + DEFAULT_ORBIT.packetMs + 100;
     const after = run(model, 1000 + DEFAULT_ORBIT.homeMs * 0.5 + 16, end);
     expect(after.programs).toEqual([]);
@@ -391,7 +418,7 @@ describe("the constellation on the orbit", () => {
  * spot, beside a crewmate and under a seated part; the captain chose "a
  * seat per constellation". Here each is a program, so all four draw: eight
  * crewmates on this Mac's inner orbit, four of them parts, and each program
- * with a finished part beside its live one.
+ * with a finished part that draws nothing (INF-1037).
  */
 function captainsBoard(): { tasks: TaskView[]; links: TaskLinkView[] } {
   const tasks: TaskView[] = [];
@@ -424,19 +451,15 @@ function captainsBoard(): { tasks: TaskView[]; links: TaskLinkView[] } {
 
 /**
  * Every mark the inner orbit carries, by the task it stands for: its
- * crewmates, each root, and every part's node or seated crewmate. Crew on
- * the other planes cross it on screen by the approved design, never in 3D.
+ * crewmates, each root, and every seated part's crewmate. Crew on the other
+ * planes cross it on screen by the approved design, never in 3D.
  */
 function marksOf(frame: OrbitFrame): Array<{ id: string; x: number; y: number }> {
   const seated = new Set(frame.programs.flatMap((p) => p.nodes.map((n) => n.id)));
   const marks = frame.crew
     .filter((c) => c.phase !== "leaving" && (c.plane === 0 || seated.has(c.id)))
     .map((c) => ({ id: c.id, x: c.x, y: c.y }));
-  for (const program of frame.programs) {
-    marks.push({ id: program.id, x: program.x, y: program.y });
-    for (const node of program.nodes)
-      if (!node.crewed) marks.push({ id: node.id, x: node.x, y: node.y });
-  }
+  for (const program of frame.programs) marks.push({ id: program.id, x: program.x, y: program.y });
   return marks;
 }
 
@@ -505,7 +528,7 @@ describe("a seat per constellation", () => {
   });
 });
 
-// INF-999: a root ring, a finished part's node and a seated part were drawn
+// INF-999: a root ring and a seated part were drawn
 // with nothing to point at or nothing to say, so the captain could not tell
 // which task a mark stood for.
 describe("every mark names its task", () => {
@@ -524,11 +547,29 @@ describe("every mark names its task", () => {
       expect(marks.has(id), id).toBe(true);
       expect(facts[id]?.task.id, id).toBe(id);
     }
-    // Pointing at a root ring or a finished part's node reads that task.
+    // Pointing at a root ring or a seated part reads that task.
     for (const program of frame.programs) {
       expect(crewHit(stageMarks(frame), program.x, program.y)).toBe(program.id);
       for (const node of program.nodes)
         expect(crewHit(stageMarks(frame), node.x, node.y)).toBe(node.id);
     }
+  });
+});
+
+// INF-1037: "Add a row such as '20 finished, 5 running, 0 waiting' when
+// pointing at the ring", and "make the hover preview for a ring a bit richer
+// than just the counts": the summary names each running part too.
+describe("a program's progress on its ring", () => {
+  it("counts the parts the stage no longer draws, and lists the running ones in filed order", () => {
+    const { tasks } = reviewBoard();
+    const board = [
+      ...tasks,
+      view({ id: "dropped", status: "dropped", closedReason: "cancelled", createdAt: 7 }),
+      view({ id: "reviewer", reviewOf: "verify-a", createdAt: 8 }),
+    ];
+    const progress = programProgress(board, "review");
+    expect(progress.finished).toBe(2);
+    expect(progress.waiting).toBe(1);
+    expect(progress.running.map((task) => task.id)).toEqual(["verify-a", "verify-b"]);
   });
 });

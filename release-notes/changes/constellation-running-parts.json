@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "constellation-running-parts",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A task split into parts shows only the parts that are running",
+      "body": "A constellation now draws only the parts running right now, each as a full-size crewmate on a line from its ring, spread so none overlap. Finished and not-started parts no longer leave dots behind. When parts run on more than one computer, each computer shows its own copy of the ring with the crewmates running there. Pointing at a ring shows how far the task has got, such as 12 finished, 5 running, 2 waiting, and names each running part.",
+      "picture": {
+        "dark": "constellation-running-parts-dark.webp",
+        "light": "constellation-running-parts-light.webp",
+        "alt": "A constellation's ring with five full-size crewmates fanned out on lines from it, beside Firstmate, with no dots for finished or waiting parts"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

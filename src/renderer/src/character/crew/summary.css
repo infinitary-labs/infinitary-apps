@@ -131,3 +131,49 @@
   min-width: 0;
   flex: 1 1 12em;
 }
+/* A program's parts on its ring's summary (INF-1037): the counts, one bar
+   with each state's share - finished in --fg-3, running in the accent,
+   waiting as an outline - and each running part's key, which takes a
+   press as a blocker key does, with the computer it runs on. */
+.fm-crew-summary .parts {
+  margin: -4px 0 10px;
+}
+.fm-crew-summary .parts-bar {
+  display: flex;
+  gap: 2px;
+  height: 3px;
+  margin: 5px 0 0 76px;
+}
+.fm-crew-summary .parts-bar i {
+  flex-basis: 0;
+  min-width: 3px;
+  border-radius: 2px;
+}
+.fm-crew-summary .parts-bar [data-part="finished"] {
+  background: var(--fg-3);
+}
+.fm-crew-summary .parts-bar [data-part="running"] {
+  background: var(--accent);
+}
+.fm-crew-summary .parts-bar [data-part="waiting"] {
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.fm-crew-summary .parts .parts-bar + .row {
+  margin-top: 6px;
+}
+.fm-crew-summary .parts .running {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 10px;
+  row-gap: 2px;
+  white-space: normal;
+}
+.fm-crew-summary .parts [data-task-key] {
+  pointer-events: auto;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+.fm-crew-summary .parts .where {
+  color: var(--fg-3);
+  font-size: var(--text-xs);
+}

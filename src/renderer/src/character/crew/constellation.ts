@@ -28,8 +28,14 @@ export const CONSTELLATION = {
   collapse: "fold" as "fold" | "fade",
   /** The program's mark, a hollow ring, px. */
   rootMarkPx: 5,
-  /** A wide layer shrinks its glyphs, as the preview did past nine. */
-  comfortableLayer: 9,
+  /**
+   * The least room between two neighbours on a layer, screen px: a glyph's
+   * width, so running crewmates keep their full size and never overlap
+   * (INF-1037). A layer that needs more room than the spread widens its fan.
+   */
+  crewGapPx: 25,
+  /** The widest a fan opens before its layer moves outward instead, degrees. */
+  widestSpreadDeg: 180,
 } as const;
 
 export type PartState = "live" | "done" | "open";
@@ -56,6 +62,45 @@ function partState(task: TaskView): PartState | null {
   if (task.status === "done") return "done";
   // A dropped part dims and drifts off as today; it leaves no node.
   return null;
+}
+
+/**
+ * The parts the stage draws (INF-1037): only the running ones, each a
+ * crewmate. A finished or unstarted part draws nothing, so a running part
+ * hangs from another only by a wait on a part that also runs - a wait the
+ * captain released - and otherwise from the root.
+ */
+export function runningParts(parts: readonly ProgramPart[]): ProgramPart[] {
+  const live = parts.filter((part) => part.state === "live");
+  const ids = new Set(live.map((part) => part.id));
+  return live.map((part) => ({ ...part, parents: part.parents.filter((id) => ids.has(id)) }));
+}
+
+/** How far a program has got, for the summary its ring opens (INF-1037). */
+export type ProgramProgress = {
+  finished: number;
+  /** Its running parts, each named in the summary, in the order they were filed. */
+  running: TaskView[];
+  waiting: number;
+};
+
+/**
+ * A program's parts by state, read from the board as `programsOf` reads
+ * them: the stage draws only the running ones, so the ring's summary counts
+ * the rest. A dropped part counts in none.
+ */
+export function programProgress(tasks: readonly TaskView[], programId: string): ProgramProgress {
+  const progress: ProgramProgress = { finished: 0, running: [], waiting: 0 };
+  const parts = tasks
+    .filter((task) => task.parentId === programId && task.kind === "work" && !task.reviewOf)
+    .sort((a, b) => a.createdAt - b.createdAt || a.key.localeCompare(b.key));
+  for (const part of parts) {
+    const state = partState(part);
+    if (state === "done") progress.finished++;
+    else if (state === "live") progress.running.push(part);
+    else if (state === "open") progress.waiting++;
+  }
+  return progress;
 }
 
 /**
@@ -114,11 +159,15 @@ export type NodePlace = { x: number; y: number; layer: number; angle: number };
  * from the root, each layer spread evenly across the spread and ordered by
  * its parents' angles so a chain stays straight, and the whole graph
  * scaled about its root when a node would leave `half` (a square half-size).
+ * Neighbours on a layer stay `gap` apart (scene px; a glyph's width, divided
+ * by the share a remote computer's group draws at): a crowded layer first
+ * widens its fan up to the widest spread, then moves outward.
  */
 export function layoutProgram(
   parts: readonly ProgramPart[],
   root: { x: number; y: number },
   half: number,
+  gap: number = CONSTELLATION.crewGapPx,
 ): Map<string, NodePlace> {
   const out = Math.atan2(root.y, root.x);
   const byId = new Map(parts.map((part) => [part.id, part]));
@@ -142,12 +191,18 @@ export function layoutProgram(
     members.push(part);
     layers[l] = members;
   }
-  const spread = (CONSTELLATION.spreadDeg * Math.PI) / 180;
+  const least = (CONSTELLATION.spreadDeg * Math.PI) / 180;
+  const widest = (CONSTELLATION.widestSpreadDeg * Math.PI) / 180;
   const placed = new Map<string, NodePlace>();
   let distance = 0;
   for (let l = 1; l < layers.length; l++) {
     distance += CONSTELLATION.branchPx * CONSTELLATION.branchDecay ** (l - 1);
     const members = layers[l] ?? [];
+    // Each neighbour a chord of `gap` apart; past the widest fan the layer moves out.
+    const steps = members.length - 1;
+    if (steps > 0) distance = Math.max(distance, gap / (2 * Math.sin(widest / steps / 2)));
+    const spread =
+      steps > 0 ? Math.max(least, steps * 2 * Math.asin(Math.min(1, gap / (2 * distance)))) : 0;
     const keyed = members.map((part, order) => {
       const angles = part.parents.map((id) => placed.get(id)?.angle ?? out);
       const key = angles.length ? angles.reduce((a, b) => a + b, 0) / angles.length : out;
@@ -155,7 +210,7 @@ export function layoutProgram(
     });
     keyed.sort((a, b) => a.key - b.key || a.order - b.order);
     keyed.forEach(({ part }, j) => {
-      const angle = keyed.length > 1 ? out + spread * (j / (keyed.length - 1) - 0.5) : out;
+      const angle = steps > 0 ? out + spread * (j / steps - 0.5) : out;
       placed.set(part.id, {
         x: root.x + Math.cos(angle) * distance,
         y: root.y + Math.sin(angle) * distance,
@@ -183,18 +238,4 @@ export function layoutProgram(
     }
   }
   return placed;
-}
-
-/** A wide layer's glyph share, as the preview drew it. */
-export function layerGlyphShare(
-  parts: readonly ProgramPart[],
-  places: Map<string, NodePlace>,
-): number {
-  const widths = new Map<number, number>();
-  for (const part of parts) {
-    const l = places.get(part.id)?.layer;
-    if (l !== undefined) widths.set(l, (widths.get(l) ?? 0) + 1);
-  }
-  const widest = Math.max(1, ...widths.values());
-  return Math.min(1, Math.sqrt(CONSTELLATION.comfortableLayer / widest));
 }

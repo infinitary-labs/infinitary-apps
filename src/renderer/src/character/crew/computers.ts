@@ -93,9 +93,9 @@ export class ComputerOrbits extends CrewOrbit {
   private tiers = new Map<string, Slot | undefined>();
   private reviewEdges = new Map<string, string>();
   private waits: readonly CrewedWait[] = [];
-  /** The board's programs, and the computer each is drawn on. */
+  /** The board's programs, and the computers each is drawn on. */
   private programList: readonly Program[] = [];
-  private programAt = new Map<string, string>();
+  private programAt = new Map<string, readonly string[]>();
   constructor(now: number, random: () => number = Math.random) {
     super(now, undefined, random, "adaptive");
     this.clock = now;
@@ -402,11 +402,11 @@ export class ComputerOrbits extends CrewOrbit {
     return links;
   }
   /**
-   * Each program draws in the group of the computer running its live parts
-   * (INF-999), so its root and its seated crew share one orbit: it stays
-   * where it is drawn while a live part runs there, and otherwise goes to
-   * the computer of its first live part. Another computer's live part is a
-   * filled accent node, as at home.
+   * A program draws a copy of its ring in the group of each computer that
+   * runs its parts, each copy with the crewmates running there (INF-1037,
+   * the captain's choice A), so every crewmate stays where its work runs.
+   * With none running, between stages, its rings stay where they were drawn,
+   * or one at home.
    */
   override setPrograms(list: readonly Program[], now: number): void {
     this.programList = [...list];
@@ -414,18 +414,21 @@ export class ComputerOrbits extends CrewOrbit {
   }
   private routePrograms(now: number): void {
     const byComputer = new Map<string, Program[]>();
-    const placed = new Map<string, string>();
+    const placed = new Map<string, readonly string[]>();
     for (const program of this.programList) {
-      const live = program.parts
-        .filter((part) => part.state === "live")
-        .map((part) => this.computerOf(part.id));
-      const had = this.programAt.get(program.id);
-      const at =
-        had && (live.length === 0 || live.includes(had)) ? had : (live[0] ?? HOME_COMPUTER);
+      const running = program.parts.filter((part) => part.state === "live");
+      const live = [...new Set(running.map((part) => this.computerOf(part.id)))];
+      const at = live.length > 0 ? live : (this.programAt.get(program.id) ?? [HOME_COMPUTER]);
       placed.set(program.id, at);
-      const list = byComputer.get(at) ?? [];
-      list.push(program);
-      byComputer.set(at, list);
+      for (const computer of at) {
+        // Each copy holds only the parts running on its own computer.
+        const parts = program.parts.filter(
+          (part) => part.state !== "live" || this.computerOf(part.id) === computer,
+        );
+        const list = byComputer.get(computer) ?? [];
+        list.push({ ...program, parts });
+        byComputer.set(computer, list);
+      }
     }
     this.programAt = placed;
     super.setPrograms(byComputer.get(HOME_COMPUTER) ?? [], now);

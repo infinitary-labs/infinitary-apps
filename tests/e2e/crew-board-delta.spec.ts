@@ -21,9 +21,11 @@ import { served } from "./providerRequest";
  * (INF-892: they listened to snapshots alone, so a large board froze them).
  * The dev override lowers the trigger to zero, so a small board takes the
  * path a large one takes. A review program is seeded as
- * `program-constellation.spec.ts` seeds one, beside two idle crewmates.
- * The first mate links the two by a wait and later unlinks them, and the
- * captain drops an unstarted part; the window records every board push, and
+ * `program-constellation.spec.ts` seeds one, with a second verifier running
+ * beside the first, next to two idle crewmates.
+ * The first mate links the two crewmates by a wait and later unlinks them,
+ * and puts the second verifier behind the first, so the constellation, which
+ * draws only running parts (INF-1037), moves; the window records every board push, and
  * each change must arrive as a delta, never a snapshot, before the stage's
  * published arrows and constellation are read. Completion is the near
  * layer's published reading; it runs on this Mac alone and shares nothing
@@ -67,14 +69,19 @@ async function carrierOf(
 }
 
 /** The captain's words, answered by the first mate with one `link_tasks` call. */
-async function firstmateLinks(app: LaunchedApp, words: string, remove: boolean): Promise<void> {
+async function firstmateLinks(
+  app: LaunchedApp,
+  words: string,
+  remove: boolean,
+  { from, to }: { from: string; to: string } = { from: "owner", to: "waiter" },
+): Promise<void> {
   if (!app.mockProvider) throw new Error("This journey scripts the first mate's link");
   const turn = app.mockProvider.scriptFirstmateTurn(
     served({ kind: "user", origin: "captain", body: renderWake(captainTurn(words, false)) }),
     [
       {
         name: "link_tasks",
-        args: { from: "owner", to: "waiter", type: "blocks", ...(remove ? { remove } : {}) },
+        args: { from, to, type: "blocks", ...(remove ? { remove } : {}) },
       },
     ],
   );
@@ -117,6 +124,15 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
   });
   tasks.link("find", "verify", "blocks", "host");
   seedTask(tasks, {
+    id: "check",
+    title: "Check the finder's second lost turn",
+    parentId: "review",
+    status: "idle",
+    worktreeDir: worktree("check"),
+    outcome: "Reading the resume path.",
+  });
+  tasks.link("find", "check", "blocks", "host");
+  seedTask(tasks, {
     id: "synthesize",
     title: "Write up the verified lost turns",
     parentId: "review",
@@ -140,6 +156,7 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     outcome: "The importer change is ready.",
   });
   const ownerKey = tasks.get("owner")?.key ?? "";
+  const checkKey = tasks.get("check")?.key ?? "";
   db.pragma("query_only = ON");
 
   const app = await launchApp({
@@ -156,7 +173,7 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     await resizeWindow(app.app, page, { width: 1280, height: 860 });
     await expect
       .poll(() => near(page).getAttribute("data-constellation"), { timeout: 15_000 })
-      .toBe("review=review>find find>verify verify>synthesize");
+      .toBe("review=review>verify review>check");
     await expect(near(page)).toHaveAttribute("data-crew-arrows", "");
     // The core's first push follows the boot's presentation pass, so every
     // push from here on has a base and is a delta.
@@ -175,22 +192,19 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     await expect(near(page)).toHaveAttribute("data-crew-arrows", "wait:waiter>owner");
     await regionShot(formation(page), out("delta-wait-drawn.png"));
 
-    // Section 2: the captain drops the unstarted write-up from its record.
-    await page.evaluate(() =>
-      window.infinitary.task.run("synthesize", "drop-task", {
-        parts: [],
-        waiting: [],
-        underway: [],
-      }),
-    );
+    // Section 2: the first mate puts the second verifier behind the first.
+    await firstmateLinks(app, "Have the second check wait for the verification.", false, {
+      from: "verify",
+      to: "check",
+    });
     await expect
-      .poll(() => carrierOf(page, "synthesize", (task) => task.status === "dropped"))
+      .poll(() => carrierOf(page, "verify", (task) => task.blocks.includes(checkKey)))
       .toBe("delta");
     await expect(near(page)).toHaveAttribute(
       "data-constellation",
-      "review=review>find find>verify",
+      "review=review>verify verify>check",
     );
-    await regionShot(formation(page), out("delta-part-dropped.png"));
+    await regionShot(formation(page), out("delta-part-linked.png"));
 
     // Section 3: the first mate takes the wait away again.
     const linked = (await boardPushes(page)).length;

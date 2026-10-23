@@ -182,8 +182,8 @@ Constants beside `STALL_WAKE_MS`, never settings; each is timed from the rung be
 
 | Idle for | Rung | What the host does | Ledger |
 |---|---|---|---|
-| 10 min | 1 | One typed steer to the crewmate, once per episode (`IDLE_NUDGE_TEXT`, `idleNoteNudgeText` naming the newest note while one is up, or `IDLE_THREAD_NUDGE_TEXT` in the step-2 case). A task the first mate declared an internal step (`shape.internal_step`) is asked for its answer and told it takes no completion card (`IDLE_STEP_NUDGE_TEXT`, or the note's words with `step`; FI3-801). Skipped when the last turn failed at the provider: the retry owns that. | `rule:idle-nudge`, routine |
-| 20 min | 2 | One wake to the first mate carrying the ways out as a hold does (`holds.ts`, `idle-stall`: steer, cancel, discard), as typed facts rendered where served (`docs/inbox.md`, "The wake envelope"); while a note is up it names the note, never "no card up". | `rule:idle-wake`, captain |
+| 10 min | 1 | One typed steer to the crewmate, once per episode (`IDLE_NUDGE_TEXT`, `idleNoteNudgeText` naming the newest note while one is up, or `idleThreadNudgeText` in the step-2 case, naming each card whose captain reply waits so the crewmate answers that card rather than another of its own, INF-990 friction 4). A task the first mate declared an internal step (`shape.internal_step`) is asked for its answer and told it takes no completion card (`IDLE_STEP_NUDGE_TEXT`, or the note's words with `step`; FI3-801). Skipped when the last turn failed at the provider: the retry owns that. | `rule:idle-nudge`, routine |
+| 20 min | 2 | One wake to the first mate carrying the ways out as a hold does (`holds.ts`, `idle-stall`: steer, cancel, discard), as typed facts rendered where served (`docs/inbox.md`, "The wake envelope"); while a note is up it names the note, never "no card up", and in the step-2 case it names the cards whose captain reply waits. | `rule:idle-wake`, captain |
 | 50 min | 2 | The same wake again, "the second time", if the first was ignored. | `rule:idle-repeat`, captain |
 | 80 min | 3 | The host raises its own card on the task, in place of any further wake. | `rule:idle-card`, captain |
 

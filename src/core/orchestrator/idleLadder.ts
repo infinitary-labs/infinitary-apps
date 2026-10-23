@@ -101,6 +101,11 @@ export function timedWaitOver(gate: TaskGate): TypedWake {
  * Whether the Firstmate declared the task an internal step (FI3-801): its
  * nudge asks for its answer, never the completion card its brief forbids.
  */
+/** The waiting cards a stall wake names, when any are open. */
+function waitingFact(waiting: WakeNote[]): { waiting?: WakeNote[] } {
+  return waiting.length > 0 ? { waiting } : {};
+}
+
 function declaredStep(record: TaskRecord | undefined): boolean {
   return record?.shape?.internal_step === true;
 }
@@ -170,8 +175,8 @@ export type IdleLadderHost = {
   oldestRunningJob?: (taskId: string) => RunningJob | undefined;
   /** The cards on the stack now. */
   openCards(): Iterable<Card>;
-  /** The captain wrote last on one of the task's open card threads. */
-  threadAwaitingAuthor(taskId: string): boolean;
+  /** The task's open cards whose captain reply waits on their author, oldest first. */
+  threadsAwaitingAuthor(taskId: string): WakeNote[];
   /** The reviewed lane and review tasks bypass supervision. */
   bypassesSupervision(taskId: string): boolean;
   notifyOp(wake: TypedWake, origin: ServedWakeOrigin, taskId?: string): void;
@@ -274,7 +279,7 @@ export class IdleLadder {
     // (INF-731): that close is its crewmate's next turn.
     const finishedCardUp = record?.delivery?.finishedAt !== undefined && this.ownCardFor(taskId);
     return {
-      threadAwaitingAuthor: this.host.threadAwaitingAuthor(taskId),
+      threadAwaitingAuthor: this.host.threadsAwaitingAuthor(taskId).length > 0,
       decisionCardOpen: cardUp || gateCardUp || captainWait || browserWithCaptain,
       captainWait,
       finishedCardUp,
@@ -905,7 +910,8 @@ export class IdleLadder {
    */
   private nudge(record: TaskRecord, now: number, threadUnanswered: boolean): void {
     const note = threadUnanswered ? undefined : this.noteFor(record.id);
-    const nudge = idleNudge(threadUnanswered, note, declaredStep(record));
+    const waiting = threadUnanswered ? this.host.threadsAwaitingAuthor(record.id) : [];
+    const nudge = idleNudge(threadUnanswered, note, declaredStep(record), waiting);
     this.host.tasks.recordRecovery(record.id, { rung: 1, count: 0, at: now });
     this.host.recordSort(
       record.id,
@@ -986,6 +992,7 @@ export class IdleLadder {
       key: record.key || record.id,
       idleMs,
       thread,
+      ...(thread ? waitingFact(this.host.threadsAwaitingAuthor(record.id)) : {}),
       nudged: this.episodeNudged(record),
       wakes,
       ...(last ? { last } : {}),

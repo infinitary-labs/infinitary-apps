@@ -856,6 +856,58 @@ describe("CardService", () => {
     expect(cards.has("card-fm-no-headroom")).toBe(false);
   });
 
+  // INF-990 friction 4, replayed from INF-908: the crewmate answered the
+  // captain's reply with a card under a new id, the reply on it was lost,
+  // and the first card waited on an answer while it closed the second.
+  it("keeps a reply on the card the captain wrote under, and names that card while it waits", () => {
+    const { tasks, cardStore, make } = setup();
+    seedTask(tasks, { id: "t1", title: "Why the chips differ", status: "idle" });
+    const cards = make();
+    const first = cards.emitCrewmateCard(
+      "t1",
+      {
+        title: "The chip colors distinguish prefixes",
+        body: "<p>Prefixes are muted.</p>",
+        actions: [],
+      },
+      "m",
+    );
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    cards.addMessage(first, "captain", "that seems inconsistent");
+    const answer = {
+      id: "models-chip-color",
+      title: "The chip uses separate colors",
+      body: "<p>Prefixes are muted; labels are bright.</p>",
+      actions: [],
+      reply: "Yes, the same name is bright in a label and muted as a prefix.",
+    };
+    expect(() => cards.emitCrewmateCard("t1", answer, "m")).toThrow(
+      `Card refused: reply answers the captain's reply under card "The chip colors distinguish prefixes" (${first}), and id "models-chip-color" names a new card, so that answer would be lost.`,
+    );
+    expect(cards.threadsAwaitingAuthor("t1")).toEqual([
+      { id: first, title: "The chip colors distinguish prefixes" },
+    ]);
+
+    // A new card without the reply goes up; an answer under it says the
+    // first card still waits, and closing it leaves that card named.
+    const second = cards.emitCrewmateCard("t1", { ...answer, reply: undefined }, "m");
+    expect(cards.replyFromCrewmate("t1", { cardId: second, text: "Muted means a prefix." })).toBe(
+      `Replied in the thread on "The chip uses separate colors" (${second}). The captain's reply under card "The chip colors distinguish prefixes" (${first}) still waits on your answer: answer it there with reply, or in that card's emit_card revision.`,
+    );
+    cards.close(second, { kind: "crewmate", taskId: "t1" }, "relayed");
+    expect(cards.threadsAwaitingAuthor("t1").map((card) => card.id)).toEqual([first]);
+
+    // The revision of the card the captain wrote under answers them.
+    cards.emitCrewmateCard("t1", { ...answer, id: first }, "m");
+    expect(cardStore.awaitingAuthor(first)).toBe(false);
+    expect(cards.threadAwaitingAuthor("t1")).toBe(false);
+    expect(cardStore.messages(first).map((message) => message.who)).toEqual([
+      "captain",
+      "host",
+      "crewmate",
+    ]);
+  });
+
   it("writes a crewmate's thread answer only on its own card, and pushes the thread whole", () => {
     const { tasks, threads, make } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });

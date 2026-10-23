@@ -1503,7 +1503,7 @@ export class CrewSupervisor {
         options.hasRunningJobs?.(taskId) === true || this.clientJobStart(taskId) !== undefined,
       oldestRunningJob: (taskId) => this.oldestJob(taskId),
       openCards: () => this.cards.values(),
-      threadAwaitingAuthor: (taskId) => this.cards.threadAwaitingAuthor(taskId),
+      threadsAwaitingAuthor: (taskId) => this.cards.threadsAwaitingAuthor(taskId),
       bypassesSupervision: (taskId) => this.bypassesSupervision(taskId),
       notifyOp: (wake, origin, taskId) => this.hooks.notifyOp(wake, origin, taskId),
       premiumCanServe: () => this.premiumCanServe(),

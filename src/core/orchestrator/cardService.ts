@@ -54,7 +54,7 @@ import { cardChanges } from "./cardChanges";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 import { requiredActionCard } from "./requiredActionCard";
 import type { SeatPauseClass } from "./seat";
-import type { WakeCard } from "./wakes";
+import { type WakeCard, waitingCardWords } from "./wakes";
 
 /**
  * The card stack (the primitives review's P4 and P6, docs/card-threads.md):
@@ -995,6 +995,18 @@ export class CardService {
       this.scheduleBroadcast();
       return resolved;
     }
+    // A reply rides a revision of the card the captain wrote under. A new
+    // card carrying one would drop it and leave that card waiting on an
+    // answer nobody gives (INF-990 friction 4), so it names that card.
+    const waiting =
+      input.reply?.trim() && context.author === "crewmate" && context.taskId
+        ? this.threadsAwaitingAuthor(context.taskId)
+        : [];
+    if (waiting.length > 0) {
+      throw new Error(
+        `Card refused: reply answers the captain's reply under ${waitingCardWords(waiting)}, and ${stableId ? `id "${stableId}" names a new card` : "a card without that card's id is a new card"}, so that answer would be lost. Revise that card under its own id with reply, or answer it with reply(card_id, text) and emit this card without reply. Nothing was shown.`,
+      );
+    }
     const id = resolved && !this.cards.has(resolved) ? resolved : context.mintId();
     const built = buildEmittedCard(id, input, context, this.host.now());
     // A crewmate's new card waits for its close-out, and lands on its
@@ -1619,7 +1631,11 @@ export class CardService {
       return `A reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter, or revise the card.`;
     }
     this.addMessage(id, "crewmate", text);
-    return `Replied in the thread on "${card.title}" (${id}).`;
+    const replied = `Replied in the thread on "${card.title}" (${id}).`;
+    // An answer under another card leaves the captain's reply waiting
+    // (INF-990 friction 4): the receipt names the card that still waits.
+    const still = this.threadsAwaitingAuthor(taskId).filter((other) => other.id !== id);
+    return still.length > 0 ? `${replied} ${stillWaitingWords(still)}` : replied;
   }
 
   /**
@@ -1628,11 +1644,19 @@ export class CardService {
    * retained thread history alone does not mean the author owes an answer.
    */
   threadAwaitingAuthor(taskId: string): boolean {
-    for (const card of this.cards.values()) {
-      if (card.taskId !== taskId) continue;
-      if (this.host.cardStore.awaitingAuthor(card.id)) return true;
-    }
-    return false;
+    return this.threadsAwaitingAuthor(taskId).length > 0;
+  }
+
+  /**
+   * The task's open cards whose current lifecycle waits on an author answer,
+   * oldest first: what a reminder names, so its author answers the card the
+   * captain wrote under rather than another of its cards (INF-990 friction 4).
+   */
+  threadsAwaitingAuthor(taskId: string): { id: string; title: string }[] {
+    return [...this.cards.values()]
+      .filter((card) => card.taskId === taskId && this.host.cardStore.awaitingAuthor(card.id))
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .map((card) => ({ id: card.id, title: card.title }));
   }
 
   /**
@@ -2672,6 +2696,11 @@ function buildEmittedCard(
  * emit_card hands the model back the resolved id, so a crewmate revising its
  * own card resends that id. Prefixing it again would mint a duplicate instead.
  */
+/** What a receipt adds when another card's thread still waits on its author. */
+function stillWaitingWords(cards: readonly { id: string; title: string }[]): string {
+  return `The captain's reply under ${waitingCardWords(cards)} still waits on your answer: answer it there with reply, or in that card's emit_card revision.`;
+}
+
 function crewmateCardId(taskId: string, stableId: string): string {
   return stableId.startsWith(`card-${taskId}-`) ? stableId : `card-${taskId}-${stableId}`;
 }

@@ -151,6 +151,8 @@ Since v4.14 it also says when: the work comes first and the answer once, because
 `piResources.test.ts` pins that every persona carries it once and no tool description repeats a sentence of it, the same structural pin `CARD_AUTHORING` has.
 
 While a captain reply waits on the author, `emit_card` under that card's id without `reply` is refused as tool text naming the fix, and the card and thread stay unchanged (`CardService.upsertEmitted`).
+While one of a crewmate's cards waits on its answer, a new card carrying `reply` - a new id, or none - is refused naming the card that waits, since the reply rides only a revision of that card and would otherwise be lost (INF-990 friction 4).
+A `reply` under another of its cards succeeds, and its receipt names the card that still waits.
 An author that answers first with `reply(card_id, text)` may revise afterwards with no `reply`, because the answer already landed.
 The app reads only that typed state, never the words of the answer.
 

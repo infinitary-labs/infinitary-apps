@@ -163,7 +163,6 @@ import {
   ciCapWake,
   GUIDANCE_MARK_WORDS,
   IDLE_NUDGE_TEXT,
-  IDLE_THREAD_NUDGE_TEXT,
   idleNoteNudgeText,
   RESTART_REPLAY_NOTE,
   REVIEW_NEW_HEAD_NEXT,
@@ -13833,12 +13832,15 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await tick();
       await endTurn(crewmate, taskId);
       await at(minutes(11));
-      expect(crewmate.promptCalls.at(-1)).toBe(IDLE_THREAD_NUDGE_TEXT);
+      // INF-990 friction 4: the reminders name the card the captain wrote
+      // under, so its crewmate answers that card and not another of its own.
+      expect(crewmate.promptCalls.at(-1)).toBe(
+        `The captain wrote under your card "Pick a course" (${card.id}) and you have not answered: answer in that card's thread with reply, naming its card_id, or pass your answer as the reply of that card's emit_card revision under the same id.`,
+      );
       await endTurn(crewmate, taskId);
       await at(minutes(21));
       await at(minutes(51));
-      const state =
-        "since the captain wrote under its card, without answering them, and nothing queued will; the host's nudge did not move it.";
+      const state = `since the captain wrote under card "Pick a course" (${card.id}), without answering them, and nothing queued will; the host's nudge did not move it.`;
       expect(idleWakes(ops)).toEqual([
         `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 21m ${state} Its last report: Done with step one.${stallBlock(taskId)}`,
         `[fm-op] crewmate 1 on task ${taskId} "Job" has been idle for 51m ${state}${SECOND} Its last report: Done with step one.${stallBlock(taskId)}`,

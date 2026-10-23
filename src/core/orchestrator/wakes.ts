@@ -105,6 +105,17 @@ export const IDLE_THREAD_NUDGE_TEXT =
   "The captain wrote under your card and you have not answered: answer in the thread with reply, or pass your answer as the reply of your emit_card revision.";
 
 /**
+ * The nudge naming the cards the captain wrote under (INF-990 friction 4):
+ * a crewmate with another card, or one it already closed, answers the
+ * card that waits rather than the one it last touched.
+ */
+export function idleThreadNudgeText(waiting?: readonly WakeNote[]): string {
+  if (!waiting?.length) return IDLE_THREAD_NUDGE_TEXT;
+  const one = waiting.length === 1;
+  return `The captain wrote under your ${waitingCardWords(waiting)} and you have not answered: answer in ${one ? "that card's" : "each card's"} thread with reply, naming its card_id, or pass your answer as the reply of ${one ? "that card's" : "its"} emit_card revision under the same id.`;
+}
+
+/**
  * The fixed host preamble every captain thread reply carries (cards-as-
  * threads phase 1, R4). It is the process direction the Firstmate used to
  * relay by hand on 27 of 40 turns, said once by the host instead: where to
@@ -263,6 +274,12 @@ export type WakeOpenReview = {
 /** A note up on a task: a card with no actions, which holds no turn. */
 export type WakeNote = { id: string; title: string };
 
+/** The cards a reminder or refusal names: `card "Title" (id)`, joined. */
+export function waitingCardWords(cards: readonly WakeNote[]): string {
+  const named = cards.map((card) => `"${card.title}" (${card.id})`);
+  return `card${cards.length === 1 ? "" : "s"} ${named.join(" and ")}`;
+}
+
 /**
  * The typed facts of one wake. `kind` names what it is; everything else is
  * a fact the host read, never a sentence. A new wake adds its kind here.
@@ -279,6 +296,8 @@ export type WakeFacts =
       kind: "idle-nudge";
       /** The captain wrote last under one of its cards. */
       thread: boolean;
+      /** The cards whose captain reply waits on the crewmate, when `thread` (INF-990 friction 4). */
+      waiting?: WakeNote[];
       /** The newest note up on the task, when one is (FI3-438). */
       note?: WakeNote;
       /** The Firstmate declared the task an internal step (`shape.internal_step`, FI3-801). */
@@ -295,6 +314,8 @@ export type WakeFacts =
       idleMs: number;
       /** The captain wrote under its card and nothing queued will answer him. */
       thread: boolean;
+      /** The cards whose captain reply waits on the crewmate, when `thread` (INF-990 friction 4). */
+      waiting?: WakeNote[];
       /** This episode's nudge actually went out. */
       nudged: boolean;
       /** 1 for the first wake, 2 for its repeat. */
@@ -1270,11 +1291,17 @@ export function answerMissingWake(
  * Continue. The thread's nudge outranks the note's and the step's: the
  * captain spoke, and its words are the same for a step.
  */
-export function idleNudge(thread = false, note?: WakeNote, step = false): TypedWake {
+export function idleNudge(
+  thread = false,
+  note?: WakeNote,
+  step = false,
+  waiting: readonly WakeNote[] = [],
+): TypedWake {
   return {
     facts: {
       kind: "idle-nudge",
       thread,
+      ...(thread && waiting.length > 0 ? { waiting: [...waiting] } : {}),
       ...(note && !thread ? { note } : {}),
       ...(step && !thread ? { step: true as const } : {}),
     },
@@ -1588,12 +1615,12 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
     case "task-policies-changed":
       return `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope.${facts.policies.rigor.value === "reviewed" ? ` Careful contract: ${CAREFUL_LIVE_VALIDATION}` : ""} Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.policies.rigor.value === "reviewed" ? ` ${CAREFUL_NOTICE}` : ""}`;
     case "idle-nudge":
-      if (facts.thread) return IDLE_THREAD_NUDGE_TEXT;
+      if (facts.thread) return idleThreadNudgeText(facts.waiting);
       if (facts.note) return idleNoteNudgeText(facts.note, facts.step === true);
       return facts.step ? IDLE_STEP_NUDGE_TEXT : IDLE_NUDGE_TEXT;
     case "idle-stall": {
       const state = facts.thread
-        ? "since the captain wrote under its card, without answering them, and nothing queued will"
+        ? `since the captain wrote under ${facts.waiting?.length ? waitingCardWords(facts.waiting) : "its card"}, without answering them, and nothing queued will`
         : facts.note
           ? `with nothing running, nothing queued and only the note "${facts.note.title}" (${facts.note.id}) up, which asks the captain nothing`
           : "with nothing running, nothing queued and no card up";

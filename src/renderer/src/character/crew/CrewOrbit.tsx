@@ -831,6 +831,17 @@ export function CrewOrbit({
       .join(" ");
     if (near.canvas.dataset.constellationCrew !== seated)
       near.canvas.dataset.constellationCrew = seated;
+    // Each wait and review arrow drawn, both ends on the stage as `paintFrame`
+    // requires, so a journey reads the arrows it painted.
+    const arrows = frame.links
+      .filter(
+        (link) =>
+          frame.crew.some((c) => c.id === link.fromId) &&
+          frame.crew.some((c) => c.id === link.toId),
+      )
+      .map((link) => `${link.kind}:${link.fromId}>${link.toId}`)
+      .join(" ");
+    if (near.canvas.dataset.crewArrows !== arrows) near.canvas.dataset.crewArrows = arrows;
     if (rootRef.current?.style.getPropertyValue("--crew-plane-blend") !== blend) {
       rootRef.current?.style.setProperty("--crew-plane-blend", blend);
     }

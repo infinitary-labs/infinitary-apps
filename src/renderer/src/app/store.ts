@@ -51,6 +51,7 @@ import {
   type UiSize,
 } from "@shared/preferences";
 import type { ReleaseNotesView } from "@shared/releaseTracking";
+import type { TaskBoard } from "@shared/tasks";
 import type { UsageUnit } from "@shared/usage";
 import { create } from "zustand";
 import { isPreparing, MAIN_FILES_KEY, whenPrepared } from "../attachments/intake";
@@ -70,6 +71,7 @@ import { requestCharacterEmote, requestCharacterNotice } from "../character/emot
 import { stageNow } from "../character/stageClock";
 import type { ImageAttachment } from "../design";
 import { changesOff, changesOffWords, doneThereWords, isView } from "../devices/viewWords";
+import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { resyncReads } from "../plugins/reads/resync";
 import { SettingSave } from "../settings/settingSave";
 import { type MicLine, readMicAccess, settledMicLine } from "../voice/micAccess";
@@ -1330,9 +1332,19 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       })
       .catch(() => {});
     // A new or cleared wait, and a task's parts and their links, arrive on the
-    // sequenced board, not on task_changed.
-    window.infinitary.tasks.onBoard((board) =>
-      applyCrewDependencies(crewOrbit(), board.tasks, board.links, stageNow()),
+    // sequenced board, not on task_changed. The stage reads the board the
+    // Tasks panel reads, which folds the core's deltas above the trigger (P5)
+    // and reads again on a gap, so a large board moves the stage too.
+    appReadExecutor().subscribe(
+      "tasks.board",
+      {},
+      {
+        onValue: (value) => {
+          const board = value as TaskBoard;
+          applyCrewDependencies(crewOrbit(), board.tasks, board.links, stageNow());
+        },
+        onError: () => {},
+      },
     );
     setInterval(() => get().collapseStaleNotes(), NOTE_COLLAPSE_TICK_MS);
     // The activity feed is not shell state: its rail panel reads it from

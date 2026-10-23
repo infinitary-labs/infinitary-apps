@@ -38,6 +38,7 @@ The explicit `ring` mode remains available for the historical comparison and reg
 Production uses the selected inner plane even for a small roster; the historical single-ring geometry survives only in explicit `ring` mode.
 Geometry, radius and angular slots follow the existing springs.
 A settled boot roster is placed on its planes immediately, without re-emitting already active crewmates.
+Waits and tasks with parts come from the board the Tasks panel reads (`tasks.board` through the read executor), so above the board's delta trigger (more than 500 rows or 256 KiB) the folded deltas move them as a snapshot does, and a gap reads the board again.
 Reduced motion snaps the formation and lifecycle clips to their settled state.
 
 The inner plane fills to eight crew, then middle to twelve, then outer to twenty.
@@ -177,7 +178,7 @@ When the parent closes done the tree folds into its root over the fall home's ti
 A program first draws once one of its parts is underway, and keeps the planes while its next parts are filed.
 Reduced motion paints one settled frame, and the pointer's slowdown and pause apply as to every crewmate.
 The near crew canvas publishes each program's branches as `data-constellation` and the parts seated at their nodes as `data-constellation-crew`, compare-before-write.
-`constellation.test.ts` checks the graph read from a board, the layout, the seats, the packets up and down, the fold home and the settled frame; `tests/e2e/program-constellation.spec.ts` seeds a review program and reads its branches off the painted stage before and after a part is dropped.
+`constellation.test.ts` checks the graph read from a board, the layout, the seats, the packets up and down, the fold home and the settled frame; `tests/e2e/program-constellation.spec.ts` seeds a review program and reads its branches off the painted stage before and after a part is dropped, and `tests/e2e/crew-board-delta.spec.ts` drops a part above the delta trigger.
 
 ## Tier solids
 
@@ -216,7 +217,8 @@ Clearing the wait removes the cue, and the offset returns on the existing spring
 Reduced motion paints one settled frame.
 Inspecting a Tasks row does not pause the stage.
 `dependencyVisual.ts` is the one projection both surfaces read.
-`crewmate.test.ts` checks each kind's color at rest and lit, and `tests/e2e/computer-clusters.spec.ts` reads a wait's gray and a review's ember off the painted stage between two computers.
+The near crew canvas publishes each arrow it draws as `data-crew-arrows`, `wait:<waiter>><blocker>` or `review:<reviewer>><builder>`, compare-before-write.
+`crewmate.test.ts` checks each kind's color at rest and lit; `tests/e2e/computer-clusters.spec.ts` reads a wait's gray and a review's ember off the painted stage between two computers, and `tests/e2e/crew-board-delta.spec.ts` reads a wait's arrow appear and clear above the delta trigger.
 `satellites.ts` owns the circle.
 The Tasks gutter is specified in the design skill's NowPanel.
 

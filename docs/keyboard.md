@@ -105,6 +105,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `settings.automation`, Open Automation | window, run by the shell page | none: chosen by name (schedule, recurring, reminder and pause find it too) |
 | `automation.pause-all`, Pause all automations | window, run by the shell page | none: chosen by name (schedule, recurring and stop find it too) |
 | `usage.unit`, Switch Usage units | window, run by the shell page | none: chosen by name (tokens, cost, dollars and estimate find it too) |
+| `allowance.recheck`, Recheck allowance | window, run by the shell page | none: chosen by name (quota, refresh, usage, limit, account and switch find it too) |
 | `devices.try-again`, Try again to reach your computers | window, run by the shell page | none: chosen by name (devices, ssh, reconnect and connect find it too), only where Devices shows |
 | `size.larger` | window | ⌘+ and ⌘= (and ⌃+, ⌃=) |
 | `size.smaller` | window | ⌘- (and ⌃-) |
@@ -288,6 +289,7 @@ The main process's own commands, the size keys, are never refused by the page.
   Focus a person has moved into the tab by then stays where they put it (INF-963).
 - `automation.pause-all`, Pause all automations, opens the same tab and pauses every running automation, as its Pause all button does; drafts, paused and done ones stay as they are.
 - `usage.unit`, Switch Usage units, switches every amount in Usage between tokens and estimated dollars, which the core keeps, and opens Usage the same way.
+- `allowance.recheck`, Recheck allowance, reads which login each account's store names and its allowance again, the way the spent-allowance card's button does, so a switched Claude login is heard at once (`docs/quota.md`, "A changed login").
 - `devices.try-again`, Try again to reach your computers, opens Settings at Devices and tries this Mac's own SSH connection once more to every Mac it stopped trying (`docs/devices.md`, "Through the home's SSH").
   Both refuse on a Mac that controls another, which has no Usage tab.
 - While Keyboard settings records a key every shell command refuses ("Settings is recording a key"), after the dictation key's pick.

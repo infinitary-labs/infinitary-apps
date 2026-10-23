@@ -272,15 +272,21 @@ export class Shell {
     return core ? core.services.settings.getDictation().enabled : false;
   }
 
-  /** The window was focused: a stale allowance reading is refreshed on the Mac that holds it. */
+  /**
+   * The window was focused: a stale allowance reading is refreshed on the
+   * Mac that holds it, and a login switched meanwhile is heard now.
+   */
   windowFocused(): void {
-    this.core()?.services.quota.onWindowFocus();
+    const core = this.core();
+    core?.services.quota.onWindowFocus();
+    void core?.services.vault.checkLogins();
   }
 
   /** The Mac woke. */
   resumed(): void {
     const core = this.core();
     core?.services.quota.onResumed();
+    void core?.services.vault.checkLogins();
     // Each computer out of reach over this Mac's own SSH is tried at once.
     core?.services.sshConnections.resume();
   }

@@ -29,7 +29,8 @@ export const CLAUDE_RATE_LIMIT_BACKOFF_MS = 10 * 60 * 1000;
 /** Timer drift: a tick one interval after the last ask must not be skipped. */
 const ASK_SLACK_MS = 2_000;
 
-type ClaudeAsk = { at: number; nextAskAt: number; view: QuotaProviderView };
+/** One answer from the usage service, under the login it was asked with. */
+type ClaudeAsk = { at: number; nextAskAt: number; view: QuotaProviderView; login?: string };
 
 export type QuotaFetchResult = {
   snapshot: QuotaSnapshotView;
@@ -71,6 +72,13 @@ export type QuotaFetcherOptions = {
    * reading, before any refusal is laid over it.
    */
   onAccepted?: (accountId: string, windows: QuotaWindowView[]) => void;
+  /**
+   * The login the account's store names now (`AccountVault.loginSync`): an
+   * answer asked under another login is not this account's any more, so it
+   * is never served from the ledger, and one that lands after the login
+   * changed is dropped (docs/quota.md "A changed login").
+   */
+  loginOf?: (accountId: string) => string | undefined;
 };
 
 /**
@@ -139,10 +147,13 @@ async function fetchOneAccount(
 ): Promise<QuotaProviderView> {
   const { auth } = options;
   const throttled = account.quotaId === "claude";
+  const login = options.loginOf?.(account.accountId);
   if (throttled) {
     const last = claudeAsks.get(account.accountId);
-    // A person's Retry always asks; everything else waits out the interval.
-    if (last && !allowPrompt && now < last.nextAskAt - ASK_SLACK_MS) return last.view;
+    // A person's Retry always asks; everything else waits out the interval,
+    // unless the login changed since the last answer.
+    if (last && last.login === login && !allowPrompt && now < last.nextAskAt - ASK_SLACK_MS)
+      return last.view;
   }
   const base = {
     provider: account.quotaId,
@@ -173,6 +184,10 @@ async function fetchOneAccount(
 
   // From here the vendor is asked, so the answer is what the next refreshes serve.
   const answered = (outcome: ProviderOutcome): QuotaProviderView => {
+    // The login changed while the vendor was asked: the answer is the old
+    // login's, so it is neither kept nor shown as this account's.
+    if (options.loginOf && options.loginOf(account.accountId) !== login)
+      return { ...base, status: "skipped", windows: [] };
     const result = view(outcome);
     if (throttled) {
       const retryAfterMs = Number(outcome.retryAfter) * 1000;
@@ -180,7 +195,12 @@ async function fetchOneAccount(
         outcome.status === "rate_limited"
           ? Math.max(CLAUDE_RATE_LIMIT_BACKOFF_MS, Number.isFinite(retryAfterMs) ? retryAfterMs : 0)
           : CLAUDE_ASK_INTERVAL_MS;
-      claudeAsks.set(account.accountId, { at: now, nextAskAt: now + wait, view: result });
+      claudeAsks.set(account.accountId, {
+        at: now,
+        nextAskAt: now + wait,
+        view: result,
+        ...(login !== undefined ? { login } : {}),
+      });
     }
     if (outcome.status === "ok") options.onAccepted?.(account.accountId, outcome.windows);
     return result;

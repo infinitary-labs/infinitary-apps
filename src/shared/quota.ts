@@ -20,19 +20,23 @@ export {
  * one formatter, shared by the usage readings the core builds and the
  * waiting line a card thread derives (docs/card-threads.md).
  */
+/** A moment's local time of day the way the allowance words write it: "6pm", "2:30pm". */
+export function clockTime(at: number): string {
+  const date = new Date(at);
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const hour12 = hours % 12 || 12;
+  const suffix = hours < 12 ? "am" : "pm";
+  return minutes === 0
+    ? `${hour12}${suffix}`
+    : `${hour12}:${String(minutes).padStart(2, "0")}${suffix}`;
+}
+
 export function formatResetText(resetsAtMs: number, now: number): string | undefined {
   if (!Number.isFinite(resetsAtMs)) return undefined;
   const reset = new Date(resetsAtMs);
   const nowDate = new Date(now);
-  if (reset.toDateString() === nowDate.toDateString()) {
-    const hours = reset.getHours();
-    const minutes = reset.getMinutes();
-    const hour12 = hours % 12 || 12;
-    const suffix = hours < 12 ? "am" : "pm";
-    return minutes === 0
-      ? `resets ${hour12}${suffix}`
-      : `resets ${hour12}:${String(minutes).padStart(2, "0")}${suffix}`;
-  }
+  if (reset.toDateString() === nowDate.toDateString()) return `resets ${clockTime(resetsAtMs)}`;
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
   return `resets ${days[reset.getDay()]}`;
 }

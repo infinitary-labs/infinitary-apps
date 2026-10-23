@@ -143,6 +143,14 @@ The fact lives on the account's registry row (`cutOff`, additive: a row an older
     A refusal is not cleared by any of those.
   - `refused` clears only on the captain's "Try Claude again" (`AccountVault.tryAgain`, which the seat's refused card calls through its `try-again` host op), another login, or another client version.
     A live credential renews itself routinely, so a rewrite alone is not a changed login here - which also means signing in again to the same account and organisation does not clear a refusal; "Try Claude again" is the way back after a fix that keeps the same login.
+- **A changed login** (INF-1079).
+  A person may switch the machine's Claude login outside the app when one runs out, and the account row stays the same, so the vault keeps the login its store last named on the row (`AccountRecord.login`, kept across a restart).
+  Every fresh health read (the account check on the one-minute tick, and the first read after a start) and `AccountVault.checkLogins` - an attribute-only read of the stamp's login (`AccountBackend.loginStamp`), with no credential value, no client and no request for access, run at start, on window focus and on a wake - compare it.
+  The first login seen is adopted and an unreadable one is no change; a different one clears whatever cut-off stood on the account and is heard through `AccountVault.onLoginChange`.
+  The composition root then forgets the old login's pushed readings (`PushedQuotaStore.forget`), drops its row from the last snapshot so it is not carried forward (`QuotaService.forgetAccount`), and takes a reading at once (`refresh("account-changed")`, which, like `demand`, chains after a refresh in flight instead of joining it).
+  The sensor keeps each Claude answer under the login it was asked with (`createQuotaFetcher`'s `loginOf`): an answer the old login got is never served from the five-minute ledger, and one that lands after the switch is dropped as `skipped`.
+  An unchanged login keeps its spacing, its backoff and its genuine refusal.
+  The captain's Recheck allowance (the spent-allowance card, command search, Subscriptions' Refresh) reads the logins first and then refreshes with `demand`, the one reason that may ask for access (`FirstmateAgent.recheckAllowance`).
 - **A refusal never renews.**
   `AccountVault.renew` answers `withheld` without asking the backend while a refusal stands; the health tick already skips a degraded account, and the sensor's 401 path reads `withheld` as `renewal_withheld` (not knowing), never a sign-out.
   A lost sign-in may still renew: only a 401 renews, and that is the path to proof.

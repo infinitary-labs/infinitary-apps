@@ -97,6 +97,11 @@ export type AccountRecord = {
   /** Round-robin cursor for selection among unknown-quota accounts. */
   lastSelectedAt?: number;
   /**
+   * The login its store last named (`CredentialStamp.login`), for a backend
+   * that can say: a different one later is a changed login (`onLoginChange`).
+   */
+  login?: string;
+  /**
    * A typed cut-off standing on this account (`noteCutOff`). Absent on a row
    * written before it existed, which is simply no cut-off.
    */
@@ -202,6 +207,7 @@ export class AccountVault {
   private readonly now: () => number;
   /** Who hears a cut-off recorded or cleared (`onCutOffChange`). */
   private readonly cutOffListeners = new Set<(accountId: string) => void>();
+  private readonly loginListeners = new Set<(accountId: string) => void>();
   /** A failed sign-in's second sweep, once its backend's own work settles. */
   private readonly sweeping = new Set<Promise<void>>();
   /** A Claude sign-in that has passed the account check and not settled. */
@@ -687,6 +693,46 @@ export class AccountVault {
     return () => this.cutOffListeners.delete(listener);
   }
 
+  /**
+   * Hear an account's store name a different login than it last did (a
+   * person switched the machine's Claude login, say): every reading taken
+   * under the old login is no longer this account's. Returns the
+   * unsubscription.
+   */
+  onLoginChange(listener: (accountId: string) => void): () => void {
+    this.loginListeners.add(listener);
+    return () => this.loginListeners.delete(listener);
+  }
+
+  /** The login the account's store last named, when its backend can say. */
+  loginSync(accountId: string): string | undefined {
+    return this.registry.accounts.find((entry) => entry.id === accountId)?.login;
+  }
+
+  /** Who the account's own client last said is signed in (an email), when it says. */
+  identitySync(accountId: string): string | undefined {
+    return this.lastStatus.get(accountId)?.identity?.label;
+  }
+
+  /**
+   * Read which login each enabled account's store names, from attributes
+   * only - no credential value, no client, nothing that asks for access - so
+   * it can run whenever the person comes back (window focus, a wake). A
+   * changed login is heard at once and its health read fresh.
+   */
+  async checkLogins(): Promise<void> {
+    await Promise.all(
+      this.liveAccounts().map(async (account) => {
+        if (!account.enabled) return;
+        const backend = this.backends.get(backendForProvider(account.providerId));
+        if (!backend?.loginStamp) return;
+        const login = await backend.loginStamp(this.refFor(account)).catch(() => undefined);
+        if (this.noteLogin(account.id, login))
+          await this.health(account.id, { refresh: true }).catch(() => undefined);
+      }),
+    );
+  }
+
   /** The cut-off standing on this account, if any. */
   cutOff(accountId: string): AccountCutOff | undefined {
     const account = this.registry.accounts.find((entry) => entry.id === accountId);
@@ -773,7 +819,10 @@ export class AccountVault {
         health = this.lastHealth.get(accountId) ?? { state: "degraded", reason: "unknown" };
       }
       // A fresh read is where a changed login or client clears a cut-off.
-      if (read) this.settleCutOff(accountId, health.stamp);
+      if (read) {
+        this.settleCutOff(accountId, health.stamp);
+        this.noteLogin(accountId, health.stamp?.login);
+      }
       this.lastHealth.set(accountId, health);
       const reported = this.withCutOff(accountId, health);
       this.lastStatus.set(accountId, statusFromHealth(reported));
@@ -1128,6 +1177,24 @@ export class AccountVault {
       account.cutOff = { ...account.cutOff, stamp: adopted };
       this.saveRegistry();
     }
+  }
+
+  /**
+   * Keep the login a fresh read saw. The first one seen is adopted; an
+   * unreadable one is no change. A different one is a changed login: what
+   * stood on the old login (any cut-off) ends, and every listener hears it.
+   * Answers whether the login changed.
+   */
+  private noteLogin(accountId: string, login: string | undefined): boolean {
+    const account = this.registry.accounts.find((entry) => entry.id === accountId);
+    if (!account || login === undefined || account.login === login) return false;
+    const changed = account.login !== undefined;
+    account.login = login;
+    this.saveRegistry();
+    if (!changed) return false;
+    this.clearCutOff(accountId);
+    for (const listener of this.loginListeners) queueMicrotask(() => listener(accountId));
+    return true;
   }
 
   private clearCutOff(accountId: string): void {

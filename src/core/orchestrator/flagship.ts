@@ -66,6 +66,8 @@ export type FlagshipVaultView = {
   cutOff(accountId: string): { class: CutOffClass; resetsAt?: number } | undefined;
   /** The captain's "Try again" on a refusal; answers whether one stood. */
   tryAgain(accountId: string): boolean;
+  /** Who the account's own client last said is signed in, when it says. */
+  identitySync?(accountId: string): string | undefined;
   runtimeFor(accountId: string): Promise<ModelRuntime>;
   binding(accountId: string): { via: string };
 };
@@ -386,6 +388,26 @@ export class Flagship {
   /** The flagship's effective remaining from the latest snapshot. */
   headroom(accountId: string): number | undefined {
     return effectiveFromProvider(this.snapshotRow(accountId), Date.now()).effectivePercentRemaining;
+  }
+
+  /**
+   * The account's last allowance reading, for the spent-allowance card:
+   * when it was taken, whether this refresh read it (rather than carrying
+   * an older one forward), and who the account's client says is signed in.
+   */
+  allowanceCheck(
+    accountId: string,
+  ): { at: number; read: true; identity?: string } | { at?: number; read: false } | undefined {
+    const row = this.snapshotRow(accountId);
+    if (!row) return undefined;
+    if (row.status !== "ok" || row.stale)
+      return { read: false, ...(row.measuredAt !== undefined ? { at: row.measuredAt } : {}) };
+    const identity = this.options.vault.identitySync?.(accountId);
+    return {
+      at: row.measuredAt ?? this.options.quota.latest()?.fetchedAt ?? Date.now(),
+      read: true,
+      ...(identity ? { identity } : {}),
+    };
   }
 
   /** When the flagship's quota resets, for user-facing ladder copy. */

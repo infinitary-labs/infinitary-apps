@@ -1033,6 +1033,7 @@ export async function createServices(
               },
             }),
         models: () => quotaCatalogModels(),
+        loginOf: (accountId) => vault.loginSync(accountId),
         // A session's refusal is a zero window until its reset, even on a
         // sensed row: the vendor said no, and the sensor lags behind it.
         onAccepted: (accountId, windows) => {
@@ -2592,6 +2593,12 @@ export async function createServices(
       ),
     modelRuntime: auth.modelRuntime,
     flagship,
+    // The captain's recheck reads the login first, so a switched one's
+    // reading is the one taken.
+    recheckAllowance: async () => {
+      await vault.checkLogins();
+      return quota.refresh("demand");
+    },
     // Each backend's seat (W1): the seat preset, opened by the one factory
     // per backend.
     seats: sessionFactories,
@@ -2704,6 +2711,17 @@ export async function createServices(
     supervisor.reconcileCutOffs();
     firstmate.onCutOffChanged();
   });
+  // A changed login (the machine's Claude login switched, say): what the old
+  // login was refused or read is not this account's any more, so its saved
+  // refusals and last reading go and a new reading is taken now
+  // (docs/quota.md "A changed login"). Read once at start, then on the
+  // account check's tick, window focus and wake.
+  vault.onLoginChange((accountId) => {
+    pushedQuota.forget(accountId);
+    quota.forgetAccount(accountId);
+    void quota.refresh("account-changed");
+  });
+  void vault.checkLogins();
   // So is one a computer that runs work names on its own sign-ins; its
   // setup card reads them too, and a task waiting for a sign-in there
   // starts now rather than at the next tick.

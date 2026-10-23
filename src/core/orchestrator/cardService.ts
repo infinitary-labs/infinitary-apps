@@ -201,7 +201,12 @@ export type FirstmatePauseCard = {
   providerName: string;
   /** Rung 2: where the seat could move, asked on the card. */
   move?: { providerId: string; providerName: string };
+  /** A spent allowance is being read again: no second recheck is offered. */
+  checking?: boolean;
 };
+
+/** The spent-allowance card's way back: read the allowance again. */
+export const RECHECK_ALLOWANCE_LABEL = "Recheck allowance";
 
 /** A crewmate's sign-in card's title, and the Firstmate's own on a 401. */
 export const PROVIDER_SIGN_IN_TITLE = "A provider needs sign in";
@@ -1816,6 +1821,34 @@ export class CardService {
         : FIRSTMATE_BENCH_CARD_ID;
     const previous = this.cards.get(id);
     if (!previous && options.reviseOnly) return;
+    // A spent allowance is read again on the captain's word - after a switch
+    // to another login elsewhere, say - and that is the card's default; a
+    // move or Settings stays beside it.
+    if (input.pause === "no_headroom" && input.accountId && !input.checking) {
+      this.putFirstmatePauseCard(id, input, [
+        {
+          id: "recheck-allowance",
+          label: RECHECK_ALLOWANCE_LABEL,
+          variant: "primary",
+          default: true,
+          effect: { kind: "host", op: "try-again", arg: input.accountId },
+        },
+        input.move
+          ? {
+              id: "move-flagship",
+              label: moveLabel(input.move.providerName),
+              variant: "secondary",
+              effect: { kind: "host", op: "move-flagship", arg: input.move.providerId },
+            }
+          : {
+              id: "open-settings",
+              label: "Open settings",
+              variant: "secondary",
+              effect: { kind: "open", target: "settings" },
+            },
+      ]);
+      return;
+    }
     const wayBack: CardAction[] =
       input.pause === "refused" && input.accountId
         ? [
@@ -1863,6 +1896,16 @@ export class CardService {
               ]
             : []),
         ];
+    this.putFirstmatePauseCard(id, input, actions);
+  }
+
+  /** Put a pause card under `id`, unless the one up already says the same. */
+  private putFirstmatePauseCard(
+    id: string,
+    input: FirstmatePauseCard,
+    actions: CardAction[],
+  ): void {
+    const previous = this.cards.get(id);
     const title = firstmatePauseTitle(input.pause, input.providerName);
     if (
       previous &&

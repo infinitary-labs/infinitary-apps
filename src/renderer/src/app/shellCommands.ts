@@ -259,6 +259,10 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
       console.warn("[infinitary] Pause all automations did not run:", error);
     });
   },
+  // The first mate's recheck: a card paused on a spent allowance says it checks.
+  "allowance.recheck": () => {
+    void window.infinitary.quota.refresh().catch(() => {});
+  },
   // Settings → Devices, where each Mac this Mac stopped trying over its own
   // SSH is tried once more and says how it went.
   "devices.try-again": () => {

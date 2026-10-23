@@ -710,6 +710,7 @@ describe("a typed cut-off on the account", () => {
       login: async () => {},
       logout: async () => undefined,
       health: async () => ({ ...facts.health, stamp: { ...facts.stamp } }),
+      loginStamp: async () => facts.stamp.login,
       renew,
       status: async () => statusFromHealth(facts.health),
       binding: () => ({ via: "default-login" }),
@@ -1123,6 +1124,40 @@ describe("a typed cut-off on the account", () => {
     await vault.health(id, { refresh: true });
     expect(vault.cutOff(id)).toBeUndefined();
     expect(world.open().cutOff(id)).toBeUndefined();
+  });
+
+  // INF-1079: the captain switches Claude's login elsewhere when one runs out.
+  it("hears another login once, on a focus read or a health read, and across a restart", async () => {
+    const world = claudeWorld();
+    const { vault, id } = await signedInClaude(world);
+    await vault.health(id, { refresh: true });
+    const heard: string[] = [];
+    vault.onLoginChange((accountId) => heard.push(accountId));
+
+    // A read that cannot see the login, or sees the same one, is no change.
+    world.facts.stamp = { written: "file:2", client: "2.1.234" };
+    await vault.checkLogins();
+    world.facts.stamp = { login: "login-a", written: "file:3", client: "2.1.234" };
+    await vault.checkLogins();
+    await vi.waitFor(() => expect(vault.loginSync(id)).toBe("login-a"));
+    expect(heard).toEqual([]);
+
+    // Another login, read when the window is focused: what stood on the old
+    // login ends, a spent allowance included.
+    vault.noteCutOff(id, { class: "no_headroom", resetsAt: world.facts.now + 3_600_000 });
+    world.facts.stamp = { login: "login-b", written: "file:4", client: "2.1.234" };
+    await vault.checkLogins();
+    await vi.waitFor(() => expect(heard).toEqual([id]));
+    expect(vault.cutOff(id)).toBeUndefined();
+    expect(vault.loginSync(id)).toBe("login-b");
+
+    // Switched while the app was closed: the next start's first read hears it.
+    world.facts.stamp = { login: "login-c", written: "file:5", client: "2.1.234" };
+    const reopened = world.open();
+    const afterRestart: string[] = [];
+    reopened.onLoginChange((accountId) => afterRestart.push(accountId));
+    await reopened.health(id, { refresh: true });
+    await vi.waitFor(() => expect(afterRestart).toEqual([id]));
   });
 
   it("holds a spent allowance until its reset without withholding the account", async () => {

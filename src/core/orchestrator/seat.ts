@@ -162,6 +162,24 @@ export function allowanceSpentWords(label: string): string {
   return `${label} has used up its allowance`;
 }
 
+/** The spent-allowance card's line while the captain's recheck runs. */
+export const ALLOWANCE_CHECKING_WORDS = "Checking its allowance now.";
+
+/**
+ * The spent-allowance card's line on its last reading: when it was taken
+ * and who the account's client says is signed in, or that it could not be
+ * taken - never that the allowance is still spent.
+ */
+export function allowanceCheckedWords(
+  reading: { read: true; time: string; identity?: string } | { read: false; time?: string },
+): string {
+  if (!reading.read)
+    return `Its allowance could not be read just now${
+      reading.time ? `; last read at ${reading.time}` : ""
+    }.`;
+  return `Checked at ${reading.time}${reading.identity ? `, signed in as ${reading.identity}` : ""}.`;
+}
+
 /**
  * The feed line a fresh pause writes (docs/architecture.md §16 "A paused
  * seat"): a refusal says the provider stopped answering and the words are

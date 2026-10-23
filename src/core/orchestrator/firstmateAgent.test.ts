@@ -15,7 +15,7 @@ import type { PanelMounts } from "@shared/personal/mounts";
 import { AUTOMATIC_WORD } from "@shared/placement";
 import { plainProblem } from "@shared/plainProblem";
 import { type DecisionRecord, decisionRecordSchema } from "@shared/provenance";
-import type { ModelsCatalogView, Slot } from "@shared/quota";
+import { clockTime, type ModelsCatalogView, type Slot } from "@shared/quota";
 import { remoteLoginWords } from "@shared/remoteLogin";
 import { runsHereOnly } from "@shared/repos";
 import { parseServedInput, type ServedWakeOrigin } from "@shared/servedFrame";
@@ -89,6 +89,7 @@ import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
 import { ANSWER_ONLY_REFUSAL } from "./answerDelivery";
+import { RECHECK_ALLOWANCE_LABEL } from "./cardService";
 import { CrewSupervisor } from "./crewSupervisor";
 import {
   CAPTAIN_TURN_REF,
@@ -100,7 +101,7 @@ import {
 import { Flagship, type FlagshipOptions, type FlagshipVaultView } from "./flagship";
 import { idleStallWays } from "./holds";
 import { Scheduler } from "./scheduler";
-import { keptMessageWords } from "./seat";
+import { ALLOWANCE_CHECKING_WORDS, keptMessageWords } from "./seat";
 import {
   ANSWER_MISSING_OPENING,
   captainTurn,
@@ -3702,6 +3703,8 @@ function setupWithFlagship(options: {
   claudeRenewedFrom?: string;
   /** A previous run's database: this setup is that app, restarted. */
   db?: ReturnType<typeof openInMemoryDatabase>;
+  /** The captain's recheck of the allowance, as the composition root runs it. */
+  recheckAllowance?: () => Promise<undefined>;
 }) {
   const paths = appPathsFor(scratchDir("infinitary-agent-"));
   const db = options.db ?? openInMemoryDatabase();
@@ -3825,6 +3828,7 @@ function setupWithFlagship(options: {
     settings,
     modelRuntime: { kind: "base" } as unknown as ModelRuntime,
     flagship,
+    ...(options.recheckAllowance ? { recheckAllowance: options.recheckAllowance } : {}),
     availableModels: () => options.availableModels ?? [{ provider: "openai-codex", id: "gpt-5.5" }],
     quotaModels: () => (options.catalog ? { generatedAt: "", models: options.catalog } : undefined),
     quotaLine: () => "quota",
@@ -4122,7 +4126,8 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
       .cards()
       .find((entry) => entry.title === "Your first mate has used up its allowance") as Card;
     expect(card.body).toBe(
-      "Grok has used up its allowance (resets Fri). Your messages are kept. Move your first mate to Codex until then?",
+      // The check time is the stand-in reading's own.
+      `Grok has used up its allowance (resets Fri). Your messages are kept. Checked at ${clockTime(0)}. Move your first mate to Codex until then?`,
     );
     expect(card.body).toContain("Move your first mate to Codex");
   });
@@ -4223,7 +4228,7 @@ describe("FirstmateAgent flagship binding (broker phase 6)", () => {
       .cards()
       .find((entry) => entry.title === "Your first mate has used up its allowance") as Card;
     expect(card.body).toBe(
-      "Personal has used up its allowance (resets Fri). Your messages are kept. Move your first mate to Grok until then?",
+      `Personal has used up its allowance (resets Fri). Your messages are kept. Checked at ${clockTime(0)}. Move your first mate to Grok until then?`,
     );
     expect(card.body).toContain("Move your first mate to Grok");
     const move = card.actions.find((action) => action.id === "move-flagship");
@@ -4698,6 +4703,7 @@ function claudeLogin(): FlagshipAccount {
 async function claudeLoginSeat(
   options: {
     codex?: number;
+    recheckAllowance?: () => Promise<undefined>;
     /** A previous run's accounts and database: the app restarted. */
     restart?: {
       accounts: FlagshipAccount[];
@@ -4732,6 +4738,7 @@ async function claudeLoginSeat(
     claudeSeat: true,
     accounts,
     availableModels: [CLAUDE_MODEL, ...(options.codex !== undefined ? [CODEX_MODEL] : [])],
+    ...(options.recheckAllowance ? { recheckAllowance: options.recheckAllowance } : {}),
   });
   t.settings.setFirstmateModel(CLAUDE_MODEL);
   t.setHeadroom(CLAUDE_ACCOUNT, 80);
@@ -5066,6 +5073,74 @@ describe("the paused seat: each cut-off class through the ladder (W1 S9)", () =>
     expect(notes(t.events)).toContain("Your first mate is answering again on Claude.");
     expect(seat.prompts).toHaveLength(3);
     expect(seat.prompts[2]).toContain("check the build");
+  });
+
+  // INF-1079, the captain: "it would be great to have a button here to
+  // trigger a recheck" after switching Claude accounts elsewhere.
+  it("a spent allowance's Recheck reads it again: still spent, the card comes back; another login's room answers the kept words once", async () => {
+    let rechecks = 0;
+    let read!: () => void;
+    let onRead = () => {};
+    const t = await claudeLoginSeat({
+      recheckAllowance: async () => {
+        rechecks += 1;
+        await new Promise<void>((resolve) => {
+          read = resolve;
+        });
+        onRead();
+        return undefined;
+      },
+    });
+    await t.agent.converse("hello");
+    const seat = t.sessions[0] as FakeSession;
+    await cutOffTurn(seat, { class: "no_headroom", resetsAt: Date.now() + 3 * 60 * 60_000 });
+    const card = () => t.cards().find((entry) => entry.id === "card-fm-no-headroom");
+    const recheck = [
+      "recheck-allowance",
+      RECHECK_ALLOWANCE_LABEL,
+      { kind: "host", op: "try-again", arg: CLAUDE_ACCOUNT },
+    ];
+    const actions = () => card()?.actions.map((action) => [action.id, action.label, action.effect]);
+    expect(actions()).toEqual([
+      recheck,
+      ["open-settings", "Open settings", { kind: "open", target: "settings" }],
+    ]);
+    expect(card()?.actions.find((action) => action.default)?.id).toBe("recheck-allowance");
+
+    // The click closes the card; it comes back saying it checks, with no
+    // second recheck, and another ask shares the one running.
+    t.supervisor.act("card-fm-no-headroom", "recheck-allowance");
+    await tick();
+    expect(card()?.body).toContain(ALLOWANCE_CHECKING_WORDS);
+    expect(actions()?.map(([id]) => id)).toEqual(["open-settings"]);
+    void t.agent.recheckAllowance();
+    expect(rechecks).toBe(1);
+
+    // Still spent on the same login: the card comes back as it was, nothing tried.
+    read();
+    await tick();
+    expect(card()?.body).not.toContain(ALLOWANCE_CHECKING_WORDS);
+    expect(actions()?.[0]).toEqual(recheck);
+    expect(seat.prompts).toHaveLength(1);
+    // A spent allowance is not a refusal the captain's word clears.
+    expect(t.tryAgains).toEqual([]);
+
+    // Another login with room: the vault ended the old login's cut-off.
+    onRead = () => {
+      t.account(CLAUDE_ACCOUNT).cutOff = undefined;
+    };
+    t.supervisor.act("card-fm-no-headroom", "recheck-allowance");
+    await tick();
+    read();
+    await tick();
+    expect(card()).toBeUndefined();
+    expect(notes(t.events)).toContain("Your first mate is answering again on Claude.");
+    expect(seat.prompts).toHaveLength(2);
+    expect(seat.prompts[1]).toContain("hello");
+    // Later readings deliver nothing twice.
+    t.agent.onQuotaRefreshed();
+    await tick();
+    expect(seat.prompts).toHaveLength(2);
   });
 
   it("a refusal renews nothing and attempts nothing until the captain's Try again", async () => {

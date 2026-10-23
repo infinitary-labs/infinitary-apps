@@ -29,8 +29,10 @@ import {
   providerServesRole,
 } from "@shared/providers";
 import {
+  clockTime,
   type ModelsCatalogView,
   PREMIUM_SLOT,
+  type QuotaSnapshotView,
   SLOTS,
   type Slot,
   servedModelKey,
@@ -141,6 +143,7 @@ import { AskCapture } from "./askCapture";
 import {
   FIRSTMATE_FAILURE_CARD_ID,
   FIRSTMATE_MOVE_BACK_CARD_ID,
+  type FirstmatePauseCard,
   type ThreadOwed,
 } from "./cardService";
 import { escapeCardText } from "./cardText";
@@ -151,6 +154,8 @@ import type { LocalOrchestratorSeat } from "./localOrchestrator";
 import { type ReplyFacts, replyLine, startedReply } from "./replyLine";
 import { scheduleText } from "./scheduler";
 import {
+  ALLOWANCE_CHECKING_WORDS,
+  allowanceCheckedWords,
   FIRSTMATE_CAPTAIN_THINKING_LEVEL,
   FIRSTMATE_OPERATIONAL_THINKING_LEVEL,
   type FirstmateThinkingLevel,
@@ -271,6 +276,12 @@ export type FirstmateAgentOptions = {
   modelRuntime: ModelRuntime;
   /** The flagship account binding (broker phase 6); absent = base runtime. */
   flagship?: Flagship;
+  /**
+   * The captain's recheck of the allowance: which login each store names
+   * now, then a fresh reading that may ask for access, as Retry does
+   * (`recheckAllowance`). Absent reads nothing.
+   */
+  recheckAllowance?: () => Promise<QuotaSnapshotView | undefined>;
   /**
    * The dev-only local seat (roadmap 1.7) as the boot found it: when set it
    * is the Firstmate's model and runtime outright - no pin, no account, no
@@ -1757,13 +1768,7 @@ export class FirstmateAgent {
     // The pause card speaks for a lost sign-in: the generic sign-in card a
     // failed turn raised before the proof came is not a second card for it.
     this.options.supervisor.clearAuthDecisionCard(AUTH_CARD_ID);
-    const card = {
-      pause: pause.class,
-      body: this.pauseCardBody(accountId, pause, providerName, other?.providerName),
-      ...(flagship.labelOf(accountId) ? { accountId } : {}),
-      providerName,
-      ...(other ? { move: other } : {}),
-    };
+    const card = this.pauseCard(accountId, pause);
     if (!fresh) {
       // The same pause: its card stands, revised in place if its words
       // moved; one the captain dismissed stays down.
@@ -1784,6 +1789,24 @@ export class FirstmateAgent {
     this.options.supervisor.addFirstmatePauseCard(card);
   }
 
+  /** The pause card for the seat's account and its pause, as it stands now. */
+  private pauseCard(accountId: string, pause: SeatPause): FirstmatePauseCard {
+    const flagship = this.options.flagship;
+    const providerId =
+      flagship?.providerOf(accountId) ?? this.options.settings.getFirstmateModel()?.provider;
+    const providerName =
+      providerId && flagship ? flagship.providerNameOf(providerId) : "its provider";
+    const other = providerId ? flagship?.otherProviderOption(providerId) : undefined;
+    return {
+      pause: pause.class,
+      body: this.pauseCardBody(accountId, pause, providerName, other?.providerName),
+      ...(flagship?.labelOf(accountId) ? { accountId } : {}),
+      providerName,
+      ...(other ? { move: other } : {}),
+      ...(this.rechecking ? { checking: true } : {}),
+    };
+  }
+
   /** What a pause card says: what stopped the seat, what is kept, and what it asks. */
   private pauseCardBody(
     accountId: string,
@@ -1801,11 +1824,12 @@ export class FirstmateAgent {
         providerId && flagship.accountCount(providerId) > 1
           ? `Your first mate's ${providerName} accounts have used up their allowance (${summary}).`
           : flagship.pauseSentence(accountId, pause);
+      const checked = this.allowanceCheckWords(accountId);
       return moveTo
-        ? `${spent} Your messages are kept. Move your first mate to ${moveTo} until then?`
+        ? `${spent} Your messages are kept.${checked} Move your first mate to ${moveTo} until then?`
         : `No connected account has allowance left for your first mate right now${
             summary ? ` (${summary})` : ""
-          }. Your messages are kept. It will resume when one resets.`;
+          }. Your messages are kept. It will resume when one resets.${checked}`;
     }
     if (pause.class === "unavailable" && !moveTo) {
       return "Your first mate's account was disconnected and no other account can serve it. Connect an account to continue.";
@@ -1819,6 +1843,29 @@ export class FirstmateAgent {
     if (pause.class === "signed_out")
       return `${said} Your first mate picks them up once you sign in.`;
     return `${said} Your first mate picks them up once it can run.`;
+  }
+
+  /**
+   * When the spent allowance was last read and who is signed in, with a
+   * leading space, for the pause card: a person who switched accounts
+   * elsewhere sees whether the reading is the new one. A reading that could
+   * not be taken says so, never that the allowance is still spent.
+   */
+  private allowanceCheckWords(accountId: string): string {
+    const flagship = this.options.flagship;
+    if (!flagship) return "";
+    if (this.rechecking) return ` ${ALLOWANCE_CHECKING_WORDS}`;
+    const check = flagship.allowanceCheck(accountId);
+    if (!check) return "";
+    return ` ${allowanceCheckedWords(
+      check.read
+        ? {
+            read: true,
+            time: clockTime(check.at),
+            ...(check.identity ? { identity: check.identity } : {}),
+          }
+        : { read: false, ...(check.at !== undefined ? { time: clockTime(check.at) } : {}) },
+    )}`;
   }
 
   /**
@@ -1910,11 +1957,69 @@ export class FirstmateAgent {
   private tryAgain(accountId: string): void {
     const flagship = this.options.flagship;
     if (!flagship) return;
+    // On a spent allowance, trying again is reading it again.
+    if (flagship.pause(accountId)?.class === "no_headroom") {
+      void this.recheckAllowance({ fromCard: true });
+      return;
+    }
     flagship.tryAgain(accountId);
     if (this.paused?.accountId === accountId) this.paused = undefined;
     this.options.supervisor.withdrawFirstmatePauseCards("trying again");
     this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
     void this.drainInbox();
+  }
+
+  /**
+   * The captain's Recheck allowance (the spent-allowance card, Settings'
+   * Refresh, command search): one at a time, and a second ask shares the
+   * one running. While it runs the card says so and offers no second
+   * recheck; then the seat reads its way back - serving again closes the
+   * card and the kept messages go, once, through the inbox - and a seat
+   * still paused gets its card back with what the reading said.
+   */
+  recheckAllowance(options: { fromCard?: boolean } = {}): Promise<QuotaSnapshotView | undefined> {
+    // The card's own click closed it: the card comes back, saying it checks.
+    // A recheck from elsewhere revises a card that is up and raises none.
+    if (options.fromCard) this.recheckRaises = true;
+    this.recheck ??= this.runRecheck().finally(() => {
+      this.recheck = undefined;
+    });
+    if (options.fromCard) this.showSpentAllowanceCard();
+    return this.recheck;
+  }
+
+  private recheck: Promise<QuotaSnapshotView | undefined> | undefined;
+
+  /** A recheck is running: the pause card says so. */
+  private rechecking = false;
+
+  /** The running recheck came from the card, so its card comes back. */
+  private recheckRaises = false;
+
+  private async runRecheck(): Promise<QuotaSnapshotView | undefined> {
+    this.rechecking = true;
+    this.showSpentAllowanceCard();
+    try {
+      return await this.options.recheckAllowance?.();
+    } finally {
+      this.rechecking = false;
+      this.checkSeat();
+      this.showSpentAllowanceCard();
+      this.recheckRaises = false;
+      void this.drainInbox();
+    }
+  }
+
+  /** The seat is paused on a spent allowance: its card, as it stands now, is up. */
+  private showSpentAllowanceCard(): void {
+    const flagship = this.options.flagship;
+    const paused = this.paused;
+    if (!flagship || paused?.class !== "no_headroom") return;
+    const pause = flagship.pause(paused.accountId);
+    if (pause?.class !== "no_headroom") return;
+    this.options.supervisor.addFirstmatePauseCard(this.pauseCard(paused.accountId, pause), {
+      reviseOnly: !this.recheckRaises,
+    });
   }
 
   /**

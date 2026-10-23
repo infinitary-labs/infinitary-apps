@@ -274,6 +274,8 @@ const REFUSALS: Readonly<
   "settings.integrations": usageRefusalFor("Integrations"),
   "automation.pause-all": usageRefusalFor("Automation"),
   "usage.unit": usageRefusal,
+  // The allowance is read where the first mate lives, from any Mac.
+  "allowance.recheck": () => null,
   // Devices is the home's own: a Mac that controls another has none (docs/devices.md).
   "devices.try-again": (s) => (s.devicesShown ? null : `Devices is on ${HOME.the}`),
 };

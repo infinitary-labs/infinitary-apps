@@ -1161,4 +1161,49 @@ describe("Claude usage asks", () => {
     expect(t.asks()).toBe(2);
     expect(after.snapshot.providers[0]?.status).toBe("ok");
   });
+  // INF-1079: the captain switched the machine's Claude login while the old
+  // one's allowance was spent, and the app kept showing the old reading.
+  it("never serves an answer the previous login got, and drops one that lands after a switch", async () => {
+    let at = NOW;
+    let login = "login-a";
+    let asks = 0;
+    let percent = 100;
+    let landing: (() => void) | undefined;
+    const http: QuotaHttp = async () => {
+      asks += 1;
+      const answer = { status: 200, json: claudeUsage(percent), retryAfter: "0" };
+      if (!landing) return answer;
+      await new Promise<void>((resolve) => {
+        landing = resolve;
+      });
+      return answer;
+    };
+    const fetcher = createQuotaFetcher({
+      auth,
+      http,
+      models: () => [],
+      now: () => at,
+      loginOf: () => login,
+    });
+    const spent = await fetcher("startup");
+    expect(spent.snapshot.providers[0]?.windows[0]?.percentRemaining).toBe(0);
+
+    // Another login a minute later: the five-minute wait is the old login's.
+    login = "login-b";
+    percent = 20;
+    at += 60_000;
+    const switched = await fetcher("focus");
+    expect(asks).toBe(2);
+    expect(switched.snapshot.providers[0]?.windows[0]?.percentRemaining).toBe(80);
+
+    // A request login-b started lands after a switch back to login-a.
+    landing = () => {};
+    at += 5 * 60_000;
+    const late = fetcher("interval");
+    await vi.waitFor(() => expect(asks).toBe(3));
+    login = "login-a";
+    landing();
+    const dropped = await late;
+    expect(dropped.snapshot.providers[0]).toMatchObject({ status: "skipped", windows: [] });
+  });
 });

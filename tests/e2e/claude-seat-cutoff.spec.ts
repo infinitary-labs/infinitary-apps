@@ -1,8 +1,12 @@
-import { utimesSync } from "node:fs";
+import { utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
-import { firstmatePauseTitle } from "../../src/core/orchestrator/cardService";
 import {
+  firstmatePauseTitle,
+  RECHECK_ALLOWANCE_LABEL,
+} from "../../src/core/orchestrator/cardService";
+import {
+  ALLOWANCE_CHECKING_WORDS,
   allowanceSpentWords,
   keptMessageWords,
   seatMovedLine,
@@ -33,6 +37,7 @@ import {
 import { failureLines, feedLine } from "./rails";
 import { closeOpenCards, shownCard } from "./stack";
 import { starterFor } from "./starters";
+import { pressWindowKey, runFromSearch } from "./windowKeys";
 
 /**
  * The Firstmate's Claude seat cut off (W1 S12; the cut-off contract,
@@ -66,6 +71,14 @@ function tried(mockProvider: MockProviderServer, words: string): number {
     const tail = body.slice(body.lastIndexOf('"role":"user"'));
     return tail.includes(words) && !tail.includes('"tool_use_id"');
   }).length;
+}
+
+/** The open card titled `title`, as the core's stack holds it. */
+async function pauseCard(page: Page, title: string) {
+  return page.evaluate(
+    async (wanted) => (await window.infinitary.cards.list()).find((card) => card.title === wanted),
+    title,
+  );
 }
 
 /** A quota refresh: the moment a paused seat reads its way back. */
@@ -275,6 +288,83 @@ test("a spent allowance pauses with its reset, asks to move to Codex, and tries 
   });
   await expect(feedLine(page, await movedLine(page))).toBeVisible();
   expect(tried(mock, words)).toBe(1);
+});
+
+/**
+ * Which login the machine's Claude store names, as Claude's own client
+ * writes it in the home's account config: switching accounts there rewrites
+ * it with another account.
+ */
+function writeClaudeLogin(homeDir: string, accountUuid: string): void {
+  writeFileSync(
+    join(homeDir, ".claude.json"),
+    JSON.stringify({ oauthAccount: { accountUuid, emailAddress: "kun@example.com" } }),
+  );
+}
+
+// INF-1079, the captain: "it would be great to have a button here to trigger
+// a recheck" after switching Claude accounts elsewhere.
+test("a spent allowance's Recheck allowance, by key, keeps the card on one login, and coming back after a switch answers the kept words once", async () => {
+  const mock = await startMockProvider();
+  mockProvider = mock;
+  const homeDir = scratchDir("infinitary-home-");
+  launched = await launchClaudeSeat({
+    mockProvider: mock,
+    homeDir,
+    prepareHome: (home) => writeClaudeLogin(home, "account-a"),
+  });
+  const { app, page } = launched;
+  mock.cutClaudeSeat({ class: "no_headroom", resetsAt: Date.now() + 2 * 3600_000 });
+  const words = `chart the shoals ${ANSWER_PROMPT_MARKER}`;
+  await say(page, words);
+  const title = firstmatePauseTitle("no_headroom", "Claude");
+  await expect(shownCard(page, title)).toBeVisible({ timeout: 45_000 });
+  const recheck = shownCard(page, title).getByRole("button", { name: RECHECK_ALLOWANCE_LABEL });
+  await expect(recheck).toBeVisible();
+
+  await test.step("the same login: ⌘1 rechecks, and the card comes back with Recheck allowance", async () => {
+    const before = await pauseCard(page, title);
+    await pressWindowKey(app, "1", ["meta"]);
+    // Closed by the click, the card comes back as a new one once the reading is in.
+    await expect
+      .poll(
+        async () => {
+          const after = await pauseCard(page, title);
+          return (
+            after !== undefined &&
+            after.lifecycleId !== before?.lifecycleId &&
+            after.actions.some((action) => action.label === RECHECK_ALLOWANCE_LABEL) &&
+            !after.body.includes(ALLOWANCE_CHECKING_WORDS)
+          );
+        },
+        { timeout: 30_000 },
+      )
+      .toBe(true);
+    await expect(recheck).toBeVisible();
+    expect(tried(mock, words)).toBe(1);
+  });
+
+  await test.step("another login: coming back to the window hears it and answers the kept words", async () => {
+    // The captain switched Claude to an account with room, outside the app,
+    // and comes back to the window: macOS tells the window it has focus.
+    writeClaudeLogin(homeDir, "account-b");
+    mock.cutClaudeSeat(null);
+    await app.evaluate(({ BrowserWindow }) => {
+      BrowserWindow.getAllWindows()
+        .find((win) => win.webContents.getURL().startsWith("file:"))
+        ?.emit("focus");
+    });
+    await expect.poll(() => cardTitles(page), { timeout: 45_000 }).toContain(MOCK_ANSWER_TITLE);
+    expect(await cardTitles(page)).not.toContain(title);
+    expect(tried(mock, words)).toBe(2);
+  });
+
+  await test.step("Recheck allowance from command search delivers nothing twice", async () => {
+    await runFromSearch(app, page, "allowance.recheck");
+    await refreshQuota(page);
+    expect(tried(mock, words)).toBe(2);
+    expect(await cardTitles(page)).not.toContain(title);
+  });
 });
 
 test("a Codex seat that runs out is offered Claude, moves only on the click, and Claude answers", async () => {

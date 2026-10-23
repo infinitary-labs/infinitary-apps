@@ -164,6 +164,7 @@ function ownCore() {
       sshConnections: ssh,
       settings: { getDictation: () => ({ enabled: true }) },
       quota: { onWindowFocus: vi.fn(), onResumed: vi.fn() },
+      vault: { checkLogins: vi.fn(async () => {}) },
       personal: { installedPanelDir: () => "/own/panels" },
     },
     paths: { crewmatesDir: "/own/crewmates", personalCacheDir: "/own/cache" },

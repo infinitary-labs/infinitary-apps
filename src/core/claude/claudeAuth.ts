@@ -620,6 +620,12 @@ export class ClaudeAuthBackend implements AccountBackend {
     return { ...health, state: "degraded", reason: issue, ...(detail ? { detail } : {}) };
   }
 
+  /** Which login the default store names: the stamp's, from attributes only. */
+  async loginStamp(_account: AccountRef): Promise<string | undefined> {
+    void _account;
+    return (await this.stamp(this.configDir()).catch((): CredentialStamp => ({}))).login;
+  }
+
   /** The credential's own health, from the client's probe (when one can run) and the store. */
   private async credentialHealth(probeAllowed: boolean): Promise<CredentialHealth> {
     const dir = this.configDir();

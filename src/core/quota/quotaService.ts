@@ -18,6 +18,12 @@ import type { QuotaFetchResult } from "./fetchQuota";
 export type QuotaRefresh = (reason?: string) => Promise<QuotaFetchResult>;
 
 const REFRESH_INTERVAL_MS = 5 * 60 * 1000;
+/**
+ * Refreshes an in-flight background one never swallows: a person's Retry
+ * (`demand`, the only one that may ask for access) and a changed login,
+ * whose reading must be taken under the new login.
+ */
+const FORCED_REASONS: ReadonlySet<string> = new Set(["demand", "account-changed"]);
 /** A focus event only refreshes when the last snapshot is older than this. */
 const FOCUS_STALENESS_MS = 60 * 1000;
 /**
@@ -45,7 +51,8 @@ export class QuotaService {
   private latestCatalog: ModelsCatalogView | undefined;
   private refreshing: Promise<QuotaSnapshotView | undefined> | undefined;
   private refreshingReason: string | undefined;
-  private followUpDemand: Promise<QuotaSnapshotView | undefined> | undefined;
+  /** The forced refresh waiting on the one in flight, by reason. */
+  private readonly followUps = new Map<string, Promise<QuotaSnapshotView | undefined>>();
   private interval: ReturnType<typeof setInterval> | undefined;
   private readonly now: () => number;
   private readonly snapshots: QuotaSnapshotStore;
@@ -111,21 +118,39 @@ export class QuotaService {
   }
 
   /**
+   * An account's login changed: its last reading was the old login's, so it
+   * is not carried forward as this account's while the next one is taken.
+   */
+  forgetAccount(accountId: string): void {
+    const latest = this.latestSnapshot;
+    if (!latest?.providers.some((provider) => provider.accountId === accountId)) return;
+    this.latestSnapshot = {
+      ...latest,
+      providers: latest.providers.filter((provider) => provider.accountId !== accountId),
+    };
+  }
+
+  /**
    * Single-flight refresh; failures keep the last snapshot (stale > wrong).
-   * A `demand` refresh (Retry) is never swallowed by an in-flight background
-   * tick: it chains a follow-up so the user-initiated `allowPrompt` actually
-   * runs.
+   * A forced refresh (`FORCED_REASONS`) is never swallowed by an in-flight
+   * one of another reason: it chains a follow-up, so a person's Retry
+   * actually runs with its `allowPrompt`, and a changed login's reading is
+   * taken after a request the old login started.
    */
   refresh(reason: string): Promise<QuotaSnapshotView | undefined> {
     if (this.refreshing) {
-      if (reason === "demand" && this.refreshingReason !== "demand") {
-        this.followUpDemand ??= this.refreshing.then(() => {
-          this.followUpDemand = undefined;
-          return this.refresh("demand");
-        });
-        return this.followUpDemand;
+      if (FORCED_REASONS.has(reason) && this.refreshingReason !== reason) {
+        let followUp = this.followUps.get(reason);
+        if (!followUp) {
+          followUp = this.refreshing.then(() => {
+            this.followUps.delete(reason);
+            return this.refresh(reason);
+          });
+          this.followUps.set(reason, followUp);
+        }
+        return followUp;
       }
-      return this.followUpDemand ?? this.refreshing;
+      return [...this.followUps.values()].at(-1) ?? this.refreshing;
     }
     this.refreshingReason = reason;
     this.refreshing = (async () => {

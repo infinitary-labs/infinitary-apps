@@ -456,6 +456,18 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["tokens", "cost", "dollars", "estimate"],
   },
+  // Every account's allowance read again, as the spent-allowance card's
+  // Recheck allowance and Subscriptions' Refresh do: a login switched
+  // elsewhere is read first (docs/quota.md "A changed login"). No default key.
+  "allowance.recheck": {
+    label: "Recheck allowance",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "view",
+    keys: [],
+    searchWords: ["quota", "refresh", "usage", "limit", "account", "switch"],
+  },
   // This Mac's own SSH connections to the Macs it added by their address,
   // each it stopped trying tried once more (docs/devices.md, "Through the
   // home's SSH"); chosen by name, and only where Devices shows.

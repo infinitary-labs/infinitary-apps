@@ -77,6 +77,7 @@ describe("the command catalog", () => {
       "settings.integrations",
       "automation.pause-all",
       "usage.unit",
+      "allowance.recheck",
       "devices.try-again",
     ]);
   });
@@ -131,6 +132,7 @@ describe("the command catalog", () => {
       "settings.integrations",
       "automation.pause-all",
       "usage.unit",
+      "allowance.recheck",
       "devices.try-again",
     ]);
     expect(MAIN_COMMAND_IDS).toEqual(["size.larger", "size.smaller", "size.reset"]);

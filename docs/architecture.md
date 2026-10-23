@@ -732,6 +732,7 @@ Every class reaches the seat through the one admission ladder, the same for a Pi
 - **The ladder at an idle boundary** (`FirstmateAgent.admitTurn`): rung 1 rebinds to a sibling of the same provider that can serve (a feed line, the system working); otherwise the seat pauses.
   Rung 2 is one card, `card-fm-flagship-move`, asking to move to another provider with measured headroom; rung 3 is one card saying it waits - `card-fm-refused` ("<provider> is not answering your first mate right now", with "Try <provider> again" and "Open settings") for a refusal, `card-fm-no-headroom` titled per class for the rest.
   A card carries its class's way back beside the move: "Sign in" (`restore-account`, a click only - the seat never runs a sign-in) for a lost sign-in, "Try again" (`try-again`) for a refusal.
+  A spent allowance's card leads with "Recheck allowance" (`try-again` on that account, its default), with the move or "Open settings" beside it; while the recheck runs the card says so and offers no second one, and a seat still paused gets its card back saying when the allowance was read and who is signed in (INF-1079, `docs/quota.md` "A changed login").
   The copy never says signing in again clears a refusal: only "Try again", another login or another client version does (S7).
   One feed line and one ledger row per pause, and no generic problem line beside it: a failed turn that carries a cut-off class is not a problem in the feed (`feedLineFrom`).
   An attach the account's own fact explains (no client to run it) pauses the same way, and the captain's words it was carrying wait on the inbox (rev-9).
@@ -753,6 +754,7 @@ Every class reaches the seat through the one admission ladder, the same for a Pi
   A cut-off recorded or cleared on any account is heard at once, as the crew lanes hear it (`AccountVault.onCutOffChange` → `FirstmateAgent.onCutOffChanged`), rather than at the next tick.
   A seat the captain moved off a paused account remembers where it was (`firstmate-moved-from`), and when that account serves again it is offered "Move your first mate back to <provider>?" once (`card-fm-move-back`), which does nothing until clicked.
   The refused card's "Try again" clears the refusal (S7's `tryAgain`) and drains once: that drain is the attempt.
+  The spent-allowance card's "Recheck allowance" reads the account's login and its allowance again (`FirstmateAgent.recheckAllowance`), then reads the way back and drains once; a switched login clears the old login's spent allowance, so the kept words go through once.
 - **Moving across backends** (the owner's Q4 b): each backend resumes its own last session.
   The attachment that carries out a move queues a typed `seat-moved` wake for its first turn, naming where the seat was and why; when the move changed sessions it carries a bounded digest of the turns that session has not seen (`seatDigest.ts`: at most six turns, 280 characters per quoted excerpt, eight tool names per turn, the whole wake under 5,500 characters) - what the host saw on its own seam, never the other backend's transcript.
   The context block stays the host's truth.

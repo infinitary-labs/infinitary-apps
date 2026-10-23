@@ -752,7 +752,10 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:quota:snapshot": () => services.quota.latest() ?? null,
 
-    "inf:quota:refresh": async () => (await services.quota.refresh("demand")) ?? null,
+    // Settings' Refresh and command search's Recheck allowance are the
+    // first mate's recheck: a switched login is read first, and a seat paused
+    // on a spent allowance reads its way back.
+    "inf:quota:refresh": async () => (await services.firstmate.recheckAllowance()) ?? null,
 
     "inf:quota:models": () => services.quota.latestModels() ?? null,
 

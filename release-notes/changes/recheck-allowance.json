@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "recheck-allowance",
+      "kind": "feature",
+      "area": "firstmate",
+      "title": "Recheck your first mate's allowance after switching Claude accounts",
+      "body": "When your first mate has used up its allowance, its card now offers Recheck allowance, says when the allowance was last checked and who is signed in. If you switch Claude to another account outside Infinitary, it notices when you come back to the window, when your Mac wakes, or within a minute, reads the new account's allowance, and picks up your kept messages once there is room. Recheck allowance is also in command search.",
+      "picture": {
+        "dark": "recheck-allowance-dark.webp",
+        "light": "recheck-allowance-light.webp",
+        "alt": "The card Your first mate has used up its allowance, saying when it was checked and who is signed in, with Recheck allowance beside Move to Codex."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

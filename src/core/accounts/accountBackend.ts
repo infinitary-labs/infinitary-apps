@@ -110,6 +110,12 @@ export interface AccountBackend {
    */
   health(account: AccountRef): Promise<CredentialHealth>;
   /**
+   * Which login the store names now (`CredentialStamp.login`), read from
+   * attributes alone: no credential value, no client, no request for access.
+   * Cheap enough for every window focus; a backend that cannot say has none.
+   */
+  loginStamp?(account: AccountRef): Promise<string | undefined>;
+  /**
    * Give Claude's delegated renewal a home and let Pi declare that resolve
    * is renewal; a backend with no renewal answers `unsupported` (spec §11.3).
    * Never a secret: a caller that needs the fresh credential re-resolves.

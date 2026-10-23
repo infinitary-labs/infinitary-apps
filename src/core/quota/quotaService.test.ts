@@ -128,6 +128,53 @@ describe("QuotaService", () => {
     expect(fromBackground).toBeDefined();
     expect(fromDemand).toBeDefined();
   });
+  // INF-1079: after a switch of the machine's Claude login, the old login's
+  // spent reading must not stand in for the new one's.
+  it("takes a changed login's reading after one in flight, and never carries the old login's forward", async () => {
+    const db = openInMemoryDatabase();
+    const row = (status: "ok" | "unavailable", percent?: number) => ({
+      provider: "claude",
+      label: "Claude",
+      accountId: "c1",
+      status,
+      stale: false,
+      windows:
+        percent === undefined
+          ? []
+          : [{ id: "five_hour", label: "session", percentRemaining: percent }],
+    });
+    const answers = [row("ok", 0), row("unavailable"), row("unavailable"), row("ok", 80)];
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const reasons: string[] = [];
+    const refresh = vi.fn(async (reason?: string) => {
+      reasons.push(reason ?? "");
+      if (reasons.length === 2) await gate;
+      const provider = answers[reasons.length - 1] ?? row("unavailable");
+      return {
+        snapshot: { generatedAt: "t", fetchedAt: 5000, providers: [provider] },
+        catalog: CATALOG,
+      };
+    });
+    const service = new QuotaService({ refresh, db, broadcast: () => {}, now: () => 5000 });
+    await service.refresh("startup");
+
+    // A read that could not be taken keeps the last reading - the same login's.
+    const kept = service.refresh("interval");
+    service.forgetAccount("c1");
+    const changed = service.refresh("account-changed");
+    release();
+    await kept;
+    // The login changed: the old login's 0% is not this account's any more.
+    expect(service.latest()?.providers[0]).toMatchObject({ status: "unavailable", windows: [] });
+    await changed;
+    expect(reasons).toEqual(["startup", "interval", "account-changed"]);
+    expect(await service.refresh("demand")).toMatchObject({
+      providers: [{ status: "ok", windows: [{ percentRemaining: 80 }] }],
+    });
+  });
 });
 
 describe("mergeStaleProviders", () => {

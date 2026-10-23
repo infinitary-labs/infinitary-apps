@@ -439,6 +439,52 @@ describe("computer constellations", () => {
   });
 });
 
+describe("a program on another computer", () => {
+  // INF-999: INF-505, INF-527 and INF-867 had their live parts on the Mac
+  // mini, yet drew at home, piled with INF-923's; the captain chose to draw
+  // a constellation in the group of the computer running its live parts.
+  it("draws in the group of the computer running its live part, with that part seated", () => {
+    const model = new ComputerOrbits(0);
+    model.configure([device("mini")]);
+    seed(model, "778", null);
+    seed(model, "507", "mini");
+    seed(model, "925", null);
+    model.setPrograms(
+      [
+        {
+          id: "505",
+          state: "live",
+          parts: [
+            { id: "506", parents: [], state: "done" },
+            { id: "507", parents: ["506"], state: "live" },
+          ],
+        },
+        { id: "923", state: "live", parts: [{ id: "925", parents: [], state: "live" }] },
+      ],
+      0,
+    );
+    model.settleBootRoster(0);
+    const frame = model.update(0, true);
+    const mini = required(model.clusters().find((cluster) => cluster.id === "mini"));
+    const program = (id: string) => required(frame.programs.find((p) => p.id === id));
+    const from = (p: { x: number; y: number }, c: { x: number; y: number }) =>
+      Math.hypot(p.x - c.x, p.y - c.y);
+    expect(from(program("505"), mini)).toBeLessThan(mini.radius + 1);
+    expect(from(program("923"), { x: 0, y: 0 })).toBeLessThan(from(program("923"), mini));
+    // Each live part sits at its node on its own computer's orbit.
+    for (const [parent, part] of [
+      ["505", "507"],
+      ["923", "925"],
+    ] as const) {
+      const node = required(program(parent).nodes.find((n) => n.id === part));
+      const mate = required(frame.crew.find((c) => c.id === part));
+      expect(node.crewed).toBe(true);
+      expect(mate.x).toBeCloseTo(node.x);
+      expect(mate.y).toBeCloseTo(node.y);
+    }
+  });
+});
+
 describe("the multi-computer stage (FI3-1519)", () => {
   const gap = CLUSTER_LAYOUT.gapPx;
   const remoteRadius = (count: number) => outerPlaneRadius(count) * CLUSTER_LAYOUT.sizeShare;

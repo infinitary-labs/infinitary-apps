@@ -178,11 +178,15 @@ The review names each key it checked, that key's fate, and the keys left uncheck
 
 ## Current blockers in the task panel and record
 
-The board/detail `blockedBy` list contains only live (open or active) work, using `TaskService.blockerHoldsClose` for that status, so the arrow still draws for a recorded wait.
-Close refusals, the active blocked flag, task-query active rows and the context's “cannot land until” line read only the marked edges (`blockersHoldingClose`).
+The board/detail `blockedBy` list names only the waits that hold the task now, by one rule the board and the crew's tasks reader share (`holdingWaits`, INF-999).
+On open work that is every live (open or active) blocker.
+On active work it is a live blocker whose edge holds its merge, unless the captain's words passed that hold (the recorded override, `overridePasses`); a recorded wait only while its crewmate stands idle on its waits (posture idle, reason `dependency`), so the arrow still draws while it waits; and the live work a standing baseline wait names.
+A crewmate working past a recorded wait is not blocked by it, and a merge hold the captain released reads as released.
+Close refusals, the active blocked flag and the context's “cannot land until” line read only the marked edges (`blockersHoldingClose`).
 Done, dropped and discarded work stays in graph/timeline history, not in the record's “Waiting on” banner or “Waits on” facts.
 With no live blockers, that banner disappears.
-On active work the list also names a live task its standing baseline wait names (FI3-250): no edge holds its close, but it waits on that work all the same.
+The baseline wait (FI3-250) holds no edge to its close, but the task waits on that work all the same.
+The tasks reader's open rows also name a dropped blocker, so the agent can resolve it.
 
 This is not a change to the start policy: a dropped edge still prevents an open task from dispatching until the first mate resolves it.
 Such a record says it needs attention rather than claiming closed work is still underway, and Start stays disabled without naming the closed task as a live blocker.

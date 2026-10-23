@@ -259,6 +259,12 @@ export const taskViewSchema = z.object({
   reviewOf: z.string().nullable().optional(),
   /** Actual execution device; null is the home Mac, absent on an older home. */
   executionDeviceId: z.string().nullable().optional(),
+  /**
+   * The task runs a program the host runs (`shape.program`, docs/programs.md):
+   * its parts are its children. Absent on every other task, and on an older
+   * home, so the stage draws a constellation only for a program.
+   */
+  program: z.literal(true).optional(),
   /** Where it runs, in words, when another computer runs it; absent on this Mac. */
   place: taskPlaceSchema.optional(),
   kind: taskKindSchema,

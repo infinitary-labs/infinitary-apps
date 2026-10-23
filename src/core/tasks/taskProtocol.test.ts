@@ -27,6 +27,7 @@ import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
 import { recentFeed } from "./taskFeed";
 import { TaskProtocol } from "./taskProtocol";
+import { queryTasks } from "./taskQuery";
 import { type TaskChange, TaskService, TIMELINE_CAP } from "./taskService";
 
 /**
@@ -1043,8 +1044,43 @@ describe("the task protocol (task-system P3)", () => {
     expect(long.rows).toEqual(short.rows);
   });
 
+  // INF-999: INF-778's summary read Blocked by INF-886 from a recorded wait
+  // after the captain's words had released it, while the crewmate's own
+  // reader named nothing. The captain chose "Blocked by only for a hold".
+  it("names the same waits on the board and in the tasks reader: only those that hold the task now", () => {
+    let posture: WorkPosture = { state: "idle", reason: "dependency" };
+    const { tasks, protocol } = setup({ workPosture: () => posture });
+    for (const id of ["recorded", "marked"])
+      tasks.create({ id, title: id, prompt: "p", repoId: null });
+    tasks.create({ id: "waiter", title: "waiter", prompt: "p", repoId: null, status: "active" });
+    tasks.link("recorded", "waiter", "blocks", "firstmate");
+    tasks.link("marked", "waiter", "blocks", "crewmate", true);
+    const board = () => [...protocol.detail("waiter").blockedBy].sort();
+    const reader = () =>
+      [
+        ...(queryTasks(tasks, { key: "waiter" }, undefined, undefined, undefined, () => posture)
+          .rows[0]?.blocked_by ?? []),
+      ].sort();
+    const keys = (...ids: string[]) => ids.map((id) => tasks.get(id)?.key).sort();
+    // Idle on its waits: the recorded wait holds it, the marked one its merge.
+    expect(board()).toEqual(keys("recorded", "marked"));
+    expect(reader()).toEqual(board());
+    // Working past them: only the merge hold stands.
+    posture = { state: "active", reason: "turn" };
+    expect(board()).toEqual(keys("marked"));
+    expect(reader()).toEqual(board());
+    // The captain's words pass the merge hold for the task: nothing holds it.
+    tasks.recordDelivery("waiter", {
+      override: { words: "merge it, no need to wait", holds: ["waits"], until: "task", at: 1 },
+    });
+    expect(board()).toEqual([]);
+    expect(reader()).toEqual([]);
+  });
+
   it("shows only live blockers while retaining closed edges and the dropped-start gate", () => {
-    const { tasks, protocol } = setup();
+    // The crewmate stands idle on its waits, so its recorded waits hold it (INF-999).
+    let posture: WorkPosture = { state: "idle", reason: "dependency" };
+    const { tasks, protocol } = setup({ workPosture: () => posture });
     for (const id of ["merged", "dropped", "discarded", "planned", "working"]) {
       tasks.create({ id, title: id, prompt: "p", repoId: null });
     }
@@ -1077,6 +1113,13 @@ describe("the task protocol (task-system P3)", () => {
     expect(protocol.detail("open-dependent").flags.blocked).toBe(true);
     expect(protocol.detail("active-dependent").flags.blocked).toBe(false);
     expect(tasks.blockerRefusal("active-dependent")).toBeUndefined();
+    // INF-999: INF-778 read Blocked by INF-886 while its crewmate worked on.
+    // A recorded wait holds no merge, so it holds a crewmate only while it
+    // stands idle on it: working past it, it names nothing.
+    posture = { state: "active", reason: "turn" };
+    expect(protocol.detail("active-dependent").blockedBy).toEqual([]);
+    expect(protocol.detail("open-dependent").blockedBy).toEqual(["SCR-4", "SCR-5"]);
+    posture = { state: "idle", reason: "dependency" };
     tasks.close("planned", { status: "done", reason: "landed", actor: "captain" });
     tasks.close("working", { status: "dropped", reason: "discarded", actor: "captain" });
     for (const task of shown()) {

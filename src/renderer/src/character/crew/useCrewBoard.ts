@@ -83,13 +83,22 @@ export function crewModelNames(
   );
 }
 
-/** One entry per crewmate in orbit. */
+/**
+ * One entry per mark the stage paints: each crewmate in orbit, and each
+ * program with every one of its parts, since its root and a part's own node
+ * are pointed at and summarised as a crewmate is (./marks.ts, INF-999).
+ */
 export function crewFacts(
   tasks: readonly TaskView[],
   modelName: (model: string) => string,
 ): Readonly<Record<string, CrewFacts>> {
+  const programs = new Set(tasks.filter((task) => task.program).map((task) => task.id));
+  const painted = (task: TaskView) =>
+    inOrbit(task) ||
+    programs.has(task.id) ||
+    (task.parentId !== null && programs.has(task.parentId));
   return Object.fromEntries(
-    tasks.flatMap((task) => (inOrbit(task) ? [[task.id, { task, modelName }]] : [])),
+    tasks.flatMap((task) => (painted(task) ? [[task.id, { task, modelName }]] : [])),
   );
 }
 

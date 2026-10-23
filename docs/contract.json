@@ -23980,6 +23980,10 @@
                     }
                   ]
                 },
+                "program": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "place": {
                   "type": "object",
                   "properties": {
@@ -25285,6 +25289,10 @@
                 "type": "null"
               }
             ]
+          },
+          "program": {
+            "type": "boolean",
+            "const": true
           },
           "place": {
             "type": "object",
@@ -28921,6 +28929,10 @@
                   "type": "null"
                 }
               ]
+            },
+            "program": {
+              "type": "boolean",
+              "const": true
             },
             "place": {
               "type": "object",
@@ -50190,6 +50202,10 @@
                     }
                   ]
                 },
+                "program": {
+                  "type": "boolean",
+                  "const": true
+                },
                 "place": {
                   "type": "object",
                   "properties": {
@@ -51495,6 +51511,10 @@
                       "type": "null"
                     }
                   ]
+                },
+                "program": {
+                  "type": "boolean",
+                  "const": true
                 },
                 "place": {
                   "type": "object",

@@ -339,6 +339,41 @@ export type OrbitFrame = {
 
 type Packet = { direction: PacketDirection; at: number };
 
+/** One occupant's angle on its plane: a crewmate's slot, or a program mark's seat. */
+type PlaneSeat = { slot: number };
+
+const crewSeat = (c: Crewmate): PlaneSeat => ({
+  get slot() {
+    return c.planeSlot;
+  },
+  set slot(value: number) {
+    c.planeSlot = value;
+  },
+});
+
+const markSeat = (program: ProgramState): PlaneSeat => ({
+  get slot() {
+    return program.rootSlot;
+  },
+  set slot(value: number) {
+    program.rootSlot = value;
+  },
+});
+
+/** `marks` spread evenly through `crew`, in order: the first a half step in. */
+function interleave<T>(crew: readonly T[], marks: readonly T[]): T[] {
+  const total = crew.length + marks.length;
+  const out: T[] = [];
+  let c = 0;
+  let m = 0;
+  for (let i = 0; i < total; i++) {
+    const due = m < marks.length && i >= Math.floor(((m + 0.5) * total) / marks.length);
+    if ((due || c >= crew.length) && m < marks.length) out.push(marks[m++] as T);
+    else out.push(crew[c++] as T);
+  }
+  return out;
+}
+
 /** A live part's node, and every part of its parent, whose waits are branches. */
 type Seat = { x: number; y: number; z: number; siblings: ReadonlySet<string> };
 
@@ -348,8 +383,14 @@ type RoutePacket = { route: string[]; at: number; home: boolean };
 type ProgramState = {
   id: string;
   parts: ProgramPart[];
-  /** Where the mark sits on the inner orbit, travelling with it. */
+  /**
+   * The mark's seat on the inner orbit, travelling with it: an occupant
+   * like a crewmate, so the plane spaces crew and marks evenly together
+   * (INF-999) and a newcomer enters the widest gap between them all.
+   */
   rootSlot: number;
+  /** Where the mark is drawn, gliding to its seat on the springs a crewmate's slot uses. */
+  rootAngle: Spring;
   leaving: LeaveMode | null;
   leaveAt: number;
   litAt: number;
@@ -541,6 +582,7 @@ export class CrewOrbit {
    */
   setPrograms(list: readonly Program[], now: number): void {
     let changed = false;
+    let seats = false;
     const seen = new Set<string>();
     for (const program of list) {
       seen.add(program.id);
@@ -548,16 +590,19 @@ export class CrewOrbit {
       if (!had) {
         if (program.state !== "live" || !program.parts.some((part) => part.state === "live"))
           continue;
+        const rootSlot = this.openPlaneSlot(0);
         this.programs.set(program.id, {
           id: program.id,
           parts: program.parts,
-          rootSlot: this.openPlaneSlot(0),
+          rootSlot,
+          rootAngle: new Spring(rootSlot, 0.7, 1),
           leaving: null,
           leaveAt: 0,
           litAt: Number.NEGATIVE_INFINITY,
           packets: [],
         });
         changed = true;
+        seats = true;
         continue;
       }
       if (had.leaving) continue;
@@ -576,13 +621,17 @@ export class CrewOrbit {
       if (program.state !== "live") {
         this.endProgram(had, program.state === "done" ? "home" : "away", now);
         changed = true;
+        seats = true;
       }
     }
     for (const had of this.programs.values()) {
       if (seen.has(had.id) || had.leaving) continue;
       this.endProgram(had, "away", now);
       changed = true;
+      seats = true;
     }
+    // A mark that takes or gives up its seat re-spaces the inner orbit.
+    if (seats) this.respacePlanes();
     if (changed) this.bump();
   }
 
@@ -845,6 +894,24 @@ export class CrewOrbit {
     return raw + Math.round((c.angle.x - raw) / TAU) * TAU;
   }
 
+  /**
+   * The marks seated on the inner orbit: each program's root that is not
+   * leaving. They count as occupants wherever the plane is spaced, so no
+   * crewmate is ever seated on a mark and no two marks share a seat.
+   */
+  private seatedRoots(): ProgramState[] {
+    if (this.formation !== "adaptive") return [];
+    return [...this.programs.values()]
+      .filter((program) => !program.leaving)
+      .sort((a, b) => a.id.localeCompare(b.id));
+  }
+
+  /** Every occupant of a plane as a seat: its crew, and on the inner orbit the marks too. */
+  private planeSeats(plane: number, roster: Crewmate[]): PlaneSeat[] {
+    const crew = roster.filter((c) => c.plane === plane).map(crewSeat);
+    return plane === 0 ? [...crew, ...this.seatedRoots().map(markSeat)] : crew;
+  }
+
   /** Fill an earlier plane with its oldest later member; respacePlanes evens the slots after. */
   private fillPlaneVacancies(): void {
     const roster = this.roster();
@@ -870,31 +937,30 @@ export class CrewOrbit {
   private respacePlanes(): void {
     const roster = this.roster();
     for (let plane = 0; plane < CROWDED_PLANES.length; plane++) {
-      const members = roster
-        .filter((c) => c.plane === plane)
-        .sort((a, b) => (((a.planeSlot % TAU) + TAU) % TAU) - (((b.planeSlot % TAU) + TAU) % TAU));
+      const members = this.planeSeats(plane, roster).sort(
+        (a, b) => (((a.slot % TAU) + TAU) % TAU) - (((b.slot % TAU) + TAU) % TAU),
+      );
       const m = members.length;
       if (m === 0) continue;
       let sin = 0;
       let cos = 0;
-      members.forEach((c, i) => {
-        const d = c.planeSlot - (i / m) * TAU;
+      members.forEach((seat, i) => {
+        const d = seat.slot - (i / m) * TAU;
         sin += Math.sin(d);
         cos += Math.cos(d);
       });
       const base = Math.atan2(sin, cos);
-      members.forEach((c, i) => {
+      members.forEach((seat, i) => {
         const target = base + (i / m) * TAU;
-        c.planeSlot = target + Math.round((c.planeSlot - target) / TAU) * TAU;
+        seat.slot = target + Math.round((seat.slot - target) / TAU) * TAU;
       });
     }
   }
 
-  /** Where a newcomer would enter: the middle of the widest gap. */
+  /** Where a newcomer would enter: the middle of the widest gap, marks counted. */
   private openPlaneSlot(plane: number): number {
-    const slots = this.roster()
-      .filter((c) => c.plane === plane)
-      .map((c) => ((c.planeSlot % TAU) + TAU) % TAU)
+    const slots = this.planeSeats(plane, this.roster())
+      .map((seat) => ((seat.slot % TAU) + TAU) % TAU)
       .sort((a, b) => a - b);
     let best = CROWDED_PLANES[plane]?.phase ?? 0;
     let widest = 0;
@@ -983,9 +1049,12 @@ export class CrewOrbit {
 
   private spacePlaneSlots(roster: Crewmate[]): void {
     for (let plane = 0; plane < CROWDED_PLANES.length; plane++) {
-      const members = roster.filter((c) => c.plane === plane);
-      members.forEach((c, i) => {
-        c.planeSlot = (i / members.length) * TAU + (CROWDED_PLANES[plane]?.phase ?? 0);
+      const crew = roster.filter((c) => c.plane === plane).map(crewSeat);
+      // The marks spread evenly among the crew, never bunched together.
+      const marks = plane === 0 ? this.seatedRoots().map(markSeat) : [];
+      const members = interleave(crew, marks);
+      members.forEach((seat, i) => {
+        seat.slot = (i / members.length) * TAU + (CROWDED_PLANES[plane]?.phase ?? 0);
       });
     }
   }
@@ -1260,6 +1329,13 @@ export class CrewOrbit {
     }
     for (const id of gone) this.crew.delete(id);
     if (gone.length > 0) this.bump();
+    // A mark glides to its seat when the inner orbit re-spaces, as a crewmate does.
+    for (const program of this.programs.values()) {
+      if (settled) {
+        program.rootAngle.x = program.rootSlot;
+        program.rootAngle.v = 0;
+      } else program.rootAngle.step(program.rootSlot, dt);
+    }
     const layouts = this.layoutPrograms(slotTime, ringR, mix);
     const seats = new Map<string, Seat>();
     for (const layout of layouts) {
@@ -1315,7 +1391,7 @@ export class CrewOrbit {
     if (this.formation !== "adaptive" || mix < 0.999) return [];
     const radius = ringR + ((CROWDED_PLANES[0]?.radius ?? ringR) - ringR) * mix;
     return [...this.programs.values()].map((program) => {
-      const angle = program.rootSlot + planePhase(0, slotTime);
+      const angle = program.rootAngle.x + planePhase(0, slotTime);
       const scene = this.scenePoint(0, angle, radius);
       const root = { ...scene, radius };
       const places = layoutProgram(program.parts, root, SCENE_REACH_PX);

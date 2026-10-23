@@ -97,6 +97,7 @@ test("above the delta trigger, the stage's wait arrows and constellation follow 
     title: "Review the session parser for lost turns",
     status: "queued",
     startPolicy: "on-request",
+    shape: { kind: "unclear", program: { script: 'return task("Find lost turns.");', bound: 3 } },
   });
   seedTask(tasks, {
     id: "find",

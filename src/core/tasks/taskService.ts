@@ -124,6 +124,7 @@ import {
   TaskStore,
 } from "../storage/taskStore";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
+import { holdingWaits, holdKindOf } from "./holdingWaits";
 import { decideValidation, recordValidation } from "./liveValidation";
 import type { TaskExportBundle } from "./taskExport";
 import { liveWaitCycle, waitCycleWords } from "./waitCycles";
@@ -1511,6 +1512,29 @@ export class TaskService {
   }
 
   /**
+   * What the task's Blocked by names in the tasks reader, by the board's own
+   * rule (./holdingWaits.ts, INF-999): the waits that hold it now.
+   * `idleOnWaits` says its crewmate stands idle on its waits.
+   */
+  waitsHolding(id: string, idleOnWaits: boolean): TaskRecord[] {
+    const record = this.store.get(id);
+    if (!record) return [];
+    const marked = new Set(
+      this.links
+        .listTo(id, "blocks")
+        .filter((link) => link.holdsMerge)
+        .map((link) => link.fromId),
+    );
+    return holdingWaits({
+      record,
+      blockers: this.blockers(id),
+      holdsMerge: (blocker) => marked.has(blocker.id),
+      tasks: this.store,
+      idleOnWaits,
+    });
+  }
+
+  /**
    * The blocks rule at close time: a task that something must land before
    * does not close until it has. This is what `file_followup`'s `blocks_me`
    * promises ("your task cannot land until this does"); blocks edges
@@ -1520,18 +1544,11 @@ export class TaskService {
   blockerRefusal(id: string): SettleRefusal | undefined {
     // The captain's override passes a must-merge-first wait (`waits`), and
     // the host's review edge with the review itself (`review`).
-    const delivery = this.store.get(id)?.delivery;
+    const record = this.store.get(id);
+    const delivery = record?.delivery;
     const holding = this.blockersHoldingClose(id).filter(
       (blocker) =>
-        !overridePasses(
-          delivery,
-          blocker.parentId === id &&
-            TaskService.isDeliveryChild(blocker) &&
-            blocker.shape?.kind === "review"
-            ? "review"
-            : "waits",
-          delivery?.headSha,
-        ),
+        !record || !overridePasses(delivery, holdKindOf(record, blocker), delivery?.headSha),
     );
     if (holding.length === 0) return undefined;
     const task = settleRef(this.store.get(id), id);

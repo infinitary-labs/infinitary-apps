@@ -11258,6 +11258,7 @@ export class CrewSupervisor {
       (repoId) => this.options.repos.get(repoId)?.name,
       (taskId) => this.cards.newestForTask(taskId)?.body,
       (taskId) => this.cards.newestResolutionForTask(taskId),
+      (record) => this.workPosture(record),
     );
   }
 

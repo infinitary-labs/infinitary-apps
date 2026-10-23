@@ -3,6 +3,7 @@ import type { CaptainAction } from "@shared/requiredActions";
 import { foldForSearch } from "@shared/searchText";
 import { taskChangeOf } from "@shared/taskFacts";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import type { WorkPosture } from "@shared/workPosture";
 import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskStore";
@@ -206,6 +207,8 @@ export function queryTasks(
    */
   cardBody: (taskId: string) => string | undefined = () => undefined,
   resolution: (taskId: string) => CardResolution | undefined = () => undefined,
+  /** Each live task's work posture, read as the board reads it; absent says nothing is known. */
+  posture: (record: TaskRecord) => WorkPosture | undefined = () => undefined,
 ): { rows: TaskQueryRow[]; total: number } {
   const limit = Math.max(
     1,
@@ -244,7 +247,7 @@ export function queryTasks(
     // compact index and never carries bodies in bulk.
     .map((record) => {
       const resolved = one ? resolution(record.id) : undefined;
-      const row = toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined);
+      const row = toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined, posture);
       return {
         ...row,
         ...(resolved ? { resolution: queryResolution(resolved, row.card) } : {}),
@@ -273,6 +276,7 @@ function toRow(
   projectKeys: Map<string, string>,
   repoName: (repoId: string) => string | undefined,
   cardBody?: (taskId: string) => string | undefined,
+  posture: (record: TaskRecord) => WorkPosture | undefined = () => undefined,
 ): TaskQueryRow {
   const history = cardBody ? tasks.timeline(record.id) : [];
   const reports = history
@@ -285,10 +289,14 @@ function toRow(
     .map((event) => ({ event_id: event.id, text: event.text, data: event.data }));
   const flags = tasks.flagsOf(record);
   const parent = record.parentId ? tasks.get(record.parentId) : undefined;
-  // An active row is past readiness: what it waits on is what still holds
-  // its close, which is what `blocks_me` files against it.
+  // An active row names what holds it now, by the board's own rule
+  // (./holdingWaits.ts); an open row also names a dropped blocker, which
+  // can never clear, so the reader can act on it.
+  const now = record.status === "active" ? posture(record) : undefined;
   const blockedBy = (
-    record.status === "active" ? tasks.blockersHoldingClose(record.id) : tasks.waitingOn(record.id)
+    record.status === "active"
+      ? tasks.waitsHolding(record.id, now?.state === "idle" && now.reason === "dependency")
+      : tasks.waitingOn(record.id)
   ).map((blocker) => blocker.key || blocker.id);
   const blocks = tasks.blocking(record.id).map((blocked) => blocked.key || blocked.id);
   const children = tasks.children(record.id);
@@ -304,7 +312,7 @@ function toRow(
       : record.gate.kind === "quota-reset"
         ? `quota (${record.gate.ref ?? "unknown scope"})`
         : "a set time"
-    : flags.blocked
+    : flags.blocked && blockedBy.length > 0
       ? `blocked by ${blockedBy.join(", ")}${flags.deadBlocker ? " (dropped - cannot clear)" : ""}`
       : undefined;
   const policies = tasks.policiesOf(record);

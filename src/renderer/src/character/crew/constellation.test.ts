@@ -2,12 +2,15 @@ import type { TaskLinkView, TaskView } from "@shared/tasks";
 import { describe, expect, it } from "vitest";
 import { CONSTELLATION, layoutProgram, programsOf } from "./constellation";
 import { applyCrewDependencies, seedCrew } from "./crewSignal";
+import { crewHit } from "./hover";
+import { stageMarks } from "./marks";
 import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
 import { SCENE_REACH_PX } from "./satellites";
+import { crewFacts } from "./useCrewBoard";
 
 /**
- * The captain's INF-799 choice, "Branching constellation": a task with parts
- * draws on the stage from the graph's own links, "a part hangs from the
+ * The captain's INF-799 choice, "Branching constellation": a program the
+ * host runs draws on the stage from the graph's own links, "a part hangs from the
  * parts whose results it builds on", a finished part's result climbs to the
  * root, the tree folds into the root, and one result falls home. The board
  * below is a review program as the task graph records one.
@@ -51,7 +54,14 @@ const blocks = (fromId: string, toId: string): TaskLinkView => ({ fromId, toId, 
 function reviewBoard(): { tasks: TaskView[]; links: TaskLinkView[] } {
   return {
     tasks: [
-      view({ id: "review", parentId: null, status: "open", activity: null, startedAt: null }),
+      view({
+        id: "review",
+        parentId: null,
+        status: "open",
+        activity: null,
+        startedAt: null,
+        program: true,
+      }),
       view({ id: "find-a", status: "done", closedReason: "answered", createdAt: 1 }),
       view({ id: "find-b", status: "done", closedReason: "answered", createdAt: 2 }),
       view({ id: "verify-a", createdAt: 3, activity: "idle" }),
@@ -95,9 +105,17 @@ describe("programsOf", () => {
     ]);
   });
 
-  it("leaves a parent with a crewmate of its own, and its children, as they orbit today", () => {
+  // INF-999: INF-923, an umbrella task holding a plan and its build, drew as
+  // a program though none ran; the captain chose "programs only".
+  it("leaves a task that runs no program, and its children, as they orbit today", () => {
     const { tasks, links } = reviewBoard();
-    const crewed = tasks.map((task) =>
+    const umbrella = tasks.map((task) => {
+      if (task.id !== "review") return task;
+      const { program: _program, ...rest } = task;
+      return rest;
+    });
+    expect(programsOf(umbrella, links)).toEqual([]);
+    const crewed = umbrella.map((task) =>
       task.id === "review"
         ? { ...task, status: "active" as const, activity: "running" as const }
         : task,
@@ -204,7 +222,7 @@ describe("the constellation on the orbit", () => {
 
   it("replaces a wait arrow between two parts with their branch", () => {
     const tasks = [
-      view({ id: "review", parentId: null, status: "open", activity: null }),
+      view({ id: "review", parentId: null, status: "open", activity: null, program: true }),
       view({ id: "stage-1", createdAt: 1 }),
       view({
         id: "stage-2",
@@ -226,11 +244,18 @@ describe("the constellation on the orbit", () => {
   });
 
   // INF-979, from INF-977's board: INF-869, a live part of INF-867 (open, no
-  // crewmate), waits on INF-886 outside its parent and on a sibling part.
+  // crewmate, here a program), waits on INF-886 outside its parent and on a sibling part.
   it("keeps a part's wait arrow to a blocker outside its parent, and only a sibling's gives way", () => {
     const waiting = { state: "idle", reason: "dependency" } as const;
     const tasks = [
-      view({ id: "867", parentId: null, status: "open", activity: null, startedAt: null }),
+      view({
+        id: "867",
+        parentId: null,
+        status: "open",
+        activity: null,
+        startedAt: null,
+        program: true,
+      }),
       view({ id: "868", parentId: "867", createdAt: 1 }),
       view({
         id: "869",
@@ -357,5 +382,153 @@ describe("the constellation on the orbit", () => {
     );
     applyCrewDependencies(model, dropped, links, 0);
     expect(model.update(0, true).programs).toEqual([]);
+  });
+});
+
+/**
+ * INF-999, from the captain's board of 2026-10-23: four tasks with a live
+ * part each (INF-505, INF-527, INF-867, INF-923) drew their roots on one
+ * spot, beside a crewmate and under a seated part; the captain chose "a
+ * seat per constellation". Here each is a program, so all four draw: eight
+ * crewmates on this Mac's inner orbit, four of them parts, and each program
+ * with a finished part beside its live one.
+ */
+function captainsBoard(): { tasks: TaskView[]; links: TaskLinkView[] } {
+  const tasks: TaskView[] = [];
+  const links: TaskLinkView[] = [];
+  for (const solo of ["778", "643", "843", "930"])
+    tasks.push(view({ id: solo, parentId: null, activity: "idle", createdAt: Number(solo) }));
+  for (const [parent, done, live] of [
+    ["505", "506", "507"],
+    ["527", "528", "529"],
+    ["867", "868", "869"],
+    ["923", "924", "925"],
+  ] as const) {
+    tasks.push(
+      view({
+        id: parent,
+        parentId: null,
+        status: "open",
+        activity: null,
+        startedAt: null,
+        program: true,
+        createdAt: Number(parent),
+      }),
+      view({ id: done, parentId: parent, status: "done", createdAt: Number(done) }),
+      view({ id: live, parentId: parent, activity: "idle", createdAt: Number(live) }),
+    );
+    links.push(blocks(done, live));
+  }
+  return { tasks, links };
+}
+
+/**
+ * Every mark the inner orbit carries, by the task it stands for: its
+ * crewmates, each root, and every part's node or seated crewmate. Crew on
+ * the other planes cross it on screen by the approved design, never in 3D.
+ */
+function marksOf(frame: OrbitFrame): Array<{ id: string; x: number; y: number }> {
+  const seated = new Set(frame.programs.flatMap((p) => p.nodes.map((n) => n.id)));
+  const marks = frame.crew
+    .filter((c) => c.phase !== "leaving" && (c.plane === 0 || seated.has(c.id)))
+    .map((c) => ({ id: c.id, x: c.x, y: c.y }));
+  for (const program of frame.programs) {
+    marks.push({ id: program.id, x: program.x, y: program.y });
+    for (const node of program.nodes)
+      if (!node.crewed) marks.push({ id: node.id, x: node.x, y: node.y });
+  }
+  return marks;
+}
+
+/** The closest two marks of different tasks on the inner orbit, px apart. */
+function closest(frame: OrbitFrame): number {
+  const marks = marksOf(frame);
+  let near = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < marks.length; i++)
+    for (let j = i + 1; j < marks.length; j++) {
+      const a = marks[i];
+      const b = marks[j];
+      if (!a || !b || a.id === b.id) continue;
+      near = Math.min(near, Math.hypot(a.x - b.x, a.y - b.y));
+    }
+  return near;
+}
+
+/** The crowded formation's glyph, scene px (docs/crew-orbits.md). */
+const GLYPH_PX = 25;
+
+describe("a seat per constellation", () => {
+  it("seats every root apart at boot and keeps every mark a glyph clear for a minute", () => {
+    const { tasks, links } = captainsBoard();
+    const model = adaptive();
+    seedCrew(model, tasks, 0, links);
+    const settled = model.update(0, true);
+    expect(settled.programs.map((p) => p.id)).toEqual(["505", "527", "867", "923"]);
+    expect(closest(settled)).toBeGreaterThan(GLYPH_PX);
+    let frame = settled;
+    let near = Number.POSITIVE_INFINITY;
+    for (let t = 16; t <= 60_000; t += 16) {
+      frame = model.update(t);
+      near = Math.min(near, closest(frame));
+    }
+    expect(near).toBeGreaterThan(GLYPH_PX);
+  });
+
+  it("enters a newcomer at the widest gap among crew and roots, and re-spaces them all", () => {
+    const { tasks, links } = captainsBoard();
+    const model = adaptive();
+    seedCrew(model, tasks, 0, links);
+    run(model, 0, 2000);
+    // A crewmate arrives and a fifth program draws, as the board moves on.
+    model.spawn("1001", "working", 2000);
+    applyCrewDependencies(
+      model,
+      [
+        ...tasks,
+        view({ id: "1001", parentId: null, createdAt: 1001 }),
+        view({ id: "990", parentId: null, status: "open", activity: null, program: true }),
+        view({ id: "991", parentId: "990", activity: "idle", createdAt: 991 }),
+      ],
+      links,
+      2000,
+    );
+    model.spawn("991", "idle", 2000);
+    let near = Number.POSITIVE_INFINITY;
+    let frame = model.update(2000);
+    // Once the spark has landed and the springs have glided everyone to their seats.
+    for (let t = 2016; t <= 20_000; t += 16) {
+      frame = model.update(t);
+      if (t > 8000) near = Math.min(near, closest(frame));
+    }
+    expect(frame.programs.map((p) => p.id)).toEqual(["505", "527", "867", "923", "990"]);
+    expect(near).toBeGreaterThan(GLYPH_PX);
+  });
+});
+
+// INF-999: a root ring, a finished part's node and a seated part were drawn
+// with nothing to point at or nothing to say, so the captain could not tell
+// which task a mark stood for.
+describe("every mark names its task", () => {
+  it("summarises and points at everything the stage paints", () => {
+    const { tasks, links } = captainsBoard();
+    const model = adaptive();
+    seedCrew(model, tasks, 0, links);
+    const frame = model.update(0, true);
+    const painted = [
+      ...frame.crew.map((c) => c.id),
+      ...frame.programs.flatMap((p) => [p.id, ...p.nodes.map((n) => n.id)]),
+    ];
+    const marks = new Set(stageMarks(frame).map((mark) => mark.id));
+    const facts = crewFacts(tasks, (model) => model);
+    for (const id of painted) {
+      expect(marks.has(id), id).toBe(true);
+      expect(facts[id]?.task.id, id).toBe(id);
+    }
+    // Pointing at a root ring or a finished part's node reads that task.
+    for (const program of frame.programs) {
+      expect(crewHit(stageMarks(frame), program.x, program.y)).toBe(program.id);
+      for (const node of program.nodes)
+        expect(crewHit(stageMarks(frame), node.x, node.y)).toBe(node.id);
+    }
   });
 });

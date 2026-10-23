@@ -5,10 +5,12 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
-import { waitForFirstmateIdle } from "./crew";
+import { crewSummary, pointAtCrewmate, waitForFirstmateIdle } from "./crew";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
+import { focusOn } from "./windowKeys";
 
 /**
  * A task with parts draws on the stage as a branching constellation (the
@@ -18,6 +20,9 @@ import { heroShot, regionShot } from "./pictures";
  * finder by a recorded wait, and a synthesis waiting on both verifiers. The
  * stage draws one branch per recorded link and none it was not given, seats
  * each verifier's crewmate at its node, and redraws when a part is dropped.
+ * A task that only holds children, a plan and its build, runs no program
+ * and draws none (INF-999). A seated part names the program it is part of,
+ * and the program's root is a mark of its own the keyboard reaches.
  * Completion is the near layer's published constellation; it runs on this
  * Mac alone and shares nothing with another test.
  */
@@ -43,6 +48,30 @@ test("a task with parts draws its recorded graph as a constellation and redraws 
     title: "Review the session parser for lost turns",
     status: "queued",
     startPolicy: "on-request",
+    shape: { kind: "unclear", program: { script: 'return task("Find lost turns.");', bound: 6 } },
+  });
+  // An umbrella task, a finished plan and its build underway: no program.
+  seedTask(tasks, {
+    id: "rollout",
+    title: "Roll out the new settings layout",
+    status: "queued",
+    startPolicy: "on-request",
+  });
+  seedTask(tasks, {
+    id: "rollout-plan",
+    title: "Plan the settings layout",
+    parentId: "rollout",
+    status: "idle",
+    outcome: "Planned.",
+  });
+  tasks.close("rollout-plan", { status: "done", reason: "answered", actor: "host" });
+  seedTask(tasks, {
+    id: "rollout-build",
+    title: "Build the settings layout",
+    parentId: "rollout",
+    status: "idle",
+    worktreeDir: worktree("rollout-build"),
+    outcome: "Built the first panel.",
   });
   for (const id of ["find-a", "find-b"]) {
     seedTask(tasks, {
@@ -65,6 +94,8 @@ test("a task with parts draws its recorded graph as a constellation and redraws 
       status: "idle",
       worktreeDir: worktree(id),
       outcome: "Reproduced one of the two.",
+      // A routed model, so the stage names the crewmate and the pointer can find it.
+      model: { provider: MOCK_PROVIDER_ID, id: MOCK_MODEL_ID },
     });
     tasks.link(finder, id, "blocks", "host");
   }
@@ -105,7 +136,22 @@ test("a task with parts draws its recorded graph as a constellation and redraws 
         name: "program-constellation",
       });
 
-    // Section 2: the synthesis is dropped before it starts; it leaves no node.
+    // Section 2: a seated part names its program; the program's root is a mark of its own.
+    const reviewKey = await page.evaluate(
+      async () => (await window.infinitary.tasks.detail("review"))?.key,
+    );
+    await pointAtCrewmate(page, "verify-a");
+    await expect(crewSummary(page)).toHaveAttribute("data-crew-summary", "verify-a");
+    const partOf = crewSummary(page).locator("[data-crew-part-of]");
+    await expect(partOf).toContainText("Part of");
+    await expect(partOf).toContainText(reviewKey ?? "review");
+    await page.mouse.move(2, 2);
+    await focusOn(page.locator('[data-crew-mark="review"]'));
+    await expect(crewSummary(page)).toHaveAttribute("data-crew-summary", "review");
+    await page.locator('[data-crew-mark="review"]').blur();
+    await expect(crewSummary(page)).toHaveCount(0);
+
+    // Section 3: the synthesis is dropped before it starts; it leaves no node.
     // The record's Drop task, with the effects it reviewed: none wait on it.
     await page.evaluate(() =>
       window.infinitary.task.run("synthesize", "drop-task", {

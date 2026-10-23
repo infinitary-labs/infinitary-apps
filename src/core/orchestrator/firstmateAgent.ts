@@ -3108,6 +3108,7 @@ export class FirstmateAgent {
           (repoId) => this.options.repos.get(repoId)?.name,
           (taskId) => this.options.supervisor.newestCardBody(taskId),
           (taskId) => this.options.supervisor.newestCardResolution(taskId),
+          (record) => this.options.supervisor.workPosture(record),
         ),
     };
   }

@@ -35,6 +35,7 @@ import {
   placeCrewSummary,
   type SummaryRoom,
 } from "./hover";
+import { programMarks, stageMarks } from "./marks";
 import { CREW_MODEL_LABEL, crewModelLabelPlacement, crewModelLabelsVisible } from "./modelLabels";
 import type { CrewOrbit as CrewOrbitModel, OrbitFrame } from "./orbit";
 import { crewRush } from "./rush";
@@ -282,6 +283,11 @@ export function CrewOrbit({
   const farRef = useRef<HTMLCanvasElement>(null);
   const nearRef = useRef<HTMLCanvasElement>(null);
   const nameRefs = useRef(new Map<string, HTMLButtonElement>());
+  // A program's root and its finished or unstarted parts, each a button of
+  // its own for the keyboard, placed on its painted mark (./marks.ts).
+  const markRefs = useRef(new Map<string, HTMLDivElement>());
+  const markKeyRef = useRef("");
+  const [markIds, setMarkIds] = useState<readonly string[]>([]);
   const clusterRefs = useRef(new Map<string, HTMLDivElement>());
   const singleOrbitRef = useRef(false);
   const [singleOrbit, setSingleOrbit] = useState(false);
@@ -449,7 +455,7 @@ export function CrewOrbit({
     const target = targetRef.current;
     const line = lineRef.current;
     const panel = panelRef.current;
-    const cm = view?.frame.crew.find((c) => c.id === shownRef.current);
+    const cm = view && stageMarks(view.frame).find((c) => c.id === shownRef.current);
     if (!view || !cm || !wrap || !layer || !target || !line || !panel) return;
     const rect = wrap.getBoundingClientRect();
     const cx = rect.left + rect.width / 2;
@@ -513,7 +519,9 @@ export function CrewOrbit({
     const view = viewRef.current;
     const root = rootRef.current;
     const target = litTargetRef.current;
-    const cm = view?.frame.crew.find((c) => c.id === litCrewRef.current && c.phase !== "leaving");
+    const cm =
+      view &&
+      stageMarks(view.frame).find((c) => c.id === litCrewRef.current && c.phase !== "leaving");
     const present = Boolean(view && cm);
     if (root) {
       if (present && root.getAttribute("data-crew-lit") !== litCrewRef.current)
@@ -603,11 +611,11 @@ export function CrewOrbit({
       pointerRef.current = { x, y, movedAt: real };
       const view = viewRef.current;
       // A name is part of its crewmate: pointing at it points at the crewmate.
-      const named = e.target.closest("[data-crew-model-name]");
+      const named = e.target.closest("[data-crew-model-name], [data-crew-mark]");
       let id = named
-        ? named.getAttribute("data-crew-model-name")
+        ? (named.getAttribute("data-crew-model-name") ?? named.getAttribute("data-crew-mark"))
         : view
-          ? crewHit(view.frame.crew, x, y, view.scale, hoveredRef.current)
+          ? crewHit(stageMarks(view.frame), x, y, view.scale, hoveredRef.current)
           : null;
       if (dismissedRef.current) {
         if (id === dismissedRef.current) id = null;
@@ -636,7 +644,8 @@ export function CrewOrbit({
     const onClick = (e: MouseEvent) => {
       const id = hoveredRef.current;
       // A name is a button and opens its crewmate itself.
-      if (!id || !onStage(e.target) || e.target.closest("[data-crew-model-name]")) return;
+      if (!id || !onStage(e.target) || e.target.closest("[data-crew-model-name], [data-crew-mark]"))
+        return;
       onOpenRef.current?.(id);
     };
     window.addEventListener("pointermove", onMove, { passive: true });
@@ -734,8 +743,9 @@ export function CrewOrbit({
     viewRef.current = { frame, now, scale, box };
     // A crewmate that is gone, or going, lets its summary and its pause go.
     const inspected = inspectingRef.current;
+    const marks = stageMarks(frame);
     const there =
-      inspected !== null && frame.crew.some((c) => c.id === inspected && c.phase !== "leaving");
+      inspected !== null && marks.some((c) => c.id === inspected && c.phase !== "leaving");
     if (inspected !== null && !there) {
       setHovered(null);
       setFocused(null);
@@ -749,7 +759,9 @@ export function CrewOrbit({
         interactiveRef.current
           ? {
               crew: frame.orbits.length > 0,
-              inZone: pointer !== null && inCrewZone(frame, pointer.x, pointer.y, scale),
+              inZone:
+                pointer !== null &&
+                inCrewZone({ orbits: frame.orbits, crew: marks }, pointer.x, pointer.y, scale),
               onCrewmate: there,
               restedMs: pointer ? real - pointer.movedAt : Number.POSITIVE_INFINITY,
             }
@@ -791,6 +803,21 @@ export function CrewOrbit({
         element.parentElement?.style.setProperty("opacity", opacity);
     }
     for (const [id, element] of nameRefs.current) if (!present.has(id)) element.hidden = true;
+    const others = programMarks(frame).filter((mark) => mark.phase !== "leaving");
+    const markKey = others.map((mark) => mark.id).join(" ");
+    if (markKeyRef.current !== markKey) {
+      markKeyRef.current = markKey;
+      setMarkIds(others.map((mark) => mark.id));
+    }
+    for (const mark of others) {
+      const anchor = markRefs.current.get(mark.id);
+      if (anchor)
+        writeStyle(
+          anchor,
+          "transform",
+          `translate(${extent / 2 + mark.x}px, ${extent / 2 + mark.y}px)`,
+        );
+    }
     // A cluster's name follows its seat, which glides as the scene changes.
     if (computers) {
       for (const cluster of computers.clusters()) {
@@ -1012,6 +1039,42 @@ export function CrewOrbit({
             </div>
           ))}
         </fieldset>
+        {markIds.length > 0 && (
+          <fieldset className="fm-crew-model-names" aria-label="Programs and their parts">
+            {markIds.map((id) => {
+              const name = facts?.[id]?.task.title ?? facts?.[id]?.task.key ?? "A part";
+              return (
+                <div
+                  className="fm-crew-model-anchor"
+                  data-painted=""
+                  key={id}
+                  ref={(node) => {
+                    if (node) markRefs.current.set(id, node);
+                    else markRefs.current.delete(id);
+                  }}
+                >
+                  <button
+                    type="button"
+                    className="fm-crew-model-name fm-computer-crew-target"
+                    data-crew-mark={id}
+                    aria-label={name}
+                    aria-expanded={inspecting === id}
+                    tabIndex={interactive ? 0 : -1}
+                    style={{ pointerEvents: interactive ? "auto" : "none", width: 24, height: 24 }}
+                    onFocus={() => setFocused(id)}
+                    onBlur={() => setFocused(null)}
+                    onClick={() => onOpen?.(id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape") event.currentTarget.blur();
+                    }}
+                  >
+                    <span className="fm-computer-crew-accessible">{name}</span>
+                  </button>
+                </div>
+              );
+            })}
+          </fieldset>
+        )}
         {clusters.map((cluster) => (
           <div
             key={cluster.id}

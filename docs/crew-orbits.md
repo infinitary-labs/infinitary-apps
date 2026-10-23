@@ -156,15 +156,18 @@ Reduced motion paints one settled frame.
 
 ## A task with parts
 
-A task split into parts draws as a branching constellation, the captain's INF-799 choice ("the branches are the program's own graph"), with the settings the captain staged on that plan: branches of 60 px, 70 degrees of spread, and a finished tree that folds into its root.
+A task that runs a program the host runs (`shape.program`, `docs/programs.md`) draws as a branching constellation, the captain's INF-799 choice ("the branches are the program's own graph"), with the settings the captain staged on that plan: branches of 60 px, 70 degrees of spread, and a finished tree that folds into its root.
 The program's shape and the demo's parts and pace were the preview's only.
-`constellation.ts` reads it from the board alone (`programsOf`): a parent with work children and no crewmate of its own, and the recorded `blocks` links among those children, closed ones included.
+`constellation.ts` reads it from the board alone (`programsOf`): a parent the board marks as a program (`TaskView.program`) with work children, and the recorded `blocks` links among those children, closed ones included.
 A part hangs from the siblings it waits on, and a part that waits on none hangs from the root, so parallel parts are siblings, a pipeline is a chain and a part after a barrier joins several branches.
 A link to a task outside the parent is not a branch, a host-commissioned review is the builder's cue and never a part, and nothing is inferred from a title, an order or a script.
-A parent with a crewmate of its own keeps today's look: its crewmate is the work, and its children orbit as before.
+Any other parent, such as a task that only holds a plan and its build, or one with a crewmate of its own, draws no constellation, and its children orbit as single crewmates (INF-999).
+A home that sends no `program` draws no constellation on a newer view (`src/shared/contract-changes/task-program.md`).
 A basis or a branch-from that is not also a recorded wait draws no branch, since the board does not carry them; a program's runner files each part's inputs as its waits.
 
-The root is a small hollow ring on the inner orbit at the widest gap when the program first draws, travelling with that orbit.
+The root is a small hollow ring with a seat of its own on the inner orbit (INF-999): the inner orbit's spacing counts each root as an occupant beside its crewmates, so a program first draws at the widest gap, a newcomer enters at the widest gap among crew and roots, and every seat re-spaces evenly as programs come and go, each root gliding on a spring to its new seat.
+With several work computers a program draws in the group of the computer running its live parts: it stays where it is while a live part runs there, and otherwise moves to its first live part's computer, or home with none.
+`constellation.test.ts` holds two marks of different tasks on the inner orbit more than a glyph's width apart at boot, for a minute of frames, and through a newcomer and a new program; crew on the other planes cross it on screen by design.
 `layoutProgram` lays the parts in layers outward from it: the first layer 60 px out and each later one 0.82 of the one before, each layer spread evenly across 70 degrees round the root's outward direction and ordered by its parents' mean angle, so a chain stays straight and a barrier's join sits between its branches.
 When a node would leave the stage the whole graph scales about its root, and a layer wider than nine shrinks its glyphs as the preview did.
 A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its node on the springs a waiting crewmate's circle uses, with its slot reserved, and any wait arrow between two parts gives way to their branch.
@@ -178,8 +181,10 @@ The parent's own report, when it has no crewmate here, is a packet from the root
 When the parent closes done the tree folds into its root over the fall home's time, and the root then falls into the first mate as the one result home; a dropped parent fades where it stands.
 A program first draws once one of its parts is underway, and keeps the planes while its next parts are filed.
 Reduced motion paints one settled frame, and the pointer's slowdown and pause apply as to every crewmate.
+Every mark names its task (`marks.ts`, INF-999): the root ring and a part's own node are pointed at, summarised and opened as a crewmate is, and each has a button of its own (`data-crew-mark`) the keyboard reaches, so nothing painted is a mark without a name.
+A part's summary carries a Part of row naming its program's key, which opens the program's record.
 The near crew canvas publishes each program's branches as `data-constellation` and the parts seated at their nodes as `data-constellation-crew`, compare-before-write.
-`constellation.test.ts` checks the graph read from a board, the layout, the seats, the packets up and down, the fold home and the settled frame; `tests/e2e/program-constellation.spec.ts` seeds a review program and reads its branches off the painted stage before and after a part is dropped, and `tests/e2e/crew-board-delta.spec.ts` drops a part above the delta trigger.
+`constellation.test.ts` checks the graph read from a board, the layout, the seats, the packets up and down, the fold home and the settled frame; `tests/e2e/program-constellation.spec.ts` seeds a review program beside an umbrella task that draws none, reads its branches off the painted stage before and after a part is dropped, and reads a part's Part of row and the root's own summary, and `tests/e2e/crew-board-delta.spec.ts` drops a part above the delta trigger.
 
 ## Tier solids
 

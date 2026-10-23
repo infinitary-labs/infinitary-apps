@@ -1,13 +1,15 @@
 import type { TaskLinkView, TaskView } from "@shared/tasks";
 
 /**
- * A task with parts, drawn on the stage as a branching constellation (the
- * captain's INF-799 choice). Everything here is read from the graph's own
- * facts: a parent task, its children, and the recorded "blocks" links
- * among them. A part hangs from the parts it waits on, so parallel parts
- * are siblings under the root, a pipeline is a chain and a part after a
- * barrier joins several branches. No link is inferred from a title, a
- * script or an order, and the host never names a program.
+ * A program the host runs, drawn on the stage as a branching constellation
+ * (the captain's INF-799 choice). Everything here is read from the graph's
+ * own facts: a task the board marks as running a program (`TaskView.program`,
+ * its `shape.program`), its children, and the recorded "blocks" links among
+ * them. A part hangs from the parts it waits on, so parallel parts are
+ * siblings under the root, a pipeline is a chain and a part after a barrier
+ * joins several branches. No link is inferred from a title, a script or an
+ * order, and a task that only holds children is no program (INF-999): its
+ * parts orbit as every crewmate does.
  */
 
 /**
@@ -57,9 +59,8 @@ function partState(task: TaskView): PartState | null {
 }
 
 /**
- * Every parent on the board with work parts and no crewmate of its own, and
- * how each part hangs. A host-commissioned review is the builder's own cue,
- * never a part.
+ * Every program on the board with work parts, and how each part hangs. A
+ * host-commissioned review is the builder's own cue, never a part.
  */
 export function programsOf(tasks: readonly TaskView[], links: readonly TaskLinkView[]): Program[] {
   const byId = new Map(tasks.map((task) => [task.id, task]));
@@ -81,9 +82,9 @@ export function programsOf(tasks: readonly TaskView[], links: readonly TaskLinkV
   const programs: Program[] = [];
   for (const [parentId, kids] of children) {
     const parent = byId.get(parentId);
-    // A parent with a crewmate of its own is that crewmate's work, and its
-    // children orbit as they always have; the mark stands for a container.
-    if (!parent || (parent.kind === "work" && parent.status === "active")) continue;
+    // Only a program the host runs is a constellation; any other parent's
+    // children orbit as they always have (INF-999).
+    if (!parent?.program) continue;
     const ordered = [...kids].sort(
       (a, b) => a.createdAt - b.createdAt || a.key.localeCompare(b.key),
     );

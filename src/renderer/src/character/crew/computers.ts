@@ -3,6 +3,7 @@ import { type DeviceView, deviceRunsWork } from "@shared/devices";
 import type { Slot } from "@shared/modelSlots";
 import { HERE } from "../../../../shared/deviceNames";
 import { Spring } from "../face";
+import type { Program } from "./constellation";
 import {
   CrewOrbit,
   type CrewStatus,
@@ -92,6 +93,9 @@ export class ComputerOrbits extends CrewOrbit {
   private tiers = new Map<string, Slot | undefined>();
   private reviewEdges = new Map<string, string>();
   private waits: readonly CrewedWait[] = [];
+  /** The board's programs, and the computer each is drawn on. */
+  private programList: readonly Program[] = [];
+  private programAt = new Map<string, string>();
   constructor(now: number, random: () => number = Math.random) {
     super(now, undefined, random, "adaptive");
     this.clock = now;
@@ -125,6 +129,7 @@ export class ComputerOrbits extends CrewOrbit {
     const after = this.computerOf(id);
     if (before !== after && this.has(id)) this.relocate(id);
     this.routeDependencies();
+    if (before !== after) this.routePrograms(this.clock);
     this.bump();
   }
   isHome(id: string): boolean {
@@ -396,6 +401,38 @@ export class ComputerOrbits extends CrewOrbit {
     }
     return links;
   }
+  /**
+   * Each program draws in the group of the computer running its live parts
+   * (INF-999), so its root and its seated crew share one orbit: it stays
+   * where it is drawn while a live part runs there, and otherwise goes to
+   * the computer of its first live part. Another computer's live part is a
+   * filled accent node, as at home.
+   */
+  override setPrograms(list: readonly Program[], now: number): void {
+    this.programList = [...list];
+    this.routePrograms(now);
+  }
+  private routePrograms(now: number): void {
+    const byComputer = new Map<string, Program[]>();
+    const placed = new Map<string, string>();
+    for (const program of this.programList) {
+      const live = program.parts
+        .filter((part) => part.state === "live")
+        .map((part) => this.computerOf(part.id));
+      const had = this.programAt.get(program.id);
+      const at =
+        had && (live.length === 0 || live.includes(had)) ? had : (live[0] ?? HOME_COMPUTER);
+      placed.set(program.id, at);
+      const list = byComputer.get(at) ?? [];
+      list.push(program);
+      byComputer.set(at, list);
+    }
+    this.programAt = placed;
+    super.setPrograms(byComputer.get(HOME_COMPUTER) ?? [], now);
+    for (const id of byComputer.keys()) if (id !== HOME_COMPUTER) this.local(id);
+    for (const [id, local] of this.locals)
+      local.model.setPrograms(byComputer.get(id) ?? [], local.time);
+  }
   private routeDependencies(): void {
     const byComputer = new Map<string, CenterCue[]>();
     for (const cue of this.pendingDependencies) {
@@ -538,6 +575,12 @@ export class ComputerOrbits extends CrewOrbit {
           ...frame,
           crew: frame.crew.map((c) => ({ ...c, x: c.x + dx, y: c.y + dy })),
           orbits: frame.orbits.map((o) => ({ ...o, x: o.x + dx, y: o.y + dy })),
+          programs: frame.programs.map((p) => ({
+            ...p,
+            x: p.x + dx,
+            y: p.y + dy,
+            nodes: p.nodes.map((n) => ({ ...n, x: n.x + dx, y: n.y + dy })),
+          })),
         };
       }
       const visible = clusters.some((c) => c.id === computer.id);
@@ -586,6 +629,7 @@ export class ComputerOrbits extends CrewOrbit {
       crew: frames.flatMap((f) => f.crew).sort((a, b) => a.depth - b.depth),
       orbits: frames.flatMap((f) => f.orbits),
       packets: frames.flatMap((f) => f.packets),
+      programs: frames.flatMap((f) => f.programs),
       links: [
         ...frames.flatMap((f) => f.links),
         ...this.acrossLinks(frames.flatMap((f) => f.crew)),

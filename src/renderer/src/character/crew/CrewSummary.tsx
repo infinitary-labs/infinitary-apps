@@ -38,6 +38,7 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
         </span>
       </div>
       {facts.task.reviewOf && <Reviewing builderId={facts.task.reviewOf} />}
+      {facts.task.parentId && <PartOf parentId={facts.task.parentId} />}
       {(facts.task.blockedBy?.length ?? 0) > 0 && <BlockedBy keys={facts.task.blockedBy} />}
       <TaskFactRows
         facts={shown}
@@ -67,6 +68,23 @@ function Reviewing({ builderId }: { builderId: string }) {
           another task
         </span>
       )}
+    </div>
+  );
+}
+
+/**
+ * The program a part belongs to, so a part seated in a constellation is
+ * named as the part it is (INF-999). Only a program the host runs draws one.
+ */
+function PartOf({ parentId }: { parentId: string }) {
+  const program = useBoardTasks().find((row) => row.id === parentId && row.program);
+  if (!program) return null;
+  return (
+    <div className="blocked" data-crew-part-of="">
+      <span className="label">Part of</span>
+      <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(program)}>
+        {program.key}
+      </TaskKey>
     </div>
   );
 }

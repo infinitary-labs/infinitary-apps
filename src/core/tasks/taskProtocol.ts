@@ -47,6 +47,7 @@ import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { standingDependencyWaits } from "./dependencyWaits";
+import { holdingWaits } from "./holdingWaits";
 import { type ConcernedEventView, condenseActivity, reportHeadline } from "./recordActivity";
 import { taskFeedLine } from "./taskFeed";
 import { type TaskChange, TaskService } from "./taskService";
@@ -763,20 +764,19 @@ export class TaskProtocol {
   ): TaskView {
     const blockers = graph.blockersOf.get(record.id) ?? [];
     const waiting = blockers.filter((blocker) => !TaskService.blockerCleared(blocker));
-    // The current blocker list is live work, shared with the close/query/context
-    // readers. Dropped edges remain in the graph and still gate STARTING, but
-    // closed work must not be presented as something still underway.
     const liveBlockers = blockers.filter(TaskService.blockerHoldsClose);
-    // Active work also names the live work its standing baseline wait names
-    // (FI3-250): no edge holds its close, but it waits all the same.
-    const waitsOn =
-      record.status === "active"
-        ? standingDependencyWaits(graph.byId, record.delivery)
-            .map((wait) => wait.task)
-            .filter(
-              (task) => TaskService.blockerHoldsClose(task) && !TaskService.isDeliveryChild(task),
-            )
-        : [];
+    const posture = this.options.workPosture?.(record);
+    // Blocked by names only the waits that hold the task now, by the one
+    // rule the tasks reader shares (./holdingWaits.ts, INF-999). Dropped
+    // edges remain in the graph and still gate STARTING, but closed work is
+    // never presented as something still underway.
+    const holding = holdingWaits({
+      record,
+      blockers,
+      holdsMerge: (blocker) => graph.mergeHolds.has(`${record.id}\0${blocker.id}`),
+      tasks: graph.byId,
+      idleOnWaits: posture?.state === "idle" && posture.reason === "dependency",
+    });
     const open = record.status === "open";
     // An active row shows the blockers that still hold its CLOSE - a
     // marked edge, what a `blocks_me` follow-up files against the task a
@@ -828,6 +828,7 @@ export class TaskProtocol {
       ...(record.kind === "work"
         ? { reviewOf: reviewBuilderOf(record), executionDeviceId: record.deviceId }
         : {}),
+      ...(record.shape?.program ? { program: true as const } : {}),
       ...(place ? { place } : {}),
       kind: record.kind,
       title: record.title,
@@ -835,7 +836,7 @@ export class TaskProtocol {
       priority: record.priority,
       status: record.status,
       activity: record.activity,
-      workPosture: this.options.workPosture?.(record),
+      workPosture: posture,
       closedReason: record.closedReason,
       ...(record.status === "dropped"
         ? { replacedBy: this.options.tasks.replacementOf(record.id) }
@@ -847,9 +848,7 @@ export class TaskProtocol {
         needsYou,
         ready: open && record.kind === "work" && !blocked && !held,
       },
-      blockedBy: [
-        ...new Set([...liveBlockers, ...waitsOn].map((blocker) => blocker.key || blocker.id)),
-      ],
+      blockedBy: holding.map((blocker) => blocker.key || blocker.id),
       blocks: (graph.blockingOf.get(record.id) ?? []).map((blocked) => blocked.key || blocked.id),
       children: graph.children.get(record.id) ?? { total: 0, closed: 0 },
       assignee: record.assignee,

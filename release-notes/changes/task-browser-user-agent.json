@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-user-agent",
+      "kind": "fix",
+      "title": "A crewmate’s browser no longer announces the app when it opens a website",
+      "body": "When a crewmate opens a website in its task’s browser, the page no longer receives Infinitary’s name and version in its browser identification.",
+      "area": "tasks",
+      "noPicture": "This changes the browser identification sent to websites, not the browser view.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

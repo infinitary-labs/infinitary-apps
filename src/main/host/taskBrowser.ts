@@ -373,7 +373,7 @@ async function drivePage(
     contents
       .getUserAgent()
       .split(" ")
-      .filter((part) => !/^(Electron|firstmate)/i.test(part))
+      .filter((part) => !/^(Electron|firstmate|infinitary)/i.test(part))
       .join(" "),
   );
   // WebRTC reaches its peers only through the proxy, so never around the guard.

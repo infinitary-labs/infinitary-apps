@@ -1036,6 +1036,44 @@ const PR203 = {
   ).map(([name, state]) => ({ name, state })),
 };
 
+/**
+ * GitHub's own reading of PR #372 (INF-886) at its pager repair's version, read
+ * on 2026-10-23 in the order GitHub listed it, its sixteen overflow journey
+ * shards left out. GitHub lists a check name once per workflow run, so the
+ * version holds three `affected-journeys`: two journey runs requested by hand,
+ * which passed, and the pull request's own, which failed (INF-991).
+ */
+const PR372 = {
+  /** Its journey check was cancelled here, the stalled worker the repair diagnosed. */
+  source: "503b1f2f59d12e0fb3c69f88c2c17606c34855b1",
+  repaired: "9d6667c8799ba1aa04938cd8826592b40ba18b4d",
+  current: "e966f30af9963b842b8ec9b97fd2f872c91859fa",
+  atRepaired: (
+    [
+      ["linux-overflow", "skipped"],
+      ["linux-overflow", "skipped"],
+      ["affected-journeys", "success"],
+      ["affected-journeys", "success"],
+      ["linux-source", "skipped"],
+      ["choose-journeys", "success"],
+      ["linux-source", "skipped"],
+      ["choose-journeys", "success"],
+      ["affected-journeys", "failure"],
+      ["native-phone", "success"],
+      ["linux-source / source-desktop (parallel)", "success"],
+      ["linux-source / source-desktop (desktop)", "success"],
+      ["probe-tests", "success"],
+      ["unit-tests", "success"],
+      ["integration-tests (1/2)", "success"],
+      ["integration-tests (2/2)", "success"],
+      ["choose-journeys", "success"],
+      ["typecheck-lint-build", "success"],
+      ["choose-phone", "success"],
+      ["cancel-replaced", "success"],
+    ] as const
+  ).map(([name, state]) => ({ name, state })),
+};
+
 describe("the CI round counter (delivery rigor phase 3)", () => {
   /** A forge whose change head and check state the test moves between calls. */
   function movingForge() {
@@ -1562,6 +1600,75 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
         expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ headSha: PR203.current });
       },
     );
+  });
+
+  // INF-991: PR #372's pager repair read as passed or failed depending on
+  // which of its version's three journey checks GitHub listed first.
+  describe("a repair whose check name repeats at its version", () => {
+    const pagerRepair = {
+      id: "pager-waits-for-arrival",
+      sourceHead: PR372.source,
+      headSha: PR372.repaired,
+      check: "affected-journeys",
+      evidence: "Wait for the requested card to arrive before paging",
+    };
+    /** INF-886's history: the journey check cancelled at the source, then the repair declared. */
+    async function declarePagerRepair(
+      service: PrCiService,
+      forge: FakeForge,
+      atRepaired: { name: string; state: ForgeCheckState }[],
+    ) {
+      forge.change = { ...(forge.change as ForgeChange), headSha: PR372.source };
+      forge.atHead[PR372.source] = [{ name: "affected-journeys", state: "cancelled" }];
+      await service.checkForCrew("ab12cd34");
+      await service.checkForCrew("ab12cd34", {
+        diagnosis: {
+          headSha: PR372.source,
+          check: "affected-journeys",
+          classification: "own-regression",
+          evidence: "The worker waited in showCard's last assertion after paging too early",
+        },
+      });
+      forge.change = { ...(forge.change as ForgeChange), headSha: PR372.repaired };
+      forge.atHead[PR372.repaired] = atRepaired;
+      await service.checkForCrew("ab12cd34", { repair: pagerRepair });
+    }
+
+    it.each([
+      { listed: "in GitHub's order", checks: () => PR372.atRepaired },
+      { listed: "in reverse", checks: () => [...PR372.atRepaired].reverse() },
+    ])(
+      "counts it unsuccessful when any check of that name failed there, listed $listed",
+      async ({ checks }) => {
+        const { tasks, repos, service, forge } = setup();
+        await insertDirectPrTask(tasks, repos);
+        await declarePagerRepair(service, forge, checks());
+        const delivery = tasks.get("ab12cd34")?.delivery;
+        expect(delivery?.ciRepair?.repairs.map((repair) => repair.outcome)).toEqual(["failed"]);
+        expect(delivery).toMatchObject({ ciRounds: 1, ciRedHead: PR372.repaired });
+      },
+    );
+
+    it("names the check of that name that failed once the change moved past it", async () => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      await declarePagerRepair(
+        service,
+        forge,
+        PR372.atRepaired.map((check) => ({ ...check, state: "pending" as const })),
+      );
+      forge.atHead[PR372.repaired] = PR372.atRepaired;
+      forge.change = { ...(forge.change as ForgeChange), headSha: PR372.current };
+      forge.atHead[PR372.current] = [{ name: "affected-journeys", state: "pending" }];
+      expect(await service.checkForCrew("ab12cd34")).toContain(
+        "affected-journeys completed / failure there (1 of 3 checks of that name did not pass), so it is an unsuccessful own repair (1/3).",
+      );
+      expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+        headSha: PR372.current,
+        ciRounds: 1,
+        ciRedHead: PR372.repaired,
+      });
+    });
   });
 
   it("does not open the change again for a task whose number was recorded before the label", async () => {

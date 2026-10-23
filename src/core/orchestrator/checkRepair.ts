@@ -1,7 +1,7 @@
 import { type CheckChangeInput, type CheckRepairLedger, failingRun } from "@shared/checkRepair";
 import { overridePasses, softHoldWords } from "@shared/holds";
 import { CI_ROUND_CAP, ciCapReached } from "@shared/rigor";
-import { type ForgeCheckState, isAcceptedCheckState } from "../forge";
+import { type ForgeCheck, isAcceptedCheckState } from "../forge";
 import type { TaskDelivery, TaskRecord } from "../storage/taskStore";
 import { baselineStands } from "../tasks/dependencyWaits";
 import { TaskService } from "../tasks/taskService";
@@ -267,6 +267,25 @@ export function declareCheckAction(
 }
 
 /**
+ * The check that decides a repair at its version, how many checks there share
+ * its name and how many of those did not pass (INF-991). GitHub lists a name
+ * once per workflow run, so a version can hold the pull request's own run of a
+ * check beside runs of it requested by hand. The first of them that did not
+ * pass decides, whatever order the host listed them in; only when every one
+ * passed does the first decide, as passed. Nothing when no check there has
+ * that name.
+ */
+export function repairCheck(
+  checks: readonly ForgeCheck[],
+  name: string,
+): { check: ForgeCheck; named: number; unpassed: number } | undefined {
+  const named = checks.filter((check) => check.name === name);
+  const unpassed = named.filter((check) => !isAcceptedCheckState(check.state));
+  const check = unpassed[0] ?? named[0];
+  return check ? { check, named: named.length, unpassed: unpassed.length } : undefined;
+}
+
+/**
  * Raw history and budget-qualified results stay separate, on the durable delivery record.
  * `headSha` is the version `checks` were read at: the change's current head, or an
  * earlier repair's own version the change has moved past (INF-685). Either way only
@@ -275,7 +294,7 @@ export function declareCheckAction(
 export function observeCheckRepair(
   delivery: TaskDelivery | null | undefined,
   headSha: string,
-  checks: { name: string; state: ForgeCheckState }[],
+  checks: ForgeCheck[],
   at: number,
 ): Partial<TaskDelivery> {
   const ledger = structuredClone(delivery?.ciRepair ?? empty());
@@ -294,11 +313,11 @@ export function observeCheckRepair(
     else ledger.failures.push({ headSha, checks: failed });
   }
   const attempt = ledger.repairs.find((r) => r.headSha === headSha && r.outcome === undefined);
-  const target = attempt ? checks.find((c) => c.name === attempt.check) : undefined;
+  const target = attempt ? repairCheck(checks, attempt.check) : undefined;
   // Do not decide from an incomplete suite; neutral remains unsuccessful; skipped is accepted.
   if (!attempt || !target || checks.some((c) => c.state === "pending"))
     return { ...migrated, ciRepair: ledger };
-  attempt.outcome = isAcceptedCheckState(target.state) ? "passed" : "failed";
+  attempt.outcome = isAcceptedCheckState(target.check.state) ? "passed" : "failed";
   if (attempt.outcome === "passed") return { ...migrated, ciRepair: ledger };
   const ciRounds = (legacy && delivery?.ciCapAt === undefined ? 0 : (delivery?.ciRounds ?? 0)) + 1;
   return {

@@ -353,6 +353,8 @@ A version still running, one that never ran the repaired check, or one the host 
 A version the open change moved past where the host holds no check at all - no check run, status or workflow run, as when the change conflicted until it moved on - can never have a result, because the host starts checks only on the change's head (INF-988).
 That attempt is closed as `superseded`, spends nothing, and the next repair may be declared.
 A repaired check cancelled at its own version, by a time limit or a newer push, is unsuccessful like any other cancellation.
+A version can hold several checks of the repaired check's name, one per workflow run, such as the pull request's own run beside journey runs requested by hand (INF-991).
+The repair passes only when every one of them passed; any one that did not makes it unsuccessful, whatever order the host lists them in (`repairCheck`).
 
 The third unsuccessful repair stamps `ciCapAt` and sends one cap wake; completion stays held pending the captain's answer and relaying steer.
 That steer reopens the counters and flake allowance alongside the existing caps, retaining raw history, evidence and completed repair ids/results so an old observation still cannot become a new attempt.

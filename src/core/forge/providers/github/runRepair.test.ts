@@ -445,7 +445,7 @@ describe("a repair with no pull request (INF-970)", () => {
     );
     const next = await f.checkChange({ repair: IMPORT });
     expect(next).toContain(
-      `Repair ${IDLE_BUDGET.id} at ${GRADED} (with no open pull request): native-phone completed / failure there, so it is an unsuccessful own repair (1/3).`,
+      `Repair ${IDLE_BUDGET.id} at ${GRADED} (with no open pull request): native-phone completed / failure there (2 of 2 checks of that name did not pass), so it is an unsuccessful own repair (1/3).`,
     );
     expect(f.repairs()).toEqual([{ ...IDLE_BUDGET, outcome: "failed" }, IMPORT]);
     expect(f.delivery()?.ciRounds).toBe(1);
@@ -462,7 +462,7 @@ describe("a repair with no pull request (INF-970)", () => {
     // Once the second run ends, a plain reading settles it: passed, and no attempt spent.
     f.githubRan(FIXED, { runs: [fixedSecond(true), fixed], checks: fixedChecks(true) });
     expect(await f.checkChange({})).toContain(
-      `Repair ${IMPORT.id} at ${FIXED} (with no open pull request): native-phone completed / success there, so it passed and spent no attempt.`,
+      `Repair ${IMPORT.id} at ${FIXED} (with no open pull request): native-phone completed / success there (all 2 checks of that name passed), so it passed and spent no attempt.`,
     );
     expect(f.outcome(IMPORT.id)).toBe("passed");
     expect(f.delivery()?.ciRounds).toBe(1);

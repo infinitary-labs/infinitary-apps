@@ -53,6 +53,7 @@ import {
   declareCheckAction,
   observeCheckRepair,
   outstandingRepair,
+  repairCheck,
   supersedeCheckRepair,
 } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
@@ -2632,9 +2633,15 @@ export class PrCiService {
     if (round.ciCapAt !== undefined) {
       this.options.onCap?.(taskId, { rounds: round.ciRounds as number, headSha: attempt.headSha });
     }
-    const target = checks.find((check) => check.name === attempt.check);
+    const target = repairCheck(checks, attempt.check);
     if (outcome && target) {
-      const read = `${name}: ${attempt.check} ${describeCheckState(target.state)} there`;
+      const named =
+        target.named === 1
+          ? ""
+          : outcome === "passed"
+            ? ` (all ${target.named} checks of that name passed)`
+            : ` (${target.unpassed} of ${target.named} checks of that name did not pass)`;
+      const read = `${name}: ${attempt.check} ${describeCheckState(target.check.state)} there${named}`;
       return outcome === "passed"
         ? `${read}, so it passed and spent no attempt.`
         : `${read}, so it is an unsuccessful own repair (${round.ciRounds ?? 0}/${CI_ROUND_CAP}).`;

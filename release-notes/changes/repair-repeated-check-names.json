@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "repair-repeated-check-names",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A crewmate's failed fix now counts as failed when checks share a name",
+      "body": "When a version of a pull request ran the same check more than once on GitHub, such as the pull request's own run beside runs a crewmate asked for, the app could read a passing run first and count a failed fix as a success. A crewmate could then show two of its three tries used when it had used all three. The app now counts a fix as passed only when every run of that check passed.",
+      "noPicture": "Nothing new appears on screen; a crewmate's count of its three tries is now right.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

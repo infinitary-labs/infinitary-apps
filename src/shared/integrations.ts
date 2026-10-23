@@ -243,7 +243,7 @@ export const INTEGRATIONS_MCP_WORDS = {
   add: "MCP server",
   title: "Add an MCP server",
   name: "Name",
-  namePlaceholder: "Linear",
+  namePlaceholder: "Example",
   runs: "Runs",
   runsPlaceholder: "npx -y @example/mcp-server, or https://example.com/mcp",
   runsHint:

@@ -5,6 +5,7 @@ import {
   type IntegrationSettingsPatch,
   type IntegrationsView,
   type IntegrationView,
+  integrationIdSchema,
   integrationKindSchema,
   integrationNameSchema,
   integrationRenameWords,
@@ -120,12 +121,25 @@ export type IntegrationListen = {
   filters?: readonly { name: string; label: string; defaultValue?: string }[];
 };
 
+/** A connection's reference as `referenceConnections` gives it. */
+const CONNECTION_REF = /^c-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** What holds a name now (`IntegrationsService.holder`). */
+type Holder = { row: Row } | { claim: IntegrationKind } | { reserved: string; signedOut: boolean };
+
 /** A refusal the catalog line's caller reads as the reason. */
 export class IntegrationRefusal extends Error {}
 
 export class IntegrationsService {
   /** The sign-in waiting for the person's browser, at most one at a time. */
   private signingIn: AbortController | undefined;
+  /**
+   * Names and ids an addition or a sign-in holds while it waits for the
+   * place (docs/integrations.md, "Names"), by their compared form: another
+   * addition, sign-in or rename cannot take one before it is published or
+   * let go (INF-948).
+   */
+  private readonly claims = new Map<string, { kind: IntegrationKind; by: symbol }>();
 
   constructor(private readonly options: IntegrationsServiceOptions) {}
 
@@ -170,6 +184,7 @@ export class IntegrationsService {
       return {
         name: view.name,
         id: view.id,
+        connection: row.ref,
         kind: view.kind,
         ...(view.renamed ? { renamed: view.renamed } : {}),
         ...(view.account ? { account: view.account } : {}),
@@ -184,11 +199,12 @@ export class IntegrationsService {
   /** One integration's actions with what each does and its input's JSON Schema. */
   show(name: string): Record<string, unknown> | IntegrationAnswer {
     const row = this.find(name);
-    if (!row) return this.unknown(name);
+    if (!("connection" in row)) return row;
     const view = this.viewOf(row);
     return {
       integration: view.name,
       id: view.id,
+      connection: row.ref,
       kind: view.kind,
       ...(view.renamed ? { renamed: view.renamed } : {}),
       ...(view.account ? { account: view.account } : {}),
@@ -229,8 +245,9 @@ export class IntegrationsService {
    */
   listenable(integration: string, event: string): IntegrationListen | undefined {
     const row = this.find(integration);
-    const spec = row?.connection.events?.find((entry) => entry.name === event);
-    if (!row || !spec) return undefined;
+    if (!("connection" in row)) return undefined;
+    const spec = row.connection.events?.find((entry) => entry.name === event);
+    if (!spec) return undefined;
     return {
       integration: row.connection.id,
       connection: row.ref,
@@ -250,7 +267,7 @@ export class IntegrationsService {
     input: unknown,
   ): Promise<IntegrationAnswer> {
     const row = this.find(name);
-    if (!row) return this.unknown(name);
+    if (!("connection" in row)) return row;
     const view = this.viewOf(row);
     if (view.paused)
       return {
@@ -457,12 +474,23 @@ export class IntegrationsService {
       throw new IntegrationRefusal(
         `${INTEGRATION_KIND_NAMES[kind]} is connected by signing in, not added from a form.`,
       );
+    // The name and the id are held before the place is asked, so an addition
+    // or a sign-in that overlaps this one cannot take either (INF-948).
     this.assertNameFree(input.name);
+    const by = Symbol(kind);
+    this.claim(input.name, kind, by);
     let id: string;
     try {
-      id = await binding.add(input);
+      id = await binding.add(input, (candidate) => {
+        if (this.holder(candidate) || !integrationIdSchema.safeParse(candidate).success)
+          return false;
+        this.claim(candidate, kind, by);
+        return true;
+      });
     } catch (error) {
       throw new IntegrationRefusal(error instanceof Error ? error.message : String(error));
+    } finally {
+      this.release(by);
     }
     return { id, view: this.changed() };
   }
@@ -485,16 +513,25 @@ export class IntegrationsService {
     const kindName = INTEGRATION_KIND_NAMES[kind];
     const own = this.rows().find((row) => row.binding.kind === kind);
     const name = own ? this.viewOf(own).name : kindName;
-    const holder = this.holderOf(name, (row) => row.binding.kind === kind);
-    if (holder) {
-      const held = INTEGRATION_KIND_NAMES[holder.binding.kind];
+    const holder = this.holder(name, { kind });
+    if (holder && "row" in holder) {
+      const held = INTEGRATION_KIND_NAMES[holder.row.binding.kind];
       throw new IntegrationRefusal(
-        `The ${held} named ${this.viewOf(holder).name} already uses that name, so ${kindName} cannot be added beside it. Remove that ${held} in Settings → Integrations, or ask your first mate to rename it, then sign in to ${kindName} again.`,
+        `The ${held} named ${this.viewOf(holder.row).name} already uses that name, so ${kindName} cannot be added beside it. Remove that ${held} in Settings → Integrations, or ask your first mate to rename it, then sign in to ${kindName} again.`,
       );
     }
+    if (holder)
+      throw new IntegrationRefusal(
+        "claim" in holder
+          ? `An integration named ${name} is being added, so ${kindName} cannot be added beside it until that ends. Then sign in to ${kindName} again.`
+          : `${name} belongs to your ${holder.reserved} connection, so ${kindName} cannot be added under it.`,
+      );
     this.signingIn?.abort();
     const controller = new AbortController();
     this.signingIn = controller;
+    // The name is held while the browser is open; a sign-in this one ends lets go of its own.
+    const by = Symbol(kind);
+    this.claim(name, kind, by);
     try {
       const id = await binding.signIn(controller.signal);
       return { id, view: this.changed() };
@@ -502,6 +539,7 @@ export class IntegrationsService {
       if (controller.signal.aborted) throw new IntegrationRefusal("The sign-in was cancelled.");
       throw new IntegrationRefusal(error instanceof Error ? error.message : String(error));
     } finally {
+      this.release(by);
       if (this.signingIn === controller) this.signingIn = undefined;
     }
   }
@@ -556,14 +594,11 @@ export class IntegrationsService {
     const all = this.options.store.read();
     const next: IntegrationSettings = { ...(all[id] ?? {}) };
     if (patch.name !== undefined) {
+      // A reset is a rename to the default name, checked the same way (INF-938).
       const name = patch.name ?? this.defaultName(row);
-      if (name === this.defaultName(row)) {
-        this.assertReservedNameFree(name, id);
-        delete next.name;
-      } else {
-        this.assertNameFree(name, id);
-        next.name = name;
-      }
+      this.assertNameFree(name, id);
+      if (name === this.defaultName(row)) delete next.name;
+      else next.name = name;
       delete next.renamed;
     }
     if (patch.paused !== undefined) {
@@ -647,7 +682,7 @@ export class IntegrationsService {
           ref: "",
         })),
       );
-    this.repairReservedNames(rows, settings);
+    this.repairNames(rows, settings);
     this.referenceConnections(rows);
     return rows;
   }
@@ -679,27 +714,46 @@ export class IntegrationsService {
   }
 
   /**
-   * A sign-in can arrive outside this service. Repair old clashes before
-   * any view, roster or lookup escapes, including the first read after a
-   * restart and while signed out. INF-882: the captain chose automatic
-   * distinct naming with an explanation, never blocking project sign-in.
-   * Only names change; ids keep asks, events, keys and settings attached.
+   * Every name a row shows is its own (docs/integrations.md, "Names"). A
+   * sign-in can arrive outside this service, and an older version saved
+   * clashes this one refuses, so old clashes are repaired before any view,
+   * roster or lookup escapes, including the first read after a restart and
+   * while signed out. INF-882 and INF-946: the captain chose automatic
+   * distinct naming with an explanation, never blocking a sign-in. A name
+   * declared by a binding's identity stays with it; otherwise a name stays
+   * with the row whose id comes first, and an id stays with its row. Only
+   * names change; ids and references keep asks, events, keys and settings
+   * attached.
    */
-  private repairReservedNames(rows: Row[], settings: Record<string, IntegrationSettings>): void {
-    const reserved = this.reservedNames(settings);
-    const used = new Set([
-      ...reserved.map((entry) => this.nameKey(entry.name)),
-      ...rows.flatMap((row) => [row.connection.id, this.nameKey(this.rowName(row))]),
-    ]);
+  private repairNames(rows: Row[], settings: Record<string, IntegrationSettings>): void {
+    const held = new Map<string, { id: string; owner: string }>();
+    for (const entry of this.reservedNames(settings))
+      if (!held.has(this.nameKey(entry.name)))
+        held.set(this.nameKey(entry.name), { id: entry.id, owner: entry.owner });
+    for (const row of rows)
+      if (!held.has(this.nameKey(row.connection.id)))
+        held.set(this.nameKey(row.connection.id), {
+          id: row.connection.id,
+          owner: this.rowName(row),
+        });
+    const used = new Set([...held.keys(), ...rows.map((row) => this.nameKey(this.rowName(row)))]);
     let changed = false;
-    for (const row of rows) {
+    // The order a binding lists its rows in never decides who keeps a name.
+    const byId = [...rows].sort((a, b) => (a.connection.id < b.connection.id ? -1 : 1));
+    for (const row of byId) {
       const from = this.rowName(row);
-      const owner = reserved.find(
-        (entry) =>
-          entry.id !== row.connection.id && this.nameKey(entry.name) === this.nameKey(from),
-      );
-      if (!owner) continue;
-      const base = `${from} ${INTEGRATION_KIND_NAMES[row.binding.kind]}`;
+      const holder = held.get(this.nameKey(from));
+      if (!holder) {
+        held.set(this.nameKey(from), { id: row.connection.id, owner: from });
+        continue;
+      }
+      if (holder.id === row.connection.id) continue;
+      const holderKind = rows.find((entry) => entry.connection.id === holder.id)?.binding.kind;
+      // The kind tells two kinds apart; the id tells two of one kind apart.
+      const base =
+        holderKind === row.binding.kind
+          ? `${from} (${row.connection.id})`
+          : `${from} ${INTEGRATION_KIND_NAMES[row.binding.kind]}`;
       let name: string;
       let number = 1;
       do {
@@ -708,7 +762,8 @@ export class IntegrationsService {
         number++;
       } while (used.has(this.nameKey(name)));
       used.add(this.nameKey(name));
-      row.settings = { ...row.settings, name, renamed: { from, for: owner.owner } };
+      held.set(this.nameKey(name), { id: row.connection.id, owner: name });
+      row.settings = { ...row.settings, name, renamed: { from, for: holder.owner } };
       settings[row.connection.id] = row.settings;
       changed = true;
     }
@@ -717,10 +772,10 @@ export class IntegrationsService {
 
   /** The permanent identity and saved name of each binding that declares one. */
   private reservedNames(settings = this.options.store.read()) {
-    return this.options.bindings.flatMap(({ identity }) => {
+    return this.options.bindings.flatMap(({ identity, kind }) => {
       if (!identity) return [];
       return [identity.id, identity.name, settings[identity.id]?.name ?? identity.name].map(
-        (name) => ({ id: identity.id, name, owner: identity.name }),
+        (name) => ({ id: identity.id, kind, name, owner: identity.name }),
       );
     });
   }
@@ -772,35 +827,67 @@ export class IntegrationsService {
     return row.connection.name ?? INTEGRATION_KIND_NAMES[row.binding.kind];
   }
 
-  /** A declared connection keeps its identity even while signed out. */
-  private assertReservedNameFree(name: string, except?: string): void {
+  /**
+   * Who holds a name or an id now, in the one compared form: a row's id or
+   * name, an addition or sign-in waiting for its place, or a binding's
+   * identity while signed out. `except` leaves out a row's own id, or every
+   * holder of one kind (a sign-in replacing its own row or an earlier try).
+   */
+  private holder(
+    name: string,
+    except?: { id?: string; kind?: IntegrationKind },
+  ): Holder | undefined {
+    const wanted = this.nameKey(name);
+    const rows = this.rows().filter(
+      (entry) => entry.connection.id !== except?.id && entry.binding.kind !== except?.kind,
+    );
+    const named = rows.find((entry) => this.nameKey(this.rowName(entry)) === wanted);
+    if (named) return { row: named };
+    const claim = this.claims.get(wanted);
+    if (claim && claim.kind !== except?.kind) return { claim: claim.kind };
     const reserved = this.reservedNames().find(
-      (entry) => entry.id !== except && this.nameKey(entry.name) === this.nameKey(name),
+      (entry) =>
+        entry.id !== except?.id &&
+        entry.kind !== except?.kind &&
+        this.nameKey(entry.name) === wanted,
     );
     if (reserved)
-      throw new IntegrationRefusal(
-        `${name.trim()} belongs to your ${reserved.owner} connection, even while signed out. Choose another name.`,
-      );
+      return {
+        reserved: reserved.owner,
+        signedOut: !rows.some((entry) => entry.connection.id === reserved.id),
+      };
+    const byId = rows.find((entry) => entry.connection.id === wanted);
+    return byId ? { row: byId } : undefined;
   }
 
-  /** Two rows never share a name: a name is how the crew and the first mate reach one. */
+  /** Two holders never share a name: a name is how the crew and the first mate reach one. */
   private assertNameFree(name: string, except?: string): void {
-    this.assertReservedNameFree(name, except);
-    const taken = this.holderOf(name, (row) => row.connection.id === except);
-    if (taken)
+    if (CONNECTION_REF.test(name.trim()))
       throw new IntegrationRefusal(
-        `An integration is already named ${this.viewOf(taken).name}. Choose another name.`,
+        `${name.trim()} reads as a connection's reference, which the app gives. Choose another name.`,
       );
+    const holder = this.holder(name, { id: except });
+    if (!holder) return;
+    if ("row" in holder)
+      throw new IntegrationRefusal(
+        `An integration is already named ${this.viewOf(holder.row).name}. Choose another name.`,
+      );
+    if ("claim" in holder)
+      throw new IntegrationRefusal(
+        `An integration named ${name.trim()} is being added. Choose another name.`,
+      );
+    throw new IntegrationRefusal(
+      `${name.trim()} belongs to your ${holder.reserved} connection${holder.signedOut ? ", even while signed out" : ""}. Choose another name.`,
+    );
   }
 
-  /** The row a name already reaches, by its id or its name in any case, besides the rows `except` names. */
-  private holderOf(name: string, except: (row: Row) => boolean): Row | undefined {
-    const wanted = name.trim().toLowerCase();
-    return this.rows().find(
-      (row) =>
-        !except(row) &&
-        (row.connection.id === wanted || this.nameKey(this.rowName(row)) === wanted),
-    );
+  /** Hold a name or an id for one addition or sign-in until it lets go. */
+  private claim(name: string, kind: IntegrationKind, by: symbol): void {
+    this.claims.set(this.nameKey(name), { kind, by });
+  }
+
+  private release(by: symbol): void {
+    for (const [key, claim] of this.claims) if (claim.by === by) this.claims.delete(key);
   }
 
   /** A row's keys, kept or not; nothing when its kind declares none. */
@@ -818,12 +905,34 @@ export class IntegrationsService {
     };
   }
 
-  /** A row by its id or its name, in any case. */
-  private find(name: string): Row | undefined {
-    const wanted = name.trim().toLowerCase();
-    return this.rows().find(
-      (row) => row.connection.id === wanted || this.nameKey(this.rowName(row)) === wanted,
+  /**
+   * The row a caller means (docs/integrations.md, "Names"). A connection's
+   * reference reaches only that connection, and one removed or replaced is
+   * refused, never looked up again as a name. Anything else is a name or an
+   * id in any case, reaching a row only when exactly one answers to it.
+   */
+  private find(name: string): Row | IntegrationAnswer {
+    const rows = this.rows();
+    const wanted = name.trim();
+    if (CONNECTION_REF.test(wanted)) {
+      const row = rows.find((entry) => entry.ref === wanted);
+      if (row) return row;
+      return {
+        text: `No integration is connection ${wanted} now: it was removed or replaced. List the integrations again and use one's connection or name.`,
+        refused: "invalid",
+      };
+    }
+    const key = this.nameKey(wanted);
+    const matches = rows.filter(
+      (row) => row.connection.id === key || this.nameKey(this.rowName(row)) === key,
     );
+    const [only, ...more] = matches;
+    if (!only) return this.unknown(name);
+    if (more.length === 0) return only;
+    return {
+      text: `"${wanted}" could mean ${matches.map((row) => `${this.viewOf(row).name} (connection ${row.ref})`).join(" or ")}. Use one's connection.`,
+      refused: "invalid",
+    };
   }
 
   private byId(id: string): Row {

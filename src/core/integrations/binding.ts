@@ -104,9 +104,10 @@ export class IntegrationOutcomeUnknown extends Error {}
 export type IntegrationBinding = {
   kind: IntegrationKind;
   /**
-   * A connection whose identity exists even while signed out (GitHub's
-   * project sign-in). Its id, default name and saved name belong to it;
-   * another connection cannot take them while it is absent.
+   * A kind with one connection, whose identity exists even while signed
+   * out (GitHub's project sign-in, Google's). Its id, default name and
+   * saved name belong to it; another connection cannot take them while it
+   * is absent. A kind the person adds again and again declares none.
    */
   identity?: { id: string; name: string };
   /** The keys its connections sign in with; none for a kind whose sign-in has its own owner. */
@@ -125,8 +126,11 @@ export type IntegrationBinding = {
   /**
    * Add a connection from the person's own words (an MCP server's name and
    * what it runs) and answer its id; throws words when it cannot connect.
+   * `claim` holds a candidate id for this addition before the binding waits
+   * on the place, and answers false when the id or a name like it is
+   * another's, so the binding tries its next one (docs/integrations.md, "Names").
    */
-  add?: (input: unknown) => Promise<string>;
+  add?: (input: unknown, claim?: (id: string) => boolean) => Promise<string>;
   /**
    * Sign in where the person signs in in their own browser (Google's
    * loopback sign-in) and answer the connection's id once it comes back;

@@ -61,10 +61,28 @@ const ARRIVING = {
   attachment: { name: "invoice-2214.pdf", type: "application/pdf", size: 48_211 },
 };
 
-async function fixture(browser?: (url: string) => Promise<void>, withMcp = false) {
+/** The MCP binding on its own, as an older version that kept a server here ran it. */
+function olderMcp(dir: string) {
+  return mcpIntegration({
+    root: dir,
+    env: () => hostEnv(),
+    belowUi: (file, args) => atUtilityQos(file, args),
+    cwd: () => dir,
+    version: "0.0.0-test",
+    changed: () => {},
+  });
+}
+
+async function fixture(
+  browser?: (url: string) => Promise<void>,
+  withMcp = false,
+  /** What an older version saved in the integrations folder before this one opens it. */
+  older?: (dir: string) => Promise<void>,
+) {
   const google: GoogleStandIn = await startGoogleStandIn();
   cleanup.push(() => google.close());
   const dir = join(scratchDir("fm-google-"), "integrations");
+  await older?.(dir);
   const secrets = new FileIntegrationSecrets(join(dir, "secrets"));
   const db = openInMemoryDatabase();
   cleanup.push(() => {
@@ -241,28 +259,58 @@ describe("Google as an integration", () => {
     expect(partial.google.issued()).toEqual([]);
   });
 
-  it("refuses to sign in while another connection is named Google, before the browser opens or a key is kept", async () => {
-    // The captain's answer to review finding F3 on INF-784: "refuse the sign-in and say which connection holds the name".
+  it("keeps Google's name its own while signed out, renames an older server that took it, and never lets a reset take it back", async () => {
+    // INF-946, approved: GitHub's automatic rename-and-explain rule (INF-882)
+    // extends to Google, replacing INF-784's refusal; INF-938: restoring a
+    // server's original name Google must not leave "Google" reaching Mail.
     const notes = await serveNotesHttp("modern");
     cleanup.push(() => notes.close());
-    const { google, dir, opened, integrations } = await fixture(undefined, true);
-    const { id: server } = await integrations.add("mcp", { name: "Google", runs: notes.url });
-    await expect(integrations.signIn("google")).rejects.toThrow(
-      "The MCP server named Google already uses that name, so Google cannot be added beside it. Remove that MCP server in Settings → Integrations, or ask your first mate to rename it, then sign in to Google again.",
+    const { google, opened, integrations } = await fixture(undefined, true, async (dir) => {
+      // An older version let a server take the name before Google was signed in.
+      const older = olderMcp(dir);
+      await older.add?.({ name: "Google", runs: notes.url });
+      await older.close?.();
+    });
+    const server = "mcp-google";
+    expect(integrations.view().integrations).toEqual([
+      expect.objectContaining({
+        id: server,
+        name: "Google MCP server",
+        renamed: { from: "Google", for: "Google" },
+      }),
+    ]);
+    await expect(integrations.add("mcp", { name: " google " })).rejects.toThrow(
+      "google belongs to your Google connection, even while signed out. Choose another name.",
     );
     expect(opened).toEqual([]);
-    expect(google.tokens).toEqual([]);
-    expect(existsSync(join(dir, "google.json"))).toBe(false);
-    expect(integrations.view().integrations.map((row) => row.name)).toEqual(["Google"]);
 
-    // Renamed, the server leaves the name free, and Google signs in under it.
-    integrations.configure(server, { name: "Drive notes" });
     await integrations.signIn("google");
-    // A Google row the person renamed keeps its name when it signs in again.
+    expect(google.tokens).not.toEqual([]);
+    expect(integrations.view().integrations.map((row) => [row.id, row.name])).toEqual([
+      ["google", "Google"],
+      [server, "Google MCP server"],
+    ]);
     integrations.configure("google", { name: "Mail" });
-    integrations.configure(server, { name: "Google" });
-    await integrations.signIn("google");
-    expect(integrations.view().integrations.map((row) => row.name)).toEqual(["Mail", "Google"]);
+    expect(() => integrations.configure(server, { name: null })).toThrow(
+      "Google belongs to your Google connection. Choose another name.",
+    );
+    expect(() => integrations.configure(server, { name: "Mail" })).toThrow(
+      "An integration is already named Mail. Choose another name.",
+    );
+    expect(integrations.view().integrations.map((row) => row.name)).toEqual([
+      "Mail",
+      "Google MCP server",
+    ]);
+    // "Google" still reaches the Google connection, and the server answers only to its own name.
+    expect(integrations.show("Google")).toMatchObject({ id: "google", integration: "Mail" });
+    expect(integrations.show("Google MCP server")).toMatchObject({ id: server });
+    const notesRead = await integrations.call(
+      { kind: "firstmate" },
+      "Google MCP server",
+      "list_notes",
+      {},
+    );
+    expect(notesRead.refused).toBeUndefined();
   });
 
   it("ends a sign-in waiting for the browser when it is cancelled", async () => {

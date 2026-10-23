@@ -512,3 +512,44 @@ describe("an MCP server that cannot connect", () => {
     expect(service.view().integrations).toEqual([]);
   });
 });
+
+// INF-948 (INF-946 piece 2): two additions started together against the
+// real server each waited on discovery before either was saved, so both
+// rows came back named the same with the same id.
+describe("two additions that overlap (INF-948)", () => {
+  it("gives each its own id, refuses a second of the same name, and reaches each by its own name", async () => {
+    const root = scratchDir("mcp-overlap-");
+    const { service, close } = serviceIn(root);
+    const first = await serveNotesHttp("modern");
+    const second = await serveNotesHttp("modern");
+    opened.push({ service, http: first, close }, { service, http: second, close: () => {} });
+
+    const adding = [
+      service.add("mcp", { name: "Studio notes", runs: first.url }),
+      service.add("mcp", { name: "Studio notes", runs: second.url }),
+      service.add("mcp", { name: "Studio-notes", runs: second.url }),
+    ];
+    const [one, same, other] = await Promise.allSettled(adding);
+    expect(same).toMatchObject({
+      status: "rejected",
+      reason: expect.objectContaining({
+        message: "An integration named Studio notes is being added. Choose another name.",
+      }),
+    });
+    expect(one).toMatchObject({ status: "fulfilled", value: { id: "mcp-studio-notes" } });
+    expect(other).toMatchObject({ status: "fulfilled", value: { id: "mcp-studio-notes-2" } });
+    const rows = service.roster();
+    expect(rows.map((row) => [row.id, row.name])).toEqual([
+      ["mcp-studio-notes", "Studio notes"],
+      ["mcp-studio-notes-2", "Studio-notes"],
+    ]);
+    expect(new Set(rows.map((row) => row.connection)).size).toBe(2);
+
+    const read = await service.call(task, "Studio-notes", "list_notes", {});
+    expect(read.text).toContain(SAMPLE_NOTES[0]);
+    const answer = await service.call(task, String(rows[1]?.connection), "add_note", {
+      text: "Book the October shoot",
+    });
+    expect(answer.text).toContain("Not run: Studio-notes's add_note");
+  });
+});

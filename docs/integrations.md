@@ -26,7 +26,21 @@ Removing the connection through the service forgets it, so whatever comes next u
 An unreadable file reads as none, so every connection gets a new reference and nothing kept before is sent.
 A kept ask carries the reference as `connection` (`IntegrationAsk`), and the captain's click runs it only while its id still stands for that connection: otherwise it is refused as removed or replaced, and an ask kept before references existed is refused as kept before the app could tell connections apart.
 An Automation rule keeps it the same way (`docs/automation.md`, "Events").
-The reference is the service's own fact; no caller looks a connection up by it yet.
+Discovery gives each row's reference as `connection` (the roster, `show`), and a caller may pass it in place of a name to reach exactly that connection ("Names").
+
+## Names
+
+A name is how the person, the first mate and the crew reach a connection, so the service is the one owner of every name and id (INF-946, piece 2; the captain's approval extends INF-882's rule to every kind).
+Names compare ignoring case and surrounding spaces, and one compared form belongs to one holder: a row's name, a row's id, a name or id an addition or sign-in is waiting on, or a reserved identity's names while it is signed out.
+A kind with one connection declares its identity (`IntegrationBinding.identity`): GitHub and Google do, so their id, default name and saved custom name stay theirs even while signed out.
+Adding, signing in, renaming and restoring a default name all run the same check, and a new name that another holds is refused in words; so is a name shaped like a reference.
+An addition holds its name, and every id its binding tries (`add`'s `claim`), before it waits on the place, and a sign-in holds the name its row will take while the browser is open; each lets go when it is published, fails or is cancelled (INF-948), so two overlapping additions never publish the same name or id.
+A name that clashes anyway - saved by an older version, or a sign-in that arrived outside the service, such as GitHub's - is repaired before any view, roster or lookup escapes, the captain's automatic distinct name with an explanation.
+An identity's names stay with it; otherwise a name stays with the row whose id sorts first and an id with its row, never with whichever row a binding lists first.
+The renamed row takes its kind's name after the old one when the holder is another kind (Google MCP server), or its own id in brackets when the holder is the same kind (Notes (mcp-notes-2)), with a number if that is taken too, within the published name size.
+Only the name changes: ids, references, paused state, disabled actions, keys, event rules and kept requests stay attached to the same connection.
+A lookup by reference reaches only that connection, and a reference whose connection was removed or replaced is refused, never looked up again as a name.
+Anything else is a name or an id, and reaches a row only when exactly one row answers to it; otherwise it is refused with the candidates and their references.
 
 ## What an integration can tell
 
@@ -72,12 +86,9 @@ Removing an integration forgets its keys.
 
 GitHub's row is the app's own github.com sign-in, made and kept by the forge (`ForgeSignIns`, `docs/forge.md`), seen through the binding in `src/core/integrations/providers/github.ts`.
 The row exists exactly while that sign-in does, and removing the row signs it out.
-The binding declares its permanent identity, so its id, GitHub and any saved custom name remain reserved even while signed out.
-Adding or renaming another connection to one of those names is refused, ignoring case and surrounding spaces; restoring a default name checks the same rule.
-An older connection already using a reserved name gets a distinct name automatically, as the captain chose on INF-882: for example GitHub MCP server, with a number if that name is taken.
-The service saves this repair before exposing any view, roster or lookup, including the first read after restart; it uses the published name size and avoids every current name and id.
+The binding declares its permanent identity, so its id, GitHub and any saved custom name remain reserved even while signed out ("Names").
+An older connection already using a reserved name gets a distinct name automatically, as the captain chose on INF-882: for example GitHub MCP server.
 Settings explains the change directly below the renamed row, even while collapsed, and the crew's discovery and the first mate's roster carry the same explanation.
-Only the name changes: connection ids, paused state, disabled actions, keys, event rules and kept requests stay attached to the same connection.
 GitHub sign-in, clones and pull requests never wait on an integration rename.
 Its two actions are the gateway's two calls through that sign-in, whatever the caller's project is: `read` (GET or HEAD one REST path) runs, and `write` (POST, PATCH, PUT or DELETE) asks.
 A crewmate's write is kept on its task as a write ask, the way a write to another project is (`docs/forge.md`, "A write that asks"), and the captain's click on its card sends it through the same sign-in.
@@ -109,7 +120,7 @@ Google is one row that signs in once for Gmail and Calendar, asking every permis
 Its permissions are Gmail's `gmail.modify` and Calendar's `calendar.events` and `calendar.readonly` (`GOOGLE_SCOPES`, `client.ts`): an installed app cannot add a permission later, and the same sign-in reaches both APIs.
 Google's device flow does not reach Gmail or Calendar, so the sign-in is the installed-app flow (`signIn.ts`): the app listens on `127.0.0.1` at a port the system picks, opens Google's consent page in the person's browser with PKCE (S256), a state, offline access and consent every time, and trades the code the browser brings back for the sign-in.
 The listener turns away anything without the sign-in's state and closes once the browser answers or the sign-in is cancelled; a second sign-in ends the first.
-Two rows never share a name, so while another row has the name the Google row would take - its own, or Google for a new one - the sign-in is refused before the browser opens, naming that row.
+The binding declares its identity, so Google and a saved custom name stay its own while signed out ("Names"): a server an older version let take the name Google is renamed Google MCP server with the explanation, and Google signs in beside it.
 A sign-in in which the person unchecked any Gmail or Calendar permission is handed back to Google and kept nowhere.
 The access key and the lasting key are kept in the integration's key store ("Keys") under `access_token` and `refresh_token` and used only through it: the access key as each Gmail or Calendar request's bearer, the lasting key as the renewal's form field and, on removal, the revocation's.
 The row declares no key slots, so it has no key fields; who it is signed in as, what Google granted, when the access runs out and its health are `userData/integrations/google.json`, 0600 (`GoogleSignInStore`).
@@ -183,6 +194,8 @@ A computer without the change, or without a task channel, gives its crewmates ne
 ## Tests
 
 `src/core/integrations/service.test.ts` holds the view drawn from the github.com sign-in, settings that hold across a restart, a paused integration refusing, removal signing out, reserved names while signed out, automatic repairs and their explanations, custom names, case-insensitive conflicts and name-size boundaries.
+Its INF-946 cases hold a name and id while an addition or a sign-in waits and let them go when it ends, check a reset to a default name like a rename, repair a shared name or another's id the same way whatever order the rows come in, and reach a connection by its reference but never a removed one by its name.
+The Google case in `googleIntegration.test.ts` renames a server an older version saved as Google, refuses the name while signed out, signs in beside it, and refuses restoring the server's name once Google is renamed Mail (INF-938); the MCP case of INF-948 starts three additions together against stand-in servers and finds two distinct ids and a refusal.
 The GitHub naming journey in `tests/e2e/older-profile.spec.ts` upgrades a real MCP discovery saved under GitHub, checks the explanation and the signed-out name refusal by keys, signs in through the GitHub stand-in, reads projects, restarts, and has a crewmate read both connections by their distinct names.
 The kept-request case in `mcpIntegration.test.ts` approves an ask saved before the repair and observes exactly one change on the original server, with no GitHub write; the event's id stays the same too.
 Its INF-947 cases remove a stand-in notes server and add another under the same name and id: the ask kept for the first is refused and neither server changes, an ask kept for the replacement runs after a rename and a restart, an ask kept by an older build is refused, and a rule on the removed server never looks at the replacement until it is pointed there with `reconnect`, nor does a rule saved by an older build.

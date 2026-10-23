@@ -295,8 +295,10 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
     many: true,
     connections: () => servers.map(connectionOf),
 
-    add: async (input) => {
+    add: async (input, claim) => {
       const { name, runs } = integrationMcpAddSchema.parse(input);
+      // The id is held before anything waits, so an overlapping addition takes another.
+      const id = freeId(name, servers, claim);
       let network: McpSavedServer["network"];
       try {
         const parsed = parseRuns(runs);
@@ -305,7 +307,6 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
       } catch (error) {
         throw new McpConnectError(wordsOf(error));
       }
-      const id = freeId(name, servers);
       const link = await connect({ id, runs, network });
       try {
         const lists = savedLists(await listed(link.client));
@@ -583,8 +584,15 @@ function resourceAnswer(result: ReadResourceResult): string {
   return parts.length > 0 ? parts.join("\n") : "The resource is empty.";
 }
 
-/** An id for a new server from its name: `mcp-` and the name's words, never one in use. */
-function freeId(name: string, servers: readonly McpSavedServer[]): string {
+/**
+ * An id for a new server from its name: `mcp-` and the name's words, never
+ * one in use or one `claim` refuses.
+ */
+function freeId(
+  name: string,
+  servers: readonly McpSavedServer[],
+  claim: (id: string) => boolean = () => true,
+): string {
   const words =
     name
       .toLowerCase()
@@ -595,7 +603,7 @@ function freeId(name: string, servers: readonly McpSavedServer[]): string {
   const base = `mcp-${words}`;
   const taken = new Set(servers.map((server) => server.id));
   let id = base;
-  for (let count = 2; taken.has(id); count++) id = `${base}-${count}`;
+  for (let count = 2; taken.has(id) || !claim(id); count++) id = `${base}-${count}`;
   return id;
 }
 

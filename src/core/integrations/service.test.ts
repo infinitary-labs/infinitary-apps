@@ -262,3 +262,203 @@ describe("IntegrationsService", () => {
     expect(open().view().integrations[0]).toMatchObject({ name: "GitHub", paused: false });
   });
 });
+
+/**
+ * INF-946 piece 2, approved: one owner for integration names. Every way a
+ * name arrives - an addition, a sign-in, a rename, a reset to the default
+ * name, an older version's saved rows - runs the same check, and a name an
+ * overlapping addition or sign-in waits on is held until it ends (INF-948).
+ */
+describe("One owner for integration names (INF-946)", () => {
+  /** MCP servers whose additions wait until the test lets each one finish. */
+  function servers(saved: { id: string; name: string }[]) {
+    const rows = [...saved];
+    const waiting: (() => void)[] = [];
+    const binding: IntegrationBinding = {
+      kind: "mcp",
+      many: true,
+      connections: () => rows.map((row) => ({ ...row, account: null, health: "ok", actions: [] })),
+      add: async (input, claim) => {
+        const { name } = input as { name: string };
+        const base = `mcp-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+        let id = base;
+        for (let count = 2; rows.some((row) => row.id === id) || !claim?.(id); count++)
+          id = `${base}-${count}`;
+        await new Promise<void>((resolve) => waiting.push(resolve));
+        rows.push({ id, name });
+        return id;
+      },
+      check: async () => {},
+      remove: (id) => {
+        rows.splice(
+          rows.findIndex((row) => row.id === id),
+          1,
+        );
+      },
+      call: async (id) => ({ text: `answered by ${id}` }),
+    };
+    const finish = () => waiting.shift()?.();
+    return { binding, finish };
+  }
+
+  /** A kind signed in to in the browser that declares no identity, waiting until the test answers. */
+  function browserKind() {
+    let signedIn = false;
+    let answer: (() => void) | undefined;
+    const binding: IntegrationBinding = {
+      kind: "stand-in",
+      connections: () =>
+        signedIn ? [{ id: "stand-in", account: "ada", health: "ok", actions: [] }] : [],
+      signIn: (signal) =>
+        new Promise<string>((resolve, reject) => {
+          signal.addEventListener("abort", () => reject(new Error("ended")));
+          answer = () => {
+            signedIn = true;
+            resolve("stand-in");
+          };
+        }),
+      check: async () => {},
+      remove: () => {
+        signedIn = false;
+      },
+      call: async () => ({ text: "stand-in answered" }),
+    };
+    return { binding, answer: () => answer?.() };
+  }
+
+  function open(bindings: IntegrationBinding[]) {
+    const dir = join(scratchDir("fm-integration-owner-"), "integrations");
+    const store = new IntegrationSettingsStore(dir);
+    const service = () =>
+      new IntegrationsService({
+        bindings,
+        store,
+        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
+      });
+    return { store, service };
+  }
+
+  it("holds a name and its id while an addition waits, and lets them go when it ends", async () => {
+    const mcp = servers([]);
+    const { service } = open([mcp.binding]);
+    const integrations = service();
+    const first = integrations.add("mcp", { name: "Studio notes" });
+    await expect(integrations.add("mcp", { name: " studio NOTES " })).rejects.toThrow(
+      "An integration named studio NOTES is being added. Choose another name.",
+    );
+    // Another name whose words make the same id gets the next id, never the same one.
+    const second = integrations.add("mcp", { name: "Studio-notes" });
+    mcp.finish();
+    mcp.finish();
+    expect((await first).id).toBe("mcp-studio-notes");
+    expect((await second).id).toBe("mcp-studio-notes-2");
+    expect(integrations.view().integrations.map((row) => [row.id, row.name])).toEqual([
+      ["mcp-studio-notes", "Studio notes"],
+      ["mcp-studio-notes-2", "Studio-notes"],
+    ]);
+    // No name can take another row's id either.
+    expect(() =>
+      integrations.configure("mcp-studio-notes", { name: "MCP-studio-notes-2" }),
+    ).toThrow("An integration is already named Studio-notes. Choose another name.");
+  });
+
+  it("holds the name a sign-in will take until it comes back or is cancelled", async () => {
+    const mcp = servers([]);
+    const browser = browserKind();
+    const { service } = open([browser.binding, mcp.binding]);
+    const integrations = service();
+    const signingIn = integrations.signIn("stand-in");
+    await expect(integrations.add("mcp", { name: "Stand-in" })).rejects.toThrow(
+      "An integration named Stand-in is being added. Choose another name.",
+    );
+    integrations.cancelSignIn();
+    await expect(signingIn).rejects.toThrow("The sign-in was cancelled.");
+    const added = integrations.add("mcp", { name: "Stand-in" });
+    await expect(integrations.signIn("stand-in")).rejects.toThrow(
+      "An integration named Stand-in is being added, so Stand-in cannot be added beside it until that ends. Then sign in to Stand-in again.",
+    );
+    mcp.finish();
+    await added;
+    const again = integrations.signIn("stand-in");
+    browser.answer();
+    await expect(again).rejects.toThrow(
+      "The MCP server named Stand-in already uses that name, so Stand-in cannot be added beside it.",
+    );
+  });
+
+  it("checks a reset to a server's own default name like any rename (INF-938)", () => {
+    const mcp = servers([
+      { id: "mcp-notes", name: "Notes" },
+      { id: "mcp-drafts", name: "Drafts" },
+    ]);
+    const { service } = open([mcp.binding]);
+    const integrations = service();
+    integrations.configure("mcp-notes", { name: "Work" });
+    integrations.configure("mcp-drafts", { name: "Notes" });
+    expect(() => integrations.configure("mcp-notes", { name: null })).toThrow(
+      "An integration is already named Notes. Choose another name.",
+    );
+    expect(integrations.show("Notes")).toMatchObject({ id: "mcp-drafts" });
+    expect(integrations.show("Work")).toMatchObject({ id: "mcp-notes" });
+  });
+
+  it("gives every existing row of a shared name or another's id a distinct name, whatever order the place lists them in", () => {
+    const saved = [
+      { id: "mcp-notes-2", name: "Notes" },
+      { id: "mcp-tasks", name: "mcp-notes" },
+      { id: "mcp-notes", name: "notes" },
+      { id: "mcp-drafts", name: "Drafts" },
+    ];
+    const { service, store } = open([servers(saved).binding]);
+    store.write({ "mcp-notes-2": { paused: true, off: ["add_note"] } });
+    const names = (bindings: IntegrationBinding[]) =>
+      new IntegrationsService({
+        bindings,
+        store: new IntegrationSettingsStore(join(scratchDir("fm-integration-order-"), "i")),
+        secrets: new FileIntegrationSecrets(join(scratchDir("fm-integration-order-"), "s")),
+      })
+        .view()
+        .integrations.map((row) => [row.id, row.name])
+        .sort();
+    const view = service().view();
+    expect(view.integrations.map((row) => [row.id, row.name, row.renamed])).toEqual([
+      ["mcp-notes-2", "Notes (mcp-notes-2)", { from: "Notes", for: "notes" }],
+      ["mcp-tasks", "mcp-notes (mcp-tasks)", { from: "mcp-notes", for: "notes" }],
+      ["mcp-notes", "notes", undefined],
+      ["mcp-drafts", "Drafts", undefined],
+    ]);
+    expect(store.read()["mcp-notes-2"]).toMatchObject({ paused: true, off: ["add_note"] });
+    // The same rows listed in another order keep the same names.
+    expect(names([servers([...saved].reverse()).binding])).toEqual(
+      view.integrations.map((row) => [row.id, row.name]).sort(),
+    );
+    expect(service().view()).toEqual(view);
+  });
+
+  it("gives discovery each connection's reference, which reaches only that connection", async () => {
+    const mcp = servers([{ id: "mcp-notes", name: "Notes" }]);
+    const { service } = open([mcp.binding]);
+    const integrations = service();
+    const [listed] = integrations.roster();
+    const connection = String(listed?.connection);
+    expect(connection).toMatch(/^c-/);
+    expect(integrations.show(connection)).toMatchObject({ id: "mcp-notes", connection });
+    expect(await integrations.call({ kind: "firstmate" }, connection, "missing", {})).toMatchObject(
+      { refused: "invalid", text: expect.stringContaining("Notes has no action") },
+    );
+    expect(() => integrations.configure("mcp-notes", { name: connection })).toThrow(
+      "reads as a connection's reference",
+    );
+    // Removed and added again under the same name and id, it is another connection.
+    await integrations.remove("mcp-notes");
+    const added = integrations.add("mcp", { name: "Notes" });
+    mcp.finish();
+    expect((await added).id).toBe("mcp-notes");
+    expect(integrations.show(connection)).toEqual({
+      text: `No integration is connection ${connection} now: it was removed or replaced. List the integrations again and use one's connection or name.`,
+      refused: "invalid",
+    });
+    expect(integrations.show("Notes")).toMatchObject({ id: "mcp-notes" });
+    expect(integrations.show("Notes")).not.toMatchObject({ connection });
+  });
+});

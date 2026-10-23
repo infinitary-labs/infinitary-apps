@@ -1,4 +1,4 @@
 {
   "schemaVersion": 1,
-  "channels": ["alpha"]
+  "channels": ["alpha", "stable"]
 }

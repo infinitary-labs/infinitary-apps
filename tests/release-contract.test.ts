@@ -2003,12 +2003,11 @@ describe("resolving a release", () => {
     expect(alpha.outputs).toMatchObject({ old_cask: "true", ...oldNames("0.1.26-alpha.7") });
     expect(alpha.outputs.old_public_tag).toBe("firstmate-3000-alpha-v0.1.26-alpha.7");
     expect(resolve(clone, { CHANNEL: "stable", DRY_RUN: "true" }).outputs.old_cask).toBe("false");
-    // The repository's own switch file lists alpha (step 13, INF-35) and not
-    // yet stable (step 14): Firstmate 3000's alpha cask moves to Infinitary,
-    // its stable cask stays on Firstmate 3000.
+    // The repository's own switch file lists alpha (step 13, INF-35) and
+    // stable (step 14, INF-36): both of Firstmate 3000's casks move to Infinitary.
     expect(
       JSON.parse(readFileSync(join(root, "packaging", "old-cask-switch.json"), "utf8")),
-    ).toEqual({ schemaVersion: 1, channels: ["alpha"] });
+    ).toEqual({ schemaVersion: 1, channels: ["alpha", "stable"] });
   });
 
   it("promotes a published alpha newer than the latest stable on the alpha's own commit, with the captain's picks and no pull request", () => {

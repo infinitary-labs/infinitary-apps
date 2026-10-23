@@ -27,7 +27,7 @@ name: release
 #
 # The old-cask switch (docs/alpha.md "The old-cask switch"): for each channel
 # packaging/old-cask-switch.json lists - alpha since the rename's step 13,
-# stable from step 14 - the release also publishes the same signed zip and
+# stable since step 14 - the release also publishes the same signed zip and
 # Linux files under Firstmate 3000's names on its tap, and moves Firstmate
 # 3000's cask and frozen-schema update files to it, so the usual Firstmate
 # 3000 update installs Infinitary. A rehearsal writes what that switch would, always.

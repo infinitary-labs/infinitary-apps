@@ -680,6 +680,32 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   });
 
   /**
+   * INF-941: on 2026-10-22 another task's request for journeys on main
+   * (run 39867018455) cancelled INF-933's request (run 39865801314) in the
+   * shared group journeys-refs/heads/main, before keyboard-routing ran. A
+   * newer push to a pull request still replaces its older run, as PR #341's
+   * run 39862278380 replaced 39861114356 that day.
+   */
+  it("lets a newer push replace its pull request's journeys, and no request cancel another", () => {
+    const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
+      concurrency: { group: string; "cancel-in-progress": boolean };
+    };
+    const group = (event_name: string, ref: string, run_id: string) =>
+      workflowString(journeys.concurrency.group, { github: { event_name, ref, run_id } });
+    expect(journeys.concurrency["cancel-in-progress"]).toBe(true);
+    expect(group("pull_request", "refs/pull/341/merge", "39861114356")).toBe(
+      group("pull_request", "refs/pull/341/merge", "39862278380"),
+    );
+    const requests = [
+      group("workflow_dispatch", "refs/heads/main", "39865801314"),
+      group("workflow_dispatch", "refs/heads/main", "39867018455"),
+    ];
+    expect(new Set(requests).size).toBe(2);
+    // Nor does a request share a group with a pull request's push.
+    expect(requests).not.toContain(group("pull_request", "refs/pull/341/merge", "39862278380"));
+  });
+
+  /**
    * INF-850: on 2026-10-22 GitHub answered no verify.yml run to a search by
    * result while its plain list held passing ones, and every pull request's
    * chooser failed. The step's own script runs against those answers.

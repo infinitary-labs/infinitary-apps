@@ -285,6 +285,8 @@ A newer push to the same pull request cancels the older run, because the Mac min
 The names are read as a `Journeys:` trailer's are, separated by spaces or commas, and a name that is no journey fails the chooser (`scripts/affected-journeys.ts --named`).
 The chooser places the named files exactly as it places a pull request's, closest six minutes on the Mac mini and the rest on hosted Linux, and the run skips the pull request's Linux starter coverage.
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
+Each request is its own concurrency group, so another request on the same branch, `main` included, never cancels it, whatever journeys either names (INF-941); only a newer push to a pull request replaces that pull request's older run.
+A request its requester no longer needs is cancelled by its run's id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
 
 ## A journey's own scenarios
 

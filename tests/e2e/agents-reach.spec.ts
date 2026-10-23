@@ -17,6 +17,7 @@ import {
 } from "../../src/shared/holds";
 import { LIVE_VALIDATION_WORDS } from "../../src/shared/liveValidation";
 import type { TaskView } from "../../src/shared/tasks";
+import { CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
 import { noSurfaceProof } from "../helpers/liveValidation";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
@@ -360,13 +361,15 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     await regionShot(shownCard(page, REACH_STOP_CARD_TITLE), out("1-completion-card-override.png"));
 
     // The captain's merge: at the version the reviewer last read, with no
-    // re-review, and the review task goes with its builder. The card's merge
-    // is found by its place, the default action: its label still reads as
-    // if it waits for a fix on failed checks, though his override passes
-    // them (INF-756).
-    await shownCard(page, REACH_STOP_CARD_TITLE)
-      .locator("[data-card-actions] button[data-card-action-default]")
-      .click();
+    // re-review, and the review task goes with its builder. On failed checks
+    // his override passes, the merge says it merges now (INF-756).
+    const merge = shownCard(page, REACH_STOP_CARD_TITLE).getByRole("button", {
+      name: MERGE_WORDS["merge-pr"],
+      exact: true,
+    });
+    await expect(facts.checks).toHaveText(CHECK_WORDS.red);
+    await expect(merge).toBeVisible();
+    await merge.click();
     await expect(putInLine(page, builder.key)).toBeVisible({ timeout: 30_000 });
     expect(github.merges()).toEqual([
       {

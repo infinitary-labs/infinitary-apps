@@ -12612,7 +12612,9 @@ export class CrewSupervisor {
    * still running keeps the captain's approval and the host merges once
    * they pass, so it reads Merge when checks pass; on failed checks the
    * approval waits for a fix, so it reads Merge after fixing errors;
-   * otherwise Merge the pull request. Undefined - the label as it stands -
+   * otherwise Merge the pull request. The captain's override on the checks
+   * at the card's version passes either, so a click merges now and it reads
+   * Merge the pull request (INF-756). Undefined - the label as it stands -
    * on a card whose click approves nothing (`approvableOffer`), where a
    * click on such checks is only refused.
    */
@@ -12625,6 +12627,9 @@ export class CrewSupervisor {
       offerId: card.offerId,
     });
     if (!offer) return undefined;
+    const head = offer.baseline.headSha;
+    if (record.delivery?.headSha === head && overridePasses(record.delivery, "checks", head))
+      return MERGE_WORDS["merge-pr"];
     const ci = record.delivery?.ci;
     if (ci === "red") return MERGE_AFTER_FIXING_WORDS;
     return ci === "pending" ? MERGE_WHEN_CHECKS_PASS_WORDS : MERGE_WORDS["merge-pr"];

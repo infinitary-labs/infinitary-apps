@@ -4486,6 +4486,56 @@ describe("CrewSupervisor", () => {
         expect(feed.some((line) => line.includes("Soft hold"))).toBe(false);
       });
 
+      /** The completion card's merge button, as the card shows it now. */
+      const mergeLabelOf = (h: Awaited<ReturnType<typeof approved>>) =>
+        h
+          .cards()
+          .find((card) => card.id === h.card.id)
+          ?.actions.find(
+            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+          )?.label;
+
+      // INF-756: with his words passing the checks at the card's version, the
+      // click merges at once, yet the button read Merge after fixing errors.
+      it("names the merge for what a click does while his words pass the checks at the card's version, failed or running, and the click merges at once", async () => {
+        const h = await approved();
+        h.forge.states = ["failure"];
+        await h.declare({});
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
+        h.supervisor.declareOverride(h.taskId, {
+          words: "The failing check is the flaky one; merge it anyway.",
+          holds: ["checks"],
+          until: "version",
+        });
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]));
+        h.forge.states = ["success", "pending"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("pending");
+        expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]);
+        h.forge.states = ["failure"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery?.ci).toBe("red");
+        expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]);
+
+        h.supervisor.act(h.card.id, "merge");
+        await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+        expect(h.authorization()?.waiting).toBeUndefined();
+      });
+
+      it("keeps the wait's words on a card whose version the pull request has moved past, though his words pass the checks for the task", async () => {
+        const h = await approved();
+        h.supervisor.declareOverride(h.taskId, {
+          words: "The failing check is the flaky one; merge it anyway.",
+          holds: ["checks"],
+          until: "task",
+        });
+        h.forge.headSha = "fixed0004";
+        h.forge.states = ["failure"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
+      });
+
       it("never holds the first mate's merge on its own card, while a crewmate's question holds it until his words pass it", async () => {
         const h = await approved();
         editPolicies(h, { autonomy: true });

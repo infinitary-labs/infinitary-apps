@@ -408,6 +408,7 @@ The captain's merge click on a completion card is an approval of that change, an
   Frames and agents cannot mint one - a settle effect runs only from the chrome.
 - **Its words (INF-23).**
   The completion card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CrewSupervisor.mergeLabel`): Merge when checks pass while the task's checks are still running, Merge after fixing errors once they failed (the captain's words), and Merge the pull request again once they pass.
+  While the captain's override passes the checks at the card's version and the pull request is still at it, a click merges at once, so it reads Merge the pull request whatever the checks read (INF-756).
   `CardService.refreshSettleFacts` writes it with the fact strip whenever the task's record changes, so it follows each new reading.
   A click then keeps the approval waiting on the checks, and its feed line says what the merge waits for (`keptFeedLine`, by the task's last reading): the running checks, or a fix after failed ones.
   A fix brings a new version with fresh checks, so it comes back to the captain on a new completion card when it changed the work (a repair declared `changed-work`, under "Repairs" below); a fix declared to leave the approved work as it was, or the same version passing on a rerun, merges on the kept approval once the checks pass.
@@ -511,6 +512,7 @@ The row is a `note` event on the timeline with one feed line, quoting the captai
 Each site reads it with `overridePasses(delivery, kind, head)`: a task-long override always passes, and a version-long one passes only at the version it covers, so a new version brings the hold back.
 The captain's merge click reads the same record, since the settle boundary is one function for the captain's click and the first mate's merge.
 The completion card's fact strip shows an Override cell naming the holds the captain's words pass, and says the merge goes without live proof when live proof is one of them.
+When they pass the checks, its merge reads Merge the pull request on failed or running checks, since the click merges at once ("Its words" above).
 
 **The counted caps are soft.**
 The repair limit, the re-review limit and the rerun limit are numbers the app made up.

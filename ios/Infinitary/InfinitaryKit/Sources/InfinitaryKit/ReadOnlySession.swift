@@ -34,7 +34,11 @@ public struct PhoneNotice: Equatable, Sendable {
     public var notice: PhoneNotice?
     /// Offers the stage has drawn while the person could see it, kept for this computer's session only.
     public private(set) var seenCards = Set<String>()
-    public var unreadCards: Int { cards.filter { !seenCards.contains($0.offerID ?? $0.id) }.count }
+    /// INF-944 item 3: the stack follows the Mac's. A card minimized there leaves the phone's stack, count and badge too.
+    public var stack: [PhoneCard] { cards.filter { !$0.minimized } }
+    /// Open cards minimized on the Mac, listed apart so one can be brought back.
+    public var minimizedCards: [PhoneCard] { cards.filter(\.minimized) }
+    public var unreadCards: Int { stack.filter { !seenCards.contains($0.offerID ?? $0.id) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     public var changeRefusal: String? {
         if contact != "in-reach" { return "Your computer is out of reach. Nothing will be sent later." }
@@ -149,7 +153,7 @@ public struct PhoneNotice: Equatable, Sendable {
 
     private func observeCards(_ snapshot: [PhoneCard]) {
         let live = snapshot.filter { $0.awaiting == nil || $0.sentBackAt != nil }
-        let news = live.filter { primed && (notified[$0.id] == nil || (notified[$0.id] == true && $0.awaiting == nil)) }
+        let news = live.filter { !$0.minimized && primed && (notified[$0.id] == nil || (notified[$0.id] == true && $0.awaiting == nil)) }
         // A card that waited on its author after the captain's reply returns as a reply: one the stage
         // kept while it waited, or one that left the stage and was awaiting the answer.
         let reply = news.last.map { notified[$0.id] == true || awaited.contains($0.id) } ?? false

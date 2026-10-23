@@ -20,7 +20,8 @@ import XCTest
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 0)
     XCTAssertEqual(input.value as? String, words)
     addPhoneJourneyPhoto(app: app)
-    for name in ["Activity", "Tasks", "Cards"] {
+    // INF-944 item 6: the tabs in their order, Activity last.
+    for name in ["Tasks", "Activity", "Cards"] {
         tab(name)
         let surface = name == "Activity" ? app.scrollViews["activity-list"]
             : name == "Tasks" ? app.buttons["group-waiting"] : app.scrollViews["card-scroll"]
@@ -59,19 +60,23 @@ import XCTest
     // INF-82: draft retention alone missed a card reduced to a thin attribution strip.
     // Read the complete native heading, then scroll actual body text and an action into view.
     if UIDevice.current.userInterfaceIdiom == .phone {
-        let card = app.scrollViews["card-scroll"]
+        // INF-944 items 1 and 2: the card's frame holds its head and choices; its body scrolls inside it.
+        // A short card scrolls whole, its frame then being its scroller.
+        let card = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier == 'card-frame' OR identifier == 'card-scroll'")).firstMatch
         let title = app.staticTexts["card-title"]
         XCTAssertTrue(phoneCardReadingBounds(card, app: app).contains(phoneAccessibilityBounds(title.frame)),
             "Landscape leaves room to read the full card heading, not just its attribution")
         XCTAssertTrue(title.isHittable)
         picture("draft-landscape")
         let body = app.webViews.staticTexts.firstMatch
-        let action = card.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'card-action-'")).firstMatch
-        for element in [body, action] {
-            revealPhoneCardReading(element, in: card, app: app)
+        let action = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'card-action-'")).firstMatch
+        // The body reads inside its scroller; a choice may be pinned at the frame's foot or scroll with a short card's body.
+        for (element, region) in [(body, app.scrollViews["card-scroll"]), (action, card)] {
+            revealPhoneCardReading(element, in: region, app: app)
             XCTAssertTrue(element.isHittable, "The landscape card can be read and used")
-            XCTAssertTrue(phoneCardReadingBounds(card, app: app).contains(phoneAccessibilityBounds(element.frame)),
-                "Landscape shows the complete reading \(element.frame) inside \(phoneCardReadingBounds(card, app: app)), not a clipped sliver")
+            XCTAssertTrue(phoneCardReadingBounds(region, app: app).contains(phoneAccessibilityBounds(element.frame)),
+                "Landscape shows the complete reading \(element.frame) inside \(phoneCardReadingBounds(region, app: app)), not a clipped sliver")
             picture(element.elementType == .button ? "draft-landscape-card-action" : "draft-landscape-card-body")
         }
         revealPhoneCardReading(title, in: card, app: app)
@@ -120,12 +125,14 @@ import XCTest
 /// A short viewport needs a measured drag, not an inertial whole-view swipe that skips a paragraph.
 /// Keep the same complete-containment assertion, and scroll toward the actual element in either direction.
 @MainActor private func revealPhoneCardReading(_ element: XCUIElement, in card: XCUIElement, app: XCUIApplication) {
+    let scroller = app.scrollViews["card-scroll"]
     for _ in 0..<8 {
-        let visible = phoneCardReadingBounds(card, app: app)
         let frame = phoneAccessibilityBounds(element.frame)
         // XCTest cannot resolve a hit point for an entirely offscreen native label.
         // Geometry decides whether to scroll first; hittability is still required once it is visible.
-        if visible.contains(frame) && element.isHittable { return }
+        if phoneCardReadingBounds(card, app: app).contains(frame) && element.isHittable { return }
+        // Drag inside the body's own scroller, which the frame's pinned head and choices do not scroll.
+        let visible = phoneCardReadingBounds(scroller, app: app)
         let distance = min(visible.height * 0.6, abs(frame.midY - visible.midY))
         let direction: CGFloat = frame.midY > visible.midY ? 1 : -1
         let origin = app.coordinate(withNormalizedOffset: .zero)
@@ -190,7 +197,12 @@ import XCTest
     }
     let bar = app.tabBars.firstMatch
     if bar.exists && bar.isHittable && bar.frame.midY > app.frame.midY {
-        XCTAssertLessThanOrEqual(footer.frame.maxY, bar.frame.minY, "The composer stays above the native tabs")
+        // INF-944 item 4: receded tabs leave one round button, and the composer shares its row beside it.
+        if bar.buttons.count == 1 {
+            XCTAssertFalse(footer.frame.intersects(bar.buttons.firstMatch.frame), "The composer sits beside the receded tabs")
+        } else {
+            XCTAssertLessThanOrEqual(footer.frame.maxY, bar.frame.minY, "The composer stays above the native tabs")
+        }
     }
 }
 

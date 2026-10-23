@@ -30,13 +30,14 @@ extension TextFieldStyle where Self == PhoneFieldStyle {
 }
 
 /// The Mac's input: one shape holding its field and send arrow, a pill at one line and a rounded rectangle taller.
-/// Floating at the foot it is native glass on iOS 26; elsewhere it is the app's field fill and hairline.
+/// Floating at the foot it is native glass on iOS 26, its corners concentric with the screen's (INF-944 item 4);
+/// elsewhere it is the app's field fill and hairline.
 private struct PhoneInputSurface: ViewModifier {
     let floating: Bool
     private let shape = RoundedRectangle(cornerRadius: 22, style: .continuous)
     @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 26, *) {
-            if floating { content.glassEffect(.regular, in: shape) } else { plain(content) }
+            if floating { content.glassEffect(.regular, in: ConcentricRectangle(corners: .concentric(minimum: 22), isUniform: true)) } else { plain(content) }
         } else { plain(content) }
     }
     private func plain(_ content: Content) -> some View {
@@ -61,10 +62,97 @@ extension View {
         }
     }
 
-    /// A sheet on the panel color with a hairline at its edge, as the Mac draws an aside.
-    func phoneSheetSurface() -> some View {
-        presentationBackground {
-            PhoneTheme.panel.overlay { ContainerRelativeShape().strokeBorder(PhoneTheme.line) }
+    /// A sheet floats over the app, so on iOS 26 it is the system's glass sheet with no backdrop of its own.
+    /// Earlier systems draw it on the panel color with a hairline at its edge, as the Mac draws an aside.
+    func phoneSheetSurface() -> some View { modifier(PhoneSheetSurface()) }
+}
+
+private struct PhoneSheetSurface: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 26, *) { content } else {
+            content.presentationBackground {
+                PhoneTheme.panel.overlay { ContainerRelativeShape().strokeBorder(PhoneTheme.line) }
+            }
         }
+    }
+}
+
+/// INF-944 item 5, the captain's pick on INF-945: a card's choices in the Mac's row.
+/// Rounded rectangles at the Mac's size, the default filled with the accent, a danger choice in a red outline,
+/// the rest in a hairline outline. Each is drawn about 37 points tall inside a 44-point touch area.
+struct PhoneChoiceStyle: ButtonStyle {
+    enum Kind { case primary, secondary, danger }
+    let kind: Kind
+    @Environment(\.isEnabled) private var enabled
+
+    init(_ kind: Kind) { self.kind = kind }
+    init(primary: Bool, danger: Bool = false) { kind = primary ? .primary : danger ? .danger : .secondary }
+
+    func makeBody(configuration: Configuration) -> some View {
+        let shape = RoundedRectangle(cornerRadius: PhoneTheme.controlRadius, style: .continuous)
+        configuration.label
+            .font(PhoneFont.callout)
+            .foregroundStyle(kind == .primary ? PhoneTheme.onAccent : kind == .danger ? PhoneTheme.danger : PhoneTheme.text)
+            .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space2)
+            .frame(minHeight: PhoneChoiceRow.drawnHeight)
+            .background { if kind == .primary { shape.fill(PhoneTheme.accent) } }
+            .overlay { if kind != .primary { shape.strokeBorder(kind == .danger ? PhoneTheme.danger : PhoneTheme.line) } }
+            .opacity(!enabled ? 0.5 : configuration.isPressed ? 0.7 : 1)
+            .padding(.vertical, (44 - PhoneChoiceRow.drawnHeight) / 2)
+            .contentShape(Rectangle())
+    }
+}
+
+/// The Mac's footer row: choices keep their own width, sit at the trailing edge and wrap onto another line
+/// when they do not fit, the default last. An optional leading fact (the answered count) starts the first line.
+struct PhoneChoiceRow: Layout {
+    /// The Mac's button height; the touch area around it stays 44 points.
+    static let drawnHeight: CGFloat = 37
+    /// Subviews marked with this key start the first line at the leading edge.
+    struct Leading: LayoutValueKey { static let defaultValue = false }
+    private let gap = PhoneTheme.space2
+    /// Each choice carries its own vertical touch padding, so lines sit closer to keep the Mac's drawn gap.
+    private var lineGap: CGFloat { max(0, gap - (44 - Self.drawnHeight)) }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let lines = arrange(width: proposal.width ?? .infinity, subviews: subviews)
+        let width = proposal.width ?? lines.map(\.width).max() ?? 0
+        return CGSize(width: width, height: lines.reduce(0) { $0 + $1.height } + lineGap * CGFloat(max(0, lines.count - 1)))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for line in arrange(width: bounds.width, subviews: subviews) {
+            var x = bounds.maxX - line.trailingWidth
+            for index in line.items {
+                let size = subviews[index].sizeThatFits(.init(width: bounds.width, height: nil))
+                let leading = subviews[index][Leading.self]
+                subviews[index].place(at: CGPoint(x: leading ? bounds.minX : x, y: y + (line.height - size.height) / 2),
+                                      proposal: .init(width: min(size.width, bounds.width), height: size.height))
+                if !leading { x += size.width + gap }
+            }
+            y += line.height + lineGap
+        }
+    }
+
+    private struct Line { var items: [Int] = []; var width: CGFloat = 0; var trailingWidth: CGFloat = 0; var height: CGFloat = 0 }
+
+    private func arrange(width: CGFloat, subviews: Subviews) -> [Line] {
+        var lines: [Line] = []
+        var line = Line()
+        for index in subviews.indices {
+            let size = subviews[index].sizeThatFits(.init(width: width, height: nil))
+            let leading = subviews[index][Leading.self]
+            let added = line.items.isEmpty ? min(size.width, width) : size.width + gap
+            if !line.items.isEmpty && line.width + added > width {
+                lines.append(line); line = Line()
+            }
+            let step = line.items.isEmpty ? min(size.width, width) : size.width + gap
+            line.items.append(index); line.width += step
+            if !leading { line.trailingWidth += line.trailingWidth == 0 ? min(size.width, width) : size.width + gap }
+            line.height = max(line.height, size.height)
+        }
+        if !line.items.isEmpty { lines.append(line) }
+        return lines
     }
 }

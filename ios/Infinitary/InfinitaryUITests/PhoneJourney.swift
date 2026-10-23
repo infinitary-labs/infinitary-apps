@@ -41,6 +41,9 @@ import XCTest
     private func tab(_ name: String) {
         // iPhone exposes a TabBar; iPad's floating tabs are cells. Their accessible name is shared.
         let tab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", name)).firstMatch
+        // INF-944 item 4: receded tabs show only the current one; a tap brings the others back.
+        let bar = app.tabBars.firstMatch
+        if !tab.exists, bar.exists, bar.buttons.count == 1 { bar.buttons.firstMatch.tap() }
         XCTAssertTrue(tab.waitForExistence(timeout: 10)); tab.tap()
     }
 
@@ -154,22 +157,24 @@ import XCTest
             XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)
             XCTAssertLessThanOrEqual(sidebar.frame.maxX, app.scrollViews["card-scroll"].frame.minX)
             try await appearances("ipad-landscape")
-            // INF-589 item 16: Activity and Tasks are a segmented pair at the sidebar's top, each scrolling alone.
-            let activityRail = phoneSidebarRail("Activity", in: sidebar), tasksRail = phoneSidebarRail("Tasks", in: sidebar)
-            let activity = sidebar.staticTexts.matching(identifier: "activity-text").firstMatch
-            XCTAssertTrue(activity.waitForExistence(timeout: 10))
-            XCTAssertTrue(activityRail.isSelected)
-            XCTAssertLessThanOrEqual(tasksRail.frame.maxY, activity.frame.minY, "The pair sits at the sidebar's top")
-            tasksRail.tap()
+            // INF-589 item 16: Tasks and Activity are a segmented pair at the sidebar's top, each scrolling alone.
+            // INF-944 item 6: in the tabs' order, Tasks then Activity, opening on Tasks.
+            let tasksRail = phoneSidebarRail("Tasks", in: sidebar), activityRail = phoneSidebarRail("Activity", in: sidebar)
+            XCTAssertLessThan(tasksRail.frame.midX, activityRail.frame.midX, "Tasks comes before Activity")
+            XCTAssertTrue(tasksRail.isSelected)
             let waiting = sidebar.buttons["group-waiting"]
-            XCTAssertTrue(waiting.waitForExistence(timeout: 10), "Tasks opens at once, not under the whole Activity list")
+            XCTAssertTrue(waiting.waitForExistence(timeout: 10), "The sidebar opens on Tasks")
             XCTAssertTrue(waiting.isHittable)
-            XCTAssertFalse(activity.exists)
-            XCTAssertLessThanOrEqual(tasksRail.frame.maxY, waiting.frame.minY)
+            XCTAssertLessThanOrEqual(tasksRail.frame.maxY, waiting.frame.minY, "The pair sits at the sidebar's top")
             picture("ipad-landscape-tasks")
             activityRail.tap()
-            XCTAssertTrue(activity.waitForExistence(timeout: 10))
+            let activity = sidebar.staticTexts.matching(identifier: "activity-text").firstMatch
+            XCTAssertTrue(activity.waitForExistence(timeout: 10), "Activity opens at once")
             XCTAssertFalse(waiting.exists)
+            XCTAssertLessThanOrEqual(activityRail.frame.maxY, activity.frame.minY)
+            tasksRail.tap()
+            XCTAssertTrue(waiting.waitForExistence(timeout: 10))
+            XCTAssertFalse(activity.exists)
             XCUIDevice.shared.orientation = .portrait
             app.activate()
             XCTAssertTrue(sidebar.waitForNonExistence(timeout: 10))
@@ -264,6 +269,31 @@ import XCTest
         let taskKey = try XCTUnwrap(caughtUpFeed.last?["taskKey"] as? String)
         XCTAssertTrue(app.staticTexts[taskKey].exists, "Activity shows the actual computer-authored task key")
         picture("activity-caught-up")
+        // INF-944 item 4, the captain's answer: on iOS 26 the iPhone's tabs recede while a list scrolls down,
+        // and the message box follows them into their row, beside the one round button they leave.
+        if #available(iOS 26, *), UIDevice.current.userInterfaceIdiom == .phone {
+            let long = try await home("long-activity")
+            let newest = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", try XCTUnwrap(long["newest"] as? String))).firstMatch
+            XCTAssertTrue(newest.waitForExistence(timeout: 10), app.debugDescription)
+            let composer = app.otherElements["phone-composer"].firstMatch, bar = app.tabBars.firstMatch
+            let above = composer.frame
+            app.scrollViews["activity-list"].swipeUp()
+            let receded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 1"), object: bar.buttons)
+            XCTAssertEqual(XCTWaiter.wait(for: [receded], timeout: 10), .completed, app.debugDescription)
+            let button = bar.buttons.firstMatch
+            let edge = button.frame.maxX
+            let beside = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in composer.frame.minX > edge }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [beside], timeout: 10), .completed, "The message box moves beside the receded tabs")
+            XCTAssertGreaterThan(composer.frame.maxY, above.maxY, "The message box follows the tabs down")
+            verifyPhoneComposerBounds(app: app)
+            picture("activity-receded")
+            button.tap()
+            let returned = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 3"), object: bar.buttons)
+            XCTAssertEqual(XCTWaiter.wait(for: [returned], timeout: 10), .completed, app.debugDescription)
+            let back = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in composer.frame == above }, object: nil)
+            XCTAssertEqual(XCTWaiter.wait(for: [back], timeout: 10), .completed, "The message box returns above the tabs")
+            verifyPhoneComposerBounds(app: app)
+        }
         tab("Cards")
 
         // A background/foreground return keeps the home's epoch and exercises replay, not a reload.
@@ -629,6 +659,36 @@ import XCTest
         verifyPhoneComposerBounds(app: app)
         picture("cards-hero-dark")
         _ = try await home("appearance-light")
+        // INF-944 item 5 with INF-945's pick: the Mac's row, pinned at the card's foot with no scrolling,
+        // the default last at the right and every choice keeping a 44-point touch area.
+        let keepChoice = app.buttons["card-action-keep"], waitChoice = app.buttons["card-action-wait"]
+        XCTAssertTrue(keepChoice.isHittable, "The choices sit in view without scrolling")
+        XCTAssertTrue(waitChoice.isHittable)
+        // The answered count starts the first line, so the row wraps where its choices do not fit beside it.
+        if abs(keepChoice.frame.midY - waitChoice.frame.midY) < 1 {
+            XCTAssertLessThan(waitChoice.frame.maxX, keepChoice.frame.minX, "The default is drawn last")
+        } else {
+            XCTAssertGreaterThan(keepChoice.frame.minY, waitChoice.frame.minY, "The default is drawn last")
+            XCTAssertEqual(keepChoice.frame.maxX, waitChoice.frame.maxX, accuracy: 1, "Each line sits at the trailing edge")
+        }
+        // XCUI reports the 44-point area in fractions of a pixel, such as 43.99999999999994.
+        XCTAssertGreaterThanOrEqual(keepChoice.frame.height.rounded(), 44)
+        XCTAssertLessThan(keepChoice.frame.width, app.scrollViews["card-scroll"].frame.width / 2, "A choice keeps its own width")
+        // INF-944 item 3: a card minimized on the computer leaves the phone's stack and waits under Minimized.
+        let heroTitle = try XCTUnwrap(hero["title"] as? String)
+        _ = try await home("minimize-hero")
+        XCTAssertTrue(cardHeading(heroTitle).waitForNonExistence(timeout: 10), app.debugDescription)
+        let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
+        XCTAssertTrue(pager.waitForExistence(timeout: 10), app.debugDescription); pager.tap()
+        // The answered choice card shares the title under Past cards; the one to open is listed under Minimized.
+        let restore = app.buttons.matching(identifier: "minimized-card").matching(NSPredicate(format: "label == %@", heroTitle)).firstMatch
+        XCTAssertTrue(restore.waitForExistence(timeout: 10), app.debugDescription)
+        picture("cards-minimized-menu")
+        restore.tap()
+        XCTAssertTrue(cardHeading(heroTitle).waitForExistence(timeout: 10), "Opening a minimized card brings it back")
+        let restored = try await home("hero-state", method: "GET")
+        let restoredCard = try XCTUnwrap(restored["card"] as? [String: Any])
+        XCTAssertNil(restoredCard["minimized"], "The phone brings it back on the computer too")
         // INF-209: the native frame remains usable at the largest standard Dynamic Type size.
         app.terminate()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]

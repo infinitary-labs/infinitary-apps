@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-frame",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "Cards on iPhone and iPad fit their frame and scroll once",
+      "body": "In Infinitary on iPhone and iPad, a card's title stays at the top and its choices stay at the bottom, with everything between scrolling once inside the card's frame. The choices are the same compact row as on your Mac, with the recommended one last. Cards you minimize on your Mac leave the phone's stack too and wait under Minimized in the card menu, where opening one brings it back everywhere. The tabs now read Cards, Tasks and Activity. On iOS 26 the tabs shrink while you scroll, and the message box moves down beside them.",
+      "picture": {
+        "dark": "phone-card-frame-dark.webp",
+        "light": "phone-card-frame-light.webp",
+        "alt": "The foot of a card on iPhone: the reply box, then 0 of 1 answered in small mono type beside a compact outlined Not now button, with the filled Use this entrance button below it at the right."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

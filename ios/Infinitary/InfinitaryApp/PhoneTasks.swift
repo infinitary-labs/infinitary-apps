@@ -312,8 +312,8 @@ struct PhoneTaskRecord: View {
         VStack(spacing: PhoneTheme.space3) {
             if steerable { steerBox }
             if canInterrupt || canStart || canContinue {
-                // The default is lit and last, as on a card; Interrupt is the bordered secondary beside it.
-                HStack(spacing: PhoneTheme.space2) {
+                // The card's row (INF-944 item 5): the default lit and last at the trailing edge, Interrupt outlined beside it.
+                PhoneChoiceRow {
                     if canInterrupt { choice("Interrupt", id: "interrupt-task", primary: false) { change(.interrupt, args: [task.id], from: "interrupt-task") } }
                     if canStart { choice("Start", id: "start-task", primary: true) { change(.run, args: [task.id, "start-task"], from: "start-task") } }
                     if canContinue { choice("Continue", id: "continue-task", primary: true) { change(.run, args: [task.id, "continue-task"], from: "continue-task") } }
@@ -344,8 +344,7 @@ struct PhoneTaskRecord: View {
         Button(action: action) {
             Text(title).opacity(busy && pressed == id ? 0 : 1)
                 .overlay { if busy && pressed == id { ProgressView() } }
-                .frame(maxWidth: .infinity).padding(.vertical, PhoneTheme.space2)
-        }.modifier(PhoneRecordChoiceStyle(primary: primary)).accessibilityIdentifier(id)
+        }.buttonStyle(PhoneChoiceStyle(primary: primary)).accessibilityIdentifier(id)
     }
 
     private func section(_ title: String, _ text: String) -> some View {
@@ -380,15 +379,6 @@ struct PhoneTaskRecord: View {
                 await refresh()
             } catch { problem = error.localizedDescription }
         }
-    }
-}
-
-/// A card's choices: the default prominent, with the void's ink on the accent in either appearance, the rest bordered.
-private struct PhoneRecordChoiceStyle: ViewModifier {
-    let primary: Bool
-    @ViewBuilder func body(content: Content) -> some View {
-        if primary { content.buttonStyle(.borderedProminent).foregroundStyle(PhoneTheme.onAccent) }
-        else { content.buttonStyle(.bordered) }
     }
 }
 

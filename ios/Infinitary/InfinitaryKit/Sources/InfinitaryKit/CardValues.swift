@@ -54,6 +54,8 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
         value["replies"] != .bool(false) && (author == "firstmate" || (author == "crewmate" && value["taskId"].text != nil))
     }
     public var isPast: Bool { value["ending"] != .null }
+    /// Minimized on the Mac: still open, but off its stack.
+    public var minimized: Bool { value["minimized"] == .bool(true) }
     /// The evidence actor may be "frame"; name that frame's author, never the captain.
     /// Keep the stored ending untouched and reuse the shared owner's words after this typed projection.
     public var endingForWords: PhoneJSON {

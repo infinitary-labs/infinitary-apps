@@ -38,8 +38,9 @@ public enum PhoneCardRequest: String, Sendable {
     case `picture` = "inf:cards:picture"
     case `typeface` = "inf:cards:typeface"
     case `media` = "inf:cards:media"
+    case `minimize` = "inf:cards:minimize"
     public var changes: Bool {
-        switch self { case .act, .close, .seen, .reply: true; default: false }
+        switch self { case .act, .close, .seen, .reply, .minimize: true; default: false }
     }
 }
 

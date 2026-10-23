@@ -33,9 +33,9 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     @State private var viewport = CGSize.zero
     @State private var selection = 0
     @State private var messageContext = PhoneMessageContext()
-    @State private var rail = Rail.activity
+    @State private var rail = Rail.tasks
     @State private var footerHeight: CGFloat = 0
-    @State private var tabClearance: CGFloat = 0
+    @State private var tabClearance = PhoneTabClearance()
 
     init(session: ReadOnlySession, stage: Stage, tasks: Tasks?, composer: Composer?) {
         self.session = session; self.stage = stage; self.tasks = tasks; self.composer = composer
@@ -45,7 +45,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         UIDevice.current.userInterfaceIdiom == .pad && horizontalSize == .regular && viewport.width > viewport.height
     }
     private var sidebarWidth: CGFloat { min(320, viewport.width * 0.32) }
-    private enum Rail: Hashable { case activity, tasks }
+    private enum Rail: Hashable { case tasks, activity }
 
     var body: some View {
         tabs(footerSpace: composer == nil ? 0 : footerHeight)
@@ -53,7 +53,8 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             .overlay(alignment: .bottom) {
                 footer
                     .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
-                    .padding(.bottom, tabClearance)
+                    .padding(.bottom, tabClearance.bottom)
+                    .padding(.leading, tabClearance.leading).padding(.trailing, tabClearance.trailing)
             }
             .task(id: session.notice) {
                 // A reply notice leaves on its own; one about a new card waits until it is read or swiped.
@@ -108,13 +109,14 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         }
     }
 
-    // INF-589 item 16: Activity and Tasks as a segmented pair at the sidebar's top, each scrolling alone.
+    // INF-589 item 16: Tasks and Activity as a segmented pair at the sidebar's top, each scrolling alone.
+    // INF-944 item 6: in the tabs' order, opening on Tasks.
     private var sidebar: some View {
         VStack(spacing: 0) {
             if tasks != nil {
                 Picker("Show", selection: $rail) {
-                    Text("Activity").tag(Rail.activity)
                     Text("Tasks").tag(Rail.tasks)
+                    Text("Activity").tag(Rail.activity)
                 }.pickerStyle(.segmented).labelsHidden()
                     .padding([.horizontal, .top], PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
             }
@@ -142,30 +144,41 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                 .toolbar(wide ? .hidden : .visible, for: .tabBar)
                 .tabItem { Label { Text("Cards") } icon: { PhoneSymbol.cards.image } }.tag(0)
                 .badge(session.unreadCards)
-            noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list"))
-            .modifier(PhoneFooterSpace(height: footerSpace))
-            .toolbar(wide ? .hidden : .visible, for: .tabBar)
-            .tabItem { Label { Text("Activity") } icon: { PhoneSymbol.activity.image } }.tag(1)
+            // INF-944 item 6: Activity is the last tab.
             if let tasks {
                 noticed(tasks.background(PhoneTheme.background))
                     .modifier(PhoneFooterSpace(height: footerSpace))
                     .toolbar(wide ? .hidden : .visible, for: .tabBar)
                     .tabItem { Label { Text("Tasks") } icon: { PhoneSymbol.tasks.image } }.tag(2)
             }
+            noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list"))
+            .modifier(PhoneFooterSpace(height: footerSpace))
+            .toolbar(wide ? .hidden : .visible, for: .tabBar)
+            .tabItem { Label { Text("Activity") } icon: { PhoneSymbol.activity.image } }.tag(1)
         }
+        .modifier(PhoneTabRecede())
     }
 }
 
-/// Each tab keeps the floating footer's height clear. On iOS 26 that space is a bar, so the system's
-/// soft scroll edge sits behind the last turn and the capsule instead of a drawn panel.
+/// Each tab keeps the floating footer's height clear. On iOS 26 that space is a bar with the system's hard
+/// scroll edge (INF-944 item 6), a nearly opaque foot, so rows never show through the last turn or the capsule.
 private struct PhoneFooterSpace: ViewModifier {
     let height: CGFloat
     @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 26, *) {
             content.safeAreaBar(edge: .bottom, spacing: 0) { Color.clear.frame(height: height) }
+                .scrollEdgeEffectStyle(.hard, for: .bottom)
         } else {
             content.safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: height) }
         }
+    }
+}
+
+/// INF-944 item 4, the captain's answer: on iOS 26 the tab bar recedes while a long card or list scrolls down,
+/// and the message box follows the bar it is measured against.
+private struct PhoneTabRecede: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 26, *) { content.tabBarMinimizeBehavior(.onScrollDown) } else { content }
     }
 }
 
@@ -196,9 +209,7 @@ private struct PhoneNoticePill: View {
                 Text(notice.title).font(PhoneFont.callout).foregroundStyle(PhoneTheme.text).lineLimit(1)
             }
             .padding(.horizontal, PhoneTheme.space4).frame(minHeight: 44)
-            .background(PhoneTheme.surface, in: Capsule())
-            .overlay { Capsule().strokeBorder(PhoneTheme.line) }
-            .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
+            .modifier(PhoneNoticeSurface())
             .contentShape(Capsule())
         }
         .buttonStyle(.plain).frame(maxWidth: PhoneColumn.inside)
@@ -213,6 +224,17 @@ private struct PhoneNoticePill: View {
         .accessibilityHint("Opens the card")
         .accessibilityAction(named: "Dismiss", dismiss)
         .accessibilityIdentifier("phone-notice")
+    }
+}
+
+/// INF-944 item 4: the pill floats over content under the title, so on iOS 26 it is glass, as the bars are.
+private struct PhoneNoticeSurface: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 26, *) { content.glassEffect(.regular.interactive(), in: Capsule()) } else {
+            content.background(PhoneTheme.surface, in: Capsule())
+                .overlay { Capsule().strokeBorder(PhoneTheme.line) }
+                .shadow(color: .black.opacity(0.12), radius: 12, y: 6)
+        }
     }
 }
 

@@ -77,13 +77,20 @@ Neither reconnection nor discovery queues or retries a mutation.
 ## Cards on the phone
 
 `PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
-It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles and then a Past cards section.
-With no current card the chevrons and count hide, leaving a lone Past cards menu only while past cards exist.
+It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles, then a Minimized section and then a Past cards section.
+With no current card the chevrons and count hide, leaving a lone Minimized or Past cards menu only while such cards exist.
+The stack follows the Mac's: a card minimized on any Mac leaves the phone's stack, count and badge, and opening it from the Minimized section sends `inf:cards:minimize` with `false`, which brings it back on every Mac too.
+A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments, thread and reply row scroll between them in one native scroller.
+The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
+On a short stage, such as an iPhone on its side, where the pinned head and choices would take more room than the body keeps, the whole card scrolls in that one scroller instead.
 The session keeps which offers the stage drew while the person could see it, so the Cards tab's badge counts unread cards and the next chevron's dot marks an unread card ahead.
 Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
 Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card before the first card.
 Form and reply drafts live only in memory and survive paging.
 Native controls own the title, attribution, close, footer choices and reply field; a body cannot draw over or press them.
+The footer choices are the Mac's row (`PhoneChoiceStyle` in `PhoneChoiceRow`): rounded rectangles with 16-point words, drawn about 37 points tall inside a 44-point touch area, each keeping its own width at the trailing edge and wrapping onto another line when they do not fit.
+As on the Mac (`footerGroups`), the default is drawn last, filled with the accent; a danger choice has a red outline and the rest a hairline outline.
+The answered count sits in mono at the start of the first line, and a hairline sits above the row while the body runs on beneath it.
 A card carrying the host-validated `reviewTaskId` shows Review finding above its title, and first mate cards about tasks name their task in the existing meta line.
 A footer press collects a fresh form reading through the computer’s shared bridge, including question definitions and staged settings, and sends the mounted offer and lifecycle with its own interaction id.
 If the body has already failed, a later deliberate press may use its last observed draft, marked `fallback` with `no-fresh-reading` rather than fresh question evidence.
@@ -136,17 +143,20 @@ Card and task owners keep their selected records and replies.
 One content-sized footer floats over the tab container above the measured native bar, with each tab reserving its measured height; no native bar height is guessed.
 Only a tab bar attached to the same window contributes clearance; the iPad's top tabs leave a detached legacy bar whose stale frame must not move the footer.
 No panel sits behind it: the last turn is two bare lines over the message capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
-On iOS 26 each tab reserves that height as a safe-area bar, so the system's soft scroll edge sits behind the footer; on iOS 18 the page color fades in behind it.
+On iOS 26 each tab reserves that height as a safe-area bar with the system's hard scroll edge, a nearly opaque foot, so rows never show through the last turn or the capsule; on iOS 18 the page color fades in behind it.
+On iOS 26 the tab bar recedes while a card or list scrolls down and returns on the way back up, and the footer follows the bar it is measured against.
 While the keyboard is open, a leading Done button in the persistent native navigation bar and the Hide keyboard command (Shift-Command-K) dismiss it without sending or clearing the draft, making the tabs reachable after typing.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 The system tab accessory is fixed-height and cannot contain the composer’s turn, photo and error rows, so those rows stay in the growing footer instead.
-The iPad's wide landscape workspace places a sidebar beside the stage, with Activity and Tasks as a segmented pair at its top, each scrolling alone, and puts the composer at the stage's foot.
+The tabs read Cards, Tasks and Activity, in that order.
+The iPad's wide landscape workspace places a sidebar beside the stage, with Tasks and Activity as a segmented pair at its top, opening on Tasks, each scrolling alone, and puts the composer at the stage's foot.
 Portrait or narrow multitasking returns to tabs; layout measurement excludes the keyboard.
 `PhoneActivity` reads the computer's wording and optional task key, shows its kind dot and relative mono age, and orders newest first on both devices.
 The task key sits inline before the words at micro size, as on the Mac's feed line.
 It exposes the full local timestamp to accessibility.
 `PhoneSymbol` supplies native outline template images for the system's tinted chrome.
-`PhoneStyle` holds the shared looks: `phoneTitle` draws a sheet's title inline in Space Grotesk, the `.phone` field style is the app's field, and `phoneSheetSurface` puts a sheet on the panel color with a hairline at its edge.
+`PhoneStyle` holds the shared looks: `phoneTitle` draws a sheet's title inline in Space Grotesk, the `.phone` field style is the app's field, and `phoneSheetSurface` leaves a sheet on the system's glass on iOS 26 and puts it on the panel color with a hairline at its edge on iOS 18.
+The message capsule's glass takes corners concentric with the screen's.
 It also holds `SensoryFeedback.phone`, the one soft tap played when the computer accepts a message, a card's answer or reply, or a task's start, continue, interrupt or steer, and when `returns` counts the computer back; a page turn plays none.
 Join, Leave and Forget ask in alerts, which keep the cancel choice in view; on iOS 26 a confirmation dialog becomes a popover that hides it, and the Join request has no button to anchor to.
 
@@ -188,7 +198,7 @@ The timeline's events sit on a hairline rail in caption size, each time right-al
 The open record refreshes once a second, as the desktop transcript does, and no hidden record polls.
 Start and Continue come only from the Mac’s `moves`; Steer and Interrupt use the existing captain-owned task channels, never a phone worker.
 Interrupt stops a running turn and keeps its task idle and steerable; Continue is offered only when the Mac marks a task Interrupted, such as after recovery.
-The record's actions sit at its foot like a card's footer: Start or Continue full width and lit, and Interrupt bordered beside it.
+The record's actions sit at its foot in a card's footer row: Start or Continue filled with the accent, and Interrupt outlined beside it.
 The crewmate message box above them is a capsule whose arrow sends the steer.
 Tool results open on demand through their published read.
 Task cards, browser pages and rich transcript pictures remain outside this piece.
@@ -199,7 +209,7 @@ The phone retains the draft, asks the captain to check the Mac, and never queues
 A native draft, last turn, task and transcript are never written to the phone’s saved connection file.
 
 A new card or an answered reply raises an in-app notice while the app is open, after reading the Mac’s Notifications switch.
-The notice is a pill at the top of every tab, a New card or Reply label and the card's title; a tap opens that card on the Cards tab, and a swipe dismisses it.
+The notice is a pill at the top of every tab, interactive glass on iOS 26, a New card or Reply label and the card's title; a tap opens that card on the Cards tab, and a swipe dismisses it.
 It sits under the iPad's tabs, over the stage beside the landscape sidebar, and waits while an iPhone is on its side.
 A reply notice leaves after five seconds unless VoiceOver is running; a new-card notice stays until its card is read or the pill is swiped, and no pill points at the card already on the stage.
 The first snapshot and a reload seed the notice history without announcing old cards; a body-only revision is not new news.
@@ -316,7 +326,7 @@ It checks both immediate script stalls and a stall during answer collection, and
 A scripted card attempts network access, parent access, direct native messages, injected scripts and a footer effect; the test home records whether any forbidden request reaches it.
 The runner keeps the card interaction recording separately from the reconnect recording when `--demo` is selected.
 
-It also photographs join, Cards, Activity, the empty stage and details in both appearances, checks the largest standard Dynamic Type size, opens details by keyboard, and checks the iPad's landscape sidebar, its Activity and Tasks pair and return to portrait.
+It also photographs join, Cards, Activity, the empty stage and details in both appearances, checks the largest standard Dynamic Type size, opens details by keyboard, and checks the iPad's landscape sidebar, its Tasks and Activity pair opening on Tasks and return to portrait.
 Every native journey launch goes through `launchPhoneApp`, which renews the owned simulator's keyboard log subscription and waits for its startup before launching the app.
 A live subscription is not proof that it still supplies registrations after relaunch; the new subscription starts with no cached witnesses and observes both launch and the home's keyboard attachment.
 The runner joins the old output streams before appending the new subscription's gzip member, keeping all registrations in order.

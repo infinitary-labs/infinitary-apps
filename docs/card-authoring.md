@@ -910,7 +910,7 @@ The native phone reader shows the same label and task name without running the b
 Minimize card is the neutral minus before Maximize on every live decision, note and attention card, including maximized cards and cards with threads.
 It changes only the card’s optional saved `minimized` fact, through `CardService.setMinimized` and the views-only `inf:cards:minimize` request.
 It is independent from `awaiting`, resolution, offers, task status, the captain gate and the idle ladder; no message, feed line or notification is emitted.
-The Mac stack and pager omit minimized cards, while the phone’s read-only list is unchanged.
+The Mac stack and pager omit minimized cards, and so does the phone's stack, which lists them under Minimized in its pager menu (`docs/ios.md`, "Cards on the phone").
 Every Mac showing this first mate shares that fact, including after a restart.
 A crewmate's revision or answer brings the card back unread when that crewmate's turn ends, never at a report mid-turn (INF-926); the first mate's own answer brings it back at once.
 Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Minimize.

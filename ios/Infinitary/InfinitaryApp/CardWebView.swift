@@ -48,12 +48,19 @@ import SwiftUI
         view.allowsLinkPreview = false
         view.navigationDelegate = self; view.uiDelegate = self
         view.isOpaque = false; view.backgroundColor = .clear; view.scrollView.backgroundColor = .clear
+        // INF-944 items 1 and 2: the card's native scroller is the only one. The web view is always as tall as its
+        // body, takes no safe-area insets of its own and cannot be zoomed, so it never scrolls inside the card.
+        view.scrollView.isScrollEnabled = false
+        view.scrollView.bounces = false
+        view.scrollView.contentInsetAdjustmentBehavior = .never
+        view.scrollView.minimumZoomScale = 1; view.scrollView.maximumZoomScale = 1
+        view.scrollView.pinchGestureRecognizer?.isEnabled = false
         view.accessibilityIdentifier = "card-body"
         self.view = view
         // Agent HTML is assigned to an opaque iframe's srcdoc, never interpolated into this parent.
         // Its own hash policy narrows this parent's inline permission. Neither realm can use the network.
         view.loadHTMLString("""
-        <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1">
+        <!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
         <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' app-frame://runtime; style-src 'unsafe-inline'; frame-src about:; img-src data: app-frame:; font-src app-frame:; base-uri 'none'; form-action 'none'">
         <style>html,body{margin:0;padding:0;background:transparent}iframe{width:100%;border:0}</style>
         <script src="app-frame://runtime/CardHost.generated.js"></script></head><body></body></html>

@@ -125,6 +125,8 @@ export async function startPhoneHome(
   await new Promise<void>((resolve) => stalledServer.listen(0, "127.0.0.1", resolve));
   const stalledPort = (stalledServer.address() as { port: number }).port;
   let loseNextReply = false;
+  // The core's own id for the hero card (a first mate card's id is the core's, not the one asked for).
+  let heroId = "";
   const connect = (protocolVersion = PROTOCOL_VERSION) => {
     const connection = startConnection({
       dispatch: async (channel, args, actor) => {
@@ -137,6 +139,7 @@ export async function startPhoneHome(
             "inf:cards:reply",
             "inf:cards:seen",
             "inf:cards:media",
+            "inf:cards:minimize",
           ].includes(channel)
         )
           cardRequests.push({ channel, args });
@@ -386,7 +389,7 @@ export async function startPhoneHome(
         }
         case "POST hero-card": {
           const title = "Choose the harbour";
-          core.services.supervisor.addFirstmateCard({
+          heroId = core.services.supervisor.addFirstmateCard({
             id: "phone-hero",
             title,
             body: `<p>Choose which entrance to keep clear on the next chart.</p>
@@ -405,6 +408,29 @@ export async function startPhoneHome(
           result = { title };
           break;
         }
+        // INF-944 item 4: an Activity list longer than the screen, so scrolling it makes the tabs recede.
+        case "POST long-activity": {
+          for (let line = 1; line <= 30; line++)
+            core.services.tasks.recordReport(task.id, {
+              text: `Checked the harbour chart (${line})`,
+              summary: `Checked the harbour chart (${line})`,
+            });
+          result = { newest: "Checked the harbour chart (30)" };
+          break;
+        }
+        // INF-944 item 3: minimize the hero card on the computer, as the captain would there.
+        case "POST minimize-hero":
+          await core.dispatch("inf:cards:minimize", [heroId, true]);
+          result = { ok: true };
+          break;
+        case "GET hero-state":
+          result = {
+            card:
+              (
+                (await core.dispatch("inf:cards:list", [])) as { id: string; minimized?: boolean }[]
+              ).find((card) => card.id === heroId) ?? null,
+          };
+          break;
         // INF-499 #9: hold the real request before dispatch so a competing input has an observable window.
         case "POST hold-card-action":
           cardHold = { entered: cardBarrier(), released: cardBarrier() };

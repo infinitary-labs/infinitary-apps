@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "card-close-flash",
+      "kind": "fix",
+      "title": "Cards close without flashing back",
+      "body": "Closing a card no longer briefly shows it again as it disappears, whether another card follows or the stack is empty.",
+      "area": "cards",
+      "noPicture": "The correction is a single-frame animation rebound; a still picture cannot show the close remaining invisible until removal.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

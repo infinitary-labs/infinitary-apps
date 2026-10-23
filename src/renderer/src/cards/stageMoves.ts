@@ -1,3 +1,4 @@
+import { flushSync } from "react-dom";
 import { CARD_PEEK_STEP } from "../design/cards/CardStack";
 import { motionEase, motionToken } from "../design/motion";
 
@@ -77,10 +78,10 @@ export function playStageMove(
       { duration, easing, fill: "forwards" },
     );
     out.onfinish = () => {
-      // The drawing may stay mounted as an inert tab; release its final
-      // opacity/transform instead of leaving a finished effect on its next visit.
+      // Retire (or park) the drawing before releasing the filled end state.
+      // A queued React update would leave an opaque outgoing frame after cancel.
+      flushSync(done);
       out.cancel();
-      done();
     };
     running.push(() => out.cancel());
     if (incoming) running.push(playIncoming(move, incoming, incomingDone));
@@ -104,10 +105,10 @@ export function playStageMove(
     { duration, easing, fill: "forwards" },
   );
   out.onfinish = () => {
-    // The drawing may stay mounted as an inert tab; release its final
-    // opacity/transform instead of leaving a finished effect on its next visit.
+    // Retained tabs must be hidden before their finished effect is released,
+    // and free of that effect when they return.
+    flushSync(done);
     out.cancel();
-    done();
   };
   running.push(() => out.cancel());
   return stop;

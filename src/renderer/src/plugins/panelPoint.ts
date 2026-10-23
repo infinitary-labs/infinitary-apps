@@ -7,6 +7,7 @@ import {
 import { pointNeedsBoardMessage } from "@shared/personal/manifest";
 import { useMemo } from "react";
 import { z } from "zod";
+import { pressesSoFar } from "../app/presses";
 import { mainMessageRefusal, type ShellState, shownCard, useShellStore } from "../app/store";
 import { isView } from "../devices/viewWords";
 import { pluginHost } from "./host";
@@ -128,21 +129,28 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
     if (!reads) throw new Error(pointNeedsBoardMessage(call));
   };
   return {
+    // Each pointing counts the captain's presses before it waits on the
+    // gate: a press he begins meanwhile keeps focus (app/presses.ts).
     openTask: async (taskId) => {
       need("openTask");
+      const since = pressesSoFar();
       const id = idOf("openTask", taskId);
       const task = listed(id);
       if (!task || !(await page.gate())) return false;
-      await openTask({ taskId: id, ...(task.waitingCardId ? { cardId: task.waitingCardId } : {}) });
+      await openTask(
+        { taskId: id, ...(task.waitingCardId ? { cardId: task.waitingCardId } : {}) },
+        since,
+      );
       return true;
     },
     openRecord: async (taskId) => {
       need("openRecord");
+      const since = pressesSoFar();
       const id = idOf("openRecord", taskId);
       const task = listed(id);
       if (!task || !(await page.gate())) return false;
       if (task.minimizedCardId && !task.key)
-        return useShellStore.getState().focusCard(task.minimizedCardId);
+        return useShellStore.getState().focusCard(task.minimizedCardId, since);
       useShellStore.getState().openRecord(id);
       return true;
     },
@@ -166,13 +174,14 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
     },
     showCard: async (cardId) => {
       need("showCard");
+      const since = pressesSoFar();
       const id = z.string().min(1).max(128).safeParse(cardId);
       if (!id.success) throw new Error("point.showCard: name the card by its waitingCardId");
       const waits = boardOnScreen()?.tasks.some(
         (task) => task.waitingCardId === id.data || task.minimizedCardId === id.data,
       );
       if (!waits || !(await page.gate())) return false;
-      return useShellStore.getState().focusCard(id.data);
+      return useShellStore.getState().focusCard(id.data, since);
     },
     aim: async (taskId) => {
       need("aim");

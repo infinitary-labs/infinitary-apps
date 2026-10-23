@@ -174,7 +174,11 @@ import { mediatedFetchRequestSchema } from "./fetch";
  * straight from one frame to another (docs/ui-plugins.md, "Focus and the
  * frames"). The bridge hears it before any script of the body's and sends
  * it through what it held from its start, so the body cannot keep its frame
- * from saying it.
+ * from saying it. The one-way `pressed` says, the same way, that a press
+ * began in the frame's window - a pointer going down, or a key that is not
+ * a held key repeating - which the window's page does not hear either: a
+ * card the captain pointed at before it takes focus only if he began no
+ * press since (docs/keyboard.md, "Cards and frames").
  *
  * A document's MARKUP can be refreshed in place (FI3-1093): the host's
  * `markup` message carries the body's markup anew, and the bridge rewrites
@@ -1669,6 +1673,16 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       host.postMessage({ fm: VERSION, type: "focused", document: documentId, focused: type === "focus" }, "*");
     }, true);
   });
+  // A press beginning in the frame passes the page by too: the frame says
+  // so, the same way, before the press's own click or key is sent.
+  var repeatOf = Object.getOwnPropertyDescriptor(KeyboardEvent.prototype, "repeat").get;
+  window.addEventListener("pointerdown", function () {
+    host.postMessage({ fm: VERSION, type: "pressed", document: documentId }, "*");
+  }, true);
+  window.addEventListener("keydown", function (event) {
+    if (apply(repeatOf, event, [])) return;
+    host.postMessage({ fm: VERSION, type: "pressed", document: documentId }, "*");
+  }, true);
   post({ type: "ready" });
 })();`;
 
@@ -1677,7 +1691,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-W2vgMAsZn6oGteYOn9UYWV0kH2N/YgkkOuckdV/pLrk=";
+export const FRAME_BRIDGE_SHA256 = "sha256-Vl4bwle532/4bhsb43205qEDzVCqPtZ8SN3734s5aiY=";
 
 // --- the envelope, frame -> host -------------------------------------------
 
@@ -1862,6 +1876,8 @@ export const frameMessageSchema = z.discriminatedUnion("type", [
     document: z.string(),
     focused: z.boolean(),
   }),
+  /** A press began in the frame's own window. */
+  z.object({ fm: fmMarker, type: z.literal("pressed"), document: z.string() }),
   /** An Escape nothing in a card body used: the body asks to be left for its card. */
   z.object({ fm: fmMarker, type: z.literal("escape"), document: z.string() }),
   z.object({

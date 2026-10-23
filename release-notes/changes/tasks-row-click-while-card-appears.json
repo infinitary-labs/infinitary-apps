@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "tasks-row-click-while-card-appears",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A second click on a Tasks row opens its task",
+      "body": "When you click a task waiting on you and then quickly click another task in Tasks, the second task now opens. The card you asked for first still comes forward, and a click or key you begin while it appears now does what you meant.",
+      "noPicture": "A still picture cannot show a click that used to do nothing; the Tasks panel and the card look the same before and after.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

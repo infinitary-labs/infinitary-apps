@@ -537,6 +537,9 @@ export class FrameController {
       // The window's own focus guards read it (`guardFrameActivation`).
       case "focused":
         return;
+      // The window's own press count reads it (app/presses.ts).
+      case "pressed":
+        return;
       case "escape":
         if (message.document === this.documentId) this.spec.onEscape?.();
         return;

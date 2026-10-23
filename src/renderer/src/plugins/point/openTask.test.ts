@@ -14,8 +14,10 @@ const target = () => ({
 describe("opening a task", () => {
   it("brings the named card forward when the stack still holds it", () => {
     const shell = target();
-    expect(openTaskOn({ taskId: "t1", cardId: "card-1" }, shell)).toBe("card");
-    expect(shell.focusCard).toHaveBeenCalledWith("card-1");
+    // The captain's presses counted when he pointed go with it (INF-551).
+    const since = 3;
+    expect(openTaskOn({ taskId: "t1", cardId: "card-1" }, shell, since)).toBe("card");
+    expect(shell.focusCard).toHaveBeenCalledWith("card-1", since);
     expect(shell.openRecord).not.toHaveBeenCalled();
   });
 

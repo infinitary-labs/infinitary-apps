@@ -1,6 +1,7 @@
 import type { TaskDetail, TaskView } from "@shared/tasks";
 import { minimizedRowId, presentTask } from "@shared/taskWaiting";
 import { z } from "zod";
+import { pressesSoFar } from "../../app/presses";
 import { useShellStore } from "../../app/store";
 
 /** A pointing gesture at a task: it opens its waiting decision, or its record. */
@@ -10,20 +11,26 @@ export const openTaskValueSchema = z.strictObject({
 });
 export type OpenTaskValue = z.infer<typeof openTaskValueSchema>;
 export type OpenTaskTarget = {
-  focusCard: (cardId: string) => boolean;
+  focusCard: (cardId: string, since?: number) => boolean;
   openRecord: (taskId: string) => void;
 };
 export type OpenTaskOutcome = "card" | "record";
 
 /**
  * The named card forward while the stack still holds it; otherwise the
- * task's record at the front of the stack.
+ * task's record at the front of the stack. `since` is the captain's
+ * presses counted when he pointed (app/presses.ts): the card takes focus
+ * only if he began none since.
  */
-export function openTaskOn(value: unknown, target: OpenTaskTarget): OpenTaskOutcome {
+export function openTaskOn(
+  value: unknown,
+  target: OpenTaskTarget,
+  since?: number,
+): OpenTaskOutcome {
   const parsed = openTaskValueSchema.safeParse(value);
   if (!parsed.success) throw new Error(`open: ${parsed.error.message}`);
   const { taskId, cardId } = parsed.data;
-  if (cardId && target.focusCard(cardId)) return "card";
+  if (cardId && target.focusCard(cardId, since)) return "card";
   target.openRecord(taskId);
   return "record";
 }
@@ -48,15 +55,17 @@ function showableRequiredAction(detail: Pick<TaskDetail, "status" | "requiredAct
  * the page painted it, so the task's associations are refreshed and
  * reconciled with the focusable local stack first; a task with no reachable
  * decision whose required action the captain deferred gets its card shown
- * again (INF-358), and only a task with neither opens its record.
+ * again (INF-358), and only a task with neither opens its record. `since`
+ * is the captain's presses counted when he pointed, by default now: a
+ * press he begins while the task's associations are read is his to finish.
  */
-export async function openTask(value: OpenTaskValue): Promise<void> {
+export async function openTask(value: OpenTaskValue, since = pressesSoFar()): Promise<void> {
   const shell = useShellStore.getState();
   const standalone = shell.cards.find(
     (card) => card.minimized && minimizedRowId(card.id) === value.taskId,
   );
   if (standalone) {
-    shell.focusCard(standalone.id);
+    shell.focusCard(standalone.id, since);
     return;
   }
   let detail = await window.infinitary.tasks.detail(value.taskId);
@@ -80,6 +89,7 @@ export async function openTask(value: OpenTaskValue): Promise<void> {
   openTaskOn(
     { taskId: value.taskId, cardId: waitingCardId ?? undefined },
     useShellStore.getState(),
+    since,
   );
 }
 

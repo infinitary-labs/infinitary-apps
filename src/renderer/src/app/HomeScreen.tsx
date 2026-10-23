@@ -154,6 +154,7 @@ import { FirstRunGate } from "./FirstRunGate";
 import { focusTakenElsewhere } from "./focusRecovery";
 import { useCommandKeys } from "./keyHints";
 import { LastTurn } from "./LastTurn";
+import { pressesSoFar } from "./presses";
 import { usePromptFoot } from "./promptFoot";
 import { LAST_TURN_LANE, LAST_TURN_RISE, promptFoldsRails, promptShellMax } from "./promptGeometry";
 import { firstTabbable, lastTabbable } from "./regions";
@@ -868,19 +869,23 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     };
   }, [leaving, emptied, cardId]);
 
+  // The card pointed at takes focus once it appears (`focusCard`), unless
+  // the captain began a press since he pointed, which decides where focus
+  // goes (app/presses.ts). A request for a card that is no longer the one
+  // coming forward is let go, so it never fires on a later visit.
   const focusedVisit = useRef(0);
   useLayoutEffect(() => {
-    if (
-      cardFocusTarget !== cardId ||
-      !cardFocusRequest ||
-      focusedVisit.current === cardFocusRequest ||
-      !stage.revealed
-    )
+    if (cardFocusTarget === null) return;
+    if (cardFocusTarget !== cardId) {
+      useShellStore.setState({ cardFocusTarget: null });
       return;
+    }
+    if (!cardFocusRequest || focusedVisit.current === cardFocusRequest || !stage.revealed) return;
     const entry = shellRef.current?.querySelector<HTMLElement>('[data-stage-entry="shown"]');
     if (!entry || entry.inert) return;
     focusedVisit.current = cardFocusRequest;
-    focusWithRing(entry, { preventScroll: true });
+    if (pressesSoFar() === useShellStore.getState().cardFocusPresses)
+      focusWithRing(entry, { preventScroll: true });
     useShellStore.setState({ cardFocusTarget: null });
   }, [cardFocusTarget, cardFocusRequest, stage.revealed, cardId]);
 

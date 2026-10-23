@@ -2,6 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./app/App";
 import { hydratePreferences } from "./app/preferences";
+import { countPresses } from "./app/presses";
 import { registerDesignFixtures } from "./design/fixtures";
 import { installHostModules } from "./personal/hostModules";
 import { startPersonalPlugins } from "./personal/personalPlugins";
@@ -13,6 +14,10 @@ import "./design/styles.css";
 
 const container = document.getElementById("root");
 if (!container) throw new Error("Renderer root element missing");
+
+// The captain's presses are counted before anything else listens, so a
+// card pointed at knows whether a press began since (app/presses.ts).
+countPresses();
 
 // The app's own UI is the first plugin (docs/ui-plugins.md); it registers
 // before the first render so every registry is populated when read.

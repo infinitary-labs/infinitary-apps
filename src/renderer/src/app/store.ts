@@ -78,6 +78,7 @@ import { type MicLine, readMicAccess, settledMicLine } from "../voice/micAccess"
 import { voiceController } from "../voice/voiceController";
 import { detectVoiceSupport, insertVoiceTranscript } from "../voice/voiceInput";
 import { recognizerPlace } from "../voice/whisperClient";
+import { pressesSoFar } from "./presses";
 
 /**
  * Shell state on real orchestrator data. The phase model matches the design
@@ -613,6 +614,8 @@ export type ShellState = {
   /** A task or record pointed at a card: focus the new visit once its body is ready. */
   cardFocusRequest: number;
   cardFocusTarget: string | null;
+  /** The captain's presses counted when the pointing began: one begun since keeps focus where it is. */
+  cardFocusPresses: number;
   /** Cards that joined the stack behind the shown one and were never shown (WI-18). */
   unreadCardIds: string[];
   /** Seen, aged notes collapsed out of the stack into their task records (WI-18). */
@@ -954,8 +957,13 @@ export type ShellState = {
   closeTaskRecord: (taskId: string) => void;
   /** Closes one past card wherever it sits; the shown entry stays shown. */
   closePastCard: (cardId: string) => void;
-  /** Brings a stacked card to the front; false when it is not on the stack. */
-  focusCard: (cardId: string) => boolean;
+  /**
+   * Brings a stacked card to the front; false when it is not on the stack.
+   * It takes focus once it appears unless the captain began a press since
+   * `since`, his presses counted when the pointing began (app/presses.ts):
+   * by default, now.
+   */
+  focusCard: (cardId: string, since?: number) => boolean;
   minimizeCard: (cardId: string) => Promise<void>;
   applyCards: (cards: Card[]) => void;
   /** The captain dragged a card's edge; null returns it to the width the host decided. */
@@ -1155,6 +1163,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   cards: [],
   cardFocusRequest: 0,
   cardFocusTarget: null,
+  cardFocusPresses: 0,
   pendingCardActions: {},
   cardActionErrors: {},
   cardAnswers: {},
@@ -2279,7 +2288,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     forgetReadingPlace(pastReadingPlaceId(cardId));
     set((s) => closeHeld(s, (record) => "pastCardId" in record && record.pastCardId === cardId));
   },
-  focusCard: (cardId) => {
+  focusCard: (cardId, since = pressesSoFar()) => {
     const minimized = get().cards.find((card) => card.id === cardId)?.minimized;
     if (minimized) {
       if (changesOff(get().thisMac)) return false;
@@ -2289,7 +2298,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         .then(() => window.infinitary.cards.list())
         .then((cards) => {
           get().applyCards(cards);
-          get().focusCard(cardId);
+          get().focusCard(cardId, since);
         })
         .catch((error: unknown) => {
           set((s) => ({ cardActionErrors: { ...s.cardActionErrors, [cardId]: String(error) } }));
@@ -2306,6 +2315,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       cardIndex: index,
       cardFocusRequest: s.cardFocusRequest + 1,
       cardFocusTarget: cardId,
+      cardFocusPresses: since,
       collapsedCardIds,
       unreadCardIds: s.unreadCardIds.filter((id) => id !== cardId),
       phase: derivePhase(s.recording, s.cards, s.firstmateBusy, collapsedCardIds, s.records),

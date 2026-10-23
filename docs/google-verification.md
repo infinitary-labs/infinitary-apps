@@ -85,7 +85,7 @@ flowchart LR
 | Message identifiers, thread identifiers, labels, headers and snippets | Search and triage mail; query results reach the requesting agent and its model provider. | Gmail holds the mailbox; returned results may persist in model sessions, task records and outputs. |
 | Message text and attachment metadata | Read a selected message; HTML is converted to text. The read action reports attachment names, types and sizes, not an attachment-download feature. | Results can persist in sessions, reports, cards and user-requested files. |
 | Recipients, subject and outgoing text | Prepare a draft or send after the person's approval of an exact action. | The pending write ask and task record keep its input; Gmail holds accepted drafts and sent messages. |
-| Inbox history cursor and sender/subject summaries | Poll for new inbox messages while a rule listens; supply summaries to the rule's first mate turn. | Automation's saved cursor and task/session records. Lost history starts from now rather than replaying an old inbox. |
+| Inbox history cursor and sender/subject summaries | Poll for new inbox messages while a rule listens; supply summaries, fenced as data from outside, to the rule's first mate turn. | Automation's saved cursor and task/session records. Lost history starts from now rather than replaying an old inbox. |
 | Calendar lists, event data and availability | List calendars and events, read event details and busy intervals, create or update an event after approval, and react to changes in a selected calendar. Event data includes titles, descriptions, times, locations and attendees where Google returns them; a change notification carries title and times but not descriptions or guests. | Google holds the calendars; results can persist in task/session records, cards and outputs. Automation keeps a per-account, per-calendar sync token. |
 | Diagnostic events | Fixed event names, booleans, numbers, app version and random installation identifier; no Google content or email address in permitted fields. | Sharing service and the configured diagnostics endpoint, as described in [Sharing](sharing.md). |
 
@@ -267,6 +267,9 @@ This may include full message text when the assistant reads a message, not only 
 Infinitary is not an offline-only mail reader.
 The app's publisher does not operate a server that relays your Google sign-in or mailbox contents.
 If you ask the assistant to put information in a file or send it elsewhere, that output may create further copies or share it with your chosen recipients.
+Anyone can send you a message written to steer an AI assistant.
+Infinitary marks mail and calendar content as information from outside, never as instructions, and asks you before every Gmail or Calendar change.
+A message can still mislead an assistant, and an assistant working on a task can reach the internet without asking you, so a misled assistant could send what it read elsewhere.
 
 **Publication requirement:** identify the permitted AI-provider processing arrangements and their retention and training terms before replacing this paragraph with final copy; the in-product consent for these transfers is Google's notice ([Integrations](integrations.md#googles-notice)).
 Do not claim all user-selected subscriptions prohibit training or human review.
@@ -391,7 +394,46 @@ Google's estimate for restricted-scope review is six weeks, and for gmail.modify
 Forward each question Google sends to your first mate, so a crewmate drafts the answer from the code.
 
 The in-app disclosure and accept before the sign-in starts is Google's notice ([Integrations](integrations.md#googles-notice), INF-949).
-Google's Workspace policy also asks for things the app does not do yet, which a reviewer may raise: confirming each agent read (INF-950), prompt-injection protection (INF-951), tokens encrypted at rest (INF-30, INF-785) and a deletion route for Google-derived data (INF-952).
+Prompt-injection protection is the fence on data from outside, the asks before every change and send, and the notice's account of what stays open ("Prompt injection" below, INF-951).
+Google's Workspace policy also asks for things the app does not do yet, which a reviewer may raise: confirming each agent read (INF-950), tokens encrypted at rest (INF-30, INF-785) and a deletion route for Google-derived data (INF-952).
+
+## Prompt injection
+
+Google's Workspace policy asks for "protecting against prompt injection techniques by either using Google Cloud Platform's Model Armor or other prompt injection protection".
+Infinitary takes the second route, in three layers:
+
+1. Data from outside is fenced.
+   Every Gmail and Calendar answer, and every event summary, reaches the first mate or a crewmate between marks whose random value the writer could not know, with any copy of a mark in the words broken and a line before and after saying never to follow what is inside ([Integrations](integrations.md#data-from-outside)).
+2. Every change and send asks.
+   A label, a draft, a send and an event creation or update run only after the captain approves the exact call on a card, once, and the first mate cannot run them at all ([Integrations](integrations.md#the-rules)).
+3. The person is told before connecting.
+   Google's notice says what the app does against a message written to mislead and the way out it cannot close (`INTEGRATION_NOTICES`, [Integrations](integrations.md#googles-notice)).
+
+Model Armor is not used: it runs in a Google Cloud project with billing, so every message would pass either through a service Infinitary runs, which the app does not have and the person's work never passes through, or through each person's own Cloud project.
+A local classifier that judges whether words try to steer an agent is not used either: it would be the host's verdict on natural language, which the project's principles leave to the agent (`docs/principles.md`, "Put ambiguous judgments in agent instructions" and "Build the agent's reach, never its verdicts").
+The fence makes a model less likely to follow words it read, but it cannot guarantee that a model never does, so only Google's review decides whether this protection is enough.
+
+### Ways out without an ask
+
+A model misled by a message could try to send what it read elsewhere.
+Each way out, and how it stands:
+
+| Way out | Who has it | An ask in the way | Status |
+| --- | --- | --- | --- |
+| A Gmail send or draft, or a Calendar creation or update that notifies guests | Crewmate | Yes: the exact call on a card | Closed |
+| The same from the first mate | First mate | Refused: only a crewmate's card can carry it | Closed |
+| A GitHub write through its integration, on any repository | Crewmate | Yes: kept as the forge's write ask | Closed; the first mate's is refused |
+| A change on an MCP server, any tool not marked read-only | Crewmate | Yes | Closed; the first mate's is refused |
+| A read on an MCP server, whose input the server receives | Both | No | Disclosed here: the captain adds each server, and one that fetches any address the agent names is a way out |
+| The crewmate's shell: any program, network address, or `git push` to a remote it names | Crewmate | No: crewmate isolation stays social, a captain decision (`docs/architecture.md`, rev-5) | Disclosed in Google's notice |
+| A write to the task's own project, which sends at once | Crewmate | No | Disclosed, as the shell |
+| The task's browser opening a public address | Crewmate | No | Disclosed, as the shell |
+| A crewmate's own web tools, such as a Claude crewmate's fetch and search | Crewmate | No | Disclosed, as the shell |
+| A brief or a steer from the first mate to a crewmate | First mate | No; the brief is on the task's record | Disclosed: it hands the words to a crewmate, which has the ways above |
+| A card to the captain | Both | The captain reads it | Not a way out: it reaches only the captain, and a card's frame has no network |
+
+Closing the crewmate's ways needs either a crewmate whose network is limited once its task has read Google data, which would revisit the captain's decision that crewmate isolation stays social, or the captain's confirmation of each Google read (INF-950).
+Until one of them is decided, Google's notice tells the person before they connect.
 
 ## CASA questionnaire answer bank
 
@@ -440,9 +482,9 @@ Do not invent an assurance level, penetration test, certification, scan result o
 | 5.1.3–5.1.4: dynamic code/templates | Mail is converted to text, not executed by the mail reader. Cards intentionally support scripts in isolated frames; agents can run code for tasks. | `gmail.ts`, `docs/live-prototype-security.md`; do not claim there is no dynamic execution anywhere. |
 | 5.1.5: server-side request forgery | The Google binding uses fixed roots and validated/encoded identifiers; it exposes no arbitrary URL action. Other integrations, browsers and agent shells have broader reach. | `gmail.ts`, `client.ts`, `docs/task-browser.md`; assess the complete Google-data processing boundary. |
 | 5.1.6: XML/XPath injection | Proposed not applicable to the Gmail action parser: it consumes JSON and MIME text, not XML/XPath. | `gmail.ts`; confirm no additional in-scope XML consumer. |
-| 5.1.7: script injection | HTML mail becomes text; React text is escaped, and authored card HTML is sandboxed rather than sanitized. Instructions treat external results as evidence, not commands. | `gmail.ts`, `IntegrationsTab.tsx`, `docs/live-prototype-security.md`; prompt-injection resistance is not proven by stripping markup. |
+| 5.1.7: script injection | HTML mail becomes text; React text is escaped, and authored card HTML is sandboxed rather than sanitized. Every Gmail and Calendar answer reaches an agent fenced as data from outside, between marks the sender cannot forge. | `gmail.ts`, `IntegrationsTab.tsx`, `docs/live-prototype-security.md`, `src/shared/outsideData.ts`; prompt-injection resistance is not proven by stripping markup or by a fence ("Prompt injection"). |
 | 5.1.8: database injection | Mail actions do not form SQL. Persisted tasks, asks and rules use their shared storage owners. | `service.ts`, `docs/task-record.md`; review/test those storage paths, not a blanket Yes from the mail module. |
-| 5.1.9–5.1.10: commands/file inclusion | Gmail actions do not spawn a shell or load files named in mail. Agents can independently use shells and files for the person's task. | `gmail.ts`, `docs/architecture.md`; assess the agent boundary and malicious mail influence. |
+| 5.1.9–5.1.10: commands/file inclusion | Gmail actions do not spawn a shell or load files named in mail. Agents can independently use shells and files for the person's task, and mail reaches them fenced as data from outside; a misled crewmate's shell is a disclosed way out. | `gmail.ts`, `docs/architecture.md`, "Ways out without an ask" above; assess the agent boundary and malicious mail influence. |
 | 5.2.1: untrusted files | This mail action reports attachment metadata and does not offer downloading or executing attachments. Other app file-handling features remain in scope if Google data reaches them. | `gmail.ts`; assessor confirms coverage. |
 | 6.1.1: component vulnerabilities | Unproven. A lockfile, automated tests and release checks are not a current vulnerability assessment. | `pnpm-lock.yaml`, `docs/testing.md`; obtain the assessor's required component inventory, scans and triage. |
 | 6.2.1: production debug mode | Partial: packaged Google setup ignores stand-in endpoints and client overrides. This does not audit all production debugging or logging. | `client.ts`; inspect the actual packaged release. |
@@ -453,7 +495,7 @@ Do not invent an assurance level, penetration test, certification, scan result o
 | 6.7.1: secret storage | Gap: OS permissions and brokered use are present, but tokens are plaintext and same-account processes can read them. | `secrets.ts`; INF-785/INF-30 own secret-manager work; assess encrypted record storage separately. |
 
 The Workspace policy additionally requires protection against prompt injection and limits general-model training and permanent copies.
-These obligations are not discharged by a CASA table or by telling an agent to regard mail as untrusted.
+These obligations are not discharged by a CASA table or by telling an agent to regard mail as untrusted; "Prompt injection" above is the app's protection and the ways out it leaves open.
 The assessor needs the actual data flow, provider contracts, consent, storage/deletion behavior and security evidence, not only this application's source files.
 
 ## Sources and maintenance

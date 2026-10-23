@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "google-messages-written-to-mislead",
+      "kind": "improvement",
+      "title": "Mail and events reach your crew marked as information from outside",
+      "body": "What your first mate and crew read from Gmail and Calendar now arrives marked as information from outside, never as instructions, so a message written to steer an AI is harder to follow by mistake. Google's notice before you connect now says what this protects and what it cannot stop: a crewmate can still reach the internet without asking you.",
+      "area": "settings",
+      "picture": {
+        "dark": "google-messages-written-to-mislead-dark.webp",
+        "light": "google-messages-written-to-mislead-light.webp",
+        "alt": "Google's notice in Settings with its new group, Messages written to mislead: what Infinitary does and what it cannot stop, above Accept and continue to Google"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

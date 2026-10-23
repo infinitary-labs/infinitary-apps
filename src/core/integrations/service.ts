@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import {
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
@@ -14,6 +14,7 @@ import {
   integrationRenameWords,
   integrationRule,
 } from "@shared/integrations";
+import { type Fence, fenced, fencedAnswer } from "@shared/outsideData";
 import type { IntegrationAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
 import {
   type IntegrationAnswer,
@@ -129,6 +130,9 @@ const CONNECTION_REF = /^c-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a
 
 /** What holds a name now (`IntegrationsService.holder`). */
 type Holder = { row: Row } | { claim: IntegrationKind } | { reserved: string; signedOut: boolean };
+
+/** A fence's random value: 64 bits, which nobody who wrote the fenced words could guess. */
+const FENCE_VALUE_BYTES = 8;
 
 /** A refusal the catalog line's caller reads as the reason. */
 export class IntegrationRefusal extends Error {}
@@ -397,7 +401,9 @@ export class IntegrationsService {
     const redact = (text: string) => this.options.secrets.redact(text);
     try {
       const answer = await row.binding.call(row.connection.id, action, input, caller);
-      return { answer: { ...answer, text: redact(answer.text) } };
+      const text = redact(answer.text);
+      const label = answer.refused ? undefined : row.binding.fence;
+      return { answer: { ...answer, text: label ? fencedAnswer(text, this.fence(label)) : text } };
     } catch (error) {
       return {
         answer: {
@@ -590,7 +596,29 @@ export class IntegrationsService {
     const fields = row.connection.events?.find((spec) => spec.name === event)?.filters ?? [];
     if (Object.keys(filter ?? {}).some((key) => !fields.some((field) => field.name === key)))
       throw new IntegrationRefusal("This event does not declare that filter.");
-    return row.binding.look(row.connection.id, event, cursor, filter);
+    const look = await row.binding.look(row.connection.id, event, cursor, filter);
+    const label = row.binding.fence;
+    if (!label) return look;
+    return {
+      ...look,
+      items: look.items.map((item) => ({
+        ...item,
+        summary: fenced(item.summary, this.fence(label)),
+      })),
+    };
+  }
+
+  /**
+   * A fresh fence for one answer or summary of a kind whose words anyone
+   * can write (`IntegrationBinding.fence`): a random value nobody who wrote
+   * them could know, and the moment they were read.
+   */
+  private fence(label: string): Fence {
+    return {
+      label,
+      value: randomBytes(FENCE_VALUE_BYTES).toString("hex"),
+      at: (this.options.now ?? Date.now)(),
+    };
   }
 
   /** Stop whatever a binding started, as the app quits. */

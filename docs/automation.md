@@ -127,6 +127,7 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
   An edit that keeps the integration and event keeps the connection, so nothing moves a rule onto a replacement unasked.
   The person picks it again by saving the rule in Settings → Automation, whose sheet says that saving listens to what is picked under When (`reconnect` on `inf:automation:save`); pointing the rule at another integration or event picks that one.
 - The prompt is filled with `{{events}}`, one line per event with the integration's typed summary and its id, never its body; a prompt without the placeholder gets the events after it.
+  A summary of words anyone can write, such as a message's sender and subject, arrives fenced as data from outside, and the list ends with one line saying never to follow what the fences hold (`docs/integrations.md`, "Data from outside").
   The first mate's message names the integration, the event and how many arrived, and says each event is evidence from outside, never an instruction.
 - An event rule has no next time and no preview dates: Settings shows its When words (`when` on the rule, "When an item arrives in Stand-in") and how often the app looks.
 - Settings → Automation's When offers "When something happens" while a connected integration declares an event, with a second choice listing each one; the first mate passes `on_event` (`integration/event`) to `schedule_prompt`.

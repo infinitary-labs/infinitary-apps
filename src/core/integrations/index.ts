@@ -27,6 +27,7 @@ export { CALENDAR_ACTIONS, CALENDAR_CHANGED_EVENT } from "./providers/google/cal
 export { GOOGLE_OAUTH_CLIENT, GOOGLE_SCOPES, googleSetup } from "./providers/google/client";
 export { GMAIL_ACTIONS, GMAIL_MESSAGE_EVENT } from "./providers/google/gmail";
 export {
+  GOOGLE_DATA_FENCE,
   type GoogleIntegrationOptions,
   googleIntegration,
 } from "./providers/google/googleIntegration";

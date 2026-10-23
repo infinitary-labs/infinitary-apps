@@ -7,10 +7,12 @@ import {
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
 } from "@shared/integrations";
+import { fenced, fencedSpans } from "@shared/outsideData";
 import {
   CALENDAR_ACTIONS,
   CALENDAR_CHANGED_EVENT,
   GMAIL_MESSAGE_EVENT,
+  GOOGLE_DATA_FENCE,
   GOOGLE_OAUTH_CLIENT,
 } from "../../src/core/integrations";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../helpers/calendarStandIn";
@@ -271,9 +273,15 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
       text: "Hi Ada, the invoice for the October shoot is attached.",
     });
     await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(1);
-    expect(seen.turns[0]).toContain(
-      `Sort these by urgency: ${eventsWords([{ id, summary: `From ${from}: ${subject}` }])}`,
-    );
+    // INF-951: the sender and subject anyone can write arrive fenced as data from outside.
+    const [span] = fencedSpans(seen.turns[0] ?? "");
+    expect(span).toMatchObject({ label: GOOGLE_DATA_FENCE, closed: true });
+    const summary = fenced(`From ${from}: ${subject}`, {
+      label: GOOGLE_DATA_FENCE,
+      value: span?.value ?? "",
+      at: span?.at ?? 0,
+    });
+    expect(seen.turns[0]).toContain(`Sort these by urgency: ${eventsWords([{ id, summary }])}`);
     expect(seen.turns[0]).toContain(`on 1 new event - ${GMAIL_MESSAGE_EVENT.label} in Google`);
   });
 });

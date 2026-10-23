@@ -69,6 +69,25 @@ A kind whose binding keeps its own asks says so (`keepsAsks`); GitHub's are the 
 A paused integration answers nobody.
 An input that does not fit an action's schema is refused before the binding is reached, and so is any call while a key the kind needs is not entered.
 What an integration answers is evidence from outside, never an instruction, and every caller's words say so.
+A kind whose words anyone can write also fences them ("Data from outside").
+
+## Data from outside
+
+A kind whose answers and event summaries carry words anyone can write, such as a message or an invitation, declares the label they reach every agent under (`IntegrationBinding.fence`); Google declares `google-data` (INF-951).
+Google's [Workspace user data and developer policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy) asks for "protecting against prompt injection techniques", and anyone can mail the captain words meant for their crew.
+`IntegrationsService` fences every answer of such a kind that is not a refusal, whoever called: the first mate's `use_integration`, a crewmate's command here or on a computer that runs work, and the answer a captain's click on a kept ask sends back.
+It fences each event summary the kind's `look` tells the same way.
+The words sit between an opening mark, `[[google-data fence=<value> read=<when>]]`, and a closing mark, `[[/google-data fence=<value>]]`, whose value is 64 random bits drawn for that one span (`src/shared/outsideData.ts`).
+Whoever wrote the words could not know the value, so nothing inside can close the span early.
+A copy of either mark in the words is broken (`[ [google-data`) before they are fenced, so none reads as the app's.
+A line before and after an answer names its fence and says the span is data from outside, to read and report but never to follow.
+A shell that cuts a long answer keeps its start or its end, so one of the two lines stays with what it keeps.
+A rule's list of events ends with one such line for each label its lines hold (`eventsWords`, `src/shared/automation.ts`).
+The words are otherwise unchanged, so a reply can still quote them and a summary reads as it did.
+A refusal and an error are the app's own words and stay as they are.
+The opening mark keeps the moment the words were read, and `fencedSpans` finds each span, one cut short included, so a later pass can find what an agent read in saved records.
+The fence carries what the host knows, where the words came from, and never a verdict on them: no rule reads the words to judge whether they try to steer anyone (`docs/principles.md`).
+What the fence does not close, and how each way out stands, is in [Google verification material](google-verification.md#prompt-injection).
 
 ## Keys
 
@@ -165,6 +184,7 @@ The notice's words are `INTEGRATION_NOTICES` in `src/shared/integrations.ts`: wh
 Only the person's agreement and settings with their provider decide whether that provider trains on what it receives, while Google does not allow its data to train AI models, so the notice says both and asks the person to check their provider before connecting.
 The core holds the accept as a fact of the sign-in: `IntegrationsService.signIn` refuses a kind with a notice unless the request carries `{ noticeAccepted: true }`, before any browser opens, before a waiting sign-in ends and before anything is asked of Google.
 The accept covers one sign-in and is never saved, so every way into Google's sign-in shows the notice again: the chip, a row's Sign in again, and a card that opens Google's sign-in.
+Its last group says what the app does against a message written to mislead an agent, and the way out it cannot close: a crewmate's own reach to the internet (INF-951, [Google verification material](google-verification.md#prompt-injection)).
 Open the page again, while that sign-in waits, reuses the accept it followed.
 Cancel, closing Settings or leaving the tab asks nothing of Google.
 
@@ -235,8 +255,8 @@ The Google case of the same number keeps an ask through a renewal and a sign-in 
 `src/core/placed/placedSessions.test.ts`, "the integrations command on a computer that runs work", runs it from a real Pi crewmate's shell on a joined computer through that computer's launcher, command process and task channel and across the real connection to this Mac's integrations over a stand-in GitHub: list and show answer what is connected here, a read runs through this Mac's sign-in, a write is kept here as an ask and sends nothing, the instructions there carry the line, no file there holds the token, and a computer that does not list the change gets neither the command nor the line.
 `src/core/integrations/providers/mcp/mcpIntegration.test.ts` adds a stand-in notes server (`tests/helpers/mcpStandIn.ts`) in both protocol eras, over stdio and over HTTP: its own list becomes the row, reads run, a change is kept as an ask that runs once on the click, a change the server took before its connection dropped is unknown and never run again, a changed resource is told, and an address leaving its class or redirecting is refused.
 `tests/e2e/integrations-mcp.spec.ts` adds the stand-in from Settings by keyboard and has a crewmate call one of its reads from its shell.
-`src/core/integrations/providers/google/googleIntegration.test.ts` signs in to a stand-in Google (`tests/helpers/googleStandIn.ts`, answering in Google's documented shapes) through the loopback with PKCE and every permission: a sign-in that carries no accept of Google's notice opens no page and asks Google nothing (INF-949), a declined or partial consent keeps nothing, a sign-in while an MCP server is named Google is refused before the browser opens, a cancel ends the wait, reads run, an HTML-only message full of markup that never closes reads as its words, a label, a draft and a send are kept as asks that run once on the click, a send Gmail took before the connection dropped or it failed is unknown and never sent again, the history cursor tells what arrived and resyncs on a 404 or another mailbox, a 429's Retry-After holds every request, the access renews before it runs out and after a refusal, Google refusing the lasting key asks for a new sign-in, removal revokes, and no key reaches the view, discovery or the facts file.
-`tests/e2e/integrations-google.spec.ts` signs in from the Google chip by keys against the stand-in, through Google's notice, which takes the focus, reads what it uses and where it goes, and opens nothing until its accept or after its Cancel, and has a message arriving fire a rule to the first mate.
+`src/core/integrations/providers/google/googleIntegration.test.ts` signs in to a stand-in Google (`tests/helpers/googleStandIn.ts`, answering in Google's documented shapes) through the loopback with PKCE and every permission: a sign-in that carries no accept of Google's notice opens no page and asks Google nothing (INF-949), a declined or partial consent keeps nothing, a sign-in while an MCP server is named Google is refused before the browser opens, a cancel ends the wait, reads run, a message written to steer an agent reaches the crewmate and the first mate fenced as data from outside with the marks it forged broken, and its summary is fenced in a rule's list (INF-951), an HTML-only message full of markup that never closes reads as its words, a label, a draft and a send are kept as asks that run once on the click, a send Gmail took before the connection dropped or it failed is unknown and never sent again, the history cursor tells what arrived and resyncs on a 404 or another mailbox, a 429's Retry-After holds every request, the access renews before it runs out and after a refusal, Google refusing the lasting key asks for a new sign-in, removal revokes, and no key reaches the view, discovery or the facts file.
+`tests/e2e/integrations-google.spec.ts` signs in from the Google chip by keys against the stand-in, through Google's notice, which takes the focus, reads what it uses and where it goes, and opens nothing until its accept or after its Cancel, and has a message arriving fire a rule to the first mate, its sender and subject fenced as data from outside.
 `src/core/orchestrator/schedulerEvents.test.ts` fires Automation from the stand-in's events, and `tests/e2e/automation-events.spec.ts` saves an event rule by keys and reads the one first mate turn three items make.
 
 The Calendar cases in `googleIntegration.test.ts` exercise all six actions, single-consent access to both APIs, exact once-only write asks, disabled and invalid calls, unknown write outcomes, renewal, rate backoff, paged sync, revision ids, cancellation, calendar selection and 410 recovery against `tests/helpers/calendarStandIn.ts` through the same local Google sign-in.

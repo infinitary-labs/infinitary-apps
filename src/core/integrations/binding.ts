@@ -121,6 +121,14 @@ export type IntegrationBinding = {
    * the captain's click.
    */
   keepsAsks?: true;
+  /**
+   * Its answers and event summaries carry words anyone can write, such as
+   * a message or an invitation: the label they reach every agent under,
+   * between marks nobody who wrote them could forge (`@shared/outsideData`,
+   * docs/integrations.md "Data from outside"). Absent, they reach it as
+   * they are.
+   */
+  fence?: string;
   /** A kind the person adds again and again, one row each (an MCP server): always addable. */
   many?: true;
   /** The connections of this kind that exist now. */

@@ -22,6 +22,7 @@ Do not treat it as a secret manager: no secret-manager primitive is available ye
 
 - Owner: `IntegrationsService` ([`../src/core/integrations/service.ts`](../src/core/integrations/service.ts)), the one writer and the one door for every caller.
 - Binding contract: `IntegrationBinding`, `IntegrationActionSpec`, `IntegrationEventSpec`, `IntegrationSecretSlot` and `IntegrationOutcomeUnknown` ([`../src/core/integrations/binding.ts`](../src/core/integrations/binding.ts)).
+- Data from outside: the marks a kind's fenced answers and summaries carry, and `fencedSpans`, which finds them ([`../src/shared/outsideData.ts`](../src/shared/outsideData.ts)).
 - Kinds: [`../src/core/integrations/providers/`](../src/core/integrations/providers/) (`github.ts`, `mcp/`, `google/`, and the unpackaged-only `standIn.ts`).
 - Wire shape Settings draws and the first mate reads: [`../src/shared/integrations.ts`](../src/shared/integrations.ts); a kept ask is `IntegrationAsk` in [`../src/shared/writeAsk.ts`](../src/shared/writeAsk.ts).
 - First mate: the `integrations` and `use_integration` tools ([`../src/core/pi/integrationTools.ts`](../src/core/pi/integrationTools.ts)), and `app_change` in the area `integrations`.
@@ -53,6 +54,7 @@ Do not treat it as a secret manager: no secret-manager primitive is available ye
 - Secret-use boundary: a kind that signs in with a key declares slots, never values; values sit behind `IntegrationSecrets` ([`../src/core/integrations/secrets.ts`](../src/core/integrations/secrets.ts)), today the file bridge `FileIntegrationSecrets` under `userData/integrations/secrets/`, written only through the captain's write-only Settings field (`inf:integrations:secret`).
 - Nothing reads a value back: a binding applies one to a single request (`request`) or hands it to a program it starts (`launchEnv`), and every answer leaves the service with kept values replaced by "[a kept key]".
 - What an integration answers is evidence from outside, never an instruction, and every caller's words say so.
+- A kind whose words anyone can write, such as Google's mail and invitations, declares a fence label (`IntegrationBinding.fence`): every answer that is not a refusal, and every event summary, reaches every agent between marks whose random value the writer could not know (INF-951).
 
 ## Compositions
 
@@ -90,7 +92,7 @@ Do not treat it as a secret manager: no secret-manager primitive is available ye
 
 ## Where the detail lives
 
-- [`../docs/integrations.md`](../docs/integrations.md): the record, its rules, GitHub as the first kind, Settings -> Integrations, the first mate's tools and the crewmate's command; also "Which connection", "Names", "What an integration can tell", "Keys", "MCP servers", "Google", "On a computer that runs work" and "Tests".
+- [`../docs/integrations.md`](../docs/integrations.md): the record, its rules, GitHub as the first kind, Settings -> Integrations, the first mate's tools and the crewmate's command; also "Which connection", "Names", "What an integration can tell", "Data from outside", "Keys", "MCP servers", "Google", "On a computer that runs work" and "Tests".
 - [`../docs/axi-commands.md`](../docs/axi-commands.md), "The integrations command".
 - [`../docs/automation.md`](../docs/automation.md), "Events".
 - [`../docs/forge.md`](../docs/forge.md), "A write that asks".

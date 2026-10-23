@@ -368,6 +368,9 @@ export type IntegrationNotice = {
  * and the saved task records. Only the person's own provider terms and
  * settings decide whether that provider trains on what it receives, while
  * Google forbids its data training AI models, so the notice says both.
+ * It also says what the app does against a message written to steer an
+ * agent, and the way out it cannot close: a crewmate's own reach to the
+ * internet (INF-951, docs/google-verification.md "Prompt injection").
  */
 const GOOGLE_NOTICE: IntegrationNotice = {
   title: "Before you connect Google",
@@ -403,6 +406,19 @@ const GOOGLE_NOTICE: IntegrationNotice = {
         {
           name: "Saved task records",
           text: "What your first mate and crew read stays in that task's conversation, cards and files until you delete them. Removing Google does not delete them. Purge task data in Settings → General deletes every saved task on this computer.",
+        },
+      ],
+    },
+    {
+      heading: "Messages written to mislead",
+      items: [
+        {
+          name: "What Infinitary does",
+          text: "Anyone can send you words written to steer an AI. Infinitary hands your mail and events to your first mate and crew marked as information from outside, never as instructions.",
+        },
+        {
+          name: "What it cannot stop",
+          text: "A message can still mislead an AI model. A crewmate can reach the internet without asking you, so a misled crewmate could send what it read elsewhere.",
         },
       ],
     },

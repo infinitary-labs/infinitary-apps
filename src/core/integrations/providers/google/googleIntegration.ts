@@ -39,6 +39,14 @@ import { GoogleSignInStore } from "./store";
  */
 
 const GOOGLE_ID = "google";
+
+/**
+ * The label Gmail and Calendar answers and event summaries reach every
+ * agent under (INF-951): anyone can write a message or an invitation, so
+ * its words sit between marks they could not forge, as data from outside
+ * (docs/integrations.md, "Data from outside").
+ */
+export const GOOGLE_DATA_FENCE = "google-data";
 const ACCESS = "access_token";
 const REFRESH = "refresh_token";
 
@@ -247,6 +255,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     kind: "google",
     // One Google sign-in: its name stays its own while signed out (INF-946).
     identity: { id: GOOGLE_ID, name: INTEGRATION_KIND_NAMES.google },
+    fence: GOOGLE_DATA_FENCE,
     connections: () => {
       const record = store.read();
       if (!record) return [];

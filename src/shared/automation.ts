@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { fencedListReminder, fencedSpans } from "./outsideData";
 
 /**
  * Automation (docs/automation.md): the schedules Firstmate runs, as rules a
@@ -199,9 +200,20 @@ export function scheduleDetailsFor(
 /** One event an integration told, as a run carries it: its id there and its typed summary. */
 export type AutomationEventItem = { id: string; summary: string };
 
-/** The events as `{{events}}` fills them: one line each, its summary and its id. */
+/**
+ * The events as `{{events}}` fills them: one line each, its summary and its
+ * id. A summary of words anyone can write arrives fenced as data from
+ * outside (`@shared/outsideData`), and the list ends with one line saying
+ * so for each label its lines hold (INF-951).
+ */
 export function eventsWords(items: readonly AutomationEventItem[]): string {
-  return items.map((item) => `- ${item.summary} (id ${item.id})`).join("\n");
+  const labels = new Set(
+    items.flatMap((item) => fencedSpans(item.summary).map((span) => span.label)),
+  );
+  return [
+    ...items.map((item) => `- ${item.summary} (id ${item.id})`),
+    ...[...labels].map(fencedListReminder),
+  ].join("\n");
 }
 
 /** The planned moment as a prompt says it: "Sunday, October 11, 2026 at 7:00 AM PDT". */

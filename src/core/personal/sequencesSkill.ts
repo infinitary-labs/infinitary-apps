@@ -171,9 +171,9 @@ you proved it: pointed at it, reasoned it through, or ran it.
 - retrieval: a bounded read-only lookup, extraction, factual summary or mechanical
   comparison of existing evidence. Any required non-retrieval work excludes it;
   diagnosis, conflict explanation and reproduction remain research or reproduce.
-  State the question and sources faithfully and pass typed read-only; choose no kind
+  State the question and sources faithfully, read-only; choose no kind
   yourself.
-- research: investigation beyond that boundary.
+- research: investigation beyond that boundary, read-only.
 For either: one drawn card with citations, revised on my questions. Separate fact from
 inference; my premise is not fact. "Not established" names missing or conflicting
 evidence, not permission to broaden.

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "build-preview-keeps-the-build",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Choosing on a build's preview no longer ends the build",
+      "body": "A crewmate building an approved plan can show you a preview to pick from before it builds that part. Your choice on that preview now lets the build go on, instead of closing the task as answered while it was still working.",
+      "noPicture": "Nothing on screen changes: the task simply stays open after the choice.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

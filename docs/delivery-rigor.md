@@ -149,15 +149,18 @@ Nothing else moves the rigor: not the intelligence tier - the tier routes models
 ### The deliverable axis (Task B)
 
 Rule 0's first case is its own fact on the record.
-`WorkShape.deliverable` is `answer` or `change`, derived by the host at the mint from two typed facts it already holds (`deliverableFor` in `src/core/orchestrator/intentBrief.ts`): a `plan`, `research`, `retrieval` or `reproduce` kind off the classifier (a `teach` kind is always a `change`: its card is never the end of the work), or the typed `read-only` constraint - which is the first mate relaying that the captain wants no changes.
-Everything else is a change, `unclear` included (an unknown piece of work is treated as work).
+`WorkShape.deliverable` is `answer` or `change`, derived by the host at the mint from the one typed fact the first mate declares (`deliverableFor` in `src/core/orchestrator/intentBrief.ts`): the `read-only` constraint, which says the work ships nothing.
+The sequences document marks every plan, retrieval, research and reproduce step read-only, and the constraint's description says a task without it ships a change.
+Everything else is a change, and a `teach` kind is always a change even with the constraint: its card is never the end of the work.
+For work the first mate commissioned, the classifier's kind only routes, never decides the deliverable (INF-990 friction 7: a build whose goal asked for a preview first was classified a plan, so its brief said answer only and the captain's choice on the preview closed it).
 A plan is its own answer step since contract v4.6 (`docs/sequences.md`), so the retired `plan-first` constraint - which a stored intent may still name - changes nothing here.
 No agent judges it, the same way none judges the tier or the rigor.
 
 An answer task is told so, in the one place the visual-density audit measured as the channel every model family obeys - the brief.
 It gets no `Delivery:` line, no rigor section, and `renderAnswerShapeSection` says the rest as facts about the task: its card is the deliverable, its worktree is a laboratory that is discarded when the task closes, and it commits nothing, pushes nothing, and opens no pull request.
 The host does not only ask: `settle_task merge-pr` and `land` are refused on it, a card carrying a settle effect is refused at the card boundary the way the personal workspace's is, and its worktree is removed whatever it holds with nothing saved first (every other closed task's unlanded work is saved on a hidden kept ref before its tree goes) - the record's own `deliverable` is what says the worktree was scratch.
-A crewmate's follow-up is held to the same brief, though it has no intent to render from: its brief was written at filing, with the `Delivery:` line last, so when the classifier calls it an answer the host drops that line (`withoutDeliveryLine`) and appends the same answer-shape section.
+A crewmate's follow-up has no intent, so nobody declared it: for it alone the classifier's kind decides, a `plan`, `research`, `retrieval` or `reproduce` kind being an answer.
+It is held to the same brief, though it has no intent to render from: its brief was written at filing, with the `Delivery:` line last, so when its kind makes it an answer the host drops that line (`withoutDeliveryLine`) and appends the same answer-shape section.
 Its tools follow the same stamped deliverable, so an answer is never told to open a pull request it has no `open_change` to open (FI3-598).
 A follow-up the classifier calls a change gets that line written again when it starts, from its own record's posture - the project's, or an ask made of the follow-up itself - which is the one its merge takes (`withDeliveryLine`, FI3-733).
 An ask made of the origin never reaches it, and a posture the project changed while it waited does.

@@ -59,8 +59,8 @@ export type WorkKind = z.infer<typeof workKindSchema>;
  * resolves that card. A `change` task ships something through a gate and
  * is everything the fleet did before this axis existed.
  *
- * The HOST derives it at the mint from facts it already holds - the
- * classifier's kind and a typed `read-only` constraint - the same way it
+ * The HOST derives it at the mint from the one typed fact the Firstmate
+ * declares - a `read-only` constraint (`deliverableFor`) - the same way it
  * derives the tier and the rigor. No agent judges it.
  */
 export const deliverableSchema = z.enum(["answer", "change"]);

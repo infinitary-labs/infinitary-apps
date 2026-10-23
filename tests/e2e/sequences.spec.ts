@@ -484,7 +484,7 @@ test("a bug that reproduces: the fix starts on the reproduction, and the reprodu
   const fix = await rowTitled(page, SEQ_BUG_YES.fix);
   const fixDetail = detailOf(page, fix.id);
   const reproduceDetail = detailOf(page, reproduce.id);
-  // The reproduce step is an answer, as a real classifier sorts it.
+  // The reproduce step is an answer: the Firstmate declares it read-only, as its guide says.
   await expect.poll(reproduceDetail, { timeout: 30_000 }).toMatchObject({
     deliverable: "answer",
   });

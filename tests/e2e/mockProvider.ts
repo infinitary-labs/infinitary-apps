@@ -3483,6 +3483,7 @@ const SEQ_ASKS: SeqAsk[] = [
     now: {
       title: SEQ_BUG_YES.reproduce,
       goal: `Reproduce the meter reset ${SEQ_REPRODUCE_GOAL} yes or reproduced: no.`,
+      constraints: [{ kind: "read-only" }],
     },
     later: { title: SEQ_BUG_YES.fix, goal: `Fix the meter reset ${SEQ_FIX_GOAL}.` },
   },
@@ -3492,6 +3493,7 @@ const SEQ_ASKS: SeqAsk[] = [
     now: {
       title: SEQ_BUG_SHOWN.reproduce,
       goal: `Reproduce the clock drift ${SEQ_REPRODUCE_GOAL} yes or reproduced: no.`,
+      constraints: [{ kind: "read-only" }],
       // The captain asked to see this step's own result: not an internal step.
       captainAsked: true,
     },
@@ -3503,6 +3505,7 @@ const SEQ_ASKS: SeqAsk[] = [
     now: {
       title: SEQ_BUG_NO.reproduce,
       goal: `Reproduce the dock flicker ${SEQ_REPRODUCE_GOAL} yes or reproduced: no.`,
+      constraints: [{ kind: "read-only" }],
     },
     later: { title: SEQ_BUG_NO.fix, goal: `Fix the dock flicker ${SEQ_FIX_GOAL}.` },
   },

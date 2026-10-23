@@ -408,23 +408,27 @@ export function renderRigorSection(rigor: Rigor): string {
 
 /**
  * What this task DELIVERS, derived by the host (crew-posture
- * rationalization Task B, captain F1 A of 2026-09-20). Two facts decide it,
- * both already the host's: the kind the classifier established - `plan`,
- * `research`, `retrieval` and `reproduce` find something out rather than ship it -
- * and a typed `read-only` constraint, which is the Firstmate relaying that
- * the captain wants no changes. Everything else is a `change`, including
- * `unclear` (an unknown piece of work is treated as work).
- *
- * This replaced `answerShaped`, which guessed at the same question with a
- * regular expression over free constraint text. The kind and the
- * constraint are typed facts; nothing here reads prose.
+ * rationalization Task B, captain F1 A of 2026-09-20). For work the
+ * Firstmate commissioned, one typed fact decides it: the `read-only`
+ * constraint, its declaration that the work ships nothing. Without it the
+ * task is a `change`, and the classifier's kind only routes (INF-990
+ * friction 7: a build whose goal asked for a preview first was classified a
+ * plan, so its brief said answer only and the preview's click closed it).
+ * A crewmate's follow-up has no intent and so no declaration: its kind
+ * decides, `plan`, `research`, `retrieval` and `reproduce` being answers.
+ * A `teach` task is never an answer: a choice on a lesson card must never
+ * close the subject.
  */
-export function deliverableFor(intent: SpawnIntent, kind: WorkKind | undefined): Deliverable {
-  // A lesson loop is neither an answer nor a change, but it must never be an
-  // answer task: a captain's choice on its card would close the subject.
+export function deliverableFor(
+  intent: SpawnIntent | undefined,
+  kind: WorkKind | undefined,
+): Deliverable {
   if (kind === "teach") return "change";
-  if (kind === "plan" || kind === "research" || kind === "retrieval" || kind === "reproduce")
-    return "answer";
+  if (!intent) {
+    return kind === "plan" || kind === "research" || kind === "retrieval" || kind === "reproduce"
+      ? "answer"
+      : "change";
+  }
   return (intent.constraints ?? []).some((constraint) => constraint.kind === "read-only")
     ? "answer"
     : "change";

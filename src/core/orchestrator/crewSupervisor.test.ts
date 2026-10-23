@@ -8593,7 +8593,7 @@ describe("the task graph (R1)", () => {
   });
 
   it.each([false, true])(
-    "retrieval is an answer without a read-only constraint (queued: %s)",
+    "retrieval with its read-only constraint is an answer, routed low (queued: %s)",
     async (queued) => {
       const crew = fakeCrewmate();
       const classify = vi.fn(async () => ({
@@ -8609,7 +8609,10 @@ describe("the task graph (R1)", () => {
       });
       const { taskId } = await supervisor.commission({
         title: "Read the retry limit",
-        intent: intentOf("Quote the retry limit from the config"),
+        intent: {
+          ...intentOf("Quote the retry limit from the config"),
+          constraints: [{ kind: "read-only" }],
+        },
         ...(queued ? { startAfter: { at: Date.now() - 1000 } } : {}),
       });
       if (queued) {
@@ -19718,7 +19721,7 @@ describe("the deliverable axis (Task B)", () => {
     const harness = setup(crewmate, { classifier: research, ...extras });
     const { taskId } = await harness.supervisor.commission({
       title: "Why is the meter idle",
-      intent: intentOf("why is nothing running?"),
+      intent: { ...intentOf("why is nothing running?"), constraints: [{ kind: "read-only" }] },
     });
     await tick();
     return { ...harness, taskId };
@@ -19799,6 +19802,61 @@ describe("the deliverable axis (Task B)", () => {
       next: `This receipt is not the plan. For any choice that files, starts or saves work, use read to recover the full report, closing offer and submitted answers before acting. Judge the choice by meaning, not its label: ${APPROVE_AND_BUILD}, ${START_THE_NEXT_STEP} and ${SAVE_AND_DEFER} are examples, not an allowlist. Routine acknowledgements and choices that abandon work (for example, ${ABANDON}) need no read. Follow HANDOFF: reuse an existing successor for authorized work, save deferred work unstarted, and keep design-only and later gates.`,
     });
     expect(crewmate.steer).not.toHaveBeenCalled();
+  });
+
+  /**
+   * INF-990 friction 7: INF-945 carried no read-only constraint, its goal
+   * asked for a preview before the buttons were built, the classifier
+   * called it a plan, and the captain's "Build with this look" on the
+   * preview closed the build as answered mid-work.
+   */
+  it("keeps a build with no read-only constraint open when its preview card is chosen on, whatever the classifier calls it", async () => {
+    const crewmate = fakeCrewmate();
+    let asked = 0;
+    const harness = setup(crewmate, {
+      classifier: {
+        classify: async () => {
+          asked += 1;
+          return { kind: "plan", source: "classifier:xai/grok-cheap", version: "kc1-abc" };
+        },
+      },
+    });
+    const { supervisor, tasks, specs, cards } = harness;
+    const { taskId } = await supervisor.commission({
+      title: "Build the agreed iOS app card, Activity and tab fixes",
+      intent: {
+        goal: "Build the approved INF-944 plan for the Infinitary iOS app as one change. Before deciding the action buttons, first show the captain a playable preview comparing the Mac's row buttons with glass buttons on its own card, and build the buttons only after he picks.",
+        userWords: "the action buttons are WAY too big... looking very odd on the phone.",
+        constraints: [
+          {
+            kind: "free",
+            text: "implement: on request until I accept, then Queued. Ground it on the plan (basis) - its recorded spec and my choice - from the plan's branch if it has one; on Save and defer it waits on request until I press Start or ask. The simplest change that meets the accepted plan.",
+          },
+        ],
+      },
+    });
+    await tick();
+    expect(asked).toBe(1);
+    expect(tasks.get(taskId)?.shape).toMatchObject({ kind: "plan", deliverable: "change" });
+    const brief = crewmate.promptCalls[0] ?? "";
+    expect(brief).not.toContain("deliverable is an answer");
+    expect(brief).toContain("Delivery: ");
+    specs[0]?.onCard?.({
+      title: "Pick the look for the phone card's choices",
+      body: "<p>I recommend the Mac's row for the card's choices.</p><p>Both looks keep the Mac's size.</p>",
+      asking: true,
+      actions: [
+        { id: "hold-build", label: "Hold the build" },
+        { id: "build-with-pick", label: "Build with this look", default: true },
+      ],
+    });
+    await tick();
+    const card = cards().find((entry) => entry.taskId === taskId) as Card;
+    specs[0]?.onReport?.("The preview is up; I build the rest of the approved plan meanwhile.");
+    supervisor.act(card.id, "build-with-pick");
+    await tick();
+    expect(tasks.get(taskId)?.status).toBe("active");
+    expect(crewmate.aborts).toHaveLength(0);
   });
 
   /**
@@ -20074,7 +20132,7 @@ describe("the deliverable axis (Task B)", () => {
     expect(supervisor.cardsSnapshot().map((entry) => entry.id)).toContain(fmCardId);
   });
 
-  it("re-renders a queued row's brief when the classifier turns it into an answer", async () => {
+  it("keeps a queued row a change when the classifier calls it research (INF-990 friction 7)", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks } = setup(crewmate, { classifier: research });
     const { taskId } = await supervisor.commission({
@@ -20089,13 +20147,12 @@ describe("the deliverable axis (Task B)", () => {
 
     await supervisor.sweepGates(Date.now());
     await tick();
-    // The gate-open classification made it an answer, and the brief the
-    // crewmate actually ran from says so instead of stating a posture it
-    // does not have.
-    expect(tasks.get(taskId)?.shape?.deliverable).toBe("answer");
+    // The gate-open classification routes it, and never makes undeclared
+    // work an answer: the brief the crewmate ran from keeps its posture.
+    expect(tasks.get(taskId)?.shape).toMatchObject({ kind: "research", deliverable: "change" });
     const brief = crewmate.promptCalls[0] ?? "";
-    expect(brief).not.toContain("Delivery: ");
-    expect(brief).toContain("commit nothing, push nothing, and open no pull request");
+    expect(brief).toContain("Delivery: ");
+    expect(brief).not.toContain("deliverable is an answer");
   });
 
   /**
@@ -20628,7 +20685,7 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
       repos.configure(view.id, { delivery: "direct-pr", autonomy: false });
       const { taskId } = await supervisor.commission({
         title: "Why is the meter idle",
-        intent: intentOf("why is nothing running?"),
+        intent: { ...intentOf("why is nothing running?"), constraints: [{ kind: "read-only" }] },
         repoId: view.id,
       });
       await tick();
@@ -22109,6 +22166,12 @@ describe("closing an answer task another task builds on", () => {
           : ({ kind: "implement", source: "classifier:test", version: "kc1" } as const),
   };
 
+  /** A plan or reproduce step carries typed read-only, as the sequences document says. */
+  const stepIntent = (text: string): SpawnIntent => ({
+    ...intentOf(text),
+    constraints: [{ kind: "read-only" }],
+  });
+
   /** A crewmate that reports and goes idle. */
   async function reportAndIdle(crew: FakeCrewmate, taskId: string, text: string) {
     crew.emit({ type: "assistant_delta", taskId, text });
@@ -22127,7 +22190,9 @@ describe("closing an answer task another task builds on", () => {
     const { supervisor, tasks } = harness;
     const spawned = await supervisor.commission({
       title,
-      intent: intentOf(title.toLowerCase()),
+      intent: /^(Plan|Reproduce)/.test(title)
+        ? stepIntent(title.toLowerCase())
+        : intentOf(title.toLowerCase()),
       ...(internalStep ? { shape: { internal_step: true } } : {}),
     });
     await tick();
@@ -22198,7 +22263,7 @@ describe("closing an answer task another task builds on", () => {
     // names no basis of the check, linked as a recorded wait.
     const check = await supervisor.commission({
       title: "Reproduce the live cases on the meter",
-      intent: intentOf("run the live cases"),
+      intent: stepIntent("run the live cases"),
       shape: { internal_step: true },
     });
     await tick();
@@ -22235,7 +22300,7 @@ describe("closing an answer task another task builds on", () => {
     // A link to work that already closed carries the answer nowhere.
     const late = await supervisor.commission({
       title: "Reproduce the live cases on the dock",
-      intent: intentOf("run the dock's live cases"),
+      intent: stepIntent("run the dock's live cases"),
       shape: { internal_step: true },
     });
     await tick();
@@ -22293,7 +22358,7 @@ describe("closing an answer task another task builds on", () => {
 
     const busy = await supervisor.commission({
       title: "Reproduce the drift",
-      intent: intentOf("reproduce the drift"),
+      intent: stepIntent("reproduce the drift"),
       ...step,
     });
     await tick();
@@ -22305,7 +22370,7 @@ describe("closing an answer task another task builds on", () => {
 
     const lone = await supervisor.commission({
       title: "Plan the rename",
-      intent: intentOf("plan the rename"),
+      intent: stepIntent("plan the rename"),
       ...step,
     });
     await tick();
@@ -22323,7 +22388,7 @@ describe("closing an answer task another task builds on", () => {
 
     const shown = await supervisor.commission({
       title: "Reproduce the flash",
-      intent: intentOf("reproduce the flash"),
+      intent: stepIntent("reproduce the flash"),
       ...step,
     });
     await tick();

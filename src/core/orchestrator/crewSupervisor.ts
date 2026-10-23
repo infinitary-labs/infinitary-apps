@@ -4679,13 +4679,13 @@ export class CrewSupervisor {
 
   /**
    * Stamp what the work DELIVERS on its shape (Task B). Derived by the host
-   * from the two typed facts it already holds - the kind and a `read-only`
-   * constraint (`deliverableFor`) - and re-derived wherever the kind moves,
-   * so a row queued before the classifier ran is told the deliverable of the
-   * moment it starts. A `review` task keeps whatever the derivation says; it
-   * is ungated for its kind either way.
+   * from the typed `read-only` constraint the Firstmate declared
+   * (`deliverableFor`), or from the kind for a crewmate's follow-up, which
+   * carries no declaration, and re-derived wherever the kind moves. A
+   * `review` task keeps whatever the derivation says; it is ungated for its
+   * kind either way.
    */
-  private withDeliverable(shape: WorkShape, intent: SpawnIntent): WorkShape {
+  private withDeliverable(shape: WorkShape, intent: SpawnIntent | undefined): WorkShape {
     return { ...shape, deliverable: deliverableFor(intent, shape.kind) };
   }
 
@@ -11440,7 +11440,7 @@ export class CrewSupervisor {
     const intent = record.intent ?? { goal: record.title, userWords: record.prompt };
     const classified = this.withDeliverable(
       await this.classifyShape(record.id, record.title, intent, record.repoId, shape),
-      intent,
+      record.intent ?? undefined,
     );
     const current = this.options.tasks.get(record.id);
     if (current?.status !== "open" || current.kind !== "work") return;

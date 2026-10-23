@@ -215,7 +215,7 @@ function groupDescription(lead: string, rules: Record<string, string>): string {
 export const CONSTRAINTS_DESCRIPTION = groupDescription(
   "Typed constraint flags plus free strings.",
   {
-    kind: "read-only: the task answers a question and ships nothing - no commit, push or pull request; free: anything else, relayed verbatim",
+    kind: "read-only: the task only answers - no commit, push or pull request; without it, it ships a change; free: anything else, relayed verbatim",
     text: "Required when kind is free; optional qualifier otherwise",
   },
 );

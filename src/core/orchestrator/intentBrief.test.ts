@@ -436,12 +436,26 @@ describe("the deliverable axis (Task B, captain F1 A)", () => {
       ...(constraints ? { constraints } : {}),
     });
 
-  it("derives an answer from the kind, or from the typed read-only constraint", () => {
-    expect(deliverableFor(intent(), "retrieval")).toBe("answer");
-    expect(deliverableFor(intent(), "research")).toBe("answer");
-    expect(deliverableFor(intent(), "plan")).toBe("answer");
-    expect(deliverableFor(intent(), "reproduce")).toBe("answer");
+  /**
+   * INF-990 friction 7: INF-945 was a build with no read-only constraint
+   * whose goal asked for a preview first; the classifier called it a plan,
+   * the kind made it an answer, and the captain's choice on the preview
+   * closed the build. Only the declared constraint decides now.
+   */
+  it("derives an answer only from the typed read-only constraint, whatever the kind", () => {
+    for (const kind of ["plan", "research", "retrieval", "reproduce"] as const) {
+      expect(deliverableFor(intent([{ kind: "read-only" }]), kind)).toBe("answer");
+      expect(deliverableFor(intent(), kind)).toBe("change");
+    }
     expect(deliverableFor(intent([{ kind: "read-only" }]), "implement")).toBe("answer");
+    expect(deliverableFor(intent([{ kind: "read-only" }]), undefined)).toBe("answer");
+  });
+
+  it("lets the kind decide only for a crewmate's follow-up, which declares nothing", () => {
+    for (const kind of ["plan", "research", "retrieval", "reproduce"] as const)
+      expect(deliverableFor(undefined, kind)).toBe("answer");
+    expect(deliverableFor(undefined, "fix")).toBe("change");
+    expect(deliverableFor(undefined, "teach")).toBe("change");
   });
 
   it("derives a change for everything else, including unclear and plan-first", () => {

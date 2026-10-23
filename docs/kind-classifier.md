@@ -36,7 +36,7 @@ Listing a disagreement without resolving it, or reporting a saved test outcome w
 Any required causal explanation, uncertainty resolution, investigation, diagnosis, experiment, bug reproduction, recommendation, design or change excludes the whole task even when most effort is lookup.
 The dominant-effort rule applies only after retrieval is excluded.
 “Read-only,” “simple” and “quick” are not shortcuts to this verdict; uncertain boundaries answer `unclear` and request high.
-R10 requests low for retrieval and derives the existing answer deliverable, with no change to answer-card or closure behavior.
+R10 requests low for retrieval; for work the first mate commissioned the kind never decides the deliverable, which only the typed `read-only` constraint makes an answer (`docs/delivery-rigor.md`, "The deliverable axis").
 An older task's saved classification is not rewritten.
 
 ## Teaching

@@ -89,6 +89,9 @@ function shownPart(entryId: string, selector: string): HTMLElement | null {
   return part && available(part) ? part : null;
 }
 
+const browserControlButton = (entryId: string) =>
+  shownPart(entryId, "[data-browser-handoff] button:not(:disabled):not([aria-disabled=true])");
+
 /** The shown card's reply field. */
 const replyField = (cardId: string) =>
   shownPart(cardId, `[data-card-reply="${CSS.escape(cardId)}"] textarea`);
@@ -238,6 +241,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "cards.thread": () => onShownCard((stage) => stage.thread?.()),
   "cards.show-info": () => toTab("cards.show-info"),
   "cards.show-crewmate": () => toTab("cards.show-crewmate"),
+  "browser.control": () => toShownPart(browserControlButton, (button) => button.click()),
   "cards.show-browser": () => toTab("cards.show-browser"),
   "cards.next-tab": () => toTab("cards.next-tab"),
   "cards.previous-tab": () => toTab("cards.previous-tab"),
@@ -316,6 +320,10 @@ function openUsage(): void {
 function windowFacts(): WindowFacts {
   return {
     dialogOpen: modalOpen(),
+    browserControl: (() => {
+      const id = shownEntry(useShellStore.getState())?.id;
+      return !!id && browserControlButton(id) !== null;
+    })(),
     computers: { page: crewOrbit().page, pages: crewOrbit().pages },
     panelCommand: (id, recording) => panelCommandRefusal(pluginHost, id, recording),
   };

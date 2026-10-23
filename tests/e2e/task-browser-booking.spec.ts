@@ -213,14 +213,10 @@ async function takeControl(page: Page, taskId: string): Promise<void> {
   await expect.poll(async () => (await canvasReading(page)).frames).toBeGreaterThan(0);
 }
 
-/** Return control, answering the one question it asks. */
+/** The approved one-click handback; final submissions remain captain-only. */
 async function returnControl(page: Page, taskId: string): Promise<void> {
   await view(page, taskId)
     .locator("[data-browser-chrome]")
-    .getByRole("button", { name: RETURN_CONTROL_LABEL })
-    .click();
-  await view(page, taskId)
-    .locator("[data-browser-return-question]")
     .getByRole("button", { name: RETURN_CONTROL_LABEL })
     .click();
 }

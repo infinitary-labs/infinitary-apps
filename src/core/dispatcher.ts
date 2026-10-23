@@ -738,6 +738,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         ? { available: true, signIns: services.browsers.savedSignIns() }
         : { available: false, signIns: [] },
 
+    "inf:browser:sign-ins:automatic": (site, id, automatic) =>
+      services.browsers
+        ? services.browsers.allowAutomaticSignIn(site, id, automatic)
+        : { ok: false, text: NO_TASK_BROWSERS },
+
     "inf:browser:sign-ins:remove": async (site) =>
       services.browsers
         ? services.browsers.removeSavedSignIn(site)

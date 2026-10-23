@@ -1,5 +1,10 @@
 import { HERE } from "@shared/deviceNames";
-import type { SavedSignIn, SavedSignInsView } from "@shared/taskBrowser";
+import {
+  AUTOMATIC_SIGN_IN_LABEL,
+  AUTOMATIC_SIGN_IN_NOTICE,
+  type SavedSignIn,
+  type SavedSignInsView,
+} from "@shared/taskBrowser";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../design";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingError } from "./settingRows";
@@ -23,7 +28,7 @@ export function savedWhen(at: number, now: number): string {
 }
 
 export const WEBSITE_SIGN_INS_LEAD =
-  "Sign-ins you saved as you handed a task's browser back. A task uses one only after you choose it on that task's request.";
+  "Sign-ins you saved as you handed a task's browser back. Allow future tasks separately for each site, or choose access on each task’s request.";
 export const WEBSITE_SIGN_INS_EMPTY =
   "None yet. Tick Remember as you return control of a task's browser to save one.";
 
@@ -33,6 +38,7 @@ export function WebsiteSignInsSectionView({
   removing,
   error,
   onRemove,
+  onAutomatic,
 }: {
   view: SavedSignInsView | null;
   now: number;
@@ -40,6 +46,7 @@ export function WebsiteSignInsSectionView({
   removing: string | null;
   error: string | null;
   onRemove: (site: string) => void;
+  onAutomatic?: (signIn: SavedSignIn, automatic: boolean) => void;
 }) {
   if (!view?.available) return null;
   return (
@@ -90,6 +97,7 @@ export function WebsiteSignInsSectionView({
                 padding: "var(--space-3) var(--space-4)",
                 borderTop: index === 0 ? undefined : "1px solid var(--line-1)",
                 minWidth: 0,
+                flexWrap: "wrap",
               }}
             >
               <span
@@ -124,10 +132,34 @@ export function WebsiteSignInsSectionView({
               >
                 Remove
               </Button>
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "var(--space-2)",
+                  fontSize: "var(--text-xs)",
+                  color: "var(--fg-2)",
+                  flexBasis: "100%",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={signIn.automatic ?? false}
+                  disabled={!signIn.id || removing === signIn.site}
+                  onChange={(event) => onAutomatic?.(signIn, event.target.checked)}
+                  style={{ accentColor: "var(--accent)" }}
+                />
+                {AUTOMATIC_SIGN_IN_LABEL}
+              </label>
             </li>
           ))
         )}
       </ul>
+      {view.signIns.length > 0 && (
+        <p style={{ color: "var(--fg-3)", fontSize: "var(--text-xs)" }}>
+          {AUTOMATIC_SIGN_IN_NOTICE}
+        </p>
+      )}
       <SettingError error={error} surface="website-sign-ins" />
     </div>
   );
@@ -157,6 +189,24 @@ export function WebsiteSignInsSection() {
       await load();
     }
   };
+  const automatic = async (signIn: SavedSignIn, allowed: boolean) => {
+    if (!signIn.id) return;
+    setRemoving(signIn.site);
+    setError(null);
+    try {
+      const result = await window.infinitary.browser.allowAutomaticSignIn(
+        signIn.site,
+        signIn.id,
+        allowed,
+      );
+      if (!result.ok) setError(result.text);
+    } catch {
+      setError(`${HERE.This} could not change that permission right now.`);
+    } finally {
+      setRemoving(null);
+      await load();
+    }
+  };
   return (
     <WebsiteSignInsSectionView
       view={view}
@@ -164,6 +214,7 @@ export function WebsiteSignInsSection() {
       removing={removing}
       error={error}
       onRemove={(site) => void remove(site)}
+      onAutomatic={(signIn, allowed) => void automatic(signIn, allowed)}
     />
   );
 }

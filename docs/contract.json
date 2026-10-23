@@ -30171,6 +30171,9 @@
               "ok": {
                 "type": "boolean",
                 "const": true
+              },
+              "warning": {
+                "type": "string"
               }
             },
             "required": [
@@ -30219,6 +30222,9 @@
               "ok": {
                 "type": "boolean",
                 "const": true
+              },
+              "warning": {
+                "type": "string"
               }
             },
             "required": [
@@ -30286,6 +30292,9 @@
               "ok": {
                 "type": "boolean",
                 "const": true
+              },
+              "warning": {
+                "type": "string"
               }
             },
             "required": [
@@ -30346,6 +30355,12 @@
             "properties": {
               "remember": {
                 "type": "boolean"
+              },
+              "site": {
+                "type": "string"
+              },
+              "savedId": {
+                "type": "string"
               }
             }
           }
@@ -30361,6 +30376,9 @@
               "ok": {
                 "type": "boolean",
                 "const": true
+              },
+              "warning": {
+                "type": "string"
               }
             },
             "required": [
@@ -30409,6 +30427,12 @@
                 },
                 "savedAt": {
                   "type": "number"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "automatic": {
+                  "type": "boolean"
                 }
               },
               "required": [
@@ -30421,6 +30445,64 @@
         "required": [
           "available",
           "signIns"
+        ]
+      }
+    },
+    "inf:browser:sign-ins:automatic": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 260
+          },
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "boolean"
+          }
+        ],
+        "minItems": 3,
+        "items": false
+      },
+      "response": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": true
+              },
+              "warning": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ok"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "ok": {
+                "type": "boolean",
+                "const": false
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "ok",
+              "text"
+            ]
+          }
         ]
       }
     },
@@ -30447,6 +30529,9 @@
               "ok": {
                 "type": "boolean",
                 "const": true
+              },
+              "warning": {
+                "type": "string"
               }
             },
             "required": [
@@ -45712,6 +45797,148 @@
         "required": [
           "ok"
         ]
+      }
+    },
+    "inf:work:browser-sign-in": {
+      "effect": "read",
+      "reach": "work",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "object",
+            "properties": {
+              "task": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_-]{1,64}$"
+              },
+              "site": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "task",
+              "site"
+            ]
+          }
+        ],
+        "minItems": 1,
+        "items": false
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "signIn": {
+            "type": "object",
+            "properties": {
+              "cookies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "value": {
+                      "type": "string"
+                    },
+                    "domain": {
+                      "type": "string"
+                    },
+                    "hostOnly": {
+                      "type": "boolean"
+                    },
+                    "path": {
+                      "type": "string"
+                    },
+                    "secure": {
+                      "type": "boolean"
+                    },
+                    "httpOnly": {
+                      "type": "boolean"
+                    },
+                    "expirationDate": {
+                      "type": "number"
+                    },
+                    "sameSite": {
+                      "type": "string",
+                      "enum": [
+                        "unspecified",
+                        "no_restriction",
+                        "lax",
+                        "strict"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "value",
+                    "domain",
+                    "hostOnly",
+                    "path",
+                    "secure",
+                    "httpOnly",
+                    "sameSite"
+                  ]
+                }
+              },
+              "storage": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "origin": {
+                      "type": "string",
+                      "minLength": 1
+                    },
+                    "items": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "prefixItems": [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "string"
+                          }
+                        ],
+                        "minItems": 2,
+                        "items": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "origin",
+                    "items"
+                  ]
+                }
+              },
+              "site": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "savedAt": {
+                "type": "number"
+              },
+              "automatic": {
+                "type": "boolean",
+                "const": true
+              }
+            },
+            "required": [
+              "cookies",
+              "storage",
+              "site",
+              "id",
+              "savedAt",
+              "automatic"
+            ]
+          }
+        }
       }
     },
     "inf:work:browser-frame": {
@@ -61261,6 +61488,9 @@
                 "ok": {
                   "type": "boolean",
                   "const": true
+                },
+                "warning": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -61334,6 +61564,9 @@
                 "ok": {
                   "type": "boolean",
                   "const": true
+                },
+                "warning": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -61397,6 +61630,12 @@
                       "type": "string",
                       "minLength": 1,
                       "maxLength": 128
+                    },
+                    "site": {
+                      "type": "string"
+                    },
+                    "refresh": {
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -61525,6 +61764,9 @@
                     "site",
                     "held"
                   ]
+                },
+                "warning": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -61579,6 +61821,9 @@
                 "ok": {
                   "type": "boolean",
                   "const": true
+                },
+                "warning": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -61633,6 +61878,9 @@
                 "ok": {
                   "type": "boolean",
                   "const": true
+                },
+                "warning": {
+                  "type": "string"
                 }
               },
               "required": [
@@ -61913,6 +62161,9 @@
                 "ok": {
                   "type": "boolean",
                   "const": true
+                },
+                "warning": {
+                  "type": "string"
                 }
               },
               "required": [

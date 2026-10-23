@@ -235,7 +235,7 @@ An app controlling this Mac from another shows no page: its view says the task's
 
 The page lays out at 1280 by 800 (`TASK_BROWSER_PAGE`) unless the captain maximizes the view (the design skill's ResponseCard, "Maximize").
 Maximized, the view gives the page its room: the place under its row and the browser's lines, above its foot line, which it asks for on `inf:browser:size`, a shell channel, and asks again when the window's size settles.
-The return question and a refusal line come and go, so the room counts them and the page fits under them.
+The sharing notice and a refusal line take room from the page, which fits under them.
 The core lays every page of the task's browser out at that size (`TaskBrowsers.sizeView`): its window, its viewport, its pictures and every point the captain presses, and a browser, a second page or Open again that opens while the view stays maximized opens at it.
 A resize waits only for a click the crewmate's command is making, and a click waits for a resize, so the page never moves between a command finding a control and pressing it; a read, a wait or a load goes on at the new size.
 Restore, Hide or a window that stops watching gives the page back its own size.
@@ -306,7 +306,10 @@ While the captain holds it:
 - what the page says - refused requests, errors, dialogs, popups and its moves - is kept for nobody, so the crewmate never hears of the captain's time;
 - the browser never stops for being unused, and its fact carries `control: "captain"`, which the record's Browser line reads as `you have control` and the view's row as `you have control · the crewmate cannot see this page`, tinted violet.
 
-Return control asks once in the view: `Return control? The crewmate will read this page as it is now, including what you signed in to.`, with Keep control and Return control, and under them the unticked `Remember my <site> sign-in on this computer`, which saves the site's sign-in as it goes back ("Saved sign-ins").
+Return control hands the browser back with one press.
+While the captain has control, the view shows `Returning control lets the crewmate read and use this browser, including signed-in pages.` before that press.
+Command search's `Take or return browser control` runs the same control on the shown browser.
+An unsaved site offers an unticked `Remember my <site> sign-in on this computer`; a saved site shows `Sign-in saved on this computer · updates on return` and Manage, which opens Settings → General → Website sign-ins.
 `TaskBrowsers.returnControl` waits, at most ten seconds, for a load the captain started to finish, so a return during a reload hands back the loaded page; then every page starts a new book, so every older ref is refused, nothing from the captain's time is kept, the crewmate's next answer leads with a line saying control came back, and its fact carries `returned`, which the view's caption reads as `temporary · keeps what you signed in to until it stops`.
 The crewmate is woken once through its task's durable lane: `CrewSupervisor.browserReturned` steers the typed `browser-returned` wake (`docs/inbox.md`), named by the run, the browser and its count of returns, so the inbox queues each return once.
 The wake names the site, says the old refs are gone and to take a fresh look with `infinitary-browser-axi`, the command's home view, repeats what the crewmate said it would do next, and says returning gives the task the signed-in site, never permission to buy, pay or submit anything that matters.
@@ -352,21 +355,32 @@ The captain may keep a website's sign-in on this Mac, one per site, and a task's
 A task's browser starts with none, whatever this Mac has saved.
 
 **Saving one.**
-Ticking `Remember my <site> sign-in on this computer` on the return question saves the current page's site's sign-in as Return control hands the page back (`inf:browser:return` with `{ remember: true }`, `TaskBrowsers.returnControl`); nothing is saved without the tick.
+Ticking Remember saves an unsaved site's sign-in as Return control hands the page back (`inf:browser:return` with `remember` and the displayed `site`, `TaskBrowsers.returnControl`).
+The selection clears when the displayed site or browser changes, and the core checks the site again after the captain's load settles and after reading site data.
+Saved status instead sends the displayed save's `savedId`; a human return refreshes that exact record without another tick, including a different account chosen on the site.
+A removed or replaced save is never restored or overwritten by a stale handback.
+An unsupported or failed save leaves a visible warning even when handback succeeds, with no silent retry.
 A sign-in is the site's own signed-in state, the way a browser keeps it, in two parts.
 Its cookies are those the browser sends to the site's name, those its parent shares with every name under it, and those of the names under it (`cookiesOfSite`, `src/core/browser/webSignIns.ts`).
 Its page storage is the local storage of the site's own origins, `http://` or `https://` at exactly its host and port, read from the browser's pages on the site, where a site that keeps its sign-in in the page rather than in a cookie keeps it (`storageOfSite`).
 A page reads only its own origin's storage, so a name under the site, its parent and another site hold none of the site's.
 It is never anything the captain typed, the person's own Safari or Chrome profile, or the app's subscription sign-ins, which live in their own stores.
 A site that holds neither saves nothing, and a site that keeps its sign-in only in session storage or the page's own database is not remembered.
-Saving again replaces the site's earlier one, and the browser that saved it uses it from then on.
+The browser that saves or refreshes a site's sign-in uses it from then on.
 
 **Where they live.**
-`WebSignIns` (`src/core/browser/webSignIns.ts`) is the one writer over `userData/web-sign-ins/`: a 0700 folder with one 0600 file per site, named by a digest of the site, holding the site, when it was saved, which save it is (`id`), its cookies and its page storage by origin.
-A save made before page storage was kept reads as one with none.
+`WebSignIns` (`src/core/browser/webSignIns.ts`) is the one writer over `userData/web-sign-ins/`: a 0700 folder with one 0600 file per site, named by a digest of the site, holding the site, when it was saved, which save it is (`id`), its cookies, its page storage by origin and its optional `automatic` permission.
+A save made before page storage was kept reads as one with none, and a save with no `automatic` permission remains save-only.
 `TaskBrowsers` is its only caller; nothing else reads it, and nothing makes the folder until the captain first ticks Remember.
 
 **Using one.**
+The captain separately enables `Allow future tasks to use this sign-in automatically` for one saved site in Settings.
+It starts off for every existing save, lasts across restarts and applies to tasks across projects sharing the home.
+On a crewmate's explicit visit, the browser uses the permitted site's saved state and reloads once before answering the command; it never substitutes for a help or payment review card.
+The browser records the grant, hides signed-in-page diagnostics as for a manual grant, invalidates old references and requires a reason for pictures.
+A browser attempts a site once; a website that rejects the sign-in needs the captain, not another automatic attempt.
+Turning the permission off stops future grants but leaves browsers already using the save signed in; Remove also signs them out.
+
 When a crewmate asks for help on a site this Mac has a sign-in saved for that its page can use - a cookie still alive, or page storage for the very origin the page is on - and its browser holds nothing of the captain's yet - no page the captain handed back, no saved sign-in - the host adds `Use my saved <site> sign-in` to the request card as its default, last in the row, and relabels the crewmate's open-browser action `Sign in myself` (`CrewSupervisor.withSavedSignIn`, `TaskBrowsers.savedSignInFor`).
 The crewmate never learns which sites are saved, and only the host adds that action: its effect is `{ kind: "open", target: "browser", savedSignIn: true }`, which the crewmate's tool cannot declare and the supervisor refuses from any other author.
 The host adds it after the card lint, so the 2 or 3 actions a decision gives are counted over the crewmate's own (`docs/card-authoring.md`, "The shape lint").
@@ -385,9 +399,9 @@ A site that holds no cookies by then copies none back over the save, and an orig
 The app's quit closes every browser at once and copies nothing back.
 
 **Settings.**
-Settings → General lists them under Website sign-ins, one row per site with when it was saved and Remove (`WebsiteSignInsSection`, `src/renderer/src/settings/`), read with `inf:browser:sign-ins`, which answers `available: false` where this build keeps no task browsers, so the section draws nothing there.
+Settings → General lists them under Website sign-ins, one row per site with when it was saved, its initially off future-task permission and Remove (`WebsiteSignInsSection`, `src/renderer/src/settings/`), read with `inf:browser:sign-ins`, which answers `available: false` where this build keeps no task browsers, so the section draws nothing there.
 Remove (`inf:browser:sign-ins:remove`, `TaskBrowsers.removeSavedSignIn`) deletes the site's file, signs every browser using it out of that site at once - its cookies there and its own origins' page storage go, and nothing is copied back - writes a timeline line on each such task, and tells each crewmate on its next command.
-Both are core channels this Mac's window alone may ask; the first mate never removes a saved sign-in.
+The list, Remove and `inf:browser:sign-ins:automatic` are core channels this Mac's window alone may ask; the first mate never changes saved-site permission or removes a saved sign-in.
 
 **A page never gets another site's storage.**
 The host reads and writes page storage only through a page's own protocol, by its top document's own storage key (`HostPageStorage`, `src/main/host/taskBrowser.ts`).
@@ -458,7 +472,11 @@ The captain reads and drives it from the home as the captain does one here (`Pla
 - What that computer has the home do once - a line on the task's timeline, the crewmate's wake on a return, a saved sign-in copied back - arrives as a work request that the conversation's ledger answers once (`inf:work:browser-event`, `docs/helper.md` "Holding a conversation").
 - A saved sign-in stays the home's (`WebSignIns`).
   The captain's click on a request card lends that one site's save to the browser there, which holds it in its site data in memory only and copies it back by the save's id as it stops.
-  The captain's Remember tick brings what that browser holds of the site home in the answer to the captain's Return control, saved under an id the home chose first, and only for the site the captain's view showed the captain.
+  Remember or a saved status brings what that browser holds home in the Return control answer, bound to the displayed site and save identity.
+  A refresh uses the same identity and the home refuses a removed or replaced record.
+  On an explicit visit, `inf:work:browser-sign-in` reads only a separately permitted site from the home; the command awaits that read and applies the session in memory.
+  This live read bypasses the durable conversation ledger, so no sign-in is saved on the work computer or in a kept response.
+  A home that does not support the read, or is out of reach, provides no automatic grant and the ordinary sign-in request remains available.
   Remove signs every browser there that uses it out of that site.
   Nothing on that computer writes a sign-in to a file.
 - The home's quit leaves a browser there running with its crewmate's turn; that computer's quit or restart ends it, and the home reads that it has none once that computer is back.
@@ -522,7 +540,7 @@ Its third has a crewmate emit a decision whose door reads `Try it`: the card nam
 `taskBrowsers.test.ts` holds taking and returning control against the stand-in page: a take while a command runs lets it finish and refuses the one queued behind it, the captain's input reaches the page and nothing records it, what the page said in the captain's time never reaches the crewmate, a return during a reload waits for it and refuses every older ref, each return is one named wake, a stale handle is refused, a crash or a quit in the captain's hands wakes nobody, and a request pauses the browser only on the site it names.
 `crewSupervisor.test.ts` holds that a request card pauses the browser before it goes up, that the captain's click takes the card's own browser and tells the crewmate nothing, that a click or a saved sign-in's grant whose browser ended with a quit, or stopped and was replaced, steers the crewmate once with that fact and the feed line and never names the saved sign-in, that a browser in the captain's hands is never nudged, the request's refusals, and the one wake on return; `wakes.test.ts` its words, `reportSort.test.ts` the witness, `cardTool.test.ts` the parameter and the first mate's refusal, and `taskFacts.test.ts`, `CardAttachment.test.tsx` and `store.test.ts` the record's words, the strip's tint and its missing button, and the view the action opens.
 `crewSupervisor.test.ts` also holds that a return takes down the request card naming that browser, leaves a card that asked nothing and one naming an older browser, and wakes the crewmate only once.
-The fourth journey in `tests/e2e/task-browser.spec.ts` has a crewmate ask the captain to sign in on a local account page: its card's strip reads paused for your help with no button beside the card's action and its browser refuses the crewmate, the card's key opens the record, whose Open shows the paused page and says so, Open browser and sign in hands the captain the page with no word to the crewmate, the captain signs in with real clicks and typing on the view's picture while no file under the app's data and no model call holds the captain's password, Hide and Keep control resume nothing, and Return control wakes the crewmate once - its old ref refused, its fresh look leading with the return, the page signed in, and nothing the page logged or asked for in the captain's time reaching it - and its picture of the signed-in page is refused without a reason and taken with one, which its record names.
+The fourth journey in `tests/e2e/task-browser.spec.ts` has a crewmate ask the captain to sign in on a local account page: its card's strip reads paused for your help with no button beside the card's action and its browser refuses the crewmate, the card's key opens the record, whose Open shows the paused page and says so, Open browser and sign in hands the captain the page with no word to the crewmate, the captain signs in with real clicks and typing on the view's picture while no file under the app's data and no model call holds the captain's password, Hide resumes nothing and the sharing notice stays visible before handback, and Return control wakes the crewmate once - its old ref refused, its fresh look leading with the return, the page signed in, and nothing the page logged or asked for in the captain's time reaching it - and its picture of the signed-in page is refused without a reason and taken with one, which its record names.
 `webSignIns.test.ts` holds the store - its folder's and files' modes, one sign-in per site, a copy back only into the save it was given, a broken file read as nothing - and which cookies make up a site's sign-in.
 `taskBrowsers.test.ts` holds saved sign-ins against the stand-in page: the tick saves only the site's cookies, a request is offered one only on its site and only while the browser holds nothing of the captain's, the grant copies it in, reloads, wakes once and needs a reason for a picture, a grant is refused to a browser not waiting or stale or with nothing saved, a site that turned it away is offered nothing more, a stopping browser copies back, Remove signs out the browser using it and nothing copies back, and the app's quit copies nothing.
 `crewSupervisor.test.ts` holds the request card's added default and relabeled action, a card left as declared with nothing saved, a crewmate's declared saved sign-in never carried, the click's grant and its feed line when refused, and the saved wake; `wakes.test.ts` its words, `taskBrowser.test.ts` the foot line, `WebsiteSignInsSection.test.tsx` the Settings rows, and `core.test.ts` the gate.

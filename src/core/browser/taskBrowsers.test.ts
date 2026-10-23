@@ -28,6 +28,7 @@ import {
   TASK_BROWSER_COMMAND_MS,
   TASK_BROWSER_IDLE_MS,
   TaskBrowsers,
+  type TaskBrowsersOptions,
 } from "./taskBrowsers";
 import { WebSignIns } from "./webSignIns";
 
@@ -304,7 +305,14 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
  * poll) passes at once; a long one (the command bound, the idle stop) waits
  * until the test fires it.
  */
-function harness(options: { max?: number; signIns?: WebSignIns; now?: () => number } = {}) {
+function harness(
+  options: {
+    max?: number;
+    signIns?: WebSignIns;
+    now?: () => number;
+    automaticSignIn?: TaskBrowsersOptions["automaticSignIn"];
+  } = {},
+) {
   const pages: FakePage[] = [];
   const notes: string[] = [];
   const changes: string[] = [];
@@ -329,6 +337,7 @@ function harness(options: { max?: number; signIns?: WebSignIns; now?: () => numb
     ...(options.max !== undefined ? { max: options.max } : {}),
     ...(options.signIns ? { signIns: options.signIns } : {}),
     ...(options.now ? { now: options.now } : {}),
+    ...(options.automaticSignIn ? { automaticSignIn: options.automaticSignIn } : {}),
     guard: async (guardOptions) => {
       const guard = { ...guardOptions, closed: false };
       guards.push(guard);
@@ -2082,12 +2091,130 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
 
     const again = onThisMac();
     await signedInAndReturned(again, true);
-    expect(again.browsers.savedSignIns()).toEqual([{ site: "localhost:5173", savedAt: 1_000 }]);
+    expect(again.browsers.savedSignIns()).toEqual([
+      { site: "localhost:5173", savedAt: 1_000, id: again.signIns.get("localhost:5173")?.id },
+    ]);
     expect(again.signIns.get("localhost:5173")?.cookies.map((cookie) => cookie.name)).toEqual([
       "sid",
     ]);
     // The browser that saved it uses it from now on, and its foot line says so.
     expect(again.browsers.fact("t1")).toMatchObject({ returned: true, saved: ["localhost:5173"] });
+  });
+
+  it("refreshes the shown saved site on human handback, including an account change, but never a removed or replaced record (approved plan C)", async () => {
+    const h = onThisMac();
+    const { page, handle } = await signedInAndReturned(h, true);
+    const saved = h.signIns.get(request.site);
+    if (!saved) throw new Error("The fixture did not save its sign-in");
+    h.signIns.allowAutomatic(saved.site, saved.id, true);
+    await h.browsers.takeControl("t1", handle);
+    page.cookies.cookies = [{ ...(SIGNED_IN[0] as HostCookie), value: "other-account-session" }];
+    expect(
+      await h.browsers.returnControl("t1", handle, { site: saved.site, savedId: saved.id }),
+    ).toEqual({ ok: true });
+    expect(h.signIns.get(saved.site)).toMatchObject({
+      id: saved.id,
+      automatic: true,
+      cookies: [{ ...(SIGNED_IN[0] as HostCookie), value: "other-account-session" }],
+    });
+    await h.browsers.takeControl("t1", handle);
+    h.signIns.remove(saved.site);
+    expect(
+      await h.browsers.returnControl("t1", handle, { site: saved.site, savedId: saved.id }),
+    ).toMatchObject({ ok: true, warning: expect.stringContaining("removed or replaced") });
+    expect(h.signIns.get(saved.site)).toBeUndefined();
+    await h.browsers.takeControl("t1", handle);
+    const replacement = h.signIns.save(saved.site, { cookies: SIGNED_IN, storage: [] });
+    expect(
+      await h.browsers.returnControl("t1", handle, { site: saved.site, savedId: saved.id }),
+    ).toMatchObject({ ok: true, warning: expect.stringContaining("removed or replaced") });
+    expect(h.signIns.get(saved.site)).toEqual(replacement);
+  });
+
+  it("does not apply Remember for a different site and reports a failed save without blocking handback (approved plan)", async () => {
+    const h = onThisMac();
+    const { page, handle } = await asking(h);
+    await h.browsers.takeControl("t2", handle);
+    page.cookies.cookies = SIGNED_IN;
+    expect(
+      await h.browsers.returnControl("t2", handle, { site: "another.example", remember: true }),
+    ).toMatchObject({ ok: true, warning: expect.stringContaining("changed sites") });
+    expect(h.signIns.list()).toEqual([]);
+    await h.browsers.takeControl("t2", handle);
+    page.cookies.all = async () => {
+      throw new Error("page gone");
+    };
+    expect(
+      await h.browsers.returnControl("t2", handle, { site: request.site, remember: true }),
+    ).toMatchObject({ ok: true, warning: expect.stringContaining("could not be saved") });
+    expect(h.signIns.list()).toEqual([]);
+    expect(h.returned.filter((event) => event.taskId === "t2")).toHaveLength(2);
+  });
+
+  it("uses only explicitly permitted sites on new visits, never retries a rejected save, and still pauses for final submissions (approved direction C)", async () => {
+    const h = onThisMac();
+    await signedInAndReturned(h, true);
+    const saved = h.signIns.get(request.site);
+    if (!saved) throw new Error("The fixture did not save its sign-in");
+    const ordinary = h.browsers.forTask("ordinary");
+    await ordinary.navigate({ url: "http://localhost:5173/account" });
+    expect(h.pages.at(-1)?.cookies.cookies).toEqual([]);
+    expect(h.browsers.allowAutomaticSignIn(saved.site, saved.id, true)).toEqual({ ok: true });
+    const automatic = h.browsers.forTask("automatic");
+    const answer = await automatic.navigate({ url: "http://localhost:5173/account" });
+    const page = h.pages.at(-1);
+    if (!page) throw new Error("The fixture did not open a page");
+    expect(page.cookies.cookies.map((cookie) => cookie.value)).toEqual(["sam-1"]);
+    expect(answer.text).toContain("used it automatically");
+    expect(h.returned.filter((event) => event.taskId === "automatic")).toEqual([]);
+    page.cookies.cookies = [];
+    await automatic.navigate({ url: "http://localhost:5173/account" });
+    expect(page.cookies.cookies).toEqual([]);
+    expect(h.browsers.savedSignInFor("automatic", request.site)).toBeUndefined();
+    expect(
+      await h.browsers.requestHelp("automatic", {
+        ...request,
+        reason: "Review and pay",
+        after: "Read confirmation",
+      }),
+    ).toMatchObject({ ok: true });
+    expect(h.browsers.fact("automatic")).toMatchObject({ control: "waiting" });
+    h.browsers.allowAutomaticSignIn(saved.site, saved.id, false);
+    await h.browsers.forTask("revoked").navigate({ url: "http://localhost:5173/account" });
+    expect(h.pages.at(-1)?.cookies.cookies).toEqual([]);
+    await h.browsers.removeSavedSignIn(saved.site);
+    expect(h.browsers.fact("automatic")).not.toHaveProperty("saved");
+  });
+
+  it("awaits the home's live permission lookup before answering a remote visit, and carries on signed out when the home cannot be reached (approved plan C)", async () => {
+    const store = new WebSignIns(scratchDir("infinitary-web-sign-ins-"));
+    const record = store.save(request.site, { cookies: [SIGNED_IN[0] as HostCookie], storage: [] });
+    store.allowAutomatic(record.site, record.id, true);
+    const requested: string[] = [];
+    const remote = harness({
+      automaticSignIn: async (task, site) => {
+        requested.push(`${task}:${site}`);
+        return store.get(site);
+      },
+    });
+    const answer = await remote.browsers
+      .forTask("remote")
+      .navigate({ url: "http://localhost:5173/account" });
+    expect(requested).toEqual([`remote:${record.site}`]);
+    expect(remote.pages[0]?.cookies.cookies.map((cookie) => cookie.value)).toEqual(["sam-1"]);
+    expect(answer.text).toContain("used it automatically");
+    expect(remote.returned).toEqual([]);
+    const unavailable = harness({
+      automaticSignIn: async () => {
+        throw new Error("out of reach");
+      },
+    });
+    const signedOut = await unavailable.browsers
+      .forTask("remote")
+      .navigate({ url: "http://localhost:5173/account" });
+    expect(signedOut.refused).toBeUndefined();
+    expect(unavailable.pages[0]?.cookies.cookies).toEqual([]);
+    expect(await unavailable.browsers.requestHelp("remote", request)).toMatchObject({ ok: true });
   });
 
   it("offers a saved sign-in only on its own site, to a browser that holds none of the captain's", async () => {
@@ -2270,6 +2397,7 @@ describe('saved website sign-ins (docs/task-browser.md, "Saved sign-ins")', () =
     await empty.browsers.takeControl("t2", handle);
     expect(await empty.browsers.returnControl("t2", handle, { remember: true })).toEqual({
       ok: true,
+      warning: "Control returned, but this site has no supported sign-in to save.",
     });
     expect(blank.effects).toContain(`read storage ${ORIGIN}`);
     expect(empty.signIns.list()).toEqual([]);

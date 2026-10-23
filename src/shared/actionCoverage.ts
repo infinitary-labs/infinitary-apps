@@ -60,6 +60,8 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:browser:return": "The captain's click in a task's browser view; nothing is set",
   "inf:update:install":
     "The captain's own Install in the update panel; the system asks for the person's password and the app starts again",
+  "inf:browser:sign-ins:automatic":
+    "The captain's separate grant or revocation of saved website account access; the first mate never changes it",
   "inf:browser:sign-ins:remove":
     "The captain's own Remove of a saved website sign-in; the first mate never removes one",
   "inf:cards:seen": "View stamp",

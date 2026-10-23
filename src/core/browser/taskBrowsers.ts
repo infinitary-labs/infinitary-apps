@@ -65,7 +65,7 @@ import {
   signInSite,
   siteOrigins,
   storageOfSite,
-  type WebSignIns,
+  WebSignIns,
 } from "./webSignIns";
 import { foundWords, nextBlock, type WindowAsk, windowOf } from "./window";
 
@@ -363,6 +363,8 @@ export type TaskBrowsersOptions = {
   lookup?: GuardLookup;
   /** The website sign-ins saved on this Mac; with none, nothing is saved or offered. */
   signIns?: SignInStore;
+  /** The home may lend an opted-in site to a browser on another computer, without storing it there. */
+  automaticSignIn?: (taskId: string, site: string) => Promise<SavedSignInRecord | undefined>;
   /** The time, injected so a test drives which cookies are still alive. */
   now?: () => number;
   /** Serves a project folder for a page the captain opens; the real loopback server when absent. */
@@ -525,6 +527,7 @@ type Browser = {
    * it copies them back into that save when it stops.
    */
   saved: Map<string, string>;
+  automaticTried?: Set<string>;
   cancelIdle?: () => void;
   /** Stops the pictures the captain watches. */
   stopWatching?: () => void;
@@ -960,6 +963,7 @@ export class TaskBrowsers {
       this.options.note?.(taskId, "you closed the page you opened in its browser");
       return { ok: true };
     }
+    const shownSite = options.site ?? signInSite(siteOf(this.addressOf(browser, browser.current)));
     return this.serial(taskId, async () => {
       if (this.browsers.get(taskId) !== browser || browser.control !== "captain") {
         return { ok: false, text: "This browser stopped before control went back." };
@@ -970,9 +974,12 @@ export class TaskBrowsers {
       if (this.browsers.get(taskId) !== browser) {
         return { ok: false, text: "This browser stopped before control went back." };
       }
-      // The captain's tick saves the site's sign-in on this Mac, before the
-      // crewmate has the page; nothing is saved without it.
-      if (options.remember) await this.rememberSignIn(browser);
+      // Remember saves a new site; a saved status refreshes only the record
+      // the captain saw. Neither applies if the displayed site changed.
+      const warning =
+        options.remember || options.savedId
+          ? await this.rememberSignIn(browser, shownSite, options.savedId)
+          : undefined;
       const after = browser.request?.after;
       browser.control = "crewmate";
       browser.request = undefined;
@@ -991,7 +998,7 @@ export class TaskBrowsers {
         ...(after ? { after } : {}),
         once: `browser-returned:${this.session}:${browser.generation}:${browser.returns}`,
       });
-      return { ok: true };
+      return { ok: true, ...(warning ? { warning } : {}) };
     });
   }
 
@@ -1136,6 +1143,66 @@ export class TaskBrowsers {
     return offer ? { site: offer.record.site, savedAt: offer.record.savedAt } : undefined;
   }
 
+  /** Use separately permitted sites on an explicit visit, never instead of a captain handoff or final-submission review. */
+  private async applyAutomaticSignIn(taskId: string, browser: Browser): Promise<void> {
+    if (browser.control !== "crewmate" || browser.captains || browser.returns > 0) return;
+    const entry = browser.current;
+    const address = this.addressOf(browser, entry);
+    const site = signInSite(siteOf(address));
+    if (
+      browser.saved.size >= SAVED_SIGN_INS_PER_BROWSER ||
+      browser.saved.has(site) ||
+      browser.automaticTried?.has(site)
+    )
+      return;
+    browser.automaticTried ??= new Set();
+    browser.automaticTried.add(site);
+    const local = this.options.signIns?.get(site);
+    const record = local?.automatic
+      ? local
+      : await this.options.automaticSignIn?.(taskId, site).catch(() => undefined);
+    if (!record?.automatic || record.site !== site) return;
+    const usable = this.usable(record, address);
+    if (
+      !holds(usable) ||
+      this.browsers.get(taskId) !== browser ||
+      browser.control !== "crewmate" ||
+      this.addressOf(browser, entry) !== address
+    )
+      return;
+    try {
+      // Mark the grant before asynchronous page writes, so Remove can sign it out.
+      browser.saved.set(site, record.id);
+      await entry.page.cookies.set(usable.cookies);
+      for (const storage of usable.storage) await entry.page.storage.write(storage);
+      if (this.browsers.get(taskId) !== browser) return;
+      if (browser.saved.get(site) !== record.id) {
+        // Remove may have cleared the grant while asynchronous writes were in flight.
+        await entry.page.cookies.remove(cookiesOfSite(await entry.page.cookies.all(), site));
+        for (const origin of siteOrigins(site)) await entry.page.storage.clear(origin);
+        return;
+      }
+      await this.loadOwn(entry, entry.page.reload());
+      this.handBackBooks(taskId, browser);
+      browser.notice = `The captain allowed future tasks to use the sign-in saved for ${site}. This browser used it automatically. Take a fresh look; this never authorizes a payment or final submission.`;
+      this.options.note?.(
+        taskId,
+        `used your saved sign-in at ${site}, as you allowed for future tasks`,
+      );
+      this.options.onChange?.(taskId);
+    } catch {
+      browser.notice =
+        "The saved sign-in could not be used. It was not retried; ask the captain to sign in if needed.";
+    }
+  }
+
+  allowAutomaticSignIn(site: string, id: string, automatic: boolean): TaskBrowserCommandResult {
+    const store = this.options.signIns;
+    return store instanceof WebSignIns && store.allowAutomatic(site, id, automatic)
+      ? { ok: true }
+      : { ok: false, text: "That saved sign-in changed. Open Website sign-ins again." };
+  }
+
   /**
    * The captain's click on a request card's saved sign-in: the site's saved
    * cookies and its page's own storage are copied into the browser the card
@@ -1248,20 +1315,38 @@ export class TaskBrowsers {
    * copies back into it when it stops. A site that holds neither cookies
    * nor page storage saves nothing.
    */
-  private async rememberSignIn(browser: Browser): Promise<void> {
+  private async rememberSignIn(
+    browser: Browser,
+    shownSite: string,
+    savedId?: string,
+  ): Promise<string | undefined> {
     const store = this.options.signIns;
-    if (!store) return;
+    if (!store) return "Control returned, but this computer cannot save that sign-in.";
     const site = signInSite(siteOf(this.addressOf(browser, browser.current)));
+    if (site !== signInSite(shownSite))
+      return "Control returned, but the page changed sites. No sign-in was saved.";
     try {
       const held: HeldSignIn = {
         cookies: cookiesOfSite(await browser.current.page.cookies.all(), site),
         storage: storageOfSite(await this.storageOn(browser, new Set([site])), site),
       };
-      if (!holds(held)) return;
-      const record = store.save(site, held);
-      browser.saved.set(site, record.id);
+      if (signInSite(siteOf(this.addressOf(browser, browser.current))) !== site)
+        return "Control returned, but the page changed sites. No sign-in was saved.";
+      if (!holds(held)) return "Control returned, but this site has no supported sign-in to save.";
+      if (savedId) {
+        if (!store.refresh(site, savedId, held))
+          return "Control returned, but that saved sign-in was removed or replaced. It was not changed.";
+        browser.saved.set(site, savedId);
+      } else {
+        // An unsaved-site choice cannot overwrite a save made in another view meanwhile.
+        if (store.get(site))
+          return "Control returned, but this site's saved sign-in changed. It was not replaced.";
+        const record = store.save(site, held);
+        browser.saved.set(site, record.id);
+      }
+      return undefined;
     } catch {
-      // A page that went away keeps nothing to save.
+      return "Control returned, but the sign-in could not be saved. It was not retried.";
     }
   }
 
@@ -1450,6 +1535,7 @@ export class TaskBrowsers {
     const href = check.url.href;
     return this.guarded(taskId, opened, "load the page", async () => {
       const outcome = await this.loadOwn(entry, entry.page.load(href));
+      if (outcome.ok) await this.applyAutomaticSignIn(taskId, opened);
       return this.answer(
         opened,
         `${fresh}${this.loadLead(opened, outcome, `Opened ${href}.`, href)}`,

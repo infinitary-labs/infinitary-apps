@@ -8,10 +8,17 @@ import { resizeWindow } from "./layout";
 import { heroShot } from "./pictures";
 import { activityFrame } from "./rails";
 
-test("a hero pair holds the whole region it measured at every Size", async () => {
+test("a hero pair holds the whole region at every Size while another hidden page exists", async () => {
   const launched = await launchApp({ withMockProvider: true });
   try {
     const { app, page } = launched;
+    // INF-920: a task browser's newer hidden window must never receive the shell's theme push.
+    await app.evaluate(({ BrowserWindow }) => {
+      new BrowserWindow({
+        show: false,
+        webPreferences: { sandbox: true, contextIsolation: true, nodeIntegration: false },
+      });
+    });
     await page.emulateMedia({ reducedMotion: "reduce" });
     const region = page.locator("[data-prompt-dock]");
     const dir = test.info().outputPath("hero");

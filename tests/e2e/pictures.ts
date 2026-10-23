@@ -160,15 +160,16 @@ async function themed(app: ElectronApplication, page: Page, theme?: Theme): Prom
     ? { ...saved, appearance: { ...saved.appearance, theme } }
     : saved;
   const channel: PushChannel = "inf:shell:preferences";
+  const windowId = await (await app.browserWindow(page)).evaluate((window) => window.id);
   await app.evaluate(
-    ({ BrowserWindow, nativeTheme }, { channel, shown }) => {
-      // The app's own window is its first, as every journey's window helper reads it.
-      const appWindow = BrowserWindow.getAllWindows()[0];
+    ({ BrowserWindow, nativeTheme }, { channel, shown, windowId }) => {
+      // A hidden task browser may be first; theme the window whose page we photograph.
+      const appWindow = BrowserWindow.fromId(windowId);
       if (!appWindow) throw new Error("No window to show the theme in");
       nativeTheme.themeSource = shown.appearance.theme;
       appWindow.webContents.send(channel, shown);
     },
-    { channel, shown },
+    { channel, shown, windowId },
   );
   const next = shown.appearance.theme;
   await expect.poll(() => page.evaluate(() => document.body.dataset.theme)).toBe(next);

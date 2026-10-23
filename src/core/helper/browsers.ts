@@ -6,6 +6,7 @@ import {
   type BrowserOrderRequest,
   browserOrders,
   isBrowserOrderChannel,
+  workRequests,
 } from "@shared/work";
 import { AxiChannel, type TaskShell } from "../axi/channel";
 import type { GuardLookup } from "../browser/connectionGuard";
@@ -112,7 +113,8 @@ class LentSignIns implements SignInStore {
   }
 
   refresh(site: string, id: string, held: HeldSignIn): boolean {
-    this.copyBack(signInSite(site), id, held);
+    if (this.saving?.id === id) this.saving.taken = { site: signInSite(site), held };
+    else this.copyBack(signInSite(site), id, held);
     return true;
   }
 
@@ -173,7 +175,6 @@ export class ComputerBrowsers {
     // A browser copies a save back once, as it stops; a fresh one holds none.
     this.lent = new LentSignIns((site, id, held) => {
       this.event(this.owners.get(id), { kind: "sign-in", site, id, held });
-      this.owners.delete(id);
     });
     this.browsers = new TaskBrowsers({
       host: options.host,
@@ -195,6 +196,13 @@ export class ComputerBrowsers {
           once: returned.once,
         }),
       signIns: this.lent,
+      automaticSignIn: async (task, site) => {
+        const result = workRequests["inf:work:browser-sign-in"].response.parse(
+          await options.tell("inf:work:browser-sign-in", [{ task, site }]),
+        );
+        if (result.signIn) this.owners.set(result.signIn.id, task);
+        return result.signIn;
+      },
     });
   }
 
@@ -297,12 +305,16 @@ export class ComputerBrowsers {
         // One tick at a time, so the save each takes is its own.
         const run = this.remembered.then(() =>
           this.lent.remembering(remember.id, () =>
-            browsers.returnControl(task, handle, { remember: true }),
+            browsers.returnControl(task, handle, {
+              remember: !remember.refresh,
+              ...(remember.site ? { site: remember.site } : {}),
+              ...(remember.refresh ? { savedId: remember.id } : {}),
+            }),
           ),
         );
         this.remembered = run.catch(() => undefined);
         const { result, taken } = await run;
-        return result.ok && taken ? { ok: true, remembered: taken } : result;
+        return result.ok && taken ? { ...result, remembered: taken } : result;
       }
       case "inf:task-browser:stop": {
         const [{ task }] = request as BrowserOrderRequest<"inf:task-browser:stop">;

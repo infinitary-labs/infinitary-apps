@@ -25,9 +25,9 @@ import type { HostCookie, HostOriginStorage } from "../host";
  * keeps it - the site's own signed-in state, the way a browser keeps it -
  * and never anything he typed, the person's own Safari or Chrome profile,
  * or the app's subscription sign-ins, which live in their own stores. A
- * task's browser starts with none of them: one reaches a task only when the
- * captain lets that task use it on its request card, and the browser
- * copies it back when it stops, so a session the site refreshed stays
+ * task's browser uses one after its request-card grant or the captain's
+ * separate, lasting permission for future tasks on that site. The browser
+ * copies it back on human return and when it stops, so a refreshed session stays
  * current. Each save mints a new `id`, so a browser copies back only into
  * the save it was given, never into one the captain removed and saved anew.
  */
@@ -37,6 +37,7 @@ export type SavedSignInRecord = {
   site: string;
   savedAt: number;
   id: string;
+  automatic?: boolean;
   cookies: HostCookie[];
   storage: HostOriginStorage[];
 };
@@ -49,6 +50,7 @@ export type HeldSignIn = {
 
 const recordSchema = z.object({
   version: z.literal(1),
+  automatic: z.boolean().optional(),
   site: z.string().min(1),
   savedAt: z.number(),
   id: z.string().min(1),
@@ -144,7 +146,12 @@ export class WebSignIns {
   /** Every saved sign-in, by site, as Settings lists them. */
   list(): SavedSignIn[] {
     return this.records()
-      .map(({ site, savedAt }) => ({ site, savedAt }))
+      .map(({ site, savedAt, id, automatic }) => ({
+        site,
+        savedAt,
+        id,
+        ...(automatic ? { automatic } : {}),
+      }))
       .sort((a, b) => a.site.localeCompare(b.site));
   }
 
@@ -191,6 +198,14 @@ export class WebSignIns {
       cookies: held.cookies.length > 0 ? [...held.cookies] : record.cookies,
       storage: [...record.storage.filter((origin) => !read.has(origin.origin)), ...storage],
     });
+    return true;
+  }
+
+  /** Separate site permission, bound to the save shown in Settings; legacy saves stay off. */
+  allowAutomatic(site: string, id: string, automatic: boolean): boolean {
+    const record = this.get(site);
+    if (!record || record.id !== id) return false;
+    this.write({ ...record, automatic });
     return true;
   }
 

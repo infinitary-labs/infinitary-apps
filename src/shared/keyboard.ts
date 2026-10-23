@@ -338,6 +338,15 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["task", "session", "transcript", "tab"],
   },
+  "browser.control": {
+    label: "Take or return browser control",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["handback", "take", "return", "browser"],
+  },
   "cards.show-browser": {
     label: "Show Browser",
     scope: "window",

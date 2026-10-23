@@ -347,6 +347,7 @@ describe("ipc contract", () => {
       "inf:work:browser",
       "inf:work:browser-event",
       "inf:work:browser-frame",
+      "inf:work:browser-sign-in",
       "inf:work:card",
       "inf:work:card-refused",
       "inf:work:check-change",

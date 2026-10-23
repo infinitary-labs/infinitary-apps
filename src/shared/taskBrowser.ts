@@ -206,21 +206,30 @@ export type TaskBrowserHandle = z.infer<typeof taskBrowserHandleSchema>;
 
 /** What the captain's Stop browser or Open again answers: done, or why not in words. */
 export const taskBrowserCommandResultSchema = z.union([
-  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(true), warning: z.string().optional() }),
   z.object({ ok: z.literal(false), text: z.string() }),
 ]);
 export type TaskBrowserCommandResult = z.infer<typeof taskBrowserCommandResultSchema>;
 
 /**
  * How the captain hands a browser back (docs/task-browser.md, "Saved
- * sign-ins"): `remember` is the confirm's tick, which saves the site's
- * sign-in on this Mac. Nothing is saved without it.
+ * sign-ins"): `remember` saves an unsaved site; `savedId` refreshes the save shown
+ * to the captain. `site` binds either choice to the displayed site.
  */
-export const taskBrowserReturnSchema = z.object({ remember: z.boolean().optional() });
+export const taskBrowserReturnSchema = z.object({
+  remember: z.boolean().optional(),
+  site: z.string().optional(),
+  savedId: z.string().optional(),
+});
 export type TaskBrowserReturn = z.infer<typeof taskBrowserReturnSchema>;
 
 /** One website sign-in saved on this Mac, as Settings lists it: its site and when it was saved. */
-export const savedSignInSchema = z.object({ site: z.string(), savedAt: z.number() });
+export const savedSignInSchema = z.object({
+  site: z.string(),
+  savedAt: z.number(),
+  id: z.string().optional(),
+  automatic: z.boolean().optional(),
+});
 export type SavedSignIn = z.infer<typeof savedSignInSchema>;
 
 /**
@@ -279,17 +288,20 @@ export const VIEW_DRIVER_WORDS: Record<TaskBrowserDriver, string> = {
   captain: "you have control · the crewmate cannot see this page",
 };
 
-/** The view's controls for the handoff, and the line Return control asks with. */
+/** The view's controls and visible notice for the one-click handoff. */
 export const TAKE_CONTROL_LABEL = "Take control";
 export const RETURN_CONTROL_LABEL = "Return control";
-export const KEEP_CONTROL_LABEL = "Keep control";
 /** The control on a browser the captain's own click opened: there is no crewmate to hand it to. */
 export const CLOSE_PAGE_LABEL = "Close page";
-export const RETURN_CONTROL_QUESTION =
-  "Return control? The crewmate will read this page as it is now, including what you signed in to.";
+export const RETURN_CONTROL_NOTICE =
+  "Returning control lets the crewmate read and use this browser, including signed-in pages.";
+export const SAVED_SIGN_IN_STATUS = "Sign-in saved on this computer · updates on return";
+export const AUTOMATIC_SIGN_IN_LABEL = "Allow future tasks to use this sign-in automatically";
+export const AUTOMATIC_SIGN_IN_NOTICE =
+  "Applies to tasks across all projects sharing this computer. Turning this off stops future automatic access; Remove also signs out browsers already using it.";
 /** What the crewmate did last, as the row reads it once control came back. */
 export const FRESH_LOOK_WORDS = "fresh look at the page";
-/** The return confirm's tick: the one way a sign-in is saved on this Mac. */
+/** The unticked choice for a site with no saved sign-in. */
 export function rememberSignInLabel(site: string): string {
   return `Remember my ${site} sign-in on ${HERE.this}`;
 }

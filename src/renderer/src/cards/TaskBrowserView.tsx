@@ -4,13 +4,14 @@ import {
   browserDriverOf,
   CLOSE_PAGE_LABEL,
   canOpenAgain,
-  KEEP_CONTROL_LABEL,
   OPEN_AGAIN_CAPTION,
   OPEN_AGAIN_LABEL,
   REPORT_PROBLEM_DRAFT,
   RETURN_CONTROL_LABEL,
-  RETURN_CONTROL_QUESTION,
+  RETURN_CONTROL_NOTICE,
   rememberSignInLabel,
+  SAVED_SIGN_IN_STATUS,
+  type SavedSignIn,
   STALE_ATTACHMENT_WORDS,
   STOP_VIEW_WORDS,
   signInCaption,
@@ -26,6 +27,7 @@ import {
 import type { TaskDetail } from "@shared/tasks";
 import type React from "react";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { Button, IconButton, MicroLabel, RowMenu, StatusDot } from "../design";
 import { CardCorner, CardSizeContext } from "../design/cards/CardSize";
@@ -49,8 +51,8 @@ import { hasCrewmateTab } from "./taskTabs";
  * nothing here reaches the page while the captain watches - watching is not
  * control. Take control makes it his (docs/task-browser.md, "Taking
  * control"): his pointer, wheel and keys on the picture go to the page as
- * they came, and nothing records them; Return control asks once first, with
- * a tick that saves the site's sign-in on this Mac (docs/task-browser.md,
+ * they came, and nothing records them; Return control hands back directly,
+ * with a visible sharing notice and a lasting site save choice (docs/task-browser.md,
  * "Saved sign-ins").
  * The card's tab strip names each page Browser and its title; picking
  * another page is the captain's while he holds the browser, as navigation is.
@@ -403,8 +405,8 @@ const within = (value: number, min: number, max: number) =>
 /**
  * While the view is maximized, the page takes the room the view gives it
  * (docs/task-browser.md, "The view"): the page's own place under the row,
- * the browser's lines and above the foot line. The return question and a
- * refusal line come and go, so the page keeps its size under them and fits.
+ * the browser's lines and above the foot line. The persistent sharing notice
+ * belongs to that chrome; transient refusal lines keep the page's size under them.
  * Restored or gone, the view gives the page back its own size. Answers the
  * ref the view's surface takes.
  */
@@ -482,14 +484,20 @@ export function TaskBrowserView({
   /** Why Open again could not open one now; cleared by the next try. */
   const [refusal, setRefusal] = useState<string | null>(null);
   const [opening, setOpening] = useState(false);
-  /** Return control's one question is open. */
-  const [asking, setAsking] = useState(false);
-  /** The question's tick: return control and save the site's sign-in on this Mac. */
-  const [remember, setRemember] = useState(false);
+  const [saveWarning, setSaveWarning] = useState<string | null>(null);
+  /** The saved record shown to the captain, whose identity binds refresh consent. */
+  const [savedState, setSavedState] = useState<{
+    key: string;
+    record?: SavedSignIn;
+    unavailable?: boolean;
+  }>();
+  /** An unsaved site's initially unticked Remember choice. */
+  const [rememberFor, setRememberFor] = useState<string | null>(null);
   /** The captain's Take control or Return control is on its way. */
   const [moving, setMoving] = useState<"take" | "return" | null>(null);
   const canvas = useWatchedPage(taskId);
   const maximized = useContext(CardSizeContext)?.maximized ?? false;
+  const controlKeys = useCommandKeys("browser.control");
   // On a Mac controlling another, the page shows only there (docs/view.md).
   const thisMac = useShellStore((s) => s.thisMac);
   const there = isView(thisMac) ? browserShownThereWords(thisMac) : null;
@@ -528,14 +536,35 @@ export function TaskBrowserView({
   useEffect(() => {
     if (factUrl !== undefined) setRefusal(null);
   }, [factUrl]);
-  // The return question belongs to the captain's own control.
+  const currentSite = fact?.state === "open" ? fact.site : undefined;
+  const currentKey = `${fact?.session}:${fact?.generation}:${currentSite}`;
+  const shellView = useShellStore((state) => state.view);
+  const saved = savedState?.key === currentKey ? savedState.record : undefined;
+  const remember = rememberFor === currentKey;
+  const savedRead = savedState?.key === currentKey;
   useEffect(() => {
-    if (!captain) setAsking(false);
-  }, [captain]);
-  // The tick is never already ticked when the question opens: nothing is saved without it.
-  useEffect(() => {
-    if (!asking) setRemember(false);
-  }, [asking]);
+    setRememberFor(null);
+    setSavedState(undefined);
+    let active = true;
+    if (captain && currentSite && shellView === "home") {
+      void window.infinitary.browser
+        .signIns()
+        .then((view) => {
+          if (active)
+            setSavedState({
+              key: currentKey,
+              record: view.signIns.find((entry) => entry.site === currentSite),
+              unavailable: !view.available,
+            });
+        })
+        .catch(() => {
+          if (active) setSavedState({ key: currentKey, unavailable: true });
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [captain, currentSite, currentKey, shellView]);
   // The record keeps the card the view came from, so Hide on it returns there too.
   const openRecord = () =>
     useShellStore.getState().openRecord(taskId, from ? { cardId: from.cardId } : undefined);
@@ -548,7 +577,7 @@ export function TaskBrowserView({
   const noticeWords = standing === "same" ? undefined : STALE_ATTACHMENT_WORDS[standing];
   const noticeFit = useOverflowTitle(noticeWords);
   const whoFit = useOverflowTitle(who ? `· ${who}` : undefined);
-  const questionFit = useOverflowTitle(RETURN_CONTROL_QUESTION);
+
   // The page's title and whole address, which the status line has no room
   // for: it is a Tab stop that shows them on rest (docs/keyboard.md, "Facts
   // shown on rest").
@@ -683,13 +712,18 @@ export function TaskBrowserView({
     if (!handle) return;
     setMoving(which);
     setRefusal(null);
+    setSaveWarning(null);
     try {
       const result =
         which === "return"
-          ? await window.infinitary.browser.return(taskId, handle, { remember })
+          ? await window.infinitary.browser.return(taskId, handle, {
+              remember: !saved && remember,
+              site: fact.site,
+              ...(saved?.id ? { savedId: saved.id } : {}),
+            })
           : await window.infinitary.browser.take(taskId, handle);
       if (!result.ok) setRefusal(result.text);
-      else if (which === "return") setAsking(false);
+      else if (result.warning) setSaveWarning(result.warning);
     } catch {
       setRefusal(`${HERE.This} could not hand the browser over right now.`);
     } finally {
@@ -735,11 +769,13 @@ export function TaskBrowserView({
         >
           {CLOSE_PAGE_LABEL}
         </Button>
-      ) : asking ? null : (
+      ) : (
         <Button
           variant="primary"
           size="sm"
-          onClick={() => setAsking(true)}
+          pending={moving === "return"}
+          onClick={() => void handOver("return")}
+          {...controlKeys}
           style={{ flexShrink: 0 }}
         >
           {RETURN_CONTROL_LABEL}
@@ -751,12 +787,13 @@ export function TaskBrowserView({
         size="sm"
         pending={moving === "take"}
         onClick={() => void handOver("take")}
+        {...controlKeys}
         style={{ flexShrink: 0 }}
       >
         {TAKE_CONTROL_LABEL}
       </Button>
     );
-  const question = captain && asking;
+  const question = captain && !fact.own;
   // The card's tab strip names each page Browser and its title; picking
   // another page is the controller's, as navigation is.
   const strip = (
@@ -827,7 +864,11 @@ export function TaskBrowserView({
             </span>
           )}
         </div>
-        <span data-browser-control-button="" style={{ display: "contents" }}>
+        <span
+          data-browser-control-button=""
+          data-browser-handoff={fact.own ? undefined : ""}
+          style={{ display: "contents" }}
+        >
           {control}
         </span>
         <RowMenu
@@ -848,13 +889,14 @@ export function TaskBrowserView({
       </div>
       {question && (
         <div
-          data-browser-return-question=""
-          data-browser-passing=""
+          data-browser-sharing=""
           style={{
             display: "flex",
             flexDirection: "column",
             justifyContent: "center",
-            height: QUESTION_HEIGHT,
+            minHeight: QUESTION_HEIGHT,
+            gap: "var(--space-2)",
+            paddingBlock: "var(--space-2)",
             padding: "0 var(--space-3)",
             borderBottom: "1px solid var(--line-1)",
             background: "var(--captain-dim)",
@@ -864,52 +906,60 @@ export function TaskBrowserView({
             minWidth: 0,
           }}
         >
-          <div
-            style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 0 }}
-          >
-            <span ref={questionFit.ref} title={questionFit.title} style={{ ...LINE, flex: 1 }}>
-              {RETURN_CONTROL_QUESTION}
+          <p style={{ margin: 0, lineHeight: "var(--leading-normal)" }}>{RETURN_CONTROL_NOTICE}</p>
+          {saved ? (
+            <div
+              data-browser-saved=""
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+                flexWrap: "wrap",
+                fontSize: "var(--text-xs)",
+                color: "var(--fg-2)",
+              }}
+            >
+              <span>{SAVED_SIGN_IN_STATUS}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  useShellStore.setState({ view: "settings", settingsSection: "general" })
+                }
+              >
+                Manage
+              </Button>
+            </div>
+          ) : !savedRead || savedState?.unavailable ? (
+            <span style={{ fontSize: "var(--text-xs)", color: "var(--fg-2)" }}>
+              {!savedRead
+                ? "Checking saved sign-in…"
+                : "Saved sign-ins are unavailable. Return control without saving."}
             </span>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => setAsking(false)}
-              style={{ flexShrink: 0 }}
+          ) : (
+            <label
+              data-browser-remember=""
+              style={{
+                ...LINE,
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-2)",
+                alignSelf: "flex-start",
+                maxWidth: "100%",
+                fontSize: "var(--text-xs)",
+                color: remember ? "var(--fg-1)" : "var(--fg-2)",
+                cursor: "pointer",
+              }}
             >
-              {KEEP_CONTROL_LABEL}
-            </Button>
-            <Button
-              variant="primary"
-              size="sm"
-              pending={moving === "return"}
-              onClick={() => void handOver("return")}
-              style={{ flexShrink: 0 }}
-            >
-              {RETURN_CONTROL_LABEL}
-            </Button>
-          </div>
-          <label
-            data-browser-remember=""
-            style={{
-              ...LINE,
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              alignSelf: "flex-start",
-              maxWidth: "100%",
-              fontSize: "var(--text-xs)",
-              color: remember ? "var(--fg-1)" : "var(--fg-2)",
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={remember}
-              onChange={(event) => setRemember(event.target.checked)}
-              style={{ margin: 0, flex: "none", accentColor: "var(--accent)" }}
-            />
-            {rememberSignInLabel(fact.site)}
-          </label>
+              <input
+                type="checkbox"
+                checked={remember}
+                onChange={(event) => setRememberFor(event.target.checked ? currentKey : null)}
+                style={{ margin: 0, flex: "none", accentColor: "var(--accent)" }}
+              />
+              {rememberSignInLabel(fact.site)}
+            </label>
+          )}
         </div>
       )}
       {notice}
@@ -990,13 +1040,13 @@ export function TaskBrowserView({
           · {signInCaption(fact, captain)}
         </span>
       </div>
-      {refusal && (
+      {(refusal || saveWarning) && (
         <div
           role="status"
           data-browser-passing=""
           style={{ padding: "var(--space-2) var(--space-3)", color: "var(--fg-2)" }}
         >
-          {refusal}
+          {refusal ?? saveWarning}
         </div>
       )}
     </section>

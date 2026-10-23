@@ -765,6 +765,21 @@ export const workRequests = {
     ]),
     response: doneSchema,
   },
+  /** A live read only: credentials never enter the durable conversation ledger. */
+  "inf:work:browser-sign-in": {
+    effect: "read",
+    request: z.tuple([z.object({ task: placedTaskIdSchema, site: z.string().min(1) })]),
+    response: z.object({
+      signIn: heldSignInSchema
+        .extend({
+          site: z.string(),
+          id: z.string(),
+          savedAt: z.number(),
+          automatic: z.literal(true),
+        })
+        .optional(),
+    }),
+  },
   /** One picture of a task's page while the captain watches it there; asked once, like the fact. */
   "inf:work:browser-frame": {
     effect: "change",
@@ -1346,12 +1361,19 @@ export const browserOrders = {
     effect: "change",
     request: aboutBrowser({
       handle: taskBrowserHandleSchema,
-      remember: z.object({ id: z.string().min(1).max(128) }).optional(),
+      remember: z
+        .object({
+          id: z.string().min(1).max(128),
+          site: z.string().optional(),
+          refresh: z.boolean().optional(),
+        })
+        .optional(),
     }),
     response: z.union([
       z.object({
         ok: z.literal(true),
         remembered: z.object({ site: z.string(), held: heldSignInSchema }).optional(),
+        warning: z.string().optional(),
       }),
       z.object({ ok: z.literal(false), text: z.string() }),
     ]),

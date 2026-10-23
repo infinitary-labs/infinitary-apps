@@ -60,6 +60,7 @@ export type RefusalState = Pick<
 export type WindowFacts = {
   /** A modal dialog other than command search holds focus: the picture viewer, the custom API form. */
   dialogOpen: boolean;
+  browserControl?: boolean;
   computers?: { page: number; pages: number };
   /**
    * Why a panel's command cannot run now beyond what holds every key
@@ -246,6 +247,8 @@ const REFUSALS: Readonly<
   },
   "cards.show-info": (s) => tabRefusal(s, "cards.show-info"),
   "cards.show-crewmate": (s) => tabRefusal(s, "cards.show-crewmate"),
+  "browser.control": (_s, facts) =>
+    facts.browserControl ? null : "Show a browser with control available first",
   "cards.show-browser": (s) => tabRefusal(s, "cards.show-browser"),
   "cards.next-tab": (s) => tabRefusal(s, "cards.next-tab"),
   "cards.previous-tab": (s) => tabRefusal(s, "cards.previous-tab"),

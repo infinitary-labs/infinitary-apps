@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "browser-handback",
+      "kind": "fix",
+      "title": "Return browser control with one click",
+      "body": "Return control now hands the browser back directly, with a sharing notice visible before you press it. Saved sites show their saved status instead of asking you to remember them again. In Settings, separately allow a saved site for future tasks across your projects, or turn that permission off without removing the sign-in.",
+      "area": "tasks",
+      "picture": {
+        "dark": "browser-handback-dark.webp",
+        "light": "browser-handback-light.webp",
+        "alt": "A task browser under your control, with a sharing notice and a Remember choice before one-click return"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

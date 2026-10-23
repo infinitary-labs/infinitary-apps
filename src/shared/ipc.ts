@@ -2186,6 +2186,13 @@ export const invokeContract = {
     request: z.tuple([]),
     response: savedSignInsViewSchema,
   },
+  "inf:browser:sign-ins:automatic": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string().min(1).max(260), z.string().min(1), z.boolean()]),
+    response: taskBrowserCommandResultSchema,
+  },
   "inf:browser:sign-ins:remove": {
     effect: "change",
     surface: "core",
@@ -2800,6 +2807,11 @@ export const invokeContract = {
   "inf:work:events": { ...workRequests["inf:work:events"], surface: "core", reach: "work" },
   // A task's browser on that computer (docs/task-browser.md, "On another computer").
   "inf:work:browser": { ...workRequests["inf:work:browser"], surface: "core", reach: "work" },
+  "inf:work:browser-sign-in": {
+    ...workRequests["inf:work:browser-sign-in"],
+    surface: "core",
+    reach: "work",
+  },
   "inf:work:browser-frame": {
     ...workRequests["inf:work:browser-frame"],
     surface: "core",
@@ -3329,6 +3341,12 @@ export type FirstmateApi = {
     ) => Promise<TaskBrowserCommandResult>;
     /** The website sign-ins saved on this Mac, for Settings; `available` false where there are no task browsers. */
     signIns: () => Promise<SavedSignInsView>;
+    /** Separately allow or revoke future tasks using the shown saved site. */
+    allowAutomaticSignIn: (
+      site: string,
+      id: string,
+      automatic: boolean,
+    ) => Promise<TaskBrowserCommandResult>;
     /** Remove a site's saved sign-in, signing out every browser using it. */
     removeSignIn: (site: string) => Promise<TaskBrowserCommandResult>;
     /** The captain's own pointer, keys and pasted text, while he has control; recorded nowhere. */

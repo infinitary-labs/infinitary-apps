@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { HERE } from "@shared/deviceNames";
-import type { InvokeRequest } from "@shared/ipc";
+import type { InvokeRequest, InvokeResponse } from "@shared/ipc";
 import type {
   SavedSignIn,
   TaskBrowserCommandResult,
@@ -106,6 +106,17 @@ export class PlacedBrowsers implements PlacedBrowserSink {
   }
 
   // ---- what that computer says -------------------------------------------------
+
+  automaticSignIn(
+    task: string,
+    site: string,
+  ): InvokeResponse<"inf:work:browser-sign-in">["signIn"] {
+    if (!this.holds(task)) return undefined;
+    const record = this.options.signIns?.get(site);
+    return record?.automatic
+      ? { ...record, automatic: true, cookies: liveCookies(record.cookies, this.now()) }
+      : undefined;
+  }
 
   heardFact(deviceId: string, task: string, fact: TaskBrowserFact | null): void {
     this.heard(deviceId, task, fact);
@@ -225,25 +236,37 @@ export class PlacedBrowsers implements PlacedBrowserSink {
     const store = this.options.signIns;
     // The site his tick named: the one the browser's fact shows him.
     const shown = this.fact(taskId);
-    const site = shown?.state === "open" ? signInSite(shown.site) : undefined;
-    const id = options.remember && store && site ? randomUUID() : undefined;
+    const site = options.site ?? (shown?.state === "open" ? signInSite(shown.site) : undefined);
+    const id =
+      store && site
+        ? (options.savedId ?? (options.remember ? randomUUID() : undefined))
+        : undefined;
     const answer = await this.order(taskId, "inf:task-browser:return", {
       handle,
-      ...(id ? { remember: { id } } : {}),
+      ...(id ? { remember: { id, site, ...(options.savedId ? { refresh: true } : {}) } } : {}),
     });
     if (!answer.ok) return answer;
     const remembered = answer.remembered;
+    let warning = answer.warning;
     if (id && store && site && remembered && signInSite(remembered.site) === site) {
-      store.save(
-        site,
-        {
-          cookies: cookiesOfSite(remembered.held.cookies, site),
-          storage: remembered.held.storage,
-        },
-        id,
-      );
-    }
-    return { ok: true };
+      const held = {
+        cookies: cookiesOfSite(remembered.held.cookies, site),
+        storage: remembered.held.storage,
+      };
+      try {
+        if (options.savedId) {
+          if (!store.refresh(site, id, held))
+            warning =
+              "Control returned, but that saved sign-in was removed or replaced. It was not changed.";
+        } else if (!store.get(site)) store.save(site, held, id);
+        else
+          warning = "Control returned, but this site's saved sign-in changed. It was not replaced.";
+      } catch {
+        warning = "Control returned, but the sign-in could not be saved. It was not retried.";
+      }
+    } else if (id && !warning)
+      warning = "Control returned, but no sign-in was saved for the site you selected.";
+    return { ok: true, ...(warning ? { warning } : {}) };
   }
 
   async requestHelp(
@@ -568,6 +591,10 @@ export class HomeBrowsers {
     return this.there.holds(taskId)
       ? this.there.grantSavedSignIn(taskId, handle)
       : this.local.grantSavedSignIn(taskId, handle);
+  }
+
+  allowAutomaticSignIn(site: string, id: string, automatic: boolean): TaskBrowserCommandResult {
+    return this.local.allowAutomaticSignIn(site, id, automatic);
   }
 
   /** Remove in Settings: the save goes from this Mac, and every browser using it signs out, here or there. */

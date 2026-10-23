@@ -32,8 +32,8 @@ describe("the saved sign-ins store", () => {
     now = 2_000;
     store.save("localhost:5173", cookies(cookie("localhost", "session", { secure: false })));
     expect(store.list()).toEqual([
-      { site: "aurora.example", savedAt: 1_000 },
-      { site: "localhost:5173", savedAt: 2_000 },
+      { site: "aurora.example", savedAt: 1_000, id: store.get("aurora.example")?.id },
+      { site: "localhost:5173", savedAt: 2_000, id: store.get("localhost:5173")?.id },
     ]);
     expect(statSync(root).mode & 0o777).toBe(0o700);
     const files = readdirSync(root);
@@ -44,6 +44,36 @@ describe("the saved sign-ins store", () => {
       expect(file).toMatch(/^[0-9a-f]{32}\.json$/);
     }
     expect(store.get("AURORA.EXAMPLE")?.cookies).toEqual([cookie("aurora.example", "sid")]);
+  });
+
+  it("keeps the approved direction C permission separately across restart, revokes it without deleting the save and refuses stale settings", () => {
+    const root = scratchDir("infinitary-web-sign-ins-");
+    const store = new WebSignIns(root);
+    const record = store.save("aurora.example", cookies(cookie("aurora.example", "sid")));
+    expect(store.get(record.site)?.automatic).toBeUndefined();
+    expect(store.allowAutomatic(record.site, record.id, true)).toBe(true);
+    const restarted = new WebSignIns(root);
+    expect(restarted.get(record.site)?.automatic).toBe(true);
+    expect(
+      restarted.refresh(
+        record.site,
+        record.id,
+        cookies(cookie(record.site, "sid", { value: "renewed" })),
+      ),
+    ).toBe(true);
+    expect(restarted.get(record.site)?.automatic).toBe(true);
+    expect(restarted.allowAutomatic(record.site, record.id, false)).toBe(true);
+    expect(new WebSignIns(root).get(record.site)).toMatchObject({
+      id: record.id,
+      automatic: false,
+    });
+    const replacement = store.save(record.site, cookies(cookie(record.site, "sid")));
+    expect(store.allowAutomatic(record.site, record.id, true)).toBe(false);
+    expect(store.get(record.site)).toMatchObject({ id: replacement.id });
+    expect(store.get(record.site)?.automatic).toBeUndefined();
+    store.remove(record.site);
+    expect(store.allowAutomatic(record.site, replacement.id, true)).toBe(false);
+    expect(store.list()).toEqual([]);
   });
 
   it("copies back only into the save a browser was given, never one removed or saved anew", () => {
@@ -78,7 +108,9 @@ describe("the saved sign-ins store", () => {
     // Only the club's own origins: a page reads its own origin's storage alone.
     expect(saved.storage).toEqual([own, plain]);
     expect(store.get("club.example")).toMatchObject({ cookies: [], storage: [own, plain] });
-    expect(store.list()).toEqual([{ site: "club.example", savedAt: expect.any(Number) }]);
+    expect(store.list()).toEqual([
+      { site: "club.example", savedAt: expect.any(Number), id: saved.id },
+    ]);
 
     // A browser on the secure origin alone refreshes that one; the plain one and the
     // cookies it holds none of stay as they were saved.

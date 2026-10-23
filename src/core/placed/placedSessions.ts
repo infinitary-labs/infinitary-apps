@@ -370,6 +370,10 @@ export type PlacedSessionsOptions = {
 
 /** What a task's browser on a computer tells this Mac, by the computer that asked. */
 export type PlacedBrowserSink = {
+  automaticSignIn?: (
+    task: string,
+    site: string,
+  ) => InvokeResponse<"inf:work:browser-sign-in">["signIn"];
   heardFact: (
     deviceId: string,
     task: string,
@@ -720,6 +724,12 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       const { frame } = request as InvokeRequest<"inf:work:browser-frame">[0];
       this.options.browsers?.()?.heardFrame(asked.task, frame);
       return { ok: true } as InvokeResponse<C>;
+    }
+    if (channel === "inf:work:browser-sign-in") {
+      const { site } = request as InvokeRequest<"inf:work:browser-sign-in">[0];
+      return {
+        signIn: this.options.browsers?.()?.automaticSignIn?.(asked.task, site),
+      } as InvokeResponse<C>;
     }
     const placed = this.load(asked.task, deviceId);
     if (channel === "inf:work:events") {

@@ -300,6 +300,8 @@ const api: FirstmateApi = {
         ? invoke("inf:browser:return", taskId, handle, options)
         : invoke("inf:browser:return", taskId, handle),
     signIns: () => invoke("inf:browser:sign-ins"),
+    allowAutomaticSignIn: (site, id, automatic) =>
+      invoke("inf:browser:sign-ins:automatic", site, id, automatic),
     removeSignIn: (site) => invoke("inf:browser:sign-ins:remove", site),
     input: (taskId, input) => invoke("inf:browser:input", taskId, input),
     size: (taskId, size) => invoke("inf:browser:size", taskId, size),

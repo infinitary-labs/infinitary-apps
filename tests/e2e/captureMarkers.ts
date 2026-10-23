@@ -58,12 +58,9 @@ export async function chooseSize(app: ElectronApplication, page: Page, size: UiS
   await page.getByRole("tab", { name: "Appearance", exact: true }).click();
   await page.getByRole("radio", { name: `${size}%`, exact: true }).check();
   await page.keyboard.press("Escape");
+  const window = await app.browserWindow(page);
   await expect
-    .poll(() =>
-      app.evaluate(({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows()[0]?.webContents.getZoomFactor(),
-      ),
-    )
+    .poll(() => window.evaluate((shown) => shown.webContents.getZoomFactor()))
     .toBe(size / 100);
 }
 

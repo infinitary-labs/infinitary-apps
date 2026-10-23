@@ -17,9 +17,8 @@ import {
   DRIVER_WORDS,
   FRESH_LOOK_WORDS,
   INFO_TAB_LABEL,
-  KEEP_CONTROL_LABEL,
   RETURN_CONTROL_LABEL,
-  RETURN_CONTROL_QUESTION,
+  RETURN_CONTROL_NOTICE,
   RETURNED_CAPTION,
   rememberSignInLabel,
   SIGN_IN_MYSELF_LABEL,
@@ -1000,7 +999,7 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       }
     });
 
-    await test.step("Hide resumes nothing; Return control asks once, and Keep control keeps it", async () => {
+    await test.step("Hide resumes nothing; the sharing notice appears before the one-click return", async () => {
       await view(page, task.id).getByRole("button", { name: "Hide" }).click();
       expect((await detail())?.browser).toMatchObject({ control: "captain" });
       expect(crewmateCalls()).toHaveLength(calls);
@@ -1012,13 +1011,9 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       await expect(line).toContainText(DRIVER_WORDS.captain);
       await line.locator("[data-browser-open]").click();
       await expect(view(page, task.id)).toHaveAttribute("data-browser-state", "captain");
-      const chrome = view(page, task.id).locator("[data-browser-chrome]");
-      await chrome.getByRole("button", { name: RETURN_CONTROL_LABEL }).click();
-      const question = view(page, task.id).locator("[data-browser-return-question]");
-      await expect(question).toContainText(RETURN_CONTROL_QUESTION);
-      await shoot(view(page, task.id), "view-return-question-dark.png");
-      await question.getByRole("button", { name: KEEP_CONTROL_LABEL }).click();
-      await expect(question).toHaveCount(0);
+      const sharing = view(page, task.id).locator("[data-browser-sharing]");
+      await expect(sharing).toContainText(RETURN_CONTROL_NOTICE);
+      await shoot(view(page, task.id), "view-sharing-notice-dark.png");
       expect((await detail())?.browser).toMatchObject({ control: "captain" });
       expect(crewmateCalls()).toHaveLength(calls);
     });
@@ -1026,10 +1021,6 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
     await test.step("returning wakes the crewmate once, for a fresh look with every old ref gone", async () => {
       await view(page, task.id)
         .locator("[data-browser-chrome]")
-        .getByRole("button", { name: RETURN_CONTROL_LABEL })
-        .click();
-      await view(page, task.id)
-        .locator("[data-browser-return-question]")
         .getByRole("button", { name: RETURN_CONTROL_LABEL })
         .click();
       const status = view(page, task.id).locator("[data-browser-status]");
@@ -1212,10 +1203,6 @@ test("the captain takes a task's browser while its crewmate's command runs, and 
       await openView(await detail());
       await view(page, task.id)
         .locator("[data-browser-chrome]")
-        .getByRole("button", { name: RETURN_CONTROL_LABEL })
-        .click();
-      await view(page, task.id)
-        .locator("[data-browser-return-question]")
         .getByRole("button", { name: RETURN_CONTROL_LABEL })
         .click();
       await expect
@@ -1660,7 +1647,7 @@ const clubPage = (who: string | undefined): string => `<!doctype html>
   </body>
 </html>`;
 
-test("a sign-in saved on this Mac reaches a later task only on the captain's click, and Settings removes it", async () => {
+test("without future-task permission a saved sign-in reaches a later task only on the captain's click, and Settings removes it", async () => {
   // One journey: a sign-in saved as one task's browser is handed back, its
   // grant to a second task, and its removal while that task uses it.
   test.setTimeout(240_000);
@@ -1745,15 +1732,11 @@ test("a sign-in saved on this Mac reaches a later task only on the captain's cli
       await expect
         .poll(() => pageSays(launched.app, clubUrl, "state").catch(() => null))
         .toBe("Signed in as sam@example.com");
-      const question = view(page, a.id).locator("[data-browser-return-question]");
+      const question = view(page, a.id).locator("[data-browser-sharing]");
       const tick = question.getByRole("checkbox", {
         name: rememberSignInLabel(site),
       });
       const asking = async (): Promise<void> => {
-        await view(page, a.id)
-          .locator("[data-browser-chrome]")
-          .getByRole("button", { name: RETURN_CONTROL_LABEL })
-          .click();
         // Nothing is saved without the tick, and it never starts ticked.
         await expect(tick).not.toBeChecked();
       };
@@ -1762,6 +1745,7 @@ test("a sign-in saved on this Mac reaches a later task only on the captain's cli
         await asking();
         await tick.check();
         await shoot(view(page, a.id), "view-return-remember-ticked-light.png");
+        await tick.uncheck();
         await setThemeViaSettings(page, "dark");
       }
       await asking();
@@ -1769,7 +1753,9 @@ test("a sign-in saved on this Mac reaches a later task only on the captain's cli
       await tick.check();
       await shoot(view(page, a.id), "view-return-remember-ticked-dark.png");
       expect(savedSignInFiles()).toEqual([]);
-      await question.getByRole("button", { name: RETURN_CONTROL_LABEL }).click();
+      await view(page, a.id)
+        .getByRole("button", { name: RETURN_CONTROL_LABEL, exact: true })
+        .click();
       await expect
         .poll(async () => (await detailTitled(first))?.outcome ?? "", { timeout: 60_000 })
         .toContain(`${MOCK_SAVED_REPORT_PREFIX} "Signed in as sam@example.com"`);
@@ -1789,7 +1775,9 @@ test("a sign-in saved on this Mac reaches a later task only on the captain's cli
       ]);
       expect(filesHolding(launched.userDataDir, PASSWORD)).toEqual([]);
       const listed = await page.evaluate(() => window.infinitary.browser.signIns());
-      expect(listed.signIns).toEqual([{ site, savedAt: expect.any(Number) }]);
+      expect(listed.signIns).toEqual([
+        { site, savedAt: expect.any(Number), id: expect.any(String) },
+      ]);
     });
 
     await test.step("Settings lists it, and the browser copies it back when it stops", async () => {
@@ -1985,13 +1973,9 @@ test("a site that keeps its sign-in in its own page storage is saved, used and r
         await expect
           .poll(() => pageSays(app, clubUrl, "state").catch(() => null))
           .toBe("Signed in as sam@example.com");
-        await view(page, task.id)
-          .locator("[data-browser-chrome]")
-          .getByRole("button", { name: RETURN_CONTROL_LABEL })
-          .click();
-        const question = view(page, task.id).locator("[data-browser-return-question]");
-        await question.getByRole("checkbox", { name: rememberSignInLabel(site) }).check();
-        await question.getByRole("button", { name: RETURN_CONTROL_LABEL }).click();
+        const sharing = view(page, task.id).locator("[data-browser-sharing]");
+        await sharing.getByRole("checkbox", { name: rememberSignInLabel(site) }).check();
+        await runFromSearch(app, page, "browser.control");
         await expect
           .poll(async () => (await detailTitled(first))?.outcome ?? "", { timeout: 60_000 })
           .toContain(`${MOCK_SAVED_REPORT_PREFIX} "Signed in as sam@example.com"`);

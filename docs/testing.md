@@ -162,7 +162,8 @@ A part the pull request leaves is checked after it merges, by the nightly check 
 Unlike the desktop journey workflow, a device gate that already started finishes and deletes its own simulators.
 A manual rerun of a replaced version stops before its gate.
 So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the nightly check of `main` checks what merged.
-Only native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
+On the Mac mini's own runners, native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
+A job on the virtual-Mac label (`VIRTUAL_MAC_RUNNER`) takes a group of its own, so phone checks run side by side in the virtual places (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
 The actual desktop build/test command takes a shared lease through `scripts/with-mac-check.py`; the native device gate takes an exclusive lease against the same runner-account cache file, once for both devices.
 A waiting phone holds the entry lock while active desktops finish, so new desktops cannot continually pass it; after admission, command exit or cancellation releases the kernel lease.
@@ -196,7 +197,7 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 A run on request skips the chooser and runs every part of the device gate whatever changed; it starts no release, TestFlight or App Store step.
 It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
 No part on either device stops another, and inside the gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
-It takes the same `mac-mini-phone` queue and exclusive Mac check lease as a pull request's phone check.
+It takes the same line and runner as a pull request's phone check: its own fresh virtual Mac with no lease on the virtual-Mac label, otherwise the `mac-mini-phone` queue and the exclusive Mac check lease.
 
 ## Journeys on the pull request
 
@@ -590,7 +591,7 @@ Each reads `${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || <its fallback> }}`, s
 Every other Mac job reads `MAC_RUNNER` alone and may run in any place, a virtual one or the real Mac's.
 Two jobs ask for a virtual Mac instead, by the placement service's `mini-mac-virtual` label.
 `old-cask-upgrade.yml`'s check writes `/Applications` and quits apps by their bundle id, which only a throwaway clone may take (`docs/alpha.md`, "The old-cask switch").
-The phone check reads that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place once the phone queue releases it (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
+The phone check reads that label from `VIRTUAL_MAC_RUNNER` when the variable is set, so it starts on the next free virtual place, beside any other phone check (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 `tests/release-contract.test.ts` holds which jobs ask for the real Mac.
 
 ### The runner's microphone access

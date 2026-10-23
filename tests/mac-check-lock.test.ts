@@ -466,7 +466,7 @@ describe.skipIf(process.platform === "win32")("the Mac check command leases", ()
     }
   });
   // INF-517, the captain's answer on INF-79's rule: in a virtual Mac a phone check waits only
-  // for other phone checks (the mac-mini-phone queue), never for running journeys.
+  // for a free virtual place, never for running journeys.
   it("starts a virtual Mac's device gate beside running journeys, taking no lease", async () => {
     const f = fixture();
     try {

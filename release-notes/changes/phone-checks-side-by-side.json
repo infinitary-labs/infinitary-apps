@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-checks-side-by-side",
+      "reason": "CI only: phone checks in the virtual Macs run side by side instead of one at a time, and TestFlight uploads wait in a line of their own; nothing in the app changes."
+    }
+  ]
+}

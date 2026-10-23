@@ -2,9 +2,9 @@
 # phone.sh - the phone check's device gates in a fresh virtual Mac cloned
 # from the lane's image (image.sh), with no Mac check lease: phone.yml runs
 # it when the repository variable PHONE_VIRTUAL_MAC is set (docs/ios.md,
-# "The phone check in a virtual Mac"). One phone check runs at a time
-# (phone.yml's mac-mini-phone queue), so phone checks wait only for each
-# other, never for journeys (the captain's INF-517 answer on INF-79's rule).
+# "The phone check in a virtual Mac"). Its clone has one fixed name, so one
+# phone check runs at a time (phone.yml's mac-mini-phone queue, which this
+# variable keeps): phone checks wait only for each other, never for journeys (the captain's INF-517 answer on INF-79's rule).
 #
 # usage: scripts/virtual-mac/phone.sh start <results folder>
 #        scripts/virtual-mac/phone.sh gate <iphone|ipad>...

@@ -123,9 +123,14 @@ jobs:
       pull-requests: read
     # Only phone jobs queue here. Desktop jobs from other PRs remain parallel.
     # The command leases below let a phone take its turn after active journeys.
-    # In the virtual Mac this queue alone keeps one phone clone at a time.
+    # INF-989 (captain: "let both virtual Macs run phone checks at once by ending
+    # the one-at-a-time line"): a job on the placement service's virtual-Mac label
+    # gets its own fresh virtual Mac and takes no lease, so it gets a group of its
+    # own and waits only for a free virtual place. The real Mac never takes that
+    # label. On the Mac mini's runners, and with PHONE_VIRTUAL_MAC's one fixed
+    # clone, the shared mac-mini-phone line keeps one phone check at a time.
     concurrency:
-      group: mac-mini-phone
+      group: ${{ vars.VIRTUAL_MAC_RUNNER && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
       queue: max
       cancel-in-progress: false
     # Allow 45 minutes for the native gate, 105 across admission waits

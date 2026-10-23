@@ -60,9 +60,10 @@ jobs:
     # the real Mac, so it asks for the real Mac, never a virtual one, once
     # the switch sets REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").
     runs-on: ${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
-    # Share the existing phone queue, not the desktop jobs' queues.
+    # TestFlight uploads keep a line of their own, apart from the phone checks'
+    # (INF-989); the device gates below still take the exclusive Mac check lease.
     concurrency:
-      group: mac-mini-phone
+      group: ios-testflight
       queue: max
       cancel-in-progress: false
     # The native lane's 165-minute allowance, which includes waiting behind local

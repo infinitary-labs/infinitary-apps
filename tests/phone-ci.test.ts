@@ -241,26 +241,67 @@ describe("the native pull-request gate", () => {
   it("queues only phone jobs across PRs, leaving desktop PRs independent", () => {
     // The captain's review-cap choice replaces the former all-jobs queue.
     // Real shared/exclusive command admission belongs to mac-check-lock.test.ts.
+    // INF-989 (captain: "let both virtual Macs run phone checks at once by ending the
+    // one-at-a-time line"): a job on the virtual-Mac label gets a group of its own; the Mac
+    // mini's runners and PHONE_VIRTUAL_MAC's one fixed clone keep the shared line.
     const journeys = yaml.load(readFileSync(".github/workflows/journeys.yml", "utf8"));
     const native = workflow.jobs["native-phone"].concurrency;
     expect(journeys.jobs["affected-journeys"].concurrency).toBeUndefined();
-    const resolveGroup = (group: string, ref: string) =>
+    const resolveGroup = (group: string, contexts: Plain) =>
       group.replace(/\$\{\{(.*?)\}\}/g, (_: string, expression: string) => {
-        const github = new data.Dictionary({ key: "ref", value: new data.StringData(ref) });
-        const ast = new Parser(new Lexer(expression).lex().tokens, ["github"], []).parse();
-        return new Evaluator(ast, new data.Dictionary({ key: "github", value: github }))
-          .evaluate()
-          .coerceString();
+        const ast = new Parser(new Lexer(expression).lex().tokens, Object.keys(contexts), [
+          { name: "format", minArgs: 1, maxArgs: 255 },
+        ]).parse();
+        return new Evaluator(ast, toData(contexts)).evaluate().coerceString();
       });
-    const refs = ["refs/pull/79/merge", "refs/pull/136/merge"];
-    const phones = refs.map((ref) => resolveGroup(native.group, ref));
-    const desktops = refs.map((ref) => resolveGroup(journeys.concurrency.group, ref));
-    expect(phones[0]).toBeTruthy();
-    expect(new Set(phones).size).toBe(1);
-    expect(new Set(desktops).size).toBe(refs.length);
-    expect(desktops.some((group) => phones.includes(group))).toBe(false);
+    // Two pull requests' runs, as GitHub names them.
+    const runs = [
+      { ref: "refs/pull/79/merge", run_id: "18800000001", run_attempt: "1" },
+      { ref: "refs/pull/136/merge", run_id: "18800000002", run_attempt: "1" },
+    ];
+    const groups = (vars: Plain) =>
+      runs.map((github) => resolveGroup(native.group, { github, vars }));
+    const desktops = runs.map((github) => resolveGroup(journeys.concurrency.group, { github }));
+    expect(new Set(desktops).size).toBe(runs.length);
+    const lines: { vars: Plain; shared: boolean }[] = [
+      // Today's repository variables: phone checks in the virtual Macs, side by side.
+      {
+        vars: { VIRTUAL_MAC_RUNNER: "mini-mac-virtual", MAC_RUNNER: "mini-mac-any" },
+        shared: false,
+      },
+      // The Mac mini's own runners, where each gate takes the exclusive lease.
+      { vars: { MAC_RUNNER: "mini-mac-any" }, shared: true },
+      { vars: {}, shared: true },
+      // PHONE_VIRTUAL_MAC reuses one fixed clone, whatever the other variables say.
+      {
+        vars: { PHONE_VIRTUAL_MAC: "together", VIRTUAL_MAC_RUNNER: "mini-mac-virtual" },
+        shared: true,
+      },
+      { vars: { PHONE_VIRTUAL_MAC: "together" }, shared: true },
+    ];
+    for (const { vars, shared } of lines) {
+      const phones = groups(vars);
+      for (const group of phones) expect(group).toBeTruthy();
+      expect(new Set(phones).size).toBe(shared ? 1 : runs.length);
+      expect(desktops.some((group) => phones.includes(group))).toBe(false);
+    }
+    // A rerun of the same run is a new job, never queued behind its own first attempt.
+    const virtual = { VIRTUAL_MAC_RUNNER: "mini-mac-virtual" };
+    expect(
+      resolveGroup(native.group, { github: { ...runs[0], run_attempt: "2" }, vars: virtual }),
+    ).not.toBe(groups(virtual)[0]);
     expect(native.queue).toBe("max");
     expect(native["cancel-in-progress"]).toBe(false);
+  });
+  it("keeps TestFlight uploads in a line of their own, apart from the phone checks", () => {
+    // INF-989 (captain: "keep TestFlight uploads in their own line").
+    const release = yaml.load(readFileSync(".github/workflows/ios-release.yml", "utf8"));
+    const testflight = release.jobs.testflight.concurrency;
+    expect(testflight.group).not.toMatch(/\$\{\{/);
+    expect(testflight.group).not.toBe("mac-mini-phone");
+    expect(workflow.jobs["native-phone"].concurrency.group).not.toContain(testflight.group);
+    expect(testflight.queue).toBe("max");
+    expect(testflight["cancel-in-progress"]).toBe(false);
   });
   it("never holds a newer version behind its pull request's older run", () => {
     // INF-487: a run-level group kept PR #135's current version waiting for hours.
@@ -386,7 +427,8 @@ describe("the native pull-request gate", () => {
       ),
     ).toEqual(["Start a fresh virtual Mac", BOTH, "Delete the virtual Mac"]);
     // In the virtual Mac no gate takes the Mac check lease: phone checks wait only for each
-    // other through the mac-mini-phone queue (the captain's answer on INF-79's rule).
+    // other through the mac-mini-phone queue, which keeps one fixed clone at a time (the
+    // captain's answer on INF-79's rule).
     expect(
       stepsThatRun(TOGETHER)
         .filter(isGate)

@@ -263,7 +263,7 @@ The captain's one-time Apple setup is:
 After preflight, the existing disposable iPhone and iPad gates run on `REAL_MAC_RUNNER` when it is set, otherwise on `MAC_RUNNER`, falling back only to `mini-mac`.
 Xcode signs the upload with the captain's certificates, so the job asks for the real Mac, never a virtual one (`docs/testing.md`, "The real Mac's place").
 Either failure prevents archive and upload; iPad still runs after an iPhone failure unless cancelled.
-The release job shares the `mac-mini-phone` queue, and each device gate and the release command use the existing exclusive command lease while desktop jobs retain their parallel queues.
+The release job waits in a line of its own, `ios-testflight`, apart from the phone checks, and each device gate and the release command use the existing exclusive command lease while desktop jobs retain their parallel queues.
 The job allows the native lane's 165 minutes, which include waiting behind local phone gates that took the entry lock first, plus 60 minutes for release work; this changes no test deadline.
 Install-time checks use a scratch HOME and an empty local-signing directory, as in `phone.yml`.
 
@@ -390,7 +390,8 @@ A device gate that already started is never cancelled; it finishes and deletes i
 No simulator exists right before the gate, so there a replaced version cancels its own run instead of starting the gate; a failed reading of the pull request runs the gate.
 That check also stops a manual rerun of a replaced version, which no newer run cancels, about a minute after it reaches the Mac mini.
 It stops the run of a pull request that merged or closed while the run waited in the phone line the same way, so a merged pull request never holds that line for a device gate; the nightly check of `main` checks what merged.
-Only native jobs share the repository-wide `mac-mini-phone` concurrency group, with `queue: max` and cancellation disabled at the job level; GitHub keeps up to 100 pending phone jobs.
+On the Mac mini's own runners, native jobs share the repository-wide `mac-mini-phone` concurrency group, with `queue: max` and cancellation disabled at the job level; GitHub keeps up to 100 pending phone jobs.
+A job on the placement service's virtual-Mac label takes a group of its own instead, so phone checks run side by side, one per free virtual place ("A phone check the placement service puts in a virtual Mac").
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
 On the Mac, `scripts/with-mac-check.py` gives the desktop build/test command a shared kernel file lease and the native device gate an exclusive one, taken once for both devices; a gate inside a virtual Mac takes none ("A phone check the placement service puts in a virtual Mac").
 The `test:phone` package script takes that lease around `scripts/test-phone.ts`, and the script never takes it, because CI already wraps the script and a nested exclusive lease waits forever; the script also swaps `HOME` for a scratch home before anything else runs.
@@ -415,7 +416,7 @@ The version rides in as a `git archive` of the checkout, because a pull request'
 The gate step then runs `phone.sh gate iphone ipad`, which runs `scripts/test-phone.ts --both --simulators 2` inside the clone, two simulators at a time for its 6 CPUs and 16 GB, and copies each device's results into `$RUNNER_TEMP/phone/<device>`, so `phone-results` keeps what the Mac mini's gate keeps, a failed device's included.
 The last step, `phone.sh delete`, stops and deletes the clone however the job ends, a cancelled or replaced run's included.
 No gate in the virtual Mac takes the Mac check lease, so phone checks wait only for each other, never for journeys (the captain's INF-517 answer on INF-79's rule).
-The `mac-mini-phone` queue is what keeps one phone clone running at a time.
+The `mac-mini-phone` queue is what keeps one phone clone running at a time, so with this variable set every phone check takes that shared line whatever `VIRTUAL_MAC_RUNNER` says.
 Whatever its value, the gate is the same one step as on the Mac mini, `Read and recover on iPhone and iPad at once`, right after the replacement check.
 The script prints in UTC when the virtual Mac started and when each device began and ended.
 The image and its base image's download take about 80 GB together in tart's own `~/.tart` on the Mac mini.
@@ -434,8 +435,9 @@ Leave `PHONE_VIRTUAL_MAC` unset with the placement service: a job already inside
 The repository variable `VIRTUAL_MAC_RUNNER`, which `native-phone` reads before `MAC_RUNNER`, names the service's virtual-Mac label, `mini-mac-virtual`, so the phone check never takes the real Mac's place (INF-897).
 GitHub hands a scale set's new runner whichever of that set's waiting jobs it picks, not the one the service started it for, so in the scale set the other Mac jobs share, the service's choice does not hold.
 Under the virtual-Mac label the phone check shares its scale set only with `old-cask-upgrade.yml`'s check, which runs after a release that switched the old cask, on request, or for a pull request that changes it.
-Phone checks come one at a time through the `mac-mini-phone` queue, so the runner the service starts for one takes it, unless that rarer check waits in the same set.
-GitHub assigns a phone check to the scale set only once the queue releases it, with no earlier time, so the service ranks it from that release.
+On that label each phone check takes a concurrency group of its own, so phone checks no longer wait in one line: each waits only for a free virtual place, and both virtual places can run phone checks at once (the captain's choice on INF-989: "let both virtual Macs run phone checks at once by ending the one-at-a-time line").
+The real Mac never takes that label, so a phone check never takes its place or its Mac check lease.
+A runner the service starts for one phone check may take another waiting phone check, or that rarer check in the same set; either is a job that asked for a virtual Mac.
 The service gives a free virtual place first to the oldest job that asks for a virtual Mac (`Plan` in dotfiles-private's `pkgs/fm-placer/schedule.go`), so a released phone check starts on the next free virtual place instead of behind every Mac job already waiting.
 Unset, the job runs where `MAC_RUNNER` sends it, as before; `tests/phone-ci.test.ts` evaluates the job's runner for each setting.
 

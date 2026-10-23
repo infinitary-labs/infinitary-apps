@@ -45,8 +45,13 @@ function setup() {
       now += ms;
     },
     /** A task closed now, with its folder holding every kept part and three leftovers. */
-    closed: (id: string) => {
-      seedTask(tasks, { id, title: id, status: "cancelled" });
+    closed: (id: string, basis?: string) => {
+      seedTask(tasks, {
+        id,
+        title: id,
+        status: "cancelled",
+        shape: basis ? { kind: "implement", basis } : undefined,
+      });
       plantFolder(paths, id);
       return tasks.get(id) as NonNullable<ReturnType<TaskService["get"]>>;
     },
@@ -165,6 +170,64 @@ describe("a closed task's leftover files", () => {
     expect(entries(paths, "origin")).toEqual(KEPT);
     expect(entries(paths, "blocker")).toEqual(KEPT);
     unwatch();
+  });
+
+  // INF-1010: a later task reads every earlier task's evidence in place, not a copied history.
+  it("keeps the entire evidence chain for an unstarted descendant, then releases it at the last close", async () => {
+    const { paths, tasks, workspace, files, pass, closed } = setup();
+    const first = closed("first");
+    const second = closed("second", first.key);
+    const third = closed("third", second.key);
+    const later = tasks.create({
+      id: "later",
+      title: "later",
+      prompt: "Read earlier evidence where it is",
+      repoId: null,
+      startPolicy: "on-request",
+      shape: { kind: "implement", basis: third.key },
+    });
+    const unrelated = closed("unrelated");
+    pass(40 * DAY);
+    await files.sweep();
+    for (const id of [first.id, second.id, third.id]) {
+      expect(entries(paths, id)).toContain("evidence");
+      expect(removalNotes(tasks, id)).toEqual([]);
+    }
+    expect(entries(paths, unrelated.id)).toEqual(KEPT);
+    // No copied history is needed in the successor's folder.
+    expect(existsSync(join(paths.crewmatesDir, later.id, "evidence"))).toBe(false);
+
+    tasks.close(later.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+    await files.sweep();
+    await workspace.deletionsSettled();
+    for (const id of [first.id, second.id, third.id]) {
+      expect(entries(paths, id)).toEqual(KEPT);
+      expect(removalNotes(tasks, id)).toHaveLength(1);
+    }
+  });
+
+  it("follows origin and blocker links through closed intermediates", async () => {
+    const { paths, tasks, workspace, files, pass, closed } = setup();
+    const origin = closed("chain-origin");
+    const follow = closed("chain-follow");
+    const blocker = closed("chain-blocker", follow.key);
+    tasks.link(follow.id, origin.id, "discovered-from", "host");
+    const later = tasks.create({
+      id: "chain-later",
+      title: "later",
+      prompt: "Read the chain's evidence",
+      repoId: null,
+      startPolicy: "on-request",
+      blockedBy: [blocker.id],
+    });
+    pass(8 * DAY);
+    await files.sweep();
+    for (const id of [origin.id, follow.id, blocker.id])
+      expect(entries(paths, id)).toContain("evidence");
+    tasks.close(later.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+    await files.sweep();
+    await workspace.deletionsSettled();
+    for (const id of [origin.id, follow.id, blocker.id]) expect(entries(paths, id)).toEqual(KEPT);
   });
 
   it("starts a pass when a task closes, and not on a later write to an older closed task", async () => {

@@ -50,7 +50,9 @@ Everything else there is the crewmate's: its evidence folder and whatever scratc
 A temporary folder the app provisioned is not part of that week: it goes when the task closes, as the next section says.
 
 A week after a task closes (done or dropped), the app removes those leftover files (the captain's FI3-1199 answer).
-A closed task's files stay while a live task builds on it (its `basis`), was filed from it (`discovered-from`) or waits on it (`blocks`), because crewmates read a closed plan's or origin's evidence; once none does, the week counts from the task's own close.
+A closed task's files stay while a live task builds on it (its `basis`), was filed from it (`discovered-from`) or waits on it (`blocks`), directly or through any number of earlier tasks, including closed intermediates.
+An open task that has not started protects the entire upstream chain too, so a successor can read every earlier task's evidence where it is instead of copying accumulated histories forward.
+Once no live task reaches it, the week counts from the task's own close; the hold does not restart the clock.
 Open and active tasks are never touched, and neither is anything outside the folder: the record, cards, answers, attachments, the kept ref and knowledge stay.
 
 `ClosedTaskFiles` runs one pass at start-up, once an hour on the shared ticker, each time a task closes, and when a work computer comes back into reach.
@@ -63,7 +65,10 @@ The computer keeps the same app-owned parts plus `state.json`, `orders.jsonl`, `
 The cleanup order refuses an open conversation, moves leftovers to that computer's trash without following links, deletes them, and remembers its answer under the order id for that close.
 Only an acknowledged answer clears the task for this run, and the home records the removed names and bytes in a quiet timeline note.
 An out-of-reach computer or failed cleanup retries at the next pass or contact; a computer older than protocol 4.2 needs updating before it answers the cleanup order.
-The crewmate's instructions say the evidence folder goes a week after the close, so what a later reader needs belongs in its report or on a card, and ask for one copy of each download and no kept database copies (`crewmateEvidenceNote`).
+The crewmate's instructions explain the week and the live-chain protection, and tell successors to read earlier evidence in place and name its task and original path rather than copying evidence folders (`crewmateEvidenceNote`).
+An unreadable file or one on another computer is a gap to report, not a reason to duplicate the history.
+The existing card and validation-proof file rules still require copying an individual file into the successor's own allowed folder when it actually publishes that file; this does not authorize copying whole evidence folders.
+What a later reader needs belongs in the report or on a card; instructions also ask for one copy of each download and no kept database copies.
 Bulk downloads, unpacked copies, throwaway environments and test-run output go in the temporary folder when the crewmate chooses the destination (`crewmateTempNote`).
 
 ## A task's temporary folder

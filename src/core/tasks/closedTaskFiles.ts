@@ -12,7 +12,8 @@ import { TaskService } from "./taskService";
  * leftover files"; the captain's FI3-1199 answer): a week after a task
  * closes, its evidence folder and everything else its crewmate left in
  * `crewmates/<taskId>/` go, unless a live task still builds on it, was
- * filed from it or waits on it. The parts the app keeps for itself stay.
+ * filed from it or waits on it, directly or through earlier tasks. The
+ * parts the app keeps for itself stay.
  */
 
 /** How long a closed task's leftover files stay after its close. */
@@ -33,18 +34,32 @@ export type ClosedTaskFilesOptions = {
   removePlaced?: (record: TaskRecord) => Promise<{ removedFiles: string[]; bytes: number }>;
 };
 
-/** The closed tasks a live task builds on (basis), was filed from, or waits on. */
+/** Every upstream task live work builds on, including through closed intermediates. */
 function heldByLiveWork(tasks: Pick<TasksReader, "listLive" | "allLinks" | "resolve">) {
-  const live = tasks.listLive();
-  const liveIds = new Set(live.map((record) => record.id));
-  const held = new Set<string>();
-  for (const record of live) {
-    const basis = record.shape?.basis ? tasks.resolve(record.shape.basis) : undefined;
-    if (basis) held.add(basis.id);
-  }
+  const upstream = new Map<string, string[]>();
   for (const link of tasks.allLinks()) {
-    if (link.type === "discovered-from" && liveIds.has(link.fromId)) held.add(link.toId);
-    if (link.type === "blocks" && liveIds.has(link.toId)) held.add(link.fromId);
+    const [from, to] =
+      link.type === "discovered-from"
+        ? [link.fromId, link.toId]
+        : link.type === "blocks"
+          ? [link.toId, link.fromId]
+          : [];
+    if (!from || !to) continue;
+    const refs = upstream.get(from) ?? [];
+    refs.push(to);
+    upstream.set(from, refs);
+  }
+  const pending = tasks.listLive();
+  const held = new Set<string>();
+  for (const record of pending) {
+    if (held.has(record.id)) continue;
+    held.add(record.id);
+    const refs = [...(upstream.get(record.id) ?? [])];
+    if (record.shape?.basis) refs.push(record.shape.basis);
+    for (const ref of refs) {
+      const ancestor = tasks.resolve(ref);
+      if (ancestor && !held.has(ancestor.id)) pending.push(ancestor);
+    }
   }
   return held;
 }

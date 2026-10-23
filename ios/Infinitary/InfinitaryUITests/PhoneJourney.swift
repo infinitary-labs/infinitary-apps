@@ -496,6 +496,8 @@ import XCTest
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForExistence(timeout: 20), app.debugDescription)
 
         let choose = app.buttons["card-action-choose"]
+        // INF-1070: the retried card takes taps only once it reports drawn, which enables its footer; its text exists sooner.
+        waitUntilEnabled(choose)
         let stalledAnswer = app.webViews.buttons["Stall the next answer"]
         reveal(stalledAnswer); stalledAnswer.tap()
         reveal(choose); choose.tap()
@@ -504,6 +506,7 @@ import XCTest
         XCTAssertTrue(app.buttons["close-card"].isEnabled, "A stalled form cannot keep native chrome busy")
         app.buttons["retry-card"].tap()
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForExistence(timeout: 20))
+        waitUntilEnabled(choose)
         reveal(choose); choose.tap()
         XCTAssertTrue(app.staticTexts["Answer each required question first."].waitForExistence(timeout: 10))
         let refused = try await home("card-state", method: "GET")

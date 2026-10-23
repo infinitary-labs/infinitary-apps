@@ -760,6 +760,11 @@ Hosted files can outlive a failed or abandoned opening, and local cleanup never 
 
 New stories print no publication-time checks status; the host's live checks strip remains authoritative.
 If checked facts change after publication, the author updates them and verification in a new story revision and deliberately republishes it before offering completion.
+A push after publication is such a change: the published story keeps its own version, so the completion card is refused until a revision at the pushed version is published.
+That refusal, the refusal of an ordinary body on a saved-story task's completion card, the refusal of a completion card with neither body nor `presentation`, and the `presentation` rule itself each name the way out: `prepare_change` at the pushed version, keeping the base and title and updating what was checked, then `open_change` with that revision, then the card (INF-961).
+The completion refusal names the revision and the versions from the ledger; the merge path's refusal reaches the captain, so it keeps its own words and names no tool.
+Only an accepted conflict repair refreshes the story on its own (`refreshConflictOnly`), because only the author can say whether its checked facts still hold after any other push.
+Evidence: `prCi.test.ts` ("names the way to a current story when a push follows its publication"), `cardTool.test.ts` and `crewSupervisor.test.ts` (the two card refusals).
 A replacement keeps the original Before base and evidence; After needs fresh captures or an explicit applicability declaration for the current committed version.
 Confirmed receipts are reused after restart without another upload, while an open PR keeps its last complete story until the replacement is ready.
 The generated region carries stable markers and a last-published hash; replacement normalizes CRLF to LF, preserves the surrounding words, and refuses edits inside it.

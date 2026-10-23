@@ -3296,6 +3296,46 @@ describe("shared story delivery boundaries", () => {
     expect(completion).toHaveBeenCalledTimes(1);
   });
 
+  // INF-961: INF-899 published its story, pushed three repairs, and stopped
+  // when no completion card said how to show a story at the pushed version.
+  it("names the way to a current story when a push follows its publication (INF-961)", async () => {
+    const at = await saved();
+    at.bringBranchHome.mockResolvedValue("");
+    at.forge.change = { ...(at.forge.change as ForgeChange), headSha: repaired };
+    at.readHead.mockResolvedValue(repaired);
+    const refresh = `Prepare a new story revision at the pushed version with prepare_change, keeping its base and title and updating what was checked, publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`;
+    const stale = `Story revision 1 was published at ${original}, and the pushed branch is now at ${repaired}. ${refresh}`;
+    await expect(at.service.completionPresentation("ab12cd34", 1)).rejects.toThrow(stale);
+    // A guessed newer revision is told the same, since none exists yet.
+    await expect(at.service.completionPresentation("ab12cd34", 2)).rejects.toThrow(stale);
+    // The merge path's words reach the captain, so they name no tool.
+    await expect(
+      at.presentations.assertPublished("ab12cd34", at.forge.change as ForgeChange, at.forge),
+    ).rejects.toThrow(
+      /^The current story and all evidence must be published and read back before the completion card or merge\.$/,
+    );
+
+    at.tasks.updateChangePresentation("ab12cd34", (record) => ({
+      ...record!,
+      revisions: [...record!.revisions, { ...at.story, revision: 2, head: repaired }],
+    }));
+    await expect(at.service.completionPresentation("ab12cd34", 2)).rejects.toThrow(
+      "Story revision 2 is prepared at the pushed version but not yet published and read back: publish it with open_change, then show the completion card with presentation 2.",
+    );
+    await at.service.open("ab12cd34", { title: "fix: keep the saved story", presentation: 2 });
+    await expect(at.service.completionPresentation("ab12cd34", 1)).rejects.toThrow(
+      "The newest story is revision 2: show the completion card with presentation 2.",
+    );
+    expect((await at.service.completionPresentation("ab12cd34", 2)).title).toBe("One saved story");
+
+    // A commit not yet pushed is named with the same way out.
+    const unpushed = "63fd25b591c30c1761c6d6c2d43e5b9585a9884e";
+    at.readHead.mockResolvedValue(unpushed);
+    await expect(at.service.completionPresentation("ab12cd34", 2)).rejects.toThrow(
+      `The current code changed before the completion card: the branch is at ${unpushed}, and the pushed branch at ${repaired}. Push it, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`,
+    );
+  });
+
   it("automatically republishes the unchanged story before a kept merge of an accepted repair", async () => {
     const at = await saved();
     const putIn = vi.spyOn(at.forge, "putIn");

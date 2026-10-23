@@ -6596,7 +6596,10 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
         body: completionBody("<p>Different.</p>"),
         actions: [{ id: "merge", effect: SETTLE_MERGE }],
       }),
-    ).toThrow(/Use presentation/);
+    ).toThrow(
+      // INF-961: the refusal names the way to a story at the pushed version.
+      "Use presentation on the completion card so it shows the current published story, not a second account of the change. This task's newest story is revision 1. After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.",
+    );
     const id = await specs[0]?.onCard?.({
       title: "Ignored duplicate title",
       body: "",

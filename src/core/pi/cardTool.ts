@@ -397,6 +397,7 @@ export const SAVED_STORY_RULE = [
   "Pass that current revision here and to open_change as presentation, not body; supply the saved conventional title on both surfaces, give one settle merge action, and omit body, body_file, risk and required_actions. A task that merges on its own passes it on a note with no actions instead.",
   "The host uses the saved story after the checks pass.",
   "Pictures and recordings on it are the selected, inspected, publishable ones, with no local path or private thread.",
+  "A story published before a later push is no longer current: prepare a new revision at the pushed version, keeping its base and title and updating what was checked, and publish it with open_change before the card.",
   "Existing pull requests, self-hosted GitLab, GitHub Enterprise, plain Git and local-only delivery keep body and the five headings.",
   "A pull request opened before saved stories and since closed starts a new story; one still open keeps body.",
 ].join(" ");
@@ -615,7 +616,16 @@ async function emitCard(
     return `Card shown from presentation ${params.presentation}${cardId ? ` (${cardId})` : ""}`;
   }
   if ((params.body !== undefined) === (params.body_file !== undefined)) {
-    throw new Error("Card refused: give exactly one of body or body_file.");
+    // INF-961: a completion card given neither may have meant its saved story.
+    const story =
+      !options.firstmate &&
+      params.body === undefined &&
+      (params.actions ?? []).some(
+        (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+      );
+    throw new Error(
+      `Card refused: give exactly one of body or body_file.${story ? " A completion card for a saved story gives presentation instead: the newest revision prepare_change returned, published with open_change at the pushed version. After a push since the story was published, prepare a new story revision at the pushed version and publish it with open_change first." : ""}`,
+    );
   }
   if (options.firstmate && params.body_file !== undefined) {
     throw new Error("Card refused: the first mate's cards use inline body, not body_file.");

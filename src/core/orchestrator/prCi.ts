@@ -1443,7 +1443,7 @@ export class PrCiService {
     if (!this.options.presentations) throw new Error("Saved change stories are unavailable.");
     const change = await located.forge.changeFor(located.branch);
     if (!change) throw new Error("The story's pull request is not open.");
-    await this.options.presentations.assertPublished(taskId, change, located.forge);
+    await this.options.presentations.assertPublished(taskId, change, located.forge, revision);
     return this.options.presentations.completion(taskId, revision, change.headSha);
   }
 

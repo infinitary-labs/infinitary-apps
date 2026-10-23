@@ -8582,10 +8582,14 @@ export class CrewSupervisor {
       ownPresentation &&
       input.actions.some((action) => settleEffectOf(action)?.mode === "merge") &&
       !presentationChecked
-    )
+    ) {
+      // INF-961: the refusal names the way to a current story, which a push
+      // after publication needs, so a crewmate never takes its story as lost.
+      const newest = ownPresentation.revisions.at(-1)?.revision;
       throw new Error(
-        "Use presentation on the completion card so it shows the current published story, not a second account of the change.",
+        `Use presentation on the completion card so it shows the current published story, not a second account of the change. ${newest === undefined ? "" : `This task's newest story is revision ${newest}. `}After a push since the story was published, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`,
       );
+    }
     const before = this.options.tasks.get(task.id);
     const carefulMerge =
       before?.delivery?.reviewVerdict === "pass" &&

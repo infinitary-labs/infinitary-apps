@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "story-refresh-refusals",
+      "reason": "Internal: what a crewmate is told when its completion card is refused because its saved story was published before a later push; the cards and pull requests a person sees are unchanged."
+    }
+  ]
+}

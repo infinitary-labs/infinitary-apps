@@ -454,8 +454,11 @@ export class ChangePresentations {
   async completion(taskId: string, revision: number, head: string) {
     return this.serial(taskId, async () => {
       const story = this.publishedStory(taskId, head, revision);
-      if ((await this.options.head(taskId)) !== head)
-        throw new Error("The current code changed before the completion card.");
+      const committed = await this.options.head(taskId);
+      if (committed !== head)
+        throw new Error(
+          `The current code changed before the completion card: the branch is at ${committed}, and the pushed branch at ${head}. Push it, prepare a new story revision at the pushed version with prepare_change and publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`,
+        );
       await this.checkRetained(story);
       // A displayed card owns independent copies. Story pruning never sees
       // these minted names, even after the card closes or the app restarts.
@@ -511,10 +514,19 @@ export class ChangePresentations {
     });
   }
 
-  /** Publication completeness is independent of checks and of permission to merge. */
-  async assertPublished(taskId: string, change: ForgeChange, forge: Forge): Promise<ForgeChange> {
+  /**
+   * Publication completeness is independent of checks and of permission to
+   * merge. A completion offer passes its revision, so a refusal names the way
+   * to a current story.
+   */
+  async assertPublished(
+    taskId: string,
+    change: ForgeChange,
+    forge: Forge,
+    revision?: number,
+  ): Promise<ForgeChange> {
     const record = this.ledger(taskId);
-    const story = this.publishedStory(taskId, change.headSha);
+    const story = this.publishedStory(taskId, change.headSha, revision);
     if (!record.published) throw new Error("The current story has not been published.");
     if (
       !forge.attachments ||
@@ -608,6 +620,7 @@ export class ChangePresentations {
     );
   }
 
+  /** A completion offer names its revision; the merge path names none and keeps its own words. */
   private publishedStory(taskId: string, head: string, revision?: number): ChangePresentation {
     const record = this.ledger(taskId);
     const story = record.revisions.at(-1);
@@ -622,7 +635,7 @@ export class ChangePresentations {
       story.head !== head
     )
       throw new Error(
-        "The current story and all evidence must be published and read back before the completion card or merge.",
+        `The current story and all evidence must be published and read back before the completion card or merge.${revision === undefined ? "" : ` ${completionWayOut(record, story, head)}`}`,
       );
     return story;
   }
@@ -839,6 +852,24 @@ export class ChangePresentations {
       this.active.delete(taskId);
     }
   }
+}
+
+/**
+ * The way to a refused completion card, said from the ledger's typed facts
+ * (INF-961): a story published before a later push is never current again,
+ * and a crewmate refused without these words took it as lost (INF-899).
+ */
+function completionWayOut(
+  record: ChangePresentationRecord,
+  newest: ChangePresentation,
+  head: string,
+): string {
+  const published = record.published?.revision === newest.revision;
+  if (newest.head !== head || (published && record.published?.head !== head))
+    return `Story revision ${newest.revision} was ${published ? "published" : "prepared"} at ${published ? record.published?.head : newest.head}, and the pushed branch is now at ${head}. Prepare a new story revision at the pushed version with prepare_change, keeping its base and title and updating what was checked, publish it with open_change, then show the completion card with the revision prepare_change returns as presentation.`;
+  if (!published || record.publication?.state !== "confirmed")
+    return `Story revision ${newest.revision} is prepared at the pushed version but not yet published and read back: publish it with open_change, then show the completion card with presentation ${newest.revision}.`;
+  return `The newest story is revision ${newest.revision}: show the completion card with presentation ${newest.revision}.`;
 }
 
 function receiptMatches(

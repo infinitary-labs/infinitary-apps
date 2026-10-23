@@ -265,6 +265,21 @@ describe("createEmitCardTool", () => {
     expect(onCard).toHaveBeenCalledTimes(1);
   });
 
+  // INF-961: INF-899's crewmate left presentation out and was told only to give a body.
+  it("points a completion card with neither body nor presentation at its saved story", async () => {
+    const onCard = vi.fn(() => "card-task-story");
+    const tool = piToolOf(bindTool(EMIT_CARD_TOOL, { onCard })) as unknown as AnyTool;
+    await expect(
+      tool.execute("t1", {
+        title: "docs(crew): guide referenced pull request merges",
+        actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+      }),
+    ).rejects.toThrow(
+      "Card refused: give exactly one of body or body_file. A completion card for a saved story gives presentation instead: the newest revision prepare_change returned, published with open_change at the pushed version. After a push since the story was published, prepare a new story revision at the pushed version and publish it with open_change first.",
+    );
+    expect(onCard).not.toHaveBeenCalled();
+  });
+
   it("takes a completion decision only with its risk, and risk on no other card (FI3-1128)", async () => {
     const onCard = vi.fn(() => "card-t1-9");
     const tool = piToolOf(createEmitCardTool(onCard)) as unknown as AnyTool;

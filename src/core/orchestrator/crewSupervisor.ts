@@ -6691,8 +6691,9 @@ export class CrewSupervisor {
         return receipt;
       });
     const receipt = this.recordExplicitReport(task, text, summary, declared);
-    // The report is the crewmate's close-out: what it wrote on its cards
-    // since the last one reaches the stage now, not at its turn's end.
+    // The report is the crewmate's close-out for its new cards: they reach
+    // the stage now. A card the captain already had waits for the turn's
+    // end, so it comes back once, with the crewmate's last word (INF-926).
     this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "report");
     return receipt;
   }
@@ -6850,7 +6851,9 @@ export class CrewSupervisor {
     }
     this.options.tasks.setActivity(task.id, "idle");
     this.options.tasks.markIdle(task.id, { providerFailed: providerError !== undefined });
-    // Going idle is the crewmate's close-out when it did not report.
+    // Going idle is the crewmate's close-out: a card the captain already had
+    // comes back or redraws with its last write, and a new card no report
+    // released reaches the stage.
     this.cards.closeOut({ kind: "crewmate", taskId: task.id }, "idle");
     if (report) {
       const summary = candidateSummary || reportSummary(report);

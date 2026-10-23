@@ -232,10 +232,18 @@ export class CardService {
   private readonly cards = new Map<string, Card>();
   /**
    * The version the stage still shows of a card on it whose author has
-   * written it again and not yet closed out (a revision waiting on the
-   * report). Memory only: a restart closes every author out.
+   * written it again and not yet closed out (a revision waiting on its
+   * author's turn end). Memory only: a restart closes every author out.
    */
   private readonly staged = new Map<string, Card>();
+  /**
+   * Cards the captain put aside that their crewmate has since written on,
+   * by card, with the lifecycle written on (INF-926): the head no longer
+   * says aside, so the card comes back, but the stage keeps it aside until
+   * that crewmate's turn ends. Memory only: a restart closes every author
+   * out, and the card comes back with it.
+   */
+  private readonly asideUntilTurnEnd = new Map<string, string>();
   /**
    * What changed in each card's shown version since the captain last saw
    * it, by card, worked out once per shown offer: a later look cannot move
@@ -589,6 +597,9 @@ export class CardService {
     for (const id of this.changes.keys()) {
       if (!this.cards.has(id)) this.changes.delete(id);
     }
+    for (const [id, lifecycleId] of this.asideUntilTurnEnd) {
+      if (this.cards.get(id)?.lifecycleId !== lifecycleId) this.asideUntilTurnEnd.delete(id);
+    }
     return [...this.cards.values()]
       .map((card) => {
         const shown = this.withChanges(this.onTheStage(card));
@@ -672,11 +683,13 @@ export class CardService {
 
   /**
    * The card as the stage shows it: the version on it while a newer write
-   * waits, under the head's own hold (what it awaits, where it was sent).
+   * waits, under the head's own hold (what it awaits, where it was sent),
+   * and still aside while its author's answer to that waits on its turn end.
    */
   private onTheStage(card: Card): Card {
+    const aside = !card.minimized && this.heldAside(card);
     const version = this.staged.get(card.id);
-    if (!version) return card;
+    if (!version) return aside ? { ...card, minimized: true } : card;
     const {
       awaiting: _awaiting,
       sentBackAt: _sentBackAt,
@@ -685,10 +698,17 @@ export class CardService {
     } = version;
     return {
       ...shown,
-      ...(card.minimized ? { minimized: true as const } : {}),
+      ...(card.minimized || aside ? { minimized: true as const } : {}),
       ...(card.awaiting ? { awaiting: card.awaiting } : {}),
       ...(card.sentBackAt !== undefined ? { sentBackAt: card.sentBackAt } : {}),
     };
+  }
+
+  /** Whether the stage keeps a card aside until its author's turn ends (`asideUntilTurnEnd`). */
+  private heldAside(card: Card): boolean {
+    return (
+      card.lifecycleId !== undefined && this.asideUntilTurnEnd.get(card.id) === card.lifecycleId
+    );
   }
 
   /**
@@ -926,11 +946,10 @@ export class CardService {
         JSON.stringify(existing.risk) !== JSON.stringify(revised.risk) ||
         JSON.stringify(existing.requiredActions) !== JSON.stringify(revised.requiredActions);
       // A card off the stage stays off it; one on it keeps showing what it
-      // showed until a crewmate author closes out (the one rule), and so
-      // does one still waiting on its author after the captain's reply, whoever
-      // its author is. The
-      // Firstmate's own revision of any other card on the stage redraws at
-      // once.
+      // showed until its crewmate author's turn ends (the one rule), and so
+      // does one still waiting on its author after the captain's reply,
+      // whoever its author is. The Firstmate's own revision of any other
+      // card on the stage redraws at once.
       const { card: updated, offer } = this.stamp({
         ...revised,
         ...(existing.awaiting ? { awaiting: existing.awaiting } : {}),
@@ -951,6 +970,10 @@ export class CardService {
       });
       if (staged) this.staged.set(resolved, staged);
       this.cards.set(resolved, updated);
+      // A crewmate's revision of a card the captain put aside brings it back
+      // when that crewmate's turn ends, never mid-turn (INF-926).
+      if (existing.minimized && context.author === "crewmate" && updated.lifecycleId)
+        this.asideUntilTurnEnd.set(resolved, updated.lifecycleId);
       this.placed(updated);
       // The preferred answer to a thread message is a revision of the head
       // (cards-as-threads phase 1): the card re-renders above, and the
@@ -1227,8 +1250,11 @@ export class CardService {
    * An author closed out (docs/card-threads.md "When a card reaches the
    * stage"): a crewmate's `report` or its idle, the Firstmate's turn end.
    * Each of its cards that waited on it reaches the stage - a card off it
-   * comes up, one on it redraws in place with the newer write - and a card
-   * the captain's reply holds stays off it.
+   * comes up, one on it redraws in place with the newer write, one put
+   * aside that its author wrote on comes back - and a card the captain's
+   * reply holds stays off it. A report releases only a crewmate's new
+   * cards: one the captain already had on the stage waits for its turn's
+   * end, so it comes back once, with the crewmate's last word (INF-926).
    */
   closeOut(author: CardAuthorRef, reason: CloseOut): void {
     if (author.kind === "crewmate") {
@@ -1244,6 +1270,8 @@ export class CardService {
           ? this.firstmateAnswers(card)
           : card.author === "crewmate" && card.taskId === author.taskId;
       if (!mine) continue;
+      if (reason === "report" && this.reachedStage(card)) continue;
+      if (this.asideUntilTurnEnd.delete(card.id)) moved = true;
       if (card.awaiting !== "answer" && card.lifecycleId) {
         if (this.host.cardStore.releaseRevisions(card.id, card.lifecycleId)) {
           moved = true;
@@ -1269,6 +1297,14 @@ export class CardService {
       this.scheduleBroadcast();
       for (const id of released) this.host.broadcastThread?.(this.thread(id));
     }
+  }
+
+  /** Whether the stage has shown the captain this lifecycle of a card. */
+  private reachedStage(card: Card): boolean {
+    return (
+      card.lifecycleId !== undefined &&
+      this.host.cardStore.lastAvailableOffer(card.id, card.lifecycleId) !== undefined
+    );
   }
 
   /**
@@ -1452,7 +1488,10 @@ export class CardService {
     // The captain's line takes an ordinary card off the stack until its
     // author answers and closes out; any other line - the author's answer, or the
     // host's "revised:" for a revision - ends his line being the newest.
-    if (who === "crewmate" || who === "firstmate") this.setMinimized(cardId, false);
+    // An author's line brings back a card the captain put aside: the
+    // Firstmate's at once, a crewmate's when its turn ends (INF-926).
+    if (who === "firstmate") this.setMinimized(cardId, false);
+    if (who === "crewmate") this.backAtTurnEnd(cardId);
     const card = this.cards.get(cardId);
     // The captain writes about the version the stage shows him; an author,
     // or the host's line for its revision, about the newest one it wrote.
@@ -2074,16 +2113,37 @@ export class CardService {
     return true;
   }
 
-  /** INF-476: saved presentation only, not a close, reply, gate or ladder interaction. */
+  /**
+   * INF-476: saved presentation only, not a close, reply, gate or ladder
+   * interaction. It reads and moves what the stage shows, so bringing a card
+   * back also ends a wait for its author's turn end (`asideUntilTurnEnd`).
+   */
   setMinimized(cardId: string, minimized: boolean): void {
     const card = this.cards.get(cardId);
-    if (!card || Boolean(card.minimized) === minimized) return;
-    const { minimized: _previous, ...rest } = card;
-    const updated: Card = { ...rest, ...(minimized ? { minimized: true } : {}) };
-    this.host.cardStore.upsert(updated);
-    this.cards.set(cardId, updated);
+    if (!card || Boolean(card.minimized || this.heldAside(card)) === minimized) return;
+    this.asideUntilTurnEnd.delete(cardId);
+    if (Boolean(card.minimized) !== minimized) {
+      const { minimized: _previous, ...rest } = card;
+      const updated: Card = { ...rest, ...(minimized ? { minimized: true } : {}) };
+      this.host.cardStore.upsert(updated);
+      this.cards.set(cardId, updated);
+    }
     this.scheduleBroadcast();
     this.flushBroadcast();
+  }
+
+  /**
+   * A crewmate wrote on a card the captain put aside: the saved card is no
+   * longer aside, so a restart - a close-out - brings it back, while the
+   * stage keeps it aside until that crewmate's turn ends (INF-926).
+   */
+  private backAtTurnEnd(cardId: string): void {
+    const card = this.cards.get(cardId);
+    if (!card?.minimized || !card.lifecycleId) return;
+    const { minimized: _aside, ...rest } = card;
+    this.host.cardStore.upsert(rest);
+    this.cards.set(cardId, rest);
+    this.asideUntilTurnEnd.set(cardId, card.lifecycleId);
   }
 
   /** Publish a newly reopened card before asking either the local or paired view to focus it. */
@@ -2233,6 +2293,7 @@ export class CardService {
         // now. The Firstmate is not, so a reply on its note keeps its wait.
         if (card.author === "crewmate" && card.awaiting !== undefined) this.release(card, "idle");
         this.staged.delete(cardId);
+        this.asideUntilTurnEnd.delete(cardId);
         continue;
       }
       this.host.cardStore.transaction(() => {

@@ -111,9 +111,10 @@ export const IDLE_THREAD_NUDGE_TEXT =
  *
  * Since contract v4.14 it also says WHEN (the captain's "ship it" of
  * 2026-09-27, docs/card-threads.md "When a card reaches the stage"): the
- * card comes back to him at the crewmate's close-out, so the crewmate does
- * the work first, answers once, then reports - and never acknowledges, the
- * shape that brought 4 of 25 answered cards back before their answer.
+ * card comes back at the crewmate's close-out - its turn end since INF-926,
+ * never a report while it works on - so the crewmate does the work first,
+ * answers once, then reports - and never acknowledges, the shape that
+ * brought 4 of 25 answered cards back before their answer.
  *
  * The last clause is the settle hand-off, and it is INSTRUCTION, not a
  * classifier: nothing in the host reads the captain's words. A crewmate
@@ -126,7 +127,7 @@ export const IDLE_THREAD_NUDGE_TEXT =
 export const THREAD_STEER_PREAMBLE = [
   "The captain replied in the thread on your card.",
   "Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report.",
-  "Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when you report, so never acknowledge their words or say what you are about to do: they read your answer, not your plan.",
+  "Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan.",
   "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.",
 ].join(" ");
 

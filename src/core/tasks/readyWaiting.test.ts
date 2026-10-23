@@ -255,7 +255,7 @@ describe("ready decisions are the sole waiting fact", () => {
       h.cards.addMessage(id, "captain", "Why this choice?");
       await h.flush();
       h.cards.replyFromCrewmate("t", { cardId: id, text: "This is the safer choice." });
-      h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "report");
+      h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
       await h.flush();
       h.pauseTransport(false);
       h.cards.addMessage(id, "captain", "Why this choice?");
@@ -269,7 +269,7 @@ describe("ready decisions are the sole waiting fact", () => {
       expect(h.boards.at(-1)?.seq).toBe(h.protocol.board().seq);
       h.assertWaiting("t", null);
       h.cards.replyFromCrewmate("t", { cardId: id, text: "This is the safer choice." });
-      h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "report");
+      h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
       await h.flush();
       h.assertWaiting("t", id);
     } finally {
@@ -316,7 +316,12 @@ describe("ready decisions are the sole waiting fact", () => {
         h.cards.emitCrewmateCard("t", { ...decision, id, title: "Answered" }, "route");
         await h.flush();
         h.assertWaiting("t", null);
+        // INF-926: a report mid-turn does not bring back a card the captain
+        // already had, on any reader; the crewmate's turn end does.
         h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "report");
+        await h.flush();
+        h.assertWaiting("t", null);
+        h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
         await h.flush();
         h.assertWaiting("t", id);
         const seq = h.tasks.boardSeq();
@@ -331,7 +336,7 @@ describe("ready decisions are the sole waiting fact", () => {
         expect(h.tasks.timeline("t")).toEqual(afterReportTimeline);
         expect(h.events).toHaveLength(events);
         h.cards.replyFromCrewmate("t", { cardId: id, text: "This is the safer choice." });
-        h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "report");
+        h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
         await h.flush();
         h.assertWaiting("t", id);
         expect(h.tasks.get("t")?.gate).toEqual(before?.gate);
@@ -376,7 +381,7 @@ describe("ready decisions are the sole waiting fact", () => {
       h.cards.emitCrewmateCard("t", { ...decision, id, actions: [] }, "route");
       await h.flush();
       h.assertWaiting("t", id);
-      h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "report");
+      h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
       await h.flush();
       h.assertWaiting("t", null);
       h.cards.emitCrewmateCard("t", { ...decision, id }, "route");

@@ -21055,11 +21055,13 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
  * The regression cases are the recorded exchanges of the design's section
  * 3.3, replayed tool call by tool call at their recorded offsets through
  * the real card, thread and report paths: the acknowledgement must not
- * bring the card back, the report must, a steered correction redraws in
- * place, and case C comes back once, at +110 s. The stage is what the
- * window draws: the snapshot's cards that are not awaiting their author. A
- * card the captain replied under stays on it at the back (`sentBackAt`)
- * while it waits, showing what it showed.
+ * bring the card back, and neither must a report while its author works on
+ * - the captain's INF-797: "it should come back when the crewmate's turn is
+ * finished" - so case C comes back once, at its turn's end. A new card
+ * still goes up at the report. The stage is what the window draws: the
+ * snapshot's cards that are not awaiting their author. A card the captain
+ * replied under stays on it at the back (`sentBackAt`) while it waits,
+ * showing what it showed.
  */
 describe("CrewSupervisor: a card reaches the stage at its author's close-out", () => {
   const S = 1_000;
@@ -21104,7 +21106,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       .map((event) => ({ at: event.at, data: event.data }));
   }
 
-  it("A: an acknowledgement in the thread does not bring the card back; the report does (+185 s)", async () => {
+  it("A: an acknowledgement in the thread does not bring the card back, nor does the report at +185 s; the turn's end does", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     const { taskId, cardId, stable } = await onTheStage(harness, crewmate, {
@@ -21169,14 +21171,20 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     await at(replied, 185 * S);
     spec?.onReport?.("Intent: assess a general catch-all for all idle crewmates.");
     await tick();
-    expect(staged(harness, cardId)?.title).toBe("General idle crew recovery · round 2");
-    expect(stageMoments(harness, taskId, cardId).at(-1)).toEqual({
-      at: replied + 185 * S,
-      data: expect.objectContaining({ closeOut: "report", returned: true }),
+    // The crewmate works on: the card waits at the back, as it was.
+    expect(staged(harness, cardId)).toBeUndefined();
+    expect(harness.cards().find((card) => card.id === cardId)).toMatchObject({
+      title: "Idle crew recovery",
+      awaiting: "close-out",
     });
+    const raised = stageMoments(harness, taskId, cardId).length;
     crewmate.finishPrompt();
     await tick();
     expect(staged(harness, cardId)?.title).toBe("General idle crew recovery · round 2");
+    expect(stageMoments(harness, taskId, cardId)).toHaveLength(raised + 1);
+    const back = stageMoments(harness, taskId, cardId).at(-1);
+    expect(back?.data).toEqual(expect.objectContaining({ closeOut: "idle", returned: true }));
+    expect(back?.at).toBeGreaterThan(replied + 185 * S);
   });
 
   it("a click on a card waiting at the back chooses from the version it showed", async () => {
@@ -21211,7 +21219,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     expect(harness.cards().some((card) => card.id === cardId)).toBe(false);
   });
 
-  it("B: the answer lands at the report", async () => {
+  it("B: the answer lands at the turn's end, not the report", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     const { cardId, stable } = await onTheStage(harness, crewmate, {
@@ -21257,10 +21265,13 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       "Captain asked for clickable choices; I answered yes in the thread and revised the card.",
     );
     await tick();
+    expect(staged(harness, cardId)).toBeUndefined();
+    crewmate.finishPrompt();
+    await tick();
     expect(staged(harness, cardId)?.title).toBe(oneAtATime.title);
   });
 
-  it("C: two revisions and an answer before the report come back once, settled, at +110 s", async () => {
+  it("C: two revisions, an answer and five reports come back once, settled, at the turn's end", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
     const { taskId, cardId, stable } = await onTheStage(harness, crewmate, {
@@ -21331,9 +21342,12 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       sample(offset * S);
     }
 
+    // No report brought it back while the crewmate worked on.
+    expect(shownAfter).toEqual([]);
+    crewmate.finishPrompt();
+    await tick();
     // Never the half-drawn decision: the card came back once, as the note
-    // its last write made it, at the report.
-    expect(shownAfter).toEqual([110, 186, 576, 793, 819].map((offset) => offset * S));
+    // its last write made it, when its turn ended.
     expect(staged(harness, cardId)).toMatchObject({
       title: "Why Always Allow did not survive",
       actions: [],
@@ -21342,8 +21356,64 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
       (moment) => moment.data?.returned === true,
     );
     expect(returns).toEqual([
-      { at: replied + 110 * S, data: expect.objectContaining({ closeOut: "report" }) },
+      { at: expect.any(Number), data: expect.objectContaining({ closeOut: "idle" }) },
     ]);
+    expect(returns[0]?.at).toBeGreaterThan(replied + 819 * S);
+  });
+
+  // INF-797: a card the captain put aside must not come back "while the
+  // crewmate is still working and hasn't finished updating the card content".
+  it("a card put aside that its crewmate answers and revises mid-turn comes back at its turn's end, with the last write", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const actions = [
+      { id: "ship", label: "Ship it", default: true },
+      { id: "wait", label: "Wait" },
+    ];
+    const { cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "Ship the release on Friday",
+      body: "<p>Everything is ready for Friday.</p><p>Ship it then.</p>",
+      actions,
+    });
+    const aside = () => harness.cards().find((card) => card.id === cardId)?.minimized;
+    harness.supervisor.replyToCard(cardId, "what about the windows build?");
+    await tick();
+    harness.supervisor.setCardMinimized(cardId, true);
+    expect(aside()).toBe(true);
+
+    const spec = harness.specs[0];
+    spec?.onReply?.({ cardId, text: "Windows builds on Saturday, so I am moving the plan." });
+    syncCardId(
+      spec?.onCard?.({
+        id: stable,
+        title: "Ship the release on Saturday (draft)",
+        body: "<p>Draft: moving to Saturday.</p><p>Still checking the Windows build.</p>",
+        actions,
+      }),
+    );
+    spec?.onReport?.("Moving the release plan to Saturday.");
+    await tick();
+    // The crewmate works on: the card stays aside through its answer,
+    // its revision and its report.
+    expect(aside()).toBe(true);
+    syncCardId(
+      spec?.onCard?.({
+        id: stable,
+        title: "Ship the release on Saturday after the Windows build",
+        body: "<p>The Windows build passed.</p><p>Ship Saturday afternoon.</p>",
+        actions,
+      }),
+    );
+    await tick();
+    expect(aside()).toBe(true);
+
+    crewmate.finishPrompt();
+    await tick();
+    expect(aside()).toBeUndefined();
+    expect(staged(harness, cardId)).toMatchObject({
+      title: "Ship the release on Saturday after the Windows build",
+      body: "<p>The Windows build passed.</p><p>Ship Saturday afternoon.</p>",
+    });
   });
 
   it("puts a new card up at the close-out, never at the emit, and a revision before it arrives settled", async () => {
@@ -22436,8 +22506,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     supervisor.replyToCard(card ?? "", "see this", [pngImage]);
     await tick();
     expect(crewmate.promptCalls.slice(before)).toEqual([
-      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when you report, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
-      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when you report, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
+      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
+      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply takes your card off their screen until the answer, unless it is their only card or asked to stay; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
     ]);
     expect(crewmate.promptImageCalls.at(-1)).toEqual([pngImage]);
   });
@@ -23322,7 +23392,6 @@ describe("ready-card choice admission", () => {
     expect(cardStore.chosenAction(id)).toBeUndefined();
     expect(tasks.timeline(taskId)).toEqual(before);
     expect(crewmate.steer).not.toHaveBeenCalled();
-    specs[0]?.onReport?.("The decision is ready.");
     specs[0]?.onCard?.({
       id,
       title: "Choose a route",
@@ -23337,8 +23406,10 @@ describe("ready-card choice admission", () => {
         { id: "later", label: "Not now" },
       ],
     });
-    specs[0]?.onReport?.("The answer is ready.");
-    // A pending revision must neither remove a shown choice nor admit an unseen one.
+    specs[0]?.onReport?.("The decision is ready.");
+    // A pending revision must neither remove a shown choice nor admit an
+    // unseen one, and a later report does not show it while the crewmate
+    // works on (INF-926).
     specs[0]?.onCard?.({
       id,
       title: "A new route",
@@ -23353,6 +23424,7 @@ describe("ready-card choice admission", () => {
         { id: "later", label: "Not now" },
       ],
     });
+    specs[0]?.onReport?.("The answer is ready.");
     expect(() => supervisor.act(id, "subscriptions")).toThrow(
       "This choice is not offered on this card",
     );

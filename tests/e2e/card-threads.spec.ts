@@ -630,7 +630,7 @@ async function windowCaughtUp(page: LaunchedApp["page"], cardId: string): Promis
   }, cardId);
 }
 
-test("a reply takes the card off the stack; an acknowledgement does not redraw it, nor does a reload; the report does", async () => {
+test("a reply takes the card off the stack; an acknowledgement does not redraw it, nor does a reload; its crewmate's turn end does", async () => {
   const { page, mockProvider } = launched;
   // The preceding image reply can still be finishing when its request is
   // observed; close its card only once its author has ended that turn.
@@ -688,9 +688,9 @@ test("a reply takes the card off the stack; an acknowledgement does not redraw i
   await expect(newBadge).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Next card" })).toHaveCount(0);
 
-  // The work lands - a revision, then the report - and the report is what
-  // redraws it with the answer: marked new in its original place, never over the card
-  // on screen.
+  // The work lands - a revision, then the report - and the crewmate's turn
+  // end after it is what redraws it with the answer (INF-926): marked new in
+  // its original place, never over the card on screen.
   mockProvider?.releaseThreadAnswer();
   await expect(newBadge).toHaveText("1 new", { timeout: 30_000 });
   await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible();

@@ -912,7 +912,7 @@ It changes only the card’s optional saved `minimized` fact, through `CardServi
 It is independent from `awaiting`, resolution, offers, task status, the captain gate and the idle ladder; no message, feed line or notification is emitted.
 The Mac stack and pager omit minimized cards, while the phone’s read-only list is unchanged.
 Every Mac showing this first mate shares that fact, including after a restart.
-A revision or author answer clears it and the card returns unread, through the existing author close-out rule.
+A crewmate's revision or answer brings the card back unread when that crewmate's turn ends, never at a report mid-turn (INF-926); the first mate's own answer brings it back at once.
 Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Minimize.
 
 The renderer keeps answers and reply drafts in their existing in-session stores while a card is minimized.

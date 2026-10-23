@@ -97,7 +97,7 @@ describe("CardService", () => {
     expect(cards.get(standalone)?.meta).toBe("firstmate");
   });
 
-  it("INF-476 minimizes only presentation, persists through restart, and author answers and revisions restore it", () => {
+  it("INF-476 minimizes only presentation, persists through restart, and author answers and revisions restore it at the author's turn end", () => {
     const { db, tasks, cardStore, gates, make } = setup();
     seedTask(tasks, { id: "launch", title: "Prepare the launch checklist", status: "idle" });
     const cards = make();
@@ -118,12 +118,22 @@ describe("CardService", () => {
     expect(restored.snapshot().find((card) => card.id === id)?.minimized).toBe(true);
     restored.showOpenCard(id);
     expect(restored.get(id)?.minimized).toBeUndefined();
+    // INF-926: the author's answer brings the card back when its turn ends,
+    // not at a report while it still works.
+    const aside = (service: CardService) =>
+      service.snapshot().find((card) => card.id === id)?.minimized;
     restored.setMinimized(id, true);
     restored.replyFromCrewmate("launch", {
       cardId: id,
       text: "Friday keeps the review beside the launch.",
     });
     expect(restored.get(id)?.minimized).toBeUndefined();
+    expect(aside(restored)).toBe(true);
+    restored.closeOut({ kind: "crewmate", taskId: "launch" }, "report");
+    expect(aside(restored)).toBe(true);
+    restored.closeOut({ kind: "crewmate", taskId: "launch" }, "idle");
+    expect(aside(restored)).toBeUndefined();
+    // So does a revision; the captain's own restore needs no turn end.
     restored.setMinimized(id, true);
     restored.emitCrewmateCard(
       "launch",
@@ -131,7 +141,25 @@ describe("CardService", () => {
       "m",
     );
     restored.closeOut({ kind: "crewmate", taskId: "launch" }, "report");
-    expect(restored.snapshot().find((card) => card.id === id)?.minimized).toBeUndefined();
+    expect(aside(restored)).toBe(true);
+    restored.setMinimized(id, false);
+    expect(aside(restored)).toBeUndefined();
+    restored.setMinimized(id, true);
+    restored.emitCrewmateCard(
+      "launch",
+      { ...decision, id, body: "<p>Keep Friday for the launch review.</p>" },
+      "m",
+    );
+    restored.closeOut({ kind: "crewmate", taskId: "launch" }, "idle");
+    expect(restored.snapshot().find((card) => card.id === id)).toMatchObject({
+      body: "<p>Keep Friday for the launch review.</p>",
+    });
+    expect(aside(restored)).toBeUndefined();
+    // A restart closes every author out: an answer written before it brings the card back.
+    restored.setMinimized(id, true);
+    restored.replyFromCrewmate("launch", { cardId: id, text: "The launch review stays." });
+    expect(aside(restored)).toBe(true);
+    expect(aside(make())).toBeUndefined();
     db.close();
   });
 
@@ -351,10 +379,12 @@ describe("CardService", () => {
         .map((event) => event.data),
     ).toEqual([expect.objectContaining({ closeOut: "restart" })]);
 
-    // The held card comes back when its author answers and closes out.
+    // The held card comes back when its author answers and its turn ends.
     after.replyFromCrewmate("t1", { cardId: asked, text: "Left races the queue." });
     expect(after.get(asked)?.awaiting).toBe("close-out");
     after.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    expect(after.snapshot().find((card) => card.id === asked)?.awaiting).toBe("close-out");
+    after.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(after.snapshot().find((card) => card.id === asked)?.awaiting).toBeUndefined();
   });
 
@@ -392,10 +422,13 @@ describe("CardService", () => {
     expect(cards.get(id)?.body).toBe("<p>Revised.</p>");
     expect(cards.snapshot()[0]).toMatchObject({ body: decision.body });
     expect(cards.snapshot()[0]?.awaiting).toBeUndefined();
-    // Another task's close-out is not this author's.
-    cards.closeOut({ kind: "crewmate", taskId: "t2" }, "report");
+    // Another task's close-out is not this author's, and a report is not
+    // its turn's end: the card the captain already has redraws only then.
+    cards.closeOut({ kind: "crewmate", taskId: "t2" }, "idle");
     expect(cards.snapshot()[0]?.body).toBe(decision.body);
     cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    expect(cards.snapshot()[0]?.body).toBe(decision.body);
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(cards.snapshot()[0]?.body).toBe("<p>Revised.</p>");
   });
 
@@ -527,11 +560,14 @@ describe("CardService", () => {
     expect(restored.snapshot().find((card) => card.id === asked)?.body).toBe("<p>Revised.</p>");
     expect(restored.get(asked)?.body).toBe("<p>Revised.</p>");
 
-    // The author answers and closes out: the newest version redraws, and the
-    // card returns to its original place, no longer waiting.
+    // The author answers and its turn ends: the newest version redraws, and
+    // the card returns to its original place, no longer waiting. Its report
+    // alone leaves the card off the stage while it works on.
     restored.replyFromCrewmate("t1", { cardId: asked, text: "Left races the queue." });
     expect(restored.snapshot().find((card) => card.id === asked)?.body).toBe("<p>Revised.</p>");
     restored.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    expect(restored.shown(asked) && onStage(restored.shown(asked) as Card)).toBe(false);
+    restored.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     const answered = restored.snapshot().find((card) => card.id === asked);
     expect(answered).toMatchObject({ body: "<p>Revised.</p>" });
     expect(answered?.awaiting).toBeUndefined();
@@ -1018,7 +1054,7 @@ describe("CardService evidence", () => {
     cards.replyFromCrewmate("t1", { cardId: id, text: "Capacity corrected." });
     expect(cards.get(id)?.awaiting).toBe("close-out");
     expect(cards.threadAwaitingAuthor("t1")).toBe(false);
-    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(cards.shown(id)?.awaiting).toBeUndefined();
     db.close();
   });
@@ -1427,7 +1463,7 @@ describe("CardService what changed since the captain looked", () => {
     // The stage still shows the version seen: nothing has changed on it.
     expect(shown(cards, id).body).toBe(v1);
     expect(shown(cards, id).changes).toBeUndefined();
-    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(shown(cards, id).changes).toMatchObject({ added: 2, removed: 1, rewritten: false });
   });
 
@@ -1445,7 +1481,7 @@ describe("CardService what changed since the captain looked", () => {
     const told = cards.revisionChanges(id);
     expect(told).toMatchObject({ added: 2, removed: 1, rewritten: false, preview: false });
     expect(revisionNotice(told)).toContain("2 parts new and 1 removed");
-    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+    cards.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     expect(shown(cards, id).changes).toMatchObject({ added: told?.added, removed: told?.removed });
 
     // A rewrite is accepted, and named as one.
@@ -1653,7 +1689,7 @@ describe("revision link publication", () => {
       ["Sign-in"],
       ["Checks"],
     ]);
-    cards.closeOut({ kind: "crewmate", taskId: "revisions" }, "report");
+    cards.closeOut({ kind: "crewmate", taskId: "revisions" }, "idle");
     const released = cards.thread(id).messages.filter((m) => m.revision);
     expect(released.map((m) => m.revision?.released)).toEqual([true, true]);
     expect(released.every((m) => m.revisionShown?.offerId === cards.get(id)?.offerId)).toBe(true);

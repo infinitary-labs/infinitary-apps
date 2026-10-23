@@ -1068,7 +1068,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // Integrations (docs/integrations.md): Settings and app_change alike.
     "inf:integrations:list": () => services.integrations.view(),
     "inf:integrations:add": (server) => services.integrations.add("mcp", server),
-    "inf:integrations:sign-in": (kind) => services.integrations.signIn(kind),
+    "inf:integrations:sign-in": (kind, consent) => services.integrations.signIn(kind, consent),
     "inf:integrations:sign-in-cancel": () => {
       services.integrations.cancelSignIn();
       return services.integrations.view();

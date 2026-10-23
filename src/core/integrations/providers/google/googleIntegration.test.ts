@@ -1,5 +1,10 @@
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import {
+  INTEGRATION_KIND_NAMES,
+  integrationNoticeRefusal,
+  NOTICE_ACCEPTED,
+} from "@shared/integrations";
 import { afterEach, describe, expect, it } from "vitest";
 import { SHOOT_EVENT, STUDIO_CALENDAR } from "../../../../../tests/helpers/calendarStandIn";
 import {
@@ -152,7 +157,7 @@ type Fixture = Awaited<ReturnType<typeof fixture>>;
 
 async function signedIn(): Promise<Fixture> {
   const world = await fixture();
-  await world.integrations.signIn("google");
+  await world.integrations.signIn("google", NOTICE_ACCEPTED);
   return world;
 }
 
@@ -168,7 +173,7 @@ describe("Google as an integration", () => {
       addable: [{ kind: "google", name: "Google" }],
     });
 
-    const { id, view } = await integrations.signIn("google");
+    const { id, view } = await integrations.signIn("google", NOTICE_ACCEPTED);
 
     expect(id).toBe("google");
     const consent = new URL(opened[0] ?? "");
@@ -240,10 +245,31 @@ describe("Google as an integration", () => {
     for (const key of google.issued()) for (const read of reads) expect(read).not.toContain(key);
   });
 
+  it("opens nothing and asks Google nothing until the person accepts Google's notice", async () => {
+    // INF-949, Google's Workspace user data policy: the in-app disclosure
+    // "must accompany and immediately precede a request for user consent",
+    // and "You must not begin collection prior to obtaining affirmative consent".
+    const { google, opened, integrations } = await fixture();
+    await expect(integrations.signIn("google")).rejects.toThrow(
+      integrationNoticeRefusal(INTEGRATION_KIND_NAMES.google),
+    );
+    expect(opened).toEqual([]);
+    expect(google.tokens).toEqual([]);
+    expect(google.seen).toEqual([]);
+    expect(integrations.view()).toMatchObject({
+      integrations: [],
+      addable: [{ kind: "google", name: "Google" }],
+    });
+
+    await integrations.signIn("google", NOTICE_ACCEPTED);
+    expect(opened).toHaveLength(1);
+    expect(integrations.view().integrations.map((row) => row.account)).toEqual([STAND_IN_ACCOUNT]);
+  });
+
   it("keeps no sign-in when the person declines on Google's page, or unchecks Gmail", async () => {
     const declined = await fixture();
     declined.google.knobs.consent.deny = true;
-    await expect(declined.integrations.signIn("google")).rejects.toThrow(
+    await expect(declined.integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
       "The sign-in was declined on Google's page.",
     );
     expect(declined.pages[0]).toContain("Not signed in to Google");
@@ -251,7 +277,7 @@ describe("Google as an integration", () => {
 
     const partial = await fixture();
     partial.google.knobs.consent.grant = GOOGLE_SCOPES.filter((scope) => !scope.includes("gmail"));
-    await expect(partial.integrations.signIn("google")).rejects.toThrow(
+    await expect(partial.integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
       "Google did not grant the Gmail permission. Sign in again and leave every box checked.",
     );
     expect(partial.integrations.view().integrations).toEqual([]);
@@ -285,7 +311,7 @@ describe("Google as an integration", () => {
     );
     expect(opened).toEqual([]);
 
-    await integrations.signIn("google");
+    await integrations.signIn("google", NOTICE_ACCEPTED);
     expect(google.tokens).not.toEqual([]);
     expect(integrations.view().integrations.map((row) => [row.id, row.name])).toEqual([
       ["google", "Google"],
@@ -321,7 +347,7 @@ describe("Google as an integration", () => {
     });
     // A browser that opens the page, and the person never finishes there.
     const { integrations } = await fixture(async () => opened());
-    const signingIn = integrations.signIn("google");
+    const signingIn = integrations.signIn("google", NOTICE_ACCEPTED);
     await pageOpen;
     integrations.cancelSignIn();
     await expect(signingIn).rejects.toThrow("The sign-in was cancelled.");
@@ -582,7 +608,7 @@ describe("Google as an integration", () => {
     expect(integrations.view().integrations[0]).toMatchObject({ health: "needs_reauth" });
 
     // Signing in again brings the row back.
-    await integrations.signIn("google");
+    await integrations.signIn("google", NOTICE_ACCEPTED);
     expect(integrations.view().integrations[0]).toMatchObject({ health: "ok" });
   });
 
@@ -602,14 +628,14 @@ describe("Google as an integration", () => {
     const renewed = await label();
     clock.now += 3_599_000;
     await crew.call("Google", "search_mail", { max: 1 });
-    await integrations.signIn("google");
+    await integrations.signIn("google", NOTICE_ACCEPTED);
     expect((await integrations.sendAsk("task-1", renewed)).outcome).toEqual({ kind: "ran" });
     expect(modified()).toHaveLength(1);
 
     // Signed in as someone else under the same row, the request is not theirs to send.
     const asked = await label();
     google.knobs.account = "ada.park.studio@gmail.com";
-    await integrations.signIn("google");
+    await integrations.signIn("google", NOTICE_ACCEPTED);
     expect(integrations.view().integrations[0]).toMatchObject({
       id: "google",
       account: "ada.park.studio@gmail.com",
@@ -922,7 +948,7 @@ describe("Calendar on the shared Google row", () => {
     google.knobs.consent.grant = GOOGLE_SCOPES.filter(
       (scope) => !scope.endsWith("calendar.events"),
     );
-    await expect(integrations.signIn("google")).rejects.toThrow(
+    await expect(integrations.signIn("google", NOTICE_ACCEPTED)).rejects.toThrow(
       "every Gmail and Calendar permission",
     );
     expect(integrations.view().integrations).toEqual([]);

@@ -5,6 +5,7 @@ Settings -> Integrations: what the first mate and the crew reach outside the per
 <IntegrationsTab integrations={[{...GITHUB, paused:true}]} open="github"/>  // paused, actions open
 <IntegrationsTab integrations={[{id:"mcp-notes",kind:"mcp",name:"Notes",runs:"npx -y @example/notes",health:"ok",paused:false,actions:TOOLS,events:[RESOURCE_CHANGED]}]} open="mcp-notes"/>  // an MCP server, open
 <IntegrationsTab integrations={[]} addable={[GITHUB_KIND, MCP_KIND]} adding/>  // the MCP server form
+<IntegrationsTab integrations={[]} addable={[GITHUB_KIND, GOOGLE_KIND, MCP_KIND]} notice="google"/>  // Google's notice, before its page opens
 <IntegrationsTab integrations={[]} addable={[GITHUB_KIND, GOOGLE_KIND, MCP_KIND]} signingIn="google"/>  // waiting for Google's page
 ```
 The tab's head is the Automation tab's: the title "Integrations" at `--text-md` weight 500, then one `--text-sm --fg-3` intro, "What your first mate and your crew can reach outside your projects.
@@ -22,7 +23,14 @@ A kind that signs in with keys follows its actions with its keys, indented the s
 The field starts empty every time and never shows a kept value; one `--text-xs --fg-3` line closes the keys, "It stays on this computer.
 Your first mate and your crew use it but never see it."
 The foot is the `ConnectChips` row: one chip per kind not yet connected ("+ GitHub", "+ Google"), whose sign-in aside is `ForgeRow`'s device-code aside, under the chip or under the row signing in again.
-Google signs in in the browser, so its aside, in the same place and box, is one `--text-sm --fg-2` line, "Finish signing in to Google in your browser.", over a small secondary "Open the page again" and a ghost "Cancel"; its chip reads "Connecting..." while it waits, and the new row opens on its actions once the browser is back.
+Before Google's page opens, Google's notice takes that place and box (INF-949; Google's Workspace user data policy asks an app to show what it uses and where it goes, right before the sign-in, and to wait for an accept).
+The chip, a row's "Sign in again" and a card that opens Google's sign-in all open the notice first, and nothing is asked of Google until it is accepted.
+It reads, top to bottom: the title "Before you connect Google" in `--text-sm` weight 500 `--fg-1`; one `--text-sm --fg-2` lead; two groups, "What Infinitary uses" and "Where it goes", each under an `--text-xs --fg-3` head like the keys' "Keys"; one `--text-sm --fg-3` closing line; then a small primary "Accept and continue to Google" beside a ghost "Cancel".
+Each group is a list of `--text-sm --fg-2` items, one fact per sentence, an item's name first in `--fg-1` weight 500 ("Gmail", "Calendar", "Your AI provider", "Other computers", "Saved task records").
+It sits in the aside's place, framed by a `--line-1` hairline at `--radius-m` with `--space-3` by `--space-4` padding, so the focus ring it takes on opening follows that frame, and it keeps a reading measure of about 72 characters, so a wide window never stretches it.
+The notice takes the focus when it opens, labelled by its title, so it is read from the top and Tab reaches Accept; Cancel closes it with nothing asked and puts the focus back on the chip, and leaving the tab is no accept either.
+The words are `INTEGRATION_NOTICES` in `src/shared/integrations.ts`; the notice never closes by itself.
+Google signs in in the browser, so once the notice is accepted its aside, in the same place and box, is one `--text-sm --fg-2` line, "Finish signing in to Google in your browser.", over a small secondary "Open the page again" and a ghost "Cancel"; its chip reads "Connecting..." while it waits, and the new row opens on its actions once the browser is back.
 Its last chip, "+ MCP server", is always there, and opens the add form under the chips in the same aside box: a "Name" field (placeholder "Linear"), a mono "Runs" field (placeholder "npx -y @example/mcp-server, or https://example.com/mcp") with the `--text-sm --fg-3` hint "A program and its arguments, started on this computer when someone uses it, or the server's https address.", one `--danger` `--text-sm` status line for why it could not connect, and a small primary "Connect" ("Connecting…" while it connects; disabled until both fields hold words) beside a ghost "Cancel".
 Connect opens the new row on the tools the server listed.
 Settings -> Projects' "Where your projects live" ends with one pointer line, "Your GitHub sign-in is in Integrations.", in `--text-sm --fg-3`, with a small secondary "Open Integrations".

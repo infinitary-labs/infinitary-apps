@@ -2,6 +2,7 @@ import { FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
 import {
   INTEGRATION_EFFECT_WORDS,
   INTEGRATION_KIND_NAMES,
+  INTEGRATION_NOTICES,
   INTEGRATION_RULE_WORDS,
   INTEGRATION_SECRET_WORDS,
   INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
@@ -9,11 +10,14 @@ import {
   INTEGRATIONS_SIGN_IN_HOST,
   INTEGRATIONS_WORDS,
   type IntegrationKind,
+  type IntegrationNotice,
   type IntegrationSettingsPatch,
+  type IntegrationSignInConsent,
   type IntegrationsView,
   type IntegrationView,
   integrationRenameWords,
   isIntegrationSignIn,
+  NOTICE_ACCEPTED,
 } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
@@ -40,10 +44,13 @@ import "./forges.css";
  * (`docs/forge.md`): this tab starts it, shows the code, and follows the
  * `inf:forges` push for how it ends, as Settings -> Projects did before the
  * sign-in moved here (INF-775, the captain's q2). Google signs in in the
- * person's browser (`integrations.signIn`): while the app waits for the
- * browser to come back, an aside says so, opens the page again or cancels,
- * and the new row opens once it is back. Every change here goes through
- * the same channels the first mate's `app_change` lines reach.
+ * person's browser (`integrations.signIn`), after its notice: what
+ * Infinitary uses from Gmail and Calendar and where it goes, which the
+ * person accepts before anything is asked of Google (INF-949). While the
+ * app waits for the browser to come back, an aside says so, opens the page
+ * again or cancels, and the new row opens once it is back. Every change
+ * here goes through the same channels the first mate's `app_change` lines
+ * reach.
  */
 
 const EMPTY: IntegrationsView = { integrations: [], addable: [] };
@@ -61,6 +68,9 @@ export function IntegrationsTab() {
   /** The kind whose sign-in waits for the person's browser. */
   const [browser, setBrowser] = useState<IntegrationKind | null>(null);
   const browserRun = useRef(0);
+  /** The kind whose notice is open, and what had the focus when it opened. */
+  const [notice, setNotice] = useState<IntegrationKind | null>(null);
+  const noticeFrom = useRef<HTMLElement | null>(null);
   const pending = useShellStore((s) => s.pendingForgeSignIn);
 
   useEffect(() => {
@@ -93,24 +103,54 @@ export function IntegrationsTab() {
 
   // A sign-in in the browser: a second one ends the first, whose answer is
   // then nobody's, and so does Cancel.
-  const signInInBrowser = useCallback((kind: IntegrationKind) => {
-    const run = ++browserRun.current;
-    setError(null);
-    setBrowser(kind);
-    window.infinitary.integrations
-      .signIn(kind)
-      .then(({ id, view: next }) => {
-        if (browserRun.current !== run) return;
-        setBrowser(null);
-        setView(next);
-        setOpen(id);
-      })
-      .catch((caught: unknown) => {
-        if (browserRun.current !== run) return;
-        setBrowser(null);
-        setError(caught instanceof Error ? caught.message : String(caught));
-      });
-  }, []);
+  const signInInBrowser = useCallback(
+    (kind: IntegrationKind, consent?: IntegrationSignInConsent) => {
+      const run = ++browserRun.current;
+      setError(null);
+      setBrowser(kind);
+      window.infinitary.integrations
+        .signIn(kind, consent)
+        .then(({ id, view: next }) => {
+          if (browserRun.current !== run) return;
+          setBrowser(null);
+          setView(next);
+          setOpen(id);
+        })
+        .catch((caught: unknown) => {
+          if (browserRun.current !== run) return;
+          setBrowser(null);
+          setError(caught instanceof Error ? caught.message : String(caught));
+        });
+    },
+    [],
+  );
+  // A kind with a notice shows it first (INF-949): its page opens only on
+  // the notice's accept, and Cancel, or leaving the tab, asks nothing.
+  const startBrowserSignIn = useCallback(
+    (kind: IntegrationKind) => {
+      if (!INTEGRATION_NOTICES[kind]) {
+        signInInBrowser(kind);
+        return;
+      }
+      setError(null);
+      noticeFrom.current =
+        document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      setNotice(kind);
+    },
+    [signInInBrowser],
+  );
+  const acceptNotice = (kind: IntegrationKind) => {
+    setNotice(null);
+    signInInBrowser(kind, NOTICE_ACCEPTED);
+  };
+  const cancelNotice = () => {
+    setNotice(null);
+    noticeFrom.current?.focus();
+  };
+  // The page again, for the sign-in waiting now: a kind with a notice waits
+  // only once its notice was accepted, so the accept still stands.
+  const signInAgain = (kind: IntegrationKind) =>
+    signInInBrowser(kind, INTEGRATION_NOTICES[kind] ? NOTICE_ACCEPTED : undefined);
   const cancelBrowser = () => {
     browserRun.current++;
     setBrowser(null);
@@ -119,7 +159,7 @@ export function IntegrationsTab() {
 
   // A card's "Sign in to GitHub" lands here with the sign-in to start, so
   // the code is on screen when the tab opens; a card's Google sign-in opens
-  // Google's page.
+  // Google's notice, and its accept opens Google's page.
   useEffect(() => {
     if (!loaded || !isIntegrationSignIn(pending)) return;
     if (pending === INTEGRATIONS_SIGN_IN_HOST) {
@@ -131,8 +171,8 @@ export function IntegrationsTab() {
     const kind =
       view.addable.find((entry) => entry.kind === pending)?.kind ??
       view.integrations.find((row) => row.kind === pending)?.kind;
-    if (kind) signInInBrowser(kind);
-  }, [pending, loaded, signIn, view, signInInBrowser]);
+    if (kind) startBrowserSignIn(kind);
+  }, [pending, loaded, signIn, view, startBrowserSignIn]);
 
   const change = (run: () => Promise<IntegrationsView>) => {
     setError(null);
@@ -162,7 +202,7 @@ export function IntegrationsTab() {
         {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.waiting(INTEGRATION_KIND_NAMES[browser])}
       </div>
       <div className="fm-forges-aside-actions">
-        <Button variant="secondary" size="sm" onClick={() => signInInBrowser(browser)}>
+        <Button variant="secondary" size="sm" onClick={() => signInAgain(browser)}>
           {INTEGRATIONS_BROWSER_SIGN_IN_WORDS.again}
         </Button>
         <Button variant="ghost" size="sm" onClick={cancelBrowser}>
@@ -170,6 +210,15 @@ export function IntegrationsTab() {
         </Button>
       </div>
     </div>
+  );
+  const noticeWords = notice && INTEGRATION_NOTICES[notice];
+  const noticeAside = notice && noticeWords && (
+    <IntegrationNoticeAside
+      kind={notice}
+      notice={noticeWords}
+      onAccept={() => acceptNotice(notice)}
+      onCancel={cancelNotice}
+    />
   );
 
   return (
@@ -202,7 +251,7 @@ export function IntegrationsTab() {
                 setOpen((current) => (current === integration.id ? null : integration.id))
               }
               onSignIn={
-                integration.kind === "github" ? signIn : () => signInInBrowser(integration.kind)
+                integration.kind === "github" ? signIn : () => startBrowserSignIn(integration.kind)
               }
               onCheck={() => change(() => window.infinitary.integrations.check(integration.id))}
               onPause={(paused) => configure(integration.id, { paused })}
@@ -230,6 +279,7 @@ export function IntegrationsTab() {
               />
             )}
             {integration.kind === "github" && aside}
+            {notice === integration.kind && noticeAside}
             {browser === integration.kind && browserAside}
           </div>
         ))}
@@ -267,7 +317,7 @@ export function IntegrationsTab() {
                     <HostChip
                       host={{ host: kind.kind, name: kind.name }}
                       busy={browser === kind.kind}
-                      onConnect={() => signInInBrowser(kind.kind)}
+                      onConnect={() => startBrowserSignIn(kind.kind)}
                     />
                   )}
                 </span>
@@ -286,11 +336,77 @@ export function IntegrationsTab() {
               />
             )}
             {!github && aside}
+            {notice && !view.integrations.some((row) => row.kind === notice) && noticeAside}
             {browser && !view.integrations.some((row) => row.kind === browser) && browserAside}
           </div>
         )}
       </div>
     </section>
+  );
+}
+
+/**
+ * A kind's notice before its sign-in (INF-949; design skill
+ * `components/integrations/IntegrationRow`): what it uses and where it
+ * goes, then Accept, which starts the sign-in, beside Cancel, which asks
+ * nothing. It takes the focus when it opens, so it is read from the top
+ * and Tab reaches Accept; it never closes by itself.
+ */
+function IntegrationNoticeAside({
+  kind,
+  notice,
+  onAccept,
+  onCancel,
+}: {
+  kind: IntegrationKind;
+  notice: IntegrationNotice;
+  onAccept: () => void;
+  onCancel: () => void;
+}) {
+  const ids = useId();
+  const box = useRef<HTMLElement>(null);
+  useEffect(() => {
+    box.current?.focus();
+  }, []);
+  return (
+    <div className="fm-connect-aside fm-forges-aside">
+      <section
+        ref={box}
+        tabIndex={-1}
+        className="fm-integrations-notice"
+        data-integration-notice={kind}
+        aria-labelledby={`${ids}-title`}
+      >
+        <div id={`${ids}-title`} className="fm-integrations-notice-title">
+          {notice.title}
+        </div>
+        <p className="fm-integrations-notice-lead">{notice.lead}</p>
+        {notice.groups.map((group, index) => (
+          <div key={group.heading} className="fm-integrations-notice-group">
+            <div id={`${ids}-${index}`} className="fm-integrations-notice-head">
+              {group.heading}
+            </div>
+            <ul aria-labelledby={`${ids}-${index}`}>
+              {group.items.map((item) => (
+                <li key={item.text}>
+                  {item.name && <span className="fm-integrations-notice-name">{item.name}</span>}
+                  {item.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        <p className="fm-integrations-notice-closing">{notice.closing}</p>
+        <div className="fm-forges-aside-actions">
+          <Button variant="primary" size="sm" onClick={onAccept}>
+            {notice.accept}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={onCancel}>
+            {notice.cancel}
+          </Button>
+        </div>
+      </section>
+    </div>
   );
 }
 

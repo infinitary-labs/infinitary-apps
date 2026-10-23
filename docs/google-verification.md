@@ -268,7 +268,7 @@ Infinitary is not an offline-only mail reader.
 The app's publisher does not operate a server that relays your Google sign-in or mailbox contents.
 If you ask the assistant to put information in a file or send it elsewhere, that output may create further copies or share it with your chosen recipients.
 
-**Publication requirement:** identify the permitted AI-provider processing arrangements, retention and training terms, and the in-product consent for these transfers before replacing this paragraph with final copy.
+**Publication requirement:** identify the permitted AI-provider processing arrangements and their retention and training terms before replacing this paragraph with final copy; the in-product consent for these transfers is Google's notice ([Integrations](integrations.md#googles-notice)).
 Do not claim all user-selected subscriptions prohibit training or human review.
 The disclosure must cover every recipient permitted for Google-derived data, including summaries and saved task context.
 
@@ -328,6 +328,7 @@ The captain records it on a Mac of their own, since Google's consent page runs i
    Say: "Infinitary is a desktop AI assistant that runs on my computer.
    I'm connecting my Google account."
 2. Open Settings → Integrations and click the Google chip.
+   Infinitary shows its notice of what it uses from Gmail and Calendar and where it goes; leave it still long enough to read, then click Accept and continue to Google.
    Your browser opens Google's sign-in; choose the demo account.
 3. If Google says it has not verified this app, click Advanced, then Go to Infinitary (unsafe).
    That warning is what this verification removes.
@@ -389,7 +390,8 @@ Google answers by email to the project's owners; keep that address watched.
 Google's estimate for restricted-scope review is six weeks, and for gmail.modify Google then points you to the yearly security assessment (INF-905).
 Forward each question Google sends to your first mate, so a crewmate drafts the answer from the code.
 
-Google's Workspace policy also asks for things the app does not do yet, which a reviewer may raise: an in-app disclosure and accept before the sign-in starts (INF-949), confirming each agent read (INF-950), prompt-injection protection (INF-951), tokens encrypted at rest (INF-30, INF-785) and a deletion route for Google-derived data (INF-952).
+The in-app disclosure and accept before the sign-in starts is Google's notice ([Integrations](integrations.md#googles-notice), INF-949).
+Google's Workspace policy also asks for things the app does not do yet, which a reviewer may raise: confirming each agent read (INF-950), prompt-injection protection (INF-951), tokens encrypted at rest (INF-30, INF-785) and a deletion route for Google-derived data (INF-952).
 
 ## CASA questionnaire answer bank
 
@@ -408,7 +410,7 @@ Do not invent an assurance level, penetration test, certification, scan result o
 | What is the authorization model? | Installed-app authorization code flow, S256 PKCE, random state and a loopback callback. Google passwords stay with Google. Changes/sends are kept as exact single-use approval requests. | `signIn.ts`, `IntegrationsService.call/sendAsk`; attach real-consent evidence for the submitted application. |
 | Is user data encrypted at rest? | Not by the current integration store. Tokens are plaintext in a file restricted to the OS account; transcript and output encryption is not established. Do not answer Yes based on file modes or assumed disk encryption. | `secrets.ts`, `store.ts`; INF-785 covers token-store migration, but does not by itself establish protection for every derived record. |
 | Can users revoke and delete? | Disconnect removes the local Google facts and keys and attempts revocation. Historical content, provider copies and exports remain. Settings purge is broader and does not prove per-Google deletion across destinations. | `googleIntegration.ts` removal, `docs/task-retention.md`; end-to-end deletion evidence is still needed. |
-| Does any AI provider train on the data? | Not established for all supported subscription/provider configurations. The code's routing and a user's subscription do not demonstrate a no-training agreement. | Review each allowed downstream arrangement, retention/human-access terms and the consent shown before a Google result is sent. |
+| Does any AI provider train on the data? | Not established for all supported subscription/provider configurations. The code's routing and a user's subscription do not demonstrate a no-training agreement. Google's notice tells the person before sign-in that their provider's terms and settings decide training and asks them to check. | Review each allowed downstream arrangement and its retention/human-access terms; the consent shown before sign-in is Google's notice (`INTEGRATION_NOTICES`). |
 | Are vulnerability management, incident response and owner MFA established? | The project has code review and automated checks, but no current assessment, organization-wide policy or owner-account setting is certified by this answer bank. | Owner/assessor evidence required; do not claim scans, staff training, response deadlines or Cloud Console MFA from code alone. |
 
 ### Control mapping

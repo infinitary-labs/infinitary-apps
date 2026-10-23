@@ -1,8 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, type Locator, test } from "@playwright/test";
 import { eventsWords } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
 import {
   INTEGRATION_KIND_NAMES,
+  INTEGRATION_NOTICES,
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
 } from "@shared/integrations";
@@ -33,8 +34,9 @@ import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
  * Google sign-in from Settings (the captain's q8: "one Google row that
  * signs in once for both, asking every permission up front").
  *
- * - Promised result: the Google chip, pressed by keys, opens Google's
- *   consent page in the browser and says to finish there; once the browser
+ * - Promised result: the Google chip, pressed by keys, shows Google's
+ *   notice (INF-949) and opens nothing until its accept; the accept, by keys,
+ *   opens Google's consent page in the browser and says to finish there; once the browser
  *   comes back the Google row shows who it is signed in as, with its Gmail
  *   reads allowed and its changes asking; a rule listening for "A message
  *   arrives" then reaches the first mate with the message that arrived.
@@ -50,6 +52,20 @@ import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
  * - Shared resources: none; its own userData, HOME and stand-in Google.
  */
 
+/** Google's notice, words from their owner (INF-949). */
+const NOTICE = (() => {
+  const notice = INTEGRATION_NOTICES.google;
+  if (!notice) throw new Error("Google shows a notice before its sign-in");
+  return notice;
+})();
+
+/** Accept Google's notice by keys; it closes, and the sign-in starts. */
+async function acceptGoogleNotice(tab: Locator): Promise<void> {
+  const notice = tab.locator('[data-integration-notice="google"]');
+  await pressKey(notice.getByRole("button", { name: NOTICE.accept, exact: true }), "Enter");
+  await expect(notice).toHaveCount(0);
+}
+
 let launched: LaunchedApp | undefined;
 let google: GoogleStandIn | undefined;
 test.afterEach(async () => {
@@ -64,7 +80,8 @@ test.afterEach(async () => {
  * for private testing, using stable for testers and alpha for personal development.
  * Data: fresh isolated homes with the real registered public client, no account.
  * Completion: development and packaged Settings offer one Google chip; keys open
- * registered-client consent and cancel without saving a connection. Packaged
+ * Google's notice, whose Cancel opens nothing (INF-949), then its accept opens
+ * registered-client consent, cancelled without saving a connection. Packaged
  * setup also ignores development overrides. No external browser is opened.
  * Prerequisites: hermetic launcher, including its inert packaged bootstrap.
  * Shared resources: none beyond the desktop lane's packaged connection port.
@@ -101,11 +118,20 @@ test("development and released builds offer the registered Google client by keys
           const tab = settingsSection(page, "integrations");
           const chip = tab.locator('[data-integration-add="google"] button');
           await expect(chip).toHaveCount(1);
+          const opening = () =>
+            app.evaluate(() => (globalThis as { googleOpened?: string[] }).googleOpened ?? []);
+          // INF-949: the notice comes first, and its Cancel asks Google nothing.
           await pressKey(chip, "Enter");
+          const notice = tab.locator('[data-integration-notice="google"]');
+          await expect(notice).toBeFocused();
+          await pressKey(notice.getByRole("button", { name: NOTICE.cancel, exact: true }), "Enter");
+          await expect(notice).toHaveCount(0);
+          await expect(chip).toBeFocused();
+          expect(await opening()).toEqual([]);
+          await pressKey(chip, "Enter");
+          await acceptGoogleNotice(tab);
           await expect(tab.locator('[data-integration-signing-in="google"]')).toBeVisible();
-          const opened = await app.evaluate(
-            () => (globalThis as { googleOpened?: string[] }).googleOpened ?? [],
-          );
+          const opened = await opening();
           // A boolean failure cannot print the registered client configuration.
           expect(
             opened.length === 1 &&
@@ -163,10 +189,23 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
   const opened = () =>
     app.evaluate(() => (globalThis as { __fmOpened?: string[] }).__fmOpened ?? []);
 
-  await test.step("the chip opens Google's page, and the row comes back signed in", async () => {
+  await test.step("the chip shows Google's notice, and nothing opens until it is accepted", async () => {
     await runFromSearch(app, page, "settings.integrations");
     const tab = settingsSection(page, "integrations");
     await pressKey(tab.locator('[data-integration-add="google"] button'), "Enter");
+    const notice = tab.locator('[data-integration-notice="google"]');
+    await expect(notice).toBeFocused();
+    await expect(notice).toHaveAccessibleName(NOTICE.title);
+    // What it uses and where it goes: the AI provider, other computers, saved task records.
+    for (const item of NOTICE.groups.flatMap((group) => group.items))
+      await expect(notice).toContainText(item.text);
+    expect(await opened()).toEqual([]);
+    expect(stand.tokens).toEqual([]);
+  });
+
+  await test.step("the accept opens Google's page, and the row comes back signed in", async () => {
+    const tab = settingsSection(page, "integrations");
+    await acceptGoogleNotice(tab);
     await expect(tab.locator('[data-integration-signing-in="google"]')).toContainText(
       INTEGRATIONS_BROWSER_SIGN_IN_WORDS.waiting(INTEGRATION_KIND_NAMES.google),
     );
@@ -274,6 +313,7 @@ test("Calendar shares the Google row and a calendar selected by keys fires Autom
   await runFromSearch(app, page, "settings.integrations");
   const connections = settingsSection(page, "integrations");
   await pressKey(connections.locator('[data-integration-add="google"] button'), "Enter");
+  await acceptGoogleNotice(connections);
   await expect(connections.locator('[data-integration-row="google"]')).toHaveCount(1);
   const actions = connections.locator('[data-integration-actions="google"]');
   for (const action of CALENDAR_ACTIONS) {

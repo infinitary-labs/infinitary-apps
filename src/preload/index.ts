@@ -513,8 +513,10 @@ const api: FirstmateApi = {
     list: () => invoke("inf:integrations:list"),
     addMcp: (server) =>
       readableRequest("inf:integrations:add", () => invoke("inf:integrations:add", server)),
-    signIn: (kind) =>
-      readableRequest("inf:integrations:sign-in", () => invoke("inf:integrations:sign-in", kind)),
+    signIn: (kind, consent) =>
+      readableRequest("inf:integrations:sign-in", () =>
+        invoke("inf:integrations:sign-in", kind, consent),
+      ),
     cancelSignIn: () => invoke("inf:integrations:sign-in-cancel"),
     configure: (id, patch) => invoke("inf:integrations:configure", id, patch),
     remove: (id) => invoke("inf:integrations:remove", id),

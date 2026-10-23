@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "google-notice-before-sign-in",
+      "kind": "improvement",
+      "title": "See what connecting Google shares before you sign in",
+      "body": "Connecting Google in Settings → Integrations now first shows which Gmail and Calendar details Infinitary uses and where they go: your AI provider, another computer that runs your work, and your saved tasks. Google's sign-in page opens only after you accept.",
+      "area": "settings",
+      "picture": {
+        "dark": "google-notice-before-sign-in-dark.webp",
+        "light": "google-notice-before-sign-in-light.webp",
+        "alt": "Integrations shows the notice Before you connect Google, listing what Gmail and Calendar details are used and where they go, above Accept and continue to Google and Cancel."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

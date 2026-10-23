@@ -125,6 +125,7 @@ import {
   type IntegrationKind,
   type IntegrationMcpAdd,
   type IntegrationSettingsPatch,
+  type IntegrationSignInConsent,
   type IntegrationsView,
   integrationIdSchema,
   integrationKindSchema,
@@ -132,6 +133,7 @@ import {
   integrationSecretNameSchema,
   integrationSecretValueSchema,
   integrationSettingsPatchSchema,
+  integrationSignInConsentSchema,
   integrationsViewSchema,
 } from "./integrations";
 import {
@@ -1714,11 +1716,12 @@ export const invokeContract = {
   },
   // Sign in to a kind that signs in in the person's browser (Google): the
   // answer comes once the browser is back, and the cancel ends the wait.
+  // A kind with a notice needs its accept (INF-949), or nothing opens.
   "inf:integrations:sign-in": {
     effect: "change",
     surface: "core",
     reach: "home",
-    request: z.tuple([integrationKindSchema]),
+    request: z.tuple([integrationKindSchema, integrationSignInConsentSchema.optional()]),
     response: z.object({ id: integrationIdSchema, view: integrationsViewSchema }).strict(),
   },
   "inf:integrations:sign-in-cancel": {
@@ -3558,9 +3561,13 @@ export type FirstmateApi = {
     addMcp: (server: IntegrationMcpAdd) => Promise<{ id: string; view: IntegrationsView }>;
     /**
      * Sign in to a kind that signs in in the person's browser (Google): it
-     * opens the page there and answers once the browser comes back.
+     * opens the page there and answers once the browser comes back. A kind
+     * with a notice (`INTEGRATION_NOTICES`) needs the person's accept of it.
      */
-    signIn: (kind: IntegrationKind) => Promise<{ id: string; view: IntegrationsView }>;
+    signIn: (
+      kind: IntegrationKind,
+      consent?: IntegrationSignInConsent,
+    ) => Promise<{ id: string; view: IntegrationsView }>;
     /** End the sign-in waiting for the browser. */
     cancelSignIn: () => Promise<IntegrationsView>;
     configure: (id: string, patch: IntegrationSettingsPatch) => Promise<IntegrationsView>;

@@ -308,3 +308,98 @@ export const INTEGRATIONS_BROWSER_SIGN_IN_WORDS = {
   again: "Open the page again",
   cancel: "Cancel",
 } as const;
+
+/**
+ * What a kind tells the person before its sign-in starts, and the accept
+ * that starts it (INF-949). Google's Workspace user data policy asks for an
+ * in-app disclosure of the data used and where it goes that "must
+ * accompany and immediately precede a request for user consent", and that
+ * no collection begin "prior to obtaining affirmative consent"
+ * (docs/integrations.md, "Google's notice").
+ */
+export type IntegrationNotice = {
+  readonly title: string;
+  readonly lead: string;
+  readonly groups: readonly {
+    readonly heading: string;
+    /** One item each; `name` leads it, when it has one. */
+    readonly items: readonly { readonly name?: string; readonly text: string }[];
+  }[];
+  readonly closing: string;
+  readonly accept: string;
+  readonly cancel: string;
+};
+
+/**
+ * Google's notice: what Infinitary uses from Gmail and Calendar, and where
+ * it goes - the person's AI provider, another computer that runs the work,
+ * and the saved task records. Only the person's own provider terms and
+ * settings decide whether that provider trains on what it receives, while
+ * Google forbids its data training AI models, so the notice says both.
+ */
+const GOOGLE_NOTICE: IntegrationNotice = {
+  title: "Before you connect Google",
+  lead: "Read what Infinitary uses from your Google account and where it goes. Google's sign-in page opens only after you accept.",
+  groups: [
+    {
+      heading: "What Infinitary uses",
+      items: [
+        {
+          name: "Gmail",
+          text: "The senders, recipients, subjects, dates, labels and text of your messages, and the names, types and sizes of attachments.",
+        },
+        {
+          name: "Calendar",
+          text: "Your calendars, their events with titles, times, places, descriptions and guests, and the times you are busy.",
+        },
+        {
+          text: "Infinitary uses them only to do what you ask and to run the rules you turn on. Each label, draft, sent message and event change waits for your approval.",
+        },
+      ],
+    },
+    {
+      heading: "Where it goes",
+      items: [
+        {
+          name: "Your AI provider",
+          text: "What your first mate and crew read, whole messages included, goes to the provider whose model does the work. Your agreement and settings with that provider decide how long it keeps them and whether it trains its models on them. Google does not allow this data to train AI models. Before you connect, check that your provider does not train on your conversations.",
+        },
+        {
+          name: "Other computers",
+          text: "If another computer runs your first mate's work, the results that work needs reach it over Infinitary's encrypted connection. Your Google sign-in stays on this computer.",
+        },
+        {
+          name: "Saved task records",
+          text: "What your first mate and crew read stays in that task's conversation, cards and files until you delete them. Removing Google does not delete them. Purge task data in Settings → General deletes every saved task on this computer.",
+        },
+      ],
+    },
+  ],
+  closing:
+    "Infinitary runs no server that receives your Google data. Your Google data is never sold, used for ads, or used by Infinitary to train AI models.",
+  accept: "Accept and continue to Google",
+  cancel: "Cancel",
+};
+
+/** The kinds that show a notice before their sign-in starts, and its words. */
+export const INTEGRATION_NOTICES: Partial<Record<IntegrationKind, IntegrationNotice>> = {
+  google: GOOGLE_NOTICE,
+};
+
+/**
+ * The person accepted the kind's notice for this sign-in. A sign-in to a
+ * kind with a notice carries it, or the core refuses it before the browser
+ * opens and before anything is asked of the kind.
+ */
+export const integrationSignInConsentSchema = z
+  .object({ noticeAccepted: z.literal(true) })
+  .strict();
+export type IntegrationSignInConsent = z.infer<typeof integrationSignInConsentSchema>;
+
+/** What the notice's accept sends with the sign-in. */
+export const NOTICE_ACCEPTED: IntegrationSignInConsent = { noticeAccepted: true };
+
+/** Why a sign-in that carries no accept of its kind's notice did not start. */
+export function integrationNoticeRefusal(name: string): string {
+  return `Read what connecting ${name} shares and accept it in Settings → Integrations before you sign in.`;
+}

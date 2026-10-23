@@ -1,13 +1,16 @@
 import { randomUUID } from "node:crypto";
 import {
   INTEGRATION_KIND_NAMES,
+  INTEGRATION_NOTICES,
   type IntegrationKind,
   type IntegrationSettingsPatch,
+  type IntegrationSignInConsent,
   type IntegrationsView,
   type IntegrationView,
   integrationIdSchema,
   integrationKindSchema,
   integrationNameSchema,
+  integrationNoticeRefusal,
   integrationRenameWords,
   integrationRule,
 } from "@shared/integrations";
@@ -499,14 +502,22 @@ export class IntegrationsService {
    * Sign in to a kind that signs in in the person's browser (Google): the
    * binding opens the page and waits for it to come back, and the new row
    * shows who it is. A second sign-in ends the first, and so does
-   * `cancelSignIn`; an ended one throws words.
+   * `cancelSignIn`; an ended one throws words. A kind with a notice
+   * (`INTEGRATION_NOTICES`, INF-949) signs in only with the person's accept
+   * of it: without one, nothing opens, nothing waiting ends, and nothing is
+   * asked of the kind.
    */
-  async signIn(kind: IntegrationKind): Promise<{ id: string; view: IntegrationsView }> {
+  async signIn(
+    kind: IntegrationKind,
+    consent?: IntegrationSignInConsent,
+  ): Promise<{ id: string; view: IntegrationsView }> {
     const binding = this.options.bindings.find((entry) => entry.kind === kind);
     if (!binding?.signIn)
       throw new IntegrationRefusal(
         `${INTEGRATION_KIND_NAMES[kind]} is not signed in to from here in this version of the app.`,
       );
+    if (INTEGRATION_NOTICES[kind] && consent?.noticeAccepted !== true)
+      throw new IntegrationRefusal(integrationNoticeRefusal(INTEGRATION_KIND_NAMES[kind]));
     // Two rows never share a name: the row keeps its name, or a new one takes
     // its kind's, so another row under that name stops the sign-in before the
     // browser opens and before any key is kept.

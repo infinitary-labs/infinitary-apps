@@ -40,6 +40,7 @@ import {
   type PlacementWaitRow,
   placementWait,
 } from "@shared/placement";
+import { acceptedValidation } from "@shared/liveValidation";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
@@ -51,6 +52,7 @@ import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { queueStartedRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
 import {
+  CARE_WORDS,
   MERGE_AFTER_FIXING_WORDS,
   MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
@@ -16968,6 +16970,63 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
   const BUILDER_REPORT =
     "Intent: the meter test passes ten runs in a row. What changed: the test awaits the queue flush. Verified: pnpm test on the final commit; PR is green. Risk: low. Not done: nothing.";
   const HEAD = "0123456789abcdef0123456789abcdef01234567";
+
+  // INF-994, the captain's direction A: "Keep validation records at every care
+  // level; only Careful's merge reads them".
+  it("INF-994: a Default-care plan is kept, and a raise to Careful still holds the merge for a run and a review", async () => {
+    const repo = directPrRepo();
+    try {
+      const builder = fakeCrewmate();
+      const { supervisor, tasks, repos, workspace, specs } = setup(builder);
+      const { repo: view } = await repos.setup({ kind: "adopt", path: repo.dir, name: repo.name });
+      repos.configure(view.id, { delivery: "direct-pr" });
+      const { taskId } = await supervisor.commission({
+        title: "Fix the meter",
+        intent: intentOf("Make the meter count every press."),
+        repoId: view.id,
+      });
+      await tick();
+      const record = () => tasks.get(taskId)!;
+      const policies = () => effectiveTaskPolicies(record(), repos.get(view.id));
+      expect(policies()?.rigor.value).toBe("standard");
+      const head = execFileSync("git", ["-C", repo.dir, "rev-parse", "HEAD"], {
+        encoding: "utf8",
+      }).trim();
+      vi.mocked(workspace.branchHead).mockResolvedValue(head);
+      const receipt = await specs[0]!.onReport!("Planned before editing.", undefined, {
+        validation: {
+          kind: "plan",
+          previousRevision: 0,
+          reason: "The press count is what the captain asked for.",
+          scenarios: [
+            {
+              id: "count-press",
+              source: "Make the meter count every press.",
+              importance: "required",
+              action: "Press the meter three times.",
+              expected: "It reads three.",
+              adverse: "A double press reads two, not one.",
+              environment: "The launched app",
+              signal: "The meter's label",
+              boundary: "The actual app",
+            },
+          ],
+        },
+      });
+      expect(receipt).toContain(
+        `Nothing reads it at ${CARE_WORDS.standard} care; it counts if this task becomes Careful.`,
+      );
+      expect(record().delivery?.liveValidation?.scenarios.map((s) => s.id)).toEqual(["count-press"]);
+      const before = policies();
+      tasks.updateFields(taskId, { policies: { rigor: "reviewed" } }, "captain");
+      supervisor.policiesChanged(taskId, { rigor: "reviewed" }, before);
+      expect(policies()?.rigor.value).toBe("reviewed");
+      expect(record().delivery?.liveValidation?.scenarios.map((s) => s.id)).toEqual(["count-press"]);
+      expect(acceptedValidation(record().delivery?.liveValidation, head).ready).toBe(false);
+    } finally {
+      repo.dispose();
+    }
+  });
 
   it("INF-125: only the shown captain choice approves an exact shared effect, and execution never replays an unknown result", async () => {
     const repo = directPrRepo();

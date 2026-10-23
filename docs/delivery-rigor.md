@@ -615,6 +615,8 @@ The CI-counting lines below match the current ledger (`observeCheckRepair`, `CI_
 
 Careful change work uses the builder to gather proof, with first-mate coordination when needed, and its existing independent review as the judge of coverage and proof (captain's accepted INF-125 plan, implemented by INF-100).
 Quick, Default, answer-only and personal-workspace work, and the local-delivery fallback keep their existing rules.
+A change delivered through a pull request keeps its validation records and validation questions at every care level, so a raise to Careful mid-task keeps them; only Careful's gates read them (captain's INF-994 direction A).
+Below Careful, the `report` answer says nothing reads the record yet and that it counts if the task becomes Careful.
 The shared `CAREFUL_LIVE_VALIDATION` brief reaches both model families, on this computer or a work computer.
 A reviewer runs neither the product nor the tests: it reads the captain's words, the whole changed-file checklist, the scenario record and the kept proof.
 

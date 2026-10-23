@@ -8607,8 +8607,9 @@ export class CrewSupervisor {
       this.policiesOf(before)?.rigor.value === "reviewed" &&
       input.actions.some((action) => settleEffectOf(action)?.mode === "merge");
     if (!checkedHead && (input.validationDecision || carefulMerge)) {
-      if (!before || this.policiesOf(before)?.rigor.value !== "reviewed")
-        throw new Error("A validation decision needs its Careful task.");
+      // INF-994: a validation question is kept at every care level; only
+      // Careful's merge reads what it answers.
+      if (!before) throw new Error("The task no longer exists.");
       return this.validationHead(before).then(async (head) => {
         const current = this.options.tasks.get(task.id);
         if (!current) throw new Error("The task closed while reading its version.");
@@ -10919,13 +10920,11 @@ export class CrewSupervisor {
     if (!record) throw new Error("The task no longer exists.");
     const builder = this.reviewBuilderOf(record);
     const owner = builder ?? record;
-    if (
-      this.policiesOf(owner)?.rigor.value !== "reviewed" ||
-      this.taskDelivery(owner.id) !== "direct-pr"
-    )
-      throw new Error(
-        "Live validation belongs to a Careful change delivered through a pull request.",
-      );
+    // INF-994: records are kept at every care level, so a raise to Careful
+    // mid-task keeps them; only Careful's merge reads them.
+    if (this.taskDelivery(owner.id) !== "direct-pr")
+      throw new Error("Live validation belongs to a change delivered through a pull request.");
+    const care = this.policiesOf(owner)?.rigor.value;
     const currentHead = await this.validationHead(owner);
     const head = builder ? record.delivery?.validationAssignment?.head : currentHead;
     if (!head)
@@ -10964,6 +10963,10 @@ export class CrewSupervisor {
     this.options.tasks.recordDelivery(owner.id, { validationHead: currentHead });
     const { validation: _validation, ...declaration } = declared;
     const revision = validationRevision(this.options.tasks.get(owner.id)?.delivery?.liveValidation);
+    const counts =
+      care === "reviewed"
+        ? ""
+        : ` Nothing reads it at ${CARE_WORDS[care ?? "standard"]} care; it counts if this task becomes Careful.${input.kind === "request" && input.request.kind === "gap" ? " A gap has nothing to waive below Careful, so ask the captain nothing about it." : ""}`;
     if (
       input.kind !== "run" &&
       input.kind !== "review" &&
@@ -10971,8 +10974,8 @@ export class CrewSupervisor {
       !declaration.wait &&
       !declaration.finished
     )
-      return `Validation ${input.kind} recorded at evidence revision ${revision}. This records facts, not a finished-work report or permission. Continue the task; report when the first mate must act.`;
-    return `${this.recordExplicitReport(task, text, summary, declaration)} Validation recorded at evidence revision ${revision}.`;
+      return `Validation ${input.kind} recorded at evidence revision ${revision}.${counts} This records facts, not a finished-work report or permission. Continue the task; report when the first mate must act.`;
+    return `${this.recordExplicitReport(task, text, summary, declaration)} Validation recorded at evidence revision ${revision}.${counts}`;
   }
 
   /**

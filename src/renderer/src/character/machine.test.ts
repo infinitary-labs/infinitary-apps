@@ -87,15 +87,41 @@ describe("FirstmateMachine emotes", () => {
     expect(idleMachine.update(t2)).toMatchObject({ state: "idle", clip: "return" });
   });
 
-  it("is cut short directly: attention to listening, a rising turn to working", () => {
+  it("is cut short directly by attention to listening", () => {
     const m = machine();
     m.requestEmote("ponder", 100);
     m.setInputs({ listening: true, busy: false }, 200);
     expect(m.update(200)).toMatchObject({ state: "listening", clip: "attend" });
-    const m2 = machine();
-    m2.requestEmote("ponder", 100);
-    m2.setInputs({ listening: false, busy: true }, 200);
-    expect(m2.update(200)).toMatchObject({ state: "working", clip: "engage" });
+  });
+
+  // INF-790, the captain's ask: "keep the emote animation but change the
+  // color to indicate the working status, similar to how we handle the
+  // 'listening' state".
+  it("plays on in ember when a turn starts, then returns to working", () => {
+    const m = machine();
+    m.requestEmote("ponder", 100);
+    m.setInputs({ listening: false, busy: true }, 200);
+    expect(m.update(200)).toMatchObject({ state: "ponder", busy: true, clip: "drift" });
+    const t = 100 + EMOTE_DURATION_MS.ponder + 1;
+    m.setInputs({ listening: false, busy: true }, t);
+    expect(m.update(t)).toMatchObject({ state: "working", clip: "return" });
+  });
+
+  // INF-790 answer "send": a message the captain sends leaves a playing emote
+  // alone, and the emote ending inside the submit grace goes to working.
+  it("plays on through a send, then anticipates working for the grace", () => {
+    const m = machine();
+    m.requestEmote("greet", 100);
+    const sent = 100 + EMOTE_DURATION_MS.greet - 500;
+    m.noteSubmit(sent);
+    m.setInputs({ listening: false, busy: false }, sent);
+    expect(m.update(sent)).toMatchObject({ state: "greet" });
+    const ended = 100 + EMOTE_DURATION_MS.greet + 1;
+    m.setInputs({ listening: false, busy: false }, ended);
+    expect(m.update(ended)).toMatchObject({ state: "working", clip: "return" });
+    // Busy never rose: the grace runs out and the character rests.
+    m.setInputs({ listening: false, busy: false }, sent + 1600);
+    expect(m.update(sent + 1600)).toMatchObject({ state: "idle", clip: "settle" });
   });
 
   it("only cools when busy falls mid-emote - no state change", () => {

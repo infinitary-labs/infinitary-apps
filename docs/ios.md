@@ -153,6 +153,7 @@ Join, Leave and Forget ask in alerts, which keep the cancel choice in view; on i
 `PhoneCharacter` draws the Mac's character in a native Canvas with the numbers of the Mac's own character code (`src/renderer/src/character`), so the two move alike.
 At rest the tesseract drifts slowly and the eyes blink every few seconds and wander; listening breathes as two counter-rotating hexagons; working speeds up with the Mac's ember, shimmer and halo, with white-hot cores.
 It plays two of the Mac's emotes and no others: the greeting, on the first character a person sees after the app opens or joins a computer (`CharacterCues.greetOnNextSight`), and the nod.
+A turn that starts mid-greeting lets the greeting play on as the ember eases in, then the character works, as on the Mac.
 A character that leaves mid-greeting, such as the empty stage a join shows before its cards arrive, hands the greeting on to the next one shown.
 The nod plays when the Mac's first mate reacts to a reply with one (`firstmate_emote`), held until that turn ends as on the Mac; a reaction replayed while reconnecting is not played, and a character off screen does not keep one for later.
 The wire and halo boosts come from the design skill's tokens through `scripts/generate-phone-theme.ts`, like its colours.

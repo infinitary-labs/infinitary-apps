@@ -3,8 +3,8 @@
 // (report.md, iterated live with the captain): named states, an explicit
 // clip for every transition, one-shot emotes with a randomized fidget pool,
 // and ONE blend parameter - busy - that drives the ember independently of
-// state, so listening runs hot while the agent's own turn continues and
-// cools in place the moment it ends.
+// state, so listening - or an emote a turn starts under - runs hot while the
+// agent's own turn continues and cools in place the moment it ends.
 //
 // The reviewed prototype was event-sourced (voiceStart/typeStart/...). The
 // app version reconciles against the shell's derived inputs instead -
@@ -184,13 +184,12 @@ export class FirstmateMachine {
   /**
    * Reconcile against the shell's derived inputs. Attention always wins -
    * listening interrupts any state, emotes included. Busy is the parameter:
-   * flipping it during listening or an emote changes only the color, but a
-   * turn starting while an emote plays cuts it straight to working, and a
-   * turn ending while working settles home - or into the reply held back
-   * during the turn, which plays as the ember cools.
+   * flipping it during listening or an emote changes only the color - a
+   * turn starting while an emote plays lets it finish in ember, then home is
+   * working - and a turn ending while working settles home, or into the
+   * reply held back during the turn, which plays as the ember cools.
    */
   setInputs(inputs: MachineInputs, now: number): void {
-    const busyRose = inputs.busy && !this.busy;
     const busyFell = !inputs.busy && this.busy;
     this.busy = inputs.busy;
     // The turn ended: a held reply plays now or not at all. Attention on the
@@ -214,9 +213,8 @@ export class FirstmateMachine {
       return;
     }
     if (isEmote(this.state)) {
-      // A starting turn cuts any emote straight to working (no listening
-      // hop); busy merely ending just cools the emote in place.
-      if (busyRose) this.go("working", "engage", now);
+      // Busy only colors an emote: a starting turn heats it and it plays on
+      // to its end (update), a turn ending cools it in place.
       return;
     }
     if (reply) {
@@ -234,10 +232,13 @@ export class FirstmateMachine {
 
   /**
    * A turn was submitted: play intake into working immediately instead of
-   * waiting for the busy signal, holding for a bounded grace window.
+   * waiting for the busy signal, holding for a bounded grace window. A
+   * playing emote is left alone - the ember shows the message was taken -
+   * and returns to working when it ends inside that window.
    */
   noteSubmit(now: number): void {
     this.submitGraceUntil = now + SUBMIT_GRACE_MS;
+    if (isEmote(this.state)) return;
     if (this.state !== "working") {
       this.go("working", this.state === "listening" ? "intake" : "engage", now);
     }
@@ -282,8 +283,7 @@ export class FirstmateMachine {
   /**
    * Pin the active emote's clock at a normalized progress (0..1) so a frame
    * can be held for review or a screenshot; null lets it run on from there.
-   * Inputs still win: attention or a starting turn leaves the emote and
-   * drops the pin. Pinning outside an emote is a no-op.
+   * Inputs still win: attention leaves the emote and drops the pin. Pinning outside an emote is a no-op.
    */
   pinEmote(fraction: number | null, now: number): void {
     if (fraction === null) {
@@ -313,8 +313,10 @@ export class FirstmateMachine {
       this.enteredAt = now - this.pinnedT * this.emoteDurationMs();
     }
     if (isEmote(this.state) && now - this.enteredAt >= this.emoteDurationMs()) {
-      // One-shot done: home is working when busy, idle otherwise.
-      this.go(this.busy ? "working" : "idle", "return", now);
+      // One-shot done: home is working when busy or just submitted, idle
+      // otherwise.
+      const home = this.busy || now < this.submitGraceUntil ? "working" : "idle";
+      this.go(home, "return", now);
     }
     if (this.state === "idle" && now - this.enteredAt >= this.fidgetAt) {
       this.requestEmote("fidget", now);

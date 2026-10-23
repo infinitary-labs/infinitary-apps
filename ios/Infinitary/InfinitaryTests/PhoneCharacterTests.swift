@@ -47,16 +47,18 @@ import XCTest
         XCTAssertEqual(machine.update(now: 8).mode, .idle, "A turn with no reply ends without a nod")
     }
 
-    func testATurnCutsAnEmoteAndListeningInterruptsIt() {
+    /// INF-790: a starting turn keeps the emote playing and the ember shows the turn, as on the Mac.
+    func testATurnHeatsAnEmoteAndListeningInterruptsIt() {
         var machine = CharacterMachine(now: 0)
         machine.request(.greet, now: 0)
         machine.setInputs(listening: false, busy: true, now: 0.5)
-        XCTAssertEqual(machine.update(now: 0.5).mode, .working, "A starting turn cuts the greeting to work")
-        machine.setInputs(listening: false, busy: false, now: 1)
-        machine.request(.nod, now: 1)
-        machine.setInputs(listening: true, busy: false, now: 1.2)
-        XCTAssertEqual(machine.update(now: 1.2).mode, .listening, "Attention interrupts the nod")
-        XCTAssertFalse(machine.request(.nod, now: 1.3), "No emote plays over listening")
+        XCTAssertEqual(machine.update(now: 0.5).mode, .greet, "A starting turn lets the greeting play on")
+        XCTAssertEqual(machine.update(now: 2.2).mode, .working, "The greeting ends into work")
+        machine.setInputs(listening: false, busy: false, now: 3)
+        machine.request(.nod, now: 3)
+        machine.setInputs(listening: true, busy: false, now: 3.2)
+        XCTAssertEqual(machine.update(now: 3.2).mode, .listening, "Attention interrupts the nod")
+        XCTAssertFalse(machine.request(.nod, now: 3.3), "No emote plays over listening")
     }
 
     func testOnlyTheNodReachesCharactersOnScreen() {

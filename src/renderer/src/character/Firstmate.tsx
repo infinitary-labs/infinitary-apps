@@ -92,8 +92,8 @@ import { stageClock, stageNow } from "./stageClock";
 // inner square's vertices sink away - captain's call) breathing with the
 // voice, spun faster by keystroke kicks; working = fast double rotation +
 // shimmer with wires heated to ember. Heat rides the machine's busy
-// parameter rather than the state, so listening mid-turn runs hot and cools
-// in place when the turn ends. One-shot emotes (greet, celebrate, ponder,
+// parameter rather than the state, so listening or an emote mid-turn runs
+// hot and cools in place when the turn ends. One-shot emotes (greet, celebrate, ponder,
 // confused, and a fidget pool: roll, yawn, orbit, the five sky fidgets of
 // ./sky - Orion, the Big Dipper, Saturn, a spiral galaxy, Algol - and a
 // pretend black hole, which also sends the crew racing round their orbits,
@@ -1232,8 +1232,9 @@ function drawFrame(
       : null;
   if (bhEnv) drawBlackholeUnder(bhEnv);
   // The sky fidgets' under-layers: Saturn's far ring half and globe, the
-  // galaxy's bulge and arms, Algol's orbit - all beneath the wires.
-  const skyColors = { acc: accRgb, dim: dimRgb, hot: hotRgb, bg: bgRgb, boost };
+  // galaxy's bulge and arms, Algol's orbit - all beneath the wires. A figure
+  // drawn during a turn takes the wires' ember, so the turn reads at its peak.
+  const skyColors = { acc: briRgb, dim: dimRgbUse, hot: hotRgb, bg: bgRgb, boost };
   if (sat > 0.001) drawSaturnUnder({ ctx, k: sat, c, R, size, colors: skyColors });
   if (gal > 0.001) drawGalaxyUnder({ ctx, k: gal, c, R, size, tSec, colors: skyColors });
   if (alg > 0.001) drawAlgolUnder({ ctx, k: alg, c, R, size, colors: skyColors });

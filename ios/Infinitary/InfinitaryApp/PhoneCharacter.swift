@@ -76,10 +76,10 @@ struct CharacterMachine {
 
     private mutating func go(_ to: Mode, _ now: Double) { mode = to; enteredAt = now }
 
-    /// Listening interrupts everything; a starting turn cuts an emote to working;
+    /// Listening interrupts everything; a starting turn only heats an emote, which plays on to its end;
     /// a turn ending settles home, or into the nod held during it.
     mutating func setInputs(listening: Bool, busy: Bool, now: Double) {
-        let rose = busy && !self.busy, fell = !busy && self.busy
+        let fell = !busy && self.busy
         self.busy = busy
         let reply = fell && heldNod
         if fell { heldNod = false }
@@ -88,10 +88,7 @@ struct CharacterMachine {
             return
         }
         if mode == .listening { return go(busy ? .working : .idle, now) }
-        if Self.seconds(mode) != nil {
-            if rose { go(.working, now) }
-            return
-        }
+        if Self.seconds(mode) != nil { return }
         if reply { return go(.nod, now) }
         if mode == .idle && busy { return go(.working, now) }
         if mode == .working && !busy { go(.idle, now) }

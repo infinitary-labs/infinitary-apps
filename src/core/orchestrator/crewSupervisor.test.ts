@@ -24568,6 +24568,53 @@ describe("a project folder that is missing or behind (INF-572, real git)", {
     await h.supervisor.disposeAll();
   });
 
+  // INF-757: once the captain named a moved folder's new place, the standing
+  // repair kept starting in the folder above the old one while its brief
+  // named the new folder. Its goal: it starts in the folder the captain named.
+  it("a repair that started above its missing folder starts in the folder the captain names for it", async () => {
+    const h = await project();
+    const parent = dirname(h.folder);
+    seedTask(h.tasks, {
+      id: "header01",
+      title: "Fix the header",
+      status: "queued",
+      repoId: h.repo.id,
+    });
+    // The captain moved the folder somewhere else.
+    const moved = join(scratchDir("infinitary-moved-"), "shop");
+    renameSync(h.folder, moved);
+    h.sessions.open.mockRejectedValueOnce(
+      new Error("This custom connection needs its checked account."),
+    );
+
+    // The first start opens in the folder above the missing one, and fails.
+    await h.supervisor.dispatchQueuedTask("header01");
+    const [repair] = h.repairs();
+    if (!repair) throw new Error("no repair task was filed");
+    await vi.waitFor(
+      () =>
+        expect(h.tasks.get(repair.id)?.gate).toMatchObject({
+          kind: "captain",
+          ref: "dispatch-failed",
+        }),
+      REAL_GIT_WAIT,
+    );
+    expect(h.sessions.open.mock.calls[0]?.[0].cwd).toBe(parent);
+
+    // The captain names the folder's new place and presses Start.
+    const named = h.repos.configure(h.repo.id, { path: moved }).path;
+    await h.supervisor.dispatchQueuedTask(repair.id, { requested: { by: "captain" } });
+    await vi.waitFor(() => expect(h.crewmate.promptCalls).toHaveLength(1), REAL_GIT_WAIT);
+    expect(h.sessions.open.mock.calls[1]?.[0].cwd).toBe(named);
+    const brief = h.crewmate.promptCalls[0] ?? "";
+    expect(brief).toContain(`- Folder: ${named}`);
+    expect(brief).toContain(`your working directory is ${named}, the project's folder itself`);
+    // A resume of this conversation opens where it started, not above the old folder.
+    expect(h.tasks.get(repair.id)?.shape?.in_place).not.toHaveProperty("started_in");
+    expect(h.tasks.get(repair.id)?.repoDir).toBe(named);
+    await h.supervisor.disposeAll();
+  });
+
   it("refuses a merge into a folder that is missing, and files its repair", async () => {
     const h = await project();
     h.repos.configure(h.repo.id, { delivery: "local-only" });

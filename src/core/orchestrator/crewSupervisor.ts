@@ -3738,8 +3738,8 @@ export class CrewSupervisor {
     repo: Pick<RepoView, "name" | "path" | "origin">,
     facts: InPlaceFacts,
   ): string {
-    const workdir =
-      facts.started_in ?? (existsSync(repo.path) ? undefined : nearestFolderAbove(repo.path));
+    // Rendered just before a start, so it names where that start opens (`inPlaceDir`).
+    const workdir = existsSync(repo.path) ? undefined : nearestFolderAbove(repo.path);
     return renderFolderRepairBrief({
       ...facts,
       project: repo.name,
@@ -3750,23 +3750,27 @@ export class CrewSupervisor {
   }
 
   /**
-   * Where a task that works in place runs: its project's folder, or, for a
-   * folder repair that found it missing, the folder above it that exists,
-   * kept on the record so a resume opens there again (INF-572).
+   * Where a task that works in place starts: its project's folder, or, for a
+   * folder repair that finds it missing, the folder above it that exists,
+   * kept on the record so a resume opens there again (INF-572). Each start
+   * opens a new conversation, so it reads the project's folder as it stands
+   * now: one the captain has since named somewhere else, or one that is back,
+   * is where it starts (INF-757).
    */
   private inPlaceDir(taskId: string, folder: string): string {
     const record = this.options.tasks.get(taskId);
     const facts = record?.shape?.in_place;
     if (!record || !isFolderRepair(facts)) return folder;
-    if (facts.started_in) return facts.started_in;
-    if (existsSync(folder)) return folder;
-    const started_in = nearestFolderAbove(folder);
-    this.options.tasks.recordShape(
-      taskId,
-      { in_place: { ...facts, started_in } },
-      record.difficulty,
-    );
-    return started_in;
+    const { started_in: before, ...rest } = facts;
+    const started_in = existsSync(folder) ? undefined : nearestFolderAbove(folder);
+    if (started_in !== before) {
+      this.options.tasks.recordShape(
+        taskId,
+        { in_place: started_in ? { ...rest, started_in } : rest },
+        record.difficulty,
+      );
+    }
+    return started_in ?? folder;
   }
 
   /**

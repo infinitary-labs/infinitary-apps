@@ -26,7 +26,7 @@ Once a minute the host reads each such folder without changing it (`WorkspaceSer
 A refusal for `no-origin` or `no-default-branch` read no default branch, so the minute's read takes it from the folder's own `origin/HEAD`, as the next merge's update does (INF-583).
 Its brief has the crewmate add origin at the project's address when the folder has none, and name origin's default branch with `git remote set-head origin --auto`, since a pull of one branch leaves `origin/HEAD` unset.
 Removing a working copy never touches a directory that is the repository itself or holds it, so a failed start of a task that works in place leaves its folder, or the folder above a missing one with everything in it, as it was (INF-585).
-It deletes a directory git refused to remove only when it is in the worktrees area, so a repair whose project's folder was since named somewhere else leaves the folder it started in.
+It deletes a directory git refused to remove only when it is in the worktrees area, so a failed start never deletes a folder outside it, whatever the record says the task started in.
 
 A folder that is gone is `missing`, and one git cannot read is `unreadable`; neither reads as having no address (INF-572).
 Work that needs the folder notices it then, never earlier: a merge's update says it is missing, and a task starting on this computer, a branch coming home from a computer that runs work (`PlacedCopies.bringBranchHome`), and a merge into the folder itself (`SettleService`) are refused with words naming the folder and its repair (`CrewSupervisor.folderMissing`, `folderMissingText`).
@@ -35,6 +35,7 @@ Of the tasks that work in the folder, only that repair starts while the folder i
 A refused start waits on the captain like any start that failed.
 A task bound for a computer that runs work still starts: the start's read of the folder's address skips a missing folder (`ProjectChanges.inspect`), and that computer clones from the project's saved address.
 A missing folder's repair works in the folder that held it, or the nearest folder above that exists, recorded as `in_place.started_in` so a resume opens there again (`nearestFolderAbove`).
+Each start opens a new conversation, so it reads the project's folder at the path the project names now and starts in it when it is there, dropping `started_in` (`CrewSupervisor.inPlaceDir`, INF-757).
 Its brief has the crewmate find out why the folder is missing, clone it again into the same path only when it was deleted, and otherwise ask the captain on a card.
 A repair that never read a default branch reads it from the folder's own `origin/HEAD` when the minute's read comes round, so it closes once the folder is back, clean, on that branch and level with origin's.
 

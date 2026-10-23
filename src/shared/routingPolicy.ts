@@ -300,7 +300,8 @@ export const workShapeSchema = z.object({
         /**
          * Where the repair's crewmate works when the folder was missing as it
          * started: the nearest folder above it that exists (INF-572). A resume
-         * opens there again, even once the folder is back.
+         * opens there again, even once the folder is back; a new start reads
+         * the project's folder again and opens in it when it is there (INF-757).
          */
         started_in: z.string().optional(),
       }),

@@ -938,7 +938,9 @@ export function renderFolderRepairBrief(
     `- Why it was not brought up to date: ${folderRefreshWords(facts.cause)}`,
   ];
   if (facts.cause === "missing") {
-    const workdir = facts.workdir ?? facts.folder;
+    const workdir = facts.workdir
+      ? `${facts.workdir}, the nearest folder above the missing one that exists`
+      : `${facts.folder}, the project's folder itself, which is there now`;
     return [
       `Goal: bring back the folder of ${facts.project} at ${facts.folder}: there again, checked out on its default branch, with no uncommitted edits, and level with where the project lives.`,
       "",
@@ -946,7 +948,7 @@ export function renderFolderRepairBrief(
       "",
       ...factLines,
       "",
-      `${IN_PLACE_OPENING}: your working directory is ${workdir}, the nearest folder above the missing one that exists, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
+      `${IN_PLACE_OPENING}: your working directory is ${workdir}, not a working copy of your own. This task has no branch, no pull request and no completion decision, and it ships nothing.`,
       "Find out why the folder is missing first: whether it was deleted, moved or renamed elsewhere, sits on a drive that is not connected, or was kept only on this computer.",
       `Only if it was deleted, and the project has an address where it lives, clone it again from there into exactly ${facts.folder}. A fresh clone cannot bring back branches or edits that were only in the deleted folder: say so in your report.`,
       "In every other case change nothing and ask the captain on a card what to do. Never move, rename or delete another folder, and never clone into any other path.",

@@ -2,10 +2,11 @@ import { type ChildProcess, spawn } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
+import { GRADES_BUDGETS } from "./budgets.ts";
 
 // INF-804: on a fresh simulator Photos hands over a chosen photo only once it has opened its shared-with-you
 // library, which took up to six minutes after boot with simulators booting side by side. A part that chooses a
-// photo waits for Photos to say so, and fails rather than wait past fifteen minutes after boot.
+// photo waits for Photos to say so, and fails rather than wait past its finite boot ceiling.
 export const PHOTOS_LOG =
   'process == "assetsd" AND eventMessage CONTAINS "opened syndication photo library"';
 const PHOTOS_OPENED = /\sassetsd\[[^\]]*\].* opened syndication photo library/;
@@ -54,11 +55,11 @@ export async function photosOpened({
       () =>
         reject(
           new Error(
-            "Photos had not opened its shared-with-you library fifteen minutes after boot," +
+            `Photos had not opened its shared-with-you library ${GRADES_BUDGETS ? "fifteen" : "twenty"} minutes after boot,` +
               " and a part that chooses a photo needs it",
           ),
         ),
-      booting.getTime() + 15 * 60_000 - Date.now(),
+      booting.getTime() + (GRADES_BUDGETS ? 15 : 20) * 60_000 - Date.now(),
     );
     stream.once("error", (error) => {
       clearTimeout(deadline);

@@ -84,6 +84,7 @@ type Step = {
   uses?: string;
   if?: string;
   run?: string;
+  "timeout-minutes"?: number;
   env?: Record<string, string>;
 };
 type Plain = { [key: string]: string | Plain };
@@ -322,6 +323,15 @@ describe("the native pull-request gate", () => {
     expect(gates).toEqual([BOTH]);
     expect(DEVICE_GATES).toEqual([IPHONE, IPAD, BOTH]);
   });
+  // INF-1083 / INF-1072: the gate, not just its lease, ends on every route.
+  it("caps every route at sixty minutes while preserving the 165-minute job", () => {
+    for (const route of [OFF, IN_TURN, TOGETHER]) {
+      const gates = stepsThatRun(route).filter(isGate);
+      expect(gates).toHaveLength(1);
+      expect(gates[0]?.["timeout-minutes"]).toBe(60);
+    }
+    expect(workflow.jobs[NATIVE_JOB]["timeout-minutes"]).toBe(165);
+  });
   it("reads the pull request's latest version right before the device gate", () => {
     const steps = workflow.jobs[NATIVE_JOB].steps;
     const at = steps.findIndex((step: { name: string }) => step.name === BOTH);
@@ -335,7 +345,14 @@ describe("the native pull-request gate", () => {
     expect(gateStarts(BOTH, "", "true")).toBe("false");
   });
   it("receives every pull request and selects the Mac mini without a paid fallback", () => {
-    expect(workflow.on).toEqual({ pull_request: null, workflow_dispatch: null });
+    expect(workflow.on.pull_request).toBeNull();
+    expect(Object.keys(workflow.on)).toEqual(["pull_request", "workflow_dispatch"]);
+    expect(workflow.on.workflow_dispatch.inputs).toMatchObject({
+      parts: { type: "string" },
+      starve: { type: "boolean", default: false },
+      perf: { type: "boolean", default: false },
+      waits: { type: "boolean", default: false },
+    });
     const expression = workflow.jobs["native-phone"]["runs-on"].replace(/^\$\{\{\s*|\s*\}\}$/g, "");
     const ast = new Parser(new Lexer(expression).lex().tokens, ["vars"], []).parse();
     for (const configured of ["mini-mac", ""]) {
@@ -369,13 +386,13 @@ describe("the native pull-request gate", () => {
         'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
         // INF-658: a job placed in a virtual Mac runs the gate there without the lease.
         'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi',
-        'python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"',
+        'python3 scripts/with-mac-check.py --max-hold 60m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"',
         "",
       ].join("\n"),
     ]);
     // The gate reads the chooser's parts, which a run on request leaves empty.
     expect(stepsThatRun(OFF).find(isGate)?.env?.PHONE_PARTS).toBe(
-      "${{ needs.choose-phone.outputs.parts }}",
+      "${{ github.event_name == 'workflow_dispatch' && inputs.parts || needs.choose-phone.outputs.parts }}",
     );
     expect(workflow.jobs["choose-phone"].outputs.parts).toBe("${{ steps.select.outputs.parts }}");
     // The gates' shell sees the switch as the repository sets it, empty when unset.

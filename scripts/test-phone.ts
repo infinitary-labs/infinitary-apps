@@ -4,13 +4,15 @@ import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } fro
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
+import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpers/budgets.ts";
+import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
 import { logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
 import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { runEveryCheck } from "./phone-checks.ts";
-import { PHONE_PARTS, type PhoneDevice, partSelection, phoneJobs, runSideBySide, testHomeKeys } from "./phone-test-plan.ts";
+import { PHONE_PARTS, type PhoneDevice, partSelection, phoneExecutionArguments, phoneJobs, runSideBySide, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -22,6 +24,8 @@ const { values } = parseArgs({ options: {
   evidence: { type: "string" },
   ipad: { type: "boolean", default: false },
   demo: { type: "boolean", default: false },
+  waits: { type: "boolean", default: process.env.INFINITARY_PHONE_WAITS_ONLY === "1" },
+  starve: { type: "boolean", default: process.env.INFINITARY_STARVE_CHECK === "1" },
   // INF-662 piece 1: check and build once, then the iPhone and the iPad side by side.
   both: { type: "boolean", default: false },
   // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many simulators at once.
@@ -38,7 +42,7 @@ if (evidence === REPO_ROOT || evidence.startsWith(REPO_ROOT + "/"))
 if (values.both && (values.ipad || values.xctestrun)) throw new Error("--both runs the iPhone and the iPad itself");
 if (values.xctestrun && values.part?.length !== 1) throw new Error("--xctestrun runs exactly one --part");
 const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ? "ipad" : "iphone"];
-const jobs = phoneJobs(devices, values.part ?? PHONE_PARTS.map((part) => part.name));
+const jobs = phoneJobs(devices, values.waits ? ["rest"] : values.part ?? PHONE_PARTS.map((part) => part.name));
 const simulators = Number(values.simulators);
 mkdirSync(evidence, { recursive: true });
 const root = scratchDir("infinitary-native-");
@@ -48,6 +52,7 @@ process.env.HOME = home;
 process.env.CFFIXED_USER_HOME = home;
 process.env.PI_OFFLINE = "1";
 process.env.INFINITARY_LOCAL_CODESIGN_DIR = join(home, "signing-unused");
+startPhoneLoadClock();
 const runner = await openModuleRunner();
 const { hostEnv } = await runner.import<typeof import("../src/core/hostEnv")>(join(REPO_ROOT, "src/core/hostEnv.ts"));
 const env = { ...hostEnv(), HOME: home, CFFIXED_USER_HOME: home };
@@ -85,6 +90,7 @@ const SIMULATOR_LOG = 'process == "Infinitary" OR process BEGINSWITH "com.apple.
 const SYSTEM_LOG = 'process IN {"SpringBoard", "backboardd", "AccessibilityUIServer", "testmanagerd", "kbd"}'
   + ' OR process ENDSWITH "-Runner" OR subsystem BEGINSWITH[c] "com.apple.accessibility"';
 let keyboard: Awaited<ReturnType<typeof observePhoneKeyboard>> | undefined;
+let simulatorLog: Awaited<ReturnType<typeof observePhoneLog>> | undefined;
 let recorder: ChildProcess | undefined;
 let recorded: Promise<void> | undefined;
 let recordingLog = "";
@@ -134,15 +140,15 @@ const recording = {
     recorder = child;
     recorded = new Promise<void>((resolveStopped) => child.once("close", () => resolveStopped()));
     await new Promise<void>((resolveStarted, reject) => {
-      const timeout = setTimeout(() => reject(new Error("The simulator recorder did not start")), 15_000);
+      const timeout = budgetTimer(() => reject(new Error("The simulator recorder did not start")), 15_000);
       const hear = (part: Buffer) => {
         recordingLog += part.toString();
-        if (recordingLog.includes("Recording started")) { clearTimeout(timeout); resolveStarted(); }
+        if (recordingLog.includes("Recording started")) { timeout.cancel(); resolveStarted(); }
       };
       child.stdout?.on("data", hear); child.stderr?.on("data", hear);
-      child.once("error", (error) => { clearTimeout(timeout); reject(error); });
+      child.once("error", (error) => { timeout.cancel(); reject(error); });
       child.once("exit", () => {
-        clearTimeout(timeout);
+        timeout.cancel();
         if (!recordingLog.includes("Recording started")) reject(new Error("The simulator recorder exited before starting"));
       });
     });
@@ -174,9 +180,10 @@ const everyPart = async () => {
     const name = `${device} ${part}`;
     const began = Date.now();
     console.log(`${name}: began at ${new Date(began).toISOString()}`);
-    const child = spawn(process.execPath, ["scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
-      ...(values.demo ? ["--demo"] : []), "--part", part, "--evidence", folder(device, part), "--xctestrun", join(products, plan)],
-    { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
+    const command = [process.execPath, "scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
+      ...(values.demo ? ["--demo"] : []), ...(values.waits ? ["--waits"] : []), "--part", part, "--evidence", folder(device, part), "--xctestrun", join(products, plan)];
+    if (values.starve) command.unshift("python3", "scripts/starve-check.py", "--timeout", "3600", "--stall-seconds", "12", "--");
+    const child = spawn(command[0]!, command.slice(1), { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
     children.add(child);
     for (const stream of [child.stdout, child.stderr])
       createInterface({ input: stream }).on("line", (line) => console.log(`${name}: ${line}`));
@@ -190,15 +197,19 @@ const everyPart = async () => {
   // No part stops another; any part failing fails the gate.
   const failed = (await runSideBySide(jobs, simulators, gate)).flat();
   // Only a full gate, every part on both devices, writes them.
-  if (values.both && !values.part) writeFileSync(join(evidence, "part-times.json"), `${JSON.stringify(times, null, 2)}\n`);
+  if (values.both && !values.part && !values.waits) writeFileSync(join(evidence, "part-times.json"), `${JSON.stringify(times, null, 2)}\n`);
   if (failed.length) throw new Error(`The phone gate failed: ${failed.join(", ")}; see its results in ${evidence}`);
 };
 // A test plan copy beside the built one, naming this device's own test home.
 const planFor = async (built: string, url: string) => {
   const plan = join(dirname(built), `${values.ipad ? "ipad" : "iphone"}-${values.part![0]}.xctestrun`);
   copyFileSync(built, plan);
-  for (const key of testHomeKeys(JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", built]))))
+  for (const key of testHomeKeys(JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", built])))) {
     await run("plutil", ["-replace", key, "-string", url, plan]);
+    // Xcode does not inherit the launcher's environment into its test targets.
+    await run("plutil", ["-replace", key.replace(/PHONE_TEST_HOME$/, "INFINITARY_PERF_BUDGETS"),
+      "-string", GRADES_BUDGETS ? "1" : "0", plan]);
+  }
   return plan;
 };
 const onePart = async () => {
@@ -215,7 +226,7 @@ const onePart = async () => {
   await run("xcrun", ["simctl", "bootstatus", simulator, "-b"]);
   await run("xcrun", ["simctl", "addmedia", simulator, join(REPO_ROOT, "release-notes/pictures/activity-settles-setting-runs-light.png")]);
   // Photos opens its libraries while the rest of the part gets ready; the part's tests start once it has.
-  const photos = PHONE_PARTS.find((part) => part.name === values.part![0])?.photos
+  const photos = !values.waits && PHONE_PARTS.find((part) => part.name === values.part![0])?.photos
     ? photosOpened({ device: simulator, booting, env, evidence, children, run, failureLog: SIMULATOR_LOG }) : undefined;
   photos?.catch(() => {});
   keyboard = await observePhoneKeyboard({ simulator, env, evidence, children });
@@ -227,12 +238,16 @@ const onePart = async () => {
     "-resultBundlePath", join(evidence, "phone.xcresult")];
   const plan = await planFor(values.xctestrun!, fixture.url);
   await photos;
+  simulatorLog = await observePhoneLog({ device: simulator, env, evidence, children,
+    predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})` });
   const testing = new Date();
-  await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!), "test-without-building"])
+  await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!, values.waits),
+    ...phoneExecutionArguments(GRADES_BUDGETS), "test-without-building"])
     .catch(async (error: Error & { output?: string }) => {
       // The CI job log names why a part failed; its results archive is often too large to fetch.
       for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed/.test(each)).slice(0, 20))
         console.log(line);
+      console.log("The pre-failure simulator log is kept in simulator-live.log, even if XCTest tore its domain down.");
       // INF-804: what the app, Photos and WebKit logged on this simulator, kept with the command logs.
       await run("xcrun", ["simctl", "spawn", simulator!, "log", "show", "--last", "20m", "--style", "compact", "--info",
         "--predicate", SIMULATOR_LOG])
@@ -266,7 +281,8 @@ try {
   }
   await (values.xctestrun ? onePart() : everyPart());
   if (failures.length > 0) throw new Error(`The simulator tests passed, but ${failures.length} earlier check(s) failed: ${failures.join("; ")}`);
-  console.log(values.xctestrun ? `The ${values.part![0]} part passed on its own simulator and disposable Mac.`
+  console.log(values.waits ? `Native wait-clock tests passed on ${devices.join(" and ")}, with disposable simulators and homes.`
+    : values.xctestrun ? `The ${values.part![0]} part passed on its own simulator and disposable Mac.`
     : `Every part passed on ${devices.join(" and ")}, each on its own simulator and disposable Mac.`);
 } finally {
   cleaningUp = true;
@@ -275,7 +291,10 @@ try {
       if (fixture) writeFileSync(join(evidence, "home-observations.json"), JSON.stringify(fixture.observations(), null, 2));
     } finally {
       try { await recording.stop(); }
-      finally { await keyboard?.close(); }
+      finally {
+        try { await keyboard?.close(); }
+        finally { await simulatorLog?.close(); }
+      }
     }
   } finally {
     try { await fixture?.close(); }

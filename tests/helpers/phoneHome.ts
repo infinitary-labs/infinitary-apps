@@ -27,6 +27,7 @@ import {
 } from "../e2e/mockProvider";
 
 import { encodePng } from "../e2e/pictureFixtures";
+import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budgets";
 import { claimedPort } from "./claimedPort";
 import { standInDnsSd } from "./dnsSdStandIn";
 import type { PhoneChord, PhoneKeyWitness } from "./phoneKeyboard";
@@ -90,28 +91,28 @@ export async function startPhoneHome(
     await new Promise<void>((resolve, reject) => {
       const off = core.events.subscribe(() => {
         if (predicate()) {
-          clearTimeout(timer);
+          timer?.cancel();
           off();
           resolve();
         }
       });
-      const timer = setTimeout(() => {
+      const timer = budgetTimer(() => {
         off();
         reject(new Error("The phone action did not reach its promised Mac state"));
       }, 30_000);
     });
   };
   const within = async (promise: Promise<void>, failure: string) => {
-    let timer: NodeJS.Timeout | undefined;
+    let timer: DeadlineTimer | undefined;
     try {
       await Promise.race([
         promise,
         new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error(failure)), 30_000);
+          timer = budgetTimer(() => reject(new Error(failure)), 30_000);
         }),
       ]);
     } finally {
-      clearTimeout(timer);
+      timer?.cancel();
     }
   };
   const views = new Set<string>();
@@ -513,14 +514,14 @@ export async function startPhoneHome(
           break;
         case "POST card-action-held": {
           if (!cardHold) throw new Error("No card action is held");
-          let timer!: ReturnType<typeof setTimeout>;
+          let timer: DeadlineTimer | undefined;
           const deadline = new Promise<never>((_, reject) => {
-            timer = setTimeout(() => reject(new Error("No card action arrived")), 10_000);
+            timer = budgetTimer(() => reject(new Error("No card action arrived")), 10_000);
           });
           try {
             await Promise.race([cardHold.entered.promise, deadline]);
           } finally {
-            clearTimeout(timer);
+            timer?.cancel();
           }
           result = { calls: structuredClone(cardRequests) };
           break;
@@ -649,12 +650,12 @@ export async function startPhoneHome(
             await new Promise<void>((resolve, reject) => {
               const off = connection.onViewDevice(() => {
                 if (views.size === 0) {
-                  clearTimeout(timer);
+                  timer?.cancel();
                   off();
                   resolve();
                 }
               });
-              const timer = setTimeout(() => {
+              const timer = budgetTimer(() => {
                 off();
                 reject(new Error("The background phone kept its connection"));
               }, 10_000);
@@ -956,6 +957,7 @@ export async function startPhoneHome(
       response.writeHead(500).end(JSON.stringify({ error: String(error) }));
     }
   });
+  keepControlConnection(control);
   await new Promise<void>((resolve) => control.listen(0, "127.0.0.1", resolve));
   const controlPort = (control.address() as { port: number }).port;
   return {

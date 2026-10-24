@@ -7,6 +7,22 @@ name: phone
 on:
   pull_request:
   workflow_dispatch:
+    inputs:
+      parts:
+        description: Parts to run, separated by spaces (empty runs all)
+        type: string
+      starve:
+        description: Reproduce scheduling starvation on each part's owned descendants
+        type: boolean
+        default: false
+      waits:
+        description: Run only native wait-clock tests, without product journeys
+        type: boolean
+        default: false
+      perf:
+        description: Hold native waits to their wall budgets on a quiet run
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -133,10 +149,8 @@ jobs:
       group: ${{ vars.VIRTUAL_MAC_RUNNER && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
       queue: max
       cancel-in-progress: false
-    # Allow 45 minutes for the native gate, 105 across admission waits
-    # (60 behind active desktop journeys plus two local phone gates of about
-    # 22 minutes each, ahead through the entry lock), and 15 for setup, cleanup
-    # and upload. Test deadlines remain unchanged.
+    # Preserve the job's outer allowance for admission, setup, cleanup and upload.
+    # The device gate below has its own 60-minute limit on every runner route.
     timeout-minutes: 165
     env:
       PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
@@ -181,7 +195,16 @@ jobs:
       - id: vm
         name: Start a fresh virtual Mac
         if: ${{ vars.PHONE_VIRTUAL_MAC }}
-        run: scripts/virtual-mac/phone.sh start "$RUNNER_TEMP/phone"
+        run: |
+          if [ -n "$REQUESTED_PARTS" ] || [ "$STARVE" = true ] || [ "$PERF" = true ] || [ "$WAITS" = true ]; then
+            echo 'Selected parts, starvation, grading and clock-only proof use the normal or placed runner route'; exit 1
+          fi
+          scripts/virtual-mac/phone.sh start "$RUNNER_TEMP/phone"
+        env:
+          REQUESTED_PARTS: ${{ inputs.parts }}
+          STARVE: ${{ inputs.starve }}
+          PERF: ${{ inputs.perf }}
+          WAITS: ${{ inputs.waits }}
       # No simulator exists before a device gate. A rerun of a replaced version, and the
       # run of a pull request that merged or closed, has no newer run to cancel it, so it
       # stops here (INF-895). A failed reading runs the gate.
@@ -201,19 +224,23 @@ jobs:
       # runner works"): a job the placement service put in a fresh virtual Mac shares that
       # Mac with no journeys, so it takes no lease either, with the 2 simulators at a time
       # its 6 cores hold, as phone-job.sh runs them. The real Mac's place still takes it.
-      # 40m is over twice the longest measured gate for both devices, 15 minutes.
+      # INF-1083: every route has the approved 60-minute gate limit, including placed virtual Macs.
       # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the
       # parts the chooser kept; a run on request, and the virtual Mac switch, run every part.
       - id: both
         name: Read and recover on iPhone and iPad at once
+        timeout-minutes: 60
         if: ${{ steps.start.outputs.replaced != 'true' }}
         run: |
           parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done
           if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi
           if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
-          python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
+          python3 scripts/with-mac-check.py --max-hold 60m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
         env:
-          PHONE_PARTS: ${{ needs.choose-phone.outputs.parts }}
+          PHONE_PARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.parts || needs.choose-phone.outputs.parts }}
+          INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
+          INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
+          INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
       - name: Delete the virtual Mac
         if: ${{ always() && steps.vm.outcome != 'skipped' }}
         run: scripts/virtual-mac/phone.sh delete

@@ -29,8 +29,24 @@ export const PHONE_PARTS = [
 export type PhonePart = (typeof PHONE_PARTS)[number]["name"];
 export type PhoneDevice = "iphone" | "ipad";
 
+/** INF-1083: ordinary XCTest must still stop a stuck test, not wait for the job limit.
+ * Twenty minutes bounds each ordinary test while the outer gate keeps its own sixty-minute cap.
+ * Quiet grading keeps Xcode's original allowances. Neither mode disables its timeouts.
+ */
+export function phoneExecutionArguments(grades: boolean): string[] {
+  return ["-test-timeouts-enabled", "YES", ...(grades ? [] : [
+    "-default-test-execution-time-allowance", "1200",
+    "-maximum-test-execution-time-allowance", "1200",
+  ])];
+}
+
 /** The xcodebuild arguments that choose one part's tests from the built test plan. */
-export function partSelection(name: string): string[] {
+export function partSelection(name: string, waitsOnly = false): string[] {
+  // INF-1083: prove the native clock in either mode without grading unrelated UI journeys.
+  if (waitsOnly) {
+    if (name !== "rest") throw new Error("Native wait-clock tests belong to the rest part");
+    return ["-only-testing:InfinitaryUITests/PhoneWaitsTests"];
+  }
   const index = PHONE_PARTS.findIndex((part) => part.name === name);
   if (index < 0) throw new Error(`No phone journey part is named ${name}`);
   if (index < PHONE_PARTS.length - 1) return [`-only-testing:${PHONE_JOURNEY}/${PHONE_PARTS[index]!.test}`];

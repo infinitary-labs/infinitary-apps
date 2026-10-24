@@ -1,3 +1,4 @@
+import type { Server } from "node:http";
 import { availableParallelism, loadavg } from "node:os";
 
 /**
@@ -99,16 +100,29 @@ export function startLoadClock(
 }
 
 const CLOCK = Symbol.for("infinitary.loadClock");
+const scope = globalThis as { [CLOCK]?: LoadClock };
+
+/** The native phone launcher opts its Node failure timers into the same clock as journeys. */
+export function startPhoneLoadClock(): void {
+  if (!GRADES_BUDGETS) scope[CLOCK] ??= startLoadClock();
+}
+
+/** Only the disposable home's control server, never the app's transport.
+ * A queued POST survives a frozen home, but an unused connection still closes by a finite cap.
+ */
+export function keepControlConnection(server: Server): void {
+  if (!GRADES_BUDGETS) server.keepAliveTimeout = waitCap(server.keepAliveTimeout);
+}
 
 /**
  * The clock this process's waits run on: a Playwright test worker's on an
  * ordinary run, where the patched `playwright` and `playwright-core` read it
- * at every wait deadline (`patches/`). A graded run, the runner's own process
- * and every other process keep the wall clock.
+ * at every wait deadline (`patches/`). The native launcher explicitly opts
+ * into the same shared clock. A graded run, the journey runner's own process
+ * and processes that did not opt in keep the wall clock.
  */
 export const loadClock: LoadClock | undefined = (() => {
   if (GRADES_BUDGETS || process.env.TEST_WORKER_INDEX === undefined) return undefined;
-  const scope = globalThis as { [CLOCK]?: LoadClock };
   scope[CLOCK] ??= startLoadClock();
   return scope[CLOCK];
 })();
@@ -116,11 +130,12 @@ export const loadClock: LoadClock | undefined = (() => {
 /**
  * A test's own failure timer, never a stimulus, a poll interval or a product
  * deadline: it fires after `milliseconds` of load time on an ordinary journey
- * run, by its wall cap at the latest, and after `milliseconds` on the wall
- * clock everywhere else.
+ * or native phone run, by its wall cap at the latest, and after `milliseconds`
+ * on the wall clock everywhere else.
  */
 export function budgetTimer(fail: () => void, milliseconds: number): DeadlineTimer {
-  if (loadClock) return loadClock.timer(fail, loadClock.now() + milliseconds);
+  const clock = scope[CLOCK];
+  if (clock) return clock.timer(fail, clock.now() + milliseconds);
   const timer = setTimeout(fail, milliseconds);
   const handle: DeadlineTimer = {
     cancel: () => clearTimeout(timer),

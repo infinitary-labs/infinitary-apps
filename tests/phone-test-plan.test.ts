@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   PHONE_PARTS,
   partSelection,
+  phoneExecutionArguments,
   phoneJobs,
   runSideBySide,
   testHomeKeys,
@@ -101,6 +102,34 @@ describe("running the parts side by side", () => {
   it("refuses to run with no simulator", async () => {
     await expect(runSideBySide(phoneJobs(["iphone"]), 0, async () => 0)).rejects.toThrow(
       /at least one simulator/,
+    );
+  });
+});
+
+// INF-1083: timeouts stay on in both modes; grading keeps Xcode's own allowances.
+describe("the native test's outer deadline", () => {
+  it("gives ordinary tests 1200 seconds and leaves graded allowances to Xcode", () => {
+    expect(phoneExecutionArguments(false)).toEqual([
+      "-test-timeouts-enabled",
+      "YES",
+      "-default-test-execution-time-allowance",
+      "1200",
+      "-maximum-test-execution-time-allowance",
+      "1200",
+    ]);
+    expect(phoneExecutionArguments(true)).toEqual(["-test-timeouts-enabled", "YES"]);
+  });
+});
+
+// INF-1083: the native clock proof is not a grading of unrelated UI recovery latency.
+describe("the native clock proof selection", () => {
+  it("selects only the existing native clock class on request, leaving ordinary parts unchanged", () => {
+    expect(partSelection("rest", true)).toEqual([
+      "-only-testing:InfinitaryUITests/PhoneWaitsTests",
+    ]);
+    expect(partSelection("rest")).toHaveLength(PHONE_PARTS.length - 1);
+    expect(() => partSelection("cards", true)).toThrow(
+      "Native wait-clock tests belong to the rest part",
     );
   });
 });

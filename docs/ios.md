@@ -314,8 +314,22 @@ A part's results are in its own folder, inside the device's folder with `--both`
 A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, which a pull request's phone check reads to keep within its budget.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
 No part stops another, and any part failing fails the gate.
+Every explicit native observation goes through `InfinitaryUITests/PhoneWaits.swift`: element presence and absence, predicate reads and the disposable home's control requests.
+On ordinary runs it samples the same load clock as journeys, with 25 ms ticks, at most two ticks counted across a stall, and a share reduced by one-minute load per active processor above 1.
+Each wait ends by 20 times its budget on the monotonic wall clock, at most ten minutes; direct predicate evaluation preserves INF-975's short-window fix.
+The phone launcher starts the Node load clock for its failure timers too, and the disposable control server keeps idle connections for a finite capped interval so a queued POST survives a frozen home.
+A graded run keeps each original wall-clock budget, and the launcher writes that reading into every test target's own test plan.
+XCTest timeouts are enabled in both modes: ordinary tests have 1200-second default and maximum allowances, while graded tests use Xcode's own allowances.
+`PhoneWaitsTests` observes a real delayed file across a stalled reader, fails a missing file, expires a stalled clock at its wall cap and checks direct short-window observation.
+Typing waits for the message box's actual keyboard focus, and a choice after paging waits for the restored native form reading as well as its enabled action.
+The gate starts `simulator-live.log` before XCTest starts, so a failed test that tears down the simulator domain cannot erase the earlier app, WebKit and system log.
+The Cards journey keeps both its accessibility tree and the disposable home's card-state calls when a choice does not dismiss its card.
+A request to `phone.yml` can name `parts`, `starve` and `perf`; the load controller stops each part's owned process tree with twelve-second long stalls and a 60-minute experiment limit.
+The `waits` input (or `--waits`) selects only `PhoneWaitsTests` on both devices, so `perf: true, waits: true` proves the native deadline rule without also grading unrelated UI recovery latency.
+This proof-only selection writes no whole-gate timing sample; an ordinary gate still runs every selected product journey and native test.
+Selected parts, starvation, grading and proof-only selection use the normal or placed runner route; the fixed virtual-Mac switch refuses those options rather than silently dropping them.
 A part that chooses a library photo (`talk` and `rest`) starts its tests only after the simulator's Photos says it has opened its shared-with-you library, because Photos hands over no chosen photo before then.
-With simulators booting side by side that took up to six minutes after boot, so the part waits while its home gets ready, and fails if Photos has not opened it fifteen minutes after boot.
+With simulators booting side by side that took up to six minutes after boot, so the part waits while its home gets ready, and fails if Photos has not opened it twenty minutes after boot, or fifteen on a graded run.
 The part keeps that wait's own log output in `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs, before deleting the simulator.
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character and task-start recordings with their posters beside the test results.
 The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
@@ -405,8 +419,8 @@ The runner slots and a crewmate's `pnpm test:phone` use the same account and `$H
 The helper holds the lease as the command's parent and never passes it on, so it ends when the command exits, even if the command leaves background processes running; lock files are never unlinked.
 A waiting check prints that it waits and who holds the lease, and takes the lease back from a holder whose command ended, a dead holder's command or a command past its `--max-hold` limit (`docs/testing.md`, "Native phone checks on the pull request").
 No desktop work runs between the iPhone and the iPad: the one gate holds the lease for both.
-The native job's 165-minute limit allows 45 minutes for the device gate, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
-The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.
+The device gate has a 60-minute step limit on every route: the real Mac, the fixed virtual-Mac switch and a placed virtual Mac.
+The real Mac's command lease also holds it to 60 minutes; the job retains its 165-minute outer limit for admission, setup, cleanup and upload.
 Setup, evidence upload, the choosers and Linux jobs remain independent.
 Neither device's failure is ignored: their parts run side by side, none stops another, and any failing fails the gate.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.

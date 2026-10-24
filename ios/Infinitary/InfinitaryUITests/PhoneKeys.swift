@@ -7,7 +7,7 @@ import XCTest
     var request = URLRequest(url: try XCTUnwrap(URL(string: control + "/keyboard-before-launch")))
     request.httpMethod = "POST"
     request.timeoutInterval = 40
-    let (data, response) = try await URLSession.shared.data(for: request)
+    let (data, response) = try await phoneTestSession.data(for: request)
     guard (response as? HTTPURLResponse)?.statusCode == 200 else {
         throw NSError(domain: "PhoneKeyboard", code: 3, userInfo: [NSLocalizedDescriptionKey:
             "The app was not launched: " + (String(data: data, encoding: .utf8) ?? "No keyboard observer")])
@@ -37,7 +37,7 @@ import XCTest
     request.httpBody = try JSONSerialization.data(withJSONObject: [
         "key": canonicalKey, "modifiers": modifierNames
     ])
-    let (data, response) = try await URLSession.shared.data(for: request)
+    let (data, response) = try await phoneTestSession.data(for: request)
     guard (response as? HTTPURLResponse)?.statusCode == 200 else {
         throw NSError(domain: "PhoneKeyboard", code: 1, userInfo: [NSLocalizedDescriptionKey:
             "The requested chord was not sent: " + (String(data: data, encoding: .utf8) ?? "No keyboard registration witness")])

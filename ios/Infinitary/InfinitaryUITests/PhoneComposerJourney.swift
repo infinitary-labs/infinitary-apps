@@ -27,7 +27,7 @@ import XCTest
         tab(name)
         let surface = name == "Activity" ? app.scrollViews["activity-list"]
             : name == "Tasks" ? app.buttons["group-waiting"] : app.scrollViews["card-scroll"]
-        XCTAssertTrue(surface.waitForExistence(timeout: 10), "The requested tab actually opens")
+        XCTAssertTrue(surface.waitForPresence(timeout: 10), "The requested tab actually opens")
         XCTAssertTrue(surface.isHittable)
         if name != "Activity" { verifyPhoneReadingColumn(surface, column: column) }
         if name == "Home" {
@@ -43,10 +43,10 @@ import XCTest
     picture("draft-after-tabs")
     XCUIDevice.shared.orientation = .landscapeLeft
     app.activate()
-    XCTAssertTrue(input.waitForExistence(timeout: 10))
+    XCTAssertTrue(input.waitForPresence(timeout: 10))
     if UIDevice.current.userInterfaceIdiom == .pad {
         let sidebar = phoneSidebar(app)
-        XCTAssertTrue(sidebar.waitForExistence(timeout: 10))
+        XCTAssertTrue(sidebar.waitForPresence(timeout: 10))
         // INF-1062: the landscape iPad shows the stage and its sidebar, so the bar carries no strip.
         XCTAssertFalse(app.buttons["tab-home"].exists, "Landscape columns have no strip above them")
         XCTAssertLessThanOrEqual(sidebar.frame.maxX, input.frame.minX,
@@ -55,7 +55,7 @@ import XCTest
         phoneSidebarRail("Tasks", in: sidebar).tap()
         // The search waits above the list until it is pulled down (INF-589 item 9), so the first group stands for Tasks.
         let tasks = sidebar.buttons["group-waiting"]
-        XCTAssertTrue(tasks.waitForExistence(timeout: 10), "The Tasks rail shows Tasks in the landscape sidebar")
+        XCTAssertTrue(tasks.waitForPresence(timeout: 10), "The Tasks rail shows Tasks in the landscape sidebar")
         XCTAssertTrue(tasks.isHittable)
     }
     XCTAssertEqual(input.value as? String, words, "Rotating keeps the unsent words")
@@ -94,12 +94,12 @@ import XCTest
     if UIDevice.current.userInterfaceIdiom == .pad {
         let sidebar = phoneSidebar(app)
         phoneSidebarRail("Activity", in: sidebar).tap()
-        XCTAssertTrue(sidebar.staticTexts.matching(identifier: "activity-text").firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(sidebar.staticTexts.matching(identifier: "activity-text").firstMatch.waitForPresence(timeout: 10))
     }
     XCUIDevice.shared.orientation = .portrait
     app.activate()
-    XCTAssertTrue(phoneSidebar(app).waitForNonExistence(timeout: 10))
-    XCTAssertTrue(input.waitForExistence(timeout: 10))
+    XCTAssertTrue(phoneSidebar(app).waitForAbsence(timeout: 10))
+    XCTAssertTrue(input.waitForPresence(timeout: 10))
     XCTAssertEqual(input.value as? String, words)
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
     verifyPhoneComposerBounds(app: app)
@@ -111,12 +111,12 @@ import XCTest
     // The full journey has relaunched before this point: sibling app commands must still work too.
     try await pressPhoneKey("i", modifiers: .command, in: app)
     let closeDetails = app.buttons["close-computer-details"]
-    XCTAssertTrue(closeDetails.waitForExistence(timeout: 10))
+    XCTAssertTrue(closeDetails.waitForPresence(timeout: 10))
     // INF-499 #8: one real press must not send the retained text/photo behind a native sheet.
     try await pressPhoneKey(XCUIKeyboardKey.return.rawValue, modifiers: .command, in: app)
     picture("sheet-after-command-return")
     closeDetails.tap()
-    XCTAssertTrue(closeDetails.waitForNonExistence(timeout: 10))
+    XCTAssertTrue(closeDetails.waitForAbsence(timeout: 10))
     picture("draft-after-sheet-command-return")
     XCTAssertEqual(input.value as? String, words)
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
@@ -154,21 +154,21 @@ import XCTest
     let photos = app.buttons["add-photos"]
     XCTAssertTrue(photos.isHittable); photos.tap()
     let photo = app.images.matching(NSPredicate(format: "label BEGINSWITH 'Photo' OR label BEGINSWITH 'Screenshot'")).firstMatch
-    XCTAssertTrue(photo.waitForExistence(timeout: 10), app.debugDescription)
+    XCTAssertTrue(photo.waitForPresence(timeout: 10), app.debugDescription)
     // iOS 26 exposes the real asset frame, but not a hittable AX point; never guess a screen coordinate.
     photo.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     let add = app.buttons.matching(NSPredicate(format: "label == 'Done' OR label == 'Add'")).firstMatch
-    XCTAssertTrue(add.waitForExistence(timeout: 10)); XCTAssertTrue(add.isEnabled); add.tap()
+    XCTAssertTrue(add.waitForPresence(timeout: 10)); XCTAssertTrue(add.isEnabled); add.tap()
     // INF-662 piece 2: with other simulators beside this one, Photos has taken just over 10 seconds
     // to hand the picked photo's bytes over; the chip appears once they have loaded.
-    XCTAssertTrue(app.buttons["photo-chip"].waitForExistence(timeout: 30), app.debugDescription)
+    XCTAssertTrue(app.buttons["photo-chip"].waitForPresence(timeout: 30), app.debugDescription)
 }
 
 /// INF-230: the actual footer contains every visible row and does not overlap the keyboard; INF-1062: it sits in Home's
 /// own column with no bar under it.
 @MainActor func verifyPhoneComposerBounds(app: XCUIApplication) {
     let footer = app.otherElements["phone-composer"].firstMatch
-    XCTAssertTrue(footer.waitForExistence(timeout: 10))
+    XCTAssertTrue(footer.waitForPresence(timeout: 10))
     let controls = [app.textFields["message-box"], app.buttons["add-photos"], app.buttons["send-message"],
                     app.buttons["photo-chip"], app.staticTexts["last-turn-you"], app.staticTexts["last-turn-reply"],
                     app.staticTexts["connection-refusal"], app.staticTexts["message-problem"]]
@@ -185,7 +185,7 @@ import XCTest
     let card = app.scrollViews["card-scroll"]
     if card.exists {
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
-        XCTAssertTrue(pager.waitForExistence(timeout: 10))
+        XCTAssertTrue(pager.waitForPresence(timeout: 10))
         XCTAssertTrue(pager.isHittable, "The card pager is not covered by the composer")
         for id in ["previous-card", "card-pager", "next-card"] {
             let control = app.descendants(matching: .any).matching(identifier: id).firstMatch
@@ -218,10 +218,10 @@ import XCTest
 /// Done and the native Hide keyboard command leave the actual component-owned draft untouched.
 @MainActor private func dismissPhoneJourneyKeyboard(app: XCUIApplication, usingKey: Bool = false) async throws {
     let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
-    XCTAssertTrue(done.waitForExistence(timeout: 10))
+    XCTAssertTrue(done.waitForPresence(timeout: 10))
     XCTAssertTrue(done.isHittable)
     if usingKey { try await pressPhoneKey("k", modifiers: [.command, .shift], in: app) } else { done.tap() }
-    XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 10))
+    XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10))
 }
 
 /// INF-589 item 15: the reading column, read from the message box on Home, where it is (INF-1062).

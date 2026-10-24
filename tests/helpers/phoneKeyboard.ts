@@ -5,6 +5,8 @@ import { createInterface } from "node:readline";
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 
+import { budgetTimer } from "./budgets.ts";
+
 export type PhoneChord = { key: string; modifiers: string[] };
 type Registration = { pid: number; token: string; keys: Set<string>; timestamp: string };
 export type PhoneKeyWitness = Omit<Registration, "keys"> & PhoneChord;
@@ -59,7 +61,7 @@ export class PhoneKeyRegistrations {
   wait(pid: number, chord: PhoneChord): Promise<PhoneKeyWitness> {
     return new Promise((resolve, reject) => {
       const finish = () => {
-        clearTimeout(deadline);
+        deadline.cancel();
         this.listeners.delete(check);
       };
       const check = () => {
@@ -77,7 +79,7 @@ export class PhoneKeyRegistrations {
         }
       };
       // A failure deadline, not a delay before sending: only an observed acknowledgement resolves.
-      const deadline = setTimeout(() => {
+      const deadline = budgetTimer(() => {
         finish();
         reject(new Error(`No backboard registration for app ${pid}, ${signature(chord)}`));
       }, 30_000);
@@ -241,22 +243,22 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
   };
   try {
     await new Promise<void>((resolve, reject) => {
-      const deadline = setTimeout(
+      const deadline = budgetTimer(
         () => reject(new Error("The simulator keyboard log did not start")),
         15_000,
       );
       child.once("error", (error) => {
-        clearTimeout(deadline);
+        deadline.cancel();
         registrations.close(error);
         reject(error);
       });
       child.once("close", () => {
-        clearTimeout(deadline);
+        deadline.cancel();
         reject(new Error("The simulator keyboard log exited"));
       });
       lines.on("line", (line) => {
         if (line.startsWith("Filtering the log data using ")) {
-          clearTimeout(deadline);
+          deadline.cancel();
           resolve();
           return;
         }

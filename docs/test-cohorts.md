@@ -11,7 +11,7 @@ The PR checks (`ci.yml`) run the same projects on separate machines: `unit-tests
 | Project | Files | Rule |
 | --- | --- | --- |
 | `pure` | `src/shared/**/*.test.ts` | Shared contracts and math. One module cache (`isolate: false`) with per-test guards against mutated globals (`tests/helpers/pureProject.ts`). In memory, like `unit`. |
-| `unit` | every other test file not listed as integration | Most files share loaded code (`isolate: false`) with the same process-state leak guard as `pure`; 58 module-mocking, environment/global-mutating or SDK-loading files run as `unit-isolated` with `isolate: true` (the explicit list in `vitest.config.ts`). Both use vitest's 5 s default. May not start a child process, drive real git or sleep on a real clock. |
+| `unit` | every other test file not listed as integration | Most files share loaded code (`isolate: false`) with the same process-state leak guard as `pure`; the module-mocking, environment/global-mutating or SDK-loading files run as `unit-isolated` with `isolate: true` (the explicit list in `vitest.config.ts`). Both use vitest's 5 s default. May not start a child process, drive real git or sleep on a real clock. |
 | `integration` | the list below | Real git, pnpm, a shell, a stub executable or the installed Claude client. Eight workers on macOS, four elsewhere, in a group that starts after `pure` and `unit` finish, so the suite does not load the host it measures. Each file carries a budget sized to its measured work. |
 | `probe` | the files of the list below that `PROBE_FILES` names | Integration files that can fail with no code change ("Probes" below). The same workers and budgets as `integration`, in a group that starts after it finishes. |
 
@@ -87,6 +87,7 @@ On a graded run a wait keeps a `timeout` it names, and one that names none waits
 A file sets no default window for its polls.
 `tests/wait-window.test.ts` holds both runs against a child the test freezes.
 A journey's waits read the same variable but are never without a clock: they run on the load clock, capped at 20 times their budget (`docs/e2e-contracts.md`, "Waits run on the load clock").
+The native phone launcher explicitly starts that same Node load clock for its failure timers, and native observations mirror it in `PhoneWaits.swift` (`docs/ios.md`).
 A budget an author already set above the rule stays as it was, and a test whose time is a fixed product timeout rather than load-scaled work (hostEnv's hanging-shell test waits out a 3 s timeout) keeps the budget sized to that timeout.
 A file whose slowest test fits the 5 s default under the rule carries none.
 
@@ -115,6 +116,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/eval-auth-turn-taking.test.ts` | two processes on a scratch auth file and local fake OAuth server, for two provider ids | 5 s default |
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
 | `tests/wait-window.test.ts` | node children frozen with SIGSTOP and let go, against the waits of `tests/helpers/waitWindow.ts` | 10 s |
+| `tests/control-connection.test.ts` | real loopback POSTs across a frozen disposable control server, plus finite idle expiry | 20 s |
 | `tests/load-clock.test.ts` | four real Playwright runs of a fixture config, each process group frozen with SIGSTOP and let go, the longest waiting out its 20 s cap | 60 s |
 | `tests/starve-check.test.ts` | the load controller over real detached process trees, children stopped at birth, a parent waiting in vfork on its stopped child, another user's descendant, cancellation and its experiment limit | 25 s |
 | `tests/mac-check-lock.test.ts` | actual workflow commands and the `test:phone` package script, held Node processes, `ps` and Python kernel-lock probes, on macOS/Linux | 5 s default |

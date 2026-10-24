@@ -293,6 +293,9 @@ It does not repeat the release's other stages: the run-alone pass, the replay ga
 A newer push to the same pull request cancels the older run, because the Mac mini is one machine.
 `tests/affected-journeys.test.ts` pins the selection and `tests/release-contract.test.ts` the workflow's shape.
 
+The native phone gate uses the same clock and cap through `PhoneWaits.swift`, with 1200-second ordinary XCTest allowances and a 60-minute gate limit on every route; graded native runs retain Xcode's own allowances and wall-clock waits (`docs/ios.md`, "Disposable verification").
+Its on-demand `parts`, `starve` and `perf` inputs select native parts and reproduce twelve-second stalls without changing assertions or app deadlines.
+
 ### Journeys on request
 
 `journeys.yml` also runs on request for any branch, with the journeys it names: `POST /repos/{owner}/{repo}/actions/workflows/journeys.yml/dispatches` with `{"ref":"<branch>","inputs":{"files":"now-panel task-crewmate.spec.ts"}}`.

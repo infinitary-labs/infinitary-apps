@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { GRADES_BUDGETS } from "./helpers/budgets";
 import { logTime, PHOTOS_LOG, PHOTOS_STREAM_LOG, photosOpened } from "./helpers/phonePhotos";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -74,9 +75,9 @@ describe("the phone gate's Photos readiness wait (INF-907)", () => {
       failureLog,
     });
     const failed = expect(waiting).rejects.toThrow(
-      "Photos had not opened its shared-with-you library fifteen minutes after boot",
+      `Photos had not opened its shared-with-you library ${GRADES_BUDGETS ? "fifteen" : "twenty"} minutes after boot`,
     );
-    await vi.advanceTimersByTimeAsync(15 * 60_000);
+    await vi.advanceTimersByTimeAsync((GRADES_BUDGETS ? 15 : 20) * 60_000);
     await failed;
     // Before the gate's cleanup can delete the simulator, the wait asked it for everything since boot.
     expect(run).toHaveBeenLastCalledWith("xcrun", [

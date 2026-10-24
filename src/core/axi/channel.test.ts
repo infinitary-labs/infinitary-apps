@@ -576,6 +576,8 @@ describe("the Secrets command's disposable operation proof", () => {
     // The command process has exited, so another command can run while approval waits.
     outputs.push((await run(["status", receipt.request])).stdout);
     expect(received?.env).toEqual({ SERVICE_TOKEN: "s1" });
+    // Relative arguments resolve from the folder the crewmate's shell ran the command in.
+    expect(received?.cwd).toBe(process.cwd());
     await owner.approve(receipt.request, "fixture-fresh-auth");
     const completed = await run(["status", receipt.request]);
     expect(decode(completed.stdout)).toMatchObject({

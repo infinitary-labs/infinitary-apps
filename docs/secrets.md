@@ -1,8 +1,9 @@
 # Secrets
 
 The [Secrets primitive](../primitives/secrets.md) defines shared credential custody and exact-operation authority.
-The current code provides a disposable request coordinator and optional AXI command seam only.
-No native backend, production task grant, secure entry screen or migration is installed.
+The code provides the protected owner, `ProtectedSecrets` in [`../src/core/secrets/protected.ts`](../src/core/secrets/protected.ts), behind the request coordinator and the optional AXI command seam.
+It also provides native custody and fresh system authentication for macOS and Linux in `src/main/host/`.
+Production does not construct the owner: no task receives the command, and there is no Settings → Secrets, secure entry screen or migration yet, so every production use still refuses.
 The existing integration bridge remains in use and is not described as protected by this foundation.
 
 ## Threat model and the accepted boundary
@@ -17,10 +18,9 @@ Direct and encoded output must not flow to the requesting agent merely because a
 The default result is state and exit status; any typed projection or artifact needs its own reviewed rule.
 Secret permission remains separate from consent for an external action.
 
-The first-piece `SecretsBackend` seam deliberately has no production implementation.
-Its disposable adapters are fixtures, not a fallback for real credentials.
-An implementation must refuse when custody, authenticated confirmation, protected policy, checked immutable inputs or atomic pre-effect journaling is unavailable.
-It must never accept an agent-written policy file or a script digest supplied by the requester as proof of approval.
+`ProtectedSecrets` refuses whenever custody, protected rules, the recipient's checked inputs or the durable journal is unavailable; there is no plaintext, environment or unprotected fallback.
+It never accepts an agent-written rules file or a script digest supplied by the requester as proof of approval.
+The disposable adapters under `tests/helpers/` are fixtures, not a fallback for real credentials.
 
 ## Current command seam
 
@@ -29,26 +29,110 @@ It runs only where the host explicitly supplies a Secrets facade; production tas
 Bare invocation and `list` return linked metadata and current receipts; `show <reference>` describes one linked entry.
 `inject --env '{"SERVICE_TOKEN":"s1"}' --reason 'Check staging' --id staging-check -- /bin/sh ./scripts/check-staging.sh` submits references and an explicit argument vector.
 The example neither approves that script nor reads a secret.
+The channel adds the calling shell's working folder as the request's working directory, which the recipient binds like any other fact and which never grants authority.
 `status <request>` reads a receipt and never executes again; `cancel <request>` withdraws unused authority.
 Help and version use the ordinary runtime; unknown flags and unsupported commands refuse.
 There is no `get`, `approve`, raw-output mode or session-wide environment export.
-The first-piece command has no brokered-operation, private-file or private-input-stream delivery yet.
+The command has no brokered-operation, private-file or private-input-stream delivery yet.
 No command may turn a reference into an agent-readable value.
 
-## Backend obligations before protected rollout
+## Native custody
 
-Prepare must establish custody availability and resolve every reference before rule evaluation.
-Unknown and inaccessible references must have the same unavailable response without other-project names or counts.
-Validate mapping collisions, missing values and forbidden interpreter/launcher/channel variables against a clean allowlisted environment built through `hostEnv`.
-Bind executable, interpreter, script snapshot, dependencies, configuration, input files, arguments, working directory, secret versions, policy revision, delivery, destinations and approved results.
-Do not hash a script and then run its mutable source path.
-Revalidate all facts at consumption; changed facts require new review, even with an unchanged filename.
-A reusable rule authorizes the protected operation, not arbitrary commands run by a similarly named task.
-Journal intent and consume authority atomically before launch; a failed journal refuses execution.
-Keep raw stdout, stderr, diagnostics and overflow private, dispose them across success, cancellation, failure and restart, and never call disposal secure erasure.
-A failed or ambiguous external effect remains unknown until reconciled, never automatically replayed.
-Native custody and trusted confirmation must be proven on macOS and Linux before either protected rollout.
-Headless startup and authenticated remote decisions need the same exact-operation contract; they do not authorize hosted services or team infrastructure.
+Custody holds only what the owner cannot protect on its own: a 32-byte random root key, and the head of the protected rules record.
+Values never live in custody.
+Each app flavor uses its own custody name, so a development run never reads the release root.
+Every adapter reports what the platform answered (`value`, `absent`, `locked` or `unavailable`) and never falls back to a file, an environment variable or another store.
+
+On macOS, [`../src/main/host/darwinSecretCustody.ts`](../src/main/host/darwinSecretCustody.ts) keeps each slot as a generic password item in the default keychain, through Security.framework in the app's own process.
+An item the app creates trusts only the program that created it, so another program asking for it meets the Keychain's own dialog.
+Every read and write is silent unless the caller asks for interaction: a locked keychain answers `locked`, never a dialog the person did not ask for.
+
+On Linux, [`../src/main/host/linuxSecretCustody.ts`](../src/main/host/linuxSecretCustody.ts) keeps each slot as an item of the schema `app.infinitary.Secrets` in the default collection, through libsecret on the session bus.
+It refuses libsecret's file backend.
+The Secret Service has no per-program rule: while the collection is unlocked, any program of the same user on that session can read these items, an agent's ordinary shell included.
+With the root and the sealed files, such a program can read every value.
+Linux custody therefore stops an edited or copied file and an agent that goes through Infinitary, but not an agent that asks the Secret Service directly.
+Closing that needs a separate system user or a sandbox, which nothing here creates; the first Linux rollout waits for the captain's decision on it.
+
+The root opens once per owner start and is read again at every use, so a locked or replaced root stops a use that was already approved.
+Only the trusted controller's first Add creates a root, and only where nothing was ever sealed.
+A missing root beside sealed records is `lost`, never silently replaced.
+
+## The vault
+
+Each value is a record under `<userData>/secrets/values/`, sealed with AES-256-GCM under a key derived from the root (HKDF-SHA256) and bound to its own metadata.
+Each record's metadata carries a check under a separate derived key, so a relabelled or re-versioned file is left out rather than shown or repaired.
+Adding or replacing a value writes a private temporary file, syncs it, renames it over the old record and syncs the folder, and raises the version.
+There is no reveal: the owner opens a value only to deliver it to an approved recipient.
+
+## Protected rules
+
+The authority record (`<userData>/secrets/authority.json`) holds the rules, the enrolled approval devices and the home they bind to, under a revision number.
+Its check is keyed by the root, and its head (revision and digest) lives in custody, so an agent-written, edited or older valid record is refused.
+A refused record makes the rules `tampered`, and every use answers unavailable until the captain saves a new revision with fresh authentication.
+Saving needs a fresh local confirmation of that exact revision; it writes the next record, moves the head in custody, then renames, so an interruption leaves one record that matches the head.
+Rules apply to every required secret together: Never precedes Ask, then Allow, and no match asks.
+An Allow rule always names one operation key; there is no wildcard Allow.
+Rehearsal evaluates a use against the rules and returns its checked facts without journaling, approving or running anything.
+
+## The recipient
+
+[`../src/core/secrets/recipient.ts`](../src/core/secrets/recipient.ts) binds the program, its interpreter and every argument naming a regular file by digest.
+A file this user could change, by writing it or any folder above it, is copied into the use's private folder and runs from there; one it cannot change runs in place and is hashed again right before it starts.
+A script's interpreter is started directly with the script's copy, so neither its `#!` line nor the search path is read again at launch.
+A `#!` line needs an absolute interpreter and at most one argument; `#!/usr/bin/env NAME` resolves NAME on the search path when the use is prepared, and any other form is refused.
+The working directory is bound by its real path.
+The recipient's environment is a short list of base variables from the host environment plus the approved values; a mapping onto a base variable is refused.
+Its output stays private and is removed with its folder when the use ends; removal is not secure erasure.
+The operation key a rule names is the digest of these facts.
+Sibling files a script reads while it runs and programs the recipient starts are not bound, a recipient's own children may outlive it, and a program that cannot run from a copy cannot be served this way.
+
+## Journal and reconciliation
+
+The journal (`<userData>/secrets/history.jsonl`) records each use's request, approval, consumption and end, one line per event, synced before the call returns.
+Each line carries a check chained to the line before it, so a forged or edited line ends what is read.
+Consumption is written before the recipient starts; a journal that cannot be written refuses the launch.
+At the next start, a use consumed with no recorded end is `unknown`, because its effect may have happened, and a use still waiting is `invalidated`.
+The same intent ID then answers its earlier receipt instead of running again, so a restart never replays a use.
+Private folders a previous process left are removed at start.
+Truncating the journal's last lines is not detected.
+
+## Trusted approvals
+
+A human Allow needs the operating system to confirm the person now, for that one use.
+On macOS, [`../src/main/host/darwinFreshAuthentication.ts`](../src/main/host/darwinFreshAuthentication.ts) asks LocalAuthentication's device-owner policy (Touch ID, a paired watch or the login password) through a new context every time.
+On Linux, [`../src/main/host/linuxFreshAuthentication.ts`](../src/main/host/linuxFreshAuthentication.ts) asks polkit for the action `app.infinitary.secrets.approve`, whose policy is meant to keep no confirmation (`auth_self`).
+Only `pkcheck`'s exit 0 confirms, and `pkcheck` and `pkaction` run only from a root-owned system folder with an environment of their own, so a program on the person's search path cannot answer in polkit's place.
+The polkit policy file is not shipped yet, so Linux reports fresh authentication as unavailable and a human Allow waits.
+A confirmation becomes an in-process proof bound to one use's digest and expiry, spent once and never saved, so no approval survives a restart.
+A request expires after 300 seconds.
+A computer that cannot confirm the person, such as a headless start, refuses local approval and waits; it still serves saved rules and remote decisions.
+
+## Remote decisions
+
+A device approves from elsewhere only with a P-256 key enrolled for this purpose, never its paired-view identity, and each re-enrollment raises its generation.
+Each waiting use gets one random nonce, and a decision passes only when the device, at its current generation, signed the home, request, digest, nonce, expiry and decision.
+Racing decisions spend the nonce once, and challenges live in memory only.
+Enrollment and the phone's approval screen are not built yet.
+
+## History
+
+History is the journal read as metadata: what was asked, which secrets, the bound program, the requester's reason shown as theirs, how it was approved and how it ended.
+It never holds a value, an environment or a full request body.
+It stays until the captain deletes it, and the owner reports its storage use and exports it; deleting it refuses while a use is running.
+It is local evidence, not an immutable audit log.
+
+## Before production
+
+These remain before any production use:
+
+- Settings → Secrets with trusted secure entry, Uses, Rules, History, export and storage use, rehearsal, End access and recovery.
+- Wiring the owner and both platforms' adapters into the composition root, and shipping the polkit policy with the Linux packages.
+- Fresh human confirmation and Keychain custody shown working in the app on both platforms.
+- The captain's decision on the Linux same-user limit above.
+- Enrollment and the phone's approval screen for remote decisions.
+- The recovery key, the bounded brokered reads and each consumer migration below.
+
 No real keychain or signing access occurs without the captain's separate consent.
 
 ## Saved product settings
@@ -62,7 +146,7 @@ Shell support includes exact one-off commands/scripts and reusable reviewed scri
 New secret policy is Ask; Never overrides Ask, then Allow, with all required secrets evaluated conjunctively.
 Fresh human authentication, 300-second request expiry and one-use program approval remain required.
 The optional 600-second/20-use permission applies only to supported brokered reads and is not implemented here.
-Settings → Secrets, searchable metadata, Uses/Rules/History, trusted Add/Replace, rehearsal, End access, export/storage display and recovery belong to the protected-foundation piece, not this disposable proof.
+Settings → Secrets, searchable metadata, Uses/Rules/History, trusted Add/Replace, rehearsal, End access, export/storage display and recovery are not built yet.
 No reveal, partial-value display, clipboard export or agent-authored secret-entry form is planned.
 
 ## Consumer register

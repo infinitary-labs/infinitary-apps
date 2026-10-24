@@ -127,6 +127,7 @@ The optional grant is exercised only with disposable adapters today; production 
 Bare invocation and `list` show linked metadata, `inject` submits an exact operation using references, and `status`/`cancel` read or withdraw unused requests.
 There is no value-returning getter, approval operation, raw output mode or global environment export.
 The channel's task label is organizational context, not authenticated secret authority.
+The channel adds the calling shell's working folder to an `inject` request as its working directory, a fact the owner binds, never authority.
 The operation boundary, backend requirements and current limitations are owned by [Secrets](../primitives/secrets.md) and [`secrets.md`](secrets.md).
 
 ## Tests

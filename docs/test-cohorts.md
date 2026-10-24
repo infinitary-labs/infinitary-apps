@@ -25,7 +25,7 @@ New unit files default to guarded sharing; add state-mutating files to the isola
 
 ## Probes
 
-A probe is an integration file that can fail with no code change, because it leans on what the runner has: SSH and Remote Login stand-ins, dns-sd, release rehearsals, the connection listener, real Playwright runs, the Claude client against a stand-in API and whole-core command-line runs.
+A probe is an integration file that can fail with no code change, because it leans on what the runner has: SSH and Remote Login stand-ins, dns-sd, release rehearsals, the connection listener, real Playwright runs, the Claude client against a stand-in API, whole-core command-line runs and a Linux Secret Service.
 Such a file fails on the runner's state as well as on the code, and catches a real problem mostly when its own subject changes (FI3-1756).
 So a change runs only the probes whose paths it edits, and `verify.yml`'s `linux-checks` lane, inside every alpha and on demand, runs them all.
 
@@ -176,6 +176,11 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/pi/personalizeTool.test.ts` | real git | 5 s default |
 | `src/core/plugins/pluginInstaller.test.ts` | real git at the run's own priority, npm pack (a local registry that answers nothing), tar | 10 s on the npm test, 5 s default for the rest |
 | `src/main/host/darwinKeychain.scratch.test.ts` | `security` (opt-in, `INFINITARY_SCRATCH_KEYCHAIN_PROBE=1`) | 120 s on the opt-in unlock test, 5 s default for the rest |
+| `src/main/host/darwinSecretCustody.scratch.test.ts` | `security` on a scratch keychain file (opt-in, `INFINITARY_SCRATCH_KEYCHAIN_PROBE=1`), Secrets custody through the real Security.framework binding | 5 s default (Mac 0.2 s) |
+| `src/main/host/darwinFreshAuthentication.test.ts` | macOS LocalAuthentication with its prompt refused (macOS only) | 5 s default |
+| `src/main/host/linuxSecretCustody.test.ts` | a private session bus and gnome-keyring under a scratch HOME, driven from a Node child; on a throwaway GitHub-hosted runner `apt-get` installs them first (Linux only, a probe) | 450 s on the install (Linux hosted runner 90 s); 5 s default for the tests (Linux slowest 0.4 s) |
+| `src/main/host/linuxFreshAuthentication.test.ts` | stand-in `pkcheck` and `pkaction` scripts, and the system's polkit where installed (Linux only) | 5 s default |
+| `src/core/secrets/protected.test.ts` | `/bin/sh` recipients started from private copies, `mkfifo` | 5 s default |
 | `src/main/host/claudeKeychainAccess.integration.test.ts` | isolated `security` on a throwaway keychain, and an ad-hoc `codesign` of the large app it builds (darwin only) | 5 s default; 15 s on building the app (Mac fastest 2.4 s) |
 | `src/core/devices/remoteLogin.test.ts` | the Mac's own `sshd` on loopback (`tests/helpers/sshServer.ts`, macOS only, skipped without it), ssh, ssh-keygen, tar, curl, openssl | 15 s (Mac slowest per-case fastest 2.1 s); 30 s on the check-line and password tests, and on the Mac's download describe (Mac slowest per-case fastest 5.7 s) |
 | `src/core/devices/relay.test.ts` | a stand-in relay on Node, and on macOS `/usr/bin/nc`, carrying the real connection on loopback | 5 s default |

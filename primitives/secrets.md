@@ -1,8 +1,8 @@
 # Secrets
 
 Secrets is the common contract for credential custody and approved uses, not a command that returns a value.
-The current implementation is a disposable operation coordinator and optional command-runtime seam, not a protected credential store.
-No production task receives this command yet and no existing credential consumer has migrated.
+The implementation is a protected owner with native custody and fresh system authentication on macOS and Linux, behind a request coordinator and an optional command-runtime seam.
+Production does not construct the owner yet: no production task receives this command and no existing credential consumer has migrated.
 
 ## Intended use
 
@@ -21,8 +21,9 @@ Do not use secret permission as deployment, purchase, submission, release or mer
 ## Owner and entry points
 
 The intended single custody/access owner is Secrets, with native backends behind the core/host boundary.
-The first-piece coordinator is `SecretRequests` in [`../src/core/secrets/requests.ts`](../src/core/secrets/requests.ts).
-Its backend owns checked immutable recipient facts, protected policy, authentication, one-use journaling, execution and disposal; there is no production backend yet.
+The coordinator is `SecretRequests` in [`../src/core/secrets/requests.ts`](../src/core/secrets/requests.ts).
+Its backend, `ProtectedSecrets` in [`../src/core/secrets/protected.ts`](../src/core/secrets/protected.ts), owns custody, the sealed vault, protected rules, checked recipient facts, authentication, the durable journal, execution and disposal.
+The host supplies custody (`SecretCustody`) and fresh authentication (`FreshAuthentication`) through the adapters in `src/main/host/`.
 The agent facade contains only metadata/receipt reads, `inject`, `status` and `cancel`.
 Only a trusted controller can call `approve`; AXI has no approval, value getter, policy writer or global export.
 The optional [`../src/core/axi/secretsCommands.ts`](../src/core/axi/secretsCommands.ts) table uses the existing launcher, isolated command process and task channel independently of a browser.
@@ -43,12 +44,12 @@ Status never launches or repeats an operation.
 Cancellation withdraws unused authority and does not claim to stop an already-sent effect.
 Receipts distinguish waiting, executing, completed, denied, cancelled, expired, invalidated, unavailable and unknown, with actual exit status on completion.
 Backend errors and raw output never become receipt text.
-The coordinator is process-local; production wiring requires durable unknown-outcome reconciliation before restart can be safe.
+The journal makes each use durable: after a restart a consumed use with no recorded end is unknown, a waiting one is invalidated, and the same intent answers its earlier receipt.
 
 ## Authority
 
 Protected rules apply conjunctively to all required secrets and operation facts; Never precedes Ask, then Allow, and no match asks.
-The disposable coordinator consumes a backend-declared rule; it does not yet implement protected policy editing or matching.
+Rules live in a record checked by a custody key, with its head in custody, and are saved only with fresh local authentication of that exact revision; an Allow rule always names one operation.
 New operations begin at Ask and human Allow requires fresh system authentication.
 Requests expire after 300 seconds.
 The saved short-read option is at most 600 seconds and 20 uses for eligible brokered reads, never program launches, broad writes or disclosure; it is not implemented in this first piece.
@@ -56,7 +57,8 @@ Saved reusable permission binds protected code, operation, delivery and destinat
 Existing explicit service permissions retain only their original purpose and recipient; an agent cannot impersonate an app service using context labels.
 The captain selected unchanged lock behavior: approval cards wait for the captain to return, without a new global pause rule.
 Custody unavailability must still be reported honestly, never bypassed by approval.
-The first protected rollout waits for both macOS and Linux; neither platform is certified by the disposable adapters.
+The first protected rollout waits for both macOS and Linux.
+On Linux the Secret Service lets any same-user program read the root while the collection is unlocked, and that rollout waits for the captain's decision on it ([`../docs/secrets.md`](../docs/secrets.md), "Native custody").
 
 ## Compositions
 
@@ -74,7 +76,7 @@ An unknown external effect is not retried; reconciliation or provider idempotenc
 Cleanup failure is unknown, not a claim of secure erasure.
 Removing a local record, ending future access and revoking a provider credential are distinct outcomes.
 Pending and transient permissions must not survive restart, while explicitly saved rules may authorize new operations, never replay an interrupted effect.
-Protected storage, native authentication, durable effect journaling, recovery and migration remain unimplemented and must precede production use.
+Settings, secure entry, recovery, production wiring and migration remain unimplemented and must precede production use.
 Encrypted recovery needs a separately held recovery key; platform/non-exportable keys use their owner's recovery or enrollment.
 No automatic scan or import of unrelated user files is permitted.
 
@@ -87,8 +89,13 @@ Possible: approved brokered requests, exact-run shell injection, reviewed reusab
 ## Checks
 
 [`../src/core/secrets/requests.test.ts`](../src/core/secrets/requests.test.ts) exercises disposable authentication, racing approval, deduplication, expiry, cancellation, changed facts, unknown effects and cleanup failure.
-[`../src/core/axi/channel.test.ts`](../src/core/axi/channel.test.ts) runs the actual launcher and isolated command process against a disposable owner, launches a child with an invented credential, withholds direct and encoded output, and checks status and cancellation.
-These tests prove coordinator behavior, not native custody, fresh authentication, protected snapshots, policy integrity or containment against same-user programs.
+[`../src/core/axi/channel.test.ts`](../src/core/axi/channel.test.ts) runs the actual launcher and isolated command process against a disposable owner, launches a child with an invented credential, withholds direct and encoded output, and checks status, cancellation and the working directory.
+[`../src/core/secrets/protected.test.ts`](../src/core/secrets/protected.test.ts) runs the protected owner on disposable custody: an exact use from a private copy, changed copies, secrets and rules invalidating approval, saved reviewed scripts, a crash reconciled as unknown, a headless start with one signed remote decision, and indistinguishable unavailable references.
+The vault, rules, journal and approval tests beside it check sealing, tampering, rollback, the chained journal and single-use proofs.
+[`../src/main/host/linuxSecretCustody.test.ts`](../src/main/host/linuxSecretCustody.test.ts) is a probe that runs custody and the owner on a real gnome-keyring and session bus under a scratch HOME.
+[`../src/main/host/darwinSecretCustody.scratch.test.ts`](../src/main/host/darwinSecretCustody.scratch.test.ts) does the same on a scratch macOS keychain, opt-in with `INFINITARY_SCRATCH_KEYCHAIN_PROBE=1`.
+The fresh-authentication tests check LocalAuthentication without a prompt and polkit through stand-in commands; no automated test confirms a real person.
+These tests do not prove containment against same-user programs.
 No existing isolation test is removed or weakened by the revised authority model.
 
 ## Where the detail lives

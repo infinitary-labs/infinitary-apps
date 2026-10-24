@@ -142,6 +142,11 @@ export const PROBES = [
     paths: ["scripts/export-tasks.ts", "scripts/moduleRunner.ts", "scripts/task-records.ts"],
   },
   {
+    why: "Secrets custody on a real Linux Secret Service: a private session bus and gnome-keyring, which the probe installs on a throwaway GitHub-hosted runner",
+    files: ["src/main/host/linuxSecretCustody.test.ts"],
+    paths: ["src/core/secrets/", "src/main/host/linuxSecretCustody.ts"],
+  },
+  {
     why: "the Claude client against a stand-in API, under the Firstmate's seat",
     files: ["src/core/claude/claudeFirstmateSession.integration.test.ts"],
     paths: [

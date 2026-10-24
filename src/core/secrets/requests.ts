@@ -7,6 +7,8 @@ export type Injection = {
   reason: string;
   env: Record<string, string>;
   argv: string[];
+  /** The folder relative arguments resolve from: context the backend binds, never authority. */
+  cwd?: string;
 };
 export type UseState =
   | "waiting"
@@ -32,18 +34,29 @@ export type PreparedUse = {
   rule: "never" | "ask" | "allow";
   /** Revalidates every bound fact, including custody availability, immediately before consumption. */
   current: () => Promise<boolean>;
-  /** Journal and consume once before launching; never returns values, logs or arbitrary results. */
-  execute: () => Promise<{ exitCode: number }>;
-  /** Dispose snapshots and private output; failure makes the outcome unknown. */
-  dispose: () => Promise<void>;
+  /**
+   * Journal and consume once before launching; never returns values, logs or arbitrary results.
+   * A fact that changed after consumption, or a journal that could not be written, stops the
+   * launch and says so; `unknown` or a thrown error means the effect may have happened.
+   */
+  execute: () => Promise<
+    { exitCode: number } | { state: "invalidated" | "unavailable" | "unknown" }
+  >;
+  /** Dispose snapshots and private output, recording how the use ended; failure makes the outcome unknown. */
+  dispose: (ended: UseState) => Promise<void>;
 };
 export interface SecretsBackend {
   /** Only explicitly linked metadata, never system credentials or values. */
   list(): Promise<SecretReference[]>;
   /** Unsupported or unavailable protection refuses before policy; no plaintext fallback. */
-  prepare(input: Injection): Promise<PreparedUse | undefined>;
+  prepare(input: Injection, request: string, expires: number): Promise<PreparedUse | undefined>;
   /** Trusted controller checks fresh authentication, nonce, expiry and exact digest. Not an agent operation. */
   authenticate(request: string, digest: string, expires: number, proof: unknown): Promise<boolean>;
+  /**
+   * Uses settled before this process started, with the intent that named each, so
+   * a restarted owner answers an earlier intent instead of running it again.
+   */
+  restored?(): { intent: string; inputDigest: string; receipt: UseReceipt }[];
 }
 
 type Kept = {
@@ -67,7 +80,13 @@ export class SecretRequests {
     private readonly backend: SecretsBackend,
     private readonly now: () => number = Date.now,
     private readonly changed: (receipt: UseReceipt) => void = () => {},
-  ) {}
+  ) {
+    for (const { intent, inputDigest, receipt } of backend.restored?.() ?? []) {
+      const kept: Kept = { inputDigest, receipt: { ...receipt }, expires: 0 };
+      this.requests.set(receipt.request, kept);
+      this.intents.set(intent, Promise.resolve(kept));
+    }
+  }
 
   async list(): Promise<SecretReference[]> {
     return this.backend.list();
@@ -81,15 +100,7 @@ export class SecretRequests {
     // Copy before awaiting: the requesting program cannot mutate approved input.
     const copied: Injection = JSON.parse(JSON.stringify(input));
     if (!validInjection(copied)) throw new Error("Invalid injection request.");
-    const digest = createHash("sha256")
-      .update(
-        JSON.stringify({
-          reason: copied.reason,
-          argv: copied.argv,
-          env: Object.entries(copied.env).sort(([a], [b]) => a.localeCompare(b)),
-        }),
-      )
-      .digest("hex");
+    const digest = inputDigest(copied);
     let work = this.intents.get(copied.id);
     if (!work) {
       work = this.prepare(copied, digest);
@@ -109,7 +120,7 @@ export class SecretRequests {
     };
     this.requests.set(kept.receipt.request, kept);
     try {
-      kept.prepared = await this.backend.prepare(input);
+      kept.prepared = await this.backend.prepare(input, kept.receipt.request, kept.expires);
       if (kept.prepared) {
         kept.receipt.state = kept.prepared.rule === "never" ? "denied" : "waiting";
         if (kept.prepared.rule === "allow") void this.start(kept);
@@ -120,6 +131,13 @@ export class SecretRequests {
       kept.receipt.state = "unavailable";
     }
     return kept;
+  }
+
+  /** What a trusted controller approves: the checked digest and its expiry. Never an agent operation. */
+  pending(request: string): { digest: string; expires: number } | undefined {
+    const kept = this.requests.get(request);
+    if (!kept?.prepared || this.view(kept).state !== "waiting") return undefined;
+    return { digest: kept.prepared.digest, expires: kept.expires };
   }
 
   status(request: string): UseReceipt | undefined {
@@ -190,12 +208,14 @@ export class SecretRequests {
         kept.receipt.state = "invalidated";
       } else {
         const result = await kept.prepared.execute();
-        if (!Number.isInteger(result.exitCode)) throw new Error("Invalid exit status.");
-        kept.receipt = {
-          request: kept.receipt.request,
-          state: "completed",
-          exitCode: result.exitCode,
-        };
+        if ("state" in result) kept.receipt.state = result.state;
+        else if (!Number.isInteger(result.exitCode)) throw new Error("Invalid exit status.");
+        else
+          kept.receipt = {
+            request: kept.receipt.request,
+            state: "completed",
+            exitCode: result.exitCode,
+          };
       }
     } catch {
       kept.receipt.state = "unknown";
@@ -209,7 +229,7 @@ export class SecretRequests {
     const prepared = kept.prepared;
     kept.prepared = undefined;
     try {
-      await prepared?.dispose();
+      await prepared?.dispose(kept.receipt.state);
     } catch {
       kept.receipt.state = "unknown";
     }
@@ -224,11 +244,27 @@ export class SecretRequests {
   }
 }
 
+/** The digest of what a requester submitted: one intent names one operation, across restarts too. */
+export function inputDigest(input: Injection): string {
+  return createHash("sha256")
+    .update(
+      JSON.stringify({
+        reason: input.reason,
+        argv: input.argv,
+        env: Object.entries(input.env).sort(([a], [b]) => a.localeCompare(b)),
+        cwd: input.cwd ?? null,
+      }),
+    )
+    .digest("hex");
+}
+
 /** Typed mapping validation, not a heuristic for whether code is safe. */
 export function validInjection(input: Injection): boolean {
   return (
     typeof input?.id === "string" &&
-    Object.keys(input).every((key) => ["id", "reason", "env", "argv"].includes(key)) &&
+    Object.keys(input).every((key) => ["id", "reason", "env", "argv", "cwd"].includes(key)) &&
+    (input.cwd === undefined ||
+      (typeof input.cwd === "string" && input.cwd.startsWith("/") && !input.cwd.includes("\0"))) &&
     input.id.length > 0 &&
     typeof input.reason === "string" &&
     input.reason.trim().length > 0 &&

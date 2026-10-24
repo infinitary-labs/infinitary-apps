@@ -414,7 +414,7 @@ export class AxiChannel {
           return;
         }
         if (message?.type === "call") {
-          void this.call(grant, command.tool, message, command.deadline, stopsAt).then((reply) => {
+          void this.call(grant, command, message, stopsAt).then((reply) => {
             if (!finished) child.postMessage({ type: "result", id: message.id, reply });
           });
         }
@@ -437,11 +437,11 @@ export class AxiChannel {
    */
   private async call(
     grant: Grant,
-    tool: string,
+    command: { tool: string; cwd: string; deadline?: number },
     message: AxiCallMessage,
-    deadline: number | undefined,
     stopsAt: number,
   ): Promise<ChannelReply<OpAnswer>> {
+    const { tool, deadline } = command;
     const parked = grant.parked.get(tool);
     if (parked) {
       const settled = await within(parked.work, deadline);
@@ -457,7 +457,7 @@ export class AxiChannel {
             AbortSignal.timeout(Math.max(0, stopsAt - CAP_MARGIN_MS - Date.now())),
           )
         : tool === SECRETS_COMMAND
-          ? this.secret(grant, message)
+          ? this.secret(grant, message, command.cwd)
           : this.operate(grant, message);
     const settled = await within(work, deadline);
     if (settled === TIMEOUT) {
@@ -512,7 +512,7 @@ export class AxiChannel {
   }
 
   /** Operation authority is checked by Secrets, never by this same-user bearer channel. */
-  private async secret(grant: Grant, message: AxiCallMessage): Promise<SecretsAnswer> {
+  private async secret(grant: Grant, message: AxiCallMessage, cwd: string): Promise<SecretsAnswer> {
     const secrets = grant.tools.secrets;
     if (!secrets) return { unavailable: true };
     try {
@@ -525,7 +525,14 @@ export class AxiChannel {
           return secret ? { secret } : { unavailable: true };
         }
         case "secrets.inject":
-          return { receipt: await secrets.inject(message.input as Injection) };
+          // The shell's working folder, as its launcher reported it: where relative
+          // arguments resolve, shown on the approval, never authority.
+          return {
+            receipt: await secrets.inject({
+              ...(message.input as Injection),
+              ...(cwd ? { cwd } : {}),
+            }),
+          };
         case "secrets.status": {
           const receipt = secrets.status((message.input as { request: string }).request);
           return receipt ? { receipt } : { unavailable: true };

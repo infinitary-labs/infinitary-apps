@@ -779,6 +779,10 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   incomingHeld.current = shownHeld;
   const forward = useRef<{ key: string; move: StageMove } | null>(null);
   const revealFlight = useRef<string | null>(null);
+  // An incoming card still coming in after the drawing it replaced has gone.
+  const arriving = useRef<{ opened: string | null; stop: () => void; arrived: boolean } | null>(
+    null,
+  );
   const selectionRef = useRef(cardId);
   selectionRef.current = cardId;
   useLayoutEffect(() => {
@@ -841,7 +845,8 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
       revealFlight.current = opened;
     }
     if (incoming) revealFlight.current = opened;
-    const stop = playStageMove(
+    const flight = { opened, stop: () => {}, arrived: false };
+    flight.stop = playStageMove(
       move,
       drawing,
       incoming,
@@ -849,22 +854,39 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
       comes
         ? undefined
         : () => {
+            flight.arrived = true;
+            if (arriving.current === flight) arriving.current = null;
             if (revealFlight.current === opened) revealFlight.current = null;
             noteMotionRef.current("reveal", opened);
           },
     );
     return () => {
-      // The incoming card finishes its own move after the drawing has gone;
-      // only a move cut short by the next one stops.
+      // The incoming card finishes its own move after the drawing has gone,
+      // until the next selection cuts it short (below); only a move cut short
+      // by the next one stops.
       if (!gone) {
-        stop();
+        flight.stop();
         // A cancelled reveal has no finish event. Release its ownership so
         // returning to the drawing still held can settle without a new move.
         if (revealFlight.current === opened) revealFlight.current = null;
         if (comes && forward.current?.key === comes) forward.current = null;
-      }
+      } else if (incoming && !flight.arrived) arriving.current = flight;
     };
   }, [leaving, emptied, cardId]);
+  // The next selection cuts short the incoming card of the one it leaves,
+  // also once that card's drawing has gone, and releases the reveal's
+  // ownership as above: a selection that starts no new move, such as a
+  // return to a drawing still held, never waits on it.
+  useLayoutEffect(() => {
+    const left = cardId ?? null;
+    return () => {
+      const flight = arriving.current;
+      if (!flight || flight.opened !== left) return;
+      arriving.current = null;
+      flight.stop();
+      if (revealFlight.current === left) revealFlight.current = null;
+    };
+  }, [cardId]);
 
   // The card pointed at takes focus once it appears (`focusCard`), unless
   // the captain began a press since he pointed, which decides where focus

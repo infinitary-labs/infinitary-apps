@@ -498,3 +498,80 @@ test("a smooth scroll of a card's body survives the card's height check", async 
     await launched.close();
   }
 });
+
+/**
+ * INF-1154 (card-keyboard.spec.ts:354 in run 40106791569: the key's summary
+ * never appeared): Shift+Tab onto a task key scrolls the card's body to
+ * bring the key into view, and the frame reports the key two frames later.
+ * The window hears that scroll at its own next frame, which under load comes
+ * after it has read the report. The window here holds the scrolls it hears
+ * until the frame's report has been read, then lets them go, so the order the
+ * failing run met by chance is the order of every run. The data: the card
+ * the journey above reads, scrolled to its end. The completion signal: the
+ * frame has reported the key and the held scrolls have reached the window.
+ * Platform and shared resources: none beyond the hermetic launch.
+ */
+test("a task key the keyboard brings into view opens its summary when the window hears the scroll late", async () => {
+  test.setTimeout(120_000);
+  const userDataDir = scratchDir("infinitary-card-keyboard-");
+  seed(userDataDir, (key) => [decisionCard(key)]);
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 820 });
+    await showCard(page, TITLE);
+    const frame = body(page, TITLE);
+    await expect.poll(() => cardOverflow(page)).toBeGreaterThan(0);
+    // The question, just below the key; the key is then carried out of view.
+    await pressKey(frame.getByRole("textbox", { name: "Note" }), "Shift+Tab");
+    await expect.poll(() => focusedInFrame(frame)).toEqual({ tag: "INPUT", name: "window" });
+    await shownEntry(page)
+      .locator("[data-card-body]")
+      .evaluate((scroller) => {
+        scroller.scrollTop = scroller.scrollHeight;
+      });
+    await expect.poll(() => cardScroll(page)).toBeGreaterThan(0);
+    // That scroll reaches the window before the hold begins.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    type Held = { held: number; rested: boolean; released: boolean };
+    await page.evaluate(() => {
+      const targets: EventTarget[] = [];
+      const state: Held = { held: 0, rested: false, released: false };
+      Object.assign(window, { heldScrolls: state });
+      const hold = (event: Event) => {
+        if (!event.isTrusted || state.rested) return;
+        event.stopImmediatePropagation();
+        if (event.target) targets.push(event.target);
+        state.held += 1;
+      };
+      window.addEventListener("scroll", hold, { capture: true });
+      // Heard once the window's own code has read the report, in the same
+      // task; the held scrolls come in a later one.
+      window.addEventListener("message", (event) => {
+        const data = event.data as { type?: string; gesture?: string } | null;
+        if (data?.type !== "task" || data.gesture !== "rest" || state.rested) return;
+        state.rested = true;
+        setTimeout(() => {
+          window.removeEventListener("scroll", hold, { capture: true });
+          for (const target of targets) target.dispatchEvent(new Event("scroll"));
+          state.released = true;
+        });
+      });
+    });
+    const held = () =>
+      page.evaluate(() => (window as unknown as { heldScrolls: Held }).heldScrolls);
+
+    await page.keyboard.press("Shift+Tab");
+    await expect(linkedTaskKeys(frame).first()).toBeFocused();
+    await expect.poll(async () => (await held()).released).toBe(true);
+    expect((await held()).held).toBeGreaterThan(0);
+    await expect(keySummary(page)).toBeVisible();
+  } finally {
+    await launched.close();
+  }
+});

@@ -134,6 +134,19 @@ export function PeekSummary() {
   const openRef = useRef(open);
   openRef.current = open;
   const resting = pointed === null ? null : kindOf(pointed);
+  // Where the task's holder stood when its box was measured, read in the
+  // same task that set it. The window hears a scroll at its next frame,
+  // after the scroll itself: a frame whose key the keyboard brought into
+  // view can report that key, already in its new place, first.
+  const measured = useRef<{ peek: NonNullable<TaskPeek>; left: number; top: number } | null>(null);
+  useLayoutEffect(() => {
+    if (!pointed) {
+      measured.current = null;
+      return;
+    }
+    const { left, top } = holderOf(pointed).getBoundingClientRect();
+    measured.current = { peek: pointed, left, top };
+  }, [pointed]);
   useEffect(() => {
     if (!resting) return;
     const letGo = () => taskPeek.set(null);
@@ -148,10 +161,18 @@ export function PeekSummary() {
       if (openRef.current) event.stopPropagation();
       letGo();
     };
+    // A scroll carries the task away only if it moved the holder since the
+    // task's box was measured.
     const onScroll = (event: Event) => {
       const at = taskPeek.get();
-      const anchor = at && holderOf(at);
-      if (anchor && event.target instanceof Node && event.target.contains(anchor)) letGo();
+      const holder = at && holderOf(at);
+      if (!holder || !(event.target instanceof Node && event.target.contains(holder))) return;
+      const from = measured.current;
+      if (from?.peek === at) {
+        const { left, top } = holder.getBoundingClientRect();
+        if (left === from.left && top === from.top) return;
+      }
+      letGo();
     };
     const onVisibility = () => {
       if (document.hidden) letGo();

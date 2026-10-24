@@ -4,7 +4,6 @@ import { pictureHint, pictureSize } from "../../src/renderer/src/design/cards/pi
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pseudoBox, within } from "./layout";
-import { CARD_PICTURES_PROMPT_MARKER, PICTURE_CARD_TITLES } from "./mockProvider";
 import {
   encodeInBrowser,
   FIRST_GROUP,
@@ -15,6 +14,11 @@ import {
   WORKING_COPY_PICTURES,
 } from "./pictureFixtures";
 import { promptInput } from "./prompt";
+import {
+  CARD_PICTURES_PROMPT_MARKER,
+  cardPictures,
+  PICTURE_CARD_TITLES,
+} from "./scenarios/cardPictures";
 import { clickInBody, pager, showCard, shownCard } from "./stack";
 import { focusOn } from "./windowKeys";
 
@@ -83,7 +87,7 @@ async function closeWithEscape(page: Page) {
 }
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [cardPictures] });
   const { page } = launched;
   await encodeInBrowser(page, WORKING_COPY_PICTURES);
   const input = promptInput(page);

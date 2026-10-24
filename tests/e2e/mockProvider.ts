@@ -18,11 +18,13 @@ import {
   CARD_CLOSED_STEER_PREFIX,
   FINISHED_REPORT_WORDS,
   RESTART_REPLAY_NOTE,
+  renderWake,
   SETUP_CARD_FAILED_WORDS,
   WELCOME_WAKE_WORDS,
 } from "../../src/core/orchestrator/wakes";
 import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { SEQUENCES_SEED } from "../../src/core/personal/sequencesSkill";
+import { backgroundJobReceipt } from "../../src/core/pi/bashWords";
 import { DEMO_UNPLAYED_WORDS, TYPEFACE_UNREAD_WORDS } from "../../src/core/pi/cardImages";
 import {
   PREANSWERED_WORDS,
@@ -100,14 +102,7 @@ import {
   bytesOf,
   CHANGE_AFTER_PICTURES,
   CHANGE_BEFORE_PICTURES,
-  dataUrl,
-  FIRST_GROUP,
-  INLINE_PICTURE,
   type PictureFixture,
-  SECOND_GROUP,
-  TALL_PICTURE,
-  WIDE_PICTURE,
-  WORKING_COPY_PICTURES,
 } from "./pictureFixtures";
 import {
   holdsSegment,
@@ -414,22 +409,6 @@ export const FILE_CARD_REVISED =
   '<figure aria-label="Revised answer drawing"><svg viewBox="0 0 750 40" width="100%" role="img" aria-label="Revised answer drawing"><rect x="1" y="1" width="748" height="38" rx="6" fill="var(--accent-dim)" stroke="var(--accent)"/><text x="12" y="25">The revised file uses the wide card</text></svg></figure>';
 
 /**
- * Marker prompt: the mock crewmate writes real picture files into its
- * working copy with bash, then names them in its card bodies - the real card
- * path since card pictures phase 2 (`tests/e2e/card-picture-fit.spec.ts`):
- * one wide and one tall picture alone, a card mixing lone pictures with one
- * the body carries itself as a `data:` URL, and a card with two groups.
- */
-export const CARD_PICTURES_PROMPT_MARKER = "show the card pictures";
-export const PICTURE_CARD_TITLES = {
-  wide: "A wide picture",
-  tall: "A tall picture",
-  mixed: "Pictures of every shape",
-  groups: "Two groups of pictures",
-} as const;
-const PICTURE_GROUP_CAPTION = "Before and after, at 640 px";
-
-/**
  * The longest command one bash call carries: `bash -c` takes its command as
  * one argument, and Linux refuses an argument over 128 KiB, so a crewmate
  * there writes a long run of files in several calls (a Mac allows far more).
@@ -437,7 +416,9 @@ const PICTURE_GROUP_CAPTION = "Before and after, at 640 px";
 const LONGEST_COMMAND = 128 * 1024 - 1;
 
 /** The bash calls a mock crewmate writes `files` into `shots/` of its working copy with, one file each. */
-function writeFilesCalls(files: ReadonlyArray<{ path: string; bytes: Buffer }>): ScriptedCall[] {
+export function writeFilesCalls(
+  files: ReadonlyArray<{ path: string; bytes: Buffer }>,
+): ScriptedCall[] {
   return files.map(({ path, bytes }) => {
     const command = `mkdir -p shots && printf '%s' '${bytes.toString("base64")}' | base64 --decode > ${path}`;
     if (Buffer.byteLength(command) > LONGEST_COMMAND) {
@@ -448,52 +429,6 @@ function writeFilesCalls(files: ReadonlyArray<{ path: string; bytes: Buffer }>):
 }
 
 const pictureFile = (picture: PictureFixture) => ({ path: picture.path, bytes: bytesOf(picture) });
-
-function writePicturesCalls(): ScriptedCall[] {
-  return writeFilesCalls(WORKING_COPY_PICTURES.map(pictureFile));
-}
-
-function pictureCardToolCalls(): ScriptedCall[] {
-  const img = (picture: PictureFixture) => `<img src="${picture.path}" alt="${picture.alt}">`;
-  return [
-    {
-      name: "emit_card",
-      args: {
-        title: PICTURE_CARD_TITLES.wide,
-        body: `<p>The meter row now reads on the first paint, all five meters in one line.</p>${img(WIDE_PICTURE)}`,
-      },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: PICTURE_CARD_TITLES.tall,
-        body: `<p>The transcript keeps its newest line in view after every turn.</p>${img(TALL_PICTURE)}`,
-      },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: PICTURE_CARD_TITLES.mixed,
-        body:
-          "<p>The settings screen, the meter row and the transcript, as they look now.</p>" +
-          `<img src="${dataUrl(INLINE_PICTURE)}" alt="${INLINE_PICTURE.alt}">` +
-          img(WIDE_PICTURE) +
-          img(TALL_PICTURE),
-      },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: PICTURE_CARD_TITLES.groups,
-        body:
-          "<p>The row no longer wraps at 640 px.</p>" +
-          `<figure class="inf-pictures">${FIRST_GROUP.map(img).join("")}<figcaption>${PICTURE_GROUP_CAPTION}</figcaption></figure>` +
-          "<p>The checks passed on the change, in both themes.</p>" +
-          `<figure class="inf-pictures">${SECOND_GROUP.map(img).join("")}</figure>`,
-      },
-    },
-  ];
-}
 
 /**
  * Marker prompt (contract v4.69, `tests/e2e/card-before-after.spec.ts`): the
@@ -1187,6 +1122,51 @@ export function browserShellMessages(messages: ReturnType<typeof providerMessage
     return message;
   });
   return { readings, pending: pending.size > 0 };
+}
+
+/** Stands for the part of a composer's words a reader looks for around them. */
+const HOLE = "\u0000";
+
+/** The job a bash answer says is still running, read in the bash tool's own words; none when it finished. */
+function receiptJob(answer: string): string | undefined {
+  const [before, after] = backgroundJobReceipt(HOLE).split(HOLE) as [string, string];
+  const end = answer.startsWith(before) ? answer.indexOf(after, before.length) : -1;
+  return end < 0 ? undefined : answer.slice(before.length, end);
+}
+
+/** Whether `wake` is job `id`'s exit, read in the wake renderer's own words. */
+function exitOf(wake: string, id: string): boolean {
+  const exit = renderWake({
+    facts: {
+      kind: "job-exit",
+      to: "crewmate",
+      jobId: id,
+      command: HOLE,
+      exitCode: 0,
+      durationMs: 0,
+    },
+  });
+  return wake.startsWith(exit.slice(0, exit.indexOf(HOLE)));
+}
+
+/**
+ * Whether a shell command of this conversation is still running as a
+ * background job: its receipt came back and no exit wake has followed yet,
+ * across every message, so several jobs may end in one wake turn. A file a
+ * stand-in wrote that way is not written until its job has exited (INF-1128).
+ */
+export function shellJobsRunning(body: string): boolean {
+  const running = new Set<string>();
+  for (const message of providerMessages(body)) {
+    const job = message.role === "tool" ? receiptJob(message.text) : undefined;
+    if (job) running.add(job);
+    if (message.role !== "user") continue;
+    const wakes = parseServedInput(message.text)
+      ?.filter((part) => part.kind === "wake")
+      .map((part) => part.body) ?? [message.text];
+    for (const id of running) if (wakes.some((wake) => exitOf(wake, id))) running.delete(id);
+  }
+  return running.size > 0;
 }
 
 /**
@@ -7793,18 +7773,6 @@ export async function startMockProvider(
             .reduce((sum, count) => sum + count, 0);
           if (emits === 1 && latestUserTail.includes(PROJECT_FONT_REFUSAL)) {
             streamToolCalls([projectFontCardCall(PROJECT_FONT, port)]);
-            return;
-          }
-        }
-        // The pictures crewmate: write the files, then attach them. After
-        // the cards it falls through to the default close-out.
-        if (!isFirstmate && latestUserTail.includes(CARD_PICTURES_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls(writePicturesCalls());
-            return;
-          }
-          if (!calledTool(latestUserTail, "emit_card")) {
-            streamToolCalls(pictureCardToolCalls());
             return;
           }
         }

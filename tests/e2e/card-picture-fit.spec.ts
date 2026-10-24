@@ -2,9 +2,13 @@ import { expect, test } from "@playwright/test";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow, settled, within } from "./layout";
-import { CARD_PICTURES_PROMPT_MARKER, PICTURE_CARD_TITLES } from "./mockProvider";
 import { encodeInBrowser, WIDE_PICTURE, WORKING_COPY_PICTURES } from "./pictureFixtures";
 import { promptInput } from "./prompt";
+import {
+  CARD_PICTURES_PROMPT_MARKER,
+  cardPictures,
+  PICTURE_CARD_TITLES,
+} from "./scenarios/cardPictures";
 import { pager, showCard } from "./stack";
 
 /**
@@ -20,7 +24,7 @@ import { pager, showCard } from "./stack";
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [cardPictures] });
   const { page } = launched;
   // The JPEG and WebP the crewmate writes come from the app's own encoder.
   await encodeInBrowser(page, WORKING_COPY_PICTURES);

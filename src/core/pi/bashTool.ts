@@ -1,6 +1,7 @@
 import { defineTool, type ToolDefinition } from "@earendil-works/pi-coding-agent";
 import { type Static, Type } from "typebox";
 import type { BashOutcome } from "../jobs/jobManager";
+import { backgroundJobReceipt } from "./bashWords";
 
 /**
  * The event-driven bash tool (R2): Infinitary-owned, replacing blocking bash.
@@ -66,9 +67,7 @@ export function createEventBashTool(runner: BashRunner): ToolDefinition {
         content: [
           {
             type: "text",
-            text: `Still running as background job ${outcome.jobId}; you will receive the result when it exits.${
-              outcome.tail ? ` Output so far:\n${outcome.tail}` : ""
-            }`,
+            text: backgroundJobReceipt(outcome.jobId, outcome.tail),
           },
         ],
         details: {},

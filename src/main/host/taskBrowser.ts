@@ -509,6 +509,11 @@ async function drivePage(
       }
     }
   });
+  // Native window.open navigations ignore Electron's setUserAgent override
+  // (electron/electron#45897). Set the protocol override before our first
+  // await: it covers the popup's first request and first script without
+  // replacing its native navigation, opener or POST body, or reloading it.
+  await send("Emulation.setUserAgentOverride", { userAgent: contents.getUserAgent() });
   await send("Page.enable");
   await send("Runtime.enable");
   await send("Log.enable");

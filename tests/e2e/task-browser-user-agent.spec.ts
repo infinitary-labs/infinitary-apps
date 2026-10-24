@@ -10,18 +10,39 @@ import { launchApp } from "./launch";
 import { closeSite, pageSays } from "./taskBrowser";
 
 const SITE = `<!doctype html><title>Browser identity</title>
-<p id="user-agent"></p>
-<script>document.getElementById("user-agent").textContent = navigator.userAgent;</script>`;
+<p id="user-agent"></p><p id="opener"></p><p id="message"></p><p id="fetch-agent"></p>
+<a href="/linked" target="_blank">Open link</a>
+<button onclick="window.open('/scripted')">Open script</button>
+<button onclick="const child = window.open(); child.location = '/blank-opened'">Open blank then navigate</button>
+<a href="/redirect" target="_blank">Open redirect</a>
+<form action="/submitted" method="post" target="_blank">
+  <input name="confirmation" value="draft"><button>Send form</button>
+</form>
+<button onclick="window.opener.postMessage(location.pathname, location.origin); window.close()">Finish check</button>
+<script>
+  // Read during the document's first script, not after the host has settled it.
+  document.getElementById("user-agent").textContent = navigator.userAgent;
+  document.getElementById("opener").textContent = String(!!window.opener);
+  document.cookie = 'browser-fixture=shared; SameSite=Lax';
+  window.addEventListener('message', event => {
+    if (event.origin === location.origin) document.getElementById('message').textContent = event.data;
+  });
+  fetch('/fetch-agent').then(r => r.text()).then(agent => document.getElementById('fetch-agent').textContent = agent);
+</script>`;
 
 /**
  * INF-985; docs/task-browser.md, "The page itself": sites see an ordinary
  * Chrome user agent, not the app's identity. The real core and Electron
  * host visit a loopback site, reload and navigate to another document. Both
  * the server's request headers and the page's navigator must keep that promise.
+ * INF-1015: a website-opened page must use that same identity from its first
+ * request and first script, without reloading or replaying a submitted form.
+ * Native links, window.open (including a blank page), a redirect and a POST
+ * keep their usual opener, cookies and one-submission behavior.
  * Runs with the hermetic launcher's disposable HOME, userData and claimed
  * loopback port; no account, public network or shared browser is used.
  */
-test("sites see Chrome without the app identity on first load, reload and navigation", async ({
+test("sites and their popups see Chrome from the first request without replaying forms", async ({
   browserName,
 }, info) => {
   void browserName;
@@ -44,11 +65,33 @@ test("sites see Chrome without the app identity on first load, reload and naviga
     tsconfig: "tsconfig.node.json",
     outfile: bundle,
   });
-  const requests: { path: string; userAgent: string }[] = [];
-  const server = createServer((request, response) => {
-    requests.push({ path: request.url ?? "", userAgent: request.headers["user-agent"] ?? "" });
-    response.setHeader("content-type", "text/html; charset=utf-8");
-    response.end(SITE);
+  const requests: {
+    path: string;
+    userAgent: string;
+    method: string;
+    body: string;
+    cookie: string;
+  }[] = [];
+  const server = createServer(async (request, response) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of request) chunks.push(Buffer.from(chunk));
+    requests.push({
+      path: request.url ?? "",
+      userAgent: request.headers["user-agent"] ?? "",
+      method: request.method ?? "",
+      body: Buffer.concat(chunks).toString(),
+      cookie: request.headers.cookie ?? "",
+    });
+    response.setHeader("cache-control", "no-store");
+    if (request.url === "/redirect") {
+      response.writeHead(302, { location: "/redirected" });
+      response.end();
+    } else if (request.url === "/fetch-agent") {
+      response.end(request.headers["user-agent"]);
+    } else {
+      response.setHeader("content-type", "text/html; charset=utf-8");
+      response.end(SITE);
+    }
   });
   const port = await claimedPort();
   await new Promise<void>((resolve) => server.listen(port, "127.0.0.1", resolve));
@@ -81,6 +124,9 @@ test("sites see Chrome without the app identity on first load, reload and naviga
         { method, input },
       );
     const checkIdentity = async (state: string, path: string) => {
+      await expect
+        .poll(() => pageSays(launched.app, `${url}${path}`, "user-agent"))
+        .toContain(chrome);
       const userAgent = await pageSays(launched.app, `${url}${path}`, "user-agent");
       readings.push({ state, userAgent });
       expect(userAgent).toContain(chrome);
@@ -89,6 +135,10 @@ test("sites see Chrome without the app identity on first load, reload and naviga
       const received = requests.filter((request) => request.path === path);
       expect(received.length).toBeGreaterThan(0);
       for (const request of received) expect(request.userAgent).toBe(userAgent);
+      await expect
+        .poll(() => pageSays(launched.app, `${url}${path}`, "fetch-agent"))
+        .toBe(userAgent);
+      return userAgent;
     };
     await call("navigate", { url: `${url}/first` });
     await checkIdentity("first load", "/first");
@@ -99,7 +149,49 @@ test("sites see Chrome without the app identity on first load, reload and naviga
     );
     await checkIdentity("reload", "/first");
     await call("navigate", { url: `${url}/next` });
-    await checkIdentity("navigation", "/next");
+    const ordinaryAgent = await checkIdentity("navigation", "/next");
+    const click = async (label: string) => {
+      const outline = await call("inspect", {});
+      const ref = outline.text
+        .split("\n")
+        .find((line) => line.includes(`"${label}"`))
+        ?.match(/\[(g\d+:e\d+)\]/)?.[1];
+      expect(ref, outline.text).toBeTruthy();
+      return call("act", { action: "click", ref });
+    };
+    for (const [label, path, opener] of [
+      ["Open link", "/linked", false],
+      ["Open script", "/scripted", true],
+      ["Open blank then navigate", "/blank-opened", true],
+      ["Open redirect", "/redirected", false],
+      ["Send form", "/submitted", false],
+    ] as const) {
+      await click(label);
+      expect(await checkIdentity(label, path)).toBe(ordinaryAgent);
+      expect(await pageSays(launched.app, `${url}${path}`, "opener")).toBe(String(opener));
+      const received = requests.filter((request) => request.path === path);
+      expect(received).toHaveLength(1);
+      expect(received[0]?.cookie).toContain("browser-fixture=shared");
+      if (path === "/linked") {
+        await call("navigate", { go: "reload" });
+        expect(await checkIdentity("popup reload", path)).toBe(ordinaryAgent);
+        expect(requests.filter((request) => request.path === path)).toHaveLength(2);
+        await call("navigate", { url: `${url}/linked-next` });
+        expect(await checkIdentity("popup navigation", "/linked-next")).toBe(ordinaryAgent);
+      }
+      if (path === "/submitted") {
+        expect(received[0]?.method).toBe("POST");
+        expect(received[0]?.body).toBe("confirmation=draft");
+      }
+      if (opener) {
+        await click("Finish check");
+        await expect.poll(() => pageSays(launched.app, `${url}/next`, "message")).toBe(path);
+      } else {
+        await call("close", { page: 2 });
+      }
+    }
+    expect(requests.filter((request) => request.path === "/redirect")).toHaveLength(1);
+    for (const request of requests) expect(request.userAgent).toBe(ordinaryAgent);
   } finally {
     writeFileSync(
       info.outputPath("user-agents.json"),

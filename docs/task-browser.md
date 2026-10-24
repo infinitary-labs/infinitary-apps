@@ -493,10 +493,11 @@ The host makes each page (`src/main/host/taskBrowser.ts`, behind `HostTaskBrowse
 - Navigation, redirects and frame navigation are checked against the same policy as requests; loopback is reached directly, and everything else through the browser's connection guard, its session's one proxy ("Where a page may go").
 - It never reloads a page that answers a form that was sent ("A final submission").
 - A certificate error, a site's sign-in box and a request for a client certificate are refused and told to the core (`HostBrowserRefusal`).
-- A page the crewmate opens uses an ordinary Chrome user agent, without Infinitary's name and version or Electron's token; reloading and navigating that page keep it.
-  `tests/e2e/task-browser-user-agent.spec.ts` checks the actual request header and the page's `navigator.userAgent` against the running browser.
-  A website-opened second page still uses Electron's default identity despite the host's override, so that page can disclose the app's name and version.
+- Every page uses an ordinary Chrome user agent, without Infinitary's name and version or Electron's token; reloading and navigating keep it.
+  The host sets the same identity through Electron and through the page's protocol before its first asynchronous initialization, since native popup navigation ignores Electron's override alone (`electron/electron#45897`).
+  A website-opened second page keeps its native navigation, opener and form body, with the ordinary identity in its first request and its first script's `navigator.userAgent`.
   The host never reloads such a page to change its identity, since that could repeat a form submission.
+  `tests/e2e/task-browser-user-agent.spec.ts` checks real request headers, document scripts and fetches for opening, reloading, navigation, links, scripted popups, a blank popup followed by navigation, redirects and a form sent once.
 - The host drives it over the browser's own protocol, attached to that one page and nothing else: the accessibility tree, an element's box, mouse and keyboard input at a point, typed text, a list's option, and the picture, at one pixel per point.
   It also reads a time element's `datetime` and a title tooltip off the page, and the core names them on the outline line, and where each element sits, so the core knows which lines the window shows.
   A whole-page picture is at least as wide as the window, so the scrollbar is not left out of its width.

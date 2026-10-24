@@ -7,7 +7,6 @@ import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { openDatabase } from "../../src/core/storage/db";
 import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { TaskStore } from "../../src/core/storage/taskStore";
-import { TaskService } from "../../src/core/tasks/taskService";
 import automationManifest from "../../src/panels/automation/manifest.json" with { type: "json" };
 import { AUTOMATION_STATE_WORDS } from "../../src/shared/automationWords";
 import {
@@ -19,7 +18,6 @@ import {
 import { LIVE_VALIDATION_WORDS } from "../../src/shared/liveValidation";
 import type { TaskView } from "../../src/shared/tasks";
 import { CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
-import { noSurfaceProof } from "../helpers/liveValidation";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -51,6 +49,8 @@ import {
   REACH_AUDIT_CARD_TITLE,
   REACH_AUDIT_PROJECT,
   REACH_AUDIT_RULE,
+  REACH_READ_STEER,
+  REACH_READ_WORDS,
   REACH_RERUN_AGAIN_LABEL,
   REACH_RERUN_CARD_TITLE,
   REACH_RERUN_CHANGE,
@@ -124,6 +124,8 @@ let repoDir: string;
 let userDataDir: string;
 let launched: LaunchedApp;
 let github: GitHubStub;
+/** The builder's readings so far (`builderReads`). */
+let readings = 0;
 
 /** A task branch's commit now: the head of its change on GitHub. */
 const branchHead = (branch: string) => git(repoDir, "rev-parse", `refs/heads/${branch}`);
@@ -137,24 +139,32 @@ function pushFix(branch: string, subject: string): string {
 }
 
 /**
- * The builder's own check_change after it pushes, as `rigor-reviewed.spec.ts`
- * stands it in: the head, its checks and its revalidated proof on the task.
+ * The builder's own check_change after it pushes, through the app: the
+ * captain asks, the first mate relays it, and the scripted builder reads the
+ * head and its checks and, on green, revalidates it (`agentsReach`). The app
+ * is the one writer while it runs (INF-1148): a write from here collided with
+ * its own and failed with "database is locked".
  */
-function builderReads(taskId: string, head: string, ci: "green" | "red"): void {
-  const db = openDatabase(userDataDir);
-  try {
-    // e2e-writer-ok: stands in for the builder's check_change, which the mock builder takes once, on its first report
-    const tasks = new TaskService({ db });
-    tasks.recordDelivery(taskId, { ci, ciAt: Date.now(), headSha: head });
-    if (ci === "red") return;
-    const proof = noSurfaceProof(head).runs[0];
-    if (!proof) throw new Error("the fixture's proof has its run");
-    // e2e-writer-ok: the scripted builder revalidates this fixture's history-only commit.
-    const { revision: _revision, deviceId: _deviceId, at: _at, ...run } = proof;
-    tasks.recordLiveValidation(taskId, { ...run, id: `fixture-${head}` }, { head });
-  } finally {
-    db.close();
-  }
+async function builderReads(taskId: string, head: string, ci: "green" | "red"): Promise<void> {
+  // Each reading is its own captain turn, told apart by its count: the red
+  // reading is at the version the last green one read.
+  readings += 1;
+  const words = `${REACH_READ_WORDS} (reading ${readings})`;
+  const read = launched.mockProvider?.scriptFirstmateTurn(captainWords(words), [
+    { name: "steer_crewmate", args: { task_id: taskId, message: REACH_READ_STEER } },
+  ]);
+  if (!read) throw new Error("this journey runs on the mock provider");
+  await send(words);
+  await expect
+    .poll(read.outcome, { timeout: 30_000 })
+    .toEqual(expect.objectContaining({ state: "closed" }));
+  await expect.poll(() => stored(taskId), { timeout: 30_000 }).toMatchObject({ ci, headSha: head });
+  if (ci === "green")
+    await expect
+      .poll(() => stored(taskId)?.liveValidation?.runs.some((run) => run.head === head), {
+        timeout: 30_000,
+      })
+      .toBe(true);
 }
 
 async function send(text: string): Promise<void> {
@@ -286,7 +296,7 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
       [3, "fix: keep the meter steady"],
     ] as const) {
       reviewed = pushFix(branch, subject);
-      builderReads(builder.id, reviewed, "green");
+      await builderReads(builder.id, reviewed, "green");
       await send(REREVIEW_PROMPT_MARKER);
       await expect
         .poll(() => detail(builder.id), { timeout: 30_000 })
@@ -300,7 +310,7 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     const capCard = await cardTitled(MOCK_REVIEW_CAP_CARD_TITLE);
     // The version the reviewer last read fails its checks too.
     github.setChecks(FAILED);
-    builderReads(builder.id, reviewed, "red");
+    await builderReads(builder.id, reviewed, "red");
     await showCard(page, MOCK_REVIEW_CAP_CARD_TITLE);
     await regionShot(shownCard(page, MOCK_REVIEW_CAP_CARD_TITLE), out("1-review-cap-card.png"));
 

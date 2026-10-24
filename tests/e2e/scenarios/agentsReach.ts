@@ -1,5 +1,6 @@
 import { captainTurn, renderWake } from "../../../src/core/orchestrator/wakes";
 import { fixedHoldWords, type OverridableHold } from "../../../src/shared/holds";
+import { noSurfaceProof } from "../../helpers/liveValidation";
 import {
   browserShellMessages,
   contextRepos,
@@ -20,7 +21,9 @@ import { holdsSegment, latestServedTurn, providerMessages, served } from "../pro
  * needs, in the order the story meets them.
  *
  * 1. The captain's words stop a capped review: the reviewed builder, steered
- *    with them, emits its completion card at the reviewed version.
+ *    with them, emits its completion card at the reviewed version. Before
+ *    that, after each fix the journey pushes, the builder reads its checks
+ *    and revalidates the new version through the app's own tools.
  * 2. Words naming a fixed limit: the first mate passes the soft hold the
  *    words name (asking first), tries the merge, and relays GitHub's rule,
  *    which no one's word passes, in its reply.
@@ -40,6 +43,19 @@ export const REACH_STOP_STEER =
 export const REACH_STOP_CARD_TITLE = "The meter fix merges at the reviewed version";
 const REACH_STOP_REPORT =
   "Emitted the completion card at the reviewed version on the captain's words; no re-review asked.";
+
+/**
+ * The reviewed builder's own reading after the journey pushes its fix
+ * (INF-1148): the captain asks, the first mate relays it, and the builder
+ * takes check_change and, on green, reports its revalidated proof, so the
+ * app records both. A spec that wrote them into the running app's database
+ * collided with the app's own writes ("database is locked").
+ */
+export const REACH_READ_WORDS = "read the meter fix's checks at its new version";
+export const REACH_READ_STEER =
+  "Read the checks on the fix you pushed with check_change; when they pass, revalidate its new version.";
+const REACH_READ_REPORT =
+  "Read the checks on the pushed fix; they passed, and I revalidated its new version.";
 
 /** The second task: a change GitHub's own rule holds. */
 export const REACH_RULE_MARKER = "trim the meter help copy";
@@ -215,11 +231,38 @@ function sinceLastAssignment(body: string) {
 }
 
 function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer | undefined {
+  // 1. The reviewed builder's reading: its checks at the pushed fix, then
+  //    on green its proof at that version, as the first reading's report
+  //    carried it (`reviewedTier`). On red it has nothing more to say.
+  const turn = sinceLastUser(body);
+  if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && turn.user.includes(REACH_READ_STEER)) {
+    const { results } = turn;
+    const reading = results.find((result) => /^overall: /m.test(result));
+    if (!reading) return { calls: [{ name: "check_change", args: {} }] };
+    const recorded = results.some((result) =>
+      result.includes("Validation recorded at evidence revision"),
+    );
+    if (recorded || !/^overall: green$/m.test(reading)) return { text: "" };
+    const head = reading.match(/head ([a-f0-9]{40})/)?.[1];
+    if (!head) throw new Error("The scripted builder needs its actual checked version.");
+    const proof = noSurfaceProof(head).runs[0];
+    if (!proof) throw new Error("The fixture's proof has its run.");
+    const { revision: _revision, deviceId: _deviceId, at: _at, ...run } = proof;
+    return {
+      calls: [
+        {
+          name: "report",
+          args: {
+            text: REACH_READ_REPORT,
+            validation: { ...run, id: `fixture-${head}`, evidence: [] },
+          },
+        },
+      ],
+    };
+  }
+
   // 1. The reviewed builder, steered with the captain's words.
-  if (
-    body.includes(REVIEWED_TIER_PROMPT_MARKER) &&
-    sinceLastUser(body).user.includes(REACH_STOP_STEER)
-  ) {
+  if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && turn.user.includes(REACH_STOP_STEER)) {
     if (hasToolResults) return { text: "done" };
     return {
       calls: [

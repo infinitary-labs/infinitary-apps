@@ -5,8 +5,8 @@ Native controls keep Dynamic Type, VoiceOver, hardware-keyboard focus and platfo
 The screen is opaque, with the shared void background, raised cards, hairlines and one ice-cyan selection.
 Native colors, spacing and radii are generated from the shared tokens; cards use the card radius and fields the control radius.
 The launch screen is the shared void in each appearance, so the first frame is already the app's own surface, never pure white or black.
-Every sheet title is inline in Space Grotesk at the headline size, as the joined computer's name is, never the system's large bold title.
-The paste and computer sheets sit on the panel color with a hairline at their edge.
+Every sheet title is inline in Space Grotesk at the headline size, never the system's large bold title.
+The paste, Settings and computer sheets sit on the panel color with a hairline at their edge.
 A plain field, such as the task search, a crewmate message or a computer's link, is the app's field: the panel fill, a hairline and the control radius.
 A card's reply row is shaped like the message capsule: one shape with the send arrow inside at its right edge, dimmed until there is text, on the field's fill and hairline.
 That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
@@ -25,10 +25,15 @@ An alert names the computer address reached through the link, with Cancel beside
 The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
 
-Once joined, the native navigation title is the computer's name, with its reach line below it.
-Out of reach is said once, by the reach line with its last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
+Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks and Activity strip in the middle and the computer button at the right; the computer's name is in its sheet, not the bar.
+The strip is words only, the current tab lit in the accent on a quiet lens, with a dot beside Home while a card is unread; on iOS 26 the bar sets it on glass, and on iOS 18 it takes the field's fill and hairline.
+The computer button is the Lucide computer glyph with a reach dot at its corner, the accent in reach and the warning color otherwise; VoiceOver hears the reach as its value.
+In reach the bar says nothing more.
+Out of reach is said once, by one line under the bar on every tab with its dot, state and last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.
-The top-right computer button opens a native sheet with the computer's name and reach, this device and its current capability, and the fact that appearance follows the device.
+The computer button opens a native sheet with the computer's name, its reach and its address.
+The Settings button, the Lucide gear, opens this phone's own sheet: this device and its current capability, the fact that appearance follows the device, and the app's version.
+Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and Command-I the computer.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
 Leave sits at the foot under a hairline, with an alert that keeps Keep it beside Leave and explains that a new link is needed to return.
 Out of reach, Forget this computer replaces Leave, asking in the same kind of alert before clearing only the local saved computer and explaining that the computer may still list this device.
@@ -38,19 +43,19 @@ A damaged saved connection clears only the saved computer, keeps this device's i
 
 ## Stage and rails
 
-The compact shell uses iOS's own Cards and Activity tabs, tinted with the shared accent and Lucide outline template images.
-Tasks joins those tabs when the task reader is present, never as an inert placeholder.
-Landscape iPad uses two columns: a sidebar with Activity and, when present, Tasks as a segmented pair at its top, each scrolling alone, with the stage alongside at up to 560 points.
-Portrait and narrow multitasking return to one column with tabs; the tablet's width and height decide the layout, not its physical orientation alone.
+The compact shell switches between Home, Tasks and Activity with the strip in the top bar; there is no bottom tab bar.
+Tasks joins the strip when the task reader is present, never as an inert placeholder.
+Landscape iPad uses two columns: a sidebar with Activity and, when present, Tasks as a segmented pair at its top, each scrolling alone, with the stage alongside at up to 560 points, and no strip in the bar.
+Portrait and narrow multitasking return to one column with the strip; the tablet's width and height decide the layout, not its physical orientation alone.
 On any width the card with its pager, the message box, Tasks and Activity share one centred reading column of 560 points with its gutters, so the message box lines up with the card.
 Activity is newest first on both devices, following the captain's submitted answer over the plan's bottom-up sidebar sentence.
 A row has a semantic kind dot, the computer-authored words, an optional task key in micro mono inline before them, and a relative mono age.
 The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.
 
-Cards shows one card at a time, with a peek of the next card at its right edge and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
+Home shows one card at a time, with a peek of the next card at its right edge and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
 The count opens a menu of the current titles, then Past cards; the next chevron carries a dot while an unread card lies ahead.
 With no card to page the chevrons and count hide; a lone Past cards menu stays while there are past cards, and nothing shows when there are none.
-The Cards tab carries the native badge with the count of cards not yet read.
+Home carries a dot in the strip while a card is not yet read, and VoiceOver hears the count.
 The peek stays within the shorter of the foreground card and its scrolling viewport, never filling the empty space beneath a short card or reaching the pager.
 Swiping the native card head changes cards without intercepting the body's own sliders, canvases or pinch gestures.
 The card stage fits the shell's available column, up to 560 logical points, and owns neither navigation nor the computer-details sheet.
@@ -76,17 +81,16 @@ The join stage uses idle; the empty stage shows working only when the Mac's publ
 A stopped or lost connection clears that reading; until a new busy event arrives, the character stays idle because the connection has no initial busy snapshot.
 Listening remains a drawing capability, not a live phone state: native keyboard dictation supplies no public listening signal, and focus, typing, tasks and connection traffic never stand in for one.
 
-The conversation owner puts the message box at the foot on every tab, with the last turn's two lines above it.
-One capsule floats alone above the measured native tabs and grows with the message, photos, last turn and problems; no panel sits behind it.
-On iOS 26 the capsule is native glass over the system's soft scroll edge; on iOS 18 it is the field's fill and hairline, with the page color fading in behind it.
-The fixed-height system tab accessory is not used for multi-line content.
+The conversation owner puts the message box at the foot of Home, with the last turn's two lines above it; Tasks and Activity run to the foot with nothing over them.
+One capsule sits in Home's column under the card's pager and grows with the message, photos, last turn and problems; no panel sits behind it.
+On iOS 26 the capsule is native glass; on iOS 18 it is the field's fill and hairline.
 In the landscape sidebar layout it sits at the stage's foot.
 The message box stays mounted once, so its own text and photo drafts survive changing tabs or rotating; no tab or orientation branch owns another copy.
-On an iPhone on its side the card gets the height: the title row is one line, the computer's name and then its reach; the last turn and the notice wait until it is upright; and one row holds the removable photo strip and the message capsule.
-The field shows at most two lines there and keeps its full text; the 44-point controls and complete warning rows remain visible above the native tabs.
+On an iPhone on its side the card gets the height: the bar keeps its one row with the strip; the last turn and the notice wait until it is upright; and one row holds the removable photo strip and the message capsule.
+The field shows at most two lines there and keeps its full text; the 44-point controls and complete warning rows remain visible at the foot.
 Portrait and iPad retain the stacked layout; a landscape card must show its full heading and have enough scrollable height to read body text and use its actions.
 Dictation is the keyboard's own.
-While the keyboard is open, a native Done button occupies the leading navigation slot and supports Shift-Command-K without sending or clearing the draft.
+While the keyboard is open, a native Done button takes the Settings button's leading slot and supports Shift-Command-K without sending or clearing the draft.
 Its command belongs to the persistent navigation bar, not the keyboard's transient accessory view.
 Tasks uses the desktop's five groups, search, status/key/title/project rows and records with their actions at the foot.
 
@@ -98,7 +102,7 @@ The panel says the phone app comes from TestFlight for now, only to people asked
 
 ## Talk and tasks
 
-The joined screen keeps the message box at its foot above the system tabs, with the last captain turn and the first mate’s reply immediately above it.
+The joined screen keeps the message box at the foot of Home, with the last captain turn and the first mate’s reply immediately above it.
 The last turn is two bare centred lines, one each, with no border, fill or padding: the captain's words in the secondary ink, the reply in the primary ink, each inside quotation marks in the muted ink.
 The message field, Photos and Send sit inside the one capsule, Send at its right edge and dimmed until there is something to send.
 The native multiline field takes the keyboard’s dictation; there is no second microphone or speech engine.
@@ -117,6 +121,6 @@ Start and Continue follow the Mac’s own allowed moves; Steer sends to that cre
 The actions sit at the record's foot like a card's footer: Start or Continue full width with the accent fill, Interrupt bordered beside it, and above them a capsule message box whose arrow is Steer.
 A closed task remains readable without a message box or actions.
 New cards and answered replies announce themselves while the phone is open, following the Mac’s Notifications switch.
-The notice is a quiet pill at the top of every tab, under the iPad's tabs and over the stage beside the landscape sidebar: a mono New card or Reply label in the accent, then the card's title, on the raised surface with a hairline.
-A tap opens the card on the Cards tab and a swipe dismisses it; a reply notice leaves after a few seconds, a new-card notice when its card is read, and VoiceOver offers Dismiss.
+The notice is a quiet pill at the top of every tab, under the top bar and over the stage beside the landscape sidebar: a mono New card or Reply label in the accent, then the card's title, on the raised surface with a hairline.
+A tap opens the card on Home and a swipe dismisses it; a reply notice leaves after a few seconds, a new-card notice when its card is read, and VoiceOver offers Dismiss.
 No notice requests background delivery, and an initial snapshot does not announce old cards.

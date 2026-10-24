@@ -3,7 +3,7 @@
 The native SwiftUI app lives in `ios/Infinitary/`, supports iPhone and iPad from iOS 18, and reads a Mac through the published connection contract.
 Its name is Infinitary, its bundle identifier is `com.getinfinitary.infinitary`, and its Xcode development team is `9T2J7MNUP9`.
 The phone is a view of the Mac, not a separate first mate or a place that runs work.
-It shows interactive Cards, Activity and Tasks, sends the captain's messages and photos, and lets the captain start, continue, steer and interrupt work on the Mac.
+It shows interactive cards on Home, with Tasks and Activity on their own tabs, sends the captain's messages and photos, and lets the captain start, continue, steer and interrupt work on the Mac.
 The version-dispatched TestFlight workflow and the square app icon support internal delivery; App Store distribution and background notifications remain separate work.
 The visual rules live in the design skill's `components/devices/PhoneView.prompt.md`.
 
@@ -61,7 +61,7 @@ A gap in numbering drops the cursor and reconnects rather than silently losing u
 Successful frames and pongs update the last-heard time; bounded handshake, welcome, read, Leave and heartbeat waits cut a stalled connection.
 The watchdog starts before sending hello and cancels the transport too, so a stalled TLS handshake does not inherit the socket's longer lifetime.
 The app keeps only its in-memory view while out of reach and shows its last-heard time.
-Out of reach is said once, by the reach line under the computer's name; the message capsule and a card's reply row dim, and `changesOffLine` puts the Mac's own words (`changesOffWords`, `src/renderer/src/devices/viewWords.ts`) under the message box.
+Out of reach is said once, by the reach line under the top bar with the time the computer was last heard; the message capsule and a card's reply row dim, and `changesOffLine` puts the Mac's own words (`changesOffWords`, `src/renderer/src/devices/viewWords.ts`) under the message box.
 `ReadOnlySession.returns` counts the times the computer came back in reach after a failed attempt, so the app can mark a return without mistaking the ordinary reconnection when it opens for one.
 Background cancels the old connection generation, and activation starts it again; an inactive scene such as Control Center does not disconnect.
 A late callback from an old connection cannot clear or overwrite a newer connection.
@@ -69,7 +69,8 @@ Nearby addresses may be tried with the original pin, and only an authenticated a
 
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the saved Mac.
 Out of reach, **Forget this computer** asks for confirmation and clears the saved Mac and pin locally without claiming the Mac removed the phone.
-Both choices live in the computer-details sheet, opened by the top-right computer button or Command-I; neither is an always-visible destructive toolbar action.
+Both choices live in the computer's sheet, opened by the top bar's right-hand computer button or Command-I; neither is an always-visible destructive toolbar action.
+That button is the computer glyph with a reach dot at its corner, the accent in reach and the warning color otherwise, and VoiceOver reads the reach as its value; the computer's name is in the sheet, not the bar.
 A removal close or repeated authenticated refusal clears cards and feed, forgets the Mac, and offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
 Neither reconnection nor discovery queues or retries a mutation.
@@ -83,7 +84,7 @@ The stack follows the Mac's: a card minimized on any Mac leaves the phone's stac
 A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments, thread and reply row scroll between them in one native scroller.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
 On a short stage, such as an iPhone on its side, where the pinned head and choices would take more room than the body keeps, the whole card scrolls in that one scroller instead.
-The session keeps which offers the stage drew while the person could see it, so the Cards tab's badge counts unread cards and the next chevron's dot marks an unread card ahead.
+The session keeps which offers the stage drew while the person could see it, so a dot sits beside Home in the top bar while a card is unread, VoiceOver hears the count there, and the next chevron's dot marks an unread card ahead.
 Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
 Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card before the first card.
 Form and reply drafts live only in memory and survive paging.
@@ -135,25 +136,26 @@ The phone containment review is in `docs/live-prototype-security.md`, “Phone c
 The composition installs `PhoneCards(session:)`, `PhoneTasks(session:)` and `MessageComposer(session:)` together.
 The composer stays mounted once, preserving its own text and photo state across tab and orientation changes; the shell never copies it into a tab or layout branch.
 The card with its pager, the message box, Tasks and Activity share one centred reading column, `PhoneColumn`, 560 points with its gutters, so on an iPad the message box lines up with the card above it.
-On an iPhone on its side (compact height) the card gets the height: the title row is one line, the computer's name and then its reach, and the last turn and the notice wait until it is upright.
+On an iPhone on its side (compact height) the card gets the height: the bar keeps its one row, and the last turn and the notice wait until it is upright.
 There `AnyLayout` puts the removable photo strip beside the message capsule, retaining one field and its complete draft.
 The field displays up to two lines there, the controls retain 44-point targets, and warnings remain full-length; portrait and iPad keep the stacked arrangement.
-The native journey requires a completely visible card heading and scrolls real body text and an action into full view, not merely a retained draft above the tabs.
+The native journey requires a completely visible card heading and scrolls real body text and an action into full view, not merely a retained draft under the card.
 Card and task owners keep their selected records and replies.
-`PhoneMessageContext` carries only the shown current or past card, the Cards tab’s visibility and the open task record into the composer; hidden cards and dismissed records supply no hint.
-One content-sized footer floats over the tab container above the measured native bar, and each tab's room ends at the footer's measured top; no native bar height is guessed.
-Only a tab bar attached to the same window contributes clearance; the iPad's top tabs leave a detached legacy bar whose stale frame must not move the footer.
-No panel sits behind it: the last turn is two bare lines over the message capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
-On iOS 26 each tab reserves that height as a safe-area bar with the system's hard scroll edge, a nearly opaque foot, so rows never show through the last turn or the capsule; on iOS 18 the page color fades in behind it.
-On iOS 26 the tab bar recedes while a card or list scrolls down and returns on the way back up, and the footer follows the bar it is measured against.
-A receded bar keeps the full bar's bottom inset, so each tab sets that inset aside and reserves its own measured room down to the footer, and a card grows into the room the footer leaves.
-The Cards tab's bar does not recede while the stage is empty, so a bar receded on a card comes back once the last card closes.
-While the keyboard is open, a leading Done button in the persistent native navigation bar and the Hide keyboard command (Shift-Command-K) dismiss it without sending or clearing the draft, making the tabs reachable after typing.
+`PhoneMessageContext` carries only the shown current or past card, Home's visibility and the open task record into the composer; hidden cards and dismissed records supply no hint.
+The top bar is the one-row bar the captain chose (INF-1062): a Settings button at its left, the strip of Home, Tasks and Activity in its middle and the computer button at its right; there is no bottom tab bar.
+The strip is the app's own control, `PhoneTabStrip`: words only, the current tab lit in the accent on a quiet lens, a dot beside Home while a card is unread, read by VoiceOver as a tab bar whose Home carries the unread count.
+The strip's words keep the bar's own size at every type setting, as the system's bars do, because at the default size the strip already fills the room between Settings and the computer on an iPhone 16; at an accessibility size a long press on a tab shows its name large.
+Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and Command-I the computer.
+`PhoneWorkspace` holds the tabs in the system tab controller with its own bar hidden, so each tab keeps its draft, scroll position and search while another is shown, and a tab that is away leaves the view hierarchy: nothing in it is drawn, pressable or read, and a keyboard typing into the message box closes with the tab it leaves.
+Home is one column: the stage, then the last turn and the message box under it, in the layout rather than floating over it; Tasks and Activity run to the foot with nothing over them, so the last row is whole and pressable after scrolling to the end.
+No bar height is measured or guessed, and nothing recedes on scroll.
+No panel sits behind the message box: the last turn is two bare lines over the capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
+Settings is this phone's own sheet, `PhoneSettingsSheet`: this device and what it can do, that appearance follows the device, and the app's version; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
+While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
 The dismissal command does not belong to the keyboard’s transient accessory view.
-The system tab accessory is fixed-height and cannot contain the composer’s turn, photo and error rows, so those rows stay in the growing footer instead.
-The tabs read Cards, Tasks and Activity, in that order.
-The iPad's wide landscape workspace places a sidebar beside the stage, with Tasks and Activity as a segmented pair at its top, opening on Tasks, each scrolling alone, and puts the composer at the stage's foot.
-Portrait or narrow multitasking returns to tabs; layout measurement excludes the keyboard.
+The tabs read Home, Tasks and Activity, in that order.
+The iPad's wide landscape workspace places a sidebar beside the stage, with Tasks and Activity as a segmented pair at its top, opening on Tasks, each scrolling alone, keeps the composer at the stage's foot and shows no strip in the bar.
+Portrait or narrow multitasking returns to the strip; layout measurement excludes the keyboard.
 `PhoneActivity` reads the computer's wording and optional task key, shows its kind dot and relative mono age, and orders newest first on both devices.
 The task key sits inline before the words at micro size, as on the Mac's feed line.
 It exposes the full local timestamp to accessibility.
@@ -180,7 +182,7 @@ The details sheet names the connected view's ability to answer cards, send messa
 ## Talk and tasks
 
 The message box keeps the captain’s last message and the first mate’s reply above its native multiline field.
-Its component owns messages and photos; the shared shell places it at the foot above the tabs.
+Its component owns messages and photos; the shared shell places it at the foot of Home.
 A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` through the published conversation request as a hint, never as the message’s topic.
 The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.
 Photos uses the system library picker, converts selected images to orientation-correct JPEG thumbnails up to 2,048 pixels, and bounds each attachment and turn by the published limits.
@@ -212,8 +214,8 @@ The phone retains the draft, asks the captain to check the Mac, and never queues
 A native draft, last turn, task and transcript are never written to the phone’s saved connection file.
 
 A new card or an answered reply raises an in-app notice while the app is open, after reading the Mac’s Notifications switch.
-The notice is a pill at the top of every tab, interactive glass on iOS 26, a New card or Reply label and the card's title; a tap opens that card on the Cards tab, and a swipe dismisses it.
-It sits under the iPad's tabs, over the stage beside the landscape sidebar, and waits while an iPhone is on its side.
+The notice is a pill at the top of every tab, interactive glass on iOS 26, a New card or Reply label and the card's title; a tap opens that card on Home, and a swipe dismisses it.
+It sits under the top bar, over the stage beside the landscape sidebar, and waits while an iPhone is on its side.
 A reply notice leaves after five seconds unless VoiceOver is running; a new-card notice stays until its card is read or the pill is swiped, and no pill points at the card already on the stage.
 The first snapshot and a reload seed the notice history without announcing old cards; a body-only revision is not new news.
 Background stops the connection and clears the notice; there is no background notification service or push relay.
@@ -225,7 +227,7 @@ Once a build is in internal testing, Apple emails each tester in the app's inter
 On the phone, the tester opens Apple's TestFlight app with the Apple Account in that group, accepts the invitation and installs Infinitary; automatic distribution offers each later build there too.
 The phone and Mac need a network route to one another and a Mac build that accepts `system: "ios"`.
 Open **A phone** in the Mac app's Devices settings, scan or paste its link in the phone app, and confirm that Mac.
-The phone should name the Mac and show In reach, its Cards, Activity and Tasks.
+The phone should show Home, Tasks and Activity in its top bar, its cards on Home, and the Mac's name with In reach in the computer's sheet behind the bar's right-hand button.
 Type a message or use keyboard dictation, attach a library photo, and confirm the last turn on the Mac.
 Open a task’s record to start or continue it, and its Crewmate section to steer or interrupt its running turn.
 TestFlight installation, camera scanning and the real Local Network prompt are the captain's checks on a physical phone.
@@ -322,14 +324,14 @@ The runner creates and deletes its own simulator, scratch HOME, real-core home, 
 The test home uses the real stores, dispatcher, pairing and TLS connection, with sample cards, feed lines and a task; its control interface listens only on loopback behind a fresh per-run token.
 The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
 It first verifies the independent published-contract client can join and read the sample card.
-The join part covers a wrong Mac pin, joining, cards and feed, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
+The join part covers a wrong Mac pin, joining, cards and feed, Activity scrolled to its last whole row, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
 Every other part first joins its own home, and reaches the state the single journey had reached before it: the talk part puts the hero card on the stage and relaunches the app.
 The cards part drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, a picture card drawn while the phone is still reaching after a reconnect, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
 It checks both immediate script stalls and a stall during answer collection, and captures both appearances and the largest standard Dynamic Type size.
 A scripted card attempts network access, parent access, direct native messages, injected scripts and a footer effect; the test home records whether any forbidden request reaches it.
 The runner keeps the card interaction recording separately from the reconnect recording when `--demo` is selected.
 
-It also photographs join, Cards, Activity, the empty stage and details in both appearances, checks the largest standard Dynamic Type size, opens details by keyboard, and checks the iPad's landscape sidebar, its Tasks and Activity pair opening on Tasks and return to portrait.
+It also photographs join, Home, Activity, the empty stage, details and Settings in both appearances, checks the largest standard Dynamic Type size, opens details and Settings by keyboard, checks the bar's order of Settings, strip and computer, and checks the iPad's landscape sidebar, its Tasks and Activity pair opening on Tasks and return to portrait.
 Every native journey launch goes through `launchPhoneApp`, which renews the owned simulator's keyboard log subscription and waits for its startup before launching the app.
 A live subscription is not proof that it still supplies registrations after relaunch; the new subscription starts with no cached witnesses and observes both launch and the home's keyboard attachment.
 The runner joins the old output streams before appending the new subscription's gzip member, keeping all registrations in order.
@@ -356,7 +358,7 @@ The talk part chooses a project-owned picture from the disposable photo library,
 It pulls the task search down, closes it, opens it again by Find a task's key, then searches and starts an on-request task, checks that the real Mac ran it, and interrupts its turn.
 The fixture then gives that real task’s saved workspace and session the Interrupted state used by recovery; the phone continues it and sends a steer that the held mock-provider turn actually reads.
 The fixture uses Pi with the mock provider’s Anthropic message format, matching its held-turn script; no Claude client or provider account is involved.
-It also checks that the foreground notice sits under the iPad's tabs and over its landscape stage, waits on an iPhone on its side beside a one-line title row, and opens its own card, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
+It also checks that the foreground notice sits under the top bar and over the iPad's landscape stage, waits on an iPhone on its side while the strip stays in the bar, and opens its own card on Home, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
 The home records read and connection counts across streaming, pushed card revisions and an idle period longer than both pairing deadlines.
 The journey also checks Control Center and removal while away with an owned endpoint that stalls TLS between authenticated refusals.
 The launcher truncates the actual saved Mac only inside its owned simulator's app container; the same journey captures the damaged-record explanation and joins again with a fresh confirmed link.
@@ -384,6 +386,7 @@ A run on request (`workflow_dispatch`, such as the nightly check of `main`) skip
 Inside a gate, a failed generator check or Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
 The native job uses `VIRTUAL_MAC_RUNNER` when it is set, otherwise `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results`.
 It also uploads command logs separately as `phone-logs`, so an Xcode failure can be read without downloading screenshot-heavy result bundles.
+A third artifact, `phone-pictures`, holds only the pictures the journeys took, exported from the result bundles under `<device>/<part>`, so a crewmate reads them within the app's artifact limit, which `phone-results` has outgrown.
 A failed part adds to its command logs what the app, its card pages and Photos logged on its simulator, and names its failing lines in the job log.
 It also keeps, in a log of its own, what the simulator's system logged from the part's first test: SpringBoard, backboardd, the accessibility server, the keyboard and the test runner, which answer XCUITest's check for interrupting elements.
 Its package install also uses a scratch HOME and an empty local-signing directory, so the install-time signature check never reads this Mac's signing material.

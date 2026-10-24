@@ -19,6 +19,29 @@ import Observation
     }
 }
 
+/// INF-1062, the captain's one-row bar: the three places the strip in the top bar switches between, in its order.
+/// Home holds the cards and the message box; Tasks and Activity run to the foot with nothing over them.
+enum PhoneTab: CaseIterable {
+    case home, tasks, activity
+
+    var title: String {
+        switch self {
+        case .home: "Home"
+        case .tasks: "Tasks"
+        case .activity: "Activity"
+        }
+    }
+    var identifier: String { "tab-" + title.lowercased() }
+    /// Command-1, Command-2 and Command-3, in the strip's order.
+    var key: KeyEquivalent {
+        switch self {
+        case .home: "1"
+        case .tasks: "2"
+        case .activity: "3"
+        }
+    }
+}
+
 /// Shared shell slots. The composer has one structural identity across tabs and window layouts.
 /// Integration: stage = PhoneCards(session:), tasks = PhoneTasks(session:), composer = MessageComposer(session:).
 struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
@@ -31,12 +54,9 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var viewport = CGSize.zero
-    @State private var selection = 0
+    @State private var selection = PhoneTab.home
     @State private var messageContext = PhoneMessageContext()
     @State private var rail = Rail.tasks
-    /// The floating footer's top in the window, where each tab's room ends.
-    @State private var footerTop: CGFloat?
-    @State private var tabClearance = PhoneTabClearance()
 
     init(session: ReadOnlySession, stage: Stage, tasks: Tasks?, composer: Composer?) {
         self.session = session; self.stage = stage; self.tasks = tasks; self.composer = composer
@@ -47,24 +67,36 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     }
     private var sidebarWidth: CGFloat { min(320, viewport.width * 0.32) }
     private enum Rail: Hashable { case tasks, activity }
+    /// A landscape iPad always shows the stage with its sidebar, without losing the compact tab selection.
+    private var shown: PhoneTab { wide ? .home : selection }
+    private var tabs: [PhoneTab] { tasks == nil ? [.home, .activity] : PhoneTab.allCases }
 
     var body: some View {
-        tabs(footerTop: composer == nil ? nil : footerTop)
-            .background { if composer != nil { PhoneTabBarClearance { tabClearance = $0 } } }
-            .overlay(alignment: .bottom) {
-                footer
-                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { footerTop = $0 }
-                    .padding(.bottom, tabClearance.bottom)
-                    .padding(.leading, tabClearance.leading).padding(.trailing, tabClearance.trailing)
+        // INF-1062: the system tab controller holds the tabs with its own bar hidden; the strip in the top bar is the one control.
+        TabView(selection: Binding(get: { shown }, set: { if !wide { selection = $0 } })) {
+            tab(.home) { home }
+            // INF-944 item 6: Activity is the last tab.
+            if let tasks { tab(.tasks) { noticed(tasks.background(PhoneTheme.background)) } }
+            tab(.activity) { noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list")) }
+        }
+        .toolbar {
+            // INF-1062: the strip sits in the bar's middle; a landscape iPad shows the stage beside its sidebar and needs none.
+            if !wide {
+                ToolbarItem(placement: .principal) {
+                    PhoneTabStrip(tabs: tabs, selection: $selection, unread: session.unreadCards)
+                }
             }
-            .task(id: session.notice) {
-                // A reply notice leaves on its own; one about a new card waits until it is read or swiped.
-                guard let notice = session.notice, notice.reply, !voiceOver else { return }
-                try? await Task.sleep(for: .seconds(5))
-                if session.notice == notice { session.notice = nil }
-            }
+        }
+        .task(id: session.notice) {
+            // A reply notice leaves on its own; one about a new card waits until it is read or swiped.
+            guard let notice = session.notice, notice.reply, !voiceOver else { return }
+            try? await Task.sleep(for: .seconds(5))
+            if session.notice == notice { session.notice = nil }
+        }
         .environment(messageContext)
-        .onChange(of: wide || selection == 0, initial: true) { _, visible in messageContext.cardsVisible = visible }
+        .onChange(of: shown == .home, initial: true) { _, visible in messageContext.cardsVisible = visible }
+        // The message box is Home's alone, so a keyboard typing into it closes with the tab it leaves.
+        .onChange(of: shown) { _, tab in if tab != .home { dismissPhoneKeyboard() } }
         .background {
             // Measure window space without treating the keyboard as an orientation change.
             GeometryReader { geometry in
@@ -73,19 +105,50 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         }
     }
 
-    @ViewBuilder private var footer: some View {
-        if let composer {
-            composer
-                .fixedSize(horizontal: false, vertical: true)
-                .background(alignment: .bottom) { PhoneFooterBackdrop() }
-                .accessibilityElement(children: .contain).accessibilityIdentifier("phone-composer")
-                .padding(.horizontal, PhoneTheme.space4)
-                .padding(.bottom, PhoneTheme.space2)
-                .padding(.leading, wide ? sidebarWidth + 1 : 0)
+    /// Each tab keeps its own state while another is shown, so a draft, a scroll position and a search survive a change
+    /// of tab (INF-209), and the tab controller takes a tab that is away out of the view hierarchy, so nothing in it is
+    /// drawn, pressable or read. The reach line sits under the bar on every tab.
+    private func tab(_ tab: PhoneTab, @ViewBuilder content: () -> some View) -> some View {
+        content()
+            .safeAreaInset(edge: .top, spacing: 0) { reachLine }
+            .toolbar(.hidden, for: .tabBar)
+            .tag(tab)
+    }
+
+    /// INF-1062: Home is the stage and, under it in the same column, the last turn and the message box; on a landscape
+    /// iPad the sidebar stands beside both. One place in the tree for either layout keeps one draft (INF-209).
+    private var home: some View {
+        HStack(spacing: 0) {
+            if wide {
+                sidebar
+                Rectangle().fill(PhoneTheme.line).frame(width: 1)
+            }
+            VStack(spacing: 0) {
+                noticed(stage.frame(maxWidth: .infinity, maxHeight: .infinity))
+                if let composer {
+                    composer
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityElement(children: .contain).accessibilityIdentifier("phone-composer")
+                        .padding(.horizontal, PhoneTheme.space4)
+                        .padding(.bottom, PhoneTheme.space2)
+                }
+            }
+        }.background(PhoneTheme.background)
+    }
+
+    /// INF-1062, the captain's pick: the computer's name left the bar, so one line under it on every tab says the reach
+    /// with its time while the computer is not in reach, and nothing while it is. INF-589 item 11: said once.
+    @ViewBuilder private var reachLine: some View {
+        if session.contact != "in-reach" {
+            PhoneReach(session: session, oneLine: true)
+                .padding(.horizontal, PhoneTheme.space4).padding(.bottom, PhoneTheme.space2)
+                .frame(maxWidth: .infinity)
+                .background(PhoneTheme.background)
+                .accessibilityElement(children: .contain).accessibilityIdentifier("reach-line")
         }
     }
 
-    /// INF-589 item 6, placed by item 16: the pill sits at the top of what it is over, under the tabs and beside the sidebar.
+    /// INF-589 item 6, placed by item 16: the pill sits at the top of what it is over, under the bar and beside the sidebar.
     /// An iPhone on its side gives the card that height, so the pill waits until it is upright.
     private func noticed(_ content: some View) -> some View {
         content.overlay(alignment: .top) {
@@ -94,7 +157,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
                 if let notice = session.notice, !phoneOnItsSide(verticalSize),
                    !(messageContext.cardsVisible && messageContext.card == .current(notice.cardID)) {
                     PhoneNoticePill(notice: notice, open: {
-                        selection = 0; session.showCardID = notice.cardID; session.notice = nil
+                        selection = .home; session.showCardID = notice.cardID; session.notice = nil
                     }, dismiss: { session.notice = nil })
                     .padding(.top, PhoneTheme.space2).padding(.horizontal, PhoneTheme.space4)
                     .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
@@ -126,91 +189,65 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         .frame(width: sidebarWidth).background(PhoneTheme.panel)
         .accessibilityElement(children: .contain).accessibilityIdentifier("phone-sidebar")
     }
-
-    private var stageAndSidebar: some View {
-        HStack(spacing: 0) {
-            if wide {
-                sidebar
-                Rectangle().fill(PhoneTheme.line).frame(width: 1)
-            }
-            noticed(stage.frame(maxWidth: .infinity, maxHeight: .infinity))
-        }.background(PhoneTheme.background)
-    }
-
-    private func tabs(footerTop: CGFloat?) -> some View {
-        // A landscape iPad always shows the stage, without losing the compact tab selection.
-        TabView(selection: Binding(get: { wide ? 0 : selection }, set: { if !wide { selection = $0 } })) {
-            stageAndSidebar
-                .modifier(PhoneFooterSpace(top: footerTop))
-                .toolbar(wide ? .hidden : .visible, for: .tabBar)
-                .tabItem { Label { Text("Cards") } icon: { PhoneSymbol.cards.image } }.tag(0)
-                .badge(session.unreadCards)
-            // INF-944 item 6: Activity is the last tab.
-            if let tasks {
-                noticed(tasks.background(PhoneTheme.background))
-                    .modifier(PhoneFooterSpace(top: footerTop))
-                    .toolbar(wide ? .hidden : .visible, for: .tabBar)
-                    .tabItem { Label { Text("Tasks") } icon: { PhoneSymbol.tasks.image } }.tag(2)
-            }
-            noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list"))
-            .modifier(PhoneFooterSpace(top: footerTop))
-            .toolbar(wide ? .hidden : .visible, for: .tabBar)
-            .tabItem { Label { Text("Activity") } icon: { PhoneSymbol.activity.image } }.tag(1)
-        }
-        // INF-1060: an empty stage has nothing to scroll back up, so its tabs stay out and a receded bar comes back.
-        .modifier(PhoneTabRecede(recedes: wide || selection != 0 || messageContext.card != nil))
-    }
 }
 
-/// Each tab's room ends at the floating footer's top. On iOS 26 the space below is a bar with the system's hard
-/// scroll edge (INF-944 item 6), a nearly opaque foot, so rows never show through the last turn or the capsule.
-/// A receded iOS 26 bar keeps the full bar's bottom inset while the footer follows it down (INF-1060), so each tab
-/// sets that inset aside and reserves what it measures down to the footer: a card gets the room the footer left.
-private struct PhoneFooterSpace: ViewModifier {
-    let top: CGFloat?
-    @State private var bottom: CGFloat = 0
-    func body(content: Content) -> some View {
-        reserve(content, height: top.map { max(0, bottom - $0) } ?? 0)
-            .ignoresSafeArea(.container, edges: top == nil ? [] : .bottom)
-            .background {
-                // The tab's own frame stops above the inset it sets aside; a reader that ignores it too finds the foot.
-                GeometryReader { geometry in
-                    Color.clear.onChange(of: geometry.frame(in: .global).maxY, initial: true) { _, foot in bottom = foot }
-                }.ignoresSafeArea(.container, edges: .bottom)
-            }
-    }
-    @ViewBuilder private func reserve(_ content: Content, height: CGFloat) -> some View {
-        if #available(iOS 26, *) {
-            content.safeAreaBar(edge: .bottom, spacing: 0) { Color.clear.frame(height: height) }
-                .scrollEdgeEffectStyle(.hard, for: .bottom)
-        } else {
-            content.safeAreaInset(edge: .bottom, spacing: 0) { Color.clear.frame(height: height) }
-        }
-    }
-}
+/// INF-1062, the captain's one-row bar: Home, Tasks and Activity as words in the bar's middle, the current one lit in
+/// the accent on a quiet lens, and a dot beside Home while a card is unread. VoiceOver reads a tab bar and Home's count.
+/// The words keep the bar's own size at every type setting, as the system's bars do: at the default size the strip
+/// already fills the room between Settings and the computer on an iPhone 16, so growing words would truncate and keep
+/// the bar relaying out around its buttons. At an accessibility size a long press shows a tab's name large instead.
+struct PhoneTabStrip: View {
+    let tabs: [PhoneTab]
+    @Binding var selection: PhoneTab
+    let unread: Int
 
-/// INF-944 item 4, the captain's answer: on iOS 26 the tab bar recedes while a long card or list scrolls down,
-/// and the message box follows the bar it is measured against.
-private struct PhoneTabRecede: ViewModifier {
-    let recedes: Bool
-    @ViewBuilder func body(content: Content) -> some View {
-        if #available(iOS 26, *) { content.tabBarMinimizeBehavior(recedes ? .onScrollDown : .never) } else { content }
-    }
-}
-
-/// The system's fixed-height tab accessory clips a multi-line composer, so the growing footer floats above the measured tabs.
-/// Only the composer's own capsule is drawn; on iOS 18 the page color fades in behind it so scrolled rows never run under its words.
-private struct PhoneFooterBackdrop: View {
     var body: some View {
-        if #available(iOS 26, *) { Color.clear } else {
-            LinearGradient(stops: [.init(color: PhoneTheme.background.opacity(0), location: 0), .init(color: PhoneTheme.background, location: 0.35)],
-                startPoint: .top, endPoint: .bottom)
-                .padding(.horizontal, -PhoneTheme.space4).padding(.bottom, -PhoneTheme.space2).allowsHitTesting(false)
+        HStack(spacing: 2) {
+            ForEach(tabs, id: \.self) { tab in
+                Button { selection = tab } label: {
+                    HStack(spacing: 5) {
+                        Text(tab.title).lineLimit(1).minimumScaleFactor(0.75)
+                        if tab == .home && unread > 0 {
+                            Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
+                        }
+                    }
+                    .font(PhoneFont.callout).fontWeight(.medium)
+                    .foregroundStyle(selection == tab ? PhoneTheme.accent : PhoneTheme.secondary)
+                    .padding(.horizontal, PhoneTheme.space3)
+                    .frame(minHeight: 32)
+                    .background { if selection == tab { Capsule().fill(PhoneTheme.text.opacity(0.08)) } }
+                    .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .keyboardShortcut(tab.key, modifiers: .command)
+                .accessibilityShowsLargeContentViewer { Text(tab.title) }
+                .accessibilityLabel(tab.title)
+                .accessibilityValue(tab == .home && unread > 0 ? (unread == 1 ? "1 unread card" : "\(unread) unread cards") : "")
+                .accessibilityAddTraits(selection == tab ? .isSelected : [])
+                .accessibilityIdentifier(tab.identifier)
+            }
+        }
+        .padding(3)
+        .dynamicTypeSize(...DynamicTypeSize.large)
+        .modifier(PhoneStripSurface())
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isTabBar)
+        .accessibilityLabel("Tabs")
+        .accessibilityIdentifier("phone-tabs")
+    }
+}
+
+/// On iOS 26 the bar already sets each of its items on glass, so the strip is bare there; the iOS 18 bar is a plain
+/// band, so the strip takes the field's fill and hairline, as the sheets do.
+private struct PhoneStripSurface: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(iOS 26, *) { content } else {
+            content.background(PhoneTheme.panel, in: Capsule()).overlay { Capsule().strokeBorder(PhoneTheme.line) }
         }
     }
 }
 
-/// A quiet pill under the title: what arrived and the card's title. A tap opens the card; a swipe dismisses it.
+/// A quiet pill under the bar: what arrived and the card's title. A tap opens the card; a swipe dismisses it.
 private struct PhoneNoticePill: View {
     let notice: PhoneNotice
     let open: () -> Void
@@ -243,7 +280,7 @@ private struct PhoneNoticePill: View {
     }
 }
 
-/// INF-944 item 4: the pill floats over content under the title, so on iOS 26 it is glass, as the bars are.
+/// INF-944 item 4: the pill floats over content under the bar, so on iOS 26 it is glass, as the bar is.
 private struct PhoneNoticeSurface: ViewModifier {
     @ViewBuilder func body(content: Content) -> some View {
         if #available(iOS 26, *) { content.glassEffect(.regular.interactive(), in: Capsule()) } else {

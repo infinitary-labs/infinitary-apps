@@ -20,18 +20,25 @@ import XCTest
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 0)
     XCTAssertEqual(input.value as? String, words)
     addPhoneJourneyPhoto(app: app)
-    // INF-944 item 6: the tabs in their order, Activity last.
-    for name in ["Tasks", "Activity", "Cards"] {
+    // INF-944 item 6: the tabs in their order, Activity last. INF-1062: the message box is Home's alone, so Tasks and
+    // Activity show none, and the draft waits out of view until Home comes back.
+    let column = phoneReadingColumn(app: app)
+    for name in ["Tasks", "Activity", "Home"] {
         tab(name)
         let surface = name == "Activity" ? app.scrollViews["activity-list"]
             : name == "Tasks" ? app.buttons["group-waiting"] : app.scrollViews["card-scroll"]
         XCTAssertTrue(surface.waitForExistence(timeout: 10), "The requested tab actually opens")
         XCTAssertTrue(surface.isHittable)
-        if name != "Activity" { verifyPhoneReadingColumn(surface, app: app) }
-        XCTAssertEqual(input.value as? String, words, "Changing tabs keeps the unsent words")
-        XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1, "Changing tabs keeps the picked photo")
-        XCTAssertEqual(app.textFields.matching(identifier: "message-box").count, 1)
-        verifyPhoneComposerBounds(app: app)
+        if name != "Activity" { verifyPhoneReadingColumn(surface, column: column) }
+        if name == "Home" {
+            XCTAssertEqual(input.value as? String, words, "Changing tabs keeps the unsent words")
+            XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1, "Changing tabs keeps the picked photo")
+            XCTAssertEqual(app.textFields.matching(identifier: "message-box").count, 1)
+            verifyPhoneComposerBounds(app: app)
+        } else {
+            XCTAssertFalse(input.exists, "\(name) runs to the foot with no message box over it")
+            XCTAssertFalse(app.otherElements["phone-composer"].exists)
+        }
     }
     picture("draft-after-tabs")
     XCUIDevice.shared.orientation = .landscapeLeft
@@ -40,8 +47,8 @@ import XCTest
     if UIDevice.current.userInterfaceIdiom == .pad {
         let sidebar = phoneSidebar(app)
         XCTAssertTrue(sidebar.waitForExistence(timeout: 10))
-        let cardsTab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Cards")).firstMatch
-        XCTAssertFalse(cardsTab.isHittable, "Landscape columns have no second tab row above them")
+        // INF-1062: the landscape iPad shows the stage and its sidebar, so the bar carries no strip.
+        XCTAssertFalse(app.buttons["tab-home"].exists, "Landscape columns have no strip above them")
         XCTAssertLessThanOrEqual(sidebar.frame.maxX, input.frame.minX,
             "The landscape composer belongs to the stage beside the sidebar")
         verifyPhoneReadingColumn(app.scrollViews["card-scroll"], app: app)
@@ -157,7 +164,8 @@ import XCTest
     XCTAssertTrue(app.buttons["photo-chip"].waitForExistence(timeout: 30), app.debugDescription)
 }
 
-/// INF-230: the actual footer contains every visible row and does not overlap native bottom tabs or the keyboard.
+/// INF-230: the actual footer contains every visible row and does not overlap the keyboard; INF-1062: it sits in Home's
+/// own column with no bar under it.
 @MainActor func verifyPhoneComposerBounds(app: XCUIApplication) {
     let footer = app.otherElements["phone-composer"].firstMatch
     XCTAssertTrue(footer.waitForExistence(timeout: 10))
@@ -194,22 +202,9 @@ import XCTest
     let keyboard = app.keyboards.firstMatch
     if keyboard.exists {
         XCTAssertLessThanOrEqual(footer.frame.maxY, keyboard.frame.minY, "The composer stays above the keyboard")
-    }
-    let bar = app.tabBars.firstMatch
-    if bar.exists && bar.isHittable && bar.frame.midY > app.frame.midY {
-        // INF-944 item 4: receded tabs leave one round button, and the composer shares its row beside it.
-        if bar.buttons.count == 1 {
-            XCTAssertFalse(footer.frame.intersects(bar.buttons.firstMatch.frame), "The composer sits beside the receded tabs")
-            // INF-1060, the captain: the shrunk message box should "actually free up vertical space for the card",
-            // so the card's pager follows the box down instead of leaving a band above it.
-            let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
-            if card.exists && pager.exists {
-                XCTAssertEqual(phoneAccessibilityBounds(pager.frame).maxY, phoneAccessibilityBounds(footer.frame).minY, accuracy: 1,
-                    "The card's room ends where the receded composer \(footer.frame) begins, not at \(pager.frame)")
-            }
-        } else {
-            XCTAssertLessThanOrEqual(footer.frame.maxY, bar.frame.minY, "The composer stays above the native tabs")
-        }
+    } else {
+        // INF-1062: with no bar under it, the message box sits at the foot of the window, above only the home indicator.
+        XCTAssertLessThan(app.frame.maxY - footer.frame.maxY, 60, "The composer \(footer.frame) sits at the foot of \(app.frame)")
     }
 }
 
@@ -229,13 +224,22 @@ import XCTest
     XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 10))
 }
 
-/// INF-589 item 15: the card, the Tasks list and the message box share one centred reading column on any width.
-@MainActor func verifyPhoneReadingColumn(_ surface: XCUIElement, app: XCUIApplication) {
-    let frame = phoneAccessibilityBounds(surface.frame)
+/// INF-589 item 15: the reading column, read from the message box on Home, where it is (INF-1062).
+@MainActor func phoneReadingColumn(app: XCUIApplication) -> ClosedRange<CGFloat> {
     let left = phoneAccessibilityBounds(app.buttons["add-photos"].frame).minX
     let right = phoneAccessibilityBounds(app.buttons["send-message"].frame).maxX
-    XCTAssertEqual(frame.minX, left, accuracy: 1, "\(surface.identifier) \(surface.frame) starts where the message box does")
-    XCTAssertEqual(frame.maxX, right, accuracy: 1, "\(surface.identifier) \(surface.frame) ends where the message box does")
+    return left...right
+}
+
+/// INF-589 item 15: the card, the Tasks list and the message box share one centred reading column on any width.
+@MainActor func verifyPhoneReadingColumn(_ surface: XCUIElement, app: XCUIApplication) {
+    verifyPhoneReadingColumn(surface, column: phoneReadingColumn(app: app))
+}
+
+@MainActor func verifyPhoneReadingColumn(_ surface: XCUIElement, column: ClosedRange<CGFloat>) {
+    let frame = phoneAccessibilityBounds(surface.frame)
+    XCTAssertEqual(frame.minX, column.lowerBound, accuracy: 1, "\(surface.identifier) \(surface.frame) starts where the message box does")
+    XCTAssertEqual(frame.maxX, column.upperBound, accuracy: 1, "\(surface.identifier) \(surface.frame) ends where the message box does")
 }
 
 /// The iPad's landscape sidebar, a container holding its Activity and Tasks pair.

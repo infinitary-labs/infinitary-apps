@@ -3,24 +3,42 @@ import SwiftUI
 
 struct PhoneReach: View {
     let session: ReadOnlySession
-    /// INF-589 item 17: on an iPhone on its side the time it was last heard follows on the same line.
+    /// INF-589 item 17: on one line the time it was last heard follows the state.
     var oneLine = false
     var body: some View {
         (oneLine ? AnyLayout(HStackLayout(spacing: PhoneTheme.space2)) : AnyLayout(VStackLayout(spacing: 2))) {
             HStack(spacing: PhoneTheme.space2) {
                 Circle().fill(session.contact == "in-reach" ? PhoneTheme.accent : PhoneTheme.warning)
                     .frame(width: 6, height: 6).accessibilityHidden(true)
-                Text(session.contact == "in-reach" ? "In reach" : session.contact == "reaching" ? "Reaching your computer…" : "Out of reach")
-                    .accessibilityIdentifier("contact")
+                Text(session.reachWords).accessibilityIdentifier("contact")
             }
-            if session.contact != "in-reach", let date = session.heardAt {
-                Text("as of \(date.formatted(date: .omitted, time: .shortened))")
-            }
+            if let time = session.reachTime { Text("as of \(time)") }
         }.font(PhoneFont.micro).foregroundStyle(PhoneTheme.secondary)
     }
 }
 
 extension ReadOnlySession {
+    /// The reach, in the words the reach line and the computer button share.
+    var reachWords: String {
+        switch contact {
+        case "in-reach": "In reach"
+        case "reaching": "Reaching your computer…"
+        default: "Out of reach"
+        }
+    }
+
+    /// When the computer was last heard, shown only while it is not in reach.
+    var reachTime: String? {
+        guard contact != "in-reach", let heardAt else { return nil }
+        return heardAt.formatted(date: .omitted, time: .shortened)
+    }
+
+    /// INF-1062: the computer button in the top bar says the reach to VoiceOver, with its time while out of reach.
+    var reachLine: String {
+        guard let reachTime else { return reachWords }
+        return "\(reachWords), as of \(reachTime)"
+    }
+
     /// INF-589 item 11: the reach line says out of reach, so the one line where changes are made says only that
     /// they are off, in the Mac's words (`changesOffWords`, src/renderer/src/devices/viewWords.ts). None while first reaching.
     var changesOffLine: String? {
@@ -32,6 +50,8 @@ extension ReadOnlySession {
     }
 }
 
+/// INF-1062: the computer's own sheet, with its name, reach and address, and Leave or Forget at its foot.
+/// This device's own facts live in `PhoneSettingsSheet`.
 struct PhoneComputerSheet: View {
     let session: ReadOnlySession
     let leave: () -> Void
@@ -40,34 +60,17 @@ struct PhoneComputerSheet: View {
     @State private var leaving = false
     @State private var forgetting = false
 
-    private var device: String { UIDevice.current.userInterfaceIdiom == .pad ? "This iPad" : "This phone" }
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: PhoneTheme.space5) {
-                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                        Text(session.mac.name).font(PhoneFont.title)
-                        Text("Your first mate lives here.").foregroundStyle(PhoneTheme.secondary)
-                        PhoneReach(session: session)
-                        if let address = session.mac.addresses.first {
-                            Text(address).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
-                        }
+                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                    Text(session.mac.name).font(PhoneFont.title).accessibilityIdentifier("home-name")
+                    Text("Your first mate lives here.").foregroundStyle(PhoneTheme.secondary)
+                    PhoneReach(session: session)
+                    if let address = session.mac.addresses.first {
+                        Text(address).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
                     }
-                    Divider().overlay(PhoneTheme.line)
-                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                        Text(device).font(PhoneFont.headline)
-                        Text(session.contact == "in-reach" && session.access != "full"
-                            ? "Reads cards, Activity and tasks. Update Infinitary on both devices to make changes."
-                            : "Answers cards, sends messages and controls tasks on your computer.")
-                            .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                        Text("Conversation stays on your computer.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                    }
-                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                        Text("Appearance").font(PhoneFont.headline)
-                        Text("Follows this device’s setting.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                    }
-
-                }.padding(PhoneTheme.space5)
+                }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
             }
             .safeAreaInset(edge: .bottom) {
                 exitControls.padding(PhoneTheme.space4).background(PhoneTheme.panel)

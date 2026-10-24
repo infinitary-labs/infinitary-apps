@@ -34,8 +34,8 @@ struct PhoneView: View {
     @State private var pasting = false
     @State private var linkText = ""
     @State private var details = false
+    @State private var settings = false
     @State private var keyboardVisible = false
-    @Environment(\.verticalSizeClass) private var verticalSize
 
     var body: some View {
         NavigationStack {
@@ -58,6 +58,8 @@ struct PhoneView: View {
             .navigationTitle("Infinitary")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // INF-1062, the captain's one-row bar: Settings at the left, the strip in the middle (PhoneWorkspace),
+                // the computer at the right. While the keyboard is open, Done takes Settings' place.
                 if keyboardVisible {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Done", action: dismissPhoneKeyboard)
@@ -65,23 +67,29 @@ struct PhoneView: View {
                             .keyboardShortcut("k", modifiers: [.command, .shift])
                             .accessibilityIdentifier("dismiss-phone-keyboard")
                     }
+                } else if model.connection != nil, !model.removed {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { settings = true } label: { PhoneSymbol.settings.image.frame(minWidth: 44, minHeight: 44) }
+                            .accessibilityLabel("Settings").accessibilityIdentifier("phone-settings")
+                            .keyboardShortcut(",", modifiers: .command)
+                    }
                 }
                 if model.connection == nil || model.removed {
                     ToolbarItem(placement: .principal) { Text("Infinitary").font(PhoneFont.headline).accessibilityAddTraits(.isHeader) }
                 }
                 if let session = model.connection, !model.removed {
-                    ToolbarItem(placement: .principal) {
-                        // INF-589 item 17: on its side an iPhone's title row is one line, the name and then its reach.
-                        let side = phoneOnItsSide(verticalSize)
-                        (side ? AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: PhoneTheme.space2))
-                            : AnyLayout(VStackLayout(spacing: 2))) {
-                            Text(session.mac.name).font(PhoneFont.headline).lineLimit(1).accessibilityIdentifier("home-name")
-                            PhoneReach(session: session, oneLine: side)
-                        }
-                    }
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button { details = true } label: { PhoneSymbol.computer.image.frame(minWidth: 44, minHeight: 44) }
-                            .accessibilityLabel("Your computer").accessibilityIdentifier("computer-details")
+                        // The computer's name lives in its sheet; the glyph's dot says the reach, and VoiceOver hears the words.
+                        Button { details = true } label: {
+                            PhoneSymbol.computer.image
+                                .overlay(alignment: .topTrailing) {
+                                    Circle().fill(session.contact == "in-reach" ? PhoneTheme.accent : PhoneTheme.warning)
+                                        .frame(width: 7, height: 7).offset(x: 3, y: -3)
+                                }
+                                .frame(minWidth: 44, minHeight: 44)
+                        }
+                            .accessibilityLabel("Your computer").accessibilityValue(session.reachLine)
+                            .accessibilityIdentifier("computer-details")
                             .keyboardShortcut("i", modifiers: .command)
                     }
                 }
@@ -91,6 +99,9 @@ struct PhoneView: View {
                     PhoneComputerSheet(session: session, leave: { Task { await model.leave() } }, forget: { model.forgetMac() })
                 }
             }
+            .sheet(isPresented: $settings) {
+                if let session = model.connection { PhoneSettingsSheet(session: session) }
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
                 keyboardVisible = true
             }
@@ -98,7 +109,7 @@ struct PhoneView: View {
                 keyboardVisible = false
             }
             .onChange(of: model.connection == nil || model.removed) { _, unavailable in
-                if unavailable { details = false }
+                if unavailable { details = false; settings = false }
             }
             .safeAreaInset(edge: .bottom) {
                 if let problem = model.problem {
@@ -196,7 +207,7 @@ struct PhoneView: View {
         }
     }
 
-    // INF-589 item 11: out of reach is said once, by the reach line under the computer's name; no strip repeats it.
+    // INF-589 item 11: out of reach is said once, by the reach line under the bar; no strip repeats it.
     private func connected(_ session: ReadOnlySession) -> some View {
         PhoneWorkspace(session: session, stage: PhoneCards(session: session),
             tasks: PhoneTasks(session: session), composer: MessageComposer(session: session))

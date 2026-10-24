@@ -39,12 +39,20 @@ import XCTest
     }
 
     private func tab(_ name: String) {
-        // iPhone exposes a TabBar; iPad's floating tabs are cells. Their accessible name is shared.
-        let tab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", name)).firstMatch
-        // INF-944 item 4: receded tabs show only the current one; a tap brings the others back.
-        let bar = app.tabBars.firstMatch
-        if !tab.exists, bar.exists, bar.buttons.count == 1 { bar.buttons.firstMatch.tap() }
-        XCTAssertTrue(tab.waitForExistence(timeout: 10)); tab.tap()
+        // INF-1062: the tabs are words in the top bar's strip, the same on iPhone and an upright iPad; the pressed one lights.
+        let tab = app.buttons["tab-" + name.lowercased()]
+        XCTAssertTrue(tab.waitForExistence(timeout: 10), app.debugDescription); tab.tap()
+        let lit = XCTNSPredicateExpectation(predicate: NSPredicate(format: "selected == true"), object: tab)
+        XCTAssertEqual(XCTWaiter.wait(for: [lit], timeout: 10), .completed, "\(name) is the lit tab after its press")
+    }
+
+    /// INF-1062: in reach the bar says nothing; the computer button's value carries the reach for VoiceOver,
+    /// and a line under the bar says it only while the computer is not in reach.
+    private func reach(_ words: String, timeout: TimeInterval = 20) {
+        let button = app.buttons["computer-details"]
+        let said = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", words), object: button)
+        XCTAssertEqual(XCTWaiter.wait(for: [said], timeout: timeout), .completed, app.debugDescription)
+        if words == "In reach" { XCTAssertFalse(app.otherElements["reach-line"].exists, "In reach, no line under the bar repeats it") }
     }
 
     private func background() async throws {
@@ -75,7 +83,7 @@ import XCTest
 
     private func join() async throws {
         try await submitLink()
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20), app.debugDescription)
+        reach("In reach", timeout: 20)
     }
 
     // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the journey's four parts are
@@ -130,19 +138,40 @@ import XCTest
         verifyPhoneComposerBounds(app: app)
         picture("cards")
         try await appearances("cards")
-        // INF-209: the shared shell names the computer and moves Leave behind its details sheet.
-        XCTAssertEqual(app.staticTexts["home-name"].label, "Test Mac mini")
+        // INF-1062: the computer's name leaves the bar for its sheet, and Leave stays behind that sheet (INF-209).
+        XCTAssertFalse(app.staticTexts["home-name"].exists, "The bar no longer carries the computer's name")
         XCTAssertFalse(app.buttons["leave"].exists)
         // INF-355: details must also work as the first hardware chord after relaunch.
         app.terminate(); try await launchPhoneApp(app)
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         try await pressPhoneKey("i", modifiers: .command, in: app)
         XCTAssertTrue(app.buttons["close-computer-details"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["home-name"].label, "Test Mac mini")
+        XCTAssertTrue(app.staticTexts["In reach"].exists, "The computer's sheet says its reach")
         XCTAssertTrue(app.buttons["leave"].exists)
         try await appearances("computer-details")
         app.buttons["close-computer-details"].tap()
+        // INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with no Leave in it.
+        try await pressPhoneKey(",", modifiers: .command, in: app)
+        XCTAssertTrue(app.buttons["close-phone-settings"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["app-version"].label.hasPrefix("Version "), app.staticTexts["app-version"].label)
+        XCTAssertFalse(app.buttons["leave"].exists)
+        try await appearances("phone-settings")
+        app.buttons["close-phone-settings"].tap()
+        XCTAssertTrue(app.buttons["close-phone-settings"].waitForNonExistence(timeout: 10))
+        let settings = app.buttons["phone-settings"]
+        XCTAssertTrue(settings.isHittable); XCTAssertEqual(settings.label, "Settings")
+        let strip = [app.buttons["tab-home"], app.buttons["tab-tasks"], app.buttons["tab-activity"]]
+        XCTAssertLessThan(settings.frame.maxX, strip[0].frame.minX, "Settings sits left of the strip")
+        XCTAssertLessThan(strip[0].frame.maxX, strip[1].frame.minX); XCTAssertLessThan(strip[1].frame.maxX, strip[2].frame.minX)
+        XCTAssertLessThan(strip[2].frame.maxX, app.buttons["computer-details"].frame.minX, "The computer sits right of the strip")
+        XCTAssertTrue(strip[0].isSelected, "Home is the lit tab")
+        let stripFrames = strip.map { $0.frame.integral }
         _ = try await home("display-large")
         XCTAssertTrue(app.buttons["computer-details"].isHittable)
+        // INF-1062: the strip keeps the bar's own size at the largest standard type, so no word truncates and the
+        // bar's buttons stay where they were; growing words once truncated Activity and lost a tap on the computer.
+        XCTAssertEqual(strip.map { $0.frame.integral }, stripFrames, "The strip's words keep the bar's own size at the largest type")
         picture("cards-largest-standard-type")
         computerDetails()
         XCTAssertTrue(app.buttons["leave"].isHittable)
@@ -206,7 +235,7 @@ import XCTest
         springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.9)).tap()
         XCTAssertTrue(controlCenter.waitForNonExistence(timeout: 10))
         app.activate()
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 10))
+        reach("In reach", timeout: 10)
         let afterInactive = try await home("state", method: "GET")
         XCTAssertEqual((afterInactive["readings"] as? [String: Int])?["connections"],
             (beforeInactive["readings"] as? [String: Int])?["connections"], "An inactive scene keeps its connection")
@@ -216,7 +245,7 @@ import XCTest
         XCTAssertTrue(app.staticTexts[line].waitForExistence(timeout: 10))
         XCTAssertEqual(app.staticTexts.matching(identifier: "activity-text").firstMatch.label, feed.last?["text"] as? String)
         try await appearances("activity")
-        tab("Cards")
+        tab("Home")
         _ = try await home("empty-cards")
         // INF-1060: as on the Mac, the empty stage is the character alone, with no line under it.
         XCTAssertTrue(app.otherElements["phone-character"].waitForExistence(timeout: 10))
@@ -235,7 +264,7 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForExistence(timeout: 10))
 
         app.terminate(); try await launchPhoneApp(app)
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20), app.debugDescription)
+        reach("In reach", timeout: 20)
         let afterLaunch = try await home("state", method: "GET")
         XCTAssertEqual((afterLaunch["devices"] as? [[String: Any]])?.first?["id"] as? String, phone["id"] as? String)
 
@@ -255,7 +284,7 @@ import XCTest
         _ = try await home("capture-start")
         let change = try await home("change")
         _ = try await home("online")
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20), app.debugDescription)
+        reach("In reach", timeout: 20)
         let title = try XCTUnwrap(change["title"] as? String)
         showCard(title)
         XCTAssertTrue(cardHeading(title).waitForExistence(timeout: 10))
@@ -270,38 +299,26 @@ import XCTest
         let taskKey = try XCTUnwrap(caughtUpFeed.last?["taskKey"] as? String)
         XCTAssertTrue(app.staticTexts[taskKey].exists, "Activity shows the actual computer-authored task key")
         picture("activity-caught-up")
-        // INF-944 item 4, the captain's answer: on iOS 26 the iPhone's tabs recede while a list scrolls down,
-        // and the message box follows them into their row, beside the one round button they leave.
-        if #available(iOS 26, *), UIDevice.current.userInterfaceIdiom == .phone {
-            let long = try await home("long-activity")
-            let newest = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", try XCTUnwrap(long["newest"] as? String))).firstMatch
-            XCTAssertTrue(newest.waitForExistence(timeout: 10), app.debugDescription)
-            let composer = app.otherElements["phone-composer"].firstMatch, bar = app.tabBars.firstMatch
-            let above = composer.frame
-            app.scrollViews["activity-list"].swipeUp()
-            let receded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 1"), object: bar.buttons)
-            XCTAssertEqual(XCTWaiter.wait(for: [receded], timeout: 10), .completed, app.debugDescription)
-            let button = bar.buttons.firstMatch
-            let edge = button.frame.maxX
-            let beside = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in composer.frame.minX > edge }, object: nil)
-            XCTAssertEqual(XCTWaiter.wait(for: [beside], timeout: 10), .completed, "The message box moves beside the receded tabs")
-            XCTAssertGreaterThan(composer.frame.maxY, above.maxY, "The message box follows the tabs down")
-            verifyPhoneComposerBounds(app: app)
-            picture("activity-receded")
-            button.tap()
-            let returned = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 3"), object: bar.buttons)
-            XCTAssertEqual(XCTWaiter.wait(for: [returned], timeout: 10), .completed, app.debugDescription)
-            let back = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in composer.frame == above }, object: nil)
-            XCTAssertEqual(XCTWaiter.wait(for: [back], timeout: 10), .completed, "The message box returns above the tabs")
-            verifyPhoneComposerBounds(app: app)
-        }
-        tab("Cards")
+        // INF-1062, the captain: Activity runs to the foot with nothing over it, so after scrolling to its end
+        // the last row is whole in the window and pressable; the message box belongs to Home.
+        XCTAssertFalse(app.textFields["message-box"].exists, "Activity has no message box over it")
+        XCTAssertFalse(app.otherElements["phone-composer"].exists)
+        let long = try await home("long-activity")
+        let newestLine = app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", try XCTUnwrap(long["newest"] as? String))).firstMatch
+        XCTAssertTrue(newestLine.waitForExistence(timeout: 10), app.debugDescription)
+        let oldest = app.staticTexts.matching(NSPredicate(format: "label == %@", try XCTUnwrap(caughtUpFeed.first?["text"] as? String))).firstMatch
+        let list = app.scrollViews["activity-list"]
+        for _ in 0..<12 where !(oldest.exists && oldest.isHittable) { list.swipeUp() }
+        XCTAssertTrue(oldest.isHittable, "The oldest line, the last row, can be reached and pressed: \(app.debugDescription)")
+        XCTAssertLessThanOrEqual(oldest.frame.maxY, app.frame.maxY, "The last row is whole in the window")
+        picture("activity-end")
+        tab("Home")
 
         // A background/foreground return keeps the home's epoch and exercises replay, not a reload.
         try await background()
         let whileAway = try await home("change")
         app.activate()
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         let replayed = try XCTUnwrap(whileAway["title"] as? String)
         showCard(replayed)
         XCTAssertTrue(app.staticTexts[replayed].waitForExistence(timeout: 10))
@@ -341,7 +358,7 @@ import XCTest
         XCTAssertTrue(app.buttons["paste-link"].exists)
         // INF-136 #3: two genuine 401s separated by an unreachable address still prove removal.
         try await submitLink("link-with-unreachable")
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         try await background()
         _ = try await home("link") // Keep the real home listening after its final phone is removed.
         _ = try await home("remove")
@@ -385,7 +402,7 @@ import XCTest
         let hero = try await home("hero-card")
         XCTAssertTrue(cardHeading(try XCTUnwrap(hero["title"] as? String)).waitForExistence(timeout: 10), app.debugDescription)
         app.terminate(); try await launchPhoneApp(app)
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         try await talkAndTasks()
     }
 
@@ -566,14 +583,15 @@ import XCTest
         app.buttons["close-card"].tap()
 
         showCard(chart)
-        // INF-1060: scrolling a long card down recedes the tabs, and the card takes the room the message box gives up.
-        if #available(iOS 26, *), UIDevice.current.userInterfaceIdiom == .phone {
-            let bar = app.tabBars.firstMatch
-            let receded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 1"), object: bar.buttons)
+        // INF-1062: with no bar under it, scrolling a long card leaves the message box where it is, in the column's width.
+        if UIDevice.current.userInterfaceIdiom == .phone {
+            let composer = app.otherElements["phone-composer"].firstMatch
+            let before = composer.frame
             app.scrollViews["card-scroll"].swipeUp()
-            XCTAssertEqual(XCTWaiter.wait(for: [receded], timeout: 10), .completed, app.debugDescription)
+            XCTAssertEqual(composer.frame.minY, before.minY, accuracy: 1, "Scrolling a card does not move the message box")
+            XCTAssertEqual(composer.frame.width, before.width, accuracy: 1, "Scrolling a card does not narrow the message box")
             verifyPhoneComposerBounds(app: app)
-            try await appearances("card-receded")
+            try await appearances("card-scrolled")
         }
         let pictureElement = app.webViews.images["Blue harbour survey"].firstMatch
         XCTAssertTrue(pictureElement.waitForExistence(timeout: 10))
@@ -631,7 +649,7 @@ import XCTest
         reveal(bodyButton); bodyButton.tap()
         picture("card-out-of-reach")
         _ = try await home("online")
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         let afterReconnect = try await home("card-state", method: "GET")
         let writes: ([String: Any]) -> Int = { state in (state["calls"] as? [[String: Any]] ?? []).filter { $0["channel"] as? String == "inf:cards:act" }.count }
         XCTAssertEqual(writes(afterReconnect), writes(atDisconnect), "An offline body action is never replayed")
@@ -661,13 +679,9 @@ import XCTest
         let closed = try await home("card-state", method: "GET")
         XCTAssertNotNil(closed["note"] as? [String: Any])
         XCTAssertEqual(closed["leaks"] as? Int, 0)
-        // INF-1060, the captain: "after cards are dismissed, it doesn't extend back". With no card left to scroll,
-        // the receded tabs and the message box above them come back.
-        if #available(iOS 26, *), UIDevice.current.userInterfaceIdiom == .phone {
-            let back = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 3"), object: app.tabBars.firstMatch.buttons)
-            XCTAssertEqual(XCTWaiter.wait(for: [back], timeout: 10), .completed, app.debugDescription)
-            verifyPhoneComposerBounds(app: app)
-        }
+        // INF-1060, the captain: "after cards are dismissed, it doesn't extend back". With the last card closed,
+        // the message box keeps its place and the column's width at the foot of Home.
+        verifyPhoneComposerBounds(app: app)
         picture("cards-answered-and-closed")
         // INF-1059, the captain's "why images couldn't render inline?": a picture card already in the stack when the
         // phone comes back is drawn from the first cards read while the board read is still out, so its picture is asked
@@ -681,7 +695,7 @@ import XCTest
         XCTAssertTrue(app.webViews.staticTexts[try XCTUnwrap(late["words"] as? String)].waitForExistence(timeout: 10))
         _ = try await home("board-read-held")
         _ = try await home("release-board-read")
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         _ = try await home("late-picture-asked")
         picture("card-picture-after-reaching")
         app.buttons["close-card"].tap()
@@ -734,7 +748,7 @@ import XCTest
         app.terminate()
         app.launchArguments += ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryXXXL"]
         try await launchPhoneApp(app)
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         showCard(try XCTUnwrap(hero["title"] as? String))
         let largeChoice = app.buttons["card-action-keep"]
         reveal(largeChoice)
@@ -852,12 +866,12 @@ import XCTest
         picture("last-turn")
         _ = try await home("appearance-dark")
         app.terminate(); try await launchPhoneApp(app)
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         XCTAssertTrue(app.staticTexts["last-turn-you"].waitForExistence(timeout: 10))
         picture("talk-hero-dark")
         _ = try await home("appearance-light")
         app.terminate(); try await launchPhoneApp(app)
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         XCTAssertTrue(app.staticTexts["last-turn-you"].waitForExistence(timeout: 10))
         picture("talk-hero-light")
 
@@ -916,13 +930,11 @@ import XCTest
         // INF-589 item 6: the notice is a quiet pill under the title on any tab, and a tap opens its card.
         let notice = app.buttons["phone-notice"]
         XCTAssertTrue(notice.waitForExistence(timeout: 10))
-        let cardsTab = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", "Cards")).firstMatch
-        if UIDevice.current.userInterfaceIdiom == .pad {
-            XCTAssertGreaterThanOrEqual(notice.frame.minY, cardsTab.frame.maxY, "The notice sits under the iPad's tabs, not over them")
-        }
+        // INF-1062: the notice sits under the top bar on any tab, never over its strip.
+        let bar = app.navigationBars.firstMatch
+        XCTAssertGreaterThanOrEqual(notice.frame.minY, bar.frame.maxY, "The notice sits under the bar, not over it")
+        XCTAssertTrue(app.buttons["tab-tasks"].isSelected, "The notice shows on Tasks, where the record was")
         picture("foreground-notice")
-        let name = app.staticTexts["home-name"], reach = app.staticTexts["contact"]
-        XCTAssertGreaterThanOrEqual(reach.frame.minY, name.frame.maxY, "Upright, the reach sits under the name")
         XCUIDevice.shared.orientation = .landscapeLeft
         app.activate()
         if UIDevice.current.userInterfaceIdiom == .pad {
@@ -933,24 +945,23 @@ import XCTest
             XCTAssertGreaterThanOrEqual(notice.frame.minX, sidebar.frame.maxX, "The notice belongs to the stage")
             picture("notice-landscape")
         } else {
-            // INF-589 item 17: on its side the card gets the height; the title row is one line and the notice and last turn wait.
+            // INF-589 item 17: on its side the card gets the height; the one-row bar keeps its strip and the notice waits.
             XCTAssertTrue(notice.waitForNonExistence(timeout: 10))
-            XCTAssertFalse(app.staticTexts["last-turn-you"].exists)
-            XCTAssertLessThan(reach.frame.minY, name.frame.maxY, "The reach shares the name's line")
-            XCTAssertGreaterThanOrEqual(reach.frame.minX, name.frame.maxX)
+            XCTAssertTrue(app.buttons["tab-home"].isHittable, "The strip stays in the bar on its side")
             picture("on-its-side")
         }
         XCUIDevice.shared.orientation = .portrait
         app.activate()
         XCTAssertTrue(notice.waitForExistence(timeout: 10), "Upright, the unread notice returns")
-        XCTAssertTrue(app.staticTexts["last-turn-you"].waitForExistence(timeout: 10))
-        XCTAssertGreaterThanOrEqual(reach.frame.minY, name.frame.maxY)
         let noticed = notice.label
         notice.tap()
         XCTAssertTrue(notice.waitForNonExistence(timeout: 10))
         let heading = app.staticTexts["card-title"]
         XCTAssertTrue(heading.waitForExistence(timeout: 10))
         XCTAssertTrue(noticed.hasSuffix(": " + heading.label), "The notice \(noticed) opens its own card, not \(heading.label)")
+        // The card opens on Home, where the last turn and the message box are.
+        XCTAssertTrue(app.buttons["tab-home"].isSelected)
+        XCTAssertTrue(app.staticTexts["last-turn-you"].waitForExistence(timeout: 10))
         input.tap(); input.typeText("Keep this unsent draft")
         _ = try await home("offline")
         XCTAssertTrue(app.staticTexts["Out of reach"].waitForExistence(timeout: 20))
@@ -958,7 +969,7 @@ import XCTest
         verifyPhoneComposerBounds(app: app)
         picture("offline-draft")
         _ = try await home("online")
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         let after = try await home("talk-state", method: "GET")
         XCTAssertEqual((after["writes"] as? [Any])?.count, allWrites.count, "Reconnecting never sends the retained draft")
         XCTAssertEqual(input.value as? String, "Keep this unsent draft")
@@ -971,17 +982,14 @@ import XCTest
         picture("unconfirmed-send")
         XCTAssertGreaterThanOrEqual(unconfirmed.frame.minY, app.frame.minY)
         XCTAssertLessThanOrEqual(unconfirmed.frame.maxY, app.frame.maxY, "The entire unconfirmed-send warning stays on screen")
-        if UIDevice.current.userInterfaceIdiom == .phone {
-            XCTAssertLessThanOrEqual(unconfirmed.frame.maxY, app.tabBars.firstMatch.frame.minY,
-                "The warning stays above the native tabs, not behind them")
-        }
+        XCTAssertTrue(unconfirmed.isHittable, "Nothing sits over the warning at the foot")
         _ = try await home("online")
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         let once = try await home("talk-state", method: "GET")
         XCTAssertEqual((once["writes"] as? [Any])?.count, allWrites.count + 1, "A lost reply never repeats the mutation")
         XCTAssertEqual(input.value as? String, "Keep this unsent draft")
         _ = try await home("read-only")
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         XCTAssertFalse(app.buttons["send-message"].isEnabled, "A version-mismatched view can read but cannot act")
         verifyPhoneComposerBounds(app: app)
         picture("read-only-draft")
@@ -1014,7 +1022,7 @@ import XCTest
 
         // INF-82: Command-Return sends the complete multiline ask once, not merely hides a keyboard.
         app.terminate(); try await launchPhoneApp(app)
-        XCTAssertTrue(app.staticTexts["In reach"].waitForExistence(timeout: 20))
+        reach("In reach", timeout: 20)
         XCTAssertTrue(input.waitForExistence(timeout: 10))
         // A multiline field exposes its empty value differently from placeholderValue.
         // Read that state before typing, then require Send to restore it.

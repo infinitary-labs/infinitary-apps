@@ -230,6 +230,28 @@ jobs:
             ${{ runner.temp }}/phone/part-times.json
           if-no-files-found: ignore
           retention-days: 14
+      # INF-1062: the pictures alone, exported from each result bundle with the names the
+      # journeys gave them, so a crewmate reads the gate's pictures within the app's artifact
+      # limit; phone-results, with every bundle whole, has outgrown it.
+      - name: Keep the pictures
+        if: always()
+        run: |
+          [ -d "$RUNNER_TEMP/phone" ] || exit 0
+          out="$RUNNER_TEMP/phone-pictures"
+          while IFS= read -r bundle; do
+            part="${bundle#"$RUNNER_TEMP/phone/"}"; part="${part%/phone.xcresult}"
+            mkdir -p "$out/$part"
+            xcrun xcresulttool export attachments --path "$bundle" --output-path "$out/$part" \
+              || echo "No pictures exported from $bundle"
+          done < <(find "$RUNNER_TEMP/phone" -type d -name phone.xcresult)
+      - name: Keep the pictures as their own artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phone-pictures
+          path: ${{ runner.temp }}/phone-pictures
+          if-no-files-found: ignore
+          retention-days: 14
       - name: Keep native results and connection readings
         if: always()
         uses: actions/upload-artifact@v4

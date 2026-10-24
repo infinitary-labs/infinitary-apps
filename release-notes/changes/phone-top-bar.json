@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "phone-top-bar",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "On iPhone and iPad the tabs move into a top bar",
+      "body": "On iPhone and iPad, Home, Tasks and Activity now sit in one bar at the top, with Settings at its left and your computer at its right, with a dot showing whether it is in reach. The bottom tabs row is gone, so Tasks and Activity run to the bottom of the screen and the message box stays on Home with your cards. A dot beside Home marks a card you have not read. Tap your computer for its name, address and the Leave and Forget controls, and Settings for this device and Appearance. With a keyboard, Command-1, 2 and 3 switch tabs, Command-Comma opens Settings and Command-I your computer.",
+      "picture": {
+        "dark": "phone-top-bar-dark.webp",
+        "light": "phone-top-bar-light.webp",
+        "alt": "The top of Infinitary on iPhone: a gear at the left, the Home, Tasks and Activity strip in the middle with Home lit, a computer glyph with its reach dot at the right, and the head of a card below."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

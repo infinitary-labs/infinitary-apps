@@ -8,6 +8,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { createServer, type ServerResponse } from "node:http";
@@ -31,6 +32,7 @@ import {
   afterAll,
   afterEach,
   beforeAll,
+  beforeEach,
   describe,
   expect,
   it,
@@ -77,6 +79,7 @@ import { type HelperRun, startHelper } from "../helper/run";
 import { SessionHost } from "../helper/sessionHost";
 import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
+import * as hostEnvironment from "../hostEnv";
 import { CREWMATE_INTEGRATIONS_LINE } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
@@ -2990,6 +2993,23 @@ describe("the integrations command on a computer that runs work", () => {
     entry = await bundleAxiProcess();
   }, 60_000);
 
+  beforeEach(() => {
+    // INF-1038: this computer has only its fixture's tools, not the runner's
+    // task commands. hostEnv also appends installer directories, so replacing
+    // process.env.PATH alone does not isolate it. Keep git for working copies;
+    // withTaskShell still adds the real command path when the task is granted it.
+    const bin = scratchDir("infinitary-placed-host-bin-");
+    symlinkSync("/usr/bin/git", join(bin, "git"));
+    const inheritedHostEnv = hostEnvironment.hostEnv;
+    const environment = vi.spyOn(hostEnvironment, "hostEnv").mockImplementation((extra) => ({
+      ...inheritedHostEnv(extra),
+      PATH: bin,
+    }));
+    stops.push(() => {
+      environment.mockRestore();
+    });
+  });
+
   it("lists, shows and calls this Mac's integrations from the crewmate's shell there, with the sign-in and the ask kept here", async () => {
     const github = await standInGitHub();
     const at = await world(undefined, {
@@ -3099,6 +3119,15 @@ describe("the integrations command on a computer that runs work", () => {
   });
 
   it("gives a crewmate on a computer without the change neither the command nor its line", async () => {
+    // An installed command must not supply a missing command on the older
+    // computer, even on CI runners that have no task commands of their own.
+    const installed = scratchDir("infinitary-installed-task-command-");
+    writeFileSync(
+      join(installed, "infinitary-integrations-axi"),
+      "#!/bin/sh\nprintf 'runner-installed command reached\\n'\nexit 0\n",
+      { mode: 0o700 },
+    );
+    vi.stubEnv("PATH", `${installed}:${process.env.PATH ?? ""}`);
     const github = await standInGitHub();
     const at = await world(undefined, {
       jobs: true,

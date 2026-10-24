@@ -170,6 +170,51 @@ export function layoutProgram(
   gap: number = CONSTELLATION.crewGapPx,
 ): Map<string, NodePlace> {
   const out = Math.atan2(root.y, root.x);
+  const placed = new Map<string, NodePlace>();
+  for (const node of programShape(parts, gap)) {
+    const angle = out + node.turn;
+    placed.set(node.id, {
+      x: root.x + Math.cos(angle) * node.distance,
+      y: root.y + Math.sin(angle) * node.distance,
+      layer: node.layer,
+      angle,
+    });
+  }
+  let fit = 1;
+  for (const place of placed.values()) {
+    for (const [p, r] of [
+      [place.x, root.x],
+      [place.y, root.y],
+    ] as const) {
+      const d = p - r;
+      if (Math.abs(p) <= half || d === 0) continue;
+      fit = Math.min(fit, (Math.sign(d) * half - r) / d);
+    }
+  }
+  if (fit < 1) {
+    fit = Math.max(0, fit);
+    for (const place of placed.values()) {
+      place.x = root.x + (place.x - root.x) * fit;
+      place.y = root.y + (place.y - root.y) * fit;
+    }
+  }
+  return placed;
+}
+
+/** A part's place relative to the root's outward direction: its layer, distance and turn. */
+type ShapeNode = { id: string; layer: number; distance: number; turn: number };
+
+/**
+ * The graph's shape, which moves only when its parts or gap do (the last
+ * gap is kept): a program
+ * draws every frame while its root rides the orbit, so the layering is kept
+ * per parts list and only the coordinates are placed again (INF-1073).
+ */
+const shapes = new WeakMap<readonly ProgramPart[], { gap: number; nodes: readonly ShapeNode[] }>();
+
+function programShape(parts: readonly ProgramPart[], gap: number): readonly ShapeNode[] {
+  const kept = shapes.get(parts);
+  if (kept?.gap === gap) return kept.nodes;
   const byId = new Map(parts.map((part) => [part.id, part]));
   const layer = new Map<string, number>();
   const layerOf = (id: string, seen: Set<string>): number => {
@@ -193,7 +238,8 @@ export function layoutProgram(
   }
   const least = (CONSTELLATION.spreadDeg * Math.PI) / 180;
   const widest = (CONSTELLATION.widestSpreadDeg * Math.PI) / 180;
-  const placed = new Map<string, NodePlace>();
+  const turns = new Map<string, number>();
+  const nodes: ShapeNode[] = [];
   let distance = 0;
   for (let l = 1; l < layers.length; l++) {
     distance += CONSTELLATION.branchPx * CONSTELLATION.branchDecay ** (l - 1);
@@ -204,38 +250,17 @@ export function layoutProgram(
     const spread =
       steps > 0 ? Math.max(least, steps * 2 * Math.asin(Math.min(1, gap / (2 * distance)))) : 0;
     const keyed = members.map((part, order) => {
-      const angles = part.parents.map((id) => placed.get(id)?.angle ?? out);
-      const key = angles.length ? angles.reduce((a, b) => a + b, 0) / angles.length : out;
+      const angles = part.parents.map((id) => turns.get(id) ?? 0);
+      const key = angles.length ? angles.reduce((a, b) => a + b, 0) / angles.length : 0;
       return { part, key, order };
     });
     keyed.sort((a, b) => a.key - b.key || a.order - b.order);
     keyed.forEach(({ part }, j) => {
-      const angle = steps > 0 ? out + spread * (j / steps - 0.5) : out;
-      placed.set(part.id, {
-        x: root.x + Math.cos(angle) * distance,
-        y: root.y + Math.sin(angle) * distance,
-        layer: l,
-        angle,
-      });
+      const turn = steps > 0 ? spread * (j / steps - 0.5) : 0;
+      turns.set(part.id, turn);
+      nodes.push({ id: part.id, layer: l, distance, turn });
     });
   }
-  let fit = 1;
-  for (const place of placed.values()) {
-    for (const [p, r] of [
-      [place.x, root.x],
-      [place.y, root.y],
-    ] as const) {
-      const d = p - r;
-      if (Math.abs(p) <= half || d === 0) continue;
-      fit = Math.min(fit, (Math.sign(d) * half - r) / d);
-    }
-  }
-  if (fit < 1) {
-    fit = Math.max(0, fit);
-    for (const place of placed.values()) {
-      place.x = root.x + (place.x - root.x) * fit;
-      place.y = root.y + (place.y - root.y) * fit;
-    }
-  }
-  return placed;
+  shapes.set(parts, { gap, nodes });
+  return nodes;
 }

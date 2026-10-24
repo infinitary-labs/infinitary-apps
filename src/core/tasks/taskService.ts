@@ -220,12 +220,18 @@ export type TaskChange = {
   /** Ids of rows the mutation deleted; they are not in `taskIds`. */
   removed: string[];
   reset: boolean;
+  /**
+   * Only the presentation pass republishing rows (`refreshPresentation`):
+   * it changes nothing a status reads, so it asks for no further pass.
+   */
+  republish?: true;
 };
 
 export type TaskChangeListener = (change: TaskChange) => void;
 
 type PendingChange = {
   presentation: boolean;
+  republish: boolean;
   taskIds: Set<string>;
   events: TaskEvent[];
   removed: Set<string>;
@@ -235,6 +241,7 @@ type PendingChange = {
 function freshPending(): PendingChange {
   return {
     presentation: false,
+    republish: false,
     taskIds: new Set(),
     events: [],
     removed: new Set(),
@@ -812,6 +819,8 @@ export class TaskService {
   refreshPresentation(taskIds: readonly string[]): void {
     this.write(() => {
       for (const id of taskIds) if (this.store.get(id)) this.touch(id);
+      // Its own commit alone is a republish; inside another write it joins that one.
+      if (this.depth === 1) this.pending.republish = true;
     })();
   }
 
@@ -4653,6 +4662,7 @@ export class TaskService {
           events: pending.events,
           removed: [...pending.removed],
           reset: pending.reset,
+          ...(pending.republish ? { republish: true as const } : {}),
         };
         for (const listener of this.listeners) {
           try {

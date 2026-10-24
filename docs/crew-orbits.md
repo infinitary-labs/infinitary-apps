@@ -177,6 +177,7 @@ Every copy is the same task: pointing at either opens its summary beside it, and
 Running crewmates keep their full size and stay a glyph's width (25 px on screen) apart: a crowded layer widens its fan, up to 180 degrees, and past that moves outward.
 A remote computer's group draws at half the scene's size with its glyphs at nearly full size, so its layout asks for the same room on screen.
 When a node would leave the stage the whole graph scales about its root.
+The layers, distances and turns depend only on the parts and the gap, so they are kept per parts list, and each frame places only the moving coordinates (INF-1073).
 A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its node on the springs a waiting crewmate's circle uses, with its slot reserved, and any wait arrow between two parts gives way to their branch.
 A running part whose crewmate has not arrived yet draws no branch.
 A seated part never circles a blocker, but its wait arrow to a task outside its parent stays, so the arrows into a busy blocker count every live waiter.
@@ -273,6 +274,9 @@ Interrupted turns retain the danger dot unless continuing work is known.
 
 The host refreshes sequenced presentation changes after job membership, inbox, card/thread, account cut-off and task events, with reconciliation on the existing ticker.
 Only active work has a live posture, so its facts are gathered for active rows alone, and the refresh walks only live rows: a closed row's posture changes only with the write that closed it (`deriveWorkPosture`, `TaskProtocol.refreshPresentation`).
+One pass reads each live row's posture once, and the crew counts it announces reuse those readings (`WorkPresentation`, INF-1073).
+The pass's own effects ask for no further pass: its republish write changes no posture (`TaskChange.republish`), and its own counts event is not a crew change.
+Any other write or crew change, including one made while the pass runs, asks for the next pass; `workPresentation.test.ts` counts the passes and readings per change.
 Boot derives the same answer; persisted job rows are history, not live jobs.
 Claude's complete background list replaces membership on each signal.
 Attachment/transport loss invalidates the previous membership.

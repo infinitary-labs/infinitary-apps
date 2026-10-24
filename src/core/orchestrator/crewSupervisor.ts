@@ -348,6 +348,7 @@ import {
   TaskService,
 } from "../tasks/taskService";
 import { provisionTaskTemp } from "../tasks/taskTemp";
+import { crewTally } from "../tasks/workPresentation";
 import { compareSemver } from "../update/semver";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { gitFailure } from "../workspace/git";
@@ -12175,15 +12176,10 @@ export class CrewSupervisor {
   }
 
   crewCounts(): CrewCounts {
-    let working = 0;
-    let idle = 0;
-    for (const record of this.options.tasks.listActive()) {
-      if (record.kind !== "work") continue;
-      if (this.workPosture(record).state === "active") working += 1;
-      else idle += 1;
-    }
-    // Counted, not read: every crew event asks, and planned work only counts.
-    return { working, idle, queued: this.options.tasks.count("open", "work") };
+    const tally = crewTally();
+    for (const record of this.options.tasks.listActive())
+      tally.see(record, () => this.workPosture(record));
+    return tally.counts(this.options.tasks);
   }
 
   private broadcastCrewCounts(): void {

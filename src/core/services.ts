@@ -230,6 +230,7 @@ import { CrewLiveText, CrewTranscripts } from "./tasks/crewTranscript";
 import { TaskProtocol } from "./tasks/taskProtocol";
 import { TaskService } from "./tasks/taskService";
 import { TaskTempFiles } from "./tasks/taskTemp";
+import { WorkPresentation } from "./tasks/workPresentation";
 import { createAppTelemetry } from "./telemetry";
 import { readLinuxInstallation } from "./update/linuxInstall";
 import { createInstalledUpdateChecker, type UpdateChecker } from "./update/updateChecker";
@@ -778,6 +779,7 @@ export async function createServices(
   let runsOnOf: (record: TaskRecord) => TaskRunsOn | undefined = () => undefined;
   let placeOf: (record: TaskRecord) => TaskPlace | undefined = () => undefined;
   let scheduleWorkPresentation = () => {};
+  let hearPresentation: (event: FmEvent) => void = () => {};
   let readWorkPosture: ((record: TaskRecord) => WorkPosture) | undefined;
   // The run whose line is Activity's newest, with that line's row
   // (`feedRunOf`): the captain's settled run on one setting
@@ -794,8 +796,9 @@ export async function createServices(
       tasks.note(event.taskId, event.text, { news: true, feed: true, data: { feedLine: true } });
       return;
     }
-    // Structural/activity changes only; streaming deltas must not scan the task table.
-    if (event.type === "task_changed" || event.type === "crew_counts") scheduleWorkPresentation();
+    // Crew changes only; streaming deltas must not scan the task table, and
+    // a task write asks through its own change (`WorkPresentation`).
+    hearPresentation(event);
     const line = feedLineFrom(event);
     const run = feedRunOf(event);
     if (run && runLine?.id === run.id) {
@@ -2195,17 +2198,13 @@ export async function createServices(
   closingResolutionOf = (taskId) => supervisor.newestCardResolution(taskId);
   cardStack = supervisor;
   readWorkPosture = (record) => supervisor.workPosture(record);
-  let presentationQueued = false;
-  scheduleWorkPresentation = () => {
-    if (presentationQueued) return;
-    presentationQueued = true;
-    queueMicrotask(() => {
-      presentationQueued = false;
-      if (taskProtocol.refreshPresentation()) {
-        broadcastEvent({ type: "crew_counts", ...supervisor.crewCounts() });
-      }
-    });
-  };
+  const workPresentation = new WorkPresentation({
+    tasks,
+    protocol: taskProtocol,
+    broadcastEvent: (event) => broadcastEvent(event),
+  });
+  hearPresentation = (event) => workPresentation.heard(event);
+  scheduleWorkPresentation = () => workPresentation.schedule();
   inbox.onChange(scheduleWorkPresentation);
   // Holds may change without a task write. Reconcile on the existing host clock too.
   ticker.register("work-presentation", TICK_PERIOD_MS, scheduleWorkPresentation);

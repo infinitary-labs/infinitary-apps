@@ -17,6 +17,7 @@ export const RENDERER_SUITES = [
   "still-character.spec.ts",
   "subscriptions-instruments.spec.ts",
   "task-record-height.spec.ts",
+  "typing-stage.spec.ts",
   "ui-kit-panel.spec.ts",
 ].map((file) => `**/${file}`);
 

@@ -2290,6 +2290,9 @@ function crewSummaryRoom(): SummaryRoom {
   };
 }
 
+/** The keystroke count, read by the character's own frame: typing never renders the stage. */
+const readKick = () => useShellStore.getState().kick;
+
 /**
  * Character, window-centred, painted behind the rails and cards, with its
  * crew in orbit around it; the mounted frame fades to hidden under cards.
@@ -2316,7 +2319,6 @@ export const HomeMate = memo(function HomeMate() {
   const phase = useShellStore((s) => s.phase);
   // Only whether there is a draft: typing never re-renders the stage.
   const drafting = useShellStore((s) => s.inputText.length > 0);
-  const kick = useShellStore((s) => s.kick);
   const submitted = useShellStore((s) => s.submitted);
   const firstmateBusy = useShellStore((s) => s.firstmateBusy);
   const showCards = useShellStore(
@@ -2388,7 +2390,7 @@ export const HomeMate = memo(function HomeMate() {
             listening={listening}
             busy={firstmateBusy}
             size={300}
-            kick={kick}
+            kick={readKick}
             submitSignal={submitted}
             theme={theme}
           />

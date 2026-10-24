@@ -200,6 +200,29 @@ describe("layoutProgram", () => {
     ).toBeGreaterThanOrEqual(CONSTELLATION.crewGapPx * 2 - 1e-9);
   });
 
+  // INF-1073: the root rides the orbit, so a program lays out every frame;
+  // the shape is kept per parts list, and must place exactly as a fresh one.
+  it("places a kept shape at each new root and gap as a fresh layout does", () => {
+    const { tasks, links } = reviewBoard();
+    const [program] = programsOf(tasks, links);
+    // The review program, and twelve verifiers running at once off its root.
+    const fan: ProgramPart[] = Array.from({ length: 12 }, (_, i) => ({
+      id: `verify-${i}`,
+      parents: [],
+      state: "live",
+    }));
+    for (const parts of [program?.parts ?? [], fan])
+      for (const [at, gap] of [
+        [root, CONSTELLATION.crewGapPx],
+        [{ x: 120, y: -90 }, CONSTELLATION.crewGapPx],
+        [{ x: -150, y: 40 }, CONSTELLATION.crewGapPx * 2],
+        [root, CONSTELLATION.crewGapPx],
+      ] as const)
+        expect(layoutProgram(parts, at, 1000, gap)).toEqual(
+          layoutProgram(structuredClone(parts), at, 1000, gap),
+        );
+  });
+
   it("scales the whole graph about its root when a node would leave the stage", () => {
     const { tasks, links } = reviewBoard();
     const [program] = programsOf(tasks, links);

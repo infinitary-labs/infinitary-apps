@@ -231,18 +231,20 @@ export class TaskProtocol {
    * changes (a computer going out of reach writes no record), and answer whether any
    * moved. Only live rows are read: a long record is mostly closed rows, and a row's
    * posture moves on closing only with the write that closed it, which publishes it -
-   * so a row leaving the live set is a move, not a write.
+   * so a row leaving the live set is a move, not a write. `read` sees each
+   * live row's posture as this pass read it, so a count can share the pass.
    */
-  refreshPresentation(): boolean {
+  refreshPresentation(
+    read?: (record: TaskRecord, posture: WorkPosture | undefined) => void,
+  ): boolean {
     if (this.disposed) return false;
     const changed: string[] = [];
     const live = new Set<string>();
     for (const record of this.options.tasks.listLive()) {
       live.add(record.id);
-      const posture = JSON.stringify([
-        this.options.workPosture?.(record),
-        this.options.place?.(record),
-      ]);
+      const workPosture = this.options.workPosture?.(record);
+      read?.(record, workPosture);
+      const posture = JSON.stringify([workPosture, this.options.place?.(record)]);
       if (this.postures.get(record.id) === posture) continue;
       this.postures.set(record.id, posture);
       changed.push(record.id);

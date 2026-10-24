@@ -152,8 +152,12 @@ export type FirstmateProps = {
   size?: number;
   /** 0-1 live voice level; scales the structure and spin while listening. */
   level?: number;
-  /** Monotonic counter; each increment kicks the listening spin. */
-  kick?: number;
+  /**
+   * Monotonic counter; each increment kicks the listening spin. A reader is
+   * called on each drawing frame instead, so a keystroke reaches the spin
+   * without rendering the character again (INF-1073).
+   */
+  kick?: number | (() => number);
   /** Monotonic counter; each increment is a submitted turn (plays intake). */
   submitSignal?: number;
   /** The eyes follow the pointer anywhere in the window (default on); an object tunes it. */
@@ -1487,6 +1491,8 @@ export function Firstmate({
   levelRef.current = level;
   const kickRef = useRef(kick);
   kickRef.current = kick;
+  const readKick = () =>
+    typeof kickRef.current === "function" ? kickRef.current() : kickRef.current;
   const submitRef = useRef(submitSignal);
   submitRef.current = submitSignal;
   const simRef = useRef<Sim | null>(null);
@@ -1571,7 +1577,7 @@ export function Firstmate({
     const machine = machineRef.current;
     if (fitBacking(canvas, size)) pictureRef.current = false;
     if (!simRef.current || simRef.current.size !== size) {
-      simRef.current = createSim(size, canvas, kickRef.current);
+      simRef.current = createSim(size, canvas, readKick());
     }
     if (submitRef.current !== lastSubmit.current) {
       lastSubmit.current = submitRef.current;
@@ -1617,7 +1623,7 @@ export function Firstmate({
       real,
       snap,
       level: readLiveVoiceLevel(levelRef.current),
-      kick: kickRef.current,
+      kick: readKick(),
     };
     drawnRef.current = drawn;
     // The state name stays current while faded: it is the signal, not the paint.

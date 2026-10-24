@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "typing-beside-busy-crew",
+      "kind": "fix",
+      "area": "message-box",
+      "title": "Typing keeps up while your crew is busy",
+      "body": "Keys you type in the message box show up sooner while crewmates start, answer and move around the character. Each key no longer redraws the whole scene behind the message box, and Infinitary does less repeated work each time a crewmate's state changes.",
+      "noPicture": "Nothing looks different: the change is how quickly each key appears, which a still picture cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

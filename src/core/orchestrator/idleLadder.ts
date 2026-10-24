@@ -375,15 +375,14 @@ export class IdleLadder {
   /**
    * The work a task waits on that only a start begins (FI3-671), from both
    * typed waits: a task its standing baseline wait names, and a blocker
-   * holding its close. A dropped blocker holds no close, so it is no wait;
-   * a dropped baseline dependency is one nobody will start.
+   * holding its close. Closed work is not waiting to start, including a
+   * dropped baseline dependency; its close already resumes the waiter.
    */
   unstartedWaits(record: TaskRecord): TaskRecord[] {
     const tasks = this.host.tasks;
     return uniqueTasks(
       this.dependencyWaits(record).filter(
-        ({ task, kind }) =>
-          (kind === "baseline" || TaskService.blockerHoldsClose(task)) && tasks.awaitsStart(task),
+        ({ task }) => TaskService.blockerHoldsClose(task) && tasks.awaitsStart(task),
       ),
     );
   }

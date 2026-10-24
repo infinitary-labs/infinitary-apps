@@ -125,6 +125,7 @@ Ids and keys name the same task, and duplicate references count once.
 A cycle refuses the whole update, so its field edits and the new link do not remain.
 An already linked prerequisite is left as it is, including one whose task has closed.
 `link_tasks` remains the way to remove a wait.
+Removing `blocks` also clears standing baseline diagnosis references from the waiting task to that owner, even when no graph edge exists; the check failure and diagnosis evidence remain recorded.
 On-request creation and updates still need no declaration, so the first mate can file related work safely, add its links, read back the graph, then start ready work within the captain's authorization.
 This is a generic input requirement, not a rule over plans, titles, parents or sequence labels; automatic scheduling and explicit independent work otherwise behave as before.
 `spawn_crewmate` gained `parent`, `blocked_by`, and `priority`; `after_task` stays as an alias of `blocked_by`.

@@ -10829,7 +10829,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     expect(reportWakes(ops)).toHaveLength(1);
   });
 
-  it("ends a baseline wait by itself at a new head, and says when its work was dropped", async () => {
+  it("ends a baseline wait by itself at a new head, and never calls dropped work unstarted", async () => {
     const crewmate = fakeCrewmate();
     const clientSide: FakeCrewmate = {
       ...crewmate,
@@ -10864,8 +10864,10 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     );
     tasks.close(owner.id, { status: "dropped", reason: "cancelled", actor: "host" });
     await report(clientSide, taskId, "Waiting on the main-line fix.");
-    expect(sorts.at(-1)?.rule).toBe("waits-unstarted");
-    expect(reportWakes(ops).at(-1)).toContain(`It waits on ${owner.key} "Fix main" (dropped)`);
+    expect(sorts.at(-1)?.rule).toBe("cannot-tell");
+    expect(reportWakes(ops).at(-1)).toBe(
+      `[fm-op] crewmate 1 reported on task ${taskId} "Job": Waiting on the main-line fix.`,
+    );
 
     // The crewmate pushed again: the diagnosis was about another version.
     tasks.recordDelivery(taskId, { headSha: "head-2", ci: "pending" });
@@ -12357,12 +12359,98 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         // The wait's end opened a new episode: the turn it starts is the
         // task's own, and its report is sorted like any other.
         await endTurn(crewmate, taskId, "Carried on from the wait.");
-        expect(sorts.at(-1)?.rule).toBe(
-          wait === "baseline" && closed === "dropped" ? "waits-unstarted" : "stopped",
-        );
+        expect(sorts.at(-1)?.rule).toBe("stopped");
         await supervisor.sweepGates(hostNow);
         await tick();
         expect(resumes(tasks, taskId)).toHaveLength(1);
+      },
+    );
+
+    // INF-1137 friction 1: a dropped baseline owner must not mask the
+    // other work this crewmate is legitimately waiting on.
+    it("ignores a dropped baseline wait beside live work through every idle rung", async () => {
+      const { supervisor, crewmate, ops, tasks, taskId, owner, at, sorts } =
+        await waitingOn("baseline");
+      const live = seedTask(tasks, {
+        id: "live-owner",
+        title: "Fix the remaining failure",
+        status: "running",
+      });
+      const delivery = tasks.get(taskId)?.delivery;
+      tasks.recordDelivery(taskId, {
+        ...observeCheckRepair(
+          delivery,
+          "head-1",
+          [
+            { name: "linux-checks", state: "failure" },
+            { name: "integration", state: "failure" },
+          ],
+          hostNow,
+        ),
+      });
+      expect(
+        declareCheckAction(
+          tasks,
+          taskId,
+          {
+            diagnosis: {
+              headSha: "head-1",
+              check: "integration",
+              classification: "baseline-blocked",
+              evidence: "The integration check also fails on untouched main",
+              dependencyTask: live.id,
+            },
+          },
+          hostNow,
+        ).text,
+      ).toContain("Diagnosis recorded");
+      tasks.close(owner.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+      await supervisor.sweepGates(hostNow);
+      await tick();
+      await endTurn(crewmate, taskId, "Still waiting on the remaining fix.");
+      expect(sorts.at(-1)?.rule).toBe("still-moving");
+      const prompts = crewmate.promptCalls.length;
+      const wakes = ops.length;
+      for (const step of [10, 20, 50, 80, 600]) await at(minutes(step));
+      expect(crewmate.promptCalls).toHaveLength(prompts);
+      expect(ops).toHaveLength(wakes);
+      expect(resumes(tasks, taskId)).toHaveLength(1);
+      expect(supervisor.crewStatus(taskId)[0]?.stalled).toBeUndefined();
+      const before = tasks.get(taskId)?.delivery?.ciRepair;
+      expect(supervisor.unlinkTasks(owner.key, tasks.get(taskId)?.key ?? "", "blocks")).toMatch(
+        /^Removed:/,
+      );
+      const after = tasks.get(taskId)?.delivery?.ciRepair;
+      expect(after?.diagnoses.find((d) => d.check === "integration")).toEqual(
+        before?.diagnoses.find((d) => d.check === "integration"),
+      );
+      expect(
+        after?.diagnoses.find((d) => d.check === "linux-checks")?.dependencyTask,
+      ).toBeUndefined();
+      expect(after?.failures).toEqual(before?.failures);
+    });
+
+    it.each([false, true])(
+      "removes a baseline wait by task keys with graph edge %s without erasing check evidence",
+      async (graph) => {
+        const { supervisor, tasks, taskId, owner } = await waitingOn("baseline");
+        if (graph) tasks.link(owner.id, taskId, "blocks", "firstmate", true);
+        const before = tasks.get(taskId)?.delivery;
+        const key = tasks.get(taskId)?.key;
+        if (!key) throw new Error("missing waiting task");
+        tasks.close(owner.id, { status: "dropped", reason: "cancelled", actor: "captain" });
+        expect(supervisor.unlinkTasks(owner.key, key, "related")).toMatch(/^No such link/);
+        expect(supervisor.unlinkTasks(owner.key, key, "blocks")).toMatch(/^Removed:/);
+        const after = tasks.get(taskId)?.delivery;
+        expect(tasks.linksTo(taskId).filter((link) => link.type === "blocks")).toEqual([]);
+        expect(after?.ci).toBe("red");
+        expect(after?.ciRepair?.failures).toEqual(before?.ciRepair?.failures);
+        const { dependencyTask: _dependency, ...diagnosis } = before?.ciRepair?.diagnoses[0] ?? {};
+        expect(after?.ciRepair?.diagnoses).toEqual([diagnosis]);
+        expect(tasks.timeline(taskId).filter((event) => event.kind === "unlinked")).toMatchObject([
+          { actor: "firstmate", data: { fromId: owner.id, type: "blocks" } },
+        ]);
+        expect(supervisor.unlinkTasks(owner.key, key, "blocks")).toMatch(/^No such link/);
       },
     );
 

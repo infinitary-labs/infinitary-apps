@@ -100,8 +100,9 @@ Two typed waits stand on a task.
 A `baseline-blocked` diagnosis at its change's current head, while the checks are not green, names its `dependencyTask` (`standingDependencyWaits` in `src/core/tasks/dependencyWaits.ts`: derived, never stored, so a new head or a passing reading ends the wait by itself).
 A marked `blocks` edge from a task that has not closed holds its close (`blockersHoldingClose`: a `blocks_me` filing, the host's review, or a required action's prerequisite).
 A link the first mate records holds the start only.
-When the named task is open and the ready sweep will not start it - on request, held, or waiting on blockers of its own - or a named dependency was dropped (`TaskService.awaitsStart`), only the first mate or the captain can begin that work, so a report from the waiting task wakes the first mate on any backend, naming that work - which a moving witness would otherwise hold quiet.
-The wake names each such task and whether it was dropped (`waits` on the report's facts, `IdleLadder.unstartedWaits`); the first mate's prompt says what to do with it: start it, steer the waiting crewmate to fold the fix into its own branch when that is smaller, or one decision card.
+When the named task is open and the ready sweep will not start it - on request, held, or waiting on blockers of its own (`TaskService.awaitsStart`) - only the first mate or the captain can begin that work, so a report from the waiting task wakes the first mate on any backend, naming that work - which a moving witness would otherwise hold quiet.
+Closed dependencies, including dropped baseline owners, are not unstarted work and do not mask a wait on other work still underway.
+The wake names each such task (`waits` on the report's facts, `IdleLadder.unstartedWaits`); the first mate's prompt says what to do with it: start it, steer the waiting crewmate to fold the fix into its own branch when that is smaller, or one decision card.
 Host delivery machinery (a review) never counts.
 The row sits after the filings, which wake anyway, and before row 3: a crewmate still moving does not start the work it waits on.
 The idle ladder's turn ignores this witness.
@@ -113,9 +114,11 @@ A wait on unstarted work beside it keeps the task out of this witness, so row 2a
 The task reads as waiting: its posture is `dependency` ("Blocked by another task"), the record names the work (`blockedBy` includes a live task a standing baseline wait names), and its context-block row says `waits on KEY`.
 When that work closes, done or dropped, the ready sweep's active branch ends the wait as it ends a timed one: one typed steer on the task's own lane (`dependency-closed`, actor supervisor), named by that work so the inbox queues it once even across a restart, and a new idle episode.
 It goes only for work that closed after the wait began (the link's `createdAt`, the diagnosis's host-stamped `at`) and after the task started - so a continuation its origin's close started hears nothing - and while the task has not gone idle since the close.
-The words say what the close means: a link's done or dropped work no longer holds the task, so it carries on; a baseline wait's done work means bring the change up to date, and its dropped work means lead the report with it, which row 2a turns into the first mate's wake.
+The words say what the close means: a link's done or dropped work no longer holds the task, so it carries on; a baseline wait's done work means bring the change up to date, and its dropped work means lead the report with it, which the ordinary report sort routes without treating the dropped task as unstarted work.
 A baseline wait also resumes before that close, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake"): one `main-check-passed` steer, once per check and commit, and the close still resumes it if that run has not passed.
 A record cancelled from its record or stall card runs the sweep at once, as every close does.
+Removing a `blocks` wait through `link_tasks remove` clears both its graph edge and any standing baseline diagnosis reference to that owner, preserving the failed readings and diagnosis evidence.
+Other dependency owners and historical diagnoses whose waits no longer stand remain unchanged.
 
 **"Still moving" is decidable because only the host starts a turn.**
 `CrewSupervisor.runTurn` is the one caller of `transport.prompt`, and what feeds it is the task's durable inbox lane.

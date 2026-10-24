@@ -124,6 +124,7 @@ import {
   TaskStore,
 } from "../storage/taskStore";
 import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
+import { baselineStands } from "./dependencyWaits";
 import { holdingWaits, holdKindOf } from "./holdingWaits";
 import { decideValidation, recordValidation } from "./liveValidation";
 import type { TaskExportBundle } from "./taskExport";
@@ -3990,7 +3991,28 @@ export class TaskService {
   unlink(fromId: string, toId: string, type: TaskLinkType, actor: TaskEventActor): boolean {
     const at = this.now();
     const run = this.write(() => {
-      const removed = this.links.delete(fromId, toId, type);
+      const edgeRemoved = this.links.delete(fromId, toId, type);
+      // INF-1137: baseline waits live on the delivery record, not in links.
+      // Remove the standing reference too, keeping the diagnosis and failed
+      // readings intact. One removal clears both representations of a wait.
+      const record = this.mustGet(toId);
+      const repair = record.delivery?.ciRepair;
+      let baselineRemoved = false;
+      if (type === "blocks" && repair) {
+        const diagnoses = repair.diagnoses.map((diagnosis) => {
+          if (
+            diagnosis.classification !== "baseline-blocked" ||
+            diagnosis.dependencyTask !== fromId ||
+            !baselineStands(record.delivery, diagnosis)
+          )
+            return diagnosis;
+          baselineRemoved = true;
+          const { dependencyTask: _dependency, ...kept } = diagnosis;
+          return kept;
+        });
+        if (baselineRemoved) this.recordDelivery(toId, { ciRepair: { ...repair, diagnoses } });
+      }
+      const removed = edgeRemoved || baselineRemoved;
       if (removed) {
         this.touch(fromId);
         const from = this.store.get(fromId);

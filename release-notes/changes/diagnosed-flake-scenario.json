@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "diagnosed-flake-scenario",
+      "reason": "Internal: a unit test's diagnosis now says its failed check is outside the change, as the changed-test flake rule requires; the app is unchanged."
+    }
+  ]
+}

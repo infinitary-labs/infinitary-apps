@@ -4666,6 +4666,8 @@ describe("CrewSupervisor", () => {
             check: "linux-checks",
             classification: "suspected-flake",
             evidence: "The job timed out loading a window; it passed alone on main and on this branch.",
+            // INF-840: a suspected flake is a test the change does not touch.
+            changedTest: false,
           },
         });
         await repairTurn(h, async () => {

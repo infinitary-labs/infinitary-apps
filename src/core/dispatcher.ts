@@ -9,6 +9,7 @@ import {
   type ActionActor,
   type ActionName,
   actionRefusal,
+  integrationSignInValue,
 } from "@shared/actions";
 import { AUTOMATION_UNREADABLE, type AutomationRule } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
@@ -1616,6 +1617,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           from: prior?.speed ?? "standard",
           to: args[1],
         });
+      } else if (name === "integration-add") {
+        trail(name, integrationSignInValue(channel, args), actor);
       } else if (name === "forge-sign-out") {
         trail(name, { host: args[0] }, actor);
       } else if (name === "direction") {

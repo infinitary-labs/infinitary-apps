@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "integration-sign-in-activity-line",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Connecting an integration names it in Activity",
+      "body": "When you connect Google, GitHub or another integration, Activity and the task record now say which one you signed in to, such as \"Google sign-in started\", instead of \"undefined sign-in started\".",
+      "noPicture": "Only the words of one Activity line change; the panel and its controls look the same.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

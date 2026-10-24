@@ -623,6 +623,36 @@ describe("the core, driven with no Electron in the process", () => {
     }
   });
 
+  // SCR-523 (INF-1137 friction 10): the captain connected Google and the
+  // operation read "undefined sign-in started"; a click names what it signed in to.
+  it("names the integration a captain's sign-in click started", async () => {
+    const before = new Set(core.services.tasks.list().map((task) => task.id));
+    const titles = () =>
+      core.services.tasks
+        .list()
+        .filter((task) => task.kind === "operation" && !before.has(task.id))
+        .map((task) => task.title)
+        .sort();
+    const google = vi
+      .spyOn(core.services.integrations, "signIn")
+      .mockResolvedValue({ id: "google-1", view: core.services.integrations.view() });
+    const server = vi
+      .spyOn(core.services.forges, "signInWithKey")
+      .mockResolvedValue({ ok: false, problem: "address", host: null });
+    try {
+      await core.dispatch("inf:integrations:sign-in", ["google", { noticeAccepted: true }]);
+      await core.dispatch("inf:forges:sign-in-key", [
+        { kind: "github", address: "https://code.example.com/team/app", key: "disposable-key" },
+      ]);
+      expect(titles()).toEqual(
+        ["Google sign-in started", "GitHub Enterprise sign-in started for code.example.com"].sort(),
+      );
+    } finally {
+      google.mockRestore();
+      server.mockRestore();
+    }
+  });
+
   it("shares catalog changes, refusals and one trail per actor through the real core", async () => {
     const events: FmEvent[] = [];
     const detach = core.events.subscribe((channel, payload) => {

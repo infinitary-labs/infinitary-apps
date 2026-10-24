@@ -12,10 +12,12 @@ import {
   deviceWords,
   userDisplayName,
 } from "./devices";
+import { hostOfAddress, kindByName } from "./forge";
 import { FORGE_HOST_NAME, type ForgesView } from "./forges";
 import {
   INTEGRATION_KIND_NAMES,
   INTEGRATIONS_SIGN_IN_HOST,
+  type IntegrationKind,
   type IntegrationsView,
   integrationActionNameSchema,
   integrationIdSchema,
@@ -148,6 +150,34 @@ export type HandoverOffer = {
 };
 
 /** An integration as the catalog reads it back: its settings, without its actions' words. */
+/**
+ * What the captain's own sign-in click started, read from the channel it
+ * called (SCR-523: a click carries no catalog value, so the line once read
+ * "undefined sign-in started"). A forge's own sign-in names its server kind
+ * (`github` for GitHub Enterprise) and the address the captain typed.
+ */
+export function integrationSignInValue(
+  channel: CoreInvokeChannel,
+  args: readonly unknown[],
+): { kind?: IntegrationKind; host?: string } {
+  if (channel === "inf:integrations:sign-in") return { kind: args[0] as IntegrationKind };
+  if (channel === "inf:forges:sign-in") {
+    const host = String(args[0]);
+    if (host === INTEGRATIONS_SIGN_IN_HOST) return { kind: "github" };
+    const kind = kindByName(host);
+    return kind === "gitlab"
+      ? { kind, host }
+      : kind === "github"
+        ? { kind: "github-enterprise", host }
+        : { host };
+  }
+  const input = args[0] as { kind: string; address: string };
+  const host = hostOfAddress(input.address) ?? undefined;
+  const kind =
+    input.kind === "github" ? "github-enterprise" : input.kind === "gitlab" ? "gitlab" : undefined;
+  return { ...(kind ? { kind } : {}), ...(host ? { host } : {}) };
+}
+
 function integrationsBrief(view: IntegrationsView): Record<string, unknown>[] {
   return view.integrations.map((row) => ({
     id: row.id,
@@ -887,8 +917,12 @@ const actionLines = {
     },
     toRequest: () => [],
     readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
-    done: (v) =>
-      `${INTEGRATION_KIND_NAMES[v.kind as keyof typeof INTEGRATION_KIND_NAMES]} sign-in started`,
+    done: (v) => {
+      const name = v.kind ? INTEGRATION_KIND_NAMES[v.kind as IntegrationKind] : null;
+      const host = typeof v.host === "string" ? v.host : null;
+      if (name && host) return `${name} sign-in started for ${host}`;
+      return `${name ?? host ?? "Integration"} sign-in started`;
+    },
   },
   "integration-add-mcp": {
     area: "integrations",

@@ -21,7 +21,7 @@ import {
   type MockProviderServer,
   startMockProvider,
 } from "./mockProvider";
-import { addFromSetupCard, projectRow } from "./projects";
+import { addedProjects, addFromSetupCard, projectRow } from "./projects";
 import { promptInput } from "./prompt";
 import { assertReadableSettingsFeedback, assertSettingsFits, settingRow } from "./settings";
 
@@ -123,17 +123,13 @@ test("new projects go in the folder chosen in Settings, and the choice survives 
     // folder as real repositories, and the fleet root links each.
     await ask(page, `${INIT_REPO_PROMPT_MARKER}nebula`);
     await addFromSetupCard(page, "nebula");
-    await expect
-      .poll(() => page.evaluate(() => window.infinitary.repos.list()), { timeout: 30_000 })
-      .toHaveLength(1);
+    await expect.poll(() => addedProjects(page), { timeout: 30_000 }).toHaveLength(1);
     await waitForFirstmateIdle(page);
     const origin = initGitRepo();
     await ask(page, `${CLONE_REPO_PROMPT_MARKER}${origin}`);
     await addFromSetupCard(page, basename(origin));
-    await expect
-      .poll(() => page.evaluate(() => window.infinitary.repos.list()), { timeout: 30_000 })
-      .toHaveLength(2);
-    const repos = await page.evaluate(() => window.infinitary.repos.list());
+    await expect.poll(() => addedProjects(page), { timeout: 30_000 }).toHaveLength(2);
+    const repos = await addedProjects(page);
     const nebula = repos.find((repo) => repo.setupKind === "init");
     const cloned = repos.find((repo) => repo.setupKind === "clone");
     expect(nebula?.path).toBe(join(chosen, "nebula"));
@@ -169,7 +165,7 @@ test("new projects go in the folder chosen in Settings, and the choice survives 
     await ask(launched.page, `${INIT_REPO_PROMPT_MARKER}comet`);
     await addFromSetupCard(launched.page, "comet");
     await expect
-      .poll(() => launched?.page.evaluate(() => window.infinitary.repos.list()), {
+      .poll(() => (launched ? addedProjects(launched.page) : undefined), {
         timeout: 30_000,
       })
       .toHaveLength(3);

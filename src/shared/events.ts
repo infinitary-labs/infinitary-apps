@@ -367,7 +367,7 @@ export const fmEventSchema = z.discriminatedUnion("type", [
   /**
    * The Firstmate applied a preference on the captain's word (talk-to-
    * personalize Step 1: theme, a panel's rail or visibility, a surface
-   * removed, a standing instruction). One feed line, never a card; the
+   * removed). One feed line, never a card; the
    * text is the whole line. Catalog actions stamp their actor; older events
    * without one retain the Firstmate personalization wording.
    */

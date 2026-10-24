@@ -21,9 +21,8 @@ import { join, relative } from "node:path";
  * (./workspace.ts), only as trees rather than single files: a seed makes
  * each managed skill directory match its source exactly, restoring what was
  * deleted and removing what was added, so the rules cannot be quietly
- * rewritten from inside the workspace. Everything else - the captain's
- * standing instructions in `captain/`, the extensions themselves - is the
- * workspace's and is never touched.
+ * rewritten from inside the workspace. Everything else - the extensions
+ * themselves above all - is the workspace's and is never touched.
  *
  * Content, not `mtime`, decides: a copy is made only where the bytes differ,
  * so an untouched workspace costs one read of ~5 MB on each side at boot and

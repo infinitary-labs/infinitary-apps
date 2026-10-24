@@ -21,7 +21,7 @@ import {
   MOCK_WHICH_PROJECT_TITLE,
   UNREGISTER_REPO_PROMPT_MARKER,
 } from "./mockProvider";
-import { addFromSetupCard, projectRow } from "./projects";
+import { addedProjects, addFromSetupCard, projectRow } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, reportLine, startedLine, taskKey } from "./rails";
 import { cardMeta, shownCard } from "./stack";
@@ -67,9 +67,7 @@ test.beforeAll(async () => {
     await input.press("Enter");
     await addFromSetupCard(launched.page, basename(path));
     await expect
-      .poll(() => launched.page.evaluate(() => window.infinitary.repos.list()), {
-        timeout: 30_000,
-      })
+      .poll(() => addedProjects(launched.page), { timeout: 30_000 })
       .toHaveLength(index + 1);
     await waitForFirstmateIdle(launched.page);
   }

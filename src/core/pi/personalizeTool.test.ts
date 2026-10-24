@@ -123,12 +123,12 @@ describe("retired personalization actions", () => {
 });
 
 describe("personalize", () => {
-  it("names its two actions and the surface ids in its description, and never the machinery", () => {
+  it("names its action and the surface ids in its description, and never the machinery", () => {
     const { tool } = setup();
     expect(tool.name).toBe("personalize");
     // Theme and panel placement are app_change's (contract 4.54); the persona's
     // operate move says so once, and a call that asks for them here is refused.
-    for (const word of ["remove", "instruction", "your-surfaces"]) {
+    for (const word of ["remove", "your-surfaces"]) {
       expect(tool.description).toContain(word);
     }
     expect(tool.description).not.toMatch(/\bplugin\b/i);
@@ -182,21 +182,7 @@ describe("personalize", () => {
     );
   });
 
-  it("appends a standing instruction to the captain skill and refuses a duplicate", async () => {
-    const { run, events } = setup();
-    expect(await run({ action: "instruction", text: "always use compact rows in my panels" })).toBe(
-      'Standing instruction recorded in the captain skill (1 now): "Always use compact rows in my panels."',
-    );
-    expect(
-      await run({ action: "instruction", text: "Always use compact rows in my panels." }),
-    ).toBe('Already a standing instruction: "Always use compact rows in my panels."');
-    expect(await run({ action: "instruction" })).toBe(
-      "instruction needs text: one imperative line.",
-    );
-    expect(feed(events)).toEqual(["standing instruction - Always use compact rows in my panels."]);
-  });
-
-  it("keeps remove and instruction to the captain's own turn without changing theme", async () => {
+  it("keeps remove to the captain's own turn without changing theme", async () => {
     const { run, removed, settings } = setup({
       captainTurn: false,
       personal: { extensions: [extension("open-prs", "Open PRs")] },
@@ -205,15 +191,12 @@ describe("personalize", () => {
       "Only the captain's own turn removes a surface",
     );
     expect(removed).toEqual([]);
-    expect(await run({ action: "instruction", text: "Always." })).toContain(
-      "Only the captain's own turn writes a standing instruction",
-    );
     expect(settings.getAppearance().theme).toBe("dark");
   });
 });
 
 describe("the your-surfaces section", () => {
-  it("lists the app panels, the personal panels up to the cap, and the instruction count", () => {
+  it("lists the app panels and the personal panels up to the cap", () => {
     // The second of the captain's panels is named after the app's Activity,
     // so the window refused it while the app's own Activity is drawn.
     const many: PersonalSnapshot = {
@@ -236,7 +219,6 @@ describe("the your-surfaces section", () => {
         panels: { enabled: true, offReason: null },
       },
       many,
-      3,
       STABLE,
       {
         panels: [
@@ -290,8 +272,7 @@ describe("the your-surfaces section", () => {
       '- panel-2 "Panel 2" (yours): right rail, top; no word from the window',
     );
     expect(lines).toContain("- and 2 more personal panels");
-    expect(lines.at(-1)).toBe("standing instructions in the captain skill: 3");
-    expect(lines).toHaveLength(1 + 3 + SURFACES_CONTEXT_LIMIT + 1 + 1);
+    expect(lines).toHaveLength(1 + 3 + SURFACES_CONTEXT_LIMIT + 1);
   });
 
   it("says which panels a short rail folded for room or gathered into its More row, apart from drawn ones", () => {
@@ -311,7 +292,6 @@ describe("the your-surfaces section", () => {
         panels: { enabled: true, offReason: null },
       },
       clocks,
-      0,
       STABLE,
       {
         panels: [
@@ -357,7 +337,6 @@ describe("the your-surfaces section", () => {
           panels: { enabled: true, offReason: null },
         },
         { extensions: [] },
-        0,
         gates,
       );
     expect(section({ knowledge: true })).toContain(
@@ -379,7 +358,6 @@ describe("the your-surfaces section", () => {
       },
       // Off, the core serves no personal extension at all.
       { extensions: [] },
-      0,
       STABLE,
     );
     const off = lines.find((line) => line.startsWith("the captain's panels are off"));
@@ -395,7 +373,6 @@ describe("the your-surfaces section", () => {
         panels: { enabled: false, offReason: "captain" },
       },
       { extensions: [] },
-      0,
       STABLE,
     ).find((line) => line.startsWith("the captain's panels are off"));
     expect(byHand).toContain("the captain turned them off");
@@ -409,7 +386,6 @@ describe("the your-surfaces section", () => {
           panels: { enabled: true, offReason: null },
         },
         { extensions: [] },
-        0,
         STABLE,
       ).some((line) => line.startsWith("your own panels are off")),
     ).toBe(false);

@@ -54,6 +54,7 @@ import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
 import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
+import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
 import { feedLine, feedLineOf } from "./rails";
 import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
@@ -529,7 +530,7 @@ test("another user on this Mac joins with a command made from Firstmate's card, 
     await question.getByRole("button", { name: "Remove", exact: true }).click();
     expect(await again.ended).toBe("removed");
     await expect(row).toHaveCount(0);
-    expect((await page.evaluate(() => window.infinitary.repos.list()))[0]?.runsOn).toBeNull();
+    expect((await addedProjects(page))[0]?.runsOn).toBeNull();
     await page.keyboard.press("Escape");
     await expect(
       feedLine(
@@ -832,7 +833,7 @@ test("this Mac's address changes: a computer added by a command says how it come
     expect(
       (await page.evaluate(() => window.infinitary.devices.list())).map(({ id }) => id),
     ).toEqual([deviceId]);
-    expect((await page.evaluate(() => window.infinitary.repos.list()))[0]?.runsOn).toBe(deviceId);
+    expect((await addedProjects(page))[0]?.runsOn).toBe(deviceId);
   } finally {
     await Promise.all(runs.map((each) => each.stop()));
     await catalogRefreshesSettled();

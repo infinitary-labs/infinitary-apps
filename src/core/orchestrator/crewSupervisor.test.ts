@@ -16705,6 +16705,7 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
       inbox: base.inbox,
       paths: base.paths,
       personal,
+      ...(extras.knowledge ? { knowledge: extras.knowledge(base.repos) } : {}),
       recordSort: (input) => {
         base.sorts.push({ taskId: input.taskId, verdict: input.verdict, rule: input.rule });
         input.effect?.();
@@ -16778,6 +16779,52 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(brief).toContain('Surfaces now: open-prs "Open PRs" (right rail)');
     // Nothing stamped a tier on the record either.
     expect(h.tasks.get(taskId)?.shape?.rigor).toBeUndefined();
+  });
+
+  /**
+   * INF-1054 (the captain's "A. One store, one way in: panel instructions
+   * are ordinary directions"): a panel instruction is a direction scoped to
+   * the personal workspace, so the crewmate building a panel hears it on
+   * every turn, and a retired one is gone from the next.
+   */
+  it("serves the personal workspace's directions on every turn and drops a retired one", async () => {
+    const crewmate = fakeCrewmate();
+    let knowledge: KnowledgeService | undefined;
+    const h = liveSetup(crewmate, {
+      knowledge: (registry) => {
+        knowledge ??= new KnowledgeService({
+          projects: { get: (id) => registry.get(id), list: () => registry.list() },
+          gitFacts: async () => ({ commit: null, dirty: false }),
+        });
+        return knowledge;
+      },
+    });
+    const personal = h.repos.ensurePersonal(h.workspaceDir);
+    knowledge?.changeDirection({
+      op: "add",
+      id: "compact-rows",
+      scope: personal.id,
+      text: "Always use compact rows in my panels.",
+      reason: "captain said so",
+    });
+    const { taskId } = await h.supervisor.commission({
+      title: "Tokyo clock",
+      intent: { goal: "g", userWords: "w", kind: "personal-ui" },
+    });
+    await tick();
+    expect(crewmate.promptCalls[0]).toContain("Always use compact rows in my panels.");
+    crewmate.finishPrompt();
+    await tick();
+    await h.supervisor.steerCrewmate(taskId, "make it bigger");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain("Always use compact rows in my panels.");
+    crewmate.finishPrompt();
+    await tick();
+    knowledge?.changeDirection({ op: "retire", id: "compact-rows", reason: "captain retired it" });
+    await h.supervisor.steerCrewmate(taskId, "and blue");
+    await tick();
+    expect(crewmate.promptCalls.at(-1)).toContain("and blue");
+    expect(crewmate.promptCalls.at(-1)).not.toContain("Always use compact rows in my panels.");
   });
 
   it("commits the turn with the report and closes done, with no wake and no settle", async () => {

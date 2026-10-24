@@ -2,6 +2,17 @@ import { expect, type Locator, type Page } from "@playwright/test";
 import { SETUP_CARD_WORDS } from "../../src/shared/projectSetup";
 import { showCard, shownCard } from "./stack";
 
+/**
+ * The projects the captain added, oldest first: every registered one but the
+ * personal workspace, which is a project from the first start so a panel
+ * instruction can be a direction scoped to it (INF-1054).
+ */
+export async function addedProjects(page: Page) {
+  return (await page.evaluate(() => window.infinitary.repos.list())).filter(
+    (repo) => repo.kind !== "personal",
+  );
+}
+
 /** One Settings -> Projects row, by its registered repository id. */
 export function projectRow(page: Page, id: string): Locator {
   return page.locator(`[data-project="${id}"]`);

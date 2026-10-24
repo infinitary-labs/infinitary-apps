@@ -634,7 +634,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.1, interaction P1 WI-9 and WI-12)",
     // Talk-to-personalize Step 1, captain decision Q5: Tier A is a
     // `personalize` call and a feed line; a new panel stays crewmate work.
     expect(core).toContain(
-      "Personalization is the operate case for the app itself: the theme or a panel's rail, position or visibility is one app_change call (theme or panel); removing a surface or a standing instruction for the panels built for the captain is one personalize call, and the feed line is the whole answer - no card.",
+      "Personalization is the operate case for the app itself: the theme or a panel's rail, position or visibility is one app_change call (theme or panel); removing a surface is one personalize call, a lasting instruction for the panels built for the captain is one app_change direction scoped to the personal workspace, and the feed line is the whole answer - no card.",
     );
     expect(core).toContain(
       "A new panel, or a change to how one draws, is crewmate work on the personal project, never personalize.",

@@ -157,6 +157,7 @@ import {
   crewmateEvidenceDir,
   crewmateSessionsDir,
 } from "./paths";
+import { carryPanelInstructions } from "./personal/panelInstructions";
 import { PANELS_SAFE_MODE_NOTE } from "./personal/panelLines";
 import { PanelMountsHolder } from "./personal/panelMounts";
 import { PersonalExtensions } from "./personal/personalExtensions";
@@ -1813,6 +1814,16 @@ export async function createServices(
   const pluginRecords = new PluginRecords(db);
   const personalStore = new PersonalStore(db);
   const panelMounts = new PanelMountsHolder();
+  // The personal workspace is a project from the first start, so a panel
+  // instruction can be a direction scoped to it before any panel exists;
+  // what an older build kept in the workspace's captain skill is carried
+  // there once, before the seeder or any agent touches the workspace.
+  await carryPanelInstructions({
+    workspaceDir: paths.personalWorkspaceDir,
+    scope: repos.ensurePersonal(paths.personalWorkspaceDir).id,
+    knowledge,
+    log: (message) => console.warn(`[infinitary] ${message}`),
+  });
   const personal = await PersonalExtensions.start({
     workspaceDir: paths.personalWorkspaceDir,
     // The app's own design skill and the authoring skills are seeded from

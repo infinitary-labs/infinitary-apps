@@ -115,4 +115,4 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
 
 Catalog changes, including project settings, file their operation once in the core dispatcher.
 `appActionRecorded` attaches a first mate turn’s ask to that operation; `filingOperations` does not wrap them.
-Theme and panel arrangement use `app_change`; removal and standing instructions stay in `personalize`.
+Theme, panel arrangement and panel instructions (a `direction` scoped to the personal workspace) use `app_change`; removal stays in `personalize`.

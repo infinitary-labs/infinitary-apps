@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { cardLabelKey, parsePlainLabelRows } from "../../scripts/interaction-metrics";
 import { presentationCommitMessage } from "../../src/core/forge";
+import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
 import {
@@ -55,6 +56,7 @@ import {
   WORKFLOW_EVIDENCE_MARKER,
 } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
+import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine } from "./rails";
 import { readSavedData } from "./savedData";
@@ -533,7 +535,10 @@ async function servedLives(page: Page): Promise<string[]> {
   await send(page, PROJECT_LIVES_PROMPT_MARKER);
   const card = cardBody(page, MOCK_PROJECT_LIVES_CARD_TITLE);
   await expect(card.locator("li").first()).toBeVisible({ timeout: 30_000 });
-  const lives = await card.locator("li").allTextContents();
+  // The personal workspace lives nowhere else; these journeys read the projects the captain added.
+  const lives = (await card.locator("li").allTextContents()).filter(
+    (line) => !line.startsWith(`${PERSONAL_WORKSPACE_NAME}:`),
+  );
   await page.getByRole("button", { name: "Close", exact: true }).click();
   // Gone from the stack, read off the cards the app holds: the feed's
   // latest-activity line still names the card it just dismissed.
@@ -1302,9 +1307,7 @@ test("a GitHub Enterprise host: signed in with a key made there, its projects ar
   );
 
   // Its projects are GitHub projects now, and the Firstmate is told so.
-  expect(
-    (await page.evaluate(() => window.infinitary.repos.list())).map((repo) => repo.host),
-  ).toEqual([
+  expect((await addedProjects(page)).map((repo) => repo.host)).toEqual([
     { kind: "github", name: ENTERPRISE },
     { kind: "github", name: ENTERPRISE },
   ]);

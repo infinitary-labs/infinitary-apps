@@ -382,7 +382,7 @@
         "!src/core/devices/dnsSd.test.ts",
         "!src/core/devices/computerUpdate.test.ts",
         "!src/core/devices/farSystems.test.ts",
-        "!src/core/personal/captainSkill.test.ts",
+        "!src/core/personal/panelInstructions.test.ts",
         "!src/core/personal/liveWorkspace.test.ts",
         "!src/core/personal/personalExtensions.test.ts",
         "!src/core/personal/sequencesSkill.test.ts",

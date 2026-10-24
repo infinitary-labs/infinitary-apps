@@ -1,5 +1,5 @@
 /**
- * The feed's lines about the captain's panels and standing instructions:
+ * The feed's lines about the captain's panels:
  * one line per change, never a card (`pluginInstaller.ts`,
  * `personalizeTool.ts`, and the safe-mode boot in `services.ts`). A plain
  * module, so an e2e spec reads them from their owner (docs/e2e-contracts.md,
@@ -37,11 +37,6 @@ export function personalPanelRemovedLine(title: string): string {
 /** An app panel, hidden rather than removed. */
 export function appPanelHiddenLine(title: string): string {
   return `${title} hidden`;
-}
-
-/** A standing instruction appended to the captain skill. */
-export function standingInstructionLine(line: string): string {
-  return `standing instruction - ${line}`;
 }
 
 /** The note a safe-mode boot leaves: what happened, and where the switch is. */

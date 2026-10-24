@@ -660,7 +660,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "a panel is removed only on the captain's own ask",
     home: { tool: "personalize" },
-    says: "Remove a surface or append a standing instruction, only on the captain's own turn",
+    says: "Remove a surface, only on the captain's own turn",
   },
   {
     rule: "a skipped plan is declared on the direct build",

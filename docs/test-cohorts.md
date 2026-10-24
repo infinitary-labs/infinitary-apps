@@ -163,7 +163,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/typecheck.test.ts` | the pinned checker through its real command, a scratch copy of the settings words and incremental imports, missing/failed native executables | 20 s for the eleven-check incremental journey; 5 s default elsewhere |
 | `tests/install-clones.test.ts` | `cp -c`, tar, the installed ONNX runtime files, APFS's private size through koffi | 5 s default |
 | `src/core/claude/claudeLoginProbe.test.ts` | the installed Claude client | 5 s default |
-| `src/core/personal/captainSkill.test.ts` | real git, at the run's own priority | 5 s default |
+| `src/core/personal/panelInstructions.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/pi/customApiCertificates.integration.test.ts` | a local HTTPS server and the custom-API certificate review | 5 s default |
 | `src/core/integrations/providers/mcp/mcpIntegration.test.ts` | a stand-in MCP server in both protocol eras, as a Node child over stdio and on a local HTTP server, through the integrations service | 10 s (Mac slowest per-case minimum 0.643 s, two child starts) |
 | `src/core/claude/claudeCli.test.ts` | stub client executables | 5 s default |

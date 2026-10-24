@@ -16,12 +16,10 @@ import {
 } from "@shared/preferences";
 import { type AppPanelGates, builtinSurfacesFor } from "@shared/surfaces";
 import { Type } from "typebox";
-import { appendCaptainInstruction, readCaptainInstructions } from "../personal/captainSkill";
 import {
   appPanelHiddenLine,
   panelRemovedLine,
   personalPanelRemovedLine,
-  standingInstructionLine,
 } from "../personal/panelLines";
 import { mountOf, surfaceWord } from "../personal/panelMounts";
 import type { ShellPreferencesService } from "../preferences/shellPreferences";
@@ -29,8 +27,10 @@ import { boundTool, stringEnum } from "../session/tools";
 
 /**
  * The Firstmate's `personalize` tool (talk-to-personalize Step 1, plan
- * sections 5.2 and 5.3; Tier A). Removing a panel and standing instructions
- * stay here after catalog piece 4. Theme and arrangement use app_change.
+ * sections 5.2 and 5.3; Tier A). Removing a panel stays here after catalog
+ * piece 4. Theme and arrangement use app_change, and a standing instruction
+ * for the captain's panels is an ordinary direction scoped to the personal
+ * workspace (app_change direction; primitives/standing-directions.md).
  * Applied changes leave one feed line, never a card. Anything that needs a
  * new panel or a change to how one draws is crewmate work, not this tool.
  *
@@ -40,14 +40,11 @@ import { boundTool, stringEnum } from "../session/tools";
  *   personal extension out of the workspace in one commit, or takes a
  *   panel the captain added away - its files, its record and its data
  *   (one plugin vehicle, Phase A, A2a).
- * - `instruction` appends one line to the workspace's `captain` skill, where
- *   the crewmate building the next panel discovers it.
  *
  * A surface is named by the id the context block's "your surfaces" section
  * lists; an unknown id is refused with the list, never guessed. Refusals
- * are tool text, never throws. Removing a surface and writing a standing
- * instruction are the captain's word alone (captain-turn gated like a
- * note's creation); the theme and a panel's place may follow a schedule the
+ * are tool text, never throws. Removing a surface is the captain's word
+ * alone (captain-turn gated like a note's creation); the theme and a panel's place may follow a schedule the
  * captain set ("dark in the evening").
  */
 
@@ -76,7 +73,7 @@ export type PersonalizeDelegate = {
   removePersonal: (id: string) => Promise<{ removed: boolean; committed: boolean }>;
   /** Takes a panel the captain added away; `removed: false` when the id is not one. */
   uninstallPlugin: (id: string) => Promise<{ removed: boolean }>;
-  /** `userData/fleet/personal`, where the captain skill lives. */
+  /** `userData/fleet/personal`, the personal workspace. */
   personalWorkspaceDir: string;
   isCaptainTurn: () => boolean;
   broadcastEvent: (event: FmEvent) => void;
@@ -178,14 +175,12 @@ export function panelsOffLine(panels: PersonalPanels): string | null {
 /**
  * The bounded "your surfaces" section of the Firstmate's context block:
  * the theme, every app panel, the personal panels up to a cap, each with
- * the window's word on it (`surfaceState`), whether the
- * captain's own panels are on at all, and how many standing instructions
- * the captain skill holds. Each row carries the id `personalize` takes.
+ * the window's word on it (`surfaceState`), and whether the
+ * captain's own panels are on at all. Each row carries the id `personalize` takes.
  */
 export function renderSurfacesSection(
   preferences: ShellPreferences,
   personal: PersonalSnapshot,
-  instructions: number,
   gates: AppPanelGates,
   mounts: PanelMounts | null = null,
 ): string[] {
@@ -212,15 +207,13 @@ export function renderSurfacesSection(
     }),
     ...(more > 0 ? [`- and ${more} more personal panel${more === 1 ? "" : "s"}`] : []),
     ...(off ? [off] : []),
-    `standing instructions in the captain skill: ${instructions}`,
   ];
 }
 
 type Params = {
-  action: "remove" | "instruction";
+  action: "remove";
   evidence: string;
   surface?: string;
-  text?: string;
 };
 
 export function createPersonalizeTool(delegate: PersonalizeDelegate) {
@@ -228,14 +221,11 @@ export function createPersonalizeTool(delegate: PersonalizeDelegate) {
     name: "personalize",
     label: "Personalize",
     description:
-      "Remove a surface or append a standing instruction, only on the captain's own turn, with evidence of their words. remove hides an app panel and forgets its records, removes a personal panel from the workspace in one commit, or takes an added panel away with its data. instruction appends one imperative line to the captain skill every panel built for the captain follows. Name a surface by id from your-surfaces. Applied changes leave one feed line, never a card.",
+      "Remove a surface, only on the captain's own turn, with evidence of their words. remove hides an app panel and forgets its records, removes a personal panel from the workspace in one commit, or takes an added panel away with its data. Name a surface by id from your-surfaces. Applied changes leave one feed line, never a card.",
     parameters: Type.Object({
-      action: stringEnum(["remove", "instruction"]),
+      action: stringEnum(["remove"]),
       evidence: Type.String({ description: "The captain's words that asked for this" }),
       surface: Type.Optional(Type.String({ description: "A surface id from your-surfaces" })),
-      text: Type.Optional(
-        Type.String({ description: "The standing instruction, one imperative line" }),
-      ),
     }),
     run: async (params) => ({ text: await run(delegate, params as Params) }),
   });
@@ -245,10 +235,8 @@ async function run(delegate: PersonalizeDelegate, params: Params): Promise<strin
   switch (params.action) {
     case "remove":
       return runRemove(delegate, params);
-    case "instruction":
-      return runInstruction(delegate, params);
     default:
-      return "Use app_change for theme and panel; personalize only removes surfaces or writes standing instructions.";
+      return "Use app_change for theme and panel, and app_change direction for a standing instruction; personalize only removes surfaces.";
   }
 }
 
@@ -288,21 +276,6 @@ async function runRemove(delegate: PersonalizeDelegate, params: Params): Promise
   return `${surface.title} removed from your workspace${
     result.committed ? " in one commit; git keeps its history" : ""
   }.`;
-}
-
-async function runInstruction(delegate: PersonalizeDelegate, params: Params): Promise<string> {
-  if (!delegate.isCaptainTurn()) {
-    return "Only the captain's own turn writes a standing instruction. Surface it to the captain instead.";
-  }
-  if (!params.text?.trim()) return "instruction needs text: one imperative line.";
-  const result = await appendCaptainInstruction(delegate.personalWorkspaceDir, params.text);
-  if (result.status === "refused") return `Refused: ${result.reason}.`;
-  if (result.status === "duplicate") {
-    return `Already a standing instruction: "${result.line}"`;
-  }
-  delegate.broadcastEvent({ type: "personalized", text: standingInstructionLine(result.line) });
-  const count = (await readCaptainInstructions(delegate.personalWorkspaceDir)).length;
-  return `Standing instruction recorded in the captain skill (${count} now): "${result.line}"`;
 }
 
 function resolveSurface(

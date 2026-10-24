@@ -21,7 +21,7 @@ process walks outside.
 
 Open the one skill your brief names. Do not read every skill under \`.claude/skills/\`.
 A panel task opens \`.claude/skills/personal-panel/SKILL.md\` before it writes or changes a panel. That skill is the one copy of a panel's shape, imports, store, actions, cards and checks. Look up a type you use in \`infinitary-env.d.ts\` next to this file (the \`@infinitary/contracts\` module). Do not read that file from top to bottom.
-A \`captain\` skill, when present, carries standing instructions written on the captain's word; follow it too.
+The captain's panel instructions arrive as standing directions with each turn; follow them too.
 
 ## What the host still does
 

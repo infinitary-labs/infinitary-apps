@@ -109,7 +109,7 @@ Existing task/card/panel-removal abilities remain their only execution paths.
 Captain sign-in/key/consent actions also leave a trail, with no credentials in that trail.
 
 Piece 4 adds `theme`, `panel` (rail, position and visibility), and `project-settings` to the same catalog and dispatcher.
-`configure_repo` is retired; `personalize` keeps only removal and standing instructions.
+`configure_repo` is retired; `personalize` keeps only removal, and a panel instruction is a `direction` scoped to the personal workspace.
 Both actors get an attributed feed line and operation for each applied change, the captain's settling as a run ("Settled runs" below); project operations stay with their project and use the existing `repo_configured` refresh event, not a second personalization event.
 No-ops and refusals add no success trail.
 Shared appearance/layout channels enforce the named action's field boundary; panel arrangement resolves defaults, preserves collapse, refuses unknown surfaces and a full target rail, and stores only placement deviations.

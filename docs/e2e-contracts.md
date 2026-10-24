@@ -55,7 +55,7 @@ A merge is GitHub's squash at the head the app asks for, recorded with its title
 A wrong or missing title, a head this Mac lacks, a head that moved, or failing checks is a named refusal case (`settle-effects.spec.ts`), never an accidentally malformed happy path.
 Personal workspace reports remain unmodified in the task record, while untyped reports get a `chore:` subject in git history.
 A journey asserts what the save point promises (`tests/e2e/savePoints.ts`): exactly one new save point, named so the host's own guard (`requireConventional`) accepts it, touching the intended files and carrying the report, with nothing left unsaved.
-The exact subject belongs to the unit tests that compose it (`captainSkill.test.ts`, `liveWorkspace.test.ts`, `personalExtensions.test.ts`), never to a journey.
+The exact subject belongs to the unit tests that compose it (`panelInstructions.test.ts`, `liveWorkspace.test.ts`, `personalExtensions.test.ts`), never to a journey.
 
 ## Scripted first mate turns
 

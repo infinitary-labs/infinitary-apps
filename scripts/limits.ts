@@ -468,9 +468,6 @@ export const BASELINE: Record<string, Record<string, string>> = {
   "src/core/orchestrator/runWatch.ts": {
     RUN_WATCH_LIMIT: "refused in words; read it with read_workflow once a slot is free",
   },
-  "src/core/personal/captainSkill.ts": {
-    CAPTAIN_INSTRUCTION_MAX_CHARS: "refused in words naming 300 characters; shorten the instruction",
-  },
   "src/core/pi/cardTool.ts": {
     STABLE_CARD_ID_MAX: "refused in words naming 64; choose a shorter kebab-case id",
   },

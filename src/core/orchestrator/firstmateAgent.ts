@@ -59,7 +59,6 @@ import {
 } from "../knowledge/knowledgeTools";
 import { classifyInboxBatch, type KnowledgeOrigin } from "../knowledge/origin";
 import type { AppPaths } from "../paths";
-import { readCaptainInstructions } from "../personal/captainSkill";
 import {
   type SequencesFallback,
   SequencesSource,
@@ -881,7 +880,6 @@ export class FirstmateAgent {
       this.delivery.endTurn({ asks: [ask.id], held: true, unread: [] });
       return;
     }
-    await this.refreshInstructionCount();
     const context = this.contextForTurn(
       visibleCardId,
       hintTaskId,
@@ -3662,13 +3660,10 @@ export class FirstmateAgent {
   }
 
   /**
-   * The captain's surfaces (talk-to-personalize Step 1): the theme, every
-   * panel with its rail, position and visibility under the layout, and how
-   * many standing instructions the captain skill holds - bounded, one row
-   * per surface, each carrying the id `personalize` takes. Absent in a
-   * build with no personalize tool. The instruction count is refreshed at
-   * turn start (`refreshInstructionCount`), because the context block is
-   * built synchronously and the skill is a file.
+   * The captain's surfaces (talk-to-personalize Step 1): the theme and every
+   * panel with its rail, position and visibility under the layout - bounded,
+   * one row per surface, each carrying the id `personalize` takes. Absent in
+   * a build with no personalize tool.
    */
   private renderSurfaces(): Record<string, unknown> | undefined {
     const personalize = this.options.personalize;
@@ -3699,12 +3694,8 @@ export class FirstmateAgent {
       })),
       ...(omitted > 0 ? { personal_panels_omitted: omitted } : {}),
       ...(panelsOff ? { panels_off: panelsOff } : {}),
-      standing_instructions: this.instructionCount,
     };
   }
-
-  /** How many standing instructions the captain skill lists; read before each turn. */
-  private instructionCount = 0;
 
   /**
    * The captain's sequences (docs/sequences.md), read at each idle boundary
@@ -3728,14 +3719,6 @@ export class FirstmateAgent {
       }
     }
     return served;
-  }
-
-  private async refreshInstructionCount(): Promise<void> {
-    const personalize = this.options.personalize;
-    if (!personalize) return;
-    this.instructionCount = (
-      await readCaptainInstructions(personalize.personalWorkspaceDir)
-    ).length;
   }
 
   /**
@@ -4344,7 +4327,6 @@ export class FirstmateAgent {
     if (this.disposed || !session || session.isStreaming() || this.running) return;
     // Paused (no account can serve): rows stay queued for a later drain.
     const admitted = await this.admitTurn(session);
-    await this.refreshInstructionCount();
     if (this.disposed || !admitted || admitted.isStreaming() || this.running) return;
     this.serveInstructionsAt(admitted);
     // Admission or the instructions served may have queued the moved seat's
@@ -4677,8 +4659,6 @@ function personalizeTitle(params: Record<string, unknown>): string {
       return `Arranged the ${surface ?? "panel"} surface`;
     case "remove":
       return `Removed the ${surface ?? "panel"} surface`;
-    case "instruction":
-      return `Standing instruction: ${stringParam(params.text) ?? ""}`.trim();
     default:
       return "Personalized the app";
   }

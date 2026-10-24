@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "panel-instructions-are-directions",
+      "kind": "improvement",
+      "area": "firstmate",
+      "title": "Your panel instructions are kept with your other directions",
+      "body": "When you ask for something every panel should do, such as compact rows, your first mate keeps it as a direction for your personal workspace. You can see, change or retire it in Knowledge, under Directions. The instructions you gave before carry across on the first start after the update.",
+      "noPicture": "The Directions list looks the same; your panel instructions now appear in it beside your other directions.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

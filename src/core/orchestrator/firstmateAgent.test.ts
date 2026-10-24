@@ -125,7 +125,6 @@ type ContextObject = Record<string, unknown> & {
   task_index: string[];
   surfaces: {
     panels: Array<{ id: string }>;
-    standing_instructions: number;
   };
   captain_resolutions: string[];
   thread_activity?: string[];
@@ -2418,8 +2417,8 @@ describe("FirstmateAgent", () => {
     expect(events).toContainEqual({ type: "firstmate_emote", emote: "ponder" });
   });
 
-  it("lists surfaces for catalog actions and retains standing instructions in personalize", async () => {
-    const { agent, specs, events, personalWorkspaceDir } = setup({
+  it("lists surfaces for catalog actions", async () => {
+    const { agent } = setup({
       personal: {
         extensions: [
           {
@@ -2474,7 +2473,6 @@ describe("FirstmateAgent", () => {
     expect(context.surfaces).toMatchObject({
       description: "app_change panel and personalize remove act on these ids",
       theme: "dark",
-      standing_instructions: 0,
     });
     expect(context.surfaces.panels).toEqual(
       expect.arrayContaining([
@@ -2493,31 +2491,9 @@ describe("FirstmateAgent", () => {
     );
     expect(state("activity")).toBe("drawn, collapsed");
     expect(state("now")).toBe("no word from the window");
-
-    const personalize = toolsOf(specs).get("personalize");
-    const instruction = await personalize?.execute("p4", {
-      action: "instruction",
-      text: "always use compact rows in my panels",
-      evidence: "always use compact rows in my panels",
-    });
-    expect(instruction?.content[0]?.text).toContain(
-      'Standing instruction recorded in the captain skill (1 now): "Always use compact rows in my panels."',
-    );
-    const skill = readFileSync(
-      join(personalWorkspaceDir, ".claude", "skills", "captain", "SKILL.md"),
-      "utf8",
-    );
-    expect(skill).toContain("- Always use compact rows in my panels.");
-    expect(events).toContainEqual({
-      type: "personalized",
-      text: "standing instruction - Always use compact rows in my panels.",
-    });
-    // The next context block counts it.
-    await agent.converse("hello again");
-    expect(decodeContext(agent.buildContextBlock()).surfaces.standing_instructions).toBe(1);
   });
 
-  it("refuses to remove a surface or write an instruction on an operational wake (Step 1)", async () => {
+  it("refuses to remove a surface on an operational wake (Step 1)", async () => {
     const { agent, specs, session, settings, removedPersonal } = setup({
       personal: {
         extensions: [
@@ -2567,12 +2543,6 @@ describe("FirstmateAgent", () => {
     });
     expect(removed?.content[0]?.text).toContain("Only the captain's own turn removes a surface");
     expect(removedPersonal).toEqual([]);
-    const instruction = await personalize?.execute("p2", {
-      action: "instruction",
-      text: "Always do this.",
-      evidence: "scheduled",
-    });
-    expect(instruction?.content[0]?.text).toContain("Only the captain's own turn writes");
     session.resolveNextPrompt();
     await tick();
     // On the captain's turn, remove takes the personal panel out and forgets its records.

@@ -16,7 +16,7 @@ import {
   INIT_REPO_PROMPT_MARKER,
   LAND_PROMPT_MARKER,
 } from "./mockProvider";
-import { addFromSetupCard, projectRow } from "./projects";
+import { addedProjects, addFromSetupCard, projectRow } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, startedLine, taskKey } from "./rails";
 
@@ -87,7 +87,7 @@ test("adopts a local repo by asking the agent and refuses a missing folder", asy
   // A folder that does not exist is refused by the app_change project-setup tool: the
   // turn completes with no repo and no scraped close-out feed line.
   await askFirstmate(page, `${ADOPT_REPO_PROMPT_MARKER}/no/such/infinitary/folder`);
-  expect(await page.evaluate(() => window.infinitary.repos.list())).toHaveLength(0);
+  expect(await addedProjects(page)).toHaveLength(0);
 
   // The real setup is one conversational ask and the captain's Add project
   // on the setup card it puts up - no settings step anywhere. Adoption is a
@@ -97,9 +97,7 @@ test("adopts a local repo by asking the agent and refuses a missing folder", asy
   await input.fill(`${ADOPT_REPO_PROMPT_MARKER}${registeredRepo}`);
   await input.press("Enter");
   await addFromSetupCard(page, basename(registeredRepo));
-  await expect
-    .poll(() => page.evaluate(() => window.infinitary.repos.list()), { timeout: 30_000 })
-    .toHaveLength(1);
+  await expect.poll(() => addedProjects(page), { timeout: 30_000 }).toHaveLength(1);
   const repoName = registeredRepo.split("/").at(-1) as string;
   const link = join(userDataDir, "fleet", repoName);
   expect(lstatSync(link).isSymbolicLink()).toBe(true);
@@ -110,7 +108,7 @@ test("adopts a local repo by asking the agent and refuses a missing folder", asy
   // lives only in an open row.
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("tab", { name: "Projects" }).click();
-  const [linked] = await page.evaluate(() => window.infinitary.repos.list());
+  const [linked] = await addedProjects(page);
   const row = projectRow(page, linked?.id ?? "");
   await expect(row.getByText(registeredRepo)).toBeVisible();
   await expect(row.getByText(PROJECT_SETUP_WORDS.adopt)).toBeVisible();
@@ -123,7 +121,7 @@ test("adopts a local repo by asking the agent and refuses a missing folder", asy
 test("creates and clones projects inside the app-owned fleet root", async () => {
   const { page, userDataDir } = launched;
   const input = promptInput(page);
-  const before = (await page.evaluate(() => window.infinitary.repos.list())).length;
+  const before = (await addedProjects(page)).length;
 
   // A brand-new project: a real git repo in the fleet root, seeded with a
   // first commit so task worktrees can branch immediately.
@@ -132,9 +130,7 @@ test("creates and clones projects inside the app-owned fleet root", async () => 
   await input.fill(`${INIT_REPO_PROMPT_MARKER}zephyr`);
   await input.press("Enter");
   await addFromSetupCard(page, "zephyr");
-  await expect
-    .poll(() => page.evaluate(() => window.infinitary.repos.list()), { timeout: 30_000 })
-    .toHaveLength(before + 1);
+  await expect.poll(() => addedProjects(page), { timeout: 30_000 }).toHaveLength(before + 1);
   const zephyrDir = join(userDataDir, "fleet", "zephyr");
   expect(lstatSync(zephyrDir).isDirectory()).toBe(true);
   const head = execFileSync("git", ["-C", zephyrDir, "rev-parse", "--verify", "HEAD"])
@@ -149,9 +145,7 @@ test("creates and clones projects inside the app-owned fleet root", async () => 
   await input.fill(`${CLONE_REPO_PROMPT_MARKER}${origin}`);
   await input.press("Enter");
   await addFromSetupCard(page, basename(origin));
-  await expect
-    .poll(() => page.evaluate(() => window.infinitary.repos.list()), { timeout: 30_000 })
-    .toHaveLength(before + 2);
+  await expect.poll(() => addedProjects(page), { timeout: 30_000 }).toHaveLength(before + 2);
 
   const repos = await page.evaluate(() => window.infinitary.repos.list());
   expect(repos.find((repo) => repo.name === "zephyr")).toMatchObject({

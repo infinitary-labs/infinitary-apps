@@ -21,6 +21,7 @@ import {
   SETUP_CARD_FAILED_WORDS,
   WELCOME_WAKE_WORDS,
 } from "../../src/core/orchestrator/wakes";
+import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
 import { SEQUENCES_SEED } from "../../src/core/personal/sequencesSkill";
 import { DEMO_UNPLAYED_WORDS, TYPEFACE_UNREAD_WORDS } from "../../src/core/pi/cardImages";
 import {
@@ -2900,7 +2901,7 @@ export const SALUTE_PROMPT_MARKER = "salute me";
 export const WORDLESS_CLOSE_PROMPT_MARKER = "and close without words";
 /**
  * Talk-to-personalize Step 1 (Tier A): the mock Firstmate answers each of
- * these with ONE personalize call and no card, the way the contract says.
+ * these with ONE app_change call and no card, the way the contract says.
  */
 export const APP_CATALOG_PROMPT_MARKER = "catalog change ";
 export const PERSONALIZE_THEME_PROMPT_MARKER = "switch to light";
@@ -5696,6 +5697,7 @@ export async function startMockProvider(
             // repositories from the context block.
             const repoNames = contextRepos(body)
               .map(([name]) => name)
+              .filter((name) => name !== PERSONAL_WORKSPACE_NAME)
               .slice(0, 2);
             streamToolCalls([
               {
@@ -5879,12 +5881,19 @@ export async function startMockProvider(
             return;
           }
           if (!hasToolResults && latestUserTail.includes(PERSONALIZE_INSTRUCTION_PROMPT_MARKER)) {
+            // A panel instruction is a direction scoped to the personal workspace (INF-1054).
             streamToolCalls([
               {
-                name: "personalize",
+                name: "app_change",
                 args: {
-                  action: "instruction",
-                  text: MOCK_STANDING_INSTRUCTION,
+                  action: "direction",
+                  value: {
+                    op: "add",
+                    text: MOCK_STANDING_INSTRUCTION,
+                    scope: contextRepos(body).find(
+                      ([name]) => name === PERSONAL_WORKSPACE_NAME,
+                    )?.[1],
+                  },
                   evidence: "always use compact rows in my panels",
                 },
               },

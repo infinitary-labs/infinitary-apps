@@ -52,7 +52,7 @@ import { absentKeychain, type HostCapabilities, type HostTaskBrowser } from "./h
 import { type Core, startCore } from "./index";
 import { automationWords } from "./orchestrator/scheduler";
 import { renderWake } from "./orchestrator/wakes";
-import { appPathsFor } from "./paths";
+import { appPathsFor, PERSONAL_WORKSPACE_NAME } from "./paths";
 import { actionValue, createAppTools } from "./pi/appTools";
 import { EMIT_CARD_TOOL } from "./pi/cardTool";
 import { catalogRefreshesSettled } from "./pi/modelRuntime";
@@ -3159,6 +3159,16 @@ describe("the knowledge browser's reads, gated at the protocol", () => {
           scope: "captain",
           name: "",
           private: true,
+          concepts: 0,
+          findings: 0,
+          directions: 0,
+        },
+        // The personal workspace is a project from the first start, so a
+        // panel instruction can be a direction scoped to it (INF-1054).
+        {
+          scope: expect.any(String),
+          name: PERSONAL_WORKSPACE_NAME,
+          private: false,
           concepts: 0,
           findings: 0,
           directions: 0,

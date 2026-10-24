@@ -1,8 +1,10 @@
-import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { ACTIONS } from "@shared/actions";
-import { standingInstructionLine } from "../../src/core/personal/panelLines";
+import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
+import { OLD_PANEL_INSTRUCTIONS_PATH } from "../../src/core/personal/panelInstructions";
+import { OPEN_KNOWLEDGE, row, tab } from "./knowledgeBrowser";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
@@ -16,7 +18,8 @@ import {
 } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { feedLine, nowFrame } from "./rails";
-import { oneNewSavePoint, savePointCount } from "./savePoints";
+import { savePointCount } from "./savePoints";
+import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
  * Preferences by talking (talk-to-personalize Step 1, plan section 7): each
@@ -24,8 +27,9 @@ import { oneNewSavePoint, savePointCount } from "./savePoints";
  * mock provider, applied by the host the moment the core pushes it, and one
  * feed line - never a card. "switch to light" flips the theme; "hide tasks"
  * leaves the right rail zero-width while the board still has a row; "always
- * use compact rows in my panels" appends to the workspace's captain skill
- * and commits it. The preferences relaunch proof is preferences.spec.ts.
+ * use compact rows in my panels" is a standing direction scoped to the
+ * personal workspace (INF-1054). The preferences relaunch proof is
+ * preferences.spec.ts.
  */
 let launched: LaunchedApp;
 
@@ -141,21 +145,34 @@ test("move Activity to the right changes its rail without changing collapse or o
   await page.screenshot({ path: test.info().outputPath("panel-moved.png") });
 });
 
-test("a standing instruction appends to the workspace's captain skill and is committed", async () => {
-  const { page, userDataDir } = launched;
+/**
+ * INF-1054 (the captain's "A. One store, one way in: panel instructions are
+ * ordinary directions"): a panel instruction is one standing direction
+ * scoped to the personal workspace, listed with the captain's other
+ * directions, and the workspace gets no file and no commit for it.
+ */
+test("a panel instruction is a standing direction for the personal workspace", async () => {
+  const { app, page, userDataDir } = launched;
   const workspace = join(userDataDir, "fleet", "personal");
   const before = savePointCount(workspace);
   await say(page, PERSONALIZE_INSTRUCTION_PROMPT_MARKER);
-  await expect(feedLine(page, standingInstructionLine(MOCK_STANDING_INSTRUCTION))).toBeVisible({
-    timeout: 30_000,
-  });
-  const skillPath = join(".claude", "skills", "captain", "SKILL.md");
-  const skill = readFileSync(join(workspace, skillPath), "utf8");
-  expect(skill).toContain("name: captain");
-  expect(skill.trimEnd().endsWith(`- ${MOCK_STANDING_INSTRUCTION}`)).toBe(true);
-  // One save point holds exactly that change, named as the host's guard
-  // wants, with nothing left unsaved; its words are captainSkill.test.ts's.
-  const saved = await oneNewSavePoint(workspace, before);
-  expect(saved.paths).toEqual([skillPath]);
+  await expect(
+    feedLine(page, ACTIONS.direction.done({ op: "add", text: MOCK_STANDING_INSTRUCTION })),
+  ).toBeVisible({ timeout: 30_000 });
+  const listed = await page.evaluate(() =>
+    window.infinitary.plugins.read("knowledge.directions", { scope: "all" }),
+  );
+  const saved =
+    listed.state === "ready"
+      ? listed.rows.find(({ text }) => text === MOCK_STANDING_INSTRUCTION)
+      : undefined;
+  expect(saved).toMatchObject({ scopeName: PERSONAL_WORKSPACE_NAME, authority: "instruction" });
+  expect(existsSync(join(workspace, OLD_PANEL_INSTRUCTIONS_PATH))).toBe(false);
+  expect(savePointCount(workspace)).toBe(before);
   await expect(page.locator("[data-card-layer]")).toHaveCount(0);
+  // The captain sees it among their directions in the Knowledge browser.
+  await runFromSearch(app, page, OPEN_KNOWLEDGE);
+  await pressKey(tab(page, "directions"), "Enter");
+  await expect(row(page, saved?.id ?? "")).toContainText(MOCK_STANDING_INSTRUCTION);
+  await page.screenshot({ path: test.info().outputPath("panel-instruction-direction.png") });
 });

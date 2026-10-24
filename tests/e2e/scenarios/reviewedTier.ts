@@ -1,4 +1,5 @@
 import { REVIEW_BRIEF_OPENING } from "../../../src/core/orchestrator/intentBrief";
+import { PERSONAL_WORKSPACE_NAME } from "../../../src/core/paths";
 import { liveValidationSchema } from "../../../src/shared/liveValidation";
 import { noSurfaceProof } from "../../helpers/liveValidation";
 import type { ScriptedCardAction } from "../../helpers/scriptedCalls";
@@ -116,7 +117,8 @@ function firstmateMove({
     !latestUserTail.includes("Commissioned")
   ) {
     const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
-    const repo = contextRepos(body)[0];
+    // The captain's own project, never the personal workspace the app keeps beside it.
+    const repo = contextRepos(body).find(([name]) => name !== PERSONAL_WORKSPACE_NAME);
     return {
       calls: [
         {

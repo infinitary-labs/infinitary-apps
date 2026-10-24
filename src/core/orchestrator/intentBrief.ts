@@ -222,14 +222,14 @@ function renderPersonalFacts(personal: PersonalBriefFacts): string[] {
     return [
       `${BUILD_IN_PLACE_OPENING}: this is a teach task on the personal workspace, with no branch, pull request or rigor tier.`,
       `Workspace: ${personal.workspaceDir} - your working directory. Do not commit; the host commits each turn.`,
-      "Open .claude/skills/lessons/SKILL.md before the first card, and follow captain when listed. Teach through lesson cards and keep the subject's panel record current using the tested part in the lessons guide. Read lessons/learner.md and keep the subject's progress under lessons/<subject>/. Do not open the panel skill, infinitary-env.d.ts, or the design overview.",
+      "Open .claude/skills/lessons/SKILL.md before the first card, and follow the standing directions each turn carries. Teach through lesson cards and keep the subject's panel record current using the tested part in the lessons guide. Read lessons/learner.md and keep the subject's progress under lessons/<subject>/. Do not open the panel skill, infinitary-env.d.ts, or the design overview.",
       "Your report commits this round, not the end of the subject. Keep one subject task open across rounds; use the lessons guide for the goal, round and welcome-back cards. Your completion is a report, never a merge card.",
     ];
   }
   return [
     `${BUILD_IN_PLACE_OPENING}: this task carries no delivery posture and no rigor tier, because nothing here ships through a gate. What that means concretely:`,
     `Workspace: ${personal.workspaceDir} - your working directory. There is no worktree, no branch, and no pull request: you edit these files in place. The app compiles what you save as you save it, apart from the captain's rails: they keep each panel as it was until place_panel puts your version there, and the host commits it with your report. Do not commit; the host commits at the end of each of your turns with your report as the message. Your completion is that report, never a completion card, and there is nothing to merge, land, or discard.`,
-    "Your session carries the workspace's AGENTS.md and lists its skills under .claude/skills/. Open personal-panel before you write or change a panel, and follow captain, when it is listed: standing instructions written on the captain's word. Before every report, lint_panel checks your files, place_panel puts your version on the captain's rail and says whether their window drew it, and capture_panel photographs it there.",
+    "Your session carries the workspace's AGENTS.md and lists its skills under .claude/skills/. Open personal-panel before you write or change a panel, and follow the standing directions each turn carries: the captain's panel instructions among them. Before every report, lint_panel checks your files, place_panel puts your version on the captain's rail and says whether their window drew it, and capture_panel photographs it there.",
     `Surfaces now: ${surfaces}. A change to one of these is an edit of that directory, not a new one.`,
   ];
 }

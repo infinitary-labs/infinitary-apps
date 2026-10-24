@@ -24,7 +24,7 @@ import {
   SPAWN_PROMPT_MARKER,
   startMockProvider,
 } from "./mockProvider";
-import { addFromSetupCard, projectRow, showSetupCard } from "./projects";
+import { addedProjects, addFromSetupCard, projectRow, showSetupCard } from "./projects";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
 
@@ -108,7 +108,7 @@ test("Firstmate proposes a project after a crewmate's report, and Add project se
     await input.fill(`${SPAWN_PROMPT_MARKER} ${PROPOSE_PROJECT_PROMPT_MARKER}${folder}`);
     await input.press("Enter");
     await showSetupCard(page, name);
-    expect(await page.evaluate(() => window.infinitary.repos.list())).toHaveLength(0);
+    expect(await addedProjects(page)).toHaveLength(0);
     const card = (await page.evaluate(() => window.infinitary.cards.list())).find(
       (entry) => entry.title === title,
     );
@@ -137,7 +137,7 @@ test("Firstmate proposes a project after a crewmate's report, and Add project se
   const repo =
     await test.step("the project is added with those choices, and Firstmate hears once", async () => {
       await expect
-        .poll(async () => (await page.evaluate(() => window.infinitary.repos.list()))[0], {
+        .poll(async () => (await addedProjects(page))[0], {
           timeout: 30_000,
         })
         .toMatchObject({
@@ -148,7 +148,7 @@ test("Firstmate proposes a project after a crewmate's report, and Add project se
           rigor: "reviewed",
           runsOn: deviceId,
         });
-      const [added] = await page.evaluate(() => window.infinitary.repos.list());
+      const [added] = await addedProjects(page);
       if (!added) throw new Error("The project must be on the list");
       const devices = await page.evaluate(() => window.infinitary.devices.list());
       const told = renderWake({

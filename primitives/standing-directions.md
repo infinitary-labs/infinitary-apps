@@ -17,9 +17,8 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - Do not use it for a one-off ask, a reminder or a recurring job: a task carries one-off work, and [automation.md](automation.md) carries work that starts at a time or on an event.
 - Do not build a second instruction store (a settings file of preferences, a skill file of rules, a per-feature "remember this" table, a prompt fragment a feature appends to).
   A second store drifts from this one, is not delivered whole on every turn, and the captain cannot see or retire it in one place.
-- Known current gap: panel personalization keeps its own captain instructions outside this primitive.
-  The `personalize` tool's `instruction` action (`../src/core/pi/personalizeTool.ts`) calls `appendCaptainInstruction` (`../src/core/personal/captainSkill.ts`), which appends one line to `.claude/skills/captain/SKILL.md` in the personal workspace, and the crewmate building a panel reads that skill.
-  This is current fact, not the intended pattern; a separate plan is to consolidate it into standing directions, and new work must not copy it.
+- The captain's panel instructions ("always use compact rows in my panels") are ordinary directions scoped to the personal workspace, so every crewmate building a panel or teaching a lesson there receives them on every turn.
+  The personal workspace is registered as a project at startup so a direction can name it before any panel exists.
 
 ## Owner and entry points
 
@@ -43,6 +42,8 @@ Directions are instructions to weigh with the work, not data to search: they nev
   - rendering never truncates directions.
 - Retired directions have no active influence from the next turn on.
 - `KnowledgeService.carryDirections` carried the active notes-era preferences into Knowledge once, before any agent starts; no older-notes reader, writer or fallback remains.
+- `carryPanelInstructions` (`../src/core/personal/panelInstructions.ts`) carries the panel instructions an older build kept in the personal workspace's `.claude/skills/captain/SKILL.md` once at startup, before any agent runs: each listed line becomes one direction word for word, any other words one more, and the file leaves in one workspace commit.
+  Its ids come from the words, so a second start or a quit before the removal adds nothing; Knowledge that cannot be read leaves the file for a later start.
 
 ## Authority
 
@@ -80,7 +81,9 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - [`../src/core/knowledge/knowledgeService.test.ts`](../src/core/knowledge/knowledgeService.test.ts): add, revise and retire through `changeDirection`, kept reasons, a stale revision refused, and `record_knowledge` refusing a direction.
 - [`../src/core/core.test.ts`](../src/core/core.test.ts) ("shares catalog changes"): the `direction` line on a turn a crewmate's report began, with one feed line and its reason in the history.
 - [`../src/core/orchestrator/firstmateAgent.test.ts`](../src/core/orchestrator/firstmateAgent.test.ts) ("renders authoritative directions and keeps them from a scheduled turn too"): whole delivery to the first mate, background wakes included.
-- [`../src/core/orchestrator/crewSupervisor.test.ts`](../src/core/orchestrator/crewSupervisor.test.ts) ("serves active project directions with their authority once on the first turn"): project directions on a crewmate turn.
+- [`../src/core/orchestrator/crewSupervisor.test.ts`](../src/core/orchestrator/crewSupervisor.test.ts) ("serves active project directions with their authority once on the first turn", "serves the personal workspace's directions on every turn and drops a retired one"): project directions on a crewmate turn.
+- [`../src/core/personal/panelInstructions.test.ts`](../src/core/personal/panelInstructions.test.ts): the panel instructions carry, its repeat and its unreadable-Knowledge case.
+- [`../tests/e2e/personalize.spec.ts`](../tests/e2e/personalize.spec.ts) ("a panel instruction is a standing direction for the personal workspace"): the captain's words become a direction listed in the Knowledge browser.
 - [`../tests/e2e/knowledge-directions.spec.ts`](../tests/e2e/knowledge-directions.spec.ts): directions stay distinct from personal facts, forty directions arrive on an unrelated ask, carry-over and restart, forget and purge without a notes fallback.
 - [`../tests/e2e/knowledge-gate.spec.ts`](../tests/e2e/knowledge-gate.spec.ts): unreadable directions pause new work without replacing the collection.
 

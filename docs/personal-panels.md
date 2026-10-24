@@ -62,7 +62,8 @@ It is called from Step 2's `seedPersonalWorkspace`, so a heal rides the same com
 | `clock-timer-scratchpad` | The three small panels: derived state, the store (a deadline, never a countdown), calm motion |
 
 The seed is **exact**: every boot makes the managed skill directories match their source, restoring what was deleted and removing what was added, so the rules cannot be quietly rewritten from inside.
-`captain/` (standing instructions) and the extensions themselves are never touched.
+The extensions themselves are never touched.
+The captain's panel instructions are not files here: each is a standing direction scoped to the personal workspace, served to every crewmate there on every turn (`primitives/standing-directions.md`).
 
 **One home, twice enforced.**
 `src/core/personal/skillText.test.ts` pins that no persona prompt and no card contract repeats a sentence of an authoring skill, AND that the skills and the workspace's own `AGENTS.md` do not repeat each other: the personal-panel skill owns a panel's mechanics and its look, and `AGENTS.md` keeps the common workspace rules and points there.
@@ -145,7 +146,7 @@ There is exactly one `personal` row, and `RepoRegistry.configure` refuses its wh
 The workspace becomes a managed repo on first need (`RepoRegistry.ensurePersonal`: name `personal`, the seeder's directory, `kind: personal`, autonomy on; its `delivery` column is written `local-only` and never read), which also births its project, so a task there has a key like any other.
 
 **Dispatch.**
-`spawn_crewmate` carries `personal_ui: true` when the ask is about the user's own panels (the intent's `kind: "personal-ui"`, `SpawnIntent`); the supervisor binds it to the personal repo itself, whatever `repo_id` came with it, and `renderIntentBrief` writes NO `Delivery:` line for it and appends the workspace's facts to the fixed template: that you build in place and the host commits, the workspace path, which skills to start from (`personal-panel`, and `captain` when it is listed - every crewmate's session already carries the workspace's `AGENTS.md` and lists its skills, `src/core/session/projectResources.ts`, so the brief never lists them again), the checks before every report, and the surfaces that already exist so a change resolves to its directory.
+`spawn_crewmate` carries `personal_ui: true` when the ask is about the user's own panels (the intent's `kind: "personal-ui"`, `SpawnIntent`); the supervisor binds it to the personal repo itself, whatever `repo_id` came with it, and `renderIntentBrief` writes NO `Delivery:` line for it and appends the workspace's facts to the fixed template: that you build in place and the host commits, the workspace path, which skill to start from and that the standing directions each turn carries hold the captain's panel instructions (`personal-panel` - every crewmate's session already carries the workspace's `AGENTS.md` and lists its skills, `src/core/session/projectResources.ts`, so the brief never lists them again), the checks before every report, and the surfaces that already exist so a change resolves to its directory.
 A teach task's brief names the lessons skill and the learner records instead, and tells the teacher not to open the panel skill, the type file, or the design overview.
 No rigor section is written either: rigor exists only where a change lands through a gate, so a personal task has no tier at all rather than a quick one.
 `startTask` creates NO worktree for a personal task: the crewmate's cwd is the workspace, the record's `worktreeDir` and `branch` stay empty (`workspaceState: "none"`, so no close ever tries to remove one), and `resumeTask` falls back to the repo dir the same way.

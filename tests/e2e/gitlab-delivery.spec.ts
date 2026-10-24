@@ -25,6 +25,7 @@ import { resizeWindow } from "./layout";
 import { GITLAB_EVIDENCE_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
+import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
 import { expandDock, notesNaming, putInLine, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
@@ -179,7 +180,7 @@ for (const host of HOSTS) {
       await resizeWindow(launched.app, page, { width: 1280, height: 800 });
       // The project is GitLab's, with the key sign-in on file.
       await expect
-        .poll(async () => (await page.evaluate(() => window.infinitary.repos.list()))[0]?.host)
+        .poll(async () => (await addedProjects(page))[0]?.host)
         .toEqual({ kind: "gitlab", name: host });
       const title = `field-notes ${GITHUB_CHANGE_PROMPT_MARKER}`;
       await send(page, `${SPAWN_PROMPT_MARKER} ${title}`);

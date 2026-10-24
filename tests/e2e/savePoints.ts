@@ -6,7 +6,7 @@ import { requireConventional } from "../../src/core/workspace/conventional";
  * A workspace's save points as a journey reads them (docs/testing.md, the
  * e2e assertion contract): how many there are, what the newest touched and
  * carries, and whether anything is left unsaved. The exact subject the host
- * writes is composed and tested where it is written (`captainSkill.test.ts`,
+ * writes is composed and tested where it is written (`panelInstructions.test.ts`,
  * `liveWorkspace.test.ts`, `personalExtensions.test.ts`), so a journey asks
  * only that the newest is one the host's own naming guard accepts
  * (`requireConventional`, whose rule `conventional.test.ts` owns).

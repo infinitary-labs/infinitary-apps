@@ -3,9 +3,10 @@ import { CARD_BODY_WORDS } from "../../src/renderer/src/cards/cardBodyWords";
 import { FRAME_BRIDGE_SHA256 } from "../../src/shared/plugins/bridge";
 import { cardBody, cardBodyElement, cardBodySelector } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { SCRIPT_CARD_TITLES, SCRIPT_CARDS_PROMPT_MARKER } from "./mockProvider";
+import { SCRIPT_CARD_TITLES } from "./mockProvider";
 import { measured, PERF_TAG } from "./perf";
 import { promptInput } from "./prompt";
+import { SCRIPT_CARDS_PROMPT_MARKER, scriptCards } from "./scenarios/scriptCards";
 import { pager, showCard, shownEntry } from "./stack";
 
 /**
@@ -25,7 +26,7 @@ const WATCHDOG_WINDOW_MS = 1_000 * 5 + 3_000;
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [scriptCards] });
   const { page } = launched;
   const input = promptInput(page);
   await input.click();

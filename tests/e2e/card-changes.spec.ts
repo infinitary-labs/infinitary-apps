@@ -6,8 +6,12 @@ import { clock, revisedLine as revisedWords } from "../../src/renderer/src/cards
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pseudoBox } from "./layout";
-import { CHANGE_MARKS_PROMPT_MARKER, CHANGE_MARKS_TITLE } from "./mockProvider";
 import { promptInput } from "./prompt";
+import {
+  CHANGE_MARKS_PROMPT_MARKER,
+  CHANGE_MARKS_TITLE,
+  changeMarkVersions,
+} from "./scenarios/changeMarkVersions";
 import { changeMarks, revisedLine } from "./stack";
 import { focusOn } from "./windowKeys";
 
@@ -64,7 +68,7 @@ async function providerQuiet(page: Page, mock: LaunchedApp["mockProvider"]): Pro
 // The whole journey is one test: each revision is compared with what the
 // window last showed, so the sections depend on one another by design.
 test("a revised card says what is new since the captain last saw it, and marks it", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ withMockProvider: true, scenarios: [changeMarkVersions] });
   const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
   const shot = async (name: string) => {
     if (evidence) await launched.page.screenshot({ path: join(evidence, `${name}.png`) });
@@ -198,7 +202,11 @@ test("each revision keeps its own links and reveals folded current content witho
   const { seedRevisionCard, revisionRows, revisionLinks, revisionFrame, cardScroller } =
     await import("./revisions");
   const fixture = seedRevisionCard();
-  const app = await launchApp({ withMockProvider: true, userDataDir: fixture.userDataDir });
+  const app = await launchApp({
+    withMockProvider: true,
+    scenarios: [changeMarkVersions],
+    userDataDir: fixture.userDataDir,
+  });
   try {
     const { page } = app;
     const links = revisionLinks(page),
@@ -265,7 +273,11 @@ test("each revision keeps its own links and reveals folded current content witho
 test("an older missing area keeps its link and does not move the current card", async () => {
   const { seedRevisionCard, revisionLinks, cardScroller } = await import("./revisions");
   const fixture = seedRevisionCard({ removed: true });
-  const app = await launchApp({ withMockProvider: true, userDataDir: fixture.userDataDir });
+  const app = await launchApp({
+    withMockProvider: true,
+    scenarios: [changeMarkVersions],
+    userDataDir: fixture.userDataDir,
+  });
   try {
     const { page } = app;
     const link = revisionLinks(page).first();

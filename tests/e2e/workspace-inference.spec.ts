@@ -12,18 +12,17 @@ import {
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  ADOPT_REPO_PROMPT_MARKER,
-  AMBIGUOUS_PROMPT_MARKER,
-  CONFIGURE_REPO_PROMPT_MARKER,
-  LAND_PROMPT_MARKER,
-  MOCK_FM_CHAT_TEXT,
-  MOCK_WHICH_PROJECT_TITLE,
-  UNREGISTER_REPO_PROMPT_MARKER,
-} from "./mockProvider";
+import { ADOPT_REPO_PROMPT_MARKER, LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, reportLine, startedLine, taskKey } from "./rails";
+import {
+  AMBIGUOUS_PROMPT_MARKER,
+  CONFIGURE_REPO_PROMPT_MARKER,
+  MOCK_WHICH_PROJECT_TITLE,
+  UNREGISTER_REPO_PROMPT_MARKER,
+  workspaceInference,
+} from "./scenarios/workspaceInference";
 import { cardMeta, shownCard } from "./stack";
 
 /**
@@ -55,7 +54,7 @@ function initGitRepo(prefix: string): string {
 test.beforeAll(async () => {
   repoAlpha = initGitRepo("infinitary-alpha-");
   repoBeta = initGitRepo("infinitary-beta-");
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [workspaceInference] });
   // Adopt both repos by asking the agent: its app_change project-setup puts
   // up the setup card, and the captain's Add project links each into the
   // fleet in place. Each turn, and the one that hears the answer, is

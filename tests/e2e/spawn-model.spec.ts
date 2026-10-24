@@ -5,16 +5,16 @@ import Database from "better-sqlite3";
 import { namedModelWords } from "../../src/core/orchestrator/namedModel";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { type LaunchedApp, launchApp } from "./launch";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockProvider";
+import { promptInput } from "./prompt";
 import {
-  MOCK_MODEL_ID,
-  MOCK_PROVIDER_ID,
   NAMED_SPAWN_ASK,
   NAMED_SPAWN_MISSING_ASK,
   NAMED_SPAWN_MISSING_MODEL_ID,
   NAMED_SPAWN_MISSING_TITLE,
   NAMED_SPAWN_TITLE,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+  namedSpawn,
+} from "./scenarios/namedSpawn";
 
 /**
  * New work on a model the captain names answers with the model that took it
@@ -30,7 +30,7 @@ import { promptInput } from "./prompt";
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [namedSpawn] });
 });
 
 test.afterAll(async () => {

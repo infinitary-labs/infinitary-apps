@@ -14,13 +14,16 @@ import {
   MOCK_MODEL_ID,
   MOCK_PROVIDER_ID,
   mockModelsJson,
-  RETRIEVAL_CARD_TITLE,
-  RETRIEVAL_SOURCE,
   RETRIEVAL_TASK_ASK,
-  RETRIEVAL_TASK_TITLE,
 } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { promptInput } from "./prompt";
+import {
+  RETRIEVAL_CARD_TITLE,
+  RETRIEVAL_SOURCE,
+  RETRIEVAL_TASK_TITLE,
+  retrievalTask,
+} from "./scenarios/retrievalTask";
 import { shownCard, shownEntry } from "./stack";
 import { starterFor } from "./starters";
 import { usageSummary, usageTab } from "./usage";
@@ -97,7 +100,13 @@ test("a bounded lookup requests low, reads its source and stays an answer after 
   });
   const tasks = new TaskService({ db });
   const decisions = new DecisionStore(db);
-  let launched = await launchApp({ userDataDir, withMockProvider: true, env, modelsJson });
+  let launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [retrievalTask],
+    env,
+    modelsJson,
+  });
   const evidence = process.env.INFINITARY_RETRIEVAL_EVIDENCE;
   try {
     await launched.page.evaluate(() => window.infinitary.quota.refresh());
@@ -159,7 +168,14 @@ test("a bounded lookup requests low, reads its source and stays an answer after 
     const savedRouting = decisions.routing({ taskIds: [task.id] });
     const homeDir = launched.homeDir;
     await launched.close();
-    launched = await launchApp({ withMockProvider: true, userDataDir, homeDir, env, modelsJson });
+    launched = await launchApp({
+      withMockProvider: true,
+      scenarios: [retrievalTask],
+      userDataDir,
+      homeDir,
+      env,
+      modelsJson,
+    });
     await expect(shownCard(launched.page, RETRIEVAL_CARD_TITLE)).toBeVisible();
     expect(row()?.shape).toEqual(savedShape);
     expect(decisions.routing({ taskIds: [task.id] })).toEqual(savedRouting);

@@ -17,16 +17,15 @@ import { cardBody } from "./frames";
 import { FIRST_CONTACT_TIMEOUT_MS } from "./helperContact";
 import { type HelperRun, startHelper } from "./helperRun";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  MOCK_PROPOSED_WORK,
-  type MockProviderServer,
-  PROPOSE_PROJECT_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-  startMockProvider,
-} from "./mockProvider";
+import { type MockProviderServer, SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow, showSetupCard } from "./projects";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
+import {
+  MOCK_PROPOSED_WORK,
+  PROPOSE_PROJECT_PROMPT_MARKER,
+  projectProposal,
+} from "./scenarios/projectProposal";
 
 /**
  * The setup card (docs/fleet.md, "Asking the first mate to add a project"; the
@@ -73,7 +72,7 @@ function folderWithRemote(): string {
 }
 
 test("Firstmate proposes a project after a crewmate's report, and Add project sets it up as the captain chose", async () => {
-  mock = await startMockProvider();
+  mock = await startMockProvider({ scenarios: [projectProposal] });
   const env = { INFINITARY_JOINS_FROM_ANOTHER_MAC: "1" };
   const app = await launchApp({ reuseMockProvider: mock, env });
   apps.push(app);

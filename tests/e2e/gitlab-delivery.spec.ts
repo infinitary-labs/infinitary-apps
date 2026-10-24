@@ -22,7 +22,7 @@ import {
 } from "./gitlabStub";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { GITLAB_EVIDENCE_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { addedProjects } from "./projects";
@@ -37,6 +37,7 @@ import {
   MOCK_GITHUB_CHANGE_CARD_TITLE,
   MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
 } from "./scenarios/githubChange";
+import { GITLAB_EVIDENCE_MARKER, gitlabEvidence } from "./scenarios/gitlabEvidence";
 import { factsStrip, shownCard } from "./stack";
 
 /**
@@ -296,7 +297,12 @@ for (const host of HOSTS) {
         ],
       },
     ]);
-    const launched = await launchApp({ withMockProvider: true, userDataDir, env: gitlab.env });
+    const launched = await launchApp({
+      withMockProvider: true,
+      scenarios: [gitlabEvidence],
+      userDataDir,
+      env: gitlab.env,
+    });
     try {
       const { page } = launched;
       const title = `field-notes ${GITLAB_EVIDENCE_MARKER}`;

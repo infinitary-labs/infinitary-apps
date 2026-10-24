@@ -9,13 +9,9 @@ import { DEMO_TARGET, startDemo } from "./demo";
 import { DEMO_CAPTION, DEMO_POSTER, DEMO_RECORDING } from "./demoFixtures";
 import { bodyIn, cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  DEMO_CARD_TITLE,
-  DEMO_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-  startMockProvider,
-} from "./mockProvider";
+import { DEMO_CARD_TITLE, SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
+import { DEMO_PROMPT_MARKER, demoCard } from "./scenarios/demoCard";
 import {
   clickInBody,
   closeQuestion,
@@ -71,7 +67,7 @@ async function playerState(page: Page) {
 }
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [demoCard] });
   const input = promptInput(launched.page);
   await input.click();
   await input.fill(`${SPAWN_PROMPT_MARKER} ${DEMO_PROMPT_MARKER}`);
@@ -185,7 +181,7 @@ test("the poster opens the viewer paused on it, and the slider seeks by keys", a
 test("a demo of the Play journey, recorded by the demo helper, is one the card check accepts", async ({}, testInfo) => {
   test.setTimeout(180_000);
   // A recording of its own app: this journey owns its prerequisites.
-  const demo = await startDemo({ withMockProvider: true, size: WINDOW });
+  const demo = await startDemo({ withMockProvider: true, scenarios: [demoCard], size: WINDOW });
   const { page } = demo.launched;
   try {
     const input = promptInput(page);
@@ -232,7 +228,7 @@ test("a demo of the Play journey, recorded by the demo helper, is one the card c
 test("the demo plays again after the app restarts and from the card once it is closed, and says so once its recording is gone", async () => {
   test.setTimeout(180_000);
   const userDataDir = scratchDir("infinitary-card-demo-restart-");
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: [demoCard] });
   let app: LaunchedApp | undefined;
   /** Presses a frame's Play button by key and waits for the recording to play. */
   const playFrom = async (page: Page, frame: FrameLocator) => {

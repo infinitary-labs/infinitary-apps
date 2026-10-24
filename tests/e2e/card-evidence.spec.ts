@@ -9,13 +9,14 @@ import type { CardObservation, CardQuestion } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import {
-  SPAWN_PROMPT_MARKER,
   STALE_OFFER_CHOICE_LABEL,
   STALE_OFFER_PROMPT_MARKER,
   STALE_OFFER_REVISED_TITLE,
   STALE_OFFER_TITLE,
-} from "./mockProvider";
+  staleOffer,
+} from "./scenarios/staleOffer";
 import { discardAndClose, expectNoCard, showCard, shownCard } from "./stack";
 
 /**
@@ -70,7 +71,7 @@ function observationsOf(userDataDir: string, cardId: string): CardObservation[] 
 }
 
 test("a choice names the offer the stage showed, not the head its crewmate wrote after it", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ withMockProvider: true, scenarios: [staleOffer] });
   const { page, mockProvider, userDataDir } = launched;
   let cardId = "";
   let taskId = "";
@@ -347,7 +348,11 @@ test("a footer click records what each question asked; a draft the captain never
   );
   db.close();
 
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [staleOffer],
+  });
   const { page } = launched;
   try {
     await showCard(page, ROLLOUT);

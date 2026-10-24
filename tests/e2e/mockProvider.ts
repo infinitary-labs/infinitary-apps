@@ -8,33 +8,20 @@ import type { AddressInfo } from "node:net";
 import { zstdDecompressSync } from "node:zlib";
 import { parseServedInput, type ServedSegment } from "@shared/servedFrame";
 import { BROWSER_COMMAND } from "../../src/core/browser/commandWords";
-import { HIDDEN_VALUE_WORDS, REF_PATTERN } from "../../src/core/browser/outline";
-import { GIF_LOOP_WORDS } from "../../src/core/gifFormat";
+import { REF_PATTERN } from "../../src/core/browser/outline";
 import { BUILD_IN_PLACE_OPENING } from "../../src/core/orchestrator/intentBrief";
 import {
   ANSWER_MISSING_OPENING,
-  BROWSER_GONE_OPENING,
   BROWSER_RETURNED_OPENING,
   CARD_CLOSED_STEER_PREFIX,
   FINISHED_REPORT_WORDS,
-  RESTART_REPLAY_NOTE,
   renderWake,
   SETUP_CARD_FAILED_WORDS,
   WELCOME_WAKE_WORDS,
 } from "../../src/core/orchestrator/wakes";
-import { PERSONAL_WORKSPACE_NAME } from "../../src/core/paths";
-import { SEQUENCES_SEED } from "../../src/core/personal/sequencesSkill";
 import { backgroundJobReceipt } from "../../src/core/pi/bashWords";
-import { DEMO_UNPLAYED_WORDS, TYPEFACE_UNREAD_WORDS } from "../../src/core/pi/cardImages";
-import {
-  PREANSWERED_WORDS,
-  untaggedNewMarkRefusal,
-  WRITE_IN_GAP_WORDS,
-} from "../../src/core/pi/cardLint";
-import { BROWSER_PAY_STEP, BROWSER_SIGN_IN_STEP } from "../../src/core/pi/cardTool";
 import { NOTHING_SPAWNED } from "../../src/core/pi/crewTools";
 import { FIRSTMATE_PERSONA, KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
-import { APPROVE_AND_BUILD, SAVE_AND_DEFER } from "../../src/core/prompts/cardContract";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../../src/core/storage/sessionReader";
 import { CREATE_PANEL_DRAFT } from "../../src/shared/createPanelSlot";
 import { HERE } from "../../src/shared/deviceNames";
@@ -46,8 +33,6 @@ import {
   writeAnthropicToolUse,
 } from "../helpers/anthropicDialect";
 import { completionCardBody } from "../helpers/completionCard";
-import { damagedFontBytes, projectFontBytes } from "../helpers/fontFixture";
-import { mp4 } from "../helpers/mp4Fixture";
 import type { ScriptedArgs, ScriptedCall, ScriptedCardAction } from "../helpers/scriptedCalls";
 import {
   API_WRITE_GUARD_MARKER,
@@ -63,17 +48,10 @@ import {
   WRITE_ASK_SENT_WAKE,
   writeAskCall,
 } from "./apiWriteCases";
-import {
-  DEMO_CAPTION,
-  DEMO_POSTER,
-  DEMO_RECORDING,
-  GIF_DEMO_RECORDING,
-  LOOPING_GIF_DEMO,
-} from "./demoFixtures";
-import { GITLAB_STUB_OTHER_PROJECT, GITLAB_STUB_PROJECT } from "./gitlabStub";
+import { DEMO_CAPTION, DEMO_POSTER } from "./demoFixtures";
+import { GITLAB_STUB_PROJECT } from "./gitlabStub";
 import {
   chessItems,
-  FRACTION_ITEMS,
   LESSON_CHESS_ASK,
   LESSON_CHESS_CARD_ID,
   LESSON_CHESS_GOAL,
@@ -82,7 +60,6 @@ import {
   LESSON_FRACTIONS_GOAL,
   LESSON_FRACTIONS_GOAL_BODY,
   LESSON_FRACTIONS_GOAL_TITLE,
-  LESSON_FRACTIONS_ROUND_TITLE,
   LESSON_FRACTIONS_TITLE,
   LESSON_GOAL_BODY,
   LESSON_GOAL_TITLE,
@@ -126,15 +103,8 @@ export const MOCK_COMPLETION_TEXT =
 /** Marker prompt: the mock crewmate answers with emit_card tool calls first. */
 export const EMIT_CARDS_PROMPT_MARKER = "show every card kind";
 
-/**
- * Marker steer: the card-kinds crewmate revises its "Quota note" in place
- * (same id, WI-12), so a collapsed note can come back (fable review M1).
- */
-export const REVISE_NOTE_PROMPT_MARKER = "revise the quota note";
 export const MOCK_REVISED_NOTE_TEXT = "Codex weekly is now at 58% - still routing on pace.";
 
-/** Marker prompt: the mock crewmate emits three cards whose bodies carry scripts (WI-16). */
-export const SCRIPT_CARDS_PROMPT_MARKER = "show scripted cards";
 /** Where the fetch probe card aims: the mock server itself, which counts every hit. */
 export const CARD_FETCH_PROBE_PATH = "/card-fetch-probe";
 export const SCRIPT_CARD_TITLES = {
@@ -208,197 +178,6 @@ function keyboardCardToolCalls(): ScriptedCall[] {
   ];
 }
 
-/** Marker prompt: the mock crewmate emits a note, a decision and a scripted card, each with a local-subdomain link. */
-export const LOCAL_LINK_CARDS_PROMPT_MARKER = "show the local link cards";
-export const LOCAL_LINK_HREF =
-  "http://task-c5db2568.soapbox.localhost:1355/reports/probe?view=agenda";
-export const LOCAL_LINK_CARD_TITLES = {
-  note: "Local link note",
-  decision: "Local link decision",
-  scripted: "Local link scripted",
-} as const;
-
-function localLinkCardToolCalls(): ScriptedCall[] {
-  const anchor = `<a href="${LOCAL_LINK_HREF}">Open the report</a>`;
-  return [
-    {
-      name: "emit_card",
-      args: { title: LOCAL_LINK_CARD_TITLES.note, body: `<p>${anchor}</p>` },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: LOCAL_LINK_CARD_TITLES.decision,
-        body: `<p>The report is ready to read.</p><p>${anchor}</p>`,
-        actions: [
-          { id: "keep", label: "Keep it", default: true },
-          { id: "drop", label: "Drop it" },
-        ],
-      },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: LOCAL_LINK_CARD_TITLES.scripted,
-        body:
-          "<p></p><script>const link = document.createElement('a');" +
-          `link.href = ${JSON.stringify(LOCAL_LINK_HREF)}; link.textContent = 'Open the report';` +
-          "document.querySelector('p').append(link);</script>",
-      },
-    },
-  ];
-}
-
-function scriptCardToolCalls(port: number): ScriptedCall[] {
-  const note = (title: string, body: string): ScriptedCall => ({
-    name: "emit_card",
-    args: { title, body },
-  });
-  return [
-    note(
-      SCRIPT_CARD_TITLES.canvas,
-      '<p>Drawn by the card.</p><canvas width="120" height="40"></canvas>' +
-        '<script>const sample = "</body>"; const canvas = document.querySelector("canvas");' +
-        'const ink = getComputedStyle(document.body).getPropertyValue("--accent").trim() || "cyan";' +
-        'const pen = canvas.getContext("2d"); pen.fillStyle = ink; pen.fillRect(0, 0, 120, 40);</script>',
-    ),
-    note(
-      SCRIPT_CARD_TITLES.fetch,
-      '<p role="status">pending</p>' +
-        `<script>const out = document.querySelector("[role=status]");` +
-        `fetch("http://127.0.0.1:${port}${CARD_FETCH_PROBE_PATH}").then(` +
-        `() => { out.textContent = "reached"; }, () => { out.textContent = "blocked"; });</script>`,
-    ),
-    note(
-      SCRIPT_CARD_TITLES.runaway,
-      "<p>This card never yields.</p><script>while (true) {}</script>",
-    ),
-    note(
-      SCRIPT_CARD_TITLES.figure,
-      "<figure><div></div><figcaption>Drawn by the card itself.</figcaption></figure>" +
-        '<script>const ns = "http://www.w3.org/2000/svg";' +
-        'const svg = document.createElementNS(ns, "svg");' +
-        'svg.setAttribute("viewBox", "0 0 480 40"); svg.setAttribute("width", "100%");' +
-        'svg.setAttribute("role", "img"); svg.setAttribute("aria-label", "One crewmate, running");' +
-        'const dot = document.createElementNS(ns, "circle");' +
-        'dot.setAttribute("cx", "12"); dot.setAttribute("cy", "20"); dot.setAttribute("r", "6");' +
-        'dot.setAttribute("style", "fill:var(--ok)"); svg.append(dot);' +
-        'document.querySelector("figure div").append(svg);</script>',
-    ),
-  ];
-}
-/**
- * Marker prompt: the mock crewmate emits the containment corpus - every
- * attack vector the retired sanitizer used to strip, in one body per
- * vehicle. There is no sanitizer any more (captain decision, 2026-09-15):
- * the frame's sandbox, its CSP and the host's bridge validation are the
- * boundary, and `tests/e2e/card-containment.spec.ts` measures them.
- */
-export const ATTACK_CARDS_PROMPT_MARKER = "show the containment corpus";
-export const ATTACK_CARD_TITLES = {
-  /** No `<script>` element, so this body rides srcdoc. */
-  srcdoc: "Containment corpus",
-  /** Carries scripts, so the host serves it as a card mount. */
-  mount: "Containment corpus with scripts",
-  /** A `data:` image, the one thing a frame may now load (captain decision). */
-  image: "Inline image",
-  /** Navigation of the frame away from its own document: a self-inflicted nuisance. */
-  selfNav: "Navigating away",
-} as const;
-/** Any vector that executes sets this on the frame's window; none may. */
-export const ATTACK_MARKER = "fmAttackRan";
-/** A 2x2 opaque red PNG: small enough to read back pixel by pixel. */
-export const INLINE_PNG =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91" +
-  "JpzAAAAFElEQVR4nGP8z4AATAxQxhAXAAAA//8DTQEBc0GFdgAAAABJRU5ErkJggg==";
-
-/**
- * Every vector that needs no `<script>` element of its own: event handler
- * attributes, `javascript:` URLs, and every element that names a resource.
- * Each URL aims at the mock server's probe path, which counts what arrives.
- */
-function scriptlessAttackBody(probe: string): string {
-  const M = ATTACK_MARKER;
-  const fire = `window.${M} = true`;
-  return (
-    `<p onclick="${fire}" onmouseover="${fire}">Every vector the sanitizer used to strip.</p>` +
-    `<div onload="${fire}" onerror="${fire}" onfocus="${fire}" onanimationstart="${fire}"></div>` +
-    `<details ontoggle="${fire}"><summary onfocus="${fire}">Evidence</summary>` +
-    `<a href="javascript:${fire}">a javascript URL</a>` +
-    `<a href="${probe}?anchor" download="x.txt">a download</a></details>` +
-    `<img src="${probe}?img" onerror="${fire}" alt="">` +
-    `<iframe src="${probe}?iframe"></iframe>` +
-    `<object data="${probe}?object"></object><embed src="${probe}?embed">` +
-    `<link rel="stylesheet" href="${probe}?link">` +
-    `<style>@import url(${probe}?import);.x{background-image:url(${probe}?css)}</style>` +
-    `<base href="${probe}/">` +
-    `<form action="${probe}?form" method="post"><button type="submit">Submit</button></form>` +
-    `<video src="${probe}?video" autoplay><source src="${probe}?source"></video>` +
-    `<audio src="${probe}?audio" autoplay></audio>` +
-    `<svg><image href="${probe}?svgimage"></image>` +
-    `<use href="${probe}?use#icon"></use>` +
-    `<a href="javascript:${fire}"><text>svg link</text></a>` +
-    `<set attributeName="href" to="javascript:${fire}"></set>` +
-    `<foreignObject width="80" height="20"><iframe src="${probe}?fo"></iframe></foreignObject>` +
-    "</svg>"
-  );
-}
-
-/**
- * The same corpus on the mount vehicle, plus the two vectors that need a
- * script element: a `<script src>` the CSP must refuse, and a script the
- * card injects at run time, which has no hash. The card's OWN inline script
- * runs by design (WI-16) and is what reports both verdicts.
- */
-function scriptedAttackBody(probe: string): string {
-  const M = ATTACK_MARKER;
-  return (
-    scriptlessAttackBody(probe) +
-    `<p role="status">pending</p>` +
-    `<script src="${probe}?scriptsrc"></script>` +
-    "<script>(function () {" +
-    `var injected = document.createElement("script");` +
-    `injected.textContent = "window.${M} = true;";` +
-    "document.body.appendChild(injected);" +
-    `var img = new Image(); img.src = ${JSON.stringify(`${probe}?runtimeimg`)};` +
-    `fetch(${JSON.stringify(`${probe}?fetch`)}).catch(function () {});` +
-    `try { new WebSocket(${JSON.stringify(probe.replace("http://", "ws://"))}); } catch (e) {}` +
-    `try { navigator.sendBeacon(${JSON.stringify(`${probe}?beacon`)}); } catch (e) {}` +
-    `document.querySelector("[role=status]").textContent = "ran";` +
-    "})();</script>"
-  );
-}
-
-function attackCardToolCalls(port: number): ScriptedCall[] {
-  const probe = `http://127.0.0.1:${port}${CARD_FETCH_PROBE_PATH}`;
-  return [
-    {
-      name: "emit_card",
-      args: { title: ATTACK_CARD_TITLES.srcdoc, body: scriptlessAttackBody(probe) },
-    },
-    {
-      name: "emit_card",
-      args: { title: ATTACK_CARD_TITLES.mount, body: scriptedAttackBody(probe) },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: ATTACK_CARD_TITLES.image,
-        body: `<p>An image the body carries itself.</p><img src="${INLINE_PNG}" width="2" height="2" alt="">`,
-      },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: ATTACK_CARD_TITLES.selfNav,
-        body:
-          `<p>This body navigates its own frame.</p>` +
-          `<meta http-equiv="refresh" content="0;url=${probe}?meta">`,
-      },
-    },
-  ];
-}
-
 export const FILE_CARD_PROMPT_MARKER = "show a file-backed card";
 export const FILE_CARD_REVISE_MARKER = "show the edited card file";
 export const FILE_CARD_TITLE = "A card edited in its file";
@@ -428,86 +207,18 @@ export function writeFilesCalls(
   });
 }
 
-const pictureFile = (picture: PictureFixture) => ({ path: picture.path, bytes: bytesOf(picture) });
+/** A 2x2 opaque red PNG: small enough to read back pixel by pixel. */
+export const INLINE_PNG =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91" +
+  "JpzAAAAFElEQVR4nGP8z4AATAxQxhAXAAAA//8DTQEBc0GFdgAAAABJRU5ErkJggg==";
 
-/**
- * Marker prompt (contract v4.69, `tests/e2e/card-before-after.spec.ts`): the
- * mock crewmate writes two before pictures and three after pictures, one of
- * them of a new view, and offers a completion decision that shows them. Its
- * first card marks the new picture itself, where no New tag can be drawn; it
- * reads the card check's refusal and offers the card again with the mark on
- * the picture's figure.
- */
-export const BEFORE_AFTER_PROMPT_MARKER = "show the before and after";
-export const BEFORE_AFTER_CARD_TITLE = "The meter row and transcript read at a glance";
-export const BEFORE_AFTER_NEW_PICTURE = CHANGE_AFTER_PICTURES[2] as PictureFixture;
-export const BEFORE_AFTER_MARK_REFUSAL = untaggedNewMarkRefusal("img");
-
-function writeChangePicturesCalls(): ScriptedCall[] {
+export function writeChangePicturesCalls(): ScriptedCall[] {
   return writeFilesCalls([...CHANGE_BEFORE_PICTURES, ...CHANGE_AFTER_PICTURES].map(pictureFile));
 }
 
-function beforeAfterCardCall(newMark: "figure" | "picture"): ScriptedCall {
-  const mark = (fresh: boolean, on: typeof newMark) =>
-    fresh && newMark === on ? " data-inf-new" : "";
-  const view = (picture: PictureFixture, caption: string, fresh = false) =>
-    `<figure${mark(fresh, "figure")}><img${mark(fresh, "picture")} src="${picture.path}" alt="${picture.alt}"><figcaption>${caption}</figcaption></figure>`;
-  const [meterBefore, transcriptBefore] = CHANGE_BEFORE_PICTURES as [
-    PictureFixture,
-    PictureFixture,
-  ];
-  const [meterAfter, transcriptAfter, history] = CHANGE_AFTER_PICTURES as [
-    PictureFixture,
-    PictureFixture,
-    PictureFixture,
-  ];
-  return {
-    name: "emit_card",
-    args: {
-      title: BEFORE_AFTER_CARD_TITLE,
-      body: completionCardBody(
-        "<p>The meter row and the transcript were hard to read at a glance.</p>",
-        "<p>Both views are rearranged, and a history list is added.</p>",
-        `<p>The meters wrapped and the transcript ran together.</p>${view(meterBefore, "The meter row")}${view(transcriptBefore, "The transcript")}`,
-        `<p>The meters sit in one line and the transcript has room.</p>${view(meterAfter, "The meter row")}${view(transcriptAfter, "The transcript")}${view(history, "The history list", true)}`,
-      ),
-      actions: [
-        {
-          id: "put-in",
-          label: "Put it in",
-          default: true,
-          effect: { kind: "settle", mode: "merge" },
-        },
-      ],
-    },
-  };
-}
-
-/**
- * Marker prompt (demo recordings, `tests/e2e/card-demo.spec.ts`): the mock
- * crewmate writes a demo recording and its poster into its working copy,
- * beside a recording whose boxes are sound and whose pictures are filler.
- * It offers its completion decision with that recording first - which the
- * host's decoder refuses - then, reading the refusal, with the real one: a
- * still picture under Before, the demo under After.
- */
-export const DEMO_PROMPT_MARKER = "show the demo";
 export const DEMO_CARD_TITLE = "Dragging the box moves it";
-export const DEMO_REFUSAL = DEMO_UNPLAYED_WORDS;
-const BROKEN_DEMO = "shots/filler-demo.mp4";
 
-function writeDemoCalls(): ScriptedCall[] {
-  return writeFilesCalls([
-    { path: DEMO_RECORDING.path, bytes: DEMO_RECORDING.bytes },
-    pictureFile(DEMO_POSTER),
-    {
-      path: BROKEN_DEMO,
-      bytes: mp4({ width: DEMO_RECORDING.width, height: DEMO_RECORDING.height, seconds: 3 }),
-    },
-  ]);
-}
-
-function demoCardCall(recording: string, title = DEMO_CARD_TITLE): ScriptedCall {
+export function demoCardCall(recording: string, title = DEMO_CARD_TITLE): ScriptedCall {
   const before = CHANGE_BEFORE_PICTURES[0] as PictureFixture;
   return {
     name: "emit_card",
@@ -524,68 +235,12 @@ function demoCardCall(recording: string, title = DEMO_CARD_TITLE): ScriptedCall 
   };
 }
 
-/**
- * Marker prompt (GIF demos, `tests/e2e/card-demo-gif.spec.ts`): the mock
- * crewmate could make no MP4, so it attaches the single-play GIF fallback.
- * It offers its completion decision with a GIF told to loop first - which
- * the host refuses - then, reading the refusal, with the one that plays once.
- */
-export const GIF_DEMO_PROMPT_MARKER = "show the gif fallback";
-export const GIF_DEMO_CARD_TITLE = "Dragging the box moves it, shown once";
-export const GIF_DEMO_REFUSAL = GIF_LOOP_WORDS;
+export const pictureFile = (picture: PictureFixture) => ({
+  path: picture.path,
+  bytes: bytesOf(picture),
+});
 
-function writeGifDemoCalls(): ScriptedCall[] {
-  return writeFilesCalls([
-    { path: GIF_DEMO_RECORDING.path, bytes: GIF_DEMO_RECORDING.bytes },
-    { path: LOOPING_GIF_DEMO.path, bytes: LOOPING_GIF_DEMO.bytes },
-    pictureFile(DEMO_POSTER),
-  ]);
-}
-
-/**
- * Marker prompt (project fonts, `tests/e2e/card-containment.spec.ts`): the
- * mock crewmate writes its project's own font file into its working copy,
- * beside a copy damaged inside its compressed data, and names one in a
- * preview's `@font-face`. It offers the preview with the damaged copy first
- * - which the host's test load refuses - then, reading the refusal, with
- * the real file. The same preview names a second face by a web address,
- * first in its family list, which no frame loads.
- */
-export const PROJECT_FONT_PROMPT_MARKER = "show the project font";
-export const PROJECT_FONT_CARD_TITLE = "The balance screen in the project's own type";
-/** The family the preview's `@font-face` names the project's file by. */
-export const PROJECT_FONT_FAMILY = "Project Face";
-export const PROJECT_FONT_REFUSAL = TYPEFACE_UNREAD_WORDS;
-const PROJECT_FONT = "shots/project-face.woff2";
-const DAMAGED_FONT = "shots/project-face-damaged.woff2";
-
-function writeProjectFontCalls(): ScriptedCall[] {
-  return writeFilesCalls([
-    { path: PROJECT_FONT, bytes: projectFontBytes() },
-    { path: DAMAGED_FONT, bytes: damagedFontBytes() },
-  ]);
-}
-
-function projectFontCardCall(font: string, port: number): ScriptedCall {
-  const probe = `http://127.0.0.1:${port}${CARD_FETCH_PROBE_PATH}`;
-  return {
-    name: "emit_card",
-    args: {
-      title: PROJECT_FONT_CARD_TITLE,
-      body:
-        "<p>The balance screen, drawn in the project's own type.</p>" +
-        "<style>" +
-        `@font-face{font-family:"${PROJECT_FONT_FAMILY}";font-weight:300 700;src:url("${font}") format("woff2")}` +
-        `@font-face{font-family:"Web Face";src:url("${probe}?font") format("woff2")}` +
-        // The web face comes first, so the frame tries it - and loads nothing - before the project's.
-        `.balance{font-family:"Web Face","${PROJECT_FONT_FAMILY}",sans-serif;background:#fbf4e6;color:#1d2a24;border-radius:16px;padding:16px 20px;max-width:320px}` +
-        ".balance h2{margin:0 0 6px;font-size:22px;font-weight:700;color:#1d2a24}.balance p{margin:0;color:#1d2a24}" +
-        ".balance .amount{font-size:40px;font-weight:700}" +
-        "</style>" +
-        `<div class="balance"><h2>Eddie's Wallet</h2><p>Balance</p><p class="amount">$42.50</p><p>Saving for a bike - 3 weeks to go</p></div>`,
-    },
-  };
-}
+export const BEFORE_AFTER_NEW_PICTURE = CHANGE_AFTER_PICTURES[2] as PictureFixture;
 
 /**
  * Marker prompt (card width, the captain's Q5 to Q7 A of 2026-09-28): the
@@ -692,33 +347,6 @@ function widthCardToolCalls(): ScriptedCall[] {
  */
 export const FILE_FOLLOWUP_PROMPT_MARKER = "file a follow-up for the meter test";
 /**
- * The Sep 15 Claude crewmate case (contract v2.0): a completion card whose
- * body arrives entity-escaped. The mock crewmate emits it that way first,
- * and emits the raw-tag version only after the tool result names the
- * escaping - so the corrected card on screen is proof the refusal said so.
- */
-export const ESCAPED_CARD_PROMPT_MARKER = "show an escaped card";
-export const MOCK_ESCAPED_CARD_TITLE = "Transcript scroll is fixed";
-export const MOCK_ESCAPED_CARD_LEAD = "PR 140 keeps the transcript on its newest line.";
-const MOCK_ESCAPED_CARD_ACTIONS: ScriptedCardAction[] = [
-  {
-    id: "merge",
-    label: "Merge the branch",
-    default: true,
-    effect: { kind: "settle", mode: "merge" },
-  },
-  { id: "discard", label: "Discard", danger: true, effect: { kind: "settle", mode: "discard" } },
-];
-/** The escaped card's one list item, which the frame must show as words, never as markup. */
-export const MOCK_ESCAPED_CARD_ITEM = "Scrolls with the stream, stops when you scroll up.";
-const MOCK_ESCAPED_CARD_BODY = completionCardBody(
-  "<p>The newest transcript line should stay in view.</p>",
-  "<p>The transcript follows the stream until you scroll up.</p>",
-  "<p>The newest line could scroll out of view.</p>",
-  `<p>${MOCK_ESCAPED_CARD_LEAD}</p><ul><li>${MOCK_ESCAPED_CARD_ITEM}</li></ul>`,
-);
-const ESCAPED_BODY_REFUSAL_PHRASE = "arrived HTML-escaped";
-/**
  * Delivery rigor, phase 1 (the standard tier): a crewmate briefed with
  * "ship at the standard tier" reports under the five headings the tier
  * prescribes and emits its completion card with the four-heading outline.
@@ -727,8 +355,6 @@ const ESCAPED_BODY_REFUSAL_PHRASE = "arrived HTML-escaped";
  * path and the report reaches the feed - not that a model obeyed.
  */
 export const STANDARD_TIER_PROMPT_MARKER = "ship at the standard tier";
-export const STANDARD_TIER_MISSING_HEADING_MARKER = "ship at the standard tier missing a heading";
-export const MOCK_STANDARD_CARD_TITLE = "The meter test is steady";
 export const STANDARD_TIER_HEADINGS = [
   "Intent",
   "What changed",
@@ -736,7 +362,7 @@ export const STANDARD_TIER_HEADINGS = [
   "Risk",
   "Not done",
 ] as const;
-const MOCK_STANDARD_SECTIONS: Record<(typeof STANDARD_TIER_HEADINGS)[number], string> = {
+export const MOCK_STANDARD_SECTIONS: Record<(typeof STANDARD_TIER_HEADINGS)[number], string> = {
   Intent: "The meter test passes ten runs in a row.",
   "What changed": "The test awaits the job queue flush before it reads the meter.",
   Verified:
@@ -752,32 +378,38 @@ export const MOCK_STANDARD_CARD_BODY = completionCardBody(
   "<p>The test could read the old meter value while a write was still queued.</p>",
   `<p>${MOCK_STANDARD_AFTER}</p>`,
 );
+
 /** The report under the same five headings; the feed line carries the outcome after Intent. */
 export const MOCK_STANDARD_REPORT = STANDARD_TIER_HEADINGS.map(
   (heading) => `${heading}: ${MOCK_STANDARD_SECTIONS[heading]}`,
 ).join(" ");
-const MOCK_STANDARD_CARD_ACTIONS: ScriptedCardAction[] = [
+
+/** The label the crewmate invents; the captain must never see it. */
+export const MOCK_STANDARD_INVENTED_LABEL = "Ship it";
+
+export const MOCK_STANDARD_DRAWN_BODY = completionCardBody(
+  "<p>The meter test sometimes read before the pending write finished.</p>",
+  `<p>${MOCK_STANDARD_SECTIONS["What changed"]}</p>`,
+  "<p>The test could read the old meter value while a write was still queued.</p>",
+  `<p>${MOCK_STANDARD_AFTER}</p>` +
+    '<figure aria-label="Ten runs, all passed"><svg viewBox="0 0 510 50" width="100%"><rect x="5" y="5" width="500" height="40" rx="8" fill="var(--ok-dim)"/><text x="20" y="30" fill="var(--fg-1)">Ten consecutive runs passed</text></svg></figure>',
+);
+
+export const MOCK_STANDARD_MERGE_ONLY_ACTIONS: ScriptedCardAction[] = [
   {
-    id: "merge",
-    label: "Merge the branch",
+    id: "ship",
+    label: MOCK_STANDARD_INVENTED_LABEL,
     default: true,
     effect: { kind: "settle", mode: "merge" },
   },
-  { id: "discard", label: "Discard", danger: true, effect: { kind: "settle", mode: "discard" } },
 ];
+
 /**
- * Cards as threads, phase 1. Three marked crewmates, one per scenario the
- * captain's build order names as binding evidence:
- *
- *  - `THREAD_PROMPT_MARKER` emits a plain decision card and then answers
- *    the captain's replies the two ways the shared contract prescribes -
- *    a REVISION of the card under the same id when his words change what
- *    the card should say, and a prose `reply` when nothing on it changes.
- *  - `THREAD_SETTLE_PROMPT_MARKER` emits a completion card and, on a reply
- *    asking for the change to go in, closes its own card and reports the
- *    captain's words verbatim - the settle hand-off, with no classifier
- *    anywhere: the crewmate's instruction does the routing and the report
- *    wake is what reaches the Firstmate.
+ * Cards as threads, phase 1: `THREAD_PROMPT_MARKER` emits a plain decision
+ * card and then answers the captain's replies the two ways the shared
+ * contract prescribes - a REVISION of the card under the same id when his
+ * words change what the card should say, and a prose `reply` when nothing on
+ * it changes. The settle hand-off is `scenarios/threadSettle.ts`.
  */
 /**
  * Inline decisions (contract 4.22; tests/e2e/card-questions.spec.ts): a
@@ -810,88 +442,6 @@ export function inlineQuestionsBody(revised: boolean): string {
     '<p><label>Anything else <textarea name="notes"></textarea></label></p>',
   ].join("");
 }
-/**
- * Unpicked choices (contract 4.56; tests/e2e/card-questions.spec.ts): a
- * crewmate that first writes its required questions already answered, the
- * way cards were authored before 4.56, reads the card lint's refusal from
- * the tool result, and emits the same card again with every choice unpicked
- * and its recommendations marked.
- */
-export const UNPICKED_PROMPT_MARKER = "ask the release questions unpicked";
-export const UNPICKED_TITLE = "Two calls settle the release notes";
-export const UNPICKED_DEFAULT_LABEL = "Ship the notes";
-export const UNPICKED_REFUSAL = PREANSWERED_WORDS;
-export function unpickedQuestionsBody(preanswered: boolean): string {
-  return [
-    "<p>The release notes can go out once two calls are made.</p>",
-    "<p>Both calls change who reads the notes and when they arrive.</p>",
-    "<fieldset><legend>Who reads the notes?</legend>",
-    `<label><input type="radio" name="audience" value="project" required ${preanswered ? "checked" : "data-inf-recommended"}> The whole project</label>`,
-    '<label><input type="radio" name="audience" value="me"> Only me</label>',
-    '<label><input type="radio" name="audience" value="other" data-inf-write-in> Something else</label>',
-    "</fieldset>",
-    '<label for="ship-day">When should they arrive?</label><select id="ship-day" name="ship-day" required>',
-    preanswered
-      ? '<option value="friday" selected>Friday</option>'
-      : '<option value="">Choose</option><option value="friday" data-inf-recommended>Friday</option>',
-    '<option value="monday">Monday</option><option value="other" data-inf-write-in>Something else</option></select>',
-  ].join("");
-}
-/**
- * Something else (FI3-1002; tests/e2e/card-questions.spec.ts): a crewmate
- * that first asks its questions with no Something else row, reads the card
- * lint's refusal from the tool result, and emits the same card again with
- * the row on each question - one question opted out with
- * `data-inf-options-only` instead.
- */
-export const WRITE_IN_PROMPT_MARKER = "ask the launch questions with a way out";
-export const WRITE_IN_TITLE = "Two calls before the launch check";
-export const WRITE_IN_DEFAULT_LABEL = "Send answers";
-export const WRITE_IN_REFUSAL = WRITE_IN_GAP_WORDS;
-export function writeInQuestionsBody(rows: boolean): string {
-  return [
-    "<p>The launch check can run once you make two calls.</p>",
-    "<p>Your key's app did not answer when this Mac woke.</p>",
-    "<fieldset><legend>What should happen when your key's app does not answer?</legend>",
-    '<label><input type="radio" name="key_app" value="retry" required data-inf-recommended> Keep trying quietly, and say it once</label>',
-    '<label><input type="radio" name="key_app" value="keep" required> Keep it as built</label>',
-    rows
-      ? '<label><input type="radio" name="key_app" value="other" required data-inf-write-in> Something else</label>'
-      : "",
-    "</fieldset>",
-    '<label for="retry_every">How often should it try again?</label><select id="retry_every" name="retry_every">',
-    '<option value="">Choose</option><option value="5m" data-inf-recommended>Every 5 minutes</option><option value="wake">Only when this Mac wakes</option>',
-    rows ? '<option value="other" data-inf-write-in>Something else</option>' : "",
-    "</select>",
-    "<fieldset data-inf-options-only><legend>Which account runs the check?</legend>",
-    '<label><input type="radio" name="account" value="work" data-inf-recommended> Work account</label>',
-    '<label><input type="radio" name="account" value="home"> Home account</label>',
-    "</fieldset>",
-  ].join("");
-}
-/**
- * Card evidence (docs/card-evidence.md, "The stage"): a crewmate that puts
- * its card up with its report, then revises the same card in the same turn
- * and keeps working, held until the spec releases it or the app closes. The
- * stage keeps showing the first offer while the stored head is the second,
- * so a click on the stage chooses from an offer the card row no longer holds.
- */
-export const STALE_OFFER_PROMPT_MARKER = "revise the offer after reporting";
-export const STALE_OFFER_TITLE = "Retry on the queue flush";
-export const STALE_OFFER_REVISED_TITLE = "Retry on the clock instead";
-export const STALE_OFFER_CHOICE_LABEL = "Retry on the flush";
-
-/**
- * A crewmate whose one long turn the app closes under, again and again
- * (quit-mid-turn.spec.ts; docs/inbox.md, "A turn a quit or crash cut"). Its
- * turn is held open - the model still working - each time its message
- * arrives, until that message has come back after RESTART_REPLAY_QUITS
- * restarts, each one saying so; then it reports.
- */
-export const RESTART_REPLAY_PROMPT_MARKER = "keep working through restarts";
-export const RESTART_REPLAY_QUITS = 3;
-export const MOCK_RESTART_REPLAY_REPORT =
-  "I picked the work up again after three restarts and checked what had already happened first.";
 
 export const THREAD_PROMPT_MARKER = "keep a thread open";
 export const THREAD_TREE_PROMPT_MARKER = "with a waiting tree";
@@ -926,78 +476,6 @@ export const MOCK_THREAD_ACK_REPORT =
  * Firstmate revises under the same id, or its closing words land as
  * prose in the thread - it has no reply tool.
  */
-/**
- * What changed since the captain looked (the accepted FI3-472 plan): the
- * Firstmate puts one card up and revises it under the same id, one version
- * per captain turn - "show the change marks at version 3". Its cards redraw
- * at once, so each turn is one revision on the stage.
- */
-export const CHANGE_MARKS_PROMPT_MARKER = "show the change marks at version ";
-export const CHANGE_MARKS_TITLE = "Two ways to fix the flaky upload test";
-const CHANGE_MARKS_FIGURE = (fill: string, label: string) =>
-  `<figure aria-label="${label}"><svg viewBox="0 0 510 40" width="100%" role="img" aria-label="${label}"><rect x="0" y="8" width="510" height="24" rx="6" style="fill:${fill}"/></svg></figure>`;
-const CHANGE_MARKS_V2 =
-  "<p>The upload test fails when the queue drains late.</p>" +
-  "<p>Mocking the clock also fixes the retry failure you asked about.</p>" +
-  "<ul><li>Mock the clock: 12 lines, tests only</li><li>Await the queue: 40 lines, touches the uploader</li></ul>" +
-  "<table><tr><th>Route</th><th>Lines</th></tr><tr><td>Mock the clock</td><td>12</td></tr><tr><td>Await the queue</td><td>40</td></tr></table>" +
-  CHANGE_MARKS_FIGURE("var(--bg-3)", "Ten runs before the fix") +
-  "<p>Evidence is in the CI log.</p>";
-const CHANGE_MARKS_QUESTION =
-  '<fieldset><legend>Which route?</legend><label><input type="radio" name="route" value="clock" checked> Mock the clock</label><label><input type="radio" name="route" value="queue"> Await the queue</label><label><input type="radio" name="route" value="other" data-inf-write-in> Something else</label></fieldset>';
-/** The figure version 7 adds: ten runs, one more on each press of Next run. */
-const CHANGE_MARKS_PLAYABLE_FIGURE =
-  '<figure aria-label="Ten runs after the fix, one more on each press">' +
-  '<button type="button">Next run</button>' +
-  '<svg viewBox="0 0 510 64" width="100%" role="img" aria-label="Ten runs, all passed">' +
-  Array.from(
-    { length: 10 },
-    (_, i) =>
-      `<rect data-run x="${i * 51}" y="8" width="45" height="24" rx="6" style="fill:var(--ok);transition:opacity var(--dur-med) var(--ease-out)"/>`,
-  ).join("") +
-  '<text data-runs-label x="0" y="54" style="fill:var(--fg-2)">10 of 10 passed</text>' +
-  "</svg>" +
-  "<script>(function(){var figure=document.currentScript.closest('figure');var runs=figure.querySelectorAll('[data-run]');var label=figure.querySelector('[data-runs-label]');var shown=runs.length;figure.querySelector('button').addEventListener('click',function(){shown=shown%runs.length+1;runs.forEach(function(run,i){run.style.opacity=i<shown?'1':'0';});label.textContent=shown+' of '+runs.length+' passed';});})();</script>" +
-  "</figure>";
-/** Each version's body, by the number the captain names. */
-export const CHANGE_MARKS_VERSIONS: Record<number, string> = {
-  1:
-    "<p>The upload test fails when the queue drains late.</p>" +
-    "<ul><li>Mock the clock: 12 lines, tests only</li><li>Rewrite the uploader: 200 lines</li></ul>" +
-    "<table><tr><th>Route</th><th>Lines</th></tr><tr><td>Mock the clock</td><td>12</td></tr></table>" +
-    CHANGE_MARKS_FIGURE("var(--bg-3)", "Ten runs before the fix") +
-    "<p>Evidence is in the CI log.</p>",
-  // One new paragraph, one list item and one table row changed or added.
-  2: CHANGE_MARKS_V2,
-  // A question, then (unseen) a new drawing: marked together.
-  3: CHANGE_MARKS_V2 + CHANGE_MARKS_QUESTION,
-  4:
-    CHANGE_MARKS_V2.replace(
-      CHANGE_MARKS_FIGURE("var(--bg-3)", "Ten runs before the fix"),
-      CHANGE_MARKS_FIGURE("var(--ok-dim)", "Ten runs after the fix, all passed"),
-    ) + CHANGE_MARKS_QUESTION,
-  // Rewritten: more than half the card is new.
-  5:
-    "<p>Await the queue: the race is gone in production too.</p>" +
-    "<ul><li>40 lines in the uploader</li><li>One new test for the drain</li></ul>" +
-    "<p>Ten runs passed on the Mac and in CI.</p>",
-  // A playable preview: its own script draws it, so only the line says what changed.
-  6:
-    "<p>Await the queue: the race is gone in production too.</p>" +
-    "<ul><li>40 lines in the uploader</li><li>One new test for the drain</li></ul>" +
-    "<p>Ten runs passed on the Mac and in CI.</p>" +
-    "<p>Drag to replay the ten runs.</p>" +
-    '<canvas id="runs" width="510" height="40"></canvas>' +
-    "<script>const c=document.getElementById('runs').getContext('2d');c.fillStyle=getComputedStyle(document.body).getPropertyValue('--ok');c.fillRect(0,8,510,24);</script>",
-  // A figure that moves: its script sits inside it, so the card is still
-  // prose and is marked like any other.
-  7:
-    "<p>Await the queue: the race is gone in production too.</p>" +
-    "<ul><li>40 lines in the uploader</li><li>One new test for the drain</li></ul>" +
-    "<p>Ten runs passed on the Mac and in CI.</p>" +
-    "<p>Press Next run to replay the ten runs one at a time.</p>" +
-    CHANGE_MARKS_PLAYABLE_FIGURE,
-};
 
 export const FM_THREAD_PROMPT_MARKER = "keep a firstmate thread open";
 export const FM_THREAD_CARD_TITLE = "Two ways to phrase the welcome";
@@ -1008,35 +486,13 @@ export const FM_THREAD_PROSE_ANSWER = "The chips stay; the caption is the first 
 export const THREAD_IMAGE_PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
-export const THREAD_SETTLE_PROMPT_MARKER = "hand the settle over";
-export const THREAD_SETTLE_CARD_TITLE = "The queue flush is ready";
-/** The captain's words under that card - a settle is not the crewmate's to run. */
-export const THREAD_SETTLE_REPLY = "merge it";
-/**
- * The phrase the crewmate's report carries so the mock Firstmate can find
- * the hand-off. In the product the Firstmate reads the captain's words; a
- * scripted model needs a needle, and this is it.
- */
-export const THREAD_HANDOFF_PHRASE = "this one is yours to run";
-export const MOCK_THREAD_HANDOFF_REPORT =
-  `The captain replied under my card, verbatim: "${THREAD_SETTLE_REPLY}". ` +
-  `Putting the change in is not mine to do, so I closed my card - ${THREAD_HANDOFF_PHRASE}.`;
-
-/**
- * A crewmate on a Mac opened from the Dock (host-env e2e): a brief carrying
- * this marker runs `node --version` in its shell, then reports what came
- * back, verbatim, so the spec reads the answer off the feed.
- */
-export const NODE_VERSION_PROMPT_MARKER = "say which node this Mac runs";
-export const MOCK_NODE_REPORT_PREFIX = "This Mac's node answers";
-
 /**
  * A crewmate's browser command, as it runs it in its shell
  * (docs/axi-commands.md): `infinitary-browser-axi` and its arguments, each one
  * shell word. Pi serves the shell as `bash` and Claude's client as `Bash`
  * (`servedToolName`), so one script drives both.
  */
-function browser(...args: (string | number)[]): ScriptedCall {
+export function browser(...args: (string | number)[]): ScriptedCall {
   const words = args.map((arg) => {
     const word = String(arg);
     return /^[A-Za-z0-9@:._/=-]+$/.test(word) ? word : `'${word.replaceAll("'", "'\\''")}'`;
@@ -1175,7 +631,7 @@ export function shellJobsRunning(body: string): boolean {
  * Pi shell's limit answered `running`, and its answer came with the next
  * look (`earlier`), so the two read as the one answer the browser gave.
  */
-function toolAnswers(messages: ReturnType<typeof providerMessages>, from = 0): string[] {
+export function toolAnswers(messages: ReturnType<typeof providerMessages>, from = 0): string[] {
   const answers: string[] = [];
   let waiting = false;
   for (const message of browserShellMessages(messages).readings.slice(from)) {
@@ -1206,12 +662,62 @@ function toolAnswers(messages: ReturnType<typeof providerMessages>, from = 0): s
   return answers;
 }
 
+/** The wake a returned browser brings, which the browser journeys read. */
+export const HANDOFF_WAKE = BROWSER_RETURNED_OPENING;
+
+/** The first sentence of an answer, as a report quotes it. */
+export function firstSentence(text: string | undefined): string {
+  const passage =
+    (text ?? "").split("\n").find((line) => line.startsWith("The captain returned control")) ??
+    (text ?? "").match(/^did: (.*)$/m)?.[1] ??
+    text;
+  return (passage ?? "").split("\n")[0]?.split(/(?<=[.:])\s/)[0] ?? "";
+}
+
+/** The tool answers after a place in the conversation, oldest first, as the scripts read them. */
+export function answersAfter(
+  messages: ReturnType<typeof providerMessages>,
+  from: number,
+): string[] {
+  return toolAnswers(messages, from);
+}
+
+/**
+ * The ref an outline gave a control, by its role and the start of its name;
+ * `text` with no name finds the first cut passage, the one text line a ref names.
+ */
+export function refOf(outline: string | undefined, role: string, name: string): string | undefined {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return outline?.match(new RegExp(`${role} "${escaped}[^"]*" \\[(${REF_PATTERN})\\]`))?.[1];
+}
+
+/** A same-page action need not repeat unchanged controls. Keep refs only in the current book. */
+export function knownRefOf(
+  answers: readonly string[],
+  role: string,
+  name: string,
+): string | undefined {
+  const book = [...answers]
+    .reverse()
+    .map((text) => text.match(/^\s*refs: (g\d+)$/m)?.[1])
+    .find(Boolean);
+  for (const answer of [...answers].reverse()) {
+    const current = answer
+      .split("\n")
+      .filter((line) => !line.startsWith("- old line "))
+      .join("\n");
+    const ref = refOf(current, role, name);
+    if (ref && (!book || ref.startsWith(`${book}:`))) return ref;
+  }
+  return undefined;
+}
+
 /**
  * A browser journey's next step, looking again first while the crewmate's
  * last command still runs in its browser: a command past a Pi shell's
  * limit keeps running, and the bare command reads its answer.
  */
-function lookingAgain(
+export function lookingAgain(
   body: string,
   step: (body: string) => ScriptedCall[] | undefined,
 ): ScriptedCall[] | undefined {
@@ -1314,1204 +820,6 @@ function taskBrowserStep(body: string): ScriptedCall[] | undefined {
 }
 
 /**
- * A page that opens a release without a full load, a long passage, a time,
- * and a plain-text feed. The marker names the page; the script clicks the
- * release, tries the release link's ref from before the page moved, reads
- * the cut passage, reads the feed, photographs the whole page and reports
- * what the tools actually said.
- */
-export const TASK_BROWSER_READING_MARKER = "read the release page at ";
-export const MOCK_BROWSER_READING_REPORT_PREFIX = "The release page said";
-export const MOCK_BROWSER_READING_PICTURE = "release-page";
-
-function taskBrowserReadingStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/read the release page at (http:\/\/127\.0\.0\.1:\d+\/reading)/);
-  if (!ask) return undefined;
-  const url = ask[1] as string;
-  const answers = toolAnswers(providerMessages(body));
-  const missing = (what: string): ScriptedCall[] => [
-    {
-      name: "report",
-      args: {
-        text: `${MOCK_BROWSER_READING_REPORT_PREFIX} nothing with ${what}: ${(answers.at(-1) ?? "").slice(0, 500)}`,
-      },
-    },
-  ];
-  switch (answers.length) {
-    case 0:
-      return [browser("open", url)];
-    case 1: {
-      const ref = refOf(
-        answers[0],
-        "link",
-        "Firstmate 3000 0.2.1-alpha.52 (private alpha, alpha channel)",
-      );
-      return ref ? [browser("click", `@${ref}`)] : missing("the release link");
-    }
-    case 2: {
-      // The release link's ref from before the page moved, used where a
-      // stale ref would do least: a scroll.
-      const ref = refOf(
-        answers[0],
-        "link",
-        "Firstmate 3000 0.2.1-alpha.52 (private alpha, alpha channel)",
-      );
-      return ref ? [browser("scroll", `@${ref}`)] : missing("the release link");
-    }
-    case 3: {
-      const ref = refOf(answers[1], "text", "");
-      return ref ? [browser("snapshot", `@${ref}`)] : missing("a cut passage");
-    }
-    case 4:
-      return [browser("screenshot", MOCK_BROWSER_READING_PICTURE, "--full-page")];
-    case 5:
-      return [browser("open", `${url}/feed`)];
-    case 6: {
-      const ref = refOf(answers[5], "text", "");
-      return ref ? [browser("snapshot", `@${ref}`)] : missing("the feed passage");
-    }
-    case 7:
-      return [browser("stop")];
-    case 8: {
-      const listed = answers[0] ?? "";
-      const click = answers[1] ?? "";
-      const stale = answers[2] ?? "";
-      const notes = answers[3] ?? "";
-      const feed = answers[6] ?? "";
-      const moved = click.includes("/reading/one") ? "moved" : "stayed";
-      const title = click.includes('heading "Firstmate 3000 0.2.1-alpha.52"')
-        ? "new title"
-        : "old title";
-      const time = listed.includes("2026-10-08T21:52:52Z") ? "exact time" : "no time";
-      const tip = listed.includes("Oct 8, 2026, 2:52 PM PDT") ? "title tooltip" : "no tooltip";
-      const tail = notes.includes("anything stays secret in the notes")
-        ? "notes in full"
-        : "notes cut";
-      const atom = feed.includes("feed ends with the atom tail") ? "feed in full" : "feed cut";
-      return [
-        {
-          name: "report",
-          args: {
-            text: `${MOCK_BROWSER_READING_REPORT_PREFIX} ${moved}, ${title}, ${time}, ${tip}, ${tail}, ${atom}. The old ref: "${firstSentence(stale)}"`,
-          },
-        },
-      ];
-    }
-    default:
-      return undefined;
-  }
-}
-
-/**
- * A page too long for one answer (docs/task-browser.md, "Reading a long
- * page"). The marker names the page; the script opens it, finds words in
- * its last section, reads on from the line the first answer's next lines
- * name, scrolls down, and reports what each answer actually showed.
- */
-export const TASK_BROWSER_LONG_MARKER = "read the long changelog at ";
-export const MOCK_BROWSER_LONG_REPORT_PREFIX = "The long changelog said";
-/** Words only the changelog's last section holds. */
-export const TASK_BROWSER_LONG_LAST_WORDS = "the last release ends here";
-
-/** The first outline line an answer shows, from its `outline:` line. */
-function firstShownLine(answer: string | undefined): number | undefined {
-  const line = answer?.match(/^outline: lines (\d+)-\d+ of \d+/m)?.[1];
-  return line === undefined ? undefined : Number(line);
-}
-
-function taskBrowserLongStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/read the long changelog at (http:\/\/127\.0\.0\.1:\d+\/long)/);
-  if (!ask) return undefined;
-  const url = ask[1] as string;
-  const answers = toolAnswers(providerMessages(body));
-  // The line the first answer says to read on from, read off its next lines.
-  const readOn = answers[0]?.match(/`infinitary-browser-axi snapshot --from (\d+)`/)?.[1];
-  switch (answers.length) {
-    case 0:
-      return [browser("open", url)];
-    case 1:
-      return [browser("snapshot", "--find", TASK_BROWSER_LONG_LAST_WORDS)];
-    case 2:
-      return [browser("snapshot", "--from", Number(readOn ?? 0))];
-    case 3:
-      return [browser("scroll", "down")];
-    case 4:
-      return [browser("stop")];
-    case 5: {
-      const [opened = "", found = "", read = "", scrolled = ""] = answers;
-      const facts = [
-        /^map\[\d+\]:$/m.test(opened) && opened.includes('region "Release 40"')
-          ? "a map"
-          : "no map",
-        opened.includes("(same as line ") ? "folded repeats" : "no folds",
-        (firstShownLine(found) ?? 1) > 1 &&
-        found.includes(`text "And ${TASK_BROWSER_LONG_LAST_WORDS}."`)
-          ? "found the end"
-          : "did not find the end",
-        readOn !== undefined && firstShownLine(read) === Number(readOn)
-          ? "read on"
-          : "did not read on",
-        (firstShownLine(scrolled) ?? 1) > 1 && scrolled.includes(", those on screen")
-          ? "scrolled past the top"
-          : "scrolled to the same top",
-      ];
-      const sizes = answers
-        .slice(0, 4)
-        .map((answer) => answer.length)
-        .join(", ");
-      return [
-        {
-          name: "report",
-          args: {
-            text: `${MOCK_BROWSER_LONG_REPORT_PREFIX} ${facts.join(", ")}. Characters per answer: ${sizes}.`,
-          },
-        },
-      ];
-    }
-    default:
-      return undefined;
-  }
-}
-
-/**
- * A page opens a second page (docs/task-browser.md, "A second page"). A
- * brief carrying this marker, a shop and a bank this Mac serves, and a
- * site whose certificate does not verify ("pay at the shop page at
- * http://127.0.0.1:A/ with the bank at http://localhost:B/ after
- * https://localhost:C/") drives the task's own browser the way a crewmate
- * would: it opens the untrusted site first and reads the refusal, opens the
- * bank (so the shop's page may reach it), then the shop, and clicks Pay.
- * The shop opens the bank's check as a second page; the crewmate waits on
- * it for the bank to say "Ready to approve" - which it does once the spec
- * tells its server so, keeping the turn and both pages up meanwhile -
- * clicks Approve, waits for the shop to say it was paid once the check has
- * closed itself, and reports what each answer said, read off the tool
- * results, never assumed.
- */
-export const TASK_BROWSER_PAGES_MARKER = "pay at the shop page at ";
-export const MOCK_PAGES_REPORT_PREFIX = "The shop and its bank said";
-/** The words the bank's check shows once the spec lets the crewmate approve. */
-export const TASK_BROWSER_APPROVE_WORDS = "Ready to approve";
-
-/** The second-page journey's next scripted step, from the browser answers so far. */
-function taskBrowserPagesStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(
-    /pay at the shop page at (http:\/\/127\.0\.0\.1:\d+\/) with the bank at (http:\/\/localhost:\d+\/) after (https:\/\/localhost:\d+\/)/,
-  );
-  if (!ask) return undefined;
-  const [, shop, bank, untrusted] = ask as unknown as [string, string, string, string];
-  const answers = toolAnswers(providerMessages(body));
-  const last = answers.at(-1) ?? "";
-  const report = (text: string): ScriptedCall[] => [
-    { name: "report", args: { text: `${MOCK_PAGES_REPORT_PREFIX} ${text}` } },
-  ];
-  switch (answers.length) {
-    case 0:
-      return [browser("open", untrusted)];
-    case 1:
-      return [browser("open", bank)];
-    case 2:
-      return [browser("open", shop)];
-    case 3: {
-      const ref = refOf(last, "button", "Pay");
-      return ref
-        ? [browser("click", `@${ref}`)]
-        : report(`nothing with a Pay button: ${last.slice(0, 400)}`);
-    }
-    default:
-      break;
-  }
-  // Waiting on the bank's check until it is ready: each wait is up to ten seconds of turn.
-  const approved = answers.some((text) => text.includes('did: Clicked button "Approve"'));
-  if (!approved) {
-    if (!last.includes(`Found "${TASK_BROWSER_APPROVE_WORDS}"`)) {
-      return [browser("wait", TASK_BROWSER_APPROVE_WORDS)];
-    }
-    const ref = refOf(last, "button", "Approve");
-    return ref
-      ? [browser("click", `@${ref}`)]
-      : report(`nothing with an Approve button: ${last.slice(0, 400)}`);
-  }
-  if (!last.includes('Found "Paid with"') && !last.includes("Waited")) {
-    return [browser("wait", "Paid with")];
-  }
-  const all = answers.join("\n");
-  const opened = all.match(/The page opened a second page[^.]*\./)?.[0] ?? "no second page";
-  const closed = all.match(/Page 2 \([^)]+\) closed itself[^.]*\./)?.[0] ?? "it never closed";
-  const paid = last.match(/text "(Paid[^"]*)"/)?.[1];
-  return report(
-    `"${firstSentence(answers[0])}" Then: "${opened}" The check: "${answers.some((text) => /^\s*page: 2 of 2$/m.test(text)) ? "page 2 of 2" : "one page"}". After Approve: "${closed}" The shop: "${paid}".`,
-  );
-}
-
-/**
- * The captain watches a task's browser (docs/task-browser.md, "The view").
- * A brief carrying this marker, a page this Mac serves and a name ("watch
- * the sign-up page at http://127.0.0.1:PORT/ as Sam") opens the task's
- * browser there and types the name, then keeps its turn running - the
- * crewmate driving - by waiting for the page to say "Ready to send", which
- * it does once the spec tells the server so. Then it clicks Send and
- * reports what the page said, leaving its browser open: nobody drives it.
- */
-export const TASK_BROWSER_WATCH_MARKER = "watch the sign-up page at ";
-export const MOCK_BROWSER_WATCH_REPORT_PREFIX = "The watched sign-up page said";
-/** The words the watched page shows once the spec lets the crewmate go on. */
-export const TASK_BROWSER_READY_WORDS = "Ready to send";
-
-/** The watched check's next scripted step, from the browser answers so far. */
-function taskBrowserWatchStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/watch the sign-up page at (http:\/\/127\.0\.0\.1:\d+\/) as (\w+)/);
-  if (!ask) return undefined;
-  const [, url, name] = ask as unknown as [string, string, string];
-  const answers = toolAnswers(providerMessages(body));
-  const last = answers.at(-1) ?? "";
-  if (answers.length === 0) return [browser("open", url)];
-  if (answers.length === 1) {
-    const ref = refOf(last, "textbox", "Name");
-    return ref
-      ? [browser("fill", `@${ref}`, name)]
-      : [{ name: "report", args: { text: `${MOCK_BROWSER_WATCH_REPORT_PREFIX} no Name field.` } }];
-  }
-  // Driving until the page is ready: each wait is up to ten seconds of turn.
-  if (!last.includes(`Found "${TASK_BROWSER_READY_WORDS}"`) && !last.includes("Clicked")) {
-    return [browser("wait", TASK_BROWSER_READY_WORDS)];
-  }
-  if (!last.includes("Clicked")) {
-    const ref = knownRefOf(answers, "button", "Send");
-    return ref
-      ? [browser("click", `@${ref}`)]
-      : [{ name: "report", args: { text: `${MOCK_BROWSER_WATCH_REPORT_PREFIX} no Send button.` } }];
-  }
-  const thanks = last.match(/text "(Thanks, [^"]+)"/)?.[1];
-  return [
-    {
-      name: "report",
-      args: { text: `${MOCK_BROWSER_WATCH_REPORT_PREFIX} "${thanks}", and left its browser open.` },
-    },
-  ];
-}
-
-/**
- * A card that opens its task's browser (docs/task-browser.md, "From a
- * card"). A brief carrying this marker, a page this Mac serves and a name
- * ("show the sign-up page at http://127.0.0.1:PORT/ as Sam") opens the
- * task's browser there, types the name and clicks Send by the outline's
- * refs, then emits a decision whose browser button reads "Try it" and
- * reports, leaving its browser open for the captain to try.
- */
-export const TASK_BROWSER_CARD_MARKER = "show the sign-up page at ";
-export const MOCK_BROWSER_CARD_TITLE = "The sign-up page thanks the name after Send";
-export const MOCK_BROWSER_BUTTON = "Try it";
-export const MOCK_BROWSER_CARD_REPORT = "I left the sign-up page open for the captain to try.";
-
-/**
- * A crewmate asks the captain to sign in (docs/task-browser.md, "Asking for
- * help"). A brief carrying this marker and a page this Mac serves ("sign in
- * to the account page at http://127.0.0.1:PORT/") opens the task's browser
- * there, emits an ordinary decision that asks the captain to take the
- * browser over - the site, why, what it does after - then tries to read the
- * page once more and reports what its browser answered. Woken by the
- * captain's Return control, it clicks Sign in by its ref from before the
- * handoff, takes a fresh look - waiting for the page to say "Ready to go
- * on", which it does once the spec tells the server so - and reports what
- * each answer said, read off the tool results, never assumed.
- */
-export const TASK_BROWSER_HANDOFF_MARKER = "sign in to the account page at ";
-export const MOCK_HANDOFF_CARD_TITLE = "Sign in to the account page to continue";
-/** Why the crewmate asks the captain to take its browser: its card's words and its request's reason. */
-export const MOCK_HANDOFF_REASON = "The account page needs your sign-in";
-export const MOCK_HANDOFF_ACTION = BROWSER_SIGN_IN_STEP;
-export const MOCK_HANDOFF_ASKED_REPORT = "I asked the captain to sign in.";
-export const MOCK_HANDOFF_RETURNED_REPORT = "The captain returned my browser.";
-export const TASK_BROWSER_HANDOFF_READY_WORDS = "Ready to go on";
-/** The picture it takes of the signed-in page, once with a reason (docs/task-browser.md, "A signed-in page"). */
-export const MOCK_SIGNED_IN_PICTURE = "signed-in-account";
-export const MOCK_SIGNED_IN_PICTURE_REASON = "the task needs to show which account is signed in";
-const HANDOFF_WAKE = BROWSER_RETURNED_OPENING;
-
-/** The first sentence of an answer, as a report quotes it. */
-function firstSentence(text: string | undefined): string {
-  const passage =
-    (text ?? "").split("\n").find((line) => line.startsWith("The captain returned control")) ??
-    (text ?? "").match(/^did: (.*)$/m)?.[1] ??
-    text;
-  return (passage ?? "").split("\n")[0]?.split(/(?<=[.:])\s/)[0] ?? "";
-}
-
-/** The handoff's next scripted step, from the browser answers so far. */
-function taskBrowserHandoffStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/sign in to the account page at (http:\/\/127\.0\.0\.1:\d+\/)/);
-  if (!ask) return undefined;
-  const url = ask[1] as string;
-  const messages = providerMessages(body);
-  const wake = messages.findIndex(
-    (message) => message.role === "user" && message.text.includes(HANDOFF_WAKE),
-  );
-  const answers = (from: number) => toolAnswers(messages, from);
-  if (wake === -1) {
-    if (calledTool(body, "report")) return undefined;
-    const before = answers(0);
-    switch (before.length) {
-      case 0:
-        return [browser("open", url)];
-      case 1:
-        return [
-          {
-            name: "emit_card",
-            args: {
-              id: "sign-in-request",
-              title: MOCK_HANDOFF_CARD_TITLE,
-              body: `<p>${MOCK_HANDOFF_REASON} before I can go on, so I paused the browser on its sign-in page.</p><p>While you have control I cannot see the page, and your typing is not recorded.</p>`,
-              browser_handoff: {
-                site: new URL(url).host,
-                reason: MOCK_HANDOFF_REASON,
-                after: "read the account page and report what it says",
-              },
-              actions: [
-                { id: "leave", label: "Leave waiting" },
-                {
-                  id: "sign-in",
-                  label: MOCK_HANDOFF_ACTION,
-                  default: true,
-                  effect: { kind: "open", target: "browser" },
-                },
-              ],
-            },
-          },
-        ];
-      case 2:
-        return [browser("snapshot")];
-      case 3:
-        return [
-          {
-            name: "report",
-            args: {
-              text: `${MOCK_HANDOFF_ASKED_REPORT} My browser then said: "${firstSentence(before[2])}"`,
-            },
-          },
-        ];
-      default:
-        return undefined;
-    }
-  }
-  const after = answers(wake);
-  // Its report's own answer: this turn has said what it found.
-  if (after.some((text) => text.startsWith("Reported."))) return undefined;
-  if (after.length === 0) {
-    // The Sign in button's ref from before the handoff.
-    const ref = refOf(answers(0)[0], "button", "Sign in") ?? "g1:e1";
-    return [browser("click", `@${ref}`)];
-  }
-  const looked = after.findIndex(
-    (text, index) =>
-      index > 0 &&
-      (text.includes(`Found "${TASK_BROWSER_HANDOFF_READY_WORDS}"`) || text.includes("Waited")),
-  );
-  if (looked === -1) {
-    return [browser("wait", TASK_BROWSER_HANDOFF_READY_WORDS)];
-  }
-  // The page may show the captain's account now: a picture only with a reason.
-  const refused = after.find((text) =>
-    text.includes("a picture is taken only when the task needs one"),
-  );
-  const saved = after.find((text) => /^did: Saved /m.test(text));
-  if (!refused) return [browser("screenshot", MOCK_SIGNED_IN_PICTURE)];
-  if (!saved) {
-    return [
-      browser("screenshot", MOCK_SIGNED_IN_PICTURE, "--reason", MOCK_SIGNED_IN_PICTURE_REASON),
-    ];
-  }
-  const look = after.slice(1, looked + 1).join("\n");
-  const state = look.match(/text "((?:Not signed in|Signed in as [^"]+))"/)?.[1];
-  const kept = ["private sign-in note", "tracker.example"].filter((word) => look.includes(word));
-  return [
-    {
-      name: "report",
-      args: {
-        text: `${MOCK_HANDOFF_RETURNED_REPORT} The old ref: "${firstSentence(after[0])}" The fresh look said "${firstSentence(after[1])}" and the page said "${state}". It kept ${kept.length ? kept.join(" and ") : "nothing from the captain's time"}. A picture without a reason: "${refused.split("\n")[0]}" With one: "${saved.match(/^did: (.*?) \(/m)?.[1]}".`,
-      },
-    },
-  ];
-}
-
-/**
- * A sign-in saved on this Mac reaches a later task (docs/task-browser.md,
- * "Saved sign-ins"). A brief carrying this marker and a club page this Mac
- * serves ("use the club page at http://127.0.0.1:PORT/ as ...") opens the
- * task's browser there and asks the captain to sign in on an ordinary
- * decision - the host may add a saved sign-in beside its own action - and
- * reports that it asked. Woken, by Return control or by the saved sign-in,
- * it opens the page again, so the club's server sees its sign-in, and
- * reports the wake's first sentence and what the page said, read off the
- * tool results, never assumed.
- */
-export const TASK_BROWSER_SAVED_MARKER = "use the club page at ";
-export const MOCK_SAVED_CARD_TITLE = "Sign in to the club page to continue";
-export const MOCK_SAVED_ACTION = BROWSER_SIGN_IN_STEP;
-export const MOCK_SAVED_ASKED_REPORT = "I asked the captain to sign in to the club page.";
-export const MOCK_SAVED_REPORT_PREFIX = "The club page said";
-const SAVED_WAKES = [
-  BROWSER_RETURNED_OPENING,
-  `The captain let this task use the sign-in saved on ${HERE.this}`,
-];
-
-/** The saved sign-in journey's next scripted step, from the browser answers so far. */
-function taskBrowserSavedStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/use the club page at (http:\/\/127\.0\.0\.1:\d+\/)/);
-  if (!ask) return undefined;
-  const url = ask[1] as string;
-  const messages = providerMessages(body);
-  const wake = messages.findIndex(
-    (message) =>
-      message.role === "user" && SAVED_WAKES.some((words) => message.text.includes(words)),
-  );
-  const answers = (from: number) => toolAnswers(messages, from);
-  if (wake === -1) {
-    if (calledTool(body, "report")) return undefined;
-    const before = answers(0);
-    if (before.length === 0) return [browser("open", url)];
-    if (before.length === 1) {
-      return [
-        {
-          name: "emit_card",
-          args: {
-            id: "club-sign-in",
-            title: MOCK_SAVED_CARD_TITLE,
-            body: "<p>The club page needs your sign-in before I can read your membership, so I paused the browser on it.</p><p>While you have control I cannot see the page, and your typing is not recorded.</p>",
-            browser_handoff: {
-              site: new URL(url).host,
-              reason: "The club page needs your sign-in",
-              after: "read the club page and report what it says",
-            },
-            actions: [
-              { id: "leave", label: "Leave waiting" },
-              {
-                id: "sign-in",
-                label: MOCK_SAVED_ACTION,
-                default: true,
-                effect: { kind: "open", target: "browser" },
-              },
-            ],
-          },
-        },
-      ];
-    }
-    // A refused card is reported as it was refused, so a spec reads why.
-    const refused = before[1]?.startsWith("Card refused") ? ` ${before[1]}` : "";
-    return [{ name: "report", args: { text: `${MOCK_SAVED_ASKED_REPORT}${refused}` } }];
-  }
-  const after = answers(wake);
-  if (after.some((text) => text.startsWith("Reported."))) return undefined;
-  if (after.length === 0) return [browser("open", url)];
-  const state = after[0]?.match(/text "((?:Not signed in|Signed in as [^"]+))"/)?.[1];
-  const woken = firstSentence(messages[wake]?.text);
-  return [
-    {
-      name: "report",
-      args: { text: `${MOCK_SAVED_REPORT_PREFIX} "${state}". The wake said "${woken}"` },
-    },
-  ];
-}
-
-/** The browser card's next scripted step, from the browser answers so far. */
-function taskBrowserCardStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/show the sign-up page at (http:\/\/127\.0\.0\.1:\d+\/) as (\w+)/);
-  if (!ask) return undefined;
-  const [, url, name] = ask as unknown as [string, string, string];
-  const answers = toolAnswers(providerMessages(body));
-  const last = answers.at(-1) ?? "";
-  const missing = (what: string): ScriptedCall[] => [
-    { name: "report", args: { text: `The sign-up page has no ${what}: ${last.slice(0, 400)}` } },
-  ];
-  switch (answers.length) {
-    case 0:
-      return [browser("open", url)];
-    case 1: {
-      const ref = refOf(last, "textbox", "Name");
-      return ref ? [browser("fill", `@${ref}`, name)] : missing("Name field");
-    }
-    case 2: {
-      const ref = knownRefOf(answers, "button", "Send");
-      return ref ? [browser("click", `@${ref}`)] : missing("Send button");
-    }
-    case 3:
-      return [
-        {
-          name: "emit_card",
-          args: {
-            id: "try-sign-up",
-            title: MOCK_BROWSER_CARD_TITLE,
-            body:
-              `<p>The sign-up page said "Thanks, ${name}" after I typed the name and pressed Send.</p>` +
-              "<p>Its browser is still open on this Mac, so you can try the page yourself.</p>",
-            actions: [
-              { id: "change-words", label: "Change the words" },
-              { id: "looks-right", label: "Looks right", default: true },
-            ],
-            browser_button: MOCK_BROWSER_BUTTON,
-          },
-        },
-      ];
-    case 4:
-      return [{ name: "report", args: { text: MOCK_BROWSER_CARD_REPORT } }];
-    default:
-      return undefined;
-  }
-}
-
-/**
- * Booking a flight in a task's browser (docs/task-browser.md, "A final
- * submission"; tests/e2e/task-browser-booking.spec.ts). A brief carrying
- * this marker, the invented airline this Mac serves and a passenger ("book
- * the Lisbon flight at http://aurora.localhost:PORT/ for Sam Rivera")
- * books the way the crewmate's instructions say, on Pi and on Claude alike:
- *
- * 1. It opens the airline's search and asks which fare to prepare, on a
- *    decision whose door reads View search.
- * 2. Told to prepare the 07:40 nonstop, it selects it, meets the airline's
- *    sign-in, and asks the captain to sign in on an ordinary request card.
- *    Told the captain closed that card, it says its browser stays paused.
- * 3. Woken by Return control, it fills in the passenger details and goes on
- *    to the payment page, where it stops: its review card names the trip,
- *    the passenger, the seller, the total and currency, the baggage, the
- *    fare rules and what is still uncertain, marks a total that changed
- *    since the search, and asks the captain to make the payment himself.
- * 4. Woken again, it reads the confirmation and leaves a note with the
- *    reference, its door reading View booking.
- *
- * Every value it reports is read off the tool results, never assumed.
- */
-export const TASK_BROWSER_BOOKING_MARKER = "book the Lisbon flight at ";
-export const MOCK_FARES_CARD_TITLE = "Three fares fit 18 to 25 Oct";
-export const MOCK_FARES_CHOICE = "Prepare the 07:40 nonstop";
-export const MOCK_FARES_BUTTON = "View search";
-export const MOCK_FARES_ASKED_REPORT = "I compared three fares and asked which one to prepare.";
-export const MOCK_AIRLINE_SIGN_IN_TITLE = "Sign in to Aurora Air to hold the fare";
-export const MOCK_AIRLINE_SIGN_IN_ACTION = BROWSER_SIGN_IN_STEP;
-export const MOCK_AIRLINE_SIGN_IN_REPORT = "I asked the captain to sign in to Aurora Air.";
-export const MOCK_SIGN_IN_CLOSED_REPORT =
-  "The captain closed my sign-in request without choosing; my browser stays paused on the sign-in for the captain.";
-export const MOCK_REVIEW_PAY_ACTION = BROWSER_PAY_STEP;
-export const MOCK_REVIEW_STOP_ACTION = "Stop here";
-export const MOCK_REVIEW_REPORT_PREFIX = "I prepared the booking and stopped before paying.";
-export const MOCK_BOOKED_BUTTON = "View booking";
-export const MOCK_BOOKED_REPORT_PREFIX = "Booked:";
-/** The review card's title: the total and the site, as the payment page shows them. */
-export const reviewCardTitle = (total: string, site: string): string =>
-  `Ready to pay ${total} on ${site}`;
-/** The booked note's title, with the reference the confirmation gave. */
-export const bookedNoteTitle = (reference: string): string =>
-  `Booked: London to Lisbon, 18 to 25 Oct, ${reference}`;
-
-/** Where a booking conversation stands: the wakes it has had, newest last, by kind and place. */
-type BookingSteer = { kind: "choice" | "closed" | "returned"; at: number };
-function bookingSteers(messages: ReturnType<typeof providerMessages>): BookingSteer[] {
-  return messages.flatMap((message, at): BookingSteer[] => {
-    if (message.role !== "user") return [];
-    if (message.text.includes(`chose "${MOCK_FARES_CHOICE}"`)) return [{ kind: "choice", at }];
-    if (message.text.includes(CARD_CLOSED_STEER_NEEDLE)) return [{ kind: "closed", at }];
-    if (message.text.includes(HANDOFF_WAKE)) return [{ kind: "returned", at }];
-    return [];
-  });
-}
-
-/** The tool answers after a place in the conversation, oldest first, as the scripts read them. */
-function answersAfter(messages: ReturnType<typeof providerMessages>, from: number): string[] {
-  return toolAnswers(messages, from);
-}
-
-/**
- * The ref an outline gave a control, by its role and the start of its name;
- * `text` with no name finds the first cut passage, the one text line a ref names.
- */
-function refOf(outline: string | undefined, role: string, name: string): string | undefined {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return outline?.match(new RegExp(`${role} "${escaped}[^"]*" \\[(${REF_PATTERN})\\]`))?.[1];
-}
-
-/** A same-page action need not repeat unchanged controls. Keep refs only in the current book. */
-function knownRefOf(answers: readonly string[], role: string, name: string): string | undefined {
-  const book = [...answers]
-    .reverse()
-    .map((text) => text.match(/^\s*refs: (g\d+)$/m)?.[1])
-    .find(Boolean);
-  for (const answer of [...answers].reverse()) {
-    const current = answer
-      .split("\n")
-      .filter((line) => !line.startsWith("- old line "))
-      .join("\n");
-    const ref = refOf(current, role, name);
-    if (ref && (!book || ref.startsWith(`${book}:`))) return ref;
-  }
-  return undefined;
-}
-
-/** What the review card marks when the total moved since the search. */
-export function fareRoseWords(searched: string, total: string): string {
-  return `The total rose from ${searched} to ${total} since the search`;
-}
-
-/** A review card for the payment page the crewmate stopped on (docs/task-browser.md, "A final submission"). */
-function reviewCard(
-  site: string,
-  passenger: string,
-  total: string,
-  searched: string | undefined,
-): ScriptedCall {
-  const changed =
-    searched && `${searched}.00` !== total
-      ? `<p><mark>${fareRoseWords(searched, total)}</mark>, so I stopped for your review.</p>`
-      : "";
-  return {
-    name: "emit_card",
-    args: {
-      id: "review-and-pay",
-      title: reviewCardTitle(total, site),
-      body:
-        "<p>I filled in the booking and stopped before paying: the payment is yours to make on Aurora Air's page.</p>" +
-        "<table>" +
-        "<tr><td>Route</td><td>London Heathrow (LHR) to Lisbon (LIS), nonstop both ways</td></tr>" +
-        "<tr><td>Dates</td><td>Sat 18 Oct, 07:40 London time · return Sat 25 Oct, 18:05 Lisbon time</td></tr>" +
-        `<tr><td>Passenger</td><td>${passenger}, 1 adult</td></tr>` +
-        `<tr><td>Seller</td><td>Aurora Air, ${site}</td></tr>` +
-        `<tr><td>Total</td><td>${total} EUR</td></tr>` +
-        "<tr><td>Baggage</td><td>1 cabin bag, no checked bag</td></tr>" +
-        "<tr><td>Fare rules</td><td>Non-refundable, changes €60</td></tr>" +
-        "<tr><td>Still uncertain</td><td>Seats are assigned at check-in</td></tr>" +
-        "</table>" +
-        changed +
-        "<p>You enter the card details on Aurora Air's page. Infinitary records none of them.</p>",
-      browser_handoff: {
-        site,
-        reason: "The final payment is yours to make",
-        after: "read the confirmation and keep the reference",
-      },
-      actions: [
-        { id: "stop-here", label: MOCK_REVIEW_STOP_ACTION },
-        {
-          id: "pay",
-          label: MOCK_REVIEW_PAY_ACTION,
-          default: true,
-          effect: { kind: "open", target: "browser" },
-        },
-      ],
-    },
-  };
-}
-
-/** The booking journey's next scripted step, from the wakes and browser answers so far. */
-function taskBrowserBookingStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(
-    /book the Lisbon flight at (http:\/\/aurora\.localhost:\d+\/) for ([A-Z][a-z]+ [A-Z][a-z]+)/,
-  );
-  if (!ask) return undefined;
-  const [, url, passenger] = ask as unknown as [string, string, string];
-  const site = new URL(url).host;
-  const messages = providerMessages(body);
-  const steers = bookingSteers(messages);
-  const last = steers.at(-1);
-  const answers = answersAfter(messages, last?.at ?? 0);
-  // Its report's own answer: this turn has said what it found.
-  if (answers.some((text) => text.startsWith("Reported."))) return undefined;
-  const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
-  const refused = (answer: string | undefined): string =>
-    answer?.startsWith("Card refused") ? ` ${answer}` : "";
-  const search = answersAfter(messages, 0)[0];
-  const searched = search?.match(/text "07:40 to 10:25 · nonstop · (€\d+)/)?.[1];
-  if (!last) {
-    switch (answers.length) {
-      case 0:
-        return [browser("open", url)];
-      case 1:
-        return [
-          {
-            name: "emit_card",
-            args: {
-              id: "choose-fare",
-              title: MOCK_FARES_CARD_TITLE,
-              body:
-                `<p>I would prepare the 07:40 nonstop at ${searched ?? "its fare"}: it costs €67 more than the cheapest and saves about 3 hours each way.</p>` +
-                "<table>" +
-                `<tr><td>Aurora Air · 07:40 · nonstop</td><td>${searched ?? "not shown"}</td></tr>` +
-                "<tr><td>Aurora Air · 09:15 · 1 stop in Madrid</td><td>€231</td></tr>" +
-                "<tr><td>Aurora Air · 13:30 · 1 stop in Paris</td><td>€254</td></tr>" +
-                "</table>",
-              browser_button: MOCK_FARES_BUTTON,
-              actions: [
-                { id: "more", label: "Show me more" },
-                { id: "prepare", label: MOCK_FARES_CHOICE, default: true },
-              ],
-            },
-          },
-        ];
-      case 2:
-        return report(`${MOCK_FARES_ASKED_REPORT}${refused(answers[1])}`);
-      default:
-        return undefined;
-    }
-  }
-  if (last.kind === "choice") {
-    switch (answers.length) {
-      case 0: {
-        const ref = refOf(search, "link", "Select the 07:40 nonstop");
-        return ref
-          ? [browser("click", `@${ref}`)]
-          : report(`No Select link for the 07:40 nonstop: ${(search ?? "").slice(0, 400)}`);
-      }
-      case 1:
-        return [
-          {
-            name: "emit_card",
-            args: {
-              id: "airline-sign-in",
-              title: MOCK_AIRLINE_SIGN_IN_TITLE,
-              body: "<p>Aurora Air needs your account to hold the fare, so I paused the browser on its sign-in page.</p><p>While you have control I cannot see the page, and your typing is not recorded.</p>",
-              browser_handoff: {
-                site,
-                reason: "Aurora Air needs your account to hold the fare",
-                after: "fill in the passenger details",
-              },
-              actions: [
-                { id: "leave", label: "Leave waiting" },
-                {
-                  id: "sign-in",
-                  label: MOCK_AIRLINE_SIGN_IN_ACTION,
-                  default: true,
-                  effect: { kind: "open", target: "browser" },
-                },
-              ],
-            },
-          },
-        ];
-      case 2:
-        return report(`${MOCK_AIRLINE_SIGN_IN_REPORT}${refused(answers[1])}`);
-      default:
-        return undefined;
-    }
-  }
-  if (last.kind === "closed") return report(MOCK_SIGN_IN_CLOSED_REPORT);
-  const returns = steers.filter((steer) => steer.kind === "returned").length;
-  if (returns === 1) {
-    const form = answers[0];
-    switch (answers.length) {
-      case 0:
-        return [browser("snapshot")];
-      case 1: {
-        const ref = refOf(form, "textbox", "Full name");
-        return ref
-          ? [browser("fill", `@${ref}`, passenger)]
-          : report(`No passenger form after the sign-in: ${(form ?? "").slice(0, 400)}`);
-      }
-      case 2: {
-        const ref = refOf(form, "textbox", "Date of birth");
-        return ref
-          ? [browser("fill", `@${ref}`, "12 Mar 1988")]
-          : report(`No date of birth field: ${(form ?? "").slice(0, 400)}`);
-      }
-      case 3: {
-        const ref = refOf(form, "button", "Continue to payment");
-        return ref
-          ? [browser("click", `@${ref}`)]
-          : report(`No Continue to payment button: ${(form ?? "").slice(0, 400)}`);
-      }
-      case 4: {
-        const total = answers[3]?.match(/text "Total (€[\d.]+) \(EUR\)"/)?.[1];
-        return total
-          ? [reviewCard(site, passenger, total, searched)]
-          : report(`No total on the payment page: ${(answers[3] ?? "").slice(0, 400)}`);
-      }
-      case 5: {
-        const total = answers[3]?.match(/text "Total (€[\d.]+) \(EUR\)"/)?.[1];
-        return report(
-          `${MOCK_REVIEW_REPORT_PREFIX} The total is ${total}; the search said ${searched}.${refused(answers[4])}`,
-        );
-      }
-      default:
-        return undefined;
-    }
-  }
-  switch (answers.length) {
-    case 0:
-      return [browser("snapshot")];
-    case 1: {
-      const reference = answers[0]?.match(/text "Reference (AUR-\w+)"/)?.[1];
-      if (!reference) {
-        return report(`The page did not confirm the booking: ${(answers[0] ?? "").slice(0, 400)}`);
-      }
-      return [
-        {
-          name: "emit_card",
-          args: {
-            id: "booked",
-            title: bookedNoteTitle(reference),
-            body: `<p>I read Aurora Air's confirmation after you returned control. The reference is ${reference}, and the receipt went to your Aurora Air account email.</p><p>I kept the itinerary and the reference, not the page itself.</p>`,
-            browser_button: MOCK_BOOKED_BUTTON,
-          },
-        },
-      ];
-    }
-    case 2: {
-      const reference = answers[0]?.match(/text "Reference (AUR-\w+)"/)?.[1];
-      return report(`${MOCK_BOOKED_PREFIX_TEXT(reference)}${refused(answers[1])}`);
-    }
-    default:
-      return undefined;
-  }
-}
-
-const MOCK_BOOKED_PREFIX_TEXT = (reference: string | undefined): string =>
-  `${MOCK_BOOKED_REPORT_PREFIX} London to Lisbon, 18 to 25 Oct, reference ${reference}. I kept the itinerary and the reference, not the page.`;
-
-/**
- * A payment whose answer is lost, then a restart (docs/task-browser.md, "A
- * final submission"; tests/e2e/task-browser-booking.spec.ts). A brief
- * carrying this marker and the airline's payment page ("pay for the held
- * Lisbon fare at http://aurora.localhost:PORT/pay") opens the page and
- * stops before paying, on a review card that asks the captain to pay.
- * Woken by Return control on a page that could not confirm the payment, it
- * tries to reload it - as a careless crewmate would, so the browser's
- * refusal shows - then looks at My bookings and keeps watching it for a
- * confirmation that never comes, its turn running. Woken once more, after
- * the app restarted and redelivered that wake, it finds its browser gone,
- * opens My bookings afresh, and asks the captain to check in the browser,
- * on a decision that says the outcome is unknown and that it did not pay
- * again. Told that the captain chose to check on that card after the app
- * quit once more, with its browser gone, it opens My bookings again and asks
- * anew on a new card. Every value it reports is read off the tool results.
- */
-export const TASK_BROWSER_LOST_MARKER = "pay for the held Lisbon fare at ";
-export const MOCK_LOST_ASKED_REPORT = "I prepared the payment and stopped before paying.";
-export const MOCK_LOST_CHECK_ACTION = "Open browser and check";
-export const MOCK_LOST_NOT_BOOKED_ACTION = "Treat as not booked";
-export const MOCK_LOST_REPORT_PREFIX = "The payment's outcome on Aurora Air is unknown.";
-export const MOCK_LOST_ASKED_AGAIN_REPORT =
-  "My browser was gone when the captain chose to check, so I opened My bookings again and asked anew.";
-/** The decision that says the outcome is unknown. */
-export const unknownCardTitle = (site: string): string => `The payment on ${site} is unknown`;
-
-/** The decision that asks the captain to check a payment whose outcome is unknown, in the browser. */
-function unknownCard(site: string, id: string, lead: string): ScriptedCall {
-  return {
-    name: "emit_card",
-    args: {
-      id,
-      title: unknownCardTitle(site),
-      body: `<p>${lead}</p><p>Its bookings page shows nothing yet, and your bank may show a pending charge. Check in the browser before anything else is paid.</p>`,
-      browser_handoff: {
-        site,
-        reason: "Aurora Air never confirmed your payment",
-        after: "read what you found and report it",
-      },
-      actions: [
-        { id: "not-booked", label: MOCK_LOST_NOT_BOOKED_ACTION },
-        {
-          id: "check",
-          label: MOCK_LOST_CHECK_ACTION,
-          default: true,
-          effect: { kind: "open", target: "browser" },
-        },
-      ],
-    },
-  };
-}
-
-/** The lost payment's next scripted step, from the wakes and browser answers so far. */
-function taskBrowserLostStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/pay for the held Lisbon fare at (http:\/\/aurora\.localhost:\d+\/)pay/);
-  if (!ask) return undefined;
-  const home = ask[1] as string;
-  const site = new URL(home).host;
-  const messages = providerMessages(body);
-  const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
-  // The captain chose to check on a card whose browser was gone: it asks anew.
-  const told = messages.findLastIndex(
-    (message) => message.role === "user" && message.text.includes(BROWSER_GONE_OPENING),
-  );
-  if (told !== -1) {
-    const again = answersAfter(messages, told);
-    if (again.some((text) => text.startsWith("Reported."))) return undefined;
-    switch (again.length) {
-      case 0:
-        return [browser("open", `${home}bookings`)];
-      case 1:
-        return [
-          unknownCard(
-            site,
-            "payment-unknown-again",
-            "My browser was gone when you chose to check, so I opened Aurora Air's bookings again. It still has not confirmed the payment, and I did not pay again.",
-          ),
-        ];
-      case 2:
-        return report(
-          `${MOCK_LOST_ASKED_AGAIN_REPORT}${again[1]?.startsWith("Card refused") ? ` ${again[1]}` : ""}`,
-        );
-      default:
-        return undefined;
-    }
-  }
-  const steers = bookingSteers(messages).filter((steer) => steer.kind === "returned");
-  const last = steers.at(-1);
-  const answers = answersAfter(messages, last?.at ?? 0);
-  if (answers.some((text) => text.startsWith("Reported."))) return undefined;
-  if (!last) {
-    switch (answers.length) {
-      case 0:
-        return [browser("open", `${home}pay`)];
-      case 1: {
-        const total = answers[0]?.match(/text "Total (€[\d.]+) \(EUR\)"/)?.[1] ?? "the total";
-        return [reviewCard(site, "Sam Rivera", total, undefined)];
-      }
-      case 2:
-        return report(
-          `${MOCK_LOST_ASKED_REPORT}${answers[1]?.startsWith("Card refused") ? ` ${answers[1]}` : ""}`,
-        );
-      default:
-        return undefined;
-    }
-  }
-  if (answers.length === 0) return [browser("snapshot")];
-  const gone = answers[0]?.includes("No browser is open");
-  if (!gone) {
-    // Before the restart: the page could not confirm the payment.
-    if (answers.length === 1) return [browser("reload")];
-    if (answers.length === 2) {
-      return [browser("open", `${home}bookings`)];
-    }
-    // Watching My bookings for a confirmation that never comes: its turn runs on.
-    return [browser("wait", "Booking confirmed")];
-  }
-  switch (answers.length) {
-    case 1:
-      return [browser("open", `${home}bookings`)];
-    case 2:
-      return [
-        unknownCard(
-          site,
-          "payment-unknown",
-          "Aurora Air did not confirm the payment after you pressed Pay, and I did not pay again.",
-        ),
-      ];
-    case 3: {
-      const all = answersAfter(messages, 0);
-      const reload = all
-        .flatMap((text) => text.split("\n"))
-        .map((line) => line.replace(/^did: /, ""))
-        .find((line) => line.startsWith("Did not reload"));
-      const listed = answers[1]?.match(/text "(No bookings yet[^"]*)"/)?.[1];
-      return report(
-        `${MOCK_LOST_REPORT_PREFIX} My bookings said "${listed}", and I did not pay again.${reload ? ` Reloading the unconfirmed page said: "${reload}"` : ""} After the restart my browser was gone: "${firstSentence(answers[0])}"${answers[2]?.startsWith("Card refused") ? ` ${answers[2]}` : ""}`,
-      );
-    }
-    default:
-      return undefined;
-  }
-}
-
-/**
- * A payment the captain leaves unpaid (docs/task-browser.md, "A signed-in
- * page"; tests/e2e/task-browser-booking.spec.ts). A brief carrying this
- * marker and the airline's payment page ("prepare the Lisbon payment at
- * http://aurora.localhost:PORT/pay") opens the page and stops before
- * paying, on a review card that asks the captain to pay. Woken by Return
- * control on the page with his card details typed and never sent, it takes
- * its fresh look, asks for a picture of the page with a reason, and
- * reports how each card field read and what the picture's answer said.
- * Every value it reports is read off the tool results.
- */
-export const TASK_BROWSER_UNPAID_MARKER = "prepare the Lisbon payment at ";
-export const MOCK_UNPAID_ASKED_REPORT = "I prepared the payment for the captain to make.";
-export const MOCK_UNPAID_REPORT_PREFIX = "The captain handed the payment page back unpaid.";
-export const MOCK_UNPAID_PICTURE = "unpaid-payment";
-/** The card fields the crewmate reads after the return, by their labels on the page. */
-export const MOCK_UNPAID_FIELDS = ["Card number", "Expiry", "Security code"] as const;
-
-/** The unpaid payment's next scripted step, from the wakes and browser answers so far. */
-function taskBrowserUnpaidStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/prepare the Lisbon payment at (http:\/\/aurora\.localhost:\d+\/)pay/);
-  if (!ask) return undefined;
-  const home = ask[1] as string;
-  const site = new URL(home).host;
-  const messages = providerMessages(body);
-  const last = bookingSteers(messages)
-    .filter((steer) => steer.kind === "returned")
-    .at(-1);
-  const answers = answersAfter(messages, last?.at ?? 0);
-  if (answers.some((text) => text.startsWith("Reported."))) return undefined;
-  const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
-  if (!last) {
-    switch (answers.length) {
-      case 0:
-        return [browser("open", `${home}pay`)];
-      case 1: {
-        const total = answers[0]?.match(/text "Total (€[\d.]+) \(EUR\)"/)?.[1] ?? "the total";
-        return [reviewCard(site, "Sam Rivera", total, undefined)];
-      }
-      case 2:
-        return report(
-          `${MOCK_UNPAID_ASKED_REPORT}${answers[1]?.startsWith("Card refused") ? ` ${answers[1]}` : ""}`,
-        );
-      default:
-        return undefined;
-    }
-  }
-  switch (answers.length) {
-    case 0:
-      return [browser("snapshot")];
-    case 1:
-      return [
-        browser(
-          "screenshot",
-          MOCK_UNPAID_PICTURE,
-          "--reason",
-          "the task needs to show what the payment page says now",
-        ),
-      ];
-    case 2: {
-      // Each field as the fresh look read it: its value, hidden, or not there.
-      const lines = (answers[0] ?? "").split("\n").map((line) => line.trim());
-      const read = MOCK_UNPAID_FIELDS.map((label) => {
-        const line = lines.find((text) => text.startsWith(`textbox "${label}`));
-        if (!line) return `${label}: missing`;
-        if (line.includes(HIDDEN_VALUE_WORDS)) return `${label}: hidden`;
-        return `${label}: ${line.match(/\]: ("[^"]*")/)?.[1] ?? "empty"}`;
-      });
-      return report(
-        `${MOCK_UNPAID_REPORT_PREFIX} The fresh look read ${read.join("; ")}. The picture: "${firstSentence(answers[1])}"`,
-      );
-    }
-    default:
-      return undefined;
-  }
-}
-
-/**
- * The captain takes a task's browser while its crewmate's command runs
- * (docs/task-browser.md, "Taking control"; task-browser.spec.ts). A brief
- * carrying this marker and the account page this Mac serves ("keep the
- * account page at http://127.0.0.1:PORT/ open") opens its browser there and
- * waits on the page for "Ready to go on", again and again, its turn
- * running, until its browser refuses it; then it reports that refusal and
- * the answer before it. Woken by Return control, it takes its fresh look
- * and reports what the page says, read off the tool results.
- */
-export const TASK_BROWSER_TAKE_MARKER = "keep the account page at ";
-export const MOCK_TAKE_REFUSED_REPORT = "The captain took my browser while I waited on the page.";
-export const MOCK_TAKE_RETURNED_REPORT = "The captain handed my browser back.";
-
-/** The take-in-flight journey's next scripted step, from the wakes and browser answers so far. */
-function taskBrowserTakeStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/keep the account page at (http:\/\/127\.0\.0\.1:\d+\/) open/);
-  if (!ask) return undefined;
-  const url = ask[1] as string;
-  const messages = providerMessages(body);
-  const wake = messages.findLastIndex(
-    (message) => message.role === "user" && message.text.includes(HANDOFF_WAKE),
-  );
-  const answers = answersAfter(messages, wake === -1 ? 0 : wake);
-  if (answers.some((text) => text.startsWith("Reported."))) return undefined;
-  const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
-  if (wake === -1) {
-    if (answers.length === 0) return [browser("open", url)];
-    const refused = answers.findIndex((text) =>
-      text.startsWith("The captain has control of this task's browser"),
-    );
-    if (refused === -1) {
-      return [browser("wait", TASK_BROWSER_HANDOFF_READY_WORDS)];
-    }
-    return report(
-      `${MOCK_TAKE_REFUSED_REPORT} The command before it answered "${firstSentence(answers[refused - 1])}" Then my browser said "${firstSentence(answers[refused])}"`,
-    );
-  }
-  if (answers.length === 0) return [browser("snapshot")];
-  const state = answers[0]?.match(/text "((?:Not signed in|Signed in as [^"]+))"/)?.[1];
-  return report(
-    `${MOCK_TAKE_RETURNED_REPORT} The fresh look said "${firstSentence(answers[0])}" and the page said "${state}".`,
-  );
-}
-
-/**
- * One task's browser reaches nothing of another's, nor a private address a
- * redirect leads to (docs/task-browser.md, "Where a page may go";
- * task-browser.spec.ts). A brief carrying this marker and a page this Mac
- * serves, "for task A", opens it twice and reports what it says. With
- * "beside" a second page's address, the crewmate opens its own page - which
- * asks the other task's server for data and a picture - then asks the
- * captain to take over the other task's site, follows two redirects of its
- * own page's, one to a public name that leads to this Mac and one to a
- * private address, opens the other task's page itself, and reports what each
- * answer said, read off the tool results.
- */
-export const TASK_BROWSER_FENCE_MARKER = "fence the page at ";
-export const MOCK_FENCE_A_REPORT = "Task A's page said";
-export const MOCK_FENCE_B_REPORT = "Task B's browser said";
-
-/** The fence journey's next scripted step, from the browser answers so far. */
-function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(
-    /fence the page at (http:\/\/127\.0\.0\.1:\d+\/) (for task A|beside (http:\/\/127\.0\.0\.1:\d+\/))/,
-  );
-  if (!ask) return undefined;
-  const [, own, , other] = ask as unknown as [string, string, string, string | undefined];
-  const messages = providerMessages(body);
-  const answers = answersAfter(messages, 0);
-  if (answers.some((text) => text.startsWith("Reported."))) return undefined;
-  const report = (text: string): ScriptedCall[] => [{ name: "report", args: { text } }];
-  const visits = (text: string | undefined) => text?.match(/text "(Visited [^"]+)"/)?.[1];
-  if (!other) {
-    switch (answers.length) {
-      case 0:
-        return [browser("open", own)];
-      case 1:
-        return [browser("open", own)];
-      default:
-        return report(`${MOCK_FENCE_A_REPORT} "${visits(answers[1])}".`);
-    }
-  }
-  switch (answers.length) {
-    case 0:
-      return [browser("open", own)];
-    case 1:
-      return [
-        {
-          name: "emit_card",
-          args: {
-            id: "other-task-sign-in",
-            title: "Sign in to the other task's page",
-            body: "<p>The other page needs your sign-in.</p><p>I paused my browser for you.</p>",
-            browser_handoff: {
-              site: new URL(other).host,
-              reason: "The other page needs your sign-in",
-              after: "read the other page",
-            },
-            actions: [
-              { id: "leave", label: "Leave waiting" },
-              {
-                id: "sign-in",
-                label: "Open browser and sign in",
-                default: true,
-                effect: { kind: "open", target: "browser" },
-              },
-            ],
-          },
-        },
-      ];
-    case 2:
-      return [browser("open", `${own}leave`)];
-    case 3:
-      return [browser("open", `${own}intranet`)];
-    case 4:
-      return [browser("open", other)];
-    default: {
-      const line = (text: string | undefined, start: string) =>
-        text?.split("\n").find((each) => each.startsWith(start));
-      return report(
-        `${MOCK_FENCE_B_REPORT}: "${line(answers[0], `Blocked what the page asked for from other servers on ${HERE.this}`)}" The request: "${answers[1]?.split("\n")[0]}" The redirect to a public name: "${line(answers[2], `Blocked what the page asked for on ${HERE.this}'s network`)}" The redirect to a private address: "${line(answers[3], `Blocked what the page asked for on ${HERE.this}'s network`)}" The other task's page: "${visits(answers[4])}".`,
-      );
-    }
-  }
-}
-
-/**
  * A crewmate on a Mac with no git of its own on the search path (git
  * integration phase 2, app-git e2e): a brief carrying this marker runs
  * `git --version` and `git status` in its working copy, then reports the
@@ -2519,44 +827,6 @@ function taskBrowserFenceStep(body: string): ScriptedCall[] | undefined {
  */
 export const GIT_STATUS_PROMPT_MARKER = "say which git this project runs";
 export const MOCK_GIT_REPORT_PREFIX = "The working copy's git answers";
-
-/**
- * A project on a plain Git host (git integration PR 1.1, forge-seam e2e): a
- * brief carrying this marker saves a point in its working copy and sends it
- * up with its own shell, then declares the completion card and reports - so
- * the host's forge seam finds the sent-up copy, reads it green with no
- * checks, and the captain's click puts it in.
- */
-export const SEND_UP_PROMPT_MARKER = "send the meter fix up to its host";
-export const MOCK_SENT_UP_CARD_TITLE = "The meter fix is ready to go in";
-
-export const WORKFLOW_DISPATCH_MARKER = "request the project verification workflow";
-export const WORKFLOW_EVIDENCE_MARKER = "inspect the hosted measurement evidence";
-/**
- * A project on GitLab (gitlab-evidence e2e): a brief carrying this marker
- * lists its version's pipelines and the failed one's jobs with
- * `github_read`, pages that job's log with `read_workflow`, saves its
- * artifacts archive with `download_artifact` and reads it, tries a write to
- * another project, and reports what each answered.
- */
-export const GITLAB_EVIDENCE_MARKER = "inspect the GitLab pipeline evidence";
-/**
- * locate_project's listing from the app's own sign-in (PR 1.2): a Firstmate
- * turn carrying this marker calls locate_project with the name that
- * follows it, then lands one note listing what the tool answered from
- * where the projects live.
- */
-export const LOCATE_PROJECTS_PROMPT_MARKER = "which of my projects is ";
-export const MOCK_LOCATED_CARD_TITLE = "Your projects where they live";
-
-/**
- * The context's `lives` fact (git integration PR 1.3): a Firstmate turn
- * carrying this marker lands one note listing each project's `lives` as the
- * served context block carried it - what the model was told, decoded from
- * the request itself.
- */
-export const PROJECT_LIVES_PROMPT_MARKER = "say where each of my projects lives";
-export const MOCK_PROJECT_LIVES_CARD_TITLE = "Where each project lives";
 
 /**
  * The deliverable axis (crew-posture rationalization Task B). A Firstmate
@@ -2570,11 +840,8 @@ export const MOCK_PROJECT_LIVES_CARD_TITLE = "Where each project lives";
 /** Scripted retrieval exercises plumbing, not live semantic accuracy. */
 export const RETRIEVAL_TASK_ASK =
   "Look up the version and demo support in meterlab's release-info.json, with a citation.";
-export const RETRIEVAL_TASK_TITLE = "Read meterlab release facts";
 export const RETRIEVAL_TASK_GOAL =
   "Read release-info.json and report its version and demo support with a citation; do not test playback.";
-export const RETRIEVAL_CARD_TITLE = "Release 0.1.31 includes video demos";
-export const RETRIEVAL_SOURCE = '{"version":"0.1.31","videoDemos":true}';
 
 export const ANSWER_TASK_PROMPT_MARKER = "find out and answer:";
 export const MOCK_ANSWER_CARD_TITLE = "The meter idles because the claim query filters on repo_id";
@@ -2595,11 +862,7 @@ export const MOCK_ANSWER_REPORT =
 export const CARD_CLOSED_STEER_NEEDLE = CARD_CLOSED_STEER_PREFIX.trim();
 export const MOCK_ANSWER_FINISHED_REPORT =
   "The captain read the answer on the card, and nothing is left for me to do.";
-const FINISHED_WAKE_NEEDLE = FINISHED_REPORT_WORDS;
-/** FI3-1581: a finished wake whose task title contains this puts a note up, then settles. */
-export const OWN_RENT_TITLE = "own vs rent";
-export const OWN_RENT_CARD_TITLE = "Own vs rent: owning Macs wins for steady use";
-const OWN_RENT_SETTLE_DELAY_MS = 2_500;
+export const FINISHED_WAKE_NEEDLE = FINISHED_REPORT_WORDS;
 
 /**
  * Delivery rigor, phase 2 (the reviewed tier). A builder briefed with "ship
@@ -2627,24 +890,6 @@ const OWN_RENT_SETTLE_DELAY_MS = 2_500;
  * lint no longer asks a card for the record the report and the PR carry.
  */
 export const STANDARD_TIER_HOST_BUTTONS_MARKER = "ship at the standard tier with host buttons";
-export const MOCK_STANDARD_HOST_BUTTONS_CARD_TITLE = "The meter test is steady, drawn";
-/** The label the crewmate invents; the captain must never see it. */
-export const MOCK_STANDARD_INVENTED_LABEL = "Ship it";
-export const MOCK_STANDARD_DRAWN_BODY = completionCardBody(
-  "<p>The meter test sometimes read before the pending write finished.</p>",
-  `<p>${MOCK_STANDARD_SECTIONS["What changed"]}</p>`,
-  "<p>The test could read the old meter value while a write was still queued.</p>",
-  `<p>${MOCK_STANDARD_AFTER}</p>` +
-    '<figure aria-label="Ten runs, all passed"><svg viewBox="0 0 510 50" width="100%"><rect x="5" y="5" width="500" height="40" rx="8" fill="var(--ok-dim)"/><text x="20" y="30" fill="var(--fg-1)">Ten consecutive runs passed</text></svg></figure>',
-);
-export const MOCK_STANDARD_MERGE_ONLY_ACTIONS: ScriptedCardAction[] = [
-  {
-    id: "ship",
-    label: MOCK_STANDARD_INVENTED_LABEL,
-    default: true,
-    effect: { kind: "settle", mode: "merge" },
-  },
-];
 /**
  * The autonomy hold (contract v3.9). Briefed with this marker, the mock
  * crewmate emits a completion card declaring the merge and reports - the
@@ -2795,13 +1040,9 @@ export type ClaudeSeatCut =
 export const FILE_TASK_PROMPT_MARKER = "file a task:";
 // e2e-typed-words: the captain's own words that start a scripted spawn; they only share a phrase with the product's
 export const SPAWN_PROMPT_MARKER = "commission a crewmate:";
-/** The note the mock Firstmate remembers on REMEMBER_PROMPT_MARKER and retires on FORGET_PROMPT_MARKER. */
-export const MOCK_NOTE = { id: "squash-merges", content: "Always squash-merge when landing work." };
 export const ADOPT_REPO_PROMPT_MARKER = "manage my folder at ";
 export const CLONE_REPO_PROMPT_MARKER = "manage the remote repository at ";
 export const INIT_REPO_PROMPT_MARKER = "start a new project ";
-export const CONFIGURE_REPO_PROMPT_MARKER = "make the repository ";
-export const UNREGISTER_REPO_PROMPT_MARKER = "unregister the repository ";
 // e2e-typed-words: the captain's own words that ask the mock for an answer card; they only share a phrase with the product's
 export const ANSWER_PROMPT_MARKER = "answer with a card";
 export const TALL_ANSWER_PROMPT_MARKER = `a tall ${ANSWER_PROMPT_MARKER}`;
@@ -2815,88 +1056,23 @@ export const MOCK_WELCOME_TITLE = "How I work";
 // e2e-typed-words: the mock Firstmate's own welcome note, written as the wake asks; it only shares a phrase with the wake
 export const MOCK_WELCOME_TEXT =
   "<p>Ask for something and a card comes back: an answer, a decision, or word that a crewmate is on it. There is no chat to scroll.</p><p>Start by pointing me at a project.</p>";
-export const REMEMBER_PROMPT_MARKER = "remember that I always squash-merge";
-/**
- * Knowledge (docs/knowledge.md, knowledge.spec.ts). A crewmate whose task
- * title carries KNOWLEDGE_RECORD_PROMPT_MARKER is granted saved references.
- * It records MOCK_KNOWLEDGE_CONCEPT from MOCK_KNOWLEDGE_ARTICLE, a finding
- * citing that article, then the same link again, which must not add a
- * second concept, and reports. One whose title carries
- * KNOWLEDGE_REUSE_PROMPT_MARKER reads the concept its brief offers, follows
- * it to the finding, reads the excerpt, declares that it relied on it, and
- * reports. Both titles name the project they bind to.
- */
-export const KNOWLEDGE_RECORD_PROMPT_MARKER = "learn how the harbor inbox retries";
-export const KNOWLEDGE_REUSE_PROMPT_MARKER = "check the harbor wake queue";
-export const MOCK_KNOWLEDGE_ARTICLE = {
-  url: "https://example.com/inbox-retries",
-  title: "Inbox delivery",
-  author: "Ada Lovelace",
-  published: "2026-01-02",
-  excerpt: "A provider failure spends no delivery attempt;",
-};
-export const MOCK_KNOWLEDGE_CONCEPT = {
-  title: "Inbox delivery",
-  aliases: ["wake queue"],
-  explanation: "A saved note on how a durable inbox retries a wake.",
-};
-export const MOCK_KNOWLEDGE_FINDING = {
-  statement: "A provider failure spends no delivery attempt: the wake is retried from the inbox.",
-  path: "src/inbox.ts",
-  startLine: 1,
-  endLine: 2,
-};
-export const MOCK_KNOWLEDGE_RECORD_REPORT = "Recorded how the inbox retries, with its evidence.";
-export const MOCK_KNOWLEDGE_REUSE_REPORT =
-  "Read the inbox finding and its evidence before checking.";
 /**
  * The mock Firstmate asked to remember a fact where knowledge is on: it
  * tries remember, and on the refusal records the fact with record_knowledge.
  */
 export const KNOWLEDGE_FACT_PROMPT_MARKER = "remember that deploys happen on tuesdays";
 /**
- * The mock Firstmate retires every `c-` or `f-` id the turn names as
- * `id@revision`, then closes. The collapsed-panel refresh journey uses it.
- */
-export const KNOWLEDGE_RETIRE_PROMPT_MARKER = "retire these knowledge entries";
-/**
- * Any captain turn carrying this phrase gets its closing line after its tool
- * calls only once MOCK_SLOW_CLOSE_MS has passed, the way a real model writes
- * its final hidden line after a tool result: the Firstmate's turn stays
- * open, so what happens mid-turn and what waits for the turn's end differ
- * observably (the reply emotes).
- */
-export const SLOW_CLOSE_PROMPT_MARKER = "and take your time closing";
-export const MOCK_SLOW_CLOSE_MS = 2_500;
-/**
- * The reply line (docs/composer.md "The last turn"): the mock Firstmate
- * answers a turn carrying SALUTE_PROMPT_MARKER with one wordless salute, and
- * closes with MOCK_FM_DONE_TEXT, which becomes the turn's reply line. Beside
- * SLOW_CLOSE_PROMPT_MARKER the turn stays open after the call, so the
- * Firstmate's bubble works a while before the reply. A turn carrying
- * WORDLESS_CLOSE_PROMPT_MARKER closes with no words after its tool calls,
- * so the line is the app's typed fallback.
- */
-export const SALUTE_PROMPT_MARKER = "salute me";
-export const WORDLESS_CLOSE_PROMPT_MARKER = "and close without words";
-/**
  * Talk-to-personalize Step 1 (Tier A): the mock Firstmate answers each of
  * these with ONE app_change call and no card, the way the contract says.
  */
 export const APP_CATALOG_PROMPT_MARKER = "catalog change ";
 export const PERSONALIZE_THEME_PROMPT_MARKER = "switch to light";
-export const PERSONALIZE_HIDE_PROMPT_MARKER = "hide tasks";
-export const PERSONALIZE_SHOW_PROMPT_MARKER = "show tasks again";
-export const PERSONALIZE_INSTRUCTION_PROMPT_MARKER = "always use compact rows in my panels";
-/** The standing instruction the mock Firstmate writes for that turn. */
-export const MOCK_STANDING_INSTRUCTION = "Always use compact rows in my panels.";
 /**
  * Install by talking (one plugin vehicle, Phase A): "add the panel from
  * <full folder path>" -> ONE install_plugin call naming that folder, and no
  * card of the Firstmate's own - the host's consent card is the only one.
  */
 export const ADD_PANEL_PROMPT_MARKER = "add the panel from ";
-export const FORGET_PROMPT_MARKER = "forget the squash-merge note";
 /** Provider-failure markers: the mock rejects the request itself, so the
  * turn ends with Pi's stopReason "error" path (report REPRO A). */
 export const FAIL_AUTH_PROMPT_MARKER = "fail this turn with a 401";
@@ -2911,8 +1087,6 @@ export const STEER_PROMPT_MARKER = "steer the task ";
  */
 export const BIG_USAGE_PROMPT_MARKER = "a mountain of tokens";
 export const DISCARD_PROMPT_MARKER = "discard the task ";
-/** Test-only explicit release verification through the Firstmate's typed settle tool. */
-export const RELEASE_PROMPT_MARKER = "verified external release for the task ";
 /**
  * "finish the task <title>" -> settle it. WI-11 retired the `finish` mode
  * and the `delivered` status, so the mock now lands the task (the successor
@@ -2934,35 +1108,6 @@ export const MOCK_CLOSING_SENTENCES = {
   released: "It went out in the verified external release.",
   cancel: "Stopped, as the captain asked.",
 } as const;
-export const AMBIGUOUS_PROMPT_MARKER = "which project should take this";
-/** The one decision card the mock Firstmate asks with on an ambiguous request. */
-export const MOCK_WHICH_PROJECT_TITLE = "Which project?";
-/**
- * Escalation (intelligence-bucket routing S4). "not good enough, escalate
- * the task <title>" is the captain turn Q2 requires: the mock Firstmate
- * spawns again with `escalate_from` naming that task. The blocked-report
- * pair is the other half - a crewmate briefed with "report that you are
- * blocked" ends its turn with a report that says so, and the whose-turn
- * rule hands it to the Firstmate as an [fm-op] because the crewmate has
- * stopped; the mock Firstmate then tries the same `escalate_from` off that
- * wake, which the tool boundary must refuse.
- */
-export const ESCALATE_PROMPT_MARKER = "not good enough, escalate the task ";
-export const BLOCKED_REPORT_PROMPT_MARKER = "report that you are blocked";
-/**
- * A project proposed after a crewmate's report (the setup card, docs/fleet.md
- * "Asking the first mate to add a project"): a crewmate briefed with "report that
- * the runner fixes need the folder at <path>" ends its turn with a report
- * saying that folder must be set up as a project first, which reaches the
- * Firstmate as an [fm-op]; the mock Firstmate then proposes it with
- * app_change project-setup, naming the work it starts once it is added.
- */
-export const PROPOSE_PROJECT_PROMPT_MARKER = "report that the runner fixes need the folder at ";
-const PROPOSE_PROJECT_REPORT_NEEDLE = "set up as a project first";
-export const MOCK_PROPOSED_WORK = "open the pull request for the runner fixes";
-export const MOCK_BLOCKED_REPORT =
-  "I cannot get the meter to reset, so I am blocked; escalate this to the captain.";
-const BLOCKED_REPORT_NEEDLE = "I cannot get the meter to reset";
 /**
  * A crewmate that makes one real change: a brief carrying "write the file
  * <path> with <text>" writes <text> into <path> in its working copy with
@@ -2988,7 +1133,6 @@ export const ESCALATION_REFUSAL_PHRASE = NOTHING_SPAWNED;
  * spec can watch the rails while the change is underway.
  */
 export const PERSONAL_PANEL_PROMPT_MARKER = "make me a panel:";
-export const PERSONAL_CHANGE_PROMPT_MARKER = "change my panel ";
 export const PERSONAL_REMOVE_PROMPT_MARKER = "remove my panel ";
 export const MOCK_PANEL_ID = "tokyo-clock";
 export const MOCK_PANEL_TITLE = "Tokyo clock";
@@ -3261,236 +1405,9 @@ const MOCK_TOOL_CALLS = [
   },
 ] satisfies ScriptedCall[];
 
-/**
- * Sequences (docs/sequences.md, contracts v4.6 and v4.19): the mock Firstmate
- * opens each of these asks the way the served instructions say - an ask of
- * more than one step as a parent task left on request, the step that runs
- * now spawned under it, and the next step planned on request with the first
- * as its basis; a one-step ask as one spawn with no parent - and hands off
- * on the wakes it already receives. The crewmates are keyed by their step's
- * goal.
- */
-export const SEQ_FEATURE_ASK = "the settings page feels cluttered, can we do something about it";
-export const SEQ_SMALL_ASK = "the settings page title says Setings, please fix the spelling";
-export const SEQ_BUG_YES_ASK = "the meter resets to zero when I reopen the app";
-/** Exercise the same hand-off on the mock Claude client, not a Pi session. */
-export const SEQ_CLAUDE_STEP_MARKER = "with both tasks on the Claude login";
-export const SEQ_BUG_NO_ASK = "the dock flickers when I resize the window";
-export const SEQ_FEATURE = {
-  parent: "Declutter the settings page",
-  plan: "Plan: ways to declutter settings",
-  implement: "Implement the accepted direction",
-} as const;
-export const SEQ_SMALL = {
-  implement: "Fix the settings page title spelling",
-} as const;
-/** Why the one-step ask skips its plan, as the mock Firstmate declares it. */
-export const SEQ_SMALL_PLAN_SKIP =
-  "One settings title; no rule or meaning changes; inspect the title";
-export const SEQ_BUG_YES = {
-  parent: "Fix the meter reset",
-  reproduce: "Reproduce: the meter reset",
-  fix: "Fix: the meter reset",
-} as const;
-export const SEQ_BUG_SHOWN_ASK = "the clock drifts when the laptop sleeps, show me the repro first";
-export const SEQ_BUG_SHOWN = {
-  parent: "Fix the clock drift",
-  reproduce: "Reproduce: the clock drift",
-  fix: "Fix: the clock drift",
-} as const;
-/** The captain's later word to start the fix while the repro card is still up. */
-export const SEQ_START_SHOWN_FIX = "start the clock drift fix now";
-export const SEQ_SHOWN_REPRO_TITLE = "The clock drift reproduces";
-export const SEQ_BUG_NO = {
-  parent: "Fix the dock flicker",
-  reproduce: "Reproduce: the dock flicker",
-  fix: "Fix: the dock flicker",
-} as const;
-/**
- * The seeded document's implement line, which the Firstmate relays word for
- * word as the implement step's free constraint.
- */
-export const SEQ_IMPLEMENT_AMENDED_GOAL =
-  "Implement the accepted direction for the settings page, including saved sample-count choices and replacement-only height motion";
-export const SEQ_IMPLEMENT_LINE =
-  stepLineOf(SEQUENCES_SEED, "feature", "implement") ?? "the seed has no feature implement line";
-export const SEQ_PLAN_GOAL = "Propose two or three directions for the settings page as one card";
-const SEQ_IMPLEMENT_GOAL = "Implement the accepted direction for the settings page";
-const SEQ_SMALL_GOAL = "The settings page title reads Settings";
-const SEQ_REPRODUCE_GOAL = "as reported, in a clean setup; open your report with reproduced:";
-const SEQ_FIX_GOAL = "at its root; the failing check passes";
-export const SEQ_PLAN_CARD_TITLE = "Two ways to declutter settings";
-export const SEQ_PLAN_CHOICE = APPROVE_AND_BUILD;
-export const SEQ_PLAN_CARD_BODY =
-  '<p>Two directions for the settings page.</p><ul><li>Hide the rarely used rows behind one disclosure.</li><li>Group every row into three labelled sections.</li></ul><fieldset><legend>How many records?</legend><label><input type="radio" name="q2_count" value="one" checked>One record</label><label><input type="radio" name="q2_count" value="many">One per task</label><label><input type="radio" name="q2_count" value="other" data-inf-write-in>Something else</label></fieldset><label for="sample-count">Demo sample count</label><input id="sample-count" name="sample-count" type="number" value="3">';
-export const SEQ_PLAN_REPORT =
-  "Two directions for the settings page; grouping the rows into sections is the one I would take.";
-export const SEQ_THREAD_REPLY = "B, but keep the gear icon where it is";
-/** The planner's answer under its card to the captain's reply. */
-export const SEQ_THREAD_ANSWER = "Noted: B keeps the gear icon where it is.";
-/** The spec the planner records after the captain's tweak: the final agreed version. */
-export const SEQ_PLAN_FINAL_SPEC =
-  "Agreed spec: group every settings row into three labelled sections (option B), and keep the gear icon where it is.";
-export const SEQ_IMPLEMENT_CARD_TITLE = "The settings page is grouped into sections";
-export const SEQ_REPRODUCED_YES =
-  "reproduced: yes - the meter reads zero after a reopen; the failing check is on the working copy.";
-export const SEQ_REPRODUCED_NO =
-  "reproduced: no - the dock held steady through forty resizes on a clean setup.";
-export const SEQ_NOT_REPRODUCED_TITLE = "The dock flicker did not reproduce";
-export const SEQ_NOT_REPRODUCED_WAYS = ["Fix it anyway", "Stop here"] as const;
-/**
- * A plan the captain asks for on its own and saves for later (HANDOFF's
- * Save and defer): the planner offers Approve and build, Save and defer and
- * Abandon; on Save and defer the Firstmate files the build on request with
- * the plan as its basis, and starts nothing.
- */
-export const SEQ_SAVED_ASK = "plan a calmer about page, I may build it later";
-export const SEQ_SAVED = {
-  plan: "Plan: a calmer about page",
-  build: "Build the saved plan: a calmer about page",
-} as const;
-const SEQ_SAVED_PLAN_GOAL = "Propose a calmer about page as one card";
-const SEQ_SAVED_BUILD_GOAL = "Build the calmer about page the saved plan agreed";
-export const SEQ_SAVED_CARD_TITLE = "A calmer about page";
-export const SEQ_SAVED_CHOICE = SAVE_AND_DEFER;
-export const SEQ_SAVED_CARD_BODY =
-  '<p>The about page keeps one paragraph and the version line, and the credits list goes.</p><ul><li>One paragraph says what the app is.</li><li>The credits list moves to the project page.</li></ul><fieldset><legend>Where does the version line sit?</legend><label><input type="radio" name="version_line" value="top">At the top</label><label><input type="radio" name="version_line" value="bottom" data-inf-recommended>At the bottom</label><label><input type="radio" name="version_line" value="other" data-inf-write-in>Something else</label></fieldset>';
-export const SEQ_SAVED_SPEC =
-  "Agreed spec: the about page keeps one paragraph and the version line, and drops the credits list.";
-
-/**
- * The ideation plan line of a sequences document, as the Firstmate relays a
- * step's line (one line, no bullet; `SEQ_IMPLEMENT_LINE`).
- */
-function planLineOf(document: string): string | undefined {
-  return document
-    .match(/^- (plan: a read-only step\.[\s\S]*?)\n(?=- |#)/m)?.[1]
-    ?.replace(/\s+/g, " ")
-    .trim();
-}
-/** A step's line under a section of a sequences document, as the Firstmate relays it. */
-function stepLineOf(document: string, section: string, step: string): string | undefined {
-  const at = document.indexOf(`\n## ${section} `);
-  if (at === -1) return undefined;
-  return document
-    .slice(at)
-    .split("\n- ")
-    .find((line) => line.startsWith(`${step}: `))
-    ?.split("\n#")[0]
-    ?.replace(/\s+/g, " ")
-    .trim();
-}
-/** The seeded plan line, which says what an ask for a prototype is. */
-export const SEQ_PLAN_LINE = planLineOf(SEQUENCES_SEED) ?? "the seed has no plan line";
-/**
- * An ask for a prototype (FI3-872): the plan line it was served sends it to
- * one read-only plan step whose card is a playable preview; Approve and
- * build closes that answer, and the Firstmate starts a builder grounded on it.
- */
-export const SEQ_PROTOTYPE_ASK = "prototype a tilted glass dial I can try";
-export const SEQ_PROTOTYPE = {
-  plan: "Plan: a tilted glass dial",
-  build: "Build: a tilted glass dial",
-} as const;
-export const SEQ_PROTOTYPE_PLAN_GOAL = "Show a tilted glass dial as a playable preview on one card";
-export const SEQ_PROTOTYPE_BUILD_GOAL = "Build the tilted glass dial the captain approved";
-export const SEQ_PROTOTYPE_CARD_TITLE = "A tilted glass dial to try";
-export const SEQ_PROTOTYPE_CHOICE = APPROVE_AND_BUILD;
-export const SEQ_PROTOTYPE_CARD_BODY =
-  "<p>A glass dial tilted 16 degrees; drag the tilt to try another angle.</p>" +
-  '<label>Tilt in degrees <input id="tilt" type="range" min="0" max="90" value="16"></label>' +
-  '<output id="reading">16°</output>' +
-  "<script>const tilt = document.getElementById('tilt'); tilt.oninput = () => { document.getElementById('reading').textContent = tilt.value + '°'; inf.stage('look', { tiltDeg: Number(tilt.value) }); }; tilt.oninput();</script>";
-export const SEQ_PROTOTYPE_SPEC =
-  "Agreed spec: a glass dial tilted 16 degrees by default, adjustable from 0 to 90 degrees.";
-
-/**
- * A check a build waits on (FI3-422): the Firstmate starts the build, runs a
- * read-only check of it as an internal step, and links the check as blocking
- * the build, so the build cannot merge while the check is live. The check
- * reports a pass, and the Firstmate closes it as answered into the build.
- */
-export const SEQ_CHECKED_ASK =
-  "add the battery meter, and run the live cases on it before it merges";
-export const SEQ_CHECKED = {
-  build: "Build: the battery meter",
-  check: "Check: the battery meter live cases",
-} as const;
-const SEQ_CHECKED_BUILD_GOAL = "Add a battery meter to the status bar";
-const SEQ_CHECK_GOAL = "Run the ten live cases against the battery meter build";
-export const SEQ_CHECKS_PASSED = "checks: pass - all ten live cases pass on the battery meter.";
-
-type SeqAsk = {
-  ask: string;
-  /** The ask's parent; a one-step ask has none. */
-  parent?: string;
-  /**
-   * The step that runs now. The mock Firstmate declares every step it adds
-   * as internal_step, as the instructions say, except one the captain asked
-   * to see (`captainAsked`) - its judgment, scripted here.
-   */
-  now: {
-    title: string;
-    goal: string;
-    constraints?: ScriptedArgs<"spawn_crewmate">["constraints"];
-    captainAsked?: boolean;
-  };
-  later?: { title: string; goal: string; constraints?: ScriptedArgs<"create_task">["constraints"] };
-};
-
-const SEQ_ASKS: SeqAsk[] = [
-  // A clear, small ask: one step, so no parent.
-  {
-    ask: SEQ_SMALL_ASK,
-    now: { title: SEQ_SMALL.implement, goal: `${SEQ_SMALL_GOAL}.` },
-  },
-  {
-    ask: SEQ_FEATURE_ASK,
-    parent: SEQ_FEATURE.parent,
-    now: {
-      title: SEQ_FEATURE.plan,
-      goal: `${SEQ_PLAN_GOAL}, and wait for my choice.`,
-      constraints: [{ kind: "read-only" }],
-    },
-    later: {
-      title: SEQ_FEATURE.implement,
-      goal: `${SEQ_IMPLEMENT_GOAL}.`,
-      constraints: [{ kind: "free", text: SEQ_IMPLEMENT_LINE }],
-    },
-  },
-  {
-    ask: SEQ_BUG_YES_ASK,
-    parent: SEQ_BUG_YES.parent,
-    now: {
-      title: SEQ_BUG_YES.reproduce,
-      goal: `Reproduce the meter reset ${SEQ_REPRODUCE_GOAL} yes or reproduced: no.`,
-      constraints: [{ kind: "read-only" }],
-    },
-    later: { title: SEQ_BUG_YES.fix, goal: `Fix the meter reset ${SEQ_FIX_GOAL}.` },
-  },
-  {
-    ask: SEQ_BUG_SHOWN_ASK,
-    parent: SEQ_BUG_SHOWN.parent,
-    now: {
-      title: SEQ_BUG_SHOWN.reproduce,
-      goal: `Reproduce the clock drift ${SEQ_REPRODUCE_GOAL} yes or reproduced: no.`,
-      constraints: [{ kind: "read-only" }],
-      // The captain asked to see this step's own result: not an internal step.
-      captainAsked: true,
-    },
-    later: { title: SEQ_BUG_SHOWN.fix, goal: `Fix the clock drift ${SEQ_FIX_GOAL}.` },
-  },
-  {
-    ask: SEQ_BUG_NO_ASK,
-    parent: SEQ_BUG_NO.parent,
-    now: {
-      title: SEQ_BUG_NO.reproduce,
-      goal: `Reproduce the dock flicker ${SEQ_REPRODUCE_GOAL} yes or reproduced: no.`,
-      constraints: [{ kind: "read-only" }],
-    },
-    later: { title: SEQ_BUG_NO.fix, goal: `Fix the dock flicker ${SEQ_FIX_GOAL}.` },
-  },
-];
+/** The step goal a sequences reproduce step carries; the kind classifier sorts it (`scenarios/sequences.ts`). */
+export const SEQ_REPRODUCE_GOAL =
+  "as reported, in a clean setup; open your report with reproduced:";
 
 export type ChatRequest = { messages?: { role: string; content?: unknown }[] };
 
@@ -3555,7 +1472,7 @@ export function sinceLastUser(body: string): { user: string; results: string[]; 
 }
 
 /** The instructions a request carries (system or developer), whichever dialect. */
-function servedInstructions(body: string): string {
+export function servedInstructions(body: string): string {
   if (!body.trimStart().startsWith("{")) return "";
   const request = JSON.parse(body) as {
     system?: unknown;
@@ -3578,911 +1495,6 @@ export function indexTaskId(body: string, title: string): string | undefined {
     if (!line.includes(`"${title}"`)) continue;
     const id = line.match(/\(task_id: ([\w-]+)\)/)?.[1];
     if (id) return id;
-  }
-  return undefined;
-}
-
-/**
- * FI3-250's hermetic replay, not a claim that a live model obeys: the
- * captain's words (`DEPENDENCY_WAIT_PROMPT`, then the key of the work to
- * wait on) have the Firstmate start a crewmate and link that work as its
- * blocker; the crewmate reports the wait. The work it waits on carries
- * `DEPENDENCY_WAIT_MARKER` in its title, so the host's steer when that work
- * closes names it, and the resumed crewmate reports what the steer said.
- */
-export const DEPENDENCY_WAIT_PROMPT = "exercise a dependency wait";
-export const DEPENDENCY_WAIT_MARKER = "shared fixture fix";
-export const DEPENDENCY_WAIT_TITLE = "Ship the gauge";
-
-function dependencyWaitMove(
-  body: string,
-  firstmate: boolean,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  const { user, results } = sinceLastUser(body);
-  if (firstmate) {
-    if (!user.includes("[user]") || !user.includes(DEPENDENCY_WAIT_PROMPT)) return undefined;
-    const owner = user.split(DEPENDENCY_WAIT_PROMPT)[1]?.match(/[A-Z0-9]+-\d+/)?.[0] ?? "missing";
-    if (results.length === 0)
-      return {
-        calls: [
-          {
-            name: "spawn_crewmate",
-            args: {
-              title: DEPENDENCY_WAIT_TITLE,
-              goal: `Ship the gauge once ${owner} lands.`,
-              user_words: `${DEPENDENCY_WAIT_PROMPT} on ${owner}`,
-              shape: { rigor_ask: "quick" },
-            },
-          },
-        ],
-      };
-    const spawned = results[0]?.match(/on task ([\w-]+)/)?.[1] ?? "missing";
-    if (results.length === 1)
-      return {
-        calls: [{ name: "link_tasks", args: { from: owner, to: spawned, type: "blocks" } }],
-      };
-    return { text: "Started it behind the fixture fix." };
-  }
-  if (user.includes(DEPENDENCY_WAIT_MARKER)) {
-    return results.length
-      ? { text: "Reported." }
-      : {
-          calls: [
-            {
-              name: "report",
-              args: { text: `Resumed after the wait ended: ${user.trim().split("\n").at(-1)}` },
-            },
-          ],
-        };
-  }
-  if (!user.includes(DEPENDENCY_WAIT_PROMPT)) return undefined;
-  return results.length
-    ? { text: "Reported." }
-    : {
-        calls: [{ name: "report", args: { text: "Waiting for the fixture fix to merge first." } }],
-      };
-}
-
-/** A completion card whose checks change on GitHub after it went up. */
-export const STALE_CHECKS_MARKER = "exercise stale check strip";
-export const STALE_CHECKS_CARD = "The stale strip change is ready";
-
-function staleChecksMove(
-  body: string,
-  firstmate: boolean,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  const { user, results } = sinceLastUser(body);
-  if (!user.includes(STALE_CHECKS_MARKER)) return undefined;
-  const taskId =
-    indexTaskId(body, `meterlab ${STALE_CHECKS_MARKER}`) ??
-    findCrewTaskId(body, STALE_CHECKS_MARKER) ??
-    "missing";
-  if (firstmate) {
-    if (user.includes(SPAWN_PROMPT_MARKER))
-      return results.length
-        ? { text: "Opened." }
-        : {
-            calls: [
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title: `meterlab ${STALE_CHECKS_MARKER}`,
-                  goal: "Ship a change whose checks later fail",
-                  user_words: STALE_CHECKS_MARKER,
-                  repo_id: contextRepos(body).find(([name]) => name === "meterlab")?.[1],
-                  shape: {
-                    rigor_ask: "standard",
-                    skipped_plan_because: "Bounded check-refresh fixture",
-                  },
-                },
-              },
-            ],
-          };
-    if (user.includes(`${STALE_CHECKS_MARKER} read`))
-      return results.length
-        ? { text: "Read the checks." }
-        : { calls: [{ name: "crew_status", args: { task_id: taskId } }] };
-    return { text: "Noted." };
-  }
-  if (!results.length) return { calls: [{ name: "check_change", args: {} }] };
-  if (results.length === 1)
-    return {
-      calls: [
-        {
-          name: "emit_card",
-          args: {
-            title: STALE_CHECKS_CARD,
-            body: completionCardBody(
-              "<p>The captain asked for this change.</p>",
-              "<p>Changed the meter.</p>",
-              "<p>The meter was wrong.</p>",
-              '<p>The meter is right now.</p><figure aria-label="Checks pass"><svg viewBox="0 0 510 50" width="100%"><rect x="5" y="5" width="500" height="40" rx="8" fill="var(--ok-dim)"/><text x="20" y="30" fill="var(--fg-1)">Every current check passed</text></svg></figure>',
-            ),
-            actions: [
-              {
-                id: "merge-it",
-                label: "Merge it",
-                default: true,
-                effect: { kind: "settle", mode: "merge" },
-              },
-            ],
-          },
-        },
-      ],
-    };
-  if (results.length === 2)
-    return {
-      calls: [
-        {
-          name: "report",
-          args: {
-            text: "The change passed its checks; the completion decision is up.",
-            waiting_on_captain: { reason: "the completion decision is up" },
-          },
-        },
-      ],
-    };
-  return { text: "Waiting on the captain." };
-}
-
-/** Hermetic instruction/host replay for FI3-237, not a claim that a live model obeys. */
-export const CI_REPAIR_MARKER = "exercise diagnosed check failures";
-export const CI_REPAIR_OWNER = "ci-baseline-owner";
-export const CI_REPAIR_CARD = "The diagnosed change is ready";
-export const CI_REPAIR_HEADS = ["baseline-one", "baseline-two", "flake-head"] as const;
-
-function checkRepairMove(
-  body: string,
-  firstmate: boolean,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  const { user, results } = sinceLastUser(body);
-  if (!user.includes(CI_REPAIR_MARKER)) return undefined;
-  const taskId =
-    indexTaskId(body, `meterlab ${CI_REPAIR_MARKER}`) ??
-    findCrewTaskId(body, CI_REPAIR_MARKER) ??
-    "missing";
-  if (firstmate) {
-    if (user.includes(SPAWN_PROMPT_MARKER))
-      return results.length
-        ? { text: "Opened." }
-        : {
-            calls: [
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title: `meterlab ${CI_REPAIR_MARKER}`,
-                  goal: "Exercise diagnosed failures",
-                  user_words: CI_REPAIR_MARKER,
-                  repo_id: contextRepos(body).find(([name]) => name === "meterlab")?.[1],
-                  shape: {
-                    rigor_ask: "standard",
-                    skipped_plan_because:
-                      "Existing check-repair reproduction; implementation fixture",
-                  },
-                },
-              },
-            ],
-          };
-    if (user.includes("needs diagnosis")) {
-      if (results.length === 0)
-        return { calls: [{ name: "crew_status", args: { task_id: taskId } }] };
-      if (results.length === 1)
-        return {
-          calls: [
-            {
-              name: "steer_crewmate",
-              args: { task_id: taskId, message: `${CI_REPAIR_MARKER} diagnose ${results[0]}` },
-            },
-          ],
-        };
-      return { text: "Diagnosis requested without a captain card." };
-    }
-    if (
-      user.includes("[user]") &&
-      (user.includes(`${CI_REPAIR_MARKER} read`) || user.includes(`${CI_REPAIR_MARKER} finish`))
-    ) {
-      return results.length
-        ? { text: "Continued." }
-        : {
-            calls: [
-              {
-                name: "steer_crewmate",
-                args: {
-                  task_id: taskId,
-                  message: `${CI_REPAIR_MARKER} ${user.includes(`${CI_REPAIR_MARKER} finish`) ? "finish" : "read"}`,
-                },
-              },
-            ],
-          };
-    }
-    if (user.includes("reported on task")) {
-      // FI3-671: a wait on work nobody has started is started that turn.
-      const unstarted = user.match(/It waits on ([\w-]+) "[^"]*" \(not started\)/)?.[1];
-      if (unstarted && results.length === 0)
-        return { calls: [{ name: "update_task", args: { task: unstarted, start_now: true } }] };
-      // Routine waits are not decisions.
-      return { text: "The separate owner and wait remain recorded; no captain decision needed." };
-    }
-    return undefined;
-  }
-  const card: ScriptedCall = {
-    name: "emit_card",
-    args: {
-      title: CI_REPAIR_CARD,
-      body: completionCardBody(
-        "<p>A failed check needs a diagnosis before another repair.</p>",
-        "<p>Repaired the diagnosed regression.</p>",
-        "<p>The checks failed on the previous version.</p>",
-        '<p>The diagnosed change is ready without an extra failure decision.</p><figure aria-label="Checks pass"><svg viewBox="0 0 510 50" width="100%"><rect x="5" y="5" width="500" height="40" rx="8" fill="var(--ok-dim)"/><text x="20" y="30" fill="var(--fg-1)">Every current check passed</text></svg></figure>',
-      ),
-      // The merge alone, unlabeled, as the crewmate is told: the host
-      // attaches the completion buttons and their words (FI3-249).
-      actions: [{ id: "put-in", default: true, effect: { kind: "settle", mode: "merge" } }],
-    },
-  };
-  if (user.includes(`${CI_REPAIR_MARKER} finish`)) {
-    if (!results.length) return { calls: [{ name: "check_change", args: {} }] };
-    if (results.length === 1) return { calls: [card] };
-    return results.length === 2
-      ? {
-          calls: [
-            {
-              name: "report",
-              args: {
-                text: "The diagnosed change passed every current check and its completion decision is ready.",
-              },
-            },
-          ],
-        }
-      : { text: "Completion recorded." };
-  }
-  if (user.includes(`${CI_REPAIR_MARKER} diagnose`)) {
-    const headSha = CI_REPAIR_HEADS.find((head) => user.includes(head)) ?? "missing";
-    const flake = headSha === CI_REPAIR_HEADS[2];
-    if (!results.length)
-      return {
-        calls: [
-          {
-            name: "check_change",
-            args: {
-              diagnosis: {
-                headSha,
-                check: "linux-checks",
-                classification: flake ? "suspected-flake" : "baseline-blocked",
-                evidence: flake
-                  ? "Failed standalone timeout log differs from the same-head successful verification"
-                  : "Separate owner reproduced the same failed assertion on untouched main, with log evidence",
-                ...(flake ? {} : { dependencyTask: CI_REPAIR_OWNER }),
-              },
-            },
-          },
-        ],
-      };
-    if (flake && results.length === 1)
-      return {
-        calls: [
-          {
-            name: "check_change",
-            args: {
-              rerun: {
-                headSha,
-                check: "linux-checks",
-                evidence: "Successful same-head verification and failed-job timeout log",
-              },
-            },
-          },
-        ],
-      };
-    // Try premature completion to exercise the actual card gate on failed checks.
-    if (flake && results.length === 2) return { calls: [card] };
-    if (results.length === (flake ? 3 : 1))
-      return {
-        calls: [
-          {
-            name: "report",
-            args: {
-              text: `${CI_REPAIR_MARKER} ${flake ? "rerun reserved; completion correctly refused until all checks pass" : "waiting for the evidenced separate baseline owner"}`,
-            },
-          },
-        ],
-      };
-    return { text: "Waiting." };
-  }
-  if (!results.length) return { calls: [{ name: "check_change", args: {} }] };
-  if (results.length === 1) {
-    // It names the version it read, as a crewmate does: two failures at
-    // two versions are two reports, never one repeated wake.
-    const head = CI_REPAIR_HEADS.find((h) => results[0]?.includes(h)) ?? "the current version";
-    return {
-      calls: [
-        {
-          name: "report",
-          args: {
-            text: `${CI_REPAIR_MARKER} needs diagnosis at ${head}; failed step and logs recorded for the next move`,
-          },
-        },
-      ],
-    };
-  }
-  return { text: "Reported." };
-}
-
-/**
- * A task filed earlier starts on the model the captain names (FI3-436): the
- * file ask records a parent and its on-request child with create_task; the
- * start ask names the model on that same row with update_task
- * override_model_id and starts it in the same call - never a replacement.
- */
-export const FILED_MODEL_FILE_ASK = "file the gauge calibration for later";
-export const FILED_MODEL_START_ASK = "start the gauge calibration on the mock model";
-export const FILED_MODEL_PARENT = "Gauge work";
-export const FILED_MODEL_TITLE = "Calibrate the gauge";
-
-function filedModelFirstmateMove(
-  body: string,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  const { user, results } = sinceLastUser(body);
-  if (!user.includes("[user]")) return undefined;
-  const ask = user.slice(user.lastIndexOf("[user]"));
-  if (ask.includes(FILED_MODEL_FILE_ASK)) {
-    const parentKey = results[0]?.match(/Planned ([A-Z0-9]+-\d+)/)?.[1];
-    if (results.length === 0) {
-      return {
-        calls: [
-          {
-            name: "create_task",
-            args: {
-              title: FILED_MODEL_PARENT,
-              goal: `${FILED_MODEL_PARENT}.`,
-              user_words: FILED_MODEL_FILE_ASK,
-            },
-          },
-        ],
-      };
-    }
-    if (results.length === 1 && parentKey) {
-      return {
-        calls: [
-          {
-            name: "create_task",
-            args: {
-              title: FILED_MODEL_TITLE,
-              goal: "The gauge reads true.",
-              user_words: FILED_MODEL_FILE_ASK,
-              parent: parentKey,
-            },
-          },
-        ],
-      };
-    }
-    return { text: "Filed." };
-  }
-  if (ask.includes(FILED_MODEL_START_ASK)) {
-    if (results.length > 0) return { text: "Started it on the model you named." };
-    const task = indexTaskId(body, FILED_MODEL_TITLE) ?? "missing";
-    return {
-      calls: [
-        {
-          name: "update_task",
-          args: {
-            task,
-            override_model_id: `${MOCK_PROVIDER_ID}/${MOCK_MODEL_ID}`,
-            start_now: true,
-          },
-        },
-      ],
-    };
-  }
-  return undefined;
-}
-
-/**
- * New work on a model the captain names (FI3-444): each ask is one
- * spawn_crewmate carrying override_model_id - one the app serves, and one it
- * does not - and the answer it reads back says which model took the task.
- */
-export const NAMED_SPAWN_ASK = "spawn the dial repair on the mock model";
-export const NAMED_SPAWN_TITLE = "Repair the dial";
-export const NAMED_SPAWN_MISSING_ASK = "spawn the needle repair on a model that is not here";
-export const NAMED_SPAWN_MISSING_TITLE = "Repair the needle";
-/** A model id the hermetic app's models.json does not define. */
-export const NAMED_SPAWN_MISSING_MODEL_ID = "mock-9";
-
-function namedSpawnFirstmateMove(
-  body: string,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  const { user, results } = sinceLastUser(body);
-  if (!user.includes("[user]")) return undefined;
-  const ask = user.slice(user.lastIndexOf("[user]"));
-  const spawn = (
-    title: string,
-    words: string,
-    model: string,
-  ): { calls: ScriptedCall[] } | { text: string } =>
-    results.length > 0
-      ? { text: "Started it." }
-      : {
-          calls: [
-            {
-              name: "spawn_crewmate",
-              args: {
-                title,
-                goal: `${title}.`,
-                user_words: words,
-                shape: { override_model_id: model, rigor_ask: "quick" },
-              },
-            },
-          ],
-        };
-  if (ask.includes(NAMED_SPAWN_ASK)) {
-    return spawn(NAMED_SPAWN_TITLE, NAMED_SPAWN_ASK, `${MOCK_PROVIDER_ID}/${MOCK_MODEL_ID}`);
-  }
-  if (ask.includes(NAMED_SPAWN_MISSING_ASK)) {
-    return spawn(
-      NAMED_SPAWN_MISSING_TITLE,
-      NAMED_SPAWN_MISSING_ASK,
-      `${MOCK_PROVIDER_ID}/${NAMED_SPAWN_MISSING_MODEL_ID}`,
-    );
-  }
-  return undefined;
-}
-
-/**
- * The mock Firstmate's moves for the sequences asks: the legs of opening an
- * ask, the plan's hand-off on the captain's choice, and the bug hand-offs on
- * the reproduce step's report. Undefined when the request is none of them.
- */
-function sequencesFirstmateMove(
-  body: string,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  const { user, results } = sinceLastUser(body);
-  const onClaude = body.includes(SEQ_CLAUDE_STEP_MARKER);
-  const userSegment = user.slice(user.lastIndexOf("[user]"));
-  const script = user.includes("[user]")
-    ? SEQ_ASKS.find((entry) => userSegment.includes(entry.ask))
-    : undefined;
-  // A plan asked for on its own: one read-only step, no parent.
-  if (user.includes("[user]") && userSegment.includes(SEQ_SAVED_ASK)) {
-    if (results.length > 0) return { text: "Opened." };
-    return {
-      calls: [
-        {
-          name: "spawn_crewmate",
-          args: {
-            title: SEQ_SAVED.plan,
-            goal: `${SEQ_SAVED_PLAN_GOAL}, and wait for my choice.`,
-            user_words: SEQ_SAVED_ASK,
-            constraints: [{ kind: "read-only" }],
-          },
-        },
-      ],
-    };
-  }
-  // An ask for a prototype: the plan line the Firstmate was served says it
-  // is that plan, so it relays the line beside the read-only constraint.
-  if (user.includes("[user]") && userSegment.includes(SEQ_PROTOTYPE_ASK)) {
-    if (results.length > 0) return { text: "Opened." };
-    const line = planLineOf(servedInstructions(body));
-    return {
-      calls: [
-        {
-          name: "spawn_crewmate",
-          args: {
-            title: SEQ_PROTOTYPE.plan,
-            goal: `${SEQ_PROTOTYPE_PLAN_GOAL}, and wait for my choice.`,
-            user_words: SEQ_PROTOTYPE_ASK,
-            constraints: [
-              { kind: "read-only" },
-              ...(line ? [{ kind: "free" as const, text: line }] : []),
-            ],
-          },
-        },
-      ],
-    };
-  }
-  // Approve and build on it: no successor exists, so the builder is spawned
-  // grounded on the plan (HANDOFF).
-  if (
-    user.includes('"event":"answer_task_closed"') &&
-    user.includes(`"title":"${SEQ_PROTOTYPE.plan}"`) &&
-    user.includes(`"label":"${SEQ_PROTOTYPE_CHOICE}"`)
-  ) {
-    if (results.length > 0) return { text: "Started the build." };
-    const plan = user.match(/"event":"answer_task_closed","task":\{"id":"([\w-]+)"/)?.[1];
-    return {
-      calls: [
-        {
-          name: "spawn_crewmate",
-          args: {
-            title: SEQ_PROTOTYPE.build,
-            goal: `${SEQ_PROTOTYPE_BUILD_GOAL}.`,
-            user_words: SEQ_PROTOTYPE_ASK,
-            constraints: [{ kind: "free", text: SEQ_IMPLEMENT_LINE }],
-            shape: { basis: plan ?? "missing" },
-          },
-        },
-      ],
-    };
-  }
-  // Save and defer on that plan: no successor exists, so the build is filed
-  // on request, grounded on the plan, and nothing starts.
-  if (
-    user.includes('"event":"answer_task_closed"') &&
-    user.includes(`"title":"${SEQ_SAVED.plan}"`) &&
-    user.includes(`"label":"${SEQ_SAVED_CHOICE}"`)
-  ) {
-    if (results.length > 0) return { text: "Saved for later." };
-    const plan = user.match(/"event":"answer_task_closed","task":\{"id":"([\w-]+)"/)?.[1];
-    return {
-      calls: [
-        {
-          name: "create_task",
-          args: {
-            title: SEQ_SAVED.build,
-            goal: `${SEQ_SAVED_BUILD_GOAL}.`,
-            user_words: SEQ_SAVED_ASK,
-            basis: plan ?? "missing",
-            start_policy: "on-request",
-            constraints: [{ kind: "free", text: SEQ_IMPLEMENT_LINE }],
-          },
-        },
-      ],
-    };
-  }
-  // A build and a check it waits on: the build starts, the check runs as an
-  // internal step, and a blocks link holds the build's merge on the check.
-  if (user.includes("[user]") && userSegment.includes(SEQ_CHECKED_ASK)) {
-    if (results.length === 0) {
-      return {
-        calls: [
-          {
-            name: "spawn_crewmate",
-            args: {
-              title: SEQ_CHECKED.build,
-              goal: `${SEQ_CHECKED_BUILD_GOAL}.`,
-              user_words: SEQ_CHECKED_ASK,
-            },
-          },
-        ],
-      };
-    }
-    if (results.length === 1) {
-      return {
-        calls: [
-          {
-            name: "spawn_crewmate",
-            args: {
-              title: SEQ_CHECKED.check,
-              goal: `${SEQ_CHECK_GOAL}; open your report with checks: pass or checks: fail.`,
-              user_words: SEQ_CHECKED_ASK,
-              constraints: [{ kind: "read-only" }],
-              shape: { internal_step: true },
-            },
-          },
-        ],
-      };
-    }
-    const build = results[0]?.match(/on task ([\w-]+)/)?.[1];
-    const check = results[1]?.match(/on task ([\w-]+)/)?.[1];
-    if (results.length === 2 && build && check) {
-      return { calls: [{ name: "link_tasks", args: { from: check, to: build, type: "blocks" } }] };
-    }
-    return { text: "Started the build and its live check." };
-  }
-  if (script && !script.parent) {
-    // One step: the implement step is the whole ask, spawned on its own.
-    if (results.length > 0) return { text: "Opened." };
-    return {
-      calls: [
-        {
-          name: "spawn_crewmate",
-          args: {
-            title: script.now.title,
-            goal: script.now.goal,
-            user_words: script.ask,
-            ...(script.now.constraints ? { constraints: script.now.constraints } : {}),
-            shape: { skipped_plan_because: SEQ_SMALL_PLAN_SKIP },
-          },
-        },
-      ],
-    };
-  }
-  if (script?.parent) {
-    const parentKey = results[0]?.match(/Planned ([A-Z0-9]+-\d+)/)?.[1];
-    if (results.length === 0) {
-      return {
-        calls: [
-          {
-            name: "create_task",
-            args: { title: script.parent, goal: `${script.parent}.`, user_words: script.ask },
-          },
-        ],
-      };
-    }
-    if (results.length === 1 && parentKey) {
-      return {
-        calls: [
-          {
-            name: "spawn_crewmate",
-            args: {
-              title: script.now.title,
-              goal: script.now.goal,
-              // A pinned model skips the classifier. Keep this reproduction
-              // an answer with its real read-only constraint (FI3-793).
-              ...(onClaude
-                ? {
-                    override_model_id: CLAUDE_CREW_MODEL,
-                    constraints: [{ kind: "read-only" }],
-                  }
-                : {}),
-              user_words: script.ask,
-              parent: parentKey,
-              ...(script.now.constraints ? { constraints: script.now.constraints } : {}),
-              ...(script.now.captainAsked ? {} : { shape: { internal_step: true } }),
-            },
-          },
-        ],
-      };
-    }
-    const nowId = results[1]?.match(/on task ([\w-]+)/)?.[1];
-    if (results.length === 2 && parentKey && nowId && script.later) {
-      return {
-        calls: [
-          {
-            name: "create_task",
-            args: {
-              title: script.later.title,
-              goal: script.later.goal,
-              user_words: script.ask,
-              parent: parentKey,
-              basis: nowId,
-              start_policy: "on-request",
-              internal_step: true,
-              ...(script.later.constraints ? { constraints: script.later.constraints } : {}),
-            },
-          },
-        ],
-      };
-    }
-    return { text: "Opened." };
-  }
-  // The captain says to start the clock fix while the repro he asked to see
-  // is still up: the Firstmate starts it and leaves the repro alone - it
-  // never declared it a step of its own, so it is his to close.
-  if (
-    user.includes("[user]") &&
-    user.slice(user.lastIndexOf("[user]")).includes(SEQ_START_SHOWN_FIX)
-  ) {
-    if (results.length === 0) {
-      const fix = indexTaskId(body, SEQ_BUG_SHOWN.fix) ?? "missing";
-      return { calls: [{ name: "update_task", args: { task: fix, start_now: true } }] };
-    }
-    return { text: "Started the fix; the repro is yours to close." };
-  }
-  // The captain chose on the plan's card: the plan step closed answered, and
-  // its choice says the implement step's turn has come.
-  if (
-    user.includes('"event":"answer_task_closed"') &&
-    user.includes(`"title":"${SEQ_FEATURE.plan}"`)
-  ) {
-    if (results.length > 0) return { text: "Started." };
-    const implement = indexTaskId(body, SEQ_FEATURE.implement) ?? "missing";
-    return {
-      calls: [
-        {
-          name: "update_task",
-          args: {
-            task: implement,
-            start_policy: "when-ready",
-            blocked_by: [],
-            goal: SEQ_IMPLEMENT_AMENDED_GOAL,
-          },
-        },
-      ],
-    };
-  }
-  // The reproduce step's report: yes starts the fix and closes the step it
-  // builds on as answered; no is one decision card with the ways out.
-  const reproduced = (title: string, verdict: "yes" | "no") =>
-    user.match(new RegExp(`reported on task ([\\w-]+) "${title}": reproduced: ${verdict}`))?.[1];
-  const yes = reproduced(SEQ_BUG_YES.reproduce, "yes");
-  if (yes) {
-    if (results.length === 0) {
-      const fix = indexTaskId(body, SEQ_BUG_YES.fix) ?? "missing";
-      return {
-        calls: [
-          {
-            name: "update_task",
-            args: {
-              task: fix,
-              start_now: true,
-              ...(onClaude ? { override_model_id: CLAUDE_CREW_MODEL } : {}),
-            },
-          },
-        ],
-      };
-    }
-    if (results.length === 1) {
-      return {
-        calls: [{ name: "settle_task", args: { task_id: yes, mode: "answered" } }],
-      };
-    }
-    return { text: "Fix under way." };
-  }
-  // The check's pass: the build it held carries on, so the check closes as
-  // answered into it.
-  const passed = user.match(
-    new RegExp(`reported on task ([\\w-]+) "${SEQ_CHECKED.check}": checks: pass`),
-  )?.[1];
-  if (passed) {
-    if (results.length > 0) return { text: "The checks passed; the build carries on." };
-    return { calls: [{ name: "settle_task", args: { task_id: passed, mode: "answered" } }] };
-  }
-  return undefined;
-}
-
-/** The sequences crewmates, keyed by their step's goal. */
-function sequencesCrewmateMove(
-  body: string,
-  hasToolResults: boolean,
-): { calls: ScriptedCall[] } | { text: string } | undefined {
-  // Most specific first: a builder's brief quotes its basis, never its goal.
-  if (body.includes(SEQ_SAVED_BUILD_GOAL)) return { text: "Building the saved plan." };
-  if (body.includes(SEQ_PROTOTYPE_BUILD_GOAL)) return { text: "Building the approved dial." };
-  if (body.includes(SEQ_PROTOTYPE_PLAN_GOAL)) {
-    if (hasToolResults || calledTool(body, "emit_card")) return { text: "done" };
-    return {
-      calls: [
-        {
-          name: "emit_card",
-          args: {
-            title: SEQ_PROTOTYPE_CARD_TITLE,
-            body: SEQ_PROTOTYPE_CARD_BODY,
-            actions: [
-              { id: "abandon", label: "Abandon" },
-              { id: "save-and-defer", label: "Save and defer" },
-              { id: "approve", label: SEQ_PROTOTYPE_CHOICE, default: true },
-            ],
-          },
-        },
-        { name: "report", args: { text: SEQ_PROTOTYPE_SPEC } },
-      ],
-    };
-  }
-  if (body.includes(SEQ_SAVED_PLAN_GOAL)) {
-    if (hasToolResults || calledTool(body, "emit_card")) return { text: "done" };
-    return {
-      calls: [
-        {
-          name: "emit_card",
-          args: {
-            title: SEQ_SAVED_CARD_TITLE,
-            body: SEQ_SAVED_CARD_BODY,
-            actions: [
-              { id: "abandon", label: "Abandon" },
-              { id: "save-and-defer", label: SEQ_SAVED_CHOICE },
-              { id: "approve", label: "Approve and build", default: true },
-            ],
-          },
-        },
-        { name: "report", args: { text: SEQ_SAVED_SPEC } },
-      ],
-    };
-  }
-  if (body.includes(SEQ_IMPLEMENT_GOAL)) {
-    if (hasToolResults || calledTool(body, "emit_card")) return { text: "done" };
-    return {
-      calls: [
-        {
-          name: "emit_card",
-          args: {
-            title: SEQ_IMPLEMENT_CARD_TITLE,
-            body: completionCardBody(
-              "<p>The settings rows need clear groups.</p>",
-              "<p>Grouped the rows into three labelled sections.</p>",
-              "<p>The rows were one undivided list.</p>",
-              "<p>The sections now separate the rows.</p><ul><li>The gear icon stays where it was.</li></ul>",
-            ),
-            actions: [
-              {
-                id: "put-in",
-                label: "Put it in",
-                default: true,
-                effect: { kind: "settle", mode: "merge" },
-              },
-            ],
-          },
-        },
-        { name: "report", args: { text: "Grouped the settings rows into three sections." } },
-      ],
-    };
-  }
-  if (body.includes(SEQ_CHECK_GOAL)) {
-    if (hasToolResults) return { text: "done" };
-    return { calls: [{ name: "report", args: { text: SEQ_CHECKS_PASSED } }] };
-  }
-  if (body.includes(SEQ_CHECKED_BUILD_GOAL)) return { text: "Adding the battery meter now." };
-  if (body.includes(SEQ_SMALL_GOAL)) return { text: "Fixing the title spelling now." };
-  if (body.includes(SEQ_FIX_GOAL)) return { text: "The fix is under way." };
-  if (body.includes(SEQ_REPRODUCE_GOAL)) {
-    if (hasToolResults) return { text: "done" };
-    const verdict = body.includes("the dock flicker") ? SEQ_REPRODUCED_NO : SEQ_REPRODUCED_YES;
-    if (verdict === SEQ_REPRODUCED_NO) {
-      return {
-        calls: [
-          {
-            name: "emit_card",
-            args: {
-              title: SEQ_NOT_REPRODUCED_TITLE,
-              body: "<p>The dock flicker did not show on a clean setup.</p><ul><li>Forty resizes, no flicker.</li><li>The fix waits on your word.</li></ul>",
-              actions: [
-                { id: "fix-anyway", label: SEQ_NOT_REPRODUCED_WAYS[0], default: true },
-                { id: "stop", label: SEQ_NOT_REPRODUCED_WAYS[1] },
-              ],
-            },
-          },
-          { name: "report", args: { text: verdict } },
-        ],
-      };
-    }
-    // The brief says which answer shape it has: the captain's own ask lands
-    // as a card; a step the Firstmate runs hands its report on.
-    if (body.includes("it lands as one card")) {
-      return {
-        calls: [
-          {
-            name: "emit_card",
-            args: {
-              title: SEQ_SHOWN_REPRO_TITLE,
-              body: "<p>The clock loses a minute over a sleep.</p><ul><li>Seen on three sleeps.</li></ul>",
-              actions: [
-                { id: "leave", label: "Leave it" },
-                { id: "fix", label: "Fix it", default: true },
-              ],
-            },
-          },
-          { name: "report", args: { text: verdict } },
-        ],
-      };
-    }
-    return { calls: [{ name: "report", args: { text: verdict } }] };
-  }
-  if (body.includes(SEQ_PLAN_GOAL)) {
-    const { user, tail } = sinceLastUser(body);
-    // A native steer can precede the original card's tool receipt. Only
-    // this amendment's reply call means it was acknowledged; any old tool
-    // result is not proof that the new instruction was handled.
-    if (user.includes(SEQ_THREAD_REPLY) && !calledTool(tail, "reply")) {
-      const shown = body.match(/Card shown: [^(]*\((card-[\w-]+)\)/)?.[1] ?? "";
-      return {
-        calls: [
-          {
-            name: "reply",
-            args: { card_id: shown, text: SEQ_THREAD_ANSWER },
-          },
-          // The plan changed: the task records the final agreed spec.
-          { name: "report", args: { text: SEQ_PLAN_FINAL_SPEC } },
-        ],
-      };
-    }
-    if (hasToolResults || calledTool(body, "emit_card")) return { text: "done" };
-    return {
-      calls: [
-        {
-          name: "emit_card",
-          args: {
-            title: SEQ_PLAN_CARD_TITLE,
-            body: SEQ_PLAN_CARD_BODY,
-            actions: [
-              { id: "abandon", label: "Abandon" },
-              { id: "save-and-defer", label: "Save and defer" },
-              { id: "group", label: SEQ_PLAN_CHOICE, default: true },
-            ],
-          },
-        },
-        { name: "report", args: { text: SEQ_PLAN_REPORT } },
-      ],
-    };
   }
   return undefined;
 }
@@ -4525,12 +1537,21 @@ export type ScenarioRequest = {
   wantsStream: boolean;
   latestUserTail: string;
   hasToolResults: boolean;
+  /** The stand-in's own port, for a card that loads a page the stand-in serves. */
+  port: number;
 };
-/** A scenario's answer: tool calls, text, or a refusal the way the service sends one. */
-export type ScenarioAnswer =
+/**
+ * A scenario's answer: tool calls, text, or a refusal the way the service
+ * sends one, or `held`, a turn the stand-in keeps open the way a crewmate
+ * goes on working. `afterMs` holds the answer back that long, the way a real
+ * model takes its time over a turn's last line.
+ */
+export type ScenarioAnswer = (
   | { calls: ScriptedCall[] }
   | { text: string }
-  | { refusal: { status: number; error: { type: string; message: string } } };
+  | { refusal: { status: number; error: { type: string; message: string } } }
+  | { held: true }
+) & { afterMs?: number };
 /**
  * A journey's own stand-in behavior, in its own file under
  * `tests/e2e/scenarios/` (`docs/testing.md`, "A journey's own scenarios").
@@ -4599,7 +1620,7 @@ export function findCrewTaskId(body: string, titleNeedle: string): string | unde
     : undefined;
 }
 
-function settleNeedle(haystack: string, marker: string): string {
+export function settleNeedle(haystack: string, marker: string): string {
   const after = haystack.split(marker)[1] ?? "";
   return after.split(/["\\]/)[0]?.trim() ?? "";
 }
@@ -5066,43 +2087,28 @@ export async function startMockProvider(
         // scenarios"): asked in the order the journey named them, after the
         // first mate's answer-missing retry and scripted turns and before
         // every shared answer below. The first to answer wins.
-        const scenarioRequest = { body, isFirstmate, wantsStream, latestUserTail, hasToolResults };
+        const scenarioRequest = {
+          body,
+          isFirstmate,
+          wantsStream,
+          latestUserTail,
+          hasToolResults,
+          port: (server.address() as AddressInfo).port,
+        };
         for (const scenario of scenarios) {
           const answer = scenario(scenarioRequest);
           if (!answer) continue;
-          if ("calls" in answer) streamToolCalls(answer.calls);
-          else if ("text" in answer) streamText(answer.text);
-          else writeAnthropicError(res, answer.refusal.status, answer.refusal.error);
+          const send = () => {
+            if ("calls" in answer) streamToolCalls(answer.calls);
+            else if ("text" in answer) streamText(answer.text);
+            else if ("held" in answer) holdOpen();
+            else writeAnthropicError(res, answer.refusal.status, answer.refusal.error);
+          };
+          if (answer.afterMs) setTimeout(send, answer.afterMs);
+          else send();
           return;
         }
         if (isFirstmate && wantsStream) {
-          const checkMove =
-            staleChecksMove(body, true) ??
-            checkRepairMove(body, true) ??
-            dependencyWaitMove(body, true);
-          if (checkMove) {
-            if ("calls" in checkMove) streamToolCalls(checkMove.calls);
-            else streamText(checkMove.text);
-            return;
-          }
-          const sequencesMove = sequencesFirstmateMove(body);
-          if (sequencesMove) {
-            if ("calls" in sequencesMove) streamToolCalls(sequencesMove.calls);
-            else streamText(sequencesMove.text);
-            return;
-          }
-          const filedModelMove = filedModelFirstmateMove(body);
-          if (filedModelMove) {
-            if ("calls" in filedModelMove) streamToolCalls(filedModelMove.calls);
-            else streamText(filedModelMove.text);
-            return;
-          }
-          const namedSpawnMove = namedSpawnFirstmateMove(body);
-          if (namedSpawnMove) {
-            if ("calls" in namedSpawnMove) streamToolCalls(namedSpawnMove.calls);
-            else streamText(namedSpawnMove.text);
-            return;
-          }
           const settleCall = (
             marker: string,
             mode: "land" | "discard",
@@ -5116,41 +2122,6 @@ export async function startMockProvider(
               args: { task_id: taskId, mode, closing_sentence: MOCK_CLOSING_SENTENCES[mode] },
             };
           };
-          // Cards as threads, phase 1: the crewmate closed its card and
-          // handed the captain's words up. The Firstmate runs the settle it
-          // would have run had he typed them in the main input.
-          if (!hasToolResults && latestUserTail.includes(THREAD_HANDOFF_PHRASE)) {
-            const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
-            streamToolCalls([
-              {
-                name: "settle_task",
-                args: {
-                  task_id: taskId,
-                  mode: "land",
-                  closing_sentence: MOCK_CLOSING_SENTENCES.land,
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(RELEASE_PROMPT_MARKER)) {
-            const needle = settleNeedle(latestUserTail, RELEASE_PROMPT_MARKER);
-            const taskId =
-              findCrewTaskId(latestUserTail, needle) ?? findCrewTaskId(body, needle) ?? "missing";
-            streamToolCalls([
-              {
-                name: "settle_task",
-                args: {
-                  task_id: taskId,
-                  mode: "released",
-                  release_evidence:
-                    "Release v1.2.3 verified in the release manifest and published artifact",
-                  closing_sentence: MOCK_CLOSING_SENTENCES.released,
-                },
-              },
-            ]);
-            return;
-          }
           if (!hasToolResults && latestUserTail.includes(MERGE_PROMPT_MARKER)) {
             const needle = settleNeedle(latestUserTail, MERGE_PROMPT_MARKER);
             const taskId =
@@ -5234,23 +2205,6 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(PERSONAL_CHANGE_PROMPT_MARKER)) {
-            const match = latestUserTail.match(/change my panel ([a-z0-9-]+): ([^"\\]+)/);
-            const surface = match?.[1] ?? "unknown";
-            const ask = match?.[2]?.trim() ?? "change it";
-            streamToolCalls([
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title: `Change the ${surface} panel`,
-                  goal: `Change the ${surface} panel: ${ask}`,
-                  user_words: `change my panel ${surface}: ${ask}`,
-                  personal_ui: true,
-                },
-              },
-            ]);
-            return;
-          }
           // The marker, or the words the create-your-own-panel slot puts in
           // the message box, finished by the captain.
           const slotAsk = latestUserTail.match(new RegExp(`${CREATE_PANEL_DRAFT}([^"\\\\]+)`));
@@ -5276,101 +2230,9 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(ESCALATE_PROMPT_MARKER)) {
-            // The captain rejected a result in words: a regular spawn with
-            // escalate_from, never a new tool (the captain's second-pass call).
-            const needle = settleNeedle(latestUserTail, ESCALATE_PROMPT_MARKER);
-            const taskId =
-              findCrewTaskId(latestUserTail, needle) ?? findCrewTaskId(body, needle) ?? "missing";
-            streamToolCalls([
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title: needle,
-                  goal: `Complete the task "${needle}" properly this time.`,
-                  user_words: `${ESCALATE_PROMPT_MARKER}${needle}`,
-                  shape: { escalate_from: taskId },
-                },
-              },
-            ]);
-            return;
-          }
-          // FI3-1581: woken by a finished report, Firstmate puts the answer on
-          // a card of its own and, in the same turn, closes the task answered.
-          // The gap is the reproduction's: the note is on the stack before the close.
-          if (
-            latestUserTail.includes(FINISHED_WAKE_NEEDLE) &&
-            latestUserTail.includes(OWN_RENT_TITLE)
-          ) {
-            const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
-            if (!hasToolResults) {
-              streamToolCalls([
-                {
-                  name: "emit_card",
-                  args: {
-                    task_id: taskId,
-                    title: OWN_RENT_CARD_TITLE,
-                    body:
-                      "<p>Owning Macs costs far less than renting for steady Mac CI use.</p>" +
-                      "<p>Renting only wins when extra demand comes in rare bursts.</p>",
-                  },
-                },
-              ]);
-              return;
-            }
-            if (
-              calledTool(latestUserTail, "emit_card") &&
-              !calledTool(latestUserTail, "settle_task")
-            ) {
-              setTimeout(() => {
-                streamToolCalls([
-                  { name: "settle_task", args: { task_id: taskId, mode: "answered" } },
-                ]);
-              }, OWN_RENT_SETTLE_DELAY_MS);
-              return;
-            }
-          }
           if (!hasToolResults && latestUserTail.includes(FINISHED_WAKE_NEEDLE)) {
             const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
             streamToolCalls([{ name: "settle_task", args: { task_id: taskId, mode: "answered" } }]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(PROPOSE_PROJECT_REPORT_NEEDLE)) {
-            const path = latestUserTail.match(
-              new RegExp(`folder at (\\S+) ${PROPOSE_PROJECT_REPORT_NEEDLE}`),
-            )?.[1] as string;
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "project-setup",
-                  value: { kind: "adopt", path, work: MOCK_PROPOSED_WORK },
-                  evidence: "the crewmate reported the runner fixes need this project",
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(BLOCKED_REPORT_NEEDLE)) {
-            // The wrong trigger on purpose: a crewmate's own "I am blocked",
-            // reaching the Firstmate as an [fm-op] because the whose-turn
-            // rule found it stopped. The tool boundary refuses it.
-            const taskId =
-              findCrewTaskId(body, BLOCKED_REPORT_PROMPT_MARKER) ??
-              latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ??
-              latestUserTail.match(/\(task ([\w-]+)\)/)?.[1] ??
-              "missing";
-            streamToolCalls([
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title: "Stronger meter attempt",
-                  goal: "The meter resets.",
-                  user_words: MOCK_BLOCKED_REPORT,
-                  shape: { escalate_from: taskId },
-                },
-              },
-            ]);
             return;
           }
           for (const lesson of [
@@ -5395,21 +2257,6 @@ export async function startMockProvider(
               ]);
               return;
             }
-          }
-          if (!hasToolResults && latestUserTail.includes(RETRIEVAL_TASK_ASK)) {
-            streamToolCalls([
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title: RETRIEVAL_TASK_TITLE,
-                  goal: RETRIEVAL_TASK_GOAL,
-                  user_words: RETRIEVAL_TASK_ASK,
-                  repo_id: contextRepos(body).find(([name]) => name === "meterlab")?.[1],
-                  constraints: [{ kind: "read-only" }],
-                },
-              },
-            ]);
-            return;
           }
           if (!hasToolResults && latestUserTail.includes(ANSWER_TASK_PROMPT_MARKER)) {
             const title =
@@ -5496,23 +2343,6 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(UNREGISTER_REPO_PROMPT_MARKER)) {
-            const named = latestUserTail.match(
-              /unregister the repository ([\w][\w.-]*)/,
-            )?.[1] as string;
-            const repo = contextRepos(body).find(([name]) => name === named);
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "project-remove",
-                  value: { repoId: repo?.[1] ?? named },
-                  evidence: latestUserTail,
-                },
-              },
-            ]);
-            return;
-          }
           if (!hasToolResults && latestUserTail.includes(ADOPT_REPO_PROMPT_MARKER)) {
             const path = latestUserTail
               .match(/manage my folder at ([^"\\]+)/)?.[1]
@@ -5524,59 +2354,6 @@ export async function startMockProvider(
                   action: "project-setup",
                   value: { kind: "adopt", path },
                   evidence: latestUserTail,
-                },
-              },
-            ]);
-            return;
-          }
-          if (latestUserTail.includes(PROJECT_LIVES_PROMPT_MARKER)) {
-            if (hasToolResults) {
-              streamText("done");
-              return;
-            }
-            const lives = (latestContext(body)?.repos ?? []).map(
-              (repo) => `<li>${repo.name}: ${repo.lives ?? "?"}</li>`,
-            );
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_PROJECT_LIVES_CARD_TITLE,
-                  body: `<p>Where each project lives.</p><ul>${lives.join("")}</ul>`,
-                  standalone: true,
-                },
-              },
-            ]);
-            return;
-          }
-          if (latestUserTail.includes(LOCATE_PROJECTS_PROMPT_MARKER)) {
-            if (!hasToolResults) {
-              const name = latestUserTail
-                .match(/which of my projects is ([\w.-]+)/)?.[1]
-                ?.trim() as string;
-              streamToolCalls([{ name: "locate_project", args: { name } }]);
-              return;
-            }
-            if (latestUserTail.includes(MOCK_LOCATED_CARD_TITLE)) {
-              streamText("done");
-              return;
-            }
-            // Only what the tool answered: the lines naming a project there.
-            const listed = [
-              ...latestUserTail.matchAll(
-                /- ([\w.-]+\/[\w.-]+) [^|]*\| (?:private \| )?clone origin/g,
-              ),
-            ].map((match) => match[1] as string);
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_LOCATED_CARD_TITLE,
-                  body:
-                    listed.length > 0
-                      ? `<p>These are your projects where they live.</p><ul>${listed.map((name) => `<li>${name}</li>`).join("")}</ul>`
-                      : "<p>No projects were listed where they live.</p>",
-                  standalone: true,
                 },
               },
             ]);
@@ -5658,49 +2435,6 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(CONFIGURE_REPO_PROMPT_MARKER)) {
-            const named = latestUserTail.match(
-              /make the repository ([\w][\w.-]*) autonomous/,
-            )?.[1] as string;
-            const repo = contextRepos(body).find(([name]) => name === named);
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "project-settings",
-                  on_words: true,
-                  value: { repoId: repo?.[1] ?? named, changes: { autonomy: true } },
-                  evidence: latestUserTail,
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(AMBIGUOUS_PROMPT_MARKER)) {
-            // The ask path: one concise decision card naming the plausible
-            // repositories from the context block.
-            const repoNames = contextRepos(body)
-              .map(([name]) => name)
-              .filter((name) => name !== PERSONAL_WORKSPACE_NAME)
-              .slice(0, 2);
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_WHICH_PROJECT_TITLE,
-                  body:
-                    "<p>Two repositories plausibly match this request.</p>" +
-                    `<ul>${repoNames.map((name) => `<li>${name}</li>`).join("")}</ul>`,
-                  actions: repoNames.map((name, index) => ({
-                    id: name,
-                    label: name,
-                    ...(index === 0 ? { default: true } : {}),
-                  })),
-                },
-              },
-            ]);
-            return;
-          }
           // Cards as threads, phase 2: a Firstmate card. Checked before the
           // first-run wake - a coalesced captain turn carries that wake, and
           // the captain's words outrank it. Revise/prose require the about
@@ -5739,27 +2473,6 @@ export async function startMockProvider(
             latestUserTail.includes(THREAD_PROSE_REPLY)
           ) {
             streamText(FM_THREAD_PROSE_ANSWER);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(CHANGE_MARKS_PROMPT_MARKER)) {
-            const version = Number(
-              latestUserTail.match(new RegExp(`${CHANGE_MARKS_PROMPT_MARKER}(\\d)`))?.[1],
-            );
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "change-marks",
-                  title: CHANGE_MARKS_TITLE,
-                  body: CHANGE_MARKS_VERSIONS[version] ?? "<p>No such version.</p>",
-                  actions: [
-                    { id: "clock", label: "Mock the clock" },
-                    { id: "queue", label: "Await the queue", default: true },
-                  ],
-                  standalone: true,
-                },
-              },
-            ]);
             return;
           }
           if (!hasToolResults && latestUserTail.includes(FM_THREAD_PROMPT_MARKER)) {
@@ -5838,72 +2551,6 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(PERSONALIZE_HIDE_PROMPT_MARKER)) {
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "panel",
-                  value: { surface: "now", visible: false },
-                  evidence: "hide tasks",
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(PERSONALIZE_SHOW_PROMPT_MARKER)) {
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "panel",
-                  value: { surface: "now", visible: true },
-                  evidence: "show tasks again",
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(PERSONALIZE_INSTRUCTION_PROMPT_MARKER)) {
-            // A panel instruction is a direction scoped to the personal workspace (INF-1054).
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "direction",
-                  value: {
-                    op: "add",
-                    text: MOCK_STANDING_INSTRUCTION,
-                    scope: contextRepos(body).find(
-                      ([name]) => name === PERSONAL_WORKSPACE_NAME,
-                    )?.[1],
-                  },
-                  evidence: "always use compact rows in my panels",
-                },
-              },
-            ]);
-            return;
-          }
-          if (latestUserTail.includes(KNOWLEDGE_RETIRE_PROMPT_MARKER)) {
-            if (!hasToolResults) {
-              const named = [...latestUserTail.matchAll(/\b([cf]-[a-z0-9]{6})@(\d+)/g)];
-              streamToolCalls(
-                named.map((match) => ({
-                  name: "record_knowledge",
-                  args: {
-                    action: "retire",
-                    request_id: `retire-${match[1]}`,
-                    id: match[1],
-                    expected_revision: Number(match[2]),
-                    reason: "the captain asked to retire it",
-                  },
-                })),
-              );
-            } else {
-              streamText(MOCK_FM_DONE_TEXT);
-            }
-            return;
-          }
           if (latestUserTail.includes(KNOWLEDGE_FACT_PROMPT_MARKER)) {
             if (!calledTool(latestUserTail, "record_knowledge")) {
               streamToolCalls([
@@ -5923,153 +2570,10 @@ export async function startMockProvider(
             }
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(REMEMBER_PROMPT_MARKER)) {
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "direction",
-                  value: { op: "add", id: MOCK_NOTE.id, text: MOCK_NOTE.content },
-                  evidence: "captain said always squash-merge",
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(SALUTE_PROMPT_MARKER)) {
-            streamToolCalls([{ name: "emote", args: { emote: "salute" } }]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(FORGET_PROMPT_MARKER)) {
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "direction",
-                  value: { op: "retire", id: `d:${MOCK_NOTE.id}`, expectedRevision: 1 },
-                  evidence: "captain said to forget it",
-                },
-              },
-            ]);
-            return;
-          }
-          if (hasToolResults && latestUserTail.includes(WORDLESS_CLOSE_PROMPT_MARKER)) {
-            streamText("");
-            return;
-          }
-          if (hasToolResults && latestUserTail.includes(SLOW_CLOSE_PROMPT_MARKER)) {
-            setTimeout(() => streamText(MOCK_FM_DONE_TEXT), MOCK_SLOW_CLOSE_MS);
-            return;
-          }
           streamText(hasToolResults ? MOCK_FM_DONE_TEXT : MOCK_FM_CHAT_TEXT);
           return;
         }
 
-        // The knowledge crewmates (knowledge.spec.ts): one saves an article
-        // as a concept, cites it from a finding, and is refused a second
-        // concept for the same link; a later one finds the concept through
-        // its brief, follows it to the finding, reads the excerpt and
-        // declares its use. Each step reads the ids the app answered with.
-        if (!isFirstmate && body.includes(KNOWLEDGE_RECORD_PROMPT_MARKER) && wantsStream) {
-          const concept = /Recorded concept (c-[a-z0-9]{6})/.exec(latestUserTail)?.[1];
-          const article = {
-            url: MOCK_KNOWLEDGE_ARTICLE.url,
-            title: MOCK_KNOWLEDGE_ARTICLE.title,
-            author: MOCK_KNOWLEDGE_ARTICLE.author,
-            published: MOCK_KNOWLEDGE_ARTICLE.published,
-            excerpt: MOCK_KNOWLEDGE_ARTICLE.excerpt,
-          };
-          if (!concept) {
-            streamToolCalls([
-              {
-                name: "record_knowledge",
-                args: {
-                  action: "publish",
-                  request_id: "inbox-concept",
-                  kind: "concept",
-                  title: MOCK_KNOWLEDGE_CONCEPT.title,
-                  aliases: MOCK_KNOWLEDGE_CONCEPT.aliases,
-                  text: MOCK_KNOWLEDGE_CONCEPT.explanation,
-                  sources: [article],
-                },
-              },
-            ]);
-          } else if (!/Recorded finding f-[a-z0-9]{6}/.test(latestUserTail)) {
-            streamToolCalls([
-              {
-                name: "record_knowledge",
-                args: {
-                  action: "publish",
-                  request_id: "inbox-finding",
-                  kind: "finding",
-                  text: MOCK_KNOWLEDGE_FINDING.statement,
-                  basis: "observation",
-                  about: [concept],
-                  conditions: "the saved article, as read",
-                  sources: [article],
-                },
-              },
-            ]);
-          } else if (!latestUserTail.includes("already saved")) {
-            streamToolCalls([
-              {
-                name: "record_knowledge",
-                args: {
-                  action: "publish",
-                  request_id: "inbox-again",
-                  kind: "concept",
-                  title: "Inbox delivery again",
-                  text: "A second copy of the same article.",
-                  sources: [article],
-                },
-              },
-            ]);
-          } else if (!calledTool(latestUserTail, "report")) {
-            streamToolCalls([{ name: "report", args: { text: MOCK_KNOWLEDGE_RECORD_REPORT } }]);
-          } else {
-            streamText(MOCK_KNOWLEDGE_RECORD_REPORT);
-          }
-          return;
-        }
-        if (!isFirstmate && body.includes(KNOWLEDGE_REUSE_PROMPT_MARKER) && wantsStream) {
-          const concept = /(c-[a-z0-9]{6}) concept \\?"Inbox delivery/.exec(body)?.[1];
-          const finding = /finding about this: (f-[a-z0-9]{6})/.exec(latestUserTail)?.[1];
-          if (concept && !calledTool(latestUserTail, "knowledge")) {
-            streamToolCalls([{ name: "knowledge", args: { action: "neighbors", id: concept } }]);
-          } else if (finding && !latestUserTail.includes("statement:")) {
-            streamToolCalls([{ name: "knowledge", args: { action: "get", ids: [finding] } }]);
-          } else if (finding && !latestUserTail.includes(MOCK_KNOWLEDGE_ARTICLE.excerpt)) {
-            const source = /s-[a-z0-9]{6}/.exec(latestUserTail)?.[0];
-            if (!source) throw new Error("Knowledge finding read returned no source id.");
-            streamToolCalls([{ name: "knowledge", args: { action: "get", ids: [source] } }]);
-          } else if (finding && !calledTool(latestUserTail, "record_knowledge")) {
-            streamToolCalls([
-              {
-                name: "record_knowledge",
-                args: {
-                  action: "use",
-                  request_id: "inbox-use",
-                  id: finding,
-                  reason: "checked the wake queue against how the inbox retries",
-                },
-              },
-            ]);
-          } else if (!calledTool(latestUserTail, "report")) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: {
-                  text: concept
-                    ? MOCK_KNOWLEDGE_REUSE_REPORT
-                    : "My brief offered no knowledge about the inbox.",
-                },
-              },
-            ]);
-          } else {
-            streamText(MOCK_KNOWLEDGE_REUSE_REPORT);
-          }
-          return;
-        }
         // The mock teacher (FI3-1474): scripted rounds from the shipped lesson
         // parts, one batch of calls per captain event, never a model's teaching.
         if (
@@ -6337,145 +2841,6 @@ export async function startMockProvider(
           streamText("The questions are on the card.");
           return;
         }
-        // Unpicked choices (contract 4.56): the first emit preanswers its
-        // required questions and is refused; the refusal in the tool result
-        // brings the same card back unpicked, its recommendations marked.
-        if (!isFirstmate && body.includes(UNPICKED_PROMPT_MARKER) && wantsStream) {
-          // The captain's choice is answered, never met with the card again.
-          if (latestUserTail.includes("the user chose")) {
-            streamText("Shipping the notes, as chosen.");
-            return;
-          }
-          const emits = ['"name":"emit_card","arguments"', '"name": "emit_card", "arguments"']
-            .map((call) => latestUserTail.split(call).length - 1)
-            .reduce((sum, count) => sum + count, 0);
-          const refused = hasToolResults && latestUserTail.includes(UNPICKED_REFUSAL);
-          if (emits === 0 || (emits === 1 && refused)) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "unpicked-questions",
-                  title: UNPICKED_TITLE,
-                  body: unpickedQuestionsBody(!refused),
-                  actions: [
-                    { id: "not-now", label: "Not now" },
-                    { id: "ship-notes", label: UNPICKED_DEFAULT_LABEL, default: true },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          streamText("The release questions are on the card.");
-          return;
-        }
-        // Something else (FI3-1002): the first emit has no row and is
-        // refused; the refusal brings the same card back with one.
-        if (!isFirstmate && body.includes(WRITE_IN_PROMPT_MARKER) && wantsStream) {
-          if (latestUserTail.includes("the user chose")) {
-            streamText("Following your own answer, as written.");
-            return;
-          }
-          const emits = ['"name":"emit_card","arguments"', '"name": "emit_card", "arguments"']
-            .map((call) => latestUserTail.split(call).length - 1)
-            .reduce((sum, count) => sum + count, 0);
-          const refused = hasToolResults && latestUserTail.includes(WRITE_IN_REFUSAL);
-          if (emits === 0 || (emits === 1 && refused)) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "write-in-questions",
-                  title: WRITE_IN_TITLE,
-                  body: writeInQuestionsBody(refused),
-                  actions: [
-                    { id: "not-now", label: "Not now" },
-                    { id: "send-answers", label: WRITE_IN_DEFAULT_LABEL, default: true },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          streamText("The launch questions are on the card.");
-          return;
-        }
-        // Card evidence: the card goes up with the report, then a revision
-        // of it waits on this crewmate's next close-out while it works on.
-        if (!isFirstmate && body.includes(STALE_OFFER_PROMPT_MARKER) && wantsStream) {
-          if (latestUserTail.includes("the user chose")) {
-            streamText("Retrying on the queue flush, as chosen.");
-            return;
-          }
-          if (!calledTool(latestUserTail, "emit_card")) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "stale-offer",
-                  title: STALE_OFFER_TITLE,
-                  body: "<p>Retrying on the queue flush removes the race.</p><p>Ten runs in a row passed with the retry waiting on the flush.</p>",
-                  actions: [
-                    { id: "retry-flush", label: STALE_OFFER_CHOICE_LABEL, default: true },
-                    { id: "leave-it", label: "Leave it as it is" },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          if (!calledTool(latestUserTail, "report")) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: { text: "The retry card is up; checking the clock path next." },
-              },
-            ]);
-            return;
-          }
-          if (!latestUserTail.includes(STALE_OFFER_REVISED_TITLE)) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "stale-offer",
-                  title: STALE_OFFER_REVISED_TITLE,
-                  body: "<p>Retrying on the clock is simpler than waiting on the flush.</p><p>The clock path passed the same ten runs.</p>",
-                  actions: [
-                    { id: "retry-clock", label: "Retry on the clock", default: true },
-                    { id: "leave-it", label: "Leave it as it is" },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          holdOpen();
-          return;
-        }
-        if (!isFirstmate && body.includes(THREAD_WORKING_SIBLING_MARKER) && wantsStream) {
-          holdOpen();
-          return;
-        }
-        // The crewmate the app closes under: every delivery of its message
-        // is held open until that message has come back RESTART_REPLAY_QUITS
-        // times, each time saying it is a replay.
-        if (!isFirstmate && body.includes(RESTART_REPLAY_PROMPT_MARKER) && wantsStream) {
-          if (hasToolResults) {
-            streamText("Reported.");
-            return;
-          }
-          const replays = providerMessages(body).filter(
-            (message) => message.role === "user" && message.text.includes(RESTART_REPLAY_NOTE),
-          ).length;
-          if (replays < RESTART_REPLAY_QUITS) {
-            holdOpen();
-            return;
-          }
-          streamToolCalls([{ name: "report", args: { text: MOCK_RESTART_REPLAY_REPORT } }]);
-          return;
-        }
         // Cards as threads, phase 1: the crewmate that keeps a thread. Its
         // card's id is the one emit_card handed back, read out of the
         // transcript exactly as a real model would read it.
@@ -6565,42 +2930,6 @@ export async function startMockProvider(
             return;
           }
           streamText("The card is up and I am holding for the captain.");
-          return;
-        }
-        // The settle hand-off: a reply asking for the change to go in is
-        // not the crewmate's to run, so it closes its card and reports the
-        // captain's words verbatim. No classifier reads anything.
-        if (!isFirstmate && body.includes(THREAD_SETTLE_PROMPT_MARKER) && wantsStream) {
-          const shownCardId = body.match(/Card shown: [^(]*\((card-[\w-]+)\)/)?.[1] ?? "";
-          if (!hasToolResults && latestUserTail.includes(THREAD_SETTLE_REPLY)) {
-            streamToolCalls([
-              { name: "close_card", args: { card_id: shownCardId } },
-              { name: "report", args: { text: MOCK_THREAD_HANDOFF_REPORT } },
-            ]);
-            return;
-          }
-          if (!hasToolResults && !calledTool(body, "emit_card")) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "thread-settle",
-                  title: THREAD_SETTLE_CARD_TITLE,
-                  body: MOCK_STANDARD_CARD_BODY,
-                  actions: [
-                    {
-                      id: "merge",
-                      label: "Merge the branch",
-                      default: true,
-                      effect: { kind: "settle", mode: "merge" },
-                    },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          streamText("Holding for the captain's decision.");
           return;
         }
         // The Claude crewmate on a refused login (CLAUDE_REFUSED_PROMPT_MARKER):
@@ -6739,141 +3068,7 @@ export async function startMockProvider(
           ]);
           return;
         }
-        // The mock crewmate: the card e2e answers a marked brief with
-        // emit_card tool calls; the follow-up (carrying tool results)
-        // finishes with plain text.
-        if (
-          !isFirstmate &&
-          latestUserTail.includes(REVISE_NOTE_PROMPT_MARKER) &&
-          !hasToolResults &&
-          wantsStream
-        ) {
-          streamToolCalls([
-            {
-              name: "emit_card",
-              args: {
-                id: "quota-note",
-                title: MOCK_QUOTA_NOTE_TITLE,
-                body: `<p>${MOCK_REVISED_NOTE_TEXT}</p>`,
-              },
-            },
-          ]);
-          return;
-        }
-        if (!isFirstmate && latestUserTail.includes(ESCAPED_CARD_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_ESCAPED_CARD_TITLE,
-                  body: MOCK_ESCAPED_CARD_BODY.replace(/</g, "&lt;").replace(/>/g, "&gt;"),
-                  actions: MOCK_ESCAPED_CARD_ACTIONS,
-                },
-              },
-            ]);
-            return;
-          }
-          if (
-            latestUserTail.includes(ESCAPED_BODY_REFUSAL_PHRASE) &&
-            !latestUserTail.includes(`Card shown: ${MOCK_ESCAPED_CARD_TITLE}`)
-          ) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_ESCAPED_CARD_TITLE,
-                  body: MOCK_ESCAPED_CARD_BODY,
-                  actions: MOCK_ESCAPED_CARD_ACTIONS,
-                },
-              },
-            ]);
-            return;
-          }
-          // The card is up: the turn ends with the plain-text report below.
-        }
-        const checkMove =
-          !isFirstmate && wantsStream
-            ? (staleChecksMove(body, false) ??
-              checkRepairMove(body, false) ??
-              dependencyWaitMove(body, false))
-            : undefined;
-        if (checkMove) {
-          if ("calls" in checkMove) streamToolCalls(checkMove.calls);
-          else streamText(checkMove.text);
-          return;
-        }
 
-        // Exercise the real corrective refusal, then publish the correction.
-        if (
-          !isFirstmate &&
-          latestUserTail.includes(STANDARD_TIER_MISSING_HEADING_MARKER) &&
-          wantsStream
-        ) {
-          const results = sinceLastUser(body).results;
-          if (results.length === 0) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_STANDARD_CARD_TITLE,
-                  body: MOCK_STANDARD_CARD_BODY.replace(/<h3>Before<\/h3>/, ""),
-                  actions: MOCK_STANDARD_MERGE_ONLY_ACTIONS,
-                },
-              },
-            ]);
-          } else if (results.length === 1) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_STANDARD_CARD_TITLE,
-                  body: MOCK_STANDARD_CARD_BODY,
-                  actions: MOCK_STANDARD_MERGE_ONLY_ACTIONS,
-                },
-              },
-              { name: "report", args: { text: MOCK_STANDARD_REPORT } },
-            ]);
-          } else {
-            streamText("The corrected completion outline is shown.");
-          }
-          return;
-        }
-
-        // The host-attached buttons and the freed body (contract v3.6): one
-        // declared merge under an invented label, a body that draws its
-        // answer rather than repeating the record, and the report that still
-        // carries the five headings.
-        if (
-          !isFirstmate &&
-          latestUserTail.includes(STANDARD_TIER_HOST_BUTTONS_MARKER) &&
-          wantsStream
-        ) {
-          if (!hasToolResults) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_STANDARD_HOST_BUTTONS_CARD_TITLE,
-                  body: MOCK_STANDARD_DRAWN_BODY,
-                  actions: MOCK_STANDARD_MERGE_ONLY_ACTIONS,
-                },
-              },
-              { name: "report", args: { text: MOCK_STANDARD_REPORT } },
-            ]);
-            return;
-          }
-          streamText("done");
-          return;
-        }
-        if (!isFirstmate && wantsStream) {
-          const sequencesMove = sequencesCrewmateMove(body, hasToolResults);
-          if (sequencesMove) {
-            if ("calls" in sequencesMove) streamToolCalls(sequencesMove.calls);
-            else streamText(sequencesMove.text);
-            return;
-          }
-        }
         if (!isFirstmate && latestUserTail.includes(READS_ANYWHERE_MARKER) && wantsStream) {
           // FI3-1571 piece 3: reads past the old read list, from a project
           // kept on this computer, through the github.com sign-in.
@@ -7086,339 +3281,10 @@ export async function startMockProvider(
           } else streamText("Merge API guard reported.");
           return;
         }
-        if (!isFirstmate && latestUserTail.includes(WORKFLOW_DISPATCH_MARKER) && wantsStream) {
-          const { results } = sinceLastUser(body);
-          const call = <N extends ScriptedCall["name"]>(name: N, args: ScriptedArgs<N>) =>
-            streamToolCalls([{ name, args } as ScriptedCall]);
-          const project = "/repos/octo/meterlab";
-          const runs = `${project}/actions/runs?branch=main&event=workflow_dispatch`;
-          if (!results.length) {
-            call("github_write", { method: "POST", path: "/user/keys", body: "{}" });
-            return;
-          }
-          if (results.length === 1) {
-            call("github_write", {
-              method: "POST",
-              path: `${project}/actions/workflows/verify.yml/dispatches`,
-              body: JSON.stringify({ ref: "main", inputs: { profile: "alpha", perf: true } }),
-            });
-            return;
-          }
-          const blocked = results[1]?.includes("Cannot call GitHub");
-          if (results.length === 2 && !blocked) {
-            call("github_read", { path: runs });
-            return;
-          }
-          if (results.length === 3 && !blocked) {
-            const runId = JSON.parse(results[2] ?? "{}").body?.workflow_runs?.[0]?.id;
-            call("github_write", {
-              method: "POST",
-              path: `${project}/actions/runs/${runId}/cancel`,
-            });
-            return;
-          }
-          if (results.length === 4 && !blocked) {
-            call("github_read", { path: runs });
-            return;
-          }
-          if (results.length === (blocked ? 2 : 5)) {
-            call("report", {
-              text: `Account-level refusal: ${results[0]}\nDispatch: ${results[1]}\nRuns: ${results[2] ?? "not read"}\nCancellation: ${results[3] ?? "not requested"}\nFinal runs: ${results[4] ?? "not read"}`,
-              summary: blocked
-                ? "Workflow operations need the app's GitHub sign-in."
-                : "The project workflow accepted its ref and inputs, then cancellation.",
-            });
-            return;
-          }
-          streamText("Workflow operations reported.");
-          return;
-        }
-        if (!isFirstmate && latestUserTail.includes(GITLAB_EVIDENCE_MARKER) && wantsStream) {
-          const { results } = sinceLastUser(body);
-          const call = <N extends ScriptedCall["name"]>(name: N, args: ScriptedArgs<N>) =>
-            streamToolCalls([{ name, args } as ScriptedCall]);
-          // The GitLab stand-in's project, by its URL-encoded path.
-          const project = `/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}`;
-          if (!results.length) {
-            call("bash", { command: "git rev-parse HEAD" });
-            return;
-          }
-          const last = results[results.length - 1] ?? "";
-          if (
-            results.length <= 5 &&
-            (last.includes("Cannot call") || last.includes("Cannot read workflow evidence"))
-          ) {
-            call("report", {
-              text: `Evidence blocked: ${last}`,
-              summary: "GitLab pipeline evidence could not be read.",
-            });
-            return;
-          }
-          const headSha = results[0]?.match(/[0-9a-f]{40}/)?.[0] ?? "";
-          if (results.length === 1) {
-            call("github_read", { path: `${project}/pipelines?sha=${headSha}` });
-            return;
-          }
-          const runId = JSON.parse(results[1] ?? "{}").body?.[0]?.id;
-          if (results.length === 2) {
-            call("github_read", { path: `${project}/pipelines/${runId}/jobs` });
-            return;
-          }
-          const jobId =
-            (
-              JSON.parse(results[2] ?? "{}").body as { id: number; status: string }[] | undefined
-            )?.find((job) => job.status === "failed")?.id ?? 0;
-          if (results.length === 3) {
-            call("read_workflow", { runId, jobId, offset: 1, limit: 5 });
-            return;
-          }
-          if (results.length === 4) {
-            call("download_artifact", { runId, artifactId: jobId });
-            return;
-          }
-          if (results.length === 5) {
-            const receipt = JSON.parse(results[4] ?? "{}");
-            call("bash", { command: `unzip -p '${receipt.path}' measurement.json` });
-            return;
-          }
-          if (results.length === 6) {
-            call("github_write", {
-              method: "POST",
-              path: `/projects/${encodeURIComponent(GITLAB_STUB_OTHER_PROJECT)}/issues`,
-              body: '{"title":"not this task\'s project"}',
-            });
-            return;
-          }
-          if (results.length === 7) {
-            call("report", {
-              text: `GitLab pipeline evidence returned.\nPipelines: ${results[1]}\nJobs: ${results[2]}\nJob log: ${results[3]}\nArchive receipt: ${results[4]}\nMeasurement contents: ${results[5]}\nWrite to another project: ${results[6]}`,
-              summary:
-                "The failed job's log and archive are available through the app's GitLab key.",
-            });
-            return;
-          }
-          streamText("Evidence returned.");
-          return;
-        }
-        if (!isFirstmate && latestUserTail.includes(WORKFLOW_EVIDENCE_MARKER) && wantsStream) {
-          const { results } = sinceLastUser(body);
-          const call = <N extends ScriptedCall["name"]>(name: N, args: ScriptedArgs<N>) =>
-            streamToolCalls([{ name, args } as ScriptedCall]);
-          // The project the forge-signin stand-in serves; github_read lists
-          // the version's runs, the failed attempt's jobs and the artifacts,
-          // read_workflow pages the job log and download_artifact saves the ZIP.
-          const project = "/repos/octo/meterlab";
-          if (!results.length) {
-            call("bash", { command: "git rev-parse HEAD" });
-            return;
-          }
-          const blocked = results.findIndex(
-            (result) =>
-              result.includes("Cannot call GitHub") ||
-              result.includes("Cannot read workflow evidence"),
-          );
-          if (blocked >= 0) {
-            if (blocked === results.length - 1)
-              call("report", {
-                text: `Evidence blocked: ${results[blocked]}`,
-                summary: "Workflow evidence needs the app's GitHub sign-in.",
-              });
-            else streamText("Evidence blocker reported.");
-            return;
-          }
-          const headSha = results[0]?.match(/[0-9a-f]{40}/)?.[0] ?? "";
-          if (results.length === 1) {
-            call("github_read", { path: `${project}/actions/runs?head_sha=${headSha}` });
-            return;
-          }
-          const run = JSON.parse(results[1] ?? "{}").body?.workflow_runs?.[0];
-          const runId = run?.id;
-          if (results.length === 2) {
-            call("github_read", {
-              path: `${project}/actions/runs/${runId}/attempts/${run?.run_attempt}/jobs`,
-            });
-            return;
-          }
-          if (results.length === 3) {
-            call("github_read", { path: `${project}/actions/runs/${runId}/artifacts` });
-            return;
-          }
-          const jobId = JSON.parse(results[2] ?? "{}").body?.jobs?.[0]?.id;
-          const artifactId = JSON.parse(results[3] ?? "{}").body?.artifacts?.[0]?.id;
-          if (results.length === 4) {
-            call("read_workflow", { runId, jobId, offset: 2, limit: 2 });
-            return;
-          }
-          if (results.length === 5) {
-            call("download_artifact", { runId, artifactId });
-            return;
-          }
-          const receipt = JSON.parse(results[5] ?? "{}");
-          if (results.length === 6) {
-            call("bash", { command: `unzip -p '${receipt.path}' measurement.json` });
-            return;
-          }
-          if (results.length === 7) {
-            call("report", {
-              text: `Workflow evidence returned.\nRuns: ${results[1]}\nJobs: ${results[2]}\nArtifacts: ${results[3]}\nJob log: ${results[4]}\nArtifact receipt: ${results[5]}\nMeasurement contents: ${results[6]}`,
-              summary:
-                "The failed job log and measurement artifact are available through the app's sign-in.",
-            });
-            return;
-          }
-          streamText("Evidence returned.");
-          return;
-        }
-        if (!isFirstmate && body.includes(SEND_UP_PROMPT_MARKER) && wantsStream) {
-          // INF-1099: a push past the shell's limit becomes a background
-          // job. Its receipt is not the push being done: end the turn, and
-          // declare the card from that job's exit wake, never pushing again.
-          if (
-            calledTool(body, "emit_card") ||
-            browserShellMessages(providerMessages(body)).pending
-          ) {
-            streamText("done");
-            return;
-          }
-          if (!calledTool(body, "bash")) {
-            streamToolCalls([
-              {
-                name: "bash",
-                args: {
-                  command:
-                    "printf 'reads on time\\nreads each minute\\nreads in the dark\\n' > meter.txt && git add meter.txt && " +
-                    'git commit -m "fix: the meter reads on time" && git push origin HEAD',
-                },
-              },
-            ]);
-            return;
-          }
-          streamToolCalls([
-            {
-              name: "emit_card",
-              args: {
-                title: MOCK_SENT_UP_CARD_TITLE,
-                body: MOCK_STANDARD_CARD_BODY,
-                actions: [
-                  {
-                    id: "put-in",
-                    label: "Put it in",
-                    default: true,
-                    effect: { kind: "settle", mode: "merge" },
-                  },
-                ],
-              },
-            },
-            { name: "report", args: { text: "The meter fix is saved and sent up." } },
-          ]);
-          return;
-        }
         if (!isFirstmate && body.includes(TASK_BROWSER_PROMPT_MARKER) && wantsStream) {
           const step = calledTool(body, "report") ? undefined : lookingAgain(body, taskBrowserStep);
           if (step) streamToolCalls(step);
           else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_READING_MARKER) && wantsStream) {
-          const step = calledTool(body, "report")
-            ? undefined
-            : lookingAgain(body, taskBrowserReadingStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_LONG_MARKER) && wantsStream) {
-          const step = calledTool(body, "report")
-            ? undefined
-            : lookingAgain(body, taskBrowserLongStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_PAGES_MARKER) && wantsStream) {
-          const step = calledTool(body, "report")
-            ? undefined
-            : lookingAgain(body, taskBrowserPagesStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_WATCH_MARKER) && wantsStream) {
-          const step = calledTool(body, "report")
-            ? undefined
-            : lookingAgain(body, taskBrowserWatchStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_SAVED_MARKER) && wantsStream) {
-          const step = lookingAgain(body, taskBrowserSavedStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_HANDOFF_MARKER) && wantsStream) {
-          const step = lookingAgain(body, taskBrowserHandoffStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_TAKE_MARKER) && wantsStream) {
-          const step = lookingAgain(body, taskBrowserTakeStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_FENCE_MARKER) && wantsStream) {
-          const step = lookingAgain(body, taskBrowserFenceStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_BOOKING_MARKER) && wantsStream) {
-          const step = lookingAgain(body, taskBrowserBookingStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_LOST_MARKER) && wantsStream) {
-          const step = lookingAgain(body, taskBrowserLostStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_UNPAID_MARKER) && wantsStream) {
-          const step = lookingAgain(body, taskBrowserUnpaidStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_CARD_MARKER) && wantsStream) {
-          const step = calledTool(body, "report")
-            ? undefined
-            : lookingAgain(body, taskBrowserCardStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        if (!isFirstmate && latestUserTail.includes(NODE_VERSION_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls([{ name: "bash", args: { command: "node --version" } }]);
-            return;
-          }
-          if (latestUserTail.includes(MOCK_NODE_REPORT_PREFIX)) {
-            streamText("done");
-            return;
-          }
-          // Only what came back from the shell: the tool result follows the call.
-          const result = latestUserTail.slice(latestUserTail.indexOf('"tool_calls"'));
-          const answer =
-            result.match(/v\d+\.\d+\.\d+[\w.-]*/)?.[0] ??
-            result.match(/command not found|not found/)?.[0] ??
-            "nothing";
-          streamToolCalls([
-            { name: "report", args: { text: `${MOCK_NODE_REPORT_PREFIX} ${answer}.` } },
-          ]);
           return;
         }
         // Claude's client sends each tool result as the latest user message,
@@ -7469,35 +3335,6 @@ export async function startMockProvider(
           streamText("done");
           return;
         }
-        if (!isFirstmate && body.includes(RETRIEVAL_TASK_ASK) && wantsStream) {
-          if (calledTool(body, "emit_card")) streamText("The lookup answer is ready.");
-          else if (!calledTool(body, "read"))
-            streamToolCalls([{ name: "read", args: { path: "release-info.json" } }]);
-          else {
-            const results = toolAnswers(providerMessages(body)).join("\n");
-            if (!results.includes(RETRIEVAL_SOURCE))
-              throw new Error("Retrieval fixture did not read its committed release facts");
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "release-facts",
-                  title: RETRIEVAL_CARD_TITLE,
-                  body: "<p>Release 0.1.31 includes video demos.</p><p>Source: <code>release-info.json</code>, version and videoDemos fields.</p>",
-                },
-              },
-              {
-                name: "report",
-                args: {
-                  text: "Read release-info.json: version 0.1.31, videoDemos true. No changes made.",
-                  summary: "The recorded release includes video demos.",
-                  waiting_on_captain: { reason: "Read the lookup answer" },
-                },
-              },
-            ]);
-          }
-          return;
-        }
         // The answer-task crewmate (Task B): one decision card carrying the
         // answer, and a report. No completion card, nothing committed.
         if (!isFirstmate && latestUserTail.includes(ANSWER_TASK_PROMPT_MARKER) && wantsStream) {
@@ -7515,28 +3352,6 @@ export async function startMockProvider(
                 },
               },
               { name: "report", args: { text: MOCK_ANSWER_REPORT } },
-            ]);
-            return;
-          }
-          streamText("done");
-          return;
-        }
-        // The standard-tier crewmate (delivery rigor phase 1): its completion
-        // card carries the five headings as sections and its report is the
-        // same five headings in prose, in one turn; the follow-up leg closes
-        // briefly, so the explicit report is the one Firstmate hears.
-        if (!isFirstmate && latestUserTail.includes(STANDARD_TIER_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_STANDARD_CARD_TITLE,
-                  body: MOCK_STANDARD_CARD_BODY,
-                  actions: MOCK_STANDARD_CARD_ACTIONS,
-                },
-              },
-              { name: "report", args: { text: MOCK_STANDARD_REPORT } },
             ]);
             return;
           }
@@ -7586,28 +3401,12 @@ export async function startMockProvider(
           streamToolCalls(MOCK_TOOL_CALLS);
           return;
         }
-        if (latestUserTail.includes(SCRIPT_CARDS_PROMPT_MARKER) && !hasToolResults && wantsStream) {
-          streamToolCalls(scriptCardToolCalls((server.address() as AddressInfo).port));
-          return;
-        }
         if (
           latestUserTail.includes(KEYBOARD_CARDS_PROMPT_MARKER) &&
           !hasToolResults &&
           wantsStream
         ) {
           streamToolCalls(keyboardCardToolCalls());
-          return;
-        }
-        if (
-          latestUserTail.includes(LOCAL_LINK_CARDS_PROMPT_MARKER) &&
-          !hasToolResults &&
-          wantsStream
-        ) {
-          streamToolCalls(localLinkCardToolCalls());
-          return;
-        }
-        if (latestUserTail.includes(ATTACK_CARDS_PROMPT_MARKER) && !hasToolResults && wantsStream) {
-          streamToolCalls(attackCardToolCalls((server.address() as AddressInfo).port));
           return;
         }
         if (
@@ -7702,84 +3501,6 @@ export async function startMockProvider(
             return;
           }
         }
-        // The before-and-after crewmate: write the files, then offer the merge,
-        // and offer it again once the card check refuses the misplaced mark.
-        if (!isFirstmate && latestUserTail.includes(BEFORE_AFTER_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls(writeChangePicturesCalls());
-            return;
-          }
-          if (!calledTool(latestUserTail, "emit_card")) {
-            streamToolCalls([beforeAfterCardCall("picture")]);
-            return;
-          }
-          const emits = ['"name":"emit_card","arguments"', '"name": "emit_card", "arguments"']
-            .map((call) => latestUserTail.split(call).length - 1)
-            .reduce((sum, count) => sum + count, 0);
-          const refused = JSON.stringify(BEFORE_AFTER_MARK_REFUSAL).slice(1, -1);
-          if (emits === 1 && latestUserTail.includes(refused)) {
-            streamToolCalls([beforeAfterCardCall("figure")]);
-            return;
-          }
-        }
-        // The demo crewmate: write the files, offer the card with the filler
-        // recording, then with the real one once the decoder refused it.
-        if (!isFirstmate && latestUserTail.includes(DEMO_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls([...writeChangePicturesCalls(), ...writeDemoCalls()]);
-            return;
-          }
-          if (!calledTool(latestUserTail, "emit_card")) {
-            streamToolCalls([demoCardCall(BROKEN_DEMO)]);
-            return;
-          }
-          const emits = ['"name":"emit_card","arguments"', '"name": "emit_card", "arguments"']
-            .map((call) => latestUserTail.split(call).length - 1)
-            .reduce((sum, count) => sum + count, 0);
-          if (emits === 1 && latestUserTail.includes(DEMO_REFUSAL)) {
-            streamToolCalls([demoCardCall(DEMO_RECORDING.path)]);
-            return;
-          }
-        }
-        // The GIF demo crewmate: write the files, offer the card with a GIF
-        // that loops, then with the single-play one once the host refused it.
-        if (!isFirstmate && latestUserTail.includes(GIF_DEMO_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls([...writeChangePicturesCalls(), ...writeGifDemoCalls()]);
-            return;
-          }
-          if (!calledTool(latestUserTail, "emit_card")) {
-            streamToolCalls([demoCardCall(LOOPING_GIF_DEMO.path, GIF_DEMO_CARD_TITLE)]);
-            return;
-          }
-          const emits = ['"name":"emit_card","arguments"', '"name": "emit_card", "arguments"']
-            .map((call) => latestUserTail.split(call).length - 1)
-            .reduce((sum, count) => sum + count, 0);
-          if (emits === 1 && latestUserTail.includes(GIF_DEMO_REFUSAL)) {
-            streamToolCalls([demoCardCall(GIF_DEMO_RECORDING.path, GIF_DEMO_CARD_TITLE)]);
-            return;
-          }
-        }
-        // The project-font crewmate: write the files, offer the preview with
-        // the damaged copy, then with the real file once the host refused it.
-        if (!isFirstmate && latestUserTail.includes(PROJECT_FONT_PROMPT_MARKER) && wantsStream) {
-          const port = (server.address() as AddressInfo).port;
-          if (!hasToolResults) {
-            streamToolCalls(writeProjectFontCalls());
-            return;
-          }
-          if (!calledTool(latestUserTail, "emit_card")) {
-            streamToolCalls([projectFontCardCall(DAMAGED_FONT, port)]);
-            return;
-          }
-          const emits = ['"name":"emit_card","arguments"', '"name": "emit_card", "arguments"']
-            .map((call) => latestUserTail.split(call).length - 1)
-            .reduce((sum, count) => sum + count, 0);
-          if (emits === 1 && latestUserTail.includes(PROJECT_FONT_REFUSAL)) {
-            streamToolCalls([projectFontCardCall(PROJECT_FONT, port)]);
-            return;
-          }
-        }
         // The mock crewmate files a follow-up (task-system P2) and notes
         // progress, then reports on the follow-up leg like any other turn.
         if (
@@ -7819,32 +3540,6 @@ export async function startMockProvider(
             return;
           }
           streamText("done");
-          return;
-        }
-        // A crewmate that reports it is blocked (S4, O2): its own account of
-        // itself is never an escalation trigger, so the report carries the
-        // triage marker and reaches the Firstmate as an [fm-op].
-        if (
-          !isFirstmate &&
-          latestUserTail.includes(BLOCKED_REPORT_PROMPT_MARKER) &&
-          !hasToolResults &&
-          wantsStream
-        ) {
-          streamText(MOCK_BLOCKED_REPORT);
-          return;
-        }
-        if (
-          !isFirstmate &&
-          latestUserTail.includes(PROPOSE_PROJECT_PROMPT_MARKER) &&
-          !hasToolResults &&
-          wantsStream
-        ) {
-          const path = latestUserTail.match(
-            new RegExp(`${PROPOSE_PROJECT_PROMPT_MARKER}([^"\\\\\\s]+)`),
-          )?.[1];
-          streamText(
-            `The runner fixes need the folder at ${path} ${PROPOSE_PROJECT_REPORT_NEEDLE}.`,
-          );
           return;
         }
         if (wantsStream || anthropicMessages) {

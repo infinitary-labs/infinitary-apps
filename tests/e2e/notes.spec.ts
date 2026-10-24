@@ -1,15 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  ANSWER_PROMPT_MARKER,
-  FORGET_PROMPT_MARKER,
-  MOCK_ANSWER_TITLE,
-  MOCK_NOTE,
-  REMEMBER_PROMPT_MARKER,
-} from "./mockProvider";
+import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { latestContext } from "./providerRequest";
+import { FORGET_PROMPT_MARKER, MOCK_NOTE, notes, REMEMBER_PROMPT_MARKER } from "./scenarios/notes";
 import { shownCard } from "./stack";
 
 /**
@@ -20,7 +15,7 @@ import { shownCard } from "./stack";
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [notes] });
 });
 
 test.afterAll(async () => {

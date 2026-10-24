@@ -4,13 +4,14 @@ import { expect, test } from "@playwright/test";
 import { plantProgram, writeLoginShellStub } from "../../src/core/loginShellStub";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { promptInput } from "./prompt";
+import { reportLine, taskKey } from "./rails";
 import {
   MOCK_NODE_REPORT_PREFIX,
   NODE_VERSION_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
-import { reportLine, taskKey } from "./rails";
+  nodeVersion,
+} from "./scenarios/nodeVersion";
 
 /**
  * An app opened from the Dock or Finder inherits launchd's search path -
@@ -41,6 +42,7 @@ test.beforeAll(async () => {
   });
   launched = await launchApp({
     withMockProvider: true,
+    scenarios: [nodeVersion],
     prepareHome: (home) => {
       const nvmBin = join(home, ".nvm", "versions", "node", "v99.0.0", "bin");
       plantProgram(nvmBin, "node", PLANTED_VERSION);

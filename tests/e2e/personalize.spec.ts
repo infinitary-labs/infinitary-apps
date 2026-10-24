@@ -9,16 +9,19 @@ import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   APP_CATALOG_PROMPT_MARKER,
-  MOCK_STANDING_INSTRUCTION,
-  PERSONALIZE_HIDE_PROMPT_MARKER,
-  PERSONALIZE_INSTRUCTION_PROMPT_MARKER,
-  PERSONALIZE_SHOW_PROMPT_MARKER,
   PERSONALIZE_THEME_PROMPT_MARKER,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { feedLine, nowFrame } from "./rails";
 import { savePointCount } from "./savePoints";
+import {
+  MOCK_STANDING_INSTRUCTION,
+  PERSONALIZE_HIDE_PROMPT_MARKER,
+  PERSONALIZE_INSTRUCTION_PROMPT_MARKER,
+  PERSONALIZE_SHOW_PROMPT_MARKER,
+  personalize,
+} from "./scenarios/personalize";
 import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -34,7 +37,7 @@ import { pressKey, runFromSearch } from "./windowKeys";
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [personalize] });
 });
 
 test.afterAll(async () => {

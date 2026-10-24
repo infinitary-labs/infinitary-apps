@@ -5,16 +5,16 @@ import Database from "better-sqlite3";
 import type { TaskDetail, TaskView } from "../../src/shared/tasks";
 import { crewSummary, pointAtCrewmate } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
+import { MOCK_MODEL_ID, MOCK_PROVIDER_ID } from "./mockProvider";
+import { promptInput } from "./prompt";
+import { expandDock, pressRow, recordCard, taskFact } from "./rails";
 import {
   FILED_MODEL_FILE_ASK,
   FILED_MODEL_PARENT,
   FILED_MODEL_START_ASK,
   FILED_MODEL_TITLE,
-  MOCK_MODEL_ID,
-  MOCK_PROVIDER_ID,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
-import { expandDock, pressRow, recordCard, taskFact } from "./rails";
+  filedTaskModel,
+} from "./scenarios/filedTaskModel";
 
 /**
  * A task filed earlier starts on the model the captain names (FI3-436). Before
@@ -30,7 +30,7 @@ import { expandDock, pressRow, recordCard, taskFact } from "./rails";
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [filedTaskModel] });
 });
 
 test.afterAll(async () => {

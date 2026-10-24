@@ -6,9 +6,9 @@ import {
   EMIT_CARDS_PROMPT_MARKER,
   MOCK_ANSWER_TITLE,
   MOCK_REVISED_NOTE_TEXT,
-  REVISE_NOTE_PROMPT_MARKER,
 } from "./mockProvider";
 import { promptInput } from "./prompt";
+import { REVISE_NOTE_PROMPT_MARKER, reviseNote } from "./scenarios/reviseNote";
 import { pager, showCard, shownCard } from "./stack";
 
 /**
@@ -27,7 +27,7 @@ const badge = (page: Page) => page.getByRole("status").filter({ hasText: /^\d+ n
 const dots = (page: Page) => page.locator("[data-unread-dot]");
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [reviseNote] });
   const { page } = launched;
   const input = promptInput(page);
   await input.click();

@@ -13,13 +13,10 @@ import {
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  MOCK_SENT_UP_CARD_TITLE,
-  SEND_UP_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { putInLine } from "./rails";
+import { MOCK_SENT_UP_CARD_TITLE, SEND_UP_PROMPT_MARKER, sendUp } from "./scenarios/sendUp";
 import { factsStrip, shownCard } from "./stack";
 
 /**
@@ -123,6 +120,7 @@ test.beforeAll(async () => {
   ghLog = writeLoggingGh(bin);
   launched = await launchApp({
     withMockProvider: true,
+    scenarios: [sendUp],
     userDataDir,
     env: { PATH: `${bin}:${process.env.PATH ?? ""}` },
   });

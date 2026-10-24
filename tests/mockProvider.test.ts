@@ -10,12 +10,17 @@ import {
   MOCK_FM_CHAT_TEXT,
   MOCK_FM_DONE_TEXT,
   type MockProviderServer,
+  type Scenario,
   type ScriptedCall,
   startMockProvider,
-  TASK_BROWSER_HANDOFF_MARKER,
 } from "./e2e/mockProvider";
 import { captainCardChoice, latestContext, latestServedTurn } from "./e2e/providerRequest";
 import { CONTEXT_OVERFLOW_PROMPT_MARKER, contextOverflow } from "./e2e/scenarios/contextOverflow";
+import {
+  TASK_BROWSER_HANDOFF_MARKER,
+  taskBrowserJourneys,
+} from "./e2e/scenarios/taskBrowserJourneys";
+import { workspaceInference } from "./e2e/scenarios/workspaceInference";
 
 let server: MockProviderServer | undefined;
 afterEach(async () => server?.close());
@@ -30,8 +35,8 @@ function turn(repos: Array<{ name: string; repo_id: string }>, ask: string, crew
   ]).text;
 }
 
-async function calls(messages: unknown[]) {
-  server = await startMockProvider();
+async function calls(messages: unknown[], scenarios: readonly Scenario[] = []) {
+  server = await startMockProvider({ scenarios });
   const response = await fetch(`http://127.0.0.1:${server.port}/v1/chat/completions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -56,15 +61,21 @@ const beta = { name: "beta", repo_id: "repo-b" };
 
 describe("mock provider consumes the current served snapshot", () => {
   it("offers each current project once despite repeated historical snapshots", async () => {
-    const result = await calls([
-      { role: "user", content: turn([alpha], "hello") },
-      {
-        role: "user",
-        content: [
-          { type: "text", text: turn([alpha, beta], "which project should take this: bump deps") },
-        ],
-      },
-    ]);
+    const result = await calls(
+      [
+        { role: "user", content: turn([alpha], "hello") },
+        {
+          role: "user",
+          content: [
+            {
+              type: "text",
+              text: turn([alpha, beta], "which project should take this: bump deps"),
+            },
+          ],
+        },
+      ],
+      [workspaceInference],
+    );
     expect(result[0].actions.map((action: { label: string }) => action.label)).toEqual([
       "alpha",
       "beta",
@@ -488,7 +499,7 @@ describe("browser journeys consume background shell answers", () => {
     async (tail) => {
       // INF-634: task-browser:833 reported the shell receipt as the browser's
       // refusal under load, after INF-181 and INF-531. Use the product's words.
-      server = await startMockProvider();
+      server = await startMockProvider({ scenarios: [taskBrowserJourneys] });
       const command = `${BROWSER_COMMAND} open http://127.0.0.1:5555/`;
       const jobId = "34a0ca8f";
       const tool = createEventBashTool(async () => ({ kind: "job", jobId, tail }));

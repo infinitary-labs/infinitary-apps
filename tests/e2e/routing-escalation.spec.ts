@@ -2,15 +2,15 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import Database from "better-sqlite3";
 import { type LaunchedApp, launchApp } from "./launch";
+import { ESCALATION_REFUSAL_PHRASE, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { promptInput } from "./prompt";
+import { feedLine, reportLine, startedLine, taskKey, taskLine } from "./rails";
 import {
   BLOCKED_REPORT_PROMPT_MARKER,
   ESCALATE_PROMPT_MARKER,
-  ESCALATION_REFUSAL_PHRASE,
   MOCK_BLOCKED_REPORT,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
-import { feedLine, reportLine, startedLine, taskKey, taskLine } from "./rails";
+  routingEscalation,
+} from "./scenarios/routingEscalation";
 
 /**
  * Escalation on the regular spawn (intelligence-bucket routing S4,
@@ -75,7 +75,7 @@ function readEvents(userDataDir: string, taskId: string) {
 }
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [routingEscalation] });
 });
 
 test.afterAll(async () => {

@@ -34,14 +34,22 @@ import { crewmateView } from "./crewmateTab";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import {
+  MOCK_BROWSER_PICTURE,
+  MOCK_BROWSER_REPORT_PREFIX,
+  SPAWN_PROMPT_MARKER,
+  TASK_BROWSER_PROMPT_MARKER,
+} from "./mockProvider";
+import { heroShot } from "./pictures";
+import { promptInput } from "./prompt";
+import { providerMessages } from "./providerRequest";
+import { expandDock, expectRecordBody, hideRecord, pressRow, recordCard, taskFact } from "./rails";
+import {
   MOCK_BROWSER_BUTTON,
   MOCK_BROWSER_CARD_REPORT,
   MOCK_BROWSER_CARD_TITLE,
   MOCK_BROWSER_LONG_REPORT_PREFIX,
-  MOCK_BROWSER_PICTURE,
   MOCK_BROWSER_READING_PICTURE,
   MOCK_BROWSER_READING_REPORT_PREFIX,
-  MOCK_BROWSER_REPORT_PREFIX,
   MOCK_BROWSER_WATCH_REPORT_PREFIX,
   MOCK_FENCE_A_REPORT,
   MOCK_FENCE_B_REPORT,
@@ -59,7 +67,6 @@ import {
   MOCK_SIGNED_IN_PICTURE_REASON,
   MOCK_TAKE_REFUSED_REPORT,
   MOCK_TAKE_RETURNED_REPORT,
-  SPAWN_PROMPT_MARKER,
   TASK_BROWSER_APPROVE_WORDS,
   TASK_BROWSER_CARD_MARKER,
   TASK_BROWSER_FENCE_MARKER,
@@ -68,17 +75,13 @@ import {
   TASK_BROWSER_LONG_LAST_WORDS,
   TASK_BROWSER_LONG_MARKER,
   TASK_BROWSER_PAGES_MARKER,
-  TASK_BROWSER_PROMPT_MARKER,
   TASK_BROWSER_READING_MARKER,
   TASK_BROWSER_READY_WORDS,
   TASK_BROWSER_SAVED_MARKER,
   TASK_BROWSER_TAKE_MARKER,
   TASK_BROWSER_WATCH_MARKER,
-} from "./mockProvider";
-import { heroShot } from "./pictures";
-import { promptInput } from "./prompt";
-import { providerMessages } from "./providerRequest";
-import { expandDock, expectRecordBody, hideRecord, pressRow, recordCard, taskFact } from "./rails";
+  taskBrowserJourneys,
+} from "./scenarios/taskBrowserJourneys";
 import { SHOWN_ENTRY, showCard, shownCard } from "./stack";
 import {
   canvasReading,
@@ -230,6 +233,7 @@ test.beforeAll(async () => {
   siteUrl = `http://127.0.0.1:${(site.address() as AddressInfo).port}/`;
   launched = await launchApp({
     withMockProvider: true,
+    scenarios: [taskBrowserJourneys],
     // A public name that leads to this Mac, as a rebinding name server would answer.
     env: { INFINITARY_TASK_BROWSER_HOSTS: JSON.stringify({ "rebind.example": ["127.0.0.1"] }) },
   });

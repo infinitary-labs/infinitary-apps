@@ -8,11 +8,6 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { launchApp } from "./launch";
-import {
-  DEPENDENCY_WAIT_MARKER,
-  DEPENDENCY_WAIT_PROMPT,
-  DEPENDENCY_WAIT_TITLE,
-} from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   expandDock,
@@ -24,6 +19,12 @@ import {
   recordCard,
   recordFrame,
 } from "./rails";
+import {
+  DEPENDENCY_WAIT_MARKER,
+  DEPENDENCY_WAIT_PROMPT,
+  DEPENDENCY_WAIT_TITLE,
+  dependencyWait,
+} from "./scenarios/dependencyWait";
 
 /**
  * A wait on separately owned work that is underway (FI3-250), from the
@@ -68,7 +69,7 @@ test("a task waiting on work underway stays waiting past every idle rung and res
   const evidence = (name: string) => test.info().outputPath(name);
   // Enforce read-only observation on this connection while the app owns writes.
   db.pragma("query_only = ON");
-  let app = await launchApp({ withMockProvider: true, userDataDir });
+  let app = await launchApp({ withMockProvider: true, scenarios: [dependencyWait], userDataDir });
   const requests: string[] = [];
   let waitingId = "";
   try {
@@ -111,7 +112,7 @@ test("a task waiting on work underway stays waiting past every idle rung and res
       idleSince: now - 90 * 60_000,
     });
     db.pragma("query_only = ON");
-    app = await launchApp({ withMockProvider: true, userDataDir });
+    app = await launchApp({ withMockProvider: true, scenarios: [dependencyWait], userDataDir });
     const { page } = app;
     // The boot reconcile read every idle record: the owner's clock started.
     await expect.poll(() => tasks.get(owner.id)?.idleSince ?? null).not.toBeNull();

@@ -2,16 +2,17 @@ import { expect, type Page, test } from "@playwright/test";
 import { frameFontUrl } from "../../src/shared/plugins/frameDocument";
 import { cardBody, cardBodyAsHeld, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { promptInput } from "./prompt";
 import {
   ATTACK_CARD_TITLES,
   ATTACK_CARDS_PROMPT_MARKER,
   ATTACK_MARKER,
+  cardContainment,
   PROJECT_FONT_CARD_TITLE,
   PROJECT_FONT_FAMILY,
   PROJECT_FONT_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+} from "./scenarios/cardContainment";
 import { pager, showCard } from "./stack";
 
 /**
@@ -84,7 +85,7 @@ async function probe(page: Page, title: string) {
 }
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [cardContainment] });
   const { page } = launched;
   const input = promptInput(page);
   await input.click();

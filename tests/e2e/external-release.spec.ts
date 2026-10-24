@@ -8,10 +8,10 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
-import { RELEASE_PROMPT_MARKER } from "./mockProvider";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { nowFrame, pressRow, recordFrame } from "./rails";
+import { externalRelease, RELEASE_PROMPT_MARKER } from "./scenarios/externalRelease";
 import { shownCard } from "./stack";
 
 /** The crewmate's note the spec seeds on the stage, and finds there. */
@@ -61,7 +61,11 @@ test("a verified external release closes reported work, not a dismissed note or 
     actions: [],
   });
   db.close();
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [externalRelease],
+  });
   try {
     const { page, mockProvider } = launched;
     await expect(shownCard(page, RELEASE_NOTE_TITLE)).toBeVisible();

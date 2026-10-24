@@ -27,7 +27,6 @@ import {
   FM_THREAD_PROMPT_MARKER,
   FM_THREAD_PROSE_ANSWER,
   FM_THREAD_REVISE_ANSWER,
-  MOCK_THREAD_HANDOFF_REPORT,
   SPAWN_PROMPT_MARKER,
   THREAD_ACK_REPLY,
   THREAD_ACK_REVISED_TITLE,
@@ -40,9 +39,6 @@ import {
   THREAD_PROSE_REPLY,
   THREAD_REVISE_ANSWER,
   THREAD_REVISE_REPLY,
-  THREAD_SETTLE_CARD_TITLE,
-  THREAD_SETTLE_PROMPT_MARKER,
-  THREAD_SETTLE_REPLY,
   THREAD_TREE_PARENT_KEY,
   THREAD_TREE_PROMPT_MARKER,
   THREAD_WORKING_SIBLING_MARKER,
@@ -61,6 +57,13 @@ import {
   reportLine,
   taskKey,
 } from "./rails";
+import {
+  MOCK_THREAD_HANDOFF_REPORT,
+  THREAD_SETTLE_CARD_TITLE,
+  THREAD_SETTLE_PROMPT_MARKER,
+  THREAD_SETTLE_REPLY,
+  threadSettle,
+} from "./scenarios/threadSettle";
 import {
   cardReply,
   closeOpenCards,
@@ -115,6 +118,7 @@ let launched: LaunchedApp;
 test.beforeAll(async () => {
   launched = await launchApp({
     withMockProvider: true,
+    scenarios: [threadSettle],
     userDataDir: scratchDir("infinitary-card-threads-"),
   });
 });
@@ -784,6 +788,7 @@ test("ready waiting follows reachable choices through a reply, reload and return
   db.close();
   const own = await launchApp({
     withMockProvider: true,
+    scenarios: [threadSettle],
     userDataDir,
     env: { INFINITARY_TASK_DELTA_ROWS: "0" },
   });
@@ -987,7 +992,11 @@ test("a large paste in a card reply becomes a file and reaches the author with i
 test("command search follows the chosen revision list and a row expands its own remaining links", async () => {
   const { seedRevisionCard, revisionRows, revisionFrame } = await import("./revisions");
   const fixture = seedRevisionCard({ many: true });
-  const local = await launchApp({ withMockProvider: true, userDataDir: fixture.userDataDir });
+  const local = await launchApp({
+    withMockProvider: true,
+    scenarios: [threadSettle],
+    userDataDir: fixture.userDataDir,
+  });
   try {
     const { page, app } = local;
     const row = revisionRows(page).last();

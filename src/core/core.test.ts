@@ -23,7 +23,6 @@ import type { TaskBoard } from "@shared/tasks";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   ADOPT_REPO_PROMPT_MARKER,
-  AMBIGUOUS_PROMPT_MARKER,
   ANSWER_PROMPT_MARKER,
   APP_CATALOG_PROMPT_MARKER,
   FINISH_PROMPT_MARKER,
@@ -37,6 +36,10 @@ import {
   startMockProvider,
 } from "../../tests/e2e/mockProvider";
 import { captainCardChoice, holdsSegment, latestServedTurn } from "../../tests/e2e/providerRequest";
+import {
+  AMBIGUOUS_PROMPT_MARKER,
+  workspaceInference,
+} from "../../tests/e2e/scenarios/workspaceInference";
 import { claimedPort } from "../../tests/helpers/claimedPort";
 import { connectClient, type ReceivedPush } from "../../tests/helpers/connectionClient";
 import { recordNewerMigration } from "../../tests/helpers/database";
@@ -2299,7 +2302,7 @@ describe("capture: every captain ask lands in a task", () => {
     process.env.PI_OFFLINE = "1";
     userDataDir = scratchDir("infinitary-capture-");
     adoptDir = scratchDir("infinitary-capture-repo-");
-    mock = await startMockProvider();
+    mock = await startMockProvider({ scenarios: [workspaceInference] });
     // The same seam the e2e suite uses: the app-scoped models.json points Pi
     // at the mock, so the Firstmate and its crewmate run real sessions.
     mkdirSync(join(userDataDir, "auth"), { recursive: true, mode: 0o700 });

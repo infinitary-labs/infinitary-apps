@@ -20,18 +20,21 @@ import {
   FM_SYSTEM_MARKER,
   MOCK_STANDARD_AFTER,
   MOCK_STANDARD_CARD_BODY,
-  MOCK_STANDARD_CARD_TITLE,
-  MOCK_STANDARD_HOST_BUTTONS_CARD_TITLE,
   MOCK_STANDARD_INVENTED_LABEL,
   MOCK_STANDARD_REPORT,
   SPAWN_PROMPT_MARKER,
   STANDARD_TIER_HOST_BUTTONS_MARKER,
-  STANDARD_TIER_MISSING_HEADING_MARKER,
   STANDARD_TIER_PROMPT_MARKER,
 } from "./mockProvider";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, taskKey } from "./rails";
+import {
+  MOCK_STANDARD_CARD_TITLE,
+  MOCK_STANDARD_HOST_BUTTONS_CARD_TITLE,
+  STANDARD_TIER_MISSING_HEADING_MARKER,
+  standardTier,
+} from "./scenarios/standardTier";
 import { authoredFirst, factsStrip, shownCard } from "./stack";
 
 /**
@@ -70,6 +73,7 @@ test.beforeEach(async () => {
   db.close();
   launched = await launchApp({
     withMockProvider: true,
+    scenarios: [standardTier],
     userDataDir,
     env: github.env,
   });

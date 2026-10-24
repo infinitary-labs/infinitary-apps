@@ -6,12 +6,13 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, frameGesturesDecided } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { pressPointer } from "./layout";
+import { promptInput } from "./prompt";
 import {
   LOCAL_LINK_CARD_TITLES,
   LOCAL_LINK_CARDS_PROMPT_MARKER,
   LOCAL_LINK_HREF,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+  localLinkCards,
+} from "./scenarios/localLinkCards";
 import { clickInBody, pager, showCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
 
@@ -37,7 +38,7 @@ const opened = (launched: LaunchedApp) =>
   launched.app.evaluate(() => (globalThis as { __fmOpened?: string[] }).__fmOpened ?? []);
 
 test("local-subdomain links in notes, decisions and scripted cards reach the host opener", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ withMockProvider: true, scenarios: [localLinkCards] });
   try {
     const { page } = launched;
     await recordOpens(launched);
@@ -109,7 +110,12 @@ test("a card's script cannot open its own link; the captain's click and Enter on
   } finally {
     db.close();
   }
-  const launched = await launchApp({ userDataDir, withMockProvider: true, gpuBenchmarking: true });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [localLinkCards],
+    gpuBenchmarking: true,
+  });
   try {
     const { page } = launched;
     await recordOpens(launched);

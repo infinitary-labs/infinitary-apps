@@ -11,11 +11,6 @@ import { launchApp } from "./launch";
 import {
   FM_SYSTEM_MARKER,
   KNOWLEDGE_FACT_PROMPT_MARKER,
-  KNOWLEDGE_RECORD_PROMPT_MARKER,
-  KNOWLEDGE_REUSE_PROMPT_MARKER,
-  MOCK_KNOWLEDGE_ARTICLE,
-  MOCK_KNOWLEDGE_CONCEPT,
-  MOCK_KNOWLEDGE_FINDING,
   type MockProviderServer,
   SPAWN_PROMPT_MARKER,
   startMockProvider,
@@ -23,6 +18,14 @@ import {
 import { promptInput } from "./prompt";
 import { providerMessages, served } from "./providerRequest";
 import { reportLine, taskKey } from "./rails";
+import {
+  KNOWLEDGE_RECORD_PROMPT_MARKER,
+  KNOWLEDGE_REUSE_PROMPT_MARKER,
+  knowledgeRecord,
+  MOCK_KNOWLEDGE_ARTICLE,
+  MOCK_KNOWLEDGE_CONCEPT,
+  MOCK_KNOWLEDGE_FINDING,
+} from "./scenarios/knowledgeRecord";
 
 /**
  * Knowledge (docs/knowledge.md) through the real app, its real crewmate
@@ -92,7 +95,7 @@ function crewmateMessages(bodies: readonly string[], marker: string): string[] {
 test("what one crewmate records outlives its task and a restart, and the next finds it in other words", async () => {
   const repoDir = harborRepo();
   // The journey owns the scripted model, so it outlives the first app.
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: [knowledgeRecord] });
   try {
     await journey(repoDir, mockProvider);
   } finally {
@@ -326,7 +329,7 @@ async function journey(repoDir: string, mockProvider: MockProviderServer): Promi
 }
 
 test("a fact the captain states goes to knowledge, not notes, where knowledge is on", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ withMockProvider: true, scenarios: [knowledgeRecord] });
   try {
     const input = promptInput(launched.page);
     await input.click();

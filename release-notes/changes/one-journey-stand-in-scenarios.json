@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "one-journey-stand-in-scenarios",
+      "reason": "Internal: test-only. Each stand-in model behavior that one journey uses moves out of the shared stand-in into a scenario file beside that journey; the app is unchanged."
+    }
+  ]
+}

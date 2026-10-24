@@ -9,17 +9,17 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
+import { FM_SYSTEM_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { seedHostedOrigins } from "./projectSeed";
+import { promptInput } from "./prompt";
+import { expandDock } from "./rails";
 import {
   CI_REPAIR_CARD,
   CI_REPAIR_HEADS,
   CI_REPAIR_MARKER,
   CI_REPAIR_OWNER,
-  FM_SYSTEM_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { seedHostedOrigins } from "./projectSeed";
-import { promptInput } from "./prompt";
-import { expandDock } from "./rails";
+  checkRepair,
+} from "./scenarios/checkRepair";
 import { completionAction, factsStrip } from "./stack";
 
 /** The message texts each request to the Firstmate carried, decoded from the provider bodies. */
@@ -61,7 +61,12 @@ test("two baseline failures and one flake request diagnosis without a captain ca
     status: "queued",
     startPolicy: "on-request",
   });
-  let app = await launchApp({ withMockProvider: true, userDataDir, env: github.env });
+  let app = await launchApp({
+    withMockProvider: true,
+    scenarios: [checkRepair],
+    userDataDir,
+    env: github.env,
+  });
   const title = `meterlab ${CI_REPAIR_MARKER}`;
   let taskId = "";
   const ledger = () => tasks.get(taskId)?.delivery;
@@ -127,7 +132,12 @@ test("two baseline failures and one flake request diagnosis without a captain ca
           .toBe(true);
         // A real process restart preserves the two diagnoses, not a fresh allowance.
         await app.close();
-        app = await launchApp({ withMockProvider: true, userDataDir, env: github.env });
+        app = await launchApp({
+          withMockProvider: true,
+          scenarios: [checkRepair],
+          userDataDir,
+          env: github.env,
+        });
         expect(ledger()?.ciRepair?.diagnoses).toHaveLength(2);
       }
     }

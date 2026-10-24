@@ -47,15 +47,7 @@ import {
 } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow, within } from "./layout";
-import {
-  LOCATE_PROJECTS_PROMPT_MARKER,
-  MOCK_LOCATED_CARD_TITLE,
-  MOCK_PROJECT_LIVES_CARD_TITLE,
-  PROJECT_LIVES_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-  WORKFLOW_DISPATCH_MARKER,
-  WORKFLOW_EVIDENCE_MARKER,
-} from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
@@ -70,6 +62,15 @@ import {
   MOCK_CONTINUE_CHANGE,
   MOCK_CONTINUE_STORY,
 } from "./scenarios/continueChange";
+import {
+  forgeSignin,
+  LOCATE_PROJECTS_PROMPT_MARKER,
+  MOCK_LOCATED_CARD_TITLE,
+  MOCK_PROJECT_LIVES_CARD_TITLE,
+  PROJECT_LIVES_PROMPT_MARKER,
+  WORKFLOW_DISPATCH_MARKER,
+  WORKFLOW_EVIDENCE_MARKER,
+} from "./scenarios/forgeSignin";
 import {
   GITHUB_CHANGE_PROMPT_MARKER,
   githubChange,
@@ -210,7 +211,7 @@ async function arrange({
   github.headOf((branch) => git("-C", bare, "rev-parse", `refs/heads/${branch}`));
   launched = await launchApp({
     withMockProvider: true,
-    scenarios: [githubChange, continueChange],
+    scenarios: [githubChange, continueChange, forgeSignin],
     userDataDir,
     env: github.env,
   });
@@ -1162,7 +1163,12 @@ test("a sign-in on file is still signed in after a real quit and start of the ap
   // the same folder: the captain does not sign in again.
   await arrange({ signedIn: true });
   await launched.close();
-  launched = await launchApp({ withMockProvider: true, userDataDir, env: github.env });
+  launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [forgeSignin],
+    userDataDir,
+    env: github.env,
+  });
   const { page } = launched;
   await openIntegrations(page);
   await expect(page.locator('[data-forge-row="github.com"]')).toHaveAttribute(

@@ -2,14 +2,14 @@ import { expect, test } from "@playwright/test";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { intersects, minimumWindowSize, pseudoBox, resizeWindow, settled, within } from "./layout";
-import {
-  BEFORE_AFTER_CARD_TITLE,
-  BEFORE_AFTER_NEW_PICTURE,
-  BEFORE_AFTER_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { BEFORE_AFTER_NEW_PICTURE, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { CHANGE_AFTER_PICTURES, CHANGE_BEFORE_PICTURES } from "./pictureFixtures";
 import { promptInput } from "./prompt";
+import {
+  BEFORE_AFTER_CARD_TITLE,
+  BEFORE_AFTER_PROMPT_MARKER,
+  beforeAfter,
+} from "./scenarios/beforeAfter";
 import { cardScroller, cardSurface, completionAction, factsStrip, shownCard } from "./stack";
 
 /**
@@ -23,7 +23,7 @@ import { cardScroller, cardSurface, completionAction, factsStrip, shownCard } fr
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [beforeAfter] });
   const input = promptInput(launched.page);
   await input.click();
   await input.fill(`${SPAWN_PROMPT_MARKER} ${BEFORE_AFTER_PROMPT_MARKER}`);

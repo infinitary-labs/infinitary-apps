@@ -41,6 +41,7 @@ for (const slow of ["one slow write", "two slow writes that end in one wake turn
         wantsStream: true,
         latestUserTail: body,
         hasToolResults: messages.length > 1,
+        port: 0,
       });
       return last;
     };

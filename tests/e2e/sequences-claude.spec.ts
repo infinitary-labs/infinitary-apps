@@ -2,20 +2,21 @@ import { writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import { launchClaudeCrew } from "./claudeCrew";
 import type { LaunchedApp } from "./launch";
+import { FM_SYSTEM_MARKER } from "./mockProvider";
+import { promptInput } from "./prompt";
 import {
-  FM_SYSTEM_MARKER,
   SEQ_BUG_YES,
   SEQ_BUG_YES_ASK,
   SEQ_CLAUDE_STEP_MARKER,
   SEQ_REPRODUCED_YES,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+  sequences,
+} from "./scenarios/sequences";
 
 // The Pi journey lives in sequences.spec.ts. This exercises the same
 // cardless hand-off on a client-side backend, through real typed state.
 let launched: LaunchedApp;
 test.beforeAll(async () => {
-  launched = await launchClaudeCrew();
+  launched = await launchClaudeCrew({ scenarios: [sequences] });
 });
 test.afterAll(async () => {
   await launched.close();

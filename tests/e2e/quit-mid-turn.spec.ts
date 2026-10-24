@@ -4,17 +4,16 @@ import type { TaskDetail } from "@shared/tasks";
 import { RESTART_REPLAY_NOTE } from "../../src/core/orchestrator/wakes";
 import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
-import {
-  FM_SYSTEM_MARKER,
-  MOCK_RESTART_REPLAY_REPORT,
-  RESTART_REPLAY_PROMPT_MARKER,
-  RESTART_REPLAY_QUITS,
-  SPAWN_PROMPT_MARKER,
-  startMockProvider,
-} from "./mockProvider";
+import { FM_SYSTEM_MARKER, SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { providerMessages, requestToolNames } from "./providerRequest";
 import { expandDock } from "./rails";
+import {
+  MOCK_RESTART_REPLAY_REPORT,
+  RESTART_REPLAY_PROMPT_MARKER,
+  RESTART_REPLAY_QUITS,
+  restartReplay,
+} from "./scenarios/restartReplay";
 
 /**
  * The captain closes the app while a crewmate is in the middle of one long
@@ -30,7 +29,7 @@ const TITLE = `${RESTART_REPLAY_PROMPT_MARKER} on the release checklist`;
 test("a crewmate's turn the app closes under three times picks up again at the next launch, told it is a replay", async () => {
   // Its own app, since it quits and starts it again; one mock provider across every launch.
   test.setTimeout(360_000);
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: [restartReplay] });
   // A short grace between delivery attempts, so the work a quit left in
   // flight is due again by the time the next launch sweeps its inbox, and a
   // short tick, so that sweep comes seconds after the launch, not a minute.

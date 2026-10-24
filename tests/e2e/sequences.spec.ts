@@ -6,6 +6,24 @@ import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
+import { promptInput } from "./prompt";
+import {
+  expandDock,
+  expectRecordBar,
+  expectRecordBody,
+  feedLine,
+  hideRecord,
+  nowFrame,
+  nowRowGroup,
+  openGroup,
+  pressRow,
+  recordBarButton,
+  recordCard,
+  recordFrame,
+  rowAtRest,
+  startedLine,
+  statusLine,
+} from "./rails";
 import {
   SEQ_BUG_NO,
   SEQ_BUG_NO_ASK,
@@ -49,25 +67,8 @@ import {
   SEQ_START_SHOWN_FIX,
   SEQ_THREAD_ANSWER,
   SEQ_THREAD_REPLY,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
-import {
-  expandDock,
-  expectRecordBar,
-  expectRecordBody,
-  feedLine,
-  hideRecord,
-  nowFrame,
-  nowRowGroup,
-  openGroup,
-  pressRow,
-  recordBarButton,
-  recordCard,
-  recordFrame,
-  rowAtRest,
-  startedLine,
-  statusLine,
-} from "./rails";
+  sequences,
+} from "./scenarios/sequences";
 import { cardReply, showCard, shownCard, shownCardFrame, shownEntry } from "./stack";
 
 /**
@@ -91,7 +92,7 @@ let userDataDir: string;
 
 test.beforeAll(async () => {
   userDataDir = scratchDir("infinitary-sequences-");
-  launched = await launchApp({ withMockProvider: true, userDataDir });
+  launched = await launchApp({ withMockProvider: true, scenarios: [sequences], userDataDir });
 });
 
 test.afterAll(async () => {

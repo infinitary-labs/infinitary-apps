@@ -22,6 +22,10 @@ import {
   INLINE_QUESTIONS_REVISED_TITLE,
   INLINE_QUESTIONS_TITLE,
   SPAWN_PROMPT_MARKER,
+} from "./mockProvider";
+import { pastePictures } from "./prompt";
+import {
+  cardQuestions,
   UNPICKED_DEFAULT_LABEL,
   UNPICKED_PROMPT_MARKER,
   UNPICKED_REFUSAL,
@@ -31,8 +35,7 @@ import {
   WRITE_IN_REFUSAL,
   WRITE_IN_TITLE,
   writeInQuestionsBody,
-} from "./mockProvider";
-import { pastePictures } from "./prompt";
+} from "./scenarios/cardQuestions";
 import { cardReply, closeQuestion, expectNoCard, showCard, shownCard, shownEntry } from "./stack";
 import { focusOn, pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
@@ -83,7 +86,7 @@ const OPTIONS_ONLY_QUESTION = (() => {
 })();
 
 test("picks inside a card queue until a footer button sends them, and survive a revision by name", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ withMockProvider: true, scenarios: [cardQuestions] });
   const { page } = launched;
   try {
     const prompt = page.getByRole("textbox", { name: "Task prompt" });
@@ -221,7 +224,7 @@ test("picks inside a card queue until a footer button sends them, and survive a 
 });
 
 test("a required question written already answered is refused, and the card arrives unpicked with its recommendations tagged", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ withMockProvider: true, scenarios: [cardQuestions] });
   const { page, mockProvider } = launched;
   try {
     const prompt = page.getByRole("textbox", { name: "Task prompt" });
@@ -302,7 +305,11 @@ test("a required question written already answered is refused, and the card arri
 
 test("a question's Something else row takes the captain's own words to the author as their answer", async () => {
   const userDataDir = scratchDir("infinitary-write-in-");
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [cardQuestions],
+  });
   const { page, mockProvider } = launched;
   let cardId = "";
   try {
@@ -520,7 +527,11 @@ test("a scripted body stages a snapshot beside its form, and the close confirms 
     ].join(""),
   );
   db.close();
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [cardQuestions],
+  });
   const { page, mockProvider } = launched;
   try {
     // An untouched card closes at once: nothing the captain picked is lost.
@@ -600,7 +611,11 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
     });
   }
   db.close();
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [cardQuestions],
+  });
   const { page } = launched;
   try {
     await showCard(page, PICK_TITLE);
@@ -767,7 +782,11 @@ test("a 37-question card's footer sends its answers", async () => {
     ],
   });
   db.close();
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [cardQuestions],
+  });
   const { page } = launched;
   try {
     await showCard(page, LONG_ANSWERS_TITLE);
@@ -831,7 +850,11 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
     actions: [],
   });
   db.close();
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [cardQuestions],
+  });
   const { app, page } = launched;
   try {
     // A note with no choices ends with the field and a lone Chat.

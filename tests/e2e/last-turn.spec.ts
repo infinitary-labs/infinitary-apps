@@ -9,14 +9,17 @@ import {
   FILE_TASK_PROMPT_MARKER,
   MOCK_ANSWER_TITLE,
   MOCK_FM_DONE_TEXT,
-  SALUTE_PROMPT_MARKER,
-  SLOW_CLOSE_PROMPT_MARKER,
   SPAWN_PROMPT_MARKER,
   TALL_ANSWER_PROMPT_MARKER,
-  WORDLESS_CLOSE_PROMPT_MARKER,
 } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
+import {
+  lastTurnWords,
+  SALUTE_PROMPT_MARKER,
+  SLOW_CLOSE_PROMPT_MARKER,
+  WORDLESS_CLOSE_PROMPT_MARKER,
+} from "./scenarios/lastTurnWords";
 import { REPLY_NOTE_MARKER, REPLY_NOTE_WORDS, replyNote } from "./scenarios/replyNote";
 import { cardSurface, SHOWN_ENTRY } from "./stack";
 import { pressKey, runFromSearch } from "./windowKeys";
@@ -130,7 +133,7 @@ const box = async (target: ReturnType<typeof promptInput>) => {
 };
 
 test("a turn shows your message, the Firstmate working, then its reply, and comes back after a relaunch", async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [lastTurnWords] });
   const { page } = launched;
   await recordOnPage(page);
   const input = promptInput(page);
@@ -179,7 +182,12 @@ test("a turn shows your message, the Firstmate working, then its reply, and come
   await test.step("the last turn comes back after a relaunch", async () => {
     const { userDataDir, homeDir } = launched;
     await launched.close();
-    launched = await launchApp({ withMockProvider: true, userDataDir, homeDir });
+    launched = await launchApp({
+      withMockProvider: true,
+      scenarios: [lastTurnWords],
+      userDataDir,
+      homeDir,
+    });
     const again = launched.page;
     await expect(bubbleWords(yourBubble(again))).toHaveText(wordless);
     await expect(mateBubble(again)).toHaveAttribute("data-state", "reply");
@@ -207,7 +215,7 @@ async function settleReducedMotion(page: Page): Promise<void> {
 }
 
 test("under reduced motion a turn still shows working, then the reply, while the character stands still", async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [lastTurnWords] });
   const { page } = launched;
   await recordOnPage(page);
   await settleReducedMotion(page);
@@ -224,7 +232,7 @@ test("under reduced motion a turn still shows working, then the reply, while the
 });
 
 test("a message sent mid-turn receives its own card answer, not the running turn's earlier emote", async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [lastTurnWords] });
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 960, height: 640 });
   await recordOnPage(page);
@@ -255,7 +263,7 @@ test("a message sent mid-turn receives its own card answer, not the running turn
 });
 
 test("both lines remain in sight with a tallest card at the smallest window", async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [lastTurnWords] });
   const { page } = launched;
   await resizeWindow(launched.app, page, await minimumWindowSize(launched.app));
   await recordOnPage(page);
@@ -282,7 +290,7 @@ test("both lines remain in sight with a tallest card at the smallest window", as
 });
 
 test("starting work with no closing words replies with what happened rather than echoing the task", async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [lastTurnWords] });
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 1280, height: 800 });
   const title = "Promote alpha 0.1.31-alpha.46 to the stable release";
@@ -302,7 +310,7 @@ test("starting work with no closing words replies with what happened rather than
 });
 
 test("filing work with no closing words replies with the filed task instead of a generic acknowledgment", async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [lastTurnWords] });
   const { page } = launched;
   await resizeWindow(launched.app, page, { width: 1280, height: 800 });
   const title = "Build personal panels in isolation, swap in when ready";

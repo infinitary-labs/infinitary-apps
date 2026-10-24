@@ -27,14 +27,23 @@ import {
 import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
 import {
-  bookedNoteTitle,
   CLAUDE_CREWMATE_MARKER,
+  MOCK_BROWSER_REPORT_PREFIX,
+  type MockProviderServer,
+  SPAWN_PROMPT_MARKER,
+  startMockProvider,
+  TASK_BROWSER_PROMPT_MARKER,
+} from "./mockProvider";
+import { promptInput } from "./prompt";
+import { providerMessages } from "./providerRequest";
+import { atRest, expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
+import {
+  bookedNoteTitle,
   fareRoseWords,
   MOCK_AIRLINE_SIGN_IN_REPORT,
   MOCK_AIRLINE_SIGN_IN_TITLE,
   MOCK_BOOKED_BUTTON,
   MOCK_BOOKED_REPORT_PREFIX,
-  MOCK_BROWSER_REPORT_PREFIX,
   MOCK_FARES_ASKED_REPORT,
   MOCK_FARES_BUTTON,
   MOCK_FARES_CARD_TITLE,
@@ -52,19 +61,13 @@ import {
   MOCK_UNPAID_FIELDS,
   MOCK_UNPAID_PICTURE,
   MOCK_UNPAID_REPORT_PREFIX,
-  type MockProviderServer,
   reviewCardTitle,
-  SPAWN_PROMPT_MARKER,
-  startMockProvider,
   TASK_BROWSER_BOOKING_MARKER,
   TASK_BROWSER_LOST_MARKER,
-  TASK_BROWSER_PROMPT_MARKER,
   TASK_BROWSER_UNPAID_MARKER,
+  taskBrowserBooking,
   unknownCardTitle,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
-import { providerMessages } from "./providerRequest";
-import { atRest, expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
+} from "./scenarios/taskBrowserBooking";
 import { SHOWN_ENTRY, showCard, shownCard, shownCardFrame } from "./stack";
 import {
   canvasReading,
@@ -108,12 +111,19 @@ const RUNTIMES: Runtime[] = [
     name: "Pi",
     suffix: "",
     launch: (options) =>
-      launchApp(options.reuseMockProvider ? options : { ...options, withMockProvider: true }),
+      launchApp(
+        options.reuseMockProvider
+          ? options
+          : { ...options, withMockProvider: true, scenarios: [taskBrowserBooking] },
+      ),
   },
   {
     name: "Claude",
     suffix: ` ${CLAUDE_CREWMATE_MARKER}`,
-    launch: (options) => launchClaudeCrew(options),
+    launch: (options) =>
+      launchClaudeCrew(
+        options.reuseMockProvider ? options : { ...options, scenarios: [taskBrowserBooking] },
+      ),
   },
 ];
 
@@ -613,7 +623,9 @@ for (const runtime of RUNTIMES) {
       test.setTimeout(420_000);
       const shoot = photographer(runtime);
       const airline = await startFakeAirline({ guest: true, lose: true });
-      const mockProvider: MockProviderServer = await startMockProvider();
+      const mockProvider: MockProviderServer = await startMockProvider({
+        scenarios: [taskBrowserBooking],
+      });
       // Every run of the app spaces delivery attempts by a short grace and
       // sweeps its inbox every few seconds, so the work a quit left in flight
       // is delivered again soon after the next start.

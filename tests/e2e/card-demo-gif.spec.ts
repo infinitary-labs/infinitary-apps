@@ -7,8 +7,9 @@ import { GIF_DEMO_TARGET, startDemo } from "./demo";
 import { DEMO_CAPTION, DEMO_POSTER, GIF_DEMO_RECORDING } from "./demoFixtures";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { GIF_DEMO_CARD_TITLE, GIF_DEMO_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
+import { GIF_DEMO_CARD_TITLE, GIF_DEMO_PROMPT_MARKER, gifDemoCard } from "./scenarios/gifDemoCard";
 import { clickInBody, showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -47,7 +48,7 @@ function control(page: Page) {
 
 /** Opens the app with the GIF demo card up, for the journeys that read the same card. */
 async function launchWithCard(): Promise<LaunchedApp> {
-  const app = await launchApp({ withMockProvider: true });
+  const app = await launchApp({ withMockProvider: true, scenarios: [gifDemoCard] });
   const input = promptInput(app.page);
   await input.click();
   await input.fill(`${SPAWN_PROMPT_MARKER} ${GIF_DEMO_PROMPT_MARKER}`);
@@ -184,7 +185,11 @@ test("the poster opens the viewer resting on it with nothing loaded, and hiding 
 test("a GIF made by the demo helper's fallback is one the card check accepts", async ({}, testInfo) => {
   test.setTimeout(180_000);
   // A recording of its own app: this journey owns its prerequisites.
-  const demo = await startDemo({ withMockProvider: true, size: { width: 1280, height: 800 } });
+  const demo = await startDemo({
+    withMockProvider: true,
+    scenarios: [gifDemoCard],
+    size: { width: 1280, height: 800 },
+  });
   const { page } = demo.launched;
   try {
     const input = promptInput(page);

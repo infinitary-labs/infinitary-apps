@@ -7,9 +7,9 @@ import { frameIn, panelBody, panelElement } from "./frames";
 import { knowledgePanel, knowledgeSummary } from "./knowledgeBrowser";
 import { seedKnowledge } from "./knowledgeSeed";
 import { launchApp } from "./launch";
-import { KNOWLEDGE_RETIRE_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { dockSummary, dockSummaryLine } from "./rails";
+import { KNOWLEDGE_RETIRE_PROMPT_MARKER, knowledgeRetire } from "./scenarios/knowledgeRetire";
 
 /**
  * A collapsed panel keeps refreshing after its page misses pings
@@ -98,7 +98,11 @@ test("a collapsed panel paused past the watchdog still shows new knowledge, and 
   test.setTimeout(120_000);
   const userDataDir = scratchDir("infinitary-knowledge-refresh-");
   const seeded = await seedKnowledge(userDataDir);
-  const { app, page } = await launchApp({ userDataDir, withMockProvider: true });
+  const { app, page } = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [knowledgeRetire],
+  });
   try {
     const knowledge = knowledgePanel(page);
     const activity = page.locator('[data-side-panel="activity"]');
@@ -179,7 +183,11 @@ test("a panel the watchdog stops mounts again once, and a second stop does not k
   test.setTimeout(120_000);
   const userDataDir = scratchDir("infinitary-knowledge-stopped-");
   await seedKnowledge(userDataDir);
-  const { app, page } = await launchApp({ userDataDir, withMockProvider: true });
+  const { app, page } = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [knowledgeRetire],
+  });
   try {
     const knowledge = knowledgePanel(page);
     const summary = knowledgeSummary(page);

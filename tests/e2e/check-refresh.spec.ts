@@ -8,11 +8,12 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { launchApp, SHORT_TICK } from "./launch";
-import { SPAWN_PROMPT_MARKER, STALE_CHECKS_CARD, STALE_CHECKS_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { nowRow, restOnRow, rowSummary, taskFact } from "./rails";
+import { STALE_CHECKS_CARD, STALE_CHECKS_MARKER, staleChecks } from "./scenarios/staleChecks";
 import { cardSurface, factsStrip } from "./stack";
 
 /**
@@ -39,6 +40,7 @@ test("external check changes refresh the completion strip and task facts", async
   seedHostedOrigins(db, userDataDir);
   const app = await launchApp({
     withMockProvider: true,
+    scenarios: [staleChecks],
     userDataDir,
     env: { ...github.env, ...SHORT_TICK },
   });

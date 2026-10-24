@@ -826,7 +826,13 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
       expect(eligible.evaluate().coerceString(), id).toBe("true");
       // A no-op success would not solve the problem: keep the real gate and
       // fail on any gate step's failure, without introducing step-level skips.
-      expect(job["runs-on"], id).toBe("ubuntu-latest");
+      // INI-9's plan: every job runs where LINUX_RUNNER sends it, the
+      // placement service's shell-pc-linux places, and back on GitHub's
+      // hosted Linux when the variable is unset.
+      expect(workflowString(job["runs-on"], { vars: {} }), id).toBe("ubuntu-latest");
+      expect(workflowString(job["runs-on"], { vars: { LINUX_RUNNER: "shell-pc-linux" } }), id).toBe(
+        "shell-pc-linux",
+      );
       expect(job["continue-on-error"], id).toBeFalsy();
       expect(
         job.steps.every((step) => !step.if && !step["continue-on-error"]),

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-runner-variable",
+      "reason": "Internal CI only: the pull request checks run on the Linux runner the LINUX_RUNNER repository variable names, falling back to GitHub's hosted runner. No product change."
+    }
+  ]
+}

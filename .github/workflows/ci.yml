@@ -22,6 +22,8 @@ name: ci
 # runs on the label the repository variable LINUX_RUNNER names - the
 # placement service's shell-pc-linux, a fresh VM per job on the Windows PC,
 # five at once - and on GitHub's hosted ubuntu-latest when it is unset.
+# The shell PC image supplies Node 24 and its own pnpm store (DOP-67/68),
+# so only hosted jobs restore setup-node's pnpm cache (DOP-66 fix 1).
 
 on:
   push:
@@ -45,7 +47,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm typecheck
       - run: pnpm check
@@ -61,7 +63,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm test --project pure --project unit --project unit-isolated
 
@@ -81,7 +83,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm test --project integration --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
@@ -101,7 +103,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: pnpm
+          cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:probes --base "$BASE"
         env:

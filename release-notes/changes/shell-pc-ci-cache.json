@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "shell-pc-ci-cache",
+      "reason": "Internal CI: shell PC jobs reuse the pnpm store in their job image instead of restoring setup-node's cache; hosted runners keep caching."
+    }
+  ]
+}

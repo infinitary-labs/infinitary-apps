@@ -854,6 +854,20 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     ]);
   });
 
+  // DOP-66 fix 1: the rebuilt shell PC image owns the pnpm store;
+  // hosted runners still need setup-node's cache. Evaluate the real inputs.
+  it.each([
+    ["hosted Linux", {}, "pnpm"],
+    ["shell PC", { LINUX_RUNNER: "shell-pc-linux" }, ""],
+  ])("selects the pnpm cache for %s", (_name, vars, expected) => {
+    const ci = loadYamlFile(".github/workflows/ci.yml") as { jobs: Record<string, CiJob> };
+    for (const [id, job] of Object.entries(ci.jobs)) {
+      const setup = job.steps.find((step) => step.uses?.startsWith("actions/setup-node@"));
+      expect(setup, id).toBeDefined();
+      expect(workflowString(setup?.with?.cache ?? "", { vars }), id).toBe(expected);
+    }
+  });
+
   /**
    * FI3-1204: the PR gate runs its tests on several machines at once, and
    * split it must still run every test: each vitest project in exactly one
@@ -1767,7 +1781,13 @@ type CiJob = {
   "runs-on": string;
   "continue-on-error"?: boolean;
   strategy?: { matrix: Record<string, unknown[]> };
-  steps: Array<{ run?: string; if?: string; "continue-on-error"?: boolean }>;
+  steps: Array<{
+    run?: string;
+    uses?: string;
+    with?: Record<string, string>;
+    if?: string;
+    "continue-on-error"?: boolean;
+  }>;
 };
 
 /**

@@ -3,6 +3,7 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import {
   NOTES_URI,
   type NotesBook,
@@ -33,8 +34,8 @@ import { mcpIntegration } from "./mcpIntegration";
  * protocol eras"): a stand-in notes server is added the way Settings adds
  * one, through the integrations service, in each era over each transport.
  * The captain's q7 - trust the server's list and show it after - is the
- * row that comes back; his q5 - a read runs, a change asks - is the calls,
- * a change kept on the task as an ask that his click runs once.
+ * row that comes back; INF-950 makes each action ask initially, with reads
+ * explicitly allowed in transport tests and a reasoned change kept until its click.
  */
 
 vi.setConfig({ testTimeout: 10_000 });
@@ -133,10 +134,10 @@ describe.each([
     expect(id).toBe("mcp-notes");
     expect(row).toMatchObject({ kind: "mcp", name: "Notes", runs: served.runs, health: "ok" });
     expect(row?.actions.map(({ name, effect, rule }) => ({ name, effect, rule }))).toEqual([
-      { name: "list_notes", effect: "reads", rule: "allow" },
-      { name: "get_note", effect: "reads", rule: "allow" },
+      { name: "list_notes", effect: "reads", rule: "ask" },
+      { name: "get_note", effect: "reads", rule: "ask" },
       { name: "add_note", effect: "changes", rule: "ask" },
-      { name: "read_resource", effect: "reads", rule: "allow" },
+      { name: "read_resource", effect: "reads", rule: "ask" },
     ]);
     expect(row?.events).toEqual([
       { name: "resource_changed", label: "A resource changed", every: 1 },
@@ -145,10 +146,23 @@ describe.each([
     expect(JSON.stringify(service.roster())).not.toContain(served.runs);
     expect(JSON.stringify(service.show("Notes"))).not.toContain(served.runs);
 
-    const listed = await service.call(task, "Notes", "list_notes", {});
+    allowIntegrationReads(service);
+    const listed = await service.call(
+      task,
+      "Notes",
+      "list_notes",
+      {},
+      "To perform the task’s requested action.",
+    );
     expect(listed.refused).toBeUndefined();
     expect(listed.text).toContain(`1. ${SAMPLE_NOTES[0]}`);
-    const one = await service.call(task, "notes", "get_note", { id: 2 });
+    const one = await service.call(
+      task,
+      "notes",
+      "get_note",
+      { id: 2 },
+      "To perform the task’s requested action.",
+    );
     expect(one.text).toBe(SAMPLE_NOTES[1]);
 
     const start = await service.look(id, "resource_changed", null);
@@ -160,7 +174,13 @@ describe.each([
         timeout: 9_000,
       })
       .toEqual([{ id: expect.any(String), summary: `All notes changed (${NOTES_URI})` }]);
-    const read = await service.call(task, "Notes", "read_resource", { uri: NOTES_URI });
+    const read = await service.call(
+      task,
+      "Notes",
+      "read_resource",
+      { uri: NOTES_URI },
+      "To perform the task’s requested action.",
+    );
     expect(read.text).toContain("4. Return the library books by Friday");
 
     // A server started again cannot say what changed while it was down.
@@ -168,8 +188,14 @@ describe.each([
     expect((await service.look(id, "resource_changed", start.cursor)).resynced).toBe(true);
 
     // A change is kept on the task, and runs once on the captain's click.
-    const change = await service.call(task, "Notes", "add_note", { text: "Pay the electric bill" });
-    expect(change.text).toContain("Kept as ask");
+    const change = await service.call(
+      task,
+      "Notes",
+      "add_note",
+      { text: "Pay the electric bill" },
+      "To perform the task’s requested action.",
+    );
+    expect(change.text).toContain("The app raised its approval card");
     expect(served.notes()).not.toContain("Pay the electric bill");
     const ask = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
     expect(ask).toMatchObject({
@@ -198,9 +224,15 @@ it("keeps an old MCP ask and its event on the server after the GitHub name repai
   let upgraded: IntegrationsService | undefined;
   try {
     await legacy.service.add("mcp", { name: "GitHub", runs: http.url });
-    await legacy.service.call(task, "GitHub", "add_note", {
-      text: "Return the library books by Friday",
-    });
+    await legacy.service.call(
+      task,
+      "GitHub",
+      "add_note",
+      {
+        text: "Return the library books by Friday",
+      },
+      "To perform the task’s requested action.",
+    );
     const ask = legacy.tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
     if (!ask) throw new Error("the old server's change must have been kept");
     expect(ask).toMatchObject({ kind: "integration", integration: "mcp-github", place: "GitHub" });
@@ -243,12 +275,31 @@ it("keeps an old MCP ask and its event on the server after the GitHub name repai
       "GitHub",
       "GitHub MCP server",
     ]);
+    allowIntegrationReads(upgraded);
     const crew = upgraded.forTask(task.taskId);
-    expect((await crew.call("GitHub", "read", { path: "/user" })).text).toContain('"login":"octo"');
+    expect(
+      (
+        await crew.call(
+          "GitHub",
+          "read",
+          { path: "/user" },
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).text,
+    ).toContain('"login":"octo"');
     expect(read).toHaveBeenCalledOnce();
-    expect((await crew.call("GitHub MCP server", "list_notes", {})).text).toContain(
-      SAMPLE_NOTES[0],
-    );
+    expect(
+      (
+        await crew.call(
+          "GitHub MCP server",
+          "list_notes",
+          {},
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).text,
+    ).toContain(SAMPLE_NOTES[0]);
     expect(upgraded.listenable("GitHub MCP server", "resource_changed")).toMatchObject({
       integration: "mcp-github",
     });
@@ -281,7 +332,13 @@ describe("a server removed and replaced under the same name (INF-947)", () => {
     opened.push({ service, http: first, close }, { service, http: second, close: () => {} });
 
     const { id } = await service.add("mcp", { name: "Studio notes", runs: first.url });
-    await service.call(task, "Studio notes", "add_note", { text: "Book the October shoot" });
+    await service.call(
+      task,
+      "Studio notes",
+      "add_note",
+      { text: "Book the October shoot" },
+      "To perform the task’s requested action.",
+    );
     const kept = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
     if (!kept) throw new Error("the change must have been kept as an ask");
     await service.remove(id);
@@ -298,7 +355,13 @@ describe("a server removed and replaced under the same name (INF-947)", () => {
     expect(first.book.notes).toEqual(SAMPLE_NOTES);
 
     // A request kept for the replacement survives its rename and a restart.
-    await service.call(task, "Studio notes", "add_note", { text: "Pay the electric bill" });
+    await service.call(
+      task,
+      "Studio notes",
+      "add_note",
+      { text: "Pay the electric bill" },
+      "To perform the task’s requested action.",
+    );
     const again = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
     service.configure(id, { name: "Home notes" });
     await service.dispose();
@@ -460,7 +523,13 @@ describe("an MCP server that drops a change it took", () => {
     const http = await serveNotesHttp("modern");
     opened.push({ service, http, close });
     await service.add("mcp", { name: "Notes", runs: http.url });
-    await service.call(task, "Notes", "add_note", { text: "Pay the electric bill" });
+    await service.call(
+      task,
+      "Notes",
+      "add_note",
+      { text: "Pay the electric bill" },
+      "To perform the task’s requested action.",
+    );
     const ask = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
     http.dropNextAdd();
 
@@ -545,11 +614,24 @@ describe("two additions that overlap (INF-948)", () => {
     ]);
     expect(new Set(rows.map((row) => row.connection)).size).toBe(2);
 
-    const read = await service.call(task, "Studio-notes", "list_notes", {});
+    allowIntegrationReads(service);
+    const read = await service.call(
+      task,
+      "Studio-notes",
+      "list_notes",
+      {},
+      "To perform the task’s requested action.",
+    );
     expect(read.text).toContain(SAMPLE_NOTES[0]);
-    const answer = await service.call(task, String(rows[1]?.connection), "add_note", {
-      text: "Book the October shoot",
-    });
+    const answer = await service.call(
+      task,
+      String(rows[1]?.connection),
+      "add_note",
+      {
+        text: "Book the October shoot",
+      },
+      "To perform the task’s requested action.",
+    );
     expect(answer.text).toContain("Not run: Studio-notes's add_note");
   });
 });

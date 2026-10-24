@@ -98,6 +98,7 @@ import {
   overrideWords,
   softHoldWords,
 } from "@shared/holds";
+import type { IntegrationApprovalChoice } from "@shared/integrations";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
 import {
   acceptedValidation,
@@ -210,7 +211,7 @@ import {
 } from "@shared/vocabulary";
 import type { HandoverFile } from "@shared/work";
 import type { AccountHold } from "@shared/workPosture";
-import { NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
+import { type IntegrationAsk, NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
 import { CUT_OFF_REFUSED, CUT_OFF_SIGNED_OUT } from "../accounts/credentialHealth";
 import { AttachmentUnavailableError, attachmentPath, keepImages, loadImages } from "../attachments";
@@ -390,6 +391,7 @@ import {
   type RunningJob,
   stallCardId,
 } from "./idleLadder";
+import { integrationApprovalCard } from "./integrationApprovalCard";
 import {
   type BasisBriefFacts,
   type BriefPart,
@@ -727,7 +729,11 @@ export type CrewSupervisorOptions = {
    * the kept write once, through the gateway. Absent where nothing can be
    * sent; the click then sends nothing.
    */
-  sendWriteAsk?: (taskId: string, askId: string) => Promise<WriteAskSent>;
+  sendWriteAsk?: (
+    taskId: string,
+    askId: string,
+    choice?: IntegrationApprovalChoice,
+  ) => Promise<WriteAskSent>;
   /** The pinned pull request by its number, for a kept approval's reconcile. */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
   /** Close the change where the project lives on discard, injected beside mergePullRequest. */
@@ -8952,6 +8958,10 @@ export class CrewSupervisor {
         );
       }
       const ask = this.writeAskOf(task.id, writes[0]?.ask ?? "");
+      if (ask?.kind === "integration")
+        throw new Error(
+          "The app already presents integration approval cards. Wait for its answer; do not emit another card.",
+        );
       if (!ask) {
         throw new Error(
           `Card refused: ask ${writes[0]?.ask} is not on this task. Name the id github_write or an integration's call answered with.`,
@@ -12603,39 +12613,9 @@ export class CrewSupervisor {
         if (!card.taskId || source !== "chrome" || !this.options.sendWriteAsk) return {};
         const taskId = card.taskId;
         const askId = effect.ask;
-        void this.options.sendWriteAsk(taskId, askId).then((sent) => {
-          const still = this.options.tasks.get(taskId);
-          if (!still || TaskService.isClosed(still)) return;
-          if (sent.ask) {
-            this.options.tasks.note(taskId, writeSentLine(sent), {
-              news: false,
-              feed: true,
-              actor: "host",
-            });
-          }
-          void this.steerCrewmate(
-            taskId,
-            {
-              facts: {
-                kind: "write-answered",
-                ask: askId,
-                call: sent.call,
-                place: sent.place,
-                outcome: sent.outcome.kind,
-                ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
-                ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
-                  ? { why: sent.outcome.why }
-                  : {}),
-                ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
-              },
-              once: `write-answered:${askId}`,
-            },
-            "captain",
-            { via: "card", cardId: card.id },
-          ).catch((caught: unknown) => {
-            console.warn("[crew] write outcome not delivered:", caught);
-          });
-        });
+        // Integration asks can only be answered on the app's own card.
+        if (effect.integration && card.author !== "host") return {};
+        this.answerWriteAsk(card, taskId, askId, effect.integration);
         return {};
       }
       case "open":
@@ -12944,6 +12924,54 @@ export class CrewSupervisor {
     const ci = record.delivery?.ci;
     if (ci === "red") return MERGE_AFTER_FIXING_WORDS;
     return ci === "pending" ? MERGE_WHEN_CHECKS_PASS_WORDS : MERGE_WORDS["merge-pr"];
+  }
+
+  /** The held integration call is presented immediately by its owner, not the agent. */
+  askIntegration(taskId: string, ask: IntegrationAsk): void {
+    const task = this.options.tasks.get(taskId);
+    if (!task || TaskService.isClosed(task)) return;
+    this.cards.put(integrationApprovalCard(taskId, task.title, ask));
+  }
+
+  private answerWriteAsk(
+    card: Card,
+    taskId: string,
+    askId: string,
+    choice?: IntegrationApprovalChoice,
+  ): void {
+    void this.options.sendWriteAsk?.(taskId, askId, choice).then((sent) => {
+      const still = this.options.tasks.get(taskId);
+      if (!still || TaskService.isClosed(still)) return;
+      if (sent.ask) {
+        this.options.tasks.note(taskId, writeSentLine(sent), {
+          news: false,
+          feed: true,
+          actor: "host",
+        });
+      }
+      void this.steerCrewmate(
+        taskId,
+        {
+          facts: {
+            kind: "write-answered",
+            ask: askId,
+            call: sent.call,
+            place: sent.place,
+            outcome: sent.outcome.kind,
+            ...(sent.outcome.kind === "answered" ? { status: sent.outcome.status } : {}),
+            ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
+              ? { why: sent.outcome.why }
+              : {}),
+            ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
+          },
+          once: `write-answered:${askId}`,
+        },
+        "captain",
+        { via: "card", cardId: card.id },
+      ).catch((caught: unknown) => {
+        console.warn("[crew] write outcome not delivered:", caught);
+      });
+    });
   }
 
   /**
@@ -13496,6 +13524,15 @@ export class CrewSupervisor {
       ? this.options.tasks.get(card.taskId)
       : this.options.tasks.openCardTaskFor(card.id);
     this.cards.dismiss(card, submission);
+    const integrationAsk =
+      card.author === "host"
+        ? card.actions.find(
+            (action) =>
+              action.effect?.kind === "request_write" && action.effect.integration === "deny",
+          )?.effect
+        : undefined;
+    if (card.taskId && integrationAsk?.kind === "request_write")
+      this.answerWriteAsk(card, card.taskId, integrationAsk.ask, "deny");
     // A host card that can turn something down treats the dismissal as that
     // answer (the consent card, A2a; the setup card): closing it is "don't
     // add", never a question left staged behind a card nobody can see.

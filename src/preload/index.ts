@@ -521,6 +521,7 @@ const api: FirstmateApi = {
       ),
     cancelSignIn: () => invoke("inf:integrations:sign-in-cancel"),
     configure: (id, patch) => invoke("inf:integrations:configure", id, patch),
+    rule: (id, action, allowed) => invoke("inf:integrations:rule", id, action, allowed),
     remove: (id) => invoke("inf:integrations:remove", id),
     check: (id) => invoke("inf:integrations:check", id),
     secret: (id, slot, value) => invoke("inf:integrations:secret", id, slot, value),

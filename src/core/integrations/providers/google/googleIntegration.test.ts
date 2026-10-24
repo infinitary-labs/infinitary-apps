@@ -16,6 +16,7 @@ import {
   STAND_IN_CLIENT_SECRET,
   startGoogleStandIn,
 } from "../../../../../tests/helpers/googleStandIn";
+import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { serveNotesHttp } from "../../../../../tests/helpers/mcpStandIn";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import { hostEnv } from "../../../hostEnv";
@@ -161,6 +162,7 @@ type Fixture = Awaited<ReturnType<typeof fixture>>;
 async function signedIn(): Promise<Fixture> {
   const world = await fixture();
   await world.integrations.signIn("google", NOTICE_ACCEPTED);
+  allowIntegrationReads(world.integrations);
   return world;
 }
 
@@ -214,15 +216,15 @@ describe("Google as an integration", () => {
         account: STAND_IN_ACCOUNT,
         health: "ok",
         actions: [
-          expect.objectContaining({ name: "search_mail", effect: "reads", rule: "allow" }),
-          expect.objectContaining({ name: "read_message", effect: "reads", rule: "allow" }),
+          expect.objectContaining({ name: "search_mail", effect: "reads", rule: "ask" }),
+          expect.objectContaining({ name: "read_message", effect: "reads", rule: "ask" }),
           expect.objectContaining({ name: "label_message", effect: "changes", rule: "ask" }),
           expect.objectContaining({ name: "draft_message", effect: "changes", rule: "ask" }),
           expect.objectContaining({ name: "send_message", effect: "sends", rule: "ask" }),
-          expect.objectContaining({ name: "list_calendars", effect: "reads", rule: "allow" }),
-          expect.objectContaining({ name: "list_events", effect: "reads", rule: "allow" }),
-          expect.objectContaining({ name: "read_event", effect: "reads", rule: "allow" }),
-          expect.objectContaining({ name: "free_busy", effect: "reads", rule: "allow" }),
+          expect.objectContaining({ name: "list_calendars", effect: "reads", rule: "ask" }),
+          expect.objectContaining({ name: "list_events", effect: "reads", rule: "ask" }),
+          expect.objectContaining({ name: "read_event", effect: "reads", rule: "ask" }),
+          expect.objectContaining({ name: "free_busy", effect: "reads", rule: "ask" }),
           expect.objectContaining({ name: "create_event", effect: "changes", rule: "ask" }),
           expect.objectContaining({ name: "update_event", effect: "changes", rule: "ask" }),
         ],
@@ -273,6 +275,7 @@ describe("Google as an integration", () => {
     });
 
     await integrations.signIn("google", NOTICE_ACCEPTED);
+    allowIntegrationReads(integrations);
     expect(opened).toHaveLength(1);
     expect(integrations.view().integrations.map((row) => row.account)).toEqual([STAND_IN_ACCOUNT]);
   });
@@ -323,6 +326,7 @@ describe("Google as an integration", () => {
     expect(opened).toEqual([]);
 
     await integrations.signIn("google", NOTICE_ACCEPTED);
+    allowIntegrationReads(integrations);
     expect(google.tokens).not.toEqual([]);
     expect(integrations.view().integrations.map((row) => [row.id, row.name])).toEqual([
       ["google", "Google"],
@@ -342,11 +346,13 @@ describe("Google as an integration", () => {
     // "Google" still reaches the Google connection, and the server answers only to its own name.
     expect(integrations.show("Google")).toMatchObject({ id: "google", integration: "Mail" });
     expect(integrations.show("Google MCP server")).toMatchObject({ id: server });
+    allowIntegrationReads(integrations);
     const notesRead = await integrations.call(
       { kind: "firstmate" },
       "Google MCP server",
       "list_notes",
       {},
+      "To perform the task’s requested action.",
     );
     expect(notesRead.refused).toBeUndefined();
   });
@@ -370,7 +376,13 @@ describe("Google as an integration", () => {
     const id = google.deliver(ARRIVING);
     const crew = integrations.forTask("task-1");
 
-    const found = await crew.call("Google", "search_mail", { query: "invoice", max: 10 });
+    const found = await crew.call(
+      "Google",
+      "search_mail",
+      { query: "invoice", max: 10 },
+      undefined,
+      "To perform the task’s requested action.",
+    );
     expect(found.refused).toBeUndefined();
     expect(parsed(found.text)).toEqual({
       messages: [
@@ -382,7 +394,17 @@ describe("Google as an integration", () => {
         }),
       ],
     });
-    const message = parsed((await crew.call("Google", "read_message", { id })).text);
+    const message = parsed(
+      (
+        await crew.call(
+          "Google",
+          "read_message",
+          { id },
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).text,
+    );
     expect(message).toMatchObject({
       id,
       subject: ARRIVING.subject,
@@ -395,12 +417,18 @@ describe("Google as an integration", () => {
 
     // A label asks first: nothing reaches Gmail until the click, and then once.
     const before = google.seen.length;
-    const asked = await crew.call("Google", "label_message", {
-      id,
-      add: ["receipts"],
-      remove: ["INBOX"],
-    });
-    expect(asked.text).toContain('"kind":"request_write"');
+    const asked = await crew.call(
+      "Google",
+      "label_message",
+      {
+        id,
+        add: ["receipts"],
+        remove: ["INBOX"],
+      },
+      undefined,
+      "To perform the task’s requested action.",
+    );
+    expect(asked.text).toContain("The app raised its approval card");
     expect(google.seen).toHaveLength(before);
     const label = tasks.get("task-1")?.delivery?.writeAsks?.[0];
     expect(label).toMatchObject({
@@ -417,16 +445,28 @@ describe("Google as an integration", () => {
     expect((await integrations.sendAsk("task-1", label?.id ?? "")).ok).toBe(false);
 
     // A reply drafts in the thread, and a send goes out once on its click.
-    await crew.call("Google", "draft_message", {
-      to: [ARRIVING.from],
-      body: "Thanks Lena, paying it this week.",
-      reply_to: id,
-    });
-    await crew.call("Google", "send_message", {
-      to: ["Lena Ortiz <lena@ortiz-studio.com>"],
-      subject: "Paid: invoice 2214 ✓",
-      body: "Sent the payment today.",
-    });
+    await crew.call(
+      "Google",
+      "draft_message",
+      {
+        to: [ARRIVING.from],
+        body: "Thanks Lena, paying it this week.",
+        reply_to: id,
+      },
+      undefined,
+      "To perform the task’s requested action.",
+    );
+    await crew.call(
+      "Google",
+      "send_message",
+      {
+        to: ["Lena Ortiz <lena@ortiz-studio.com>"],
+        subject: "Paid: invoice 2214 ✓",
+        body: "Sent the payment today.",
+      },
+      undefined,
+      "To perform the task’s requested action.",
+    );
     expect(google.drafts).toEqual([]);
     expect(google.sent).toEqual([]);
     const asks = tasks.get("task-1")?.delivery?.writeAsks ?? [];
@@ -449,10 +489,16 @@ describe("Google as an integration", () => {
     );
 
     // The first mate's seat cannot send: only a crewmate's card carries the exact call.
-    const seat = await integrations.call({ kind: "firstmate" }, "Google", "send_message", {
-      to: ["lena@ortiz-studio.com"],
-      body: "x",
-    });
+    const seat = await integrations.call(
+      { kind: "firstmate" },
+      "Google",
+      "send_message",
+      {
+        to: ["lena@ortiz-studio.com"],
+        body: "x",
+      },
+      "To perform the task’s requested action.",
+    );
     expect(seat.refused).toBe("refused");
   });
 
@@ -472,7 +518,17 @@ describe("Google as an integration", () => {
       html: newsletter + neverClosed,
     });
     const message = parsed(
-      (await integrations.forTask("task-1").call("Google", "read_message", { id })).text,
+      (
+        await integrations
+          .forTask("task-1")
+          .call(
+            "Google",
+            "read_message",
+            { id },
+            undefined,
+            "To perform the task’s requested action.",
+          )
+      ).text,
     );
     expect(message.text).toBe(
       `Hi Ada,\nYour October offers are here: 20% off & free returns.\nSee you soon.\nMaple Air${" ".repeat(200_000)}x${"<".repeat(200_000)}`,
@@ -557,15 +613,27 @@ describe("Google as an integration", () => {
     // Review finding F2 on INF-784: told "sent nothing" after Gmail took it, a crewmate would send a second email.
     const { google, tasks, integrations } = await signedIn();
     const crew = integrations.forTask("task-1");
-    await crew.call("Google", "send_message", {
-      to: ["Lena Ortiz <lena@ortiz-studio.com>"],
-      subject: "Paid: invoice 2214",
-      body: "Sent the payment today.",
-    });
-    await crew.call("Google", "draft_message", {
-      to: ["Lena Ortiz <lena@ortiz-studio.com>"],
-      body: "Paying it this week.",
-    });
+    await crew.call(
+      "Google",
+      "send_message",
+      {
+        to: ["Lena Ortiz <lena@ortiz-studio.com>"],
+        subject: "Paid: invoice 2214",
+        body: "Sent the payment today.",
+      },
+      undefined,
+      "To perform the task’s requested action.",
+    );
+    await crew.call(
+      "Google",
+      "draft_message",
+      {
+        to: ["Lena Ortiz <lena@ortiz-studio.com>"],
+        body: "Paying it this week.",
+      },
+      undefined,
+      "To perform the task’s requested action.",
+    );
     const asks = tasks.get("task-1")?.delivery?.writeAsks ?? [];
     const send = asks.find((ask) => ask.kind === "integration" && ask.action === "send_message");
     const draft = asks.find((ask) => ask.kind === "integration" && ask.action === "draft_message");
@@ -573,11 +641,11 @@ describe("Google as an integration", () => {
 
     expect((await integrations.sendAsk("task-1", send?.id ?? "")).outcome).toEqual({
       kind: "unknown",
-      why: "Google could not do that: Gmail did not answer.",
+      why: "Google's send_message has an unknown outcome: Gmail did not answer.\nDo not repeat this call; read Google to check what happened first.",
     });
     expect((await integrations.sendAsk("task-1", draft?.id ?? "")).outcome).toEqual({
       kind: "unknown",
-      why: "Google could not do that: Gmail failed (status 500): Backend Error",
+      why: "Google's draft_message has an unknown outcome: Gmail failed (status 500): Backend Error\nDo not repeat this call; read Google to check what happened first.",
     });
     expect(google.sent).toHaveLength(1);
     expect(google.drafts).toHaveLength(1);
@@ -590,10 +658,16 @@ describe("Google as an integration", () => {
 
   it("refuses a header that would start another one before anything is asked", async () => {
     const { integrations } = await signedIn();
-    const answer = await integrations.forTask("task-1").call("Google", "send_message", {
-      to: ["lena@ortiz-studio.com\r\nBcc: someone@example.com"],
-      body: "x",
-    });
+    const answer = await integrations.forTask("task-1").call(
+      "Google",
+      "send_message",
+      {
+        to: ["lena@ortiz-studio.com\r\nBcc: someone@example.com"],
+        body: "x",
+      },
+      undefined,
+      "To perform the task’s requested action.",
+    );
     expect(answer.refused).toBe("invalid");
   });
 
@@ -671,7 +745,15 @@ describe("Google as an integration", () => {
 
     // An hour on, the access is about to run out: it renews before the request.
     clock.now += 3_599_000 - 10_000;
-    await integrations.forTask("task-1").call("Google", "search_mail", { max: 1 });
+    await integrations
+      .forTask("task-1")
+      .call(
+        "Google",
+        "search_mail",
+        { max: 1 },
+        undefined,
+        "To perform the task’s requested action.",
+      );
     expect(renewals()).toHaveLength(1);
     expect(renewals()[0]).toMatchObject({
       client_id: STAND_IN_CLIENT_ID,
@@ -680,20 +762,37 @@ describe("Google as an integration", () => {
 
     // Google refuses the access before it says it runs out: renew once and send again.
     google.lapse();
-    const answer = await integrations.forTask("task-1").call("Google", "search_mail", { max: 1 });
+    const answer = await integrations
+      .forTask("task-1")
+      .call(
+        "Google",
+        "search_mail",
+        { max: 1 },
+        undefined,
+        "To perform the task’s requested action.",
+      );
     expect(answer.refused).toBeUndefined();
     expect(renewals()).toHaveLength(2);
     expect(integrations.view().integrations[0]?.health).toBe("ok");
 
     // The person removed the app's access in their Google account.
     google.revokeElsewhere();
-    const refused = await integrations.forTask("task-1").call("Google", "search_mail", { max: 1 });
+    const refused = await integrations
+      .forTask("task-1")
+      .call(
+        "Google",
+        "search_mail",
+        { max: 1 },
+        undefined,
+        "To perform the task’s requested action.",
+      );
     expect(refused.refused).toBe("refused");
     expect(refused.text).toContain("Sign in again in Settings -> Integrations");
     expect(integrations.view().integrations[0]).toMatchObject({ health: "needs_reauth" });
 
     // Signing in again brings the row back.
     await integrations.signIn("google", NOTICE_ACCEPTED);
+    allowIntegrationReads(integrations);
     expect(integrations.view().integrations[0]).toMatchObject({ health: "ok" });
   });
 
@@ -702,7 +801,13 @@ describe("Google as an integration", () => {
     const id = google.deliver(ARRIVING);
     const crew = integrations.forTask("task-1");
     const label = async () => {
-      await crew.call("Google", "label_message", { id, add: ["receipts"] });
+      await crew.call(
+        "Google",
+        "label_message",
+        { id, add: ["receipts"] },
+        undefined,
+        "To perform the task’s requested action.",
+      );
       const ask = tasks.get("task-1")?.delivery?.writeAsks?.[0];
       if (!ask) throw new Error("the label must have been kept as an ask");
       return ask.id;
@@ -712,8 +817,15 @@ describe("Google as an integration", () => {
     // A renewal and signing in again as the same person keep the connection.
     const renewed = await label();
     clock.now += 3_599_000;
-    await crew.call("Google", "search_mail", { max: 1 });
+    await crew.call(
+      "Google",
+      "search_mail",
+      { max: 1 },
+      undefined,
+      "To perform the task’s requested action.",
+    );
     await integrations.signIn("google", NOTICE_ACCEPTED);
+    allowIntegrationReads(integrations);
     expect((await integrations.sendAsk("task-1", renewed)).outcome).toEqual({ kind: "ran" });
     expect(modified()).toHaveLength(1);
 
@@ -721,6 +833,7 @@ describe("Google as an integration", () => {
     const asked = await label();
     google.knobs.account = "ada.park.studio@gmail.com";
     await integrations.signIn("google", NOTICE_ACCEPTED);
+    allowIntegrationReads(integrations);
     expect(integrations.view().integrations[0]).toMatchObject({
       id: "google",
       account: "ada.park.studio@gmail.com",
@@ -809,9 +922,22 @@ describe("Calendar on the shared Google row", () => {
     });
     expect(earlier).not.toEqual(GOOGLE_SCOPES);
     google.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
+    allowIntegrationReads(integrations);
     const crew = integrations.forTask("task-1");
 
-    expect(parsed((await crew.call("Google", "list_calendars", {})).text)).toMatchObject({
+    expect(
+      parsed(
+        (
+          await crew.call(
+            "Google",
+            "list_calendars",
+            {},
+            undefined,
+            "To perform the task’s requested action.",
+          )
+        ).text,
+      ),
+    ).toMatchObject({
       calendars: expect.arrayContaining([expect.objectContaining({ id: STUDIO_CALENDAR })]),
     });
     expect(google.tokens).toEqual([expect.objectContaining({ grant_type: "refresh_token" })]);
@@ -819,11 +945,17 @@ describe("Calendar on the shared Google row", () => {
     expect(
       parsed(
         (
-          await crew.call("Google", "free_busy", {
-            calendars: [STUDIO_CALENDAR],
-            from: "2026-10-26T00:00:00-07:00",
-            to: "2026-10-27T00:00:00-07:00",
-          })
+          await crew.call(
+            "Google",
+            "free_busy",
+            {
+              calendars: [STUDIO_CALENDAR],
+              from: "2026-10-26T00:00:00-07:00",
+              to: "2026-10-27T00:00:00-07:00",
+            },
+            undefined,
+            "To perform the task’s requested action.",
+          )
         ).text,
       ),
     ).toMatchObject({
@@ -840,26 +972,59 @@ describe("Calendar on the shared Google row", () => {
     const { google, integrations, tasks } = await signedIn();
     const crew = integrations.forTask("task-1");
     const existing = google.calendar.change(STUDIO_CALENDAR, SHOOT_EVENT);
-    expect(parsed((await crew.call("Google", "list_calendars", {})).text)).toMatchObject({
+    expect(
+      parsed(
+        (
+          await crew.call(
+            "Google",
+            "list_calendars",
+            {},
+            undefined,
+            "To perform the task’s requested action.",
+          )
+        ).text,
+      ),
+    ).toMatchObject({
       calendars: expect.arrayContaining([expect.objectContaining({ id: STUDIO_CALENDAR })]),
     });
     const listed = parsed(
-      (await crew.call("Google", "list_events", { calendar: STUDIO_CALENDAR, max: 10 })).text,
+      (
+        await crew.call(
+          "Google",
+          "list_events",
+          { calendar: STUDIO_CALENDAR, max: 10 },
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).text,
     );
     expect(listed).toMatchObject({ events: [existing] });
     expect(
       parsed(
-        (await crew.call("Google", "read_event", { calendar: STUDIO_CALENDAR, id: existing.id }))
-          .text,
+        (
+          await crew.call(
+            "Google",
+            "read_event",
+            { calendar: STUDIO_CALENDAR, id: existing.id },
+            undefined,
+            "To perform the task’s requested action.",
+          )
+        ).text,
       ),
     ).toEqual(existing);
     const availability = parsed(
       (
-        await crew.call("Google", "free_busy", {
-          calendars: [STUDIO_CALENDAR, "missing"],
-          from: "2026-10-26T00:00:00-07:00",
-          to: "2026-10-27T00:00:00-07:00",
-        })
+        await crew.call(
+          "Google",
+          "free_busy",
+          {
+            calendars: [STUDIO_CALENDAR, "missing"],
+            from: "2026-10-26T00:00:00-07:00",
+            to: "2026-10-27T00:00:00-07:00",
+          },
+          undefined,
+          "To perform the task’s requested action.",
+        )
       ).text,
     );
     expect(availability).toMatchObject({
@@ -871,14 +1036,20 @@ describe("Calendar on the shared Google row", () => {
       },
     });
     const before = google.seen.length;
-    await crew.call("Google", "create_event", {
-      calendar: STUDIO_CALENDAR,
-      event: {
-        summary: "Studio closed",
-        start: { date: "2026-10-30" },
-        end: { date: "2026-10-31" },
+    await crew.call(
+      "Google",
+      "create_event",
+      {
+        calendar: STUDIO_CALENDAR,
+        event: {
+          summary: "Studio closed",
+          start: { date: "2026-10-30" },
+          end: { date: "2026-10-31" },
+        },
       },
-    });
+      undefined,
+      "To perform the task’s requested action.",
+    );
     expect(google.seen).toHaveLength(before);
     const create = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
     const created = await integrations.sendAsk("task-1", create?.id ?? "");
@@ -886,16 +1057,29 @@ describe("Calendar on the shared Google row", () => {
     const saved = parsed(created.answer ?? "{}");
     expect(saved).toMatchObject({ summary: "Studio closed", start: { date: "2026-10-30" } });
     expect((await integrations.sendAsk("task-1", create?.id ?? "")).ok).toBe(false);
-    await crew.call("Google", "update_event", {
-      calendar: STUDIO_CALENDAR,
-      id: existing.id,
-      changes: { summary: "October shoot confirmed" },
-      send_updates: "all",
-    });
+    await crew.call(
+      "Google",
+      "update_event",
+      {
+        calendar: STUDIO_CALENDAR,
+        id: existing.id,
+        changes: { summary: "October shoot confirmed" },
+        send_updates: "all",
+      },
+      undefined,
+      "To perform the task’s requested action.",
+    );
     expect(
       parsed(
-        (await crew.call("Google", "read_event", { calendar: STUDIO_CALENDAR, id: existing.id }))
-          .text,
+        (
+          await crew.call(
+            "Google",
+            "read_event",
+            { calendar: STUDIO_CALENDAR, id: existing.id },
+            undefined,
+            "To perform the task’s requested action.",
+          )
+        ).text,
       ),
     ).toMatchObject({ summary: SHOOT_EVENT.summary });
     const patch = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
@@ -903,8 +1087,15 @@ describe("Calendar on the shared Google row", () => {
       kind: "ran",
     });
     const readBack = parsed(
-      (await crew.call("Google", "read_event", { calendar: STUDIO_CALENDAR, id: existing.id }))
-        .text,
+      (
+        await crew.call(
+          "Google",
+          "read_event",
+          { calendar: STUDIO_CALENDAR, id: existing.id },
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).text,
     );
     expect(readBack).toMatchObject({
       summary: "October shoot confirmed",
@@ -928,21 +1119,49 @@ describe("Calendar on the shared Google row", () => {
     const before = google.seen.length;
     expect(
       (
-        await crew.call("Google", "create_event", {
-          event: { ...SHOOT_EVENT, end: SHOOT_EVENT.start },
-        })
+        await crew.call(
+          "Google",
+          "create_event",
+          {
+            event: { ...SHOOT_EVENT, end: SHOOT_EVENT.start },
+          },
+          undefined,
+          "To perform the task’s requested action.",
+        )
       ).refused,
     ).toBe("invalid");
-    expect((await crew.call("Google", "read_event", { id: ".." })).refused).toBe("invalid");
     expect(
       (
-        await integrations.call({ kind: "firstmate" }, "Google", "create_event", {
-          event: SHOOT_EVENT,
-        })
+        await crew.call(
+          "Google",
+          "read_event",
+          { id: ".." },
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).refused,
+    ).toBe("invalid");
+    expect(
+      (
+        await integrations.call(
+          { kind: "firstmate" },
+          "Google",
+          "create_event",
+          {
+            event: SHOOT_EVENT,
+          },
+          "To perform the task’s requested action.",
+        )
       ).refused,
     ).toBe("refused");
     expect(google.seen).toHaveLength(before);
-    await crew.call("Google", "create_event", { event: SHOOT_EVENT });
+    await crew.call(
+      "Google",
+      "create_event",
+      { event: SHOOT_EVENT },
+      undefined,
+      "To perform the task’s requested action.",
+    );
     const held = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
     integrations.configure("google", { actions: { create_event: false } });
     expect((await integrations.sendAsk("task-1", held?.id ?? "")).outcome).toMatchObject({
@@ -951,7 +1170,13 @@ describe("Calendar on the shared Google row", () => {
     expect(google.seen).toHaveLength(before);
     integrations.configure("google", { actions: { create_event: true } });
     for (const failure of ["drop", 500] as const) {
-      await crew.call("Google", "create_event", { event: SHOOT_EVENT });
+      await crew.call(
+        "Google",
+        "create_event",
+        { event: SHOOT_EVENT },
+        undefined,
+        "To perform the task’s requested action.",
+      );
       const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
       google.calendar.knobs.afterTaking.push(failure);
       expect((await integrations.sendAsk("task-1", ask?.id ?? "")).outcome).toMatchObject({
@@ -1018,17 +1243,49 @@ describe("Calendar on the shared Google row", () => {
   it("renews the shared access for Calendar and honors Calendar backoff without claiming the person signed out", async () => {
     const { google, integrations, clock } = await signedIn();
     google.lapse();
-    await integrations.forTask("task-1").call("Google", "list_calendars", {});
+    await integrations
+      .forTask("task-1")
+      .call("Google", "list_calendars", {}, undefined, "To perform the task’s requested action.");
     expect(google.tokens.filter((t) => t.grant_type === "refresh_token")).toHaveLength(1);
     google.calendar.knobs.limited.push("60");
     const crew = integrations.forTask("task-1");
-    expect((await crew.call("Google", "list_calendars", {})).text).toContain("slow down");
+    expect(
+      (
+        await crew.call(
+          "Google",
+          "list_calendars",
+          {},
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).text,
+    ).toContain("slow down");
     const count = google.seen.length;
-    expect((await crew.call("Google", "search_mail", { max: 10 })).text).toContain("wait");
+    expect(
+      (
+        await crew.call(
+          "Google",
+          "search_mail",
+          { max: 10 },
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).text,
+    ).toContain("wait");
     expect(google.seen).toHaveLength(count);
     expect(integrations.view().integrations[0]?.health).toBe("ok");
     clock.now += 60_000;
-    expect((await crew.call("Google", "list_calendars", {})).refused).toBeUndefined();
+    expect(
+      (
+        await crew.call(
+          "Google",
+          "list_calendars",
+          {},
+          undefined,
+          "To perform the task’s requested action.",
+        )
+      ).refused,
+    ).toBeUndefined();
   });
 
   it("keeps no sign-in when Calendar permission was unchecked", async () => {

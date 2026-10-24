@@ -75,6 +75,7 @@ export type PlacedHome = {
   repos: RepoRegistry;
   inbox: InboxStore;
   supervisor: CrewSupervisor;
+  integrations?: IntegrationsService;
   placed: PlacedSessions;
   devices: WorkDevices;
   /** What each computer said of its own sign-ins. */
@@ -296,6 +297,16 @@ export function startPlacedHome(options: {
           { apiBaseUrl: github.apiBaseUrl, token: async () => github.token },
         )
     : undefined;
+  const integrationGateway = accountForge
+    ? new GithubGatewayService({
+        tasks,
+        repos,
+        forgeFor: forgeFor ?? accountForge,
+        accountForge,
+        readChecks: async (taskId) => prCi?.checkForCrew(taskId) ?? "No checks here.",
+        now,
+      })
+    : undefined;
   const integrations =
     github && accountForge
       ? new IntegrationsService({
@@ -307,20 +318,19 @@ export function startPlacedHome(options: {
                 checkNow: async () => {},
                 signOut: () => {},
               },
-              gateway: new GithubGatewayService({
-                tasks,
-                repos,
-                forgeFor: forgeFor ?? accountForge,
-                accountForge,
-                readChecks: async (taskId) => prCi?.checkForCrew(taskId) ?? "No checks here.",
-                now,
-              }),
+              gateway: {
+                read: (taskId, input, through) => integrationGateway!.read(taskId, input, through),
+                write: (taskId, input, through) =>
+                  integrationGateway!.write(taskId, input, through, true),
+                readAsSeat: (input) => integrationGateway!.readAsSeat(input),
+              },
             }),
           ],
           store: new IntegrationSettingsStore(paths.integrationsDir),
           secrets: new FileIntegrationSecrets(join(paths.integrationsDir, "secrets")),
           asks: {
             keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+            present: (taskId, ask) => supervisor.askIntegration(taskId, ask),
             take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
             record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
           },
@@ -335,7 +345,12 @@ export function startPlacedHome(options: {
     },
     machines: placed,
     ...(options.reachOf ? { reachOf: options.reachOf } : {}),
-    ...(integrations ? { integrations } : {}),
+    ...(integrations
+      ? {
+          integrations,
+          sendWriteAsk: (taskId, askId, choice) => integrations.sendAsk(taskId, askId, choice),
+        }
+      : {}),
     bind: async () => options.binding,
     ...(router ? { router } : {}),
     workspace,
@@ -473,6 +488,7 @@ export function startPlacedHome(options: {
     events,
     wakes,
     cards: () => cards,
+    ...(integrations ? { integrations } : {}),
     paths,
     quit,
     drop,

@@ -59,13 +59,22 @@ It has no actions and no sign-in, and a packaged build never connects it.
 
 ## The rules
 
-Until the secret manager's rules land, an action's rule follows from its effect (the captain's q5 on INF-775): a read is `allow` and runs, anything that changes or sends is `ask` and waits for the captain's click on a card, and an action turned off is `never`.
-The service holds that rule for every kind: a call to an action that changes or sends never reaches the binding.
-A crewmate's is kept on its task as a write ask of kind `integration` (`IntegrationAsk`, `src/shared/writeAsk.ts`) with its exact checked input, and its answer tells the crewmate to put it on a card whose action is `request_write`, the way a forge write ask is (`docs/forge.md`, "A write that asks").
-The card's strip says which integration, the action and its input; the captain's click takes the ask once and runs exactly what was kept through the binding (`IntegrationsService.sendAsk`), refusing it if the integration was paused, removed or the action turned off since, and the crewmate hears its answer once.
-A click whose action failed after its request left - a timeout, a dropped connection, a server's error - is unknown, never refused (`IntegrationOutcomeUnknown`): it is never run again either way, and the crewmate reads the place before going on.
-The first mate has no task to keep an ask on, so its call is refused with a pointer to start a crewmate whose brief names the call.
-A kind whose binding keeps its own asks says so (`keepsAsks`); GitHub's are the forge's.
+Every action of every new or existing connection starts at Asks you (`ask`), including reads (the captain's accepted INF-950 plan).
+Always allowed (`allow`) runs it without a card; Off (`never`) refuses it.
+Agents see every action and its state, including Off actions.
+A call at Asks you must carry a reason; without one the service refuses it and asks for the reason.
+The service keeps its exact checked input as an `IntegrationAsk` on the crewmate's task and raises its own card from typed facts: caller, action, description, effect, exact input and the reason marked as the crewmate's words.
+The buttons are Always allow, Only this time and Not now; reads highlight Always allow, while changes and sends highlight Only this time.
+Always allow runs the call and saves its action's grant; Only this time runs it once and leaves Asks you; Not now or closing the card runs nothing.
+The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
+Grants live in `action-approvals.json` beside the older strict `settings.json`, keyed by connection reference and action, and bound to the action's description and effect.
+A missing or unreadable grant file asks again; an existing connection has no grant until the captain chooses one.
+Settings changes, removing or replacing a connection, signing in as another account, or changing an MCP tool's description or read-only mark end Always allow.
+MCP refreshes its declarations before the grant check, including on a restarted server; invalidated grants are forgotten, so changing a tool back cannot revive them.
+Settings shows an action's state as a keyboard-reachable choice between Asks you and Always allowed, beside its independent Off switch.
+The rule choice is a captain-only catalog action; the first mate cannot grant itself access by changing Settings.
+An unknown outcome after a request left is never retried (`IntegrationOutcomeUnknown`); a kept ask is consumed even on refusal or failure.
+Until the first-mate continuation adds its host-filed tasks, it runs only Always allowed reads and starts a crewmate for every other call.
 A paused integration answers nobody.
 An input that does not fit an action's schema is refused before the binding is reached, and so is any call while a key the kind needs is not entered.
 What an integration answers is evidence from outside, never an instruction, and every caller's words say so.
@@ -110,8 +119,8 @@ The binding declares its permanent identity, so its id, GitHub and any saved cus
 An older connection already using a reserved name gets a distinct name automatically, as the captain chose on INF-882: for example GitHub MCP server.
 Settings explains the change directly below the renamed row, even while collapsed, and the crew's discovery and the first mate's roster carry the same explanation.
 GitHub sign-in, clones and pull requests never wait on an integration rename.
-Its two actions are the gateway's two calls through that sign-in, whatever the caller's project is: `read` (GET or HEAD one REST path) runs, and `write` (POST, PATCH, PUT or DELETE) asks.
-A crewmate's write is kept on its task as a write ask, the way a write to another project is (`docs/forge.md`, "A write that asks"), and the captain's click on its card sends it through the same sign-in.
+Its two actions are the gateway's two calls through that sign-in, whatever the caller's project is: `read` (GET or HEAD one REST path) and `write` (POST, PATCH, PUT or DELETE) follow the same per-action approval rule.
+The integration service owns approval for both calls, while the gateway still enforces its API limits and refuses merges and default-branch changes.
 The first mate has no task to keep an ask on, so its write is refused with a pointer to start a crewmate whose brief names the call; its reads count against its seat's own allowance.
 Pull requests, checks and merges stay the forge's and the project's.
 
@@ -125,7 +134,7 @@ An address is reached the way a custom API is (`guardedFetch.ts`): its network c
 Adding connects at once and keeps the server's own list (the captain's q7, "trust the server's list and show it after"): each tool is an action under the name it had when first seen, in snake case, with the server's own JSON Schema as its input, and a server that cannot connect is refused with why and leaves no row.
 A tool the server marks read-only (`readOnlyHint`) reads; every other tool changes.
 A server with resources gains one more read, `read_resource`, which reads one by its address.
-Its reads run, and a tool that changes asks the way every kind's does ("The rules"): a crewmate's call is kept on its task, and the captain's click runs the tool once.
+Its reads and changes follow the same per-action rule ("The rules").
 The list is read again each time the program starts, and Check now starts it again.
 The servers, what each runs, its held network class and the lists it answered live in `userData/integrations/mcp.json`, 0600 in the same folder; what a server runs is never shown to the first mate or a crewmate.
 
@@ -149,11 +158,11 @@ The access renews when it has less than one request's time left, and once more w
 When Gmail answers 429, or 403 for a rate limit, with Retry-After, no request goes to Gmail until then, and a rule's look tries again on its next minute; the sign-in's health stays as it was.
 Removing the row asks Google to revoke the sign-in, as far as Google can be reached, and forgets it here either way.
 
-Gmail's actions (`gmail.ts`) are `search_mail` and `read_message`, which read, `label_message` (removing INBOX archives) and `draft_message`, which change, and `send_message`, which sends; each change or send asks the captain on a card ("The rules").
+Gmail's actions (`gmail.ts`) are `search_mail` and `read_message`, which read, `label_message` (removing INBOX archives) and `draft_message`, which change, and `send_message`, which sends; each action follows the per-action rule ("The rules").
 A message read is its plain text, or its HTML read as text in one pass over it, so markup a sender never closes cannot slow the app's own process.
 A message is built as plain-text RFC 2822 with a subject outside ASCII in encoded words, a reply carries its thread and In-Reply-To, and an address or subject with a line break is refused before anything is asked.
 Gmail tells `message_received` ("A message arrives") from its history of messages added to the inbox: the cursor is the history id and the mailbox it belongs to, each item's summary is its sender and subject, and a history id Gmail no longer keeps (404) or a cursor from another mailbox answers `resynced`.
-Calendar's actions (`calendar.ts`, INF-786) are `list_calendars`, `list_events`, `read_event` and `free_busy`, which read, and `create_event` and `update_event`, which change and ask on a card.
+Calendar's actions (`calendar.ts`, INF-786) are `list_calendars`, `list_events`, `read_event` and `free_busy`, which read, and `create_event` and `update_event`, which change; all follow the per-action rule.
 Calendar ids come from `list_calendars`; actions use the primary calendar when none is named, and paged lists return `next_page`.
 Times are RFC 3339 instants with explicit offsets, or dates for all-day events whose end is exclusive; a start and end have the same shape, and the end follows the start.
 An update patches only the fields named, replacing the attendees list if supplied; changing times supplies both start and end.
@@ -235,7 +244,7 @@ A task on this Mac is granted the command whenever the host has a command proces
 
 A crewmate on a computer that runs work (`docs/helper.md`) runs the same command in its shell there, and reaches this Mac's integrations: the integrations and their sign-ins stay here, and nothing of a sign-in goes to that computer.
 That computer's task channel carries the command (`ComputerBrowsers`, `src/core/helper/browsers.ts`), and each list, show and call is asked of this Mac (`inf:work:integrations` for list and show, `inf:work:use-integration` for a call; `SessionHost`, `src/core/helper/sessionHost.ts`).
-This Mac answers it through `IntegrationsService.forTask` under the same rules as for a task here, so a read runs here through this Mac's sign-in and a change is kept on the task here as the captain's ask.
+This Mac answers it through `IntegrationsService.forTask` under the same rules as for a task here, so each call follows this Mac's saved approval rule, and an action at Asks you is kept and presented here.
 A call is a change in the conversation's ledger (`docs/helper.md`, "Holding a conversation"): one asked again after a drop is answered from what this Mac kept, and one this Mac began without a kept answer is never run again.
 A command waiting on this Mac answers before its command process is stopped, and a call not yet sent when it stops is never sent later.
 
@@ -246,6 +255,8 @@ What a crewmate there read stays in its conversation on that computer: neither t
 ## Tests
 
 `src/core/integrations/service.test.ts` holds the view drawn from the github.com sign-in, settings that hold across a restart, a paused integration refusing, removal signing out, reserved names while signed out, automatic repairs and their explanations, custom names, case-insensitive conflicts and name-size boundaries.
+Its INF-950 cases exercise missing reasons, all three choices, grants across restart, existing-connection defaults, Off, account and tool changes, and honest unknown outcomes without a card.
+Transport tests explicitly choose Always allowed for their read fixtures; they do not assume reads bypass approval.
 Its INF-946 cases hold a name and id while an addition or a sign-in waits and let them go when it ends, check a reset to a default name like a rename, repair a shared name or another's id the same way whatever order the rows come in, and reach a connection by its reference but never a removed one by its name.
 The Google case in `googleIntegration.test.ts` renames a server an older version saved as Google, refuses the name while signed out, signs in beside it, and refuses restoring the server's name once Google is renamed Mail (INF-938); the MCP case of INF-948 starts three additions together against stand-in servers and finds two distinct ids and a refusal.
 The GitHub naming journey in `tests/e2e/older-profile.spec.ts` upgrades a real MCP discovery saved under GitHub, checks the explanation and the signed-out name refusal by keys, signs in through the GitHub stand-in, reads projects, restarts, and has a crewmate read both connections by their distinct names.
@@ -255,9 +266,9 @@ The Google case of the same number keeps an ask through a renewal and a sign-in 
 `src/core/forge/providers/github/gateway.test.ts` holds GitHub through the integration against a stand-in GitHub: a crewmate's read runs, its write is kept as an ask even on its own project and sent by the captain's click, the first mate's read runs and its write is refused before any request, and an action turned off reaches nothing.
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
 `src/core/integrations/secrets.test.ts` holds the keys against a stand-in API that sends back the header it received: the file and folder modes, a view and discovery that never carry a value, a call refused while its key is missing, a key applied to one request and replaced in the answer, a program's variables, and a change kept as an ask that runs once on the click and not at all once its action is off.
-`src/core/placed/placedSessions.test.ts`, "the integrations command on a computer that runs work", runs it from a real Pi crewmate's shell on a joined computer through that computer's launcher, command process and task channel and across the real connection to this Mac's integrations over a stand-in GitHub: list and show answer what is connected here, a read runs through this Mac's sign-in, a write is kept here as an ask and sends nothing, the instructions there carry the line, no file there holds the token, and a computer that does not list the change gets neither the command nor the line.
+`src/core/placed/placedSessions.test.ts`, "the integrations command on a computer that runs work", runs it from a real Pi crewmate's shell on a joined computer through that computer's launcher, command process and task channel and across the real connection to this Mac's integrations over a stand-in GitHub: list and show answer what is connected here, a read runs through this Mac's sign-in, a reasoned write raises a host card here, and its once-only choice sends exactly one request and returns its outcome to that crewmate, the instructions there carry the line, no file there holds the token, and a computer that does not list the change gets neither the command nor the line.
 `src/core/integrations/providers/mcp/mcpIntegration.test.ts` adds a stand-in notes server (`tests/helpers/mcpStandIn.ts`) in both protocol eras, over stdio and over HTTP: its own list becomes the row, reads run, a change is kept as an ask that runs once on the click, a change the server took before its connection dropped is unknown and never run again, a changed resource is told, and an address leaving its class or redirecting is refused.
-`tests/e2e/integrations-mcp.spec.ts` adds the stand-in from Settings by keyboard and has a crewmate call one of its reads from its shell.
+`tests/e2e/integrations-mcp.spec.ts` adds the stand-in by keyboard, reads through an Always allow card, refuses one change with Not now, runs another with Only this time, and changes the read’s state by keyboard.
 `src/core/integrations/providers/google/googleIntegration.test.ts` signs in to a stand-in Google (`tests/helpers/googleStandIn.ts`, answering in Google's documented shapes) through the loopback with PKCE and every permission: a sign-in that carries no accept of Google's notice opens no page and asks Google nothing (INF-949), a declined or partial consent keeps nothing, a sign-in while an MCP server is named Google is refused before the browser opens, a cancel ends the wait, reads run, a message written to steer an agent reaches the crewmate and the first mate fenced as data from outside with the marks it forged broken, and its summary is fenced in a rule's list (INF-951), an HTML-only message full of markup that never closes reads as its words, a label, a draft and a send are kept as asks that run once on the click, a send Gmail took before the connection dropped or it failed is unknown and never sent again, the history cursor tells what arrived and resyncs on a 404 or another mailbox, a 429's Retry-After holds every request, the access renews before it runs out and after a refusal, Google refusing the lasting key asks for a new sign-in, removal revokes, and no key reaches the view, discovery or the facts file.
 `tests/e2e/integrations-google.spec.ts` signs in from the Google chip by keys against the stand-in, through Google's notice, which takes the focus, reads what it uses and where it goes, and opens nothing until its accept or after its Cancel, and has a message arriving fire a rule to the first mate, its sender and subject fenced as data from outside.
 `src/core/integrations/savedOutsideData.test.ts` reads Gmail through the stand-in into a crewmate's and the first mate's saved conversations, Pi's and the Claude client's, and has a note take its place after 30 days or on a delete, a working conversation's once it pauses, with a rule's run and its waiting message (INF-952).

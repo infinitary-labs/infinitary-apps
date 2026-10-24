@@ -2,6 +2,7 @@ import { randomBytes, randomUUID } from "node:crypto";
 import {
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
+  type IntegrationApprovalChoice,
   type IntegrationKind,
   type IntegrationSettingsPatch,
   type IntegrationSignInConsent,
@@ -19,6 +20,7 @@ import type { KeptOutsideData } from "@shared/savedOutsideData";
 import type { IntegrationAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
 import type { LegacyCalls } from "../storage/outsideDataScrub";
 import {
+  type IntegrationActionSpec,
   type IntegrationAnswer,
   type IntegrationBinding,
   type IntegrationCaller,
@@ -46,9 +48,8 @@ export type IntegrationsServiceOptions = {
   /** The keys the kinds sign in with: the bridge now, the secret manager later. */
   secrets: IntegrationSecrets;
   /**
-   * A task's asks (docs/integrations.md, "The rules"): an action that
-   * changes or sends is kept on the caller's task as a write ask, and the
-   * captain's click on its card takes it once (`TaskService`).
+   * A task's unapproved action is kept with its reason and exact input;
+   * the host presents its card and the captain's choice takes it once.
    */
   asks?: IntegrationAskStore;
   /**
@@ -90,12 +91,14 @@ export type TaskIntegrations = {
     action: string,
     input: unknown,
     signal?: AbortSignal,
+    reason?: string,
   ) => Promise<IntegrationAnswer>;
 };
 
 /** Where a task's asks are kept: the task's own write asks. */
 export type IntegrationAskStore = {
   keep: (taskId: string, ask: IntegrationAsk) => void;
+  present?: (taskId: string, ask: IntegrationAsk) => void;
   take: (taskId: string, askId: string) => { ask: WriteAsk } | { refused: string };
   record: (taskId: string, askId: string, outcome: WriteAskOutcome) => void;
 };
@@ -205,7 +208,7 @@ export class IntegrationsService {
         ...(view.account ? { account: view.account } : {}),
         health: view.health,
         ...(view.paused ? { paused: true } : {}),
-        actions: view.actions.filter((action) => action.enabled).map((action) => action.name),
+        actions: view.actions.map(({ name, rule }) => ({ name, rule })),
         ...(view.events ? { events: view.events.map((event) => event.name) } : {}),
       };
     });
@@ -230,7 +233,7 @@ export class IntegrationsService {
         return {
           name: spec.name,
           effect: spec.effect,
-          rule: integrationRule(spec.effect, enabled),
+          rule: integrationRule(this.allowed(row, spec), enabled),
           description: spec.description,
           input: spec.schema ?? spec.input.toJSONSchema(),
         };
@@ -280,8 +283,21 @@ export class IntegrationsService {
     name: string,
     action: string,
     input: unknown,
+    reason?: string,
   ): Promise<IntegrationAnswer> {
-    const row = this.find(name);
+    let row = this.find(name);
+    if (!("connection" in row)) return row;
+    if (row.settings.paused)
+      return {
+        text: `${this.viewOf(row).name} is paused. The captain resumes it in Settings → Integrations.`,
+        refused: "refused",
+      };
+    try {
+      await row.binding.prepare?.(row.connection.id);
+    } catch (error) {
+      return { text: this.options.secrets.redact(String(error)), refused: "refused" };
+    }
+    row = this.find(name);
     if (!("connection" in row)) return row;
     const view = this.viewOf(row);
     if (view.paused)
@@ -314,8 +330,10 @@ export class IntegrationsService {
         text: `${view.name} needs ${missing.join(" and ")} before it can do anything. The captain enters it in Settings → Integrations; never ask for it in a message, a card or a task.`,
         refused: "refused",
       };
-    if (spec.effect !== "reads" && !row.binding.keepsAsks)
-      return this.keepAsk(caller, row, view.name, spec.name, parsed.data);
+    // Piece 1 preserves the first mate's existing read-only reach; its own
+    // host-filed approval tasks are the continuation, not a task-less write path.
+    if (!this.allowed(row, spec) || (caller.kind === "firstmate" && spec.effect !== "reads"))
+      return this.keepAsk(caller, row, view.name, spec, parsed.data, reason);
     return (await this.run(row, view.name, spec.name, parsed.data, caller)).answer;
   }
 
@@ -325,7 +343,11 @@ export class IntegrationsService {
    * its action still allow it. Its answer comes back with every kept key
    * replaced, and it is never run again.
    */
-  async sendAsk(taskId: string, askId: string): Promise<IntegrationAskSent> {
+  async sendAsk(
+    taskId: string,
+    askId: string,
+    choice: IntegrationApprovalChoice = "once",
+  ): Promise<IntegrationAskSent> {
     const asks = this.options.asks;
     const taken = asks?.take(taskId, askId) ?? { refused: "nothing keeps asks here." };
     if ("refused" in taken)
@@ -347,7 +369,16 @@ export class IntegrationsService {
         ...(answer !== undefined ? { answer } : {}),
       };
     };
-    const row = this.rows().find((entry) => entry.connection.id === ask.integration);
+    if (choice === "deny")
+      return done({ kind: "refused", why: "The captain chose Not now. Nothing ran." });
+    let row = this.rows().find((entry) => entry.connection.id === ask.integration);
+    if (!row) return done({ kind: "refused", why: `${ask.place} is no longer connected` });
+    try {
+      await row.binding.prepare?.(row.connection.id);
+    } catch (error) {
+      return done({ kind: "refused", why: this.options.secrets.redact(String(error)) });
+    }
+    row = this.rows().find((entry) => entry.connection.id === ask.integration);
     if (!row) return done({ kind: "refused", why: `${ask.place} is no longer connected` });
     // The id alone can name a connection added after this one was removed.
     if (ask.connection === undefined)
@@ -365,12 +396,18 @@ export class IntegrationsService {
     if (view.paused) return done({ kind: "refused", why: `${view.name} is paused` });
     if (!spec || row.settings.off?.includes(spec.name))
       return done({ kind: "refused", why: `${view.name}'s action ${ask.action} is off` });
+    if (!ask.signature || ask.signature !== this.signature(spec))
+      return done({
+        kind: "refused",
+        why: "The action changed since it was asked; call again with a reason.",
+      });
     const missing = this.missingKeys(row);
     if (missing.length > 0)
       return done({ kind: "refused", why: `${view.name} needs ${missing.join(" and ")}` });
     const parsed = spec.input.safeParse(JSON.parse(ask.input));
     if (!parsed.success)
       return done({ kind: "refused", why: `its input no longer fits ${view.name}'s ${spec.name}` });
+    if (choice === "always") this.grant(row, spec, true);
     const { answer, unknown } = await this.run(row, view.name, spec.name, parsed.data, {
       kind: "task",
       taskId,
@@ -418,7 +455,10 @@ export class IntegrationsService {
       return {
         answer: {
           text: redact(
-            `${name} could not do that: ${error instanceof Error ? error.message : String(error)}`,
+            error instanceof IntegrationOutcomeUnknown
+              ? `${name}'s ${action} has an unknown outcome: ${error.message}
+Do not repeat this call; read ${name} to check what happened first.`
+              : `${name} could not do that: ${error instanceof Error ? error.message : String(error)}`,
           ),
           refused: "refused",
         },
@@ -427,22 +467,24 @@ export class IntegrationsService {
     }
   }
 
-  /**
-   * An action that changes or sends asks the captain on a card (the
-   * captain's q5 on INF-775): a task's is kept with its exact input, and
-   * the first mate, which has no task to keep it on, starts a crewmate.
-   */
+  /** The host keeps the exact call and presents its own card (INF-950). */
   private keepAsk(
     caller: IntegrationCaller,
     row: Row,
     name: string,
-    action: string,
+    spec: IntegrationActionSpec,
     input: unknown,
+    reason?: string,
   ): IntegrationAnswer {
     if (caller.kind !== "task" || !this.options.asks)
       return {
-        text: `Not run: ${name}'s ${action} changes something outside, so it asks the captain on a card, and only a crewmate's card can carry the exact call. Start a crewmate whose brief names the call.`,
+        text: `Not run: ${name}'s ${spec.name} asks the captain. Start a crewmate whose brief names the call and its reason.`,
         refused: "refused",
+      };
+    if (typeof reason !== "string" || !reason.trim())
+      return {
+        text: `Not run: ${name}'s ${spec.name} asks the captain. Call again with --reason explaining why this action is needed.`,
+        refused: "invalid",
       };
     const ask: IntegrationAsk = {
       id: `ia${randomUUID().replace(/-/g, "").slice(0, 12)}`,
@@ -450,20 +492,50 @@ export class IntegrationsService {
       integration: row.connection.id,
       connection: row.ref,
       place: name,
-      action,
+      action: spec.name,
+      label: spec.label,
+      description: spec.description,
+      effect: spec.effect,
+      signature: this.signature(spec),
+      reason,
       input: JSON.stringify(input),
       at: (this.options.now ?? Date.now)(),
     };
     this.options.asks.keep(caller.taskId, ask);
+    this.options.asks.present?.(caller.taskId, ask);
     return {
-      text: [
-        `Not run: ${name}'s ${action} changes something outside, so it asks the captain. Kept as ask ${ask.id}: ${action} on ${name}.`,
-        `To ask, emit_card with one action whose effect is {"kind":"request_write","ask":"${ask.id}"} and no label - the app adds the exact call and names the button - beside your own Not now, and say in the body why it is needed.`,
-        "Only the captain's click runs it, once, and you then hear its answer. Never run it another way.",
-      ].join("\n"),
-      // Kept is not run: the command exits 1 with these words (INF-824).
+      text: `Not run: ${name}'s ${spec.name} asks the captain. The app raised its approval card for ask ${ask.id}. Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
       refused: "refused",
     };
+  }
+
+  /** Bind a grant to what the tool says it does, including MCP's read-only mark. */
+  private signature(spec: IntegrationActionSpec): string {
+    return JSON.stringify([spec.description, spec.effect]);
+  }
+
+  private allowed(row: Row, spec: IntegrationActionSpec): boolean {
+    return this.options.store.approvals()[row.ref]?.[spec.name] === this.signature(spec);
+  }
+
+  private grant(row: Row, spec: IntegrationActionSpec, allowed: boolean): void {
+    const all = this.options.store.approvals();
+    const actions = all[row.ref] ?? {};
+    if (allowed) actions[spec.name] = this.signature(spec);
+    else delete actions[spec.name];
+    if (Object.keys(actions).length) all[row.ref] = actions;
+    else delete all[row.ref];
+    this.options.store.writeApprovals(all);
+    this.changed();
+  }
+
+  /** Captain-only action-catalog setting, separate from agents' rename/pause changes. */
+  setRule(id: string, action: string, allowed: boolean): IntegrationsView {
+    const row = this.byId(id);
+    const spec = row.connection.actions.find((entry) => entry.name === action);
+    if (!spec) throw new IntegrationRefusal(`${this.viewOf(row).name} has no action ${action}.`);
+    this.grant(row, spec, allowed);
+    return this.view();
   }
 
   /** The required slots of a row that hold no value, by their words. */
@@ -479,7 +551,8 @@ export class IntegrationsService {
     return {
       list: async () => this.roster(),
       show: async (name) => this.show(name),
-      call: (name, action, input) => this.call({ kind: "task", taskId }, name, action, input),
+      call: (name, action, input, _signal, reason) =>
+        this.call({ kind: "task", taskId }, name, action, input, reason),
     };
   }
 
@@ -693,6 +766,8 @@ export class IntegrationsService {
         );
       const off = new Set(next.off ?? []);
       for (const [name, on] of Object.entries(patch.actions)) {
+        const spec = row.connection.actions.find((entry) => entry.name === name);
+        if (spec && on !== !off.has(name)) this.grant(row, spec, false);
         if (on) off.delete(name);
         else off.add(name);
       }
@@ -763,6 +838,18 @@ export class IntegrationsService {
       );
     this.repairNames(rows, settings);
     this.referenceConnections(rows);
+    // Forget invalidated grants, not just ignore them: changing a tool back must ask again.
+    const all = this.options.store.approvals();
+    const valid: Record<string, Record<string, string>> = {};
+    for (const row of rows)
+      for (const spec of row.connection.actions) {
+        if (all[row.ref]?.[spec.name] === this.signature(spec)) {
+          const actions = valid[row.ref] ?? {};
+          actions[spec.name] = this.signature(spec);
+          valid[row.ref] = actions;
+        }
+      }
+    if (JSON.stringify(all) !== JSON.stringify(valid)) this.options.store.writeApprovals(valid);
     return rows;
   }
 
@@ -885,7 +972,7 @@ export class IntegrationsService {
           label: spec.label,
           effect: spec.effect,
           enabled,
-          rule: integrationRule(spec.effect, enabled),
+          rule: integrationRule(this.allowed(row, spec), enabled),
         };
       }),
       ...(row.connection.events?.length

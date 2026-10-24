@@ -112,6 +112,21 @@ export class IntegrationSettingsStore {
     this.writeFile(CONNECTIONS_FILE, refs);
   }
 
+  /** INF-950: connection-bound grants live beside the older strict settings file. */
+  approvals(): Record<string, Record<string, string>> {
+    try {
+      return z
+        .record(z.string(), z.record(z.string(), z.string()))
+        .parse(JSON.parse(readFileSync(join(this.root, "action-approvals.json"), "utf8")));
+    } catch {
+      return {};
+    }
+  }
+
+  writeApprovals(value: Record<string, Record<string, string>>): void {
+    this.writeFile("action-approvals.json", value);
+  }
+
   /** Write whole, never readable by anyone else even mid-write. */
   private writeFile(name: string, value: unknown): void {
     mkdirSync(this.root, { recursive: true, mode: 0o700 });

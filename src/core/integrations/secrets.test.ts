@@ -168,7 +168,16 @@ describe("integration keys", () => {
 
   it("refuses an action whose key is not entered before anything reaches the place", async () => {
     const { api, integrations } = await fixture();
-    const answer = await integrations.forTask("task-1").call("linear", "search", { query: "bug" });
+    integrations.setRule("linear", "search", true);
+    const answer = await integrations
+      .forTask("task-1")
+      .call(
+        "linear",
+        "search",
+        { query: "bug" },
+        undefined,
+        "To perform the task’s requested action.",
+      );
     expect(answer.refused).toBe("refused");
     expect(answer.text).toContain("needs Linear key");
     expect(answer.text).toContain("Settings → Integrations");
@@ -178,7 +187,16 @@ describe("integration keys", () => {
   it("applies the key to one request and replaces it in the answer, even when the place sends it back", async () => {
     const { api, integrations } = await fixture();
     integrations.setSecret("linear", "LINEAR_API_KEY", KEY);
-    const answer = await integrations.forTask("task-1").call("linear", "search", { query: "bug" });
+    integrations.setRule("linear", "search", true);
+    const answer = await integrations
+      .forTask("task-1")
+      .call(
+        "linear",
+        "search",
+        { query: "bug" },
+        undefined,
+        "To perform the task’s requested action.",
+      );
     expect(api.seen).toEqual([
       expect.objectContaining({ method: "GET", authorization: `Bearer ${KEY}` }),
     ]);
@@ -202,15 +220,27 @@ describe("integration keys", () => {
     const { api, tasks, integrations } = await fixture();
     integrations.setSecret("linear", "LINEAR_API_KEY", KEY);
 
-    const firstmate = await integrations.call({ kind: "firstmate" }, "linear", "create", {
-      title: "Crash on open",
-    });
+    const firstmate = await integrations.call(
+      { kind: "firstmate" },
+      "linear",
+      "create",
+      {
+        title: "Crash on open",
+      },
+      "To perform the task’s requested action.",
+    );
     expect(firstmate.refused).toBe("refused");
     expect(firstmate.text).toContain("Start a crewmate whose brief names the call");
 
     const kept = await integrations
       .forTask("task-1")
-      .call("linear", "create", { title: "Crash on open" });
+      .call(
+        "linear",
+        "create",
+        { title: "Crash on open" },
+        undefined,
+        "To perform the task’s requested action.",
+      );
     expect(api.seen).toEqual([]);
     const ask = tasks.get("task-1")?.delivery?.writeAsks?.[0];
     expect(ask).toMatchObject({
@@ -220,7 +250,7 @@ describe("integration keys", () => {
       action: "create",
       input: JSON.stringify({ title: "Crash on open" }),
     });
-    expect(kept.text).toContain(`{"kind":"request_write","ask":"${ask?.id}"}`);
+    expect(kept.text).toContain(`The app raised its approval card for ask ${ask?.id}`);
     // Kept is not run, so it answers as a refusal (the captain's INF-824 choice).
     expect(kept.refused).toBe("refused");
     // The card's strip says what the click runs, with its input and never the key.
@@ -252,7 +282,15 @@ describe("integration keys", () => {
   it("runs nothing on a click when the action was turned off after it was asked", async () => {
     const { api, tasks, integrations } = await fixture();
     integrations.setSecret("linear", "LINEAR_API_KEY", KEY);
-    await integrations.forTask("task-1").call("linear", "create", { title: "Crash on open" });
+    await integrations
+      .forTask("task-1")
+      .call(
+        "linear",
+        "create",
+        { title: "Crash on open" },
+        undefined,
+        "To perform the task’s requested action.",
+      );
     const ask = tasks.get("task-1")?.delivery?.writeAsks?.[0];
     integrations.configure("linear", { actions: { create: false } });
 

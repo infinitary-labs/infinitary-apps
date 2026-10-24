@@ -9,6 +9,7 @@ import {
   STAND_IN_CLIENT_SECRET,
   startGoogleStandIn,
 } from "../../../tests/helpers/googleStandIn";
+import { allowIntegrationReads } from "../../../tests/helpers/integrationApprovals";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
 import { Scheduler } from "../orchestrator/scheduler";
@@ -115,6 +116,8 @@ async function world() {
   const service = integrations;
   cleanup.push(() => service.dispose());
   await service.signIn("google", NOTICE_ACCEPTED);
+  // Content retention starts after the captain has allowed these reads.
+  allowIntegrationReads(service);
 
   const store = new ScheduleStore(db);
   const inbox = new InboxStore(db);

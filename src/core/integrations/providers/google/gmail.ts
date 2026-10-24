@@ -15,8 +15,8 @@ import type {
  *
  * Each action declares what it does to the world: a search and a read
  * change nothing; a label and a draft change the mailbox; a send reaches
- * other people. A change or a send asks the captain on a card first (the
- * captain's q5 on INF-775), which the integrations service holds for every
+ * other people. Every action follows its saved approval state (INF-950),
+ * which the integrations service holds for every
  * kind.
  */
 
@@ -88,7 +88,7 @@ export const GMAIL_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Label or archive a message",
     effect: "changes",
     description:
-      'Add or remove labels on one message by its id, naming each label as Gmail shows it (add: ["Receipts"], remove: ["UNREAD"]); removing INBOX archives it and adding INBOX brings it back. It asks the captain on a card first.',
+      'Add or remove labels on one message by its id, naming each label as Gmail shows it (add: ["Receipts"], remove: ["UNREAD"]); removing INBOX archives it and adding INBOX brings it back. Its approval state controls whether the host asks.',
     input: z
       .strictObject({
         id: messageIdSchema,
@@ -104,7 +104,7 @@ export const GMAIL_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Draft a message",
     effect: "changes",
     description:
-      "Write a draft in the captain's Gmail; nothing is sent. to and cc are addresses (Ada Park <ada@example.com>), body is plain text, and reply_to, a message's id, makes it a reply in that message's thread, with Re: and its subject when no subject is given. It asks the captain on a card first.",
+      "Write a draft in the captain's Gmail; nothing is sent. to and cc are addresses (Ada Park <ada@example.com>), body is plain text, and reply_to, a message's id, makes it a reply in that message's thread, with Re: and its subject when no subject is given. Its approval state controls whether the host asks.",
     input: outgoingSchema,
   },
   {
@@ -112,7 +112,7 @@ export const GMAIL_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Send a message",
     effect: "sends",
     description:
-      "Send a message from the captain's Gmail, with the same input as draft_message. It asks the captain on a card first, which shows exactly what is sent.",
+      "Send a message from the captain's Gmail, with the same input as draft_message. Its approval state controls whether the host asks before sending.",
     input: outgoingSchema,
   },
 ];

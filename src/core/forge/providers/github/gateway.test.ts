@@ -6,6 +6,7 @@ import { join } from "node:path";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
 import type { ForgeWriteAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import {
   FileIntegrationSecrets,
@@ -748,7 +749,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
           },
           gateway: (host) => ({
             read: (task, input) => service.read(task, input, { host }),
-            write: (task, input) => service.write(task, input, { host }),
+            write: (task, input) => service.write(task, input, { host }, true),
             readAsSeat: (input) => service.readAsSeat(input, host),
           }),
         }),
@@ -756,14 +757,30 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       store: new IntegrationSettingsStore(
         join(scratchDir("fm-enterprise-integrations-"), "settings"),
       ),
+      asks: {
+        keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+        take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
+        record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+      },
       secrets: new FileIntegrationSecrets(join(scratchDir("fm-enterprise-secrets-"), "secrets")),
     });
     const row = integrations.view().integrations[0];
     if (!row) throw new Error("Enterprise row missing");
     expect(row).toMatchObject({ host, kind: "github-enterprise", name: host });
+    allowIntegrationReads(integrations);
     const crew = integrations.forTask("task-1");
     expect(
-      JSON.parse((await crew.call(row.id, "read", { path: "/user/repos" })).text),
+      JSON.parse(
+        (
+          await crew.call(
+            row.id,
+            "read",
+            { path: "/user/repos" },
+            undefined,
+            "To perform the task’s requested action.",
+          )
+        ).text,
+      ),
     ).toMatchObject({ status: 200 });
     const change = {
       method: "POST",
@@ -771,23 +788,54 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       body: JSON.stringify({ body: "Thanks" }),
     };
     const before = seen.length;
-    expect(await crew.call(row.id, "write", change)).toMatchObject({ refused: "refused" });
+    expect(
+      await crew.call(
+        row.id,
+        "write",
+        change,
+        undefined,
+        "To perform the task’s requested action.",
+      ),
+    ).toMatchObject({ refused: "refused" });
     expect(seen).toHaveLength(before);
     const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(-1);
-    expect(ask).toMatchObject({ host, kind: "github", via: "account" });
-    expect(await service.sendAsk("task-1", ask?.id ?? "")).toMatchObject({ ok: true });
+    expect(ask).toMatchObject({ kind: "integration", integration: row.id });
+    expect(await integrations.sendAsk("task-1", ask?.id ?? "")).toMatchObject({ ok: true });
     expect(
       JSON.parse(
-        (await integrations.call({ kind: "firstmate" }, row.id, "read", { path: "/user/repos" }))
-          .text,
+        (
+          await integrations.call(
+            { kind: "firstmate" },
+            row.id,
+            "read",
+            { path: "/user/repos" },
+            "To perform the task’s requested action.",
+          )
+        ).text,
       ),
     ).toMatchObject({ status: 200 });
     const count = seen.length;
-    expect(await integrations.call({ kind: "firstmate" }, row.id, "write", change)).toMatchObject({
+    expect(
+      await integrations.call(
+        { kind: "firstmate" },
+        row.id,
+        "write",
+        change,
+        "To perform the task’s requested action.",
+      ),
+    ).toMatchObject({
       refused: "refused",
     });
     integrations.configure(row.id, { paused: true });
-    expect(await crew.call(row.id, "read", { path: "/user/repos" })).toMatchObject({
+    expect(
+      await crew.call(
+        row.id,
+        "read",
+        { path: "/user/repos" },
+        undefined,
+        "To perform the task’s requested action.",
+      ),
+    ).toMatchObject({
       refused: "refused",
     });
     expect(seen).toHaveLength(count);
@@ -806,14 +854,30 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
             checkNow: async () => {},
             signOut: () => {},
           },
-          gateway: service,
+          gateway: {
+            read: (task, input, through) => service.read(task, input, through),
+            write: (task, input, through) => service.write(task, input, through, true),
+            readAsSeat: (input) => service.readAsSeat(input),
+          },
         }),
       ],
       store: new IntegrationSettingsStore(join(scratchDir("fm-integrations-"), "integrations")),
+      asks: {
+        keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+        take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
+        record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+      },
       secrets: new FileIntegrationSecrets(join(scratchDir("fm-integration-keys-"), "secrets")),
     });
+    allowIntegrationReads(integrations);
     const crewmate = integrations.forTask("task-1");
-    const other = await crewmate.call("GitHub", "read", { path: "/repos/acme/site/issues" });
+    const other = await crewmate.call(
+      "GitHub",
+      "read",
+      { path: "/repos/acme/site/issues" },
+      undefined,
+      "To perform the task’s requested action.",
+    );
     expect(JSON.parse(other.text)).toMatchObject({ status: 200, body: [{ number: 5 }] });
 
     // Even on the task's own project, a change through the integration is kept as an ask.
@@ -822,15 +886,25 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       path: "/repos/octo/meter/issues/1/comments",
       body: JSON.stringify({ body: "Thanks" }),
     };
-    const kept = await crewmate.call("github", "write", comment);
-    expect(kept.text).toContain("Not sent: it goes through the GitHub integration");
+    const kept = await crewmate.call(
+      "github",
+      "write",
+      comment,
+      undefined,
+      "To perform the task’s requested action.",
+    );
+    expect(kept.text).toContain("The app raised its approval card");
     // Kept is not sent, so it answers as a refusal (the captain's INF-824 choice).
     expect(kept.refused).toBe("refused");
     expect(seen.filter((request) => request.method === "POST")).toEqual([]);
     const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(-1);
-    expect(ask).toMatchObject({ method: "POST", path: comment.path, via: "account" });
-    const click = await service.sendAsk("task-1", ask?.id ?? "");
-    expect(click).toMatchObject({ ok: true, outcome: { kind: "answered", status: 201 } });
+    expect(ask).toMatchObject({
+      kind: "integration",
+      action: "write",
+      input: JSON.stringify(comment),
+    });
+    const click = await integrations.sendAsk("task-1", ask?.id ?? "");
+    expect(click).toMatchObject({ ok: true, outcome: { kind: "ran" } });
     expect(seen.filter((request) => request.method === "POST")).toEqual([
       {
         method: "POST",
@@ -842,16 +916,36 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
 
     // The first mate reads as its seat, and has no card to carry a change.
     const firstmate = { kind: "firstmate" } as const;
-    const repos = await integrations.call(firstmate, "github", "read", { path: "/user/repos" });
+    const repos = await integrations.call(
+      firstmate,
+      "github",
+      "read",
+      { path: "/user/repos" },
+      "To perform the task’s requested action.",
+    );
     expect(JSON.parse(repos.text)).toMatchObject({ status: 200 });
     const before = seen.length;
-    const refused = await integrations.call(firstmate, "github", "write", comment);
+    const refused = await integrations.call(
+      firstmate,
+      "github",
+      "write",
+      comment,
+      "To perform the task’s requested action.",
+    );
     expect(refused).toMatchObject({ refused: "refused" });
     expect(seen).toHaveLength(before);
 
     // An action turned off in Settings reaches nobody.
     integrations.configure("github", { actions: { read: false } });
-    expect(await crewmate.call("github", "read", { path: "/user/repos" })).toMatchObject({
+    expect(
+      await crewmate.call(
+        "github",
+        "read",
+        { path: "/user/repos" },
+        undefined,
+        "To perform the task’s requested action.",
+      ),
+    ).toMatchObject({
       refused: "refused",
     });
     expect(seen).toHaveLength(before);

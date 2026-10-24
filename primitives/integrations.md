@@ -37,19 +37,21 @@ Integration keys still use the temporary bridge below until INF-30 and INF-785 m
 - The service owns every name and id (INF-946): names compare ignoring case and spaces, one compared form has one holder, and a clash is repaired with an explanation rather than resolved by list order.
 - Discovery: `roster`, `show` and `view` list connections, each action with its effect, rule and input schema, and each event with its filters; a caller may name a connection by name, id or reference, and an ambiguous name is refused with candidates.
 - Reads, changes and sends: each action declares its effect, `reads`, `changes` or `sends`, in its binding, never read off its name.
-- `call` checks the input against the action's schema and runs a read at once; a change or send is kept as an ask ("Authority").
+- `call` checks the input against the action's schema and runs an Always allowed action; an action at Asks you needs a reason and is kept as an ask ("Authority").
 - Events: a connection may declare events (`IntegrationEventSpec`) with a `look` that answers what arrived since a cursor, `resynced` when a cursor was lost, and items as an id plus a one-line summary, never a body.
 - Automation is the consumer of events (`listenable`, `look`); this primitive never starts work by itself.
 - Lifecycle: `add` (a kind added from a form), `signIn` and `cancelSignIn` (a kind signed in in the person's browser), `configure` (name, paused, actions turned off), `check`, `setSecret` and `remove`, which forgets the connection's keys and signs it out where the kind owns the sign-in.
 
 ## Authority
 
-- Until the secret manager's rules land, an action's rule follows from its effect (the captain's q5 on INF-775): a read is `allow`, a change or send is `ask`, and an action turned off is `never`.
-- The service holds that rule for every kind: a call that changes or sends never reaches the binding without the captain's click.
-- A crewmate's change or send is kept on its task as a write ask of kind `integration` with its exact checked input, and the crewmate puts it on a card whose action is `request_write` ([Cards and consent](cards-and-consent.md)).
-- The click runs exactly what was kept, once, through `IntegrationsService.sendAsk`, and only while the ask's reference still names the same connection and the action is still on.
-- The first mate has no task to keep an ask on, so its change or send is refused with a pointer to start a crewmate whose brief names the call.
-- A kind that keeps its own asks says so (`keepsAsks`); GitHub's writes are the forge's write asks (`../docs/forge.md`, "A write that asks").
+- Every connection's actions start at Asks you (`ask`), including existing connections, until the captain chooses Always allow (`allow`); Off is `never` (INF-950).
+- The service keeps a reasoned call and raises its own card with caller, action, effect, description, exact checked input and the attributed agent reason.
+- Always allow runs and saves the grant, Only this time runs once without a grant, and Not now or closing runs nothing; outward actions highlight Only this time.
+- The click consumes the ask before the call and delivers its outcome once through `write-answered`.
+- Grants live per connection reference and action in `action-approvals.json`, beside the older strict settings file, and end on Settings changes, connection replacement, another account or a changed MCP description/read-only mark.
+- The captain-only `integration-action-rule` catalog line changes Asks you or Always allowed; the existing switch remains Off.
+- The first mate runs only Always allowed reads until its continuation supplies task rows for its calls; it starts a crewmate for other actions.
+- Project forge delivery and event summaries stay outside this rule.
 - A paused integration answers nobody, and a call while a needed key is missing is refused.
 - Adding GitHub or Google is a sign-in, so it is the captain's own; `integration-remove` needs the captain's own words.
 - Secret-use boundary: a kind that signs in with a key declares slots, never values; values sit behind `IntegrationSecrets` ([`../src/core/integrations/secrets.ts`](../src/core/integrations/secrets.ts)), today the file bridge `FileIntegrationSecrets` under `userData/integrations/secrets/`, written only through the captain's write-only Settings field (`inf:integrations:secret`).
@@ -60,7 +62,7 @@ Integration keys still use the temporary bridge below until INF-30 and INF-785 m
 ## Compositions
 
 - With [Automation](automation.md): a rule's When names an integration event by its connection reference and declared filters; Automation looks, and its owner starts the work ([`../docs/automation.md`](../docs/automation.md), "Events").
-- With [Cards and consent](cards-and-consent.md): every change or send is one exact effect on a `request_write` card.
+- With [Cards and consent](cards-and-consent.md): every action at Asks you is an exact held call on a host-authored approval card.
 - With [Tasks](tasks.md): a crewmate's kept ask lives on its task, and its answer reaches the crewmate once through its durable lane.
 - With [App actions](app-actions.md): the first mate changes integrations through `app_change` (`integration-add`, `integration-add-mcp`, `integration-remove`, `integration-settings`, `integration-check`), the same channels the Settings tab writes.
 - On another computer: a crewmate on a computer that runs work runs the same command there, and each list, show and call is asked of the home (`inf:work:integrations`, `inf:work:use-integration`), answered through `IntegrationsService.forTask` under the same rules; sign-ins and keys never leave the home.
@@ -76,7 +78,7 @@ Integration keys still use the temporary bridge below until INF-30 and INF-785 m
 
 ## Uses
 
-- Gmail and Calendar through one Google row: reads run, labels, drafts, sends and event changes ask on a card, and `message_received` and `event_changed` fire Automation rules.
+- Gmail and Calendar through one Google row: every action follows its saved approval state, and `message_received` and `event_changed` fire Automation rules.
 - MCP servers the captain adds by name and command or address: the server's own tool list becomes the actions, read-only tools read, and `resource_changed` tells resource subscriptions.
 - GitHub REST reads and writes through the forge's github.com sign-in for any repository, not only the task's project.
 - A crewmate on a computer that runs work reaching the home's integrations from its shell.

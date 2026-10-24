@@ -61,6 +61,8 @@ export type RequestMergeEffect = z.infer<typeof requestMergeEffectSchema>;
 export const requestWriteEffectSchema = z.object({
   kind: z.literal("request_write"),
   ask: z.string().min(1).max(64),
+  /** Only the host's integration approval card declares the duration or refusal. */
+  integration: z.enum(["always", "once", "deny"]).optional(),
 });
 export type RequestWriteEffect = z.infer<typeof requestWriteEffectSchema>;
 

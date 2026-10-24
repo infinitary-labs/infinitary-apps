@@ -169,7 +169,7 @@ type Opened = {
 function cardPriority(input: Pick<EmittedCardInput, "actions">): number {
   return input.actions.length > 0 ? 30 : 15;
 }
-const HOST_CARD_PRIORITY = 40;
+export const HOST_CARD_PRIORITY = 40;
 const HOST_NOTE_PRIORITY = 25;
 
 /** Firstmate-agent cards are id-prefixed so `CrewSupervisor.act` can route their answers. */

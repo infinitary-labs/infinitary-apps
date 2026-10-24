@@ -1085,6 +1085,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return services.integrations.view();
     },
     "inf:integrations:configure": (id, patch) => services.integrations.configure(id, patch),
+    "inf:integrations:rule": (id, action, allowed) =>
+      services.integrations.setRule(id, action, allowed),
     "inf:integrations:remove": (id) => services.integrations.remove(id),
     "inf:integrations:check": (id) => services.integrations.check(id),
     "inf:integrations:secret": (id, slot, value) =>

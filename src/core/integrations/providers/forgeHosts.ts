@@ -47,7 +47,6 @@ export function forgeHostIntegration(
   return {
     kind,
     many: true,
-    keepsAsks: true,
     connections: () =>
       hosts().flatMap((row) => {
         const id = forgeIntegrationId(kind, row.host);

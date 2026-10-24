@@ -1,24 +1,33 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import {
+  INTEGRATION_APPROVAL_WORDS,
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_MCP_WORDS,
   INTEGRATIONS_WORDS,
+  integrationApprovalTitle,
 } from "../../src/shared/integrations";
 import { SAMPLE_NOTES } from "../helpers/mcpStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
+import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
+import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
 import {
   MCP_NOTES_ACTION,
+  MCP_NOTES_CHANGE_MARKER,
   MCP_NOTES_NAME,
   MCP_NOTES_PROMPT_MARKER,
+  MCP_NOTES_REASON,
+  MCP_NOTES_REMINDER,
   MCP_NOTES_REPORT_PREFIX,
   mcpNotes,
 } from "./scenarios/mcpNotes";
 import { settingsSection } from "./settings";
+import { showCard, shownCard } from "./stack";
 import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
 
 /**
@@ -30,8 +39,9 @@ import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
  * - Promised result: the "MCP server" chip's form, filled and sent by keys
  *   alone, connects the server and opens its new row on the server's own
  *   tools (the captain's q7, "trust the server's list and show it after"),
- *   a read allowed and a change asking; a crewmate then runs one of its
- *   reads from its own shell and reports the server's answer.
+ *   every action asking; a crewmate's reasoned read raises the host's card,
+ *   Always allow saves its grant, Not now runs nothing, Only this time adds
+ *   a reminder without a grant, and keyboard Settings changes the read's rule.
  * - Data: the stand-in notes server (`tests/helpers/mcpStandIn.ts`) in the
  *   2026-07-28 protocol era, run as a program on this computer over stdio,
  *   reading a notes file in this test's folder.
@@ -60,6 +70,23 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
   launched = await launchApp({ withMockProvider: true, scenarios: [mcpNotes] });
   const { app, page } = launched;
   const view = () => page.evaluate(() => window.infinitary.integrations.list());
+  const approvalFor = async (title: string) => {
+    // INF-950: crew startup and its shell call precede the host's approval.
+    // Wait for that fact before showCard checks the presentation transition.
+    await expect
+      .poll(
+        () =>
+          page.evaluate(
+            async (wanted) =>
+              (await window.infinitary.cards.list()).some((card) => card.title === wanted),
+            title,
+          ),
+        { timeout: 60_000 },
+      )
+      .toBe(true);
+    await showCard(page, title);
+    return shownCard(page, title);
+  };
 
   await test.step("the chip's form adds the server and opens its row on its tools", async () => {
     await runFromSearch(app, page, "settings.integrations");
@@ -86,7 +113,7 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
     const actions = tab.locator('[data-integration-actions="mcp-notes"]');
     await expect(
       actions.locator(`[data-integration-action="${MCP_NOTES_ACTION}"] [data-integration-rule]`),
-    ).toHaveText(INTEGRATION_RULE_WORDS.allow);
+    ).toHaveText(INTEGRATION_RULE_WORDS.ask);
     await expect(
       actions.locator('[data-integration-action="add_note"] [data-integration-rule]'),
     ).toHaveText(INTEGRATION_RULE_WORDS.ask);
@@ -110,6 +137,23 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
     await input.click();
     await input.fill(`${SPAWN_PROMPT_MARKER} ${title}`);
     await input.press("Enter");
+    const approvalTitle = integrationApprovalTitle("List notes", MCP_NOTES_NAME);
+    const approval = await approvalFor(approvalTitle);
+    await expect(cardBody(page, approvalTitle).locator("body")).toContainText(MCP_NOTES_REASON);
+    const evidenceDir = process.env.INFINITARY_TASK_EVIDENCE_DIR;
+    if (evidenceDir) {
+      await resizeWindow(app, page, { width: 1280, height: 700 });
+      await pressKey(approval.locator('[data-card-size-toggle="maximize"]'), "Enter");
+    }
+    if (evidenceDir) {
+      await regionShot(approval, join(evidenceDir, "read-approval-after.png"));
+      await heroShot(app, page, { region: approval, name: "integration-action-approval" });
+    }
+    await pressKey(
+      approval.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.always, exact: true }),
+      "Enter",
+    );
+
     const outcome = async (): Promise<string> =>
       page.evaluate(async (wanted) => {
         const row = (await window.infinitary.tasks.board()).tasks.find(
@@ -121,6 +165,72 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
     const report = await outcome();
     for (const [index, note] of SAMPLE_NOTES.entries())
       expect(report).toContain(`${index + 1}. ${note}`);
+    expect(
+      (await view()).integrations[0]?.actions.find((a) => a.name === MCP_NOTES_ACTION)?.rule,
+    ).toBe("allow");
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${MCP_NOTES_CHANGE_MARKER}`);
+    await input.press("Enter");
+    const outwardTitle = integrationApprovalTitle("add_note", MCP_NOTES_NAME);
+    let outward = await approvalFor(outwardTitle);
+    // A refusal runs nothing and does not turn this action into Always allowed.
+    await pressKey(
+      outward.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.deny, exact: true }),
+      "Enter",
+    );
+    await expect
+      .poll(async () => {
+        const rows = await page.evaluate(() => window.infinitary.tasks.board());
+        const row = rows.tasks.find((task) => task.title === MCP_NOTES_CHANGE_MARKER);
+        return row
+          ? await page.evaluate(
+              async (id) => (await window.infinitary.tasks.detail(id))?.outcome,
+              row.id,
+            )
+          : "";
+      })
+      .toContain("sent nothing");
+    expect(JSON.parse(readFileSync(notes, "utf8")).notes).not.toContain(MCP_NOTES_REMINDER);
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${MCP_NOTES_CHANGE_MARKER} again`);
+    await input.press("Enter");
+    outward = await approvalFor(outwardTitle);
+    const keptCard = (await page.evaluate(() => window.infinitary.cards.list())).find(
+      (card) => card.title === outwardTitle,
+    );
+    expect(keptCard?.actions.find((action) => action.default)?.label).toBe(
+      INTEGRATION_APPROVAL_WORDS.once,
+    );
+    if (evidenceDir) {
+      const maximize = outward.locator('[data-card-size-toggle="maximize"]');
+      if (await maximize.count()) await pressKey(maximize, "Enter");
+      await regionShot(outward, join(evidenceDir, "outward-approval-after.png"));
+    }
+    await pressKey(
+      outward.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.once, exact: true }),
+      "Enter",
+    );
+    await expect
+      .poll(async () => JSON.parse(readFileSync(notes, "utf8")).notes)
+      .toContain(MCP_NOTES_REMINDER);
+    expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
+      "ask",
+    );
+    if (evidenceDir) await resizeWindow(app, page, { width: 1280, height: 800 });
+    await runFromSearch(app, page, "settings.integrations");
+    const settings = settingsSection(page, "integrations");
+    const actionRow = settings.locator(`[data-integration-action="${MCP_NOTES_ACTION}"]`);
+    if (!(await actionRow.isVisible()))
+      await pressKey(settings.locator('[data-integration-toggle="mcp-notes"]'), "Enter");
+    const choice = actionRow.locator("[data-integration-rule]");
+    await pressKey(choice, "Enter");
+    await expect(choice).toHaveText(INTEGRATION_RULE_WORDS.ask);
+    await pressKey(choice, "Enter");
+    await expect(choice).toHaveText(INTEGRATION_RULE_WORDS.allow);
+    if (evidenceDir)
+      await regionShot(
+        settings.locator('[data-integration-actions="mcp-notes"]'),
+        join(evidenceDir, "settings-after.png"),
+      );
+
     const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
     if (evidence) writeFileSync(join(evidence, "integrations-mcp-report.txt"), `${report}\n`);
   });

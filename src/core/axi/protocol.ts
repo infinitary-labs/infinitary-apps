@@ -43,7 +43,7 @@ export type IntegrationOp = "integrations.list" | "integrations.show" | "integra
 export type IntegrationOpInput = {
   "integrations.list": Record<string, never>;
   "integrations.show": { name: string };
-  "integrations.call": { name: string; action: string; input: unknown };
+  "integrations.call": { name: string; action: string; input: unknown; reason?: string };
 };
 
 /** An integrations answer: structured rows, a call's words, or a refusal's. */

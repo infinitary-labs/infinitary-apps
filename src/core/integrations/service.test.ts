@@ -1,7 +1,9 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ForgeSignInState } from "@shared/forges";
+import type { IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { integrationNameSchema } from "../../shared/integrations";
 import {
@@ -10,7 +12,8 @@ import {
   IntegrationSettingsStore,
   IntegrationsService,
 } from ".";
-import type { IntegrationBinding } from "./binding";
+import type { IntegrationActionSpec, IntegrationBinding } from "./binding";
+import { IntegrationOutcomeUnknown } from "./binding";
 
 /**
  * INF-775 piece 1: Settings -> Integrations and the first mate's
@@ -218,7 +221,7 @@ describe("IntegrationsService", () => {
               label: "Read from GitHub",
               effect: "reads",
               enabled: true,
-              rule: "allow",
+              rule: "ask",
             },
             {
               name: "write",
@@ -242,7 +245,7 @@ describe("IntegrationsService", () => {
     const restarted = open();
     const [row] = restarted.view().integrations;
     expect(row).toMatchObject({ name: "Work GitHub", paused: true });
-    expect(row?.actions.map((action) => action.rule)).toEqual(["allow", "never"]);
+    expect(row?.actions.map((action) => action.rule)).toEqual(["ask", "never"]);
     expect(
       await restarted.forTask("task-1").call("Work GitHub", "read", { path: "/user" }),
     ).toEqual({
@@ -460,5 +463,189 @@ describe("One owner for integration names (INF-946)", () => {
     });
     expect(integrations.show("Notes")).toMatchObject({ id: "mcp-notes" });
     expect(integrations.show("Notes")).not.toMatchObject({ connection });
+  });
+});
+
+// INF-950's approved model: the service owns the rule, not the action's effect.
+describe("per-action approval (INF-950)", () => {
+  function fixture() {
+    const dir = scratchDir("infinitary-action-approvals-");
+    const store = new IntegrationSettingsStore(dir);
+    const notes = ["Call the dentist to move Thursday's cleaning"];
+    const actions = [
+      {
+        name: "list_notes",
+        label: "List notes",
+        effect: "reads" as const,
+        description: "Lists every note with its number.",
+        input: z.strictObject({}),
+      },
+      {
+        name: "add_note",
+        label: "Add a note",
+        effect: "changes" as const,
+        description: "Adds a note to the end of the list.",
+        input: z.strictObject({ text: z.string() }),
+      },
+    ];
+    let account = "sam";
+    const binding: IntegrationBinding = {
+      kind: "mcp",
+      connections: () => [{ id: "mcp-notes", name: "Notes", account, health: "ok", actions }],
+      check: async () => {},
+      remove: () => {},
+      call: vi.fn(async (_id, action, input) => {
+        if (action === "add_note") notes.push((input as { text: string }).text);
+        return { text: notes.join("\n") };
+      }),
+    };
+    const kept = new Map<string, IntegrationAsk>();
+    const present = vi.fn();
+    const open = () =>
+      new IntegrationsService({
+        bindings: [binding],
+        store,
+        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
+        asks: {
+          keep: (_taskId, ask) => {
+            kept.set(ask.id, ask);
+          },
+          present,
+          take: (_taskId, id) => {
+            const ask = kept.get(id);
+            if (!ask || ask.sentAt !== undefined) return { refused: "already taken or absent" };
+            ask.sentAt = Date.now();
+            return { ask };
+          },
+          record: (_taskId, id, outcome) => {
+            const ask = kept.get(id);
+            if (ask) ask.outcome = outcome;
+          },
+        },
+      });
+    const latest = () => [...kept.values()].at(-1)!;
+    return {
+      open,
+      store,
+      binding,
+      actions,
+      notes,
+      latest,
+      present,
+      account: (value: string) => {
+        account = value;
+      },
+    };
+  }
+
+  it("asks for reads and outward calls, requires a reason, and only the exact once or always choice runs it", async () => {
+    const f = fixture();
+    const service = f.open();
+    const crew = service.forTask("task-1");
+    expect(service.view().integrations[0]?.actions.map((a) => a.rule)).toEqual(["ask", "ask"]);
+    expect((await crew.call("Notes", "list_notes", {})).refused).toBe("invalid");
+    expect(f.present).not.toHaveBeenCalled();
+    expect(f.binding.call).not.toHaveBeenCalled();
+    const reason = "Find the dentist reminder for the week.";
+    await crew.call("Notes", "list_notes", {}, undefined, reason);
+    expect(f.present).toHaveBeenCalledWith(
+      "task-1",
+      expect.objectContaining({ reason, input: "{}", effect: "reads" }),
+    );
+    expect((await service.sendAsk("task-1", f.latest().id, "once")).answer).toContain("dentist");
+    expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
+    expect((await service.sendAsk("task-1", f.latest().id)).ok).toBe(false);
+    expect(f.binding.call).toHaveBeenCalledTimes(1);
+    await crew.call("Notes", "list_notes", {}, undefined, reason);
+    await service.sendAsk("task-1", f.latest().id, "always");
+    expect((await f.open().forTask("another-task").call("Notes", "list_notes", {})).text).toContain(
+      "dentist",
+    );
+    expect(f.binding.call).toHaveBeenCalledTimes(3);
+    await crew.call(
+      "Notes",
+      "add_note",
+      { text: "Return the library books by Friday" },
+      undefined,
+      "Keep the reminder I requested.",
+    );
+    await service.sendAsk("task-1", f.latest().id, "deny");
+    expect(f.notes).toHaveLength(1);
+    await crew.call(
+      "Notes",
+      "add_note",
+      { text: "Return the library books by Friday" },
+      undefined,
+      "Keep the reminder I requested.",
+    );
+    await service.sendAsk("task-1", f.latest().id, "always");
+    await crew.call("Notes", "add_note", { text: "Pay the electric bill" });
+    expect(f.notes).toEqual([
+      "Call the dentist to move Thursday's cleaning",
+      "Return the library books by Friday",
+      "Pay the electric bill",
+    ]);
+    service.setRule("mcp-notes", "add_note", false);
+    expect(service.view().integrations[0]?.actions[1]?.rule).toBe("ask");
+    service.configure("mcp-notes", { actions: { add_note: false } });
+    expect(service.roster()[0]).toMatchObject({
+      actions: [
+        { name: "list_notes", rule: "allow" },
+        { name: "add_note", rule: "never" },
+      ],
+    });
+    expect((await crew.call("Notes", "add_note", { text: "Not allowed" })).refused).toBe("refused");
+  });
+
+  it("reports an unknown outward outcome honestly even when Always allow skips the card", async () => {
+    const f = fixture();
+    const service = f.open();
+    service.setRule("mcp-notes", "add_note", true);
+    expect(
+      (
+        await service.call({ kind: "firstmate" }, "Notes", "add_note", {
+          text: "Do not run without a task",
+        })
+      ).refused,
+    ).toBe("refused");
+    expect(f.binding.call).not.toHaveBeenCalled();
+    vi.mocked(f.binding.call).mockRejectedValueOnce(
+      new IntegrationOutcomeUnknown("The server dropped the connection after taking the note"),
+    );
+    const answer = await service
+      .forTask("task-1")
+      .call("Notes", "add_note", { text: "Return the library books by Friday" });
+    expect(answer.text).toContain("unknown outcome");
+    expect(answer.text).toContain("Do not repeat this call");
+    expect(f.binding.call).toHaveBeenCalledTimes(1);
+    expect(f.present).not.toHaveBeenCalled();
+  });
+
+  it("starts existing connections over, keeps old settings readable, and irrevocably invalidates grants on tool or account changes", async () => {
+    const f = fixture();
+    f.store.write({ "mcp-notes": { name: "Notes", paused: false } });
+    const service = f.open();
+    expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
+    service.setRule("mcp-notes", "list_notes", true);
+    expect(JSON.parse(readFileSync(join(f.store.root, "settings.json"), "utf8"))).toEqual({
+      "mcp-notes": { name: "Notes", paused: false },
+    });
+    const read = f.actions[0]!;
+    const description = read.description;
+    read.description = "Lists notes including archived notes.";
+    expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
+    read.description = description;
+    expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
+    service.setRule("mcp-notes", "list_notes", true);
+    // Changing the MCP read-only mark changes its declared effect.
+    (read as IntegrationActionSpec).effect = "changes";
+    expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
+    (read as IntegrationActionSpec).effect = "reads";
+    service.setRule("mcp-notes", "list_notes", true);
+    f.account("another-account");
+    expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
+    service.setRule("mcp-notes", "list_notes", true);
+    await service.remove("mcp-notes");
+    expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
   });
 });

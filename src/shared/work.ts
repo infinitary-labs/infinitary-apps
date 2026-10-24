@@ -702,7 +702,12 @@ export const workRequests = {
   "inf:work:use-integration": {
     effect: "change",
     request: asked({
-      input: z.object({ name: z.string(), action: z.string(), input: z.unknown() }),
+      input: z.object({
+        name: z.string(),
+        action: z.string(),
+        input: z.unknown(),
+        reason: z.string().optional(),
+      }),
     }),
     response: integrationAnswerSchema,
   },

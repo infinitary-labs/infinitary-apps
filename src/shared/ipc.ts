@@ -127,6 +127,7 @@ import {
   type IntegrationSettingsPatch,
   type IntegrationSignInConsent,
   type IntegrationsView,
+  integrationActionNameSchema,
   integrationIdSchema,
   integrationKindSchema,
   integrationMcpAddSchema,
@@ -1684,6 +1685,13 @@ export const invokeContract = {
     surface: "core",
     reach: "home",
     request: z.tuple([integrationIdSchema, integrationSettingsPatchSchema]),
+    response: integrationsViewSchema,
+  },
+  "inf:integrations:rule": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([integrationIdSchema, integrationActionNameSchema, z.boolean()]),
     response: integrationsViewSchema,
   },
   "inf:integrations:remove": {
@@ -3604,6 +3612,7 @@ export type FirstmateApi = {
     /** End the sign-in waiting for the browser. */
     cancelSignIn: () => Promise<IntegrationsView>;
     configure: (id: string, patch: IntegrationSettingsPatch) => Promise<IntegrationsView>;
+    rule: (id: string, action: string, allowed: boolean) => Promise<IntegrationsView>;
     remove: (id: string) => Promise<IntegrationsView>;
     check: (id: string) => Promise<IntegrationsView>;
     /** Keep the captain's key for one slot, or forget it with null; nothing hands it back. */

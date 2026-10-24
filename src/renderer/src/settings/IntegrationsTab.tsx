@@ -269,6 +269,9 @@ export function IntegrationsTab() {
             {open === integration.id && (
               <IntegrationActions
                 integration={integration}
+                onRule={(name, allowed) =>
+                  change(() => window.infinitary.integrations.rule(integration.id, name, allowed))
+                }
                 onAction={(name, enabled) =>
                   configure(integration.id, { actions: { [name]: enabled } })
                 }
@@ -589,9 +592,11 @@ function IntegrationRow({
 function IntegrationActions({
   integration,
   onAction,
+  onRule,
 }: {
   integration: IntegrationView;
   onAction: (name: string, enabled: boolean) => void;
+  onRule: (name: string, allowed: boolean) => void;
 }) {
   return (
     <ul
@@ -603,9 +608,22 @@ function IntegrationActions({
         <li key={action.name} data-integration-action={action.name}>
           <span className="fm-integrations-action-label">{action.label}</span>
           <Badge tone="outline">{INTEGRATION_EFFECT_WORDS[action.effect]}</Badge>
-          <span className="fm-forges-state" data-integration-rule={action.rule}>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="fm-forges-state fm-integration-rule"
+            data-integration-rule={action.rule}
+            aria-label={`${action.label}: ${INTEGRATION_RULE_WORDS[action.rule]}`}
+            off={!action.enabled}
+            note={
+              action.enabled
+                ? "Choose Asks you or Always allowed"
+                : "Turn the action on to change its approval"
+            }
+            onClick={() => action.enabled && onRule(action.name, action.rule !== "allow")}
+          >
             {INTEGRATION_RULE_WORDS[action.rule]}
-          </span>
+          </Button>
           <Switch
             checked={action.enabled}
             aria-label={`${action.label} on`}

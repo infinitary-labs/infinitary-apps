@@ -489,9 +489,15 @@ export class AxiChannel {
           return isIntegrationAnswer(shown) ? shown : { data: shown };
         }
         case "integrations.call": {
-          const { name, action, input } = (message.input ??
+          const { name, action, input, reason } = (message.input ??
             {}) as IntegrationOpInput["integrations.call"];
-          return await integrations.call(String(name ?? ""), String(action ?? ""), input, signal);
+          return await integrations.call(
+            String(name ?? ""),
+            String(action ?? ""),
+            input,
+            signal,
+            reason,
+          );
         }
         default:
           return { text: "That is not an integrations operation.", refused: "invalid" };

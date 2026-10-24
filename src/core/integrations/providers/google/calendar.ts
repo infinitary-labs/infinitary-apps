@@ -96,7 +96,7 @@ export const CALENDAR_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Create a calendar event",
     effect: "changes",
     description:
-      "Create an event in calendar (primary when omitted). event has summary, start and end, optional description, location and attendees. Use date for all-day events (end is exclusive), or dateTime with an explicit offset and optional IANA timeZone. send_updates is none by default, all to notify guests, or externalOnly. Asks the captain before writing or notifying anyone.",
+      "Create an event in calendar (primary when omitted). event has summary, start and end, optional description, location and attendees. Use date for all-day events (end is exclusive), or dateTime with an explicit offset and optional IANA timeZone. send_updates is none by default, all to notify guests, or externalOnly. Its approval state controls whether the host asks before writing or notifying anyone.",
     input: z.strictObject({
       ...destination,
       event: changes.refine(ordered, {
@@ -110,7 +110,7 @@ export const CALENDAR_ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Update a calendar event",
     effect: "changes",
     description:
-      "Patch an event by id and calendar (primary when omitted). changes contains only fields to replace; omitted fields stay unchanged, attendees replaces the full guest list. Supply start and end together. send_updates has the same meaning as create_event. Asks the captain first. Does not delete events.",
+      "Patch an event by id and calendar (primary when omitted). changes contains only fields to replace; omitted fields stay unchanged, attendees replaces the full guest list. Supply start and end together. send_updates has the same meaning as create_event. Its approval state controls whether the host asks. Does not delete events.",
     input: z.strictObject({
       ...destination,
       id: eventId,

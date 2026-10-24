@@ -37,7 +37,7 @@
 
 .fm-integrations-actions > li {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto 72px auto;
+  grid-template-columns: minmax(0, 1fr) auto 112px auto;
   gap: var(--space-3);
   align-items: center;
   min-height: 32px;
@@ -151,4 +151,24 @@
   display: block;
   font-weight: 500;
   color: var(--fg-1);
+}
+
+/* One keyboard-reachable choice beside the independent Off switch. */
+.fm-integration-rule {
+  border: none;
+  border-radius: var(--radius-s);
+  background: transparent;
+  padding: var(--space-1);
+  cursor: pointer;
+  text-align: left;
+}
+.fm-integration-rule:hover {
+  background: var(--bg-3);
+}
+.fm-integration-rule:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.fm-integration-rule[aria-disabled="true"] {
+  cursor: default;
 }

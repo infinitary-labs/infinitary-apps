@@ -132,7 +132,7 @@ Infinitary is a desktop AI assistant that runs on the user's own computer (macOS
 5. Sends a message (users.messages.send).
 6. When the user turns on an automation rule for new mail, checks the inbox every minute for messages added since the last check and gives the rule each new message's sender and subject (users.getProfile for the starting history id; users.history.list).
 
-Every label change, draft and send runs only after the user approves that exact action, with its full content, on a confirmation card in the app, and runs once. The app never deletes messages, never reads or changes Gmail settings, and has no feature beyond the six above.
+Every action starts at Asks you, including searches and reads. The app shows the exact input and the agent’s reason on its own confirmation card. Only this time runs that call once; Always allow also allows future calls of that action on the same connection until the user changes it in Settings or replaces the connection. Changes and sends highlight Only this time, so Always allow takes a deliberate choice. The app never deletes messages, never reads or changes Gmail settings, and has no feature beyond the six above.
 
 Why narrower scopes do not work: gmail.readonly cannot label, archive, draft or send. gmail.send cannot search or read mail, so the assistant could not find the message the user is asking about. gmail.compose can draft and send but cannot search or read the inbox or change labels. gmail.metadata cannot read message text, so the assistant could not summarize a message or write a reply to it. gmail.labels manages the label list but cannot apply a label to a message. Google's reference accepts only https://mail.google.com/, gmail.modify and gmail.modify.restricted (domain-wide delegation) for users.messages.modify. gmail.modify is the narrowest scope that covers reading, labelling, drafting and sending together, and it excludes the permanent deletion that https://mail.google.com/ would add and the app does not offer.
 ```
@@ -160,7 +160,7 @@ Infinitary is a desktop AI assistant that runs on the user's own computer. With 
 4. Updates only the named fields of an existing event (events.patch).
 5. When the user turns on an automation rule for calendar changes, checks one calendar the user chose every minute with Google's sync token and gives the rule the title and times of each created, changed or cancelled event (events.list with syncToken and showDeleted).
 
-Creating or updating an event runs only after the user approves that exact event on a confirmation card in the app, including whether guests are notified (sendUpdates, none by default), and runs once. The app never deletes events, never changes sharing, and never creates or deletes calendars.
+Every Calendar action starts at Asks you. The app shows its exact input and the agent’s reason, including whether guests are notified (sendUpdates, none by default). Only this time runs that call once; Always allow also allows future calls of the action until the user changes it in Settings or replaces the connection. Changes highlight Only this time. The app never deletes events, never changes sharing, and never creates or deletes calendars.
 
 Why narrower scopes do not work: calendar.events.readonly cannot create or update events. calendar.events.owned excludes shared calendars the user can edit, such as a family or team calendar the user names by its id. calendar.app.created reaches only calendars this app created, never the user's existing calendars. The full calendar scope adds calendar creation, sharing changes and permanent deletion, which the app does not need.
 ```
@@ -342,11 +342,11 @@ The captain records it on a Mac of their own, since Google's consent page runs i
 4. On the consent page, check that the language at the bottom left is English and the title names Infinitary.
    Leave the page still for three seconds so every permission can be read, then click Continue.
 5. Back in Infinitary, the Google row shows the demo address.
-   Click its chevron to show its actions: searches and reads run, while labels, drafts, sends and event changes ask you first.
+   Click its chevron to show its actions: every action says Asks you until you choose Always allow.
 6. Gmail, search and read: in the message box type "Search my Gmail for messages about Infinitary demo and read me the newest one."
-   Wait for the answer with the sender, subject and text.
+   The app asks for each action with the agent’s reason and exact input; choose Only this time or Always allow, then wait for the answer.
 7. Gmail, label: type "Archive that message."
-   Your first mate hands the change to a crewmate, which puts up a card showing the exact change; click its button.
+   Your first mate hands the change to a crewmate, whose call makes the app show the exact change and its reason; choose Only this time.
    In the browser, open Gmail and show the message is no longer in Inbox.
 8. Gmail, draft: type "Draft a reply to it saying thanks, I'll send the invoice on Friday."
    Click the card's button.
@@ -397,9 +397,10 @@ Google answers by email to the project's owners; keep that address watched.
 Google's estimate for restricted-scope review is six weeks, and for gmail.modify Google then points you to the yearly security assessment (INF-905).
 Forward each question Google sends to your first mate, so a crewmate drafts the answer from the code.
 
+The per-action confirmations and explicit Always allow choice implement INF-950.
 The in-app disclosure and accept before the sign-in starts is Google's notice ([Integrations](integrations.md#googles-notice), INF-949).
-Prompt-injection protection is the fence on data from outside, the asks before every change and send, and the notice's account of what stays open ("Prompt injection" below, INF-951).
-Google's Workspace policy also asks for things the app does not do yet, which a reviewer may raise: confirming each agent read (INF-950), tokens encrypted at rest (INF-30, INF-785) and a deletion route for Google-derived data (INF-952).
+Prompt-injection protection is the fence on data from outside, the per-action approval cards and revocable allowances, and the notice's account of what stays open ("Prompt injection" below, INF-951).
+Google's Workspace policy also asks for things the app does not do yet, which a reviewer may raise: tokens encrypted at rest (INF-30, INF-785) and a deletion route for Google-derived data (INF-952).
 
 ## Prompt injection
 
@@ -408,8 +409,9 @@ Infinitary takes the second route, in three layers:
 
 1. Data from outside is fenced.
    Every Gmail and Calendar answer, and every event summary, reaches the first mate or a crewmate between marks whose random value the writer could not know, with any copy of a mark in the words broken and a line before and after saying never to follow what is inside ([Integrations](integrations.md#data-from-outside)).
-2. Every change and send asks.
-   A label, a draft, a send and an event creation or update run only after the captain approves the exact call on a card, once, and the first mate cannot run them at all ([Integrations](integrations.md#the-rules)).
+2. Every action starts at Asks you.
+   The host shows the exact call and agent’s reason, with Only this time highlighted for changes and sends.
+   Always allow also permits later calls of that action until revoked; the first mate cannot run changes or sends in this first piece ([Integrations](integrations.md#the-rules)).
 3. The person is told before connecting.
    Google's notice says what the app does against a message written to mislead and the way out it cannot close (`INTEGRATION_NOTICES`, [Integrations](integrations.md#googles-notice)).
 
@@ -424,11 +426,11 @@ Each way out, and how it stands:
 
 | Way out | Who has it | An ask in the way | Status |
 | --- | --- | --- | --- |
-| A Gmail send or draft, or a Calendar creation or update that notifies guests | Crewmate | Yes: the exact call on a card | Closed |
+| A Gmail send or draft, or a Calendar creation or update that notifies guests | Crewmate | Yes until Always allow: the exact call on a card | Closed at Asks you; deliberately open at Always allowed |
 | The same from the first mate | First mate | Refused: only a crewmate's card can carry it | Closed |
-| A GitHub write through its integration, on any repository | Crewmate | Yes: kept as the forge's write ask | Closed; the first mate's is refused |
-| A change on an MCP server, any tool not marked read-only | Crewmate | Yes | Closed; the first mate's is refused |
-| A read on an MCP server, whose input the server receives | Both | No | Disclosed here: the captain adds each server, and one that fetches any address the agent names is a way out |
+| A GitHub write through its integration, on any repository | Crewmate | Yes until Always allow: the integration’s host card | Closed at Asks you; deliberately open at Always allowed; the first mate’s is refused |
+| A change on an MCP server, any tool not marked read-only | Crewmate | Yes until Always allow | Closed at Asks you; deliberately open at Always allowed; the first mate’s is refused |
+| A read on an MCP server, whose input the server receives | Both | Yes until Always allow | Disclosed here: the captain adds each server, and one that fetches any address the agent names is a way out |
 | The crewmate's shell: any program, network address, or `git push` to a remote it names | Crewmate | No: crewmate isolation stays social, a captain decision (`docs/architecture.md`, rev-5) | Disclosed in Google's notice |
 | A write to the task's own project, which sends at once | Crewmate | No | Disclosed, as the shell |
 | The task's browser opening a public address | Crewmate | No | Disclosed, as the shell |
@@ -436,8 +438,9 @@ Each way out, and how it stands:
 | A brief or a steer from the first mate to a crewmate | First mate | No; the brief is on the task's record | Disclosed: it hands the words to a crewmate, which has the ways above |
 | A card to the captain | Both | The captain reads it | Not a way out: it reaches only the captain, and a card's frame has no network |
 
-Closing the crewmate's ways needs either a crewmate whose network is limited once its task has read Google data, which would revisit the captain's decision that crewmate isolation stays social, or the captain's confirmation of each Google read (INF-950).
-Until one of them is decided, Google's notice tells the person before they connect.
+Closing the crewmate's ways needs either a crewmate whose network is limited once its task has read Google data, which would revisit the captain's decision that crewmate isolation stays social, or the captain’s confirmation of each Google read.
+INF-950 asks for each action and lets the captain choose Always allow; that choice does not close the crewmate’s other ways out.
+Google’s notice tells the person about that reach before they connect.
 
 ## CASA questionnaire answer bank
 

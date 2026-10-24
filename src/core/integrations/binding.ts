@@ -115,13 +115,6 @@ export type IntegrationBinding = {
   /** The keys its connections sign in with; none for a kind whose sign-in has its own owner. */
   secrets?: readonly IntegrationSecretSlot[];
   /**
-   * The binding keeps its own asks for an action that changes or sends
-   * (GitHub's are the forge's write asks, `docs/forge.md`). Absent, the
-   * service keeps one on the caller's task and runs the action only on
-   * the captain's click.
-   */
-  keepsAsks?: true;
-  /**
    * Its answers and event summaries carry words anyone can write, such as
    * a message or an invitation: the label they reach every agent under,
    * between marks nobody who wrote them could forge (`@shared/outsideData`,
@@ -157,6 +150,8 @@ export type IntegrationBinding = {
   check: (id: string) => Promise<void>;
   /** Forget the connection's sign-in, and tell the place to forget it where it can. */
   remove: (id: string) => void | Promise<void>;
+  /** Refresh action facts before the service checks a grant (MCP can change tools). */
+  prepare?: (id: string) => Promise<void>;
   /** Run one action whose input already passed its schema. */
   call: (
     id: string,

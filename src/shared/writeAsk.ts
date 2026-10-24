@@ -36,8 +36,7 @@ export type ForgeWriteAsk = {
 };
 
 /**
- * An integration's action a crewmate asked to run that changes or sends
- * something outside (`docs/integrations.md`, "The rules"): kept the same
+ * An integration's action at Asks you, requested with the crewmate's reason (`docs/integrations.md`, "The rules"): kept the same
  * way, with the exact checked input, and run once on the captain's click
  * through the integration's own binding.
  */
@@ -55,6 +54,12 @@ export type IntegrationAsk = {
   /** Its name when it was asked, as the card says it. */
   place: string;
   action: string;
+  /** Facts shown on the host's approval card (absent on older kept asks). */
+  label?: string;
+  description?: string;
+  effect?: "reads" | "changes" | "sends";
+  reason?: string;
+  signature?: string;
   /** The action's input as JSON text, after its schema checked it. */
   input: string;
   at: number;

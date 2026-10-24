@@ -340,6 +340,10 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
       save(servers.filter((entry) => entry.id !== id));
     },
 
+    prepare: async (id) => {
+      await refresh(id, await linkOf(id));
+    },
+
     call: async (id, action, input) => {
       const server = serverOf(id);
       if (action === MCP_READ_RESOURCE) {
@@ -349,8 +353,8 @@ export function mcpIntegration(options: McpIntegrationOptions): IntegrationBindi
       }
       const tool = server.tools.find((entry) => entry.action === action);
       if (!tool) return { text: `${server.name} has no action ${action}.`, refused: "invalid" };
-      // A tool that changes something reaches here only on the captain's
-      // click: the service keeps the call as an ask until then.
+      // The service checked this tool's current declaration and either a
+      // persistent grant or the captain's once-only choice before reaching it.
       const link = await linkOf(id);
       let result: CallToolResult;
       try {

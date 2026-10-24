@@ -3008,11 +3008,15 @@ describe("the integrations command on a computer that runs work", () => {
       { tools: [shellCommand(`infinitary-integrations-axi call GitHub read '{"path":"/user"}'`)] },
       {
         tools: [
-          shellCommand(`infinitary-integrations-axi call GitHub write '${JSON.stringify(issue)}'`),
+          shellCommand(
+            `infinitary-integrations-axi call GitHub write '${JSON.stringify(issue)}' --reason 'File the footer bug you asked me to report.'`,
+          ),
         ],
       },
       { text: "The issue waits for the captain." },
     ]);
+    // INF-950: this transport journey explicitly starts with the read always allowed.
+    at.home().integrations?.setRule("github", "read", true);
     const requests = api.requests.length;
     await at.start("t-reach");
     const home = at.home();
@@ -3044,13 +3048,25 @@ describe("the integrations command on a computer that runs work", () => {
     const write = shellAnswer(api.requests[requests + 4]);
     expect(write.exit).toBe(1);
     expect(write.output).toContain("REFUSED");
-    expect(write.output).toContain("Not sent");
+    expect(write.output).toContain("Not run");
     const kept = home.tasks.get("t-reach")?.delivery?.writeAsks?.[0];
-    expect(write.output).toContain(`Kept as ask ${kept?.id}`);
+    expect(write.output).toContain(`approval card for ask ${kept?.id}`);
     expect(home.tasks.get("t-reach")?.delivery?.writeAsks).toEqual([
-      expect.objectContaining({ method: "POST", path: issue.path, via: "account" }),
+      expect.objectContaining({
+        kind: "integration",
+        action: "write",
+        input: JSON.stringify(issue),
+        reason: "File the footer bug you asked me to report.",
+      }),
     ]);
     expect(github.seen).toHaveLength(1);
+    const approval = home.supervisor.cardsSnapshot().find((card) => card.taskId === "t-reach");
+    expect(approval).toMatchObject({
+      author: "host",
+      actions: expect.arrayContaining([
+        expect.objectContaining({ label: "Only this time", default: true }),
+      ]),
+    });
     // The call is kept by its id, so one asked again after a drop is answered once.
     const calls = readFileSync(
       join(crewmatePlacedDir(home.paths, "t-reach"), "calls.jsonl"),
@@ -3060,6 +3076,20 @@ describe("the integrations command on a computer that runs work", () => {
       .split("\n")
       .map((line) => (JSON.parse(line) as { channel: string }).channel);
     expect(calls.filter((channel) => channel === "inf:work:use-integration")).toHaveLength(2);
+
+    if (!approval) throw new Error("The host approval card is missing");
+    model([{ text: "The issue request was refused." }]);
+    home.supervisor.act(approval.id, "once");
+    await expect
+      .poll(() => home.tasks.get("t-reach")?.outcome)
+      .toBe("The issue request was refused.");
+    expect(github.seen.filter((request) => request.method === "POST")).toHaveLength(1);
+    expect(home.tasks.get("t-reach")?.delivery?.writeAsks?.[0]?.outcome).toMatchObject({
+      kind: "refused",
+    });
+    // Repeating the already-resolved choice never repeats the request.
+    home.supervisor.act(approval.id, "once");
+    expect(github.seen.filter((request) => request.method === "POST")).toHaveLength(1);
 
     // Nothing of the sign-in is on that computer, while the answer it read is in its record there.
     expect(filesHolding(at.dataDir, GITHUB_TOKEN)).toEqual([]);

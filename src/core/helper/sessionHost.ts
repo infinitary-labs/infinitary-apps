@@ -1319,8 +1319,14 @@ export class SessionHost {
         const answer = await ask("inf:work:integrations", { name }, signal);
         return answer.data ?? words(answer);
       },
-      call: async (name, action, input, signal) =>
-        words(await ask("inf:work:use-integration", { name, action, input }, signal)),
+      call: async (name, action, input, signal, reason) =>
+        words(
+          await ask(
+            "inf:work:use-integration",
+            { name, action, input, ...(reason !== undefined ? { reason } : {}) },
+            signal,
+          ),
+        ),
     };
   }
 

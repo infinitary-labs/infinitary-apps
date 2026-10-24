@@ -1826,7 +1826,7 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         ? `[fm-op] ${WRITE_ANSWERED_LEAD} ${facts.ask} (${facts.call}) to ${facts.place}, once. ${facts.place} answered ${facts.status}. It is never sent again; continue from this answer.\n${facts.answer ?? ""}`
         : facts.outcome === "unknown"
           ? `[fm-op] ${WRITE_ANSWERED_LEAD} ${facts.ask} (${facts.call}) to ${facts.place}, once, and what came of it is unknown: ${sentence(facts.why)} It is never sent again; read ${facts.place} to see what happened before you do anything that depends on it.`
-          : `[fm-op] the captain's click on ask ${facts.ask}${facts.call ? ` (${facts.call})` : ""} sent nothing: ${sentence(facts.why)} To try again, make a new write with github_write, or call the integration again, and ask on a new card.`;
+          : `[fm-op] the captain's click on ask ${facts.ask}${facts.call ? ` (${facts.call})` : ""} sent nothing: ${sentence(facts.why)} To ask again, make a new write with github_write or call the integration again.`;
     case "run-watch":
       return renderRunWatch(facts);
     case "checks-settled":

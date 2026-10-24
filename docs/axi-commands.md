@@ -111,10 +111,11 @@ A refusal is typed by `TaskBrowsers`, never read off its words (`BrowserAnswer.r
 ## The integrations command
 
 `infinitary-integrations-axi` (`src/core/axi/integrationCommands.ts`) reaches the integrations the captain connected (`docs/integrations.md`): discover, then call (the captain's q1 on INF-775).
-The bare command lists them with who each is signed in as and its actions, `show <name>` lists one's actions with what each does, its rule and its input's JSON Schema, and `call <name> <action> '<json input>'` runs one.
+The bare command lists them with who each is signed in as and its actions, `show <name>` lists one's actions with what each does, its rule and its input's JSON Schema, and `call <name> <action> '<json input>' --reason 'why it is needed'` calls one.
 The input is one JSON object, checked before it is sent, and a malformed one exits 2.
-Every decision stays `IntegrationsService`'s: a paused integration, an action turned off and a change that asks the captain each print the service's words as an error with exit 1 (`REFUSED`).
-For a change that asks the captain, `REFUSED` means it has not run yet: its ask is kept, and the words name it and the card that carries it.
+Every decision stays `IntegrationsService`'s: a paused integration, an action turned off and an action that asks the captain each print the service's words as an error with exit 1 (`REFUSED`).
+For an action at Asks you, a missing reason exits 2 before any card; with a reason, `REFUSED` means the held call has not run yet and the app has raised its own approval card.
+The crewmate waits for the existing `write-answered` outcome instead of authoring another card or repeating the call.
 A task on this Mac is granted it whenever the host has a command process, and a task on a computer that runs work where the home says it reaches them (`docs/integrations.md`, "On a computer that runs work").
 Its kept answers follow the shell's limit as the browser's do.
 There, a call waits on this Mac at most until 750 milliseconds before the command process would be stopped, so the command always prints an answer, and a call not yet sent then is never sent.

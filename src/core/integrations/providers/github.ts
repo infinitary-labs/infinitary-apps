@@ -8,10 +8,8 @@ import type { IntegrationActionSpec, IntegrationBinding } from "../binding";
  * GitHub as an integration (docs/integrations.md, "GitHub"): the app's own
  * github.com sign-in, made and kept by the forge (`ForgeSignIns`,
  * `docs/forge.md`), seen through the integrations seam. Its actions are
- * the gateway's two calls through that sign-in: a read runs, and a write
- * asks the captain - a crewmate's is kept on its task as an ask its card
- * carries, the way a write to another project is today. Pull requests,
- * checks and merges stay the forge's and the project's.
+ * the gateway's two calls through that sign-in, behind the integration's
+ * per-action approval owner. Project delivery keeps the forge's rules.
  */
 
 const GITHUB_ID = "github";
@@ -51,7 +49,7 @@ const ACTIONS: readonly IntegrationActionSpec[] = [
     label: "Change something on GitHub",
     effect: "changes",
     description:
-      "POST, PATCH, PUT or DELETE one path through the captain's GitHub sign-in; body is JSON text. Every write asks the captain: a crewmate's is kept as an ask, which it puts on a card as an action whose effect is request_write. Merges and default-branch moves are refused; they use the merge card.",
+      "POST, PATCH, PUT or DELETE one path through the captain's GitHub sign-in; body is JSON text. The integration approval rule decides when it runs. Merges and default-branch moves are refused; they use the merge card.",
     input: z.strictObject({
       method: z.enum(["POST", "PATCH", "PUT", "DELETE"]),
       path: pathSchema,
@@ -80,13 +78,12 @@ export function githubIntegration(
       label === "GitLab"
         ? action.name === "read"
           ? "GET or HEAD one relative GitLab REST API path (the part after /api/v4), such as /projects?membership=true or /user. JSON only; nextPath reads the next page."
-          : "POST, PATCH, PUT or DELETE one relative GitLab REST API path, with body as JSON text. Every write asks the captain; put its ask on a card with request_write. Merges and default-branch moves require the merge card."
+          : "POST, PATCH, PUT or DELETE one relative GitLab REST API path, with body as JSON text. The integration approval rule decides when it runs. Merges and default-branch moves require the merge card."
         : action.description.replaceAll("GitHub", label),
   }));
   return {
     kind: "github",
     identity: { id, name },
-    keepsAsks: true,
     connections: () => {
       const health = options.signIns.stateOf(host);
       if (health === undefined) return [];
@@ -109,11 +106,8 @@ export function githubIntegration(
           text: `Not sent: a change on ${label} asks the captain on a card, and only a crewmate's card can carry the exact call. Start a crewmate whose brief names the call.`,
           refused: "refused",
         };
-      // Every change through the integration is kept as the captain's ask or
-      // refused, never sent here, so the command's answer is a refusal (INF-824).
       return {
         text: await options.gateway.write(caller.taskId, input as GithubWriteInput, "account"),
-        refused: "refused",
       };
     },
   };

@@ -1351,7 +1351,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       case "inf:work:use-integration": {
         const { input } = request as InvokeRequest<"inf:work:use-integration">[0];
         const integrations = callbacks?.integrations ?? missing();
-        return await integrations.call(input.name, input.action, input.input);
+        return await integrations.call(
+          input.name,
+          input.action,
+          input.input,
+          undefined,
+          input.reason,
+        );
       }
       default:
         throw new Error(`${channel} is not a request ${HERE.this} answers.`);

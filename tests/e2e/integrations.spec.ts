@@ -60,13 +60,13 @@ test("Open Integrations reaches the GitHub row, its actions and its menu by keys
   const toggle = row.locator('[data-integration-toggle="github"]');
   await untilFocused(toggle);
 
-  // Enter opens the row's actions: a read is allowed, a change asks.
+  // INF-950: existing connections also start with every action asking.
   await pressKey(toggle, "Enter");
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   const actions = tab.locator('[data-integration-actions="github"]');
   await expect(
     actions.locator('[data-integration-action="read"] [data-integration-rule]'),
-  ).toHaveText(INTEGRATION_RULE_WORDS.allow);
+  ).toHaveText(INTEGRATION_RULE_WORDS.ask);
   const write = actions.locator('[data-integration-action="write"]');
   await expect(write.locator("[data-integration-rule]")).toHaveText(INTEGRATION_RULE_WORDS.ask);
 
@@ -78,7 +78,7 @@ test("Open Integrations reaches the GitHub row, its actions and its menu by keys
       (await view()).integrations[0]?.actions.map((action) => [action.name, action.rule]),
     )
     .toEqual([
-      ["read", "allow"],
+      ["read", "ask"],
       ["write", "never"],
     ]);
 

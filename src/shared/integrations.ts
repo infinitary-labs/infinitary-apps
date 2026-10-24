@@ -53,19 +53,13 @@ export const INTEGRATION_KIND_NAMES: Record<IntegrationKind, string> = {
 export const integrationEffectSchema = z.enum(["reads", "changes", "sends"]);
 export type IntegrationEffect = z.infer<typeof integrationEffectSchema>;
 
-/**
- * Who decides when an action runs: `allow` runs it, `ask` waits for the
- * captain's click on a card, `never` refuses it. Until the secret
- * manager's rules land, a read is allowed and anything that changes or
- * sends asks (the captain's answer on INF-775); an action turned off is never.
- */
+/** A connection action asks until the captain chooses Always allow (INF-950). */
 export const integrationRuleSchema = z.enum(["allow", "ask", "never"]);
 export type IntegrationRule = z.infer<typeof integrationRuleSchema>;
 
-/** The rule an action follows, from its effect and whether it is on. */
-export function integrationRule(effect: IntegrationEffect, enabled: boolean): IntegrationRule {
-  if (!enabled) return "never";
-  return effect === "reads" ? "allow" : "ask";
+/** Off takes precedence over a connection-bound grant. */
+export function integrationRule(allowed: boolean, enabled: boolean): IntegrationRule {
+  return !enabled ? "never" : allowed ? "allow" : "ask";
 }
 
 /** An action's name: lowercase words joined by underscores. */
@@ -278,7 +272,7 @@ export const INTEGRATION_EFFECT_WORDS: Record<IntegrationEffect, string> = {
 
 /** The words for an action's rule, as its row shows them. */
 export const INTEGRATION_RULE_WORDS: Record<IntegrationRule, string> = {
-  allow: "Allowed",
+  allow: "Always allowed",
   ask: "Asks you",
   never: "Off",
 };
@@ -464,4 +458,17 @@ export const NOTICE_ACCEPTED: IntegrationSignInConsent = { noticeAccepted: true 
 /** Why a sign-in that carries no accept of its kind's notice did not start. */
 export function integrationNoticeRefusal(name: string): string {
   return `Read what connecting ${name} shares and accept it in Settings → Integrations before you sign in.`;
+}
+
+/** The app's approval card buttons, shared with keyboard journeys. */
+export const INTEGRATION_APPROVAL_WORDS = {
+  always: "Always allow",
+  once: "Only this time",
+  deny: "Not now",
+} as const;
+export type IntegrationApprovalChoice = keyof typeof INTEGRATION_APPROVAL_WORDS;
+
+/** The host's title and journeys name the same approval card. */
+export function integrationApprovalTitle(label: string, place: string): string {
+  return `Allow ${label} on ${place}?`;
 }

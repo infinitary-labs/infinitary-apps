@@ -326,6 +326,20 @@ test("GitHub sign-in keeps distinct integration names and the crew reaches both"
       GITHUB_SERVER_NAME,
     );
     await expect(tab.locator('[data-integration-renamed="mcp-github"]')).toHaveText(explanation);
+    // INF-950: older connections also start asking. This naming journey grants
+    // the two reads by keyboard before testing their routing across the restart.
+    for (const [id, action] of [
+      ["github", "read"],
+      ["mcp-github", "list_notes"],
+    ]) {
+      await pressKey(tab.locator(`[data-integration-toggle="${id}"]`), "Enter");
+      const choice = tab.locator(
+        `[data-integration-actions="${id}"] [data-integration-action="${action}"] [data-integration-rule]`,
+      );
+      await expect(choice).toHaveAttribute("data-integration-rule", "ask");
+      await pressKey(choice, "Enter");
+      await expect(choice).toHaveAttribute("data-integration-rule", "allow");
+    }
     await page.keyboard.press("Escape");
     const title = GITHUB_NAMES_PROMPT;
     const input = promptInput(page);

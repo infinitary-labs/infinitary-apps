@@ -45,7 +45,7 @@ import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
  *   notice (INF-949) and opens nothing until its accept; the accept, by keys,
  *   opens Google's consent page in the browser and says to finish there; once the browser
  *   comes back the Google row shows who it is signed in as, with its Gmail
- *   reads allowed and its changes asking; a rule listening for "A message
+ *   all actions asking; a rule listening for "A message
  *   arrives" then reaches the first mate with the message that arrived;
  *   Settings → General's delete, by keys, then puts a note where its sender
  *   and subject were in the first mate's saved conversation and the rule's
@@ -236,7 +236,7 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     const actions = tab.locator('[data-integration-actions="google"]');
     await expect(
       actions.locator('[data-integration-action="search_mail"] [data-integration-rule]'),
-    ).toHaveText(INTEGRATION_RULE_WORDS.allow);
+    ).toHaveText(INTEGRATION_RULE_WORDS.ask);
     await expect(
       actions.locator('[data-integration-action="send_message"] [data-integration-rule]'),
     ).toHaveText(INTEGRATION_RULE_WORDS.ask);
@@ -395,7 +395,7 @@ test("Calendar shares the Google row and a calendar selected by keys fires Autom
   for (const action of CALENDAR_ACTIONS) {
     await expect(
       actions.locator(`[data-integration-action="${action.name}"] [data-integration-rule]`),
-    ).toHaveText(INTEGRATION_RULE_WORDS[action.effect === "reads" ? "allow" : "ask"]);
+    ).toHaveText(INTEGRATION_RULE_WORDS.ask);
   }
   await expect(
     actions.locator(`[data-integration-event="${CALENDAR_CHANGED_EVENT.name}"]`),

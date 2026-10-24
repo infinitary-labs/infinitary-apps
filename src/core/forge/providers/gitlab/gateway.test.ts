@@ -5,6 +5,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { GITLAB } from "@shared/forges";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
 import {
   FileIntegrationSecrets,
@@ -392,12 +393,17 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
             },
             gateway: (host) => ({
               read: (task, input) => service.read(task, input, { host }),
-              write: (task, input) => service.write(task, input, { host }),
+              write: (task, input) => service.write(task, input, { host }, true),
               readAsSeat: (input) => service.readAsSeat(input, host),
             }),
           }),
         ],
         store: new IntegrationSettingsStore(join(scratchDir("fm-host-integrations-"), "settings")),
+        asks: {
+          keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+          take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
+          record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
+        },
         secrets: new FileIntegrationSecrets(join(scratchDir("fm-host-secrets-"), "secrets")),
       });
       const id = integrations.view().integrations[0]!.id;
@@ -406,8 +412,21 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
         kind: "gitlab",
         name: host === "gitlab.com" ? "GitLab" : host,
       });
+      allowIntegrationReads(integrations);
       const crew = integrations.forTask("task-1");
-      expect(JSON.parse((await crew.call(id, "read", { path: "/projects" })).text)).toMatchObject({
+      expect(
+        JSON.parse(
+          (
+            await crew.call(
+              id,
+              "read",
+              { path: "/projects" },
+              undefined,
+              "To perform the task’s requested action.",
+            )
+          ).text,
+        ),
+      ).toMatchObject({
         status: 200,
         body: [{ path_with_namespace: "acme/site" }],
       });
@@ -417,33 +436,71 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
         body: JSON.stringify({ body: "Thanks" }),
       };
       const before = seen.length;
-      expect(await crew.call(id, "write", change)).toMatchObject({ refused: "refused" });
+      expect(
+        await crew.call(id, "write", change, undefined, "To perform the task’s requested action."),
+      ).toMatchObject({ refused: "refused" });
       expect(seen).toHaveLength(before);
       const ask = tasks.get("task-1")?.delivery?.writeAsks?.at(-1);
-      expect(ask).toMatchObject({ host, kind: "gitlab", via: "account" });
-      expect(await service.sendAsk("task-1", ask?.id ?? "")).toMatchObject({
+      expect(ask).toMatchObject({ kind: "integration", integration: id });
+      expect(await integrations.sendAsk("task-1", ask?.id ?? "")).toMatchObject({
         ok: true,
-        outcome: { kind: "answered", status: 201 },
+        outcome: { kind: "ran" },
       });
-      await service.sendAsk("task-1", ask?.id ?? "");
+      await integrations.sendAsk("task-1", ask?.id ?? "");
       expect(seen.filter((request) => request.method === "POST")).toHaveLength(1);
       expect(
         JSON.parse(
-          (await integrations.call({ kind: "firstmate" }, id, "read", { path: "/user" })).text,
+          (
+            await integrations.call(
+              { kind: "firstmate" },
+              id,
+              "read",
+              { path: "/user" },
+              "To perform the task’s requested action.",
+            )
+          ).text,
         ),
       ).toMatchObject({ body: { username: "octo" } });
       const readCount = seen.length;
-      expect(await integrations.call({ kind: "firstmate" }, id, "write", change)).toMatchObject({
+      expect(
+        await integrations.call(
+          { kind: "firstmate" },
+          id,
+          "write",
+          change,
+          "To perform the task’s requested action.",
+        ),
+      ).toMatchObject({
         refused: "refused",
       });
       integrations.configure(id, { actions: { read: false } });
-      expect(await crew.call(id, "read", { path: "/user" })).toMatchObject({ refused: "refused" });
+      expect(
+        await crew.call(
+          id,
+          "read",
+          { path: "/user" },
+          undefined,
+          "To perform the task’s requested action.",
+        ),
+      ).toMatchObject({ refused: "refused" });
       expect(seen).toHaveLength(readCount);
-      const merge = await crew.call(id, "write", {
-        method: "PUT",
-        path: `${OWN}/merge_requests/1/merge`,
+      const merge = await crew.call(
+        id,
+        "write",
+        {
+          method: "PUT",
+          path: `${OWN}/merge_requests/1/merge`,
+        },
+        undefined,
+        "To perform the task’s requested action.",
+      );
+      expect(merge.text).toContain("The app raised its approval card");
+      const mergeAsk = tasks.get("task-1")?.delivery?.writeAsks?.at(0);
+      const refusedMerge = await integrations.sendAsk("task-1", mergeAsk?.id ?? "");
+      expect(refusedMerge.outcome).toMatchObject({
+        kind: "refused",
+        why: expect.stringContaining("merge card"),
       });
-      expect(merge.text).toContain("merge card");
       expect(seen).toHaveLength(readCount);
     },
   );

@@ -23,6 +23,7 @@ import {
   smallerPage,
 } from "../forge";
 import { guardApiWrite } from "../forge/apiWriteGuard";
+import { IntegrationOutcomeUnknown } from "../integrations";
 import type { TaskService } from "../tasks/taskService";
 import type { RepoRegistry } from "../workspace/repoRegistry";
 
@@ -166,6 +167,7 @@ export class GithubGatewayService {
     taskId: string,
     input: GithubWriteInput,
     through?: "account" | { host: string },
+    integrationAllowed = false,
   ): Promise<string> {
     return this.answer(
       taskId,
@@ -203,7 +205,10 @@ export class GithubGatewayService {
           await guardApiWrite(forge.kind, route, parsed, () => forge.defaultBranch());
         }
         this.guardPresentationWrite(taskId, forge, route, parsed);
-        const why = this.askReason(taskId, route, target);
+        const why =
+          integrationAllowed && target.integration
+            ? undefined
+            : this.askReason(taskId, route, target);
         if (why)
           return this.keepAsk(taskId, target, route, body, why, undefined, input.validationEffect);
         const response = await this.send(
@@ -214,11 +219,17 @@ export class GithubGatewayService {
           body,
           input.validationEffect,
           forge.host ?? GITHUB_HOST,
+          integrationAllowed,
         );
+        if (integrationAllowed && response.status >= 500)
+          throw new IntegrationOutcomeUnknown(render(response, api));
+        if (integrationAllowed && response.status >= 300)
+          throw new ForgeError("refused", render(response, api));
         const answered = render(response, api);
         return `${answered}${await this.afterWrite(taskId, target, route, response)}`;
       },
       through,
+      integrationAllowed,
     );
   }
 
@@ -561,10 +572,21 @@ export class GithubGatewayService {
     body?: string,
     validationEffect?: string,
     host = GITHUB_HOST,
+    integrationCall = false,
   ): Promise<ForgeApiResponse> {
     this.spend(taskId, api);
     await this.beforeValidationWrite(taskId, validationEffect, host, method, path, body);
-    return api.call(method, path, body);
+    try {
+      return await api.call(method, path, body);
+    } catch (caught) {
+      if (
+        !integrationCall ||
+        isSignInForgeFailure(caught) ||
+        (caught instanceof ForgeError && caught.beforeSend)
+      )
+        throw caught;
+      throw new IntegrationOutcomeUnknown(messageOf(caught));
+    }
   }
 
   private async beforeValidationWrite(
@@ -722,13 +744,15 @@ export class GithubGatewayService {
     taskId: string,
     run: (target: Target) => Promise<string>,
     through?: "account" | { host: string },
+    propagate = false,
   ): Promise<string> {
-    return this.answerWith(() => this.targetOf(taskId, through), run);
+    return this.answerWith(() => this.targetOf(taskId, through), run, propagate);
   }
 
   private async answerWith(
     targetOf: () => Target,
     run: (target: Target) => Promise<string>,
+    propagate = false,
   ): Promise<string> {
     let place = "GitHub";
     try {
@@ -736,6 +760,7 @@ export class GithubGatewayService {
       place = target.api.place;
       return await run(target);
     } catch (caught) {
+      if (propagate) throw caught;
       if (caught instanceof ForgeError)
         return `Cannot call ${place} (${caught.failure}): ${caught.message}`;
       return `Cannot call ${place}: the request failed before ${place} answered.`;

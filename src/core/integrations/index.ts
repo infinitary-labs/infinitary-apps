@@ -4,7 +4,6 @@
  * under `./providers/` is reachable only through it and the composition
  * root, the way the forge's providers are.
  */
-
 export type {
   IntegrationActionSpec,
   IntegrationAnswer,
@@ -16,6 +15,7 @@ export type {
   IntegrationLook,
   IntegrationSecretSlot,
 } from "./binding";
+export { IntegrationOutcomeUnknown } from "./binding";
 export { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "./commandWords";
 export { FIRSTMATE_READER, OutsideReads } from "./outsideReads";
 export { forgeHostIntegration, forgeIntegrationId } from "./providers/forgeHosts";

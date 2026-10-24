@@ -218,8 +218,9 @@ import XCTest
         try await appearances("activity")
         tab("Cards")
         _ = try await home("empty-cards")
-        XCTAssertTrue(app.staticTexts["No cards to read yet."].waitForExistence(timeout: 10))
-        XCTAssertTrue(app.otherElements["phone-character"].exists)
+        // INF-1060: as on the Mac, the empty stage is the character alone, with no line under it.
+        XCTAssertTrue(app.otherElements["phone-character"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == 'No cards to read yet.'")).count, 0)
         // INF-589 item 11: with no card to page, the chevrons and count hide; the cards just closed stay under Past cards.
         for id in ["previous-card", "next-card"] {
             XCTAssertFalse(app.buttons[id].exists, "\(id) shows on an empty stage")
@@ -400,8 +401,8 @@ import XCTest
     /// The existing mock holds a genuine first-mate turn; its completion signal returns the empty stage to idle.
     private func verifyConversationCharacter() async throws {
         let fixture = try await home("character-fixture")
-        XCTAssertTrue(app.staticTexts["No cards to read yet."].waitForExistence(timeout: 10))
         let character = app.otherElements["phone-character"]
+        XCTAssertTrue(character.waitForExistence(timeout: 10))
         XCTAssertEqual(character.value as? String, "idle")
         // Start before the real typing and Send journey, not immediately before releasing the held turn.
         // The simulator's first recorded frame otherwise arrives after the working state has finished.
@@ -416,7 +417,6 @@ import XCTest
         let finished = try await home("character-finished")
         XCTAssertEqual(finished["busy"] as? Bool, false)
         XCTAssertEqual(finished["held"] as? Int, 0)
-        XCTAssertTrue(app.staticTexts["No cards to read yet."].waitForExistence(timeout: 10))
         let idle = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 'idle'"), object: character)
         await fulfillment(of: [idle], timeout: 20)
         picture("character-finished")
@@ -566,6 +566,15 @@ import XCTest
         app.buttons["close-card"].tap()
 
         showCard(chart)
+        // INF-1060: scrolling a long card down recedes the tabs, and the card takes the room the message box gives up.
+        if #available(iOS 26, *), UIDevice.current.userInterfaceIdiom == .phone {
+            let bar = app.tabBars.firstMatch
+            let receded = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 1"), object: bar.buttons)
+            app.scrollViews["card-scroll"].swipeUp()
+            XCTAssertEqual(XCTWaiter.wait(for: [receded], timeout: 10), .completed, app.debugDescription)
+            verifyPhoneComposerBounds(app: app)
+            try await appearances("card-receded")
+        }
         let pictureElement = app.webViews.images["Blue harbour survey"].firstMatch
         XCTAssertTrue(pictureElement.waitForExistence(timeout: 10))
         reveal(pictureElement); pictureElement.tap()
@@ -652,6 +661,13 @@ import XCTest
         let closed = try await home("card-state", method: "GET")
         XCTAssertNotNil(closed["note"] as? [String: Any])
         XCTAssertEqual(closed["leaks"] as? Int, 0)
+        // INF-1060, the captain: "after cards are dismissed, it doesn't extend back". With no card left to scroll,
+        // the receded tabs and the message box above them come back.
+        if #available(iOS 26, *), UIDevice.current.userInterfaceIdiom == .phone {
+            let back = XCTNSPredicateExpectation(predicate: NSPredicate(format: "count == 3"), object: app.tabBars.firstMatch.buttons)
+            XCTAssertEqual(XCTWaiter.wait(for: [back], timeout: 10), .completed, app.debugDescription)
+            verifyPhoneComposerBounds(app: app)
+        }
         picture("cards-answered-and-closed")
         // INF-1059, the captain's "why images couldn't render inline?": a picture card already in the stack when the
         // phone comes back is drawn from the first cards read while the board read is still out, so its picture is asked
@@ -701,7 +717,10 @@ import XCTest
         _ = try await home("minimize-hero")
         XCTAssertTrue(cardHeading(heroTitle).waitForNonExistence(timeout: 10), app.debugDescription)
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
-        XCTAssertTrue(pager.waitForExistence(timeout: 10), app.debugDescription); pager.tap()
+        XCTAssertTrue(pager.waitForExistence(timeout: 10), app.debugDescription)
+        // INF-1060: the empty stage's lone menu keeps one name, with no Minimized label under the character.
+        XCTAssertEqual(pager.label, "Past cards")
+        pager.tap()
         // The answered choice card shares the title under Past cards; the one to open is listed under Minimized.
         let restore = app.buttons.matching(identifier: "minimized-card").matching(NSPredicate(format: "label == %@", heroTitle)).firstMatch
         XCTAssertTrue(restore.waitForExistence(timeout: 10), app.debugDescription)

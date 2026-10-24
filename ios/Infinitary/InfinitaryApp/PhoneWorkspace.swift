@@ -34,7 +34,8 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     @State private var selection = 0
     @State private var messageContext = PhoneMessageContext()
     @State private var rail = Rail.tasks
-    @State private var footerHeight: CGFloat = 0
+    /// The floating footer's top in the window, where each tab's room ends.
+    @State private var footerTop: CGFloat?
     @State private var tabClearance = PhoneTabClearance()
 
     init(session: ReadOnlySession, stage: Stage, tasks: Tasks?, composer: Composer?) {
@@ -48,11 +49,11 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     private enum Rail: Hashable { case tasks, activity }
 
     var body: some View {
-        tabs(footerSpace: composer == nil ? 0 : footerHeight)
+        tabs(footerTop: composer == nil ? nil : footerTop)
             .background { if composer != nil { PhoneTabBarClearance { tabClearance = $0 } } }
             .overlay(alignment: .bottom) {
                 footer
-                    .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { footerHeight = $0 }
+                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .global).minY } action: { footerTop = $0 }
                     .padding(.bottom, tabClearance.bottom)
                     .padding(.leading, tabClearance.leading).padding(.trailing, tabClearance.trailing)
             }
@@ -136,35 +137,49 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         }.background(PhoneTheme.background)
     }
 
-    private func tabs(footerSpace: CGFloat) -> some View {
+    private func tabs(footerTop: CGFloat?) -> some View {
         // A landscape iPad always shows the stage, without losing the compact tab selection.
         TabView(selection: Binding(get: { wide ? 0 : selection }, set: { if !wide { selection = $0 } })) {
             stageAndSidebar
-                .modifier(PhoneFooterSpace(height: footerSpace))
+                .modifier(PhoneFooterSpace(top: footerTop))
                 .toolbar(wide ? .hidden : .visible, for: .tabBar)
                 .tabItem { Label { Text("Cards") } icon: { PhoneSymbol.cards.image } }.tag(0)
                 .badge(session.unreadCards)
             // INF-944 item 6: Activity is the last tab.
             if let tasks {
                 noticed(tasks.background(PhoneTheme.background))
-                    .modifier(PhoneFooterSpace(height: footerSpace))
+                    .modifier(PhoneFooterSpace(top: footerTop))
                     .toolbar(wide ? .hidden : .visible, for: .tabBar)
                     .tabItem { Label { Text("Tasks") } icon: { PhoneSymbol.tasks.image } }.tag(2)
             }
             noticed(activity.background(PhoneTheme.background).accessibilityIdentifier("activity-list"))
-            .modifier(PhoneFooterSpace(height: footerSpace))
+            .modifier(PhoneFooterSpace(top: footerTop))
             .toolbar(wide ? .hidden : .visible, for: .tabBar)
             .tabItem { Label { Text("Activity") } icon: { PhoneSymbol.activity.image } }.tag(1)
         }
-        .modifier(PhoneTabRecede())
+        // INF-1060: an empty stage has nothing to scroll back up, so its tabs stay out and a receded bar comes back.
+        .modifier(PhoneTabRecede(recedes: wide || selection != 0 || messageContext.card != nil))
     }
 }
 
-/// Each tab keeps the floating footer's height clear. On iOS 26 that space is a bar with the system's hard
+/// Each tab's room ends at the floating footer's top. On iOS 26 the space below is a bar with the system's hard
 /// scroll edge (INF-944 item 6), a nearly opaque foot, so rows never show through the last turn or the capsule.
+/// A receded iOS 26 bar keeps the full bar's bottom inset while the footer follows it down (INF-1060), so each tab
+/// sets that inset aside and reserves what it measures down to the footer: a card gets the room the footer left.
 private struct PhoneFooterSpace: ViewModifier {
-    let height: CGFloat
-    @ViewBuilder func body(content: Content) -> some View {
+    let top: CGFloat?
+    @State private var bottom: CGFloat = 0
+    func body(content: Content) -> some View {
+        reserve(content, height: top.map { max(0, bottom - $0) } ?? 0)
+            .ignoresSafeArea(.container, edges: top == nil ? [] : .bottom)
+            .background {
+                // The tab's own frame stops above the inset it sets aside; a reader that ignores it too finds the foot.
+                GeometryReader { geometry in
+                    Color.clear.onChange(of: geometry.frame(in: .global).maxY, initial: true) { _, foot in bottom = foot }
+                }.ignoresSafeArea(.container, edges: .bottom)
+            }
+    }
+    @ViewBuilder private func reserve(_ content: Content, height: CGFloat) -> some View {
         if #available(iOS 26, *) {
             content.safeAreaBar(edge: .bottom, spacing: 0) { Color.clear.frame(height: height) }
                 .scrollEdgeEffectStyle(.hard, for: .bottom)
@@ -177,8 +192,9 @@ private struct PhoneFooterSpace: ViewModifier {
 /// INF-944 item 4, the captain's answer: on iOS 26 the tab bar recedes while a long card or list scrolls down,
 /// and the message box follows the bar it is measured against.
 private struct PhoneTabRecede: ViewModifier {
+    let recedes: Bool
     @ViewBuilder func body(content: Content) -> some View {
-        if #available(iOS 26, *) { content.tabBarMinimizeBehavior(.onScrollDown) } else { content }
+        if #available(iOS 26, *) { content.tabBarMinimizeBehavior(recedes ? .onScrollDown : .never) } else { content }
     }
 }
 

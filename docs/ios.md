@@ -78,7 +78,7 @@ Neither reconnection nor discovery queues or retries a mutation.
 
 `PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
 It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles, then a Minimized section and then a Past cards section.
-With no current card the chevrons and count hide, leaving a lone Minimized or Past cards menu only while such cards exist.
+With no current card the stage shows the character alone, as the Mac does, and the chevrons and count hide, leaving a lone menu named Past cards only while minimized or past cards exist.
 The stack follows the Mac's: a card minimized on any Mac leaves the phone's stack, count and badge, and opening it from the Minimized section sends `inf:cards:minimize` with `false`, which brings it back on every Mac too.
 A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments, thread and reply row scroll between them in one native scroller.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
@@ -141,11 +141,13 @@ The field displays up to two lines there, the controls retain 44-point targets, 
 The native journey requires a completely visible card heading and scrolls real body text and an action into full view, not merely a retained draft above the tabs.
 Card and task owners keep their selected records and replies.
 `PhoneMessageContext` carries only the shown current or past card, the Cards tab’s visibility and the open task record into the composer; hidden cards and dismissed records supply no hint.
-One content-sized footer floats over the tab container above the measured native bar, with each tab reserving its measured height; no native bar height is guessed.
+One content-sized footer floats over the tab container above the measured native bar, and each tab's room ends at the footer's measured top; no native bar height is guessed.
 Only a tab bar attached to the same window contributes clearance; the iPad's top tabs leave a detached legacy bar whose stale frame must not move the footer.
 No panel sits behind it: the last turn is two bare lines over the message capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
 On iOS 26 each tab reserves that height as a safe-area bar with the system's hard scroll edge, a nearly opaque foot, so rows never show through the last turn or the capsule; on iOS 18 the page color fades in behind it.
 On iOS 26 the tab bar recedes while a card or list scrolls down and returns on the way back up, and the footer follows the bar it is measured against.
+A receded bar keeps the full bar's bottom inset, so each tab sets that inset aside and reserves its own measured room down to the footer, and a card grows into the room the footer leaves.
+The Cards tab's bar does not recede while the stage is empty, so a bar receded on a card comes back once the last card closes.
 While the keyboard is open, a leading Done button in the persistent native navigation bar and the Hide keyboard command (Shift-Command-K) dismiss it without sending or clearing the draft, making the tabs reachable after typing.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 The system tab accessory is fixed-height and cannot contain the composer’s turn, photo and error rows, so those rows stay in the growing footer instead.

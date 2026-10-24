@@ -200,6 +200,13 @@ import XCTest
         // INF-944 item 4: receded tabs leave one round button, and the composer shares its row beside it.
         if bar.buttons.count == 1 {
             XCTAssertFalse(footer.frame.intersects(bar.buttons.firstMatch.frame), "The composer sits beside the receded tabs")
+            // INF-1060, the captain: the shrunk message box should "actually free up vertical space for the card",
+            // so the card's pager follows the box down instead of leaving a band above it.
+            let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
+            if card.exists && pager.exists {
+                XCTAssertEqual(phoneAccessibilityBounds(pager.frame).maxY, phoneAccessibilityBounds(footer.frame).minY, accuracy: 1,
+                    "The card's room ends where the receded composer \(footer.frame) begins, not at \(pager.frame)")
+            }
         } else {
             XCTAssertLessThanOrEqual(footer.frame.maxY, bar.frame.minY, "The composer stays above the native tabs")
         }

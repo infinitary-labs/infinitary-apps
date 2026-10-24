@@ -30,10 +30,9 @@ struct PhoneCards: View {
                     replyLeaves: !card.value["holdsPlace"].flag && session.stack.count > 1)
                     .id("\(card.id):\(card.offerID ?? card.body):\(card.isPast)")
             } else {
-                VStack(spacing: PhoneTheme.space3) {
-                    PhoneCharacter(state: session.firstmateBusy ? .working : .idle).frame(width: 200, height: 200)
-                    Text("No cards to read yet.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
-                }.frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, PhoneTheme.space5)
+                // INF-1060: as on the Mac, the empty stage is the character alone.
+                PhoneCharacter(state: session.firstmateBusy ? .working : .idle).frame(width: 200, height: 200)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, PhoneTheme.space5)
             }
             // INF-589 item 11: with no card to page, the pager hides; Past cards stays reachable while there are any.
             if let restoreProblem { Text(restoreProblem).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("restore-error") }
@@ -88,7 +87,7 @@ struct PhoneCards: View {
                     }
                 }
             } label: {
-                Text(past != nil ? "Past card" : session.stack.isEmpty ? (session.minimizedCards.isEmpty ? "Past cards" : "Minimized") : "\(index + 1) of \(session.stack.count)")
+                Text(past != nil ? "Past card" : session.stack.isEmpty ? "Past cards" : "\(index + 1) of \(session.stack.count)")
                     .font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
                     .frame(minWidth: 44, minHeight: 44)
             }.accessibilityIdentifier("card-pager")

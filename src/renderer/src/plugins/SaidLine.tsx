@@ -14,7 +14,8 @@ function lineKey(line: PanelSummaryLine): string {
   return `${line.tone ?? ""}|${line.lead ?? ""}|${line.line}`;
 }
 
-type Shown = { line: PanelSummaryLine; gen: number };
+/** `focused`: the line it replaced held focus, so this one takes it on. */
+type Shown = { line: PanelSummaryLine; gen: number; focused?: boolean };
 
 /**
  * The line a collapsed panel said it holds (`PanelSummaryLine`), in its
@@ -27,6 +28,11 @@ type Shown = { line: PanelSummaryLine; gen: number };
  * `--dur-fast`. Each holds the header `SAID_LINE_DWELL_MS`, and a burst
  * keeps only its newest `SAID_LINE_QUEUE_KEEP`. Under reduced motion the
  * shared rule zeroes both durations, so every move is a cut.
+ *
+ * Each line is a new element, so a line that holds focus hands it to the
+ * one replacing it: a person who tabbed to the line keeps their place, and
+ * a key pressed on it reaches the newer line, in the same commit that
+ * removed the old one.
  */
 export function SaidLine({
   line,
@@ -41,6 +47,7 @@ export function SaidLine({
   const [outgoing, setOutgoing] = useState<Shown | null>(null);
   const queue = useRef<PanelSummaryLine[]>([]);
   const shownRef = useRef(shown);
+  const holder = useRef<HTMLSpanElement>(null);
   const lastShownAt = useRef(0);
   const pump = useRef<number | undefined>(undefined);
   // `line` changes identity on every summary, its age ticking on beside
@@ -58,7 +65,12 @@ export function SaidLine({
       const upcoming = queue.current.shift();
       if (!upcoming) return;
       const replaced = shownRef.current;
-      const entering = { line: upcoming, gen: replaced.gen + 1 };
+      const active = document.activeElement;
+      const focused =
+        active instanceof HTMLElement &&
+        active.hasAttribute("data-panel-summary-line") &&
+        !!holder.current?.contains(active);
+      const entering = { line: upcoming, gen: replaced.gen + 1, focused };
       shownRef.current = entering;
       lastShownAt.current = Date.now();
       setOutgoing(replaced);
@@ -73,7 +85,7 @@ export function SaidLine({
   useEffect(() => () => window.clearTimeout(pump.current), []);
 
   return (
-    <span style={{ position: "relative", display: "block", flex: 1, minWidth: 0 }}>
+    <span ref={holder} style={{ position: "relative", display: "block", flex: 1, minWidth: 0 }}>
       {outgoing && (
         <Row
           // Its own key: the row that showed it unmounts, and this one mounts to leave.
@@ -87,6 +99,7 @@ export function SaidLine({
         key={`in-${shown.gen}`}
         line={shown.line}
         entering={shown.gen > 0}
+        takeFocus={shown.focused}
         panelTitle={panelTitle}
         onOpen={onOpen}
       />
@@ -98,6 +111,7 @@ function Row({
   line,
   entering = false,
   leaving = false,
+  takeFocus = false,
   panelTitle,
   onOpen,
   onLeft,
@@ -105,6 +119,7 @@ function Row({
   line: PanelSummaryLine;
   entering?: boolean;
   leaving?: boolean;
+  takeFocus?: boolean;
   panelTitle?: string;
   onOpen?: () => void;
   onLeft?: () => void;
@@ -113,6 +128,12 @@ function Row({
   // One move per row, as it mounts: it enters or leaves once.
   const move = useRef(leaving ? "leave" : entering ? "enter" : null);
   const left = useRef(onLeft);
+  // Before the frame the shell's lost-focus guard reads, so focus never
+  // falls to the message box in between.
+  const focusOnMount = useRef(takeFocus);
+  useLayoutEffect(() => {
+    if (focusOnMount.current) ref.current?.focus({ preventScroll: true });
+  }, []);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || move.current === null) return;

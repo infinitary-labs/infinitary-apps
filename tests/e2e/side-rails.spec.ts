@@ -10,7 +10,7 @@ import {
   startedLine,
   taskKey,
 } from "./rails";
-import { pressKey } from "./windowKeys";
+import { focusOn, pressKey, untilFocused } from "./windowKeys";
 
 /**
  * D5, the two side rails, against the built app (docs/ui-plugins.md). Since
@@ -87,13 +87,24 @@ test("collapse is host chrome: the header stays, the body goes out of sight, the
   // A newer line takes its place, and the one it replaced leaves.
   const words = dockSummaryLine(page, "activity").locator("[data-panel-summary-words]");
   const before = await words.innerText();
+  const said = "check the release notes before the alpha";
   const input = promptInput(page);
-  await input.fill("check the release notes before the alpha");
+  await input.fill(said);
   await input.press("Enter");
   await expect(words).not.toHaveText(before);
+  // The collapse's own line may show first and the captain's wait its turn
+  // behind it, so the captain's own line is the one this waits for.
+  await expect(words).toContainText(said);
   await expect(dockSummaryLine(page, "activity")).toHaveAttribute("aria-description", /.+/);
   await expect(dockSummaryLine(page, "activity")).toHaveCount(1);
   await expect(activity.locator("[data-panel-summary-line-leaving]")).toHaveCount(0);
+
+  // A newer line that replaces the focused line keeps focus on the line
+  // (INF-1100): collapsing Tasks writes one, and its click moves no focus.
+  await focusOn(dockSummaryLine(page, "activity"));
+  await page.getByRole("button", { name: `Collapse ${dockTitle("now")}` }).dispatchEvent("click");
+  await expect(words).not.toContainText(said);
+  await untilFocused(dockSummaryLine(page, "activity"));
 
   // The line opens the panel from the keyboard, as the chevron does.
   await pressKey(dockSummaryLine(page, "activity"), "Enter");

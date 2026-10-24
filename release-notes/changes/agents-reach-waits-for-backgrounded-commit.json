@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "agents-reach-waits-for-backgrounded-commit",
+      "reason": "Test only: the agent's-reach journey's stand-in crewmates carry on from the commit job's exit when a commit outlasts the shell's limit, instead of starting their task over, and the journey's commits now always take that long."
+    }
+  ]
+}

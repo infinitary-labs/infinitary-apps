@@ -1,6 +1,7 @@
 import { captainTurn, renderWake } from "../../../src/core/orchestrator/wakes";
 import { fixedHoldWords, type OverridableHold } from "../../../src/shared/holds";
 import {
+  browserShellMessages,
   contextRepos,
   findCrewTaskId,
   MOCK_CLOSING_SENTENCES,
@@ -193,11 +194,32 @@ function firstmateMove({ body }: ScenarioRequest): ScenarioAnswer | undefined {
   return undefined;
 }
 
-function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer | undefined {
-  const { user, results } = sinceLastUser(body);
+/**
+ * A crewmate's latest assignment, the tool answers since, and whether a
+ * command it ran is still running (INF-1127). A commit past a Pi shell's
+ * limit answers with a job receipt, and its exit comes back later as a
+ * wake quoting the command, which names the task. Read through the
+ * browser's reader, the receipt is no answer and the exit is the commit's
+ * answer, never a new assignment that starts the task over.
+ */
+function sinceLastAssignment(body: string) {
+  const { readings, pending } = browserShellMessages(providerMessages(body));
+  const at = readings.findLastIndex((message) => message.role === "user");
+  return {
+    user: readings[at]?.text ?? "",
+    results: readings
+      .slice(at + 1)
+      .flatMap((message) => (message.role === "tool" ? [message.text] : [])),
+    pending,
+  };
+}
 
+function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer | undefined {
   // 1. The reviewed builder, steered with the captain's words.
-  if (body.includes(REVIEWED_TIER_PROMPT_MARKER) && user.includes(REACH_STOP_STEER)) {
+  if (
+    body.includes(REVIEWED_TIER_PROMPT_MARKER) &&
+    sinceLastUser(body).user.includes(REACH_STOP_STEER)
+  ) {
     if (hasToolResults) return { text: "done" };
     return {
       calls: [
@@ -216,6 +238,10 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
 
   // 2. The change GitHub's rule holds: a commit, then the completion card.
   if (body.includes(REACH_RULE_MARKER)) {
+    const { user, results, pending } = sinceLastAssignment(body);
+    // A commit still running ends the turn with no words: its exit wake is
+    // the next turn, and words now would be one more report on the task.
+    if (pending) return { text: "" };
     if (!user.includes(REACH_RULE_MARKER)) return { text: "Nothing new to do." };
     if (results.length === 0)
       return {
@@ -246,6 +272,8 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
   // 3. The failed check: read, diagnose, reserve, rerun once, be refused
   //    a second, report; then on the captain's relayed word, once more.
   if (body.includes(REACH_RERUN_MARKER)) {
+    const { user, results, pending } = sinceLastAssignment(body);
+    if (pending) return { text: "" };
     const head =
       providerMessages(body)
         .filter((message) => message.role === "tool")

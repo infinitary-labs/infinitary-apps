@@ -1,8 +1,9 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync, writeFileSync } from "node:fs";
+import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { hostEnv } from "../../src/core/hostEnv";
+import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { openDatabase } from "../../src/core/storage/db";
 import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { TaskStore } from "../../src/core/storage/taskStore";
@@ -419,6 +420,13 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
   });
 
   await test.step("2. words naming GitHub's rule pass asking first and are refused at the rule", async () => {
+    // INF-1127: from here on a commit takes a second longer than the
+    // crewmate's shell waits, as on a busy Mac, so each crewmate's commit
+    // finishes as a background job and it carries on from that job's exit.
+    // The app's own git skips the project's hooks.
+    const hook = join(repoDir, ".git", "hooks", "pre-commit");
+    writeFileSync(hook, `#!/bin/sh\nsleep ${SYNC_CAP_MS / 1000 + 1}\n`);
+    chmodSync(hook, 0o755);
     github.setChecks(PASSED);
     github.serveNext({ ...REACH_RULE_CHANGE, mergeableState: "blocked" });
     await send(`${SPAWN_PROMPT_MARKER} ${RULE_TITLE}`);

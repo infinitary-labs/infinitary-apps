@@ -41,6 +41,7 @@ import { claimedPort } from "../../tests/helpers/claimedPort";
 import { connectClient, type ReceivedPush } from "../../tests/helpers/connectionClient";
 import { recordNewerMigration } from "../../tests/helpers/database";
 import { projectFontBytes } from "../../tests/helpers/fontFixture";
+import { SAMPLE_NOTES } from "../../tests/helpers/mcpStandIn";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { type ScriptedClient, startScriptedClient } from "../../tests/helpers/scriptedClient";
 import { startConnection } from "./connection/connection";
@@ -541,6 +542,81 @@ describe("the core, driven with no Electron in the process", () => {
     } finally {
       vi.useRealTimers();
       await setSize(start.size);
+    }
+  });
+
+  // INF-1110: adding a server names that server in its operation and Activity,
+  // through Settings or app_change; additions are separate acts, not a slider run.
+  it("names each added MCP server in its own attributed operation and Activity line", async () => {
+    const notes = join(scratchDir("catalog-mcp-notes-"), "notes.json");
+    writeFileSync(notes, JSON.stringify({ notes: SAMPLE_NOTES }));
+    const runs = `'${process.execPath}' '${join(process.cwd(), "tests/helpers/mcpStandIn.ts")}' stdio modern '${notes}'`;
+    const events: FmEvent[] = [];
+    const off = core.events.subscribe((channel, event) => {
+      if (channel === "inf:event") events.push(event as FmEvent);
+    });
+    // Hold the settle clock: even back-to-back additions must keep separate records.
+    const clock = vi.spyOn(core.services.ticker, "now").mockReturnValue(Date.now());
+    const before = new Set(core.services.tasks.list().map((task) => task.id));
+    const operations = () =>
+      core.services.tasks
+        .list()
+        .filter((task) => task.kind === "operation" && !before.has(task.id));
+    const change = createAppTools({
+      dispatch: core.dispatch,
+      actor: () => ({ kind: "firstmate", wake: "captain" }),
+    }).find((tool) => tool.name === "app_change");
+    if (!change) throw new Error("Missing app_change");
+    const names = ["Notes", "Recipes", "Reading list"];
+    try {
+      // The same channel Settings calls, including its schema's name trimming.
+      for (const name of names.slice(0, 2))
+        await core.dispatch("inf:integrations:add", [{ name: `  ${name}  `, runs }]);
+      const answer = await change.run({
+        action: "integration-add-mcp",
+        value: { name: names[2], runs },
+        evidence: "Add my Reading list server.",
+      });
+      expect(JSON.parse(answer.text).action).toBe("integration-add-mcp");
+      const titles = names.map((name) => ACTIONS["integration-add-mcp"].done({ name }));
+      expect(
+        operations()
+          .map((task) => task.title)
+          .sort(),
+      ).toEqual([...titles].sort());
+      for (const task of operations()) {
+        expect(task.status).toBe("done");
+        expect(task.outcome).toBe(task.title);
+      }
+      const added = events.filter((event) => event.type === "personalized");
+      expect(added).toEqual(
+        titles.map((text, index) => ({
+          type: "personalized",
+          actor: index === 2 ? "firstmate" : "captain",
+          text,
+        })),
+      );
+      const lines = await core.dispatch("inf:feed:recent", []);
+      for (const event of added)
+        expect(lines.filter((line) => line.text === feedLineFrom(event)?.text)).toHaveLength(1);
+
+      // A refused duplicate and a program that cannot start write no success.
+      const kept = operations().map((task) => task.id);
+      await expect(
+        core.dispatch("inf:integrations:add", [{ name: names[0], runs }]),
+      ).rejects.toThrow();
+      await expect(
+        core.dispatch("inf:integrations:add", [
+          { name: "Unavailable notes", runs: `'${join(scratchDir("missing-mcp-"), "missing")}'` },
+        ]),
+      ).rejects.toThrow();
+      expect(operations().map((task) => task.id)).toEqual(kept);
+      expect(events.filter((event) => event.type === "personalized")).toEqual(added);
+    } finally {
+      off();
+      clock.mockRestore();
+      for (const row of core.services.integrations.view().integrations)
+        if (names.includes(row.name)) await core.services.integrations.remove(row.id);
     }
   });
 

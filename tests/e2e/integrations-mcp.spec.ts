@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/wakes";
+import { ACTIONS } from "../../src/shared/actions";
 import {
   INTEGRATION_APPROVAL_WORDS,
   INTEGRATION_RULE_WORDS,
@@ -17,6 +18,7 @@ import { resizeWindow } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
+import { feedLineOf } from "./rails";
 import {
   MCP_NOTES_ACTION,
   MCP_NOTES_CHANGE_MARKER,
@@ -149,6 +151,16 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
       "data-screen-label",
       "Settings",
     );
+    // INF-1110: the Settings addition names the server in its completed record
+    // and in the Activity the captain returns to, not the integration list.
+    const addition = ACTIONS["integration-add-mcp"].done({ name: MCP_NOTES_NAME });
+    const board = await page.evaluate(() => window.infinitary.tasks.board());
+    expect(
+      board.tasks.filter((task) => task.kind === "operation" && task.title === addition),
+    ).toMatchObject([{ status: "done", outcomeSummary: addition }]);
+    await expect(
+      feedLineOf(page, { type: "personalized", actor: "captain", text: addition }),
+    ).toBeVisible();
     const title = `${MCP_NOTES_PROMPT_MARKER} for the week`;
     const input = promptInput(page);
     await input.click();

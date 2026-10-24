@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "mcp-addition-name",
+      "kind": "fix",
+      "area": "settings",
+      "title": "Added servers keep their names in Activity",
+      "body": "When you add an MCP server, Activity and its completed task record name the server you added. Each addition keeps its own record.",
+      "picture": {
+        "dark": "mcp-addition-name-dark.webp",
+        "light": "mcp-addition-name-light.webp",
+        "alt": "The completed operation record names the added Notes MCP server."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

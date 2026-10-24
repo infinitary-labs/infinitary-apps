@@ -1528,6 +1528,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       } else if (name === "project-remove") {
         const gone = (before.get(name) as RepoView[]).find((repo) => repo.id === args[0]);
         if (gone) trail(name, { repo: gone }, actor);
+      } else if (name === "integration-add-mcp") {
+        // An addition names its parsed input, not the whole list read back.
+        // Each server is a separate act, never part of a settled settings run.
+        const [server] = args as InvokeRequest<"inf:integrations:add">;
+        trail(name, { name: server.name }, actor);
       } else if (name === "device-remove") {
         trail(name, { device: result }, actor);
       } else if (name === "project-settings") {

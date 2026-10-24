@@ -35,6 +35,7 @@ beforeAll(async () => {
 }, 60_000);
 
 afterEach(() => {
+  vi.useRealTimers();
   for (const channel of channels.splice(0)) channel.close();
 });
 
@@ -298,20 +299,23 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
     // limit turned a look into a background job before its answer came
     // back. The channel now tells Pi's shell that the command reached it.
     const jobs = new JobManager({ onExit: () => {} });
-    let reached: () => void = () => {};
-    const told = new Promise<void>((resolve) => {
-      reached = resolve;
-    });
-    const channel = await openChannel(undefined, (shell) => {
-      jobs.answering(shell);
-      reached();
-    });
+    const channel = await openChannel(undefined, (shell) => jobs.answering(shell));
     const browser = standIn("Sign up");
+    let looked: () => void = () => {};
+    const looking = new Promise<void>((resolve) => {
+      looked = resolve;
+    });
     // The page never shows the words: the wait runs on in the browser.
-    browser.inspect = vi.fn(() => new Promise<BrowserAnswer>(() => {}));
+    browser.inspect = vi.fn(() => {
+      looked();
+      return new Promise<BrowserAnswer>(() => {});
+    });
     const granted = channel.grant("task-a", { browser });
     const cap = 1_500;
-    const started = Date.now();
+    // The shell's limit and the channel's deadline run on a clock the test
+    // moves, so the look reaches the browser before either runs out however
+    // long a loaded Mac takes to start the launcher (INF-1175).
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
     const running = jobs.run({
       ownerId: "task-a",
       command: "infinitary-browser-axi wait Ready",
@@ -319,16 +323,13 @@ describe("the task channel and the infinitary-browser-axi launcher", () => {
       capMs: cap,
       shell: granted,
     });
-    await told;
-    // This process stops running from before the channel's deadline (750 ms
-    // before the limit) until after the limit, as the app's did.
-    await new Promise((resolve) =>
-      setTimeout(resolve, Math.max(0, started + cap - 900 - Date.now())),
-    );
-    const until = started + cap + 300;
-    while (Date.now() < until) {
-      // Held up: no timer or answer runs here until the limit has passed.
-    }
+    // The look reached the browser: the launcher reached the app, which told
+    // the shell, and the channel's deadline (750 ms before the limit) counts.
+    await looking;
+    // This process stops running from before that deadline until after the
+    // limit, as the app's did: both run out back to back, before any answer
+    // comes back.
+    vi.advanceTimersByTime(cap + 300);
 
     const outcome = await running;
     expect(outcome.kind).toBe("done");

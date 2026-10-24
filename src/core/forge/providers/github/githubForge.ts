@@ -27,6 +27,7 @@ import {
   type ForgeRuleset,
   type ForgeSkipMerge,
   ForgeWriteError,
+  isFullCommitId,
   isSignInForgeFailure,
   isTransientForgeFailure,
   overallOfChecks,
@@ -499,6 +500,25 @@ export class GitHubForge implements Forge {
       items,
       ...(notStarted ? { notStarted: true } : {}),
     };
+  }
+
+  /**
+   * The Git database read answers only an exact full id: the commit reads
+   * `checks` uses resolve a longer id to the commit its first 40 characters
+   * name (INF-1184). GitHub answers 404 for a repository the sign-in cannot
+   * see as well, so a 404 means no such commit only once the repository reads.
+   */
+  async holdsCommit(sha: string): Promise<boolean> {
+    if (!isFullCommitId(sha)) return false;
+    const path = `${this.repoPath()}/git/commits/${encodeURIComponent(sha)}`;
+    try {
+      const commit = (await this.request("GET", path)) as { sha?: string } | null;
+      return commit?.sha === sha;
+    } catch (caught) {
+      if (!(caught instanceof ForgeError && caught.failure === "not-found")) throw caught;
+    }
+    await this.request("GET", this.repoPath());
+    return false;
   }
 
   /**

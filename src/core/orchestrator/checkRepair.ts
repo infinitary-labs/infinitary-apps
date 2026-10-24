@@ -81,12 +81,18 @@ export function observeRunFailures(
   return ledger;
 }
 
-/** A declaration is validated as a closed typed fact, never parsed out of prose. */
+/**
+ * A declaration is validated as a closed typed fact, never parsed out of prose.
+ * `target` is what the project's host answered about a repair's version
+ * (INF-1184): `held` false when it holds no commit there, absent when it could
+ * not say; `where` names the host in the refusal.
+ */
 export function declareCheckAction(
   tasks: TaskService,
   taskId: string,
   input: CheckChangeInput,
   at: number,
+  target?: { held?: boolean; where: string },
 ): { text: string; read: boolean } {
   const task = tasks.get(taskId);
   if (!task) return { read: false, text: "Check declaration refused: task not found." };
@@ -192,7 +198,16 @@ export function declareCheckAction(
         read: false,
         text: "Repair refused: provide a stable id, evidence of your fix and a new target head.",
       };
-    const previous = ledger.repairs.find((r) => r.id === repair.id || r.headSha === repair.headSha);
+    if (target?.held === false)
+      return {
+        read: false,
+        text: `Repair refused: no commit ${repair.headSha} exists ${target.where}, so no check can run there. Push the repaired version and declare its full commit id; nothing was recorded and no attempt was spent.`,
+      };
+    // A void attempt named a version no check can run at, so its id and
+    // version stay free for the declaration that corrects it (INF-1184).
+    const previous = ledger.repairs.find(
+      (r) => r.outcome !== "void" && (r.id === repair.id || r.headSha === repair.headSha),
+    );
     if (previous) {
       const read =
         same(previous, repair) &&
@@ -219,7 +234,7 @@ export function declareCheckAction(
         read: false,
         text: `Repair refused: attempt ${outstanding.id} at ${outstanding.headSha} has no result yet; read its checks with check_change once they finish, before starting another.`,
       };
-    ledger.repairs.push(repair);
+    ledger.repairs = [...ledger.repairs.filter((r) => r.id !== repair.id), repair];
   }
   const asked = input.rerun;
   let rerun: CheckRepairLedger["rerun"];
@@ -341,18 +356,20 @@ export function observeCheckRepair(
 }
 
 /**
- * The open attempt at `headSha`, a version the change has moved past where
- * the host holds no check at all (INF-988): no reading can ever settle it,
- * so it closes as superseded. It spends nothing - no result was seen - and
- * the next repair may be declared.
+ * Closes the open attempt at `headSha`, which no reading can ever settle:
+ * `superseded` when the change has moved past a version where the host holds
+ * no check at all (INF-988), `void` when the host holds no commit there
+ * (INF-1184). Either spends nothing - no result was seen - and the next
+ * repair may be declared.
  */
-export function supersedeCheckRepair(
+export function closeCheckRepair(
   delivery: TaskDelivery | null | undefined,
   headSha: string,
+  outcome: "superseded" | "void",
 ): Partial<TaskDelivery> {
   const ledger = structuredClone(delivery?.ciRepair ?? empty());
   const attempt = ledger.repairs.find((r) => r.headSha === headSha && r.outcome === undefined);
-  if (attempt) attempt.outcome = "superseded";
+  if (attempt) attempt.outcome = outcome;
   return { ciRepair: ledger };
 }
 

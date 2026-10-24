@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "repair-version-held",
+      "reason": "Internal: a crewmate's check repair declared at a version the project's host holds no commit for is refused, and one already saved there closes without spending a repair attempt, so the crewmate can declare it again correctly; only the crewmate's tool answers change."
+    }
+  ]
+}

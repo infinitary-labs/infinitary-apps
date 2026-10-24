@@ -13,6 +13,7 @@ import {
   type ForgePull,
   type ForgeReadiness,
   ForgeWriteError,
+  isFullCommitId,
   overallOfChecks,
 } from "../../forge";
 import { gitLabReleaseUpload, nextGitLabPagePath, parseGitLabApiRequest } from "./api";
@@ -274,6 +275,24 @@ export class GitLabForge implements Forge {
     const waiting = movedPast === undefined ? await this.notStarted(ofRequest, counted, iid) : null;
     if (waiting) items.push({ name: waiting, state: "pending" });
     return { overall: overallOfChecks(items), items };
+  }
+
+  /**
+   * GitLab's commit read also resolves a short id or a branch, so its answer
+   * must name `sha` itself (INF-1184); a 404 means no such commit only once
+   * the project reads, as for GitHub.
+   */
+  async holdsCommit(sha: string): Promise<boolean> {
+    if (!isFullCommitId(sha)) return false;
+    const path = `${this.projectPath()}/repository/commits/${encodeURIComponent(sha)}`;
+    try {
+      const commit = (await this.read(path)) as { id?: unknown } | null;
+      return commit?.id === sha;
+    } catch (caught) {
+      if (!(caught instanceof ForgeError && caught.failure === "not-found")) throw caught;
+    }
+    await this.read(this.projectPath());
+    return false;
   }
 
   async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {

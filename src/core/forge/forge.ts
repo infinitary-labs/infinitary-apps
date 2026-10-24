@@ -296,6 +296,13 @@ export interface Forge {
    */
   checks(change: ForgeChange, movedPast?: string): Promise<ForgeChecks>;
   /**
+   * Whether the host holds `sha` as that exact full commit id (INF-1184):
+   * false when it holds no such commit, as for a mistyped, shortened or
+   * unpushed id; throws when it cannot say. Absent where the host cannot
+   * look a commit up.
+   */
+  holdsCommit?(sha: string): Promise<boolean>;
+  /**
    * Put the change in, only while its head is still `headSha`. A host that
    * confirms the merge answers its commit; one that cannot says nothing.
    */
@@ -322,6 +329,11 @@ export interface Forge {
   /** How the change is named on a surface: `#N`, `!N`, or the branch where it has no number. */
   label(change: ForgeChange): string;
   url(change: ForgeChange): string | null;
+}
+
+/** A full commit id: 40 hexadecimal characters, or 64 in a SHA-256 repository. */
+export function isFullCommitId(sha: string): boolean {
+  return /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/.test(sha);
 }
 
 const RED_STATES = new Set<ForgeCheckState>([

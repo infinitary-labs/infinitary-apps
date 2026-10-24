@@ -358,6 +358,38 @@ describe("GitLabForge", () => {
     });
   });
 
+  // INF-1184: a repair declared at a version the host holds no commit for is
+  // refused, and one saved there closes void, so only GitLab's own answer
+  // that the commit is missing from a project it can read says no.
+  it("holds a repair's version only on GitLab's answer for that exact commit", async () => {
+    const held = "0b59b6d4863943cc06b1e6e16308572380eb3873";
+    const missing = "a75f9eb4d0f888d5a7fee139a342cbb35a86af3c";
+    const project = (projectFound: boolean) =>
+      forgeAnswering((_method, path) =>
+        path === `/api/v4${PROJECT}/repository/commits/${held}`
+          ? Response.json({ id: held, short_id: held.slice(0, 8), title: "fix: the meter" })
+          : path === `/api/v4${PROJECT}` && projectFound
+            ? Response.json({ id: 7, path_with_namespace: "group/subgroup/app" })
+            : Response.json(
+                {
+                  message: path.includes("/commits/")
+                    ? "404 Commit Not Found"
+                    : "404 Project Not Found",
+                },
+                { status: 404 },
+              ),
+      );
+
+    const { forge } = project(true);
+    expect(await forge.holdsCommit(held)).toBe(true);
+    expect(await forge.holdsCommit(missing)).toBe(false);
+
+    // A project the key cannot read says nothing about the commit.
+    await expect(project(false).forge.holdsCommit(missing)).rejects.toMatchObject({
+      failure: "not-found",
+    });
+  });
+
   it("finds only a merge request from the project's own branch, never a fork's of the same name", async () => {
     const { forge } = forgeAnswering(() =>
       Response.json([request({ iid: 5, source_project_id: 99 }), request()]),

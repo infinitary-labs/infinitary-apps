@@ -1263,3 +1263,33 @@ describe("a release file's upload address (INF-205)", () => {
     ]);
   });
 });
+
+// INF-1184: a repair declared at a version GitHub holds no commit for is
+// refused, and one saved there closes void, so only GitHub's 404 for that
+// exact commit in a repository the sign-in reads says no.
+describe("whether GitHub holds a repair's version", () => {
+  const HELD = "a75f9eb4d0f888d5a7fee139a342cbb35a86af3b";
+  const MISSING = "a75f9eb4d0f888d5a7fee139a342cbb35a86af3c";
+
+  it("answers from the Git database's read of that exact commit", async () => {
+    const { forge, seen } = await stub({
+      [`GET /repos/octo/meter/git/commits/${HELD}`]: () => ({ json: { sha: HELD, parents: [] } }),
+      "GET /repos/octo/meter": () => ({
+        json: { full_name: "octo/meter", default_branch: "main" },
+      }),
+    });
+    expect(await forge.holdsCommit(HELD)).toBe(true);
+    expect(await forge.holdsCommit(MISSING)).toBe(false);
+    // GitHub's commit reads resolve a longer id by its first 40 characters;
+    // a longer or shorter id names no commit, without asking.
+    const asked = seen.length;
+    expect(await forge.holdsCommit(`${HELD}0761`)).toBe(false);
+    expect(await forge.holdsCommit(HELD.slice(0, 7))).toBe(false);
+    expect(seen.length).toBe(asked);
+  });
+
+  it("says nothing when the sign-in cannot see the repository", async () => {
+    const { forge } = await stub({});
+    await expect(forge.holdsCommit(MISSING)).rejects.toMatchObject({ failure: "not-found" });
+  });
+});

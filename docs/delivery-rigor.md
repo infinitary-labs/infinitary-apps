@@ -360,6 +360,12 @@ That read writes only the repair ledger - the failures seen there, the attempt's
 A version still running, one that never ran the repaired check, or one the host cannot read is no result: the attempt stays outstanding and the next repair is refused with the reason.
 A version the open change moved past where the host holds no check at all - no check run, status or workflow run, as when the change conflicted until it moved on - can never have a result, because the host starts checks only on the change's head (INF-988).
 That attempt is closed as `superseded`, spends nothing, and the next repair may be declared.
+A repair names a version the host's checks will run at, so the declaration first asks the host whether it holds that exact full commit id (`holdsCommit`, INF-1184).
+A version it holds no commit at - a mistyped, shortened or lengthened id, or one never pushed - is refused with the reason, and nothing is recorded or spent.
+GitHub reads the checks of an id longer than 40 characters as the commit its first 40 characters name, so without that question such a repair would settle from another version's checks.
+An attempt already recorded at a version the host holds no commit at, as before INF-1184, is closed as `void` before any reading of its checks: it spends nothing and leaves `ciRounds` as it was.
+A void attempt's id and version stay free, so the crewmate declares the corrected repair under the same id or a new one.
+Where the host cannot look a commit up or does not answer, nothing is refused or closed, and the attempt is read as before.
 A repaired check cancelled at its own version, by a time limit or a newer push, is unsuccessful like any other cancellation.
 A version can hold several checks of the repaired check's name, one per workflow run, such as the pull request's own run beside journey runs requested by hand (INF-991).
 The repair passes only when every one of them passed; any one that did not makes it unsuccessful, whatever order the host lists them in (`repairCheck`).

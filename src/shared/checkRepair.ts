@@ -199,8 +199,11 @@ export type CheckRepairLedger = {
   /**
    * `superseded`: the change moved past the attempt's version before the host
    * ran any check there, so it can never have a result and spends nothing (INF-988).
+   * `void`: the project's host holds no commit at the declared version, as for a
+   * mistyped id, so no check can ever run there; it spends nothing, and a
+   * declaration with its id replaces it (INF-1184).
    */
-  repairs: (CheckRepair & { outcome?: "passed" | "failed" | "superseded" })[];
+  repairs: (CheckRepair & { outcome?: "passed" | "failed" | "superseded" | "void" })[];
   rerun?: CheckRerun;
 };
 

@@ -50,11 +50,11 @@ import { readChangeReading } from "../workspace/workspaceService";
 import type { ChangePresentations } from "./changePresentations";
 import {
   checkRepairWords,
+  closeCheckRepair,
   declareCheckAction,
   observeCheckRepair,
   outstandingRepair,
   repairCheck,
-  supersedeCheckRepair,
 } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
 import type { MainBranchReading } from "./mainCheckWake";
@@ -395,6 +395,7 @@ export class PrCiService {
       const located = this.locate(taskId);
       let id: string;
       let earlier: string | undefined;
+      let target: { held?: boolean; where: string } | undefined;
       if ("said" in located) {
         // Only a repair is settled by its version's checks, which a task that
         // never has a pull request does not read: a diagnosis or rerun
@@ -407,8 +408,21 @@ export class PrCiService {
         // A new repair waits on the outstanding one, so one the change moved
         // past is read at its own version first (INF-685).
         earlier = checkInput.repair ? await this.settleBeforeRepair(located) : undefined;
+        // A repair names a version the host's checks will run at, so one it
+        // holds no commit at is refused before it is recorded (INF-1184).
+        if (checkInput.repair)
+          target = {
+            held: await this.holdsVersion(located.forge, checkInput.repair.headSha),
+            where: placeWords(located.forge),
+          };
       }
-      const declaration = declareCheckAction(this.options.tasks, id, checkInput, this.now());
+      const declaration = declareCheckAction(
+        this.options.tasks,
+        id,
+        checkInput,
+        this.now(),
+        target,
+      );
       if (!declaration.read) return [earlier, declaration.text].filter(Boolean).join("\n");
       declared = [declared, earlier].filter(Boolean).join("\n");
     }
@@ -2593,6 +2607,20 @@ export class PrCiService {
     const attempt = outstandingRepair(delivery?.ciRepair);
     if (!attempt || attempt.headSha === change?.headSha) return undefined;
     const name = `Repair ${attempt.id} at ${attempt.headSha} (${change ? `the change is now at ${change.headSha}` : "with no open pull request"})`;
+    // Asked first: a host can read checks at a longer id from the commit its
+    // first 40 characters name, which is not the attempt's version (INF-1184).
+    if ((await this.holdsVersion(forge, attempt.headSha)) === false) {
+      const where = placeWords(forge);
+      this.options.tasks.recordDelivery(
+        taskId,
+        closeCheckRepair(delivery, attempt.headSha, "void"),
+        {
+          kind: "ci",
+          text: `Repair ${attempt.id} void at ${attempt.headSha}: no such commit ${where}`,
+        },
+      );
+      return `${name}: no commit ${attempt.headSha} exists ${where}, so no check can run there; it is void and spent no attempt, and its id may name the repair at its pushed version.`;
+    }
     let checks: ForgeCheck[];
     try {
       checks = (
@@ -2607,10 +2635,14 @@ export class PrCiService {
     if (change && checks.length === 0) {
       // The open change moved past a version the host ran nothing on, and it
       // starts nothing there now: no reading can settle it (INF-988).
-      this.options.tasks.recordDelivery(taskId, supersedeCheckRepair(delivery, attempt.headSha), {
-        kind: "ci",
-        text: `Repair ${attempt.id} superseded at earlier head ${attempt.headSha}: no check ran there`,
-      });
+      this.options.tasks.recordDelivery(
+        taskId,
+        closeCheckRepair(delivery, attempt.headSha, "superseded"),
+        {
+          kind: "ci",
+          text: `Repair ${attempt.id} superseded at earlier head ${attempt.headSha}: no check ran there`,
+        },
+      );
       return `${name}: no check ran there and none will start now that the change moved past it, so it is superseded and spent no attempt.`;
     }
     const round = observeCheckRepair(delivery, attempt.headSha, checks, this.now());
@@ -2649,6 +2681,15 @@ export class PrCiService {
     return checks.some((check) => check.state === "pending")
       ? `${name}: that version's checks are still running, so it has no result yet.`
       : `${name}: no check named ${attempt.check} reported there, so it has no result.`;
+  }
+
+  /**
+   * Whether the project's host holds `sha` as a commit (INF-1184): false only
+   * on its own answer, and unknown - nothing refused or closed - where it
+   * cannot look a commit up or could not answer.
+   */
+  private async holdsVersion(forge: Forge, sha: string): Promise<boolean | undefined> {
+    return forge.holdsCommit ? forge.holdsCommit(sha).catch(() => undefined) : undefined;
   }
 
   /**

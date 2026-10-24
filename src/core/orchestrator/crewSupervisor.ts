@@ -200,6 +200,7 @@ import {
   CARE_WORDS,
   CHECK_WORDS,
   CHECKS_NOT_READ_WORDS,
+  changeLinesWords,
   DEFAULT_WORKSPACE_WORD,
   MERGE_AFTER_FIXING_WORDS,
   MERGE_WHEN_CHECKS_PASS_WORDS,
@@ -1431,6 +1432,8 @@ export class CrewSupervisor {
   private readonly deviceForgeSaid = new Set<string>();
   /** Folder repairs whose folder is being read now, so one tick reads each once. */
   private readonly closingFolders = new Set<string>();
+  /** Tasks whose change lines are being read now (`readChangeLines`). */
+  private readonly readingLines = new Set<string>();
   /**
    * Starts the captain pressed that wait for the Firstmate to apply his
    * standing directions: the wake's inbox row, and where the press came from
@@ -10135,6 +10138,20 @@ export class CrewSupervisor {
         link ? `<a href="${link}">${label}</a>` : label,
       );
     }
+    // What the whole offered change adds and deletes (INF-820), read from
+    // git by the host, beside the change it measures. Shown only while it
+    // was read at the version on offer; an unread change shows no cell,
+    // never a zero.
+    const lines = record.delivery?.changeLines;
+    const offered = record.delivery?.headSha;
+    if (lines && (offered === undefined || lines.head === offered)) {
+      cell(
+        "lines",
+        "Lines",
+        `<span class="inf-mono">${changeLinesWords(lines.added, lines.deleted)}</span>`,
+      );
+    }
+    this.readChangeLines(record);
     const ci = record.delivery?.ci;
     const ciAt = record.delivery?.ciAt;
     if (ci && ciAt !== undefined) {
@@ -10223,6 +10240,43 @@ export class CrewSupervisor {
       );
     }
     return `${SETTLE_FACTS_OPEN}${cells.join("")}</div>`;
+  }
+
+  /**
+   * Read the lines the task's offered change adds and deletes and keep them
+   * on its delivery facts (INF-820), when the version on offer or its base
+   * moved since the last reading. The offered version is the head the last
+   * check reading saw, else the task's branch. A task on another computer
+   * has no branch here and keeps no reading. Recording the reading refreshes
+   * the open cards' strips; a closed card keeps the strip it was shown.
+   */
+  private readChangeLines(record: TaskRecord): void {
+    if (record.deviceId || !record.repoDir || !record.branch) return;
+    if (this.readingLines.has(record.id)) return;
+    this.readingLines.add(record.id);
+    void (async () => {
+      const workspace = this.options.workspace;
+      const head =
+        record.delivery?.headSha ?? (await workspace.branchHead(record.repoDir, record.branch));
+      if (!head) return;
+      const reading = await workspace.changeLines(record.repoDir, head);
+      if (!reading) return;
+      const kept = this.options.tasks.get(record.id)?.delivery?.changeLines;
+      if (
+        kept?.head === head &&
+        kept.base === reading.base &&
+        kept.added === reading.added &&
+        kept.deleted === reading.deleted
+      )
+        return;
+      this.options.tasks.recordDelivery(record.id, {
+        changeLines: { ...reading, head, at: this.now() },
+      });
+    })()
+      .catch(() => {
+        // An unreadable change keeps no reading: the strip shows no Lines cell.
+      })
+      .finally(() => this.readingLines.delete(record.id));
   }
 
   /**

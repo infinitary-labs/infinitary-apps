@@ -55,6 +55,7 @@ import { threadWait } from "@shared/threadWait";
 import type { IntegrationAsk } from "@shared/writeAsk";
 import {
   CARE_WORDS,
+  changeLinesWords,
   MERGE_AFTER_FIXING_WORDS,
   MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
@@ -420,6 +421,9 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     branchHead: vi.fn(async () => null as string | null),
     reviewChangedFiles: vi.fn(async () => ["src/meter.ts", "tests/meter.test.ts"]),
     reviewChangeReading: vi.fn(async () => "a".repeat(64)),
+    changeLines: vi.fn(
+      async () => null as import("../workspace/workspaceService").ChangeLineCount | null,
+    ),
   } as unknown as WorkspaceService;
   const realWorkspace = extras.realWorkspace ? new RealWorkspaceService(paths) : undefined;
   const specs: CrewmateSpec[] = [];
@@ -15193,6 +15197,73 @@ describe("the task graph (task-system P2)", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("shows the lines the whole offered change adds and deletes, read again when the offered version moves, and never a zero it could not read (INF-820)", async () => {
+    // INF-820, the captain's words: "add line added/deleted stats to merge
+    // completion card". The host reads the counts from git (the git side is
+    // workspaceService.test.ts's); this owns what the strip shows of them.
+    const { supervisor, specs, cards, tasks, workspace } = setup(fakeCrewmate());
+    const base = "0".repeat(40);
+    const first = "1".repeat(40);
+    const revised = "2".repeat(40);
+    vi.mocked(workspace.changeLines).mockImplementation(async (_dir, head) =>
+      head === first
+        ? { base, added: 128, deleted: 42 }
+        : head === revised
+          ? { base, added: 1204, deleted: 7 }
+          : null,
+    );
+    const { taskId } = await supervisor.commission({
+      title: "Fix the meter",
+      intent: intentOf("Fix the meter."),
+      shape: { rigor_ask: "quick" },
+    });
+    await tick();
+    const lines = () =>
+      cards()
+        .find((card) => card.taskId === taskId && card.actions.length > 0)
+        ?.body.match(/<span class="inf-fact" data-fact="lines">[\s\S]*?<\/span><\/span><\/span>/)?.[0];
+    const emit = () =>
+      (specs[0] as CrewmateSpec).onCard?.({
+        requiredActions: [],
+        id: "done",
+        title: "The meter is fixed",
+        body: completionBody("<p>The meter reads on time.</p><ul><li>Checked by hand.</li></ul>"),
+        actions: [
+          { id: "merge", label: "Land locally", default: true, effect: SETTLE_MERGE },
+          { id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD },
+        ],
+      });
+
+    // The offered version cannot be read here: no cell, never a zero.
+    tasks.recordDelivery(taskId, { headSha: "9".repeat(40), ci: "green", ciAt: Date.now() });
+    emit();
+    await tick();
+    expect(workspace.changeLines).toHaveBeenCalled();
+    expect(lines()).toBeUndefined();
+    expect(cards().find((card) => card.taskId === taskId)?.body).not.toContain("+0");
+
+    // A readable version: the counts, labeled apart, in mono.
+    tasks.recordDelivery(taskId, { headSha: first, ci: "green", ciAt: Date.now() });
+    await tick();
+    expect(lines()).toBe(
+      `<span class="inf-fact" data-fact="lines"><span class="inf-fact-k">Lines</span><span class="inf-fact-v"><span class="inf-mono">${changeLinesWords(128, 42)}</span></span></span>`,
+    );
+    expect(tasks.get(taskId)?.delivery?.changeLines).toMatchObject({
+      base,
+      head: first,
+      added: 128,
+      deleted: 42,
+    });
+    // It sits after the change and before the checks.
+    const body = cards().find((card) => card.taskId === taskId)?.body ?? "";
+    expect(body.indexOf('data-fact="lines"')).toBeLessThan(body.indexOf('data-fact="checks"'));
+
+    // The change is revised: the strip shows the new version's counts.
+    tasks.recordDelivery(taskId, { headSha: revised, ci: "green", ciAt: Date.now() });
+    await tick();
+    expect(lines()).toContain(changeLinesWords(1204, 7));
   });
 
   it("names the DISPATCHED model right after the project, never the routing choice (review F1)", async () => {

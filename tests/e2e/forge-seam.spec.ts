@@ -3,7 +3,12 @@ import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "n
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
-import { CARE_WORDS, CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
+import {
+  CARE_WORDS,
+  CHECK_WORDS,
+  changeLinesWords,
+  MERGE_WORDS,
+} from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -146,6 +151,17 @@ test("a project on a plain Git host: the work is sent up, the card names it ther
   await expect(facts.change).toHaveText(branch);
   await expect(facts.change.locator("a")).toHaveCount(0);
   await expect(facts.checks).toHaveText(CHECK_WORDS.green);
+  // The lines the sent-up change adds and deletes, as git counts them where
+  // the project lives (INF-820).
+  let added = 0;
+  let deleted = 0;
+  for (const line of git("-C", bare, "diff", "--numstat", `main...${branch}`).split("\n")) {
+    const [plus, minus] = line.split("\t");
+    added += Number(plus) || 0;
+    deleted += Number(minus) || 0;
+  }
+  expect(added).toBeGreaterThan(0);
+  await expect(facts.lines).toHaveText(changeLinesWords(added, deleted));
   await expect(facts.strip).not.toContainText("GitHub");
   await page.screenshot({ path: test.info().outputPath("forge-seam-plain-host-card.png") });
 

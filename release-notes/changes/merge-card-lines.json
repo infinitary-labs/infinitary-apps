@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "merge-card-lines",
+      "kind": "feature",
+      "title": "Merge cards show how many lines a change adds and deletes",
+      "body": "A card that offers to merge a change now shows how many lines the whole change adds and deletes, beside its pull request or branch and its checks. The count follows the newest version on offer, and a change the app could not count shows no number rather than a zero.",
+      "area": "cards",
+      "picture": {
+        "dark": "merge-card-lines-dark.webp",
+        "light": "merge-card-lines-light.webp",
+        "alt": "A merge card whose facts read Lines +3 added · −0 deleted between the branch and the passed checks"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -277,6 +277,13 @@ export type TaskDelivery = {
   changeLabel?: string;
   /** The PR head the last CI read saw, or the assigned commit on an independent review task. */
   headSha?: string;
+  /**
+   * The lines the whole offered change adds and deletes (INF-820), read by
+   * the host from git at `head` against the merge base `base`; the fact
+   * strip shows them only while `head` is the offered version. Absent
+   * until a reading succeeded: an unread change is never zero.
+   */
+  changeLines?: { base: string; head: string; added: number; deleted: number; at: number };
   ci?: "green" | "red" | "pending" | "no-pr" | "merged";
   ciAt?: number;
   /** When the host says the first check on that head started (INF-587). */

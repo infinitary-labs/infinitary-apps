@@ -330,6 +330,78 @@ describe("WorkspaceService", () => {
     expect(await workspace.reviewChangeReading(repo, edited)).not.toBe(reviewedReading);
   });
 
+  it("counts the lines the whole offered change adds and deletes: every commit, a rename's edit alone, no binary lines, and no reading for a commit it cannot see (INF-820)", async () => {
+    // INF-820, the captain's words: "add line added/deleted stats to merge
+    // completion card". The card's Lines cell shows this reading.
+    const { workspace } = await service();
+    const repo = await workspace.ensureDefaultRepo();
+    const commit = async (message: string) => {
+      await git(repo, ["add", "-A"]);
+      await git(repo, ["commit", "-m", message]);
+      return git(repo, ["rev-parse", "HEAD"]);
+    };
+    const lines = (count: number, tag: string) =>
+      Array.from({ length: count }, (_, index) => `${tag} line ${index + 1}`).join("\n") + "\n";
+    writeFileSync(join(repo, "meter.ts"), lines(30, "meter"));
+    writeFileSync(join(repo, "old-name.ts"), lines(40, "kept"));
+    writeFileSync(join(repo, "gone.ts"), lines(5, "gone"));
+    const mainAt = await commit("chore: base files");
+    await git(repo, ["checkout", "-b", "work"]);
+
+    // First commit: three lines edited (3 added, 3 deleted), one file of
+    // twelve new lines, and one five-line file deleted.
+    writeFileSync(
+      join(repo, "meter.ts"),
+      lines(30, "meter").replace(/meter line (1|2|3)\n/g, "meter line $1 changed\n"),
+    );
+    writeFileSync(join(repo, "added.ts"), lines(12, "added"));
+    rmSync(join(repo, "gone.ts"));
+    const first = await commit("feat: edit, add and delete");
+    expect(await workspace.changeLines(repo, first)).toEqual({
+      base: mainAt,
+      added: 15,
+      deleted: 8,
+    });
+
+    // Second commit: a rename with one line edited counts that edit alone,
+    // and a binary file adds no text lines. The reading covers both commits.
+    rmSync(join(repo, "old-name.ts"));
+    writeFileSync(
+      join(repo, "new-name.ts"),
+      lines(40, "kept").replace("kept line 40\n", "kept line 40 edited\n"),
+    );
+    writeFileSync(join(repo, "icon.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 1, 2, 0, 3]));
+    const second = await commit("feat: rename and add a picture");
+    expect(await workspace.changeLines(repo, second)).toEqual({
+      base: mainAt,
+      added: 16,
+      deleted: 9,
+    });
+
+    // A change of only a binary file reads as zero lines, a real reading.
+    await git(repo, ["checkout", "-b", "picture-only", "main"]);
+    writeFileSync(join(repo, "logo.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 9, 8, 0, 7]));
+    const binaryOnly = await commit("feat: add a logo");
+    expect(await workspace.changeLines(repo, binaryOnly)).toEqual({
+      base: mainAt,
+      added: 0,
+      deleted: 0,
+    });
+
+    // Newer main moves the base; the change still counts only its own lines.
+    await git(repo, ["checkout", "main"]);
+    writeFileSync(join(repo, "unrelated.ts"), lines(50, "main"));
+    await commit("chore: main grows");
+    expect(await workspace.changeLines(repo, second)).toEqual({
+      base: mainAt,
+      added: 16,
+      deleted: 9,
+    });
+
+    // A commit this repository does not hold has no reading, never a zero.
+    expect(await workspace.changeLines(repo, "1".repeat(40))).toBeNull();
+  });
+
   it("treats a moved guard as a different change once the file is already on main", async () => {
     // Review finding R1. Both functions are on main first, so the change is
     // only the inserted guard. With no context the two placements read the

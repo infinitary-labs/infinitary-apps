@@ -43,6 +43,9 @@ export type TaskWorkspace = {
  * this machine last saw. A repository without `origin` starts from its own
  * checked-out commit, as before.
  */
+/** What a change adds and deletes in text lines, against the merge base it was read from. */
+export type ChangeLineCount = { base: string; added: number; deleted: number };
+
 export type DispatchBase = {
   sha: string;
   /** What the commit was read from: `origin/main`, `main`, or `HEAD`. */
@@ -330,6 +333,42 @@ export class WorkspaceService {
    */
   async reviewChangeReading(repoDir: string, headSha: string): Promise<string | null> {
     return readChangeReading(repoDir, headSha);
+  }
+
+  /**
+   * The lines the whole offered change adds and deletes (INF-820): every
+   * commit from where the commit leaves the default branch to the commit,
+   * as `reviewChangedFiles` compares them, with renames found so a moved
+   * file counts only its edited lines. A binary file adds no text lines.
+   * `base` is the merge base the counts were read against. Null when the
+   * commit or its base cannot be read here, never a zero.
+   */
+  async changeLines(repoDir: string, headSha: string): Promise<ChangeLineCount | null> {
+    if (!(await resolveCommit(repoDir, headSha))) return null;
+    try {
+      const base = await git(repoDir, ["merge-base", await reviewDiffBase(repoDir), headSha]);
+      const out = await git(repoDir, [
+        "diff",
+        "--numstat",
+        "-M",
+        "--ignore-submodules=none",
+        "--no-ext-diff",
+        "--no-textconv",
+        base,
+        headSha,
+      ]);
+      let added = 0;
+      let deleted = 0;
+      for (const line of out.split("\n")) {
+        // `-` in both columns is a binary file: no text lines.
+        const [plus, minus] = line.split("\t");
+        if (plus && /^\d+$/.test(plus)) added += Number(plus);
+        if (minus && /^\d+$/.test(minus)) deleted += Number(minus);
+      }
+      return { base, added, deleted };
+    } catch {
+      return null;
+    }
   }
 
   /** Lazily creates the default local-only repo with an initial commit. */

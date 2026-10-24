@@ -498,6 +498,7 @@ export const SETTLE_FACTS = [
   "crewmate",
   "care",
   "change",
+  "lines",
   "checks",
   "check-rounds",
   "look-rounds",

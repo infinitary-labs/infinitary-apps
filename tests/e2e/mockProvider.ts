@@ -7292,7 +7292,8 @@ export async function startMockProvider(
                 name: "bash",
                 args: {
                   command:
-                    'git commit --allow-empty -m "fix: the meter reads on time" && git push origin HEAD',
+                    "printf 'reads on time\\nreads each minute\\nreads in the dark\\n' > meter.txt && git add meter.txt && " +
+                    'git commit -m "fix: the meter reads on time" && git push origin HEAD',
                 },
               },
             ]);

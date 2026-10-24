@@ -110,6 +110,15 @@ export const RUN_CHECK_WORDS: Words<RunChecks["state"]> = {
 /** What the checks say of a change no reading has reached yet. */
 export const CHECKS_NOT_READ_WORDS = "not read yet";
 
+/**
+ * What a change adds and deletes, as the fact strip's Lines cell says it
+ * (INF-820): the plus and the minus sign beside separate words, so neither
+ * count reads as the other.
+ */
+export function changeLinesWords(added: number, deleted: number): string {
+  return `+${added.toLocaleString("en-US")} added · −${deleted.toLocaleString("en-US")} deleted`;
+}
+
 /** An independent review's verdict, as a fact strip says it. */
 export const REVIEW_WORDS: Words<"pass" | "findings" | "blocked"> = {
   pass: "passed",

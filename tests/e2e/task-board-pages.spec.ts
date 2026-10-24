@@ -29,7 +29,7 @@ import {
   laneKeys,
   pressInBoard,
 } from "./taskBoard";
-import { focusOn, pressWindowKey, runFromSearch } from "./windowKeys";
+import { focusOn, pressWindowKey, runFromSearch, windowComesForward } from "./windowKeys";
 
 /**
  * The task board with hundreds of tasks (docs/task-board.md; FI3-1065, the
@@ -202,6 +202,20 @@ test("with 60 in the backlog and 300 done this week, the board pages every lane 
       await expect(boardEntry(page)).toBeVisible();
       // Three of Waiting on you, the first five of the backlog, five queued, four working.
       await expect(boardEntry(page).locator("[data-board-tile]")).toHaveCount(3 + 5 + 5 + 4);
+      await test.step("the prepared card hands focus back before the board's first key", async () => {
+        // INF-1152, as INF-1125 in task-board-moves.spec: a waiting card is
+        // prepared in a new process behind the focused board. The next
+        // injected key focuses the window, and that page hands focus to the
+        // shell: ↓ can reach the board's body before the shell gives the
+        // tile focus back. Complete that handoff without a key first, as
+        // task-board.spec does; never retry the press. The board put focus
+        // on its tiles' stop, the first of Waiting on you.
+        const stop = (await laneKeys(page, "waiting"))[0];
+        await expect.poll(() => focusedTileKey(page)).toBe(stop);
+        await stagePrepared(page);
+        await windowComesForward(app, page);
+        await expect.poll(() => focusedTileKey(page)).toBe(stop);
+      });
       expect(await laneCount(page, "waiting")).toBe(4);
       expect(await laneCount(page, "backlog")).toBe(BACKLOG);
       expect(await laneCount(page, "queued")).toBe(7);

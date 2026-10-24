@@ -6,6 +6,12 @@ export type CheckDiagnosis = {
   /** Logs and reproduction/comparison evidence, not merely a wait instruction. */
   evidence: string;
   dependencyTask?: string;
+  /**
+   * Whether the failed test's own code is added or edited by this change
+   * (INF-840): such a test is never a suspected flake, so suspected-flake
+   * needs it declared false.
+   */
+  changedTest?: boolean;
 };
 
 export type CheckRepair = {

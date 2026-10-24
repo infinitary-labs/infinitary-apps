@@ -136,7 +136,7 @@ function checkRepairMove(
                 evidence: flake
                   ? "Failed standalone timeout log differs from the same-head successful verification"
                   : "Separate owner reproduced the same failed assertion on untouched main, with log evidence",
-                ...(flake ? {} : { dependencyTask: CI_REPAIR_OWNER }),
+                ...(flake ? { changedTest: false } : { dependencyTask: CI_REPAIR_OWNER }),
               },
             },
           },

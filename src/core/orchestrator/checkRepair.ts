@@ -8,7 +8,7 @@ import { TaskService } from "../tasks/taskService";
 import { liveWaitCycle, waitCycleWords } from "../tasks/waitCycles";
 
 export const CHECK_DIAGNOSIS_NEXT =
-  "Read the failed step and logs first. Record diagnosis with check_change: own-regression with attribution evidence, baseline-blocked with untouched-main evidence and a separately owned dependencyTask, suspected-flake with comparison evidence, or unknown with the investigation gap. Fix your regression yourself; reserve one evidenced failed-job rerun, or report the separate owner and wait for its fix. Diagnosis and waiting spend no repair attempt and need no captain card.";
+  "Read the failed step and logs first. Record diagnosis with check_change: own-regression with attribution evidence, baseline-blocked with untouched-main evidence and a separately owned dependencyTask, suspected-flake with comparison evidence and changedTest false, never for a test your change adds or edits, or unknown with the investigation gap. Fix your regression yourself; reserve one evidenced failed-job rerun, or report the separate owner and wait for its fix. Diagnosis and waiting spend no repair attempt and need no captain card.";
 
 /**
  * What the task a baseline wait names stands at, said back to the crewmate
@@ -115,6 +115,13 @@ export function declareCheckAction(
       return {
         read: false,
         text: "Diagnosis refused: name an observed failing head/check and supporting log evidence first.",
+      };
+    // INF-840: a test the change adds or edits is never a suspected flake,
+    // and the crewmate declares which it is as a typed fact.
+    if (diagnosis.classification === "suspected-flake" && diagnosis.changedTest !== false)
+      return {
+        read: false,
+        text: "Diagnosis refused: a test whose own code your change adds or edits is never a suspected flake. Diagnose its failure as your own regression, or baseline-blocked with untouched-main evidence; pass changedTest false only when your change does not touch the failed test's own code.",
       };
     if (diagnosis.classification === "baseline-blocked") {
       const dependency = diagnosis.dependencyTask ? tasks.get(diagnosis.dependencyTask) : undefined;

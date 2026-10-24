@@ -44,6 +44,9 @@ The host's own dispatch-time sign-in hold still runs first (`docs/forge.md`, "Di
 Every crewmate, at every tier, delivery and backend, is served one passage on how tests are written and repaired (`CREWMATE_TEST_DEFAULT` in `src/core/pi/piResources.ts`, from FI3-1756's approved plan).
 It names six words a test meets - intent, fixture, failure, layer, owner and gate - so a test is written only for a stated intent: the user's ask, a standing ruling, or a bug being fixed.
 It gives four rules for an existing test: a failure is a bug report first; a test the product outgrew on purpose is re-typed only for a stated intent and otherwise deleted; an intermittent failure is fixed at its owner with no retry or sleep; and a repaired test meets the same six words as a new one.
+It adds the captain's direction on a change's own tests (INF-840): a test whose own code the change adds or edits - a journey file, a device test function, a unit test file, never only a helper, scenario or runner it uses - is never a suspected flake.
+Before its completion card, the crewmate runs only those tests on the computer it works on, ten times in a row for unit tests and end-to-end tests and three times on each device for device tests, with no retries, and reports the passes.
+No pull request check repeats them.
 The passage is the one copy of its words.
 It is a default, not a mandate: its last sentence lets the project's own rule on tests win, read from the instructions the crewmate already treats as its gate ("Why instruction first").
 This project keeps no testing policy of its own beyond one ruling, weakening or deleting a test only on the captain's approval (`docs/testing.md`, "This project's rulings on tests").
@@ -97,6 +100,8 @@ Own regressions are repaired on this task: declare a stable repair id, source he
 The third unsuccessful repair is a blocker report (no completion card), which the first mate turns into one decision: retry, one captain-only model way, or discard.
 
 An evidenced suspected flake may reserve **one failed-job rerun per task allowance**, before running it without code changes.
+A suspected flake is only ever a test whose own code the change does not add or edit: `check_change` takes `changedTest`, the crewmate's typed answer, and refuses a suspected-flake diagnosis unless it is false (INF-840).
+A failure in the change's own test is its own regression, or baseline-blocked with untouched-main evidence for a test it edits.
 A repeated reservation is refused, including after restart.
 If it fails again, investigate or reclassify with evidence, never rerun in a loop.
 A confirmed baseline failure needs untouched-main reproduction evidence and a separately owned task id.

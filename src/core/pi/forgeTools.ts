@@ -172,10 +172,11 @@ export const CHECK_CHANGE_TOOL = crewmateTool({
           ]),
           evidence: Type.String(),
           dependencyTask: Type.Optional(Type.String()),
+          changedTest: Type.Optional(Type.Boolean()),
         },
         {
           description:
-            "Diagnosis after reading the failed step and logs; external attribution requires untouched-main evidence and a separate owner.",
+            "Diagnosis after reading the failed step and logs; external attribution requires untouched-main evidence and a separate owner. changedTest says whether your change adds or edits the failed test's own code; such a test is never a suspected flake, so suspected-flake needs changedTest false.",
         },
       ),
     ),

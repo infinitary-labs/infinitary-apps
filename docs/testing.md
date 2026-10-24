@@ -12,6 +12,16 @@ This project adds one ruling of the captain, which wins over that default:
 
 - Weakening, skipping or deleting an existing test waits for the captain's approval.
 
+The crew's default rule has the change's own tests repeated before the completion card (INF-840): ten runs for a journey file or unit test file the change adds or edits, and three on each device for a phone part whose UI test code it edits (the chooser's distance 0, "The phone parts a pull request runs").
+The captain's ruling puts those repeats on the Mac and only for those tests: "locally on mac only. only run affected tests".
+They run even on a computer in CI mode, so the repeat command alone carries `INFINITARY_CHECKS=local` ("Where the heavy checks run"):
+
+- a journey: `INFINITARY_CHECKS=local pnpm exec playwright test <file> --repeat-each 10 --retries 0`, with `--no-deps` for a `renderer` or `application` spec;
+- a unit test file: ten `pnpm exec vitest run <file>` runs in a row, since Vitest has no repeat flag;
+- a phone part: three `INFINITARY_CHECKS=local pnpm test:phone --both --part <part>` runs in a row.
+
+`journeys.yml`, `phone.yml` and `ci.yml` add no repeat stage.
+
 ## Windows feasibility observations
 
 The opt-in hosted Windows investigation is `docs/windows-feasibility.md`.

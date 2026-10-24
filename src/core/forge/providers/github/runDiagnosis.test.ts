@@ -222,6 +222,7 @@ const FLAKE = {
   classification: "suspected-flake" as const,
   evidence:
     "Run pnpm test timed out in claudeSession.contract.integration.test.ts while 9,083 other tests passed; INF-653's untouched-main comparison passed the same case",
+  changedTest: false,
 };
 const RESERVE = {
   headSha: HEAD,

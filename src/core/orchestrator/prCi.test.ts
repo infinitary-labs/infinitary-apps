@@ -1136,6 +1136,7 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
         check: "linux-checks",
         classification: "suspected-flake",
         evidence: "Same-head verify job passed the same tests; standalone job timeout logs differ",
+        changedTest: false,
       },
     });
     const reserve = {
@@ -1161,6 +1162,40 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
     });
     expect(onCap).not.toHaveBeenCalled();
     expect(tasks.get("ab12cd34")?.delivery?.ciCapAt).toBeUndefined();
+  });
+
+  // INF-840, the captain's direction 2: PR #276's own new journey failed
+  // CI and was called flaky; a test the change adds or edits never is.
+  it("refuses a suspected flake in a test the change adds or edits", async () => {
+    const { state, forge } = movingForge();
+    const { tasks, repos, service } = setup({ forge });
+    await insertDirectPrTask(tasks, repos);
+    state.head = "agentsreach";
+    state.checks = "failure";
+    await service.readWatched("ab12cd34");
+    const flake = {
+      headSha: "agentsreach",
+      check: "linux-checks",
+      classification: "suspected-flake" as const,
+      evidence:
+        "agents-reach.spec.ts timed out waiting for the rerun line; it passed on the same version once",
+    };
+    for (const changedTest of [undefined, true]) {
+      expect(
+        await service.checkForCrew("ab12cd34", { diagnosis: { ...flake, changedTest } }),
+      ).toContain("is never a suspected flake");
+    }
+    expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.diagnoses).toEqual([]);
+    expect(
+      await service.checkForCrew("ab12cd34", {
+        rerun: { headSha: "agentsreach", check: "linux-checks", evidence: flake.evidence },
+      }),
+    ).toContain("Rerun refused");
+    expect(
+      await service.checkForCrew("ab12cd34", {
+        diagnosis: { ...flake, classification: "own-regression", changedTest: true },
+      }),
+    ).toContain("Diagnosis recorded: own-regression");
   });
 
   // FI3-671: the answer to a declared wait says where the named task stands,

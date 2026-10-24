@@ -1266,6 +1266,10 @@ describe("the default rule on tests (FI3-1756, the captain's approved plan)", ()
       "A test that fails only because the product changed on purpose is re-typed only when it serves a stated intent, and is otherwise deleted",
       "with no retry or sleep",
       "A repaired test meets the same six words as a new one, and is deleted when its intent is gone.",
+      // INF-840, the captain's direction 2: a change's own test is never a
+      // suspected flake, and its crewmate repeats it locally before the card.
+      "A test whose own code your change adds or edits is never a suspected flake",
+      "ten times in a row for unit tests and end-to-end tests and three times on each device for device tests, with no retries, and report the passes.",
     ]) {
       expect(CREWMATE_TEST_DEFAULT, rule).toContain(rule);
     }

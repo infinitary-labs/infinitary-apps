@@ -378,6 +378,7 @@ const checkChangeInputSchema = z.object({
       classification: z.enum(["own-regression", "baseline-blocked", "suspected-flake", "unknown"]),
       evidence: z.string(),
       dependencyTask: z.string().optional(),
+      changedTest: z.boolean().optional(),
     })
     .optional(),
   repair: z

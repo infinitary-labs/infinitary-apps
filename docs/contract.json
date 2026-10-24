@@ -43118,6 +43118,9 @@
                       },
                       "dependencyTask": {
                         "type": "string"
+                      },
+                      "changedTest": {
+                        "type": "boolean"
                       }
                     },
                     "required": [

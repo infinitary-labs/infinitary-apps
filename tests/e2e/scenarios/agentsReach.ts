@@ -363,6 +363,7 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
                 check: REACH_RERUN_CHECK,
                 classification: "suspected-flake",
                 evidence: REACH_RERUN_EVIDENCE,
+                changedTest: false,
               },
             },
           },

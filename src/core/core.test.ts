@@ -22,7 +22,6 @@ import { remoteLoginWords } from "@shared/remoteLogin";
 import type { TaskBoard } from "@shared/tasks";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
-  ADOPT_REPO_PROMPT_MARKER,
   ANSWER_PROMPT_MARKER,
   APP_CATALOG_PROMPT_MARKER,
   FINISH_PROMPT_MARKER,
@@ -36,6 +35,7 @@ import {
   startMockProvider,
 } from "../../tests/e2e/mockProvider";
 import { captainCardChoice, holdsSegment, latestServedTurn } from "../../tests/e2e/providerRequest";
+import { ADOPT_REPO_PROMPT_MARKER, projectSetup } from "../../tests/e2e/scenarios/projectSetup";
 import {
   AMBIGUOUS_PROMPT_MARKER,
   workspaceInference,
@@ -2332,7 +2332,7 @@ describe("capture: every captain ask lands in a task", () => {
     process.env.PI_OFFLINE = "1";
     userDataDir = scratchDir("infinitary-capture-");
     adoptDir = scratchDir("infinitary-capture-repo-");
-    mock = await startMockProvider({ scenarios: [workspaceInference] });
+    mock = await startMockProvider({ scenarios: [workspaceInference, projectSetup] });
     // The same seam the e2e suite uses: the app-scoped models.json points Pi
     // at the mock, so the Firstmate and its crewmate run real sessions.
     mkdirSync(join(userDataDir, "auth"), { recursive: true, mode: 0o700 });
@@ -3841,7 +3841,7 @@ describe("words typed on a paired Mac are the captain's own words", () => {
   beforeAll(async () => {
     process.env.PI_OFFLINE = "1";
     userDataDir = scratchDir("infinitary-core-paired-words-");
-    mock = await startMockProvider();
+    mock = await startMockProvider({ scenarios: [projectSetup] });
     mkdirSync(join(userDataDir, "auth"), { recursive: true, mode: 0o700 });
     writeFileSync(join(userDataDir, "auth", "models.json"), mockModelsJson(mock.port));
     core = await startCore(fakeHost(userDataDir).host);

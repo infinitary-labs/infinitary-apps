@@ -2,9 +2,10 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, type Rect, resizeWindow, settled, within } from "./layout";
-import { CARD_WIDTH_PROMPT_MARKER, WIDTH_CARD_TITLES } from "./mockProvider";
+
 import { promptInput } from "./prompt";
 import { expandDock } from "./rails";
+import { CARD_WIDTH_PROMPT_MARKER, cardWidths, WIDTH_CARD_TITLES } from "./scenarios/cardWidths";
 import { pager, showCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -36,7 +37,7 @@ async function expectCardWidth(page: Page, width: number) {
 const body = (page: Page, title: string) => cardBody(page, title);
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ scenarios: [cardWidths], withMockProvider: true });
   const { page } = launched;
   const input = promptInput(page);
   await input.click();

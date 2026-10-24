@@ -1,0 +1,217 @@
+import {
+  chessItems,
+  LESSON_CHESS_ASK,
+  LESSON_CHESS_CARD_ID,
+  LESSON_CHESS_GOAL,
+  LESSON_CHESS_TITLE,
+  LESSON_FRACTIONS_ASK,
+  LESSON_FRACTIONS_GOAL,
+  LESSON_FRACTIONS_GOAL_BODY,
+  LESSON_FRACTIONS_GOAL_TITLE,
+  LESSON_FRACTIONS_TITLE,
+  LESSON_GOAL_BODY,
+  LESSON_GOAL_TITLE,
+  LESSON_LEARNER_LINE,
+  LESSON_NEXT_GOAL,
+  LESSON_PROGRESS_STOP,
+  LESSON_REPLY_ANSWER,
+  LESSON_REPLY_WORDS,
+  LESSON_ROUND_ONE_TITLE,
+  LESSON_ROUND_REVIEW_TITLE,
+  LESSON_ROUND_TWO_TITLE,
+  LESSON_WELCOME_BODY,
+  LESSON_WELCOME_TITLE,
+  lessonRoundBody,
+} from "../lessonFixtures";
+import { calledTool, type Scenario, type ScriptedCall, toolAnswers } from "../mockProvider";
+import { providerMessages } from "../providerRequest";
+
+/**
+ * The lessons (FI3-1474): the mock Firstmate spawns each subject's teacher
+ * on the personal workspace, and the mock teacher plays scripted rounds from
+ * the shipped lesson parts, one batch of calls per captain event, never a
+ * model's teaching. The kind classifier, which answers before any scenario,
+ * still sorts a lesson's goal as teach in the shared stand-in.
+ */
+export const lessons: Scenario =
+  () =>
+  ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
+    if (!wantsStream) return undefined;
+    if (isFirstmate) {
+      if (hasToolResults) return undefined;
+      for (const lesson of [
+        { ask: LESSON_CHESS_ASK, title: LESSON_CHESS_TITLE, goal: LESSON_CHESS_GOAL },
+        { ask: LESSON_FRACTIONS_ASK, title: LESSON_FRACTIONS_TITLE, goal: LESSON_FRACTIONS_GOAL },
+      ]) {
+        if (latestUserTail.includes(lesson.ask)) {
+          return {
+            calls: [
+              {
+                name: "spawn_crewmate",
+                args: {
+                  title: lesson.title,
+                  goal: lesson.goal,
+                  user_words: lesson.ask,
+                  personal_ui: true,
+                },
+              },
+            ],
+          };
+        }
+      }
+      return undefined;
+    }
+    if (!body.includes(LESSON_CHESS_ASK) && !body.includes(LESSON_FRACTIONS_ASK)) return undefined;
+    const lessonCard = (
+      id: string,
+      title: string,
+      cardBody: string,
+      actions: { id: string; label: string; default?: boolean }[],
+    ): ScriptedCall => ({
+      name: "emit_card",
+      args: { id, title, body: cardBody, holds_place: true, actions },
+    });
+    const roundActions = [
+      { id: "next-round", label: "Next round", default: true },
+      { id: "stop-today", label: "Stop for today" },
+    ];
+    // The served body is JSON, so the choice's quotes arrive escaped.
+    const choseOnCard = (label: string) => latestUserTail.includes(`chose \\"${label}\\"`);
+    const ready: ScriptedCall = { name: "report", args: { text: "Round ready." } };
+    if (body.includes(LESSON_FRACTIONS_ASK)) {
+      const results = toolAnswers(providerMessages(body)).join("\n");
+      if (!hasToolResults) {
+        return { calls: [{ name: "read", args: { path: "lessons/learner.md" } }] };
+      }
+      if (!calledTool(body, "emit_card")) {
+        if (!results.includes(LESSON_LEARNER_LINE))
+          throw new Error("The second subject did not read the shared learner file");
+        return {
+          calls: [
+            {
+              name: "write",
+              args: {
+                path: "lessons/fractions/progress.md",
+                content: "# Fractions\nGoal: not yet asked\n## Skills\n- halves | next\n",
+              },
+            },
+            lessonCard(
+              "lessons-fractions",
+              LESSON_FRACTIONS_GOAL_TITLE,
+              LESSON_FRACTIONS_GOAL_BODY,
+              [
+                { id: "start", label: "Let's start", default: true },
+                { id: "stop-today", label: "Stop for today" },
+              ],
+            ),
+            ready,
+          ],
+        };
+      }
+      return { text: "Round ready." };
+    }
+    if (hasToolResults) return { text: "Round ready." };
+    if (choseOnCard("Stop these lessons")) {
+      return {
+        calls: [
+          { name: "report", args: { text: "Lessons stopped; records kept.", finished: true } },
+        ],
+      };
+    }
+    if (choseOnCard("Start today's lesson")) {
+      return {
+        calls: [
+          lessonCard(
+            LESSON_CHESS_CARD_ID,
+            LESSON_ROUND_REVIEW_TITLE,
+            lessonRoundBody(
+              chessItems(1),
+              "the rook with a piece in the way",
+              "A little review before new work.",
+            ),
+            roundActions,
+          ),
+          ready,
+        ],
+      };
+    }
+    if (choseOnCard("Stop for today")) {
+      return {
+        calls: [
+          {
+            name: "write",
+            args: { path: "lessons/chess/progress.md", content: LESSON_PROGRESS_STOP },
+          },
+          lessonCard(`lessons-welcome-chess`, LESSON_WELCOME_TITLE, LESSON_WELCOME_BODY, [
+            { id: "start-lesson", label: "Start today's lesson", default: true },
+            { id: "stop-lessons", label: "Stop these lessons" },
+          ]),
+          ready,
+        ],
+      };
+    }
+    if (choseOnCard("Next round")) {
+      return {
+        calls: [
+          lessonCard(
+            LESSON_CHESS_CARD_ID,
+            LESSON_ROUND_TWO_TITLE,
+            lessonRoundBody(
+              chessItems(2),
+              "the rook with a piece in the way",
+              "Ranks and files, together.",
+            ),
+            roundActions,
+          ),
+          ready,
+        ],
+      };
+    }
+    if (choseOnCard("Let's start")) {
+      return {
+        calls: [
+          {
+            name: "write",
+            args: {
+              path: "lessons/learner.md",
+              content: `# Learner\n${LESSON_LEARNER_LINE}\n`,
+            },
+          },
+          {
+            name: "write",
+            args: {
+              path: "lessons/chess/progress.md",
+              content:
+                "# Chess\nGoal: beat my dad at chess\n## Skills\n- rook slides | practising | first seen 2026-10-10\n",
+            },
+          },
+          lessonCard(
+            LESSON_CHESS_CARD_ID,
+            LESSON_ROUND_ONE_TITLE,
+            lessonRoundBody(
+              chessItems(1),
+              LESSON_NEXT_GOAL,
+              "Today: how the rook slides along a file.",
+            ),
+            roundActions,
+          ),
+          ready,
+        ],
+      };
+    }
+    if (latestUserTail.includes(LESSON_REPLY_WORDS)) {
+      const shown =
+        latestUserTail.match(/Card \\+"[^"]*\\+" \(([^)]+)\)/)?.[1] ?? LESSON_CHESS_CARD_ID;
+      return { calls: [{ name: "reply", args: { card_id: shown, text: LESSON_REPLY_ANSWER } }] };
+    }
+    // The first turn: the goal comes first.
+    return {
+      calls: [
+        lessonCard(LESSON_CHESS_CARD_ID, LESSON_GOAL_TITLE, LESSON_GOAL_BODY, [
+          { id: "start", label: "Let's start", default: true },
+          { id: "stop-today", label: "Stop for today" },
+        ]),
+        ready,
+      ],
+    };
+  };

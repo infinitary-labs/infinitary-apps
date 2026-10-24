@@ -5,13 +5,15 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
 import { settled } from "./layout";
+
+import { promptInput } from "./prompt";
 import {
   CARD_RESIZE_BODY,
   CARD_RESIZE_FIGURE,
   CARD_RESIZE_PROMPT_MARKER,
+  cardWidths,
   WIDTH_CARD_TITLES,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+} from "./scenarios/cardWidths";
 import { cardScroller, dragCardTo, shownCard } from "./stack";
 
 /**
@@ -28,6 +30,7 @@ import { cardScroller, dragCardTo, shownCard } from "./stack";
 test("an unchanged card settles at the outer scrollbar threshold and still resizes and scrolls", async ({}, testInfo) => {
   const homeDir = scratchDir("infinitary-card-resize-home-");
   const launched = await launchApp({
+    scenarios: [cardWidths],
     withMockProvider: true,
     homeDir,
     env: { CFFIXED_USER_HOME: homeDir, INFINITARY_LOCAL_CODESIGN_DIR: `${homeDir}/local-codesign` },

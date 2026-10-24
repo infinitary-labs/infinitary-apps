@@ -5,7 +5,6 @@ import { BROWSER_COMMAND } from "../src/core/browser/commandWords";
 import { renderWake } from "../src/core/orchestrator/wakes";
 import { createEventBashTool } from "../src/core/pi/bashTool";
 import {
-  EMIT_CARDS_PROMPT_MARKER,
   FM_SYSTEM_MARKER,
   MOCK_FM_CHAT_TEXT,
   MOCK_FM_DONE_TEXT,
@@ -16,6 +15,7 @@ import {
 } from "./e2e/mockProvider";
 import { captainCardChoice, latestContext, latestServedTurn } from "./e2e/providerRequest";
 import { CONTEXT_OVERFLOW_PROMPT_MARKER, contextOverflow } from "./e2e/scenarios/contextOverflow";
+import { EMIT_CARDS_PROMPT_MARKER, everyCardKind } from "./e2e/scenarios/everyCardKind";
 import {
   TASK_BROWSER_HANDOFF_MARKER,
   taskBrowserJourneys,
@@ -172,7 +172,7 @@ describe("mock provider speaks to Claude's own client", () => {
   const brief = [{ role: "user", content: [{ type: "text", text: EMIT_CARDS_PROMPT_MARKER }] }];
 
   it("calls a tool under the name the request serves it by", async () => {
-    server = await startMockProvider();
+    server = await startMockProvider({ scenarios: [everyCardKind] });
     const claude = await toolUses(await anthropicRequest(["mcp__infinitary__emit_card"], brief));
     expect(claude.length).toBeGreaterThan(0);
     expect(new Set(claude.map((call) => call.name))).toEqual(

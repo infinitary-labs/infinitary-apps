@@ -2,15 +2,15 @@ import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
 import { launchClaudeCrew } from "./claudeCrew";
 import type { LaunchedApp } from "./launch";
+import { CLAUDE_CREW_PROMPT_MARKER, FM_SYSTEM_MARKER } from "./mockProvider";
 import {
-  CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_RELAY_APPROVAL,
   CLAUDE_RELAY_MARKER,
-  FM_SYSTEM_MARKER,
+  claudeRelay,
   MOCK_CLAUDE_PLAN_CARD_TITLE,
   MOCK_CLAUDE_RELAY_ANSWER,
   MOCK_CLAUDE_RELAY_ASK,
-} from "./mockProvider";
+} from "./scenarios/claudeRelay";
 import { cardReply, showCard } from "./stack";
 
 /**
@@ -32,7 +32,7 @@ const TITLE = `plan the rivet threshold ${CLAUDE_CREW_PROMPT_MARKER} ${CLAUDE_RE
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchClaudeCrew();
+  launched = await launchClaudeCrew({ scenarios: [claudeRelay] });
 });
 
 test.afterAll(async () => {

@@ -343,10 +343,10 @@ Neither input changes where the files are placed or the Linux overflow jobs.
 ## A journey's own scenarios
 
 The shared stand-in model (`tests/e2e/mockProvider.ts`) answers every journey, so nearly every journey imports it and an edit to it runs them all.
-A scripted model behavior that only one or a few journeys need is a scenario in its own file under `tests/e2e/scenarios/`, imported only by those journeys.
+A scripted model behavior that only some journeys need is a scenario in its own file under `tests/e2e/scenarios/`, imported only by those journeys.
 A scenario is the stand-in's `Scenario` type: a start function that returns an answerer.
 The stand-in calls the start function once when it starts, so any state the scenario keeps lasts as long as that stand-in.
-The answerer reads one request (`ScenarioRequest`, which also carries the stand-in's port for a card that loads a page the stand-in serves) and returns tool calls, text, a refusal the way the service sends one, or `held`, a turn the stand-in keeps open the way a crewmate goes on working; `undefined` passes the request on.
+The answerer reads one request (`ScenarioRequest`, which also carries whether it came on Anthropic's messages wire and the stand-in's port, for a card that loads a page the stand-in serves) and returns tool calls, text, a refusal the way the service sends one, or `held`, a turn the stand-in keeps open the way a crewmate goes on working; `undefined` passes the request on.
 An answer's `afterMs` holds it back that long, the way a model takes its time over a turn's last line.
 A journey names its scenarios where its stand-in starts: `launchApp({ withMockProvider: true, scenarios: [reviewedTier] })`, `launchClaudeCrew({ scenarios })`, or `startMockProvider({ scenarios })` for a stand-in the spec keeps across launches.
 A relaunch with `reuseMockProvider` keeps the scenarios that stand-in started with, and `launchApp` refuses `scenarios` when it does not start the stand-in itself.
@@ -354,6 +354,8 @@ The stand-in asks the named scenarios in the order named, after the first mate's
 Words a journey and its scenario share, such as a marker or a card title, live in the scenario file, and the journey imports them from there.
 A shared helper the scenarios read, such as `calledTool` or `sinceLastUser`, stays in the stand-in, which exports it.
 A behavior that answers before the scenarios are asked, or that the spec releases through the stand-in's own controls (`releaseThreadAnswer`, `releaseHeldFirstmate`, `refuseClaude`), stays in the stand-in.
+So do the answers to the app's own words, such as the first-run welcome, a report that declares its work finished and a crewmate's build-in-place brief, and the captain's words nearly every journey's first mate needs: commission a crewmate, settle, steer or cancel a task, an answer card and a catalog change.
+Every other scripted behavior, whether one journey or several use it, is a scenario.
 Only a journey or another scenario imports a scenario file.
 `tests/lint/e2e-scenario-imports.grit` refuses the import anywhere else in `tests/e2e`, in `pnpm check`, because one import in a shared helper puts the scenario under every journey again.
 An edit to a scenario file then picks only the journeys that import it, by rule 2 of "Journeys on the pull request".

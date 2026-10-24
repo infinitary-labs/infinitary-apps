@@ -6,9 +6,10 @@ import { panelConsentTitle } from "../../src/core/plugins/consentWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { frameIn, panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { ADD_PANEL_PROMPT_MARKER, CARD_FETCH_PROBE_PATH } from "./mockProvider";
+import { CARD_FETCH_PROBE_PATH } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { feedLine } from "./rails";
+import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
 import { shownCard } from "./stack";
 
 /**
@@ -230,7 +231,7 @@ export default function Panel() {
 test.describe
   .serial("a panel someone else made cannot leave its frame", () => {
     test.beforeAll(async () => {
-      launched = await launchApp({ withMockProvider: true });
+      launched = await launchApp({ scenarios: [installPanel], withMockProvider: true });
     });
 
     test.afterAll(async () => {

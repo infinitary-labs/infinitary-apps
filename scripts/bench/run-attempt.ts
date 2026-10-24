@@ -33,6 +33,7 @@ function shellQuote(path: string): string {
 }
 
 type MockModule = typeof import("../../tests/e2e/mockProvider.ts");
+type WriteFileModule = typeof import("../../tests/e2e/scenarios/writeFile.ts");
 
 function fail(message: string): never {
   console.error(`run-attempt: ${message}`);
@@ -143,7 +144,10 @@ async function main(): Promise<void> {
       const mockModule = await runner.import<MockModule>(
         join(REPO_ROOT, "tests/e2e/mockProvider.ts"),
       );
-      mockServer = await mockModule.startMockProvider();
+      const { writeFile } = await runner.import<WriteFileModule>(
+        join(REPO_ROOT, "tests/e2e/scenarios/writeFile.ts"),
+      );
+      mockServer = await mockModule.startMockProvider({ scenarios: [writeFile] });
       provider = {
         kind: "mock",
         port: mockServer.port,

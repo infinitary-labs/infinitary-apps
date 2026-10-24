@@ -3,14 +3,7 @@ import { CARE_WORDS, DEFAULT_WORKSPACE_WORD, MERGE_WORDS } from "../../src/share
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, resizeWindow, settled, within } from "./layout";
-import {
-  EMIT_CARDS_PROMPT_MARKER,
-  MOCK_CHOICE_CARD_TITLE,
-  MOCK_LONG_ACTION_LABEL,
-  MOCK_MODEL_ID,
-  MOCK_PREVIEW_CARD_TITLE,
-  MOCK_QUOTA_NOTE_TITLE,
-} from "./mockProvider";
+import { MOCK_MODEL_ID } from "./mockProvider";
 import { promptInput } from "./prompt";
 import {
   ESCAPED_CARD_PROMPT_MARKER,
@@ -19,6 +12,14 @@ import {
   MOCK_ESCAPED_CARD_LEAD,
   MOCK_ESCAPED_CARD_TITLE,
 } from "./scenarios/escapedCard";
+import {
+  EMIT_CARDS_PROMPT_MARKER,
+  everyCardKind,
+  MOCK_CHOICE_CARD_TITLE,
+  MOCK_LONG_ACTION_LABEL,
+  MOCK_PREVIEW_CARD_TITLE,
+  MOCK_QUOTA_NOTE_TITLE,
+} from "./scenarios/everyCardKind";
 import {
   cardReply,
   cardScroller,
@@ -43,7 +44,7 @@ import {
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true, scenarios: [escapedCard] });
+  launched = await launchApp({ withMockProvider: true, scenarios: [escapedCard, everyCardKind] });
   const { page } = launched;
   const input = promptInput(page);
   await input.click();

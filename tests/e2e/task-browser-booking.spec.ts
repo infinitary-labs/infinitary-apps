@@ -28,15 +28,18 @@ import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./l
 import { resizeWindow } from "./layout";
 import {
   CLAUDE_CREWMATE_MARKER,
-  MOCK_BROWSER_REPORT_PREFIX,
   type MockProviderServer,
   SPAWN_PROMPT_MARKER,
   startMockProvider,
-  TASK_BROWSER_PROMPT_MARKER,
 } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
 import { atRest, expandDock, expectRecordBody, pressRow, recordCard, taskFact } from "./rails";
+import {
+  MOCK_BROWSER_REPORT_PREFIX,
+  TASK_BROWSER_PROMPT_MARKER,
+  taskBrowser,
+} from "./scenarios/taskBrowser";
 import {
   bookedNoteTitle,
   fareRoseWords,
@@ -114,7 +117,7 @@ const RUNTIMES: Runtime[] = [
       launchApp(
         options.reuseMockProvider
           ? options
-          : { ...options, withMockProvider: true, scenarios: [taskBrowserBooking] },
+          : { ...options, withMockProvider: true, scenarios: [taskBrowserBooking, taskBrowser] },
       ),
   },
   {
@@ -122,7 +125,9 @@ const RUNTIMES: Runtime[] = [
     suffix: ` ${CLAUDE_CREWMATE_MARKER}`,
     launch: (options) =>
       launchClaudeCrew(
-        options.reuseMockProvider ? options : { ...options, scenarios: [taskBrowserBooking] },
+        options.reuseMockProvider
+          ? options
+          : { ...options, scenarios: [taskBrowserBooking, taskBrowser] },
       ),
   },
 ];
@@ -624,7 +629,7 @@ for (const runtime of RUNTIMES) {
       const shoot = photographer(runtime);
       const airline = await startFakeAirline({ guest: true, lose: true });
       const mockProvider: MockProviderServer = await startMockProvider({
-        scenarios: [taskBrowserBooking],
+        scenarios: [taskBrowserBooking, taskBrowser],
       });
       // Every run of the app spaces delivery attempts by a short grace and
       // sweeps its inbox every few seconds, so the work a quit left in flight

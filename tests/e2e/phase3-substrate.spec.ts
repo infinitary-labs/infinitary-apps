@@ -9,16 +9,16 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  ADOPT_REPO_PROMPT_MARKER,
-  CLONE_REPO_PROMPT_MARKER,
-  DISCARD_PROMPT_MARKER,
-  INIT_REPO_PROMPT_MARKER,
-  LAND_PROMPT_MARKER,
-} from "./mockProvider";
+import { DISCARD_PROMPT_MARKER, LAND_PROMPT_MARKER } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, startedLine, taskKey } from "./rails";
+import {
+  ADOPT_REPO_PROMPT_MARKER,
+  CLONE_REPO_PROMPT_MARKER,
+  INIT_REPO_PROMPT_MARKER,
+  projectSetup,
+} from "./scenarios/projectSetup";
 
 /**
  * Phase 3 acceptance under the orchestrator loop, agent-first fleet: the
@@ -73,7 +73,7 @@ function initGitRepo(): string {
 
 test.beforeAll(async () => {
   registeredRepo = initGitRepo();
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ scenarios: [projectSetup], withMockProvider: true });
 });
 
 test.afterAll(async () => {

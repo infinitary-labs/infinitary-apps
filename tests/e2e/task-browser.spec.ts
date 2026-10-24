@@ -33,16 +33,17 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { crewmateView } from "./crewmateTab";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import {
-  MOCK_BROWSER_PICTURE,
-  MOCK_BROWSER_REPORT_PREFIX,
-  SPAWN_PROMPT_MARKER,
-  TASK_BROWSER_PROMPT_MARKER,
-} from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
 import { expandDock, expectRecordBody, hideRecord, pressRow, recordCard, taskFact } from "./rails";
+import {
+  MOCK_BROWSER_PICTURE,
+  MOCK_BROWSER_REPORT_PREFIX,
+  TASK_BROWSER_PROMPT_MARKER,
+  taskBrowser,
+} from "./scenarios/taskBrowser";
 import {
   MOCK_BROWSER_BUTTON,
   MOCK_BROWSER_CARD_REPORT,
@@ -233,7 +234,7 @@ test.beforeAll(async () => {
   siteUrl = `http://127.0.0.1:${(site.address() as AddressInfo).port}/`;
   launched = await launchApp({
     withMockProvider: true,
-    scenarios: [taskBrowserJourneys],
+    scenarios: [taskBrowserJourneys, taskBrowser],
     // A public name that leads to this Mac, as a rebinding name server would answer.
     env: { INFINITARY_TASK_BROWSER_HOSTS: JSON.stringify({ "rebind.example": ["127.0.0.1"] }) },
   });

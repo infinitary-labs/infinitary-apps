@@ -9,8 +9,9 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { drawnFrameIn, panelBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { ADD_PANEL_PROMPT_MARKER } from "./mockProvider";
+
 import { promptInput } from "./prompt";
+import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
 import { pager, showCard, shownCardFrame, shownEntry, stageAtRest } from "./stack";
 import { focusedRegion, pressWindowKey, regionAfter, typeInto } from "./windowKeys";
 
@@ -247,7 +248,11 @@ test("a card's script that calls focus() leaves the caret and the next keys in t
   test.setTimeout(120_000);
   const userDataDir = scratchDir("infinitary-frame-focus-");
   seed(userDataDir, grabbingCard());
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [installPanel],
+    userDataDir,
+    withMockProvider: true,
+  });
   try {
     const { app, page } = launched;
     await resizeWindow(app, page, { width: 1280, height: 820 });
@@ -300,7 +305,7 @@ test("an added panel's script that calls focus() leaves the caret and the next k
   cpSync(join(process.cwd(), "tests/fixtures/frame-realm/focus-taker"), source, {
     recursive: true,
   });
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ scenarios: [installPanel], withMockProvider: true });
   try {
     const { page } = launched;
     const prompt = promptInput(page);
@@ -323,7 +328,11 @@ test("a card's script cannot take focus back from the main message right after t
   test.setTimeout(120_000);
   const userDataDir = scratchDir("infinitary-frame-focus-retake-");
   seed(userDataDir, retakingCard());
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [installPanel],
+    userDataDir,
+    withMockProvider: true,
+  });
   try {
     const { app, page } = launched;
     await resizeWindow(app, page, { width: 1280, height: 820 });
@@ -373,7 +382,11 @@ test("a card's script cannot take focus back from a panel's field right after th
   cpSync(join(process.cwd(), "tests/fixtures/frame-realm/focus-taker"), source, {
     recursive: true,
   });
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [installPanel],
+    userDataDir,
+    withMockProvider: true,
+  });
   try {
     const { app, page } = launched;
     await resizeWindow(app, page, { width: 1280, height: 820 });
@@ -421,7 +434,11 @@ test("a card's script cannot take focus back from a panel's field right after th
 test("the waiting default choice still takes the captain to the card's unanswered question", async () => {
   const userDataDir = scratchDir("infinitary-frame-focus-asking-");
   seed(userDataDir, askingCard());
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [installPanel],
+    userDataDir,
+    withMockProvider: true,
+  });
   try {
     const { page } = launched;
     await showCard(page, ASKING);

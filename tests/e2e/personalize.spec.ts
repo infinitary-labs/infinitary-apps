@@ -7,11 +7,7 @@ import { OLD_PANEL_INSTRUCTIONS_PATH } from "../../src/core/personal/panelInstru
 import { OPEN_KNOWLEDGE, row, tab } from "./knowledgeBrowser";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  APP_CATALOG_PROMPT_MARKER,
-  PERSONALIZE_THEME_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { APP_CATALOG_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { feedLine, nowFrame } from "./rails";
 import { savePointCount } from "./savePoints";
@@ -22,6 +18,7 @@ import {
   PERSONALIZE_SHOW_PROMPT_MARKER,
   personalize,
 } from "./scenarios/personalize";
+import { PERSONALIZE_THEME_PROMPT_MARKER, personalizeTheme } from "./scenarios/personalizeTheme";
 import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -37,7 +34,10 @@ import { pressKey, runFromSearch } from "./windowKeys";
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true, scenarios: [personalize] });
+  launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [personalize, personalizeTheme],
+  });
 });
 
 test.afterAll(async () => {

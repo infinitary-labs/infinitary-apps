@@ -38,6 +38,7 @@ import {
   MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
 } from "./scenarios/githubChange";
 import { GITLAB_EVIDENCE_MARKER, gitlabEvidence } from "./scenarios/gitlabEvidence";
+import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
 import { factsStrip, shownCard } from "./stack";
 
 /**
@@ -113,7 +114,12 @@ for (const host of HOSTS) {
     git("-C", bare, "branch", "topic", "main");
     seedGitLabSignIn(userDataDir, host);
     const gitlab = await startGitLabStub(host);
-    const launched = await launchApp({ withMockProvider: true, userDataDir, env: gitlab.env });
+    const launched = await launchApp({
+      scenarios: [mergeWriteGuard],
+      withMockProvider: true,
+      userDataDir,
+      env: gitlab.env,
+    });
     try {
       const title = `field-notes guard-gitlab ${API_WRITE_GUARD_MARKER}`;
       await send(launched.page, `${SPAWN_PROMPT_MARKER} ${title}`);
@@ -171,7 +177,7 @@ for (const host of HOSTS) {
     gitlab.headOf(headIn(bare));
     const launched = await launchApp({
       withMockProvider: true,
-      scenarios: [githubChange],
+      scenarios: [githubChange, mergeWriteGuard],
       userDataDir,
       env: gitlab.env,
     });
@@ -299,7 +305,7 @@ for (const host of HOSTS) {
     ]);
     const launched = await launchApp({
       withMockProvider: true,
-      scenarios: [gitlabEvidence],
+      scenarios: [gitlabEvidence, mergeWriteGuard],
       userDataDir,
       env: gitlab.env,
     });

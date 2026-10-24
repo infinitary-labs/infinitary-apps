@@ -2,8 +2,9 @@ import { expect, type Page, test } from "@playwright/test";
 import type { UiSize } from "../../src/shared/preferences";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { PERSONALIZE_THEME_PROMPT_MARKER } from "./mockProvider";
+
 import { promptInput } from "./prompt";
+import { PERSONALIZE_THEME_PROMPT_MARKER, personalizeTheme } from "./scenarios/personalizeTheme";
 
 /**
  * The still character follows the theme and the size (docs/renderer.md, the
@@ -83,7 +84,7 @@ const turnEnded = (page: Page) =>
   });
 
 test("under reduced motion a theme switch repaints the still Firstmate in the new colors", async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ scenarios: [personalizeTheme], withMockProvider: true });
   const { page } = launched;
   await waitForFirstmateIdle(page);
   await holdStill(page);

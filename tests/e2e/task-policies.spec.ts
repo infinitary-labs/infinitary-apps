@@ -18,12 +18,7 @@ import { waitForFirstmateIdle } from "./crew";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import {
-  AUTONOMY_PROMPT_MARKER,
-  MOCK_AUTONOMY_CARD_TITLE,
-  MOCK_CLOSING_SENTENCES,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { MOCK_CLOSING_SENTENCES, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
@@ -37,6 +32,7 @@ import {
   recordFrame,
   taskKey,
 } from "./rails";
+import { AUTONOMY_PROMPT_MARKER, autonomy, MOCK_AUTONOMY_CARD_TITLE } from "./scenarios/autonomy";
 import { shownCard } from "./stack";
 import { pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
@@ -112,7 +108,7 @@ test("keyboard requests change queued policies, show their sources and Activity,
     },
   });
   db.close();
-  let app = await launchApp({ userDataDir, withMockProvider: true });
+  let app = await launchApp({ scenarios: [autonomy], userDataDir, withMockProvider: true });
   try {
     await resizeWindow(app.app, app.page, { width: 1440, height: 1000 });
     await openRecord(app, task.key, true);
@@ -184,7 +180,7 @@ test("keyboard requests change queued policies, show their sources and Activity,
     const history = (await detail()).events.filter((event) => event.data?.changes).length;
     const homeDir = app.homeDir;
     await app.close();
-    app = await launchApp({ userDataDir, homeDir, withMockProvider: true });
+    app = await launchApp({ scenarios: [autonomy], userDataDir, homeDir, withMockProvider: true });
     await expect.poll(detail).toMatchObject({
       status: "open",
       startedAt: null,
@@ -224,7 +220,12 @@ for (const checks of ["success", "failure"] as const)
     ).run("repo-meterlab", repoDir, "meterlab", Date.now(), "https://github.com/o/meterlab.git");
     seedHostedOrigins(db, userDataDir);
     db.close();
-    const app = await launchApp({ userDataDir, withMockProvider: true, env: github.env });
+    const app = await launchApp({
+      scenarios: [autonomy],
+      userDataDir,
+      withMockProvider: true,
+      env: github.env,
+    });
     try {
       const title = `meterlab ${AUTONOMY_PROMPT_MARKER}`;
       const input = promptInput(app.page);

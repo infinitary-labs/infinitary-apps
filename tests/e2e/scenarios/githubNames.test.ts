@@ -158,6 +158,7 @@ for (const { slow, reads } of CASES) {
         wantsStream: true,
         latestUserTail: body,
         hasToolResults: messages.length > 1,
+        anthropicMessages: false,
         port: 0,
       });
     };

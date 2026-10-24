@@ -12,18 +12,21 @@ import { HAS_APP_MENU } from "./desktop";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { intersects, minimumWindowSize, type Rect, resizeWindow, settled, within } from "./layout";
-import {
-  APP_CATALOG_PROMPT_MARKER,
-  CARD_WIDTH_PROMPT_MARKER,
-  EMIT_CARDS_PROMPT_MARKER,
-  MOCK_CHOICE_CARD_TITLE,
-  MOCK_LONG_ACTION_LABEL,
-  SPAWN_PROMPT_MARKER,
-  WIDTH_CARD_REGULAR_TEXT,
-  WIDTH_CARD_TITLES,
-} from "./mockProvider";
+import { APP_CATALOG_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { pastePictures, promptInput } from "./prompt";
 import { feedLineOf, newestFeedLine } from "./rails";
+import {
+  CARD_WIDTH_PROMPT_MARKER,
+  cardWidths,
+  WIDTH_CARD_REGULAR_TEXT,
+  WIDTH_CARD_TITLES,
+} from "./scenarios/cardWidths";
+import {
+  EMIT_CARDS_PROMPT_MARKER,
+  everyCardKind,
+  MOCK_CHOICE_CARD_TITLE,
+  MOCK_LONG_ACTION_LABEL,
+} from "./scenarios/everyCardKind";
 import { cardReply, cardSurface, pager, showCard, shownEntry } from "./stack";
 import { pressWindowKey } from "./windowKeys";
 
@@ -43,7 +46,10 @@ async function capture(launched: LaunchedApp, name: string) {
 
 for (const size of UI_SIZES) {
   test(`Size ${size}% scales the window and gives a regular card room`, async () => {
-    const launched = await launchApp({ withMockProvider: true });
+    const launched = await launchApp({
+      scenarios: [everyCardKind, cardWidths],
+      withMockProvider: true,
+    });
     try {
       const { page, app } = launched;
       await page.emulateMedia({ reducedMotion: "reduce" });
@@ -266,7 +272,10 @@ test("shortcuts, menu, picker and restart share the saved size", async () => {
 });
 
 test("Firstmate changes the saved size when asked, with one trail and no card", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [everyCardKind, cardWidths],
+    withMockProvider: true,
+  });
   try {
     const { page, app } = launched;
     const input = promptInput(page);
@@ -335,7 +344,10 @@ const cardRoom = (page: Page) =>
   settled(page, async () => (await cardSurface(page).boundingBox())?.height ?? 0);
 
 test("a card in a short window at a larger size keeps its reading room and every control", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [everyCardKind, cardWidths],
+    withMockProvider: true,
+  });
   try {
     const { page, app } = launched;
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -438,7 +450,10 @@ async function expectHeadersClearOfInput(page: Page, { cardUp }: { cardUp: boole
 
 for (const size of UI_SIZES) {
   test(`Size ${size}% keeps the collapsed panel headers clear of the main message`, async () => {
-    const launched = await launchApp({ withMockProvider: true });
+    const launched = await launchApp({
+      scenarios: [everyCardKind, cardWidths],
+      withMockProvider: true,
+    });
     try {
       const { page, app } = launched;
       await page.emulateMedia({ reducedMotion: "reduce" });
@@ -538,7 +553,10 @@ async function expectMainMessageUsable(page: Page) {
 
 for (const size of UI_SIZES) {
   test(`Size ${size}% keeps the main message usable between two expanded side panels`, async () => {
-    const launched = await launchApp({ withMockProvider: true });
+    const launched = await launchApp({
+      scenarios: [everyCardKind, cardWidths],
+      withMockProvider: true,
+    });
     try {
       const { page, app } = launched;
       await page.emulateMedia({ reducedMotion: "reduce" });
@@ -631,7 +649,11 @@ for (const size of UI_SIZES) {
       feed.record({ kind: "info", text: `Earlier ${line}` });
     }
     db.close();
-    const launched = await launchApp({ withMockProvider: true, userDataDir });
+    const launched = await launchApp({
+      scenarios: [everyCardKind, cardWidths],
+      withMockProvider: true,
+      userDataDir,
+    });
     try {
       const { page, app } = launched;
       await page.emulateMedia({ reducedMotion: "reduce" });

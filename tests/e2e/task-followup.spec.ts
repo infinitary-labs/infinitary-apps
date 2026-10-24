@@ -9,12 +9,9 @@ import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
-  FILE_FOLLOWUP_PROMPT_MARKER,
   FM_SYSTEM_MARKER,
   MOCK_COMPLETION_TEXT,
-  MOCK_FOLLOWUP_GOAL,
   MOCK_FOLLOWUP_TITLE,
-  MOCK_PROGRESS_TEXT,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
 import { promptInput } from "./prompt";
@@ -29,6 +26,12 @@ import {
   reportLine,
   taskKey,
 } from "./rails";
+import {
+  FILE_FOLLOWUP_PROMPT_MARKER,
+  fileFollowup,
+  MOCK_FOLLOWUP_GOAL,
+  MOCK_PROGRESS_TEXT,
+} from "./scenarios/fileFollowup";
 import { SPAWNED_TASK_START } from "./taskTimeline";
 
 /**
@@ -80,7 +83,7 @@ function readTasks(userDataDir: string): TaskRow[] {
 }
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ scenarios: [fileFollowup], withMockProvider: true });
 });
 
 test.afterAll(async () => {

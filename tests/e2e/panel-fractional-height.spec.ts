@@ -6,8 +6,9 @@ import { classicScrollbars, expectFrameSettles } from "./frameSizing";
 import { panelBody, panelElement } from "./frames";
 import { launchApp } from "./launch";
 import { within } from "./layout";
-import { ADD_PANEL_PROMPT_MARKER } from "./mockProvider";
+
 import { promptInput } from "./prompt";
+import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
 
 const PANEL_ID = "fractional-drawing";
 const PANEL = `[data-side-panel="${PANEL_ID}"]`;
@@ -42,7 +43,7 @@ async function addDrawing(page: Page, source: string): Promise<void> {
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
 test("fractional-height installed panels stop resizing, show all of their document, and scroll only at the outer surface", async ({}, testInfo) => {
   const source = drawingSource("content");
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ scenarios: [installPanel], withMockProvider: true });
   try {
     const { page } = launched;
     await addDrawing(page, source);
@@ -98,7 +99,7 @@ test("fractional-height installed panels stop resizing, show all of their docume
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
 test("a fill-sized installed panel scrolls its own document to reach genuinely taller content", async ({}, testInfo) => {
   const source = drawingSource("fill");
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ scenarios: [installPanel], withMockProvider: true });
   try {
     const { page } = launched;
     await addDrawing(page, source);

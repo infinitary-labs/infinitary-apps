@@ -1,4 +1,7 @@
-import { MOCK_QUOTA_NOTE_TITLE, MOCK_REVISED_NOTE_TEXT, type Scenario } from "../mockProvider";
+import type { Scenario } from "../mockProvider";
+import { MOCK_QUOTA_NOTE_TITLE } from "./everyCardKind";
+
+export const MOCK_REVISED_NOTE_TEXT = "Codex weekly is now at 58% - still routing on pace.";
 
 /**
  * Marker steer: the card-kinds crewmate revises its "Quota note" in place

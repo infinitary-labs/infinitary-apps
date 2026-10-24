@@ -15,14 +15,14 @@ import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
 import { startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
+import { type MockProviderServer, startMockProvider } from "./mockProvider";
+import { addedProjects, addFromSetupCard, projectRow } from "./projects";
+import { promptInput } from "./prompt";
 import {
   CLONE_REPO_PROMPT_MARKER,
   INIT_REPO_PROMPT_MARKER,
-  type MockProviderServer,
-  startMockProvider,
-} from "./mockProvider";
-import { addedProjects, addFromSetupCard, projectRow } from "./projects";
-import { promptInput } from "./prompt";
+  projectSetup,
+} from "./scenarios/projectSetup";
 import { assertReadableSettingsFeedback, assertSettingsFits, settingRow } from "./settings";
 
 /**
@@ -89,7 +89,7 @@ function initGitRepo(): string {
 
 test("new projects go in the folder chosen in Settings, and the choice survives a restart", async () => {
   const homeDir = scratchDir("infinitary-home-");
-  const mockProvider: MockProviderServer = await startMockProvider();
+  const mockProvider: MockProviderServer = await startMockProvider({ scenarios: [projectSetup] });
   const chosen = realpathSync(scratchDir("infinitary-projects-"));
   let launched: LaunchedApp | undefined;
   try {
@@ -219,7 +219,7 @@ test("a cancelled pick changes nothing, and a folder the app cannot use is refus
 
 test("a refused clone offers Firstmate's sign-in way and opens Projects with a code", async () => {
   const github = await startGitHubStub();
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: [projectSetup] });
   const origin = "https://github.com/octo/private.git";
   const missing = join(scratchDir("infinitary-clone-refusal-"), "missing.git");
   const launched = await launchApp({

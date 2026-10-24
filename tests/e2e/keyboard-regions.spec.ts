@@ -5,13 +5,14 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { within } from "./layout";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { promptInput } from "./prompt";
+import { expandDock, nowFrame, openRowSummary, POINT_SUMMARY, rowSummary } from "./rails";
 import {
   KEYBOARD_CARD_TITLES,
   KEYBOARD_CARDS_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
-import { expandDock, nowFrame, openRowSummary, POINT_SUMMARY, rowSummary } from "./rails";
+  keyboardCards,
+} from "./scenarios/keyboardCards";
 import { pager, showCard, shownCardFrame } from "./stack";
 import {
   commandSearch,
@@ -70,7 +71,7 @@ async function summaryLevelWith(page: Page, row: Locator): Promise<boolean> {
 
 test("F6 and Shift+F6 go round the window's parts, and the arrows move through the Tasks list", async () => {
   test.setTimeout(120_000);
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ scenarios: [keyboardCards], withMockProvider: true });
   try {
     const { app, page } = launched;
     const prompt = promptInput(page);
@@ -200,7 +201,11 @@ test("a task the keyboard rests on keeps focus, the Tab stop and its summary as 
   } finally {
     db.close();
   }
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [keyboardCards],
+    userDataDir,
+    withMockProvider: true,
+  });
   try {
     const { app, page } = launched;
     const list = nowFrame(page);

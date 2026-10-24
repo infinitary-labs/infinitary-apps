@@ -1,11 +1,12 @@
 import { expect, type Page, test } from "@playwright/test";
 import { launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { promptInput } from "./prompt";
 import {
   KEYBOARD_CARD_TITLES,
   KEYBOARD_CARDS_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+  keyboardCards,
+} from "./scenarios/keyboardCards";
 import { pager, showCard, shownCard, shownEntry, stagePrepared } from "./stack";
 import { pressWindowKey } from "./windowKeys";
 
@@ -33,7 +34,10 @@ async function holdReveal(page: Page): Promise<void> {
 // its earlier reveal must release the preparation gate, not leave it waiting
 // for the finish event of an animation that no longer exists.
 test("a fast page back prepares the successor after interrupting the shown card's reveal", async () => {
-  const { app, page, close } = await launchApp({ withMockProvider: true });
+  const { app, page, close } = await launchApp({
+    scenarios: [keyboardCards],
+    withMockProvider: true,
+  });
   try {
     const prompt = promptInput(page);
     await prompt.fill(`${SPAWN_PROMPT_MARKER} ${KEYBOARD_CARDS_PROMPT_MARKER}`);

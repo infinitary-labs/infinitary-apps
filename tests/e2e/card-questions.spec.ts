@@ -15,14 +15,7 @@ import {
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
-import {
-  INLINE_QUESTIONS_LOCK_LABEL,
-  INLINE_QUESTIONS_PROMPT_MARKER,
-  INLINE_QUESTIONS_REVISE_REPLY,
-  INLINE_QUESTIONS_REVISED_TITLE,
-  INLINE_QUESTIONS_TITLE,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { pastePictures } from "./prompt";
 import {
   cardQuestions,
@@ -36,6 +29,14 @@ import {
   WRITE_IN_TITLE,
   writeInQuestionsBody,
 } from "./scenarios/cardQuestions";
+import {
+  INLINE_QUESTIONS_LOCK_LABEL,
+  INLINE_QUESTIONS_PROMPT_MARKER,
+  INLINE_QUESTIONS_REVISE_REPLY,
+  INLINE_QUESTIONS_REVISED_TITLE,
+  INLINE_QUESTIONS_TITLE,
+  inlineQuestions,
+} from "./scenarios/inlineQuestions";
 import { cardReply, closeQuestion, expectNoCard, showCard, shownCard, shownEntry } from "./stack";
 import { focusOn, pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
@@ -86,7 +87,10 @@ const OPTIONS_ONLY_QUESTION = (() => {
 })();
 
 test("picks inside a card queue until a footer button sends them, and survive a revision by name", async () => {
-  const launched = await launchApp({ withMockProvider: true, scenarios: [cardQuestions] });
+  const launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [cardQuestions, inlineQuestions],
+  });
   const { page } = launched;
   try {
     const prompt = page.getByRole("textbox", { name: "Task prompt" });
@@ -224,7 +228,10 @@ test("picks inside a card queue until a footer button sends them, and survive a 
 });
 
 test("a required question written already answered is refused, and the card arrives unpicked with its recommendations tagged", async () => {
-  const launched = await launchApp({ withMockProvider: true, scenarios: [cardQuestions] });
+  const launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [cardQuestions, inlineQuestions],
+  });
   const { page, mockProvider } = launched;
   try {
     const prompt = page.getByRole("textbox", { name: "Task prompt" });
@@ -308,7 +315,7 @@ test("a question's Something else row takes the captain's own words to the autho
   const launched = await launchApp({
     userDataDir,
     withMockProvider: true,
-    scenarios: [cardQuestions],
+    scenarios: [cardQuestions, inlineQuestions],
   });
   const { page, mockProvider } = launched;
   let cardId = "";
@@ -530,7 +537,7 @@ test("a scripted body stages a snapshot beside its form, and the close confirms 
   const launched = await launchApp({
     userDataDir,
     withMockProvider: true,
-    scenarios: [cardQuestions],
+    scenarios: [cardQuestions, inlineQuestions],
   });
   const { page, mockProvider } = launched;
   try {
@@ -614,7 +621,7 @@ test("tagged recommendations need explicit picks, waiting approval focuses the q
   const launched = await launchApp({
     userDataDir,
     withMockProvider: true,
-    scenarios: [cardQuestions],
+    scenarios: [cardQuestions, inlineQuestions],
   });
   const { page } = launched;
   try {
@@ -785,7 +792,7 @@ test("a 37-question card's footer sends its answers", async () => {
   const launched = await launchApp({
     userDataDir,
     withMockProvider: true,
-    scenarios: [cardQuestions],
+    scenarios: [cardQuestions, inlineQuestions],
   });
   const { page } = launched;
   try {
@@ -853,7 +860,7 @@ test("the card's one field replies on Chat and goes with whichever choice the ca
   const launched = await launchApp({
     userDataDir,
     withMockProvider: true,
-    scenarios: [cardQuestions],
+    scenarios: [cardQuestions, inlineQuestions],
   });
   const { app, page } = launched;
   try {

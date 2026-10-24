@@ -16,18 +16,13 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { seedRepo } from "./githubStub";
 import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
-import {
-  GIT_STATUS_PROMPT_MARKER,
-  MOCK_GIT_REPORT_PREFIX,
-  MOCK_PROVIDER_ID,
-  mockModelsJson,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { MOCK_PROVIDER_ID, mockModelsJson, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { holdCpuBusy, homeReading, replayedCpu } from "./placementCpu";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { providerMessages, served } from "./providerRequest";
 import { reportLine, taskKey } from "./rails";
+import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
 import { starterFor } from "./starters";
 import { pressWindowKey, typeInto } from "./windowKeys";
 
@@ -228,6 +223,7 @@ test("a new task in an Automatic project waits for CPU room, then starts with th
   seedAutomaticProject(userDataDir);
   const crew = seedGrokCrew(userDataDir);
   const app = await launchApp({
+    scenarios: [gitStatus],
     userDataDir,
     withMockProvider: true,
     ...crew,
@@ -278,7 +274,12 @@ test("a new task in an Automatic project whose routing names no model starts on 
   // default, as it does for a person whose only model is a custom connection.
   // A project kept on This computer starts such a task on that default, and
   // Automatic waited for a computer with room instead (FI3-1739).
-  const app = await launchApp({ userDataDir, withMockProvider: true, env: SHORT_TICK });
+  const app = await launchApp({
+    scenarios: [gitStatus],
+    userDataDir,
+    withMockProvider: true,
+    env: SHORT_TICK,
+  });
   let id: string | undefined;
   const detail = () =>
     app.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id ?? "");
@@ -313,6 +314,7 @@ test("a premium ask in an Automatic project that no computer can serve waits on 
   // that wait (FI3-1744).
   const crew = seedGrokCrew(userDataDir);
   const app = await launchApp({
+    scenarios: [gitStatus],
     userDataDir,
     withMockProvider: true,
     ...crew,
@@ -403,7 +405,7 @@ test("a task in an Automatic project that requires a system no computer runs wai
   // system it does not run, as its own facts read it.
   const here = process.platform === "darwin" ? "macos" : "linux";
   const required = here === "macos" ? "linux" : "macos";
-  const app = await launchApp({ userDataDir, withMockProvider: true });
+  const app = await launchApp({ scenarios: [gitStatus], userDataDir, withMockProvider: true });
   const mock = app.mockProvider;
   if (!mock) throw new Error("Asking Firstmate needs the mock provider");
   const title = "Compare the test failures on main";

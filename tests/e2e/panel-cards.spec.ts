@@ -7,7 +7,7 @@ import { keyWords } from "./desktop";
 import { frameIn } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { ADD_PANEL_PROMPT_MARKER } from "./mockProvider";
+
 import {
   panelCardChrome,
   panelHeaderButton,
@@ -15,6 +15,7 @@ import {
   shownPanelCardFrame,
 } from "./panelCards";
 import { promptInput } from "./prompt";
+import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
 import { clickInBody, pager } from "./stack";
 import {
   commandSearch,
@@ -188,7 +189,7 @@ test.describe("a panel from elsewhere draws its cards walled off", () => {
       join(source, "manifest.json"),
       JSON.stringify({ ...manifest, name: "Acme", version: "1.0.0" }),
     );
-    launched = await launchApp({ withMockProvider: true });
+    launched = await launchApp({ scenarios: [installPanel], withMockProvider: true });
     await resizeWindow(launched.app, launched.page, { width: 1600, height: 900 });
   });
 
@@ -277,7 +278,7 @@ test.describe("a panel from elsewhere draws its cards walled off", () => {
 // Hold the card at its draw boundary so the pending focus move resolves only
 // after command search opens, independent of how fast this computer draws.
 test("a panel card still drawing yields its pending focus to command search", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ scenarios: [installPanel], withMockProvider: true });
   const { app, page } = launched;
   try {
     await page.evaluate(() => {

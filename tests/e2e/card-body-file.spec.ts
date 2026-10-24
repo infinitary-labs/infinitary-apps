@@ -4,14 +4,16 @@ import { expect, test } from "@playwright/test";
 import { clock, revisedLine as revisedWords } from "../../src/renderer/src/cards/revisedLine";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
+
+import { promptInput } from "./prompt";
 import {
   FILE_CARD_INITIAL,
   FILE_CARD_PROMPT_MARKER,
   FILE_CARD_REVISE_MARKER,
   FILE_CARD_REVISED,
   FILE_CARD_TITLE,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+  fileCard,
+} from "./scenarios/fileCard";
 import { cardReply, changeMarks, revisedLine } from "./stack";
 
 /** The words of the mock's card file in its `n`th `<tag>`, as the frame reads them. */
@@ -36,7 +38,7 @@ function revisedPattern(added: number, removed: number): RegExp {
 
 // One test owns the whole journey, including its initial card and the file edit.
 test("a crewmate emits a file snapshot and shows an edit only on its next explicit call", async () => {
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ scenarios: [fileCard], withMockProvider: true });
   try {
     const { page, userDataDir } = launched;
     const input = promptInput(page);

@@ -15,10 +15,14 @@ export const RETRIEVAL_CARD_TITLE = "Release 0.1.31 includes video demos";
 
 export const RETRIEVAL_SOURCE = '{"version":"0.1.31","videoDemos":true}';
 
+const RETRIEVAL_FINISHED_REPORT =
+  "The captain read the answer on the card, and nothing is left for me to do.";
+
 /**
  * The lookup ask: the first mate spawns the retrieval task, and its crewmate
- * reads the committed release facts and answers on one decision card. A
- * closed card's steer passes on to the shared answer-task close.
+ * reads the committed release facts and answers on one decision card. Told
+ * the captain closed that card, it judges the answer read and finished
+ * (FI3-435).
  */
 export const retrievalTask: Scenario =
   () =>
@@ -41,7 +45,17 @@ export const retrievalTask: Scenario =
         };
       }
     }
-    // The closed card's steer is the shared answer-task close's.
+    if (
+      !isFirstmate &&
+      body.includes(RETRIEVAL_TASK_ASK) &&
+      latestUserTail.includes(CARD_CLOSED_STEER_NEEDLE) &&
+      wantsStream
+    ) {
+      if (hasToolResults) return { text: "done" };
+      return {
+        calls: [{ name: "report", args: { text: RETRIEVAL_FINISHED_REPORT, finished: true } }],
+      };
+    }
     if (
       !isFirstmate &&
       body.includes(RETRIEVAL_TASK_ASK) &&

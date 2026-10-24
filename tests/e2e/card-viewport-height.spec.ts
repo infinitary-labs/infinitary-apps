@@ -4,13 +4,15 @@ import { expectFrameSettles } from "./frameSizing";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
 import { settled, within } from "./layout";
+
+import { promptInput } from "./prompt";
 import {
   CARD_VIEWPORT_BODY,
   CARD_VIEWPORT_PROMPT_MARKER,
   CARD_VIEWPORT_SCRIPT,
   CARD_VIEWPORT_TITLE,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+  cardWidths,
+} from "./scenarios/cardWidths";
 import { cardScroller, SHOWN_ENTRY, shownCard } from "./stack";
 
 const SCROLLER = `${SHOWN_ENTRY} [data-card-body]`;
@@ -21,6 +23,7 @@ for (const scripted of [false, true]) {
   test(`min-height:100vh stops resizing in an emitted ${scripted ? "scripted" : "static"} card, and still grows to be read and shrinks`, async ({}, testInfo) => {
     const homeDir = scratchDir("infinitary-card-viewport-home-");
     const launched = await launchApp({
+      scenarios: [cardWidths],
       withMockProvider: true,
       homeDir,
       env: {

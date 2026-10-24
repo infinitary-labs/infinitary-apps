@@ -22,11 +22,7 @@ import { hintOf } from "./desktop";
 import { cardBody, cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
-  FM_THREAD_CARD_REVISED_TITLE,
   FM_THREAD_CARD_TITLE,
-  FM_THREAD_PROMPT_MARKER,
-  FM_THREAD_PROSE_ANSWER,
-  FM_THREAD_REVISE_ANSWER,
   SPAWN_PROMPT_MARKER,
   THREAD_ACK_REPLY,
   THREAD_ACK_REVISED_TITLE,
@@ -57,6 +53,13 @@ import {
   reportLine,
   taskKey,
 } from "./rails";
+import {
+  FM_THREAD_CARD_REVISED_TITLE,
+  FM_THREAD_PROMPT_MARKER,
+  FM_THREAD_PROSE_ANSWER,
+  FM_THREAD_REVISE_ANSWER,
+  firstmateThread,
+} from "./scenarios/firstmateThread";
 import {
   MOCK_THREAD_HANDOFF_REPORT,
   THREAD_SETTLE_CARD_TITLE,
@@ -118,7 +121,7 @@ let launched: LaunchedApp;
 test.beforeAll(async () => {
   launched = await launchApp({
     withMockProvider: true,
-    scenarios: [threadSettle],
+    scenarios: [threadSettle, firstmateThread],
     userDataDir: scratchDir("infinitary-card-threads-"),
   });
 });
@@ -788,7 +791,7 @@ test("ready waiting follows reachable choices through a reply, reload and return
   db.close();
   const own = await launchApp({
     withMockProvider: true,
-    scenarios: [threadSettle],
+    scenarios: [threadSettle, firstmateThread],
     userDataDir,
     env: { INFINITARY_TASK_DELTA_ROWS: "0" },
   });
@@ -994,7 +997,7 @@ test("command search follows the chosen revision list and a row expands its own 
   const fixture = seedRevisionCard({ many: true });
   const local = await launchApp({
     withMockProvider: true,
-    scenarios: [threadSettle],
+    scenarios: [threadSettle, firstmateThread],
     userDataDir: fixture.userDataDir,
   });
   try {

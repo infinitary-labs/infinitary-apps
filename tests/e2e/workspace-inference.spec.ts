@@ -12,10 +12,11 @@ import {
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
-import { ADOPT_REPO_PROMPT_MARKER, LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT } from "./mockProvider";
+import { LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, reportLine, startedLine, taskKey } from "./rails";
+import { ADOPT_REPO_PROMPT_MARKER, projectSetup } from "./scenarios/projectSetup";
 import {
   AMBIGUOUS_PROMPT_MARKER,
   CONFIGURE_REPO_PROMPT_MARKER,
@@ -54,7 +55,10 @@ function initGitRepo(prefix: string): string {
 test.beforeAll(async () => {
   repoAlpha = initGitRepo("infinitary-alpha-");
   repoBeta = initGitRepo("infinitary-beta-");
-  launched = await launchApp({ withMockProvider: true, scenarios: [workspaceInference] });
+  launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [workspaceInference, projectSetup],
+  });
   // Adopt both repos by asking the agent: its app_change project-setup puts
   // up the setup card, and the captain's Add project links each into the
   // fleet in place. Each turn, and the one that hears the answer, is

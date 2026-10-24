@@ -7,14 +7,7 @@ import { MERGE_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchClaudeCrew } from "./claudeCrew";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  ANSWER_TASK_PROMPT_MARKER,
-  CARD_CLOSED_STEER_NEEDLE,
-  MOCK_ANSWER_ACTION_LABEL,
-  MOCK_ANSWER_CARD_TITLE,
-  MOCK_ANSWER_FINISHED_REPORT,
-  MOCK_ANSWER_REPORT,
-} from "./mockProvider";
+import { CARD_CLOSED_STEER_NEEDLE } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
@@ -36,6 +29,14 @@ import {
   ANSWER_MID_TURN_TITLE,
   answerMidTurn,
 } from "./scenarios/answerMidTurn";
+import {
+  ANSWER_TASK_PROMPT_MARKER,
+  answerTask,
+  MOCK_ANSWER_ACTION_LABEL,
+  MOCK_ANSWER_CARD_TITLE,
+  MOCK_ANSWER_FINISHED_REPORT,
+  MOCK_ANSWER_REPORT,
+} from "./scenarios/answerTask";
 import { OWN_RENT_CARD_TITLE, OWN_RENT_TITLE, ownRentAnswer } from "./scenarios/ownRentAnswer";
 import { expectNoCard, shownCard, shownEntry } from "./stack";
 
@@ -59,7 +60,7 @@ let launched: LaunchedApp;
 test.beforeAll(async () => {
   launched = await launchApp({
     withMockProvider: true,
-    scenarios: [ownRentAnswer],
+    scenarios: [ownRentAnswer, answerTask],
     userDataDir: scratchDir("infinitary-answer-task-"),
   });
 });
@@ -211,7 +212,7 @@ test("an answer task is briefed as shipping nothing, waits on its card, and clos
 test("closing the answer card reaches its crewmate, which reports it finished, and Firstmate closes it answered", async () => {
   const own = await launchApp({
     withMockProvider: true,
-    scenarios: [ownRentAnswer],
+    scenarios: [ownRentAnswer, answerTask],
     userDataDir: scratchDir("infinitary-answer-close-"),
   });
   try {
@@ -285,7 +286,7 @@ test("closing the answer card reaches its crewmate, which reports it finished, a
 test("a Firstmate note on an answer task stays up after settle_task answered", async () => {
   const own = await launchApp({
     withMockProvider: true,
-    scenarios: [ownRentAnswer],
+    scenarios: [ownRentAnswer, answerTask],
     userDataDir: scratchDir("infinitary-answer-note-stays-"),
   });
   try {
@@ -331,7 +332,7 @@ test("a Firstmate note on an answer task stays up after settle_task answered", a
  * crew, whose stand-in holds the crewmate's next step open.
  */
 test("a choice on an answer card while its crewmate works closes it answered and reaches the first mate", async () => {
-  const own = await launchClaudeCrew({ scenarios: [answerMidTurn] });
+  const own = await launchClaudeCrew({ scenarios: [answerMidTurn, answerTask] });
   let taskId: string | undefined;
   try {
     const { page, mockProvider } = own;

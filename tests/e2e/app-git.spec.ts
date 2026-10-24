@@ -6,13 +6,10 @@ import { writeLoginShellStub } from "../../src/core/loginShellStub";
 import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
 import { builtAppDir, type LaunchedApp, launchApp } from "./launch";
-import {
-  GIT_STATUS_PROMPT_MARKER,
-  MOCK_GIT_REPORT_PREFIX,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { reportLine, taskKey } from "./rails";
+import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
 
 /**
  * The app brings its own git (git integration phase 2, `docs/forge.md`
@@ -58,6 +55,7 @@ test.beforeAll(async () => {
   // The person's shell adds nothing either: its path is the launch's own.
   const { shell } = writeLoginShellStub(scratchDir("infinitary-login-shell-"), {});
   launched = await launchApp({
+    scenarios: [gitStatus],
     withMockProvider: true,
     userDataDir,
     env: { PATH: NO_GIT_PATH, SHELL: shell },

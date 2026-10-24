@@ -27,6 +27,7 @@ import {
 } from "./lessonFixtures";
 import { heroShot, regionShot } from "./pictures";
 import { readSavedData } from "./savedData";
+import { lessons } from "./scenarios/lessons";
 import { cardReply, clickInBody, expectNoCard, showCard, shownCard, shownEntry } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -91,7 +92,7 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
     createdAt: 1000,
   });
   db.close();
-  let launched = await launchApp({ userDataDir, withMockProvider: true });
+  let launched = await launchApp({ scenarios: [lessons], userDataDir, withMockProvider: true });
   const teacherRequests = () =>
     (launched.mockProvider?.requestBodies() ?? []).filter((body) =>
       body.includes(LESSON_CHESS_ASK),
@@ -239,7 +240,12 @@ test("a lesson plays in one card, keeps its records and welcomes the learner bac
     await test.step("the welcome-back card and the task survive a restart with no nudge", async () => {
       const homeDir = launched.homeDir;
       await launched.close();
-      launched = await launchApp({ userDataDir, homeDir, withMockProvider: true });
+      launched = await launchApp({
+        scenarios: [lessons],
+        userDataDir,
+        homeDir,
+        withMockProvider: true,
+      });
       const { page } = launched;
       await showCard(page, LESSON_WELCOME_TITLE);
       const titles = await page.evaluate(async () =>

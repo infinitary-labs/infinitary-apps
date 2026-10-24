@@ -12,11 +12,12 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { frameIn, panelBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { ADD_PANEL_PROMPT_MARKER } from "./mockProvider";
+
 import { panelCardChrome } from "./panelCards";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { POINT_SUMMARY, recordCard, rowSummary } from "./rails";
+import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
 import { SHOWN_ENTRY, shownCardFrame } from "./stack";
 import {
   boardConfirm,
@@ -121,7 +122,11 @@ test("the Tasks panel's own folder, added from elsewhere under another id, runs 
     join(source, "manifest.json"),
     JSON.stringify({ ...manifest, name: MAKER, version: "1.0.0", title: TITLE }),
   );
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [installPanel],
+    userDataDir,
+    withMockProvider: true,
+  });
   const { app, page } = launched;
   try {
     await resizeWindow(app, page, { width: 1600, height: 900 });

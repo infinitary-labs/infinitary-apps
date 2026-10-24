@@ -29,6 +29,7 @@ for (const slow of ["shell job", "kept integration answer"] as const) {
         wantsStream: true,
         latestUserTail: body,
         hasToolResults: messages.length > 1,
+        anthropicMessages: false,
         port: 0,
       });
       return last;

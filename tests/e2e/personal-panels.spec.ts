@@ -18,8 +18,6 @@ import {
   MOCK_PANEL_REVISED_REPORT,
   MOCK_PANEL_TITLE,
   type MockProviderServer,
-  PERSONAL_PANEL_PROMPT_MARKER,
-  PERSONAL_REMOVE_PROMPT_MARKER,
   startMockProvider,
 } from "./mockProvider";
 import { projectRow } from "./projects";
@@ -30,6 +28,11 @@ import {
   PERSONAL_CHANGE_PROMPT_MARKER,
   personalPanelChange,
 } from "./scenarios/personalPanelChange";
+import {
+  PERSONAL_PANEL_PROMPT_MARKER,
+  PERSONAL_REMOVE_PROMPT_MARKER,
+  personalPanels,
+} from "./scenarios/personalPanels";
 import { setThemeViaSettings } from "./theme";
 
 /**
@@ -414,7 +417,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
   };
 
   test.beforeAll(async () => {
-    mockProvider = await startMockProvider({ scenarios: [personalPanelChange] });
+    mockProvider = await startMockProvider({ scenarios: [personalPanelChange, personalPanels] });
     live = await launchApp({ reuseMockProvider: mockProvider });
     userDataDir = live.userDataDir;
     workspace = join(userDataDir, "fleet", "personal");

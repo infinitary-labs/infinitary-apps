@@ -16,15 +16,12 @@ import {
   CARD_CLOSED_STEER_PREFIX,
   FINISHED_REPORT_WORDS,
   renderWake,
-  SETUP_CARD_FAILED_WORDS,
   WELCOME_WAKE_WORDS,
 } from "../../src/core/orchestrator/wakes";
 import { backgroundJobReceipt } from "../../src/core/pi/bashWords";
 import { NOTHING_SPAWNED } from "../../src/core/pi/crewTools";
 import { FIRSTMATE_PERSONA, KIND_CLASSIFIER_OPENING } from "../../src/core/pi/piResources";
 import { CLAUDE_SEAT_TOOL_PREFIX } from "../../src/core/storage/sessionReader";
-import { CREATE_PANEL_DRAFT } from "../../src/shared/createPanelSlot";
-import { HERE } from "../../src/shared/deviceNames";
 import {
   beginAnthropicStream,
   finishAnthropicStream,
@@ -34,47 +31,9 @@ import {
 } from "../helpers/anthropicDialect";
 import { completionCardBody } from "../helpers/completionCard";
 import type { ScriptedArgs, ScriptedCall, ScriptedCardAction } from "../helpers/scriptedCalls";
-import {
-  API_WRITE_GUARD_MARKER,
-  mergeWriteCases,
-  READS_ANYWHERE_MARKER,
-  SKIP_RULES_CARD_TITLE,
-  SKIP_RULES_MERGE_MARKER,
-  SKIP_RULES_MERGED_WAKE,
-  SKIP_RULES_PULL,
-  WRITE_ASK_ANSWER_MARKER,
-  WRITE_ASK_CARD_TITLE,
-  WRITE_ASK_MARKER,
-  WRITE_ASK_SENT_WAKE,
-  writeAskCall,
-} from "./apiWriteCases";
+import { WRITE_ASK_ANSWER_MARKER } from "./apiWriteCases";
 import { DEMO_CAPTION, DEMO_POSTER } from "./demoFixtures";
-import { GITLAB_STUB_PROJECT } from "./gitlabStub";
-import {
-  chessItems,
-  LESSON_CHESS_ASK,
-  LESSON_CHESS_CARD_ID,
-  LESSON_CHESS_GOAL,
-  LESSON_CHESS_TITLE,
-  LESSON_FRACTIONS_ASK,
-  LESSON_FRACTIONS_GOAL,
-  LESSON_FRACTIONS_GOAL_BODY,
-  LESSON_FRACTIONS_GOAL_TITLE,
-  LESSON_FRACTIONS_TITLE,
-  LESSON_GOAL_BODY,
-  LESSON_GOAL_TITLE,
-  LESSON_LEARNER_LINE,
-  LESSON_NEXT_GOAL,
-  LESSON_PROGRESS_STOP,
-  LESSON_REPLY_ANSWER,
-  LESSON_REPLY_WORDS,
-  LESSON_ROUND_ONE_TITLE,
-  LESSON_ROUND_REVIEW_TITLE,
-  LESSON_ROUND_TWO_TITLE,
-  LESSON_WELCOME_BODY,
-  LESSON_WELCOME_TITLE,
-  lessonRoundBody,
-} from "./lessonFixtures";
+import { LESSON_CHESS_GOAL, LESSON_FRACTIONS_GOAL } from "./lessonFixtures";
 import {
   bytesOf,
   CHANGE_AFTER_PICTURES,
@@ -100,11 +59,6 @@ import { starterFor } from "./starters";
 export const MOCK_COMPLETION_TEXT =
   "Steady as she goes. The worktree is ready and this report streamed from the mock provider.";
 
-/** Marker prompt: the mock crewmate answers with emit_card tool calls first. */
-export const EMIT_CARDS_PROMPT_MARKER = "show every card kind";
-
-export const MOCK_REVISED_NOTE_TEXT = "Codex weekly is now at 58% - still routing on pace.";
-
 /** Where the fetch probe card aims: the mock server itself, which counts every hit. */
 export const CARD_FETCH_PROBE_PATH = "/card-fetch-probe";
 export const SCRIPT_CARD_TITLES = {
@@ -112,18 +66,6 @@ export const SCRIPT_CARD_TITLES = {
   fetch: "Fetch probe",
   runaway: "Runaway probe",
   figure: "Figure probe",
-} as const;
-
-/**
- * Marker prompt: the mock crewmate emits two notes that each hold a text
- * field, one drawn inline (no script) and one served at a host of its own (a
- * script), so a key can be pressed with focus inside either kind of card
- * frame (tests/e2e/keyboard-routing.spec.ts).
- */
-export const KEYBOARD_CARDS_PROMPT_MARKER = "show the keyboard cards";
-export const KEYBOARD_CARD_TITLES = {
-  inline: "A note field drawn inline",
-  served: "A note field served on its own",
 } as const;
 
 /**
@@ -162,30 +104,6 @@ function withDeclaredRisk(call: ScriptedCall): ScriptedCall {
       } as ScriptedCall)
     : call;
 }
-
-function keyboardCardToolCalls(): ScriptedCall[] {
-  const field =
-    '<p>Write the note here.</p><p><label>Note <textarea name="note"></textarea></label></p>';
-  return [
-    { name: "emit_card", args: { title: KEYBOARD_CARD_TITLES.inline, body: field } },
-    {
-      name: "emit_card",
-      args: {
-        title: KEYBOARD_CARD_TITLES.served,
-        body: `${field}<script>document.querySelector("textarea").placeholder = "a short note";</script>`,
-      },
-    },
-  ];
-}
-
-export const FILE_CARD_PROMPT_MARKER = "show a file-backed card";
-export const FILE_CARD_REVISE_MARKER = "show the edited card file";
-export const FILE_CARD_TITLE = "A card edited in its file";
-export const FILE_CARD_INITIAL =
-  "<p>The original answer from the file.</p><p>The evidence stays unchanged.</p><p>The next check stays unchanged.</p><p>The scope stays unchanged.</p>";
-export const FILE_CARD_REVISED =
-  "<p>The updated answer from the file.</p><p>The evidence stays unchanged.</p><p>The next check stays unchanged.</p><p>The scope stays unchanged.</p>" +
-  '<figure aria-label="Revised answer drawing"><svg viewBox="0 0 750 40" width="100%" role="img" aria-label="Revised answer drawing"><rect x="1" y="1" width="748" height="38" rx="6" fill="var(--accent-dim)" stroke="var(--accent)"/><text x="12" y="25">The revised file uses the wide card</text></svg></figure>';
 
 /**
  * The longest command one bash call carries: `bash -c` takes its command as
@@ -242,110 +160,6 @@ export const pictureFile = (picture: PictureFixture) => ({
 
 export const BEFORE_AFTER_NEW_PICTURE = CHANGE_AFTER_PICTURES[2] as PictureFixture;
 
-/**
- * Marker prompt (card width, the captain's Q5 to Q7 A of 2026-09-28): the
- * mock crewmate emits three notes the host sizes three ways - prose alone
- * (regular), a five-column table beside a long paragraph and a 510-unit
- * figure (wide, from the body's own facts), and a plain body carrying the
- * author's full hint (`tests/e2e/card-width.spec.ts`).
- */
-export const CARD_WIDTH_PROMPT_MARKER = "show the card widths";
-export const WIDTH_CARD_TITLES = {
-  defaultWide: "The drawing uses the wide card",
-  regular: "The meter row reads on first paint",
-  wide: "What each model costs per turn",
-  full: "The whole settings screen at once",
-} as const;
-/** The regular card's one paragraph: prose alone. */
-export const WIDTH_CARD_REGULAR_TEXT =
-  "The meter row now reads on the first paint, all five meters in one line.";
-/** The wide card's drawing: 510 units across, at width="100%". */
-const WIDTH_CARD_FIGURE = "Cost grows with the turn";
-const WIDTH_CARD_PARAGRAPH =
-  "Each row is one model family, measured over the same forty recorded turns, and the columns read left to right from the cheapest input to the costliest output, so the row that matters most is the one whose last two columns grow fastest as the turn grows longer.";
-
-/** FI3-234's fluid SVG; card-resize gives it the proportions of the card's overflow threshold. */
-export const CARD_RESIZE_PROMPT_MARKER = "show the resize reproduction";
-export const CARD_RESIZE_FIGURE = "Resize reproduction";
-export const CARD_RESIZE_BODY = `<p>A drawing.</p><figure aria-label="${CARD_RESIZE_FIGURE}"><svg viewBox="0 0 510 290" width="100%" role="img" aria-label="${CARD_RESIZE_FIGURE}"><rect width="510" height="290" style="fill:var(--accent)"/></svg></figure>`;
-
-function resizeCardToolCalls(): ScriptedCall[] {
-  return [
-    { name: "emit_card", args: { title: WIDTH_CARD_TITLES.regular, body: CARD_RESIZE_BODY } },
-  ];
-}
-
-/** A clean emitted-card reproduction of the separate viewport-height feedback. */
-export const CARD_VIEWPORT_PROMPT_MARKER = "show the viewport height reproduction";
-export const CARD_VIEWPORT_TITLE = "A viewport-height card";
-export const CARD_VIEWPORT_BODY =
-  '<div data-viewport-content style="min-height:100vh;display:flex;flex-direction:column;justify-content:space-between"><span>Viewport-height content</span><span>Bottom of the content</span></div>';
-export const CARD_VIEWPORT_SCRIPT =
-  '<script>document.documentElement.setAttribute("data-body-script", "ran");</script>';
-
-function viewportCardToolCalls(scripted: boolean): ScriptedCall[] {
-  return [
-    {
-      name: "emit_card",
-      args: {
-        title: CARD_VIEWPORT_TITLE,
-        body: CARD_VIEWPORT_BODY + (scripted ? CARD_VIEWPORT_SCRIPT : ""),
-      },
-    },
-  ];
-}
-
-function widthCardToolCalls(): ScriptedCall[] {
-  const row = (cells: string[], tag: "th" | "td") =>
-    `<tr>${cells.map((cell) => `<${tag}>${cell}</${tag}>`).join("")}</tr>`;
-  const table =
-    "<table>" +
-    row(["Model", "Input", "Cached", "Output", "Per turn"], "th") +
-    row(["Small", "0.10", "0.01", "0.40", "0.02"], "td") +
-    row(["Large", "3.00", "0.30", "15.00", "0.61"], "td") +
-    "</table>";
-  const figure =
-    `<figure aria-label="${WIDTH_CARD_FIGURE}"><svg viewBox="0 0 750 60" width="100%" role="img" aria-label="${WIDTH_CARD_FIGURE}">` +
-    '<rect x="1" y="10" width="748" height="40" rx="6" style="fill:var(--accent-dim);stroke:var(--accent)"/>' +
-    '<text x="12" y="35">Small: 0.02 per turn</text><text x="610" y="35">Large: 0.61</text></svg></figure>';
-  return [
-    {
-      name: "emit_card",
-      args: {
-        title: WIDTH_CARD_TITLES.defaultWide,
-        body: `<p>The drawing fills the wide card while prose keeps its line.</p>${figure}`,
-      },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: WIDTH_CARD_TITLES.regular,
-        body: `<p>${WIDTH_CARD_REGULAR_TEXT}</p>`,
-      },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: WIDTH_CARD_TITLES.wide,
-        body: `<p>The large model costs thirty times the small one per turn.</p><p>${WIDTH_CARD_PARAGRAPH}</p>${table}${figure}`,
-      },
-    },
-    {
-      name: "emit_card",
-      args: {
-        title: WIDTH_CARD_TITLES.full,
-        body: "<p>The settings screen shows every section without scrolling.</p>",
-        width: "full",
-      },
-    },
-  ];
-}
-
-/**
- * Marker prompt (task-system P2): the mock crewmate files a follow-up under
- * its own task and notes progress before it reports.
- */
-export const FILE_FOLLOWUP_PROMPT_MARKER = "file a follow-up for the meter test";
 /**
  * Delivery rigor, phase 1 (the standard tier): a crewmate briefed with
  * "ship at the standard tier" reports under the five headings the tier
@@ -411,38 +225,6 @@ export const MOCK_STANDARD_MERGE_ONLY_ACTIONS: ScriptedCardAction[] = [
  * words change what the card should say, and a prose `reply` when nothing on
  * it changes. The settle hand-off is `scenarios/threadSettle.ts`.
  */
-/**
- * Inline decisions (contract 4.22; tests/e2e/card-questions.spec.ts): a
- * crewmate whose card asks three questions in its body as named form
- * controls - a proposed radio, a required one with no proposal, and a free
- * note. On the captain's reply asking for a revision it revises the card,
- * renaming the required question (`writes` becomes `write-scope`) and
- * keeping the other two.
- */
-export const INLINE_QUESTIONS_PROMPT_MARKER = "ask the access questions inline";
-export const INLINE_QUESTIONS_TITLE = "Three calls settle the access plan";
-export const INLINE_QUESTIONS_REVISED_TITLE = "Two calls left on the access plan";
-/** The captain's reply that asks for the revision; his picks ride along. */
-export const INLINE_QUESTIONS_REVISE_REPLY = "Settle the read scope with these answers";
-export const INLINE_QUESTIONS_LOCK_LABEL = "Lock the plan";
-export function inlineQuestionsBody(revised: boolean): string {
-  const writes = revised ? "write-scope" : "writes";
-  return [
-    `<p>${revised ? "The read scope is settled; say which tasks may write." : "Each proposed answer is already picked; one needs yours."}</p>`,
-    "<fieldset><legend>Which projects can a task read?</legend>",
-    '<label><input type="radio" name="read-scope" value="registered" checked> Its registered project, and any you approve</label>',
-    '<label><input type="radio" name="read-scope" value="all-visible"> Every project your sign-in can see</label>',
-    '<label><input type="radio" name="read-scope" value="other" data-inf-write-in> Something else</label>',
-    "</fieldset>",
-    "<fieldset><legend>Which tasks can write?</legend>",
-    `<label><input type="radio" name="${writes}" value="shipping" required> Tasks that ship a change</label>`,
-    `<label><input type="radio" name="${writes}" value="any" required> Any task</label>`,
-    `<label><input type="radio" name="${writes}" value="other" required data-inf-write-in> Something else</label>`,
-    "</fieldset>",
-    '<p><label>Anything else <textarea name="notes"></textarea></label></p>',
-  ].join("");
-}
-
 export const THREAD_PROMPT_MARKER = "keep a thread open";
 export const THREAD_TREE_PROMPT_MARKER = "with a waiting tree";
 export const THREAD_TREE_PARENT_KEY = "SCR-1";
@@ -477,11 +259,7 @@ export const MOCK_THREAD_ACK_REPORT =
  * prose in the thread - it has no reply tool.
  */
 
-export const FM_THREAD_PROMPT_MARKER = "keep a firstmate thread open";
 export const FM_THREAD_CARD_TITLE = "Two ways to phrase the welcome";
-export const FM_THREAD_CARD_REVISED_TITLE = "Lead with the caption, not the chips";
-export const FM_THREAD_REVISE_ANSWER = "Good catch; the card now leads with the caption.";
-export const FM_THREAD_PROSE_ANSWER = "The chips stay; the caption is the first thing you read.";
 /** Tiny PNG the image-on-steer e2e pastes. */
 export const THREAD_IMAGE_PNG =
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
@@ -730,138 +508,20 @@ export function lookingAgain(
   return step(body);
 }
 
-/**
- * The task browser (docs/task-browser.md, task-browser e2e). A brief
- * carrying this marker, a page this Mac serves and a name ("check the
- * sign-up page at http://127.0.0.1:PORT/ as Sam") drives the task's own
- * browser the way a crewmate would: open it there, type the name into the
- * Name field by the ref the outline gave it, click Send by its ref, reload,
- * photograph the page, close the browser, and report what the page said at
- * each step - read off the tool results, never assumed.
- */
-export const TASK_BROWSER_PROMPT_MARKER = "check the sign-up page at ";
-export const MOCK_BROWSER_REPORT_PREFIX = "The sign-up page said";
-export const MOCK_BROWSER_PICTURE = "signed-up";
-
-/** The task browser's next scripted step, from the browser answers so far. */
-function taskBrowserStep(body: string): ScriptedCall[] | undefined {
-  const ask = body.match(/check the sign-up page at (http:\/\/127\.0\.0\.1:\d+\/) as (\w+)/);
-  if (!ask) return undefined;
-  const [, url, name] = ask as unknown as [string, string, string];
-  const answers = toolAnswers(providerMessages(body));
-  const found = (at: number, pattern: RegExp): string | undefined =>
-    answers[at]?.match(pattern)?.[1];
-  const missing = (what: string): ScriptedCall[] => [
-    {
-      name: "report",
-      args: {
-        text: `${MOCK_BROWSER_REPORT_PREFIX} nothing with ${what}: ${(answers.at(-1) ?? "").slice(0, 400)}`,
-      },
-    },
-  ];
-  switch (answers.length) {
-    case 0:
-      return [browser("open", url)];
-    case 1: {
-      const ref = refOf(answers[0], "textbox", "Name");
-      return ref ? [browser("fill", `@${ref}`, name)] : missing("a Name field");
-    }
-    case 2: {
-      const ref = knownRefOf(answers, "button", "Send");
-      return ref ? [browser("click", `@${ref}`)] : missing("a Send button");
-    }
-    case 3: {
-      const ref = knownRefOf(answers, "button", "Send");
-      return ref ? [browser("click", `@${ref}`)] : missing("a Send button");
-    }
-    case 4:
-      return [browser("reload")];
-    case 5:
-      return [browser("screenshot", MOCK_BROWSER_PICTURE)];
-    case 6:
-      return [browser("stop")];
-    case 7: {
-      const state = /text "((?:Not signed up yet|Signed up as [^"]+))"/;
-      const first = found(0, state);
-      const after = found(2, /text "(Thanks, [^"]+)"/);
-      const reloaded = found(4, state);
-      const reach = found(0, /text "(This page (?:cannot )?reach(?:es)? the app)"/);
-      const privately = found(
-        0,
-        new RegExp(
-          `Blocked what the page asked for on ${HERE.this}'s network or another private one: (.+?)\\. This`,
-        ),
-      );
-      const plain = found(
-        0,
-        /Blocked what the page asked for from websites over plain http: (.+?)\. This/,
-      );
-      const local = found(
-        0,
-        new RegExp(
-          `Blocked what the page asked for from other servers on ${HERE.this}: (.+?)\\. Open`,
-        ),
-      );
-      const atConnection = answers[0]?.includes("refused at the connection")
-        ? " at the connection"
-        : "";
-      return [
-        {
-          name: "report",
-          args: {
-            text: `${MOCK_BROWSER_REPORT_PREFIX} "${first}" first, "${after}" after Send and "${reloaded}" after a reload, and "${reach}". It blocked ${privately} on a private network${atConnection}, ${plain} over plain http, and ${local} on this Mac. Browser answers:\n${answers.slice(0, 5).join("\n\n")}`,
-          },
-        },
-      ];
-    }
-    default:
-      return undefined;
-  }
-}
-
-/**
- * A crewmate on a Mac with no git of its own on the search path (git
- * integration phase 2, app-git e2e): a brief carrying this marker runs
- * `git --version` and `git status` in its working copy, then reports the
- * version and the branch line that came back, verbatim.
- */
-export const GIT_STATUS_PROMPT_MARKER = "say which git this project runs";
-export const MOCK_GIT_REPORT_PREFIX = "The working copy's git answers";
-
-/**
- * The deliverable axis (crew-posture rationalization Task B). A Firstmate
- * turn carrying "find out and answer:" spawns an investigation with the
- * typed `read-only` constraint, so the host derives `deliverable: answer`
- * from a fact rather than from the classifier's mood; the crewmate that
- * receives that brief lands ONE decision card carrying the answer and
- * reports. It emits no completion card and never commits: the brief told
- * it so, and the host refuses either way.
- */
 /** Scripted retrieval exercises plumbing, not live semantic accuracy. */
 export const RETRIEVAL_TASK_ASK =
   "Look up the version and demo support in meterlab's release-info.json, with a citation.";
 export const RETRIEVAL_TASK_GOAL =
   "Read release-info.json and report its version and demo support with a citation; do not test playback.";
 
-export const ANSWER_TASK_PROMPT_MARKER = "find out and answer:";
-export const MOCK_ANSWER_CARD_TITLE = "The meter idles because the claim query filters on repo_id";
-export const MOCK_ANSWER_ACTION_LABEL = "Fix the claim query";
-const MOCK_ANSWER_CARD_BODY =
-  "<p>The meter idles because the claim query filters on repo_id, and seven rows carry none.</p>" +
-  "<p>Every idle row shares an empty repo_id; the sweep skips each one, so nothing is ever claimed.</p>" +
-  "<details><summary>Evidence</summary><p>src/core/tasks/taskStore.ts listReady, line 211.</p></details>";
-export const MOCK_ANSWER_REPORT =
-  "The claim query filters on repo_id and seven idle rows carry none; the card shows where.";
 /**
- * The captain's close reaches its crewmate (FI3-435). The answer-task
- * crewmate steered with the close of its card judges it read and finished
- * and reports so with `finished: true`; the mock Firstmate, woken by a
- * report that declared its work finished, closes the task the way its
- * instructions say - `settle_task answered` on an answer.
+ * The captain's close reaches its crewmate (FI3-435): a crewmate steered
+ * with the close of its card judges it read and finished and reports so
+ * with `finished: true`; the mock Firstmate, woken by a report that
+ * declared its work finished, closes the task the way its instructions say
+ * - `settle_task answered` on an answer.
  */
 export const CARD_CLOSED_STEER_NEEDLE = CARD_CLOSED_STEER_PREFIX.trim();
-export const MOCK_ANSWER_FINISHED_REPORT =
-  "The captain read the answer on the card, and nothing is left for me to do.";
 export const FINISHED_WAKE_NEEDLE = FINISHED_REPORT_WORDS;
 
 /**
@@ -891,21 +551,6 @@ export const FINISHED_WAKE_NEEDLE = FINISHED_REPORT_WORDS;
  */
 export const STANDARD_TIER_HOST_BUTTONS_MARKER = "ship at the standard tier with host buttons";
 /**
- * The autonomy hold (contract v3.9). Briefed with this marker, the mock
- * crewmate emits a completion card declaring the merge and reports - the
- * ordinary end of a direct-pr task. The task title carries the marker, so
- * the card's title carries it too and two tasks in one app never collide.
- * `AUTONOMY_ASK_MARKER` in the title is the captain's words on who merges,
- * which the mock Firstmate relays as `autonomy_ask: true`.
- */
-export const AUTONOMY_PROMPT_MARKER = "ship and wait to be merged";
-/** Short on purpose: a task title is capped at 64 characters. */
-export const AUTONOMY_ASK_MARKER = "merge it yourself";
-export const MOCK_AUTONOMY_CARD_TITLE = (title: string) => `Ready to merge - ${title}`;
-export const MOCK_AUTONOMY_REPORT =
-  "Intent: the meter reads on the first paint. What changed: the panel awaits the snapshot. Verified: pnpm test on the final commit; the PR is green. Risk: low. Not done: nothing.";
-
-/**
  * Review carefully (INF-562). A spawn whose title carries this asks for the
  * standard tier; the careful builder and its review are
  * `scenarios/reviewCarefully.ts`.
@@ -913,12 +558,17 @@ export const MOCK_AUTONOMY_REPORT =
 export const REVIEW_CAREFULLY_MARKER = "ship at default care, then review carefully";
 /** A spawn whose title carries this asks for the reviewed tier; the reviewer itself is `scenarios/reviewedTier.ts`. */
 export const REVIEWED_TIER_PROMPT_MARKER = "ship at the reviewed tier";
+/**
+ * The captain's words on who merges (contract v3.9): a spawn whose title
+ * carries this asks `autonomy_ask: true`; the autonomy-hold crewmate is
+ * `scenarios/autonomy.ts`. Short on purpose: a task title is capped at 64
+ * characters.
+ */
+export const AUTONOMY_ASK_MARKER = "merge it yourself";
 /** "merge the task <title>" -> settle_task merge-pr, so a held merge is observable. */
 export const MERGE_PROMPT_MARKER = "merge the task ";
+/** The follow-up `scenarios/fileFollowup.ts` files; the kind classifier sorts it as research. */
 export const MOCK_FOLLOWUP_TITLE = "Flaky meter test";
-export const MOCK_FOLLOWUP_GOAL = "The meter test passes ten runs in a row.";
-export const MOCK_FOLLOWUP_WHY = "It failed twice while I ran the suite.";
-export const MOCK_PROGRESS_TEXT = "Filed the follow-up; finishing the note now.";
 
 /**
  * Persona detection: requests carry their session's system prompt, so the
@@ -980,24 +630,6 @@ export const CLAUDE_HELD_CARD_MARKER = "with a chart first";
 export const MOCK_CLAUDE_HELD_CARD_TITLE = "Reef chart";
 export const CLAUDE_HELD_REPLY = "chart the northern reef too";
 export const MOCK_CLAUDE_HELD_ANSWER = "Charted the northern reef too: two shoals, both marked.";
-/**
- * A Claude crewmate that relays a captain decision only the Firstmate can
- * carry out (FI3-710). A commission whose title carries this phrase beside
- * CLAUDE_CREW_PROMPT_MARKER puts up MOCK_CLAUDE_PLAN_CARD_TITLE, a decision
- * with two actions, and reports. A captain reply carrying
- * CLAUDE_RELAY_APPROVAL is answered with one thread line
- * (MOCK_CLAUDE_RELAY_ANSWER), the card left as it is, and a report that
- * quotes his words and declares needs_firstmate (MOCK_CLAUDE_RELAY_ASK).
- */
-export const CLAUDE_RELAY_MARKER = "with a plan to approve";
-export const MOCK_CLAUDE_PLAN_CARD_TITLE = "Raise the rivet threshold";
-export const MOCK_CLAUDE_PLAN_REPORT = "The plan to raise the rivet threshold is on its card.";
-export const CLAUDE_RELAY_APPROVAL =
-  "for decision 5, raise the threshold from 8 to 32. now approve to build";
-export const MOCK_CLAUDE_RELAY_ANSWER =
-  "The first mate starts the builder next, with the threshold at 32.";
-export const MOCK_CLAUDE_RELAY_ASK = "start the builder on the approved plan, threshold 32";
-export const MOCK_CLAUDE_RELAY_REPORT = `The captain approved the plan by reply: "${CLAUDE_RELAY_APPROVAL}". The final plan keeps every decision, with the threshold at 32.`;
 /** The words the vendor's organisation refusal carries; the client types it by them. */
 export const CLAUDE_ORG_REFUSAL_MESSAGE =
   "OAuth authentication is currently not allowed for this organization.";
@@ -1029,20 +661,12 @@ export type ClaudeSeatCut =
  * Orchestrator markers. "commission a crewmate: <title>" makes the mock
  * Firstmate call spawn_crewmate with that title (bound to a registered repo
  * when the title names one from the context block); "answer with a card"
- * makes it emit one note answer card. The fleet markers drive the
- * agent-operated fleet: "manage my folder at <path>" (app_change project-setup adopt),
- * "manage the remote repository at <url>" (app_change project-setup clone), "start a new
- * project <name>" (app_change project-setup init), "make the repository <name>
- * autonomous" (configure_repo), and "unregister the repository <name>"
- * (app_change project-remove). Anything else is chit-chat: plain text that the app
- * does not map to a feed line or a card.
+ * makes it emit one note answer card. Anything else is chit-chat: plain
+ * text that the app does not map to a feed line or a card. A behavior only
+ * some journeys need is a scenario under `tests/e2e/scenarios/`.
  */
-export const FILE_TASK_PROMPT_MARKER = "file a task:";
 // e2e-typed-words: the captain's own words that start a scripted spawn; they only share a phrase with the product's
 export const SPAWN_PROMPT_MARKER = "commission a crewmate:";
-export const ADOPT_REPO_PROMPT_MARKER = "manage my folder at ";
-export const CLONE_REPO_PROMPT_MARKER = "manage the remote repository at ";
-export const INIT_REPO_PROMPT_MARKER = "start a new project ";
 // e2e-typed-words: the captain's own words that ask the mock for an answer card; they only share a phrase with the product's
 export const ANSWER_PROMPT_MARKER = "answer with a card";
 export const TALL_ANSWER_PROMPT_MARKER = `a tall ${ANSWER_PROMPT_MARKER}`;
@@ -1057,22 +681,11 @@ export const MOCK_WELCOME_TITLE = "How I work";
 export const MOCK_WELCOME_TEXT =
   "<p>Ask for something and a card comes back: an answer, a decision, or word that a crewmate is on it. There is no chat to scroll.</p><p>Start by pointing me at a project.</p>";
 /**
- * The mock Firstmate asked to remember a fact where knowledge is on: it
- * tries remember, and on the refusal records the fact with record_knowledge.
- */
-export const KNOWLEDGE_FACT_PROMPT_MARKER = "remember that deploys happen on tuesdays";
-/**
- * Talk-to-personalize Step 1 (Tier A): the mock Firstmate answers each of
- * these with ONE app_change call and no card, the way the contract says.
+ * Talk-to-personalize Step 1 (Tier A): the mock Firstmate answers
+ * "catalog change <json>" with ONE app_change call of those arguments and
+ * no card, the way the contract says.
  */
 export const APP_CATALOG_PROMPT_MARKER = "catalog change ";
-export const PERSONALIZE_THEME_PROMPT_MARKER = "switch to light";
-/**
- * Install by talking (one plugin vehicle, Phase A): "add the panel from
- * <full folder path>" -> ONE install_plugin call naming that folder, and no
- * card of the Firstmate's own - the host's consent card is the only one.
- */
-export const ADD_PANEL_PROMPT_MARKER = "add the panel from ";
 /** Provider-failure markers: the mock rejects the request itself, so the
  * turn ends with Pi's stopReason "error" path (report REPRO A). */
 export const FAIL_AUTH_PROMPT_MARKER = "fail this turn with a 401";
@@ -1108,32 +721,19 @@ export const MOCK_CLOSING_SENTENCES = {
   released: "It went out in the verified external release.",
   cancel: "Stopped, as the captain asked.",
 } as const;
-/**
- * A crewmate that makes one real change: a brief carrying "write the file
- * <path> with <text>" writes <text> into <path> in its working copy with
- * Pi's own write tool, then reports. The change is left uncommitted, the
- * way a crewmate stopped mid-work leaves it, so whatever reads the working
- * copy afterwards reads the tree, not only the branch.
- */
-export const WRITE_FILE_PROMPT_MARKER = "write the file ";
-export const MOCK_WRITE_FILE_REPORT = "Wrote the file the task asked for.";
 /** The tool boundary's refusal, as the spec looks for it in the served body. */
 export const ESCALATION_REFUSAL_PHRASE = NOTHING_SPAWNED;
 /**
- * The talk-to-personalize build loop (Step 4). "make me a panel: <title>"
- * makes the mock Firstmate spawn with personal_ui true; "change my panel
- * <id>: <ask>" spawns a personal_ui change naming the surface; "remove my
- * panel <id>" is the Tier A `personalize remove`. The mock crewmate, on a
- * brief whose delivery is live, writes the extension with Pi's own write
- * tool, runs lint_panel and capture_panel on the draft, places its version
- * on the rail with place_panel, photographs it there with capture_panel
- * again, and reports after a short delay so the running dot is observable;
- * on the change brief it rewrites the panel with smaller rows, captures,
- * places and captures it again, and reports after the same delay, so a
- * spec can watch the rails while the change is underway.
+ * The talk-to-personalize build loop (Step 4): the first mate's spawn and
+ * remove are `scenarios/personalPanels.ts`. The mock crewmate, on a brief
+ * that builds in place, writes the extension with Pi's own write tool, runs
+ * lint_panel and capture_panel on the draft, places its version on the rail
+ * with place_panel, photographs it there with capture_panel again, and
+ * reports after a short delay so the running dot is observable; on the
+ * change brief it rewrites the panel with smaller rows, captures, places
+ * and captures it again, and reports after the same delay, so a spec can
+ * watch the rails while the change is underway.
  */
-export const PERSONAL_PANEL_PROMPT_MARKER = "make me a panel:";
-export const PERSONAL_REMOVE_PROMPT_MARKER = "remove my panel ";
 export const MOCK_PANEL_ID = "tokyo-clock";
 export const MOCK_PANEL_TITLE = "Tokyo clock";
 export const MOCK_PANEL_REPORT =
@@ -1308,103 +908,6 @@ const RETRY_ANSWER_BODY = "<p>The retry showed this answer in a card.</p>";
 export const SILENT_CLOSING_WORDS = "<p>HIDDEN closing words</p><script>alert(1)</script>";
 export const MOCK_FM_DONE_TEXT = "The crew has it under way.";
 
-/** The class the preview's own stylesheet lays its row of choices out by. */
-const MOCK_PROTOTYPE_ROW_CLASS = "course-row";
-/**
- * A working preview, which is what a decision body may be: it brings a
- * stylesheet of its own, in ordinary CSS the token-only document profile
- * would strip.
- */
-export const MOCK_PROTOTYPE_HTML = [
-  `<style>.${MOCK_PROTOTYPE_ROW_CLASS}{display:flex;gap:14px;padding:6px 0}</style>`,
-  "<h2>Course options</h2>",
-  '<p class="inf-muted">Pick a heading; this preview is sandboxed.</p>',
-  `<div class="${MOCK_PROTOTYPE_ROW_CLASS}">`,
-  '<button type="button" data-inf-action="hold-course">Hold course</button>',
-  '<button type="button" data-inf-action="new-course">Plot new course</button>',
-  "</div>",
-].join("");
-
-export const MOCK_LONG_ACTION_LABEL =
-  "Mock the clock while preserving every queued write in its original execution order";
-
-/** The card-kinds crewmate's three cards (`EMIT_CARDS_PROMPT_MARKER`): its decision, its note and its working preview. */
-export const MOCK_CHOICE_CARD_TITLE = "Two ways to fix the flaky test";
-export const MOCK_QUOTA_NOTE_TITLE = "Quota note";
-export const MOCK_PREVIEW_CARD_TITLE = "Course preview";
-
-/** The decision the card-kinds crewmate shows first. */
-const MOCK_CHOICE_CARD = {
-  name: "emit_card",
-  args: {
-    title: MOCK_CHOICE_CARD_TITLE,
-    body:
-      "<p>Awaiting the job queue removes the race entirely.</p>" +
-      '<p class="inf-muted">Mocking time leaves write order uncertain.</p>' +
-      '<figure><svg viewBox="0 0 320 62" width="100%" role="img" ' +
-      'aria-label="Mock clock can leave the race">' +
-      '<rect x="4" y="9" width="136" height="44" rx="6" ' +
-      'style="fill:var(--bg-1);stroke:var(--line-2)"></rect>' +
-      '<rect x="180" y="9" width="136" height="44" rx="6" ' +
-      'style="fill:var(--accent-dim);stroke:var(--accent)"></rect>' +
-      '<path d="M140 31 H174 M166 25 L174 31 L166 37" fill="none" ' +
-      'style="stroke:var(--fg-2)"></path>' +
-      '<g font-size="14" text-anchor="middle" style="fill:var(--fg-1)">' +
-      '<text x="72" y="36">Mock clock</text><text x="248" y="36">Race can return</text>' +
-      "</g></svg></figure>" +
-      '<p class="inf-muted">Awaiting the queue orders both writes.</p>' +
-      '<figure><svg viewBox="0 0 320 62" width="100%" role="img" ' +
-      'aria-label="Await queue orders the writes">' +
-      '<rect x="4" y="9" width="136" height="44" rx="6" ' +
-      'style="fill:var(--bg-1);stroke:var(--line-2)"></rect>' +
-      '<rect x="180" y="9" width="136" height="44" rx="6" ' +
-      'style="fill:var(--accent-dim);stroke:var(--accent)"></rect>' +
-      '<path d="M140 31 H174 M166 25 L174 31 L166 37" fill="none" ' +
-      'style="stroke:var(--fg-2)"></path>' +
-      '<g font-size="14" text-anchor="middle" style="fill:var(--fg-1)">' +
-      '<text x="72" y="36">Await queue</text><text x="248" y="36">Ordered writes</text>' +
-      "</g></svg></figure>" +
-      "<details><summary>Latency trade-off</summary>" +
-      "<p>Awaiting the queue adds 40ms to the run.</p></details>",
-    actions: [
-      { id: "mock-clock", label: MOCK_LONG_ACTION_LABEL },
-      { id: "await-queue", label: "Await the queue", default: true },
-    ],
-  },
-} satisfies ScriptedCall;
-
-const MOCK_TOOL_CALLS = [
-  MOCK_CHOICE_CARD,
-  {
-    name: "emit_card",
-    args: {
-      id: "quota-note",
-      title: MOCK_QUOTA_NOTE_TITLE,
-      body:
-        '<p>Codex weekly at <span class="inf-mono">41%</span> - routing stays put.</p>' +
-        '<svg viewBox="0 0 200 8" width="100%" role="img" aria-label="Codex weekly quota">' +
-        '<rect width="200" height="8" rx="4" style="fill:var(--bg-3)"></rect>' +
-        '<rect width="82" height="8" rx="4" style="fill:var(--accent)"></rect></svg>' +
-        "<details><summary>Windows</summary><h6>Weekly</h6>" +
-        "<p><mark>41%</mark> used, resets Fri.</p></details>",
-    },
-  },
-  {
-    name: "emit_card",
-    args: {
-      // A working preview is a decision whose body is interactive: the card
-      // that shows the thing carries the choice about it (its actions are
-      // what make it a decision - nothing on the wire declares a kind).
-      title: MOCK_PREVIEW_CARD_TITLE,
-      body: MOCK_PROTOTYPE_HTML,
-      actions: [
-        { id: "hold-course", label: "Hold course" },
-        { id: "new-course", label: "Plot new course", default: true },
-      ],
-    },
-  },
-] satisfies ScriptedCall[];
-
 /** The step goal a sequences reproduce step carries; the kind classifier sorts it (`scenarios/sequences.ts`). */
 export const SEQ_REPRODUCE_GOAL =
   "as reported, in a clean setup; open your report with reproduced:";
@@ -1537,6 +1040,8 @@ export type ScenarioRequest = {
   wantsStream: boolean;
   latestUserTail: string;
   hasToolResults: boolean;
+  /** Whether it came on Anthropic's messages wire, the one Claude's client speaks. */
+  anthropicMessages: boolean;
   /** The stand-in's own port, for a card that loads a page the stand-in serves. */
   port: number;
 };
@@ -2093,6 +1598,7 @@ export async function startMockProvider(
           wantsStream,
           latestUserTail,
           hasToolResults,
+          anthropicMessages,
           port: (server.address() as AddressInfo).port,
         };
         for (const scenario of scenarios) {
@@ -2182,112 +1688,9 @@ export async function startMockProvider(
             streamToolCalls([{ name: "steer_crewmate", args: { task_id: taskId, message } }]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(ADD_PANEL_PROMPT_MARKER)) {
-            const after = latestUserTail.split(ADD_PANEL_PROMPT_MARKER)[1] ?? "";
-            const spec = after.split(/["\\\n]/)[0]?.trim() ?? "";
-            streamToolCalls([
-              {
-                name: "install_plugin",
-                args: { from: "path", spec, evidence: `add the panel from ${spec}` },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(PERSONAL_REMOVE_PROMPT_MARKER)) {
-            const surface = latestUserTail
-              .match(/remove my panel ([a-z0-9-]+)/)?.[1]
-              ?.trim() as string;
-            streamToolCalls([
-              {
-                name: "personalize",
-                args: { action: "remove", surface, evidence: `remove my panel ${surface}` },
-              },
-            ]);
-            return;
-          }
-          // The marker, or the words the create-your-own-panel slot puts in
-          // the message box, finished by the captain.
-          const slotAsk = latestUserTail.match(new RegExp(`${CREATE_PANEL_DRAFT}([^"\\\\]+)`));
-          if (
-            !hasToolResults &&
-            (latestUserTail.includes(PERSONAL_PANEL_PROMPT_MARKER) || slotAsk)
-          ) {
-            const title =
-              (latestUserTail.match(/make me a panel: ([^"\\]+)/) ?? slotAsk)?.[1]?.trim() ??
-              "A panel";
-            streamToolCalls([
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title,
-                  goal: `Add a panel: ${title}`,
-                  user_words: slotAsk
-                    ? `${CREATE_PANEL_DRAFT}${title}`
-                    : `make me a panel: ${title}`,
-                  personal_ui: true,
-                },
-              },
-            ]);
-            return;
-          }
           if (!hasToolResults && latestUserTail.includes(FINISHED_WAKE_NEEDLE)) {
             const taskId = latestUserTail.match(/reported on task ([\w-]+)/)?.[1] ?? "missing";
             streamToolCalls([{ name: "settle_task", args: { task_id: taskId, mode: "answered" } }]);
-            return;
-          }
-          for (const lesson of [
-            { ask: LESSON_CHESS_ASK, title: LESSON_CHESS_TITLE, goal: LESSON_CHESS_GOAL },
-            {
-              ask: LESSON_FRACTIONS_ASK,
-              title: LESSON_FRACTIONS_TITLE,
-              goal: LESSON_FRACTIONS_GOAL,
-            },
-          ]) {
-            if (!hasToolResults && latestUserTail.includes(lesson.ask)) {
-              streamToolCalls([
-                {
-                  name: "spawn_crewmate",
-                  args: {
-                    title: lesson.title,
-                    goal: lesson.goal,
-                    user_words: lesson.ask,
-                    personal_ui: true,
-                  },
-                },
-              ]);
-              return;
-            }
-          }
-          if (!hasToolResults && latestUserTail.includes(ANSWER_TASK_PROMPT_MARKER)) {
-            const title =
-              latestUserTail.match(/find out and answer: ([^"\\]+)/)?.[1]?.trim() ??
-              "Mock investigation";
-            streamToolCalls([
-              {
-                name: "spawn_crewmate",
-                args: {
-                  title,
-                  goal: `Find out ${title} and answer it.`,
-                  user_words: `${ANSWER_TASK_PROMPT_MARKER} ${title}`,
-                  constraints: [{ kind: "read-only" }],
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(FILE_TASK_PROMPT_MARKER)) {
-            const title =
-              latestUserTail.match(/file a task: ([^"\\]+)/)?.[1]?.trim() ?? "Mock planned task";
-            streamToolCalls([
-              {
-                name: "create_task",
-                args: {
-                  title,
-                  goal: `Complete ${title}`,
-                  user_words: `${FILE_TASK_PROMPT_MARKER} ${title}`,
-                },
-              },
-            ]);
             return;
           }
           if (!hasToolResults && latestUserTail.includes(SPAWN_PROMPT_MARKER)) {
@@ -2343,156 +1746,6 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(ADOPT_REPO_PROMPT_MARKER)) {
-            const path = latestUserTail
-              .match(/manage my folder at ([^"\\]+)/)?.[1]
-              ?.trim() as string;
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "project-setup",
-                  value: { kind: "adopt", path },
-                  evidence: latestUserTail,
-                },
-              },
-            ]);
-            return;
-          }
-          // The captain's Add project on a clone's setup card could not
-          // clone it without a sign-in: the card's answer carries the
-          // typed refusal, and the Firstmate offers its ways on one card.
-          if (!hasToolResults && latestUserTail.includes(SETUP_CARD_FAILED_WORDS)) {
-            const json = sinceLastUser(body).user.match(/```json\n([\s\S]*?)\n```/)?.[1];
-            const refusal = json ? JSON.parse(json) : undefined;
-            if (refusal?.refused === "not-signed-in") {
-              streamToolCalls([
-                {
-                  name: "emit_card",
-                  args: {
-                    title: "Sign in before cloning your project",
-                    body: "<p>The app needs your sign-in before it can clone this project.</p><p>The clone failed without your GitHub sign-in. Sign in opens Projects with a code, then you can try again.</p>",
-                    standalone: true,
-                    // A clone has no project to keep on this Mac, so its one
-                    // way out stands beside a choice to leave it for now: a
-                    // decision gives 2 or 3 actions.
-                    actions: [
-                      ...refusal.ways.map(
-                        (
-                          way: {
-                            label: string;
-                            effect: { kind: string; target: string; signIn: string };
-                          },
-                          index: number,
-                        ) => ({
-                          id: `clone-sign-in-${index}`,
-                          label: way.label,
-                          effect: {
-                            kind: way.effect.kind,
-                            target: way.effect.target,
-                            sign_in: way.effect.signIn,
-                          },
-                          default: index === 0,
-                        }),
-                      ),
-                      ...(refusal.ways.length < 2
-                        ? [{ id: "clone-later", label: "Leave it for now" }]
-                        : []),
-                    ],
-                  },
-                },
-              ]);
-              return;
-            }
-          }
-          if (!hasToolResults && latestUserTail.includes(CLONE_REPO_PROMPT_MARKER)) {
-            const origin = latestUserTail
-              .match(/manage the remote repository at ([^"\\]+)/)?.[1]
-              ?.trim() as string;
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "project-setup",
-                  value: { kind: "clone", origin },
-                  evidence: latestUserTail,
-                },
-              },
-            ]);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(INIT_REPO_PROMPT_MARKER)) {
-            const name = latestUserTail.match(/start a new project ([\w.-]+)/)?.[1] as string;
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: {
-                  action: "project-setup",
-                  value: { kind: "init", name },
-                  evidence: latestUserTail,
-                },
-              },
-            ]);
-            return;
-          }
-          // Cards as threads, phase 2: a Firstmate card. Checked before the
-          // first-run wake - a coalesced captain turn carries that wake, and
-          // the captain's words outrank it. Revise/prose require the about
-          // line so thread-activity excerpts of earlier replies cannot steal
-          // the prompt.
-          if (
-            !hasToolResults &&
-            latestUserTail.includes("about: card") &&
-            latestUserTail.includes(THREAD_REVISE_REPLY)
-          ) {
-            const aboutCardId =
-              latestUserTail.match(/about: card (card-[\w-]+)/)?.[1] ?? "fm-thread-card";
-            // The revision lands at once: the body frame the thread's opening
-            // just remounted is swapped while its first document still loads.
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: aboutCardId.startsWith("card-fm-") ? aboutCardId : "fm-thread-card",
-                  reply: FM_THREAD_REVISE_ANSWER,
-                  title: FM_THREAD_CARD_REVISED_TITLE,
-                  body: '<p>Lead with the caption, not the chips.</p><p>The chips stay underneath once the caption has said what this is.</p><label for="tone">Tone</label><input id="tone" name="tone" value="calm">',
-                  actions: [
-                    { id: "chips-first", label: "Keep the chips first" },
-                    { id: "caption-first", label: "Lead with the caption", default: true },
-                  ],
-                  standalone: true,
-                },
-              },
-            ]);
-            return;
-          }
-          if (
-            !hasToolResults &&
-            latestUserTail.includes("about: card") &&
-            latestUserTail.includes(THREAD_PROSE_REPLY)
-          ) {
-            streamText(FM_THREAD_PROSE_ANSWER);
-            return;
-          }
-          if (!hasToolResults && latestUserTail.includes(FM_THREAD_PROMPT_MARKER)) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "fm-thread-card",
-                  title: FM_THREAD_CARD_TITLE,
-                  body: '<p>Lead with the caption, not the chips.</p><p>The chips are still there; they just are not the first thing you read.</p><label for="tone">Tone</label><input id="tone" name="tone" value="calm">',
-                  actions: [
-                    { id: "chips-first", label: "Lead with the chips" },
-                    { id: "caption-first", label: "Lead with the caption", default: true },
-                  ],
-                  standalone: true,
-                },
-              },
-            ]);
-            return;
-          }
           if (!hasToolResults && latestUserTail.includes(FIRST_RUN_WAKE_MARKER)) {
             // The welcome: one standalone note in the Firstmate's own voice.
             streamToolCalls([
@@ -2542,195 +1795,10 @@ export async function startMockProvider(
             ]);
             return;
           }
-          if (!hasToolResults && latestUserTail.includes(PERSONALIZE_THEME_PROMPT_MARKER)) {
-            streamToolCalls([
-              {
-                name: "app_change",
-                args: { action: "theme", value: { theme: "light" }, evidence: "switch to light" },
-              },
-            ]);
-            return;
-          }
-          if (latestUserTail.includes(KNOWLEDGE_FACT_PROMPT_MARKER)) {
-            if (!calledTool(latestUserTail, "record_knowledge")) {
-              streamToolCalls([
-                {
-                  name: "record_knowledge",
-                  args: {
-                    action: "publish",
-                    request_id: "deploy-day",
-                    kind: "concept",
-                    title: "Deploy day",
-                    text: "Deploys happen on Tuesdays.",
-                  },
-                },
-              ]);
-            } else {
-              streamText(MOCK_FM_DONE_TEXT);
-            }
-            return;
-          }
           streamText(hasToolResults ? MOCK_FM_DONE_TEXT : MOCK_FM_CHAT_TEXT);
           return;
         }
 
-        // The mock teacher (FI3-1474): scripted rounds from the shipped lesson
-        // parts, one batch of calls per captain event, never a model's teaching.
-        if (
-          !isFirstmate &&
-          wantsStream &&
-          (body.includes(LESSON_CHESS_ASK) || body.includes(LESSON_FRACTIONS_ASK))
-        ) {
-          const lessonCard = (
-            id: string,
-            title: string,
-            cardBody: string,
-            actions: { id: string; label: string; default?: boolean }[],
-          ): ScriptedCall => ({
-            name: "emit_card",
-            args: { id, title, body: cardBody, holds_place: true, actions },
-          });
-          const roundActions = [
-            { id: "next-round", label: "Next round", default: true },
-            { id: "stop-today", label: "Stop for today" },
-          ];
-          // The served body is JSON, so the choice's quotes arrive escaped.
-          const choseOnCard = (label: string) => latestUserTail.includes(`chose \\"${label}\\"`);
-          const ready: ScriptedCall = { name: "report", args: { text: "Round ready." } };
-          if (body.includes(LESSON_FRACTIONS_ASK)) {
-            const results = toolAnswers(providerMessages(body)).join("\n");
-            if (!hasToolResults) {
-              streamToolCalls([{ name: "read", args: { path: "lessons/learner.md" } }]);
-            } else if (!calledTool(body, "emit_card")) {
-              if (!results.includes(LESSON_LEARNER_LINE))
-                throw new Error("The second subject did not read the shared learner file");
-              streamToolCalls([
-                {
-                  name: "write",
-                  args: {
-                    path: "lessons/fractions/progress.md",
-                    content: "# Fractions\nGoal: not yet asked\n## Skills\n- halves | next\n",
-                  },
-                },
-                lessonCard(
-                  "lessons-fractions",
-                  LESSON_FRACTIONS_GOAL_TITLE,
-                  LESSON_FRACTIONS_GOAL_BODY,
-                  [
-                    { id: "start", label: "Let's start", default: true },
-                    { id: "stop-today", label: "Stop for today" },
-                  ],
-                ),
-                ready,
-              ]);
-            } else streamText("Round ready.");
-            return;
-          }
-          if (hasToolResults) {
-            streamText("Round ready.");
-            return;
-          }
-          if (choseOnCard("Stop these lessons")) {
-            streamToolCalls([
-              { name: "report", args: { text: "Lessons stopped; records kept.", finished: true } },
-            ]);
-            return;
-          }
-          if (choseOnCard("Start today's lesson")) {
-            streamToolCalls([
-              lessonCard(
-                LESSON_CHESS_CARD_ID,
-                LESSON_ROUND_REVIEW_TITLE,
-                lessonRoundBody(
-                  chessItems(1),
-                  "the rook with a piece in the way",
-                  "A little review before new work.",
-                ),
-                roundActions,
-              ),
-              ready,
-            ]);
-            return;
-          }
-          if (choseOnCard("Stop for today")) {
-            streamToolCalls([
-              {
-                name: "write",
-                args: { path: "lessons/chess/progress.md", content: LESSON_PROGRESS_STOP },
-              },
-              lessonCard(`lessons-welcome-chess`, LESSON_WELCOME_TITLE, LESSON_WELCOME_BODY, [
-                { id: "start-lesson", label: "Start today's lesson", default: true },
-                { id: "stop-lessons", label: "Stop these lessons" },
-              ]),
-              ready,
-            ]);
-            return;
-          }
-          if (choseOnCard("Next round")) {
-            streamToolCalls([
-              lessonCard(
-                LESSON_CHESS_CARD_ID,
-                LESSON_ROUND_TWO_TITLE,
-                lessonRoundBody(
-                  chessItems(2),
-                  "the rook with a piece in the way",
-                  "Ranks and files, together.",
-                ),
-                roundActions,
-              ),
-              ready,
-            ]);
-            return;
-          }
-          if (choseOnCard("Let's start")) {
-            streamToolCalls([
-              {
-                name: "write",
-                args: {
-                  path: "lessons/learner.md",
-                  content: `# Learner\n${LESSON_LEARNER_LINE}\n`,
-                },
-              },
-              {
-                name: "write",
-                args: {
-                  path: "lessons/chess/progress.md",
-                  content:
-                    "# Chess\nGoal: beat my dad at chess\n## Skills\n- rook slides | practising | first seen 2026-10-10\n",
-                },
-              },
-              lessonCard(
-                LESSON_CHESS_CARD_ID,
-                LESSON_ROUND_ONE_TITLE,
-                lessonRoundBody(
-                  chessItems(1),
-                  LESSON_NEXT_GOAL,
-                  "Today: how the rook slides along a file.",
-                ),
-                roundActions,
-              ),
-              ready,
-            ]);
-            return;
-          }
-          if (latestUserTail.includes(LESSON_REPLY_WORDS)) {
-            const shown =
-              latestUserTail.match(/Card \\+"[^"]*\\+" \(([^)]+)\)/)?.[1] ?? LESSON_CHESS_CARD_ID;
-            streamToolCalls([
-              { name: "reply", args: { card_id: shown, text: LESSON_REPLY_ANSWER } },
-            ]);
-            return;
-          }
-          // The first turn: the goal comes first.
-          streamToolCalls([
-            lessonCard(LESSON_CHESS_CARD_ID, LESSON_GOAL_TITLE, LESSON_GOAL_BODY, [
-              { id: "start", label: "Let's start", default: true },
-              { id: "stop-today", label: "Stop for today" },
-            ]),
-            ready,
-          ]);
-          return;
-        }
         // The mock live-build crewmate (Step 4): write the extension with
         // Pi's own write tool, lint it and photograph its draft, place it on
         // the rail and photograph it there (docs/personal-panels.md, "Placed
@@ -2812,33 +1880,6 @@ export async function startMockProvider(
             return;
           }
           streamText("done");
-          return;
-        }
-        // Inline decisions (contract 4.22): a card that asks its questions
-        // with its own form. The captain's reply brings the answers back and
-        // the revision renames one question, so a spec can watch the other
-        // picks survive by name and the renamed one start fresh.
-        if (!isFirstmate && body.includes(INLINE_QUESTIONS_PROMPT_MARKER) && wantsStream) {
-          const revise = latestUserTail.includes(INLINE_QUESTIONS_REVISE_REPLY);
-          if (!hasToolResults && (!calledTool(body, "emit_card") || revise)) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "inline-questions",
-                  ...(revise ? { reply: "Renamed one question; your other picks stay." } : {}),
-                  title: revise ? INLINE_QUESTIONS_REVISED_TITLE : INLINE_QUESTIONS_TITLE,
-                  body: inlineQuestionsBody(revise),
-                  actions: [
-                    { id: "later", label: "Not now" },
-                    { id: "lock-plan", label: INLINE_QUESTIONS_LOCK_LABEL, default: true },
-                  ],
-                },
-              },
-            ]);
-            return;
-          }
-          streamText("The questions are on the card.");
           return;
         }
         // Cards as threads, phase 1: the crewmate that keeps a thread. Its
@@ -2978,52 +2019,6 @@ export async function startMockProvider(
           streamText("Nothing new to add.");
           return;
         }
-        // The Claude crewmate that relays an approval (CLAUDE_RELAY_MARKER):
-        // its plan card and report, then the captain's approval by reply
-        // answered in the thread and reported with needs_firstmate.
-        if (
-          !isFirstmate &&
-          anthropicMessages &&
-          wantsStream &&
-          body.includes(CLAUDE_CREW_PROMPT_MARKER) &&
-          body.includes(CLAUDE_RELAY_MARKER)
-        ) {
-          if (hasToolResults) {
-            streamText("done");
-            return;
-          }
-          const cardId = latestUserTail.includes(CLAUDE_RELAY_APPROVAL)
-            ? latestUserTail.match(/\((card-[\w-]+)\)/)?.[1]
-            : undefined;
-          streamToolCalls(
-            cardId
-              ? [
-                  { name: "reply", args: { card_id: cardId, text: MOCK_CLAUDE_RELAY_ANSWER } },
-                  {
-                    name: "report",
-                    args: {
-                      text: MOCK_CLAUDE_RELAY_REPORT,
-                      needs_firstmate: MOCK_CLAUDE_RELAY_ASK,
-                    },
-                  },
-                ]
-              : [
-                  {
-                    name: "emit_card",
-                    args: {
-                      title: MOCK_CLAUDE_PLAN_CARD_TITLE,
-                      body: "<p>Raise the rivet threshold before the next inspection.</p><p>Decision 5 sets it to 8 today.</p>",
-                      actions: [
-                        { id: "build", label: "Approve and build", default: true },
-                        { id: "later", label: "Not now" },
-                      ],
-                    },
-                  },
-                  { name: "report", args: { text: MOCK_CLAUDE_PLAN_REPORT } },
-                ],
-          );
-          return;
-        }
         // The Claude crewmate (CLAUDE_CREW_PROMPT_MARKER): card, held step,
         // steer, report. The steer is checked first because the client
         // sends it in the same user message as the held step's tool result.
@@ -3069,479 +2064,6 @@ export async function startMockProvider(
           return;
         }
 
-        if (!isFirstmate && latestUserTail.includes(READS_ANYWHERE_MARKER) && wantsStream) {
-          // FI3-1571 piece 3: reads past the old read list, from a project
-          // kept on this computer, through the github.com sign-in.
-          const { results } = sinceLastUser(body);
-          const next = JSON.parse(results[1] ?? "{}").nextPath as string | undefined;
-          const reads = [
-            "/notifications",
-            "/repos/octo/website/pulls?per_page=1",
-            next ?? "/repositories/0/pulls",
-            "/graphql",
-          ];
-          const path = reads[results.length];
-          if (path) streamToolCalls([{ name: "github_read", args: { path } }]);
-          else if (results.length === reads.length) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: {
-                  text: results.join("\n"),
-                  summary: "Read the notifications and both pages through the github.com sign-in.",
-                },
-              },
-            ]);
-          } else streamText("Reads reported.");
-          return;
-        }
-        if (
-          !isFirstmate &&
-          (latestUserTail.includes(WRITE_ASK_MARKER) ||
-            latestUserTail.includes(WRITE_ASK_ANSWER_MARKER)) &&
-          wantsStream
-        ) {
-          // FI3-1571 piece 4: a write that is kept, then asked for on a card.
-          const { results } = sinceLastUser(body);
-          const ask = results[0]?.match(/Kept as ask (wa[0-9a-f]+)/)?.[1];
-          if (!results.length) {
-            streamToolCalls([{ name: "github_write", args: writeAskCall(latestUserTail) }]);
-          } else if (results.length === 1 && ask) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "write-ask",
-                  title: WRITE_ASK_CARD_TITLE,
-                  body: "<p>This write is outside what I may send myself, so it waits on you.</p><p>It records what this task found where the people who need it will look.</p>",
-                  actions: [
-                    { id: "send", effect: { kind: "request_write", ask } },
-                    { id: "not-now", label: "Not now" },
-                  ],
-                },
-              },
-            ]);
-          } else if (results.length <= 2) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: {
-                  text: results.join("\n"),
-                  summary: "The write waits on the captain's card.",
-                },
-              },
-            ]);
-          } else streamText("The write is waiting on the captain.");
-          return;
-        }
-        if (!isFirstmate && latestUserTail.includes(WRITE_ASK_SENT_WAKE) && wantsStream) {
-          // Once sent, the same ask on a revised card sends nothing again.
-          const { results } = sinceLastUser(body);
-          const ask = body.match(/Kept as ask (wa[0-9a-f]+)/)?.[1] ?? "";
-          if (!results.length) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "write-ask",
-                  title: WRITE_ASK_CARD_TITLE,
-                  body: "<p>Asking again for the same write.</p><p>The first answer did not reach me, so I am checking it went.</p>",
-                  actions: [
-                    { id: "send", effect: { kind: "request_write", ask } },
-                    { id: "not-now", label: "Not now" },
-                  ],
-                },
-              },
-            ]);
-          } else if (results.length === 1) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: {
-                  text: `Asking again: ${results[0]}\nThe answer I heard: ${latestUserTail.match(/answered (\d{3})/)?.[1] ?? "none"}`,
-                  summary: "The captain sent the write once.",
-                },
-              },
-            ]);
-          } else streamText("The write was sent.");
-          return;
-        }
-        if (!isFirstmate && latestUserTail.includes(SKIP_RULES_MERGE_MARKER) && wantsStream) {
-          // FI3-1571 piece 2: prepare the adopted release pull request as a
-          // merge past the rules at the version read, then ask on a card.
-          const { results } = sinceLastUser(body);
-          const review = results[0]?.match(/Merge review (mr[0-9a-f]+)/)?.[1];
-          if (!results.length) {
-            streamToolCalls([
-              {
-                name: "check_change",
-                args: {
-                  pull: SKIP_RULES_PULL.number,
-                  skipRules: { headSha: SKIP_RULES_PULL.headSha, method: "squash" },
-                },
-              },
-            ]);
-          } else if (results.length === 1 && review) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "release-past-rules",
-                  title: SKIP_RULES_CARD_TITLE,
-                  body: "<p>The release pull request waits on a code owner's review, and one check failed.</p><p>Your account may skip both, so I prepared the merge at the version I read.</p>",
-                  actions: [
-                    { id: "merge", effect: { kind: "request_merge", review } },
-                    { id: "not-now", label: "Not now" },
-                  ],
-                },
-              },
-            ]);
-          } else if (results.length <= 2) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: {
-                  text: results.join("\n"),
-                  summary: "The release merge past the rules is on a card for the captain.",
-                },
-              },
-            ]);
-          } else streamText("The release merge is waiting on the captain.");
-          return;
-        }
-        if (!isFirstmate && latestUserTail.includes(SKIP_RULES_MERGED_WAKE) && wantsStream) {
-          // After the click, the same review on a revised card sends nothing again.
-          const { results } = sinceLastUser(body);
-          const review = body.match(/Merge review (mr[0-9a-f]+)/)?.[1] ?? "";
-          if (!results.length) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  id: "release-past-rules",
-                  title: SKIP_RULES_CARD_TITLE,
-                  body: "<p>Asking again for the same merge.</p><p>I want to be sure the release went in at the version I read.</p>",
-                  actions: [
-                    { id: "merge", effect: { kind: "request_merge", review } },
-                    { id: "not-now", label: "Not now" },
-                  ],
-                },
-              },
-            ]);
-          } else if (results.length === 1) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: {
-                  text: `Asking again: ${results[0]}`,
-                  summary: "The release pull request merged past its rules.",
-                },
-              },
-            ]);
-          } else streamText("The release merged.");
-          return;
-        }
-        if (!isFirstmate && latestUserTail.includes(API_WRITE_GUARD_MARKER) && wantsStream) {
-          const { results } = sinceLastUser(body);
-          const gitlab = latestUserTail.includes("guard-gitlab");
-          const project = gitlab
-            ? `/projects/${encodeURIComponent(GITLAB_STUB_PROJECT)}`
-            : "/repos/octo/meterlab";
-          const calls = mergeWriteCases(gitlab ? "gitlab" : "github", project);
-          const next = calls[results.length];
-          if (next) {
-            streamToolCalls([{ name: "github_write", args: next }]);
-          } else if (results.length === calls.length) {
-            streamToolCalls([{ name: "bash", args: { command: "git rev-parse HEAD" } }]);
-          } else if (results.length === calls.length + 1) {
-            const sha = results.at(-1)?.match(/\b[0-9a-f]{40}\b/)?.[0];
-            streamToolCalls([
-              {
-                name: "github_write",
-                args: gitlab
-                  ? { method: "DELETE", path: `${project}/repository/branches/topic` }
-                  : {
-                      method: "PATCH",
-                      path: `${project}/git/refs/heads/topic`,
-                      body: JSON.stringify({ sha, force: false }),
-                    },
-              },
-            ]);
-          } else if (results.length === calls.length + 2) {
-            streamToolCalls([
-              {
-                name: "report",
-                args: {
-                  text: results.join("\n"),
-                  summary:
-                    "Merge and default-branch writes were refused; another branch write reached the host.",
-                },
-              },
-            ]);
-          } else streamText("Merge API guard reported.");
-          return;
-        }
-        if (!isFirstmate && body.includes(TASK_BROWSER_PROMPT_MARKER) && wantsStream) {
-          const step = calledTool(body, "report") ? undefined : lookingAgain(body, taskBrowserStep);
-          if (step) streamToolCalls(step);
-          else streamText("done");
-          return;
-        }
-        // Claude's client sends each tool result as the latest user message,
-        // so on its wire the marker is earlier in the conversation.
-        const gitStatusAsked =
-          latestUserTail.includes(GIT_STATUS_PROMPT_MARKER) ||
-          (anthropicMessages && body.includes(GIT_STATUS_PROMPT_MARKER));
-        if (!isFirstmate && gitStatusAsked && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls([
-              { name: "bash", args: { command: "git --version && git status --short --branch" } },
-            ]);
-            return;
-          }
-          if (latestUserTail.includes(MOCK_GIT_REPORT_PREFIX) || calledTool(body, "report")) {
-            streamText("done");
-            return;
-          }
-          // Only what came back from the shell: the tool result follows the
-          // call, or is the latest user message itself on Claude's wire.
-          const call = latestUserTail.indexOf('"tool_calls"');
-          const result = call >= 0 ? latestUserTail.slice(call) : latestUserTail;
-          const version = result.match(/git version \d+\.\d+\.\d+/)?.[0];
-          const branch = result.match(/## [^\s"\\]+/)?.[0];
-          const answer =
-            version && branch
-              ? `${version} on ${branch}`
-              : (result.match(/command not found|not found/)?.[0] ?? "nothing");
-          streamToolCalls([
-            { name: "report", args: { text: `${MOCK_GIT_REPORT_PREFIX} ${answer}.` } },
-          ]);
-          return;
-        }
-        // The answer-task crewmate told the captain closed its card: it
-        // judges the answer read and finished (FI3-435).
-        if (
-          !isFirstmate &&
-          (body.includes(ANSWER_TASK_PROMPT_MARKER) || body.includes(RETRIEVAL_TASK_ASK)) &&
-          latestUserTail.includes(CARD_CLOSED_STEER_NEEDLE) &&
-          wantsStream
-        ) {
-          if (!hasToolResults) {
-            streamToolCalls([
-              { name: "report", args: { text: MOCK_ANSWER_FINISHED_REPORT, finished: true } },
-            ]);
-            return;
-          }
-          streamText("done");
-          return;
-        }
-        // The answer-task crewmate (Task B): one decision card carrying the
-        // answer, and a report. No completion card, nothing committed.
-        if (!isFirstmate && latestUserTail.includes(ANSWER_TASK_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_ANSWER_CARD_TITLE,
-                  body: MOCK_ANSWER_CARD_BODY,
-                  actions: [
-                    { id: "fix-it", label: MOCK_ANSWER_ACTION_LABEL, default: true },
-                    { id: "leave-it", label: "Leave it for now" },
-                  ],
-                },
-              },
-              { name: "report", args: { text: MOCK_ANSWER_REPORT } },
-            ]);
-            return;
-          }
-          streamText("done");
-          return;
-        }
-        // The autonomy-hold crewmate (contract v3.9): an ordinary finished
-        // direct-pr task - one completion card declaring the merge, and the
-        // report. Who may click that merge is the host's question, not its.
-        if (!isFirstmate && latestUserTail.includes(AUTONOMY_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
-            streamToolCalls([
-              {
-                name: "bash",
-                args: { command: 'git commit --allow-empty -m "fix: make the meter read on time"' },
-              },
-            ]);
-            return;
-          }
-          if (!latestUserTail.includes(MOCK_AUTONOMY_REPORT)) {
-            const title = latestUserTail.match(/commission a crewmate: ([^"\\]+)/)?.[1]?.trim();
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: MOCK_AUTONOMY_CARD_TITLE(title ?? AUTONOMY_PROMPT_MARKER),
-                  body: MOCK_STANDARD_CARD_BODY,
-                  actions: [
-                    {
-                      id: "ship",
-                      label: "Ship it",
-                      default: true,
-                      effect: { kind: "settle", mode: "merge" },
-                    },
-                  ],
-                },
-              },
-              { name: "report", args: { text: MOCK_AUTONOMY_REPORT } },
-            ]);
-            return;
-          }
-          streamText("done");
-          return;
-        }
-        const wantsCards = latestUserTail.includes(EMIT_CARDS_PROMPT_MARKER) && !hasToolResults;
-        if (wantsCards && wantsStream) {
-          streamToolCalls(MOCK_TOOL_CALLS);
-          return;
-        }
-        if (
-          latestUserTail.includes(KEYBOARD_CARDS_PROMPT_MARKER) &&
-          !hasToolResults &&
-          wantsStream
-        ) {
-          streamToolCalls(keyboardCardToolCalls());
-          return;
-        }
-        if (
-          !isFirstmate &&
-          (latestUserTail.includes(CARD_WIDTH_PROMPT_MARKER) ||
-            latestUserTail.includes(CARD_RESIZE_PROMPT_MARKER) ||
-            latestUserTail.includes(CARD_VIEWPORT_PROMPT_MARKER)) &&
-          !hasToolResults &&
-          wantsStream
-        ) {
-          streamToolCalls(
-            latestUserTail.includes(CARD_VIEWPORT_PROMPT_MARKER)
-              ? viewportCardToolCalls(latestUserTail.includes("scripted"))
-              : latestUserTail.includes(CARD_RESIZE_PROMPT_MARKER)
-                ? resizeCardToolCalls()
-                : widthCardToolCalls(),
-          );
-          return;
-        }
-        // Presentation regression: a real host job continues alongside a question.
-        if (
-          !isFirstmate &&
-          latestUserTail.includes("verify background posture") &&
-          wantsStream &&
-          !hasToolResults
-        ) {
-          const calls: ScriptedCall[] = [
-            {
-              name: "bash",
-              args: {
-                command: "while [ ! -f .posture-release ]; do sleep 0.1; done",
-                background: true,
-              },
-            },
-          ];
-          if (latestUserTail.includes("without a question")) {
-            streamToolCalls(calls);
-            return;
-          }
-          streamToolCalls([
-            ...calls,
-            {
-              name: "emit_card",
-              args: {
-                title: "Background posture question",
-                body: "<p>Continue after the background work finishes.</p><p>The disposable command is still running; Continue keeps this task available for its result.</p>",
-                actions: [
-                  { id: "continue", label: "Continue", default: true },
-                  { id: "stop", label: "Stop" },
-                ],
-              },
-            },
-          ]);
-          return;
-        }
-        // File-body journey: use the host-provided folder, never a project file.
-        if (
-          !isFirstmate &&
-          wantsStream &&
-          (latestUserTail.includes(FILE_CARD_PROMPT_MARKER) ||
-            latestUserTail.includes(FILE_CARD_REVISE_MARKER))
-        ) {
-          const dir = body.match(
-            /Your card body folder is ([^(]+) \(create it if it is missing\)/,
-          )?.[1];
-          if (!dir)
-            throw new Error("File card journey requires the real card body folder instruction");
-          if (!hasToolResults && !latestUserTail.includes(FILE_CARD_REVISE_MARKER)) {
-            const quote = (value: string) => `'${value.replaceAll("'", "'\\''")}'`;
-            streamToolCalls([
-              {
-                name: "bash",
-                args: {
-                  command: `mkdir -p ${quote(dir)} && printf '%s' ${quote(FILE_CARD_INITIAL)} > ${quote(`${dir}/answer.html`)}`,
-                },
-              },
-            ]);
-            return;
-          }
-          if (!calledTool(latestUserTail, "emit_card")) {
-            streamToolCalls([
-              {
-                name: "emit_card",
-                args: {
-                  title: FILE_CARD_TITLE,
-                  id: "file-answer",
-                  reply: "Updated the answer from the file.",
-                  body_file: `${dir}/answer.html`,
-                },
-              },
-            ]);
-            return;
-          }
-        }
-        // The mock crewmate files a follow-up (task-system P2) and notes
-        // progress, then reports on the follow-up leg like any other turn.
-        if (
-          latestUserTail.includes(FILE_FOLLOWUP_PROMPT_MARKER) &&
-          // The follow-up's own brief names the task it was found on; the
-          // crewmate that takes it up does not file it again.
-          !latestUserTail.includes("Filed as a follow-up by") &&
-          !hasToolResults &&
-          wantsStream
-        ) {
-          streamToolCalls([
-            {
-              name: "file_followup",
-              args: {
-                title: MOCK_FOLLOWUP_TITLE,
-                goal: MOCK_FOLLOWUP_GOAL,
-                why: MOCK_FOLLOWUP_WHY,
-              },
-            },
-            { name: "note_progress", args: { text: MOCK_PROGRESS_TEXT } },
-          ]);
-          return;
-        }
-        // The one-file crewmate: its brief rides every leg of the tool loop,
-        // so the marker is matched across the whole conversation.
-        if (!isFirstmate && body.includes(WRITE_FILE_PROMPT_MARKER) && wantsStream) {
-          if (!calledTool(body, "write")) {
-            const [, path, text] =
-              body.match(/write the file (\S+) with ([^"\\]+)/) ?? ([] as string[]);
-            streamToolCalls([
-              { name: "write", args: { path: path ?? "change.txt", content: `${text ?? ""}\n` } },
-            ]);
-            return;
-          }
-          if (!calledTool(body, "report")) {
-            streamToolCalls([{ name: "report", args: { text: MOCK_WRITE_FILE_REPORT } }]);
-            return;
-          }
-          streamText("done");
-          return;
-        }
         if (wantsStream || anthropicMessages) {
           // The default close-out. Anthropic catalog models (Pi 0.87 OpenRouter
           // Claude) take the messages wire; everything else stays completions.

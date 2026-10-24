@@ -4,8 +4,9 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 
 import { type LaunchedApp, launchApp } from "./launch";
 import { intersects, minimumWindowSize, type Rect, resizeWindow, settled, within } from "./layout";
-import { FM_THREAD_CARD_TITLE, FM_THREAD_PROMPT_MARKER } from "./mockProvider";
+import { FM_THREAD_CARD_TITLE } from "./mockProvider";
 import { pastePictures, promptInput } from "./prompt";
+import { FM_THREAD_PROMPT_MARKER, firstmateThread } from "./scenarios/firstmateThread";
 import { cardSurface, shownCard } from "./stack";
 import { MAC_ONLY_TAG } from "./tags";
 import { focusOn, typeInto } from "./windowKeys";
@@ -25,7 +26,7 @@ let launched: LaunchedApp;
 test.describe.configure({ mode: "serial" });
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ scenarios: [firstmateThread], withMockProvider: true });
 });
 
 test.afterAll(async () => {

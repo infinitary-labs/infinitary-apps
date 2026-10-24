@@ -6,16 +6,11 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  AUTONOMY_ASK_MARKER,
-  AUTONOMY_PROMPT_MARKER,
-  MERGE_PROMPT_MARKER,
-  MOCK_AUTONOMY_CARD_TITLE,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { AUTONOMY_ASK_MARKER, MERGE_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { feedLine, putInLine, taskKey } from "./rails";
+import { AUTONOMY_PROMPT_MARKER, autonomy, MOCK_AUTONOMY_CARD_TITLE } from "./scenarios/autonomy";
 import { factsStrip, shownCard } from "./stack";
 
 /**
@@ -70,6 +65,7 @@ test.beforeEach(async () => {
   seedHostedOrigins(db, userDataDir);
   db.close();
   launched = await launchApp({
+    scenarios: [autonomy],
     withMockProvider: true,
     userDataDir,
     env: github.env,

@@ -4,12 +4,12 @@ import { openDatabase } from "../../src/core/storage/db";
 import { scratchDir } from "../helpers/scratchDirs";
 import { emitContinuityCard } from "./holdsPlace";
 import { launchApp } from "./launch";
+import { FM_THREAD_CARD_TITLE, THREAD_PROSE_REPLY } from "./mockProvider";
 import {
-  FM_THREAD_CARD_TITLE,
   FM_THREAD_PROMPT_MARKER,
   FM_THREAD_PROSE_ANSWER,
-  THREAD_PROSE_REPLY,
-} from "./mockProvider";
+  firstmateThread,
+} from "./scenarios/firstmateThread";
 import { cardReply, expectNoCard, showCard, shownCard, shownEntry } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -31,7 +31,7 @@ test("a declared continuity card keeps replies, closes choices, returns forward 
     createdAt: 1000,
   });
   db.close();
-  let app = await launchApp({ userDataDir, withMockProvider: true });
+  let app = await launchApp({ scenarios: [firstmateThread], userDataDir, withMockProvider: true });
   try {
     const { page } = app;
     await expect(shownCard(page, OTHER)).toBeVisible();
@@ -66,7 +66,7 @@ test("a declared continuity card keeps replies, closes choices, returns forward 
       ),
     ).toBe(true);
     await app.close();
-    app = await launchApp({ userDataDir, withMockProvider: true });
+    app = await launchApp({ scenarios: [firstmateThread], userDataDir, withMockProvider: true });
     const restored = await app.page.evaluate(
       async (wanted) => (await window.infinitary.cards.list()).find((card) => card.id === wanted),
       id,

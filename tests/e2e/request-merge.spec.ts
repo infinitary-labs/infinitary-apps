@@ -25,6 +25,7 @@ import { heroShot, regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { expandDock, putInLine, taskKey, taskLine } from "./rails";
+import { skipRules } from "./scenarios/skipRules";
 import { expectNoCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
@@ -401,7 +402,12 @@ test("a merge that skips the branch rules is prepared by its crewmate, named on 
   seedHostedOrigins(db, userDataDir);
   db.close();
 
-  const launched = await launchApp({ withMockProvider: true, userDataDir, env: github.env });
+  const launched = await launchApp({
+    scenarios: [skipRules],
+    withMockProvider: true,
+    userDataDir,
+    env: github.env,
+  });
   try {
     const { page } = launched;
     const title = `shipyard ${SKIP_RULES_MERGE_MARKER}`;

@@ -5,15 +5,14 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { CREATE_PANEL_DRAFT, CREATE_PANEL_SLOT_ID } from "../../src/shared/createPanelSlot";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
+import { MOCK_PANEL_ID, MOCK_PANEL_TITLE, startMockProvider } from "./mockProvider";
+import { promptInput } from "./prompt";
 import {
   ANSWER_TASK_PROMPT_MARKER,
+  answerTask,
   MOCK_ANSWER_ACTION_LABEL,
-  MOCK_PANEL_ID,
-  MOCK_PANEL_TITLE,
-  PERSONAL_REMOVE_PROMPT_MARKER,
-  startMockProvider,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
+} from "./scenarios/answerTask";
+import { PERSONAL_REMOVE_PROMPT_MARKER, personalPanels } from "./scenarios/personalPanels";
 import { regionAfter } from "./windowKeys";
 
 /**
@@ -54,6 +53,7 @@ function withFinishedCrewmates(count: number): string {
 test("a profile shows no slot until its third crewmate finishes, which brings it at once", async () => {
   test.setTimeout(2 * 60_000);
   const launched = await launchApp({
+    scenarios: [personalPanels, answerTask],
     userDataDir: withFinishedCrewmates(2),
     withMockProvider: true,
   });
@@ -96,7 +96,7 @@ test("after three finished crewmates the slot starts the ask, leaves for the pan
   // One story: each step starts where the last left the slot and the panel.
   test.setTimeout(4 * 60_000);
   const userDataDir = withFinishedCrewmates(3);
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: [personalPanels, answerTask] });
   let live: LaunchedApp = await launchApp({ userDataDir, reuseMockProvider: mockProvider });
   const panel = () => live.page.locator(`[data-side-panel="${MOCK_PANEL_ID}"]`);
   const relaunch = async () => {

@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
-import { FILE_TASK_PROMPT_MARKER, SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { encodePng } from "./pictureFixtures";
 import { dropFiles, PASTE_PICTURE_PNG_BASE64, pastePictures, promptInput } from "./prompt";
 import { providerMessages } from "./providerRequest";
@@ -18,6 +18,7 @@ import {
   rowAtRest,
   taskKey,
 } from "./rails";
+import { FILE_TASK_PROMPT_MARKER, fileTask } from "./scenarios/fileTask";
 
 /**
  * The captain's pictures stay with the task the captain's message became
@@ -73,7 +74,7 @@ async function send(page: Page, words: string): Promise<void> {
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
 test("pictures pasted and dropped into a message reach the crewmate the message starts", async ({}, testInfo) => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ scenarios: [fileTask], withMockProvider: true });
   const { page, userDataDir } = launched;
   await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
   const title = "fix the layout shown in these pictures";
@@ -100,7 +101,7 @@ test("pictures pasted and dropped into a message reach the crewmate the message 
 
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
 test("a picture on a message that files a task reaches its crewmate after a relaunch", async ({}, testInfo) => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ scenarios: [fileTask], withMockProvider: true });
   const { userDataDir, homeDir } = launched;
   const title = "redesign the panel in this screenshot";
   await expect(promptInput(launched.page)).toBeEnabled({ timeout: 30_000 });
@@ -110,7 +111,12 @@ test("a picture on a message that files a task reaches its crewmate after a rela
 
   // Quit and open the app again before the task starts.
   await launched.close();
-  launched = await launchApp({ withMockProvider: true, userDataDir, homeDir });
+  launched = await launchApp({
+    scenarios: [fileTask],
+    withMockProvider: true,
+    userDataDir,
+    homeDir,
+  });
   const { page } = launched;
   await expandDock(page, "now");
   await openGroup(page, "backlog");

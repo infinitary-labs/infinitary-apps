@@ -6,15 +6,7 @@ import { CARE_WORDS } from "../../src/shared/vocabulary";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import { minimumWindowSize, overflows, resizeWindow, settled, within } from "./layout";
-import {
-  EMIT_CARDS_PROMPT_MARKER,
-  FILE_FOLLOWUP_PROMPT_MARKER,
-  MOCK_COMPLETION_TEXT,
-  MOCK_FOLLOWUP_TITLE,
-  MOCK_FOLLOWUP_WHY,
-  MOCK_QUOTA_NOTE_TITLE,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
+import { MOCK_COMPLETION_TEXT, MOCK_FOLLOWUP_TITLE, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { measured, PERF_TAG } from "./perf";
 import { promptInput } from "./prompt";
 import {
@@ -37,6 +29,16 @@ import {
   taskFact,
   taskKey,
 } from "./rails";
+import {
+  EMIT_CARDS_PROMPT_MARKER,
+  everyCardKind,
+  MOCK_QUOTA_NOTE_TITLE,
+} from "./scenarios/everyCardKind";
+import {
+  FILE_FOLLOWUP_PROMPT_MARKER,
+  fileFollowup,
+  MOCK_FOLLOWUP_WHY,
+} from "./scenarios/fileFollowup";
 import { closeOpenCards, pager, showCard, shownCard, shownEntry } from "./stack";
 import { setThemeViaSettings } from "./theme";
 import { pressKey } from "./windowKeys";
@@ -121,7 +123,7 @@ const GREETING = "hello there";
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ scenarios: [everyCardKind, fileFollowup], withMockProvider: true });
 });
 
 test.afterAll(async () => {
@@ -323,7 +325,10 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
   });
 
   await test.step("a row waiting on you brings its decision card to the front of the stack", async () => {
-    const own = await launchApp({ withMockProvider: true });
+    const own = await launchApp({
+      scenarios: [everyCardKind, fileFollowup],
+      withMockProvider: true,
+    });
     const { page } = own;
     try {
       // Own both rows, independent of the panel suite's earlier commissions.

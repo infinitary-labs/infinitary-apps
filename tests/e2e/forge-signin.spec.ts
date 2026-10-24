@@ -71,6 +71,7 @@ import {
   WORKFLOW_DISPATCH_MARKER,
   WORKFLOW_EVIDENCE_MARKER,
 } from "./scenarios/forgeSignin";
+import { forgeSigninReads } from "./scenarios/forgeSigninReads";
 import {
   GITHUB_CHANGE_PROMPT_MARKER,
   githubChange,
@@ -78,6 +79,7 @@ import {
   MOCK_GITHUB_CHANGE_CARD_TITLE,
   MOCK_GITHUB_LEGACY_CHANGE_CARD_TITLE,
 } from "./scenarios/githubChange";
+import { mergeWriteGuard } from "./scenarios/mergeWriteGuard";
 import { assertSettingsFits } from "./settings";
 import { clickInBody, expectNoCard, factsStrip, shownCard } from "./stack";
 import { focusOn, pressKey } from "./windowKeys";
@@ -211,7 +213,7 @@ async function arrange({
   github.headOf((branch) => git("-C", bare, "rev-parse", `refs/heads/${branch}`));
   launched = await launchApp({
     withMockProvider: true,
-    scenarios: [githubChange, continueChange, forgeSignin],
+    scenarios: [githubChange, continueChange, forgeSignin, forgeSigninReads, mergeWriteGuard],
     userDataDir,
     env: github.env,
   });
@@ -1165,7 +1167,7 @@ test("a sign-in on file is still signed in after a real quit and start of the ap
   await launched.close();
   launched = await launchApp({
     withMockProvider: true,
-    scenarios: [forgeSignin],
+    scenarios: [forgeSignin, forgeSigninReads, mergeWriteGuard],
     userDataDir,
     env: github.env,
   });

@@ -9,7 +9,7 @@ import { classicScrollbars, expectFrameSettles } from "./frameSizing";
 import { panelBody, panelElement } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow, settled, within } from "./layout";
-import { ADD_PANEL_PROMPT_MARKER } from "./mockProvider";
+
 import { promptInput } from "./prompt";
 import {
   expandDock,
@@ -20,6 +20,7 @@ import {
   recordCard,
   recordFrame,
 } from "./rails";
+import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
 
 const RECORD_SCROLLER = "[data-task-record] [data-card-body]";
 const PANEL_SCROLLER = '[data-side-panel="resize-probe"] [data-side-panel-body]';
@@ -45,7 +46,11 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
     status: "queued",
   });
   db.close();
-  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  const launched = await launchApp({
+    scenarios: [installPanel],
+    userDataDir,
+    withMockProvider: true,
+  });
   try {
     const { app, page } = launched;
     await classicScrollbars(page, RECORD_SCROLLER);
@@ -134,7 +139,7 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
 test("a content-sized panel stops resizing at the width-consuming scrollbar threshold, and still grows to be read and shrinks", async ({}, testInfo) => {
   const source = join(scratchDir("infinitary-panel-threshold-source-"), "resize-probe");
   cpSync(join(process.cwd(), "tests/fixtures/frame-realm/resize"), source, { recursive: true });
-  const launched = await launchApp({ withMockProvider: true });
+  const launched = await launchApp({ scenarios: [installPanel], withMockProvider: true });
   try {
     const { page } = launched;
     await classicScrollbars(page, PANEL_SCROLLER);

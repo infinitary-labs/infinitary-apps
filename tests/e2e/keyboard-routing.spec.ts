@@ -2,15 +2,19 @@ import { expect, type Locator, type Page, test } from "@playwright/test";
 import { UI_SIZES } from "../../src/shared/preferences";
 import { cardBodyElement } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { promptInput } from "./prompt";
+import { dockBody, expandDock, nowFrame } from "./rails";
 import {
   INLINE_QUESTIONS_PROMPT_MARKER,
   INLINE_QUESTIONS_TITLE,
+  inlineQuestions,
+} from "./scenarios/inlineQuestions";
+import {
   KEYBOARD_CARD_TITLES,
   KEYBOARD_CARDS_PROMPT_MARKER,
-  SPAWN_PROMPT_MARKER,
-} from "./mockProvider";
-import { promptInput } from "./prompt";
-import { dockBody, expandDock, nowFrame } from "./rails";
+  keyboardCards,
+} from "./scenarios/keyboardCards";
 import {
   cardReply,
   closeQuestion,
@@ -49,7 +53,10 @@ async function pagerPlace(page: Page): Promise<{ position: number; count: number
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({
+    scenarios: [inlineQuestions, keyboardCards],
+    withMockProvider: true,
+  });
   const prompt = promptInput(launched.page);
   await prompt.click();
   await prompt.fill(`${SPAWN_PROMPT_MARKER} ${KEYBOARD_CARDS_PROMPT_MARKER}`);

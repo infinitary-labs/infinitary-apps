@@ -14,9 +14,11 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { cardBody, frameIn, panelBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import { ADD_PANEL_PROMPT_MARKER, PERSONAL_REMOVE_PROMPT_MARKER } from "./mockProvider";
+
 import { promptInput } from "./prompt";
 import { feedLine } from "./rails";
+import { ADD_PANEL_PROMPT_MARKER, installPanel } from "./scenarios/installPanel";
+import { PERSONAL_REMOVE_PROMPT_MARKER, personalPanels } from "./scenarios/personalPanels";
 import { settingRow } from "./settings";
 import { expectNoCard, shownCard } from "./stack";
 
@@ -79,7 +81,10 @@ test.describe
         join(source, "manifest.json"),
         JSON.stringify({ ...manifest, name: MAKER, version: VERSION, title: PANEL_TITLE }),
       );
-      launched = await launchApp({ withMockProvider: true });
+      launched = await launchApp({
+        scenarios: [installPanel, personalPanels],
+        withMockProvider: true,
+      });
     });
 
     test.afterAll(async () => {

@@ -10,13 +10,16 @@ import { launchApp } from "./launch";
 import {
   ANSWER_PROMPT_MARKER,
   FM_THREAD_CARD_TITLE,
-  FM_THREAD_PROMPT_MARKER,
-  FM_THREAD_PROSE_ANSWER,
   MOCK_ANSWER_TITLE,
   THREAD_PROSE_REPLY,
 } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { expandDock, hideRecord, nowFrame, pressRow, recordCard } from "./rails";
+import {
+  FM_THREAD_PROMPT_MARKER,
+  FM_THREAD_PROSE_ANSWER,
+  firstmateThread,
+} from "./scenarios/firstmateThread";
 import {
   cardReply,
   cardSurface,
@@ -59,7 +62,7 @@ async function launchWithCards(cards: ReturnType<typeof seededCard>[]) {
   const store = new CardStore(db);
   for (const card of cards) store.upsert(card);
   db.close();
-  return launchApp({ userDataDir, withMockProvider: true });
+  return launchApp({ scenarios: [firstmateThread], userDataDir, withMockProvider: true });
 }
 
 /** A new card behind the shown one: Firstmate's answer, unread until shown. */
@@ -91,7 +94,7 @@ const BERTH_CARD = "Choose a berth";
 const TIDE_TABLE = "The tide table";
 
 test("under reduced motion a new reply arrives without moving, and stays after a reload", async () => {
-  const app = await launchApp({ withMockProvider: true });
+  const app = await launchApp({ scenarios: [firstmateThread], withMockProvider: true });
   try {
     const { page } = app;
     await page.emulateMedia({ reducedMotion: "reduce" });
@@ -156,7 +159,11 @@ test("closing a middle card or hiding a record reveals the oldest card, not the 
     });
   }
   db.close();
-  const app = await launchApp({ userDataDir, withMockProvider: true });
+  const app = await launchApp({
+    scenarios: [firstmateThread],
+    userDataDir,
+    withMockProvider: true,
+  });
   try {
     const { page } = app;
     await expect(shownCard(page, HARBOUR_NOTES[0])).toBeVisible();
@@ -369,7 +376,11 @@ for (const held of ["record", "past"] as const) {
     cards.upsert(seededCard("past", "Earlier harbour plan", "<p>The earlier plan.</p>", 1));
     cards.resolve("past", "close");
     db.close();
-    const app = await launchApp({ userDataDir, withMockProvider: true });
+    const app = await launchApp({
+      scenarios: [firstmateThread],
+      userDataDir,
+      withMockProvider: true,
+    });
     try {
       const { page } = app;
       await expect(shownCard(page, READ_NOTE)).toBeVisible();

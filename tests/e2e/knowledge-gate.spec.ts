@@ -13,15 +13,11 @@ import { waitForFirstmateIdle } from "./crew";
 import { knowledgePanel, linkedReferences, OPEN_KNOWLEDGE } from "./knowledgeBrowser";
 import { mateBubble } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  FM_SYSTEM_MARKER,
-  KNOWLEDGE_FACT_PROMPT_MARKER,
-  type MockProviderServer,
-  startMockProvider,
-} from "./mockProvider";
+import { FM_SYSTEM_MARKER, type MockProviderServer, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { latestContext, requestToolNames } from "./providerRequest";
 import { linkedTaskKeys, recordCard, recordFrame } from "./rails";
+import { KNOWLEDGE_FACT_PROMPT_MARKER, knowledgeFact } from "./scenarios/knowledgeFact";
 import { clickInBody, showCard, shownCardFrame } from "./stack";
 import { commandSearch, pressWindowKey } from "./windowKeys";
 
@@ -165,7 +161,7 @@ async function launch(userDataDir: string, version: string, mockProvider: MockPr
 test("stable and alpha share Knowledge reads, tools, citations and purge", async () => {
   const userDataDir = scratchDir("infinitary-knowledge-gate-");
   const knowledgeDir = join(userDataDir, "knowledge");
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: [knowledgeFact] });
   try {
     // An alpha records a fact the captain states, as knowledge.
     let deployDay = "";
@@ -248,7 +244,7 @@ test("unreadable directions pause new Firstmate work and leave the collection al
   mkdirSync(knowledgeDir, { recursive: true });
   writeFileSync(join(knowledgeDir, "knowledge.db"), "written by something else");
   const before = folder(knowledgeDir);
-  const mockProvider = await startMockProvider();
+  const mockProvider = await startMockProvider({ scenarios: [knowledgeFact] });
   try {
     const alpha = await launch(userDataDir, ALPHA, mockProvider);
     try {

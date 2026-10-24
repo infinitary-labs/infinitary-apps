@@ -1,14 +1,14 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { cardBody } from "./frames";
 import { type LaunchedApp, launchApp } from "./launch";
-import {
-  ANSWER_PROMPT_MARKER,
-  EMIT_CARDS_PROMPT_MARKER,
-  MOCK_ANSWER_TITLE,
-  MOCK_REVISED_NOTE_TEXT,
-} from "./mockProvider";
+import { ANSWER_PROMPT_MARKER, MOCK_ANSWER_TITLE } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { REVISE_NOTE_PROMPT_MARKER, reviseNote } from "./scenarios/reviseNote";
+import { EMIT_CARDS_PROMPT_MARKER, everyCardKind } from "./scenarios/everyCardKind";
+import {
+  MOCK_REVISED_NOTE_TEXT,
+  REVISE_NOTE_PROMPT_MARKER,
+  reviseNote,
+} from "./scenarios/reviseNote";
 import { pager, showCard, shownCard } from "./stack";
 
 /**
@@ -27,7 +27,7 @@ const badge = (page: Page) => page.getByRole("status").filter({ hasText: /^\d+ n
 const dots = (page: Page) => page.locator("[data-unread-dot]");
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true, scenarios: [reviseNote] });
+  launched = await launchApp({ withMockProvider: true, scenarios: [reviseNote, everyCardKind] });
   const { page } = launched;
   const input = promptInput(page);
   await input.click();

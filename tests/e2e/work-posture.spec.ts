@@ -3,18 +3,24 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { waitForFirstmateIdle } from "./crew";
 import { launchApp } from "./launch";
+import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
 import { expandDock, expectTaskMark, nowRow, taskKey } from "./rails";
 import { readSavedData } from "./savedData";
+import {
+  backgroundPosture,
+  WORK_POSTURE_MARKER,
+  WORK_POSTURE_QUIET_MARKER,
+} from "./scenarios/backgroundPosture";
 
 test("a background job keeps both indicators active alongside a question; its exit and restart become captain-held idle", async () => {
-  let app = await launchApp({ withMockProvider: true });
+  let app = await launchApp({ scenarios: [backgroundPosture], withMockProvider: true });
   try {
     const { page } = app;
     const input = promptInput(page);
-    await input.fill("commission a crewmate: verify background posture");
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${WORK_POSTURE_MARKER}`);
     await input.press("Enter");
-    const key = await taskKey(page, "verify background posture");
+    const key = await taskKey(page, WORK_POSTURE_MARKER);
     const posture = () =>
       page.evaluate(
         async (key) => (await window.infinitary.tasks.board()).tasks.find((t) => t.key === key),
@@ -56,7 +62,7 @@ test("a background job keeps both indicators active alongside a question; its ex
     await page.screenshot({ path: test.info().outputPath("work-posture-captain.png") });
     const userDataDir = app.userDataDir;
     await app.close();
-    app = await launchApp({ userDataDir, withMockProvider: true });
+    app = await launchApp({ scenarios: [backgroundPosture], userDataDir, withMockProvider: true });
     await expectTaskMark(app.page, key);
     await expect(app.page.locator('canvas[data-crew-layer="near"]')).toHaveAttribute(
       "aria-label",
@@ -73,13 +79,13 @@ test("a background job keeps both indicators active alongside a question; its ex
 });
 
 test("both visible indicators stay hot for a background job and cool when no work continues", async () => {
-  const app = await launchApp({ withMockProvider: true });
+  const app = await launchApp({ scenarios: [backgroundPosture], withMockProvider: true });
   try {
     const { page } = app;
     const input = promptInput(page);
-    await input.fill("commission a crewmate: verify background posture without a question");
+    await input.fill(`${SPAWN_PROMPT_MARKER} ${WORK_POSTURE_MARKER} ${WORK_POSTURE_QUIET_MARKER}`);
     await input.press("Enter");
-    const key = await taskKey(page, "verify background posture without a question");
+    const key = await taskKey(page, `${WORK_POSTURE_MARKER} ${WORK_POSTURE_QUIET_MARKER}`);
     const task = () =>
       page.evaluate(
         async (key) => (await window.infinitary.tasks.board()).tasks.find((t) => t.key === key),

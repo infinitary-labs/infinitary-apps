@@ -56,14 +56,13 @@ import {
 import {
   CLAUDE_CREW_PROMPT_MARKER,
   CLAUDE_STEER_MARKER,
-  GIT_STATUS_PROMPT_MARKER,
   MOCK_CLAUDE_CARD_TITLE,
   MOCK_CLAUDE_HELD_PROGRESS,
   MOCK_CLAUDE_STEERED_REPORT,
-  MOCK_GIT_REPORT_PREFIX,
   type MockProviderServer,
   startMockProvider,
 } from "./mockProvider";
+import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
 
 /**
  * The app runs work for another Mac's Firstmate with no window
@@ -1485,7 +1484,7 @@ for (const removal of ["from-home", "in-reach"] as const) {
 test("a crewmate's turn runs on the app as a computer that runs work: the home holds it out of reach and catches up with nothing run twice", async () => {
   // The home is the home's own record, crew and connection, in this process;
   // the work is the built app as its own process, on Claude's client.
-  const model = await startMockProvider();
+  const model = await startMockProvider({ scenarios: [gitStatus] });
   providers.push(model);
   const me = user(model);
   const userData = scratchDir("infinitary-run-work-home-");
@@ -1613,7 +1612,7 @@ test("a closed task with unreadable work history stays present and brings its wo
   await git(website, ["push", "--quiet", "origin", "HEAD:main"]);
   const main = await git(website, ["rev-parse", "HEAD"]);
 
-  const model = await startMockProvider();
+  const model = await startMockProvider({ scenarios: [gitStatus] });
   providers.push(model);
   const me = user(model);
   const userData = scratchDir("infinitary-run-work-home-");
@@ -1705,7 +1704,7 @@ test("a task in a project works in a working copy the app that runs work cloned,
   await git(website, ["push", "--quiet", "origin", "HEAD:main"]);
   const main = await git(website, ["rev-parse", "HEAD"]);
 
-  const model = await startMockProvider();
+  const model = await startMockProvider({ scenarios: [gitStatus] });
   providers.push(model);
   const me = user(model);
   const userData = scratchDir("infinitary-run-work-home-");
@@ -1800,7 +1799,7 @@ test("a Mac with no git of its own runs a project's work with the app's own git,
   await git(website, ["push", "--quiet", "origin", "HEAD:main"]);
   const main = await git(website, ["rev-parse", "HEAD"]);
 
-  const model = await startMockProvider();
+  const model = await startMockProvider({ scenarios: [gitStatus] });
   providers.push(model);
   const me = user(model);
   const { shell } = writeLoginShellStub(scratchDir("infinitary-login-shell-"), {});

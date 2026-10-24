@@ -6,8 +6,9 @@ import { hostEnv } from "../../src/core/hostEnv";
 import { scratchDir } from "../helpers/scratchDirs";
 import { askFirstmate } from "./lastTurn";
 import { launchApp } from "./launch";
-import { ADOPT_REPO_PROMPT_MARKER } from "./mockProvider";
+
 import { addFromSetupCard, projectRow } from "./projects";
+import { ADOPT_REPO_PROMPT_MARKER, projectSetup } from "./scenarios/projectSetup";
 
 // Each journey owns a disposable folder and app. The real agent setup tool,
 // registry, history and Settings result are exercised without a real account.
@@ -18,7 +19,7 @@ for (const initialized of [true, false]) {
       : "adding a plain folder leaves its files untracked",
     // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
     async ({}, testInfo) => {
-      const launched = await launchApp({ withMockProvider: true });
+      const launched = await launchApp({ scenarios: [projectSetup], withMockProvider: true });
       try {
         const { page, homeDir } = launched;
         const dir = scratchDir("infinitary-project-safety-");

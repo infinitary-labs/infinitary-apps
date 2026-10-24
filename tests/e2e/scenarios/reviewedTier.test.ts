@@ -31,6 +31,7 @@ test("the reviewed builder reads its checks once its slow save point has exited"
       wantsStream: true,
       latestUserTail: body,
       hasToolResults: messages.length > 1,
+      port: 0,
     });
     return last;
   };

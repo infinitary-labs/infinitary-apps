@@ -53,7 +53,8 @@ The realm bounds the script but is not a security boundary, since its author is 
 
 ## Compositions
 
-- Parts are ordinary child tasks, so the board, the record, follow-ups, holds and settle rules apply to them unchanged ([tasks.md](tasks.md)).
+- Parts are ordinary child tasks, so the record, follow-ups, holds and settle rules apply to them unchanged ([tasks.md](tasks.md)).
+- Activity folds a program and its parts into one progress row, and the task board folds them into the program tile; Find still reaches a part, and each part keeps its full record.
 - `ask()` reuses the decision models' one-question session ([decision-questions.md](decision-questions.md)).
 - A part's result shape and branch hand-off reuse `result_schema` and `branch_from`.
 - The `program-part`, `program-bound` and `program-ended` wakes ride the durable inbox ([report sort](../docs/report-sort.md), [inbox](../docs/inbox.md)).

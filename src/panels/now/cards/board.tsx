@@ -1021,6 +1021,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
           data-board-failed={reading.reason === "Could not start" ? "" : undefined}
         >
           <span className="fm-board-tile-word-status">{reading.word}</span>
+          {task.program && ` · ${task.children.closed} of ${task.children.total} parts finished`}
           {reading.reason && ` · ${reading.reason}`}
         </span>
         {reading.since !== undefined && (

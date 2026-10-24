@@ -209,6 +209,8 @@ declare module "@infinitary/contracts" {
     key: string;
     projectId: string;
     parentId: string | null;
+    /** A script-run program; its direct children are its parts. Absent on older homes. */
+    program?: true;
     kind: "work" | "question" | "decision" | "operation";
     title: string;
     goal: string | null;

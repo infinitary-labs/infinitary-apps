@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "program-parts-folded",
+      "kind": "improvement",
+      "title": "Programs keep their parts together",
+      "body": "A program now takes one Activity line and one tile on the Tasks board, with a count of its parts and their progress. Find still reaches each part, and its full record stays available. Other tasks look the same.",
+      "area": "tasks",
+      "picture": {
+        "dark": "program-parts-folded-dark.webp",
+        "light": "program-parts-folded-light.webp",
+        "alt": "The Tasks board shows one program tile with 29 parts, beside an ordinary task and its child"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -174,9 +174,12 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
 
 /**
  * The persisted feed, oldest first: the newest feed-worthy timeline events
- * merged with the task-less activity lines, cut to `limit`. A line its
- * writer marked to show once per task (`data.feedOnce`, such as queued
- * guidance going out, INF-1137) appears only at its newest; the timeline
+ * merged with the task-less activity lines, cut to `limit`. Programs and
+ * their direct parts occupy one progress row; their full events stay on
+ * each record. The event store folds before limiting, so a program's many
+ * parts cannot crowd unrelated work out of the retained view (INF-1137).
+ * A line its writer marked to show once per task (`data.feedOnce`, such
+ * as queued guidance going out) appears only at its newest; the timeline
  * keeps every one.
  */
 export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: number): FeedLine[] {
@@ -193,6 +196,26 @@ export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: n
     if (!records.has(event.taskId)) records.set(event.taskId, tasks.get(event.taskId));
     const record = records.get(event.taskId);
     if (!record) return [];
+    const parent = record.parentId ? tasks.get(record.parentId) : undefined;
+    const program = parent?.shape?.program ? parent : record.shape?.program ? record : undefined;
+    if (program) {
+      const parts = tasks.children(program.id);
+      const done = parts.filter((part) => part.status === "done").length;
+      const dropped = parts.filter((part) => part.status === "dropped").length;
+      return [
+        {
+          taskKey: program.key,
+          at: event.at,
+          kind:
+            program.status === "dropped" || dropped > 0
+              ? ("warn" as const)
+              : program.status === "done"
+                ? ("ok" as const)
+                : ("info" as const),
+          text: `${done}/${parts.length} parts done${dropped ? ` · ${dropped} stopped` : ""} · ${program.title}`,
+        },
+      ];
+    }
     const line = taskFeedLine(record, event);
     return line ? [line] : [];
   });

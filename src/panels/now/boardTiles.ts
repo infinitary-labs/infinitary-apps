@@ -124,6 +124,9 @@ export function boardTilesOf(
   for (const lane of ["waiting", ...BOARD_COLUMNS, "dropped"] as const) lists.set(lane, []);
   for (const task of board.tasks) {
     const lane = boardLaneOf(task);
+    // INF-1137 friction 8: only programs fold their parts. Find still
+    // reaches an individual part; ordinary parent/child tasks stay as-is.
+    if (!filter.query.trim() && task.parentId && byId.get(task.parentId)?.program) continue;
     if (!lane || !matches(task, filter)) continue;
     laneOf.set(task.id, lane);
     lists.get(lane)?.push(task);

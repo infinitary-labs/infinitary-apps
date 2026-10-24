@@ -122,6 +122,16 @@ test("a program files its parts as child tasks, hands each result on, and closes
         })),
       }),
     );
+    // INF-1137 friction 8: live part updates occupy one program row,
+    // while the parts and their full timelines still exist above.
+    const feed = await page.evaluate(() => window.infinitary.feed.recent());
+    const programKey = tasks.get(programId)?.key;
+    const partKeys = new Set(parts.map((part) => part.key));
+    expect(feed.filter((line) => line.taskKey === programKey)).toHaveLength(1);
+    expect(feed.some((line) => line.taskKey && partKeys.has(line.taskKey))).toBe(false);
+    expect(feed.find((line) => line.taskKey === programKey)?.text).toContain(
+      `${parts.length}/${parts.length} parts done`,
+    );
     await waitForFirstmateIdle(page);
   } finally {
     writeFileSync(

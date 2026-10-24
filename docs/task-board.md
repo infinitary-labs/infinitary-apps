@@ -39,7 +39,7 @@ There is no setting for any of it.
 ## What it shows
 
 The board reads the same sequenced `tasks.board` the Tasks panel paints.
-Each task appears once, under its own shared group (`nowGroupOf`, `src/shared/nowPanel.ts`), named with the panel's words, in one of its lanes:
+Each ordinary task appears once, under its own shared group (`nowGroupOf`, `src/shared/nowPanel.ts`), named with the panel's words, in one of its lanes:
 
 - Waiting on you, with "Decisions, not another stage" beside its label.
 - Backlog, Queued, Working and Done · 7d; Backlog also counts crew filings the captain has not opened (`· N new`).
@@ -47,6 +47,9 @@ Each task appears once, under its own shared group (`nowGroupOf`, `src/shared/no
 
 Answered questions, decisions and operations stay off the board, as they stay off the panel.
 Unlike the panel, which keeps a working parent's live tree together in Working (its finished parts stay under Done · 7d), the board shows each task under its own state: a child nests under its parent only when both are in the same lane, and otherwise stands alone with "part of KEY" as its word.
+A program occupies one tile in its own lane, with its total parts and finished count; its direct children do not occupy separate tiles unless Find has words.
+Find reaches a part by its key or title, and each part keeps its full record.
+Ordinary parent/child tasks keep the lane and nesting rules above.
 Lanes sort by priority, then oldest first; Done and Dropped newest first.
 An empty lane says so in its place ("Nothing queued").
 

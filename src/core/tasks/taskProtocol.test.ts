@@ -1672,6 +1672,58 @@ describe("the task protocol (task-system P3)", () => {
     ]);
   });
 
+  it("folds only programs into one feed row before the recent limit (INF-1137 friction 8)", () => {
+    const { tasks, activity, tick } = setup();
+    tasks.create({ id: "ordinary", title: "Website refresh", prompt: "p", repoId: "r1" });
+    tasks.create({
+      id: "ordinary-child",
+      parentId: "ordinary",
+      title: "Review the home page",
+      prompt: "p",
+      repoId: "r1",
+    });
+    tasks.recordReport("ordinary", { text: "Layout reviewed." });
+    tick();
+    tasks.recordReport("ordinary-child", { text: "Home page reviewed." });
+    tick();
+    tasks.create({
+      id: "program",
+      title: "Research release questions",
+      prompt: "p",
+      repoId: "r1",
+      shape: { kind: "research", program: { script: "return null;", bound: 29 } },
+    });
+    for (let i = 0; i < 29; i++) {
+      const id = `part-${i}`;
+      tasks.create({
+        id,
+        parentId: "program",
+        title: `Research question ${i + 1}`,
+        prompt: "p",
+        repoId: "r1",
+      });
+      tasks.recordReport(id, { text: "Research ready." });
+      tick();
+    }
+    const program = tasks.get("program");
+    const feed = () => recentFeed(tasks, activity, 3);
+    expect(feed().map((line) => line.taskKey)).toEqual([
+      tasks.get("ordinary")?.key,
+      tasks.get("ordinary-child")?.key,
+      program?.key,
+    ]);
+    expect(feed().at(-1)?.text).toBe("0/29 parts done · Research release questions");
+    tasks.close("part-0", { status: "done", reason: "finished", actor: "host" });
+    tick();
+    tasks.close("part-1", { status: "dropped", reason: "cancelled", actor: "host" });
+    expect(feed().at(-1)).toMatchObject({
+      taskKey: program?.key,
+      kind: "warn",
+      text: "1/29 parts done · 1 stopped · Research release questions",
+    });
+    expect(tasks.get("part-0")?.status).toBe("done");
+  });
+
   it("pushes on a purge and on a discarded spawn, with nothing left to describe", async () => {
     const { tasks, protocol, events, boards, settle } = setup();
     tasks.create({ id: "a", title: "A", prompt: "p", repoId: null });

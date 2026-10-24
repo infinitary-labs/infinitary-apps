@@ -79,6 +79,15 @@ A part's report that carries the answer its program waits for sorts as row 2b, `
 A part that hands its turn to the captain or to the first mate sorts as any other report.
 A part dropped by anyone answers `null`.
 
+## Activity and the task board
+
+Activity shows a program and its direct parts as one row, keyed to the program, with the done count, total parts and stopped count when any part stopped.
+The newest feed-worthy event sets the row's time, and grouping happens before the recent-feed limit so a busy program does not push unrelated work out.
+The task board shows one program tile in the program's own lane, with the number of finished parts out of the total.
+Find still reaches individual parts by key or title, and each part keeps its full timeline.
+Ordinary parent/child tasks keep their existing feed lines and board tiles.
+These are read-only presentations: no task, event, report or relationship is removed.
+
 ## The journal and replay
 
 The task record is the journal: each part's `program_part`, each ask's answer on a note of the program's timeline (`programAsk`), and the number of each log and phase line (`programLine`).

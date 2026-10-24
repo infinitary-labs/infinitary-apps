@@ -102,6 +102,38 @@ describe("the task board's lanes", () => {
     expect(boardCountOf(tiles)).toBe(7);
   });
 
+  it("folds only program parts across lanes, while Find reaches a part (INF-1137 friction 8)", () => {
+    const program = task({
+      id: "program",
+      key: "FI3-1",
+      program: true,
+      children: { total: 3, closed: 1 },
+    });
+    const parts = [
+      task({ id: "part-1", key: "FI3-2", parentId: program.id }),
+      task({
+        id: "part-2",
+        key: "FI3-3",
+        parentId: program.id,
+        status: "active",
+        activity: "running",
+      }),
+      task({ id: "part-3", key: "FI3-4", parentId: program.id, status: "done" }),
+    ];
+    const ordinary = task({ id: "ordinary", key: "FI3-5" });
+    const child = task({ id: "child", key: "FI3-6", parentId: ordinary.id });
+    const reading = board([program, ...parts, ordinary, child]);
+    const tiles = boardTilesOf(reading, noFilter);
+    expect(keys(tiles, "backlog")).toEqual([program.key, ordinary.key, child.key]);
+    expect(keys(tiles, "working")).toEqual([]);
+    expect(keys(tiles, "landed")).toEqual([]);
+    expect(tiles.get("backlog")?.[0]?.task.children).toEqual({ total: 3, closed: 1 });
+    expect(keys(boardTilesOf(reading, { ...noFilter, query: "FI3-3" }), "working")).toEqual([
+      "FI3-3",
+    ]);
+    expect(keys(boardTilesOf(board(parts), noFilter), "working")).toEqual(["FI3-3"]);
+  });
+
   it("keeps blocked and held work in its start policy's column", () => {
     const tiles = boardTilesOf(
       board([

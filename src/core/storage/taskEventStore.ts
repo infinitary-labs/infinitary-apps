@@ -279,10 +279,31 @@ export class TaskEventStore {
     return row.n;
   }
 
-  /** The newest feed-worthy events across every task, newest first. */
+  /**
+   * The newest feed-worthy events, newest first. A program and its direct
+   * parts share their latest event before the limit; every other event
+   * stays separate. This is a read projection, never a timeline rewrite.
+   */
   listFeed(limit: number): TaskEvent[] {
     const rows = this.db
-      .prepare("SELECT * FROM task_events WHERE feed = 1 ORDER BY at DESC, id DESC LIMIT ?")
+      .prepare(`
+        WITH grouped AS (
+          SELECT e.*, CASE
+            WHEN json_type(p.shape_json, '$.program') = 'object' THEN p.id
+            WHEN json_type(t.shape_json, '$.program') = 'object' THEN t.id
+          END AS program_id
+          FROM task_events e
+          JOIN tasks t ON t.id = e.task_id
+          LEFT JOIN tasks p ON p.id = t.parent_id
+          WHERE e.feed = 1
+        ), ranked AS (
+          SELECT *, ROW_NUMBER() OVER (
+            PARTITION BY program_id, CASE WHEN program_id IS NULL THEN id ELSE 0 END
+            ORDER BY at DESC, id DESC
+          ) AS position FROM grouped
+        )
+        SELECT * FROM ranked WHERE position = 1 ORDER BY at DESC, id DESC LIMIT ?
+      `)
       .all(limit) as Row[];
     return rows.map(fromRow);
   }

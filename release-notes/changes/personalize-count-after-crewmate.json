@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "personalize-count-after-crewmate",
+      "reason": "Internal: the personalize journey counts the personal workspace's save points only after the crewmate an earlier test started there has finished, so its commit no longer lands inside the count. No product behavior changes."
+    }
+  ]
+}

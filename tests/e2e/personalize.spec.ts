@@ -146,6 +146,25 @@ test("move Activity to the right changes its rail without changing collapse or o
 });
 
 /**
+ * The personal workspace's tasks still open or underway, by key. A crewmate
+ * there builds in place, and the host commits its work when it reports,
+ * before it closes the task (`commitLiveTurn`): once none is left, every
+ * save point a crewmate makes there is already in the workspace's history.
+ */
+function buildingInWorkspace(page: Page): Promise<string[]> {
+  return page.evaluate(
+    async (name) =>
+      (await window.infinitary.tasks.board()).tasks
+        .filter(
+          (task) =>
+            task.repo?.name === name && (task.status === "open" || task.status === "active"),
+        )
+        .map((task) => task.key),
+    PERSONAL_WORKSPACE_NAME,
+  );
+}
+
+/**
  * INF-1054 (the captain's "A. One store, one way in: panel instructions are
  * ordinary directions"): a panel instruction is one standing direction
  * scoped to the personal workspace, listed with the captain's other
@@ -154,6 +173,11 @@ test("move Activity to the right changes its rail without changing collapse or o
 test("a panel instruction is a standing direction for the personal workspace", async () => {
   const { app, page, userDataDir } = launched;
   const workspace = join(userDataDir, "fleet", "personal");
+  // INF-1131: the file shares one app, and the crewmate the hide-tasks test
+  // started builds its panel in this workspace and commits when it reports.
+  // The count starts once no crewmate there is still at work, so it measures
+  // only what the direction did. Run alone, nothing is at work.
+  await expect.poll(() => buildingInWorkspace(page), { timeout: 30_000 }).toEqual([]);
   const before = savePointCount(workspace);
   await say(page, PERSONALIZE_INSTRUCTION_PROMPT_MARKER);
   await expect(

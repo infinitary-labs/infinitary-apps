@@ -79,7 +79,7 @@ The search answers at most 50; an answer that long may have been cut before the 
 With no answer in five seconds the list says earlier results are unavailable, never that nothing matches.
 Blank Find asks for nothing earlier, and Earlier matches goes away.
 
-A tile is the shared status mark and the task key, one dim word (blocked, held, urgent at the top priority, found on KEY, part of KEY), the project's name while All projects shows and the tile is at least 200 px wide, the title on two lines at most, and the shared status word with its reason, whole on hover or focus.
+A tile is the shared status mark and the task key, one dim word (blocked, held, urgent at the top priority, found on KEY, part of KEY), the project's name while All projects shows and the tile is at least 200 px wide, the title on two lines at most, and the shared status word with its reason, whole on hover or focus, then `Wait recorded 9:14 AM` under it when a started task waits on one task whose wait has a known time (the design skill's NowPanel, "Naming a wait").
 Pressing Start, or dragging a tile to Working, shows it in Queued at once, labeled Starting, and moves it to Working when its crewmate begins.
 A Starting tile in Queued refuses Back to backlog and Start now with "It is starting.".
 Dragging a tile to Queued that nothing holds is a Start.

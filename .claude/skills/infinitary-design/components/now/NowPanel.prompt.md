@@ -79,6 +79,17 @@ A blocker, a hold or a parent's parts is the reason beside the word, never anoth
 Open, working or idle work whose computer is out of reach keeps its mark's shape in `--warn` and reads `Idle · Mac mini is out of reach`; while its connection is being made it keeps its mark as it was and reads `Idle · Mac mini is connecting`, with no warn mark; either way, unless a blocker, a hold or its parts give the reason (`../devices/RunsOn.prompt.md`); Interrupted, Starting and Waiting on you keep their own.
 Keep rows otherwise minimal.
 
+### Naming a wait (INF-38)
+
+A started crewmate idle on other work names it as its reason: `Idle · Waiting on INF-12`, or `Idle · Waiting on 2 tasks` for several, so no one key stands for the others.
+The Tasks row, which shows no reason, adds the dim word `waiting`; its margin arrow points at what it waits on, and its summary names each one.
+A board tile adds a line under its status, `Wait recorded 9:14 AM`, when it waits on one task and the time that wait was recorded is known; an earlier day puts the date in front.
+The summary's Blocked by row lists every blocker, each with `recorded 9:14 AM` where that time is known.
+The time is when the wait was recorded - the edge's own time or a dated declaration, the earliest when several name one task - never when work stopped; an unknown time is left out, never guessed.
+A ready decision that settles with a merge reads `Waiting on you · Waiting for your merge`, from the typed merge fact alone; other ready decisions keep `A decision card is ready`.
+Paused for access, Background work is unknown and No continuing work keep their own reasons.
+The stage beneath a crewmate shows none of these words.
+
 Marks occupy a fixed 12px square, using a 16-unit viewBox: Backlog is a hollow circle, Queued adds a central dot, Working/Idle/Interrupted are filled circles in ember/cyan/lava, Waiting on you is an accent dot inside an accent ring, Done is a neutral check, Dropped is a tertiary cross.
 Working while waiting on its checks (`Working · Waiting for checks`) is an ember dot inside an accent ring, the fact strip's running-checks ring around the working ember (captain's INF-676 direction A); it stays Working in the Working group, and the Tasks row, which shows no reason, adds the dim word `checks`.
 Starting is a still open ring, cyan on the arc and neutral on the rest, with no spin.

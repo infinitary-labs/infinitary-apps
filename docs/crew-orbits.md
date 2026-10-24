@@ -219,6 +219,7 @@ The circle is 64 scene pixels from the blocker, before the stage's existing fit,
 It is spanned by the blocker's radial spoke and the main plane's normal, so the planes stay at 90 degrees and the spoke turns with the blocker.
 At most three companions share that circle.
 A chain, more than one blocker, a larger group, or a companion that would leave the scene keeps its slot instead.
+A chain is a crewmate waiting on the waiter: queued work that waits on it has no crewmate, so it makes no chain and the waiter still circles (INF-38).
 Circling or on its slot, a waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker (captain, INF-304: the arrows "should be present at all times to make it more clear there's a relationship").
 The arrow keeps clear of both glyphs; as the two close in on screen, such as when the circle passes in front of the blocker, that clearance gives way so a short arrow still shows (`drawDependencyLink`).
 Crew pass close to one another and cross freely: nothing moves a circling crewmate back to its slot because another crewmate comes near (captain, INF-304: "we should just not care about collision").
@@ -228,6 +229,7 @@ A builder's merge hold on its own reviewer on another computer draws no arrow ba
 A missing blocker, or one with no crewmate yet (a queued task), is named in the summary and draws no arrow.
 No crewmate is invented, and no one is moved onto another computer.
 Continuing, paused and unknown work keep their slots.
+The stage draws no words for a wait beneath a crewmate (captain, INF-38: "the center animation should be kept as clean as possible"): its task tile and its summary name the wait, and its Tasks row says `waiting` (the design skill's NowPanel, "Naming a wait").
 The original slot, solid, label and computer stay reserved.
 Clearing the wait removes the cue, and the offset returns on the existing springs.
 Reduced motion paints one settled frame.

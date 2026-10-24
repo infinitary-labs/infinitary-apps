@@ -18,6 +18,7 @@ import {
   TaskStatusMark,
   taskStatusLabel,
   taskStatusOf,
+  waitRecordedTime,
 } from "@infinitary/ui";
 import {
   type CSSProperties,
@@ -1022,6 +1023,12 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
           <span className="fm-board-tile-word-status">{reading.word}</span>
           {reading.reason && ` · ${reading.reason}`}
         </span>
+        {reading.since !== undefined && (
+          // When the one wait was recorded, never when work stopped (INF-38).
+          <span className="fm-board-tile-since" data-board-wait-since="">
+            {`Wait recorded ${waitRecordedTime(reading.since, Date.now())}`}
+          </span>
+        )}
       </>
     );
   };

@@ -99,6 +99,8 @@ The circle is 64 scene pixels out, before the stage's existing fit, and travels 
 Its plane is spanned by the blocker's radial spoke and the main plane's normal, so the two planes stay at 90 degrees and the spoke turns with the blocker.
 At most three companions take that circle.
 A chain, a second blocker, a larger group, or a companion that would leave the scene stays on its own slot instead.
+Only another crewmate waiting on the waiter makes a chain; queued work waiting on it has no crewmate and never keeps it on its slot (INF-38).
+No caption for a wait is drawn beneath the crewmate (captain, INF-38: "the center animation should be kept as clean as possible"); the tile and the summary name it, and the Tasks row says `waiting` (`../now/NowPanel.prompt.md`, "Naming a wait").
 Circling or on its slot, the waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker, and a reviewer draws one to the builder it reviews (captain, INF-304).
 Each kind keeps its own color (captain, INF-556): a wait is the quiet gray (`--fg-3` at 0.28, 1 px) and lights in the accent; a review is the working ember (`--wire-hot`) at the same strength, at rest and lit.
 A wait or a review between crewmates on different computers is a solid arrow across the stage in its kind's color; nobody moves for it.

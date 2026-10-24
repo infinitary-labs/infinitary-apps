@@ -226,6 +226,16 @@ describe("the Tasks panel's rows", () => {
         } as Partial<PanelTaskRow>),
       ),
     ).toBe("");
+    // INF-38: a started crewmate idle on the tasks it waits on says so.
+    expect(
+      wordOf(
+        task({
+          ...active,
+          blockedBy: ["FI3-12"],
+          workPosture: { state: "idle", reason: "dependency" },
+        } as Partial<PanelTaskRow>),
+      ),
+    ).toBe("waiting");
     const filed = task({
       ...open,
       foundOn: "FI3-12",

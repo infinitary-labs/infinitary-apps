@@ -85,6 +85,7 @@ export const HELPER_EXPORTS: readonly string[] = [
   "nowGroupsOf",
   "taskStatusLabel",
   "taskStatusOf",
+  "waitRecordedTime",
   "useInPlaceReveal",
   "textIsHidden",
   "useOverflowTitle",

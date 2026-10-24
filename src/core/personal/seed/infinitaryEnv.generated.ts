@@ -228,6 +228,11 @@ declare module "@infinitary/contracts" {
     startPolicy: "when-ready" | "on-request";
     /** Keys of the open tasks it waits on. */
     blockedBy: string[];
+    /**
+     * When each of those waits was recorded, by key; a key with no known time
+     * is absent, and so is the whole field on an older home.
+     */
+    blockedSince?: Record<string, number>;
     /** Its parts: how many, and how many are closed. */
     children: { total: number; closed: number };
     /** Reachable shown ready decision, null on hidden/working/closed tasks. */

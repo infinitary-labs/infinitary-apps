@@ -410,6 +410,12 @@
   -webkit-line-clamp: unset;
 }
 
+.fm-board-tile-since {
+  font-size: var(--text-xs);
+  line-height: var(--leading-body);
+  color: var(--fg-3);
+}
+
 .fm-board-tile-status[data-board-failed] {
   color: var(--warn);
 }

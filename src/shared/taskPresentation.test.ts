@@ -91,6 +91,29 @@ describe("one task status", () => {
       read({ status: "active", workPosture: { state: "idle", reason: "checks" } }),
     ).not.toHaveProperty("wait");
   });
+  // INF-38 (INF-1137 friction 5, "should they resume?"): a started crewmate
+  // idle on other work names that work and, when known, when the wait was
+  // recorded; a merge card says it waits for the captain's merge.
+  it("names what a started crewmate waits on, and when that wait was recorded", () => {
+    const idle = {
+      status: "active",
+      activity: "idle",
+      workPosture: { state: "idle", reason: "dependency" },
+    } as const;
+    const one = read({ ...idle, blockedBy: ["INF-12"], blockedSince: { "INF-12": 1_000 } });
+    expect(one).toMatchObject({ mark: "idle", reason: "Waiting on INF-12", since: 1_000 });
+    expect(one.waitsOn).toEqual(["INF-12"]);
+    expect(read({ ...idle, blockedBy: ["INF-12"] }).since).toBeUndefined();
+    const two = read({ ...idle, blockedBy: ["INF-12", "INF-13"], blockedSince: { "INF-12": 1 } });
+    expect(taskStatusLabel(two)).toBe("Idle · Waiting on 2 tasks");
+    expect(two.since).toBeUndefined();
+    // A wait whose blocker the view cannot name keeps the posture's own words.
+    expect(read({ ...idle, blockedBy: [] })).toMatchObject({ reason: "Blocked by another task" });
+    expect(read({ ...idle, blockedBy: [] }).waitsOn).toBeUndefined();
+    expect(
+      read({ status: "active", activity: "idle", waitingCardId: "c", waitingCardMerges: true }),
+    ).toMatchObject({ mark: "waiting", word: "Waiting on you", reason: "Waiting for your merge" });
+  });
   it("reads open work by its start policy, with a blocker or hold as the reason", () => {
     expect(
       read({ startPolicy: "when-ready", flags: { ...base.flags, blocked: true } }),

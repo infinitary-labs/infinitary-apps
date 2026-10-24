@@ -1174,6 +1174,53 @@ describe("the task protocol (task-system P3)", () => {
     expect(view()?.blockedBy).toEqual([]);
   });
 
+  // INF-38 (INF-1137 friction 5): the captain could not tell how long a
+  // crewmate had waited. Each wait says when it was recorded, only from the
+  // edge's own time or a dated declaration, and no time when one source has none.
+  it("says when each wait that holds a started task was recorded, and never guesses one", () => {
+    const { tasks, protocol, tick, clock } = setup({
+      workPosture: () => ({ state: "idle", reason: "dependency" }),
+    });
+    seedTask(tasks, { id: "owner", title: "Fix main", status: "running", worktreeDir: "/wt/o" });
+    seedTask(tasks, { id: "other", title: "Fix docs", status: "running", worktreeDir: "/wt/d" });
+    seedTask(tasks, { id: "waiting", title: "Ship", status: "idle", worktreeDir: "/wt/w" });
+    tick(60_000);
+    const linkedAt = clock();
+    tasks.link("owner", "waiting", "blocks", "crewmate");
+    tick(60_000);
+    tasks.link("other", "waiting", "blocks", "crewmate");
+    const view = () => protocol.board().tasks.find((task) => task.id === "waiting");
+    const key = (id: string) => tasks.get(id)?.key ?? "";
+    expect(view()?.blockedSince).toEqual({ [key("owner")]: linkedAt, [key("other")]: clock() });
+    expect(protocol.detail("waiting").blockedSince).toEqual(view()?.blockedSince);
+    // The same task named by an undated baseline wait loses its time; the
+    // edge alone would have said one, so the earliest is not known.
+    const baseline = (at?: number) =>
+      tasks.recordDelivery("waiting", {
+        headSha: "head-1",
+        ci: "red",
+        ciRepair: {
+          failures: [{ headSha: "head-1", checks: ["linux-checks"] }],
+          diagnoses: [
+            {
+              headSha: "head-1",
+              check: "linux-checks",
+              classification: "baseline-blocked",
+              evidence: "fails on untouched main",
+              dependencyTask: "owner",
+              ...(at === undefined ? {} : { at }),
+            },
+          ],
+          repairs: [],
+        },
+      });
+    baseline();
+    expect(view()?.blockedSince).toEqual({ [key("other")]: clock() });
+    // A dated declaration earlier than the edge is when that wait was recorded.
+    baseline(linkedAt - 5_000);
+    expect(view()?.blockedSince?.[key("owner")]).toBe(linkedAt - 5_000);
+  });
+
   it("derives flags, blockers, children, the waiting card and repo facts on read", () => {
     const { tasks, protocol, cards } = setup();
     tasks.create({ id: "a", title: "A", prompt: "p", repoId: "r1" });

@@ -68,8 +68,12 @@ export function wordOf(task: PanelTaskRow): string {
     return "starting";
   }
   if (marks.startNotice) return "could not start";
-  // The row shows no reason, so the checks watch says itself (INF-676).
-  if (task.status === "active" && taskStatusOf(task).wait === "checks") return "checks";
+  // The row shows no reason, so the checks watch says itself (INF-676), and
+  // so does a started crewmate idle on the tasks it waits on (INF-38): the
+  // row's margin arrow points at them and its summary names each one.
+  const reading = task.status === "active" ? taskStatusOf(task) : null;
+  if (reading?.wait === "checks") return "checks";
+  if (reading?.waitsOn) return "waiting";
   if (task.status !== "open") return "";
   if (task.flags.blocked) return "blocked";
   if (task.flags.held) return "held";

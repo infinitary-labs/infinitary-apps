@@ -24635,6 +24635,15 @@
                     "type": "string"
                   }
                 },
+                "blockedSince": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                },
                 "blocks": {
                   "type": "array",
                   "items": {
@@ -25943,6 +25952,15 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          },
+          "blockedSince": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "number"
             }
           },
           "blocks": {
@@ -29583,6 +29601,15 @@
               "type": "array",
               "items": {
                 "type": "string"
+              }
+            },
+            "blockedSince": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "number"
               }
             },
             "blocks": {
@@ -50909,6 +50936,15 @@
                     "type": "string"
                   }
                 },
+                "blockedSince": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "number"
+                  }
+                },
                 "blocks": {
                   "type": "array",
                   "items": {
@@ -52217,6 +52253,15 @@
                   "type": "array",
                   "items": {
                     "type": "string"
+                  }
+                },
+                "blockedSince": {
+                  "type": "object",
+                  "propertyNames": {
+                    "type": "string"
+                  },
+                  "additionalProperties": {
+                    "type": "number"
                   }
                 },
                 "blocks": {

@@ -48,7 +48,10 @@ export type CenterCue = {
 /** What the stage may draw. Named and remote waits are absent, on purpose. */
 export function centerCues(nodes: readonly CenterNode[]): CenterCue[] {
   const byKey = new Map(nodes.map((node) => [node.key, node]));
-  const blocksSomeone = (key: string) => nodes.some((node) => node.blockedBy.includes(key));
+  // Only a crewed waiter makes a chain: queued work that waits on a waiter
+  // has no glyph to drag along, so it never keeps the waiter in its slot (INF-38).
+  const blocksSomeone = (key: string) =>
+    nodes.some((node) => node.crewed && node.blockedBy.includes(key));
   const sameCrew = (waiter: CenterNode, blocker: CenterNode) =>
     waiter.crewed && blocker.crewed && waiter.deviceId === blocker.deviceId;
   const groups = new Map<string, CenterNode[]>();

@@ -303,7 +303,7 @@ Dropped rows and closed question/operation rows are deliberately outside the pan
 Minimal by default: a counts line, a Search tasks button in its header (a key/title search and project chips, the document's own state, so the header is never rebuilt), rows for the two open groups, the other three collapsed to a count.
 Typed text opens every group that holds a match, so a key or title the search finds is always a row in view.
 Close search beside the field, Esc once its words are empty, and Search tasks close the search, and closing lets go of its words and project, so every task is listed again.
-A row is a status dot, the task key in dim mono at the start of the title, and the project name in dim mono (ellipsized so the title is not crushed), with at most one dim word (`blocked`, `held`); a child indents under its parent when both are in the same group.
+A row is a status dot, the task key in dim mono at the start of the title, and the project name in dim mono (ellipsized so the title is not crushed), with at most one dim word (`blocked`, `held`, `checks`, `waiting`); a child indents under its parent when both are in the same group.
 The task key also stays on hover, search, and the row locator; project chips keep the project key as the filter handle.
 
 **A row's gestures are pointing.**
@@ -589,7 +589,7 @@ In a frame the two calls are actions (`PANEL_RAIL_ACTIONS`) and `collapsed` ride
 
 ### The panel library grows (piece 6)
 
-`@infinitary/ui` exports what a panel that draws tasks draws them with: `TaskStatusMark`, the status words (`taskStatusOf`, `taskStatusLabel`), the shared grouping (`NOW_GROUPS`, `NOW_GROUP_LABELS`, `nowGroupOf`, `nowGroupsOf`), `focusWithRing` and `useInPlaceReveal` (docs/personal-panels.md, "The library is the panel library").
+`@infinitary/ui` exports what a panel that draws tasks draws them with: `TaskStatusMark`, the status words (`taskStatusOf`, `taskStatusLabel`, `waitRecordedTime`), the shared grouping (`NOW_GROUPS`, `NOW_GROUP_LABELS`, `nowGroupOf`, `nowGroupsOf`), `focusWithRing` and `useInPlaceReveal` (docs/personal-panels.md, "The library is the panel library").
 Piece 7 added the app's own words for what such a panel says: a task's search folded the app's way (`foldForSearch`), a feed line's age (`feedRelativeAge`), Drop task's question in the task record's own sentences (`DROP_TASK_LABEL`, `dropConfirmLead` and the rest of `src/shared/recordDrop.ts`), and the panel's expand chevron (`PanelExpandChevron`).
 The compiler admits a panel's own stylesheet as text: `import styles from "./board.css"` makes `board.css.mjs`, whose default export is the file's contents, which the panel puts in a `<style>` of its own; a stylesheet imported without a name, or from server code, is refused, and the lint reads it like any panel file.
 

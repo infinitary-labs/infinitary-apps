@@ -280,6 +280,12 @@ export const taskViewSchema = z.object({
   flags: taskFlagsSchema,
   /** Keys of live (open/active) blockers; closed edges remain graph history. */
   blockedBy: z.array(z.string()),
+  /**
+   * When each wait in `blockedBy` was recorded, by blocker key (INF-38): a
+   * key with no known time is absent, and so is the whole field on an older
+   * home. A recorded wait's time, never when the crewmate stopped working.
+   */
+  blockedSince: z.record(z.string(), z.number()).optional(),
   /** Keys of the tasks waiting on this one. */
   blocks: z.array(z.string()),
   children: z.object({ total: z.number(), closed: z.number() }),

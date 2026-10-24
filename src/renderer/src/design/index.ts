@@ -53,6 +53,7 @@ export {
   type TaskStatusReading,
   taskStatusLabel,
   taskStatusOf,
+  waitRecordedTime,
 } from "@shared/taskPresentation";
 export { CARD_STACK_WIDTH, CardStack, type CardStackProps } from "./cards/CardStack";
 export { ResponseCard, type ResponseCardKind, type ResponseCardProps } from "./cards/ResponseCard";

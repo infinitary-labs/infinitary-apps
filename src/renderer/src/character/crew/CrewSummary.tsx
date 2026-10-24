@@ -1,4 +1,4 @@
-import { taskStatusLabel } from "@shared/taskPresentation";
+import { taskStatusLabel, waitRecordedTime } from "@shared/taskPresentation";
 import { TaskFactRows } from "../../design/core/TaskFacts";
 import { TaskStatusMark } from "../../design/core/TaskStatusMark";
 import { TaskKey } from "../../design/panel/TaskKey";
@@ -41,7 +41,9 @@ export function CrewSummary({ taskId, facts }: { taskId: string; facts: CrewFact
       </div>
       {facts.task.reviewOf && <Reviewing builderId={facts.task.reviewOf} />}
       {facts.task.parentId && <PartOf parentId={facts.task.parentId} />}
-      {(facts.task.blockedBy?.length ?? 0) > 0 && <BlockedBy keys={facts.task.blockedBy} />}
+      {(facts.task.blockedBy?.length ?? 0) > 0 && (
+        <BlockedBy keys={facts.task.blockedBy} since={facts.task.blockedSince} />
+      )}
       {facts.task.program && <ProgramParts programId={taskId} />}
       <TaskFactRows
         facts={shown}
@@ -137,26 +139,41 @@ function ProgramParts({ programId }: { programId: string }) {
   );
 }
 
-/** Named record links for a wait an edge cannot draw, and the complete list. */
-function BlockedBy({ keys }: { keys: readonly string[] }) {
+/**
+ * Named record links for a wait an edge cannot draw, and the complete list,
+ * each with when its wait was recorded where that is known (INF-38).
+ */
+function BlockedBy({
+  keys,
+  since,
+}: {
+  keys: readonly string[];
+  since: Readonly<Record<string, number>> | undefined;
+}) {
   const tasks = useBoardTasks();
+  const now = Date.now();
   return (
     <div className="blocked" data-crew-blocked="">
       <span className="label">Blocked by</span>
       {keys.map((key) => {
         const task = tasks.find((row) => row.key === key);
-        return task ? (
-          <TaskKey
-            key={key}
-            look="quiet"
-            onRest={() => {}}
-            onOpen={() => void openTaskFromKey(task)}
-          >
-            {key}
-          </TaskKey>
-        ) : (
-          <span key={key} className="key" data-crew-blocked-key="">
-            {key}
+        const at = since?.[key];
+        return (
+          <span key={key} className="wait" data-crew-blocked-wait={key}>
+            {task ? (
+              <TaskKey look="quiet" onRest={() => {}} onOpen={() => void openTaskFromKey(task)}>
+                {key}
+              </TaskKey>
+            ) : (
+              <span className="key" data-crew-blocked-key="">
+                {key}
+              </span>
+            )}
+            {at !== undefined && (
+              <span className="since" data-crew-blocked-since="">
+                {` recorded ${waitRecordedTime(at, now)}`}
+              </span>
+            )}
           </span>
         );
       })}

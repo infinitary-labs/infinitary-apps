@@ -26,6 +26,17 @@ export type TaskStatusReading = {
    * fact strip's running checks use (INF-676, direction A).
    */
   wait?: "checks";
+  /**
+   * When the one wait it stands idle on was recorded (INF-38), when known:
+   * the tile's second line and the summary's Blocked by name it. Absent for
+   * several waits, an unknown time, and every other reading.
+   */
+  since?: number;
+  /**
+   * The tasks a started crewmate stands idle on (posture dependency), so the
+   * Tasks row names them without reading the reason's words (INF-38).
+   */
+  waitsOn?: readonly string[];
 };
 /**
  * What a task's reading needs: a board row of the app's own, or the one a
@@ -45,7 +56,10 @@ export type TaskStatusInput = Pick<
   | "startAttempt"
   | "startNotice"
   | "place"
-> & { closedReason: string | null };
+> &
+  Partial<Pick<TaskView, "blockedBy" | "blockedSince" | "waitingCardMerges">> & {
+    closedReason: string | null;
+  };
 
 const words: Record<TaskStatus, string> = {
   backlog: "Backlog",
@@ -109,7 +123,11 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
       task.requiredAction.state === "blocked" ? "Waiting for prerequisites" : "",
     );
   if (task.waitingCardId) {
-    return reading("waiting", "A decision card is ready");
+    // Only the typed fact that the card settles with a merge names the merge.
+    return reading(
+      "waiting",
+      task.waitingCardMerges ? "Waiting for your merge" : "A decision card is ready",
+    );
   }
   // Preparation is not Working and not Idle. A ready decision above still wins.
   if (
@@ -139,13 +157,17 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
       holds ?? (mark === "backlog" ? "Starts when you press Start" : "Starts by itself when ready"),
     );
   }
-  const reason = task.workPosture
-    ? workPostureLabel(task.workPosture)
-    : task.activity === "running" || task.activity === "starting"
-      ? "Working"
-      : task.activity === "interrupted"
-        ? "Work was interrupted"
-        : "No continuing work";
+  const waits = task.blockedBy ?? [];
+  const dependency = task.workPosture?.reason === "dependency" && waits.length > 0;
+  const reason = dependency
+    ? dependencyWaitWords(waits)
+    : task.workPosture
+      ? workPostureLabel(task.workPosture)
+      : task.activity === "running" || task.activity === "starting"
+        ? "Working"
+        : task.activity === "interrupted"
+          ? "Work was interrupted"
+          : "No continuing work";
   if (
     task.workPosture?.state === "active" ||
     (!task.workPosture && (task.activity === "running" || task.activity === "starting"))
@@ -156,7 +178,32 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
       : reading("working", reason);
   }
   if (task.activity === "interrupted") return reading("interrupted", reason);
-  return away ? awayReading("idle", null) : reading("idle", reason);
+  if (away) return awayReading("idle", null);
+  if (!dependency) return reading("idle", reason);
+  const since = waits.length === 1 ? task.blockedSince?.[waits[0] ?? ""] : undefined;
+  return { ...reading("idle", reason), waitsOn: waits, ...(since === undefined ? {} : { since }) };
+}
+
+/**
+ * What a started task waits on, in one place for the tile, the crew summary
+ * and the record (INF-38): the one task by its key, or how many. No one key
+ * stands for several; the summary lists each.
+ */
+export function dependencyWaitWords(blockedBy: readonly string[]): string {
+  return blockedBy.length === 1
+    ? `Waiting on ${blockedBy[0]}`
+    : `Waiting on ${blockedBy.length} tasks`;
+}
+
+/**
+ * When a wait was recorded, in the person's local time: the time of day,
+ * with the date in front when it was not today. Never when work stopped.
+ */
+export function waitRecordedTime(at: number, now: number): string {
+  const date = new Date(at);
+  const time = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (date.toDateString() === new Date(now).toDateString()) return time;
+  return `${date.toLocaleDateString([], { month: "short", day: "numeric" })}, ${time}`;
 }
 
 export function taskStatusLabel(reading: TaskStatusReading): string {

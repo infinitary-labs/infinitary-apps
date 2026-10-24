@@ -47,7 +47,7 @@ import type { TaskEvent } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { standingDependencyWaits } from "./dependencyWaits";
-import { holdingWaits } from "./holdingWaits";
+import { holdingWaits, waitsSince } from "./holdingWaits";
 import { type ConcernedEventView, condenseActivity, reportHeadline } from "./recordActivity";
 import { taskFeedLine } from "./taskFeed";
 import { type TaskChange, TaskService } from "./taskService";
@@ -779,6 +779,7 @@ export class TaskProtocol {
       tasks: graph.byId,
       idleOnWaits: posture?.state === "idle" && posture.reason === "dependency",
     });
+    const blockedSince = waitsSince({ record, holding, links: graph.links, tasks: graph.byId });
     const open = record.status === "open";
     // An active row shows the blockers that still hold its CLOSE - a
     // marked edge, what a `blocks_me` follow-up files against the task a
@@ -851,6 +852,7 @@ export class TaskProtocol {
         ready: open && record.kind === "work" && !blocked && !held,
       },
       blockedBy: holding.map((blocker) => blocker.key || blocker.id),
+      ...(Object.keys(blockedSince).length > 0 ? { blockedSince } : {}),
       blocks: (graph.blockingOf.get(record.id) ?? []).map((blocked) => blocked.key || blocked.id),
       children: graph.children.get(record.id) ?? { total: 0, closed: 0 },
       assignee: record.assignee,

@@ -30,7 +30,7 @@ import {
   laneKeys,
   pressInBoard,
 } from "./taskBoard";
-import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
+import { pressKey, pressWindowKey, runFromSearch, windowComesForward } from "./windowKeys";
 
 /**
  * The task board's moves (docs/task-board.md, "Moves"; FI3-979 piece 3,
@@ -188,6 +188,17 @@ test("the task board moves tasks by drag and by menu, asking on the tile and wri
     await pressWindowKey(app, "b", ["meta"]);
     await expect(boardEntry(page)).toBeVisible();
     await expect.poll(() => laneKeys(page, "waiting")).toEqual(["FM3K-1"]);
+    await test.step("the prepared card hands focus back before the board's first key", async () => {
+      // INF-1125: the waiting card is prepared in a new process behind the
+      // focused board. The next injected key focuses the window, and that
+      // page hands focus to the shell: Space can reach the board's BODY
+      // before the shell restores its tile. Complete that focus handoff
+      // without a key first, as task-board.spec does; never retry the press.
+      await expect.poll(() => focusedTileKey(page)).toBe("FM3K-1");
+      await stagePrepared(page);
+      await windowComesForward(app, page);
+      await expect.poll(() => focusedTileKey(page)).toBe("FM3K-1");
+    });
 
     /** Opens a Backlog row's ⋯ menu by keys and picks an entry, as a person does. */
     const backlogMenu = async (key: string, entry: string) => {

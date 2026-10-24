@@ -38,6 +38,9 @@ concurrency:
 # jobs unconditionally: every Linux gate must run. A job skipped by its own
 # condition would satisfy both GitHub and the app's green rule, so the probe
 # job picks its probes inside its one test step and passes with none.
+# Each test step ends at 30 minutes (INF-1083, the captain's choice for unit
+# tests): a stuck test or wait ends sooner, by its own cap of at most 10
+# minutes (docs/test-cohorts.md, "Budgets"), and these steps take about two.
 jobs:
   typecheck-lint-build:
     runs-on: ${{ vars.LINUX_RUNNER || 'ubuntu-latest' }}
@@ -66,6 +69,7 @@ jobs:
           cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm test --project pure --project unit --project unit-isolated
+        timeout-minutes: 30
 
   # The integration cohort, split by vitest's own --shard (a hash of each
   # file's path), on machines of their own so nothing else loads the host
@@ -86,6 +90,7 @@ jobs:
           cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm test --project integration --shard=${{ matrix.shard }}/${{ strategy.job-total }}
+        timeout-minutes: 30
 
   # The probes (docs/test-cohorts.md, "Probes"): integration files that can
   # fail with no code change - SSH and Remote Login stand-ins, dns-sd, release
@@ -106,5 +111,6 @@ jobs:
           cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
       - run: pnpm install --frozen-lockfile
       - run: pnpm test:probes --base "$BASE"
+        timeout-minutes: 30
         env:
           BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}

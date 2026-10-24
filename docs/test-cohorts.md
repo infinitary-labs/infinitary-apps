@@ -81,11 +81,13 @@ A file whose cases chain the product's git and are not about that clamp runs the
 
 A budget lives in the file, as `vi.setConfig({ testTimeout })` for the whole file, or on the describe or test that carries the work when only part of the file spawns.
 A budget holds only on a run that grades budgets, `INFINITARY_PERF_BUDGETS=1` on a quiet host (`verify.yml` with `perf`), as journeys' durations do (captain's B1, and his INF-857 choice to grade durations only on a quiet run).
-On every other run a busy Mac can freeze a test's processes for seconds at a time, so a test, a hook and an `expect.poll` or `vi.waitFor` wait for their work with no clock: our patch to `@vitest/runner` drops the limit there, and `tests/helpers/waitWindow.ts` drops the wait's window.
-A stuck test then holds its run until the job's own time limit stops it, and the graded run names it.
-On a graded run a wait keeps a `timeout` it names, and one that names none waits for the rest of its test's budget, not vitest's one second, ending just before it so a stuck wait reports its own mismatch.
+On every other run a busy Mac can freeze a test's processes for seconds at a time, so a test's and a hook's limit and an `expect.poll` or `vi.waitFor` window run on the load clock, as a journey's waits do (INF-1083, the captain's choice for unit tests: "Yes, as a third piece after these two: today a stuck unit test waits with no clock until GitHub's six-hour limit").
+`tests/helpers/waitWindow.ts`, a setup file of every project, starts the clock in each worker with `startUnitLoadClock` (`tests/helpers/budgets.ts`), before any test can fake the timers, and our patches to `@vitest/runner` and `vitest` read it at each limit and window.
+A frozen worker's limits stop with it, and each ends by its wall cap, 20 times its budget and at most 10 minutes, so a stuck test fails by its own message; each test step in `ci.yml` ends at 30 minutes, and each `pnpm test` step in `verify.yml` at 60.
+The unit clock is not `budgetTimer`'s: a helper's failure timer that a unit test drives with fake timers stays on the time it fakes.
+A wait keeps a `timeout` it names, and one that names none waits for its test's budget, not vitest's one second, ending just before it so a stuck wait reports its own mismatch; a graded run gives it what is left of the budget on the wall clock.
 A file sets no default window for its polls.
-`tests/wait-window.test.ts` holds both runs against a child the test freezes.
+`tests/wait-window.test.ts` runs vitest over `tests/fixtures/frozen-work` and freezes its whole process group: a writer frozen 7 s past its 5 s budget still passes, a missing file fails at its window on a quiet run and by the cap under a frozen run, and a graded run fails the frozen writer.
 A journey's waits read the same variable but are never without a clock: they run on the load clock, capped at 20 times their budget (`docs/e2e-contracts.md`, "Waits run on the load clock").
 The native phone launcher explicitly starts that same Node load clock for its failure timers, and native observations mirror it in `PhoneWaits.swift` (`docs/ios.md`).
 A budget an author already set above the rule stays as it was, and a test whose time is a fixed product timeout rather than load-scaled work (hostEnv's hanging-shell test waits out a 3 s timeout) keeps the budget sized to that timeout.
@@ -116,7 +118,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/account-eval.test.ts` | twenty independently owned one-case production sessions (all ten cases on each backend), two 503/no-retry proofs, one ten-case Pi run proving every case opens with its sheet allowance, one Pi case refused on a scripted local endpoint, one Claude case cut mid-answer on one, the complete ten-case no-call sheet, plus the Claude crewmate's client read from the real process table and a mock Claude run stopped when that client ends; local mock provider and boxed Claude client | 30 s kept per case |
 | `tests/eval-auth-turn-taking.test.ts` | two processes on a scratch auth file and local fake OAuth server, for two provider ids | 5 s default |
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
-| `tests/wait-window.test.ts` | node children frozen with SIGSTOP and let go, against the waits of `tests/helpers/waitWindow.ts` | 10 s |
+| `tests/wait-window.test.ts` | node children frozen with SIGSTOP and let go, against the waits of `tests/helpers/waitWindow.ts`; four nested vitest runs of a fixture config, each process group frozen, the longest waiting out its 30 s cap | 10 s; 90 s on the nested runs |
 | `tests/control-connection.test.ts` | real loopback POSTs across a frozen disposable control server, plus finite idle expiry | 20 s |
 | `tests/load-clock.test.ts` | four real Playwright runs of a fixture config, each process group frozen with SIGSTOP and let go, the longest waiting out its 20 s cap | 60 s |
 | `tests/starve-check.test.ts` | the load controller over real detached process trees, children stopped at birth, a parent waiting in vfork on its stopped child, another user's descendant, cancellation and its experiment limit | 25 s |

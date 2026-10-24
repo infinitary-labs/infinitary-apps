@@ -76,6 +76,7 @@ A full run never stops at its first failure: it reports every failure, later tes
 ## Journey waits and check limits
 
 A journey's waits run on the load clock and end by their wall cap, 20 times their budget and at most 10 minutes; a graded run keeps the wall clock (`docs/e2e-contracts.md`, "Waits run on the load clock").
+A unit test's limits and waits run on the same clock and cap, and each `ci.yml` test step ends at 30 minutes (`docs/test-cohorts.md`, "Budgets").
 Above every wait sit the whole check's limits (INF-1083, the captain's check limits).
 A pull request's journeys and journeys on request end their run at 75 minutes (Playwright's `globalTimeout`, which `playwright.config.ts` reads from the workflow's `INFINITARY_E2E_RUN_MINUTES`) and their command at 90 (the step's `timeout-minutes`), on the Mac mini and on the hosted Linux overflow alike.
 The full Mac suite in `verify.yml` ends its run at 150 minutes and its command at 180.

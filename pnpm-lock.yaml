@@ -5,10 +5,11 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
-  '@vitest/runner@4.1.10': b84182a90f02c8c0b0cbf008497b77d4b8d5f065a61607507d2d6d7e2512b6b0
+  '@vitest/runner@4.1.10': 4e7c29cacee26875b44f6172d7899e6f82eae7071352c9719f7d38878f18318b
   electron-vite@5.0.0: 60e136d369686e9fbedf28afd014aeee35f6fbf0f78f7d0c277bfb63d93ecb7c
   playwright-core@1.62.1: 2252106b9b117dc5e5a0d17434aa02ed27eb357655144aede37ddac09e1e19cc
   playwright@1.62.1: 2ccfcabfa7659e1f5f8f976083faf235473116c15cf5115242e685f887e1c296
+  vitest@4.1.10: 10aee613d76e8c8df991e37365c931885a7825f9222f050f2595478f183679d0
 
 importers:
 
@@ -152,7 +153,7 @@ importers:
         version: 7.3.6(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0)
       vitest:
         specifier: 4.1.10
-        version: 4.1.10(@types/node@24.13.3)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
+        version: 4.1.10(patch_hash=10aee613d76e8c8df991e37365c931885a7825f9222f050f2595478f183679d0)(@types/node@24.13.3)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
 
 packages:
 
@@ -5494,7 +5495,7 @@ snapshots:
     dependencies:
       tinyrainbow: 3.1.1
 
-  '@vitest/runner@4.1.10(patch_hash=b84182a90f02c8c0b0cbf008497b77d4b8d5f065a61607507d2d6d7e2512b6b0)':
+  '@vitest/runner@4.1.10(patch_hash=4e7c29cacee26875b44f6172d7899e6f82eae7071352c9719f7d38878f18318b)':
     dependencies:
       '@vitest/utils': 4.1.10
       pathe: 2.0.3
@@ -8171,12 +8172,12 @@ snapshots:
       jiti: 2.7.0
       yaml: 2.9.0
 
-  vitest@4.1.10(@types/node@24.13.3)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0)):
+  vitest@4.1.10(patch_hash=10aee613d76e8c8df991e37365c931885a7825f9222f050f2595478f183679d0)(@types/node@24.13.3)(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0)):
     dependencies:
       '@vitest/expect': 4.1.10
       '@vitest/mocker': 4.1.10(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(yaml@2.9.0))
       '@vitest/pretty-format': 4.1.10
-      '@vitest/runner': 4.1.10(patch_hash=b84182a90f02c8c0b0cbf008497b77d4b8d5f065a61607507d2d6d7e2512b6b0)
+      '@vitest/runner': 4.1.10(patch_hash=4e7c29cacee26875b44f6172d7899e6f82eae7071352c9719f7d38878f18318b)
       '@vitest/snapshot': 4.1.10
       '@vitest/spy': 4.1.10
       '@vitest/utils': 4.1.10

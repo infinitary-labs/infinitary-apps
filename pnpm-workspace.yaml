@@ -35,15 +35,16 @@ allowBuilds:
   # dugite's own pinned manifest instead (docs/forge.md "The app's own git").
   dugite: false
 minimumReleaseAge: 0
-# The @vitest/runner and playwright patches, and the load-clock hunks of the
-# playwright-core one, are ours and stay across upgrades; re-make them on an
-# upgrade. The other patches carry one fix their package's next release
+# The @vitest/runner, vitest and playwright patches, and the load-clock hunks
+# of the playwright-core one, are ours and stay across upgrades; re-make them
+# on an upgrade. The other patches carry one fix their package's next release
 # already has; drop it when the package is upgraded to that release.
-# - @vitest/runner: ours, kept across upgrades. A test's or hook's time limit
-#   holds only on a run that grades budgets (INFINITARY_PERF_BUDGETS=1, on a
-#   quiet host); elsewhere a test waits for its work with no clock and the
-#   job's own time limit stops a stuck one (captain, INF-857;
-#   docs/test-cohorts.md, "Budgets"). Re-make it on an upgrade.
+# - @vitest/runner and vitest: ours, kept across upgrades. On an ordinary run a
+#   test's or hook's limit, and an expect.poll or vi.waitFor window, read the
+#   load clock tests/helpers/budgets.ts starts in each worker and end by their
+#   wall cap; a graded run (INFINITARY_PERF_BUDGETS=1, on a quiet host) keeps
+#   the wall clock (INF-1083; docs/test-cohorts.md, "Budgets"). Re-make them
+#   on an upgrade.
 # - electron-vite: its CommonJS shim goes after a main chunk's last real
 #   import, found by parsing the chunk, never inside a string or comment that
 #   reads like an import (electron-vite 6.0.0-beta.4, docs/architecture.md
@@ -61,3 +62,4 @@ patchedDependencies:
   electron-vite@5.0.0: patches/electron-vite@5.0.0.patch
   playwright-core@1.62.1: patches/playwright-core@1.62.1.patch
   playwright@1.62.1: patches/playwright@1.62.1.patch
+  vitest@4.1.10: patches/vitest@4.1.10.patch

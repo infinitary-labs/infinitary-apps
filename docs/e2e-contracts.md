@@ -186,6 +186,7 @@ A graded run (`INFINITARY_PERF_BUDGETS=1`) starts no clock, and every wait keeps
 Test durations, traces and reports keep the wall clock either way.
 `tests/load-clock.test.ts` runs the real runner over a fixture and freezes its whole process group: a writer frozen 7 s past its 5 s budget still passes, a missing file fails at its budget on a quiet run and by the cap under a frozen runner, and a graded run fails the frozen writer at its budget.
 
+Unit tests run their limits and waits on the same clock and cap, through a clock of their own in each vitest worker (`docs/test-cohorts.md`, "Budgets").
 The native phone gate mirrors the clock and cap in `InfinitaryUITests/PhoneWaits.swift`, and explicitly starts the Node clock for its own failure timers (`docs/ios.md`, "Disposable verification").
 Native predicate reads happen directly, so a short polling interval cannot time out before evaluating the predicate.
 

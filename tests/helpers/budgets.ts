@@ -9,11 +9,10 @@ import { availableParallelism, loadavg } from "node:os";
  * A duration measured on a host running other work grades the load, not the
  * code, so only a run on a quiet host with INFINITARY_PERF_BUDGETS=1 holds a
  * test to its budget: `verify.yml`'s on-demand `perf` input. On every other
- * run a journey's waits run on the load clock below, and a unit test waits
- * for its work with no clock, the job's own time limit stopping a stuck one.
- * The e2e budgets read this through `tests/e2e/perf.ts`; vitest's test and
- * hook limits read the same variable in the one-line patch of
- * `@vitest/runner` (`patches/`), and its waits through `waitWindow.ts`.
+ * run a journey's and a unit test's waits run on the load clock below. The
+ * e2e budgets read this through `tests/e2e/perf.ts`; vitest's test and hook
+ * limits and its waits read the clock `startUnitLoadClock` starts, through
+ * the patches of `@vitest/runner` and `vitest` (`patches/`).
  */
 export const GRADES_BUDGETS = process.env.INFINITARY_PERF_BUDGETS === "1";
 
@@ -53,10 +52,12 @@ export type LoadClock = {
 const TICK_MS = 25;
 
 export function startLoadClock(
-  wall: () => number = () => performance.now(),
+  wall: () => number = performance.now.bind(performance),
   load: () => number = () => loadavg()[0] ?? 0,
   processors = availableParallelism(),
 ): LoadClock & { tick(): void; stop(): void } {
+  // The timers as they stand at the start, so a unit test that fakes them later keeps its limits on real time.
+  const { setInterval, setTimeout, clearInterval, clearTimeout } = globalThis;
   let counted = 0;
   let last = wall();
   let share = 1;
@@ -105,6 +106,21 @@ const scope = globalThis as { [CLOCK]?: LoadClock };
 /** The native phone launcher opts its Node failure timers into the same clock as journeys. */
 export function startPhoneLoadClock(): void {
   if (!GRADES_BUDGETS) scope[CLOCK] ??= startLoadClock();
+}
+
+const UNIT_CLOCK = Symbol.for("infinitary.unitLoadClock");
+
+/**
+ * A vitest worker's clock, which the patched `@vitest/runner` and `vitest`
+ * read for every test and hook limit and every `expect.poll` and `vi.waitFor`
+ * window on an ordinary run. `waitWindow.ts`, a setup file of every project,
+ * starts it before any test can fake the timers. It is a clock of its own,
+ * not `budgetTimer`'s: a unit test that drives a helper's failure timer with
+ * fake timers keeps that timer on the time it fakes.
+ */
+export function startUnitLoadClock(): void {
+  const unitScope = globalThis as { [UNIT_CLOCK]?: LoadClock };
+  if (!GRADES_BUDGETS) unitScope[UNIT_CLOCK] ??= startLoadClock();
 }
 
 /** Only the disposable home's control server, never the app's transport.

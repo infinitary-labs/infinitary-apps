@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "unit-waits-load-clock",
+      "reason": "Internal test infrastructure: unit test limits and waits run on the bounded load clock, and each CI test step has a time limit. No shipped app behavior changes."
+    }
+  ]
+}

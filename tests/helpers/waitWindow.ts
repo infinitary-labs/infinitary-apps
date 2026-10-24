@@ -1,22 +1,27 @@
 import { expect, TestRunner, vi } from "vitest";
-import { GRADES_BUDGETS } from "./budgets";
+import { GRADES_BUDGETS, startUnitLoadClock } from "./budgets";
 
 /**
- * A wait for a state ends when the state arrives, never on a clock of its own
- * (captain, INF-857: "we should fix the tests instead and make them robust
- * even during heavy load"; his choice: "Grade durations only on a quiet run,
- * as journeys already do. Elsewhere a test waits for its event with no
- * clock, and the job's own time limit stops a stuck one").
+ * A wait for a state ends when the state arrives, or when its window runs out
+ * on the clock its run keeps (captain, INF-857: "we should fix the tests
+ * instead and make them robust even during heavy load"; INF-1083, the
+ * captain's choice for unit tests: "Yes, as a third piece after these two:
+ * today a stuck unit test waits with no clock until GitHub's six-hour limit").
  *
- * `expect.poll` and `vi.waitFor` give up after their window, vitest's one
- * second unless they name one: on a Mac that freezes a test's processes for
- * seconds at a time, the state arrives a moment later and the test fails
- * with the work done. So on an ordinary run every wait lasts until its state
- * arrives. On a run that grades budgets (`budgets.ts`), a wait keeps a window
- * it names, and one that names none lasts the rest of its test's budget,
- * ending a little before it so a stuck wait reports its own last mismatch
- * rather than a bare timeout.
+ * On an ordinary run the window counts load time: this setup file starts the
+ * worker's load clock (`budgets.ts`), and the patched `vitest` reads it for
+ * `expect.poll` and `vi.waitFor`, as the patched `@vitest/runner` does for
+ * test and hook limits. A frozen worker's windows stop with it, and each ends
+ * by its wall cap, 20 times its window and at most 10 minutes.
+ *
+ * Either way a wait keeps a window it names, and one that names none lasts
+ * its test's budget rather than vitest's one second, ending a little before
+ * it so a stuck wait reports its own last mismatch rather than a bare
+ * timeout. A graded run counts what is left of the budget on the wall clock;
+ * an ordinary run gives the whole budget, since the test's own limit, on the
+ * same load clock, still ends the test.
  */
+startUnitLoadClock();
 
 /** Time kept back at the end of the test's budget for the wait to report its mismatch. */
 const REPORTING_MS = 500;
@@ -24,26 +29,23 @@ const REPORTING_MS = 500;
 /** vitest's own window for a wait with no `timeout`. */
 const VITEST_WINDOW_MS = 1_000;
 
-/** The longest delay a Node timer takes: a longer one, Infinity included, fires at once. */
-const NO_WINDOW_MS = 2 ** 31 - 1;
-
 /** What the running test is: its budget and when it started, when there is one. */
 export type RunningTest = { timeout?: number; startedAt?: number } | undefined;
 
 /**
- * The window a wait gets: none on an ordinary run; on a graded run the one it
- * names, else the rest of its test's budget less the time to report, and
- * vitest's own outside a test.
+ * The window a wait gets: the one it names, else its test's budget less the
+ * time to report - on a graded run what is left of it - and vitest's own
+ * outside a test.
  */
 export function waitWindow(
   named: number | undefined,
   run: { grades: boolean; test: RunningTest; now: number },
 ): number {
-  if (!run.grades) return NO_WINDOW_MS;
   if (named !== undefined) return named;
   const { timeout, startedAt } = run.test ?? {};
   if (!timeout || startedAt === undefined) return VITEST_WINDOW_MS;
-  return Math.max(VITEST_WINDOW_MS, startedAt + timeout - run.now - REPORTING_MS);
+  const spent = run.grades ? run.now - startedAt : 0;
+  return Math.max(VITEST_WINDOW_MS, timeout - spent - REPORTING_MS);
 }
 
 function windowNow(named: number | undefined): number {

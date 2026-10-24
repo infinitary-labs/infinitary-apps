@@ -114,9 +114,10 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    // A test's time limit, and a wait's window, hold only on a run that grades
-    // budgets (tests/helpers/budgets.ts, INF-857): the patched runner and
-    // waitWindow.ts read it; elsewhere a test waits for its work.
+    // A test's time limit, and a wait's window, count load time and end by
+    // their wall cap; a run that grades budgets keeps the wall clock
+    // (tests/helpers/budgets.ts, INF-1083): waitWindow.ts starts the clock
+    // and the patched runner and vitest read it.
     // One private TMPDIR per run, required empty at the end (runTempRoot.ts).
     globalSetup: ["./tests/helpers/vitestGlobalSetup.ts"],
     projects: [

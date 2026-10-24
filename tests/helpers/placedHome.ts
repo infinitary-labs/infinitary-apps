@@ -10,10 +10,15 @@ import { CoreEventBus } from "../../src/core/events";
 import type { Forge, ForgeRepo, ReadWorkflowInput } from "../../src/core/forge";
 import { GitHubForge } from "../../src/core/forge/providers/github/githubForge";
 import {
+  FIRSTMATE_READER,
   FileIntegrationSecrets,
   githubIntegration,
+  googleIntegration,
+  googleSetup,
   IntegrationSettingsStore,
   IntegrationsService,
+  OutsideReads,
+  SavedOutsideData,
 } from "../../src/core/integrations";
 import { jobExitWake } from "../../src/core/jobs/jobManager";
 import { ChangePresentations } from "../../src/core/orchestrator/changePresentations";
@@ -50,6 +55,7 @@ import {
   parseInvokeRequest,
 } from "../../src/shared/ipc";
 import { type CatalogModelView, servedProviderOf } from "../../src/shared/quota";
+import { STAND_IN_CLIENT_ID, STAND_IN_CLIENT_SECRET } from "./googleStandIn";
 
 /**
  * A home whose crew runs on a computer that runs work (docs/helper.md,
@@ -66,7 +72,9 @@ import { type CatalogModelView, servedProviderOf } from "../../src/shared/quota"
  * download_artifact, and the run watch, are the home's own (`PrCiService`,
  * `WorkflowEvidenceService`), composed as `createServices` composes them.
  * Given a github.com sign-in, the integrations are the home's own too, and
- * a crewmate's integrations command there is answered by them here.
+ * a crewmate's integrations command there is answered by them here; given
+ * Google's stand-in, Google is one of them, with the pass that deletes its
+ * words from saved conversations (`SavedOutsideData`).
  * A restart is a new one over the same folder and port.
  */
 
@@ -101,6 +109,8 @@ export type PlacedHome = {
   listen: () => Promise<void>;
   /** Resolves once the connection listens for what is paired now. */
   settled: () => Promise<void>;
+  /** The pass that deletes Google's words from saved conversations, given Google's stand-in. */
+  outsideData: SavedOutsideData | undefined;
 };
 
 /**
@@ -141,6 +151,12 @@ export function startPlacedHome(options: {
    * (docs/integrations.md). Absent, the crew has no integrations.
    */
   github?: { apiBaseUrl: string; token: string; login: string };
+  /**
+   * Google's stand-in (`tests/helpers/googleStandIn.ts`) at `base`: Google
+   * is composed as `createServices` composes it, signed out until a test
+   * signs in, and the pass over saved conversations with it.
+   */
+  google?: { base: string };
   /**
    * This Mac's own subscriptions, for a home that routes as `createServices`
    * composes it: the models its own sign-ins serve, their allowance as read
@@ -307,37 +323,72 @@ export function startPlacedHome(options: {
         now,
       })
     : undefined;
-  const integrations =
-    github && accountForge
+  const google = options.google
+    ? googleSetup({
+        packaged: false,
+        env: {
+          INFINITARY_GOOGLE_CLIENT_ID: STAND_IN_CLIENT_ID,
+          INFINITARY_GOOGLE_CLIENT_SECRET: STAND_IN_CLIENT_SECRET,
+          INFINITARY_GOOGLE_URL: options.google.base,
+        },
+      })
+    : undefined;
+  const secrets = new FileIntegrationSecrets(join(paths.integrationsDir, "secrets"));
+  const outsideReads = new OutsideReads(paths.integrationsDir);
+  let integrations: IntegrationsService | undefined;
+  integrations =
+    (github && accountForge) || google
       ? new IntegrationsService({
           bindings: [
-            githubIntegration({
-              signIns: {
-                stateOf: () => "ok",
-                loginOf: () => github.login,
-                checkNow: async () => {},
-                signOut: () => {},
-              },
-              gateway: {
-                read: (taskId, input, through) => integrationGateway!.read(taskId, input, through),
-                write: (taskId, input, through) =>
-                  integrationGateway!.write(taskId, input, through, true),
-                readAsSeat: (input) => integrationGateway!.readAsSeat(input),
-                writeAsSeat: (input) => integrationGateway!.writeAsSeat(input),
-              },
-            }),
+            ...(github && accountForge
+              ? [
+                  githubIntegration({
+                    signIns: {
+                      stateOf: () => "ok",
+                      loginOf: () => github.login,
+                      checkNow: async () => {},
+                      signOut: () => {},
+                    },
+                    gateway: {
+                      read: (taskId, input, through) =>
+                        integrationGateway!.read(taskId, input, through),
+                      write: (taskId, input, through) =>
+                        integrationGateway!.write(taskId, input, through, true),
+                      readAsSeat: (input) => integrationGateway!.readAsSeat(input),
+                      writeAsSeat: (input) => integrationGateway!.writeAsSeat(input),
+                    },
+                  }),
+                ]
+              : []),
+            ...(google
+              ? [
+                  googleIntegration({
+                    root: paths.integrationsDir,
+                    secrets,
+                    ...google,
+                    // The stand-in's sign-in page answers at once: nothing reaches a browser.
+                    open: async (url) => {
+                      await (await fetch(url)).text();
+                    },
+                    now,
+                    changed: () => integrations?.changed(),
+                  }),
+                ]
+              : []),
           ],
           store: new IntegrationSettingsStore(paths.integrationsDir),
-          secrets: new FileIntegrationSecrets(join(paths.integrationsDir, "secrets")),
+          secrets,
           asks: {
             keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
             present: (taskId, ask) => supervisor.askIntegration(taskId, ask),
             take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
             record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
           },
+          reads: outsideReads,
           now,
         })
       : undefined;
+  const composed = integrations;
   const supervisor = new CrewSupervisor({
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
     sessions: {
@@ -346,10 +397,10 @@ export function startPlacedHome(options: {
     },
     machines: placed,
     ...(options.reachOf ? { reachOf: options.reachOf } : {}),
-    ...(integrations
+    ...(composed
       ? {
-          integrations,
-          sendWriteAsk: (taskId, askId, choice) => integrations.sendAsk(taskId, askId, choice),
+          integrations: composed,
+          sendWriteAsk: (taskId, askId, choice) => composed.sendAsk(taskId, askId, choice),
         }
       : {}),
     bind: async () => options.binding,
@@ -395,6 +446,32 @@ export function startPlacedHome(options: {
     },
     retryConverse: () => {},
   });
+  // The pass over saved conversations, as `createServices` composes it; no
+  // first mate runs here, so its own conversation is never busy.
+  const outsideData =
+    google && composed
+      ? new SavedOutsideData({
+          paths,
+          reads: outsideReads,
+          task: (id) => tasks.get(id),
+          tasks: () => tasks.list(),
+          kept: () => composed.kept(),
+          legacy: () => composed.legacyCalls(),
+          claudeConfigDir: () => join(options.userData, "claude"),
+          firstmateClaudeSessions: () => [],
+          conversations: {
+            busy: (reader) => reader !== FIRSTMATE_READER && supervisor.conversationBusy(reader),
+            release: async (reader) =>
+              reader === FIRSTMATE_READER || supervisor.releaseConversation(reader),
+            held: (reader) => reader !== FIRSTMATE_READER && supervisor.conversationHeld(reader),
+          },
+          placed: (record, due) => placed.deleteOutside(record, due),
+          runs: { rewrite: () => 0 },
+          inbox: { rewrite: (scrub) => inbox.rewritePending(scrub) },
+          now,
+          log: options.log ?? (() => {}),
+        })
+      : undefined;
   // Each computer's setup card and GitHub card, as `createServices` wires them.
   const setup = new DeviceSetup({
     devices: () => options.pairing().list(),
@@ -472,6 +549,7 @@ export function startPlacedHome(options: {
     quitted = true;
     await supervisor.disposeAll();
     signIns.dispose();
+    await integrations?.dispose();
     await drop();
     db.close();
   };
@@ -497,6 +575,7 @@ export function startPlacedHome(options: {
     settled: async () => {
       await connection?.settled();
     },
+    outsideData,
   };
 }
 

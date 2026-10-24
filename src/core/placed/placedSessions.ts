@@ -46,9 +46,17 @@ import {
   workOrders,
 } from "@shared/work";
 import { z } from "zod";
-import type { WorkDeviceContact } from "../connection/connection";
+import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
 import { contractChange, listsChange } from "../connection/contractChanges";
-import { isIntegrationAnswer } from "../integrations";
+import {
+  dueIn,
+  dueRule,
+  isIntegrationAnswer,
+  type OutsideDue,
+  type PlacedOutsideVisit,
+  rewriteOutsideData,
+  textFilesUnder,
+} from "../integrations";
 import type { JobExit } from "../jobs/jobManager";
 import { crewmateResumeToken } from "../orchestrator/crewSession";
 import {
@@ -122,6 +130,13 @@ import type { WorkDevices } from "./workDevices";
  * computer that runs work").
  */
 const INTEGRATIONS_THERE = contractChange("integrations-there");
+
+/**
+ * The change a computer lists when it replaces the words from outside its
+ * conversations hold (`outside-data-there.md`; docs/task-retention.md,
+ * "Words from outside").
+ */
+const OUTSIDE_DATA_THERE = contractChange("outside-data-there");
 
 /** How long a computer with work is out of reach before the feed says so. */
 export const OUT_OF_REACH_LINE_MS = 60_000;
@@ -1670,6 +1685,134 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       { orderId: `clean-temp:${record.id}:${record.closedAt}`, task: record.id },
     ]);
     return workOrders["inf:session:clean-temp"].response.parse(result);
+  }
+
+  /**
+   * The words from outside a task's conversation there holds, once due
+   * (`inf:session:delete-outside`; docs/task-retention.md, "Words from
+   * outside"). This Mac's own copy of the answers it gave that
+   * conversation's callbacks goes first, whatever that computer can do;
+   * then that computer replaces them in its files, and this Mac copies each
+   * file of the record it changed whole, with any of this Mac's copy that
+   * still holds some. A computer out of reach, or without the change,
+   * follows on a later pass; one no longer on the list leaves this Mac's
+   * copy to the caller (`gone`).
+   */
+  async deleteOutside(record: TaskRecord, due: OutsideDue): Promise<PlacedOutsideVisit> {
+    const deviceId = record.deviceId;
+    if (!deviceId || !this.computers().includes(deviceId)) return "gone";
+    const rule = dueRule(due.kinds);
+    const placed = this.load(record.id, deviceId);
+    const calls = join(crewmatePlacedDir(this.options.paths, record.id), "calls.jsonl");
+    const answers = rewriteOutsideData(calls, rule, due.legacy);
+    if (answers > 0) placed.ledger = undefined;
+    const computer = this.nameOf(deviceId);
+    if (!this.options.devices.inReach(deviceId)) return { computer, until: "reach" };
+    if (!listsChange(this.options.devices.version(deviceId)?.changes, OUTSIDE_DATA_THERE))
+      return { computer, until: "update" };
+    let answer: WorkOrderResponse<"inf:session:delete-outside">;
+    try {
+      answer = workOrders["inf:session:delete-outside"].response.parse(
+        await this.options.devices.ask(deviceId, "inf:session:delete-outside", [
+          {
+            orderId: `delete-outside:${record.id}:${this.options.now()}`,
+            task: record.id,
+            kinds: due.kinds,
+            legacy: due.legacy,
+          },
+        ]),
+      );
+    } catch (caught) {
+      if (caught instanceof DeviceOutOfReachError) return { computer, until: "reach" };
+      throw caught;
+    }
+    if (answer.status === "waiting") return "waiting";
+    const session = placed.session && !placed.session.letGo ? placed.session : undefined;
+    if (answer.state && session) {
+      // Opened there again from its files: a conversation that started over is carried on as at a restart.
+      session.reopened(answer.state);
+      if (answer.state.renewal) this.host?.reopened(placed.task);
+    } else if (answer.status === "changed" && session) {
+      // It did not open there again by itself.
+      void this.reopen(placed, session, deviceId);
+    }
+    // What it changed, and anything this Mac's copy still holds, from a pass a drop cut short.
+    const names = new Set(answer.files);
+    for (const file of textFilesUnder(placed.recordDir))
+      if (await dueIn(file, rule, due.legacy, undefined))
+        names.add(relative(placed.recordDir, file).split(sep).join("/"));
+    if (names.size > 0) {
+      const copied = await this.copyWhole(placed, [...names]);
+      // A file it no longer holds is copied no more, so this Mac's copy is replaced here.
+      for (const name of copied.absent)
+        rewriteOutsideData(join(placed.recordDir, ...name.split("/")), rule, due.legacy);
+      if (copied.short.length > 0) return "waiting";
+    }
+    return answer.status === "changed" || answers > 0 || names.size > 0 ? "changed" : "unchanged";
+  }
+
+  /**
+   * These files of the record, copied whole after that computer wrote them
+   * again shorter: each is written beside this Mac's copy and put in its
+   * place once whole, so the copy never mixes old and new words, while the
+   * rest of the record is copied on as usual. Answers the files that
+   * computer does not hold, and those a drop cut short.
+   */
+  private copyWhole(
+    placed: Placed,
+    names: readonly string[],
+  ): Promise<{ absent: string[]; short: string[] }> {
+    const recordDir = placed.recordDir;
+    const staging = `${recordDir}.whole`;
+    const wanted = new Map(names.map((name) => [name, 0]));
+    const whole = new Set<string>();
+    const seen = new Set<string>();
+    const run = placed.copying.then(async () => {
+      rmSync(staging, { recursive: true, force: true });
+      try {
+        let more = true;
+        while (more) {
+          const from = [
+            ...copiedFiles(recordDir).filter((file) => !wanted.has(file.name)),
+            ...[...wanted]
+              .filter(([name]) => !whole.has(name))
+              .map(([name, offset]) => ({ name, offset })),
+          ];
+          const answer = (await this.options.devices.ask(placed.deviceId, "inf:session:copy", [
+            { task: placed.task, from },
+          ])) as WorkOrderResponse<"inf:session:copy">;
+          for (const file of answer.files) {
+            if (!wanted.has(file.name)) {
+              writeAt(recordDir, file);
+              continue;
+            }
+            if (whole.has(file.name)) continue;
+            seen.add(file.name);
+            writeAt(staging, file);
+            const end = file.offset + Buffer.byteLength(file.data, "base64");
+            wanted.set(file.name, end);
+            if (end < file.size) continue;
+            const target = join(recordDir, ...file.name.split("/"));
+            mkdirSync(dirname(target), { recursive: true });
+            renameSync(join(staging, ...file.name.split("/")), target);
+            whole.add(file.name);
+          }
+          more = answer.more && answer.files.length > 0;
+        }
+      } finally {
+        rmSync(staging, { recursive: true, force: true });
+      }
+      return {
+        absent: names.filter((name) => !seen.has(name)),
+        short: names.filter((name) => seen.has(name) && !whole.has(name)),
+      };
+    });
+    placed.copying = run.then(
+      () => undefined,
+      (caught: unknown) =>
+        this.log(`could not copy ${placed.task}'s record home whole: ${messageOf(caught)}`),
+    );
+    return run;
   }
 
   private closeIfClosed(taskId: string): void {

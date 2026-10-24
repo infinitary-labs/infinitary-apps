@@ -2705,6 +2705,8 @@ export async function createServices(
           ? firstmate.conversationHeld()
           : supervisor.conversationHeld(reader),
     },
+    // A crewmate on a computer that runs work: replaced there, by that computer.
+    placed: (record, due) => placed.deleteOutside(record, due),
     runs: { rewrite: (scrub) => scheduleStore.rewriteRuns(scrub) },
     inbox: { rewrite: (scrub) => inbox.rewritePending(scrub) },
     now: ticker.now,

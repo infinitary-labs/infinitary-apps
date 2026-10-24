@@ -18,10 +18,25 @@ export const keptOutsideDataSchema = z.strictObject({
 });
 export type KeptOutsideData = z.infer<typeof keptOutsideDataSchema>;
 
-/** What one delete did: the conversations it changed, and those still working that follow. */
+/**
+ * What one delete did: the conversations it changed, those still working
+ * that follow, and those on a computer that runs work that follow once it
+ * is back in reach, or once Infinitary there is updated (`outside-data-there.md`).
+ */
 export const outsideDataDeletedSchema = z.strictObject({
   conversations: z.number().int().nonnegative(),
   waiting: z.number().int().nonnegative(),
+  elsewhere: z
+    .array(
+      z.strictObject({
+        /** The computer's name, as Settings → Devices shows it. */
+        computer: z.string().min(1).max(200),
+        conversations: z.number().int().positive(),
+        until: z.enum(["reach", "update"]),
+      }),
+    )
+    .max(256)
+    .optional(),
 });
 export type OutsideDataDeleted = z.infer<typeof outsideDataDeletedSchema>;
 
@@ -38,22 +53,47 @@ function whatOf(kept: readonly KeptWords[]): string {
   return kept.map((entry) => entry.what).join(" and ");
 }
 
+/** How many conversations, in words. */
+function conversationCount(count: number): string {
+  return count === 1 ? "1 conversation" : `${count} conversations`;
+}
+
 /** Settings → General's row (`delete-outside-data`). */
 export const SAVED_OUTSIDE_DATA_WORDS = {
   title: (kept: readonly KeptWords[]) => `Delete ${whatOf(kept)}`,
   description: (kept: readonly KeptWords[]) => {
     const days = [...new Set(kept.map((entry) => entry.days))].join(" or ");
-    return `Replaces the ${whatOf(kept)} your first mate and crew read with a note, in every saved conversation on this computer. It also goes on its own ${days} days after it was read.`;
+    return `Replaces the ${whatOf(kept)} your first mate and crew read with a note, in every saved conversation, on this computer and on the computers that run your work. It also goes on its own ${days} days after it was read.`;
   },
   delete: "Delete",
   confirm: "Confirm delete",
   pending: "Deleting...",
-  done: ({ conversations, waiting }: OutsideDataDeleted) => {
-    const changed =
-      conversations === 0
-        ? "Nothing left to delete."
-        : `Deleted from ${conversations === 1 ? "1 conversation" : `${conversations} conversations`}.`;
-    if (waiting === 0) return changed;
-    return `${changed} ${waiting === 1 ? "1 more is" : `${waiting} more are`} deleted once ${waiting === 1 ? "its work pauses" : "their work pauses"}.`;
+  done: ({ conversations, waiting, elsewhere = [] }: OutsideDataDeleted) => {
+    const later = [
+      ...(waiting > 0
+        ? [
+            {
+              count: waiting,
+              where: "",
+              once: waiting === 1 ? "its work pauses" : "their work pauses",
+            },
+          ]
+        : []),
+      ...elsewhere.map((entry) => ({
+        count: entry.conversations,
+        where: ` on ${entry.computer}`,
+        once: entry.until === "reach" ? "it is back in reach" : "Infinitary there is updated",
+      })),
+    ];
+    if (conversations === 0 && later.length === 0) return "Nothing left to delete.";
+    const sentences =
+      conversations > 0 ? [`Deleted from ${conversationCount(conversations)}.`] : [];
+    for (const entry of later) {
+      const what = sentences.length > 0 ? `${entry.count} more` : conversationCount(entry.count);
+      sentences.push(
+        `${what}${entry.where} ${entry.count === 1 ? "is" : "are"} deleted once ${entry.once}.`,
+      );
+    }
+    return sentences.join(" ");
   },
 } as const;

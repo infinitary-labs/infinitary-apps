@@ -154,7 +154,7 @@ What an integration hands an agent from a kind that fences its words, Gmail and 
 Google keeps 30, the same as the Claude client's own sweep (`GOOGLE_DATA_KEPT`, the captain's INF-952 answer).
 Once they pass, a note, `[Gmail and Calendar content deleted]`, takes the place of each passage, and the conversation stays (the captain's INF-952 answer: "Yes, replace the passage and keep the conversation").
 Settings → General's Delete Gmail and Calendar content row does the same at once for everything read so far (`inf:retention:delete-outside`), and the captain can ask the first mate for it (`delete-outside`).
-Its answer says how many conversations changed, and how many are cleaned once their work pauses.
+Its answer says how many conversations changed, how many are cleaned once their work pauses, and how many on each computer that runs work follow once it is back in reach or Infinitary there is updated (`elsewhere`).
 
 `SavedOutsideData` (`src/core/integrations/savedOutsideData.ts`) owns both.
 A passage is one fenced span with the reminder lines before and after it that name its fence; a span a shell cut short goes from its opening mark to the end of that text, or from its start to its closing mark (`src/core/storage/outsideDataScrub.ts`).
@@ -172,16 +172,24 @@ It reaches, on this computer:
 The app's copy of a Claude transcript is rewritten the same way as the client's, so it stays a byte prefix of the original and keeps being copied.
 A reader that follows a file by its offset starts over when the file was replaced (`SessionFollower`, `SessionRecordStore`).
 
+A crewmate's conversation on a computer that runs work is replaced there, by that computer (`inf:session:delete-outside`, `PlacedSessions.deleteOutside`; [Helper](helper.md#words-from-outside)).
+That computer reads its record under `tasks/<taskId>/sessions/` and its own Claude client's files for it, only between turns and with nothing of its client's own running, and answers `waiting` otherwise.
+A conversation open there is let go of before its files are written and opened again from them, so none of the words stays in its memory either.
+This Mac then copies each file that computer changed whole into its own copy of the record, written beside it and renamed into place once whole, and with them any file of its copy that still holds due words, so a pass a drop cut short is finished on the next.
+The answers this Mac kept for that conversation's callbacks (`crewmates/<taskId>/placed/calls.jsonl`) are replaced here first, whatever that computer can do.
+A computer out of reach, or one whose Infinitary lacks the change (`outside-data-there.md`), is asked again on a later sweep.
+A computer no longer on the list has nothing more to copy, so this Mac's copy is replaced here, as a task of its own is.
+
 It does not reach what an agent wrote in its own words, such as a report, a card, a note or a file it made; those stay until the task is deleted.
-Nor does it reach copies outside this computer's saved conversations: what the AI provider received, a task's conversation on another computer that runs work, a backup, or an export.
+Nor does it reach copies outside the saved conversations: what the AI provider received, a backup, or an export.
 
 Where the words went is a ledger, `userData/integrations/outside-reads.json` (`OutsideReads`, 0600): for each conversation, the hours in which it received fenced words, and the time of the last delete.
 `IntegrationsService` writes an hour there whenever it fences an answer or a rule's event summary for a reader.
 A sweep on the shared ticker, once a minute, reads only the conversations holding an hour that is now due, and only the files written since then, so it never walks every saved session.
 A conversation in a turn is never rewritten under its writer.
 The pass lets go of it between turns, so its next turn opens it from its files, and one that is working is noted to be read whole on a later sweep.
-A task on another computer is left to it, and a task that no longer exists is dropped from the ledger.
-`src/core/storage/outsideDataScrub.test.ts` holds the replacement over lines as Pi and the Claude client save them, and `src/core/integrations/savedOutsideData.test.ts` holds the pass over a scratch userData with the Google stand-in.
+A computer that runs work reads every file of a conversation at each visit, since its clock is its own, and a task that no longer exists is dropped from the ledger.
+`src/core/storage/outsideDataScrub.test.ts` holds the replacement over lines as Pi and the Claude client save them, `src/core/integrations/savedOutsideData.test.ts` holds the pass over a scratch userData with the Google stand-in, and `src/core/placed/placedSessions.test.ts` holds it over a crewmate on a computer that runs work, across the real connection.
 
 ## Notes moved from AGENTS.md
 

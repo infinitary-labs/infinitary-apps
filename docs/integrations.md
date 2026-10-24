@@ -192,7 +192,7 @@ It distinguishes registration from submission readiness, including downstream AI
 Before Google's sign-in starts, the app shows Google's notice and waits for the person's accept (INF-949).
 Google's [Workspace user data and developer policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy) asks for an in-app disclosure of the data used and where it goes, never only in a privacy policy, that immediately precedes the consent request, and for no collection before an affirmative consent.
 The notice's words are `INTEGRATION_NOTICES` in `src/shared/integrations.ts`: what Infinitary uses from Gmail and Calendar, and where it goes, which is the person's AI provider, another computer that runs the work, and the saved task records.
-For the saved task records it says how long what the agents read stays, 30 days, how to delete it sooner on this computer from Settings → General, and what stays until the task is deleted: what the agents wrote themselves.
+For the saved task records it says how long what the agents read stays, 30 days, how to delete it sooner, here and on the computers that run the work, from Settings → General, and what stays until the task is deleted: what the agents wrote themselves.
 Only the person's agreement and settings with their provider decide whether that provider trains on what it receives, while Google does not allow its data to train AI models, so the notice says both and asks the person to check their provider before connecting.
 The core holds the accept as a fact of the sign-in: `IntegrationsService.signIn` refuses a kind with a notice unless the request carries `{ noticeAccepted: true }`, before any browser opens, before a waiting sign-in ends and before anything is asked of Google.
 The accept covers one sign-in and is never saved, so every way into Google's sign-in shows the notice again: the chip, a row's Sign in again, and a card that opens Google's sign-in.
@@ -253,7 +253,7 @@ A command waiting on this Mac answers before its command process is stopped, and
 
 The home grants the command, and its one line in the crewmate's instructions, only to a computer that has a task channel (its roster's `browsers`) and lists the `integrations-there` contract change (`PlacedSessions.takesIntegrations`; `docs/contract.md`, "Changes by name").
 A computer without the change, or without a task channel, gives its crewmates neither the command nor the line.
-What a crewmate there read stays in its conversation on that computer: neither the 30 days nor the delete in Settings reaches it yet ([Task retention](task-retention.md#words-from-outside)).
+What a crewmate there read stays in its conversation on that computer for the same 30 days, and the delete in Settings reaches it there too, through that computer (`inf:session:delete-outside`, which a computer that lists the `outside-data-there` change answers; [Task retention](task-retention.md#words-from-outside)).
 
 ## Tests
 

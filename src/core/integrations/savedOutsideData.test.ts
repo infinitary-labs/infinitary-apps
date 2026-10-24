@@ -155,6 +155,8 @@ async function world() {
       },
       held: () => false,
     },
+    // No computer runs work for this Mac.
+    placed: async () => "gone",
     runs: { rewrite: (scrub) => store.rewriteRuns(scrub) },
     inbox: { rewrite: (scrub) => inbox.rewritePending(scrub) },
     now: () => clock.now,

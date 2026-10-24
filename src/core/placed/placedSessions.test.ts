@@ -22,10 +22,12 @@ import {
   noSignInsWaitLine,
 } from "@shared/deviceSetup";
 import type { DeviceView } from "@shared/devices";
+import { GOOGLE_DATA_KEPT, NOTICE_ACCEPTED } from "@shared/integrations";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { STARTER_SLOTS } from "@shared/modelSlots";
 import { CLAUDE_PROVIDER_ID } from "@shared/providers";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
+import { outsideDataDeletedNote } from "@shared/savedOutsideData";
 import type { ComputerForges } from "@shared/signIns";
 import { type PlacedSpec, placedTaskFolders, workOrders } from "@shared/work";
 import {
@@ -51,6 +53,8 @@ import {
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
+import { startGoogleStandIn } from "../../../tests/helpers/googleStandIn";
+import { allowIntegrationReads } from "../../../tests/helpers/integrationApprovals";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
 import { type PlacedHome, startPlacedHome } from "../../../tests/helpers/placedHome";
@@ -81,6 +85,7 @@ import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
 import * as hostEnvironment from "../hostEnv";
 import { CREWMATE_INTEGRATIONS_LINE } from "../integrations";
+import { READ_HOUR_MS } from "../integrations/outsideReads";
 import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
@@ -241,7 +246,7 @@ function startHome(
   forgeFor?: ForgeFor,
   extra: Pick<
     Parameters<typeof startPlacedHome>[0],
-    "routing" | "runsForAnotherFirstmate" | "github"
+    "routing" | "runsForAnotherFirstmate" | "github" | "google"
   > & {
     claude?: ContractWorld;
     scheduleCopy?: Parameters<typeof startPlacedHome>[0]["scheduleCopy"];
@@ -266,6 +271,7 @@ function startHome(
       ? { runsForAnotherFirstmate: extra.runsForAnotherFirstmate }
       : {}),
     ...(extra.github ? { github: extra.github } : {}),
+    ...(extra.google ? { google: extra.google } : {}),
     log: (line) => process.env.PLACED_DEBUG && process.stderr.write(`[home] ${line}\n`),
   });
   stops.push(home.quit);
@@ -356,6 +362,8 @@ async function world(
     tools?: readonly CrewmateTool[];
     /** The home's github.com sign-in, whose integrations its crew there reaches through its task channel. */
     github?: Parameters<typeof startPlacedHome>[0]["github"];
+    /** Google's stand-in, which the home's integrations reach. */
+    google?: Parameters<typeof startPlacedHome>[0]["google"];
     /**
      * The computer's task channel, as the work mode opens it
      * (`ComputerBrowsers`), over the command process bundled at this path;
@@ -405,6 +413,8 @@ async function world(
   let refusing = false;
   /** The contract the running computer's hello names. */
   let protocolVersion = options.protocolVersion;
+  /** The contract changes the running computer's hello lists. */
+  let changes = options.changes;
   /** Every binding the home asked the computer to resolve with its own sign-ins. */
   const bound: PlacedSpec["binding"][] = [];
   const startComputer = (
@@ -416,7 +426,7 @@ async function world(
       say: () => {},
       retryMs: [20],
       ...(version ? { protocolVersion: version } : {}),
-      ...(options.changes ? { changes: options.changes } : {}),
+      ...(changes ? { changes } : {}),
       ...(options.signedInTo
         ? { signIns: signedInTo(options.signedInTo, options.forges, options.served) }
         : {}),
@@ -565,8 +575,11 @@ async function world(
     restartComputer: async (updated?: {
       tools?: readonly CrewmateTool[];
       protocolVersion?: string;
+      /** The contract changes its new version lists. */
+      changes?: readonly string[];
     }) => {
       if (updated?.protocolVersion) protocolVersion = updated.protocolVersion;
+      if (updated?.changes) changes = updated.changes;
       await run?.stop();
       startComputer(updated?.tools);
     },
@@ -3148,6 +3161,158 @@ describe("the integrations command on a computer that runs work", () => {
     expect(github.seen).toEqual([]);
   });
 });
+
+describe("Gmail and Calendar content on a computer that runs work", () => {
+  // INF-1094: "Gmail and Calendar content a crewmate read on another
+  // computer that runs work is replaced with the same note after 30 days
+  // and when the captain uses Delete Gmail and Calendar content, and the
+  // row's answer counts those conversations." The captain's INF-952
+  // answers hold there too: the passage is replaced and the conversation
+  // stays, 30 days after it was read.
+  const NOTE = outsideDataDeletedNote("Gmail and Calendar content");
+  const DAY = 24 * 60 * 60 * 1000;
+  const LENA = {
+    from: "Lena Ortiz <lena@ortiz-studio.com>",
+    subject: "Invoice 2214 for the October shoot",
+    text: "Hi Ada,\n\nThe invoice for the October shoot is attached. Payment is due by Nov 4.\n\nThanks,\nLena",
+  };
+  let entry: string;
+  beforeAll(async () => {
+    entry = await bundleAxiProcess();
+  }, 60_000);
+
+  /**
+   * A crewmate on the computer reads Lena's message through this Mac's
+   * Google sign-in, from its shell there, and its turn ends.
+   */
+  async function readThere(changes?: readonly string[]) {
+    const google = await startGoogleStandIn();
+    stops.push(() => google.close());
+    const at = await world(undefined, {
+      jobs: true,
+      taskChannel: entry,
+      google: { base: google.base },
+      ...(changes ? { changes } : {}),
+    });
+    const home = at.home();
+    const integrations = home.integrations;
+    const outsideData = home.outsideData;
+    if (!integrations || !outsideData) throw new Error("The home composes Google here.");
+    await integrations.signIn("google", NOTICE_ACCEPTED);
+    // INF-950: content retention starts after the captain has allowed these reads.
+    allowIntegrationReads(integrations);
+    const id = google.deliver(LENA);
+    model([
+      {
+        tools: [
+          shellCommand(
+            `infinitary-integrations-axi call Google read_message '${JSON.stringify({ id })}'`,
+          ),
+        ],
+      },
+      { text: "Lena sent the October invoice." },
+    ]);
+    const requests = api.requests.length;
+    await at.start("t-lena", "Answer Lena.");
+    await expect
+      .poll(() => home.tasks.get("t-lena")?.outcome)
+      .toBe("Lena sent the October invoice.");
+    // It read the message there, and its record there and this Mac's copy hold it.
+    expect(shellAnswer(api.requests[requests + 1]).output).toContain(LENA.subject);
+    const there = at.folders("t-lena").sessions;
+    const here = crewmateSessionsDir(home.paths, "t-lena");
+    const calls = join(crewmatePlacedDir(home.paths, "t-lena"), "calls.jsonl");
+    expect(filesHolding(there, LENA.subject)).not.toEqual([]);
+    await expect.poll(() => filesHolding(here, LENA.subject)).not.toEqual([]);
+    expect(readFileSync(calls, "utf8")).toContain(LENA.subject);
+    return { at, home, outsideData, there, here, calls };
+  }
+
+  it("replaces what it read there and in this Mac's copy on the captain's delete, counts it, and its next turn reads the note", async () => {
+    const { at, home, outsideData, there, here, calls } = await readThere();
+
+    expect(await outsideData.deleteNow()).toEqual({ conversations: 1, waiting: 0 });
+    // Replaced on the computer, in this Mac's copy of its record and in the
+    // calls this Mac answered, with the conversation kept around it.
+    expect(filesHolding(there, LENA.subject)).toEqual([]);
+    expect(filesHolding(there, NOTE)).not.toEqual([]);
+    expect(filesHolding(dirname(here), LENA.subject)).toEqual([]);
+    expect(filesHolding(here, NOTE)).not.toEqual([]);
+    expect(readFileSync(calls, "utf8")).not.toContain(LENA.subject);
+    expect(filesHolding(here, "Lena sent the October invoice.")).not.toEqual([]);
+
+    // Its next turn there carries the note, never the message.
+    model([{ text: "Lena's invoice is answered." }]);
+    const requests = api.requests.length;
+    await home.supervisor.steerCrewmate("t-lena", "What did Lena ask for?");
+    await expect.poll(() => home.tasks.get("t-lena")?.outcome).toBe("Lena's invoice is answered.");
+    const next = said(api.requests[requests]);
+    expect(next).toContain("What did Lena ask for?");
+    expect(next).toContain(NOTE);
+    expect(next).not.toContain(LENA.subject);
+    // This Mac's copy follows that turn as written there, file for file.
+    await expect.poll(() => sameFiles(here, there)).toEqual({ missing: [], differing: [] });
+    expect(filesHolding(at.dataDir, LENA.subject)).toEqual([]);
+  });
+
+  it("goes on its own 30 days after it was read, there too", async () => {
+    const { outsideData, there, here } = await readThere();
+    const kept = GOOGLE_DATA_KEPT.days * DAY;
+    ahead = kept - DAY;
+    await outsideData.sweep();
+    expect(filesHolding(there, LENA.subject)).not.toEqual([]);
+    // The ledger counts in hours: its words go within the hour after they are due.
+    ahead = kept + READ_HOUR_MS;
+    await outsideData.sweep();
+    expect(filesHolding(there, LENA.subject)).toEqual([]);
+    expect(filesHolding(there, NOTE)).not.toEqual([]);
+    expect(filesHolding(dirname(here), LENA.subject)).toEqual([]);
+  });
+
+  it("counts a computer not yet updated as following once it is, and replaces it there then", async () => {
+    const older = CONTRACT_CHANGES.names.filter((name) => name !== "outside-data-there");
+    const { at, home, outsideData, there, calls } = await readThere(older);
+
+    expect(await outsideData.deleteNow()).toEqual({
+      conversations: 0,
+      waiting: 0,
+      elsewhere: [{ computer: "Mac mini", conversations: 1, until: "update" }],
+    });
+    // Nothing was asked of that computer; the calls this Mac answered are its own to replace.
+    expect(filesHolding(there, LENA.subject)).not.toEqual([]);
+    expect(readFileSync(calls, "utf8")).not.toContain(LENA.subject);
+
+    // Updated, it is replaced there at the next sweep.
+    await at.restartComputer({ changes: CONTRACT_CHANGES.names });
+    await expect
+      .poll(() => home.devices.version(at.deviceId)?.changes)
+      .toContain("outside-data-there");
+    await at.inReach("t-lena");
+    await outsideData.sweep();
+    expect(filesHolding(there, LENA.subject)).toEqual([]);
+    expect(filesHolding(there, NOTE)).not.toEqual([]);
+  });
+});
+
+/** The files under `copy` that `source` holds differently or not at all, by their path in `source`. */
+function sameFiles(copy: string, source: string): { missing: string[]; differing: string[] } {
+  const missing: string[] = [];
+  const differing: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const path = join(dir, entry.name);
+      if (entry.isDirectory()) walk(path);
+      else if (entry.isFile()) {
+        const name = relative(source, path);
+        const copied = join(copy, name);
+        if (!existsSync(copied)) missing.push(name);
+        else if (!readFileSync(copied).equals(readFileSync(path))) differing.push(name);
+      }
+    }
+  };
+  walk(source);
+  return { missing, differing };
+}
 
 /** The invented token this Mac's github.com sign-in holds in these cases. */
 const GITHUB_TOKEN = "gho_fixture_owned_by_app";

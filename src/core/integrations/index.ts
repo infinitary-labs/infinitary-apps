@@ -17,6 +17,15 @@ export type {
 } from "./binding";
 export { IntegrationOutcomeUnknown } from "./binding";
 export { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "./commandWords";
+export {
+  ClaudeFiles,
+  conversationFiles,
+  type DueKind,
+  dueIn,
+  dueRule,
+  rewrite as rewriteOutsideData,
+  textFilesUnder,
+} from "./outsideDataFiles";
 export { FIRSTMATE_READER, OutsideReads } from "./outsideReads";
 export { forgeHostIntegration, forgeIntegrationId } from "./providers/forgeHosts";
 export {
@@ -38,7 +47,12 @@ export {
   type StandInIntegrationOptions,
   standInIntegration,
 } from "./providers/standIn";
-export { SavedOutsideData, type SavedOutsideDataOptions } from "./savedOutsideData";
+export {
+  type OutsideDue,
+  type PlacedOutsideVisit,
+  SavedOutsideData,
+  type SavedOutsideDataOptions,
+} from "./savedOutsideData";
 export {
   FileIntegrationSecrets,
   type IntegrationSecrets,

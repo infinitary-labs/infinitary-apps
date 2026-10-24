@@ -409,11 +409,11 @@ const GOOGLE_NOTICE: IntegrationNotice = {
         },
         {
           name: "Other computers",
-          text: "If another computer runs your first mate's work, the results that work needs reach it over Infinitary's encrypted connection and stay in its saved conversations. Your Google sign-in stays on this computer.",
+          text: `If another computer runs your first mate's work, the results that work needs reach it over Infinitary's encrypted connection and stay in its saved conversations for the same ${GOOGLE_DATA_KEPT.days} days. Your Google sign-in stays on this computer.`,
         },
         {
           name: "Saved task records",
-          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner on this computer, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → General. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google does not delete any of it. Purge task data deletes every saved task on this computer.`,
+          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner, here and on the computers that run your work, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → General. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google does not delete any of it. Purge task data deletes every saved task on this computer.`,
         },
       ],
     },

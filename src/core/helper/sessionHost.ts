@@ -39,7 +39,14 @@ import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
-import type { TaskIntegrations } from "../integrations";
+import {
+  ClaudeFiles,
+  conversationFiles,
+  dueIn,
+  dueRule,
+  rewriteOutsideData,
+  type TaskIntegrations,
+} from "../integrations";
 import type { JobExit } from "../jobs/jobManager";
 import {
   crewmateContractStamp,
@@ -176,6 +183,12 @@ export type SessionHostOptions = {
    * own whose callbacks ask the home, unless a test stands in its own.
    */
   tools?: readonly CrewmateTool[];
+  /**
+   * Where this computer's Claude client keeps its transcripts (`~/.claude`),
+   * so the words from outside a conversation there holds go from them too
+   * (`inf:session:delete-outside`). Absent, only its record is read.
+   */
+  claudeConfigDir?: () => string;
   now?: () => number;
   log?: (line: string) => void;
 };
@@ -264,6 +277,8 @@ type Held = {
   opened:
     | { tools: readonly string[]; instructions: string; browser: boolean; integrations: boolean }
     | undefined;
+  /** What the home opened the open conversation with, so a pass that rewrites its files opens it again. */
+  spec: PlacedSpec | undefined;
 };
 
 export class SessionHost {
@@ -565,6 +580,11 @@ export class SessionHost {
         // again it finds nothing left to remove.
         this.removeTask(held);
         return { ok: true };
+      case "inf:session:delete-outside": {
+        // Nothing is remembered: asked again, it finds nothing left to replace.
+        const [asked] = request as WorkOrderRequest<"inf:session:delete-outside">;
+        return this.deleteOutside(held, asked);
+      }
       default:
         throw new Error(`${channel} is not a request this computer answers.`);
     }
@@ -838,6 +858,7 @@ export class SessionHost {
         browser: spec.browser === true,
         integrations: spec.integrations === true,
       };
+      held.spec = spec;
       held.backend = binding.backend;
       held.account = this.options.accounts?.of(binding);
       held.renewal = session.takeRenewal();
@@ -876,6 +897,80 @@ export class SessionHost {
       opened.instructions !== spec.instructions ||
       opened.browser !== (spec.browser === true) ||
       opened.integrations !== (spec.integrations === true)
+    );
+  }
+
+  /**
+   * Replaces the words from outside this conversation holds, once due
+   * (`inf:session:delete-outside`; docs/helper.md, "Words from outside"):
+   * its record and the Claude client's own files for it, only between its
+   * turns and with nothing of its client's own still running. One open here
+   * is let go of first, so no writer holds its files and nothing of them
+   * stays in memory, and opened again from them as the home opened it.
+   */
+  private async deleteOutside(
+    held: Held,
+    asked: WorkOrderRequest<"inf:session:delete-outside">[0],
+  ): Promise<WorkOrderResponse<"inf:session:delete-outside">> {
+    if (held.removed) return { status: "unchanged", files: [] };
+    if (this.working(held)) return { status: "waiting", files: [] };
+    const rule = dueRule(asked.kinds);
+    const folders = this.options.tasks.folders(held.task);
+    const token = held.session ? crewmateResumeToken(held.session.resume()) : undefined;
+    const claude = this.options.claudeConfigDir?.();
+    const files = conversationFiles(
+      { dir: folders.sessions, ...(token ? { token } : {}), cwd: folders.work },
+      claude ? new ClaudeFiles(claude, true) : undefined,
+    );
+    const due: string[] = [];
+    for (const file of files) if (await dueIn(file, rule, asked.legacy, undefined)) due.push(file);
+    if (due.length === 0) return { status: "unchanged", files: [] };
+    // A turn may have started while the files were read.
+    if (this.working(held)) return { status: "waiting", files: [] };
+    const session = held.session;
+    const reopen =
+      session && held.spec
+        ? { spec: held.spec, resume: crewmateResumeToken(session.resume()), renewal: held.renewal }
+        : undefined;
+    if (session) await this.releaseConversation(held);
+    const changed: string[] = [];
+    let replaced = 0;
+    for (const file of due) {
+      const count = rewriteOutsideData(file, rule, asked.legacy);
+      if (count === 0) continue;
+      replaced += count;
+      const name = relative(folders.sessions, file);
+      if (name && !name.startsWith("..") && !isAbsolute(name))
+        changed.push(name.split(sep).join("/"));
+    }
+    let state: PlacedState | undefined;
+    if (reopen) {
+      try {
+        state = await this.open(held, {
+          ...reopen.spec,
+          ...(reopen.resume ? { resume: reopen.resume } : {}),
+        });
+        // The session it started over from earlier still stands until a turn of it finishes.
+        held.renewal ??= reopen.renewal;
+      } catch (error) {
+        this.log(`${held.task}'s conversation did not open again: ${messageOf(error)}`);
+      }
+    }
+    return {
+      status: replaced > 0 ? "changed" : "unchanged",
+      files: changed,
+      ...(state ? { state } : {}),
+    };
+  }
+
+  /** In a turn, opening, carrying on by itself, or with work of its client's own running. */
+  private working(held: Held): boolean {
+    return (
+      held.opening !== null ||
+      held.state.running !== undefined ||
+      held.state.continuing === true ||
+      held.clientTasks.size > 0 ||
+      held.session?.isStreaming() === true
     );
   }
 
@@ -1434,6 +1529,7 @@ export class SessionHost {
       copying: new Map(),
       removed: false,
       opened: undefined,
+      spec: undefined,
     };
     this.held.set(task, held);
     return held;

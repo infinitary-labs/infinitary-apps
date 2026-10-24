@@ -8,11 +8,12 @@ import { Button } from "../design";
 import { SettingRow } from "./settingRows";
 
 /**
- * Settings → General's delete for the words from outside (INF-952;
- * docs/task-retention.md, "Words from outside"): every saved conversation
- * on this computer keeps a note where the Gmail and Calendar content was,
- * and every other word stays. Armed on the first press and run on the
- * second, as Purge is. Absent where this build keeps none.
+ * Settings → General's delete for the words from outside (INF-952,
+ * INF-1094; docs/task-retention.md, "Words from outside"): every saved
+ * conversation, on this computer and on the computers that run its work,
+ * keeps a note where the Gmail and Calendar content was, and every other
+ * word stays. Armed on the first press and run on the second, as Purge is.
+ * Absent where this build keeps none.
  */
 export function OutsideDataRow({ kept }: { kept: readonly KeptOutsideData[] }) {
   const [armed, setArmed] = useState(false);

@@ -1096,6 +1096,44 @@ export const workOrders = {
     }),
   },
   /**
+   * Replaces the words from outside its conversation holds, once due, with
+   * their kind's note (`outside-data-there.md`; docs/task-retention.md,
+   * "Words from outside"): each kind's words read by its `until`, and the
+   * results of the calls that fetched a kind's words before they were
+   * fenced (`legacy`). `waiting` while it works; a conversation open there
+   * is let go of and opened again from its files, and `state` is its own
+   * after. `files` names what changed under its record's folder, by the
+   * names `inf:session:copy` uses, for the home to copy whole.
+   */
+  "inf:session:delete-outside": {
+    effect: "change",
+    request: ordered({
+      kinds: z
+        .array(
+          z.object({
+            label: z.string().min(1).max(48),
+            until: z.number(),
+            note: z.string().min(1).max(200),
+          }),
+        )
+        .min(1)
+        .max(64),
+      legacy: z
+        .array(
+          z.object({
+            label: z.string().min(1).max(48),
+            names: z.array(z.string().min(1).max(200)).max(1024),
+          }),
+        )
+        .max(64),
+    }),
+    response: z.object({
+      status: z.enum(["changed", "unchanged", "waiting"]),
+      files: z.array(z.string().min(1).max(1024)).max(1024),
+      state: placedStateSchema.optional(),
+    }),
+  },
+  /**
    * Removes the task's folder there - its conversation's record, orders and
    * outbox - for a task the home no longer records there: only once the
    * conversation is closed for good and its working copy is gone. One

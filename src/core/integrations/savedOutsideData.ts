@@ -1,35 +1,31 @@
 import {
-  existsSync,
-  lstatSync,
-  readdirSync,
-  readFileSync,
-  renameSync,
-  statSync,
-  writeFileSync,
-} from "node:fs";
-import { readFile, stat } from "node:fs/promises";
-import { basename, dirname, extname, join } from "node:path";
-import {
   type KeptOutsideData,
   type OutsideDataDeleted,
   outsideDataDeletedNote,
 } from "@shared/savedOutsideData";
-import { encodeClaudeProjectDir, locateClaudeTranscript } from "../claude/claudeTranscript";
 import { type AppPaths, crewmateSessionsDir } from "../paths";
 import {
   type LegacyCalls,
   type Scrubbed,
-  type ScrubRule,
-  scrubJsonLines,
   scrubText,
   scrubValue,
 } from "../storage/outsideDataScrub";
 import type { TaskRecord } from "../storage/taskStore";
+import {
+  ClaudeFiles,
+  conversationFiles,
+  type DueKind,
+  dueIn,
+  dueRule,
+  rewrite,
+  sessionIdsIn,
+  textFilesUnder,
+} from "./outsideDataFiles";
 import { FIRSTMATE_READER, type OutsideReads } from "./outsideReads";
 
 /**
- * Words from outside, kept no longer than their kind declares (INF-952;
- * docs/task-retention.md, "Words from outside").
+ * Words from outside, kept no longer than their kind declares (INF-952,
+ * INF-1094; docs/task-retention.md, "Words from outside").
  *
  * The integrations fence what an agent reads from a kind that declares it
  * (`@shared/outsideData`) and note which conversation received it, and when
@@ -39,26 +35,36 @@ import { FIRSTMATE_READER, type OutsideReads } from "./outsideReads";
  * outputs it saved beside it - and in the rules' runs that carried them.
  * Every file and every other line stays; the captain's D2 keeps sessions,
  * and their answer on INF-952 chose replacing a passage over removing one.
+ * A crewmate's conversation on a computer that runs work is replaced there,
+ * through that computer, with this Mac's copy of its record (`placed`).
  *
  * `sweep` replaces what is past its kind's days, reading only the
  * conversations the ledger names; `deleteNow` replaces everything read so
- * far in every conversation on this computer, words read before the fence
- * existed included (`LegacyCalls`). A conversation in a turn is never
- * rewritten under its writer: it is let go of first, between turns, and
- * one still working is read again on a later sweep.
+ * far in every conversation, words read before the fence existed included
+ * (`LegacyCalls`). A conversation in a turn is never rewritten under its
+ * writer: it is let go of first, between turns, and one still working, or
+ * on a computer out of reach or not updated yet, is read again on a later
+ * sweep.
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** The text files a saved conversation is kept in; anything else (a picture) has no words to find. */
-const TEXT_FILES = new Set([".jsonl", ".json", ".txt", ".md", ".log"]);
+/**
+ * What one placed task's visit came to (`SavedOutsideDataOptions.placed`):
+ * its conversation there and this Mac's copy changed or held nothing due,
+ * it is working, its computer is no longer on the list (`gone`, so this
+ * Mac's copy is all there is), or it follows once its computer is back in
+ * reach or updated.
+ */
+export type PlacedOutsideVisit =
+  | "changed"
+  | "unchanged"
+  | "waiting"
+  | "gone"
+  | { computer: string; until: "reach" | "update" };
 
-/** The Claude client's session id, as the app's copies are named (`SessionRecordStore`). */
-const SESSION_ID = /^[A-Za-z0-9][A-Za-z0-9-]*$/;
-
-/** What every fenced span or fetched answer starts with, read as bytes before any file is decoded. */
-const FENCE_HINT = Buffer.from("[[");
-const LEGACY_HINTS = [Buffer.from("use_integration"), Buffer.from("infinitary-integrations-axi")];
+/** What is due in one pass, as data a computer that runs work can be sent. */
+export type OutsideDue = { kinds: readonly DueKind[]; legacy: readonly LegacyCalls[] };
 
 export type SavedOutsideDataOptions = {
   paths: AppPaths;
@@ -82,6 +88,12 @@ export type SavedOutsideDataOptions = {
     /** A live conversation holds its files now. */
     held: (reader: string) => boolean;
   };
+  /**
+   * A task whose conversation a computer that runs work holds: what is due
+   * goes there, by that computer, and from this Mac's copy of its record
+   * (`PlacedSessions.deleteOutside`).
+   */
+  placed: (record: TaskRecord, due: OutsideDue) => Promise<PlacedOutsideVisit>;
   /** The rules' runs: their prompts and events, rewritten by their one writer. */
   runs: { rewrite: (scrub: (text: string, at: number) => Scrubbed<string>) => number };
   /** The first mate's messages no turn was handed yet, rewritten by their one writer. */
@@ -90,7 +102,10 @@ export type SavedOutsideDataOptions = {
   log: (line: string) => void;
 };
 
-type Visit = "changed" | "unchanged" | "waiting" | "elsewhere" | "gone";
+/** A conversation that follows once its computer is back in reach, or updated. */
+type Later = { computer: string; until: "reach" | "update" };
+
+type Visit = "changed" | "unchanged" | "waiting" | "gone" | Later;
 
 export class SavedOutsideData {
   private pass: Promise<unknown> = Promise.resolve();
@@ -99,16 +114,26 @@ export class SavedOutsideData {
 
   /**
    * The captain's delete: everything read so far goes from every
-   * conversation on this computer, now, or once a working one pauses.
+   * conversation, now, or once a working one pauses or its computer is
+   * back in reach or updated.
    */
   deleteNow(): Promise<OutsideDataDeleted> {
     return this.queue(async () => {
       this.options.reads.setDeleteBefore(this.options.now());
       const readers = [FIRSTMATE_READER, ...this.options.tasks().map((task) => task.id)];
       const visits = await this.visitAll(readers, { full: true });
+      const later = new Map<string, Later & { conversations: number }>();
+      for (const visit of visits) {
+        if (typeof visit !== "object") continue;
+        const key = `${visit.until}:${visit.computer}`;
+        const counted = later.get(key) ?? { ...visit, conversations: 0 };
+        counted.conversations += 1;
+        later.set(key, counted);
+      }
       return {
         conversations: visits.filter((visit) => visit === "changed").length,
         waiting: visits.filter((visit) => visit === "waiting").length,
+        ...(later.size > 0 ? { elsewhere: [...later.values()] } : {}),
       };
     });
   }
@@ -145,25 +170,23 @@ export class SavedOutsideData {
   }
 
   private async visitAll(readers: readonly string[], mode: { full: boolean }): Promise<Visit[]> {
-    const kept = this.options.kept();
     const cutoffs = this.cutoffs();
     const cutoff = this.cutoff();
     if (cutoff === undefined) return [];
-    const rule: ScrubRule = {
-      due: (label, at) => {
-        const until = cutoffs.get(label);
-        return until !== undefined && at <= until;
-      },
-      note: (label) =>
-        outsideDataDeletedNote(kept.find((kind) => kind.label === label)?.what ?? label),
+    const due: OutsideDue = {
+      kinds: this.options.kept().map((kind) => ({
+        label: kind.label,
+        until: cutoffs.get(kind.label) ?? Number.NEGATIVE_INFINITY,
+        note: outsideDataDeletedNote(kind.what),
+      })),
+      legacy: this.options.legacy(),
     };
-    const legacy = this.options.legacy();
     const claude = new ClaudeFiles(this.options.claudeConfigDir(), mode.full);
     const visits: Visit[] = [];
     for (const reader of readers) {
       let visit: Visit;
       try {
-        visit = await this.visit(reader, rule, legacy, claude, mode.full, cutoff);
+        visit = await this.visit(reader, due, claude, mode.full, cutoff);
       } catch (error) {
         this.options.log(
           `[outside-data] ${reader}: ${error instanceof Error ? error.message : String(error)}`,
@@ -171,10 +194,10 @@ export class SavedOutsideData {
         visit = "waiting";
       }
       if (visit === "changed" || visit === "unchanged") this.options.reads.settle(reader, cutoff);
-      else if (visit === "gone" || visit === "elsewhere") this.options.reads.forget(reader);
-      // A conversation still working, or one this pass could not finish, is read again,
-      // whole, on the next sweep.
-      else if (visit === "waiting") this.options.reads.retry(reader);
+      else if (visit === "gone") this.options.reads.forget(reader);
+      // A conversation still working, one this pass could not finish, and
+      // one whose computer it could not ask are read again, whole, on the next sweep.
+      else this.options.reads.retry(reader);
       visits.push(visit);
     }
     return visits;
@@ -182,12 +205,13 @@ export class SavedOutsideData {
 
   private async visit(
     reader: string,
-    rule: ScrubRule,
-    legacy: readonly LegacyCalls[],
+    due: OutsideDue,
     claude: ClaudeFiles,
     full: boolean,
     cutoff: number,
   ): Promise<Visit> {
+    const rule = dueRule(due.kinds);
+    const legacy = due.legacy;
     let records = 0;
     let files: string[];
     if (reader === FIRSTMATE_READER) {
@@ -199,37 +223,36 @@ export class SavedOutsideData {
     } else {
       const record = this.options.task(reader);
       if (!record) return "gone";
-      // A task on another computer keeps its conversation there.
-      if (record.deviceId) return "elsewhere";
-      files = this.taskFiles(record, claude);
+      if (record.deviceId) {
+        // Its conversation is on the computer that runs it: that computer replaces it there.
+        const there = await this.options.placed(record, due);
+        if (there !== "gone") return there;
+        // That computer is no longer on the list, so this Mac's copy is all that is left.
+      }
+      files = conversationFiles(
+        {
+          dir: crewmateSessionsDir(this.options.paths, record.id),
+          ...(record.sessionFile ? { token: record.sessionFile } : {}),
+          cwd: record.worktreeDir,
+        },
+        claude,
+      );
     }
     if (this.options.conversations.busy(reader)) return "waiting";
     const since = full ? undefined : this.options.reads.earliestDue(reader, cutoff);
-    const due: string[] = [];
+    const dueFiles: string[] = [];
     for (const file of files) {
       const found = await dueIn(file, rule, legacy, since);
-      if (found) due.push(file);
+      if (found) dueFiles.push(file);
     }
     let changed = records;
-    if (due.length > 0) {
+    if (dueFiles.length > 0) {
       if (!(await this.options.conversations.release(reader))) return "waiting";
       // From here to the last rename nothing yields, so no turn opens these files between them.
       if (this.options.conversations.held(reader)) return "waiting";
-      for (const file of due) changed += rewrite(file, rule, legacy);
+      for (const file of dueFiles) changed += rewrite(file, rule, legacy);
     }
     return changed ? "changed" : "unchanged";
-  }
-
-  /** A crewmate's saved conversation: its record folder, and the Claude client's own files for it. */
-  private taskFiles(record: TaskRecord, claude: ClaudeFiles): string[] {
-    const dir = crewmateSessionsDir(this.options.paths, record.id);
-    const files = textFilesUnder(dir);
-    const token = record.sessionFile;
-    if (token?.endsWith(".jsonl") && !files.includes(token) && isFile(token)) files.push(token);
-    const ids = new Set(sessionIdsIn(dir));
-    if (token && SESSION_ID.test(token)) ids.add(token);
-    for (const id of ids) files.push(...claude.filesOf(id, record.worktreeDir));
-    return files;
   }
 
   /** The first mate's sessions, its Claude copies, and the Claude client's own files for them. */
@@ -248,165 +271,4 @@ export class SavedOutsideData {
     for (const id of ids) files.push(...claude.filesOf(id, firstmateHomeDir));
     return files;
   }
-}
-
-/**
- * Where the Claude client keeps a session: its transcript, and the folder
- * beside it with the outputs too long for the transcript and its helpers'
- * own transcripts. A full pass lists the client's folders once rather than
- * searching them for each session.
- */
-class ClaudeFiles {
-  private index: Map<string, string> | undefined;
-
-  constructor(
-    private readonly configDir: string,
-    private readonly listAll: boolean,
-  ) {}
-
-  filesOf(sessionId: string, cwd: string): string[] {
-    const transcript = this.locate(sessionId, cwd);
-    if (!transcript) return [];
-    return [transcript, ...textFilesUnder(join(dirname(transcript), sessionId))];
-  }
-
-  private locate(sessionId: string, cwd: string): string | null {
-    if (!this.listAll) return locateClaudeTranscript({ configDir: this.configDir, cwd, sessionId });
-    const direct = join(
-      this.configDir,
-      "projects",
-      encodeClaudeProjectDir(cwd),
-      `${sessionId}.jsonl`,
-    );
-    if (isFile(direct)) return direct;
-    this.index ??= this.list();
-    return this.index.get(sessionId) ?? null;
-  }
-
-  private list(): Map<string, string> {
-    const index = new Map<string, string>();
-    const projects = join(this.configDir, "projects");
-    for (const dir of entriesOf(projects)) {
-      for (const name of entriesOf(join(projects, dir))) {
-        if (name.endsWith(".jsonl"))
-          index.set(name.slice(0, -".jsonl".length), join(projects, dir, name));
-      }
-    }
-    return index;
-  }
-}
-
-function entriesOf(dir: string): string[] {
-  try {
-    return readdirSync(dir);
-  } catch {
-    return [];
-  }
-}
-
-function isFile(path: string): boolean {
-  try {
-    return lstatSync(path).isFile();
-  } catch {
-    return false;
-  }
-}
-
-/** Every text file under a folder, never following a link. */
-function textFilesUnder(dir: string): string[] {
-  const files: string[] = [];
-  const walk = (at: string) => {
-    for (const name of entriesOf(at)) {
-      const path = join(at, name);
-      let kind: ReturnType<typeof lstatSync>;
-      try {
-        kind = lstatSync(path);
-      } catch {
-        continue;
-      }
-      if (kind.isDirectory()) walk(path);
-      else if (kind.isFile() && TEXT_FILES.has(extname(name))) files.push(path);
-    }
-  };
-  if (existsSync(dir)) walk(dir);
-  return files;
-}
-
-/** The Claude session ids the app holds copies of in a record folder. */
-function sessionIdsIn(dir: string): string[] {
-  return entriesOf(dir)
-    .filter((name) => name.endsWith(".jsonl") && !name.endsWith(".served.jsonl"))
-    .map((name) => basename(name, ".jsonl"))
-    .filter((id) => SESSION_ID.test(id) && !id.includes("_"));
-}
-
-/** A file's words with what is due replaced, by what kind of file it is. */
-function scrubFile(
-  file: string,
-  content: string,
-  rule: ScrubRule,
-  legacy: readonly LegacyCalls[],
-  at: number,
-): Scrubbed<string> {
-  const kind = extname(file);
-  if (kind === ".jsonl") return scrubJsonLines(content, rule, { at, legacy });
-  if (kind === ".json") {
-    try {
-      const done = scrubValue(JSON.parse(content), rule, at);
-      return done.replaced
-        ? { value: JSON.stringify(done.value), replaced: done.replaced }
-        : { value: content, replaced: 0 };
-    } catch {
-      // Not JSON after all: its text, as written.
-    }
-  }
-  return scrubText(content, rule, at);
-}
-
-/** Whether a file holds anything due, reading it without changing it. */
-async function dueIn(
-  file: string,
-  rule: ScrubRule,
-  legacy: readonly LegacyCalls[],
-  since: number | undefined,
-): Promise<boolean> {
-  let facts: Awaited<ReturnType<typeof stat>>;
-  try {
-    facts = await stat(file);
-  } catch {
-    return false;
-  }
-  if (since !== undefined && facts.mtimeMs < since) return false;
-  let bytes: Buffer;
-  try {
-    bytes = await readFile(file);
-  } catch {
-    return false;
-  }
-  const hinted =
-    bytes.includes(FENCE_HINT) ||
-    (legacy.length > 0 && LEGACY_HINTS.some((hint) => bytes.includes(hint)));
-  if (!hinted) return false;
-  return scrubFile(file, bytes.toString("utf8"), rule, legacy, facts.mtimeMs).replaced > 0;
-}
-
-/**
- * Write a file again with what is due replaced: read, replaced and renamed
- * into place in one go, keeping its mode. Answers how many it replaced.
- */
-function rewrite(file: string, rule: ScrubRule, legacy: readonly LegacyCalls[]): number {
-  let facts: ReturnType<typeof statSync>;
-  let content: string;
-  try {
-    facts = statSync(file);
-    content = readFileSync(file, "utf8");
-  } catch {
-    return 0;
-  }
-  const done = scrubFile(file, content, rule, legacy, facts.mtimeMs);
-  if (done.replaced === 0) return 0;
-  const temp = `${file}.${process.pid}.outside`;
-  writeFileSync(temp, done.value, { mode: facts.mode & 0o777 });
-  renameSync(temp, file);
-  return done.replaced;
 }

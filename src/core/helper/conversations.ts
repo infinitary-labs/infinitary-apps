@@ -294,6 +294,7 @@ export async function startConversations(options: {
           },
         }
       : {}),
+    claudeConfigDir: () => defaultClaudeConfigDir(),
     log,
   });
   const held = host;

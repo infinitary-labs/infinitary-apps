@@ -469,6 +469,41 @@ describe("compact task record frame", () => {
     expect((frame.node("timeline").children[0] as Node).open).toBe(false);
   });
 
+  // INF-1138: a click opens a line at once and fires its toggle event a task
+  // later, and an update between the two drew the line closed again - the
+  // report's whole text in custom-api.spec.ts stayed hidden on the Mac. A
+  // script's click on a line it found just before an update lands on the
+  // line the update replaced.
+  it("keeps a line as a click left it when an update lands before the click's toggle event", () => {
+    const frame = mount();
+    const detail = task({
+      outcome: "Fixed. Full evidence.",
+      events: [event("report", "Fixed. Full evidence.")],
+      activityLog: [row("report", "Fixed.")],
+    });
+    const line = () => frame.node("timeline").children[0] as Node;
+    frame.push(detail);
+    const opened = line();
+    opened.open = true;
+    frame.push({ ...detail, updatedAt: now + 1 });
+    opened.listeners.toggle?.();
+    expect(line()).not.toBe(opened);
+    expect(line().open).toBe(true);
+    const closed = line();
+    closed.open = false;
+    frame.push({ ...detail, updatedAt: now + 2 });
+    closed.listeners.toggle?.();
+    expect(line().open).toBe(false);
+    // The click lands on the line found before the update: the line drawn in its place opens.
+    const found = line();
+    frame.push({ ...detail, updatedAt: now + 3 });
+    found.open = true;
+    found.listeners.toggle?.();
+    expect(line().open).toBe(true);
+    frame.push({ ...detail, updatedAt: now + 4 });
+    expect(line().open).toBe(true);
+  });
+
   it("paints an interruption as a danger box in plain words, and leaves a waiting decision to the bar", () => {
     const frame = mount();
     frame.push(task({ blockedBy: ["DEMO-38"], waitingCardId: "card" }));

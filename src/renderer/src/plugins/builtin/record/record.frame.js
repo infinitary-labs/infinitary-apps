@@ -14,9 +14,11 @@
  * writes - what it waits on, its parent, the key on an Activity line another
  * task wrote (docs/task-record.md, "Whom an event concerns") - is plain
  * text the bridge links, as in a card's body (FI3-1271). Native
- * disclosures stay mounted across pushes, preserving open state and focus; an Activity line that opens to its whole text is rebuilt with
- * each push and keeps its open state by its event, and a control a push
- * rebuilds keeps the keyboard's focus (FI3-1279). Times read relative,
+ * disclosures stay mounted across pushes, preserving open state and focus;
+ * an Activity line that opens is rebuilt with each push and opens as the
+ * reader left it, read from the line itself, never its toggle event
+ * (INF-1138), and a control a push rebuilds keeps the keyboard's focus
+ * (FI3-1279). Times read relative,
  * the exact time on rest, the pointer's or the keyboard's focus, in the
  * app's label drawn in this page (`restLabel`). A pull request a line
  * names links to its page, where the host says which words name it. All
@@ -106,10 +108,21 @@
    */
   let ages = [];
   /**
-   * The events whose Activity line the captain opened, kept across pushes.
-   * @type {Set<number>}
+   * Each Activity line that opens, by its event, as the page shows it now.
+   * A push draws every line anew, open where the line it replaces is open:
+   * a click opens a line at once but fires its toggle event a task later,
+   * so a push between the two reads the line, never the event (INF-1138).
+   * @type {Map<number, HTMLDetailsElement>}
    */
-  const openLines = new Set();
+  let lines = new Map();
+  /**
+   * Whether each line a push took away was open as it left the page. A
+   * click that changes it afterwards landed on the line just before the
+   * push replaced it - as a script does that found the line first - and
+   * the line drawn in its place follows.
+   * @type {WeakMap<HTMLDetailsElement, boolean>}
+   */
+  const leftOpen = new WeakMap();
   let comparisonOpen = false;
 
   /**
@@ -634,8 +647,9 @@
    * Full report row).
    * @param {Row[]} rows
    * @param {Map<number, string>} wholeText
+   * @param {Map<number, HTMLDetailsElement>} drawn the lines these replace
    */
-  function activityRows(rows, wholeText) {
+  function activityRows(rows, wholeText, drawn) {
     return rows.map((row) => {
       if (row.from) return linkedLine(row, row.from);
       const whole = wholeText.get(row.id) ?? "";
@@ -687,10 +701,14 @@
         node.append(text);
       }
       node.append(...foldedLines(folded.filter((event) => event.after)));
-      node.open = openLines.has(row.id);
+      node.open = drawn.get(row.id)?.open ?? false;
+      lines.set(row.id, node);
       node.addEventListener("toggle", () => {
-        if (node.open) openLines.add(row.id);
-        else openLines.delete(row.id);
+        const shown = lines.get(row.id);
+        const left = leftOpen.get(node);
+        if (!shown || shown === node || left === undefined || left === node.open) return;
+        leftOpen.set(node, node.open);
+        shown.open = node.open;
       });
       return node;
     });
@@ -1064,8 +1082,11 @@
     activityCountEl.textContent = String(rows.length);
     earlierEl.hidden = earlier === 0;
     earlierLabelEl.textContent = `Show earlier · ${earlier}`;
-    historyEl.replaceChildren(...activityRows(rows.slice(0, earlier), wholeText));
-    timelineEl.replaceChildren(...activityRows(tail, wholeText));
+    const drawn = lines;
+    lines = new Map();
+    for (const node of drawn.values()) leftOpen.set(node, node.open);
+    historyEl.replaceChildren(...activityRows(rows.slice(0, earlier), wholeText, drawn));
+    timelineEl.replaceChildren(...activityRows(tail, wholeText, drawn));
     section("timeline", rows.length > 0);
 
     paintFacts(current);

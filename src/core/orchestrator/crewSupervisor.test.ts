@@ -25889,7 +25889,7 @@ describe("programs (INF-799 piece 2)", () => {
   async function programHarness(
     script: string,
     bound: number,
-    options: { startPolicy?: "when-ready" | "on-request"; spawns?: { count: number } } = {},
+    options: { startPolicy?: "when-ready" | "on-request"; spawns?: { count: number }; premium?: boolean } = {},
   ) {
     const sessions = [fakeCrewmate(), fakeCrewmate(), fakeCrewmate(), fakeCrewmate()];
     const counted = options.spawns;
@@ -25912,7 +25912,7 @@ describe("programs (INF-799 piece 2)", () => {
       intent: intentOf("Cap what the meter renders."),
       repoId: repo.id,
       startPolicy: options.startPolicy ?? "when-ready",
-      shape: { program: { script, bound } },
+      shape: { program: { script, bound }, ...(options.premium ? { premium_ask: true } : {}) },
     });
     harness.supervisor.graphChanged();
     /** The part a task() call filed, once its crewmate is working on it. */
@@ -25936,6 +25936,37 @@ describe("programs (INF-799 piece 2)", () => {
     };
     return { ...harness, open: harness.sessions.open, sessions, program, part, report };
   }
+
+  // INF-974: the selected level survives filing and the queued dispatch's classification.
+  it("persists each script choice through dispatch without changing unchosen parts", async () => {
+    const h = await programHarness(`
+      for (const intelligence of ["low", "medium", "high", undefined]) {
+        await task("Read the meter's existing output.", { intelligence });
+      }
+      return "read";
+    `, 4);
+    for (const [call, intelligence] of ["low", "medium", "high", undefined].entries()) {
+      const part = await h.part(call);
+      expect(part.shape?.program_part?.intelligence).toBe(intelligence);
+      expect(part.difficulty).toBe(intelligence ?? "high");
+      await h.report(call, "Read the output.");
+    }
+    await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+  });
+
+  it("refuses premium without consent and files it with the program's premium ask", async () => {
+    const script = `await task("Investigate the meter.", { intelligence: "premium" }); return "checked";`;
+    const denied = await programHarness(script, 1);
+    await vi.waitFor(() => expect(denied.tasks.get(denied.program.id)?.status).toBe("dropped"), PROGRAM_WAIT);
+    expect(denied.tasks.children(denied.program.id)).toEqual([]);
+    expect(denied.ops.join(" ")).toContain("the captain must request premium for the program first");
+    const allowed = await programHarness(script, 1, { premium: true });
+    const part = await allowed.part(0);
+    expect(part.shape).toMatchObject({ premium_ask: true, program_part: { intelligence: "premium" } });
+    expect(part.difficulty).toBe("premium");
+    await allowed.report(0, "Checked the meter.");
+    await vi.waitFor(() => expect(allowed.tasks.get(allowed.program.id)?.status).toBe("done"), PROGRAM_WAIT);
+  });
 
   it("files each task() call as a part, resolves its await with the part's result, and returns the program's result and branch", async () => {
     const h = await programHarness(

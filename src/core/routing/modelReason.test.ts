@@ -39,6 +39,23 @@ function setup() {
 }
 
 describe("modelReasonOf", () => {
+  it("records a program choice without mislabelling it as kind-based routing (INF-974)", () => {
+    const { router, decisions, reasonOf } = setup();
+    const shape: WorkShape = {
+      kind: "research",
+      program_part: { call: 0, hash: "call", label: "read", intelligence: "low" },
+    };
+    expect(router.decide("part", "Read the meter's output", shape)).toMatchObject({
+      rule: "R11",
+      bucket: "low",
+    });
+    expect(decisions.routing({ taskIds: ["part"] }).at(-1)).toMatchObject({
+      rule: "R11",
+      bucket: "low",
+    });
+    expect(reasonOf("part", shape)).toBeUndefined();
+  });
+
   it("reads the rule, both slots and the basis key off the decision the router recorded", () => {
     const { router, reasonOf } = setup();
     const shape: WorkShape = { kind: "fix", basis: "basis-task", basis_verified: true };

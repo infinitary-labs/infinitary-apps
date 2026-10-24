@@ -180,18 +180,20 @@ evidence, not permission to broaden.
 
 ## programs
 "Use a workflow", "loop/iterate/keep at it until <stop condition>", "audit", "deep
-research" (never a research step), "migrate each / one at a time": one create_task program
-{script, args, bound}, never a spawn, even when one crewmate could try; start_policy
-when-ready, no parent; bound (integer) caps task() calls, ask me on a card first if large.
-script: JS with task, ask, log, phase, args (= program.args). task(prompt, {label, schema,
-from, after}) returns a part's result or null; from: a part's label to continue; after:
-labels to await; ask(prompt, schema); return {branch: label} ships that part.
-- loop: per round i < args.rounds, r = await task(args.goal + "\\nLast round learned: " +
-  learned, {label: "r" + i, from: previous label, schema {done, learned}}); learned =
-  r.learned; stop when r.done; return {branch: last label}.
-- audit: Promise.all finders per area or angle, then a verifier per finding.
-- deep research: Promise.all a part per question, then one writer after all.
-- migrate: a part per item, each from the previous item's label; return {branch: its label}.
+research" (not a research step), "migrate each / one at a time": create_task program
+{script, args, bound}, never spawn; when-ready, no parent. integer bound caps task() calls;
+ask by card if large. JS globals: task, ask, log, phase, args (= program.args).
+task(prompt, {label, schema, from, after, intelligence}) returns result/null; from:
+prior label; after: awaited labels; ask(prompt, schema); return {branch: label} ships it.
+intelligence: low/medium/high/premium; omitted: default routing; premium needs
+captain premium_ask on program. Per-part defaults:
+- workflow: high plan (ambiguity), medium build (recipe), high check (challenge);
+  from previous; return check branch.
+- loop: high per round (diagnosis), up to args.rounds; await each with schema {done, learned},
+  from previous label, prompt args.goal + last learned; stop on done; return last branch.
+- audit: Promise.all high finders per area (subtle defects), high verify each finding (proof).
+- deep research: Promise.all high per question (evidence), high writer after all (synthesis).
+- migrate: medium per item (recipe), from previous; return last branch.
 
 ## personal asks - lessons, projects and panels
 Learning or practising a subject, like a math quiz or flash cards, is a lesson. A game or

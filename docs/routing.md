@@ -204,3 +204,14 @@ Older decisions without that identity fall back to the first observed sign-in fo
 The first mate's own calls are not placed-task charges.
 The router recomputes spend priority and the runway over charged windows, so placed work can make a window run out before its reset, but retains the raw headroom for all eligibility checks, so a negative projection never invents an exhaustion hold.
 Automatic placement commits its chosen route in the existing transaction, so the next start sees that choice without an additional allowance reservation.
+
+## Program-selected intelligence
+
+A program's `task()` call may choose `intelligence` for that part (INF-974, `docs/programs.md`).
+The runner validates the slot, journals it as part of the call identity, and the supervisor persists it on `shape.program_part.intelligence`.
+`tierFor` reads that typed declaration before kind rules and after a named model, premium ask or escalation.
+Without a declaration the existing table is unchanged.
+The supervisor refuses premium without the program's captain-origin `premium_ask`; an authorized premium part carries that ask into the existing availability wait.
+R11 records low, medium or high program choices in the routing ledger, with the requested and served slots as usual.
+R11 is ledger-only: the published model-reason vocabulary stays unchanged, and no kind-based explanation is shown for it.
+Model selection, pins, allowance fallback and reasoning remain the router's, not the script's.

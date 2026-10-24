@@ -3,15 +3,18 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
+import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { launchApp } from "./launch";
 import { promptInput } from "./prompt";
 import {
+  CAP_INTELLIGENCE,
   CAP_PROMPT,
   capped,
   FILES,
+  FIND_INTELLIGENCE,
   FIND_PROMPT,
   PROGRAM_RUN_PROMPT,
   PROGRAM_TITLE,
@@ -45,6 +48,7 @@ test("a program files its parts as child tasks, hands each result on, and closes
   // TaskService performs boot recovery in its constructor, so construct it
   // only before launch. Reconstructing it in a poll writes over live turns.
   const tasks = new TaskService({ db });
+  const decisions = new DecisionStore(db);
   const evidence = (name: string) => test.info().outputPath(name);
   // Enforce read-only observation on this connection while the app owns writes.
   db.pragma("query_only = ON");
@@ -77,10 +81,21 @@ test("a program files its parts as child tasks, hands each result on, and closes
     const parts = tasks.children(programId);
     const finder = parts.find((part) => part.title === FIND_PROMPT);
     expect(finder?.shape).toMatchObject({ internal_step: true, program_part: { call: 0 } });
+    // INF-974: the running app persists the script's choice and routes with it.
+    expect(finder?.shape?.program_part?.intelligence).toBe(FIND_INTELLIGENCE);
+    expect(decisions.routing({ taskIds: [finder?.id ?? ""] }).at(-1)).toMatchObject({
+      rule: "R11",
+      bucket: FIND_INTELLIGENCE,
+    });
     expect(finder?.delivery?.result?.value).toEqual({ files: FILES });
     const caps = FILES.map((file) => parts.find((part) => part.title === `${CAP_PROMPT} ${file}.`));
     for (const part of caps) {
       expect(part?.status).toBe("done");
+      expect(part?.shape?.program_part?.intelligence).toBe(CAP_INTELLIGENCE);
+      expect(decisions.routing({ taskIds: [part?.id ?? ""] }).at(-1)).toMatchObject({
+        rule: "R11",
+        bucket: CAP_INTELLIGENCE,
+      });
       expect(tasks.blockers(part?.id ?? "").map((row) => row.id)).toEqual([finder?.id]);
     }
     expect(parts.map((part) => part.status)).toEqual(["done", "done", "done"]);
@@ -91,6 +106,22 @@ test("a program files its parts as child tasks, hands each result on, and closes
       files: FILES,
       capped: FILES.map(capped),
     });
+    // Keep the observed result in successful CI logs too; journey files are uploaded only on failure.
+    console.info(
+      "Program intelligence record",
+      JSON.stringify({
+        status: tasks.get(programId)?.status,
+        result: tasks.get(programId)?.delivery?.result?.value,
+        parts: parts.map((part) => ({
+          label: part.shape?.program_part?.label,
+          intelligence: part.shape?.program_part?.intelligence,
+          status: part.status,
+          routing: decisions
+            .routing({ taskIds: [part.id] })
+            .map(({ rule, bucket, served }) => ({ rule, bucket, served })),
+        })),
+      }),
+    );
     await waitForFirstmateIdle(page);
   } finally {
     writeFileSync(
@@ -100,6 +131,9 @@ test("a program files its parts as child tasks, hands each result on, and closes
           program: programId ? tasks.get(programId) : null,
           timeline: programId ? tasks.timeline(programId) : [],
           parts: programId ? tasks.children(programId) : [],
+          routing: programId
+            ? decisions.routing({ taskIds: tasks.children(programId).map((part) => part.id) })
+            : [],
         },
         null,
         2,

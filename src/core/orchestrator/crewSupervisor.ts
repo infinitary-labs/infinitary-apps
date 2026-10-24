@@ -5000,10 +5000,17 @@ export class CrewSupervisor {
     program: TaskRecord,
     part: ProgramPartAsk,
   ): TaskRecord | { refused: string } {
+    if (part.intelligence === "premium" && !program.shape?.premium_ask) {
+      return {
+        refused:
+          "This part asks for premium; the captain must request premium for the program first.",
+      };
+    }
     const from = part.from ? this.options.tasks.get(part.from) : undefined;
     const ask: WorkShapeAsk = {
       internal_step: true,
       delivery_ask: "local-only",
+      ...(part.intelligence === "premium" ? { premium_ask: true } : {}),
       ...(part.schema ? { result_schema: part.schema } : {}),
       ...(from ? { branch_from: from.key || from.id } : {}),
     };
@@ -5029,7 +5036,12 @@ export class CrewSupervisor {
       {
         ...this.workShape(ask),
         ...handOff,
-        program_part: { call: part.call, hash: part.hash, label: part.label },
+        program_part: {
+          call: part.call,
+          hash: part.hash,
+          label: part.label,
+          ...(part.intelligence ? { intelligence: part.intelligence } : {}),
+        },
       },
       intent,
     );

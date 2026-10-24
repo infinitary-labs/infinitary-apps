@@ -14,6 +14,7 @@ import {
   type ProgramPartAsk,
   ProgramRunner,
 } from "./programRunner";
+import { callDigest } from "./programScript";
 
 // INF-799 piece 2, the captain's Approve and build on "Plan task-graph
 // programs, typed results first": the runner evaluates the script in its own
@@ -97,6 +98,48 @@ function harness(script: string, bound: number) {
 }
 
 describe("the program runner", () => {
+  // INF-974: scripts choose intelligence per part, and the journal must distinguish choices.
+  it("carries each level, includes it in replay identity, and preserves old calls", async () => {
+    const h = harness(
+      `
+      for (const intelligence of ["low", "medium", "high", "premium", undefined]) {
+        await task("Read the meter's result.", { intelligence });
+      }
+      return "read";
+    `,
+      5,
+    );
+    const first = h.start();
+    for (const [call, intelligence] of ["low", "medium", "high", "premium", undefined].entries()) {
+      await vi.waitFor(() => expect(h.filed).toHaveLength(call + 1), WAIT);
+      expect(h.filed[call]?.intelligence).toBe(intelligence);
+      if (call === 4) {
+        expect(h.filed[call]?.hash).toBe(callDigest("task", ["Read the meter's result.", {}]));
+        first.dispose();
+        h.start();
+      }
+      h.answer(call, "Read the result.");
+    }
+    expect(await h.end).toEqual({ value: "read" });
+    expect(h.filed).toHaveLength(5);
+    expect(new Set(h.filed.map((part) => part.hash)).size).toBe(5);
+  });
+
+  it.each(["strong", "HIGH", "", null, 1, {}])(
+    "refuses invalid intelligence %j before filing",
+    async (intelligence) => {
+      const h = harness(
+        `return await task("Read the meter.", { intelligence: ${JSON.stringify(intelligence)} });`,
+        1,
+      );
+      h.start();
+      expect(await h.end).toEqual({
+        error: "task()'s intelligence must be low, medium, high, or premium.",
+      });
+      expect(h.filed).toEqual([]);
+    },
+  );
+
   it("resolves each await with its part's answer and, after a quit, replays from the record without filing or asking again", async () => {
     const h = harness(
       `

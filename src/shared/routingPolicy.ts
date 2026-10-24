@@ -225,7 +225,13 @@ export const workShapeSchema = z.object({
    * it files the part.
    */
   program_part: z
-    .object({ call: z.number().int().nonnegative(), hash: z.string(), label: z.string() })
+    .object({
+      call: z.number().int().nonnegative(),
+      hash: z.string(),
+      label: z.string(),
+      /** The script's choice, not a model pin or permission to use premium. */
+      intelligence: intelligenceBucketSchema.optional(),
+    })
     .optional(),
   /** Legacy metadata kept readable for saved tasks; grants no different access. */
   knowledge_access: z.literal("references").optional(),
@@ -486,7 +492,8 @@ export const ruleIdSchema = z.enum([
   "R9",
   "R10",
 ]);
-export type RuleId = z.infer<typeof ruleIdSchema>;
+/** R11 is ledger-only; older views do not have a program-choice reason line. */
+export type RuleId = z.infer<typeof ruleIdSchema> | "R11";
 
 /**
  * The policy is DATA: a tier per kind rule, the unclear default, the

@@ -53,12 +53,12 @@ import { focusOn } from "./windowKeys";
  * Every crewmate fixes a bug the finished basis task reproduced, served at
  * medium as asked.
  */
-const ROUTING: CrewRouting = {
+const ROUTING = {
   shape: { kind: "fix", basis: "hover-crew-basis", basis_verified: true },
   rule: "R6",
   asked: "medium",
   served: "medium",
-};
+} satisfies CrewRouting;
 
 /** The second crewmate has opened a pull request whose checks have run for 15 minutes. */
 const CHANGE = { prNumber: 612, ci: "pending", startedAgo: 15 * 60_000 } as const;

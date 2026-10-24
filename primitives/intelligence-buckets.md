@@ -12,7 +12,7 @@ The person places each offering in zero or more slots; off means in no slot, nev
 ## When to use it, and when not
 
 Use the router for every model choice for crew work, and describe the work through its shape, not through a model name.
-Do not write a per-feature model picker, a hard-coded model id, or a prompt that asks a model which tier the work deserves: the tier is computed, and a captain-named model is a pin carried in the shape (`override_model_id`).
+Do not write a per-feature model picker, a hard-coded model id, or a prompt that asks a model which tier the work deserves: the tier is computed unless a program explicitly chooses its part's level, and a captain-named model is a pin carried in the shape (`override_model_id`).
 Do not add a fifth bucket for a bounded judgment: a typed one-value answer is a [Decision question](decision-questions.md), which holds exactly one model and no session ([`../docs/decision-models.md`](../docs/decision-models.md)).
 Do not put account or allowance math here: which account serves a chosen model, headroom, spend ranking and withheld sign-ins belong to the accounts and allowance foundation ([`../docs/quota.md`](../docs/quota.md), [`../docs/architecture.md`](../docs/architecture.md) §16); routing reads those facts and never redefines them.
 Do not use buckets to choose a computer: Automatic placement compares computers' previews of this routing ([`../docs/routing.md`](../docs/routing.md), "Read-only computer evaluation"; [`../docs/helper.md`](../docs/helper.md), "Automatic starts").
@@ -30,6 +30,7 @@ Do not use buckets to choose a computer: Automatic placement compares computers'
 ## Operations and lifecycle
 
 - Routing is computed from the work's shape, never judged (captain-approved 2026-09-18): `CrewSupervisor.commission` builds the shape (kind, basis, `premium_ask`, `override_model_id`, `escalate_from`, escalation) and stores it on `tasks.shape_json`, so a queued row dispatches from what it was commissioned with.
+- A program may declare `program_part.intelligence`; R11 reads low, medium or high before kind rules, after captain overrides and escalation; premium still needs `premium_ask`.
 - `tierFor` maps the shape to a rule and a requested tier; an `unclear` kind routes high.
 - Requested versus served: the rule names the requested slot, and the ladder may serve a weaker one; both land on the routing row (`bucket`, `served`), and a downgrade says so in the feed (`downgradeLine`).
 - Ladder: slotted offerings, then the starter map virtually, then every listed model at medium, then the whole signed-in pool; a shortlist is a preference, never a way to brick routing.

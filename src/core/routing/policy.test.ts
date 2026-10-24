@@ -13,6 +13,43 @@ function shape(over: Partial<WorkShape> = {}): WorkShape {
 }
 
 describe("tierFor: the captain's table", () => {
+  // INF-974: a script's declared choice outranks kind, never the captain's choices.
+  it.each(["low", "medium", "high"] as const)(
+    "routes a program part at %s before its kind",
+    (intelligence) => {
+      const part = { call: 0, hash: "call", label: "read", intelligence };
+      expect(tierFor(shape({ kind: "research", program_part: part }))).toMatchObject({
+        rule: "R11",
+        bucket: intelligence,
+      });
+      expect(tierFor(shape({ kind: "chore", program_part: part }))).toMatchObject({
+        rule: "R11",
+        bucket: intelligence,
+      });
+      expect(
+        tierFor(shape({ program_part: part, override_model_id: "captain-model" })),
+      ).toMatchObject({ rule: "R0", pin: "captain-model" });
+      expect(tierFor(shape({ program_part: part, premium_ask: true }))).toMatchObject({
+        rule: "R1a",
+        bucket: "premium",
+      });
+      expect(
+        tierFor(
+          shape({ program_part: part, escalation: { from: "prior", attempt: 1, floor: "high" } }),
+        ),
+      ).toMatchObject({ rule: "R1b", bucket: "high" });
+    },
+  );
+
+  it("does not treat a script's premium choice as premium consent", () => {
+    const part = { call: 0, hash: "call", label: "read", intelligence: "premium" as const };
+    expect(tierFor(shape({ program_part: part }))).toMatchObject({ rule: "R8", bucket: "high" });
+    expect(tierFor(shape({ program_part: part, premium_ask: true }))).toMatchObject({
+      rule: "R1a",
+      bucket: "premium",
+    });
+  });
+
   it("defines the approved reasoning effort for each tier", () => {
     expect(DEFAULT_ROUTING_POLICY.effort).toEqual({
       premium: "xhigh",

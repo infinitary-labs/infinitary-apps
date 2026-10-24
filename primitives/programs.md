@@ -5,7 +5,7 @@ A program is a task whose steps a script decides: the first mate writes plain Ja
 ## Intended use
 
 Compose loops, parallel fan-outs, retries and typed answers when a script can decide the steps, as one task the host runs.
-The shapes the first mate is served are the loop, the audit, deep research and the migration; "use a workflow", a loop toward a stop condition, an audit, deep research and a migration of each item are each one `create_task program`, when-ready with no parent.
+The shapes the first mate is served are the workflow, the loop, the audit, deep research and the migration; "use a workflow", a loop toward a stop condition, an audit, deep research and a migration of each item are each one `create_task program`, when-ready with no parent.
 A program is the agent's reach, not a sequence runner: the host learns no workflow's name, runs what the first mate wrote, and checks only typed facts.
 
 ## When to use it, and when not
@@ -29,7 +29,8 @@ The fact on the task: `shape.program` (`{script, args?, bound}`) in [`../src/sha
 
 The dialect, in Infinitary's own names (a Claude workflow script is not promised to run unchanged):
 
-- `task(prompt, {label, schema, from, after})` files one part and resolves to its checked result, its report text, or `null` when the part was dropped.
+- `task(prompt, {label, schema, from, after, intelligence})` files one part and resolves to its checked result, its report text, or `null` when the part was dropped.
+- `intelligence` chooses a slot per part; omission keeps ordinary routing, and premium needs the captain's `premium_ask` on the program.
 - `from` names the earlier part whose last commit the part starts at (its `branch_from`); `after` names parts it builds on, each a `blocks` link.
 - `ask(prompt, schema)` is one tool-less typed read; `log(text)` and `phase(name)` write the program's timeline; `args` is the JSON it was filed with.
 

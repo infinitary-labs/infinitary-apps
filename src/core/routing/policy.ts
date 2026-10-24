@@ -16,6 +16,7 @@ import {
  *   R0  an available model override wins outright
  *   R1a a premium ask
  *   R1b an escalation floor (the only automatic path into premium)
+ *   R11 a program part's declared intelligence (premium still needs R1a)
  *   R2-R7 the kind rules, two of them turning on a verified basis
  *   R8  unclear -> high
  */
@@ -39,6 +40,14 @@ export function tierFor(
       rule: "R1b",
       bucket: floor,
       reason: `rule R1b: escalation attempt ${attempt} from ${from} runs at ${floor}`,
+    };
+  }
+  const intelligence = shape.program_part?.intelligence;
+  if (intelligence && intelligence !== "premium") {
+    return {
+      rule: "R11",
+      bucket: intelligence,
+      reason: `rule R11: the program chose ${intelligence} for this part`,
     };
   }
   switch (shape.kind) {

@@ -23,9 +23,12 @@ A program task stays open, on the graph like any task, and starts when its start
 
 The script's host functions use Infinitary's own names; a Claude workflow script is not promised to run unchanged.
 
-- `task(prompt, {label, schema, from, after})` files one part and resolves to its answer: its checked result when `schema` declared a result shape, its report text when not, or `null` when the part was dropped.
+- `task(prompt, {label, schema, from, after, intelligence})` files one part and resolves to its answer: its checked result when `schema` declared a result shape, its report text when not, or `null` when the part was dropped.
   `label` names the part (default `part N`); `from` names an earlier part whose last commit its working copy starts at, and `null` or no `from` starts at the default branch, so a chain's first call may pass its empty `previous`; `after` names earlier parts whose results it builds on, each a `blocks` link.
   `from` and `after` may name a call that is still waiting for a free slot or the bound; the link is made when that call's part is filed, and a call naming one that was refused is refused too.
+  `intelligence` optionally requests `low`, `medium`, `high` or `premium` for this part (INF-974); an invalid value refuses the call before filing anything.
+  Omission preserves kind-based routing, and the choice is part of the replay digest; calls from older scripts without it retain their digest.
+  Premium needs `premium_ask` on the program, from the captain's words; the part carries that consent and keeps the existing premium availability wait.
   A label no earlier call used is refused, and the script's await throws, as does a call whose part cannot be filed.
 - `ask(prompt, schema)` is one tool-less typed read through the decision models' one-question session (`DecisionModels.answerJson`, `src/core/program/programAsk.ts`): the answer is JSON the host checks against the schema, asked once more with why when it does not parse or fit, then `null`.
 - `log(text)` and `phase(name)` write a line on the program's own timeline; a phase also sets its plan dots.
@@ -36,15 +39,18 @@ The script returns the program's result, and its `branch`, a part's label, names
 
 ## The shapes the first mate is served
 
-The served sequences guide's `programs` section (`src/core/personal/sequencesSkill.ts`) is the one home of the dialect's rule and of four shapes written in it (INF-799 piece 3).
+The served sequences guide's `programs` section (`src/core/personal/sequencesSkill.ts`) is the one home of the dialect's rule and of five shapes written in it (INF-799 piece 3).
 It names the asks that are programs - "use a workflow", a loop, iteration or "keep at it" until a stop condition, an audit, deep research (never a research step) and a migration of each item or one at a time - and says each is one `create_task program` in the project, when-ready with no parent, never a spawn even when one crewmate could try.
 The script's globals are named there too, since a script that reads `bound` or another name `args` does not carry fails when it runs.
 The first mate adapts a shape to the ask; the host learns no shape's name and reads nothing of the script beyond what "Filing a program" refuses.
 
-- The loop: one part a round up to `args.rounds`, awaited, each `from` the last round's label so it continues that round's commits, its schema a `done` flag and what it `learned`; each round's prompt carries the last round's learned note, and earlier rounds' reports stay on their parts for a round to look up, until a round reports done; it returns the last round as its `branch`.
-- Audit: finders in parallel, one per area or angle, then a verifier per finding; it is named apart from the crew's own adversarial review of a change.
-- Deep research: a part per question in parallel, then one writer `after` them all.
-- Migrate: a part per item, each `from` the previous item's label, returning the last as its `branch`.
+- Workflow: a high planner resolves ambiguity, a medium builder follows the plan, and a high checker challenges the result; each continues the previous branch, and the checker is the returned branch.
+- The loop: one part a round up to `args.rounds`, awaited, each `from` the last round's label so it continues that round's commits, its schema a `done` flag and what it `learned`; each round's prompt carries the last round's learned note, and earlier rounds' reports stay on their parts for a round to look up, until a round reports done; every round requests high because it diagnoses and chooses the next attempt; it returns the last round as its `branch`.
+- Audit: high finders in parallel, one per area or angle, then a high verifier per finding, to discover subtle defects and challenge each claim; it is named apart from the crew's own adversarial review of a change.
+- Deep research: high researchers per question in parallel weigh evidence, then one high writer `after` them all reconciles it.
+- Migrate: a medium part per item applies an established recipe, each `from` the previous item's label, returning the last as its `branch`.
+
+These levels are recommendations the first mate adapts and writes into each `task()` call, never rules the host applies by playbook name.
 
 The guide is served in the first mate's fixed context, whose size is bounded (`tests/firstmate-fixed-context.test.ts`), so each shape is one line; a longer shape is paid for by trimming a repeat elsewhere, recorded in that test's ledger, or by saying a rule in fewer words.
 
@@ -64,7 +70,10 @@ It stays running until its end is recorded, so a part's close during that end ne
 
 A part is a child task of the program, filed when-ready as an internal step that delivers its branch and its result: `delivery_ask` local-only, never a pull request or a completion card.
 It carries the captain's words and constraints the program was filed with, the script's prompt as its goal, `schema` as its result shape and `from` as its `branch_from`, and its brief says how a part ships (`renderProgramPartSection`, `src/core/orchestrator/intentBrief.ts`).
-Its record names the call that filed it (`shape.program_part`: the call's number, digest and label).
+Its record names the call that filed it (`shape.program_part`: the call's number, digest, label and optional intelligence).
+`tierFor` reads the selected level before kind-based rules, but after a captain-named model, premium ask or escalation.
+The router still owns model selection, saved pins, availability fallback and served-level reasoning; a script requests a slot, not a guaranteed model.
+The ledger records a non-premium script choice as R11; the existing closed set of user-facing model-reason lines does not render that new rule, rather than attributing it to the kind.
 
 A part's report that carries the answer its program waits for sorts as row 2b, `program-part` (`docs/report-sort.md`): no wake, and the host closes the part done, answered, its working copy retired with its work saved on its kept ref.
 A part that hands its turn to the captain or to the first mate sorts as any other report.

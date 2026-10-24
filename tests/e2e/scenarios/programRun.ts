@@ -20,13 +20,16 @@ const FILES_SCHEMA = {
   required: ["files"],
   properties: { files: { type: "array", items: { type: "string" } } },
 };
+/** INF-974: a bounded lookup is low; applying its recipe is medium. */
+export const FIND_INTELLIGENCE = "low";
+export const CAP_INTELLIGENCE = "medium";
 /** The capping part's report for one file. */
 export const capped = (file: string) => `Capped ${file} at 4 KiB.`;
 export const PROGRAM_SCRIPT = `
 await phase("find");
-const found = await task(${JSON.stringify(FIND_PROMPT)}, { label: "find", schema: ${JSON.stringify(FILES_SCHEMA)} });
+const found = await task(${JSON.stringify(FIND_PROMPT)}, { label: "find", intelligence: ${JSON.stringify(FIND_INTELLIGENCE)}, schema: ${JSON.stringify(FILES_SCHEMA)} });
 await phase("cap");
-const done = await Promise.all(found.files.map((file) => task(${JSON.stringify(CAP_PROMPT)} + " " + file + ".", { after: ["find"] })));
+const done = await Promise.all(found.files.map((file) => task(${JSON.stringify(CAP_PROMPT)} + " " + file + ".", { after: ["find"], intelligence: ${JSON.stringify(CAP_INTELLIGENCE)} })));
 return { files: found.files, capped: done };
 `;
 /** The bound the first mate proposes: one finder and one part per file. */

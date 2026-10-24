@@ -1,4 +1,5 @@
 import { availableParallelism } from "node:os";
+import { type IntelligenceBucket, intelligenceBucketSchema } from "@shared/modelSlots";
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import type { TaskRecord } from "../storage/taskStore";
 import type { TaskService } from "../tasks/taskService";
@@ -47,6 +48,8 @@ export type ProgramPartAsk = {
   label: string;
   /** The result shape its report must carry, when the script declared one. */
   schema?: Record<string, unknown>;
+  /** The script's requested slot; absent keeps ordinary kind-based routing. */
+  intelligence?: IntelligenceBucket;
   /** The part, by id, whose last commit its working copy starts at. */
   from?: string;
   /** The parts, by id, whose results it builds on: each a `blocks` link to it. */
@@ -219,6 +222,11 @@ class RunningProgram {
       this.refuse(call, "task()'s schema must be a JSON Schema object.");
       return;
     }
+    const intelligence = intelligenceBucketSchema.optional().safeParse(opts.intelligence);
+    if (!intelligence.success) {
+      this.refuse(call, "task()'s intelligence must be low, medium, high, or premium.");
+      return;
+    }
     const afterRefs: unknown[] = Array.isArray(opts.after)
       ? opts.after
       : opts.after === undefined
@@ -238,7 +246,13 @@ class RunningProgram {
     // in the order they arrive, which a replay of parallel work may change.
     const hash = callDigest("task", [
       prompt,
-      { label: explicit, schema, from: opts.from, after: opts.after },
+      {
+        label: explicit,
+        schema,
+        from: opts.from,
+        after: opts.after,
+        intelligence: intelligence.data,
+      },
     ]);
     this.named.add(label);
     const at = this.recorded.findIndex((part) => part.shape?.program_part?.hash === hash);
@@ -253,6 +267,7 @@ class RunningProgram {
       part: {
         prompt,
         label,
+        ...(intelligence.data ? { intelligence: intelligence.data } : {}),
         ...(schema ? { schema: schema as Record<string, unknown> } : {}),
         hash,
       },

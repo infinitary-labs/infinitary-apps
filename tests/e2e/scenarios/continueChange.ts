@@ -1,4 +1,10 @@
-import { calledTool, type Scenario, type ScenarioAnswer, sinceLastUser } from "../mockProvider";
+import {
+  browserShellMessages,
+  calledTool,
+  type Scenario,
+  type ScenarioAnswer,
+} from "../mockProvider";
+import { providerMessages } from "../providerRequest";
 import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeStory";
 
 /**
@@ -24,7 +30,7 @@ export const MOCK_CONTINUE_STORY = {
 
 export const continueChange: Scenario =
   () =>
-  ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
+  ({ body, isFirstmate, wantsStream, latestUserTail }) => {
     if (!wantsStream) return undefined;
     if (isFirstmate) return firstmateMove(latestUserTail);
     if (body.includes("Goal: Check the meter after the first fix is in.")) {
@@ -62,7 +68,7 @@ export const continueChange: Scenario =
         ],
       };
     }
-    if (!hasToolResults)
+    if (!calledTool(body, "bash"))
       return {
         calls: [
           {
@@ -74,6 +80,12 @@ export const continueChange: Scenario =
           },
         ],
       };
+    // INF-1099: a push past the shell's limit becomes a background job.
+    // Its receipt is not the push being done: end the turn, and carry on
+    // from that job's exit wake, never pushing again.
+    const shell = browserShellMessages(providerMessages(body));
+    if (shell.pending) return { text: "The push is still running." };
+    const gitReading = shell.readings.find((message) => message.role === "tool")?.text;
     if (calledTool(latestUserTail, "report")) return { text: "The first change is ready." };
     if (latestUserTail.includes("overall: green")) {
       if (!calledTool(latestUserTail, "file_followup"))
@@ -104,13 +116,7 @@ export const continueChange: Scenario =
       return { calls: [{ name: "check_change", args: {} }] };
     if (!calledTool(latestUserTail, "prepare_change"))
       return {
-        calls: [
-          prepareMockStory(
-            CONTINUE_CHANGE_CARD_TITLE,
-            sinceLastUser(body).results[0],
-            MOCK_CONTINUE_STORY,
-          ),
-        ],
+        calls: [prepareMockStory(CONTINUE_CHANGE_CARD_TITLE, gitReading, MOCK_CONTINUE_STORY)],
       };
     return {
       calls: [

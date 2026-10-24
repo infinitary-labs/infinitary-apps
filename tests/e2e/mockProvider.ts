@@ -1162,7 +1162,7 @@ function stillRunning(text: string): boolean {
  * output. Resume from that job's exit wake, never by sending the action again.
  * Keep message positions so handoff scripts can still slice at their wake.
  */
-function browserShellMessages(messages: ReturnType<typeof providerMessages>) {
+export function browserShellMessages(messages: ReturnType<typeof providerMessages>) {
   const pending = new Set<string>();
   const readings = messages.map((message) => {
     const job =
@@ -7285,8 +7285,18 @@ export async function startMockProvider(
           streamText("Evidence returned.");
           return;
         }
-        if (!isFirstmate && latestUserTail.includes(SEND_UP_PROMPT_MARKER) && wantsStream) {
-          if (!hasToolResults) {
+        if (!isFirstmate && body.includes(SEND_UP_PROMPT_MARKER) && wantsStream) {
+          // INF-1099: a push past the shell's limit becomes a background
+          // job. Its receipt is not the push being done: end the turn, and
+          // declare the card from that job's exit wake, never pushing again.
+          if (
+            calledTool(body, "emit_card") ||
+            browserShellMessages(providerMessages(body)).pending
+          ) {
+            streamText("done");
+            return;
+          }
+          if (!calledTool(body, "bash")) {
             streamToolCalls([
               {
                 name: "bash",
@@ -7297,10 +7307,6 @@ export async function startMockProvider(
                 },
               },
             ]);
-            return;
-          }
-          if (latestUserTail.includes(MOCK_SENT_UP_CARD_TITLE)) {
-            streamText("done");
             return;
           }
           streamToolCalls([

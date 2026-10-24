@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { SYNC_CAP_MS } from "../../src/core/jobs/jobManager";
 import { openDatabase } from "../../src/core/storage/db";
 import {
   CARE_WORDS,
@@ -79,6 +80,12 @@ test.beforeAll(async () => {
   git("init", "--bare", "--initial-branch=main", bare);
   const plain = join(userDataDir, "plainhost");
   seedProject(plain, { url: ORIGIN, bare });
+  // INF-1099: the host takes a second longer than the crewmate's shell
+  // waits, as a busy Mac does, so the push always finishes as a background
+  // job and the card goes up from that job's exit.
+  const hook = join(bare, "hooks", "pre-receive");
+  writeFileSync(hook, `#!/bin/sh\nsleep ${SYNC_CAP_MS / 1000 + 1}\n`);
+  chmodSync(hook, 0o755);
   const onGitHub = join(userDataDir, "meterlab");
   seedProject(onGitHub, { url: "https://github.com/o/meterlab.git" });
   const keptLocal = join(userDataDir, "ledger");

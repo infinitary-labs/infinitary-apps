@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "starve-check-top-header-only",
+      "reason": "Internal test fix: the load controller's another-user test runs top with no process rows, so its captured output no longer grows past the buffer on a Mac with many processes. No shipped app behavior changes."
+    }
+  ]
+}

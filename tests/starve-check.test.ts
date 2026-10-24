@@ -164,6 +164,8 @@ it.skipIf(process.platform !== "darwin")(
   "leaves a descendant of another user running and completes the owned work",
   async () => {
     // `top` is set-user-ID root on macOS, like `ps`, and lives long enough to be seen.
+    // INF-1107: with no process rows its output is a few header lines; a full
+    // listing grows with the Mac's processes and overran the captured output.
     const { stdout } = await execute("python3", [
       "scripts/starve-check.py",
       "--timeout",
@@ -182,6 +184,8 @@ it.skipIf(process.platform !== "darwin")(
       "3",
       "-s",
       "1",
+      "-n",
+      "0",
     ]);
     expect(stdout).toContain("command exited 0");
   },

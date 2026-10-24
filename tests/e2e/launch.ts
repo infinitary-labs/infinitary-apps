@@ -21,6 +21,7 @@ import { claimedPort } from "../helpers/claimedPort";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
 import { withoutRunnerSession } from "../helpers/runnerSession";
 import { scratchDir } from "../helpers/scratchDirs";
+import { launchDiagnostics } from "./launchDiagnostics";
 import { readInMain } from "./mainProcess";
 import { type MockClaudeTurns, writeMockClaudeClient } from "./mockClaudeClient";
 import {
@@ -48,6 +49,7 @@ export type LaunchedApp = {
    */
   connectionPort: number;
   mockProvider?: MockProviderServer;
+  diagnosticsDir: string;
   close: () => Promise<void>;
 };
 
@@ -429,7 +431,8 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
   // Named before the app starts, so an app whose worker is killed mid-launch
   // stops with it too.
   stopWithWorker(userDataDir);
-  const app = await electron.launch({
+  const diagnostics = launchDiagnostics(userDataDir, mockProvider);
+  const opening = electron.launch({
     // Playwright otherwise inserts --no-sandbox on Linux. Exercise the
     // same sandbox a normal desktop launch uses.
     chromiumSandbox: true,
@@ -538,8 +541,14 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       ...options.env,
     },
   });
+  const app = await opening.catch(async (error: unknown) => {
+    diagnostics.snapshot();
+    diagnostics.stop();
+    if (ownsMockProvider) await mockProvider?.close();
+    throw error;
+  });
   const launchedAt = performance.now();
-  watch(app);
+  diagnostics.watch(watch(app).child);
   let page: Page;
   try {
     page = await app.firstWindow();
@@ -551,7 +560,10 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     // commands: the launch is ready once the shell marks the keys as its own.
     if (options.shell !== false) await untilWindowCommands(page, SHELL_READY_MS);
   } catch (error) {
+    diagnostics.snapshot();
     await closeApp(app);
+    diagnostics.snapshot();
+    diagnostics.stop();
     if (ownsMockProvider) await mockProvider?.close();
     throw error;
   }
@@ -561,6 +573,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     app,
     page,
     userDataDir,
+    diagnosticsDir: diagnostics.dir,
     homeDir,
     connectionPort: options.packaged ? CONNECTION_PORT : Number(loopbackPort),
     ...(mockProvider ? { mockProvider } : {}),
@@ -568,7 +581,10 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
     close: () => {
       closing ??= (async () => {
         const closingAt = performance.now();
+        diagnostics.snapshot();
         await closeApp(app);
+        diagnostics.snapshot();
+        diagnostics.stop();
         if (ownsMockProvider) {
           await mockProvider?.close();
         }

@@ -4543,6 +4543,8 @@ export type Scenario = () => (request: ScenarioRequest) => ScenarioAnswer | unde
 export type MockProviderServer = {
   port: number;
   requests: () => number;
+  /** Observe decoded requests, including history, without retaining authentication headers. */
+  recordRequests: (record: (body: string) => void) => () => void;
   /** Reject every Firstmate inference, including any unexpected setup composition. */
   failFirstmate: (fail: boolean) => void;
   /** Raw completion request bodies, oldest first (contract tests). */
@@ -4610,6 +4612,7 @@ export async function startMockProvider(
   let failFirstmate = false;
   let cardFetchProbeHits = 0;
   const requestBodies: string[] = [];
+  const recorders = new Set<(body: string) => void>();
   const requestHeaders: IncomingHttpHeaders[] = [];
   /** Held crewmate steps, each with the request that opened it. */
   const held = new Map<ServerResponse, { body: string; request: number }>();
@@ -4661,6 +4664,7 @@ export async function startMockProvider(
           req.headers["content-encoding"] === "zstd" ? zstdDecompressSync(raw) : raw
         ).toString("utf8");
         requestBodies.push(body);
+        for (const record of recorders) record(body);
         requestHeaders.push(req.headers);
         const wantsStream = body.includes('"stream":true') || body.includes('"stream": true');
         const isFirstmate = body.includes(FM_SYSTEM_MARKER);
@@ -7879,6 +7883,13 @@ export async function startMockProvider(
   return {
     port: address.port,
     requests: () => requestCount,
+    recordRequests: (record) => {
+      for (const body of requestBodies) record(body);
+      recorders.add(record);
+      return () => {
+        recorders.delete(record);
+      };
+    },
     failFirstmate: (fail) => {
       failFirstmate = fail;
     },

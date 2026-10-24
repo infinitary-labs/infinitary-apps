@@ -600,3 +600,30 @@ describe("a journey's own scenarios", () => {
     expect((await captainSays(server, ask)).status).toBe(400);
   });
 });
+
+it("INF-909 retains decoded stand-in requests in order, including history and tool-result follow-ups", async () => {
+  server = await startMockProvider();
+  const send = async (messages: unknown[]) => {
+    const response = await fetch(`http://127.0.0.1:${server?.port}/v1/chat/completions`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-only-not-retained",
+      },
+      body: JSON.stringify({ model: "mock", stream: true, messages }),
+    });
+    expect(response.ok).toBe(true);
+    await response.text();
+  };
+  const initial = [{ role: "user", content: "hello" }];
+  await send(initial);
+  const recorded: string[] = [];
+  const stop = server.recordRequests((body) => recorded.push(body));
+  await send([...initial, { role: "tool", tool_call_id: "call-1", content: "card emitted" }]);
+  expect(recorded).toEqual(server.requestBodies());
+  expect(recorded).toHaveLength(2);
+  expect(recorded.join("\n")).not.toContain("test-only-not-retained");
+  stop();
+  await send(initial);
+  expect(recorded).toHaveLength(2);
+});

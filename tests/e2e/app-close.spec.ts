@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { closeApp, launchApp } from "./launch";
 
@@ -14,6 +16,11 @@ import { closeApp, launchApp } from "./launch";
 test("a step that closed its app and then failed reports its own failure after the cleanup closes it again", async () => {
   const launched = await launchApp();
   const child = launched.app.process();
+  // INF-909: a failing step's cleanup retains both main-process streams.
+  await launched.app.evaluate(() => {
+    process.stdout.write("journey stdout diagnostic\n");
+    process.stderr.write("journey stderr diagnostic\n");
+  });
   const failure = new Error("the step's own failure");
   const reported = await (async () => {
     try {
@@ -25,6 +32,12 @@ test("a step that closed its app and then failed reports its own failure after t
     }
   })().catch((error: unknown) => error);
   expect(reported).toBe(failure);
+  expect(readFileSync(join(launched.diagnosticsDir, "main.stdout.log"), "utf8")).toContain(
+    "journey stdout diagnostic",
+  );
+  expect(readFileSync(join(launched.diagnosticsDir, "main.stderr.log"), "utf8")).toContain(
+    "journey stderr diagnostic",
+  );
   expect(child.exitCode ?? child.signalCode).not.toBeNull();
 });
 

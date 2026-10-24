@@ -333,6 +333,12 @@ An edit to a scenario file then picks only the journeys that import it, by rule 
 ## Per-run e2e evidence
 
 Each Playwright run keeps its result directories (traces, error contexts, failure pictures, `testInfo.outputPath` files) and its JSON result in `test-results/runs/<UTC start>-<runner pid>/` (`tests/e2e/runEvidence.ts`), printed as `This run's evidence: …` before its tests start.
+Every `launchApp` keeps a unique `launches/<pid>-<id>/` folder inside that run, including launches shared by a file's hooks and relaunches after a restart.
+It streams `main.stdout.log`, `main.stderr.log` and `provider.requests.jsonl` while the app runs, then copies app-owned `crewmates/<task>/sessions/` before and after closing, before scratch cleanup removes userData.
+The provider record keeps decoded request bodies with sequence numbers and timestamps, including tool-result follow-ups, never authentication headers; a reused provider replays its history to the new launch's record.
+`launch.json` identifies the disposable userData and worker; no account store or whole HOME is copied.
+The existing failure uploads in `journeys.yml`, `source-journeys.yml` and `verify.yml` already keep this run directory under `test-results/`.
+Main-process streams attach as soon as Playwright returns the launched process; a failure inside `electron.launch` itself has only Playwright's launch error, not these streams.
 Playwright clears a run's output directory as the run starts, and that used to be all of `test-results/`, so a second run of the same working copy deleted the first one's traces and pictures while it was still going, and the two shared one JSON result.
 The newest ten finished runs are kept, and every live one; `--last-failed` still reads the working copy's last run, from `test-results/.last-run.json`.
 A spec saves its pictures and JSON with `test.info().outputPath(name)` (or the `testInfo` it was handed), so each lands in that test's own directory inside the run's, beside its trace: `test-results/runs/<run>/<spec>-<test title>-<lane>/<name>` (Playwright shortens a long title with a hash).

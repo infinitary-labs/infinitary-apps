@@ -254,4 +254,22 @@ test("a Claude crew turn shows its card, takes a mid-turn steer, and remains rea
     });
     await page.keyboard.press("Escape");
   });
+  await test.step("failure diagnostics retain the crew transcript and ordered provider requests before scratch cleanup", async () => {
+    const copies = crewCopies(launched.userDataDir);
+    await launched.close();
+    const kept = crewCopies(launched.diagnosticsDir);
+    expect(kept.map((file) => readFileSync(file, "utf8"))).toEqual(
+      copies.map((file) => readFileSync(file, "utf8")),
+    );
+    const requests = readFileSync(join(launched.diagnosticsDir, "provider.requests.jsonl"), "utf8")
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(requests.map((row) => JSON.stringify(row.body))).toEqual(
+      launched.mockProvider?.requestBodies().map((body) => JSON.stringify(JSON.parse(body))),
+    );
+    expect(requests.some((row) => JSON.stringify(row.body).includes(MOCK_CLAUDE_CARD_TITLE))).toBe(
+      true,
+    );
+  });
 });

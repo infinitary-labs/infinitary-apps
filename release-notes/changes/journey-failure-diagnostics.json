@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-failure-diagnostics",
+      "reason": "Internal: CI journey failure artifacts retain main-process streams, crew session diagnostics and stand-in request records before fixture cleanup. No product behavior changes."
+    }
+  ]
+}

@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, normalize, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { editedScreenText, screenRanges } from "./screen-journeys.ts";
+import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
 
 /**
  * The journey files a change can break (docs/testing.md, "Journeys on the
@@ -32,9 +33,12 @@ import { editedScreenText, screenRanges } from "./screen-journeys.ts";
  * 6. it, or a helper most journeys do not import, names a hook that a
  *    edited region under `src/renderer/` draws, even when the change adds or
  *    removes none: the region owns what that hook shows; or
- * 7. its changed path matches a targeted fallback row below, even when no
+ * 7. it, or a helper most journeys do not import, calls a
+ *    `window.infinitary` method, or names a read, whose message between the
+ *    window and the core the change edits (./window-messages.ts); or
+ * 8. its changed path matches a targeted fallback row below, even when no
  *    hook, symbol or sentence changed; or
- * 8. a commit of the change names it in a `Journeys:` trailer: the author
+ * 9. a commit of the change names it in a `Journeys:` trailer: the author
  *    knows the change reaches it where no rule above reads that reach.
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
@@ -417,6 +421,9 @@ export function select({
   const { hooks, sentences } = tokensOfDiff(sourceDiff);
   const owned = ownedHooks(changed, read, readBefore, sourceDiff);
   const symbols = symbolsOfDiff(sourceDiff);
+  const messages = readBefore
+    ? changedMessages(changed, read, readBefore)
+    : { methods: new Map<string, string>(), reads: new Map<string, string>() };
   const helperExports = new Map<string, Set<string>>();
   if (readBefore)
     for (const file of changed)
@@ -504,6 +511,17 @@ export function select({
       const reads = [...drawn].find((hook) => narrowText.includes(hook) && holdsHook(narrowText, hook));
       if (reads) add(spec, `reads ${reads}, which ${file} draws`);
     }
+    for (const [method, channel] of messages.methods)
+      if (callsMethod(narrowText, method))
+        add(
+          spec,
+          channel
+            ? `calls window.infinitary.${method}, whose message ${channel} the change edits`
+            : `calls window.infinitary.${method}, which the change edits in ${PRELOAD}`,
+        );
+    for (const [name, channel] of messages.reads)
+      if (holdsPhrase(narrowText, name))
+        add(spec, `reads ${name}, whose message ${channel} the change edits`);
   }
   const available = new Set(specs);
   for (const row of FALLBACKS) {

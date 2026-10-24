@@ -218,7 +218,7 @@ A pull request gets `journeys.yml`'s hosted Linux `choose-journeys` check, which
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run and sums each journey file's measured Mac durations.
 It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
 A missing or expired result fails the chooser rather than silently dropping journeys; run full verification to supply fresh timings.
-`scripts/journey-budget.ts` keeps the closest journeys on Mac up to six estimated minutes: edited specs first, then the shortest changed-helper import path and screen readers, with filename ties.
+`scripts/journey-budget.ts` keeps the closest journeys on Mac up to six estimated minutes: edited specs first, then the shortest changed-helper import path, screen readers and callers of a changed window message, with filename ties.
 It adds serial desktop durations to the longest of ten packed parallel workers, matching the Mac configuration.
 A new or previously skipped file uses the slowest measured file in its lane, and the summary lists it as unmeasured.
 Its Mac count and file list pass to `affected-journeys`, on the Mac mini (the `MAC_RUNNER` label).
@@ -238,15 +238,26 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 
 1. a spec file the change edits;
 2. a spec whose import closure reaches a changed helper and imports one of its changed exports, directly or through another helper: one under `tests/e2e/`, a shared one elsewhere under `tests/` such as `tests/helpers/`, or a script.
-   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 6 instead, which match words in the spec and its helpers under `tests/e2e/`;
+   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7 instead, which match words in the spec and its helpers under `tests/e2e/`;
 3. a spec that imports a changed module of `src/shared/` and names a symbol that module's diff adds or removes (a declared property of four or more letters or an export, with at least one capital letter);
 4. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the change adds or removes in `src/`;
 5. a spec, or a helper most journeys do not import, that holds a sentence of two or more words as its own quoted string, one the change adds or removes in a string of `src/`;
 6. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the edited part of a file under `src/renderer/` draws before or after the change, even when the change adds or removes no hook.
    The parser uses the smallest enclosing JSX subtree plus ancestor container hooks, or the enclosing top-level declaration for non-JSX edits, following local declaration consumers.
    Import edits, unowned setup, absent hunks and deleted owners retain conservative coverage;
-7. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence;
-8. a commit of the change names the journey in a `Journeys:` trailer.
+7. a spec, or a helper most journeys do not import, that calls a `window.infinitary` method, or names a read, whose message between the window and the core the change edits (`scripts/window-messages.ts`);
+8. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence;
+9. a commit of the change names the journey in a `Journeys:` trailer.
+
+A journey calls the window's interface directly, such as `window.infinitary.retention.scope()`, so a changed answer breaks it with no hook, sentence or symbol of its own changing.
+`knowledge-gate.spec.ts` compares that answer whole, so a new field in it breaks the journey (INF-1136).
+Rule 7 reads a message as a channel of the contract, `invokeContract` or `pushContract` in `src/shared/ipc.ts`.
+The channel changes when the code of its entry changes, or the code of a declaration of `src/shared/ipc.ts` that the entry uses, directly or through another declaration there.
+A method of the preload's `window.infinitary` object changes with its channel or with its own code in `src/preload/index.ts`, and a read of `readCatalog` in `src/shared/reads.ts` with its channel, its own entry or a declaration of that module it uses.
+The journey names the method by its whole path, as `window.infinitary.retention.scope` or `window.firstmate.retention.scope`, or holds the read's name as its own quoted string.
+A comment or a line break is not code, so an edited comment on a channel chooses nothing.
+A schema the contract imports from another module is not followed: the task and card schemas there change with most changes, and most journeys call a method that carries them.
+A change that reaches a journey through such a schema names it in a `Journeys:` trailer.
 
 The fallback table beside the existing selector unions these files into its result, deduplicating files and preserving existing reasons:
 

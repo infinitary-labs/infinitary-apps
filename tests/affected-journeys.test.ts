@@ -12,6 +12,7 @@ import {
   symbolsOfDiff,
   tokensOfDiff,
 } from "../scripts/affected-journeys.ts";
+import { changedMessages } from "../scripts/window-messages.ts";
 
 /**
  * Which journey files a change can break (scripts/affected-journeys.ts):
@@ -552,6 +553,117 @@ describe("journeys a change declares (INF-631)", () => {
       "tests/e2e/panel-tasks.spec.ts",
     ]);
     expect(declaredJourneys("")).toEqual([]);
+  });
+});
+
+/**
+ * INF-1136's fix 4, the captain's pick: "Teach the journey picker to catch a
+ * changed message between the app's window and its core". Main was red from
+ * 5:29 to 9:26 PM because the change in the fixture gave inf:retention:scope
+ * a new field, and knowledge-gate, which compares that answer whole, was not
+ * chosen. The fixture is that change's own contract, preload and journeys.
+ */
+describe("a changed message between the window and its core (INF-1136)", () => {
+  type Edit = { file: string; from: string; to: string };
+  const fixture = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/affected-journeys/window-message.json", import.meta.url),
+      "utf8",
+    ),
+  ) as {
+    changed: string[];
+    before: Record<string, string>;
+    edits: Edit[];
+    unchanged: Record<string, string>;
+    journeys: Record<string, string>;
+    specs: string[];
+  };
+  const apply = (files: Record<string, string>, edits: Edit[]) => {
+    const result = { ...files };
+    for (const edit of edits) {
+      const text = result[edit.file] ?? "";
+      expect(text.split(edit.from)).toHaveLength(2);
+      result[edit.file] = text.replace(edit.from, () => edit.to);
+    }
+    return result;
+  };
+  const change = (
+    before: Record<string, string>,
+    after: Record<string, string>,
+    journeys = fixture.journeys,
+    changed = fixture.changed,
+  ) => ({
+    changed,
+    sourceDiff: "",
+    specs: [...new Set([...fixture.specs, ...Object.keys(journeys)])],
+    read: (file: string) =>
+      after[file] ??
+      fixture.unchanged[file] ??
+      journeys[file] ??
+      (fixture.specs.includes(file) ? "" : undefined),
+    readBefore: (file: string) => before[file] ?? fixture.unchanged[file],
+  });
+  const knowledgeGate = "tests/e2e/knowledge-gate.spec.ts";
+
+  it("chooses knowledge-gate for the change that turned main red", () => {
+    const after = apply(fixture.before, fixture.edits);
+    const reasons = select(change(fixture.before, after));
+    expect(reasons.get(knowledgeGate)).toEqual([
+      "calls window.infinitary.retention.scope, whose message inf:retention:scope the change edits",
+    ]);
+    // Of the contract's channels, the change edits the two it means to, and
+    // the journey that edits itself gains no reason of this kind.
+    const { read, readBefore } = change(fixture.before, after);
+    const messages = changedMessages(fixture.changed, read, readBefore);
+    expect(Object.fromEntries(messages.methods)).toEqual({
+      "retention.scope": "inf:retention:scope",
+      "retention.deleteOutside": "inf:retention:delete-outside",
+    });
+    expect(messages.reads.size).toBe(0);
+    expect(reasons.get("tests/e2e/integrations-google.spec.ts")).toEqual([
+      "the change edits this journey",
+    ]);
+  });
+
+  it("does not count a comment on a message as a change to it", () => {
+    // The same change's new words on inf:retention:scope, without its code.
+    const comment = (text: string) =>
+      text.match(
+        / {2}\/\*\*(?:(?!\*\/)[\s\S])*What a purge clears(?:(?!\*\/)[\s\S])*\*\/\n/,
+      )?.[0] ?? "";
+    const words: Edit = {
+      file: "src/shared/ipc.ts",
+      from: comment(fixture.before["src/shared/ipc.ts"] ?? ""),
+      to: comment(fixture.edits.map((edit) => edit.to).join("")),
+    };
+    expect(words.to).toContain("the words from outside this build keeps");
+    const after = apply(fixture.before, [words]);
+    expect(
+      select(change(fixture.before, after, fixture.journeys, ["src/shared/ipc.ts"])).size,
+    ).toBe(0);
+  });
+
+  it("chooses a journey that reads a changed message by the read's name", () => {
+    // fca460b9 made inf:knowledge:directions' argument optional, and
+    // knowledge-directions reads it by name with this line.
+    const after = { ...fixture.before };
+    const before = apply(after, [
+      {
+        file: "src/shared/ipc.ts",
+        from: "request: z.tuple([knowledgeDirectionsArgsSchema.optional()]),",
+        to: "request: z.tuple([knowledgeDirectionsArgsSchema]),",
+      },
+    ]);
+    const journey = {
+      "tests/e2e/knowledge-directions.spec.ts":
+        'window.infinitary.plugins.read("knowledge.directions", { scope: "captain" }),',
+    };
+    const reasons = select(change(before, after, journey, ["src/shared/ipc.ts"]));
+    expect(Object.fromEntries(reasons)).toEqual({
+      "tests/e2e/knowledge-directions.spec.ts": [
+        "reads knowledge.directions, whose message inf:knowledge:directions the change edits",
+      ],
+    });
   });
 });
 

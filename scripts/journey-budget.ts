@@ -38,7 +38,10 @@ export function journeyTimes(report: { suites: ReportSuite[] }): Map<string, num
   return times;
 }
 
-/** Explicitly edited specs first, then the shortest test-import path, then screen readers and declared journeys. */
+/**
+ * Explicitly edited specs first, then the shortest test-import path, then
+ * screen readers, callers of a changed window message and declared journeys.
+ */
 export function proximity(
   file: string,
   reasons: string[],
@@ -65,7 +68,7 @@ export function proximity(
     }
     frontier = next;
   }
-  return reasons.some((why) => /reads |names |holds |declare it reaches /.test(why))
+  return reasons.some((why) => /reads |names |holds |calls |declare it reaches /.test(why))
     ? 1
     : Number.MAX_SAFE_INTEGER;
 }

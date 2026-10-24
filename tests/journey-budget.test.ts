@@ -116,5 +116,25 @@ describe("INF-658 measured journey placement", () => {
     expect(proximity(spec, declared ?? [], new Set(["src/core/tasks/taskService.ts"]), read)).toBe(
       1,
     );
+    // INF-1136: so does a journey that calls a window method whose message the
+    // change edits, here by sending the preload's method another channel.
+    const caller = "tests/e2e/knowledge-gate.spec.ts";
+    const preload = (channel: string) =>
+      `const api: FirstmateApi = {\n  retention: {\n    scope: () => invoke("${channel}"),\n  },\n};\n`;
+    const calls = select({
+      changed: ["src/preload/index.ts"],
+      sourceDiff: "",
+      specs: [caller],
+      read: (file) =>
+        file === caller
+          ? "return page.evaluate(() => window.infinitary.retention.scope());"
+          : file === "src/preload/index.ts"
+            ? preload("inf:retention:scope")
+            : undefined,
+      readBefore: (file) =>
+        file === "src/preload/index.ts" ? preload("inf:retention:purge") : undefined,
+    }).get(caller);
+    expect(calls).toHaveLength(1);
+    expect(proximity(caller, calls ?? [], new Set(["src/preload/index.ts"]), read)).toBe(1);
   });
 });

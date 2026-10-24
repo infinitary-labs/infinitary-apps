@@ -15,7 +15,9 @@ import {
   integrationRule,
 } from "@shared/integrations";
 import { type Fence, fenced, fencedAnswer } from "@shared/outsideData";
+import type { KeptOutsideData } from "@shared/savedOutsideData";
 import type { IntegrationAsk, WriteAsk, WriteAskOutcome } from "@shared/writeAsk";
+import type { LegacyCalls } from "../storage/outsideDataScrub";
 import {
   type IntegrationAnswer,
   type IntegrationBinding,
@@ -24,6 +26,7 @@ import {
   type IntegrationLook,
   IntegrationOutcomeUnknown,
 } from "./binding";
+import { FIRSTMATE_READER } from "./outsideReads";
 import type { IntegrationSecrets } from "./secrets";
 import type { IntegrationSettings, IntegrationSettingsStore } from "./store";
 
@@ -48,6 +51,11 @@ export type IntegrationsServiceOptions = {
    * captain's click on its card takes it once (`TaskService`).
    */
   asks?: IntegrationAskStore;
+  /**
+   * Which conversation received fenced words, and when (`OutsideReads`):
+   * a call's caller, and the first mate for a rule's events.
+   */
+  reads?: { note: (reader: string, at: number) => void };
   now?: () => number;
   /** The whole view, after every change (`inf:integrations`). */
   push?: (view: IntegrationsView) => void;
@@ -403,7 +411,9 @@ export class IntegrationsService {
       const answer = await row.binding.call(row.connection.id, action, input, caller);
       const text = redact(answer.text);
       const label = answer.refused ? undefined : row.binding.fence;
-      return { answer: { ...answer, text: label ? fencedAnswer(text, this.fence(label)) : text } };
+      return {
+        answer: { ...answer, text: label ? fencedAnswer(text, this.fence(label, caller)) : text },
+      };
     } catch (error) {
       return {
         answer: {
@@ -599,11 +609,13 @@ export class IntegrationsService {
     const look = await row.binding.look(row.connection.id, event, cursor, filter);
     const label = row.binding.fence;
     if (!label) return look;
+    // A rule's events reach the first mate.
+    const reader: IntegrationCaller = { kind: "firstmate" };
     return {
       ...look,
       items: look.items.map((item) => ({
         ...item,
-        summary: fenced(item.summary, this.fence(label)),
+        summary: fenced(item.summary, this.fence(label, reader)),
       })),
     };
   }
@@ -611,14 +623,42 @@ export class IntegrationsService {
   /**
    * A fresh fence for one answer or summary of a kind whose words anyone
    * can write (`IntegrationBinding.fence`): a random value nobody who wrote
-   * them could know, and the moment they were read.
+   * them could know, and the moment they were read, noted against the
+   * conversation that receives them so they go when due (`OutsideReads`).
    */
-  private fence(label: string): Fence {
-    return {
-      label,
-      value: randomBytes(FENCE_VALUE_BYTES).toString("hex"),
-      at: (this.options.now ?? Date.now)(),
-    };
+  private fence(label: string, reader: IntegrationCaller): Fence {
+    const at = (this.options.now ?? Date.now)();
+    this.options.reads?.note(reader.kind === "task" ? reader.taskId : FIRSTMATE_READER, at);
+    return { label, value: randomBytes(FENCE_VALUE_BYTES).toString("hex"), at };
+  }
+
+  /** Each fenced kind kept for a while, and for how long (`IntegrationBinding.kept`). */
+  kept(): KeptOutsideData[] {
+    return this.options.bindings.flatMap(({ fence, kept }) =>
+      fence && kept ? [{ label: fence, days: kept.days, what: kept.what }] : [],
+    );
+  }
+
+  /**
+   * The names a call reached each kept kind by before its words were
+   * fenced: its identity, its connections' ids and their names now
+   * (`LegacyCalls`).
+   */
+  legacyCalls(): LegacyCalls[] {
+    const settings = this.options.store.read();
+    return this.options.bindings.flatMap((binding) => {
+      if (!binding.fence || !binding.kept) return [];
+      const ids = [
+        ...(binding.identity ? [binding.identity.id] : []),
+        ...binding.connections().map((connection) => connection.id),
+      ];
+      const names = new Set([
+        ...ids,
+        ...(binding.identity ? [binding.identity.name] : []),
+        ...ids.flatMap((id) => settings[id]?.name ?? []),
+      ]);
+      return [{ label: binding.fence, names: [...names] }];
+    });
   }
 
   /** Stop whatever a binding started, as the app quits. */

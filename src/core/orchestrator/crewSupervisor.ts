@@ -12106,6 +12106,44 @@ export class CrewSupervisor {
   }
 
   /**
+   * A crewmate in a turn, opening, settling or moving, or with work of its
+   * client's own still running: its conversation's files are not to be
+   * written by anyone else now (`SavedOutsideData`).
+   */
+  conversationBusy(taskId: string): boolean {
+    const runtime = this.tasks.get(taskId);
+    if (this.moving.has(taskId)) return true;
+    if (!runtime) return false;
+    return (
+      runtime.state !== "idle" ||
+      !runtime.session ||
+      runtime.session.isStreaming() ||
+      runtime.settling === true ||
+      runtime.clientTasks.size > 0
+    );
+  }
+
+  /** A live crewmate holds its conversation's files. */
+  conversationHeld(taskId: string): boolean {
+    return this.tasks.has(taskId) || this.moving.has(taskId);
+  }
+
+  /**
+   * Let go of an idle crewmate's session, as a move does, so a pass can
+   * write its files again whole: its next delivery resumes it from them.
+   * False while it is busy.
+   */
+  async releaseConversation(taskId: string): Promise<boolean> {
+    if (this.conversationBusy(taskId)) return false;
+    const runtime = this.tasks.get(taskId);
+    if (!runtime) return true;
+    this.releaseSession(runtime);
+    this.tasks.delete(taskId);
+    await runtime.session?.closed().catch(() => {});
+    return true;
+  }
+
+  /**
    * The retention purge control (D-13): the one destructive control. Every
    * task, its worktree, its session JSONL, its cards, lane, timeline and
    * links go; projects stay.

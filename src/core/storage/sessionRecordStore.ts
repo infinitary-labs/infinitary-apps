@@ -95,6 +95,8 @@ type ParsedCopy = {
   offset: number;
   /** The bytes after the last newline read: a line the client was still writing. */
   partial: Buffer;
+  /** The file read, by its inode: a copy written again whole (`SavedOutsideData`) is read from its start. */
+  ino: number;
 };
 
 /** A copy's entries and their index by uuid, as they stand. */
@@ -170,12 +172,15 @@ export class SessionRecordStore {
    */
   index(sessionId: string): SessionRecordIndex {
     const path = this.transcriptPath(sessionId);
+    const facts = existsSync(path) ? statSync(path) : undefined;
+    const size = facts?.size ?? 0;
+    const ino = facts?.ino ?? 0;
     let copy = this.parsed.get(path);
-    if (!copy) {
-      copy = { entries: [], byUuid: new Map(), offset: 0, partial: Buffer.alloc(0) };
+    if (!copy || (copy.offset > 0 && copy.ino !== ino)) {
+      copy = { entries: [], byUuid: new Map(), offset: 0, partial: Buffer.alloc(0), ino };
       this.parsed.set(path, copy);
     }
-    const size = existsSync(path) ? statSync(path).size : 0;
+    copy.ino = ino;
     if (size > copy.offset) {
       const fd = openSync(path, "r");
       let fresh: Buffer;

@@ -422,6 +422,8 @@ const api: FirstmateApi = {
   retention: {
     purge: () => readableRequest("inf:retention:purge", () => invoke("inf:retention:purge")),
     scope: () => invoke("inf:retention:scope"),
+    deleteOutside: () =>
+      readableRequest("inf:retention:delete-outside", () => invoke("inf:retention:delete-outside")),
   },
   knowledge: {
     enabled: () => invoke("inf:knowledge:enabled"),

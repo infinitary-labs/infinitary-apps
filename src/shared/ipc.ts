@@ -290,6 +290,12 @@ import {
   RESOURCE_OBSERVATIONS_SINCE,
 } from "./resources";
 import {
+  type KeptOutsideData,
+  keptOutsideDataSchema,
+  type OutsideDataDeleted,
+  outsideDataDeletedSchema,
+} from "./savedOutsideData";
+import {
   type SharingAskAnswer,
   type SharingChannel,
   type SharingPreview,
@@ -1955,13 +1961,34 @@ export const invokeContract = {
     request: z.tuple([]),
     response: z.object({ purgedTasks: z.number() }),
   },
-  /** What a purge clears beyond tasks: knowledge, where this build has it (docs/knowledge.md). */
+  /**
+   * What a purge clears beyond tasks: knowledge, where this build has it
+   * (docs/knowledge.md); and the words from outside this build keeps for a
+   * while, which Settings → General can delete on their own
+   * (docs/task-retention.md, "Words from outside").
+   */
   "inf:retention:scope": {
     effect: "read",
     surface: "core",
     reach: "home",
     request: z.tuple([]),
-    response: z.object({ knowledge: z.boolean() }),
+    response: z.object({
+      knowledge: z.boolean(),
+      kept: z.array(keptOutsideDataSchema).optional(),
+    }),
+  },
+  /**
+   * Delete the words from outside every saved conversation on this
+   * computer holds, now: a note takes their place, and a conversation
+   * still working follows once it pauses (docs/task-retention.md, "Words
+   * from outside").
+   */
+  "inf:retention:delete-outside": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: outsideDataDeletedSchema,
   },
   // Knowledge (docs/knowledge.md, "The browser"): whether this build keeps
   // it and whether there is any to show (`held`: an entry, or a collection
@@ -3469,8 +3496,14 @@ export type FirstmateApi = {
   };
   retention: {
     purge: () => Promise<{ purgedTasks: number }>;
-    /** Whether a purge also clears knowledge, which only an alpha or development build keeps. */
-    scope: () => Promise<{ knowledge: boolean }>;
+    /**
+     * Whether a purge also clears knowledge, which only an alpha or
+     * development build keeps; and the words from outside this build keeps
+     * for a while, which `deleteOutside` deletes on their own.
+     */
+    scope: () => Promise<{ knowledge: boolean; kept?: KeptOutsideData[] }>;
+    /** Replace the Gmail and Calendar content every saved conversation holds with a note (INF-952). */
+    deleteOutside: () => Promise<OutsideDataDeleted>;
   };
   knowledge: {
     /**

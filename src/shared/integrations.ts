@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { forgeSignInStateSchema, isForgeHostName } from "./forges";
+import { type KeptOutsideData, SAVED_OUTSIDE_DATA_WORDS } from "./savedOutsideData";
 
 /**
  * Integrations (docs/integrations.md): a connection to something outside
@@ -363,9 +364,22 @@ export type IntegrationNotice = {
 };
 
 /**
+ * How long Gmail and Calendar words stay in saved conversations before a
+ * note takes their place, and what a person calls them: 30 days after they
+ * were read, the captain's answer on INF-952 ("30 days, the same as
+ * Claude's own sweep"), so no Google data is kept for good
+ * (docs/task-retention.md, "Words from outside").
+ */
+export const GOOGLE_DATA_KEPT: Omit<KeptOutsideData, "label"> = {
+  days: 30,
+  what: "Gmail and Calendar content",
+};
+
+/**
  * Google's notice: what Infinitary uses from Gmail and Calendar, and where
  * it goes - the person's AI provider, another computer that runs the work,
- * and the saved task records. Only the person's own provider terms and
+ * and the saved task records, with how long they keep it and how to delete
+ * it sooner (INF-952). Only the person's own provider terms and
  * settings decide whether that provider trains on what it receives, while
  * Google forbids its data training AI models, so the notice says both.
  * It also says what the app does against a message written to steer an
@@ -401,11 +415,11 @@ const GOOGLE_NOTICE: IntegrationNotice = {
         },
         {
           name: "Other computers",
-          text: "If another computer runs your first mate's work, the results that work needs reach it over Infinitary's encrypted connection. Your Google sign-in stays on this computer.",
+          text: "If another computer runs your first mate's work, the results that work needs reach it over Infinitary's encrypted connection and stay in its saved conversations. Your Google sign-in stays on this computer.",
         },
         {
           name: "Saved task records",
-          text: "What your first mate and crew read stays in that task's conversation, cards and files until you delete them. Removing Google does not delete them. Purge task data in Settings → General deletes every saved task on this computer.",
+          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner on this computer, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → General. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google does not delete any of it. Purge task data deletes every saved task on this computer.`,
         },
       ],
     },

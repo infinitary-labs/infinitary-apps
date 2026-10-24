@@ -82,18 +82,19 @@ flowchart LR
 | --- | --- | --- |
 | Google access and refresh tokens | Authorize API calls; renew and revoke access. Applied by the integration secret interface, not returned as tool output. | `FileIntegrationSecrets`, `userData/integrations/secrets/google/secrets.json`, a 0600 file in a 0700 directory. Plaintext JSON, not app-encrypted. INF-785 owns migration to secret management after INF-30. |
 | Account address, scopes, expiry, sign-in health | Identify the row and maintain access. The address appears in Settings and agent context. | `GoogleSignInStore`, `userData/integrations/google.json`, 0600. |
-| Message identifiers, thread identifiers, labels, headers and snippets | Search and triage mail; query results reach the requesting agent and its model provider. | Gmail holds the mailbox; returned results may persist in model sessions, task records and outputs. |
-| Message text and attachment metadata | Read a selected message; HTML is converted to text. The read action reports attachment names, types and sizes, not an attachment-download feature. | Results can persist in sessions, reports, cards and user-requested files. |
+| Message identifiers, thread identifiers, labels, headers and snippets | Search and triage mail; query results reach the requesting agent and its model provider. | Gmail holds the mailbox; returned results persist in model sessions for 30 days, and in what agents write into task records and outputs. |
+| Message text and attachment metadata | Read a selected message; HTML is converted to text. The read action reports attachment names, types and sizes, not an attachment-download feature. | Results persist in sessions for 30 days, and in what agents write into reports, cards and user-requested files. |
 | Recipients, subject and outgoing text | Prepare a draft or send after the person's approval of an exact action. | The pending write ask and task record keep its input; Gmail holds accepted drafts and sent messages. |
 | Inbox history cursor and sender/subject summaries | Poll for new inbox messages while a rule listens; supply summaries, fenced as data from outside, to the rule's first mate turn. | Automation's saved cursor and task/session records. Lost history starts from now rather than replaying an old inbox. |
-| Calendar lists, event data and availability | List calendars and events, read event details and busy intervals, create or update an event after approval, and react to changes in a selected calendar. Event data includes titles, descriptions, times, locations and attendees where Google returns them; a change notification carries title and times but not descriptions or guests. | Google holds the calendars; results can persist in task/session records, cards and outputs. Automation keeps a per-account, per-calendar sync token. |
+| Calendar lists, event data and availability | List calendars and events, read event details and busy intervals, create or update an event after approval, and react to changes in a selected calendar. Event data includes titles, descriptions, times, locations and attendees where Google returns them; a change notification carries title and times but not descriptions or guests. | Google holds the calendars; results persist in sessions for 30 days, and in what agents write into task records, cards and outputs. Automation keeps a per-account, per-calendar sync token. |
 | Diagnostic events | Fixed event names, booleans, numbers, app version and random installation identifier; no Google content or email address in permitted fields. | Sharing service and the configured diagnostics endpoint, as described in [Sharing](sharing.md). |
 
 Removing Google calls revocation and deletes the local sign-in and keys even if Google cannot be reached.
 A network failure is therefore not evidence that Google revoked the grant remotely; the person can also remove access in their Google Account.
 Removal leaves task records, session transcripts, outputs and copies held by other services intact.
-Task/session retention is durable, not seven days; the seven-day cleanup covers only a closed task's leftover evidence and scratch files ([Task retention](task-retention.md)).
-The Settings data purge is broader than disconnecting and is not a per-Google deletion control.
+What an agent read from Gmail or Calendar stays in its saved conversation for 30 days after it was read, then a note takes its place ([Task retention](task-retention.md#words-from-outside)).
+Settings → General's Delete Gmail and Calendar content does the same at once for everything read so far on this computer, and the conversations themselves stay.
+What an agent wrote in its own words, such as a report, a card or a file, stays until the task is deleted; the Settings data purge deletes every saved task on this computer.
 Backups, exported files, another computer's saved copies and AI-provider retention require separate treatment.
 
 ## Permission justifications
@@ -141,7 +142,7 @@ Why narrower scopes do not work: gmail.readonly cannot label, archive, draft or 
 ```text
 Gmail data (message headers, labels, snippets, message text, attachment names, types and sizes, inbox history ids and the account's email address) is used only to carry out the request the user made in the app: find, read, summarize, organize, draft and send their own mail, and run the mail rules they turn on. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
 
-Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved conversation on the user's computer for 30 days, then a note replaces it; the user can delete it sooner in Settings.
 
 Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
 ```
@@ -169,7 +170,7 @@ Why narrower scopes do not work: calendar.events.readonly cannot create or updat
 ```text
 Event data (titles, descriptions, locations, times, guests, recurrence and status) and the ids of the calendars it belongs to is used only to answer the user's schedule questions, create or change the events they approve, and run the calendar rules they turn on. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
 
-Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved conversation on the user's computer for 30 days, then a note replaces it; the user can delete it sooner in Settings.
 
 Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
 ```
@@ -189,7 +190,7 @@ Why narrower scopes do not work: this is the narrowest scope that reads the cale
 ```text
 The calendar list (each calendar's id, name, time zone and the user's access role) is used only to let the user and the assistant choose which calendar a request works on. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
 
-Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved conversation on the user's computer for 30 days, then a note replaces it; the user can delete it sooner in Settings.
 
 Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
 ```
@@ -209,7 +210,7 @@ Why narrower scopes do not work: calendar.events does not cover freeBusy.query. 
 ```text
 Busy intervals (start and end times with no event details) for the calendars and time range the user named is used only to answer the availability question the user asked. Infinitary does not use it for advertising, never sells it, and does not use it to train or improve AI models.
 
-Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved history on the user's computer until the user deletes it.
+Requests go directly from the user's computer to Google over HTTPS. The publisher operates no server, so no Google data passes through one of ours. To answer the user's request, what the assistant read is sent to the AI provider the user connected to Infinitary under their own subscription (for example Anthropic, OpenAI, xAI or OpenRouter), and may also reach another computer the user paired to run that work. The answer stays in the task's saved conversation on the user's computer for 30 days, then a note replaces it; the user can delete it sooner in Settings.
 
 Google's sign-in tokens are kept on the user's computer in a file readable only by their account. Removing the connection in Settings deletes them and revokes the app's access at Google. The privacy policy at https://getinfinitary.com/privacy describes this flow and tells the user that their AI provider's terms and settings govern retention and model improvement there.
 ```
@@ -279,18 +280,21 @@ The disclosure must cover every recipient permitted for Google-derived data, inc
 
 Infinitary stores Google sign-in tokens and connection details on the computer where the connection is made.
 The current implementation protects token files using operating-system file permissions, not application-level encryption.
-Mail used in a task can remain in the task's history, AI conversation, cards and files you asked to create.
-Those records do not expire when you disconnect Google or finish a task.
+Mail and calendar content an assistant reads stays in its saved conversation on the computer that read it for 30 days, then a note takes its place.
+To delete it sooner, use Delete Gmail and Calendar content in Settings → General: it replaces everything read so far, in every saved conversation on that computer, and a conversation still working is cleaned once its work pauses.
+What the assistants wrote themselves, such as a summary in a task's cards, notes or files you asked to create, stays until you delete the task.
+None of this expires when you disconnect Google or finish a task.
 
 In Settings → Integrations, you can pause Google or turn off individual actions to stop subsequent calls through those controls.
 Removing Google deletes the local sign-in and tokens and asks Google to revoke access.
 If the request cannot reach Google, also remove Infinitary's access from your [Google Account connections](https://myaccount.google.com/connections).
 Disconnecting does not delete your Gmail messages, existing task history, output files, backups or copies already sent to AI providers.
-The app's Settings data purge removes the local records it covers, not copies held elsewhere.
+Purge task data in Settings → General deletes every saved task on that computer, not copies held elsewhere.
+Neither control reaches a conversation kept on another computer you paired to run work.
 Contact **[privacy email]** for help identifying retained copies and the applicable deletion route; do not send your Google password or tokens.
 
-**Publication requirement:** replace this requirement with verified instructions for deleting Google-derived data across supported computers, sessions, exports and providers.
-Do not promise a targeted deletion feature, a retention deadline or encrypted storage until it exists and has been demonstrated.
+**Publication requirement:** extend these instructions to another computer that runs work, exports and providers before publication.
+Do not promise encrypted storage until it exists and has been demonstrated.
 
 ### Other app data
 
@@ -451,7 +455,7 @@ Do not invent an assurance level, penetration test, certification, scan result o
 | Where does restricted data travel? | Direct Google requests on the first mate's computer, results in local task/session stores and paired computers, and task context/results to selected AI providers. No publisher-operated Gmail proxy. | Data inventory above; downstream provider processing terms and model-request traces still required. |
 | What is the authorization model? | Installed-app authorization code flow, S256 PKCE, random state and a loopback callback. Google passwords stay with Google. Changes/sends are kept as exact single-use approval requests. | `signIn.ts`, `IntegrationsService.call/sendAsk`; attach real-consent evidence for the submitted application. |
 | Is user data encrypted at rest? | Not by the current integration store. Tokens are plaintext in a file restricted to the OS account; transcript and output encryption is not established. Do not answer Yes based on file modes or assumed disk encryption. | `secrets.ts`, `store.ts`; INF-785 covers token-store migration, but does not by itself establish protection for every derived record. |
-| Can users revoke and delete? | Disconnect removes the local Google facts and keys and attempts revocation. Historical content, provider copies and exports remain. Settings purge is broader and does not prove per-Google deletion across destinations. | `googleIntegration.ts` removal, `docs/task-retention.md`; end-to-end deletion evidence is still needed. |
+| Can users revoke and delete? | Disconnect removes the local Google facts and keys and attempts revocation. Delete Gmail and Calendar content in Settings → General replaces what agents read in every saved conversation on that computer, and the same happens on its own 30 days after a read. Agents' own words, another computer's conversations, provider copies and exports remain. | `googleIntegration.ts` removal, `savedOutsideData.ts`, `docs/task-retention.md` "Words from outside"; deletion on a computer that runs work is still needed. |
 | Does any AI provider train on the data? | Not established for all supported subscription/provider configurations. The code's routing and a user's subscription do not demonstrate a no-training agreement. Google's notice tells the person before sign-in that their provider's terms and settings decide training and asks them to check. | Review each allowed downstream arrangement and its retention/human-access terms; the consent shown before sign-in is Google's notice (`INTEGRATION_NOTICES`). |
 | Are vulnerability management, incident response and owner MFA established? | The project has code review and automated checks, but no current assessment, organization-wide policy or owner-account setting is certified by this answer bank. | Owner/assessor evidence required; do not claim scans, staff training, response deadlines or Cloud Console MFA from code alone. |
 
@@ -490,8 +494,8 @@ Do not invent an assurance level, penetration test, certification, scan result o
 | 6.2.1: production debug mode | Partial: packaged Google setup ignores stand-in endpoints and client overrides. This does not audit all production debugging or logging. | `client.ts`; inspect the actual packaged release. |
 | 6.3.1: Origin-only authorization | The callback uses state/PKCE, not the Origin header; the core has separate IPC and paired-device authentication. | `signIn.ts`, `docs/connection.md`; verify each in-scope request path. |
 | 6.4.1: subdomain takeover | Unproven: no verified homepage/domain inventory is supplied here. | Domain owner and hosting evidence required; check DNS and decommissioned services before publishing. |
-| 6.5.1: secret logging | Partial: integration results redact kept token values and connection metadata excludes them. Message bodies can themselves contain sensitive information, and sessions keep tool results. | `secrets.ts`, `store.ts`, `service.ts`; assess logs and saved records with disposable credentials. |
-| 6.6.1: clearing client storage | Tokens are not stored in renderer localStorage. Disconnect removes local token/facts files, not historical Google content in task/session stores. | `store.ts`, `docs/task-retention.md`; demonstrate deletion, including derived and remote copies, before claiming complete clearance. |
+| 6.5.1: secret logging | Partial: integration results redact kept token values and connection metadata excludes them. Message bodies can themselves contain sensitive information, and sessions keep Google's results for 30 days. | `secrets.ts`, `store.ts`, `service.ts`; assess logs and saved records with disposable credentials. |
+| 6.6.1: clearing client storage | Tokens are not stored in renderer localStorage. Disconnect removes local token/facts files; Google content in this computer's saved conversations goes after 30 days or on the Settings delete, while agents' own words and another computer's copies stay. | `store.ts`, `savedOutsideData.ts`, `docs/task-retention.md`; demonstrate deletion of derived and remote copies before claiming complete clearance. |
 | 6.7.1: secret storage | Gap: OS permissions and brokered use are present, but tokens are plaintext and same-account processes can read them. | `secrets.ts`; INF-785/INF-30 own secret-manager work; assess encrypted record storage separately. |
 
 The Workspace policy additionally requires protection against prompt injection and limits general-model training and permanent copies.

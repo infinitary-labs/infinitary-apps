@@ -670,7 +670,15 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { purgedTasks };
     },
 
-    "inf:retention:scope": () => ({ knowledge: services.knowledge !== undefined }),
+    "inf:retention:scope": () => ({
+      knowledge: services.knowledge !== undefined,
+      kept: services.integrations.kept(),
+    }),
+
+    // INF-952: only the words from outside go, from every saved conversation
+    // on this computer, and every other word stays (docs/task-retention.md,
+    // "Words from outside").
+    "inf:retention:delete-outside": () => services.savedOutsideData.deleteNow(),
 
     // The Knowledge browser (docs/knowledge.md, "The browser") is available
     // in every build. Isolated callers without a service refuse each read

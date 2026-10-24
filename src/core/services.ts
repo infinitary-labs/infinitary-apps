@@ -114,6 +114,7 @@ import { bootedAt } from "./helper/lock";
 import type { HostCapabilities } from "./host";
 import { captureLoginPath, configureGitSignIn, hostEnv } from "./hostEnv";
 import {
+  FIRSTMATE_READER,
   FileIntegrationSecrets,
   forgeHostIntegration,
   githubIntegration,
@@ -122,6 +123,8 @@ import {
   IntegrationSettingsStore,
   IntegrationsService,
   mcpIntegration,
+  OutsideReads,
+  SavedOutsideData,
   standInIntegration,
 } from "./integrations";
 import { type JobExit, JobManager, jobExitWake } from "./jobs/jobManager";
@@ -322,6 +325,8 @@ export type CoreServices = {
   forges: ForgeSignIns;
   /** Integrations (docs/integrations.md): the one writer over userData/integrations/. */
   integrations: IntegrationsService;
+  /** Words from outside in saved conversations: their sweep and the captain's delete. */
+  savedOutsideData: SavedOutsideData;
   /**
    * Pairing (docs/devices.md): the one writer over userData/devices, and the
    * connection's pairing seam. Nothing is on disk until the first link.
@@ -1737,6 +1742,8 @@ export async function createServices(
   // Google row until then.
   const google = googleSetup({ packaged: host.app.packaged });
   const integrationSecrets = new FileIntegrationSecrets(join(paths.integrationsDir, "secrets"));
+  // Which conversations received fenced words, and when, so they go when due.
+  const outsideReads = new OutsideReads(paths.integrationsDir);
   const integrations = new IntegrationsService({
     bindings: [
       githubIntegration({
@@ -1791,6 +1798,7 @@ export async function createServices(
       take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
       record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
     },
+    reads: outsideReads,
     now: ticker.now,
     push: (view) => emit("inf:integrations", view),
   });
@@ -2552,8 +2560,9 @@ export async function createServices(
   // through the durable inbox; late-bound because the agent is built below.
   // The scheduler follows each delivery's row there (docs/automation.md).
   let notifyFirstmate: (wake: TypedWake, origin: "scheduled") => number | null = () => null;
+  const scheduleStore = new ScheduleStore(db);
   const scheduler = new Scheduler({
-    store: new ScheduleStore(db),
+    store: scheduleStore,
     notify: (wake, origin) => notifyFirstmate(wake, origin),
     inbox,
     broadcastEvent,
@@ -2651,6 +2660,41 @@ export async function createServices(
   notifyFirstmate = (wake, origin) => firstmate.notifyOp(wake, origin);
   holdSeat = (accountId) => firstmate.holdSeatFor(accountId);
   scheduler.start(ticker);
+  // Words from outside go from saved conversations once past their days,
+  // or now on the captain's delete (docs/task-retention.md, "Words from
+  // outside"). A conversation is written again only between its turns.
+  const savedOutsideData = new SavedOutsideData({
+    paths,
+    reads: outsideReads,
+    task: (id) => tasks.get(id),
+    tasks: () => tasks.list(),
+    kept: () => integrations.kept(),
+    legacy: () => integrations.legacyCalls(),
+    claudeConfigDir: () => defaultClaudeConfigDir(),
+    firstmateClaudeSessions: () => {
+      const current = settings.getFirstmateClaudeSession();
+      return current ? [current] : [];
+    },
+    conversations: {
+      busy: (reader) =>
+        reader === FIRSTMATE_READER
+          ? firstmate.conversationBusy()
+          : supervisor.conversationBusy(reader),
+      release: (reader) =>
+        reader === FIRSTMATE_READER
+          ? firstmate.releaseConversation()
+          : supervisor.releaseConversation(reader),
+      held: (reader) =>
+        reader === FIRSTMATE_READER
+          ? firstmate.conversationHeld()
+          : supervisor.conversationHeld(reader),
+    },
+    runs: { rewrite: (scrub) => scheduleStore.rewriteRuns(scrub) },
+    inbox: { rewrite: (scrub) => inbox.rewritePending(scrub) },
+    now: ticker.now,
+    log: (line) => console.warn(`[infinitary] ${line}`),
+  });
+  ticker.register("outside-data", TICK_PERIOD_MS, () => void savedOutsideData.sweep());
   ticker.start();
   // R2 wakes: a job exit reaches its owner - the agent through the durable
   // inbox, a crewmate as its next turn. Jobs interrupted by the last quit
@@ -3060,6 +3104,7 @@ export async function createServices(
     workspace,
     forges: forgeSignIns,
     integrations,
+    savedOutsideData,
     devices,
     computers,
     inviteDevice,

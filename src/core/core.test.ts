@@ -275,6 +275,7 @@ describe("the core, driven with no Electron in the process", () => {
       "project-remove",
       "panel-remove",
       "integration-remove",
+      "delete-outside",
       "forge-sign-out",
       "account-disconnect",
       "projects-folder",

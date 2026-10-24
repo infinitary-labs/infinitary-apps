@@ -17,6 +17,7 @@ export type {
   IntegrationSecretSlot,
 } from "./binding";
 export { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "./commandWords";
+export { FIRSTMATE_READER, OutsideReads } from "./outsideReads";
 export { forgeHostIntegration, forgeIntegrationId } from "./providers/forgeHosts";
 export {
   type GithubIntegrationGateway,
@@ -37,6 +38,7 @@ export {
   type StandInIntegrationOptions,
   standInIntegration,
 } from "./providers/standIn";
+export { SavedOutsideData, type SavedOutsideDataOptions } from "./savedOutsideData";
 export {
   FileIntegrationSecrets,
   type IntegrationSecrets,

@@ -911,6 +911,18 @@ const actionLines = {
     readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
     done: (v) => `Removed integration ${v.id}`,
   },
+  "delete-outside": {
+    area: "general",
+    tier: "own-words",
+    change: "inf:retention:delete-outside",
+    current: "inf:retention:scope",
+    value: z.strictObject({}),
+    line: "Delete the Gmail and Calendar content saved in every conversation on this computer only on the captain's typed words: a note takes its place and every other word stays, and a conversation still working is cleaned once it pauses. It also goes on its own once past its days.",
+    alwaysTrail: true,
+    toRequest: () => [],
+    readValue: (c) => ({ kept: (c as { kept?: unknown }).kept ?? [] }),
+    done: () => "Deleted Gmail and Calendar content",
+  },
   "integration-settings": {
     area: "integrations",
     tier: "asked",

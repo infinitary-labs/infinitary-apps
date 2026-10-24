@@ -427,6 +427,53 @@ export class ScheduleStore {
     return rows.map(runOf);
   }
 
+  /**
+   * Every run's prompt and event summaries written again through `scrub`,
+   * which answers the text with the words from outside it found due
+   * replaced (INF-952; docs/task-retention.md, "Words from outside"). Each
+   * event keeps its id, so an event is still delivered once. A delivery
+   * still waiting has its own message (`InboxStore.rewritePending`).
+   * Answers how many it replaced.
+   */
+  rewriteRuns(scrub: (text: string, at: number) => { value: string; replaced: number }): number {
+    return this.db.transaction(() => {
+      const rows = this.db
+        .prepare(
+          "SELECT id, fired_at, prompt, events FROM schedule_runs WHERE instr(prompt, '[[') > 0 OR instr(COALESCE(events, ''), '[[') > 0",
+        )
+        .all() as Pick<RunRow, "id" | "fired_at" | "prompt" | "events">[];
+      const update = this.db.prepare(
+        "UPDATE schedule_runs SET prompt = ?, events = ? WHERE id = ?",
+      );
+      let replaced = 0;
+      for (const row of rows) {
+        const prompt = scrub(row.prompt, row.fired_at);
+        let events = row.events;
+        let count = prompt.replaced;
+        if (row.events) {
+          try {
+            const items = JSON.parse(row.events) as unknown;
+            if (Array.isArray(items)) {
+              const next = items.map((item) => {
+                if (typeof item?.summary !== "string") return item;
+                const done = scrub(item.summary, row.fired_at);
+                count += done.replaced;
+                return done.replaced ? { ...item, summary: done.value } : item;
+              });
+              events = JSON.stringify(next);
+            }
+          } catch {
+            // Not a list of events: left as it was.
+          }
+        }
+        if (count === 0) continue;
+        update.run(prompt.value, events, row.id);
+        replaced += count;
+      }
+      return replaced;
+    })();
+  }
+
   /** The rule's next fire and state, and an event rule's new cursor with them. */
   private advance(id: string, next: Advance): void {
     this.db

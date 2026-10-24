@@ -729,6 +729,49 @@ export class InboxStore {
     return true;
   }
 
+  /**
+   * Every message no turn was handed yet written again through `scrub`,
+   * which answers its payload with the words from outside it found due
+   * replaced (INF-952; docs/task-retention.md, "Words from outside"): a
+   * rule's delivery waiting when the captain deletes them carries the note
+   * instead. Each row keeps its id, place, attempts and backoff, as
+   * `revise` keeps them. Answers how many it replaced.
+   */
+  rewritePending(scrub: (payload: unknown) => { value: unknown; replaced: number }): number {
+    return this.transaction(() => {
+      const rows = this.db
+        .prepare(
+          "SELECT id, payload, origin FROM inbox WHERE delivered_at IS NULL AND instr(payload, '[[') > 0",
+        )
+        .all() as { id: number; payload: string; origin: string | null }[];
+      const update = this.db.prepare(
+        "UPDATE inbox SET payload = ?, content_hash = ? WHERE id = ? AND delivered_at IS NULL",
+      );
+      let replaced = 0;
+      for (const row of rows) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(row.payload);
+        } catch {
+          continue;
+        }
+        const done = scrub(parsed);
+        if (done.replaced === 0) continue;
+        const payload = JSON.stringify(done.value);
+        const read = decodeWake(payload);
+        // The same identity `revise` gives a body: its facts, or its prose.
+        const body =
+          read.facts !== undefined
+            ? ({ facts: read.facts, ways: read.ways } as WakeBody)
+            : (read.text ?? payload);
+        update.run(payload, wakeIdentity(body, originOf(row.origin)), row.id);
+        replaced += done.replaced;
+      }
+      if (replaced > 0) this.changed();
+      return replaced;
+    });
+  }
+
   /** Ladder spent: surfaced loudly once; excluded from retries thereafter. */
   markEscalated(id: number): void {
     this.changed();

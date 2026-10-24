@@ -129,6 +129,12 @@ export type IntegrationBinding = {
    * they are.
    */
   fence?: string;
+  /**
+   * With a fence: how many days its words stay in saved conversations
+   * before a note takes their place, and what a person calls them
+   * (`SavedOutsideData`, docs/task-retention.md "Words from outside").
+   */
+  kept?: { days: number; what: string };
   /** A kind the person adds again and again, one row each (an MCP server): always addable. */
   many?: true;
   /** The connections of this kind that exist now. */

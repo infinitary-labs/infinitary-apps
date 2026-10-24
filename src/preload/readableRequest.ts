@@ -213,6 +213,10 @@ export const REQUEST_COPY = {
     fallback: "Purge did not complete. Please try again.",
     prefix: "Purge did not complete: ",
   },
+  "inf:retention:delete-outside": {
+    fallback: "Could not delete it. Please try again.",
+    prefix: "Could not delete it: ",
+  },
   "inf:keyboard:save": {
     fallback: "Could not save these keys. Please try again.",
     prefix: "Could not save these keys: ",

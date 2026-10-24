@@ -455,14 +455,16 @@ class ClaudeSessionMapper {
  * session's entries in the Pi dialect as `readSession` maps them (a Claude
  * session's several lines of one message are one entry), leaving out the
  * served sidecar's contract stamps, which say nothing about the
- * conversation. A file shorter than what was read is read again from its
- * start. The task card's Crewmate tab reads a crewmate's sessions through
+ * conversation. A file shorter than what was read, or one written again
+ * whole (`SavedOutsideData`), is read again from its start. The task card's Crewmate tab reads a crewmate's sessions through
  * this (docs/task-card-tabs.md, "The Crewmate tab").
  */
 export class SessionFollower {
   private dialect: SessionDialect | null = null;
   /** The byte just past the last whole line read. */
   private offset = 0;
+  /** The file read, by its inode. */
+  private ino = 0;
   private pi: JsonRecord[] = [];
   private claude: ClaudeSessionMapper | null = null;
   /** Bumped whenever a read took in new lines, so a reader can tell a session moved. */
@@ -479,12 +481,14 @@ export class SessionFollower {
   /** The session's entries so far, and a number that moves each time they change. */
   read(): { entries: readonly JsonRecord[]; generation: number } {
     let size: number;
+    let ino: number;
     try {
-      size = statSync(this.path).size;
+      ({ size, ino } = statSync(this.path));
     } catch {
       return { entries: this.entries(), generation: this.generation };
     }
-    if (size < this.offset || this.dialect === null) this.reset();
+    if (size < this.offset || ino !== this.ino || this.dialect === null) this.reset();
+    this.ino = ino;
     if (this.dialect === null) {
       this.dialect = sessionDialectAt(this.path);
       if (this.dialect === null) return { entries: [], generation: this.generation };

@@ -2,6 +2,7 @@
 
 Task-system phase P5 (design record `fm-homes/mini-default/data/fm3000-task-system-design-s1/report.md`, sections 5, 9.1 and 12).
 The record is durable: a task row, its timeline and its session JSONL are never deleted by success (captain decision D2, amending D-13), and the D-13 purge in Settings is the one control that deletes the record.
+Words from outside are the one exception inside a kept session: a note takes their place after their days, or when the captain deletes them ("Words from outside").
 This document is what keeps that durable record honest at scale: what is bounded, what leaves the box on request, which of a closed task's files go on their own, and what is measured but not pruned.
 
 ## What is bounded
@@ -144,7 +145,43 @@ Counts and bytes only - the tool never prints transcript content.
 Fixture-tested (`tests/measure-session-footprint.test.ts`) in Pi's format and the Claude client's, including a session the client recorded; a MacBook-exported userData runs identically.
 
 Sessions are never pruned automatically.
+The one automatic rewrite is words from outside (next section), which replaces passages and deletes no file.
 A scrub of closed crewmate sessions, if the captain asks for one, rewrites tool results and the Claude client's copies of them, images and thinking in place and never deletes a session file.
+
+## Words from outside
+
+What an integration hands an agent from a kind that fences its words, Gmail and Calendar today (`google-data`, [Integrations](integrations.md#data-from-outside)), stays in saved conversations only for the days that kind declares (`IntegrationBinding.kept`).
+Google keeps 30, the same as the Claude client's own sweep (`GOOGLE_DATA_KEPT`, the captain's INF-952 answer).
+Once they pass, a note, `[Gmail and Calendar content deleted]`, takes the place of each passage, and the conversation stays (the captain's INF-952 answer: "Yes, replace the passage and keep the conversation").
+Settings → General's Delete Gmail and Calendar content row does the same at once for everything read so far (`inf:retention:delete-outside`), and the captain can ask the first mate for it (`delete-outside`).
+Its answer says how many conversations changed, and how many are cleaned once their work pauses.
+
+`SavedOutsideData` (`src/core/integrations/savedOutsideData.ts`) owns both.
+A passage is one fenced span with the reminder lines before and after it that name its fence; a span a shell cut short goes from its opening mark to the end of that text, or from its start to its closing mark (`src/core/storage/outsideDataScrub.ts`).
+Each span is dated by the moment in its own opening mark, so an older answer goes and a newer one beside it stays.
+An answer saved before the fence existed carries no marks: a delete finds it by the call that fetched it, the first mate's `use_integration` or a crewmate's `infinitary-integrations-axi call` naming that integration, and replaces the whole answer.
+A kept conversation is rewritten line by line, keeping every other line byte for byte, through a temporary file and one rename.
+A line the client is still writing is left as it is.
+
+It reaches, on this computer:
+
+- a crewmate's saved conversation: `crewmates/<taskId>/sessions/`, and the Claude client's transcript with the outputs it saved beside it under `~/.claude/projects/`;
+- the first mate's: `firstmate/sessions/`, `firstmate/claude/`, a retired `supervision/sessions/`, and the Claude client's own files for its sessions;
+- a rule's runs, their prompts and event summaries (`ScheduleStore.rewriteRuns`), and the first mate's messages that no turn was handed yet (`InboxStore.rewritePending`).
+
+The app's copy of a Claude transcript is rewritten the same way as the client's, so it stays a byte prefix of the original and keeps being copied.
+A reader that follows a file by its offset starts over when the file was replaced (`SessionFollower`, `SessionRecordStore`).
+
+It does not reach what an agent wrote in its own words, such as a report, a card, a note or a file it made; those stay until the task is deleted.
+Nor does it reach copies outside this computer's saved conversations: what the AI provider received, a task's conversation on another computer that runs work, a backup, or an export.
+
+Where the words went is a ledger, `userData/integrations/outside-reads.json` (`OutsideReads`, 0600): for each conversation, the hours in which it received fenced words, and the time of the last delete.
+`IntegrationsService` writes an hour there whenever it fences an answer or a rule's event summary for a reader.
+A sweep on the shared ticker, once a minute, reads only the conversations holding an hour that is now due, and only the files written since then, so it never walks every saved session.
+A conversation in a turn is never rewritten under its writer.
+The pass lets go of it between turns, so its next turn opens it from its files, and one that is working is noted to be read whole on a later sweep.
+A task on another computer is left to it, and a task that no longer exists is dropped from the ledger.
+`src/core/storage/outsideDataScrub.test.ts` holds the replacement over lines as Pi and the Claude client save them, and `src/core/integrations/savedOutsideData.test.ts` holds the pass over a scratch userData with the Google stand-in.
 
 ## Notes moved from AGENTS.md
 

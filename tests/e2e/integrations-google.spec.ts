@@ -1,13 +1,17 @@
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, type Locator, test } from "@playwright/test";
 import { eventsWords } from "@shared/automation";
 import { automationEventWords } from "@shared/automationWords";
 import {
+  GOOGLE_DATA_KEPT,
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
 } from "@shared/integrations";
 import { fenced, fencedSpans } from "@shared/outsideData";
+import { outsideDataDeletedNote, SAVED_OUTSIDE_DATA_WORDS } from "@shared/savedOutsideData";
 import {
   CALENDAR_ACTIONS,
   CALENDAR_CHANGED_EVENT,
@@ -24,10 +28,11 @@ import {
   startGoogleStandIn,
 } from "../helpers/googleStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
+import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { readSavedData } from "./savedData";
 import { type AutomationEventsSeen, automationEvents } from "./scenarios/automationEvents";
-import { settingsSection } from "./settings";
+import { settingRow, settingsSection } from "./settings";
 import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
 
 /**
@@ -41,13 +46,19 @@ import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
  *   opens Google's consent page in the browser and says to finish there; once the browser
  *   comes back the Google row shows who it is signed in as, with its Gmail
  *   reads allowed and its changes asking; a rule listening for "A message
- *   arrives" then reaches the first mate with the message that arrived.
+ *   arrives" then reaches the first mate with the message that arrived;
+ *   Settings → General's delete, by keys, then puts a note where its sender
+ *   and subject were in the first mate's saved conversation and the rule's
+ *   run, and the conversation stays (INF-952: "A person can delete the
+ *   Gmail and Calendar content Infinitary saved without purging every
+ *   task").
  * - Data: the stand-in Google (`tests/helpers/googleStandIn.ts`), answering
  *   in Google's documented shapes, as the run's Google and its client; one
  *   message delivered to its inbox after the rule found its place.
  * - Completion signal: the recorded consent page address, then the row's
  *   account, then the rule's saved cursor, then the first mate turn the
- *   stand-in model served.
+ *   stand-in model served, then the first mate at rest, then the delete's
+ *   answer and the saved files and run.
  * - Platform prerequisites: none beyond the hermetic launcher, its stand-in
  *   model and the shortened tick; the system browser is a recorder, and the
  *   test follows the consent page itself the way a browser does.
@@ -283,6 +294,63 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     });
     expect(seen.turns[0]).toContain(`Sort these by urgency: ${eventsWords([{ id, summary }])}`);
     expect(seen.turns[0]).toContain(`on 1 new event - ${GMAIL_MESSAGE_EVENT.label} in Google`);
+  });
+
+  await test.step("Settings → General deletes what the first mate read, by keys, and keeps its conversation", async () => {
+    const subject = "Invoice 2214 for the October shoot";
+    const sessions = join(userDataDir, "firstmate", "sessions");
+    const saved = () =>
+      readdirSync(sessions, { recursive: true, encoding: "utf8" })
+        .filter((name) => name.endsWith(".jsonl"))
+        .map((name) => readFileSync(join(sessions, name), "utf8"))
+        .join("\n");
+    const runs = () =>
+      readSavedData(userDataDir, (db) =>
+        (db.prepare("SELECT prompt FROM schedule_runs").all() as { prompt: string }[]).map(
+          (run) => run.prompt,
+        ),
+      );
+    // The turn that read the subject has ended: its conversation is saved, and free to rewrite.
+    // The first mate is drawn outside Settings.
+    await pressKey(page.getByRole("tab", { selected: true }), "Escape");
+    await expect(page.locator("[data-screen-label]")).not.toHaveAttribute(
+      "data-screen-label",
+      "Settings",
+    );
+    await waitForFirstmateIdle(page);
+    expect(saved()).toContain(subject);
+    expect((await runs()).join("\n")).toContain(subject);
+
+    await runFromSearch(app, page, "settings.open");
+    await pressKey(page.getByRole("tab", { selected: true }), "Home");
+    const general = settingsSection(page, "general");
+    await expect(general).toBeVisible();
+    const row = settingRow(page, "delete-outside-data");
+    await expect(row).toContainText(SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT]));
+    await expect(row).toContainText(SAVED_OUTSIDE_DATA_WORDS.description([GOOGLE_DATA_KEPT]));
+    // Armed on the first press, as Purge is; the second deletes.
+    await pressKey(
+      row.getByRole("button", { name: SAVED_OUTSIDE_DATA_WORDS.delete, exact: true }),
+      "Enter",
+    );
+    await pressKey(
+      row.getByRole("button", { name: SAVED_OUTSIDE_DATA_WORDS.confirm, exact: true }),
+      "Enter",
+    );
+    await expect(row).toContainText(
+      SAVED_OUTSIDE_DATA_WORDS.done({ conversations: 1, waiting: 0 }),
+    );
+
+    const note = outsideDataDeletedNote(GOOGLE_DATA_KEPT.what);
+    const after = saved();
+    expect(after).not.toContain(subject);
+    expect(after).toContain(note);
+    // The rest of the conversation stays: the rule's own words and the first mate's answer.
+    expect(after).toContain("Sort these by urgency:");
+    expect(after).toContain("Triaged the new items.");
+    const [prompt = ""] = await runs();
+    expect(prompt).not.toContain(subject);
+    expect(prompt).toContain(note);
   });
 });
 

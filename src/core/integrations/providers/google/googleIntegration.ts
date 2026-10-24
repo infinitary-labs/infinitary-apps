@@ -1,5 +1,5 @@
 import type { ForgeSignInState } from "@shared/forges";
-import { INTEGRATION_KIND_NAMES } from "@shared/integrations";
+import { GOOGLE_DATA_KEPT, INTEGRATION_KIND_NAMES } from "@shared/integrations";
 import { type IntegrationBinding, IntegrationOutcomeUnknown } from "../../binding";
 import { type IntegrationSecrets, MissingSecret } from "../../secrets";
 import {
@@ -256,6 +256,7 @@ export function googleIntegration(options: GoogleIntegrationOptions): Integratio
     // One Google sign-in: its name stays its own while signed out (INF-946).
     identity: { id: GOOGLE_ID, name: INTEGRATION_KIND_NAMES.google },
     fence: GOOGLE_DATA_FENCE,
+    kept: GOOGLE_DATA_KEPT,
     connections: () => {
       const record = store.read();
       if (!record) return [];

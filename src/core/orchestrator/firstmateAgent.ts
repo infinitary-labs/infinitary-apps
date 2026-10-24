@@ -1223,6 +1223,31 @@ export class FirstmateAgent {
     this.session = undefined;
   }
 
+  /**
+   * The rolling session is in a turn or opening: its files are not to be
+   * written by anyone else now (`SavedOutsideData`).
+   */
+  conversationBusy(): boolean {
+    return this.running || this.creating !== undefined || Boolean(this.session?.isStreaming());
+  }
+
+  /** A live session holds the rolling session's files. */
+  conversationHeld(): boolean {
+    return this.running || this.creating !== undefined || this.session !== undefined;
+  }
+
+  /**
+   * Let go of the rolling session between turns, so a pass can write its
+   * files again whole; the next turn re-opens them. False while busy.
+   */
+  async releaseConversation(): Promise<boolean> {
+    if (this.conversationBusy()) return false;
+    const session = this.session;
+    this.detachSession();
+    await session?.closed().catch(() => {});
+    return true;
+  }
+
   /** Peek for Observe: the orchestrator is mid-turn. */
   isBusy(): boolean {
     return this.running || Boolean(this.session?.isStreaming());

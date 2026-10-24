@@ -37,6 +37,8 @@ type Followed = {
   worktree: string;
   /** The byte just past the last whole line read. */
   offset: number;
+  /** The file read, by its inode. */
+  ino: number;
   /** The time of the newest call read, for a call whose line names none. */
   lastAt: number;
   actions: TaskActionLine[];
@@ -88,19 +90,23 @@ export class CrewActions {
 
   private read(path: string, worktree: string): TaskActionLine[] {
     let size: number;
+    let ino: number;
     try {
-      size = statSync(path).size;
+      ({ size, ino } = statSync(path));
     } catch {
       return [];
     }
     let held = this.followed.get(path);
-    // A file shorter than what was read, or a task now in another working
-    // copy, is read again from the start.
-    if (held && (size < held.offset || held.worktree !== worktree)) held = undefined;
+    // A file shorter than what was read, one written again whole
+    // (`SavedOutsideData`), or a task now in another working copy, is read
+    // again from the start.
+    if (held && (size < held.offset || held.ino !== ino || held.worktree !== worktree)) {
+      held = undefined;
+    }
     if (!held) {
       const dialect = sessionDialectAt(path);
       if (!dialect) return [];
-      held = { dialect, worktree, offset: 0, lastAt: 0, actions: [], said: null };
+      held = { dialect, worktree, offset: 0, ino, lastAt: 0, actions: [], said: null };
     }
     this.followed.delete(path);
     this.followed.set(path, held);

@@ -45,9 +45,9 @@ The script's globals are named there too, since a script that reads `bound` or a
 The first mate adapts a shape to the ask; the host learns no shape's name and reads nothing of the script beyond what "Filing a program" refuses.
 
 - Workflow: a high planner resolves ambiguity, a medium builder follows the plan, and a high checker challenges the result; each continues the previous branch, and the checker is the returned branch.
-- The loop: one part a round up to `args.rounds`, awaited, each `from` the last round's label so it continues that round's commits, its schema a `done` flag and what it `learned`; each round's prompt carries the last round's learned note, and earlier rounds' reports stay on their parts for a round to look up, until a round reports done; every round requests high because it diagnoses and chooses the next attempt; it returns the last round as its `branch`.
-- Audit: high finders in parallel, one per area or angle, then a high verifier per finding, to discover subtle defects and challenge each claim; it is named apart from the crew's own adversarial review of a change.
-- Deep research: high researchers per question in parallel weigh evidence, then one high writer `after` them all reconciles it.
+- The loop: one part a round up to `args.rounds`, awaited, each `from` the last round's label so it continues that round's commits, its schema `done` and `stuck` flags and what it `learned`; each round's prompt carries the last round's learned note, and earlier rounds' reports stay on their parts for a round to look up, until a round reports done; the first round requests high to choose an approach, later rounds request medium because earlier work narrowed the task, and the round after one that reports `stuck` requests high to reconsider it; it returns the last round as its `branch`.
+- Audit: high finders in parallel, one per area or angle, to discover subtle defects, then a medium verifier per finding to check one located claim, with one high recheck when that verifier cannot settle it; it is named apart from the crew's own adversarial review of a change.
+- Deep research: medium researchers per question in parallel gather and cite sources for one narrow question, then one high writer `after` them all reconciles conflicting evidence.
 - Migrate: a medium part per item applies an established recipe, each `from` the previous item's label, returning the last as its `branch`.
 
 These levels are recommendations the first mate adapts and writes into each `task()` call, never rules the host applies by playbook name.

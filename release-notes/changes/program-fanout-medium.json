@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "program-fanout-medium",
+      "kind": "improvement",
+      "area": "tasks",
+      "title": "Use medium intelligence for more program parts",
+      "body": "Programs now recommend medium intelligence for later loop rounds, audit verifiers and individual research questions. Stuck rounds and unsettled findings get a high-intelligence follow-up.",
+      "noPicture": "This changes the intelligence recommended for program parts, not a screen or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -116,7 +116,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
 | `tests/wait-window.test.ts` | node children frozen with SIGSTOP and let go, against the waits of `tests/helpers/waitWindow.ts` | 10 s |
 | `tests/load-clock.test.ts` | four real Playwright runs of a fixture config, each process group frozen with SIGSTOP and let go, the longest waiting out its 20 s cap | 60 s |
-| `tests/starve-check.test.ts` | the load controller over real detached process trees, children stopped at birth, another user's descendant, cancellation and its experiment limit | 25 s |
+| `tests/starve-check.test.ts` | the load controller over real detached process trees, children stopped at birth, a parent waiting in vfork on its stopped child, another user's descendant, cancellation and its experiment limit | 25 s |
 | `tests/mac-check-lock.test.ts` | actual workflow commands and the `test:phone` package script, held Node processes, `ps` and Python kernel-lock probes, on macOS/Linux | 5 s default |
 | `tests/virtual-mac-phone.test.ts` | Node tool-cache installation, guest-service settings, clean shutdown, runtime import and phone scripts against stand-ins, real git, bash and tar on a scratch working copy | 5 s default |
 | `tests/phone-release-process.test.ts` | the dispatched release command, temporary key fixtures and stand-in Xcode/upload commands; no signing or network | 5 s default |

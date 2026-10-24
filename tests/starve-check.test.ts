@@ -158,6 +158,35 @@ it.each(["signal", "deadline"] as const)(
   20_000,
 );
 
+// INF-1145: on Linux a scan landed between a spawn's vfork and its exec; the
+// stopped child held its parent in vfork short of T and the freeze never ended.
+it.skipIf(process.platform !== "linux")(
+  "stops a parent waiting in vfork on a child stopped before exec",
+  async () => {
+    const gate = join(scratchDir("infinitary-starvation-vfork-"), "gate");
+    const { stdout } = await execute("python3", [
+      "scripts/starve-check.py",
+      "--timeout",
+      "15",
+      "--run-seconds",
+      "0.05",
+      "--pause-seconds",
+      "0.1",
+      "--stall-every",
+      "0.2",
+      "--stall-seconds",
+      "0.4",
+      "--",
+      "python3",
+      "tests/fixtures/starve-vfork-parent.py",
+      gate,
+    ]);
+    expect(stdout).toContain("completed root");
+    expect(stdout).toContain("command exited 0");
+  },
+  20_000,
+);
+
 // INF-1083: a journey's quit ran the Mac's set-user-ID `ps`, a process of another
 // user that this one may neither read nor signal; the experiment crashed on it.
 it.skipIf(process.platform !== "darwin")(

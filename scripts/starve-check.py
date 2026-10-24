@@ -88,7 +88,24 @@ class LinuxProcesses:
         except (FileNotFoundError, ProcessLookupError):
             return None
         state = "T" if fields[0] in ("T", "t") else fields[0]
+        # INF-1145: a parent in vfork waits uninterruptibly (D) until its child
+        # execs, so it never reaches T while that child is stopped before exec.
+        # With SIGSTOP pending it stops before it runs again: count it stopped.
+        if state == "D" and self.stop_pending(pid):
+            state = "T"
         return (int(fields[1]), int(fields[2]), state, fields[19])
+
+    @staticmethod
+    def stop_pending(pid):
+        try:
+            lines = Path(f"/proc/{pid}/status").read_text().splitlines()
+        except (FileNotFoundError, ProcessLookupError):
+            return False
+        bit = 1 << (signal.SIGSTOP - 1)
+        return any(
+            int(line.split()[1], 16) & bit
+            for line in lines if line.startswith(("SigPnd:", "ShdPnd:"))
+        )
 
     def children(self, pid):
         # A child may have been forked by any thread of this owned process.

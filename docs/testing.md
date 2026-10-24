@@ -304,6 +304,7 @@ The `starve` input runs the Mac journeys through the load controller, `scripts/s
 The controller runs the command's own process tree for 0.1 s, stops it for 0.2 s, and adds a 65-second stop after each 20 seconds of that, longer than the one-minute journey default.
 It walks the command's known processes and their children, detached sessions included, through `libproc` on macOS and `/proc` on Linux, never a system-wide listing, which on macOS can wait on an unrelated process part-way through exec.
 It rescans a stopped parent for children it started meanwhile, rechecks each process's identity before letting it go, and never signals a process outside the tree.
+On Linux it counts a process waiting in the kernel with a stop already pending as stopped, since it stops before it runs again: a parent in vfork waits that way until its child, stopped before exec, is let go.
 It prints its schedule, the processes it found and the ones stopped at each long stop.
 Cancelled, it lets the tree go and gives it five seconds to end before killing what is left.
 Its own experiment limit is 15 minutes (`--timeout`, required, in seconds), and its run, pause and stall arguments reproduce another chosen load; compare unchanged and changed code with the same arguments.

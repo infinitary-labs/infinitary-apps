@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { constants, lstatSync, type Stats, statfsSync } from "node:fs";
 import { join } from "node:path";
+import koffi from "koffi";
 import { hostEnv } from "../hostEnv";
 import { atUtilityQos } from "../utilityQos";
 import { chmod, cp, lstat, mkdir, readdir, rm, utimes } from "./plainFs";
@@ -21,8 +22,43 @@ import { COPIED_ONE_BY_ONE, COPIED_TWO_DEEP, leftBehind } from "./tree";
 /** Units copied at once (`copyTree`). */
 const UNITS_AT_ONCE = 4;
 
-/** APFS's `f_type`, the one disk here a Mac's `cp -c` clones on. */
-const APFS = 0x1a;
+/**
+ * getattrlist(2)'s request for the volume's capabilities: `ATTR_VOL_INFO |
+ * ATTR_VOL_CAPABILITIES` in the volume group of a `struct attrlist`.
+ */
+const VOLUME_CAPABILITIES = 0x8002_0000;
+/** The interfaces word of `vol_capabilities_attr_t` (`VOL_CAPABILITIES_INTERFACES`). */
+const INTERFACES = 1;
+/** clonefile(2) works on the volume (`VOL_CAP_INT_CLONE`). */
+const CLONES = 0x0001_0000;
+
+let getattrlist:
+  | ((path: string, request: Buffer, reply: Buffer, size: number, options: number) => number)
+  | undefined;
+
+/**
+ * Whether the Mac's disk that holds `path` clones: its own answer, the
+ * capability clonefile(2), and so `cp -c`, goes by. Its `f_type` is no
+ * answer, since the system numbers each kind of disk as it registers at
+ * startup (xnu's `vfs_fsadd`), so APFS's number is not the same on every boot.
+ */
+function volumeClones(path: string): boolean {
+  getattrlist ??= koffi
+    .load("/usr/lib/libSystem.B.dylib")
+    .func(
+      "int getattrlist(const char *path, void *attrList, void *attrBuf, size_t attrBufSize, uint32_t options)",
+    );
+  // struct attrlist: bitmapcount, reserved, then the common, volume, directory, file and fork groups.
+  const request = Buffer.alloc(24);
+  request.writeUInt16LE(5, 0);
+  request.writeUInt32LE(VOLUME_CAPABILITIES, 8);
+  // The length (4), then the capabilities (4 words) and which of them are valid (4 words).
+  const reply = Buffer.alloc(36);
+  if (getattrlist(path, request, reply, reply.length, 0) !== 0) return false;
+  const capabilities = reply.readUInt32LE(4 + 4 * INTERFACES);
+  const valid = reply.readUInt32LE(20 + 4 * INTERFACES);
+  return (capabilities & valid & CLONES) !== 0;
+}
 
 export type CopyOptions = {
   platform: NodeJS.Platform;
@@ -34,7 +70,7 @@ export type CopyOptions = {
 export function copyClones(dir: string, platform: NodeJS.Platform): boolean {
   if (platform !== "darwin") return false;
   try {
-    return statfsSync(dir).type === APFS;
+    return volumeClones(dir);
   } catch {
     return false;
   }
@@ -48,7 +84,7 @@ export function copyClones(dir: string, platform: NodeJS.Platform): boolean {
 export function clonesFrom(root: string, dir: string, platform: NodeJS.Platform): boolean {
   if (!copyClones(dir, platform)) return false;
   try {
-    return statfsSync(root).type === APFS && lstatSync(root).dev === lstatSync(dir).dev;
+    return lstatSync(root).dev === lstatSync(dir).dev;
   } catch {
     return false;
   }

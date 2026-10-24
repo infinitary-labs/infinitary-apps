@@ -371,6 +371,7 @@
         "!src/core/placed/placedAccounts.test.ts",
         "!src/core/placed/placedCutOff.test.ts",
         "!src/core/helper/workingCopies.test.ts",
+        "!src/core/folderMove/copy.test.ts",
         "!src/core/folderMove/move.test.ts",
         "!src/core/helper/cleanUp.test.ts",
         "!src/core/helper/fromHome.test.ts",

@@ -64,7 +64,8 @@ The move runs in this order, and writes its record, `folder-move.json`, before e
 1. It checks, changing nothing: the older app is not open (Chromium's `SingletonLock` in the older folder names no live process on this computer, or was written before this computer last started, `predatesBoot`), its background work does not hold `work/running.lock`, and `assertSavedDataCompatible` reads the older folder.
    When the app's own folder holds saved work too, it asks which work to open instead (below).
 2. It takes the move locks beside both folders, so the older app and a second launch both wait.
-3. It counts the older folder and checks the disk has room: the bytes it copies, plus a margin of a twentieth (at least 256 MB), or the margin alone on APFS, where the copy clones its files.
+3. It counts the older folder and checks the disk has room: the bytes it copies, plus a margin of a twentieth (at least 256 MB), or the margin alone on a disk that clones, such as APFS, where the copy clones its files.
+   The disk itself says whether it clones (its volume capabilities, `copyClones` in `src/core/folderMove/copy.ts`); its kind's number is no answer, because a Mac numbers each kind of disk as it registers at startup.
 4. It copies the older folder into `<folder>.moving-<process>`, a private folder beside the app's own, keeping permissions, times and links as links; a Mac clones each file with `cp -c`, elsewhere Node's copy asks for a reflink.
    It copies four entries at once: each top-level entry, each entry of `worktrees/`, `crewmates/`, `fleet/` and `work/`, and each spare working copy of the warm pool, `worktree-pool/<project>/<slot>` (`copyUnits`, `src/core/folderMove/copy.ts`).
    The Mac's copier runs with `-v`, naming each entry it copies, so the window counts the copy as it goes.

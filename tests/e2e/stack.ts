@@ -1,5 +1,10 @@
 import { expect, type FrameLocator, type Locator, type Page } from "@playwright/test";
-import { SETTLE_FACT_VALUE_CLASS, SETTLE_FACTS, type SettleFact } from "../../src/shared/cards";
+import {
+  CARD_CHAT_LABEL,
+  SETTLE_FACT_VALUE_CLASS,
+  SETTLE_FACTS,
+  type SettleFact,
+} from "../../src/shared/cards";
 import type { ComposerNotice } from "../../src/shared/composer";
 import type { RiskDimension } from "../../src/shared/risk";
 import { drawnFrame } from "./frames";
@@ -236,10 +241,15 @@ export async function dragCardTo(page: Page, width: number): Promise<void> {
   await expect(edge).toHaveAttribute("aria-valuenow", String(width));
 }
 
-/** The shown card's reply row: both the bare card and expanded thread use the same field. */
+/**
+ * The shown card's one field and its Chat (INF-924): the field above the
+ * card's choices with Chat at the right edge of their row, or both at the
+ * foot of the thread open beside the card.
+ */
 export function cardReply(page: Page): {
   row: Locator;
   field: Locator;
+  send: Locator;
   pictures: Locator;
   notice: (kind: ComposerNotice) => Locator;
 } {
@@ -247,6 +257,7 @@ export function cardReply(page: Page): {
   return {
     row,
     field: row.getByRole("textbox"),
+    send: page.locator(SHOWN_ENTRY).getByRole("button", { name: CARD_CHAT_LABEL, exact: true }),
     pictures: row.locator("[data-card-reply-picture]"),
     notice: (kind) => row.locator(`[data-composer-notice="${kind}"]`),
   };

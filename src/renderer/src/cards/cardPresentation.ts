@@ -169,16 +169,8 @@ export function useCardPresentation(
     if (!scrolls) shell.dataset.cardGeometry = "natural";
     const natural = Math.min(cap, shown ? laidOutHeight(shown) + (scrolls ? overflow : 0) : 0);
     const card = shown?.querySelector<HTMLElement>("[data-response-card]");
-    // A lone card's reply row sits under it in the same surface.
-    const reply = shown?.querySelector<HTMLElement>(
-      "[data-card-surface]:not([data-card-pair]) > [data-card-reply-slot]",
-    );
-    const chrome = card
-      ? chromeParts(card).reduce(
-          (sum, part) => sum + laidOutHeight(part),
-          2 + (reply ? laidOutHeight(reply) : 0),
-        )
-      : 0;
+    // A lone card's one field is its own chrome, above its choices (INF-924).
+    const chrome = card ? chromeParts(card).reduce((sum, part) => sum + laidOutHeight(part), 2) : 0;
     shell.dataset.cardGeometry = "held";
     if (!scrolls)
       scrollers.forEach((el, i) => {

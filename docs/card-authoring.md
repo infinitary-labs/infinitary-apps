@@ -198,7 +198,7 @@ A refused card is never shown, and the refusal text names the fix:
 - consent: a decision that is not a preview ends every radio group, select and group of two or more checkboxes with a Something else row (FI3-1002): one without the row and without `data-inf-options-only` is refused, with the question's name and the row to add ("Something else" below);
 - consent: an action whose id or label reads like a merge or a landing carries a `settle` effect - a "Merge the pull request" button with no effect would run nothing when clicked, which is exactly the Sep 4-5 dogfood failure - and no action from an agent carries the host's own effect;
 - consent, at the crewmate boundary only: a declared `settle merge` decision has **Why**, **What changed**, **Before**, **After** headings in order; `COMPLETION_CARD_HEADINGS` in `src/shared/cardHeadings.ts` is their shared home, and `bodyHeadings` reads the markup, not mentions in prose; the refusal names the first missing or misplaced heading and its repair; completion notes follow the standing instruction alone because the host cannot distinguish them from other notes;
-- a product fact (INF-680): a decision, a preview included, that names a control or stages a setting `anything_else` is refused, because that is the answer the app's own Anything else? box rides ("Anything else?" below);
+- a product fact (INF-680): a decision, a preview included, that names a control or stages a setting `anything_else` is refused, because that is the answer the words in the app's own field ride with a click ("The card's one field" below);
 - a product fact: measurable figure text that would draw under 11px in the usual 750px column is refused, and the refusal names the repair: a full-width drawing of at most 750 units, or larger type, and a pixel width for a smaller drawing.
   It does not measure the narrow card, and it does not refuse a small drawing stretched to 100 percent.
 
@@ -647,33 +647,42 @@ The captain's Approve and build chose the author's own row with the app checking
   A revision gets the written words back by name under its own Something else row, and a body that no longer has one leaves the question at its proposal.
   A past card shows the field with the words that were sent; a restart loses an unsent draft like any pick.
 
-### Anything else?
+### The card's one field
 
-INF-680 (the captain: "every decision card has a "anything else?" input box at the bottom of the card body, so i can leave additional comments before clicking one of the action buttons").
-The captain's Approve and build chose a box pinned between the body and the buttons, the label Anything else? with the hint "sent with the button you click", 4,000 characters, five lines, and every card with buttons whose author can read a reply, merge cards and previews included.
+INF-680 (the captain: "every decision card has a "anything else?" input box at the bottom of the card body, so i can leave additional comments before clicking one of the action buttons") gave a decision a box for words that go with a click.
+INF-924 made that box and the reply row one field, on the captain's Approve and build: "i meant always showing the text input. after typing, pressing "chat" or "enter" will send the reply without making a choice. pressing any other choice will send the text along with the choice", with the placeholder "anything to add?".
 
 - **Which cards.**
-  A card draws the box when it has buttons and its author can read a reply (`cardTakesAnythingElse` in `src/shared/cards.ts`): a crewmate's card about its task and the first mate's card.
-  A note, the app's own cards, a task's record and a panel card draw none.
-- **The box.**
-  It is host chrome (`AnythingElseBox`, `src/renderer/src/cards/AnythingElseBox.tsx`), in a row of its own under a hairline after the body and its attachment, so it stays in view however long the body is.
-  Its field starts at one line and grows to five, then scrolls; it holds 4,000 characters (`ANYTHING_ELSE_MAX_CHARS`, a reply's limit), and its count shows from 80 percent of that, as a reply's does.
-  Typing sends nothing and Enter adds a line.
-  In a card too short for both, the box gives way before the body: the middle keeps one `--space-4` of room so the body stays in sight (a frame out of sight never draws), and the box's row shrinks and scrolls (`ResponseCard`).
-- **The answer.**
-  Whichever footer button the captain clicks carries the trimmed words as one more answer, `{ name: "anything_else", values: [], changed: true, written }` (`withAnythingElse`), on the path every answer takes: the author's wake, the card row, the task's `card_resolved` event, the first mate's resolutions line and a basis brief.
+  Every card whose author can read a reply (`cardTakesReplies` in `src/shared/cards.ts`) draws the field: a crewmate's card about its task and the first mate's card, merge cards, previews and notes included.
+  The app's own cards, the welcome, a task's record and a panel card draw none.
+- **The field.**
+  It is host chrome (`ReplyRow`, `src/renderer/src/cards/CardThread.tsx`), in a row of its own under a hairline after the body and its attachment and above the buttons, so it stays in view however long the body is.
+  It reads "anything to add?"
+  (`CARD_REPLY_HINT`) while empty, with ⇧⌘L at its far end, and the clip beside it takes files and pictures.
+  It grows to five lines, then scrolls; it holds a reply's 4,000 characters (`CARD_REPLY_MAX_CHARS`), and its count shows from 80 percent of that (`docs/composer.md`, "The card reply row").
+  In a card too short for both, the field gives way before the body: the middle keeps one `--space-4` of room so the body stays in sight (a frame out of sight never draws), and the field's row shrinks and scrolls (`ResponseCard`).
+- **Chat.**
+  A quiet ghost button with a speech bubble, `Chat` (`CARD_CHAT_LABEL`), sits at the right edge of the button row after the default, or alone on a card with no buttons.
+  It shows ⏎ as its key, because Enter in the field does the same; it takes no number key, so ⌘1 stays on the default.
+  It lights once the field holds something to send; with nothing typed it puts the caret in the field.
+  It never closes the card.
+  With the thread open beside the card, the field sits at the thread's foot with its own Chat beside the clip (`docs/card-threads.md`).
+- **The two sends.**
+  Enter or Chat sends the field's words, files and pictures to the author as a reply (`docs/card-threads.md`); a reply carries the body's picks among its settings, never the words as an answer beside them.
+  Any other button carries the trimmed words as one more answer, `{ name: "anything_else", values: [], changed: true, written }` (`withAnythingElse`), on the path every answer takes: the author's wake, the card row, the task's `card_resolved` event, the first mate's resolutions line and a basis brief.
   On a merge or discard the app runs the click and the first mate reads the words on the card's resolutions line, because the crewmate's task closes.
-  The box never counts in the footer's picks and never holds up the default.
-  A reply carries the words among its settings, and the box keeps them.
-  A frame's own answers stay at 500 written characters (`CARD_WRITTEN_MAX`); only the box writes more.
+  The words never count in the footer's picks and never hold up the default; once the click is taken the field is empty.
+  A frame's own answers stay at 500 written characters (`CARD_WRITTEN_MAX`); only the field writes more.
+- **A file waits for a reply.**
+  A file or picture goes only as a reply: while one is attached the buttons are off, with "Send the file as a reply first" (`CARD_FILES_FIRST`) at the row's left and on each button, and a press does nothing.
 - **The name.**
-  `anything_else` is the app's: the shape lint refuses an author's control or staged setting of that name, and a crewmate's `CARD_AUTHORING` says the app adds the box.
-  The first mate's fixed context has no room for that sentence, so it reads the box's words by the written-in rule it already has.
+  `anything_else` is the app's: the shape lint refuses an author's control or staged setting of that name, and a crewmate's `CARD_AUTHORING` says the app draws the field.
+  The first mate's fixed context has no room for that sentence, so it reads the words by the written-in rule it already has.
 - **Closing, revisions and past cards.**
-  The close asks first while the box holds words the card has not sent ("You wrote a comment.
+  The close asks first while the field holds words the card has not sent ("You wrote a reply.
   Closing will discard it.").
   A revision keeps the words, because they belong to the card's id; a restart loses them, as it loses picks.
-  A past card shows the words that were sent, read-only, and no box when none were.
+  A past card shows the words that went with its choice as one quiet line under its dimmed buttons ("Sent with your choice:", `PAST_CARD_WORDS_LEAD`), and nothing when none went.
 
 ## An answer task's card is its deliverable
 

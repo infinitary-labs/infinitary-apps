@@ -38,9 +38,9 @@ A reply does hand the turn to the author, and it never moves the card (INF-770 d
 Put aside and Close are the only ways a card leaves the captain's screen, and each says what it does on rest (`docs/card-authoring.md`, "Put a card aside" and "Close").
 An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each newly arriving marked card comes forward, including the same stable id raised again after a choice, but a revision or thread answer never undoes the captain's paging away.
 Every choice still closes the card immediately; nothing keeps its page running while its author writes.
-The card's body, scroll and reply field stay the same elements as the thread opens: only the surface's columns change.
-Its reply field keeps the focus through the send, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").
-A reply sent while the card's Anything else? box holds words carries them among its settings, as the answer `anything_else`, and the box keeps them for the button the captain clicks later (`docs/card-authoring.md`, "Anything else?").
+The card's body and scroll stay the same elements as the thread opens: only the surface's columns change.
+Its field moves from above the card's buttons to the thread's foot and keeps the focus through the send and the move, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").
+The field is the card's one place to write (`docs/card-authoring.md`, "The card's one field"): Enter or Chat sends its words as the reply, and words left in it when the captain clicks a button go with that choice instead.
 The author's answer redraws it at the close-out - see the next section.
 A refused reply moves nothing and keeps the draft.
 
@@ -173,9 +173,9 @@ Contract v4.2 is unchanged; the wire bump is protocol 1.19.0 for images on `inf:
 
 ### A card with no reply row
 
-One first mate card takes no reply: the welcome (FI3-1164, the captain's word: "for this particular card, let's disable "reply to this card" input box at the bottom. otherwise it's overwhelming").
+One first mate card takes no reply: the welcome (FI3-1164, the captain's word: "for this particular card, let's disable "reply to this card" input box at the bottom. otherwise it's overwhelming"), so it draws neither the field nor Chat.
 The host marks it when it presents the note (`Card.replies` false, the `cards.replies` column; `addRecordedFirstmateNote(..., { replies: false })`), and `cardTakesReplies` reads it as no, whoever the author is.
-The window draws no reply row under it and refuses the Reply commands with "This card takes no reply"; `CrewSupervisor.replyToCard` refuses one with "takes no reply".
+The window draws no field on it and refuses the Reply commands with "This card takes no reply"; `CrewSupervisor.replyToCard` refuses one with "takes no reply".
 Its words send the captain to the message box under the card, so the first-run hint ends on a message sent from there (`docs/first-launch.md` "The welcome").
 Every other card keeps its row as its author allows.
 
@@ -230,8 +230,8 @@ It is branch 0, above the open-card branch, deliberately - the captain has spoke
 
 The design skill owns every visual rule (`.claude/skills/infinitary-design/components/cards/CardThread.prompt.md`); `src/renderer/src/cards/CardThread.tsx` implements it and `threadGeometry.ts` holds the ladder's arithmetic.
 
-While a card has no thread, "reply to this card…" is the very bottom of the card, under the action row and one hairline above it (the captain's tweak 3).
-A card with no author to reach - the host's own agent-down set - has no reply row at all, and neither has the welcome ("A card with no reply row", above).
+While a card has no thread open beside it, its one field, reading "anything to add?", sits above the button row under one hairline, and Chat sits at the right edge of that row (INF-924; `docs/card-authoring.md`, "The card's one field").
+A card with no author to reach - the host's own agent-down set - has no field and no Chat at all, and neither has the welcome ("A card with no reply row", above).
 
 The first sent message opens the thread beside the card in ONE container (tweak 1): one surface, border, radius and shadow, a single `--line-2` hairline between the columns, the pair centred as one object.
 For card and thread sizing, stage width is the window minus twice the larger expanded rail, so one-sided panels never shift the pair.
@@ -247,9 +247,9 @@ In place is the last rung - a segmented control in the card's head swaps the bod
 ### Collapsing the thread
 
 The captain folds an open thread back into its card (FI3-1130): the thread head's Collapse thread, ⌘\ or command search's "Show or hide the card's thread" (`cards.thread`, `docs/keyboard.md`).
-The shell's `closedThreadIds` holds the cards collapsed in this window, and `entryView` (`src/renderer/src/app/HomeScreen.tsx`) draws such a card lone, its reply row at its foot with the thread's latest line above it (`ThreadCue` in `CardThread.tsx`); a click or Enter on that line, or ⌘\ again, opens the thread (`openThread`).
-The reply slot never leaves the card's tree, so the draft, pictures, chips and the body's state survive both moves.
-A focused reply field keeps the focus; otherwise the card layer focuses what undoes the move, the latest line or the collapse, ringed when a key moved it.
+The shell's `closedThreadIds` holds the cards collapsed in this window, and `entryView` (`src/renderer/src/app/HomeScreen.tsx`) draws such a card lone, its field above its buttons with the thread's latest line above it (`ThreadCue` in `CardThread.tsx`); a click or Enter on that line, or ⌘\ again, opens the thread (`openThread`).
+The draft, pictures and chips belong to the card's id in the shell, so they survive both moves, and so does the body's state.
+A focused field keeps the focus in its new place (`ReplyRow` carries it across the move); otherwise the card layer focuses what undoes the move, the latest line or the collapse, ringed when a key moved it.
 Collapsing gives up what folded the docks, so in a narrow window they come back, and the folded docks' edge tabs collapse the thread the same way.
 A thread push that holds a message the window did not have opens the thread again (`applyThread`): the author's answer, a host line, or the captain's own reply sent from the collapsed row, so nothing written goes unseen.
 A read that brings nothing new, such as a window catching up, keeps the collapse.
@@ -313,7 +313,7 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The settle hand-off carries NO classifier: nothing in the host reads the captain's words - a crewmate asked to put a change in, discard it, route a stronger model or take on unrelated work closes its own card and reports those words verbatim, and the whose-turn rule routes that report to the first mate, which runs the settle.
   The first mate is never woken for a thread message; it reads the bounded "thread activity since your last turn" context section beside `renderCaptainResolutions` (8 lines, 6h, same watermark) and the `thread:` fact on each crew line.
   RETIRED with it (captain's Q3 A): the close rule at `piResources.ts:92`, and `close_card` on the captain's behalf - only a card's own AUTHOR withdraws it now and the captain's × is the only dismissal, so `closeCard` refuses a first mate close of anyone else's card; the Jev pre-step and the relay classifier were the alternatives this replaced and are not built.
-  The shell is one CONTAINER for the pair (one surface, border, radius, shadow; a single hairline between columns; thread `clamp(0.4*stage,288,360)`, card `min(560, stage-32-thread)`), the reply row is the very bottom of the card until the first message, and below a 400px card the docked rails FOLD - `html[data-rails-folded]` zeroes their width while they keep their panels, which is why `--rail-docked-*` (what they ask for) is a different variable from `--occupied-rail-*` (what they take): reading the effective one would make the ladder circular.
+  The shell is one CONTAINER for the pair (one surface, border, radius, shadow; a single hairline between columns; thread `clamp(0.4*stage,288,360)`, card `min(560, stage-32-thread)`), the card's one field sits above its buttons until the first message (INF-924), and below a 400px card the docked rails FOLD - `html[data-rails-folded]` zeroes their width while they keep their panels, which is why `--rail-docked-*` (what they ask for) is a different variable from `--occupied-rail-*` (what they take): reading the effective one would make the ladder circular.
   `threadGeometry.test.ts` reproduces the captain's R3.1 table at 960/1200/1440/1728; `tests/e2e/card-threads.spec.ts` is the binding flow.
   Phase 2 (`PROTOCOL_VERSION` 1.19.0; contract stays 4.2): a captain reply on the first mate's own card is a captain TURN with the card as its about line (`converseAboutCard`, `TurnPayload.aboutCardId`) - the first mate answers through the same `CARD_REPLY` shape (revise same id, or closing words as prose via `recordFirstmateThreadAnswer`; no first mate `reply` tool, count stays 24); images ride `inf:cards:reply` / `steer(text, images)` where the transport can carry them (Pi native, Claude Agent SDK user-message image blocks) and degrade with `ATTACHMENTS_DROPPED_NOTE` where they cannot (the durable inbox); Observe's session detail lists open threads (`CrewSupervisor.observeThreads`, `[data-observe-threads]`).
 

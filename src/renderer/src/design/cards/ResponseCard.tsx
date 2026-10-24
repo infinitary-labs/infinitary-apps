@@ -63,8 +63,8 @@ export type ResponseCardProps = {
   attachment?: React.ReactNode;
   /**
    * Host chrome pinned between the body (and its attachment) and the action
-   * row, under a hairline: the app's own Anything else? box (INF-680), in
-   * view however long the body is.
+   * row, under a hairline: the card's one field (INF-924), whose words go as
+   * a reply or with the choice clicked, in view however long the body is.
    */
   comment?: React.ReactNode;
   /**
@@ -116,17 +116,11 @@ export type ResponseCardProps = {
    */
   revised?: React.ReactNode;
   /**
-   * Host chrome below the action row - the card's reply row while it has no
-   * thread yet (design skill `components/cards/CardThread.prompt.md`). It is
-   * never a card action and never wraps into that row.
+   * Host chrome below the action row - a task record's own bar, or the
+   * words a past card's field sent with its choice. It is never a card
+   * action and never wraps into that row.
    */
   footer?: React.ReactNode;
-  /**
-   * The card's reply row follows it inside the same surface, outside this
-   * section (the stage keeps one reply field for the card whether its
-   * thread is open or not): the action row keeps the footer's spacing.
-   */
-  replyBelow?: boolean;
   /**
    * Only the body: no head, title, revised line, actions or footer. A card
    * the stage prepares before it is shown draws its body at its final width;
@@ -192,9 +186,9 @@ export const CARD_MAX_HEIGHT =
 export const cardFloor = (px: number) => `var(--card-floor, min(${px}px, ${CARD_MAX_HEIGHT}))`;
 
 /**
- * The room the middle keeps beside the comment box: a line of the title and
+ * The room the middle keeps beside the card's field: a line of the title and
  * a few of the body, so the body stays in sight (a frame out of sight never
- * draws) while the box is what a short card cuts.
+ * draws) while the field is what a short card cuts.
  */
 const COMMENT_BODY_FLOOR = "var(--space-4)";
 
@@ -226,7 +220,6 @@ export function ResponseCard({
   headExtra,
   revised,
   footer,
-  replyBelow = false,
   bare = false,
   style,
   bodyStyle,
@@ -381,8 +374,8 @@ export function ResponseCard({
         data-card-middle=""
         style={{
           flex: 1,
-          // Beside the comment box the middle keeps a floor, so in a short
-          // card the box gives way before the body (see the comment row).
+          // Beside the card's field the middle keeps a floor, so in a short
+          // card the field gives way before the body (see the comment row).
           minHeight: comment && !bare ? COMMENT_BODY_FLOOR : 0,
           display: "flex",
           flexDirection: "column-reverse",
@@ -481,7 +474,10 @@ export function ResponseCard({
             minHeight: 0,
             overflowY: "auto",
             borderTop: "1px solid var(--line-1)",
-            padding: "var(--space-3) 16px 0",
+            // The air between the field and the buttons sits inside this row,
+            // which scrolls and so cuts what it does not hold: the field's
+            // focus glow needs it on every side.
+            padding: "var(--space-3) 16px",
           }}
         >
           {comment}
@@ -503,10 +499,8 @@ export function ResponseCard({
             rowGap: "var(--space-2)",
             // Keep the body separate from its choices and keep air above the
             // footer's hairline.
-            padding:
-              footer || replyBelow
-                ? "var(--space-3) 16px var(--space-3)"
-                : "var(--space-3) 16px 16px",
+            // The field's row above already holds the air between them.
+            padding: `${comment && !bare ? "0" : "var(--space-3)"} 16px ${footer ? "var(--space-3)" : "16px"}`,
           }}
         >
           {facts && (

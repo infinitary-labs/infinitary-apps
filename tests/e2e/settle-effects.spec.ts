@@ -707,7 +707,7 @@ for (const backend of CREW_BACKENDS) {
       await showCard(page, GUIDED_MERGE_QUESTION);
       await cardReply(page).field.click();
       await cardReply(page).field.fill(GUIDED_MERGE_ANSWER);
-      await page.getByRole("button", { name: "Send reply" }).click();
+      await cardReply(page).send.click();
       await expect.poll(() => record()?.closedReason ?? null, { timeout: 45_000 }).toBe("merged");
       expect(github.merges()).toEqual([
         expect.objectContaining({ sha: repaired, method: "squash", title: GUIDED_MERGE_TITLE }),

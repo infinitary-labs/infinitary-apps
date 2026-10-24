@@ -2,29 +2,31 @@ A card is the head of a thread between the captain and the card's author, and th
 The body's sandboxed frame is untouched by it.
 
 **Before the first message** the thread does not exist and nothing is drawn for it.
-The card ends with one reply row - a pill field reading "reply to this card…" and a send control - at the very BOTTOM of the card, below the action row, separated from it by one `--line-1` hairline.
+The card has one field - a pill reading "anything to add?" with the clip beside it - above the action row, under one `--line-1` hairline after the body, and a quiet **Chat** button at the right edge of the action row, after the default (INF-924, the captain's Approve and build: "i meant always showing the text input. after typing, pressing "chat" or "enter" will send the reply without making a choice. pressing any other choice will send the text along with the choice").
+Chat is a ghost button with a speech bubble before its label and ⏎ as its key; it takes no number key, never closes the card, puts the caret in the field when there is nothing to send, and lights (`--accent-dim` fill, `--fg-1` label) once there is.
+Enter or Chat sends the field as a reply; any other button carries its words with the choice (`ResponseCard.prompt.md`, "The card's one field").
+A card with no buttons ends with the field and a lone Chat.
+While a file or picture is attached, the choices are off, with "Send the file as a reply first" at the row's left, until it goes as a reply.
 The empty field shows Go to the card's reply (⇧⌘L) at its far end on the placeholder's line, as quiet mono text in the placeholder's color, not a keycap; it goes once the field has focus or words, it is hidden from assistive technology, and the field names that key in `aria-keyshortcuts`.
-Send reply stays unlabeled.
-It is the captain's own explicit revision ("when there's no thread yet, the reply input box should be at the very bottom of the card, below the action buttons").
-A picture pasted into that row rides with the send the same way the main input does; a chip above the pill previews it.
+A picture pasted into the field rides with the send the same way the main input does; a chip above the pill previews it.
 A refused picture shows the composer's shared notice under the reply field.
-The row takes files like the main input (`components/voice/VoiceInput.prompt.md`, "Files"): an "Add files to this reply" icon button beside send, the whole row (chips included, in the foot-of-card and thread-column layouts) as the drop target with an `--accent` inset border, named chips for supported files and an unsupported format as its path typed into the reply field.
-A card whose author cannot be reached has no reply row at all: the host's own agent-down cards answer to nobody.
+The row takes files like the main input (`components/voice/VoiceInput.prompt.md`, "Files"): an "Add files to this reply" icon button beside the field, the whole row (chips included, in the foot-of-card and thread-column layouts) as the drop target with an `--accent` inset border, named chips for supported files and an unsupported format as its path typed into the reply field.
+A card whose author cannot be reached has no field and no Chat at all: the host's own agent-down cards answer to nobody.
 Neither has the welcome, the one card the host marks as taking no reply (FI3-1164): its words send a new person to the message box under it, and a second box on the card was too much.
 
 The reply field is the composer's own field (`components/voice/VoiceInput.prompt.md`) at `--text-sm`: one line is a pill `--reply-height` tall, and it grows upward one line at a time to 5 lines inside the card, then scrolls; its radius stays `--reply-radius` (half the pill) at every height.
-The send control sits beside it, centred on the field's last line.
+The clip sits beside it, centred on the field's last line.
 The keys are the composer's: Enter sends, Shift+Enter or Option+Enter adds a line, Cmd+Enter always sends, Enter inside an open ``` code block adds a line, an Enter that confirms an input-method candidate neither sends nor adds a line, and the shell keys (Ctrl+U, Ctrl+K, Ctrl+W, Ctrl+Y) edit as they do in the task prompt.
 Every paste over 20 lines or 2,000 characters becomes the same remove-only file chip as the task prompt, up to four files of 5 MB each.
 Files are written only on send; previews and pointers appear as plain words in the thread.
-The limit is a reply's 4,000 typed characters (file previews do not count), with the composer's count and refusal: from 80% the mono count ("3,200 / 4,000") sits under the field on the right; over it the count turns `--warn`, the send control is disabled, Enter does nothing, and "Too long to send.
+The limit is a reply's 4,000 typed characters (file previews do not count), with the composer's count and refusal: from 80% the mono count ("3,200 / 4,000") sits under the field on the right; over it the count turns `--warn`, Chat is off, Enter does nothing, and "Too long to send.
 Trim it, or paste the long part so it goes as a file." sits on the left in `--fg-2`.
 A reply that did not send keeps its draft and file chips.
-The field keeps the focus through a send, by Enter or by the send control, so the next reply is typed straight away; on send the words and chips clear immediately; while the core takes the reply, the empty field stays read-only and never goes disabled.
+The field keeps the focus through a send, by Enter or by Chat, so the next reply is typed straight away; on send the words and chips clear immediately; while the core takes the reply, the empty field stays read-only and never goes disabled.
 Right ⌥ does not record from the reply row.
 
-**The first sent message opens the thread beside the card**, and the reply row moves into it, so the card returns to exactly its original footprint and never grows again.
-It is the same field and the same card body, moved, never rebuilt: what the captain did in the body (a preview's state, an open disclosure, scrolling) is still there beside the thread.
+**The first sent message opens the thread beside the card**, and the field moves to the thread's foot with its own Chat beside the clip, so the card's choices stand alone above the hairline; a click on one still carries the field's words.
+The field keeps its draft, chips and focus across the move, and the card body is the same one, never rebuilt: what the captain did in the body (a preview's state, an open disclosure, scrolling) is still there beside the thread.
 A reply never moves the card (INF-770): it stays shown beside its thread whatever waits behind it, the pager and the arrows do not change, and the waiting line says who answers next and the way on.
 Put aside and Close are the only ways a card leaves (`ResponseCard.prompt.md`, "Put aside" and "Close").
 
@@ -68,9 +70,9 @@ The list scrolls, newest at the bottom, and holds its scroll at the bottom as me
 Nothing in the thread resolves the card.
 The footer's buttons stay pinned and enabled while a thread is open and while a reply is in flight; a reply is not an answer to the decision.
 
-**A collapsed thread** goes back into the card (the captain's FI3-1130 plan): the card returns to its lone width, and the same reply row, with its draft, pictures and chips, returns to the card's foot under the hairline, reading "reply to this card…".
-It is the same field and the same body, moved, never rebuilt, and the cut is the move: no tween, as the thread opens.
-Between the hairline and the reply pill sits the **latest line**, one button row that opens the thread again:
+**A collapsed thread** goes back into the card (the captain's FI3-1130 plan): the card returns to its lone width, and the field, with its draft, pictures, chips and focus, returns above the card's buttons under the hairline, reading "anything to add?", with Chat back at the row's right edge.
+The body is the same one, never rebuilt, and the cut is the move: no tween, as the thread opens.
+Between the hairline and the field sits the **latest line**, one button row that opens the thread again:
 
 - who wrote last in the thread's 34px mono column, in the who's own color (`you` in `--captain`, `crew` or `mate` in `--accent`, `app` in `--fg-3`);
 - the newest message on one line at `--text-sm` in `--fg-2`, cut with an ellipsis; a host line, or the waiting line's sentence in its place when it applies (with no who), is `--fg-3` at `--text-xs`;

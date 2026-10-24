@@ -1,4 +1,5 @@
 import {
+  CARD_FILES_FIRST,
   type Card,
   type CardAction,
   type CardActionSource,
@@ -6,7 +7,6 @@ import {
   type CardWidth,
   cardMetaWords,
   cardPresentation,
-  cardTakesAnythingElse,
   cardTakesReplies,
   isPreviewBody,
   settleEffectOf,
@@ -45,12 +45,12 @@ import {
 } from "react";
 import { mainDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
-import { AnythingElseBox } from "../cards/AnythingElseBox";
 import { answersLine } from "../cards/answersLine";
 import { bridgeActionIds } from "../cards/bridgeActions";
 import { CardAttachment } from "../cards/CardAttachment";
 import {
   CardThread,
+  ChatButton,
   LiveMessageList,
   ReplyRow,
   ThreadCue,
@@ -1010,7 +1010,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     }
     const shell = useShellStore.getState();
     const unsent = unsentAnswers(card, shell.cardAnswers[cardId], shell.sentCardAnswers[cardId]);
-    const wrote = unsentComment(shell.cardComments[cardId], shell.sentCardAnswers[cardId]);
+    const wrote = unsentComment(shell.replyDrafts[cardId], shell.sentCardAnswers[cardId]);
     if (unsent > 0 || wrote || replyUnanswered(shell.threads[cardId])) {
       setConfirmingClose(cardId);
       setConfirmFocus(byKey);
@@ -1510,10 +1510,13 @@ function EntrySurface({
   // control. It needs a stage under 720px, which the app's own 960px window
   // minimum puts out of reach.
   const inPlace = view.home === "in-place";
-  // Tweak 3: with no thread yet, the reply row is the very bottom of the
-  // card, below the action row and one hairline under it; with the thread
-  // open it is the foot of the thread column. The same field either way.
-  const replyRow = view.replyable && !prepared && !inPlace;
+  // The card's one field (INF-924): above its choices, under one hairline,
+  // while no thread is open beside it, and the foot of the thread column
+  // once one is. The same draft either way; the focus follows the field.
+  const replyable = view.replyable && !prepared;
+  const collectHere: CollectAnswers = (focusUnpicked) =>
+    collectRef.current?.(focusUnpicked) ??
+    Promise.resolve(useShellStore.getState().cardAnswers[id]);
   return (
     <RevisionNavigation
       cardId={id}
@@ -1529,7 +1532,24 @@ function EntrySurface({
           surface={false}
           bare={prepared}
           active={active}
-          replyBelow={replyRow && !beside}
+          reply={
+            replyable && !beside ? (
+              <ReplyRow
+                cardId={id}
+                lead={
+                  view.collapsed && !inPlace ? (
+                    <ThreadCue
+                      cardId={id}
+                      card={entry}
+                      working={working}
+                      onOpen={(byKey) => onThread?.(true, byKey)}
+                    />
+                  ) : undefined
+                }
+                collect={collectHere}
+              />
+            ) : undefined
+          }
           sharedCollectRef={collectRef}
           size={shownCardSize(view.card)}
           onClose={onClose}
@@ -1553,34 +1573,17 @@ function EntrySurface({
             style={{ gridColumn: 2, gridRow: 1 }}
           />
         )}
-        {replyRow && (
+        {replyable && beside && (
           <div
             data-card-reply-slot=""
-            style={
-              beside
-                ? { gridColumn: 2, gridRow: 2, minWidth: 0, borderLeft: "1px solid var(--line-2)" }
-                : { gridColumn: 1, gridRow: 2, minWidth: 0, padding: "0 16px 16px" }
-            }
+            style={{
+              gridColumn: 2,
+              gridRow: 2,
+              minWidth: 0,
+              borderLeft: "1px solid var(--line-2)",
+            }}
           >
-            <ReplyRow
-              cardId={id}
-              {...(beside ? { placeholder: "reply…" } : {})}
-              inThread={beside}
-              lead={
-                view.collapsed ? (
-                  <ThreadCue
-                    cardId={id}
-                    card={entry}
-                    working={working}
-                    onOpen={(byKey) => onThread?.(true, byKey)}
-                  />
-                ) : undefined
-              }
-              collect={(focusUnpicked) =>
-                collectRef.current?.(focusUnpicked) ??
-                Promise.resolve(useShellStore.getState().cardAnswers[id])
-              }
-            />
+            <ReplyRow cardId={id} inThread collect={collectHere} />
           </div>
         )}
       </CardSurface>
@@ -1850,8 +1853,11 @@ type StackedCardProps = {
    * shown before they become its saved draft.
    */
   active?: boolean;
-  /** Its reply row follows it in the same surface (no thread open beside it). */
-  replyBelow?: boolean;
+  /**
+   * The card's one field, drawn above its choices with Chat at the right
+   * edge of their row (INF-924); none while its thread is open beside it.
+   */
+  reply?: React.ReactNode;
   /** The in-place rung: the body becomes the thread behind a segmented control. */
   inPlaceThread?: boolean;
   threadWorking?: boolean;
@@ -1885,7 +1891,7 @@ function StackedCard({
   surface = true,
   bare = false,
   active = true,
-  replyBelow = false,
+  reply,
   inPlaceThread = false,
   threadWorking = false,
   onClose,
@@ -1929,7 +1935,13 @@ function StackedCard({
   const messages = useShellStore((s) => s.threads[card.id]) ?? [];
   const answers = useShellStore((s) => s.cardAnswers[card.id]);
   const sentAnswers = useShellStore((s) => s.sentCardAnswers[card.id]);
-  const comment = useShellStore((s) => s.cardComments[card.id]);
+  const words = useShellStore((s) => s.replyDrafts[card.id]);
+  // A file or picture goes only as a reply: the choices wait until it has.
+  const filesFirst = useShellStore(
+    (s) =>
+      reply !== undefined &&
+      ((s.replyImages[card.id]?.length ?? 0) > 0 || (s.replyPastes[card.id]?.length ?? 0) > 0),
+  );
   const setCardAnswers = useShellStore((s) => s.setCardAnswers);
   const localCollectRef = useRef<CollectAnswers | null>(null);
   const collectRef = sharedCollectRef ?? localCollectRef;
@@ -1983,8 +1995,9 @@ function StackedCard({
   // The task the card is about leads its head as the card's door to the
   // task's record (INF-358); a card about no task draws no key.
   const task = useCardTask(card);
+  const groups = footerGroups(card.actions);
   const footer =
-    card.actions.length > 0 ? (
+    card.actions.length > 0 || reply !== undefined ? (
       <>
         {asking && (
           <span
@@ -1992,7 +2005,8 @@ function StackedCard({
             aria-live="polite"
             style={{
               alignSelf: "center",
-              marginRight: "auto",
+              // The note that a file goes first follows it, at the left.
+              marginRight: filesFirst ? undefined : "auto",
               fontFamily: "var(--font-mono)",
               fontSize: "var(--text-xs)",
               color: "var(--fg-3)",
@@ -2002,70 +2016,96 @@ function StackedCard({
             {footerAnswers(answers, isPreviewBody(card.body))}
           </span>
         )}
-        {footerGroups(card.actions).map((group) => (
-          // Each group stays on one row: a narrow card moves the choices
-          // down together, never the default alone (design skill
-          // ResponseCard footer rule).
-          <div
-            key={group.key}
+        {filesFirst && card.actions.length > 0 && (
+          <span
+            data-card-files-first=""
+            role="status"
             style={{
-              display: "flex",
-              gap: "var(--space-2)",
-              flexWrap: "nowrap",
-              minWidth: 0,
-              maxWidth: "100%",
+              alignSelf: "center",
+              marginRight: "auto",
+              fontSize: "var(--text-xs)",
+              color: "var(--fg-3)",
             }}
           >
-            {group.actions.map((action) => {
-              const at = choiceIndex.get(action.id);
-              const choiceKey = at === undefined ? undefined : choiceKeys[at];
-              return (
-                <Button
-                  key={action.id}
-                  // Where Go to the card's buttons lands (docs/keyboard.md).
-                  data-card-action-default={action.default ? "" : undefined}
-                  data-card-choice={at !== undefined && at < choiceKeys.length ? at : undefined}
-                  aria-keyshortcuts={choiceKey?.keys ? choiceKey["aria-keyshortcuts"] : undefined}
-                  // The key sits inside the button at the size its label gives it.
-                  keys={choiceKey?.keys}
-                  variant={footerVariant(action)}
-                  style={{
-                    minWidth: 0,
-                    maxWidth: "100%",
-                    flexShrink: 1,
-                    whiteSpace: "normal",
-                    overflowWrap: "anywhere",
-                    ...(unanswered && action.default
-                      ? {
-                          background: "var(--bg-2)",
-                          color: "var(--fg-3)",
-                          borderColor: "var(--line-1)",
-                        }
-                      : {}),
-                  }}
-                  pending={pending?.actionId === action.id}
-                  disabled={Boolean(pending)}
-                  off={offWords !== null}
-                  note={noticeCovers ? undefined : (offWords ?? thereWords(action) ?? undefined)}
-                  // The notice shows the reason in place of the label; a
-                  // screen reader on the button still hears it.
-                  aria-description={offWords ?? undefined}
-                  aria-disabled={unanswered && action.default ? true : undefined}
-                  // The offer this footer belongs to rides the click, read now.
-                  onClick={() => {
-                    if (unanswered && action.default) {
-                      void collect(true);
-                      return;
+            {CARD_FILES_FIRST}
+          </span>
+        )}
+        {(groups.length > 0 ? groups : [{ key: "choices", actions: [] }]).map(
+          (group, index, all) => (
+            // Each group stays on one row: a narrow card moves the choices
+            // down together, never the default alone (design skill
+            // ResponseCard footer rule).
+            <div
+              key={group.key}
+              style={{
+                display: "flex",
+                gap: "var(--space-2)",
+                flexWrap: "nowrap",
+                minWidth: 0,
+                maxWidth: "100%",
+              }}
+            >
+              {group.actions.map((action) => {
+                const at = choiceIndex.get(action.id);
+                const choiceKey = at === undefined ? undefined : choiceKeys[at];
+                return (
+                  <Button
+                    key={action.id}
+                    // Where Go to the card's buttons lands (docs/keyboard.md).
+                    data-card-action-default={action.default ? "" : undefined}
+                    data-card-choice={at !== undefined && at < choiceKeys.length ? at : undefined}
+                    aria-keyshortcuts={choiceKey?.keys ? choiceKey["aria-keyshortcuts"] : undefined}
+                    // The key sits inside the button at the size its label gives it.
+                    keys={choiceKey?.keys}
+                    variant={footerVariant(action)}
+                    style={{
+                      minWidth: 0,
+                      maxWidth: "100%",
+                      flexShrink: 1,
+                      whiteSpace: "normal",
+                      overflowWrap: "anywhere",
+                      ...(unanswered && action.default
+                        ? {
+                            background: "var(--bg-2)",
+                            color: "var(--fg-3)",
+                            borderColor: "var(--line-1)",
+                          }
+                        : {}),
+                    }}
+                    pending={pending?.actionId === action.id}
+                    disabled={Boolean(pending)}
+                    off={offWords !== null || filesFirst}
+                    note={
+                      noticeCovers
+                        ? undefined
+                        : (offWords ??
+                          (filesFirst ? CARD_FILES_FIRST : thereWords(action)) ??
+                          undefined)
                     }
-                    void onAction(action.id, "chrome", undefined, collect, mountOf(card));
-                  }}
-                >
-                  {action.label}
-                </Button>
-              );
-            })}
-          </div>
-        ))}
+                    // The notice shows the reason in place of the label; a
+                    // screen reader on the button still hears it.
+                    aria-description={offWords ?? undefined}
+                    aria-disabled={unanswered && action.default ? true : undefined}
+                    // The offer this footer belongs to rides the click, read now.
+                    onClick={() => {
+                      if (unanswered && action.default) {
+                        void collect(true);
+                        return;
+                      }
+                      void onAction(action.id, "chrome", undefined, collect, mountOf(card));
+                    }}
+                  >
+                    {action.label}
+                  </Button>
+                );
+              })}
+              {/* Chat after the choices, at the right edge (INF-924). */}
+              {index === all.length - 1 && reply !== undefined && (
+                <ChatButton cardId={card.id} collect={collect} />
+              )}
+            </div>
+          ),
+        )}
       </>
     ) : undefined;
   return (
@@ -2085,13 +2125,11 @@ function StackedCard({
       bare={bare}
       // The surface around the card holds the floor (`CardSurface`).
       minHeight={surface ? undefined : 0}
-      replyBelow={replyBelow}
       headExtra={
         inPlaceThread ? (
           <ThreadSegments showing={showing} count={messages.length} onShow={setShowing} />
         ) : undefined
       }
-      footer={inPlaceThread ? <ReplyRow cardId={card.id} collect={collect} /> : undefined}
       onClose={onClose}
       closeRef={closeRef}
       closeRest={closeRestWords(task?.key)}
@@ -2100,7 +2138,7 @@ function StackedCard({
         <CloseQuestion
           ask={closeConfirm}
           count={unsentAnswers(card, answers, sentAnswers)}
-          wrote={unsentComment(comment, sentAnswers)}
+          wrote={unsentComment(words, sentAnswers)}
           unanswered={
             replyUnanswered(messages)
               ? {
@@ -2117,7 +2155,7 @@ function StackedCard({
         />
       }
       actions={footer}
-      comment={cardTakesAnythingElse(card) ? <AnythingElseBox cardId={card.id} /> : undefined}
+      comment={reply}
       aside={
         risk && !showThread
           ? { node: <RiskChart risk={risk} />, width: riskChartBox().width, ref: asideRef }

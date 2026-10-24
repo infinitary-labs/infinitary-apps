@@ -62,7 +62,7 @@ test("a crewmate emits a file snapshot and shows an edit only on its next explic
     await expect(frame.locator("body")).toContainText(ORIGINAL_ANSWER);
     const reply = cardReply(page).field;
     await reply.fill(FILE_CARD_REVISE_MARKER);
-    await page.getByRole("button", { name: "Send reply" }).click();
+    await cardReply(page).send.click();
     await expect(frame.locator("body")).toContainText(UPDATED_ANSWER);
     await expect(frame.locator("body")).toContainText(UNCHANGED_EVIDENCE);
     // The new drawing appears on the explicit revision, never on a file edit.

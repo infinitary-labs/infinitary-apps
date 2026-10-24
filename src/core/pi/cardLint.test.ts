@@ -218,8 +218,8 @@ describe("lintCardShape (both boundaries)", () => {
     }
   });
 
-  it("keeps the name of the app's own Anything else? box for the box (INF-680)", () => {
-    // The box's words ride the click as `anything_else`; an author's own
+  it("keeps the name of the app's own field's answer for that field (INF-680, INF-924)", () => {
+    // The field's words ride the click as `anything_else`; an author's own
     // control or staged setting of that name would collide with them.
     for (const body of [
       '<p>Ship it?</p><label>Notes <textarea name="anything_else"></textarea></label>',

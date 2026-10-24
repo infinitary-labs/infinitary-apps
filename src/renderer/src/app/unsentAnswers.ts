@@ -33,8 +33,8 @@ export function unsentAnswers(
 }
 
 /**
- * Whether closing would discard words in the Anything else? box (INF-680):
- * there are some, and they are not what the card last sent.
+ * Whether closing would discard words in the card's one field (INF-924):
+ * there are some, and they are not what the card last sent with a choice.
  */
 export function unsentComment(words: string | undefined, sent: CardAnswer[] | undefined): boolean {
   const written = words?.trim() ?? "";

@@ -7,6 +7,7 @@ import type {
   DeviceArrival,
 } from "@shared/cards";
 import {
+  anythingElseOf,
   CARD_ANSWERS_MAX_BYTES,
   CARD_ANSWERS_TOO_LONG,
   CARD_QUESTIONS_MAX_BYTES,
@@ -598,12 +599,6 @@ export type ShellState = {
   cardAnswers: Record<string, FrameAnswers>;
   /** Last accepted send, kept across revisions but retired with its card. */
   sentCardAnswers: Record<string, CardAnswer[]>;
-  /**
-   * What the captain wrote in each card's Anything else? box (INF-680),
-   * sent with whichever footer button he clicks. Renderer memory like the
-   * answers: a revision keeps it by the card's id, a restart loses it.
-   */
-  cardComments: Record<string, string>;
   /** Open shell-held records, newest opened first (one per task). */
   records: OpenRecord[];
   cardIndex: number;
@@ -876,7 +871,6 @@ export type ShellState = {
   ) => Promise<void>;
   /** A card body's frame read its form again (the bridge's `answers`). */
   setCardAnswers: (cardId: string, answers: FrameAnswers) => void;
-  setCardComment: (cardId: string, words: string) => void;
   /** The close control; `mounted` is the card it was clicked on. */
   closeCard: (cardId: string, mounted?: CardMount) => void;
   /** Read one card's thread from the core; idempotent, and safe to call on every show. */
@@ -1142,7 +1136,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   pendingCardActions: {},
   cardActionErrors: {},
   cardAnswers: {},
-  cardComments: {},
   sentCardAnswers: {},
   records: [],
   cardIndex: 0,
@@ -1825,9 +1818,9 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         if (asked && defaultAction && asked.answered < asked.of) {
           throw new Error("Answer every question the card asks first.");
         }
-        // The Anything else? box's words ride whichever button this is,
-        // never holding one up (INF-680).
-        const answers = withAnythingElse(asked?.answers ?? [], get().cardComments[cardId] ?? "");
+        // The words in the card's one field ride whichever button this is,
+        // never holding one up (INF-680, INF-924).
+        const answers = withAnythingElse(asked?.answers ?? [], get().replyDrafts[cardId] ?? "");
         if (asked || answers.length > 0) {
           if (cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
             throw new Error(CARD_ANSWERS_TOO_LONG);
@@ -1844,6 +1837,10 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         submission,
       );
       if (refusal) throw new Error(refusal);
+      // The field's words went with the choice: they are not left to send again.
+      if (anythingElseOf(sentAnswers) !== undefined) {
+        set((s) => ({ replyDrafts: withoutKey(s.replyDrafts, cardId) }));
+      }
       // Acceptance is the receipt, not the settle outcome. Do not revive
       // the row while waiting for the core's coalesced cards push.
       if (get().pendingCardActions[cardId] === request) {
@@ -1904,8 +1901,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   clearPendingDeviceForgeSignIn: () => set({ pendingDeviceForgeSignIn: null }),
   setCardAnswers: (cardId, answers) =>
     set((s) => ({ cardAnswers: { ...s.cardAnswers, [cardId]: answers } })),
-  setCardComment: (cardId, words) =>
-    set((s) => ({ cardComments: { ...s.cardComments, [cardId]: words } })),
   closeCard: (cardId, mounted) => {
     const thisMac = get().thisMac;
     if (isView(thisMac) && changesOff(thisMac)) {
@@ -2045,10 +2040,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     try {
       const fresh = collect ? await collect() : undefined;
       const reading = fresh ?? get().cardAnswers[cardId];
-      // The Anything else? box's words go as context too, and the box keeps them.
-      const comment = get().cardComments[cardId] ?? "";
-      const answers =
-        reading || comment.trim() ? withAnythingElse(reading?.answers ?? [], comment) : undefined;
+      // The field's words are the reply itself, never an answer beside it.
+      const answers = reading ? withAnythingElse(reading.answers, "") : undefined;
       if (answers && cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
         throw new Error(CARD_ANSWERS_TOO_LONG);
       }
@@ -2320,9 +2313,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         ),
         cardAnswers: Object.fromEntries(
           Object.entries(s.cardAnswers).filter(([id]) => present.has(id)),
-        ),
-        cardComments: Object.fromEntries(
-          Object.entries(s.cardComments).filter(([id]) => present.has(id)),
         ),
         cardDrags: Object.fromEntries(
           Object.entries(s.cardDrags).filter(

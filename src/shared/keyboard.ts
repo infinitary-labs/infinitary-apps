@@ -127,6 +127,7 @@ export const KEYBOARD_COMMANDS = {
     risk: "navigate",
     keys: [{ key: "l", meta: true }],
   },
+  // The card's one field (INF-924): a reply, or words for a choice.
   "focus.card-reply": {
     label: "Go to the card's reply",
     scope: "window",
@@ -134,17 +135,7 @@ export const KEYBOARD_COMMANDS = {
     repeat: false,
     risk: "navigate",
     keys: [{ key: "l", meta: true, shift: true }],
-  },
-  // The app's own Anything else? box between a decision's body and its
-  // buttons (INF-680): chosen by name, with no key of its own.
-  "focus.card-comment": {
-    label: "Go to the card's comment box",
-    scope: "window",
-    runs: "shell",
-    repeat: false,
-    risk: "navigate",
-    keys: [],
-    searchWords: ["anything else", "note", "comment"],
+    searchWords: ["anything to add", "comment"],
   },
   // The shown card's own places (docs/keyboard.md, "Cards and frames"):
   // its body to read and answer, and its buttons. No key of their own yet:

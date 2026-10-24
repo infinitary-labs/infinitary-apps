@@ -6,9 +6,11 @@ import { closeQuestionWords } from "../../src/renderer/src/app/closeQuestionWord
 import { answersLine as answersWords } from "../../src/renderer/src/cards/answersLine";
 import {
   ANYTHING_ELSE_ANSWER,
-  ANYTHING_ELSE_HINT,
-  ANYTHING_ELSE_LABEL,
+  CARD_CHAT_LABEL,
+  CARD_FILES_FIRST,
+  CARD_REPLY_HINT,
   cardAnswerLines,
+  PAST_CARD_WORDS_LEAD,
 } from "../../src/shared/cards";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody, cardBodyElement } from "./frames";
@@ -30,6 +32,7 @@ import {
   WRITE_IN_TITLE,
   writeInQuestionsBody,
 } from "./mockProvider";
+import { pastePictures } from "./prompt";
 import { cardReply, closeQuestion, expectNoCard, showCard, shownCard, shownEntry } from "./stack";
 import { focusOn, pressKey, pressWindowKey, runFromSearch, typeInto } from "./windowKeys";
 
@@ -118,7 +121,7 @@ test("picks inside a card queue until a footer button sends them, and survive a 
     const reply = cardReply(page).field;
     await reply.click();
     await reply.fill(INLINE_QUESTIONS_REVISE_REPLY);
-    await page.getByRole("button", { name: "Send reply" }).click();
+    await cardReply(page).send.click();
     await expect(shownCard(page, INLINE_QUESTIONS_REVISED_TITLE)).toBeVisible({
       timeout: 30_000,
     });
@@ -798,19 +801,22 @@ test("a 37-question card's footer sends its answers", async () => {
   }
 });
 
-/** What the captain writes in the Anything else? box, as the spec types it. */
+/** What the captain writes in the card's one field, as the spec types it. */
 const COMMENT = "Check the light theme too";
-/** The title of the note the Anything else? journey seeds, which takes no box. */
+/** The title of the note the one-field journey seeds, which has no choices. */
 const NOTE_TITLE = "The access plan is filed";
 
 /**
  * The captain's ask (INF-680): "every decision card has a "anything else?"
  * input box at the bottom of the card body, so i can leave additional
  * comments before clicking one of the action buttons". His Approve and build
- * pinned the app's own box between the body and the buttons; its words ride
- * whichever button he clicks as the answer named `anything_else`.
+ * on INF-924 made it the card's one field: "after typing, pressing "chat" or
+ * "enter" will send the reply without making a choice. pressing any other
+ * choice will send the text along with the choice", with the placeholder
+ * "anything to add?". The words a choice carries ride as the answer named
+ * `anything_else`.
  */
-test("the Anything else? box's words go with whichever button the captain clicks, and a note has no box", async () => {
+test("the card's one field replies on Chat and goes with whichever choice the captain clicks", async () => {
   const userDataDir = scratchDir("infinitary-anything-else-");
   const db = openDatabase(userDataDir);
   new CardStore(db).upsert({
@@ -828,14 +834,18 @@ test("the Anything else? box's words go with whichever button the captain clicks
   const launched = await launchApp({ userDataDir, withMockProvider: true });
   const { app, page } = launched;
   try {
-    // A note has no buttons to send words with, so it draws no box.
+    // A note with no choices ends with the field and a lone Chat.
     await showCard(page, NOTE_TITLE);
-    await expect(shownCard(page, NOTE_TITLE).locator("[data-card-comment]")).toHaveCount(0);
+    await expect(cardReply(page).field).toHaveAttribute("placeholder", CARD_REPLY_HINT);
+    await expect(cardReply(page).send).toBeVisible();
+    await expect(shownCard(page, NOTE_TITLE).locator("[data-card-choice]")).toHaveCount(0);
 
     const prompt = page.getByRole("textbox", { name: "Task prompt" });
     await prompt.fill(`${SPAWN_PROMPT_MARKER} ${INLINE_QUESTIONS_PROMPT_MARKER}`);
     await prompt.press("Enter");
-    await showCard(page, INLINE_QUESTIONS_TITLE);
+    // The crewmate starts and puts its card up behind the note, so the walk
+    // retries until that card has joined the stack.
+    await expect(() => showCard(page, INLINE_QUESTIONS_TITLE)).toPass({ timeout: 60_000 });
     const card = await page.evaluate(
       async (title) =>
         (await window.infinitary.cards.list()).find((entry) => entry.title === title),
@@ -851,16 +861,19 @@ test("the Anything else? box's words go with whichever button the captain clicks
       { name: ANYTHING_ELSE_ANSWER, values: [], changed: true, written: COMMENT },
     ])[0] as string;
 
-    // The box sits between the body and the buttons, labeled, with its hint.
-    const box = shownCard(page, INLINE_QUESTIONS_TITLE).getByRole("textbox", {
-      name: ANYTHING_ELSE_LABEL,
-    });
-    await expect(box).toHaveAttribute("placeholder", ANYTHING_ELSE_HINT);
+    // One field, above the choices; Chat sits after them, and no second box.
+    const { field, send } = cardReply(page);
+    await expect(field).toHaveAttribute("placeholder", CARD_REPLY_HINT);
+    await expect(shownEntry(page).getByRole("textbox")).toHaveCount(1);
+    await expect(
+      shownEntry(page).locator("[data-card-actions] button").last(),
+    ).toHaveAccessibleName(CARD_CHAT_LABEL);
     // Command search goes to it; typing there sends nothing and picks nothing.
-    await runFromSearch(app, page, "focus.card-comment");
-    await expect(box).toBeFocused();
-    await typeInto(box, COMMENT);
-    await expect(box).toHaveValue(COMMENT);
+    await runFromSearch(app, page, "focus.card-reply");
+    await expect(field).toBeFocused();
+    await typeInto(field, COMMENT);
+    await expect(field).toHaveValue(COMMENT);
+    await expect(send).toHaveAttribute("data-lit", "");
     await expect(answersLine(page)).toHaveText(pickedLine(1, 3));
     expect((await steers()).slice(steersBefore)).toHaveLength(0);
 
@@ -870,24 +883,43 @@ test("the Anything else? box's words go with whichever button the captain clicks
     await closeQuestion(page).getByRole("button", { name: "Keep answering", exact: true }).click();
     await expect(closeQuestion(page)).toHaveCount(0);
 
-    // A reply carries the words as context; the box keeps them, and so does
-    // the revision the reply asked for.
-    const reply = cardReply(page).field;
-    await reply.click();
-    await reply.fill(INLINE_QUESTIONS_REVISE_REPLY);
-    await page.getByRole("button", { name: "Send reply" }).click();
+    // A picture goes only as a reply: the choices wait, and a press sends nothing.
+    await pastePictures(field, [{ name: "theme.png" }]);
+    await expect(shownEntry(page).locator("[data-card-files-first]")).toHaveText(CARD_FILES_FIRST);
+    const notNow = page.getByRole("button", { name: "Not now", exact: true });
+    await expect(notNow).toHaveAttribute("aria-disabled", "true");
+    // A dimmed choice still takes the pointer, so force past Playwright's own wait for an enabled button.
+    await notNow.click({ force: true });
+    await expect(shownCard(page, INLINE_QUESTIONS_TITLE)).toBeVisible();
+    expect((await steers()).slice(steersBefore)).toHaveLength(0);
+    await cardReply(page).row.getByRole("button", { name: "Remove theme.png" }).click();
+    await expect(shownEntry(page).locator("[data-card-files-first]")).toHaveCount(0);
+
+    // Chat sends the field's words as the reply itself, never as an answer
+    // beside it; the revision the reply asked for comes up with the field empty.
+    await field.fill(INLINE_QUESTIONS_REVISE_REPLY);
+    await send.click();
     // A reply never moves the card (INF-770): the revision redraws it in place.
     await expect(shownCard(page, INLINE_QUESTIONS_REVISED_TITLE)).toBeVisible({ timeout: 30_000 });
     await expect.poll(async () => (await steers()).slice(steersBefore).length).toBe(1);
-    expect((await steers()).at(-1)?.text).toContain(commentLine);
-    const revisedBox = shownCard(page, INLINE_QUESTIONS_REVISED_TITLE).getByRole("textbox", {
-      name: ANYTHING_ELSE_LABEL,
-    });
-    await expect(revisedBox).toHaveValue(COMMENT);
+    const replied = (await steers()).at(-1)?.text ?? "";
+    expect(replied).toContain(INLINE_QUESTIONS_REVISE_REPLY);
+    expect(replied).not.toContain(
+      cardAnswerLines([
+        {
+          name: ANYTHING_ELSE_ANSWER,
+          values: [],
+          changed: true,
+          written: INLINE_QUESTIONS_REVISE_REPLY,
+        },
+      ])[0] as string,
+    );
+    await expect(cardReply(page).field).toHaveValue("");
 
-    // ⌘2 from inside the box presses the button that is not the default,
+    // ⌘2 from inside the field presses the button that is not the default,
     // and the words go with it.
-    await focusOn(revisedBox);
+    await cardReply(page).field.fill(COMMENT);
+    await focusOn(cardReply(page).field);
     await pressWindowKey(app, "2", ["meta"]);
     await expectNoCard(page, INLINE_QUESTIONS_REVISED_TITLE);
     await expect.poll(async () => (await steers()).slice(steersBefore).length).toBe(2);
@@ -906,13 +938,14 @@ test("the Anything else? box's words go with whichever button the captain clicks
       ]),
     });
 
-    // The past card shows what went, read-only.
+    // The past card shows what went with the choice as one quiet line.
     await page.evaluate((id) => window.infinitary.cards.showPast(id), card?.id as string);
     const past = page.locator(`[data-past-card="${card?.id}"]`);
     await expect(past).toBeVisible();
-    const pastBox = shownEntry(page).getByRole("textbox", { name: ANYTHING_ELSE_LABEL });
-    await expect(pastBox).toHaveValue(COMMENT);
-    await expect(pastBox).toHaveAttribute("readonly", "");
+    await expect(shownEntry(page).locator("[data-past-card-words]")).toHaveText(
+      `${PAST_CARD_WORDS_LEAD} ${COMMENT}`,
+    );
+    await expect(shownEntry(page).getByRole("textbox")).toHaveCount(0);
   } finally {
     await launched.close();
   }

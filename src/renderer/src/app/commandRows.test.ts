@@ -71,12 +71,6 @@ describe("command search's list", () => {
     );
     expect(rows).toEqual([
       { id: "focus.card-reply", label: "Go to the card's reply", keys: "⇧⌘L", refusal: null },
-      {
-        id: "focus.card-comment",
-        label: "Go to the card's comment box",
-        keys: undefined,
-        refusal: null,
-      },
       { id: "focus.card-body", label: "Go to the card's body", keys: undefined, refusal: null },
       {
         id: "focus.card-actions",
@@ -114,7 +108,6 @@ describe("command search's list", () => {
     });
     expect(commandRows("card", () => null, bindings).map((row) => [row.id, row.keys])).toEqual([
       ["focus.card-reply", undefined],
-      ["focus.card-comment", undefined],
       ["focus.card-body", undefined],
       ["focus.card-actions", undefined],
       ["cards.choice-1", "⌘1"],

@@ -1,5 +1,7 @@
 import { fileSizeWords } from "@shared/attachments";
 import {
+  CARD_CHAT_LABEL,
+  CARD_REPLY_HINT,
   CARD_REPLY_MAX_CHARS,
   type Card,
   type CardAnswer,
@@ -18,6 +20,7 @@ import {
   type ReactNode,
   useEffect,
   useId,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -27,7 +30,7 @@ import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
 import { replyDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
-import { IconButton, type ImageAttachment, MicroLabel } from "../design";
+import { Button, IconButton, type ImageAttachment, MicroLabel } from "../design";
 import { ComposerCount, ComposerCountAnnouncer, ComposerField } from "../design/core/ComposerField";
 import {
   AddFilesButton,
@@ -53,11 +56,12 @@ const NO_REPLY_IMAGES: ImageAttachment[] = [];
  * `components/cards/CardThread.prompt.md` owns every rule here). The card's
  * body frame is untouched - a thread is never the author's HTML.
  *
- * Two shapes, and the same reply row in both: the row alone at the foot of
- * a card that has no thread yet (the captain's tweak 3), and the whole
- * column beside the card once the first message is sent. A thread the
- * captain collapses goes back into the card: the row returns to its foot
- * with the thread's latest line above it (FI3-1130).
+ * Two shapes, and the same one field in both: above the card's choices,
+ * with Chat at the right edge of their row, while the card has no thread
+ * open (INF-924), and at the foot of the column beside the card once the
+ * first message is sent, with its own Chat. A thread the captain collapses
+ * goes back into the card: the field returns above the choices with the
+ * thread's latest line above it (FI3-1130).
  */
 
 /** Who wrote it, in the words the thread shows and the color it uses. */
@@ -73,7 +77,8 @@ function timeOf(at: number): string {
   return new Date(at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-const sendIcon = (
+/** Chat's speech bubble (Lucide's message-square). */
+const chatIcon = (
   <svg
     width="14"
     height="14"
@@ -84,10 +89,77 @@ const sendIcon = (
     strokeLinecap="round"
     strokeLinejoin="round"
     aria-hidden="true"
+    style={{ flexShrink: 0 }}
   >
-    <path d="M5 12h14M13 6l6 6-6 6" />
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
   </svg>
 );
+
+/** The key Chat shows: Enter in the field sends the same reply. */
+const CHAT_KEY = "⏎";
+
+/**
+ * The card's field had the focus when it left one place for the other (the
+ * card's foot, or the thread column beside it): the field that takes its
+ * place takes the focus too, as one field that never moved would keep it.
+ */
+const focusCarried = new Set<string>();
+
+/** The card's one field, found from anywhere inside the card or its thread. */
+const fieldIn = (from: Element, cardId: string) =>
+  from
+    .closest("[data-card-surface], section")
+    ?.querySelector<HTMLTextAreaElement>(`[data-card-reply="${CSS.escape(cardId)}"] textarea`) ??
+  null;
+
+/**
+ * Chat (INF-924): the quiet button that sends the card's field as a reply,
+ * at the right edge of the card's choices, or beside the field at the
+ * thread's foot. It never closes the card and takes no number key; it shows
+ * ⏎, which does the same from the field, and lights once there is something
+ * to send. With nothing to send it puts the caret in the field.
+ */
+export function ChatButton({
+  cardId,
+  collect,
+  focusField,
+}: {
+  cardId: string;
+  collect?: CollectAnswers | undefined;
+  /** The field to put the caret in; found inside the card when not given. */
+  focusField?: () => void;
+}) {
+  const draft = useShellStore((s) => s.replyDrafts[cardId] ?? "");
+  const images = useShellStore((s) => s.replyImages[cardId] ?? NO_REPLY_IMAGES);
+  const pastes = useShellStore((s) => s.replyPastes[cardId] ?? NO_REPLY_PASTES);
+  const sending = useShellStore((s) => s.sendingReplies[cardId] === true);
+  const sendReply = useShellStore((s) => s.sendReply);
+  const length = composeTurnText(draft, []).length;
+  const over = limitBand(length, CARD_REPLY_MAX_CHARS) === "over";
+  const something = length > 0 || images.length > 0 || pastes.length > 0;
+  const lit = something && !over;
+  return (
+    <Button
+      variant="ghost"
+      data-card-chat={cardId}
+      data-lit={lit ? "" : undefined}
+      icon={chatIcon}
+      keys={CHAT_KEY}
+      disabled={sending}
+      // Past a reply's limit nothing leaves: Chat is off, as Enter is.
+      off={over}
+      style={lit ? { background: "var(--accent-dim)", color: "var(--fg-1)" } : undefined}
+      onClick={(event) => {
+        // The caret goes to the field either way, as a send by Enter leaves it.
+        if (focusField) focusField();
+        else fieldIn(event.currentTarget, cardId)?.focus();
+        if (lit) void sendReply(cardId, collect);
+      }}
+    >
+      {CARD_CHAT_LABEL}
+    </Button>
+  );
+}
 
 /**
  * The thread's collapse: a panel whose chevron points left, into the card,
@@ -138,22 +210,26 @@ const byKey = (event: MouseEvent) => event.detail === 0;
 const REPLY_LINE_CAP = 5;
 
 /**
- * The captain's own input under a card: the composer's field
- * (`ComposerField`) at `--text-sm`, with its keys and its count against a
- * reply's limit. It never resolves anything: Enter sends the reply to the
- * card's author and the card's buttons stay exactly where they were. The
- * field keeps the focus through a send, by Enter or by the send control.
+ * The captain's own input under a card, its one field (INF-924): the
+ * composer's field (`ComposerField`) at `--text-sm`, with its keys and its
+ * count against a reply's limit. Enter, or Chat, sends the words as a reply
+ * to the card's author and never resolves anything; a click on any of the
+ * card's choices carries them with it instead (`withAnythingElse`). The
+ * field keeps the focus through a send, by Enter or by Chat.
  */
 export function ReplyRow({
   cardId,
-  placeholder = "reply to this card…",
+  placeholder = CARD_REPLY_HINT,
   inThread,
   lead,
   collect,
 }: {
   cardId: string;
   placeholder?: string;
-  /** Inside the thread column; at the foot of the card it carries a hairline. */
+  /**
+   * Inside the thread column, with its own Chat beside the field; above the
+   * card's choices, Chat sits at the right edge of their row instead.
+   */
   inThread?: boolean;
   /** What sits between the hairline and the field: a collapsed thread's latest line. */
   lead?: ReactNode;
@@ -181,11 +257,20 @@ export function ReplyRow({
   const drop = useFileDrop(files);
   const preparing = (files?.pending.length ?? 0) > 0;
   const send = () => {
-    // A click on send leaves the caret in the field, as Enter does, so the
-    // next reply is typed straight away.
     field.current?.focus();
     void sendReply(cardId, collect);
   };
+  useLayoutEffect(() => {
+    if (focusCarried.delete(cardId)) field.current?.focus();
+    const own = field.current;
+    return () => {
+      // Read before the field leaves the page: the one that replies it in
+      // the same commit takes the focus; one that never comes forgets it.
+      if (!own || document.activeElement !== own) return;
+      focusCarried.add(cardId);
+      queueMicrotask(() => focusCarried.delete(cardId));
+    };
+  }, [cardId]);
   // What would leave on send, as the task prompt counts it: whitespace
   // alone is nothing, and past the limit nothing leaves.
   const length = composeTurnText(draft, []).length;
@@ -202,13 +287,7 @@ export function ReplyRow({
         flexDirection: "column",
         gap: 6,
         ...(drop.over ? { boxShadow: "inset 0 0 0 1px var(--accent)" } : {}),
-        ...(inThread
-          ? { padding: "10px 12px 14px" }
-          : {
-              marginTop: 2,
-              paddingTop: 12,
-              borderTop: "1px solid var(--line-1)",
-            }),
+        ...(inThread ? { padding: "10px 12px 14px" } : {}),
       }}
     >
       {lead}
@@ -350,21 +429,22 @@ export function ReplyRow({
           />
         </div>
         {/* Centred on the field's last line, at every height. */}
-        <span style={{ display: "flex", alignItems: "center", height: "var(--reply-height)" }}>
+        <span
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "var(--space-1)",
+            height: "var(--reply-height)",
+          }}
+        >
           {files && <AddFilesButton intake={files} size={28} label="Add files to this reply" />}
-          <IconButton
-            label="Send reply"
-            size={28}
-            tone="accent"
-            disabled={!canSend && !over}
-            aria-disabled={over || undefined}
-            onClick={() => {
-              if (canSend) send();
-            }}
-            style={over ? { opacity: 0.4, cursor: "default" } : undefined}
-          >
-            {sendIcon}
-          </IconButton>
+          {inThread && (
+            <ChatButton
+              cardId={cardId}
+              collect={collect}
+              focusField={() => field.current?.focus()}
+            />
+          )}
         </span>
       </div>
       {limitBand(length, CARD_REPLY_MAX_CHARS) !== "none" && (

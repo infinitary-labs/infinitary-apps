@@ -477,13 +477,13 @@ function writeInRefusal(body: string): string | undefined {
   return `the question "${first.name}" ${WRITE_IN_GAP_WORDS}, so the captain has no way to write an answer that is none of them; give it ${row} - the app opens a text field under it once picked - or, when its options are the only possible answers, put ${OPTIONS_ONLY_MARK} on its <fieldset> or <select>.`;
 }
 
-/** A refusal's words for an author's control under the app's own box's name. */
-export const ANYTHING_ELSE_TAKEN_WORDS = "is the app's own Anything else? box";
+/** A refusal's words for an author's control under the name of the app's own field's answer. */
+export const ANYTHING_ELSE_TAKEN_WORDS = "is the answer of the app's own field";
 
 /**
  * Whether a body names a control, or stages a setting, `anything_else`: the
- * answer the app's own box rides the footer click as (INF-680), so an
- * author's own would collide with it.
+ * answer the app's own field rides the footer click as (INF-680, INF-924),
+ * so an author's own would collide with it.
  */
 function anythingElseRefusal(body: string): string | undefined {
   const document = parseDocument(body, { decodeEntities: true });
@@ -505,7 +505,7 @@ function anythingElseRefusal(body: string): string | undefined {
   walk(document.children as unknown as DomNode[]);
   const staged = new RegExp(`inf\\.stage\\(\\s*["'\`]${ANYTHING_ELSE_ANSWER}["'\`]`).test(body);
   if (!named && !staged) return undefined;
-  return `the name "${ANYTHING_ELSE_ANSWER}" ${ANYTHING_ELSE_TAKEN_WORDS}, which the app draws between the body and the buttons and sends with the button the captain clicks; rename your control or setting, or drop it if it only asked for further comments.`;
+  return `the name "${ANYTHING_ELSE_ANSWER}" ${ANYTHING_ELSE_TAKEN_WORDS}, which the app draws above the buttons and sends with the button the captain clicks; rename your control or setting, or drop it if it only asked for further comments.`;
 }
 
 /**

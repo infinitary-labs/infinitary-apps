@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-one-field",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "One field under each card, with a Chat button beside its choices",
+      "body": "A card now has a single field above its buttons, labeled anything to add?. Press Enter or Chat to send what you wrote as a reply without choosing. Click any other button and your words go with that choice. A past card shows the words you sent with your choice.",
+      "picture": {
+        "dark": "card-one-field-dark.webp",
+        "light": "card-one-field-light.webp",
+        "alt": "A decision card with one field holding a short note above its Not now, Lock the plan and Chat buttons, Chat lit at the right edge."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

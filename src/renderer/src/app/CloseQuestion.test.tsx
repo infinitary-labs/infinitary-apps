@@ -19,12 +19,10 @@ describe("closeQuestionWords", () => {
     expect(closeQuestionWords(1, false)).toBe("You picked 1 answer. Closing will discard it.");
   });
 
-  it("names the words in the Anything else? box, alone or beside picks (INF-680)", () => {
-    expect(closeQuestionWords(0, false, true)).toBe(
-      "You wrote a comment. Closing will discard it.",
-    );
+  it("names the words in the card's one field, alone or beside picks (INF-680, INF-924)", () => {
+    expect(closeQuestionWords(0, false, true)).toBe("You wrote a reply. Closing will discard it.");
     expect(closeQuestionWords(2, false, true)).toBe(
-      "You picked 2 answers and wrote a comment. Closing will discard them.",
+      "You picked 2 answers and wrote a reply. Closing will discard them.",
     );
   });
 

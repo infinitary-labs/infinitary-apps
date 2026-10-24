@@ -95,7 +95,7 @@ test("an approval given by reply under a crewmate's plan card wakes the Firstmat
   const reply = cardReply(page).field;
   await reply.click();
   await reply.fill(CLAUDE_RELAY_APPROVAL);
-  await page.getByRole("button", { name: "Send reply" }).click();
+  await cardReply(page).send.click();
 
   // The crewmate answers in the thread with one line...
   await showCard(page, MOCK_CLAUDE_PLAN_CARD_TITLE);

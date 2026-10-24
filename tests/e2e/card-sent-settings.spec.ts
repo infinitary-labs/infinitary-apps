@@ -56,7 +56,7 @@ for (const preview of [true, false]) {
       if (preview) await frame.getByLabel("Tone").fill("plain");
       else await choose("Plain");
       await cardReply(page).field.fill("Use these settings.");
-      await cardReply(page).row.getByRole("button", { name: "Send reply" }).click();
+      await cardReply(page).send.click();
       await expect(page.locator('[data-card-thread] [data-thread-message="captain"]')).toHaveCount(
         1,
       );
@@ -144,7 +144,7 @@ for (const status of ["ready", "streaming"] as const) {
       }
       await cardBody(page, "Choose your settings").getByLabel("Tone").fill("plain");
       await cardReply(page).field.fill("Use these settings.");
-      await cardReply(page).row.getByRole("button", { name: "Send reply" }).click();
+      await cardReply(page).send.click();
       // The send is saved once its line is in the thread; read it after that.
       await expect(page.locator('[data-card-thread] [data-thread-message="captain"]')).toHaveCount(
         1,

@@ -81,7 +81,7 @@ test("a reply kept behind a refused sign-in says so in its thread, across a rest
     const reply = cardReply(launched.page).field;
     await reply.click();
     await reply.fill(CLAUDE_HELD_REPLY);
-    await launched.page.getByRole("button", { name: "Send reply" }).click();
+    await cardReply(launched.page).send.click();
     await expect(heldLine(launched.page)).toBeVisible({ timeout: 45_000 });
     await expect(thread(launched.page).locator("[data-thread-working]")).toHaveCount(0);
     await thread(launched.page).screenshot({

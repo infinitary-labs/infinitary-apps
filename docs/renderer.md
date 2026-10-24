@@ -149,7 +149,8 @@ That holds while the height eases and when it would jump with no easing, as a ta
 The pager stays below the maximum-height envelope; its cap reserves a separate lane for the last turn above the input, so neither intercepts the other's controls.
 Reduced motion makes every move and the easing cuts.
 
-A live card, its thread and its reply row share one surface (`CardSurface`): a grid whose columns change when the thread opens, closes or moves, while the card, its body document, its scroll surface and its reply field stay the same elements.
+A live card, its thread and its one field share one surface (`CardSurface`): a grid whose columns change when the thread opens, closes or moves, while the card, its body document and its scroll surface stay the same elements.
+The field moves between the card, above its buttons, and the thread's foot; its draft and attachments live in the shell by the card's id, and it carries the focus across the move (`ReplyRow`).
 Opening the thread under a lone card therefore keeps what the captain did in the body - a preview's state, an open disclosure, scrolling, drafts and attachments.
 
 The bridge's per-document identity and `initialize` handshake put theme, width and form state ahead of DOM readiness, fonts and two drawing frames.
@@ -224,7 +225,7 @@ No wire, storage or bridge change.
 Past cards (FI3-579 piece 2) are the same kind of shell-held entry: `records` also holds `{ pastCardId }`, one per saved card, projected into `visibleStack` (`past:<id>`) beside task records and closed by the same Hide/Esc (`closeRecord`, `closePastCard`).
 `openPastCard` is the one opener.
 The shared show-card door reaches it: `inf:cards:show` (catalog action `show-card`) returns an open card to the stack, or for a closed card broadcasts `past_card_shown` (`window.infinitary.cards.showPast`, `inf:cards:show-past`, takes the closed-card half alone), and `applyEvent` calls `openPastCard`, so the first mate and the shell's own gestures (the record's Cards row, `RecordCard`'s `open-card` frame action, takes the same door; the filter's caller arrives with a later piece) open the same entry and live-card focus is untouched.
-`PastCard.tsx` reads the closed card once (`inf:cards:past`, a pure read of `CardStore.past`: the version the stage last showed, how it ended, the submitted answers, the thread) and draws it through `HtmlCardBody` with `declaredActionIds` empty and the form `readOnly`, so the frame fills the saved answers and disables every control, present and added later; the footer shows the offered actions disabled with the chosen one marked, and the thread column has no reply row.
+`PastCard.tsx` reads the closed card once (`inf:cards:past`, a pure read of `CardStore.past`: the version the stage last showed, how it ended, the submitted answers, the thread) and draws it through `HtmlCardBody` with `declaredActionIds` empty and the form `readOnly`, so the frame fills the saved answers and disables every control, present and added later; the footer shows the offered actions disabled with the chosen one marked and, under them, the words the card's field sent with the choice, and the thread column has no reply row.
 Only the shown entry supplies the turn hint, as `pastCardId`; the core adds one `about` line saying the card is history.
 Nothing is stored, no effect is reachable, and a past card never becomes a card.
 

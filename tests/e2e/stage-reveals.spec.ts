@@ -114,7 +114,7 @@ test("under reduced motion a new reply arrives without moving, and stays after a
     await input.press("Enter");
     await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible();
     await cardReply(page).field.fill(THREAD_PROSE_REPLY);
-    await page.getByRole("button", { name: "Send reply" }).click();
+    await cardReply(page).send.click();
     const answer = page
       .locator('[data-thread-message="firstmate"]')
       .filter({ hasText: FM_THREAD_PROSE_ANSWER });
@@ -228,7 +228,7 @@ test("closing a card brings up the first unread card, not the first card, and a 
       arrived = (await answers()).find((id) => !earlier.includes(id)) ?? "";
       if (!arrived) throw new Error("No second answer arrived");
       await cardReply(page).field.fill("Which tide is this for?");
-      await page.getByRole("button", { name: "Send reply", exact: true }).click();
+      await cardReply(page).send.click();
       await expect(cardReply(page).row).toHaveAttribute("data-card-reply", "replying");
       await expect(shownCard(page, REPLYING_NOTE)).toBeVisible();
       await expect(page.getByRole("status").filter({ hasText: "1 new" })).toBeVisible();
@@ -341,7 +341,7 @@ test("after a reply under a lone card, the next reply is typed straight away", a
 
     await typeInto(reply, bySend);
     await expect(reply).toHaveValue(bySend);
-    await page.getByRole("button", { name: "Send reply", exact: true }).click();
+    await cardReply(page).send.click();
     await expect(sent(bySend)).toBeVisible();
     await expect(reply).toHaveValue("");
     await expect(reply).toBeFocused();

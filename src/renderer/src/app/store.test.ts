@@ -1,4 +1,5 @@
 import {
+  ANYTHING_ELSE_ANSWER,
   CARD_ANSWER_TEXT_MAX,
   CARD_ANSWERS_TOO_LONG,
   CARD_REPLY_MAX_CHARS,
@@ -1268,6 +1269,46 @@ describe("card action receipts", () => {
       pendingDeviceArrival: null,
       thisMac: null,
     });
+  });
+
+  // The captain's Approve and build on INF-924: one field under the card;
+  // Enter or Chat sends its words as a reply, any other button sends them
+  // with the choice, as the answer the agents already read.
+  it("sends the field's words with a clicked choice and empties the field once accepted", async () => {
+    const ipc = request();
+    useShellStore.getState().setReplyDraft("choice", "Check the light theme too");
+    const sent = useShellStore
+      .getState()
+      .actOnCard("choice", "land", "chrome", undefined, async () => undefined);
+    await vi.waitFor(() => expect(ipc.act).toHaveBeenCalledTimes(1));
+    // The click's value: the answers it carries, the field's words among them.
+    expect((ipc.act.mock.calls[0] as unknown[] | undefined)?.[3]).toEqual({
+      answers: [
+        {
+          name: ANYTHING_ELSE_ANSWER,
+          values: [],
+          changed: true,
+          written: "Check the light theme too",
+        },
+      ],
+    });
+    expect(useShellStore.getState().replyDrafts.choice).toBe("Check the light theme too");
+    ipc.resolve();
+    await sent;
+    expect(useShellStore.getState().replyDrafts.choice).toBeUndefined();
+  });
+
+  it("keeps the field's words when the choice is refused", async () => {
+    const ipc = request();
+    useShellStore.getState().setReplyDraft("choice", "Check the light theme too");
+    const sent = useShellStore
+      .getState()
+      .actOnCard("choice", "land", "chrome", undefined, async () => undefined);
+    await vi.waitFor(() => expect(ipc.act).toHaveBeenCalledTimes(1));
+    ipc.resolve({ refusal: "This card was already answered." });
+    await sent;
+    expect(useShellStore.getState().replyDrafts.choice).toBe("Check the light theme too");
+    useShellStore.setState({ replyDrafts: {} });
   });
 
   it("sets pending before IPC, deduplicates same and sibling actions, and clears on acceptance", async () => {

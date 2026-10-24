@@ -559,24 +559,24 @@ test("transported reply and embedded-action refusals keep readable reasons and u
       await composer.field.fill(draft);
       await pastePictures(composer.field, [{ name: "choice.png" }]);
       await expect(composer.pictures).toHaveCount(1);
-      await page.getByRole("button", { name: "Send reply", exact: true }).click();
+      await cardReply(page).send.click();
       await expect.poll(() => calls(app)).toBe(1);
       // A lone card stays where it is while its reply is in flight
       // (docs/card-threads.md); the held send control is what shows it left.
       await expect(title).toBeVisible();
-      await expect(page.getByRole("button", { name: "Send reply", exact: true })).toBeDisabled();
+      await expect(cardReply(page).send).toBeDisabled();
       await reply(app, true);
       await expect(page.getByRole("alert")).toHaveText(REQUEST_REASON);
       await expect(title).toBeVisible();
       await expect(composer.field).toHaveValue(draft);
       await expect(composer.pictures).toHaveCount(1);
-      await expect(page.getByRole("button", { name: "Send reply", exact: true })).toBeEnabled();
+      await expect(cardReply(page).send).toBeEnabled();
       expect(
         (await page.evaluate(() => window.infinitary.cards.thread("readable-refusal"))).messages,
       ).toEqual([]);
       await page.screenshot({ path: test.info().outputPath("card-reply-refusal.png") });
 
-      await page.getByRole("button", { name: "Send reply", exact: true }).click();
+      await cardReply(page).send.click();
       await expect.poll(() => calls(app)).toBe(2);
       await reply(app);
       await expect(composer.field).toHaveValue("");

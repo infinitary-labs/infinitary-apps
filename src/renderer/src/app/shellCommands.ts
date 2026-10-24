@@ -97,10 +97,6 @@ const browserControlButton = (entryId: string) =>
 const replyField = (cardId: string) =>
   shownPart(cardId, `[data-card-reply="${CSS.escape(cardId)}"] textarea`);
 
-/** The shown card's Anything else? box. */
-const commentField = (cardId: string) =>
-  shownPart(cardId, `[data-card-comment="${CSS.escape(cardId)}"] textarea:not([readonly])`);
-
 /** The shown entry's body, the one place it scrolls. */
 const cardBody = (entryId: string) => shownPart(entryId, "[data-card-body]");
 
@@ -217,7 +213,6 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "focus.main-message": () => useShellStore.getState().focusMainMessage(),
   // From Settings it goes home first; the words and caret wait in the field.
   "focus.card-reply": () => toShownPart(replyField, (field) => field.focus()),
-  "focus.card-comment": () => toShownPart(commentField, (field) => field.focus()),
   "focus.card-body": () => toShownPart(cardBody, enterBody),
   // Focus only: the button is pressed by its own key, through the click's checks.
   "focus.card-actions": () => toShownPart(cardButton, (button) => focusWithRing(button)),

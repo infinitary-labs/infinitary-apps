@@ -144,7 +144,7 @@ async function sendReply(page: LaunchedApp["page"], text: string): Promise<void>
   const box = replyBox(page);
   await box.click();
   await box.fill(text);
-  await page.getByRole("button", { name: "Send reply" }).click();
+  await cardReply(page).send.click();
 }
 
 /**
@@ -409,7 +409,7 @@ test("a captain reply on a Firstmate card revises it or lands as prose in the th
   const limit = page.locator("[data-card-reply-limit]");
   await expect(limit.locator('[data-composer-count="over"]')).toBeVisible();
   await expect(limit.getByText(COMPOSER_NOTICE_WORDS["too-long"])).toBeVisible();
-  const sendControl = page.getByRole("button", { name: "Send reply" });
+  const sendControl = cardReply(page).send;
   await expect(sendControl).toHaveAttribute("aria-disabled", "true");
   await box.press("Enter");
   await sendControl.click({ force: true });

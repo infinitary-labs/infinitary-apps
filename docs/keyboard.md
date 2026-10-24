@@ -80,7 +80,6 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `commands.search`, Search commands | window, run by the shell page | ⌘K |
 | `focus.main-message`, Go to the main message | window, run by the shell page | ⌘L |
 | `focus.card-reply`, Go to the card's reply | window, run by the shell page | ⇧⌘L |
-| `focus.card-comment`, Go to the card's comment box | window, run by the shell page | none: chosen by name |
 | `focus.card-body`, Go to the card's body | window, run by the shell page | none: chosen by name |
 | `focus.card-actions`, Go to the card's buttons | window, run by the shell page | none: chosen by name |
 | `cards.choice-1`, Press the recommended choice | window, run by the shell page | ⌘1 |
@@ -245,11 +244,10 @@ The main process's own commands, the size keys, are never refused by the page.
   It focuses the main message through the store's `focusMainMessage`, the same focus request a closing card uses, so the words, pictures, pastes and caret wait as they were.
   From Settings it goes home first.
   It does nothing while a recording runs, while Settings picks the dictation key, or while the main message is held: the first-launch gate is up, or the window has not yet read whether it is (`mainMessageRefusal`).
-- `focus.card-reply`, Go to the card's reply, focuses the shown card's reply field, its words and caret as they were; from Settings it goes home first.
+- `focus.card-reply`, Go to the card's reply, focuses the shown card's one field (`docs/card-authoring.md`, "The card's one field"), its words and caret as they were; from Settings it goes home first.
+  Command search also finds it by "anything to add" and "comment".
   It refuses when no card is shown, when the shown entry takes no reply (a host card, a task record, a past card) and while a recording runs.
   It focuses the reply of the card that was shown when it ran, never another one shown since.
-- `focus.card-comment`, Go to the card's comment box, focuses the shown card's Anything else? box (`docs/card-authoring.md`, "Anything else?"), its words as they were; command search also finds it by "anything else", "note" and "comment".
-  It refuses when no card is shown, when the shown entry has no box (a note, a host card, a task record, a past card) and while a recording runs.
 - `focus.card-body`, Go to the card's body, puts focus in the shown entry's body, a card's, a task's record or a past card, ringed inside its edge: the reading keys scroll it, and Tab goes on to its first control ("Cards and frames").
   The body takes focus only from this command, never from a click, so a click on a card's words never takes focus from the main message.
   From Settings it goes home first; it refuses when nothing is shown and while a recording runs.
@@ -389,9 +387,10 @@ The shown card is one of the window's parts, and inside it a person reads its bo
 
 - F6 lands on the card whole, ringed; while it holds focus the reading keys scroll its body (`readingScrollTop`): ↑ and ↓ a line, Page Up, Page Down and Space (⇧Space back) a screen, Home and End to the ends.
   Tab goes on into the card from there.
-- Go to the card's body, Go to the card's comment box, Go to the card's buttons and Go to the card's reply (⇧⌘L) go to the card's own places (`toShownPart`), each found inside the `StageEntry` that names the entry; a prepared, leaving or not-yet-ready entry is inert and takes none.
+- Go to the card's body, Go to the card's buttons and Go to the card's reply (⇧⌘L) go to the card's own places (`toShownPart`), each found inside the `StageEntry` that names the entry; a prepared, leaving or not-yet-ready entry is inert and takes none.
 - A button pressed with Enter or Space is the click itself: it reads the body's answers fresh, a default with a question unanswered puts focus on that question inside the body instead of sending, a close with picked answers asks first, and the choice carries the offer the card showed (`docs/card-evidence.md`, "What a click carries"). ⌘1 presses the default and ⌘2 through ⌘4 the other footer choices from right to left, through that same click, and the button shows the key (`cards.choice-1` and the three after it).
-  They work from inside the Anything else? box too, which Tab reaches after the body's last control and before the buttons; Enter there adds a line and sends nothing.
+  They work from inside the card's one field too, which Tab reaches after the body's last control and before the buttons, so its words go with the choice; Enter there sends them as a reply instead.
+  Chat, after the choices, takes no number key: it shows ⏎, which does the same from the field.
 - A held key presses a control once: the window drops a held Enter's repeats on its buttons and links (`guardHeldPresses`), and a message field's held Enter sends once (`enterAction`), so an Enter held on a button that closes its card never sends the main message focus goes back to.
 - Enter on a card's edge, once Tab has reached it, gives the card back the width the host chose, as a double click does; the arrows, Home and End move it.
 - The size control, Maximize card, sits right before the card's Close or Hide, and the keyboard's focus lands on it after each change of size, by click, command or Escape.

@@ -1,4 +1,4 @@
-import { anythingElseOf, type CardWidth, type PastCard } from "@shared/cards";
+import { anythingElseOf, type CardWidth, PAST_CARD_WORDS_LEAD, type PastCard } from "@shared/cards";
 import { pastCardEndingWords } from "@shared/pastCard";
 import type { FramePicture } from "@shared/plugins/bridge";
 import { HIDE_RECORD_LABEL } from "@shared/recordDrop";
@@ -9,7 +9,6 @@ import { ResponseCard } from "../design/cards/ResponseCard";
 import { RiskChart, riskBodyInset, riskChartBox } from "../design/cards/RiskChart";
 import { RISK_CHART_GAP } from "../design/cards/riskRadar";
 import { useCutWords } from "../design/core/overflowTitle";
-import { AnythingElseBox } from "./AnythingElseBox";
 import { MessageList } from "./CardThread";
 import { pastReadingPlaceId, useCardReadingPlace } from "./cardReadingPlace";
 import { footerGroups } from "./footerGroups";
@@ -143,6 +142,7 @@ export function PastCardColumn({
   // (docs/card-authoring.md "The risk chart").
   const asideRef = useRef<HTMLDivElement>(null);
   const risk = past.risk;
+  const sentWords = anythingElseOf(past.answers);
   const bodyRef = useCardReadingPlace(pastReadingPlaceId(past.id));
   return (
     <ResponseCard
@@ -221,10 +221,23 @@ export function PastCardColumn({
           <RequiredActions actions={past.requiredActions} />
         ) : undefined
       }
-      // What the Anything else? box sent, read-only; nothing when it sent nothing.
-      comment={
-        anythingElseOf(past.answers) !== undefined ? (
-          <AnythingElseBox cardId={past.id} sent={anythingElseOf(past.answers)} />
+      // What the card's field sent with the choice, as one quiet line under
+      // the buttons (INF-924); nothing when it sent nothing.
+      footer={
+        sentWords !== undefined ? (
+          <p
+            data-past-card-words=""
+            style={{
+              margin: 0,
+              fontSize: "var(--text-sm)",
+              lineHeight: "var(--leading-body)",
+              color: "var(--fg-3)",
+              whiteSpace: "pre-wrap",
+              overflowWrap: "anywhere",
+            }}
+          >
+            {PAST_CARD_WORDS_LEAD} {sentWords}
+          </p>
         ) : undefined
       }
       actions={

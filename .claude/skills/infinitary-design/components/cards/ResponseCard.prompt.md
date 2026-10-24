@@ -4,7 +4,7 @@ A first mate card about a task names that task after its key, never only “firs
 A first mate card relaying an independent review carries the host-validated review task as `reviewTaskId`; the host draws a “Review finding” badge in `warn` beside the kind badge.
 Its action row keeps the task facts beside the buttons, including the review verdict, reviewed version and risk, even while the review remains open.
 A working preview is a decision whose body is interactive, not a kind of its own.
-Every agent card is the head of a thread with its author and carries a reply row (but the welcome, which takes none, `CardThread.prompt.md`); the thread's own rules are `CardThread.prompt.md`, and a card with a thread open is one column of a single container rather than a surface of its own.
+Every agent card is the head of a thread with its author and carries one field above its buttons, with Chat after them (but the welcome, which takes none, `CardThread.prompt.md`); the thread's own rules are `CardThread.prompt.md`, and a card with a thread open is one column of a single container rather than a surface of its own.
 A card whose author ran on a model names it as the model chip (`ModelChip`, `../core/Badge.prompt.md`) right after the meta line: the meta line and the chip share the room between the kind chip and close, and the meta line is the one that gives way (ellipsis); the chip keeps its whole name, never cut and never pushed past close, wrapping inside itself only when the name is longer than all the room there is.
 The model rides as its own field, never inside the meta text.
 A card about a task leads its meta line with that task's key as a quiet key link, then a middle dot, then the meta words (`../core/TaskKey`, "The card's own key"): the key keeps its whole width and is a Tab stop between the kind chip and Maximize, the meta words beside it give way, and a click or Enter on it opens the task's record in front of the card, which Hide returns to.
@@ -231,14 +231,14 @@ The author writes the link - `<a class="inf-mono" href="its page">PR #N</a>` - w
 - **Click.**
   A click or Enter opens the pull request in the browser, through the same safe opener as every link in a body.
 
-**The Anything else? box (INF-680).**
-Every card with buttons whose author can read a reply - a crewmate's card about its task and the first mate's, merge cards and previews included - carries the app's own Anything else? box, pinned between the body (and any live attachment) and the action row, so it stays in view however long the body is.
-It is host chrome, never the author's: a `--line-1` hairline above it, `--space-3` above, 16 px at its sides like the action row.
-It reads the label `Anything else?` in `--text-xs` `--fg-3`, then the field: `--surface-input`, a `--line-1` border that turns `--line-2` with the focus ring, `--radius-m`, `--space-1` `--space-3` padding, `--text-sm` at the body leading, with the hint `sent with the button you click` as its placeholder.
-The field is one line, grows to five as the captain writes and then scrolls; it holds 4,000 characters, and from 80 percent of that the reply's mono count sits at the label row's right.
-In a card too short for the body and the box, the box gives way first: the middle keeps `--space-4` of room, so the body stays in sight, and the box's row shrinks and scrolls.
-Typing sends nothing and Enter adds a line; whichever button the captain clicks carries the words with the captain's choice, and the footer's picked count never counts them.
-A note, the app's own cards, a task's record and a panel card draw no box; a past card draws the words that were sent, read-only, and no box when none were.
+**The card's one field (INF-680, INF-924).**
+Every card whose author can read a reply - a crewmate's card about its task and the first mate's, merge cards, previews and notes included - carries the app's own field, pinned between the body (and any live attachment) and the action row, so it stays in view however long the body is.
+It is host chrome, never the author's: a `--line-1` hairline above it, `--space-3` above, 16 px at its sides like the action row; it is the reply pill (`CardThread.prompt.md`) reading `anything to add?`, with the clip beside it and no send arrow.
+The action row ends with **Chat** at its right edge, after the default: the design rule is that the default is the right-most closing choice, and Chat, which closes nothing, sits after the choices.
+In a card too short for the body and the field, the field gives way first: the middle keeps `--space-4` of room, so the body stays in sight, and the field's row shrinks and scrolls.
+Enter or Chat sends its words as a reply; any other button carries them with the captain's choice, and the footer's picked count never counts them.
+While a file or picture is attached the choices are off, with `Send the file as a reply first` at the row's left in `--text-xs` `--fg-3`, until it goes as a reply.
+The app's own cards, the welcome, a task's record and a panel card draw no field; a past card draws the words that went with its choice as one quiet `--text-sm` `--fg-3` line under its dimmed buttons, "Sent with your choice: …", and nothing when none went.
 
 ## Past card (FI3-579, direction A)
 
@@ -273,7 +273,7 @@ A completion card with required captain actions draws a host notice outside the 
 It reads “After merging, you need to…” and names every action, target and consequence in the normal body size.
 Several actions have a visible count and a focusable disclosure with every requirement; the list may scroll but never truncates requirements.
 The notice uses the existing neutral panel border, spacing and focus ring.
-In a short card it uses compact spacing and a focusable list scroller, leaving the merge buttons wholly visible above the reply row.
+In a short card it uses compact spacing and a focusable list scroller, leaving the merge buttons wholly visible below the card's field.
 After successful merging, each independent obligation gets a decision card with inert instructions, a specific confirmation and Not now.
 Deferred obligations remain under Waiting on you in Tasks with Show the card; manual results read Confirmed by you and observed results Checked by your first mate.
 

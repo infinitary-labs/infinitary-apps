@@ -203,7 +203,7 @@ test("a feature ask: plan, the captain's choice, the grounded implement step, an
   const reply = cardReply(page).field;
   await reply.click();
   await reply.fill(SEQ_THREAD_REPLY);
-  await page.getByRole("button", { name: "Send reply" }).click();
+  await cardReply(page).send.click();
   await expect(shownEntry(page).getByText(SEQ_THREAD_ANSWER)).toBeVisible({ timeout: 30_000 });
   await expect
     .poll(async () => (await planDetail()).outcome, { timeout: 30_000 })

@@ -1,0 +1,13 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "alpha-review-candidate-coverage-marker",
+      "reason": "This release-review commit only recorded exclusions for earlier empty review commits; it changed no app behavior or screens.",
+      "covers": [
+        "705df8890dc3ff7c19254603393c93a5c8ffba6a",
+        "c745a6c7a0701af9e7bd823ae17f756a48891843"
+      ]
+    }
+  ]
+}

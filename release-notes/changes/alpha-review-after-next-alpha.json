@@ -1,0 +1,50 @@
+{
+  "entries": [
+    {
+      "id": "mcp-server-name-example",
+      "kind": "improvement",
+      "title": "Use an example name for a custom server",
+      "body": "When you add an MCP server in Settings, its Name field shows Example, a neutral prompt to enter your own server name.",
+      "area": "settings",
+      "picture": {
+        "dark": "mcp-server-name-example-dark.webp",
+        "light": "mcp-server-name-example-light.webp",
+        "alt": "Settings → Integrations with the server form open; Example appears in the Name field."
+      },
+      "provenance": {
+        "origin": "release-review",
+        "covers": ["20a2d0e70c71812d71d19754130fbe2f69417f5e"]
+      }
+    }
+  ],
+  "exclusions": [
+    {
+      "id": "empty-alpha-review-candidate",
+      "reason": "The earlier release-review marker changed no app behavior or screens.",
+      "covers": ["595480a765ca1e47ee570752397e678f19b36194"]
+    },
+    {
+      "id": "main-rebased-alpha-review-candidate",
+      "reason": "This release-review marker only rebased the existing note onto latest main; it changed no app behavior or screens.",
+      "covers": ["c5cdaddb30543d3c1a0d8cc3aa200cbcbc603a2a"]
+    },
+    {
+      "id": "empty-alpha-review-commit",
+      "reason": "An earlier release-review commit added no files and changed no app behavior or screens.",
+      "covers": [
+        "789aec5b98818bcc18072328bd35b553c5c82e4a",
+        "8bdba7c4845433fba3b0650be02e1f40fe6dc725"
+      ]
+    },
+    {
+      "id": "alpha-review-ledger-exclusion",
+      "reason": "This release-review commit only recorded an exclusion for an earlier empty review commit; it changed no app behavior or screens.",
+      "covers": ["fa6cdce5e019d4ad1ab337fc8de17968d7006f9f"]
+    },
+    {
+      "id": "rebased-review-ledger-marker",
+      "reason": "This release-review commit only recorded an exclusion for an earlier review marker; it changed no app behavior or screens.",
+      "covers": ["f3ef0f6641688d4971abec46b70b0c27f882ae3c"]
+    }
+  ]
+}

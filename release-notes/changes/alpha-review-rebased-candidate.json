@@ -1,0 +1,10 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "rebased-alpha-review-ledger-marker",
+      "reason": "This release-review commit only recorded an exclusion for an earlier review marker; it changed no app behavior or screens.",
+      "covers": ["c5a856bf3f951f94a5663f434f45684e549c4f0d"]
+    }
+  ]
+}

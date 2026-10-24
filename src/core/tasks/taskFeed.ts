@@ -174,11 +174,22 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
 
 /**
  * The persisted feed, oldest first: the newest feed-worthy timeline events
- * merged with the task-less activity lines, cut to `limit`.
+ * merged with the task-less activity lines, cut to `limit`. A line its
+ * writer marked to show once per task (`data.feedOnce`, such as queued
+ * guidance going out, INF-1137) appears only at its newest; the timeline
+ * keeps every one.
  */
 export function recentFeed(tasks: TaskService, activity: ActivityStore, limit: number): FeedLine[] {
   const records = new Map<string, TaskRecord | undefined>();
+  const shown = new Set<string>();
+  // Newest first, so the first of a fold seen is the one that stays.
   const taskLines = tasks.listFeedEvents(limit).flatMap((event) => {
+    const once = text(event.data?.feedOnce);
+    if (once) {
+      const fold = `${event.taskId}\u0000${once}`;
+      if (shown.has(fold)) return [];
+      shown.add(fold);
+    }
     if (!records.has(event.taskId)) records.set(event.taskId, tasks.get(event.taskId));
     const record = records.get(event.taskId);
     if (!record) return [];

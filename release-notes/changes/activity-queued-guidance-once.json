@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "activity-queued-guidance-once",
+      "kind": "fix",
+      "title": "Activity shows delivered guidance once per task",
+      "body": "When a busy crewmate gets guidance after its current turn, Activity now shows one line under that task's key. A later delivery replaces that line instead of adding another, and the line says the guidance was delivered.",
+      "area": "tasks",
+      "noPicture": "The change is fewer repeated lines over time, which one picture of Activity cannot show apart from an ordinary list.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -1275,6 +1275,14 @@ const OWN_LANE_KINDS: ReadonlySet<string> = new Set([
   "turn-resumed",
 ]);
 
+/**
+ * The feed line for guidance that waited for a turn to end and goes out as
+ * the next one (WI-5), and the fold that keeps one such line per task in
+ * the feed (`feedOnce`, `recentFeed`; INF-1137).
+ */
+export const QUEUED_GUIDANCE_LINE = "Delivered guidance that waited for its turn to end";
+const QUEUED_GUIDANCE_FOLD = "queued-guidance";
+
 /** The idle ladder's rule ids: its wakes are the host's own, never a report's. */
 const IDLE_RULES: ReadonlySet<string> = new Set<IdleRule>([
   "idle-nudge",
@@ -7627,12 +7635,14 @@ export class CrewSupervisor {
   /**
    * Deliver the task lane's due rows as the crewmate's next turn: the
    * followup-queue fallback (guidance a backend could not take mid-turn),
-   * failed steers past their grace, and job results alike. With announce
-   * the feed says so rather than letting the guidance arrive as if the
-   * crewmate had thought of it - one quiet feed line, never a Firstmate
-   * wake (interaction P0, WI-5): the Firstmate queued that guidance itself
-   * and has nothing to act on. Rows are marked in-flight here and
-   * acknowledged at the turn's end (runTurn -> turnComplete).
+   * failed steers past their grace, and job results alike. With announce,
+   * when the rows carry guidance someone sent, the feed says so rather than
+   * letting the guidance arrive as if the crewmate had thought of it - one
+   * quiet feed line, never a Firstmate wake (interaction P0, WI-5): the
+   * Firstmate queued that guidance itself and has nothing to act on. The
+   * line is a row on the task that the feed shows once per task, the
+   * newest (`QUEUED_GUIDANCE_FOLD`, INF-1137). Rows are marked in-flight
+   * here and acknowledged at the turn's end (runTurn -> turnComplete).
    */
   private deliverPendingToTask(task: TaskRuntime, options: { announce?: boolean } = {}): void {
     if (task.cancelled || !task.session || task.state !== "idle") return;
@@ -7641,10 +7651,11 @@ export class CrewSupervisor {
     if (rows.length === 0) return;
     const pictures = this.rowPictures(task.id, rows);
     if (pictures.blocked) return;
-    if (options.announce) {
-      this.options.broadcastEvent({
-        type: "firstmate_note",
-        text: `Task ${task.title} guidance queued: it will be delivered when the task is free`,
+    if (options.announce && rows.some((row) => !OWN_LANE_KINDS.has(row.facts?.kind ?? ""))) {
+      this.options.tasks.note(task.id, QUEUED_GUIDANCE_LINE, {
+        news: false,
+        feed: true,
+        data: { feedLine: true, feedOnce: QUEUED_GUIDANCE_FOLD },
       });
     }
     const ids = this.deliverRows(task.id, rows);

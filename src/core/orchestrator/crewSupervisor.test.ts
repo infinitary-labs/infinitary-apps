@@ -115,6 +115,7 @@ import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
 import { bindTool } from "../session/tools";
+import { ActivityStore } from "../storage/activityStore";
 import { CardStore } from "../storage/cardStore";
 import {
   FIRSTMATE_RECIPIENT,
@@ -126,7 +127,7 @@ import type { TaskEvent } from "../storage/taskEventStore";
 import { standingCap, type TaskRecord } from "../storage/taskStore";
 import { UsageStore } from "../storage/usageStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
-import { taskFeedLine } from "../tasks/taskFeed";
+import { recentFeed, taskFeedLine } from "../tasks/taskFeed";
 import { TaskProtocol } from "../tasks/taskProtocol";
 import { TaskService, TIMELINE_CAP } from "../tasks/taskService";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
@@ -154,6 +155,7 @@ import {
   type CrewSupervisorOptions,
   type FirstmateHooks,
   QUIET_CARD_MS,
+  QUEUED_GUIDANCE_LINE,
   QUIT_SETTLE_MS,
 } from "./crewSupervisor";
 import { crewHoldWays } from "./holds";
@@ -9471,10 +9473,15 @@ describe("the quiet-crewmate watchdog (P4)", () => {
   });
 });
 
+/** The queued-guidance lines a task's timeline holds. */
+function queuedGuidanceLines(tasks: TaskService, taskId: string) {
+  return tasks.timeline(taskId).filter((event) => event.text === QUEUED_GUIDANCE_LINE);
+}
+
 describe("steering a crewmate whose backend cannot take it mid-turn", () => {
   it("queues the guidance for the next turn, says so, and delivers it", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
-    const { supervisor, ops, events } = setup(crewmate);
+    const { supervisor, ops, tasks } = setup(crewmate);
     const { taskId } = await supervisor.commission({
       title: "Job",
       intent: intentOf("Do the thing"),
@@ -9497,11 +9504,8 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
     // The turn ended, so the parked guidance became the next turn.
     expect(crewmate.promptCalls).toHaveLength(2);
     expect(crewmate.promptCalls[1]).toBe("use the other library");
-    // Said in the feed, never as a Firstmate wake (WI-5).
-    expect(events).toContainEqual({
-      type: "firstmate_note",
-      text: "Task Job guidance queued: it will be delivered when the task is free",
-    });
+    // Said in the feed as the task's own line, never as a Firstmate wake (WI-5).
+    expect(queuedGuidanceLines(tasks, taskId)).toHaveLength(1);
     expect(ops).toEqual([]);
   });
 
@@ -9576,7 +9580,7 @@ describe("steering a crewmate whose backend cannot take it mid-turn", () => {
 describe("a steer that lands after the run's last look at its queue", () => {
   it("goes back on the lane, its attempt unspent, and is the crewmate's next turn", async () => {
     const crewmate = fakeCrewmate();
-    const { supervisor, inbox, events } = setup(crewmate);
+    const { supervisor, inbox, tasks } = setup(crewmate);
     const { taskId } = await supervisor.commission({ title: "Job", intent: intentOf("Start") });
     await tick();
 
@@ -9592,10 +9596,7 @@ describe("a steer that lands after the run's last look at its queue", () => {
     // the next turn, announced as queued guidance.
     expect(crewmate.promptCalls).toHaveLength(2);
     expect(crewmate.promptCalls[1]).toBe("also make it blue");
-    expect(events).toContainEqual({
-      type: "firstmate_note",
-      text: "Task Job guidance queued: it will be delivered when the task is free",
-    });
+    expect(queuedGuidanceLines(tasks, taskId)).toHaveLength(1);
     // Its row rides that turn on its first attempt: the one no turn read was given back.
     expect(inbox.inFlight(taskId).map((row) => row.attempts)).toEqual([1]);
     crewmate.emit({ type: "turn_end", taskId });
@@ -15769,7 +15770,7 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
 
   it("queued guidance going out as the next turn is a feed line, not a Firstmate wake", async () => {
     const crewmate = fakeQueuedSteerCrewmate();
-    const { supervisor, ops, events } = setup(crewmate);
+    const { supervisor, ops, events, tasks } = setup(crewmate);
     const { taskId } = await supervisor.commission({
       title: "Tidy the meter test",
       intent: intentOf("Start"),
@@ -15782,10 +15783,10 @@ describe("operational chatter is feed lines (interaction P0, WI-5)", () => {
 
     expect(crewmate.promptCalls.at(-1)).toBe("also cover the reset");
     expect(fmOps(ops)).toEqual([]);
-    expect(events).toContainEqual({
-      type: "firstmate_note",
-      text: "Task Tidy the meter test guidance queued: it will be delivered when the task is free",
-    });
+    expect(queuedGuidanceLines(tasks, taskId)).toEqual([
+      expect.objectContaining({ kind: "note", feed: true, text: QUEUED_GUIDANCE_LINE }),
+    ]);
+    expect(events.filter((event) => event.type === "firstmate_note")).toEqual([]);
   });
 
   it("guidance a cancel leaves undelivered stays on the task's timeline and wakes nobody", async () => {
@@ -16568,7 +16569,7 @@ describe("crewmate session replays (Sep 14)", () => {
         line.type === "call" && line.verb === "steer" && line.message ? [line.message] : [],
       );
     const crewmate = fakeQueuedSteerCrewmate();
-    const { supervisor, ops, events } = setup(crewmate);
+    const { supervisor, ops, tasks, db } = setup(crewmate);
     const { taskId } = await supervisor.commission({ title: "Replay", intent: intentOf("go") });
     await tick();
     for (const message of steers) {
@@ -16579,10 +16580,15 @@ describe("crewmate session replays (Sep 14)", () => {
 
     expect(steers.length).toBeGreaterThan(10);
     expect(ops.filter((line) => line.startsWith("[fm-op]"))).toEqual([]);
-    const announced = events.filter(
-      (event) => event.type === "firstmate_note" && event.text.startsWith("Task "),
-    );
+    // Each delivery stays on the task's timeline, and Activity shows the
+    // newest once: the captain's audit (INF-1137) found one busy task
+    // repeating it up to ten times there.
+    const announced = queuedGuidanceLines(tasks, taskId);
     expect(announced).toHaveLength(steers.length);
+    const feed = recentFeed(tasks, new ActivityStore(db), 200);
+    expect(feed.filter((line) => line.text === QUEUED_GUIDANCE_LINE)).toEqual([
+      expect.objectContaining({ taskKey: tasks.get(taskId)?.key, at: announced.at(-1)?.at }),
+    ]);
     for (const message of steers) {
       expect(
         crewmate.promptCalls.filter((call) => call === message),

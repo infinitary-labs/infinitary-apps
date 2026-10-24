@@ -1,6 +1,8 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { GOOGLE_DATA_KEPT } from "@shared/integrations";
+import { GOOGLE_DATA_FENCE } from "../../src/core/integrations";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -34,6 +36,12 @@ import { commandSearch, pressWindowKey } from "./windowKeys";
 
 const STABLE = "0.1.30";
 const ALPHA = "0.1.31-alpha.4";
+
+// INF-1106: both builds expose the complete retention scope, even without a Google sign-in.
+const PURGE_SCOPE = {
+  knowledge: true,
+  kept: [{ label: GOOGLE_DATA_FENCE, ...GOOGLE_DATA_KEPT }],
+};
 
 /** Every file of the collection's folder, byte for byte. */
 function folder(dir: string): Record<string, string> | null {
@@ -167,7 +175,7 @@ test("stable and alpha share Knowledge reads, tools, citations and purge", async
       expect(requestToolNames(requests[0] ?? "")).toEqual(
         expect.arrayContaining(["knowledge", "record_knowledge"]),
       );
-      expect(await purgeScope(alpha.page)).toEqual({ knowledge: true });
+      expect(await purgeScope(alpha.page)).toEqual(PURGE_SCOPE);
       // The browser's surfaces are there: its panel, its command, its reads.
       expect(await knowledgeOn(alpha.page)).toEqual({ enabled: true, held: true });
       await expect(knowledgePanel(alpha.page)).toBeAttached({ timeout: 30_000 });
@@ -193,7 +201,7 @@ test("stable and alpha share Knowledge reads, tools, citations and purge", async
       expect(tools).not.toContain("forget");
       expect(tools).toEqual(expect.arrayContaining(["knowledge", "record_knowledge"]));
       expect(latestContext(requests[0] ?? "")).toHaveProperty("knowledge");
-      expect(await purgeScope(stable.page)).toEqual({ knowledge: true });
+      expect(await purgeScope(stable.page)).toEqual(PURGE_SCOPE);
       expect(await knowledgeOn(stable.page)).toEqual({ enabled: true, held: true });
       expect(await offersOpenKnowledge(stable)).toBe(true);
       await expect(knowledgePanel(stable.page)).toBeAttached();

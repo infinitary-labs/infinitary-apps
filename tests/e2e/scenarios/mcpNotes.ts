@@ -1,6 +1,7 @@
 import { INTEGRATIONS_COMMAND } from "../../../src/core/integrations";
 import { WRITE_ANSWERED_LEAD } from "../../../src/core/orchestrator/wakes";
-import { calledTool, type Scenario, sinceLastUser } from "../mockProvider";
+import { browserShellMessages, calledTool, type Scenario, sinceLastUser } from "../mockProvider";
+import { providerMessages } from "../providerRequest";
 
 /**
  * A crewmate reads the captain's notes through an MCP server he added
@@ -35,7 +36,8 @@ export const mcpNotes: Scenario =
       return {
         calls: [{ name: "report", args: { text: `${MCP_NOTES_REPORT_PREFIX}${current.user}` } }],
       };
-    if (!calledTool(current.tail, "bash")) {
+    // INF-1124: a shell exit is a new turn, not permission to call Notes again.
+    if (!calledTool(body, "bash")) {
       const change = body.includes(MCP_NOTES_CHANGE_MARKER);
       return {
         calls: [
@@ -48,7 +50,15 @@ export const mcpNotes: Scenario =
         ],
       };
     }
-    const answer = current.results.at(-1) ?? "";
+    // The shell can return its job receipt before the command reaches the app.
+    // Resume from the exit wake, through the same reader the browser uses.
+    const shell = browserShellMessages(providerMessages(body));
+    if (shell.pending) return { text: "The integrations command is still running." };
+    const answer = shell.readings.findLast((message) => message.role === "tool")?.text ?? "";
+    // The command can also finish before the integration does. Read its kept
+    // answer with the bare command, including after BUSY, never another call.
+    if (/^running: /m.test(answer) || /^code: BUSY$/m.test(answer))
+      return { calls: [{ name: "bash", args: { command: INTEGRATIONS_COMMAND } }] };
     const ask = /approval card for ask (ia[a-f0-9]+)/.exec(answer)?.[1];
     if (ask)
       return {

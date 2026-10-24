@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mcp-notes-waits-for-slow-answers",
+      "reason": "Test only: the MCP journey's stand-in follows a background shell job's exit and reads a kept integration answer without repeating the Notes call. Regression cases replay both slow paths without changing product behavior or weakening journey assertions."
+    }
+  ]
+}

@@ -192,6 +192,8 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
       }, title);
     await expect.poll(outcome, { timeout: 60_000 }).toContain(MCP_NOTES_REPORT_PREFIX);
     const report = await outcome();
+    // Keep the server's actual answer in the successful CI log too (INF-1124).
+    console.info(`[mcp-notes report]\n${report}`);
     for (const [index, note] of SAMPLE_NOTES.entries())
       expect(report).toContain(`${index + 1}. ${note}`);
     expect(

@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { CLOSE_ANYWAY } from "../../src/renderer/src/app/closeQuestionWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
@@ -8,6 +9,18 @@ import { resizeWindow } from "./layout";
 import { saveKeepOpenCard } from "./olderProfile";
 import { heroShot, regionShot } from "./pictures";
 import { cardReply, clickInBody, closeQuestion, shownEntry } from "./stack";
+
+/**
+ * Nothing answers the reply in these launches, so the close asks about it
+ * (INF-770) - and only about it: the sent picks are not discarded, so the
+ * picks' Keep answering is not offered. Close anyway closes.
+ */
+async function closeWithReplyUnanswered(page: Parameters<typeof closeQuestion>[0]): Promise<void> {
+  const question = closeQuestion(page);
+  await expect(question.getByRole("button", { name: CLOSE_ANYWAY, exact: true })).toBeVisible();
+  await expect(question.getByRole("button", { name: "Keep answering" })).toHaveCount(0);
+  await question.getByRole("button", { name: CLOSE_ANYWAY, exact: true }).click();
+}
 
 for (const preview of [true, false]) {
   test(`closing after sent ${preview ? "settings" : "answers"} loses nothing`, async () => {
@@ -72,7 +85,7 @@ for (const preview of [true, false]) {
         );
       }
       await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-      await expect(closeQuestion(page)).toHaveCount(0);
+      await closeWithReplyUnanswered(page);
       await expect
         .poll(async () =>
           (await page.evaluate(() => window.infinitary.cards.list())).some(
@@ -132,12 +145,16 @@ for (const status of ["ready", "streaming"] as const) {
       await cardBody(page, "Choose your settings").getByLabel("Tone").fill("plain");
       await cardReply(page).field.fill("Use these settings.");
       await cardReply(page).row.getByRole("button", { name: "Send reply" }).click();
+      // The send is saved once its line is in the thread; read it after that.
+      await expect(page.locator('[data-card-thread] [data-thread-message="captain"]')).toHaveCount(
+        1,
+      );
       const thread = await page.evaluate(() => window.infinitary.cards.thread("legacy"));
       expect(
         thread.messages.find((message) => message.who === "captain")?.answers?.[0]?.values,
       ).toEqual(["plain"]);
       await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
-      await expect(closeQuestion(page)).toHaveCount(0);
+      await closeWithReplyUnanswered(page);
       await expect
         .poll(() =>
           page.evaluate(() =>

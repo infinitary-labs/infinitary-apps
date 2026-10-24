@@ -609,6 +609,9 @@ The host side (`src/shared/plugins/bridge.ts`, `FrameController`, `HomeScreen.ts
   Before the first send, an untouched prefilled text field or unmarked legacy default is the author's, so that card closes at once.
   After a successfully accepted thread reply or footer choice, the shell compares current answers by name and values, including write-ins, with that send rather than the authored proposal.
   Only differing answers ask for confirmation; changing back to the last sent values closes without asking, while clearing a sent answer is an unsent edit.
+- Closing a card while the captain's reply is the newest line on its thread asks in the same popover (INF-770): who has not answered, and that a closed card's answer stays on its task's record, or readable in Tasks for a card about none, with Put aside instead as the default beside Close anyway (`replyUnanswered`, `unansweredReplyWords`).
+  With unsent picks too it stays one popover: the picks' words, then the reply's sentence, with Keep answering and Discard and close.
+  The question guards the one close that does not come back: a crewmate's card the captain replied under stays closed through that crewmate's answer, which goes to the task's record (`docs/card-threads.md`).
   A failed send never advances that comparison, and a revision keeps it alongside the draft.
   Closing is still the keep and sends nothing.
   Previews keep their settings, answered counter and changed-answer close confirmation, which counts settings ("You changed 1 setting."); text fields retain the existing changed-text revision behavior.
@@ -887,8 +890,7 @@ Every new list releases at the author's close-out, and an older link navigates t
 ## Declared continuity
 
 The `emit_card` description tells both authors to leave `holds_place` unset unless the use case requires continuous attention on the card.
-An author may set `holds_place: true` for such an interactive card to keep its place across thread replies.
-A reply keeps the shown card and opens its thread; every choice still closes it immediately, with no waiting drawing.
+An author may set `holds_place: true` for such an interactive card so it comes forward when it arrives; every card keeps its place across thread replies (INF-770), and every choice still closes it immediately, with no waiting drawing.
 Each newly arriving marked card comes forward, even over another card, including a closed stable id raised again by its author.
 A revision or a thread answer does not bring a card forward after the captain paged away.
 The declaration is optional and stored as `Card.holdsPlace`; a revision without it removes it, and unmarked cards are unchanged.
@@ -908,15 +910,17 @@ Every first mate card about a task names the task after its key; a card about no
 Review-finding cards show the host's task facts beside the buttons, including the verdict, reviewed version and risk, even while the review stays open.
 The native phone reader shows the same label and task name without running the body or offering buttons.
 
-## Minimize a card
+## Put a card aside
 
-Minimize card is the neutral minus before Maximize on every live decision, note and attention card, including maximized cards and cards with threads.
+Put aside is the neutral minus before Maximize on every live decision, note and attention card, including maximized cards and cards with threads (INF-770 renamed it from Minimize card).
+Its label on rest says the comeback, "Put aside · back when it changes", and the card's × says where a closed card stays, "Close · stays on INF-770's record" with the key of the card's task, or "Close · stays readable in Tasks" (`PUT_ASIDE_REST`, `closeRestWords`).
+A reply never moves a card, so Put aside and Close are the only ways one leaves the captain's screen.
 It changes only the card’s optional saved `minimized` fact, through `CardService.setMinimized` and the views-only `inf:cards:minimize` request.
 It is independent from `awaiting`, resolution, offers, task status, the captain gate and the idle ladder; no message, feed line or notification is emitted.
 The Mac stack and pager omit minimized cards, and so does the phone's stack, which lists them under Minimized in its pager menu (`docs/ios.md`, "Cards on the phone").
 Every Mac showing this first mate shares that fact, including after a restart.
 A crewmate's revision or answer brings the card back unread when that crewmate's turn ends, never at a report mid-turn (INF-926); the first mate's own answer brings it back at once.
-Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Minimize.
+Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Put aside.
 
 The renderer keeps answers and reply drafts in their existing in-session stores while a card is minimized.
 `useCardReadingPlace` keeps its body’s reading place across remounts for the same run, for live cards, task records (`record:<task>`) and past cards (`past:<card>`); the stack's retirement leaves the last two alone, and closing a record or past card forgets its place.
@@ -924,4 +928,4 @@ A person's own wheel, touch or key before a saved place is reachable ends the pe
 A record also keeps the sections the captain opened, per task, and hands them to its frame at birth (`openSections` view state), until the record is closed, which reopens compact; a live card's own `<details>` still reload closed.
 Bringing it back focuses the card at the default size; a restart drops unsent drafts as before.
 The first mate’s asked `show-card` action uses `inf:cards:show`: an open card returns, and a closed card opens read-only.
-The first mate has no minimize action.
+The first mate has no action that puts a card aside.

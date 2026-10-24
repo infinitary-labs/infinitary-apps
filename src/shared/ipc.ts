@@ -1435,7 +1435,7 @@ export const invokeContract = {
         }),
       ]),
       z.unknown().optional(),
-      // The view settles departure at send time; records and collapsed notes do not count.
+      // Read no more: a reply never moves its card. Kept so an older view's call still parses.
       z.boolean().optional(),
     ]),
     response: cardThreadSchema,
@@ -3326,7 +3326,6 @@ export type FirstmateApi = {
             }>;
           },
       submission?: CardSubmission,
-      leavesStack?: boolean,
     ) => Promise<CardThread>;
     onThread: (listener: (thread: CardThread) => void) => () => void;
   };

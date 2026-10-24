@@ -5,7 +5,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
   MAXIMIZE_LABEL,
-  MINIMIZE_LABEL,
+  PUT_ASIDE_LABEL,
   RESTORE_LABEL,
 } from "../../src/renderer/src/design/cards/cardSizeWords";
 import type { Card } from "../../src/shared/cards";
@@ -180,7 +180,7 @@ test("a card maximizes into the window and comes back with its page, answers, re
     await test.step("Tab and Shift+Tab go round the card and its pager", async () => {
       // INF-476 places Minimize before Maximize, retaining the whole focus round.
       await page.keyboard.press("Shift+Tab");
-      await expect(sizeControl(page, MINIMIZE_LABEL)).toBeFocused();
+      await expect(sizeControl(page, PUT_ASIDE_LABEL)).toBeFocused();
       await page.keyboard.press("Shift+Tab");
       await expect
         .poll(() =>
@@ -188,7 +188,7 @@ test("a card maximizes into the window and comes back with its page, answers, re
         )
         .toBe(true);
       await page.keyboard.press("Tab");
-      await expect(sizeControl(page, MINIMIZE_LABEL)).toBeFocused();
+      await expect(sizeControl(page, PUT_ASIDE_LABEL)).toBeFocused();
       await page.keyboard.press("Tab");
       await expect(sizeControl(page, RESTORE_LABEL)).toBeFocused();
     });

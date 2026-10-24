@@ -453,7 +453,7 @@ The raw board includes finished tasks while they have minimized cards, however o
 `presentBoard` gives a taskless minimized card one presentation-only row, titled by the card, never a saved task.
 The task board and compact Tasks count use that same projection, and restoring or withdrawing the last minimized card removes that presentation override.
 Click or Enter restores the task’s minimized cards; a task’s existing ready card already opens on a row click through `openTask`.
-The record’s Cards row labels an open minimized card Minimized, and its link brings the live card back.
+The record’s Cards row labels an open minimized card Put aside, and its link brings the live card back.
 The record’s Show the card also brings back a minimized decision.
 
 ## Live validation

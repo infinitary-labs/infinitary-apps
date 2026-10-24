@@ -119,7 +119,7 @@ Where a feature waits for the other side, its number is in the tables above.
 
 ### Cards and saved stories
 
-Cards, captured offers and placed card requests carry an optional `holdsPlace`, which declares reply continuity and forward arrival and leaves unmarked cards unchanged.
+Cards, captured offers and placed card requests carry an optional `holdsPlace`, which declares forward arrival and leaves unmarked cards unchanged.
 A card action's effect may be `request_write`: a crewmate's ask to send a write it kept where its project lives, which only the captain's click sends (`docs/forge.md`, "A write that asks").
 The setup card's Add project and Not now carry the host ops `add-project` and `decline-project` (`docs/fleet.md`, "Asking the first mate to add a project"), and the project-change card's Apply change and Not now carry `apply-project-change` and `decline-project-change`.
 
@@ -137,9 +137,8 @@ Cards and record card rows may carry `minimized`, and task rows the desktop pres
 A view's `inf:cards:minimize` changes saved stack visibility without resolving a card, and its `inf:cards:show` restores an open card or shows a closed card read-only.
 `inf:cards:show-past` answers a closed card.
 
-The optional fourth boolean argument of `inf:cards:reply` is the view's send-time decision that an ordinary card leaves the stack until the answer.
-A lone or `holds_place` card stays, and the home keeps the decision in the existing awaiting and reply-stamp fields.
-A view that omits the argument gets the stamped behavior, and waiting stamped cards keep their place until answered.
+The optional fourth boolean argument of `inf:cards:reply`, an older view's send-time decision that an ordinary card leaves the stack, is read no more (INF-770).
+Every replied-under card stays, and the home keeps the hold in the existing awaiting and reply-stamp fields; waiting stamped cards keep their place until answered.
 
 A preview's project fonts (`docs/card-authoring.md`, "Fonts by reference") travel by the `inf:cards:typeface` view read, which answers the home's own copy of a font by its minted name, and by the `inf:work:typeface` work request, which carries a kept font home before the card that names it.
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { type ThreadWait, threadWait, threadWaitWords } from "./threadWait";
+import { PUT_ASIDE_WAY_ON, type ThreadWait, threadWait, threadWaitWords } from "./threadWait";
 import type { WorkPosture } from "./workPosture";
 
 const replied = { author: "crewmate", awaiting: "answer", taskId: "t1" } as const;
@@ -41,13 +41,16 @@ describe("what a captain reply under a crewmate's card waits on", () => {
 describe("the waiting line's words", () => {
   const words = (wait: ThreadWait) => threadWaitWords(wait, "crewmate 7", NOW);
 
-  it("says the reply is saved and names who goes next", () => {
+  // INF-770: the line ends with the way on, since a reply never moves the card.
+  it("says the reply is saved, names who goes next and ends with the way on", () => {
     expect(words({ on: "checks" })).toBe(
-      "Saved. Crewmate 7 is waiting for the checks to finish, then answers.",
+      `Saved. Crewmate 7 is waiting for the checks to finish, then answers. ${PUT_ASIDE_WAY_ON}`,
     );
-    expect(words({ on: "author" })).toBe("Saved. Crewmate 7 has not answered yet.");
+    expect(words({ on: "author" })).toBe(
+      `Saved. Crewmate 7 has not answered yet. ${PUT_ASIDE_WAY_ON}`,
+    );
     expect(threadWaitWords({ on: "author" }, undefined, NOW)).toBe(
-      "Saved. The crewmate has not answered yet.",
+      `Saved. The crewmate has not answered yet. ${PUT_ASIDE_WAY_ON}`,
     );
   });
 

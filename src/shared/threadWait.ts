@@ -56,9 +56,15 @@ export function threadWait(
 const SOONER = "To go on sooner, ask your first mate to move the work to another model.";
 
 /**
+ * The way on while the author answers (INF-770): a reply never moves its
+ * card, and Put aside brings it back on its own when the answer lands.
+ */
+export const PUT_ASIDE_WAY_ON = "Put the card aside to go on; it comes back when the answer lands.";
+
+/**
  * The one line the thread shows for a wait: that the reply is saved, what
- * holds it, who goes next and, for a held account, the way back that
- * clears it. `crewmate` is the task's assignee ("crewmate 7").
+ * holds it, who goes next and the way on - Put aside or, for a held
+ * account, the way back that clears it. `crewmate` is the task's assignee ("crewmate 7").
  */
 export function threadWaitWords(
   wait: ThreadWait,
@@ -69,13 +75,13 @@ export function threadWaitWords(
   const Who = who.charAt(0).toUpperCase() + who.slice(1);
   switch (wait.on) {
     case "checks":
-      return `Saved. ${Who} is waiting for the checks to finish, then answers.`;
+      return `Saved. ${Who} is waiting for the checks to finish, then answers. ${PUT_ASIDE_WAY_ON}`;
     case "background":
-      return `Saved. ${Who} is waiting for its background work to finish, then answers.`;
+      return `Saved. ${Who} is waiting for its background work to finish, then answers. ${PUT_ASIDE_WAY_ON}`;
     case "finishing":
-      return `Saved. ${Who} is finishing the task, then answers.`;
+      return `Saved. ${Who} is finishing the task, then answers. ${PUT_ASIDE_WAY_ON}`;
     case "author":
-      return `Saved. ${Who} has not answered yet.`;
+      return `Saved. ${Who} has not answered yet. ${PUT_ASIDE_WAY_ON}`;
     case "account":
       return heldWords(wait.hold, who, now);
   }

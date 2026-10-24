@@ -11,6 +11,12 @@ export type IconButtonProps = {
    */
   label: string;
   /**
+   * Words drawn on rest in place of `label` when the control says more
+   * than its name - what it does, where the thing goes (INF-770's Put aside
+   * and Close). Assistive technology reads them as its description.
+   */
+  restWords?: string | undefined;
+  /**
    * The key that runs the same command anywhere in the window (`⌘,`), drawn
    * after the words in the label; pass `aria-keyshortcuts` with it.
    */
@@ -39,6 +45,7 @@ const tones: Record<IconButtonTone, React.CSSProperties> = {
 
 export function IconButton({
   label,
+  restWords,
   keys,
   size = 32,
   tone = "neutral",
@@ -58,7 +65,7 @@ export function IconButton({
   const [hover, setHover] = useState(false);
   // The label on rest, the pointer's or the keyboard's focus (./restLabel).
   const restLabel = useRestLabelWith(
-    label,
+    restWords ?? label,
     { keys },
     { ref, onPointerEnter, onPointerLeave, onFocus, onBlur, onKeyDown },
   );
@@ -67,6 +74,7 @@ export function IconButton({
       {...restLabel}
       type="button"
       aria-label={label}
+      aria-description={restWords}
       disabled={disabled}
       aria-disabled={off || undefined}
       onMouseEnter={() => setHover(true)}

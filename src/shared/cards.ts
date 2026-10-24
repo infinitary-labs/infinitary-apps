@@ -591,29 +591,23 @@ export type CardChanges = z.infer<typeof cardChangesSchema>;
 
 /**
  * Whether the stage shows a card: every card but one awaiting its author's
- * first close-out or an answer. A reply kept shown at send time carries
- * `sentBackAt`, as do legacy waiting cards, while its author answers.
+ * first close-out. A reply never moves its card: a replied-under card
+ * carries `sentBackAt` while its author answers. Cards older versions sent
+ * away on a reply carry no stamp and stay off until their author answers.
  */
 export function onStage(card: Pick<Card, "awaiting" | "sentBackAt">): boolean {
   return card.awaiting === undefined || card.sentBackAt !== undefined;
 }
 
 /**
- * The stack's order: cards awaiting an answer come last, oldest reply
- * first; the rest by priority, then oldest. The core snapshot owns the order.
+ * The stack's order: by priority, then oldest. A reply never moves a card,
+ * so a card awaiting its author's answer keeps its place. The core snapshot
+ * owns the order.
  */
 export function compareStack(
-  a: Pick<Card, "priority" | "createdAt" | "sentBackAt" | "awaiting" | "holdsPlace">,
-  b: Pick<Card, "priority" | "createdAt" | "sentBackAt" | "awaiting" | "holdsPlace">,
+  a: Pick<Card, "priority" | "createdAt">,
+  b: Pick<Card, "priority" | "createdAt">,
 ): number {
-  // Completed replies saved by older versions may still carry a stamp.
-  const aBack = a.awaiting !== undefined && !a.holdsPlace ? a.sentBackAt : undefined;
-  const bBack = b.awaiting !== undefined && !b.holdsPlace ? b.sentBackAt : undefined;
-  if (aBack !== undefined || bBack !== undefined) {
-    if (aBack === undefined) return -1;
-    if (bBack === undefined) return 1;
-    return aBack - bBack;
-  }
   return b.priority - a.priority || a.createdAt - b.createdAt;
 }
 

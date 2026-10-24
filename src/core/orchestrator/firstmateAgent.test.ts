@@ -1104,8 +1104,8 @@ describe("FirstmateAgent", () => {
   /**
    * The design's case D (`card-fm-6-84f4c7`, "What Default means for Care",
    * 24 Sep), replayed against the one rule: a captain reply on the
-   * Firstmate's own card sends it to the back of the stack until the
-   * Firstmate's turn ends having answered, a write mid-turn - here the
+   * Firstmate's own card holds it, still shown in its place, until the
+   * Firstmate's turn ends having answered (INF-770), a write mid-turn - here the
    * delegation the persona now asks for, said on the card - does not redraw
    * it, and
    * the answer the crewmate's research brings revises the same card in
@@ -1130,7 +1130,7 @@ describe("FirstmateAgent", () => {
     expect(shown()).toBeUndefined();
     const waiting = supervisor.cardsSnapshot().find((card) => card.id === cardId);
     expect(waiting?.awaiting).toBe("answer");
-    // Still on the stage, at the back, showing what it showed.
+    // Still on the stage, in its place, showing what it showed.
     expect(waiting && onStage(waiting)).toBe(true);
     expect(waiting?.body).toContain("Default is the care every project starts with");
 

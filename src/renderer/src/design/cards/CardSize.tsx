@@ -1,7 +1,7 @@
 import type React from "react";
 import { createContext, useContext } from "react";
 import { IconButton } from "../core/IconButton";
-import { MAXIMIZE_LABEL, MINIMIZE_LABEL, RESTORE_LABEL } from "./cardSizeWords";
+import { MAXIMIZE_LABEL, PUT_ASIDE_LABEL, PUT_ASIDE_REST, RESTORE_LABEL } from "./cardSizeWords";
 
 /**
  * The shown card's size, lent by the stage to the card it shows (design
@@ -83,7 +83,8 @@ function CardMinimize() {
   if (!minimize) return null;
   return (
     <IconButton
-      label={MINIMIZE_LABEL}
+      label={PUT_ASIDE_LABEL}
+      restWords={PUT_ASIDE_REST}
       keys={minimize.keys}
       aria-keyshortcuts={minimize["aria-keyshortcuts"]}
       onClick={minimize.run}

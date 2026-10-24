@@ -876,7 +876,8 @@ test("the Anything else? box's words go with whichever button the captain clicks
     await reply.click();
     await reply.fill(INLINE_QUESTIONS_REVISE_REPLY);
     await page.getByRole("button", { name: "Send reply" }).click();
-    await showCard(page, INLINE_QUESTIONS_REVISED_TITLE);
+    // A reply never moves the card (INF-770): the revision redraws it in place.
+    await expect(shownCard(page, INLINE_QUESTIONS_REVISED_TITLE)).toBeVisible({ timeout: 30_000 });
     await expect.poll(async () => (await steers()).slice(steersBefore).length).toBe(1);
     expect((await steers()).at(-1)?.text).toContain(commentLine);
     const revisedBox = shownCard(page, INLINE_QUESTIONS_REVISED_TITLE).getByRole("textbox", {

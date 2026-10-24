@@ -30,17 +30,15 @@ The buttons stay pinned, and a card still leaves the stage on a button, a settle
 The captain's close of a crewmate's card on a live task reaches that crewmate the same way (FI3-435, captain-approved 2026-10-01): a captain steer stamped `via: "card"` with the card's id, the typed `card-closed` wake ("The captain closed your card ... without choosing.").
 A close is not a choice, so the author judges what it meant by instruction - read and finished, still waiting on the captain, or a passing note - and its report declares it (`waiting_on_captain` or `finished`, `docs/report-sort.md`).
 The host reads none of it.
-The captain's close of a crewmate's card kept shown after the captain's reply holds through the answer the crewmate is still writing (FI3-693): until that crewmate closes out, `emit_card` under the card's id is refused in words that send the answer to its report, so the answer does not open the card again.
+The captain's close of a crewmate's card the captain replied under holds through the answer the crewmate is still writing (FI3-693): until that crewmate closes out, `emit_card` under the card's id is refused in words that send the answer to its report, so the answer does not open the card again.
 After the close-out the crewmate may raise the id again, a new card, as after any close.
 The first mate's own cards keep Q4a: their close wakes nobody and the next context block lists it.
 
-A reply does hand the turn to the author, and the shell shows it: an ordinary card leaves the stack until its author answers and closes out, and the card a close would bring up comes up instead - the first unread card, else the first card (the captain's FI3-711 answer: one rule for a close and a reply).
-An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): a reply then keeps that card shown with its thread beside it.
-Each newly arriving marked card comes forward, including the same stable id raised again after a choice, but a revision or thread answer never undoes the captain's paging away.
+A reply does hand the turn to the author, and it never moves the card (INF-770 direction A, captain-approved 2026-10-21): the card stays shown in its place with the thread beside it, the pager and the arrows do not change, and the waiting line says who answers next.
+Put aside and Close are the only ways a card leaves the captain's screen, and each says what it does on rest (`docs/card-authoring.md`, "Put a card aside" and "Close").
+An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each newly arriving marked card comes forward, including the same stable id raised again after a choice, but a revision or thread answer never undoes the captain's paging away.
 Every choice still closes the card immediately; nothing keeps its page running while its author writes.
-Cards without the declaration retain their existing stage rules.
-The shell moves on as soon as the reply is taken, so the departing card never opens its thread on the way out (`replyLeaving`).
-A lone card stays put with the thread beside it, and its body, scroll and reply field stay the same elements as the thread opens: only the surface's columns change.
+The card's body, scroll and reply field stay the same elements as the thread opens: only the surface's columns change.
 Its reply field keeps the focus through the send, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").
 A reply sent while the card's Anything else? box holds words carries them among its settings, as the answer `anything_else`, and the box keeps them for the button the captain clicks later (`docs/card-authoring.md`, "Anything else?").
 The author's answer redraws it at the close-out - see the next section.
@@ -60,12 +58,9 @@ A task that closes done keeps its crewmate's notes and the first mate's notes (c
 A note asks nothing, so the close does not answer it, and an unread note must not vanish (FI3-419, FI3-1581).
 A question card still comes down with the close, and a dropped or cancelled task still retires everything.
 The crewmate is gone, so a captain reply on its kept note goes to the first mate, as on its own cards: its closing words land in the note's thread (`recordFirstmateThreadAnswer`), its turn's end releases the wait (`closeOut`), and the WI-12 refusal does not send it to steer a crewmate that is gone, so a card of its own on that task shows.
-A captain reply removes an ordinary card from the stage until the answer and close-out.
-The view declares whether the card leaves at send time through the optional fourth `inf:cards:reply` argument, so records, past cards and collapsed notes do not count.
-That decision survives reload and restart; a later arrival does not dismiss a lone card that stayed.
-A kept reply stamps `Card.sentBackAt`, retaining the shown version until close-out.
-Older views omit the argument and keep the earlier stamped behavior.
-A marked continuity card keeps its stack order and shown place; the same stamp still establishes that it has reached the stage.
+A captain reply keeps the card on the stage, in its place, until the answer and close-out.
+Every reply stamps `Card.sentBackAt`, retaining the shown version until close-out; the stamp survives reload and restart, and a later arrival does not dismiss the card.
+The optional fourth `inf:cards:reply` argument an older view sends, whether the card was leaving, is read no more.
 Every write in between lands on the record and paints the thread; the card does not redraw.
 A card already on the stage that its crewmate revises keeps showing what it showed and redraws in place at its crewmate's turn end.
 A card awaiting an answer never collapses into its task record while it waits.
@@ -74,23 +69,24 @@ A card awaiting an answer never collapses into its task record while it waits.
 Those closing words are one sentence, and the same words show as its reply line beside the captain's message (INF-772, the captain's "both places"; `docs/composer.md` "The last turn").
 When the answer needs a crewmate, that crewmate shows it on its own card; the first mate answers the thread with one line naming it, never a new card.
 
-**The hidden state lives in the core** (the captain's Q4 A): `Card.awaiting` on the card snapshot - `answer` while the captain's line is the newest on the thread, `close-out` while the author has written and not yet closed out, absent on a card the stage shows; a card waiting for its first close-out is off the stage, while a reply with other cards removes it until the answer; kept replies and legacy stamped cards remain on it.
+**The hidden state lives in the core** (the captain's Q4 A): `Card.awaiting` on the card snapshot - `answer` while the captain's line is the newest on the thread, `close-out` while the author has written and not yet closed out, absent on a card the stage shows; a card waiting for its first close-out is off the stage, while a replied-under card, stamped, remains on it.
+A card an older version sent away on a reply carries no stamp and stays off the stage until its author answers.
 `CardService` is its one writer: the captain's line sets `answer` (`addMessage`), any later line ends it (the author's answer, or the host's `revised:` for a revision), every crewmate write holds a new or hidden card for its close-out, and `closeOut` - called from the crewmate's `report` and its resumable turn's end, and the first mate's turn end - releases what waited on that author.
 A report passes over every card with an `available` offer in its lifecycle (`CardStore.lastAvailableOffer`): only the turn's end releases those.
 `snapshot()` is the stage: a card on it whose author has written again is pushed as the version the stage showed until the close-out.
-A crewmate's answer or revision on a card the captain put aside (`Card.minimized`, "Minimize a card" in `docs/card-authoring.md`) saves the card as no longer aside, while `snapshot()` keeps it aside until that crewmate's turn ends (`asideUntilTurnEnd`, memory only), so a restart, itself a close-out, brings it back too.
-The columns are `cards.awaiting` (migration 52) and `cards.sent_back_at` (migration 59), so the send-time departure decision survives a restart and a reload; the restart is itself every author's close-out, so a card that only waited on one reaches the stage at boot.
-`sentBackAt` is a kept or legacy reply's time: `snapshot()` sorts an ordinary waiting stamped card after every other one, oldest stamp first (`compareStack`), so cards that arrive later sort in front of it and a second reply sends it back again.
-The optional declaration lives in `cards.holds_place` (migration 77); null preserves legacy behavior, and a revision without it removes it.
-The author's close-out clears the stamp: the answered card returns to its original place, unread unless it is the shown card.
+A crewmate's answer or revision on a card the captain put aside (`Card.minimized`, "Put a card aside" in `docs/card-authoring.md`) saves the card as no longer aside, while `snapshot()` keeps it aside until that crewmate's turn ends (`asideUntilTurnEnd`, memory only), so a restart, itself a close-out, brings it back too.
+The columns are `cards.awaiting` (migration 52) and `cards.sent_back_at` (migration 59), so the hold survives a restart and a reload; the restart is itself every author's close-out, so a card that only waited on one reaches the stage at boot.
+`sentBackAt` is the reply's time; it no longer moves the card in the stack's order (`compareStack`).
+The optional declaration lives in `cards.holds_place` (migration 77); null means an ordinary arrival, and a revision without it removes it.
+The author's close-out clears the stamp: the answered card redraws in its place, unread unless it is the shown card.
 A captain reply's hold is pushed at once rather than in the core's 60 ms push window, so the window always sees the wait that the close-out ends, however fast the author answers.
 Bands sort by priority, oldest creation time first within each band.
 A click resolves against the version on the stage.
 
-What reads it: the renderer shows a card only when it is on the stage (`visibleCards`) and has no door of its own - a thread message never brings a card forward, and an ordinary card's return is an arrival: onto the stage when nothing else is shown, else without displacing the shown card, unread, with the notice pulse; a kept or legacy waiting card is also an arrival when its `awaiting` clears.
+What reads it: the renderer shows a card only when it is on the stage (`visibleCards`) and has no door of its own - a thread message never brings a card forward, and an ordinary card's return is an arrival: onto the stage when nothing else is shown, else without displacing the shown card, unread, with the notice pulse; a replied-under card is also an arrival when its `awaiting` clears, unread unless it is the shown card.
 A newly visible marked card instead becomes the shown card, already read, at its author's close-out.
-The core's push moves the stack: `reconcileStack` sees the shown card leave - a close, withdrawal or task closure - and `departureIndex` picks what comes up: the first unread card in stack order, else the first card, passing over the card a reply removed (a lone card stays).
-The only other mover is the reply's own acceptance, which applies the same rule early (above).
+The core's push moves the stack: `reconcileStack` sees the shown card leave - a close, withdrawal or task closure - and `departureIndex` picks what comes up: the first unread card in stack order, else the first card.
+A reply never moves the stack.
 Unread is the session's "new" badge, never a saved fact.
 Hiding a record keeps its own rule: the first card comes up.
 Open records stay ahead of cards for paging; if only records remain, the first record shows.
@@ -114,7 +110,8 @@ Both say the captain sees that answer when the author's turn ends (INF-926).
 ## The waiting line
 
 FI3-592, grounded on FI3-643 (the captain folded a waiting line for every reason into FI3-592).
-While the captain's line is the newest on a crewmate's card (`awaiting: "answer"`) and its author's turn is not running, the thread's message list ends with one quiet sentence in the app's voice where `working` would be: that the reply is saved, what holds it, who goes next and, for a held account, the way back.
+While the captain's line is the newest on a crewmate's card (`awaiting: "answer"`) and its author's turn is not running, the thread's message list ends with one quiet sentence in the app's voice where `working` would be: that the reply is saved, what holds it, who goes next and the way on - for a held account the way back, otherwise "Put the card aside to go on; it comes back when the answer lands."
+(INF-770).
 It is derived, never a message: a host line would end the reply's wait (`addMessage`), and the card keeps showing what it showed.
 
 The line reads the task's work posture, the typed state the Tasks dot reads (`CrewSupervisor.workPosture`; `threadWait` and `threadWaitWords` in `src/shared/threadWait.ts`), and the task's assignee, both off the sequenced board (`useThreadWait`).
@@ -292,11 +289,11 @@ Cancellation and terminal session failure retire the task's open cards through `
 - `tests/e2e/task-card-retirement.spec.ts` - a shown decision disappears on running cancellation or actual terminal client exit and stays retired after restart; cancellation of a restored idle task retires its decision without reopening the session.
   `crewSupervisor.test.ts` joins closure with cards and task detail, covering hidden cards, pending revisions, preserved history/threads, unrelated choices and resumable failure/interruption.
 - `tests/e2e/card-threads.spec.ts` - phase 1's three scenarios (a reply that revises the card in place, a reply answered in the thread, and "merge it" under a completion card landing as the first mate's settle) plus phase 2: a captain reply on a first mate card revises it / lands as prose, and an image rides a thread reply on a transport that supports it.
-  The stage rule's case A: with two cards, a reply removes the card and an acknowledgement does not return it, a reload keeps it away, and the crewmate's turn end after its report brings the answer, unread; a lone card stays on the stage.
-  A lone replied-under card closes from its own X and stays closed through its crewmate's answer; `cardService.test.ts` holds the refusal until that crewmate's close-out.
-- `tests/e2e/stage-reveals.spec.ts` - a close and a reply both bring up the first unread card, the answered card comes back as news, and with nothing unread the first card comes up; a reply under a lone card keeps its body as the captain left it.
-  `store.test.ts` owns `departureIndex`, `dismissalSuccessor` and the reply's early move.
-- `crewSupervisor.test.ts` ("a card reaches the stage at its author's close-out") - the design's recorded exchanges A, B and C replayed at their offsets through the real card, thread and report paths, each back only at its turn's end, and a card put aside that its crewmate answers mid-turn; `firstmateAgent .test.ts` - case D on the first mate's own card and the mid-turn capture; `cardService.test.ts` - the hide across a restart.
+  The stage rule's case A: with two cards, a reply keeps the card shown with its thread, an acknowledgement and a reload leave it in its place, and the crewmate's turn end after its report redraws it with the answer in place.
+  A lone replied-under card closes from its own X, through the close's question about the unanswered reply, and stays closed through its crewmate's answer; `cardService.test.ts` holds the refusal until that crewmate's close-out.
+- `tests/e2e/stage-reveals.spec.ts` - a close brings up the first unread card, a reply keeps its card shown while the unread card waits, and with nothing unread the first card comes up; a reply under a lone card keeps its body as the captain left it.
+  `store.test.ts` owns `departureIndex`, `dismissalSuccessor` and the reply that moves nothing.
+- `crewSupervisor.test.ts` ("a card reaches the stage at its author's close-out") - the design's recorded exchanges A, B and C replayed at their offsets through the real card, thread and report paths, each answered only at its turn's end, and a card put aside that its crewmate answers mid-turn; `firstmateAgent .test.ts` - case D on the first mate's own card and the mid-turn capture; `cardService.test.ts` - the kept card across a restart.
 - `tests/e2e/thread-waiting.spec.ts` - a reply under a Claude crewmate's card that meets a refusal shows the held waiting line, keeps it across a restart, and loses it to the crewmate's answer once another login serves.
   `threadWait.test.ts`, `CardThread.test.tsx` and `workPosture.test.ts` own the wait per posture, its words and the row; `crewSupervisor.test.ts` the typed hold on the posture and the checks refusal's thread answer.
 - `crewSupervisor.test.ts` ("the card thread") - the steer's shape and its `via: "thread"` record, the refusals, the host "revised" line, the crewmate's own reply, the whose-turn fact, the context facts, a first mate card routing to a captain turn, and an image on a crewmate steer.

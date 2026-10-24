@@ -9711,7 +9711,6 @@ export class CrewSupervisor {
     submission?: unknown,
     answers?: CardAnswer[],
     files?: { text: string; name?: string }[],
-    leavesStack = false,
   ): CardThread {
     const id = cardId.trim();
     const card = this.cards.get(id);
@@ -9760,24 +9759,15 @@ export class CrewSupervisor {
     // thread or the lane records it (the Firstmate's own turn keeps its own).
     const kept =
       hasImages && !toFirstmate && card.taskId ? keepImages(randomUUID(), images ?? []) : undefined;
-    this.cards.addMessage(
-      id,
-      "captain",
-      shown || "sent a picture",
-      submission,
-      answers,
-      undefined,
-      leavesStack,
-    );
+    this.cards.addMessage(id, "captain", shown || "sent a picture", submission, answers);
     if (toFirstmate) {
       this.hooks.converseAboutCard?.(id, context, hasImages ? images : undefined);
       return this.cards.thread(id);
     }
     const taskId = card.taskId;
     if (taskId) {
-      // The card waits off the stack until its author answers and
-      // closes out; this one line is what the captain sees meanwhile (the captain's Q2
-      // A). The card's return is its own notice.
+      // The card stays shown with its thread while its author answers;
+      // this one line is the send's record in the feed (the captain's Q2 A).
       const crewmate = this.tasks.get(taskId)?.crewmate ?? "the crewmate";
       this.options.broadcastEvent({
         type: "firstmate_note",

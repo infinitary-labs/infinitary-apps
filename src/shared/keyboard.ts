@@ -301,7 +301,7 @@ export const KEYBOARD_COMMANDS = {
   // chosen by name, with no key of its own to clash with, and a person may
   // give it one.
   "cards.minimize": {
-    label: "Minimize card",
+    label: "Put card aside",
     scope: "window",
     runs: "shell",
     repeat: false,

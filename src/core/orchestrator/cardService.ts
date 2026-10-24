@@ -596,7 +596,7 @@ export class CardService {
    * while its author's newer write waits on a close-out, and a card still
    * waiting on its author carrying what it waits on (`awaiting`), so the
    * window, the notifier, Observe and the tests all read one fact. A card
-   * the captain kept shown after a reply sorts after new arrivals (`compareStack`).
+   * the captain replied under keeps its place (`compareStack`).
    */
   snapshot(): Card[] {
     for (const id of this.changes.keys()) {
@@ -1352,16 +1352,15 @@ export class CardService {
   }
 
   /**
-   * Hold a card, waiting on `awaiting`. A captain's reply (`answer`) takes it
-   * off the stack unless the view kept it shown at send time. Kept replies
-   * carry `sentBackAt`, as do legacy waiting cards, until close-out. The write runs in the
-   * caller's transaction; the stack moves once it committed (`applyHold`).
+   * Hold a card, waiting on `awaiting`. A captain's reply (`answer`) never
+   * moves the card: it stays shown, stamped `sentBackAt`, until close-out
+   * (docs/card-threads.md). The write runs in the caller's transaction; the
+   * stack moves once it committed (`applyHold`).
    */
   private writeHold(
     id: string,
     awaiting: CardAwaiting,
     by: { actor: CardObservationActor; source: CardObservationSource },
-    leavesStack = false,
   ): Card | undefined {
     const card = this.cards.get(id);
     // A second reply settles its send-time visibility again; any other
@@ -1372,9 +1371,7 @@ export class CardService {
       ...rest,
       awaiting,
       ...(awaiting === "answer"
-        ? !leavesStack || card.holdsPlace
-          ? { sentBackAt: this.sentBackStamp() }
-          : {}
+        ? { sentBackAt: this.sentBackStamp() }
         : sentBackAt !== undefined
           ? { sentBackAt }
           : {}),
@@ -1500,10 +1497,9 @@ export class CardService {
     submission?: unknown,
     answers?: CardAnswer[],
     revision?: CardRevisionLinks,
-    leavesStack = false,
   ): CardMessage {
-    // The captain's line takes an ordinary card off the stack until its
-    // author answers and closes out; any other line - the author's answer, or the
+    // The captain's line holds the card, still shown, until its author
+    // answers and closes out; any other line - the author's answer, or the
     // host's "revised:" for a revision - ends his line being the newest.
     // An author's line brings back a card the captain put aside: the
     // Firstmate's at once, a crewmate's when its turn ends (INF-926).
@@ -1548,7 +1544,7 @@ export class CardService {
           },
         });
       }
-      if (who === "captain") held = this.writeHold(cardId, "answer", by, leavesStack);
+      if (who === "captain") held = this.writeHold(cardId, "answer", by);
       else if (card?.awaiting === "answer") held = this.writeHold(cardId, "close-out", by);
       return message;
     });

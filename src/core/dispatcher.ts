@@ -592,17 +592,11 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return { ok: true as const };
     },
 
-    "inf:cards:reply": (cardId, payload, submission, leavesStack) => {
+    // A reply never moves its card (docs/card-threads.md); an older view's
+    // fourth argument, whether the card was leaving, is read no more.
+    "inf:cards:reply": (cardId, payload, submission) => {
       if (typeof payload === "string") {
-        return services.supervisor.replyToCard(
-          cardId,
-          payload,
-          undefined,
-          submission,
-          undefined,
-          undefined,
-          leavesStack,
-        );
+        return services.supervisor.replyToCard(cardId, payload, undefined, submission);
       }
       return services.supervisor.replyToCard(
         cardId,
@@ -611,7 +605,6 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         submission,
         payload.answers,
         payload.files,
-        leavesStack,
       );
     },
 

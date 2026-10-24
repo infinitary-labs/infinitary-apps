@@ -308,34 +308,23 @@ describe("cardTakesReplies", () => {
 });
 
 describe("stack order", () => {
-  it("does not send a continuity card behind other cards while its author answers", () => {
-    const marked = {
-      ...card,
-      holdsPlace: true as const,
-      awaiting: "answer" as const,
-      sentBackAt: 10,
-    };
+  // INF-770 direction A: a reply never moves a card, so its place holds.
+  it("keeps a card the captain replied under in its place while its author answers", () => {
+    const replied = { ...card, awaiting: "answer" as const, sentBackAt: 10 };
     const other = { ...card, id: "other", createdAt: card.createdAt + 1 };
-    expect([other, marked].sort(compareStack).map((item) => item.id)).toEqual([card.id, "other"]);
+    expect([other, replied].sort(compareStack).map((item) => item.id)).toEqual([card.id, "other"]);
   });
 
-  it("orders bands by priority, oldest first within each, and pending replies last", () => {
+  it("orders bands by priority, oldest first within each, whatever waits on an answer", () => {
     const old = { ...card, id: "old", createdAt: 1 };
     const newer = { ...card, id: "new", createdAt: 2, sentBackAt: 50 };
     const note = { ...old, id: "note", priority: 15, createdAt: 0 };
-    const held = { ...old, id: "held", awaiting: "answer" as const, sentBackAt: 10 };
-    const heldLater = {
-      ...newer,
-      id: "held-later",
-      awaiting: "close-out" as const,
-      sentBackAt: 11,
-    };
-    expect([heldLater, newer, note, held, old].sort(compareStack).map((c) => c.id)).toEqual([
+    const held = { ...old, id: "held", createdAt: 3, awaiting: "answer" as const, sentBackAt: 10 };
+    expect([held, newer, note, old].sort(compareStack).map((c) => c.id)).toEqual([
       "old",
       "new",
-      "note",
       "held",
-      "held-later",
+      "note",
     ]);
   });
 });

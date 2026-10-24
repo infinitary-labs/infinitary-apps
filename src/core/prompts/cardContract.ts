@@ -127,15 +127,16 @@ export const FIRSTMATE_CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS,
  * the whose-turn rule routes to the Firstmate on any backend (FI3-710).
  *
  * Contract v4.14 adds WHEN (the captain's "ship it" of 2026-09-27): the
- * card comes back at its author's close-out - since INF-926 a crewmate's
+ * answer is done at its author's close-out - since INF-926 a crewmate's
  * turn end, never a report while it works on, and the Firstmate's turn end
  * - so the work comes first, the answer once, and an acknowledgement never.
+ * A reply never moves the card (INF-770 direction A).
  */
 export const CARD_REPLY = [
   "CARD REPLIES",
   "Captain replies carry card ids.",
   "Do the work first; always answer in-thread in one to three sentences. For changed cards, emit_card with SAME id and answer as reply; otherwise reply.",
-  "An unmarked card leaves the stack on reply until answered; a lone card stays. They see answers when your turn ends: give results, never acknowledgements or promises.",
+  "A reply never moves the card: it stays beside its thread. They see answers when your turn ends: give results, never acknowledgements or promises.",
   "Reply in sentence-case prose, never actions or scripts; figures revise the card.",
   "Replies resolve nothing; buttons stay: a reply is not a closing choice and does not authorize merging. Never close merely for a reply.",
   "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate; the first mate acts.",
@@ -322,7 +323,7 @@ export const CARD_PARAMS = {
   body: "The card body: a raw HTML fragment",
   id: "Stable kebab-case id; reuse it to revise the open card in place",
   holds_place:
-    "Leave unset unless the use case requires continuous attention on this card. True keeps the card shown on replies and brings arrivals forward. Choices close at once.",
+    "Leave unset unless the use case requires continuous attention on this card. True brings the card forward when it arrives. Choices close at once.",
   reply:
     "Your short answer to the captain's reply in this card's thread; required when a revision answers one.",
   width:

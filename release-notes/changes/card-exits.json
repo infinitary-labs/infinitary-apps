@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-exits",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A reply keeps its card, and Put aside and Close say what they do",
+      "body": "Replying under a card no longer takes it away: it stays on your screen beside its thread, even with other cards waiting. Minimize is now called Put aside, and a card you put aside comes back on its own when it changes. Close says where the card stays readable. If you close a card while your reply is still unanswered, you are asked first, with Put aside instead as the choice that keeps the answer coming back to you.",
+      "picture": {
+        "dark": "card-exits-dark.webp",
+        "light": "card-exits-light.webp",
+        "alt": "Closing a decision with an unanswered reply asks first, offering Put aside instead beside Close anyway"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

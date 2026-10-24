@@ -514,70 +514,63 @@ describe("CardService", () => {
     expect(cards.snapshot().find((card) => card.id === note)?.awaiting).toBeUndefined();
   });
 
-  it("keeps a replied-under card off the stack across a restart until the answer", () => {
+  // INF-770 direction A: a reply never moves a card, whatever waits behind it.
+  it("keeps a replied-under card shown in its place across a restart until the answer", () => {
     const { tasks, make, cardStore } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
     const cards = make();
     const asked = cards.emitCrewmateCard("t1", decision, "m");
     cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
     const other = cards.addFirstmateCard({ ...decision, id: "other", title: "Other" });
-    const ids = () => cards.snapshot().map((card) => card.id);
-    expect(ids()).toHaveLength(2);
-
-    cards.addMessage(asked, "captain", "why not left?", undefined, undefined, undefined, true);
-    // Off the stage, carrying what it waits on, with its buttons intact.
-    expect(ids()).toEqual([asked, other]);
-    const waiting = cards.snapshot().find((card) => card.id === asked);
-    expect(waiting).toMatchObject({ awaiting: "answer", title: decision.title });
-    expect(waiting && onStage(waiting)).toBe(false);
-    expect(waiting?.sentBackAt).toBeUndefined();
-    expect(cardStore.awaitingAuthor(asked)).toBe(true);
-
-    // A later card does not bring it back, nor does a restart.
-    const later = cards.addFirstmateCard({ ...decision, id: "later", title: "Later" });
-    expect(
+    const staged = () =>
       cards
         .snapshot()
         .filter(onStage)
-        .map((card) => card.id),
-    ).toEqual([other, later]);
+        .map((card) => card.id);
+    expect(staged()).toEqual([asked, other]);
+
+    cards.addMessage(asked, "captain", "why not left?");
+    // On the stage, in its place, carrying what it waits on.
+    expect(staged()).toEqual([asked, other]);
+    const waiting = cards.snapshot().find((card) => card.id === asked);
+    expect(waiting).toMatchObject({ awaiting: "answer", title: decision.title });
+    expect(waiting?.sentBackAt).toBeDefined();
+    expect(cardStore.awaitingAuthor(asked)).toBe(true);
+
+    // A later card and a restart leave it where it is.
+    const later = cards.addFirstmateCard({ ...decision, id: "later", title: "Later" });
+    expect(staged()).toEqual([asked, other, later]);
     const restored = make();
     expect(
       restored
         .snapshot()
         .filter(onStage)
         .map((card) => card.id),
-    ).toEqual([other, later]);
+    ).toEqual([asked, other, later]);
     expect(restored.get(asked)?.awaiting).toBe("answer");
 
-    // A revision during the wait stays off the stage until the close-out.
+    // A revision during the wait leaves the version on the stage in its
+    // place until its author's turn ends (INF-926).
     restored.emitCrewmateCard(
       "t1",
       { ...decision, id: asked, body: "<p>Revised.</p>", reply: "Revised." },
       "m",
     );
-    expect(restored.shown(asked) && onStage(restored.shown(asked) as Card)).toBe(false);
-    expect(restored.snapshot().find((card) => card.id === asked)?.body).toBe("<p>Revised.</p>");
     expect(restored.get(asked)?.body).toBe("<p>Revised.</p>");
+    expect(restored.snapshot().find((card) => card.id === asked)?.body).toBe(decision.body);
 
-    // The author answers and its turn ends: the newest version redraws, and
-    // the card returns to its original place, no longer waiting. Its report
-    // alone leaves the card off the stage while it works on.
+    // The author answers: its report leaves the card in its place, waiting
+    // on its turn end, which redraws the newest version there.
     restored.replyFromCrewmate("t1", { cardId: asked, text: "Left races the queue." });
-    expect(restored.snapshot().find((card) => card.id === asked)?.body).toBe("<p>Revised.</p>");
     restored.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
-    expect(restored.shown(asked) && onStage(restored.shown(asked) as Card)).toBe(false);
+    expect(restored.snapshot().find((card) => card.id === asked)?.awaiting).toBe("close-out");
+    expect(restored.snapshot().map((card) => card.id)).toEqual([asked, other, later]);
     restored.closeOut({ kind: "crewmate", taskId: "t1" }, "idle");
     const answered = restored.snapshot().find((card) => card.id === asked);
-    expect(answered).toMatchObject({ body: "<p>Revised.</p>" });
+    expect(answered?.body).toBe("<p>Revised.</p>");
     expect(answered?.awaiting).toBeUndefined();
     expect(answered?.sentBackAt).toBeUndefined();
     expect(restored.snapshot().map((card) => card.id)).toEqual([asked, other, later]);
-    expect(
-      make()
-        .snapshot()
-        .map((card) => card.id),
-    ).toEqual([asked, other, later]);
     expect(cardStore.awaitingAuthor(asked)).toBe(false);
   });
 

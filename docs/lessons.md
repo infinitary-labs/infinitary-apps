@@ -59,7 +59,7 @@ Keeping later record writes under `lessons/` avoids rebuilding or reattributing 
 
 ## The card
 
-Every lesson card declares `holds_place` (`docs/card-authoring.md`, "Declared continuity"): a reply under it keeps it shown, a choice closes it at once, and the next round is the same stable id raised again, which comes forward over another card.
+Every lesson card declares `holds_place` (`docs/card-authoring.md`, "Declared continuity"): a reply under it keeps it shown, as under every card, a choice closes it at once, and the next round is the same stable id raised again, which comes forward over another card.
 The round's own script checks each answer against a key the teacher wrote, so the learner answering starts no model turn.
 It shows progress dots and an item count, a drawn board or number line, a feedback line, a hint button with one-step hints, a worked example after two misses and a finish screen with the first-try result and one next practice goal.
 The quiz part moves the right answer through every position and never twice in a row; the teacher writes choices of about equal length.

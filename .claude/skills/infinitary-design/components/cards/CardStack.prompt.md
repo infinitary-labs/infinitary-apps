@@ -11,9 +11,9 @@ Its optional `envelopeHeight` supplies that stage-only envelope.
 A replacement uses its final width immediately, with no width easing.
 
 A new card never steals the shown one - it lands on the stack unseen, and the pager says so: an `--accent` dot (6px, `--radius-pill`, ringed in `--bg-0`) on the arrow that leads to it, and one accent mono Badge "1 new" beside the pager, positioned outside the centred arrow group so the arrows never move under the pointer.
-A reply takes an ordinary shown card off the stack until the answer - the next card comes up by the same rule as a close (below), and a lone card stays - and when its author answers it returns to its original place marked new.
+A reply never moves a card (INF-770): the shown card stays in its place with its thread, and when its author answers it redraws there, marked new only if the captain paged away.
 An author leaves `holds_place` unset unless the use case requires continuous attention on the card.
-With that declaration, a reply keeps the card shown with its thread, and a newly arriving marked card comes forward even over another card.
+With that declaration, a newly arriving marked card comes forward even over another card.
 A choice still closes immediately, with no held page or working line; paging away is respected by subsequent revisions and thread answers.
 Cards without the declaration keep the rules above.
 A card counts as seen once it has been the shown card; the dot and the badge leave when nothing unseen remains.
@@ -35,7 +35,7 @@ Once the incoming card has drawn, it appears by the move that took the previous 
 - An arrow: the incoming card slides in from the arrow's side as the leaving drawing slides out the other way, both `--move-page` (32px) over `--dur-page` (300ms), and the page number slides the same way.
 - A card that left the stack (a close, a closing action, a withdrawal): the leaving drawing drops `--move-drop` (10px) to `--scale-stack` (97%) and fades over `--dur-quick` (200ms), drawn over the incoming card, which comes forward from `--move-stack` (8px) up and `--scale-stack` at half opacity over `--dur-page`, while the peeks move up one place.
   The last card drops away the same way before the stage is empty.
-- Anything else (a reply taking the card away, a jump to a record): one crossfade over `--dur-fast`.
+- Anything else (a jump to a record): one crossfade over `--dur-fast`.
 
 Title and body arrive together; there is no separate surface or body entrance, and width never eases.
 Selection, actions and drafts change at once; a close never waits for the drawing.
@@ -59,16 +59,16 @@ Any entry hides the character, crew and labels over `--dur-slow`, snapping under
 Peeks use the same solid surface at full opacity: depth comes from their offset and hairline, not transparency.
 
 Cards sort by priority, oldest first within each band.
-Whenever the shown card leaves (close, minimize, closing action, merge, withdrawal, task closure or reply), reveal the first unread card in that order, else the first card - the captain's FI3-711 rule, one rule for a close and a reply; a reply's own card is passed over while another card remains.
+Whenever the shown card leaves (close, Put aside, closing action, merge, withdrawal or task closure), reveal the first unread card in that order, else the first card - the captain's FI3-711 rule; a reply moves nothing.
 Unread is this window's "new" badge, never a saved fact.
 Hiding a record reveals the first card.
 Open task records remain ahead of cards for paging; if only records remain, show the first record.
 An unseen departure moves nothing.
 Explicit jumps still show their target, and the arrows keep stack order.
 
-## Minimized cards
+## Cards put aside
 
-Minimized live messages stay open but leave the stack, its pager count and new dot.
+Live messages put aside stay open but leave the stack, its pager count and new dot.
 They leave by the close navigation rule without its close question or any message.
 Their reading place, picked answers and reply draft stay for this run.
 A revision or author answer returns one unread; a pointed-at card returns at the front, focused at the default size.

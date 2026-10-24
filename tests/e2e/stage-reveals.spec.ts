@@ -197,9 +197,10 @@ test("closing a middle card or hiding a record reveals the oldest card, not the 
   }
 });
 
-// The captain's FI3-711 answers: the first unread card comes up next, after a
-// close and after a reply alike; with none unread, the first card does.
-test("closing a card or replying under it brings up the first unread card, not the first card", async () => {
+// The captain's FI3-711 answers: the first unread card comes up next after a
+// close; with none unread, the first card does. INF-770 direction A: a reply
+// never moves a card, so the unread one waits until the captain moves on.
+test("closing a card brings up the first unread card, not the first card, and a reply keeps its card shown", async () => {
   const app = await launchWithCards([
     seededCard("seen-first", READ_NOTE, "<p>Read before.</p>", 0),
     seededCard("closing", CLOSING_NOTE, "<p>Closed next.</p>", 1),
@@ -219,26 +220,33 @@ test("closing a card or replying under it brings up the first unread card, not t
       await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible();
       await expect(unreadBadge).toHaveCount(0);
     });
-    await test.step("a reply sends its card back and brings up the unread one", async () => {
+    let arrived = "";
+    await test.step("a reply keeps its card shown, and the unread card waits behind it", async () => {
       await showCard(page, REPLYING_NOTE);
       const earlier = await answers();
       await receiveUnreadCard(page);
-      const arrived = (await answers()).find((id) => !earlier.includes(id));
+      arrived = (await answers()).find((id) => !earlier.includes(id)) ?? "";
       if (!arrived) throw new Error("No second answer arrived");
       await cardReply(page).field.fill("Which tide is this for?");
       await page.getByRole("button", { name: "Send reply", exact: true }).click();
-      // The card on the stage is the answer that just arrived, not the first card.
-      await expect(cardReply(page).row).toHaveAttribute("data-card-reply", arrived);
-      // The focus the departing card's reply field held goes to the prompt,
-      // never to the incoming card's controls.
-      await expect(promptInput(page)).toBeFocused();
-    });
-    await test.step("the card whose author answered is news: a close brings it up", async () => {
-      await expect(page.getByRole("status").filter({ hasText: "1 new" })).toBeVisible({
-        timeout: 30_000,
-      });
-      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+      await expect(cardReply(page).row).toHaveAttribute("data-card-reply", "replying");
       await expect(shownCard(page, REPLYING_NOTE)).toBeVisible();
+      await expect(page.getByRole("status").filter({ hasText: "1 new" })).toBeVisible();
+      // The reply field keeps the focus for the next reply (FI3-722).
+      await expect(cardReply(page).field).toBeFocused();
+    });
+    await test.step("once its author answered, a close brings up the unread card", async () => {
+      await expect
+        .poll(
+          async () =>
+            (await page.evaluate(() => window.infinitary.cards.list())).find(
+              (card) => card.id === "replying",
+            )?.awaiting ?? "answered",
+          { timeout: 30_000 },
+        )
+        .toBe("answered");
+      await shownEntry(page).getByRole("button", { name: "Close", exact: true }).click();
+      await expect(cardReply(page).row).toHaveAttribute("data-card-reply", arrived);
       await expect(unreadBadge).toHaveCount(0);
     });
     await test.step("with nothing unread, a close brings up the first card", async () => {

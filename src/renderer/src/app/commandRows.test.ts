@@ -96,7 +96,7 @@ describe("command search's list", () => {
       },
       { id: "cards.next", label: "Show the next card", keys: "⇧⌘]", refusal: null },
       { id: "cards.close", label: "Close the shown card", keys: undefined, refusal: null },
-      { id: "cards.minimize", label: "Minimize card", keys: "⇧⌘M", refusal: null },
+      { id: "cards.minimize", label: "Put card aside", keys: "⇧⌘M", refusal: null },
       { id: "cards.maximize", label: "Maximize or restore card", keys: undefined, refusal: null },
       {
         id: "cards.thread",

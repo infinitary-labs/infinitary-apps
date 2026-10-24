@@ -5,8 +5,8 @@
  */
 
 /**
- * The one line the captain sees while a crewmate works on his reply under
- * its card; an ordinary card waits off the stack meanwhile.
+ * The feed's one line for a reply the captain sent under a crewmate's card;
+ * the card stays shown with its thread while that crewmate answers.
  */
 export function askedUnderCardLine(crewmate: string, title: string): string {
   return `You asked ${crewmate} under "${title}"`;

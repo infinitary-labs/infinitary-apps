@@ -149,6 +149,7 @@ import { useCardKind } from "../plugins/host";
 import { type CloseAsk, CloseQuestion } from "./CloseQuestion";
 import { ComposerNotice } from "./ComposerNotice";
 import { type CardStage, lendCardStage } from "./cardStage";
+import { closeRestWords } from "./closeQuestionWords";
 import { DiagnosticsNotice } from "./DiagnosticsNotice";
 import { FirstRunGate } from "./FirstRunGate";
 import { focusTakenElsewhere } from "./focusRecovery";
@@ -173,7 +174,7 @@ import {
   visibleStack,
 } from "./store";
 import { TOP_BAR_HEIGHT } from "./TopBar";
-import { unsentAnswers, unsentComment } from "./unsentAnswers";
+import { replyUnanswered, unsentAnswers, unsentComment } from "./unsentAnswers";
 import { VoiceNotice } from "./VoiceNotice";
 
 /** Same symmetric clearance as the script, applied in the resize's layout. */
@@ -254,7 +255,6 @@ type ViewFacts = {
   closedThreadIds: string[];
   cardDrags: Record<string, number>;
   defaultCardSize: DefaultCardSize;
-  replyLeaving: { cardId: string; messages: number } | null;
 };
 
 /**
@@ -271,12 +271,7 @@ function entryView(
 ): EntryView {
   const pastCard = past?.state === "ready" ? past.card : undefined;
   const replyable = !isHeldEntry(entry) && cardTakesReplies(entry);
-  const messages = facts.threads[entry.id] ?? [];
-  // A card a reply is sending back keeps the thread it had (FI3-711).
-  const count =
-    facts.replyLeaving?.cardId === entry.id
-      ? Math.min(messages.length, facts.replyLeaving.messages)
-      : messages.length;
+  const count = (facts.threads[entry.id] ?? []).length;
   // A past card's thread is always beside it when it has one: read-only, so
   // there is nothing to collapse and no reply row (design skill, "Past card").
   const collapsed = !pastCard && replyable && count > 0 && facts.closedThreadIds.includes(entry.id);
@@ -413,7 +408,6 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const threads = useShellStore((s) => s.threads);
   const threadsLoaded = useShellStore((s) => s.threadsLoaded);
   const closedThreadIds = useShellStore((s) => s.closedThreadIds);
-  const replyLeaving = useShellStore((s) => s.replyLeaving);
   const crewActivity = useShellStore((s) => s.crewActivity);
   const firstmateBusy = useShellStore((s) => s.firstmateBusy);
   const loadThread = useShellStore((s) => s.loadThread);
@@ -476,7 +470,6 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     closedThreadIds,
     cardDrags,
     defaultCardSize,
-    replyLeaving,
   };
   const view = card ? entryView(card, pastRead, facts, maximized) : undefined;
   const folded = view?.folded ?? false;
@@ -1018,7 +1011,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     const shell = useShellStore.getState();
     const unsent = unsentAnswers(card, shell.cardAnswers[cardId], shell.sentCardAnswers[cardId]);
     const wrote = unsentComment(shell.cardComments[cardId], shell.sentCardAnswers[cardId]);
-    if (unsent > 0 || wrote) {
+    if (unsent > 0 || wrote || replyUnanswered(shell.threads[cardId])) {
       setConfirmingClose(cardId);
       setConfirmFocus(byKey);
       return;
@@ -1035,6 +1028,10 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
             closeCard(cardId, mountOf(card));
           },
           onKeep: () => setConfirmingClose(null),
+          onPutAside: () => {
+            setConfirmingClose(null);
+            void useShellStore.getState().minimizeCard(cardId);
+          },
           focus: confirmFocus,
         }
       : undefined;
@@ -2097,12 +2094,24 @@ function StackedCard({
       footer={inPlaceThread ? <ReplyRow cardId={card.id} collect={collect} /> : undefined}
       onClose={onClose}
       closeRef={closeRef}
+      closeRest={closeRestWords(task?.key)}
       closeAsking={closeConfirm !== undefined}
       closeAsk={
         <CloseQuestion
           ask={closeConfirm}
           count={unsentAnswers(card, answers, sentAnswers)}
           wrote={unsentComment(comment, sentAnswers)}
+          unanswered={
+            replyUnanswered(messages)
+              ? {
+                  author:
+                    card.author === "firstmate"
+                      ? "your first mate"
+                      : (task?.assignee ?? "the crewmate"),
+                  taskKey: task?.key,
+                }
+              : undefined
+          }
           preview={isPreviewBody(card.body)}
           trigger={closeRef}
         />

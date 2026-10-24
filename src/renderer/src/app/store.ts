@@ -399,22 +399,20 @@ function firstCardIndex(shown: StackEntry[]): number {
 
 /**
  * Where the stack goes when the shown card leaves it (the captain's FI3-711
- * answers: first unread anywhere, and the same rule for a reply). The first
- * unread card in stack order, else the first card; a task record or past
- * card only when no card is left. A card a reply is sending back
- * (`leaving`) is passed over while another card remains, and stays shown
- * when it is the only one. The one rule for the stack and for the
- * successor the stage prepares (`dismissalSuccessor`). Hide instead uses
- * the first live card regardless of unread state, then the first held entry.
+ * answers: first unread anywhere). The first unread card in stack order,
+ * else the first card; a task record or past card only when no card is
+ * left. A reply never moves a card (INF-770). The one rule for the stack
+ * and for the successor the stage prepares (`dismissalSuccessor`). Hide
+ * instead uses the first live card regardless of unread state, then the
+ * first held entry.
  */
 export function departureIndex(
   shown: StackEntry[],
   unread: readonly string[],
-  leaving?: string,
   action: "depart" | "hide" = "depart",
 ): number {
   if (action === "hide") return firstCardIndex(shown);
-  const card = (entry: StackEntry) => !isHeldEntry(entry) && entry.id !== leaving;
+  const card = (entry: StackEntry) => !isHeldEntry(entry);
   const firstUnread = shown.findIndex((entry) => card(entry) && unread.includes(entry.id));
   if (firstUnread >= 0) return firstUnread;
   const first = shown.findIndex(card);
@@ -433,9 +431,7 @@ export function dismissalSuccessor(
 ): StackEntry | undefined {
   const leaving = shown[index];
   const rest = shown.filter((entry) => entry !== leaving);
-  return rest[
-    departureIndex(rest, unread, undefined, leaving && isHeldEntry(leaving) ? "hide" : "depart")
-  ];
+  return rest[departureIndex(rest, unread, leaving && isHeldEntry(leaving) ? "hide" : "depart")];
 }
 
 /** Keep the reader on their entry; else the first card (hiding a record keeps this rule). */
@@ -462,10 +458,9 @@ function withoutShown(
  * content changed since it collapsed (an emitter revised it in place, WI-12)
  * is news again: it returns to the stack unread, like an arrival - and so
  * does a card whose author closed out after the captain's reply (the core's
- * `awaiting` cleared). When the shown card leaves, or a reply sent under it
- * takes it off the stack, `departureIndex`
- * picks what comes up: the first unread card, else the first card; a lone
- * card stays. The first snapshot
+ * `awaiting` cleared). When the shown card leaves, `departureIndex` picks
+ * what comes up: the first unread card, else the first card. A reply never
+ * moves a card. The first snapshot
  * seeds the stack: what was already there at boot is not news.
  * `noticed` counts the cards that just became unread, for the character's
  * notice pulse.
@@ -634,13 +629,6 @@ export type ShellState = {
   threads: Record<string, CardMessage[]>;
   /** Initial history determines the destination layout before a body is born. */
   threadsLoaded: Record<string, true>;
-  /**
-   * The shown card a reply in flight is taking off the stack while another
-   * card remains, and how many thread messages it had when the reply left.
-   * It keeps that layout until the stack moves on, so its thread never opens
-   * for a moment on its way out (FI3-711).
-   */
-  replyLeaving: { cardId: string; messages: number } | null;
   /** What the captain has typed under each card and not yet sent. */
   replyDrafts: Record<string, string>;
   /** Replies in flight, by card: the send control's own guard. */
@@ -1100,7 +1088,7 @@ function closeHeld(s: ShellState, match: (held: OpenRecord) => boolean): Partial
     entry !== undefined && closingIds.has(entry.id)
       ? opener >= 0
         ? opener
-        : departureIndex(shown, s.unreadCardIds, undefined, "hide")
+        : departureIndex(shown, s.unreadCardIds, "hide")
       : indexKeeping(shown, entry);
   let cardDrags = s.cardDrags;
   for (const id of closingIds) cardDrags = withoutKey(cardDrags, id);
@@ -1126,20 +1114,6 @@ function freshPanelCardId(open: readonly { panelCard: PanelCardEntry }[]): strin
   let n = open.length + 1;
   while (taken.has(`card-${n}`)) n += 1;
   return `card-${n}`;
-}
-
-/**
- * The stack once a reply has dismissed the shown card `cardId`: the card
- * `departureIndex` picks comes up at once, before the core's own push, so
- * the departing card never opens its thread on the way out. A lone card
- * stays, and nothing moves when the captain has already paged away.
- */
-function afterReplyDeparture(s: ShellState, cardId: string): Partial<ShellState> {
-  const shown = visibleStack(s.cards, s.collapsedCardIds, s.records);
-  const at = Math.min(s.cardIndex, shown.length - 1);
-  if (shown[at]?.id !== cardId) return { replyLeaving: null };
-  const cardIndex = departureIndex(shown, s.unreadCardIds, cardId);
-  return { cardIndex, unreadCardIds: withoutShown(s, cardIndex), replyLeaving: null };
 }
 
 /** Both input rows take only the remaining picture slots and explain any refusal. */
@@ -1178,7 +1152,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   cardsSeeded: false,
   threads: {},
   threadsLoaded: {},
-  replyLeaving: null,
   replyDrafts: {},
   sendingReplies: {},
   replyErrors: {},
@@ -2060,14 +2033,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     // Past a reply's limit nothing leaves and the draft stays; the row
     // already says so under the field.
     if (text.length > CARD_REPLY_MAX_CHARS) return;
-    // A shown card with another card behind it leaves the stage once the
-    // reply is taken; until then it keeps the layout it has.
-    const before = get();
-    const stack = visibleStack(before.cards, before.collapsedCardIds, before.records);
-    const leaving =
-      stack[Math.min(before.cardIndex, stack.length - 1)]?.id === cardId &&
-      !before.cards.find((card) => card.id === cardId)?.holdsPlace &&
-      stack.some((entry) => !isHeldEntry(entry) && entry.id !== cardId);
     set((s) => ({
       // Clear before collecting settings or crossing the core boundary.
       replyDrafts: withoutKey(s.replyDrafts, cardId),
@@ -2076,7 +2041,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       replyNotices: withoutKey(s.replyNotices, cardId),
       sendingReplies: { ...s.sendingReplies, [cardId]: true },
       replyErrors: withoutKey(s.replyErrors, cardId),
-      ...(leaving ? { replyLeaving: { cardId, messages: s.threads[cardId]?.length ?? 0 } } : {}),
     }));
     try {
       const fresh = collect ? await collect() : undefined;
@@ -2088,8 +2052,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       if (answers && cardAnswersBytes(answers) > CARD_ANSWERS_MAX_BYTES) {
         throw new Error(CARD_ANSWERS_TOO_LONG);
       }
-      // Sending hands the turn to the author: the core's push takes the card
-      // off the stack unless it stayed at send time.
+      // Sending hands the turn to the author; the card stays where it is.
       const payload =
         images.length > 0 || files.length > 0 || answers?.length
           ? {
@@ -2103,7 +2066,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
               })),
             }
           : text;
-      const thread = await window.infinitary.cards.reply(cardId, payload, submission, leaving);
+      const thread = await window.infinitary.cards.reply(cardId, payload, submission);
       if (answers) {
         set((s) => ({ sentCardAnswers: { ...s.sentCardAnswers, [cardId]: answers } }));
       }
@@ -2111,9 +2074,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       // stage now, so a later line the core pushes (its author's answer)
       // must not be overwritten by this older reading.
       get().applyThread(thread.cardId, thread.messages);
-      // Taken: a card with others behind it leaves now, and the
-      // same rule as a close picks the card that comes up.
-      if (leaving) set((s) => afterReplyDeparture(s, cardId));
       // A Firstmate-thread reply is also a first accepted captain turn.
       void get().loadFirstRun();
     } catch (caught) {
@@ -2130,7 +2090,6 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     } finally {
       set((s) => ({
         sendingReplies: withoutKey(s.sendingReplies, cardId),
-        ...(s.replyLeaving?.cardId === cardId ? { replyLeaving: null } : {}),
       }));
       const stackAtRead = get().cards;
       void window.infinitary.cards

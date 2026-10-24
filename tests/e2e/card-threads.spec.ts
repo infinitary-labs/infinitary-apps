@@ -86,8 +86,8 @@ import { focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
  *  1. A captain reply that changes what the card should say revises it IN
  *     PLACE - same id, new head - and the thread says so in one host line.
  *  2. A reply that changes nothing on the card is answered in the thread.
- *     Either way the reply hands the turn to the author: the card leaves
- *     the stage while the captain waits and returns with the answer.
+ *     Either way the reply hands the turn to the author: the card stays
+ *     shown beside its thread while the captain waits (INF-770).
  *  3. A settle-shaped reply under a completion card is not the crewmate's
  *     to run: it closes its card and reports the captain's words verbatim,
  *     which wakes the Firstmate by the whose-turn rule and lands as the
@@ -98,11 +98,11 @@ import { focusOn, pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
  *     card revises in place, or the answer lands as prose in the thread.
  *  5. An image rides a thread reply on a transport that supports it.
  *
- * The card return rule (the captain's "ship it" of 2026-09-27):
- *  6. The card comes back at its author's close-out, never on its first
- *     write: an acknowledgement in the thread leaves it off the stage, a
- *     reload of the window keeps it off (the hide lives in the core), and
- *     the report after the real answer brings it back, answered.
+ * A reply never moves a card (INF-770 direction A):
+ *  6. The card stays shown with its thread while another card waits: an
+ *     acknowledgement in the thread moves nothing, a reload of the window
+ *     keeps it in its place (the hold lives in the core), and the report
+ *     after the real answer redraws it in place, answered.
  *
  * Collapsing a thread (FI3-1130):
  *  7. The thread folds back into its card and opens again from its own
@@ -630,13 +630,14 @@ async function windowCaughtUp(page: LaunchedApp["page"], cardId: string): Promis
   }, cardId);
 }
 
-test("a reply takes the card off the stack; an acknowledgement does not redraw it, nor does a reload; its crewmate's turn end does", async () => {
+// INF-770 direction A: a reply never moves a card, whatever waits behind it.
+test("a reply keeps the card shown with its thread while another card waits; an acknowledgement and a reload leave it there; its crewmate's turn end redraws it in place", async () => {
   const { page, mockProvider } = launched;
   // The preceding image reply can still be finishing when its request is
   // observed; close its card only once its author has ended that turn.
   await waitForFirstmateIdle(page);
   await closeOpenCards(page);
-  // A second card to come up when the first leaves.
+  // A second card waiting behind the one replied under.
   await sendPrompt(page, FM_THREAD_PROMPT_MARKER);
   await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible({ timeout: 30_000 });
   await waitForFirstmateIdle(page);
@@ -650,14 +651,16 @@ test("a reply takes the card off the stack; an acknowledgement does not redraw i
   const newBadge = page.getByRole("status").filter({ hasText: /^\d+ new$/ });
   const asked = feedLine(page, askedUnder(THREAD_CARD_TITLE));
   const askedBefore = await asked.count();
+  const thread = shownEntry(page).locator("[data-card-thread]");
   await sendReply(page, THREAD_ACK_REPLY);
-  // One feed line while the crewmate works, and the card left:
-  // the other card is now the only card.
+  // One feed line while the crewmate works; the card stays shown with its
+  // thread beside it, and the pager still counts both cards.
   await expect(asked).toHaveCount(askedBefore + 1, { timeout: 20_000 });
-  await expect(page.locator("[data-card-pager]")).toHaveCount(0);
-  await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible();
+  await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
+  await expect(thread.getByText(THREAD_ACK_REPLY)).toBeVisible();
+  await expect(pager(page, 2)).toBeVisible();
   await expect(newBadge).toHaveCount(0);
-  await page.screenshot({ path: test.info().outputPath("reply-dismissed-card.png") });
+  await page.screenshot({ path: test.info().outputPath("reply-kept-card.png") });
 
   // The acknowledgement is on the record and the crewmate is still at work.
   await expect.poll(() => mockProvider?.heldThreadAnswers() ?? 0, { timeout: 30_000 }).toBe(1);
@@ -674,35 +677,31 @@ test("a reply takes the card off the stack; an acknowledgement does not redraw i
     ["crewmate", THREAD_ACK_TEXT],
   ]);
   await windowCaughtUp(page, cardId);
-  // The acknowledgement redraws nothing and marks nothing new.
-  await expect(page.locator("[data-card-pager]")).toHaveCount(0);
+  // The acknowledgement moves nothing and marks nothing new.
+  await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
+  await expect(pager(page, 2)).toBeVisible();
   await expect(newBadge).toHaveCount(0);
 
-  // A reload keeps the replied-under card off the stack.
+  // A reload keeps the replied-under card on the stack, in its place.
   await page.reload();
   await page.waitForLoadState("domcontentloaded");
   await expect(page.getByRole("textbox", { name: "Task prompt" })).toBeVisible({ timeout: 20_000 });
   await windowCaughtUp(page, cardId);
-  await expect(page.locator("[data-card-pager]")).toHaveCount(0);
-  await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible();
-  await expect(newBadge).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "Next card" })).toHaveCount(0);
+  await expect(pager(page, 2)).toBeVisible();
+  await showCard(page, THREAD_CARD_TITLE);
+  await expect(shownCard(page, THREAD_CARD_TITLE)).toBeVisible();
 
   // The work lands - a revision, then the report - and the crewmate's turn
-  // end after it is what redraws it with the answer (INF-926): marked new in
-  // its original place, never over the card on screen.
+  // end after it is what redraws it with the answer (INF-926), in place,
+  // beside its thread.
   mockProvider?.releaseThreadAnswer();
-  await expect(newBadge).toHaveText("1 new", { timeout: 30_000 });
-  await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible();
-  await page.screenshot({ path: test.info().outputPath("answer-marked-new.png") });
-  await page.getByRole("button", { name: "Next card" }).click();
-  await expect(pagerAt(page, 2, 2)).toBeVisible();
-  await expect(shownCard(page, THREAD_ACK_REVISED_TITLE)).toBeVisible();
+  await expect(shownCard(page, THREAD_ACK_REVISED_TITLE)).toBeVisible({ timeout: 30_000 });
   await expect(shownCard(page, THREAD_CARD_TITLE)).toHaveCount(0);
-  const thread = shownEntry(page).locator("[data-card-thread]");
+  await expect(pager(page, 2)).toBeVisible();
   await expect(thread.getByText(THREAD_ACK_TEXT)).toBeVisible();
   await expect(thread.getByText(`revised: ${THREAD_ACK_REVISED_TITLE}`)).toBeVisible();
   await expect(newBadge).toHaveCount(0);
+  await page.screenshot({ path: test.info().outputPath("answer-in-place.png") });
   await closeOpenCards(page);
 });
 

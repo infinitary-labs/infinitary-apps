@@ -1,4 +1,10 @@
-import { anythingElseOf, type Card, type CardAnswer, isPreviewBody } from "@shared/cards";
+import {
+  anythingElseOf,
+  type Card,
+  type CardAnswer,
+  type CardMessage,
+  isPreviewBody,
+} from "@shared/cards";
 import type { FrameAnswers } from "@shared/plugins/bridge";
 
 /** Before the first send, retain the bridge's authored-proposal semantics.
@@ -33,4 +39,13 @@ export function unsentAnswers(
 export function unsentComment(words: string | undefined, sent: CardAnswer[] | undefined): boolean {
   const written = words?.trim() ?? "";
   return written !== "" && written !== anythingElseOf(sent);
+}
+
+/**
+ * Whether the captain's reply still waits on its answer (INF-770): his line
+ * is the newest on the card's thread, so a close leaves the answer to the
+ * record instead of the card.
+ */
+export function replyUnanswered(messages: readonly CardMessage[] | undefined): boolean {
+  return messages?.at(-1)?.who === "captain";
 }

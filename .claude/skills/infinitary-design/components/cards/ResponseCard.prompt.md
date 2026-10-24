@@ -56,7 +56,11 @@ When the captain closes with any unsent picked answer, the × asks one question 
 The popover is 296px of `--bg-2` with a `--line-2` hairline, `--radius-m`, `--shadow-2` and `--space-3` padding, and grows from the × like every popover: "You picked 2 answers.
 Closing will discard them."
 (`--text-sm`, `--fg-2`; a preview counts settings) above small `secondary` "Keep answering" and primary "Discard and close" on the right.
-Escape, a click anywhere else or the × again keeps the card; a close from command search focuses Keep answering; nothing else asks.
+Escape, a click anywhere else or the × again keeps the card.
+While the captain's reply is the newest line on the card's thread, the same popover asks (INF-770): "Crewmate 7 has not answered your reply yet.
+Closed, its answer stays on INF-770's record." above small primary "Put aside instead", the default, and `secondary` "Close anyway" on its right; a card about no task says "stays readable in Tasks", and the first mate's card says "Your first mate".
+When unsent picks are there too it stays one popover: the picks' words come first, the reply's sentence follows, and the choices are Keep answering and Discard and close.
+A close from command search focuses the first choice; nothing else asks.
 The frame stylesheet dresses a plain `fieldset` as a hairline `--line-1` box at `--radius-m` with its `legend` in `--fg-1` weight 500, each radio or checkbox label a row with `--space-2` between control and text (`accent-color: --accent`, a checked row's text `--fg-1`), and a `textarea` full width under its label.
 Every ready card body is semantic HTML in a sandboxed iframe.
 The host owns the chip, title, size control, close, pager, and footer actions.
@@ -273,10 +277,15 @@ In a short card it uses compact spacing and a focusable list scroller, leaving t
 After successful merging, each independent obligation gets a decision card with inert instructions, a specific confirmation and Not now.
 Deferred obligations remain under Waiting on you in Tasks with Show the card; manual results read Confirmed by you and observed results Checked by your first mate.
 
-## Minimize
+## Put aside
 
-Every live decision, note and attention card has a neutral Lucide minus before Maximize, labeled Minimize card, with the installed key hint (default ⇧⌘M).
+Every live decision, note and attention card has a neutral Lucide minus before Maximize, named Put aside, whose label on rest says the comeback: "Put aside · back when it changes", with the installed key hint (default ⇧⌘M).
 The same control stays while maximized or threaded.
 It changes saved stack visibility, never closes a card, asks the close question or changes work, gates or notifications.
-Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Minimize.
+Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Put aside.
+
+## Close
+
+The card's × is named Close; its label on rest says where the closed card stays: "Close · stays on INF-770's record", the key of the task the card is about, or "Close · stays readable in Tasks" for a card about none (INF-770).
+Its question is above, under picked answers.
 The body primitive accepts an owner-supplied bodyRef for keeping an in-session reading place.

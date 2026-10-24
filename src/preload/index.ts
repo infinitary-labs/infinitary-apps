@@ -263,9 +263,9 @@ const api: FirstmateApi = {
     past: (cardId) => invoke("inf:cards:past", cardId),
     showPast: (cardId) => invoke("inf:cards:show-past", cardId),
     openPage: (cardId) => invoke("inf:cards:open-page", cardId),
-    reply: (cardId, payload, submission, leavesStack) =>
+    reply: (cardId, payload, submission) =>
       readableRequest("inf:cards:reply", () =>
-        invoke("inf:cards:reply", cardId, payload, submission, leavesStack),
+        invoke("inf:cards:reply", cardId, payload, submission),
       ),
     onThread: (listener) => subscribe("inf:cards:thread", listener),
   },

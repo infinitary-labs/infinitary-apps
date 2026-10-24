@@ -16,7 +16,6 @@ import { MAIN_FILES_KEY, useIntakeStore } from "../attachments/intake";
 import { takeCharacterEmote, takeCharacterNotice } from "../character/emoteSignal";
 import { voiceController } from "../voice/voiceController";
 import {
-  departureIndex,
   derivePhase,
   dismissalSuccessor,
   isHeldEntry,
@@ -250,7 +249,7 @@ describe("stack visibility (WI-18)", () => {
       state().setReplyDraft("a", "why?");
       const focus = state().focusRequest;
       await state().sendReply("a");
-      expect(reply).toHaveBeenCalledWith("a", "why?", gesture(), true);
+      expect(reply).toHaveBeenCalledWith("a", "why?", gesture());
       // Refused: the core never removed the card, so nothing moved.
       expect(shownId()).toBe("a");
       expect(state().cards.map((card) => card.id)).toEqual(["a", "b"]);
@@ -304,7 +303,6 @@ describe("stack visibility (WI-18)", () => {
           files: Array.from({ length: 4 }, () => ({ text: "log".repeat(3000) })),
         }),
         gesture(),
-        false,
       );
       expect(state().replyPastes.a).toHaveLength(4);
       expect(state().replyDrafts.a).toHaveLength(CARD_REPLY_MAX_CHARS);
@@ -419,7 +417,6 @@ describe("stack visibility (WI-18)", () => {
         "a",
         { text: "build it as adjusted", answers, images: [] },
         gesture(),
-        false,
       );
     } finally {
       vi.unstubAllGlobals();
@@ -446,7 +443,6 @@ describe("stack visibility (WI-18)", () => {
         "a",
         "the second option is wrong\n\nkeep the first",
         gesture(),
-        false,
       );
       expect(state().replyDrafts.a).toBeUndefined();
     } finally {
@@ -454,8 +450,9 @@ describe("stack visibility (WI-18)", () => {
     }
   });
 
-  it("keeps a continuity card shown during the reply send and its core pushes", async () => {
-    const a = ready("a", { actions: DECIDE, holdsPlace: true });
+  // INF-770 direction A: a reply never moves a card, whatever waits behind it.
+  it("keeps the shown card up through a reply send and its core pushes, with others behind", async () => {
+    const a = ready("a", { actions: DECIDE });
     const b = ready("b", { actions: DECIDE });
     state().applyCards([a, b]);
     const reply = vi.fn(async () => ({ cardId: "a", messages: [] }));
@@ -467,6 +464,7 @@ describe("stack visibility (WI-18)", () => {
       expect(shownId()).toBe("a");
       state().applyCards([{ ...a, awaiting: "answer", sentBackAt: 10 }, b]);
       expect(shownId()).toBe("a");
+      expect(visibleStack(state().cards)).toHaveLength(2);
       state().applyCards([a, b]);
       expect(shownId()).toBe("a");
     } finally {
@@ -496,14 +494,14 @@ describe("stack visibility (WI-18)", () => {
     expect(shownId()).toBe("b");
   });
 
-  it("dismisses the shown card when it is replied under, and the first card comes up", () => {
+  it("brings the first card up when the shown card goes off the stage while it waits on its author", () => {
     const a = ready("a", { actions: DECIDE });
     const b = ready("b", { actions: DECIDE });
     const c = ready("c", { actions: DECIDE });
     state().applyCards([a, b, c]);
     takeCharacterNotice();
     const idsOf = () => visibleCards(state().cards).map((card) => card.id);
-    // The core's push after a reply under "a": it is off the stack.
+    // A card an older version sent away on a reply: it is off the stack.
     state().applyCards([b, c, { ...a, awaiting: "answer" }]);
     expect(idsOf()).toEqual(["b", "c"]);
     expect(shownId()).toBe("b");
@@ -595,13 +593,11 @@ describe("stack visibility (WI-18)", () => {
     // An unread card wins wherever it is.
     expect(dismissalSuccessor(stack, 0, ["c"])?.id).toBe("c");
     expect(dismissalSuccessor([a], 0, [])).toBeUndefined();
-    // A record comes up only when no card is left; a lone card replied
-    // under stays where it is.
+    // A record comes up only when no card is left.
     state().applyCards([a]);
     state().openRecord("t1");
     const withRecord = visibleStack(state().cards, [], state().records);
     expect(dismissalSuccessor(withRecord, 1, [])?.recordTaskId).toBe("t1");
-    expect(withRecord[departureIndex(withRecord, [], "a")]?.id).toBe("a");
   });
 
   for (const held of ["record", "past"] as const) {
@@ -666,7 +662,9 @@ describe("stack visibility (WI-18)", () => {
     expect(shownId()).toBe("b");
   });
 
-  it("moves on from a card a reply dismisses before its thread can open, by the same rule", async () => {
+  // INF-770 direction A: the reply opens the thread beside the card and
+  // moves nothing; the pager and what is unread stay as they were.
+  it("keeps a paged-to card shown with its thread when it is replied under", async () => {
     const a = ready("a", { actions: DECIDE, author: "crewmate", taskId: "t1" });
     const b = ready("b", { actions: DECIDE, author: "crewmate", taskId: "t2" });
     const c = ready("c", { actions: DECIDE, author: "crewmate", taskId: "t3" });
@@ -674,29 +672,19 @@ describe("stack visibility (WI-18)", () => {
     state().focusCard("b");
     state().applyCards([a, b, c]);
     expect(state().unreadCardIds).toEqual(["c"]);
-    let leaving: unknown;
-    const reply = vi.fn(async () => {
-      // The thread's own push lands before the reply returns: the card
-      // keeps the layout it had (no messages yet) while it is leaving.
-      state().applyThread("b", [{ id: 1, cardId: "b", who: "captain", text: "why", at: 1 }]);
-      leaving = state().replyLeaving;
-      expect(shownId()).toBe("b");
-      return {
-        cardId: "b",
-        messages: [{ id: 1, cardId: "b", who: "captain" as const, text: "why", at: 1 }],
-      };
-    });
+    const sent = [{ id: 1, cardId: "b", who: "captain" as const, text: "why", at: 1 }];
+    const reply = vi.fn(async () => ({ cardId: "b", messages: sent }));
     vi.stubGlobal("window", { infinitary: { cards: { reply }, firstRun: undefined } });
     try {
       state().setReplyDraft("b", "why");
       await state().sendReply("b");
-      expect(leaving).toEqual({ cardId: "b", messages: 0 });
-      // Taken: the first unread card is up before the core's own push.
-      expect(shownId()).toBe("c");
-      expect(state().replyLeaving).toBeNull();
-      expect(state().unreadCardIds).toEqual([]);
-      // That push changes nothing more.
-      state().applyCards([a, c, { ...b, awaiting: "answer" }]);
+      expect(shownId()).toBe("b");
+      expect(state().threads.b).toEqual(sent);
+      expect(state().unreadCardIds).toEqual(["c"]);
+      state().applyCards([a, { ...b, awaiting: "answer", sentBackAt: 10 }, c]);
+      expect(shownId()).toBe("b");
+      expect(visibleStack(state().cards)).toHaveLength(3);
+      state().nextCard();
       expect(shownId()).toBe("c");
     } finally {
       vi.unstubAllGlobals();

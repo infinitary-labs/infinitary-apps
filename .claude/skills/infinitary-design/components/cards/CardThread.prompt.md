@@ -25,8 +25,8 @@ Right ⌥ does not record from the reply row.
 
 **The first sent message opens the thread beside the card**, and the reply row moves into it, so the card returns to exactly its original footprint and never grows again.
 It is the same field and the same card body, moved, never rebuilt: what the captain did in the body (a preview's state, an open disclosure, scrolling) is still there beside the thread.
-A reply also takes an ordinary card off the stack until the answer (`CardStack.prompt.md`): with other cards the next card comes up at once, by the same rule as a close, and the departing card never opens its thread on the way out; a lone card stays beside its thread.
-A card whose author declared `holds_place` stays shown beside its thread even with other cards waiting.
+A reply never moves the card (INF-770): it stays shown beside its thread whatever waits behind it, the pager and the arrows do not change, and the waiting line says who answers next and the way on.
+Put aside and Close are the only ways a card leaves (`ResponseCard.prompt.md`, "Put aside" and "Close").
 
 The pair is ONE container, not two (the captain's tweak: "the card and chat should feel like just one single container with a border in between, not two disconnected containers").
 One opaque `--bg-2` (`--acrylic-bg`) with no blur (`--acrylic-blur`), one `--line-1` (`--acrylic-border`), one `--radius-l`, one `--acrylic-shadow`, and a single `--line-2` hairline dividing the two columns.

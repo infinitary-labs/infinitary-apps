@@ -86,6 +86,8 @@ export type ResponseCardProps = {
   onClose?: () => void;
   /** The close button itself, for a popover that hangs from it. */
   closeRef?: React.Ref<HTMLButtonElement>;
+  /** What the close says on rest beyond its name: where the closed card stays (INF-770). */
+  closeRest?: string | undefined;
   /**
    * Host chrome anchored under the close: the question a close asks first
    * (design skill `components/cards/ResponseCard.prompt.md`). It is never
@@ -214,6 +216,7 @@ export function ResponseCard({
   aside,
   onClose,
   closeRef,
+  closeRest,
   closeAsk,
   closeAsking,
   children,
@@ -356,6 +359,7 @@ export function ResponseCard({
                   <IconButton
                     ref={closeRef}
                     label="Close"
+                    restWords={closeRest}
                     onClick={onClose}
                     aria-haspopup={closeAsk === undefined ? undefined : "dialog"}
                     aria-expanded={closeAsk === undefined ? undefined : closeAsking === true}

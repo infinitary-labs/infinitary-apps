@@ -2,5 +2,10 @@
 export const MAXIMIZE_LABEL = "Maximize card";
 export const RESTORE_LABEL = "Restore card";
 
-/** The independent neutral minus that takes a live message off the stack. */
-export const MINIMIZE_LABEL = "Minimize card";
+/**
+ * The independent neutral minus that takes a live message off the stack
+ * until it changes (INF-770): its name, and the words it shows on rest,
+ * which say the comeback.
+ */
+export const PUT_ASIDE_LABEL = "Put aside";
+export const PUT_ASIDE_REST = "Put aside · back when it changes";

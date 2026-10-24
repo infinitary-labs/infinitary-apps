@@ -33,16 +33,49 @@ class Node {
     if (force) this.attrs[name] = "";
     else delete this.attrs[name];
   }
+  parentNode: Node | null = null;
+  get childNodes() {
+    return this.children;
+  }
+  get firstChild(): Node | string | null {
+    return this.children[0] ?? null;
+  }
+  get firstElementChild(): Node | null {
+    return this.children.find((child): child is Node => child instanceof Node) ?? null;
+  }
+  get lastElementChild(): Node | null {
+    return this.children.findLast((child): child is Node => child instanceof Node) ?? null;
+  }
+  get nextSibling(): Node | string | null {
+    const siblings = this.parentNode?.children ?? [];
+    return siblings[siblings.indexOf(this) + 1] ?? null;
+  }
+  insertBefore(node: Node | string, before: Node | string | null) {
+    if (node instanceof Node) {
+      node.parentNode?.removeChild(node);
+      node.parentNode = this;
+    }
+    this.children.splice(
+      before === null ? this.children.length : this.children.indexOf(before),
+      0,
+      node,
+    );
+  }
+  removeChild(node: Node | string) {
+    this.children.splice(this.children.indexOf(node), 1);
+    if (node instanceof Node) node.parentNode = null;
+  }
   append(...nodes: (Node | string)[]) {
-    this.children.push(...nodes);
+    for (const node of nodes) this.insertBefore(node, null);
   }
   appendChild(child: Node) {
-    this.children.push(child);
+    this.append(child);
     return child;
   }
   replaceChildren(...nodes: (Node | string)[]) {
     this.#text = "";
-    this.children = nodes;
+    for (const child of [...this.children]) this.removeChild(child);
+    this.append(...nodes);
   }
   cloneNode() {
     return new Node();
@@ -461,7 +494,8 @@ describe("compact task record frame", () => {
     line.listeners.toggle?.();
     frame.push({ ...detail, updatedAt: now + 1 });
     const again = frame.node("timeline").children[0] as Node;
-    expect(again).not.toBe(line);
+    // INF-1140: preserve the node too, so an in-flight pointer press can finish.
+    expect(again).toBe(line);
     expect(again.open).toBe(true);
     again.open = false;
     again.listeners.toggle?.();
@@ -487,7 +521,8 @@ describe("compact task record frame", () => {
     opened.open = true;
     frame.push({ ...detail, updatedAt: now + 1 });
     opened.listeners.toggle?.();
-    expect(line()).not.toBe(opened);
+    // INF-1140 strengthens this: the same disclosure survives, not only its open state.
+    expect(line()).toBe(opened);
     expect(line().open).toBe(true);
     const closed = line();
     closed.open = false;
@@ -502,6 +537,64 @@ describe("compact task record frame", () => {
     expect(line().open).toBe(true);
     frame.push({ ...detail, updatedAt: now + 4 });
     expect(line().open).toBe(true);
+    // When the summary itself changes, INF-1138's late-toggle handoff still applies.
+    const replaced = line();
+    frame.push({ ...detail, activityLog: [row("report", "Fixed the search.")] });
+    expect(line()).not.toBe(replaced);
+    expect(line().open).toBe(true);
+    replaced.open = false;
+    replaced.listeners.toggle?.();
+    expect(line().open).toBe(false);
+  });
+
+  // INF-1140: retained summaries must not freeze the content or lose the
+  // minute's age refresh, and a row leaving the tail keeps its open state.
+  it("keeps a summary mounted as its folded content grows and reconciles the tail by event", () => {
+    const frame = mount();
+    const reported = row("report", "Fixed.");
+    const detail = task({
+      events: [event("report", "Fixed. Full evidence.")],
+      activityLog: [reported],
+    });
+    frame.push(detail);
+    const original = frame.node("timeline").children[0] as Node;
+    const summary = original.firstElementChild as Node;
+    const age = summary.firstElementChild as Node;
+    const count = summary.lastElementChild?.firstElementChild as Node;
+    expect(count.hidden).toBe(true);
+    original.open = true;
+    const changed = {
+      ...detail,
+      events: [event("report", "Fixed. Updated evidence.")],
+      activityLog: [{ ...reported, folded: [row("note", "Working copy removed.", now - 60_000)] }],
+    };
+    frame.push(changed);
+    expect(frame.node("timeline").children[0]).toBe(original);
+    expect(original.firstElementChild).toBe(summary);
+    expect(summary.lastElementChild?.firstElementChild).toBe(count);
+    expect(count.hidden).toBe(false);
+    expect(count.textContent).toBe("+1");
+    expect(original.open).toBe(true);
+    expect(wholeOf(original)).toBe("Fixed. Updated evidence.");
+    expect(original.text()).toContain("Working copy removed.");
+    vi.setSystemTime(now + 60_000);
+    frame.push(changed);
+    expect(age.textContent).toBe("3m");
+    vi.setSystemTime(now + 120_000);
+    frame.tick();
+    expect(age.textContent).toBe("4m");
+    // New rows move the same disclosure behind Show earlier, not a stale clone.
+    const later = Array.from({ length: 8 }, (_, i) => row("note", `Check ${i} finished.`, now + i));
+    frame.push({ ...changed, activityLog: [...changed.activityLog, ...later] });
+    expect(frame.node("history").children[0]).toBe(original);
+    expect(original.open).toBe(true);
+    expect(frame.node("timeline").children).toHaveLength(8);
+    frame.push(task());
+    expect(frame.node("history").children).toHaveLength(0);
+    expect(frame.node("timeline").children).toHaveLength(0);
+    frame.push(detail);
+    expect(frame.node("timeline").children[0]).not.toBe(original);
+    expect((frame.node("timeline").children[0] as Node).open).toBe(false);
   });
 
   it("paints an interruption as a danger box in plain words, and leaves a waiting decision to the bar", () => {

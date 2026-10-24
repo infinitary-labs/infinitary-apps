@@ -314,6 +314,15 @@ Now carries its row's span when it reads a row (`taskFactsOf`), so the record li
 `recordActivity.test.ts` holds the spans, `record.frame.test.ts` the frame's links, and `tests/e2e/task-card-links.spec.ts` opens the pull request from the fact strip, from Now by keys and from an Activity line.
 The `tasks` query's rows carry the same change as `change`, its label and its page (`taskChangeOf`), so an agent that names a task's pull request on a card links the page it was given (FI3-1307; `docs/card-authoring.md`, "Pull request numbers").
 
+## Activity updates during a press
+
+The record frame reconciles Activity rows by event id, leaving unchanged nodes mounted rather than detaching them with `replaceChildren`.
+A native pointer press therefore reaches the same summary on release even when a detail or board update arrives between them.
+When folded events, actions or whole text change beneath an unchanged summary, the frame keeps that disclosure, its summary and its count node, and refreshes the body and count in place.
+The retained rows keep their age registrations, so relative times and their accessible names still refresh on pushes and minute ticks.
+Rows that change their summary or disclosure shape are rebuilt with the existing open-state and late-toggle handoff; removed rows leave the rendering cache.
+This is Activity's renderer behavior only; Cards and Knowledge used still render through their own owners.
+
 ## A crewmate's actions
 
 Activity also holds what the task's crewmate did: each call it made to a tool other than the app's own, read from the sessions the app keeps for the task (FI3-1189's rule 3, the captain's "Folded under the row they led to").

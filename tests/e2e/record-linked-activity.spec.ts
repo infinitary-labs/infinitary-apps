@@ -178,18 +178,31 @@ test("a task's record lists its follow-up's drop for a replacement and that repl
     const key = linkedTaskKeys(merged.locator("[data-record-from-key]"));
     await focusOn(key);
     await untilFocused(key);
-    // Work goes on while the captain reads: a push draws the line anew, and
-    // its key keeps the keyboard (FI3-1279). The follow-up's view stamp is
-    // a push the journey sends without moving the keyboard.
+    // Work goes on while the captain reads: a push keeps this unchanged
+    // line mounted (INF-1140), and its key keeps the keyboard (FI3-1279).
+    // Observe the count's repaint separately from the key's identity: a
+    // retained key alone cannot prove that the update reached the record.
+    const painted = await body.locator("[data-record-activity-count]").evaluateHandle((count) => {
+      const witness = { changed: false };
+      const observer = new MutationObserver(() => {
+        witness.changed = true;
+        observer.disconnect();
+      });
+      observer.observe(count, { childList: true });
+      return witness;
+    });
+    // The follow-up's view stamp sends a push without moving the keyboard.
     const drawn = await key.elementHandle();
     expect(
       await page.evaluate((taskId) => window.infinitary.tasks.opened(taskId), seed.followup.id),
     ).toEqual({ opened: true });
     await expect
-      .poll(() => drawn.evaluate((node) => node.isConnected), {
-        message: "the push draws the line anew",
+      .poll(() => painted.evaluate((witness) => witness.changed), {
+        message: "the push reaches the record's Activity count",
       })
-      .toBe(false);
+      .toBe(true);
+    expect(await drawn.evaluate((node) => node.isConnected)).toBe(true);
+    await painted.dispose();
     await drawn.dispose();
     await untilFocused(key);
     await page.keyboard.press("Enter");

@@ -15,7 +15,8 @@
  * task wrote (docs/task-record.md, "Whom an event concerns") - is plain
  * text the bridge links, as in a card's body (FI3-1271). Native
  * disclosures stay mounted across pushes, preserving open state and focus;
- * an Activity line that opens is rebuilt with each push and opens as the
+ * Activity keeps unchanged lines and disclosure summaries mounted so a
+ * pointer press survives an update (INF-1140). A changed line opens as the
  * reader left it, read from the line itself, never its toggle event
  * (INF-1138), and a control a push rebuilds keeps the keyboard's focus
  * (FI3-1279). Times read relative,
@@ -109,7 +110,7 @@
   let ages = [];
   /**
    * Each Activity line that opens, by its event, as the page shows it now.
-   * A push draws every line anew, open where the line it replaces is open:
+   * A push keeps unchanged lines; a replacement opens where its old line is open:
    * a click opens a line at once but fires its toggle event a task later,
    * so a push between the two reads the line, never the event (INF-1138).
    * @type {Map<number, HTMLDetailsElement>}
@@ -123,6 +124,14 @@
    * @type {WeakMap<HTMLDetailsElement, boolean>}
    */
   const leftOpen = new WeakMap();
+  /**
+   * Rendered Activity rows, keyed by event, with their age registrations.
+   * Keeping a row in the page (not merely reusing it in replaceChildren)
+   * lets Chromium deliver a release to the node that received the press.
+   * @typedef {{ node: HTMLElement, key: string, summaryKey: string, ages: typeof ages, disclosure?: HTMLDetailsElement }} ActivityView
+   * @type {Map<number, ActivityView>}
+   */
+  const activityViews = new Map();
   let comparisonOpen = false;
 
   /**
@@ -651,67 +660,131 @@
    */
   function activityRows(rows, wholeText, drawn) {
     return rows.map((row) => {
-      if (row.from) return linkedLine(row, row.from);
       const whole = wholeText.get(row.id) ?? "";
-      /** @type {{ at: number, text: string, kind: string, after: boolean, change?: Row["change"] }[]} */
-      const folded = [
-        ...(row.folded ?? []).map((event) => ({ ...event, after: event.id > row.id })),
-        ...(row.actions ?? []).map((action) => ({
-          ...action,
-          kind: "action",
-          after: action.at > row.at,
-        })),
-      ].sort((a, b) => a.at - b.at);
-      const says = Boolean(whole.trim()) && whole.trim() !== row.text.trim();
-      if (!says && folded.length === 0) {
-        const node = line("event", row.at, row.text, row.change);
-        node.setAttribute("data-record-event", row.kind);
-        return node;
+      const key = JSON.stringify([row, whole]);
+      const summaryKey = JSON.stringify([row.at, row.kind, row.text, row.change, row.from]);
+      const prior = activityViews.get(row.id);
+      if (prior?.key === key) {
+        ages.push(...prior.ages);
+        if (prior.disclosure) lines.set(row.id, prior.disclosure);
+        return prior.node;
       }
-      const node = /** @type {HTMLDetailsElement} */ (document.createElement("details"));
-      node.className = "event";
-      node.setAttribute("data-record-event", row.kind);
-      const summary = document.createElement("summary");
-      const end = span("end", "");
-      if (folded.length > 0) {
-        const count = span("count", `+${folded.length}`);
-        count.setAttribute("data-record-folded-count", "");
-        count.setAttribute("aria-label", `${folded.length} more`);
-        end.append(count);
+      const ageStart = ages.length;
+      let node = activityRow(row, whole, drawn);
+      let disclosure = lines.get(row.id);
+      let rowAges = ages.slice(ageStart);
+      if (prior?.disclosure && disclosure && prior.summaryKey === summaryKey) {
+        // Folded events/actions and whole text can grow while the summary is
+        // pressed. Keep the summary and all its hit targets, count included;
+        // update only the body and the count's words, never the pressed node.
+        const summary = must(prior.node.firstElementChild);
+        const count = /** @type {HTMLElement} */ (
+          must(summary.lastElementChild?.firstElementChild ?? null)
+        );
+        const nextCount = /** @type {HTMLElement} */ (
+          must(node.firstElementChild?.lastElementChild?.firstElementChild ?? null)
+        );
+        count.textContent = nextCount.textContent;
+        count.hidden = nextCount.hidden;
+        count.setAttribute("aria-label", nextCount.getAttribute("aria-label") ?? "");
+        while (summary.nextSibling) prior.node.removeChild(summary.nextSibling);
+        prior.node.append(...[...node.childNodes].slice(1));
+        node = prior.disclosure;
+        disclosure = prior.disclosure;
+        lines.set(row.id, disclosure);
+        // The retained summary's age owns its original label listeners.
+        rowAges = [...prior.ages.slice(0, 1), ...rowAges.slice(1)];
+        ages.splice(ageStart, ages.length - ageStart, ...rowAges);
       }
-      end.append(caretEl.cloneNode(true));
-      summary.append(
-        aged(span("mono", ""), row.at, short, summary),
-        words(row.text, row.change),
-        end,
-      );
-      /** @param {typeof folded} lines */
-      const foldedLines = (lines) =>
-        lines.map((event) => {
-          const node = line("event folded", event.at, event.text, event.change);
-          node.setAttribute("data-record-folded", event.kind);
-          return node;
-        });
-      node.append(summary, ...foldedLines(folded.filter((event) => !event.after)));
-      if (says) {
-        const text = document.createElement("p");
-        text.className = "whole";
-        text.setAttribute("data-record-whole", "");
-        text.textContent = whole;
-        node.append(text);
-      }
-      node.append(...foldedLines(folded.filter((event) => event.after)));
-      node.open = drawn.get(row.id)?.open ?? false;
-      lines.set(row.id, node);
-      node.addEventListener("toggle", () => {
-        const shown = lines.get(row.id);
-        const left = leftOpen.get(node);
-        if (!shown || shown === node || left === undefined || left === node.open) return;
-        leftOpen.set(node, node.open);
-        shown.open = node.open;
-      });
+      activityViews.set(row.id, { node, key, summaryKey, ages: rowAges, disclosure });
       return node;
     });
+  }
+
+  /** @param {Row} row @param {string} whole @param {Map<number, HTMLDetailsElement>} drawn */
+  function activityRow(row, whole, drawn) {
+    if (row.from) return linkedLine(row, row.from);
+    /** @type {{ at: number, text: string, kind: string, after: boolean, change?: Row["change"] }[]} */
+    const folded = [
+      ...(row.folded ?? []).map((event) => ({ ...event, after: event.id > row.id })),
+      ...(row.actions ?? []).map((action) => ({
+        ...action,
+        kind: "action",
+        after: action.at > row.at,
+      })),
+    ].sort((a, b) => a.at - b.at);
+    const says = Boolean(whole.trim()) && whole.trim() !== row.text.trim();
+    if (!says && folded.length === 0) {
+      const node = line("event", row.at, row.text, row.change);
+      node.setAttribute("data-record-event", row.kind);
+      return node;
+    }
+    const node = /** @type {HTMLDetailsElement} */ (document.createElement("details"));
+    node.className = "event";
+    node.setAttribute("data-record-event", row.kind);
+    const summary = document.createElement("summary");
+    const end = span("end", "");
+    const count = span("count", `+${folded.length}`);
+    count.setAttribute("data-record-folded-count", "");
+    count.setAttribute("aria-label", `${folded.length} more`);
+    count.hidden = folded.length === 0;
+    end.append(count);
+    end.append(caretEl.cloneNode(true));
+    summary.append(
+      aged(span("mono", ""), row.at, short, summary),
+      words(row.text, row.change),
+      end,
+    );
+    /** @param {typeof folded} lines */
+    const foldedLines = (lines) =>
+      lines.map((event) => {
+        const node = line("event folded", event.at, event.text, event.change);
+        node.setAttribute("data-record-folded", event.kind);
+        return node;
+      });
+    node.append(summary, ...foldedLines(folded.filter((event) => !event.after)));
+    if (says) {
+      const text = document.createElement("p");
+      text.className = "whole";
+      text.setAttribute("data-record-whole", "");
+      text.textContent = whole;
+      node.append(text);
+    }
+    node.append(...foldedLines(folded.filter((event) => event.after)));
+    node.open = drawn.get(row.id)?.open ?? false;
+    lines.set(row.id, node);
+    node.addEventListener("toggle", () => {
+      const shown = lines.get(row.id);
+      const left = leftOpen.get(node);
+      if (!shown || shown === node || left === undefined || left === node.open) return;
+      leftOpen.set(node, node.open);
+      shown.open = node.open;
+    });
+    return node;
+  }
+
+  /**
+   * Reconcile in order without detaching rows already in the right place.
+   * @param {Element} host
+   * @param {HTMLElement[]} rows
+   */
+  function placeActivity(host, rows) {
+    // Remove obsolete siblings first: replacing an earlier row must not
+    // move (and briefly detach) the unchanged row pressed after it.
+    const keep = new Set(rows);
+    for (const child of [...host.children]) {
+      if (!keep.has(/** @type {HTMLElement} */ (child))) host.removeChild(child);
+    }
+    let cursor = host.firstChild;
+    for (const node of rows) {
+      if (node !== cursor) host.insertBefore(node, cursor);
+      cursor = node.nextSibling;
+    }
+    while (cursor) {
+      const next = cursor.nextSibling;
+      host.removeChild(cursor);
+      cursor = next;
+    }
   }
 
   /**
@@ -1085,8 +1158,11 @@
     const drawn = lines;
     lines = new Map();
     for (const node of drawn.values()) leftOpen.set(node, node.open);
-    historyEl.replaceChildren(...activityRows(rows.slice(0, earlier), wholeText, drawn));
-    timelineEl.replaceChildren(...activityRows(tail, wholeText, drawn));
+    placeActivity(historyEl, activityRows(rows.slice(0, earlier), wholeText, drawn));
+    placeActivity(timelineEl, activityRows(tail, wholeText, drawn));
+    const ids = new Set(rows.map((row) => row.id));
+    for (const id of activityViews.keys()) if (!ids.has(id)) activityViews.delete(id);
+    paintAges();
     section("timeline", rows.length > 0);
 
     paintFacts(current);

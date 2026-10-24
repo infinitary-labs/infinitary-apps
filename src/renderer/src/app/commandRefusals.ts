@@ -22,6 +22,7 @@ import { changesOff, changesOffWords, isView } from "../devices/viewWords";
 import {
   isHeldEntry,
   mainMessageRefusal,
+  offStack,
   type ShellState,
   type StackEntry,
   shownCard,
@@ -48,6 +49,7 @@ export type RefusalState = Pick<
   | "cards"
   | "cardIndex"
   | "collapsedCardIds"
+  | "heldBackCardIds"
   | "records"
   | "threads"
   | "releaseNotes"
@@ -78,7 +80,7 @@ const RECORDING = "A recording is running";
 
 /** The entry the store shows on the stage, whatever is drawn. */
 export function shownEntry(s: RefusalState): StackEntry | undefined {
-  return shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
+  return shownCard(s.cards, s.cardIndex, offStack(s), s.records);
 }
 
 function cardRefusal(s: RefusalState): string | null {
@@ -136,7 +138,7 @@ function usageRefusalFor(tab: string): (s: RefusalState) => string | null {
 function pageRefusal(s: RefusalState, dir: 1 | -1): string | null {
   const refused = cardRefusal(s);
   if (refused) return refused;
-  const count = visibleStack(s.cards, s.collapsedCardIds, s.records).length;
+  const count = visibleStack(s.cards, offStack(s), s.records).length;
   const index = Math.min(Math.max(0, s.cardIndex), count - 1);
   if (dir === -1 && index <= 0) return "This is the first card";
   if (dir === 1 && index >= count - 1) return "This is the last card";

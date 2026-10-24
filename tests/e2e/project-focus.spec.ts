@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { ensureRepoProject } from "../../src/core/storage/projectStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
@@ -10,7 +11,8 @@ import { elsewhereWords } from "../../src/shared/projectFocus";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { seedHostedOrigins } from "./projectSeed";
-import { expandDock, nowFrame } from "./rails";
+import { activityFrame, expandDock, nowFrame } from "./rails";
+import { pager, showCard } from "./stack";
 import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -22,7 +24,9 @@ import { pressKey, pressWindowKey, runFromSearch } from "./windowKeys";
  * row, Esc folds it back, the Tasks panel lists only the focused project's
  * tasks while the pill's tail says what waits elsewhere, other projects'
  * crew dim on the stage, the focus survives a restart, and Show all
- * projects lets it go.
+ * projects lets it go. Under focus the card stack holds other projects'
+ * cards back and Activity hides their lines (INF-1098, the captain's
+ * answers to INF-1091's questions 2 and 3).
  */
 
 const PROJECTS = [
@@ -108,6 +112,45 @@ function seed(userDataDir: string): void {
     tasks.deferCaptainAction(row.id);
   }
   db.close();
+}
+
+/** A decision on a task in each project, and one about no task, raised before the window opens. */
+const CARDS = [
+  { id: "card-inf", taskId: "inf-2", title: "Which test owns the flaky retry?" },
+  { id: "card-web", taskId: "web-1", title: "Merge the new pricing page?" },
+  { id: "card-lab", taskId: "lab-1", title: "Which ledger row is right?" },
+  { id: "card-mate", title: "Read the release notes before the alpha?" },
+] as const;
+
+function seedCards(userDataDir: string): void {
+  const db = openDatabase(userDataDir);
+  const cards = new CardStore(db);
+  const now = Date.now();
+  CARDS.forEach((card, order) => {
+    cards.upsert({
+      ...card,
+      author: "taskId" in card ? "crewmate" : "firstmate",
+      priority: 50,
+      meta: "taskId" in card ? "crewmate" : "Firstmate",
+      body: `<p>${card.title}</p>`,
+      actions: [
+        { id: "yes", label: "Yes", default: true },
+        { id: "no", label: "Not yet" },
+      ],
+      status: "ready",
+      createdAt: now + order,
+    });
+  });
+  db.close();
+}
+
+/** The projects whose task keys Activity's lines name, each once, by key prefix. */
+function feedProjects(page: Page): Promise<(string | undefined)[]> {
+  return activityFrame(page)
+    .locator("[data-feed-row] [data-feed-key]")
+    .evaluateAll((keys) =>
+      [...new Set(keys.map((key) => key.getAttribute("data-feed-key")?.split("-")[0]))].sort(),
+    );
 }
 
 /** The keys of the rows the Tasks panel paints, in its order. */
@@ -206,6 +249,51 @@ test("the top bar's pill focuses the window on one project by keys, keeps it acr
       await expect(pill(page)).not.toHaveAttribute("data-pf-focused", "");
       await expect.poll(() => listedKeys(page)).toEqual(everyKey);
       await expect.poll(() => crewLight(page, "lab-1")).toBeGreaterThan(0.6);
+    });
+  } finally {
+    await launched.close();
+  }
+});
+
+test("under focus the stack holds other projects' cards back and Activity hides their lines, and letting focus go brings both back", async () => {
+  test.setTimeout(180_000);
+  const userDataDir = scratchDir("infinitary-project-focus-hold-");
+  seed(userDataDir);
+  seedCards(userDataDir);
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { app, page } = launched;
+    const openCards = () =>
+      page.evaluate(async () => (await window.infinitary.cards.list()).map((card) => card.id));
+    await expect
+      .poll(async () => (await page.evaluate(() => window.infinitary.tasks.board())).tasks.length)
+      .toBe(WORK.length + WAITS_ON.length);
+    await expect(pager(page, CARDS.length)).toBeVisible();
+    await expandDock(page, "activity");
+    await expect.poll(() => feedProjects(page)).toEqual(["INF", "LAB", "WEB"]);
+
+    await test.step("focusing on infinitary holds the other projects' cards back and hides their lines", async () => {
+      await pressWindowKey(app, "p", ["meta", "shift"]);
+      await expect(option(page, "all")).toBeFocused();
+      await page.keyboard.press("ArrowRight");
+      await expect(option(page, "INF")).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(row(page)).toHaveCount(0);
+      // infinitary's card and the first mate's own stay; nothing was closed.
+      await expect(pager(page, 2)).toBeVisible();
+      await showCard(page, CARDS[0].title);
+      await showCard(page, CARDS[3].title);
+      expect((await openCards()).sort()).toEqual(CARDS.map((card) => card.id).sort());
+      await expect.poll(() => feedProjects(page)).toEqual(["INF"]);
+    });
+
+    await test.step("Show all projects brings the held cards and the hidden lines back", async () => {
+      await runFromSearch(app, page, "project-focus.clear");
+      await expect(pill(page)).toContainText("All projects");
+      await expect(pager(page, CARDS.length)).toBeVisible();
+      await showCard(page, CARDS[1].title);
+      await showCard(page, CARDS[2].title);
+      await expect.poll(() => feedProjects(page)).toEqual(["INF", "LAB", "WEB"]);
     });
   } finally {
     await launched.close();

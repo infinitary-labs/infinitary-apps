@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { heldFocus, pillShown, projectPillsOf, waitingElsewhere } from "./projectFocus";
+import { heldFocus, holdsBack, pillShown, projectPillsOf, waitingElsewhere } from "./projectFocus";
 import type { ProjectView, TaskView } from "./tasks";
 
 /**
@@ -98,5 +98,25 @@ describe("the focus that holds", () => {
     expect(waitingElsewhere(pills, "p-app")).toBe(2);
     expect(waitingElsewhere(pills, "p-site")).toBe(1);
     expect(waitingElsewhere(pills, null)).toBe(0);
+  });
+});
+
+describe("the cards the focus holds back", () => {
+  // The captain's answer to INF-1091's question 2: "Hold other projects' cards back until focus changes".
+  const board = new Map([
+    ["a1", "p-app"],
+    ["s1", "p-site"],
+  ]);
+
+  it("holds back a card about another project's task, and nothing with no focus", () => {
+    expect(holdsBack({ taskId: "s1" }, "p-app", board)).toBe(true);
+    expect(holdsBack({ taskId: "a1" }, "p-app", board)).toBe(false);
+    expect(holdsBack({ taskId: "s1" }, null, board)).toBe(false);
+  });
+
+  it("keeps a card about no task, one whose task the board does not list, and every card before the board is read", () => {
+    expect(holdsBack({}, "p-app", board)).toBe(false);
+    expect(holdsBack({ taskId: "gone" }, "p-app", board)).toBe(false);
+    expect(holdsBack({ taskId: "s1" }, "p-app", null)).toBe(false);
   });
 });

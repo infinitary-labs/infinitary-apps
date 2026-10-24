@@ -18,7 +18,7 @@ import { HomeMate, HomePrompt, HomeScreen } from "./HomeScreen";
 import { guardHeldPresses } from "./heldKeys";
 import { applyTheme } from "./preferences";
 import { followShellCommands } from "./shellCommands";
-import { isHeldEntry, shownCard, useShellStore } from "./store";
+import { isHeldEntry, offStack, shownCard, useShellStore } from "./store";
 import { TopBar } from "./TopBar";
 
 export function App() {
@@ -69,12 +69,7 @@ export function App() {
           stage.toggleSize();
           return;
         }
-        const shown = shownCard(
-          store.cards,
-          store.cardIndex,
-          store.collapsedCardIds,
-          store.records,
-        );
+        const shown = shownCard(store.cards, store.cardIndex, offStack(store), store.records);
         if (store.view === "home" && isHeldEntry(shown)) {
           // A panel's card hides on an Escape nothing in it used
           // (docs/ui-plugins.md, "A panel's cards"); one its own field took stays.

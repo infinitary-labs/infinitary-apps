@@ -1,5 +1,6 @@
 import {
   heldFocus,
+  holdsBack,
   type ProjectPills,
   pillShown,
   projectPillsOf,
@@ -40,6 +41,8 @@ export type ProjectFocusState = {
 };
 
 let pills: ProjectPills | null = null;
+/** Each task's project, by the board as last read; null until it is read. */
+let taskProjects: ReadonlyMap<string, string> | null = null;
 let open = false;
 let openAsk = 0;
 let rest: string | null = null;
@@ -77,7 +80,9 @@ function start(): void {
     {},
     {
       onValue: (value) => {
-        pills = projectPillsOf(value as TaskBoard);
+        const board = value as TaskBoard;
+        pills = projectPillsOf(board);
+        taskProjects = new Map(board.tasks.map((task) => [task.id, task.projectId]));
         notify();
       },
       onError: () => {},
@@ -130,4 +135,14 @@ export function useProjectFocus(): ProjectFocusState {
 /** The focus that holds now, outside React: the turn's hint, the panels' view. */
 export function heldProjectFocus(): string | null {
   return snapshot.focus;
+}
+
+/**
+ * Whether the focus that holds now keeps `card` off the stack
+ * (`holdsBack`, docs/project-focus.md "The card stack"): the stack reads
+ * this as each cards snapshot lands, and again whenever the focus or the
+ * board moves (`projectFocus.subscribe`).
+ */
+export function focusHoldsBack(card: { taskId?: string }): boolean {
+  return holdsBack(card, snapshot.focus, taskProjects);
 }

@@ -10,7 +10,13 @@ import {
   panelCardIdSchema,
   panelCardKeptSchema,
 } from "@shared/plugins/panelCards";
-import { type PanelCardEntry, panelCardEntryId, shownCard, useShellStore } from "../app/store";
+import {
+  offStack,
+  type PanelCardEntry,
+  panelCardEntryId,
+  shownCard,
+  useShellStore,
+} from "../app/store";
 import { windowGesture } from "./frames/frameActivation";
 import { frameHoldsFocus } from "./frames/frameFocus";
 import { pluginHost } from "./host";
@@ -88,7 +94,7 @@ export function keepPanelCard(panel: string, id: string, value: unknown): void {
 /** `panel`'s open cards, newest first. */
 export function openPanelCards(panel: string): PanelOpenCard[] {
   const s = useShellStore.getState();
-  const shownId = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records)?.id;
+  const shownId = shownCard(s.cards, s.cardIndex, offStack(s), s.records)?.id;
   return s.records.flatMap((held) =>
     "panelCard" in held && held.panelCard.panel === panel
       ? [

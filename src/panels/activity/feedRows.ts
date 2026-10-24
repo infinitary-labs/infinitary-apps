@@ -46,6 +46,34 @@ export function leadingDrop(painted: readonly string[], next: readonly string[])
   return painted.length;
 }
 
+/**
+ * The lines Activity shows while the window is focused on a project
+ * (docs/project-focus.md; the captain's answer to INF-1091's question 3,
+ * "Hide them while focus is on"): a line about another project's task
+ * leaves, and a line about no task - the captain's own turn, the first
+ * mate's, the app's - stays. A task's key starts with its project's key,
+ * which never changes (D6), so the key says the project even for a task
+ * the board no longer lists. `projectKey` is the focused project's key;
+ * null, with no focus or before the board is read, keeps every line.
+ */
+export function linesInFocus(
+  lines: readonly PanelFeedLine[],
+  projectKey: string | null,
+): readonly PanelFeedLine[] {
+  if (projectKey === null) return lines;
+  const prefix = `${projectKey}-`;
+  return lines.filter((line) => line.taskKey === undefined || line.taskKey.startsWith(prefix));
+}
+
+/** The focused project's key from the board's projects, or null when none is focused or listed. */
+export function focusedKeyOf(
+  projects: readonly { id: string; key: string }[] | null,
+  focusedProjectId: string | null,
+): string | null {
+  if (focusedProjectId === null || projects === null) return null;
+  return projects.find((project) => project.id === focusedProjectId)?.key ?? null;
+}
+
 /** A line's semantic kind; rows written before the semantic trail still read. */
 export function semanticKind(kind: string): string {
   if (kind === "spawn" || kind === "report") return "info";

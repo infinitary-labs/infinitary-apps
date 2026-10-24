@@ -9,7 +9,13 @@ import { useMemo } from "react";
 import { z } from "zod";
 import { pressesSoFar } from "../app/presses";
 import { projectFocus, useProjectFocus } from "../app/projectFocus";
-import { mainMessageRefusal, type ShellState, shownCard, useShellStore } from "../app/store";
+import {
+  mainMessageRefusal,
+  offStack,
+  type ShellState,
+  shownCard,
+  useShellStore,
+} from "../app/store";
 import { isView } from "../devices/viewWords";
 import { pluginHost } from "./host";
 import { useLitTaskId } from "./point/litTask";
@@ -318,7 +324,7 @@ export function panelViewKey(
   litTaskId: string | null = null,
   focusedProjectId: string | null = null,
 ): string {
-  const shown = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
+  const shown = shownCard(s.cards, s.cardIndex, offStack(s), s.records);
   const openTaskIds = s.records.flatMap((held) => ("taskId" in held ? [held.taskId] : []));
   const shownTaskId =
     shown?.recordTaskId ??

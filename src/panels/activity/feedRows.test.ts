@@ -1,6 +1,6 @@
 import type { PanelFeedLine } from "@infinitary/contracts";
 import { describe, expect, it } from "vitest";
-import { feedKeysOf, leadingDrop, semanticKind } from "./feedRows";
+import { feedKeysOf, focusedKeyOf, leadingDrop, linesInFocus, semanticKind } from "./feedRows";
 
 /**
  * The Activity panel's row bookkeeping: which painted rows a push keeps,
@@ -40,5 +40,44 @@ describe("the feed's rows", () => {
     expect(semanticKind("report")).toBe("info");
     expect(semanticKind("done")).toBe("ok");
     expect(semanticKind("warn")).toBe("warn");
+  });
+
+  // The captain's answer to INF-1091's question 3: "Hide them while focus is on."
+  it("under focus keeps the focused project's lines and those about no task, and hides the rest", () => {
+    const feed: PanelFeedLine[] = [
+      { at: 1, kind: "info", text: "Started", taskKey: "INF-412", event: "dispatched" },
+      { at: 2, kind: "you", text: "Give the retry its own test" },
+      {
+        at: 3,
+        kind: "info",
+        text: "Reported: Opened the pricing page change",
+        taskKey: "WEB-7",
+        event: "report",
+      },
+      // A project whose key starts another's: IN is not INF.
+      { at: 4, kind: "ok", text: "Merged", taskKey: "IN-3", event: "merged" },
+      { at: 5, kind: "warn", text: "Your Claude account needs signing in again" },
+      {
+        at: 6,
+        kind: "info",
+        text: "Reported: Fixed the close button",
+        taskKey: "INF-409",
+        event: "report",
+      },
+    ];
+    const projects = [
+      { id: "repo-inf", key: "INF" },
+      { id: "repo-in", key: "IN" },
+      { id: "repo-web", key: "WEB" },
+    ];
+    expect(linesInFocus(feed, focusedKeyOf(projects, "repo-inf")).map((l) => l.at)).toEqual([
+      1, 2, 5, 6,
+    ]);
+    expect(linesInFocus(feed, focusedKeyOf(projects, "repo-in")).map((l) => l.at)).toEqual([
+      2, 4, 5,
+    ]);
+    // No focus, or a board not read yet, keeps every line.
+    expect(linesInFocus(feed, focusedKeyOf(projects, null))).toBe(feed);
+    expect(linesInFocus(feed, focusedKeyOf(null, "repo-inf"))).toBe(feed);
   });
 });

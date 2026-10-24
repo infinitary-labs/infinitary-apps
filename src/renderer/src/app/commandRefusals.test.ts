@@ -37,6 +37,7 @@ const HOME: RefusalState = {
   cards: [card("a"), card("b")],
   cardIndex: 0,
   collapsedCardIds: [],
+  heldBackCardIds: [],
   records: [],
   threads: {},
   releaseNotes: {

@@ -7,6 +7,8 @@ The dot, the words' x-height and the timestamp's x-height share one centre (read
 The dot shows nothing on rest and is no Tab stop: the line's own words say what its color does.
 Newest stays at the bottom; pin to the bottom as events arrive unless the user has scrolled up, and re-pin when the column itself resizes.
 With no events there is no panel and no rail.
+While the window is focused on a project (`components/core/ProjectFocus`), lines about other projects' tasks leave the list and the collapsed header at once, with no marker: the top bar's pill is the one place that says focus is on.
+Lines about no task (the captain's own turns, the first mate's, the app's) stay; letting focus go brings the hidden lines back in their places.
 The list is one stop for the keyboard (Tab, or F6 to the panel): the arrows and the page keys scroll it, the focus ring draws inside its edge (`--focus-ring-inset`), since the list fills the frame that would cut it, and while it has the keyboard's focus every line wraps to read in full, as resting the pointer on one shows it.
 
 Overflow does not use the default right-side OS scrollbar.

@@ -12,6 +12,8 @@ How the pill looks and moves is the design skill's `components/core/ProjectFocus
 | The pill and its row | `src/renderer/src/app/ProjectFocusControl.tsx`, drawn by `TopBar.tsx` between its two groups |
 | A panel's view and pointing | `PanelProps.view.focusedProjectId` and `point.focusProject` (`src/renderer/src/plugins/panelPoint.ts`, `docs/ui-plugins.md`) |
 | The stage's light | `src/renderer/src/character/crew/focusLight.ts` (`lightFrame`), `docs/crew-orbits.md` "The project focus" |
+| Activity's lines | `src/panels/activity/feedRows.ts` (`linesInFocus`), read by the Activity panel from `view.focusedProjectId` |
+| The cards held back | `src/shared/projectFocus.ts` (`holdsBack`), read through `focusHoldsBack` by the window's stack in `src/renderer/src/app/store.ts` (`reconcileStack`, `offStack`, `applyHold`) |
 | The first mate's hint | the turn's `focusedProjectId` (`inf:converse`), read by `buildContextBlock` as `focused_project` |
 | The keys | `project-focus.open` and `project-focus.clear` (`docs/keyboard.md`) |
 
@@ -31,10 +33,32 @@ A project with nothing waiting and nothing working reads dimmer.
 - On the stage every crewmate of another project keeps a quarter of its light; nothing hides or moves.
 - The first mate gets a hint on every turn the captain sends, below the record the window shows: new work they ask for belongs to the focused project unless they name another.
   It is a hint, never a limit.
-- Every project still notifies, and the card stack and Activity are unchanged.
+- Activity lists only the lines about the focused project's tasks and the lines about no task: the captain's own turns, the first mate's and the app's (the captain's answer to INF-1091's question 3, "Hide them while focus is on").
+  A line's task key says its project, because a task's key starts with its project's key and a project's key never changes, so a line about a task the board no longer lists follows the same rule (`linesInFocus`).
+  Collapsed, its header shows the newest line it keeps.
+- The card stack holds other projects' cards back (below).
+- Every project still notifies.
 
 Focused, the pill names the project, wears the accent border and has a × beside it, Show all projects.
 A quiet mono tail after it says how many tasks wait on the captain in other projects ("2 waiting elsewhere"), and a press on it opens the row.
+
+## The card stack
+
+While the window is focused on a project, the stack holds back the cards about other projects' tasks until the focus changes (the captain's answer to INF-1091's question 2, "Hold other projects' cards back until focus changes").
+A held card stays open: nothing closes and nothing is written, so the first mate, another Mac's view and the phone see it as before.
+How the stack draws it is the design skill's `components/cards/CardStack.prompt.md`, "Held back by the project focus".
+
+- A card about no task stays: the first mate's own, a sign-in, a notice.
+  So does a card whose task the board does not list, and before the board is read nothing is held back (`holdsBack`).
+- Anything the captain opened stays: a task record, a past card, a task's browser, a panel's card.
+- Focusing while another project's card is shown takes it off the stack as a close does, with no question and no message.
+- The pager counts only the cards on the stack; the pill's tail counts what waits on the captain in other projects, held cards among them.
+- A card that arrives while it is held back stirs nothing on the stack and gives no notice pulse.
+- Picking its project or All projects brings a held card back in its place: one that arrived while held comes back marked new, and one the captain had seen comes back seen.
+- A card the captain points at (the first mate shows it, a task key, a record's Show the card) comes to the front without moving the focus, and stays until the focus changes (`focusCard`).
+
+Every reading of the window's stack passes one list of what it sets aside, the collapsed notes and the held cards together (`offStack`).
+The hold moves with the focus and the board: the stack reads them as each cards snapshot lands and again whenever the focus store speaks (`applyHold`), and writes nothing when the held cards stay the same.
 
 ## Opening and closing the row
 
@@ -55,5 +79,5 @@ Before the board is read at launch the saved focus holds, so a restart never sho
 
 ## Tests
 
-- Unit: `src/shared/projectFocus.test.ts` (pills, Scratch, archived, the held focus and the tail), `src/renderer/src/character/crew/focusLight.test.ts` (the light on the orbit's own frames), `src/panels/now/rows.test.ts` (the narrowed summary), `src/renderer/src/plugins/panelPoint.test.ts` (`focusProject` only from the captain's click or key) and `src/core/orchestrator/firstmateAgent.test.ts` (the hint).
-- Journey: `tests/e2e/project-focus.spec.ts` drives the pill by keys, the Tasks list, the stage's light, a restart and Show all projects; `tasks-search.spec.ts` and `task-board.spec.ts` cover the chips as the one focus.
+- Unit: `src/shared/projectFocus.test.ts` (pills, Scratch, archived, the held focus, the tail and which cards are held back), `src/renderer/src/app/store.test.ts` (the stack holding, bringing back and letting a pointed-at card through), `src/renderer/src/character/crew/focusLight.test.ts` (the light on the orbit's own frames), `src/panels/now/rows.test.ts` (the narrowed summary), `src/panels/activity/feedRows.test.ts` (Activity's lines under focus), `src/renderer/src/plugins/panelPoint.test.ts` (`focusProject` only from the captain's click or key) and `src/core/orchestrator/firstmateAgent.test.ts` (the hint).
+- Journey: `tests/e2e/project-focus.spec.ts` drives the pill by keys, the Tasks list, the stage's light, a restart and Show all projects, and the held cards and hidden Activity lines coming back; `tasks-search.spec.ts` and `task-board.spec.ts` cover the chips as the one focus.

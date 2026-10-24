@@ -168,6 +168,7 @@ import {
   isHeldEntry,
   mainInputHeld,
   mainMessageRefusal,
+  offStack,
   type StackEntry,
   type Theme,
   unreadAround,
@@ -401,6 +402,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
   const cardIndex = useShellStore((s) => s.cardIndex);
   const unreadCardIds = useShellStore((s) => s.unreadCardIds);
   const collapsedCardIds = useShellStore((s) => s.collapsedCardIds);
+  const heldBackCardIds = useShellStore((s) => s.heldBackCardIds);
   const theme = useShellStore((s) => s.theme);
   const actOnCard = useShellStore((s) => s.actOnCard);
   const closeCard = useShellStore((s) => s.closeCard);
@@ -423,7 +425,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
 
   const records = useShellStore((s) => s.records);
   const closeRecord = useShellStore((s) => s.closeRecord);
-  const shown = visibleStack(cards, collapsedCardIds, records);
+  const shown = visibleStack(cards, offStack({ collapsedCardIds, heldBackCardIds }), records);
   const index = Math.min(cardIndex, shown.length - 1);
   const card = shown[index];
   // A card that landed behind the shown one is marked on the pager until
@@ -2258,9 +2260,7 @@ export const HomeScreen = memo(function HomeScreen() {
   // Only whether there is a draft: typing never re-renders the stage.
   const drafting = useShellStore((s) => s.inputText.length > 0);
   const gateOpen = useShellStore((s) => s.firstRun?.gateOpen === true);
-  const showCards = useShellStore(
-    (s) => visibleStack(s.cards, s.collapsedCardIds, s.records).length > 0,
-  );
+  const showCards = useShellStore((s) => visibleStack(s.cards, offStack(s), s.records).length > 0);
   // The card layer outlives the stack by the last card's drop (CardLayer's `onEmptied`).
   const [layerUp, setLayerUp] = useState(showCards);
   if (showCards && !layerUp) setLayerUp(true);
@@ -2377,9 +2377,7 @@ export const HomeMate = memo(function HomeMate() {
   const drafting = useShellStore((s) => s.inputText.length > 0);
   const submitted = useShellStore((s) => s.submitted);
   const firstmateBusy = useShellStore((s) => s.firstmateBusy);
-  const showCards = useShellStore(
-    (s) => visibleStack(s.cards, s.collapsedCardIds, s.records).length > 0,
-  );
+  const showCards = useShellStore((s) => visibleStack(s.cards, offStack(s), s.records).length > 0);
   const listening = phase === "recording" || drafting;
   const { names, facts } = useCrewBoard();
   // The project in light (docs/project-focus.md): the pill a pointer or the

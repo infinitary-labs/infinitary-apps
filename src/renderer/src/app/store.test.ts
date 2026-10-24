@@ -22,6 +22,7 @@ import {
   isHeldEntry,
   mainInputHeld,
   NOTE_COLLAPSE_MS,
+  offStack,
   panelCardEntryId,
   reconcileStack,
   shownCard,
@@ -31,6 +32,24 @@ import {
   visibleCards,
   visibleStack,
 } from "./store";
+
+/**
+ * The window's project focus, as the stack reads it: the focused project and
+ * each task's project on the board, through the shared rule (`holdsBack`).
+ * Nothing is focused unless a test focuses it.
+ */
+const focus = vi.hoisted(() => ({
+  on: null as string | null,
+  taskProjects: new Map<string, string>(),
+}));
+vi.mock("./projectFocus", async (importOriginal) => {
+  const { holdsBack } = await import("@shared/projectFocus");
+  return {
+    ...(await importOriginal<typeof import("./projectFocus")>()),
+    heldProjectFocus: () => focus.on,
+    focusHoldsBack: (card: { taskId?: string }) => holdsBack(card, focus.on, focus.taskProjects),
+  };
+});
 
 /** The metadata every card gesture carries beside it: a fresh id of its own. */
 const gesture = (extra: Record<string, unknown> = {}) =>
@@ -886,6 +905,107 @@ describe("stack visibility (WI-18)", () => {
     state().collapseStaleNotes(T0 + NOTE_COLLAPSE_MS * 3);
     expect(state().collapsedCardIds).toEqual(["late"]);
     expect(shownId()).toBe("a");
+  });
+});
+
+describe("the project focus holds other projects' cards back (docs/project-focus.md)", () => {
+  // The captain's answer to INF-1091's question 2: "Hold other projects'
+  // cards back until focus changes", and how they come back (INF-1098).
+  const ready = (id: string, overrides: Partial<Card> = {}) =>
+    card({ id, status: "ready", actions: DECIDE, body: id, ...overrides });
+  const state = () => useShellStore.getState();
+  const stackIds = () => {
+    const s = state();
+    return visibleStack(s.cards, offStack(s), s.records).map((entry) => entry.id);
+  };
+  const shownId = () => {
+    const s = state();
+    return shownCard(s.cards, s.cardIndex, offStack(s), s.records)?.id;
+  };
+  const focusOn = (project: string | null) => {
+    focus.on = project;
+    state().applyHold();
+  };
+  const reset = () => {
+    focus.on = null;
+    focus.taskProjects = new Map([
+      ["inf-1", "repo-inf"],
+      ["web-1", "repo-web"],
+      ["web-2", "repo-web"],
+    ]);
+    takeCharacterNotice();
+    useShellStore.setState({
+      cards: [],
+      records: [],
+      cardIndex: 0,
+      unreadCardIds: [],
+      collapsedCardIds: [],
+      collapsedDigests: {},
+      heldBackCardIds: [],
+      letThroughCardIds: [],
+      letThroughFocus: null,
+      cardsSeeded: false,
+    });
+  };
+  beforeEach(reset);
+  afterEach(reset);
+
+  const inf = ready("inf", { taskId: "inf-1" });
+  const web = ready("web", { taskId: "web-1" });
+  const mate = ready("mate");
+
+  it("takes another project's cards off the stack as a close would, keeping cards about no task", () => {
+    state().applyCards([web, inf, mate]);
+    expect(shownId()).toBe("web");
+    const presses = state().focusRequest;
+    focusOn("repo-inf");
+    expect(stackIds()).toEqual(["inf", "mate"]);
+    expect(state().heldBackCardIds).toEqual(["web"]);
+    // The first card comes up, with no notice and no focus taken back.
+    expect(shownId()).toBe("inf");
+    expect(takeCharacterNotice()).toBe(false);
+    expect(state().focusRequest).toBe(presses);
+    // A push of the same cards keeps it held back.
+    state().applyCards([web, inf, mate]);
+    expect(stackIds()).toEqual(["inf", "mate"]);
+    // A focus move that changes nothing on the stack writes nothing.
+    const before = state();
+    state().applyHold();
+    expect(state()).toBe(before);
+  });
+
+  it("brings a seen card back seen and an arrival made while held back unread, in their places", () => {
+    state().applyCards([inf, web]);
+    focusOn("repo-inf");
+    takeCharacterNotice();
+    const late = ready("late", { taskId: "web-2" });
+    state().applyCards([inf, web, late]);
+    // Held back on arrival: unread for later, and no notice now.
+    expect(stackIds()).toEqual(["inf"]);
+    expect(state().unreadCardIds).toEqual(["late"]);
+    expect(takeCharacterNotice()).toBe(false);
+    focusOn(null);
+    expect(stackIds()).toEqual(["inf", "web", "late"]);
+    expect(shownId()).toBe("inf");
+    expect(state().unreadCardIds).toEqual(["late"]);
+    expect(takeCharacterNotice()).toBe(false);
+  });
+
+  it("lets a card the captain points at through, without moving the focus, until the focus changes", () => {
+    state().applyCards([inf, web]);
+    focusOn("repo-inf");
+    expect(state().focusCard("web")).toBe(true);
+    expect(shownId()).toBe("web");
+    expect(stackIds()).toEqual(["inf", "web"]);
+    expect(focus.on).toBe("repo-inf");
+    // A push while that focus holds keeps it through.
+    state().applyCards([inf, { ...web, body: "web, revised" }]);
+    expect(stackIds()).toEqual(["inf", "web"]);
+    // Picking another project ends it; picking back holds it again.
+    focusOn("repo-web");
+    expect(stackIds()).toEqual(["web"]);
+    focusOn("repo-inf");
+    expect(stackIds()).toEqual(["inf"]);
   });
 });
 

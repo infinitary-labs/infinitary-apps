@@ -1,4 +1,4 @@
-import type { PanelFeedLine, PanelPoint, PanelProps } from "@infinitary/contracts";
+import type { PanelFeedLine, PanelPoint, PanelProject, PanelProps } from "@infinitary/contracts";
 import {
   feedRelativeAge,
   focusWithRing,
@@ -9,7 +9,7 @@ import {
   usePanelTaskKeys,
 } from "@infinitary/ui";
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { feedKeysOf, leadingDrop, semanticKind } from "./feedRows";
+import { feedKeysOf, focusedKeyOf, leadingDrop, linesInFocus, semanticKind } from "./feedRows";
 import styles from "./panel.css";
 
 /**
@@ -42,6 +42,10 @@ import styles from "./panel.css";
  * dot, its key and its words - with the age ticking each minute at the
  * right (`rail.summarize`, a line part); before the first line it reads
  * the title and `quiet`.
+ *
+ * While the window is focused on a project (`view.focusedProjectId`,
+ * docs/project-focus.md), lines about other projects' tasks leave the list
+ * and the header, and lines about no task stay (`linesInFocus`).
  *
  * The keyboard reaches the list as one stop (docs/keyboard.md, "Lists and
  * Settings"): the arrows and the page keys scroll it, and while it has the
@@ -129,7 +133,17 @@ const Row = memo(function Row({
 });
 
 export default function ActivityPanel({ reads, asks, rail, point, view }: PanelProps) {
-  const [lines, setLines] = useState<readonly PanelFeedLine[] | null>(null);
+  const [allLines, setLines] = useState<readonly PanelFeedLine[] | null>(null);
+  // The board's projects, for the focused project's key; the key is a
+  // string, so a board push that moves no project filters nothing again.
+  const [projects, setProjects] = useState<readonly PanelProject[] | null>(null);
+  useEffect(() => reads.subscribe("tasks.board", (board) => setProjects(board.projects)), [reads]);
+  const focusKey = focusedKeyOf(projects, view.focusedProjectId);
+  // The lines this window shows: under focus, the focused project's and those about no task.
+  const lines = useMemo(
+    () => (allLines === null ? null : linesInFocus(allLines, focusKey)),
+    [allLines, focusKey],
+  );
   // Which keys the lines write name tasks: the board's, or earlier work's.
   const words = useMemo(
     () => (lines ?? []).map((line) => `${line.taskKey ?? ""} ${line.text}`),
@@ -301,7 +315,9 @@ export default function ActivityPanel({ reads, asks, rail, point, view }: PanelP
   }, [lines]);
 
   const keys = lines ? feedKeysOf(lines) : [];
-  if (lines !== null && snapshotKeys.current === null) snapshotKeys.current = new Set(keys);
+  // What was there when the page first read the feed is not news, held back by focus or not.
+  if (allLines !== null && snapshotKeys.current === null)
+    snapshotKeys.current = new Set(feedKeysOf(allLines));
   return (
     <>
       <style>{styles}</style>

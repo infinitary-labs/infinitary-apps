@@ -102,3 +102,22 @@ export function waitingElsewhere(pills: ProjectPills, focus: string | null): num
 export function elsewhereWords(waiting: number): string {
   return `${waiting} waiting elsewhere`;
 }
+
+/**
+ * Whether the focus holds a card back off the stack (the captain's answer to
+ * INF-1091's question 2, "Hold other projects' cards back until focus
+ * changes"): a card about another project's task. A card about no task -
+ * the first mate's own, a sign-in, a notice - stays, and so does one whose
+ * task the board does not place: before the board is read (`taskProjects`
+ * null) nothing is held back, as Activity hides nothing then, so a board
+ * that cannot be read never hides a card behind a pill that is not shown.
+ */
+export function holdsBack(
+  card: { taskId?: string },
+  focus: string | null,
+  taskProjects: ReadonlyMap<string, string> | null,
+): boolean {
+  if (focus === null || card.taskId === undefined || taskProjects === null) return false;
+  const project = taskProjects.get(card.taskId);
+  return project !== undefined && project !== focus;
+}

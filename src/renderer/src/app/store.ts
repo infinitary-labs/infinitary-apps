@@ -80,7 +80,7 @@ import { voiceController } from "../voice/voiceController";
 import { detectVoiceSupport, insertVoiceTranscript } from "../voice/voiceInput";
 import { recognizerPlace } from "../voice/whisperClient";
 import { pressesSoFar } from "./presses";
-import { heldProjectFocus } from "./projectFocus";
+import { focusHoldsBack, heldProjectFocus, projectFocus } from "./projectFocus";
 
 /**
  * Shell state on real orchestrator data. The phase model matches the design
@@ -255,7 +255,7 @@ function isPanelCard(
 }
 export function visibleStack(
   cards: Card[],
-  collapsed: readonly string[] = [],
+  aside: readonly string[] = [],
   records: OpenRecord[] = [],
 ): StackEntry[] {
   return [
@@ -296,7 +296,7 @@ export function visibleStack(
         priority: 0,
       }),
     ),
-    ...visibleCards(cards, collapsed),
+    ...visibleCards(cards, aside),
   ];
 }
 
@@ -313,20 +313,35 @@ export const NOTE_COLLAPSE_TICK_MS = 60_000;
 
 /**
  * Cards worth showing: on the stage (not awaiting their author's first
- * close-out - the core says which, docs/card-threads.md) and not collapsed.
+ * close-out - the core says which, docs/card-threads.md), not minimized, and
+ * not `aside` in this window: collapsed or held back (`offStack`).
  */
-export function visibleCards(cards: Card[], collapsed: readonly string[] = []): Card[] {
-  return cards.filter((card) => onStage(card) && !card.minimized && !collapsed.includes(card.id));
+export function visibleCards(cards: Card[], aside: readonly string[] = []): Card[] {
+  return cards.filter((card) => onStage(card) && !card.minimized && !aside.includes(card.id));
+}
+
+/**
+ * The open cards this window sets aside from its stack (`visibleCards`):
+ * seen, aged notes collapsed into their records (WI-18), and the cards the
+ * project focus holds back (docs/project-focus.md "The card stack"). Every
+ * reading of the stack passes this one list.
+ */
+export function offStack(
+  s: Pick<StackState, "collapsedCardIds" | "heldBackCardIds">,
+): readonly string[] {
+  return s.heldBackCardIds.length === 0
+    ? s.collapsedCardIds
+    : [...s.collapsedCardIds, ...s.heldBackCardIds];
 }
 
 /** The card currently on screen, if the stack is non-empty. */
 export function shownCard(
   cards: Card[],
   cardIndex: number,
-  collapsed: readonly string[] = [],
+  aside: readonly string[] = [],
   records: OpenRecord[] = [],
 ): StackEntry | undefined {
-  const shown = visibleStack(cards, collapsed, records);
+  const shown = visibleStack(cards, aside, records);
   if (shown.length === 0) return undefined;
   return shown[Math.min(Math.max(0, cardIndex), shown.length - 1)];
 }
@@ -377,11 +392,11 @@ export function derivePhase(
   recording: boolean,
   cards: Card[],
   firstmateBusy: boolean,
-  collapsed: readonly string[] = [],
+  aside: readonly string[] = [],
   records: OpenRecord[] = [],
 ): ShellPhase {
   if (recording) return "recording";
-  if (visibleStack(cards, collapsed, records).length > 0) return "working";
+  if (visibleStack(cards, aside, records).length > 0) return "working";
   if (firstmateBusy) return "thinking";
   return "idle";
 }
@@ -395,6 +410,8 @@ type StackState = {
   collapsedCardIds: string[];
   /** Per collapsed id, what the card said when it collapsed (`cardDigest`). */
   collapsedDigests: Record<string, string>;
+  /** Cards the project focus holds back off the stack (docs/project-focus.md). */
+  heldBackCardIds: string[];
   cardsSeeded: boolean;
 };
 
@@ -460,12 +477,38 @@ function indexKeeping(shown: StackEntry[], active: Card | undefined): number {
 
 /** Whatever is on screen at `cardIndex` has now been seen. */
 function withoutShown(
-  state: Pick<StackState, "cards" | "records" | "collapsedCardIds" | "unreadCardIds">,
+  state: Pick<
+    StackState,
+    "cards" | "records" | "collapsedCardIds" | "heldBackCardIds" | "unreadCardIds"
+  >,
   cardIndex: number,
 ): string[] {
-  const card = shownCard(state.cards, cardIndex, state.collapsedCardIds, state.records);
+  const card = shownCard(state.cards, cardIndex, offStack(state), state.records);
   if (!card || !state.unreadCardIds.includes(card.id)) return state.unreadCardIds;
   return state.unreadCardIds.filter((id) => id !== card.id);
+}
+
+/** What the project focus holds back: nothing, with no focus. */
+const HOLDS_NOTHING = (_card: Card): boolean => false;
+
+/** The cards the captain let through, while the focus they were pointed under still holds. */
+function letThroughUnder(s: Pick<ShellState, "letThroughCardIds" | "letThroughFocus">): string[] {
+  return s.letThroughFocus === heldProjectFocus() || s.letThroughCardIds.length === 0
+    ? s.letThroughCardIds
+    : [];
+}
+
+/** What the project focus holds back now: its other projects' cards, short of those let through. */
+function holdOf(
+  s: Pick<ShellState, "letThroughCardIds" | "letThroughFocus">,
+): (card: Card) => boolean {
+  const letThrough = letThroughUnder(s);
+  return (card) => !letThrough.includes(card.id) && focusHoldsBack(card);
+}
+
+/** `next`, or `prev` when they hold the same ids in the same order. */
+function sameIds(prev: string[], next: string[]): string[] {
+  return prev.length === next.length && prev.every((id, i) => id === next[i]) ? prev : next;
 }
 
 /**
@@ -482,22 +525,34 @@ function withoutShown(
  * seeds the stack: what was already there at boot is not news.
  * `noticed` counts the cards that just became unread, for the character's
  * notice pulse.
+ *
+ * `holdsBack` is the project focus (docs/project-focus.md "The card
+ * stack"): a card it holds back leaves the stack as a close would, with no
+ * notice; one that arrives while held back is unread for when it comes
+ * back, and one the focus lets go returns to its place as it was, never as
+ * an arrival.
  */
 export function reconcileStack(
   prev: StackState,
   cards: Card[],
   now: number,
+  holdsBack: (card: Card) => boolean = HOLDS_NOTHING,
 ): {
   state: Pick<
     StackState,
-    "cardIndex" | "unreadCardIds" | "collapsedCardIds" | "collapsedDigests" | "cardsSeeded"
+    | "cardIndex"
+    | "unreadCardIds"
+    | "collapsedCardIds"
+    | "collapsedDigests"
+    | "heldBackCardIds"
+    | "cardsSeeded"
   >;
   noticed: number;
   lostCard: boolean;
 } {
   const byId = new Map(cards.map((card) => [card.id, card]));
-  const active = shownCard(prev.cards, prev.cardIndex, prev.collapsedCardIds, prev.records);
-  const prevShownIds = visibleStack(prev.cards, prev.collapsedCardIds, prev.records).map(
+  const active = shownCard(prev.cards, prev.cardIndex, offStack(prev), prev.records);
+  const prevShownIds = visibleStack(prev.cards, offStack(prev), prev.records).map(
     (card) => card.id,
   );
   // Still collapsed: present, and saying what it said when it collapsed.
@@ -505,7 +560,13 @@ export function reconcileStack(
     const card = byId.get(id);
     return card !== undefined && prev.collapsedDigests[id] === cardDigest(card);
   });
-  let shown = visibleStack(cards, collapsed, prev.records);
+  const heldBack = sameIds(
+    prev.heldBackCardIds,
+    visibleCards(cards, collapsed)
+      .filter(holdsBack)
+      .map((card) => card.id),
+  );
+  let shown = visibleStack(cards, [...collapsed, ...heldBack], prev.records);
   const prevById = new Map(prev.cards.map((card) => [card.id, card]));
   // A card whose author answered its reply is news even if it stayed
   // shown while its author worked.
@@ -513,14 +574,22 @@ export function reconcileStack(
     const before = prevById.get(card.id);
     return before !== undefined && before.awaiting !== undefined && card.awaiting === undefined;
   };
-  const arrived = prev.cardsSeeded
-    ? shown
-        .filter((card) => !prevShownIds.includes(card.id) || answered(card))
-        .map((card) => card.id)
+  // Neither on the stack nor held back before: new to this window.
+  const isNew = (card: Card) =>
+    (!prevShownIds.includes(card.id) && !prev.heldBackCardIds.includes(card.id)) || answered(card);
+  const arrived = prev.cardsSeeded ? shown.filter(isNew).map((card) => card.id) : [];
+  // An arrival the focus holds back is news for when it comes back, with no notice now.
+  const arrivedBack = prev.cardsSeeded
+    ? heldBack.filter((id) => {
+        const card = byId.get(id);
+        return card !== undefined && isNew(card);
+      })
     : [];
   const unseen = [
-    ...prev.unreadCardIds.filter((id) => shown.some((card) => card.id === id)),
-    ...arrived.filter((id) => !prev.unreadCardIds.includes(id)),
+    ...prev.unreadCardIds.filter(
+      (id) => shown.some((card) => card.id === id) || heldBack.includes(id),
+    ),
+    ...[...arrived, ...arrivedBack].filter((id) => !prev.unreadCardIds.includes(id)),
   ];
   // The shown card left: the first unread card comes up, else the first
   // card (`departureIndex`). Records remain available through paging.
@@ -553,7 +622,7 @@ export function reconcileStack(
   );
   if (aged.length > 0) {
     collapsed = [...collapsed, ...aged.map((card) => card.id)];
-    shown = visibleStack(cards, collapsed, prev.records);
+    shown = visibleStack(cards, [...collapsed, ...heldBack], prev.records);
     cardIndex = indexKeeping(shown, activeCard);
   }
 
@@ -562,17 +631,18 @@ export function reconcileStack(
   );
   // Nor is a card waiting on its author's first close-out: still open, only off the stage.
   const waiting = cards.filter((card) => !onStage(card) || card.minimized).map((card) => card.id);
-  const kept = new Set([...shown.map((card) => card.id), ...collapsed, ...waiting]);
+  const kept = new Set([...shown.map((card) => card.id), ...collapsed, ...heldBack, ...waiting]);
   return {
     state: {
       cardIndex,
       unreadCardIds: unread,
       collapsedCardIds: collapsed,
       collapsedDigests,
+      heldBackCardIds: heldBack,
       cardsSeeded: true,
     },
     noticed: arrived.filter((id) => unread.includes(id)).length,
-    // A collapse is not a loss: only a card that really left takes focus back.
+    // A collapse or a hold is not a loss: only a card that really left takes focus back.
     lostCard: prevShownIds.some((id) => !kept.has(id)),
   };
 }
@@ -630,6 +700,12 @@ export type ShellState = {
   collapsedCardIds: string[];
   /** What each collapsed card said when it collapsed: a change brings it back unread. */
   collapsedDigests: Record<string, string>;
+  /** Cards the project focus holds back off the stack (docs/project-focus.md "The card stack"). */
+  heldBackCardIds: string[];
+  /** Held-back cards the captain pointed at: on the stack while the focus they were pointed under holds. */
+  letThroughCardIds: string[];
+  /** The focus `letThroughCardIds` were pointed under. */
+  letThroughFocus: string | null;
   /** False until the first cards snapshot: the boot stack is not news. */
   cardsSeeded: boolean;
   /**
@@ -978,6 +1054,8 @@ export type ShellState = {
   dragCard: (cardId: string, width: number | null) => void;
   /** Collapses seen notes that have aged past NOTE_COLLAPSE_MS (the shell's tick). */
   collapseStaleNotes: (now?: number) => void;
+  /** Holds back, or lets back, the cards the project focus names as it moves (docs/project-focus.md). */
+  applyHold: () => void;
   applyEvent: (event: FmEvent) => void;
   prevCard: () => void;
   nextCard: () => void;
@@ -1097,9 +1175,9 @@ function closeHeld(s: ShellState, match: (held: OpenRecord) => boolean): Partial
   const first = closing[0];
   if (!first) return {};
   const closingIds = new Set(closing.map(heldEntryId));
-  const entry = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
+  const entry = shownCard(s.cards, s.cardIndex, offStack(s), s.records);
   const records = s.records.filter((record) => !closing.includes(record));
-  const shown = visibleStack(s.cards, s.collapsedCardIds, records);
+  const shown = visibleStack(s.cards, offStack(s), records);
   // A tab a card opened returns to that card while it is up.
   const opener =
     "from" in first && first.from ? shown.findIndex((card) => card.id === first.from?.cardId) : -1;
@@ -1119,9 +1197,9 @@ function closeHeld(s: ShellState, match: (held: OpenRecord) => boolean): Partial
       { ...s, records, unreadCardIds: s.unreadCardIds.filter((id) => !closingIds.has(id)) },
       cardIndex,
     ),
-    phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+    phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
     focusRequest:
-      records.length === 0 && visibleCards(s.cards, s.collapsedCardIds).length === 0
+      records.length === 0 && visibleCards(s.cards, offStack(s)).length === 0
         ? s.focusRequest + 1
         : s.focusRequest,
   };
@@ -1167,6 +1245,9 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   unreadCardIds: [],
   collapsedCardIds: [],
   collapsedDigests: {},
+  heldBackCardIds: [],
+  letThroughCardIds: [],
+  letThroughFocus: null,
   cardsSeeded: false,
   threads: {},
   threadsLoaded: {},
@@ -1202,7 +1283,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         recording: false,
         transcribing: false,
         voiceNotice: null,
-        phase: derivePhase(false, s.cards, s.firstmateBusy, s.collapsedCardIds, s.records),
+        phase: derivePhase(false, s.cards, s.firstmateBusy, offStack(s), s.records),
       }));
     }
     set({ dictation, pickingDictationKey: false });
@@ -1264,7 +1345,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     // A turn that ended while this Mac was away said so to nobody here.
     set((s) => ({
       firstmateBusy: false,
-      phase: derivePhase(s.recording, s.cards, false, s.collapsedCardIds, s.records),
+      phase: derivePhase(s.recording, s.cards, false, offStack(s), s.records),
     }));
     void window.infinitary.tasks
       .board()
@@ -1300,6 +1381,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       .then(({ shown }) => set({ devicesShown: shown }))
       .catch(() => {});
     window.infinitary.cards.onCards((cards) => get().applyCards(cards));
+    // The project focus holds other projects' cards back (docs/project-focus.md "The card stack").
+    projectFocus.subscribe(() => get().applyHold());
     window.infinitary.cards.onThread((thread) => get().applyThread(thread.cardId, thread.messages));
     window.infinitary.events.on((event) => get().applyEvent(event));
     const stackAtRead = get().cards;
@@ -1313,8 +1396,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         set({
           cardsSnapshotLoaded: true,
           bootCardId:
-            shownCard(state.cards, state.cardIndex, state.collapsedCardIds, state.records)?.id ??
-            null,
+            shownCard(state.cards, state.cardIndex, offStack(state), state.records)?.id ?? null,
         });
       })
       .catch(() => {});
@@ -1574,14 +1656,14 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       recording: true,
       // A line about microphone access stays until a hold works.
       voiceNotice: s.voiceNotice?.kind === "mic" ? s.voiceNotice : null,
-      phase: derivePhase(true, s.cards, s.firstmateBusy, s.collapsedCardIds, s.records),
+      phase: derivePhase(true, s.cards, s.firstmateBusy, offStack(s), s.records),
     }));
     const generation = get().voiceGeneration;
     const current = () => generation === get().voiceGeneration && get().dictation?.enabled;
     const stopWith = (voiceNotice: ShellState["voiceNotice"]) =>
       set((s) => ({
         recording: false,
-        phase: derivePhase(false, s.cards, s.firstmateBusy, s.collapsedCardIds, s.records),
+        phase: derivePhase(false, s.cards, s.firstmateBusy, offStack(s), s.records),
         voiceNotice,
       }));
     // macOS's answer, read without asking, says which line goes under the
@@ -1618,7 +1700,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     set((s) => ({
       recording: false,
       transcribing: true,
-      phase: derivePhase(false, s.cards, s.firstmateBusy, s.collapsedCardIds, s.records),
+      phase: derivePhase(false, s.cards, s.firstmateBusy, offStack(s), s.records),
     }));
     void voiceController
       .finish(held)
@@ -1650,7 +1732,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     voiceController.abandon();
     set((s) => ({
       recording: false,
-      phase: derivePhase(false, s.cards, s.firstmateBusy, s.collapsedCardIds, s.records),
+      phase: derivePhase(false, s.cards, s.firstmateBusy, offStack(s), s.records),
     }));
   },
   submit: () => {
@@ -1686,8 +1768,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         return undefined;
       }
       // Only the shown entry rides the turn as a hint.
-      const { cards, records, cardIndex, collapsedCardIds } = get();
-      const entry = shownCard(cards, cardIndex, collapsedCardIds, records);
+      const { cards, records, cardIndex } = get();
+      const entry = shownCard(cards, cardIndex, offStack(get()), records);
       const held = isHeldEntry(entry);
       const visibleCardId = held ? undefined : entry?.id;
       // A task's browser view points the turn at its task, as its record
@@ -1763,7 +1845,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       set((s) => ({
         recording: false,
         transcribing: true,
-        phase: derivePhase(false, s.cards, s.firstmateBusy, s.collapsedCardIds, s.records),
+        phase: derivePhase(false, s.cards, s.firstmateBusy, offStack(s), s.records),
       }));
       void voiceController
         .finish()
@@ -2135,7 +2217,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       return {
         records,
         cardIndex: 0,
-        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
       };
     }),
   openPastCard: (cardId) =>
@@ -2147,7 +2229,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       return {
         records,
         cardIndex: 0,
-        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
       };
     }),
   openReplyNote: () => {
@@ -2183,7 +2265,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       return {
         records,
         cardIndex: 0,
-        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
       };
     }),
   closeBrowserView: (taskId) =>
@@ -2200,7 +2282,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       return {
         records,
         cardIndex: 0,
-        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
       };
     }),
   closeCrewmateView: (taskId) =>
@@ -2236,7 +2318,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     set((s) => {
       const entryId = panelCardEntryId(panel, id);
       const at = s.records.findIndex((held) => isPanelCard(held, panel, id));
-      const active = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
+      const active = shownCard(s.cards, s.cardIndex, offStack(s), s.records);
       if (front) {
         // The captain's own click or key: at the front, shown, seen.
         const records: OpenRecord[] = [
@@ -2247,7 +2329,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
           records,
           cardIndex: 0,
           unreadCardIds: s.unreadCardIds.filter((unread) => unread !== entryId),
-          phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+          phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
         };
       }
       if (at >= 0) {
@@ -2259,14 +2341,14 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       }
       // Raised on its own: behind the entry he is reading, marked new.
       const records: OpenRecord[] = [{ panelCard: entry }, ...s.records];
-      const shown = visibleStack(s.cards, s.collapsedCardIds, records);
+      const shown = visibleStack(s.cards, offStack(s), records);
       const cardIndex = active ? indexKeeping(shown, active) : 0;
       return {
         records,
         cardIndex,
         unreadCardIds:
           shown[cardIndex]?.id === entryId ? s.unreadCardIds : [...s.unreadCardIds, entryId],
-        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(s), records),
       };
     });
     return id;
@@ -2277,7 +2359,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   aimPanelCard: (panel, id, aim) => set((s) => patchPanelCard(s, panel, id, { aim })),
   closeRecord: () => {
     const s = get();
-    const entry = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
+    const entry = shownCard(s.cards, s.cardIndex, offStack(s), s.records);
     if (entry?.recordTaskId) get().closeTaskRecord(entry.recordTaskId);
     else if (entry?.pastCardId) get().closePastCard(entry.pastCardId);
     else if (entry?.replyNote) get().closeReplyNote();
@@ -2310,20 +2392,37 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         });
       return true;
     }
-    // Pointing at a collapsed note brings it back onto the stack.
-    const collapsedCardIds = get().collapsedCardIds.filter((id) => id !== cardId);
-    const index = visibleStack(get().cards, collapsedCardIds, get().records).findIndex(
-      (card) => card.id === cardId,
-    );
+    // Pointing at a collapsed note brings it back onto the stack, and
+    // pointing at a card the focus holds back lets it through while that
+    // focus holds (docs/project-focus.md "The card stack").
+    const now = get();
+    const collapsedCardIds = now.collapsedCardIds.filter((id) => id !== cardId);
+    const heldBackCardIds = now.heldBackCardIds.filter((id) => id !== cardId);
+    const index = visibleStack(
+      now.cards,
+      offStack({ collapsedCardIds, heldBackCardIds }),
+      now.records,
+    ).findIndex((card) => card.id === cardId);
     if (index < 0) return false;
+    const letThrough = letThroughUnder(now);
     set((s) => ({
       cardIndex: index,
       cardFocusRequest: s.cardFocusRequest + 1,
       cardFocusTarget: cardId,
       cardFocusPresses: since,
       collapsedCardIds,
+      heldBackCardIds,
+      ...(heldBackCardIds.length < s.heldBackCardIds.length
+        ? { letThroughCardIds: [...letThrough, cardId], letThroughFocus: heldProjectFocus() }
+        : {}),
       unreadCardIds: s.unreadCardIds.filter((id) => id !== cardId),
-      phase: derivePhase(s.recording, s.cards, s.firstmateBusy, collapsedCardIds, s.records),
+      phase: derivePhase(
+        s.recording,
+        s.cards,
+        s.firstmateBusy,
+        offStack({ collapsedCardIds, heldBackCardIds }),
+        s.records,
+      ),
     }));
     return true;
   },
@@ -2345,7 +2444,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     retainCardReadingPlaces(new Set(cards.map((card) => card.id)));
     let noticed = 0;
     set((s) => {
-      const reconciled = reconcileStack(s, cards, Date.now());
+      const reconciled = reconcileStack(s, cards, Date.now(), holdOf(s));
       noticed = reconciled.noticed;
       const present = new Set(cards.map((card) => card.id));
       return {
@@ -2373,7 +2472,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
           s.recording,
           cards,
           s.firstmateBusy,
-          reconciled.state.collapsedCardIds,
+          offStack(reconciled.state),
           s.records,
         ),
         focusRequest: reconciled.lostCard ? s.focusRequest + 1 : s.focusRequest,
@@ -2391,7 +2490,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     ),
   collapseStaleNotes: (now = Date.now()) => {
     set((s) => {
-      const { state } = reconcileStack(s, s.cards, now);
+      const { state } = reconcileStack(s, s.cards, now, holdOf(s));
       if (
         state.collapsedCardIds.length === s.collapsedCardIds.length &&
         state.collapsedCardIds.every((id) => s.collapsedCardIds.includes(id))
@@ -2400,13 +2499,26 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       }
       return {
         ...state,
-        phase: derivePhase(
-          s.recording,
-          s.cards,
-          s.firstmateBusy,
-          state.collapsedCardIds,
-          s.records,
-        ),
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(state), s.records),
+      };
+    });
+  },
+  applyHold: () => {
+    set((s) => {
+      // Before the first cards snapshot there is no stack to hold, and the boot stack is not news.
+      if (!s.cardsSeeded) return s;
+      const letThrough = letThroughUnder(s);
+      const held = { letThroughCardIds: letThrough, letThroughFocus: heldProjectFocus() };
+      const { state, lostCard } = reconcileStack(s, s.cards, Date.now(), holdOf(held));
+      // The focus store speaks on every rest in the pill row: unchanged, nothing is written.
+      if (state.heldBackCardIds === s.heldBackCardIds && letThrough === s.letThroughCardIds) {
+        return s;
+      }
+      return {
+        ...state,
+        ...held,
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, offStack(state), s.records),
+        focusRequest: lostCard ? s.focusRequest + 1 : s.focusRequest,
       };
     });
   },
@@ -2492,7 +2604,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     if (event.type === "firstmate_state") {
       set((s) => ({
         firstmateBusy: event.busy,
-        phase: derivePhase(s.recording, s.cards, event.busy, s.collapsedCardIds, s.records),
+        phase: derivePhase(s.recording, s.cards, event.busy, offStack(s), s.records),
       }));
     }
   },
@@ -2503,7 +2615,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     }),
   nextCard: () =>
     set((s) => {
-      const last = visibleStack(s.cards, s.collapsedCardIds, s.records).length - 1;
+      const last = visibleStack(s.cards, offStack(s), s.records).length - 1;
       const cardIndex = Math.min(last, s.cardIndex + 1);
       return { cardIndex, unreadCardIds: withoutShown(s, cardIndex) };
     }),

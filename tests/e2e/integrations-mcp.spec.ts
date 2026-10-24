@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
+import { WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/wakes";
 import {
   INTEGRATION_APPROVAL_WORDS,
   INTEGRATION_RULE_WORDS,
@@ -19,12 +20,17 @@ import { promptInput } from "./prompt";
 import {
   MCP_NOTES_ACTION,
   MCP_NOTES_CHANGE_MARKER,
+  MCP_NOTES_FIRSTMATE_MARKER,
+  MCP_NOTES_FIRSTMATE_REASON,
+  MCP_NOTES_FIRSTMATE_REMINDER,
   MCP_NOTES_NAME,
   MCP_NOTES_PROMPT_MARKER,
   MCP_NOTES_REASON,
   MCP_NOTES_REMINDER,
   MCP_NOTES_REPORT_PREFIX,
+  type McpNotesFirstmateSeen,
   mcpNotes,
+  mcpNotesFirstmate,
 } from "./scenarios/mcpNotes";
 import { settingsSection } from "./settings";
 import { showCard, shownCard } from "./stack";
@@ -42,11 +48,15 @@ import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
  *   every action asking; a crewmate's reasoned read raises the host's card,
  *   Always allow saves its grant, Not now runs nothing, Only this time adds
  *   a reminder without a grant, and keyboard Settings changes the read's rule.
+ *   In the second test, the first mate's own reasoned change raises the same
+ *   host card with no task of its own, Only this time highlighted; that
+ *   click adds its reminder once and the first mate hears it (INF-1108).
  * - Data: the stand-in notes server (`tests/helpers/mcpStandIn.ts`) in the
  *   2026-07-28 protocol era, run as a program on this computer over stdio,
  *   reading a notes file in this test's folder.
  * - Completion signal: the task's report carries the notes the server
- *   listed, and `window.infinitary.integrations.list()` holds the row.
+ *   listed, and `window.infinitary.integrations.list()` holds the row; the
+ *   first mate's `write-answered` wake reaches its scripted model.
  * - Platform prerequisites: Node running the stand-in from its TypeScript
  *   source, as the unit test does; nothing leaves this computer.
  * - Shared resources: none; the app, its folder and the server are this
@@ -55,6 +65,33 @@ import { pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
 
 const STAND_IN = join(process.cwd(), "tests", "helpers", "mcpStandIn.ts");
 
+/** The host's approval card, once the call that raises it was kept. */
+async function approval(page: Page, title: string) {
+  // INF-950: crew startup and its shell call precede the host's approval.
+  // Wait for that fact before showCard checks the presentation transition.
+  await expect
+    .poll(
+      () =>
+        page.evaluate(
+          async (wanted) =>
+            (await window.infinitary.cards.list()).some((card) => card.title === wanted),
+          title,
+        ),
+      { timeout: 60_000 },
+    )
+    .toBe(true);
+  await showCard(page, title);
+  return shownCard(page, title);
+}
+
+/** The stand-in notes server over a fresh notes file, as a person writes what it runs. */
+function notesServer(prefix: string): { notes: string; runs: string } {
+  const notes = join(scratchDir(prefix), "notes.json");
+  writeFileSync(notes, JSON.stringify({ notes: SAMPLE_NOTES }));
+  // The program and its arguments as a person writes them, quoted where a folder has a space.
+  return { notes, runs: `'${process.execPath}' '${STAND_IN}' stdio modern '${notes}'` };
+}
+
 let launched: LaunchedApp | undefined;
 
 test.afterEach(async () => {
@@ -62,31 +99,11 @@ test.afterEach(async () => {
 });
 
 test("an MCP server added from Settings by keys alone shows its own tools, and a crewmate reads through it", async () => {
-  const folder = scratchDir("infinitary-mcp-notes-");
-  const notes = join(folder, "notes.json");
-  writeFileSync(notes, JSON.stringify({ notes: SAMPLE_NOTES }));
-  // The program and its arguments as a person writes them, quoted where a folder has a space.
-  const runs = `'${process.execPath}' '${STAND_IN}' stdio modern '${notes}'`;
+  const { notes, runs } = notesServer("infinitary-mcp-notes-");
   launched = await launchApp({ withMockProvider: true, scenarios: [mcpNotes] });
   const { app, page } = launched;
   const view = () => page.evaluate(() => window.infinitary.integrations.list());
-  const approvalFor = async (title: string) => {
-    // INF-950: crew startup and its shell call precede the host's approval.
-    // Wait for that fact before showCard checks the presentation transition.
-    await expect
-      .poll(
-        () =>
-          page.evaluate(
-            async (wanted) =>
-              (await window.infinitary.cards.list()).some((card) => card.title === wanted),
-            title,
-          ),
-        { timeout: 60_000 },
-      )
-      .toBe(true);
-    await showCard(page, title);
-    return shownCard(page, title);
-  };
+  const approvalFor = (title: string) => approval(page, title);
 
   await test.step("the chip's form adds the server and opens its row on its tools", async () => {
     await runFromSearch(app, page, "settings.integrations");
@@ -234,4 +251,54 @@ test("an MCP server added from Settings by keys alone shows its own tools, and a
     const evidence = process.env.INFINITARY_TASK_EVIDENCE_DIR;
     if (evidence) writeFileSync(join(evidence, "integrations-mcp-report.txt"), `${report}\n`);
   });
+});
+
+test("the first mate's own change on an MCP server waits for the app's card, then runs once", async () => {
+  const { notes, runs } = notesServer("infinitary-mcp-firstmate-");
+  const firstmateSeen: McpNotesFirstmateSeen = { wakes: [] };
+  launched = await launchApp({
+    withMockProvider: true,
+    scenarios: [mcpNotesFirstmate(firstmateSeen)],
+  });
+  const { page } = launched;
+  const view = () => page.evaluate(() => window.infinitary.integrations.list());
+  // The first journey adds the server by keys; this one adds it the same way Settings does.
+  await page.evaluate((server) => window.infinitary.integrations.addMcp(server), {
+    name: MCP_NOTES_NAME,
+    runs,
+  });
+  expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
+    "ask",
+  );
+
+  const input = promptInput(page);
+  await input.click();
+  await input.fill(MCP_NOTES_FIRSTMATE_MARKER);
+  await input.press("Enter");
+  const title = integrationApprovalTitle("add_note", MCP_NOTES_NAME);
+  const card = await approval(page, title);
+  await expect(cardBody(page, title).locator("body")).toContainText(MCP_NOTES_FIRSTMATE_REASON);
+  const held = (await page.evaluate(() => window.infinitary.cards.list())).find(
+    (shown) => shown.title === title,
+  );
+  expect(held?.taskId).toBeUndefined();
+  expect(held?.actions.find((action) => action.default)?.label).toBe(
+    INTEGRATION_APPROVAL_WORDS.once,
+  );
+  expect(JSON.parse(readFileSync(notes, "utf8")).notes).not.toContain(MCP_NOTES_FIRSTMATE_REMINDER);
+  await pressKey(
+    card.getByRole("button", { name: INTEGRATION_APPROVAL_WORDS.once, exact: true }),
+    "Enter",
+  );
+  await expect
+    .poll(async () => JSON.parse(readFileSync(notes, "utf8")).notes)
+    .toContain(MCP_NOTES_FIRSTMATE_REMINDER);
+  await expect.poll(() => firstmateSeen.wakes.length, { timeout: 60_000 }).toBe(1);
+  const kept: string[] = JSON.parse(readFileSync(notes, "utf8")).notes;
+  expect(firstmateSeen.wakes[0]).toContain(WRITE_ANSWERED_LEAD);
+  // The stand-in's own answer to the call, carried back to the first mate.
+  expect(firstmateSeen.wakes[0]).toContain(`Added note ${kept.length}.`);
+  expect((await view()).integrations[0]?.actions.find((a) => a.name === "add_note")?.rule).toBe(
+    "ask",
+  );
 });

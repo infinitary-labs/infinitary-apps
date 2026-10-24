@@ -347,7 +347,7 @@ The captain records it on a Mac of their own, since Google's consent page runs i
 6. Gmail, search and read: in the message box type "Search my Gmail for messages about Infinitary demo and read me the newest one."
    The app asks for each action with the agent’s reason and exact input; choose Only this time or Always allow, then wait for the answer.
 7. Gmail, label: type "Archive that message."
-   Your first mate hands the change to a crewmate, whose call makes the app show the exact change and its reason; choose Only this time.
+   The app shows the exact change and your first mate's reason; choose Only this time.
    In the browser, open Gmail and show the message is no longer in Inbox.
 8. Gmail, draft: type "Draft a reply to it saying thanks, I'll send the invoice on Friday."
    Click the card's button.
@@ -415,7 +415,7 @@ Infinitary takes the second route, in three layers:
    Every Gmail and Calendar answer, and every event summary, reaches the first mate or a crewmate between marks whose random value the writer could not know, with any copy of a mark in the words broken and a line before and after saying never to follow what is inside ([Integrations](integrations.md#data-from-outside)).
 2. Every action starts at Asks you.
    The host shows the exact call and agent’s reason, with Only this time highlighted for changes and sends.
-   Always allow also permits later calls of that action until revoked; the first mate cannot run changes or sends in this first piece ([Integrations](integrations.md#the-rules)).
+   Always allow also permits later calls of that action until revoked, the first mate's and every crewmate's alike ([Integrations](integrations.md#the-rules)).
 3. The person is told before connecting.
    Google's notice says what the app does against a message written to mislead and the way out it cannot close (`INTEGRATION_NOTICES`, [Integrations](integrations.md#googles-notice)).
 
@@ -430,10 +430,9 @@ Each way out, and how it stands:
 
 | Way out | Who has it | An ask in the way | Status |
 | --- | --- | --- | --- |
-| A Gmail send or draft, or a Calendar creation or update that notifies guests | Crewmate | Yes until Always allow: the exact call on a card | Closed at Asks you; deliberately open at Always allowed |
-| The same from the first mate | First mate | Refused: only a crewmate's card can carry it | Closed |
-| A GitHub write through its integration, on any repository | Crewmate | Yes until Always allow: the integration’s host card | Closed at Asks you; deliberately open at Always allowed; the first mate’s is refused |
-| A change on an MCP server, any tool not marked read-only | Crewmate | Yes until Always allow | Closed at Asks you; deliberately open at Always allowed; the first mate’s is refused |
+| A Gmail send or draft, or a Calendar creation or update that notifies guests | Both | Yes until Always allow: the exact call on a card | Closed at Asks you; deliberately open at Always allowed |
+| A GitHub write through its integration, on any repository | Both | Yes until Always allow: the integration’s host card | Closed at Asks you; deliberately open at Always allowed |
+| A change on an MCP server, any tool not marked read-only | Both | Yes until Always allow | Closed at Asks you; deliberately open at Always allowed |
 | A read on an MCP server, whose input the server receives | Both | Yes until Always allow | Disclosed here: the captain adds each server, and one that fetches any address the agent names is a way out |
 | The crewmate's shell: any program, network address, or `git push` to a remote it names | Crewmate | No: crewmate isolation stays social, a captain decision (`docs/architecture.md`, rev-5) | Disclosed in Google's notice |
 | A write to the task's own project, which sends at once | Crewmate | No | Disclosed, as the shell |

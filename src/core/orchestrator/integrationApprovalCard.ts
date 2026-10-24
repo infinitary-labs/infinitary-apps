@@ -5,8 +5,15 @@ import { HOST_CARD_PRIORITY } from "./cardService";
 import { escapeCardText } from "./cardText";
 import { writeAskStrip } from "./requestStrips";
 
-/** INF-950: only typed held-call facts, with the agent's reason explicitly attributed. */
-export function integrationApprovalCard(taskId: string, title: string, ask: IntegrationAsk): Card {
+/**
+ * INF-950: only typed held-call facts, with the agent's reason explicitly
+ * attributed. A crewmate's card sits on its task; the first mate's has no
+ * task, so the row the host files for it holds the call (INF-1108).
+ */
+export function integrationApprovalCard(
+  ask: IntegrationAsk,
+  task?: { id: string; title: string },
+): Card {
   const text = escapeCardText;
   const preferred = ask.effect === "reads" ? "always" : "once";
   const effect =
@@ -15,17 +22,19 @@ export function integrationApprovalCard(taskId: string, title: string, ask: Inte
       : ask.effect === "sends"
         ? "It sends something to other people."
         : "It changes something outside your project.";
+  const asker = task ? `The crewmate on “${text(task.title)}”` : "Your first mate";
+  const words = task ? "the crewmate's words" : "your first mate's words";
   return {
     id: `integration-ask-${ask.id}`,
-    taskId,
+    ...(task ? { taskId: task.id } : {}),
     author: "host",
     priority: HOST_CARD_PRIORITY,
     title: integrationApprovalTitle(ask.label ?? ask.action, ask.place),
     meta: "Integration approval",
     body: [
-      `<p>The crewmate on “${text(title)}” wants to use this action. ${effect}</p>`,
+      `<p>${asker} wants to use this action. ${effect}</p>`,
       `<p>${text(ask.description ?? "")}</p>`,
-      `<h3>Why, in the crewmate's words</h3><blockquote>${text(ask.reason ?? "")}</blockquote>`,
+      `<h3>Why, in ${words}</h3><blockquote>${text(ask.reason ?? "")}</blockquote>`,
       `<p>Always allow lasts until you change it in Settings, replace the connection, or the action changes.</p>`,
       writeAskStrip(ask),
     ].join(""),

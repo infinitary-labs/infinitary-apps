@@ -49,6 +49,7 @@ export {
 export {
   type IntegrationAskSent,
   type IntegrationAskStore,
+  type IntegrationAskTaken,
   type IntegrationListen,
   IntegrationRefusal,
   IntegrationsService,

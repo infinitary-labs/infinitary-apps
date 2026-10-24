@@ -68,3 +68,42 @@ export const mcpNotes: Scenario =
       };
     return { calls: [{ name: "report", args: { text: `${MCP_NOTES_REPORT_PREFIX}${answer}` } }] };
   };
+
+/**
+ * The first mate calls the Notes server itself (INF-1108): a captain message
+ * carrying this marker has it call `use_integration` with its reason, and the
+ * app's own card holds the call. The journey passes a `seen` box, where the
+ * first mate's `write-answered` wakes land for it to read.
+ */
+// e2e-typed-words: the captain's own words that start the first mate's call; they only share a phrase with the product's
+export const MCP_NOTES_FIRSTMATE_MARKER = "keep my plant reminder in the Notes server yourself";
+export const MCP_NOTES_FIRSTMATE_REASON = "You asked me to keep this reminder in your notes.";
+export const MCP_NOTES_FIRSTMATE_REMINDER = "Water the plants on Sunday";
+export type McpNotesFirstmateSeen = { wakes: string[] };
+
+export function mcpNotesFirstmate(seen: McpNotesFirstmateSeen): Scenario {
+  return () =>
+    ({ body, isFirstmate, wantsStream }) => {
+      if (!isFirstmate || !wantsStream) return undefined;
+      const current = sinceLastUser(body);
+      if (current.user.includes(WRITE_ANSWERED_LEAD) && current.user.includes("add_note")) {
+        if (current.results.length === 0) seen.wakes.push(current.user);
+        return { text: "Your reminder is in your notes." };
+      }
+      if (!current.user.includes(MCP_NOTES_FIRSTMATE_MARKER)) return undefined;
+      if (current.results.length > 0) return { text: "The app is asking you on its card." };
+      return {
+        calls: [
+          {
+            name: "use_integration",
+            args: {
+              name: MCP_NOTES_NAME,
+              action: "add_note",
+              input: { text: MCP_NOTES_FIRSTMATE_REMINDER },
+              reason: MCP_NOTES_FIRSTMATE_REASON,
+            },
+          },
+        ],
+      };
+    };
+}

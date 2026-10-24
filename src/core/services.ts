@@ -1753,6 +1753,7 @@ export async function createServices(
           read: (taskId, input, through) => githubGateway.read(taskId, input, through),
           write: (taskId, input, through) => githubGateway.write(taskId, input, through, true),
           readAsSeat: (input) => githubGateway.readAsSeat(input),
+          writeAsSeat: (input) => githubGateway.writeAsSeat(input),
         },
       }),
       ...(["gitlab", "github-enterprise"] as const).map((kind) =>
@@ -1762,6 +1763,7 @@ export async function createServices(
             read: (taskId, input) => githubGateway.read(taskId, input, { host }),
             write: (taskId, input) => githubGateway.write(taskId, input, { host }, true),
             readAsSeat: (input) => githubGateway.readAsSeat(input, host),
+            writeAsSeat: (input) => githubGateway.writeAsSeat(input, host),
           }),
         }),
       ),
@@ -1797,6 +1799,7 @@ export async function createServices(
     asks: {
       keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
       present: (taskId, ask) => supervisor.askIntegration(taskId, ask),
+      keepForFirstmate: (ask) => supervisor.askIntegrationForFirstmate(ask),
       take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
       record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
     },
@@ -2145,6 +2148,7 @@ export async function createServices(
       "integration"
         ? integrations.sendAsk(taskId, askId, choice)
         : githubGateway.sendAsk(taskId, askId),
+    sendTakenIntegrationAsk: (rowId, taken, choice) => integrations.sendTaken(rowId, taken, choice),
     reviewGate: (taskId, reviewId) => prCi.reviewGate(taskId, reviewId),
     readPull: (taskId, prNumber) => prCi.pullState(taskId, prNumber),
     closePullRequest: (taskId) => prCi.close(taskId),

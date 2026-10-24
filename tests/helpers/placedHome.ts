@@ -323,6 +323,7 @@ export function startPlacedHome(options: {
                 write: (taskId, input, through) =>
                   integrationGateway!.write(taskId, input, through, true),
                 readAsSeat: (input) => integrationGateway!.readAsSeat(input),
+                writeAsSeat: (input) => integrationGateway!.writeAsSeat(input),
               },
             }),
           ],

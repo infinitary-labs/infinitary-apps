@@ -36,7 +36,7 @@ function github(signIns: Map<string, { state: ForgeSignInState; login: string | 
         signIns.delete(host);
       },
     },
-    gateway: { read: unreached, write: unreached, readAsSeat: unreached },
+    gateway: { read: unreached, write: unreached, readAsSeat: unreached, writeAsSeat: unreached },
   });
 }
 
@@ -526,6 +526,19 @@ describe("per-action approval (INF-950)", () => {
     const latest = () => [...kept.values()].at(-1)!;
     return {
       open,
+      options: {
+        bindings: [binding],
+        store,
+        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
+      },
+      asks: {
+        keep: (_taskId: string, ask: IntegrationAsk) => {
+          kept.set(ask.id, ask);
+        },
+        present,
+        take: () => ({ refused: "not taken here" }),
+        record: () => {},
+      },
       store,
       binding,
       actions,
@@ -601,14 +614,6 @@ describe("per-action approval (INF-950)", () => {
     const f = fixture();
     const service = f.open();
     service.setRule("mcp-notes", "add_note", true);
-    expect(
-      (
-        await service.call({ kind: "firstmate" }, "Notes", "add_note", {
-          text: "Do not run without a task",
-        })
-      ).refused,
-    ).toBe("refused");
-    expect(f.binding.call).not.toHaveBeenCalled();
     vi.mocked(f.binding.call).mockRejectedValueOnce(
       new IntegrationOutcomeUnknown("The server dropped the connection after taking the note"),
     );
@@ -619,6 +624,83 @@ describe("per-action approval (INF-950)", () => {
     expect(answer.text).toContain("Do not repeat this call");
     expect(f.binding.call).toHaveBeenCalledTimes(1);
     expect(f.present).not.toHaveBeenCalled();
+  });
+
+  // INF-1108: the first mate's calls follow the same per-action rule as a
+  // crewmate's. The captain's q2: "Like a new connection: every action asks
+  // until you choose Always allow"; an always allowed change runs from its seat.
+  it("holds the first mate's call for the host's own row and card, and runs it as the first mate once taken", async () => {
+    const f = fixture();
+    const kept: IntegrationAsk[] = [];
+    const service = new IntegrationsService({
+      ...f.options,
+      asks: {
+        ...f.asks,
+        keepForFirstmate: (ask) => {
+          kept.push(ask);
+          return `integration-ask-${ask.id}`;
+        },
+      },
+    });
+    const firstmate = { kind: "firstmate" } as const;
+    const call = { text: "Return the library books by Friday" };
+    expect((await service.call(firstmate, "Notes", "add_note", call)).text).toContain(
+      "Call again with reason explaining why this action is needed.",
+    );
+    expect(kept).toEqual([]);
+    const reason = "The captain asked me to remember the library books.";
+    const held = await service.call(firstmate, "Notes", "add_note", call, reason);
+    expect(held.refused).toBe("refused");
+    expect(held.text).toContain("You will hear the outcome once through write-answered.");
+    expect(f.binding.call).not.toHaveBeenCalled();
+    expect(f.present).not.toHaveBeenCalled();
+    expect(kept).toEqual([
+      expect.objectContaining({
+        by: "firstmate",
+        reason,
+        input: JSON.stringify(call),
+        effect: "changes",
+      }),
+    ]);
+    // The turn counts the host's card as what it did (docs/task-capture.md).
+    expect(held.card).toBe(`integration-ask-${kept[0]?.id}`);
+    const sent = await service.sendTaken("host-row", { ask: kept[0]! }, "once");
+    expect(sent).toMatchObject({ ok: true, place: "Notes" });
+    expect(f.binding.call).toHaveBeenCalledWith("mcp-notes", "add_note", call, firstmate);
+    expect(service.view().integrations[0]?.actions[1]?.rule).toBe("ask");
+    service.setRule("mcp-notes", "add_note", true);
+    expect(
+      await service.call(firstmate, "Notes", "add_note", { text: "Pay the electric bill" }),
+    ).toMatchObject({ ran: "changes" });
+    service.setRule("mcp-notes", "list_notes", true);
+    expect(await service.call(firstmate, "Notes", "list_notes", {})).not.toHaveProperty("ran");
+    expect(f.notes.slice(1)).toEqual([call.text, "Pay the electric bill"]);
+    expect(kept).toHaveLength(1);
+  });
+
+  it("refuses the first mate's held call when the app could not keep it, and runs nothing", async () => {
+    const f = fixture();
+    const service = new IntegrationsService({
+      ...f.options,
+      asks: {
+        ...f.asks,
+        keepForFirstmate: () => {
+          throw new Error("the approval card has no row to wait on");
+        },
+      },
+    });
+    const answer = await service.call(
+      { kind: "firstmate" },
+      "Notes",
+      "list_notes",
+      {},
+      "Find the dentist reminder.",
+    );
+    expect(answer).toMatchObject({ refused: "refused" });
+    expect(answer.text).toContain(
+      "the app could not keep the call: the approval card has no row to wait on",
+    );
+    expect(f.binding.call).not.toHaveBeenCalled();
   });
 
   it("starts existing connections over, keeps old settings readable, and irrevocably invalidates grants on tool or account changes", async () => {

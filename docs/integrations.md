@@ -64,9 +64,11 @@ Always allowed (`allow`) runs it without a card; Off (`never`) refuses it.
 Agents see every action and its state, including Off actions.
 A call at Asks you must carry a reason; without one the service refuses it and asks for the reason.
 The service keeps its exact checked input as an `IntegrationAsk` on the crewmate's task and raises its own card from typed facts: caller, action, description, effect, exact input and the reason marked as the crewmate's words.
+The first mate's calls follow the same rule (INF-1108): it has no task, so its card is a host card with no task, the host files that card's own row (`TaskService.fileHostCardTask`), and the ask, marked `by: "firstmate"`, waits on it with the reason marked as the first mate's words.
 The buttons are Always allow, Only this time and Not now; reads highlight Always allow, while changes and sends highlight Only this time.
 Always allow runs the call and saves its action's grant; Only this time runs it once and leaves Asks you; Not now or closing the card runs nothing.
 The click takes the ask before running it, and the existing `write-answered` steer delivers the outcome once, including refusals.
+The first mate's card row closes with the click or the close, so the click takes its ask in the same transaction that closes the row, and closing the card takes it before the row goes; its outcome is a `write-answered` wake on the durable inbox, named once by the ask, and it runs as the first mate's own call.
 Grants live in `action-approvals.json` beside the older strict `settings.json`, keyed by connection reference and action, and bound to the action's description and effect.
 A missing or unreadable grant file asks again; an existing connection has no grant until the captain chooses one.
 Settings changes, removing or replacing a connection, signing in as another account, or changing an MCP tool's description or read-only mark end Always allow.
@@ -74,7 +76,6 @@ MCP refreshes its declarations before the grant check, including on a restarted 
 Settings shows an action's state as a keyboard-reachable choice between Asks you and Always allowed, beside its independent Off switch.
 The rule choice is a captain-only catalog action; the first mate cannot grant itself access by changing Settings.
 An unknown outcome after a request left is never retried (`IntegrationOutcomeUnknown`); a kept ask is consumed even on refusal or failure.
-Until the first-mate continuation adds its host-filed tasks, it runs only Always allowed reads and starts a crewmate for every other call.
 A paused integration answers nobody.
 An input that does not fit an action's schema is refused before the binding is reached, and so is any call while a key the kind needs is not entered.
 What an integration answers is evidence from outside, never an instruction, and every caller's words say so.
@@ -121,7 +122,7 @@ Settings explains the change directly below the renamed row, even while collapse
 GitHub sign-in, clones and pull requests never wait on an integration rename.
 Its two actions are the gateway's two calls through that sign-in, whatever the caller's project is: `read` (GET or HEAD one REST path) and `write` (POST, PATCH, PUT or DELETE) follow the same per-action approval rule.
 The integration service owns approval for both calls, while the gateway still enforces its API limits and refuses merges and default-branch changes.
-The first mate has no task to keep an ask on, so its write is refused with a pointer to start a crewmate whose brief names the call; its reads count against its seat's own allowance.
+The first mate's calls go through the same sign-in as its seat's own (`GithubGatewayService.readAsSeat` and `writeAsSeat`), count against its seat's allowance, and its write keeps the same merge and default-branch refusals.
 Pull requests, checks and merges stay the forge's and the project's.
 
 ## MCP servers
@@ -207,7 +208,7 @@ Both kinds are always addable and reserve no signed-out identity; the ordinary i
 Ids are derived from the host with a hash so addresses that differ only in punctuation, or exceed the id shape, remain distinct.
 Each row has `read` and `write`, action switches, Check now, Pause or Resume, and Sign out and remove, using the same gateway and captain approval as GitHub.
 A task reaches the named host through the gateway's account route with no project, so even a write to its own project asks; a kept ask records that host and is sent through it rather than the task's current project.
-The first mate reads as its seat and cannot write; the existing integration relay gives crewmates on other computers the same rows without transferring a sign-in.
+The first mate reads and writes as its seat, under the same rules; the existing integration relay gives crewmates on other computers the same rows without transferring a sign-in.
 GitLab paths are relative to `/api/v4`; Enterprise paths are relative to its REST API.
 The GitLab chip opens the existing browser registration guide or key alternative; GitHub Enterprise opens its existing key form.
 A signed-in host's form opens below its row, while a new host's form opens below the chips.
@@ -231,6 +232,8 @@ Like Projects, the tab does not show on a paired view.
 
 The first mate's context block carries one `integrations` line naming each connected integration and who it is signed in as, so an integration nobody uses costs one name.
 `integrations` lists them, or one's actions with their effect, rule and input schema; `use_integration` runs one action (`src/core/pi/integrationTools.ts`).
+An action at Asks you needs its `reason`; the app keeps the call and raises its own card, and the first mate emits no card of its own and hears the outcome once as `write-answered` ("The rules").
+That card, or a change or send that ran, counts as what its turn did for answer delivery (`docs/task-capture.md`, "Answer delivery").
 Their words never change with what is connected, so a seat never starts over when an integration comes or goes.
 It changes them through `app_change` in the area `integrations`, the same channels the tab writes: `integration-add` hands the captain to the tab for GitHub, GitLab, GitHub Enterprise or Google, with an optional host for either server kind (a sign-in is the captain's to make), refusing a kind this build cannot sign in to, `integration-add-mcp` adds an MCP server the captain named, `integration-remove` needs the captain's own words, and `integration-settings`, `integration-check` and `integration-add-mcp` are asked actions.
 
@@ -263,7 +266,8 @@ The GitHub naming journey in `tests/e2e/older-profile.spec.ts` upgrades a real M
 The kept-request case in `mcpIntegration.test.ts` approves an ask saved before the repair and observes exactly one change on the original server, with no GitHub write; the event's id stays the same too.
 Its INF-947 cases remove a stand-in notes server and add another under the same name and id: the ask kept for the first is refused and neither server changes, an ask kept for the replacement runs after a rename and a restart, an ask kept by an older build is refused, and a rule on the removed server never looks at the replacement until it is pointed there with `reconnect`, nor does a rule saved by an older build.
 The Google case of the same number keeps an ask through a renewal and a sign-in as the same person, and refuses it once the row signs in as another account.
-`src/core/forge/providers/github/gateway.test.ts` holds GitHub through the integration against a stand-in GitHub: a crewmate's read runs, its write is kept as an ask even on its own project and sent by the captain's click, the first mate's read runs and its write is refused before any request, and an action turned off reaches nothing.
+`src/core/forge/providers/github/gateway.test.ts` holds GitHub through the integration against a stand-in GitHub: a crewmate's read runs, its write is kept as an ask even on its own project and sent by the captain's click, the first mate's read runs and its write is kept, sent once through its seat when taken and refused when GitHub refuses it, and an action turned off reaches nothing.
+`src/core/orchestrator/crewSupervisor.test.ts` holds the first mate's card: the call waits on the card's own row, the click runs it once, closing the card is Not now, and either wakes the first mate once.
 `src/core/axi/channel.test.ts` runs the command through the real launcher and channel.
 `src/core/integrations/secrets.test.ts` holds the keys against a stand-in API that sends back the header it received: the file and folder modes, a view and discovery that never carry a value, a call refused while its key is missing, a key applied to one request and replaced in the answer, a program's variables, and a change kept as an ask that runs once on the click and not at all once its action is off.
 `src/core/placed/placedSessions.test.ts`, "the integrations command on a computer that runs work", runs it from a real Pi crewmate's shell on a joined computer through that computer's launcher, command process and task channel and across the real connection to this Mac's integrations over a stand-in GitHub: list and show answer what is connected here, a read runs through this Mac's sign-in, a reasoned write raises a host card here, and its once-only choice sends exactly one request and returns its outcome to that crewmate, the instructions there carry the line, no file there holds the token, and a computer that does not list the change gets neither the command nor the line.

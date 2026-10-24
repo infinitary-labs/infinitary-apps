@@ -2637,8 +2637,25 @@ export class FirstmateAgent {
             },
           )
         : []),
-      // Two fixed tools whatever is connected (docs/integrations.md).
-      ...(this.options.integrations ? createIntegrationTools(this.options.integrations) : []),
+      // Two fixed tools whatever is connected (docs/integrations.md). A held
+      // call's approval card is what the turn did, on the row the host filed
+      // for it; a change or send that ran is an operation (INF-1108).
+      ...(this.options.integrations
+        ? createIntegrationTools(this.options.integrations, (fact) => {
+            if ("ran" in fact) {
+              this.noteDelivery({ outcome: "action", kind: "record", tool: "use_integration" });
+              return;
+            }
+            const row = this.options.tasks.openCardTaskFor(fact.card);
+            if (row) this.asks.attach(row.id, "use_integration");
+            this.noteDelivery({
+              outcome: "action",
+              kind: "card",
+              tool: "use_integration",
+              ref: fact.card,
+            });
+          })
+        : []),
       ...createAppTools({
         ...(this.options.platform ? { platform: this.options.platform } : {}),
         dispatch: (channel, args, actor) => {

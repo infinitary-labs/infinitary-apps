@@ -224,7 +224,7 @@ import type {
   GithubWriteInput,
   ReadWorkflowInput,
 } from "../forge";
-import type { TaskIntegrations } from "../integrations";
+import type { IntegrationAskTaken, TaskIntegrations } from "../integrations";
 import { jobExitWake } from "../jobs/jobManager";
 import {
   knowledgeShortlist,
@@ -733,6 +733,15 @@ export type CrewSupervisorOptions = {
     taskId: string,
     askId: string,
     choice?: IntegrationApprovalChoice,
+  ) => Promise<WriteAskSent>;
+  /**
+   * Run the first mate's integration ask its card's click already took from
+   * the row the host filed for it (INF-1108), once, as the first mate's call.
+   */
+  sendTakenIntegrationAsk?: (
+    rowId: string,
+    taken: IntegrationAskTaken,
+    choice: IntegrationApprovalChoice,
   ) => Promise<WriteAskSent>;
   /** The pinned pull request by its number, for a kept approval's reconcile. */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
@@ -12496,9 +12505,23 @@ export class CrewSupervisor {
         throw new CardChoiceUnavailableError("action-changed");
       }
     }
+    // INF-1108: the first mate's held call waits on its card's own row, which
+    // this resolution closes, so the click takes it in the same transaction.
+    const firstmateAsk =
+      !card.taskId &&
+      associated &&
+      card.author === "host" &&
+      source === "chrome" &&
+      effect?.kind === "request_write" &&
+      effect.integration
+        ? { rowId: associated.id, ask: effect.ask, choice: effect.integration }
+        : undefined;
+    let takenFirstmateAsk: IntegrationAskTaken | undefined;
     let closedAnswer: ReturnType<CardService["resolve"]>;
     try {
       closedAnswer = this.cards.resolve(card, actionId, actionId, answers, by, evidence, () => {
+        if (firstmateAsk)
+          takenFirstmateAsk = this.options.tasks.takeWriteAsk(firstmateAsk.rowId, firstmateAsk.ask);
         if (validationDecision && card.taskId && card.offerId)
           this.options.tasks.decideLiveValidation(card.taskId, {
             card: card.id,
@@ -12610,6 +12633,15 @@ export class CrewSupervisor {
       case "request_write": {
         // The declaration sent nothing. Only this chrome click sends the
         // kept write, once; the crewmate hears what came of it once.
+        if (firstmateAsk && takenFirstmateAsk) {
+          this.answerFirstmateAsk(
+            firstmateAsk.rowId,
+            firstmateAsk.ask,
+            takenFirstmateAsk,
+            firstmateAsk.choice,
+          );
+          return {};
+        }
         if (!card.taskId || source !== "chrome" || !this.options.sendWriteAsk) return {};
         const taskId = card.taskId;
         const askId = effect.ask;
@@ -12930,7 +12962,84 @@ export class CrewSupervisor {
   askIntegration(taskId: string, ask: IntegrationAsk): void {
     const task = this.options.tasks.get(taskId);
     if (!task || TaskService.isClosed(task)) return;
-    this.cards.put(integrationApprovalCard(taskId, task.title, ask));
+    this.cards.put(integrationApprovalCard(ask, { id: taskId, title: task.title }));
+  }
+
+  /**
+   * The first mate's held integration call (INF-1108): it has no task, so
+   * its card is a host card with no task, whose own row the host files
+   * (`TaskService.fileHostCardTask`, through the card's placement) and keeps
+   * the exact call on, the way a crewmate's task keeps its own.
+   */
+  askIntegrationForFirstmate(ask: IntegrationAsk): string {
+    const card = integrationApprovalCard(ask);
+    this.cards.put(card);
+    const row = this.options.tasks.openCardTaskFor(card.id);
+    if (!row) {
+      this.cards.takeDown(card.id, "no-row");
+      throw new Error("its approval card has no task row to keep the call on.");
+    }
+    this.options.tasks.keepWriteAsk(row.id, ask);
+    return card.id;
+  }
+
+  /**
+   * What came of the first mate's held call reaches the first mate once
+   * (INF-1108): the row keeps the outcome and a line, and the wake names the
+   * ask, so a click, a close and a restart together still wake it once. A
+   * run that threw after the click took the ask is unknown, never retried.
+   */
+  private answerFirstmateAsk(
+    rowId: string,
+    askId: string,
+    taken: IntegrationAskTaken,
+    choice: IntegrationApprovalChoice,
+  ): void {
+    const send = this.options.sendTakenIntegrationAsk;
+    if (!send) return;
+    const tell = (sent: WriteAskSent) => {
+      if (sent.ask)
+        this.options.tasks.note(rowId, writeSentLine(sent), {
+          news: false,
+          feed: true,
+          actor: "host",
+        });
+      this.hooks.notifyOp(
+        {
+          facts: {
+            kind: "write-answered",
+            to: "firstmate",
+            ask: askId,
+            call: sent.call,
+            place: sent.place,
+            outcome: sent.outcome.kind,
+            ...(sent.outcome.kind === "unknown" || sent.outcome.kind === "refused"
+              ? { why: sent.outcome.why }
+              : {}),
+            ...(sent.answer !== undefined ? { answer: sent.answer } : {}),
+          },
+          once: `write-answered:${askId}`,
+        },
+        "agent",
+        rowId,
+      );
+    };
+    void send(rowId, taken, choice)
+      .then(tell, (caught: unknown) => {
+        const why = caught instanceof Error ? caught.message : String(caught);
+        const ask = "ask" in taken ? taken.ask : undefined;
+        if (ask) this.options.tasks.recordWriteAskOutcome(rowId, askId, { kind: "unknown", why });
+        tell({
+          ok: false,
+          ...(ask ? { ask } : {}),
+          call: ask?.kind === "integration" ? ask.action : "",
+          place: ask?.place ?? "",
+          outcome: ask ? { kind: "unknown", why } : { kind: "refused", why },
+        });
+      })
+      .catch((caught: unknown) => {
+        console.warn("[crew] first mate's integration outcome not delivered:", caught);
+      });
   }
 
   private answerWriteAsk(
@@ -13523,7 +13632,6 @@ export class CrewSupervisor {
     const home = card.taskId
       ? this.options.tasks.get(card.taskId)
       : this.options.tasks.openCardTaskFor(card.id);
-    this.cards.dismiss(card, submission);
     const integrationAsk =
       card.author === "host"
         ? card.actions.find(
@@ -13531,8 +13639,21 @@ export class CrewSupervisor {
               action.effect?.kind === "request_write" && action.effect.integration === "deny",
           )?.effect
         : undefined;
+    // The first mate's held call waits on this card's own row, which the
+    // dismissal closes: closing is Not now, taken before the row goes (INF-1108).
+    const firstmateAsk =
+      !card.taskId && home && integrationAsk?.kind === "request_write"
+        ? {
+            rowId: home.id,
+            ask: integrationAsk.ask,
+            taken: this.options.tasks.takeWriteAsk(home.id, integrationAsk.ask),
+          }
+        : undefined;
+    this.cards.dismiss(card, submission);
     if (card.taskId && integrationAsk?.kind === "request_write")
       this.answerWriteAsk(card, card.taskId, integrationAsk.ask, "deny");
+    if (firstmateAsk)
+      this.answerFirstmateAsk(firstmateAsk.rowId, firstmateAsk.ask, firstmateAsk.taken, "deny");
     // A host card that can turn something down treats the dismissal as that
     // answer (the consent card, A2a; the setup card): closing it is "don't
     // add", never a question left staged behind a card nobody can see.

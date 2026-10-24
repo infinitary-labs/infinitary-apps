@@ -93,7 +93,17 @@ export type IntegrationConnection = {
 };
 
 /** An action's answer: words for the caller, or a refusal that says why and what to do. */
-export type IntegrationAnswer = { text: string; refused?: "refused" | "invalid" };
+export type IntegrationAnswer = {
+  text: string;
+  refused?: "refused" | "invalid";
+  /**
+   * The first mate's call only, set by the service (INF-1108): the approval
+   * card the host raised for its held call, or that a change or send ran.
+   * Its turn counts either as an action that took effect.
+   */
+  card?: string;
+  ran?: "changes" | "sends";
+};
 
 /**
  * What a binding's `call` throws when it failed after the request left for

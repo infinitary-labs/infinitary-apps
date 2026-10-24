@@ -34,6 +34,7 @@ import type { CheckChangeInput } from "@shared/checkRepair";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import type { FmEvent } from "@shared/events";
 import { fixedHoldWords, softHoldWords } from "@shared/holds";
+import { INTEGRATION_APPROVAL_WORDS } from "@shared/integrations";
 import {
   AUTOMATIC_COMPUTER,
   type PlacementWait,
@@ -51,6 +52,7 @@ import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { queueStartedRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
+import type { IntegrationAsk } from "@shared/writeAsk";
 import {
   CARE_WORDS,
   MERGE_AFTER_FIXING_WORDS,
@@ -174,6 +176,7 @@ import {
   renderWake,
   reviewFindingsNext,
   THREAD_STEER_PREAMBLE,
+  WRITE_ANSWERED_LEAD,
   type WakeBody,
   type WakeFacts,
 } from "./wakes";
@@ -349,6 +352,7 @@ type SetupExtras = {
   closePullRequest?: (taskId: string) => Promise<{ ok: boolean; text: string }>;
   githubRead?: CrewSupervisorOptions["githubRead"];
   githubWrite?: CrewSupervisorOptions["githubWrite"];
+  sendTakenIntegrationAsk?: CrewSupervisorOptions["sendTakenIntegrationAsk"];
   checkCi?: (taskId: string) => Promise<import("./prCi").PrCiOverall>;
   readCheckWatch?: CrewSupervisorOptions["readCheckWatch"];
   readMainChecks?: CrewSupervisorOptions["readMainChecks"];
@@ -514,6 +518,9 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.readPull ? { readPull: extras.readPull } : {}),
     ...(extras.githubRead ? { githubRead: extras.githubRead } : {}),
     ...(extras.githubWrite ? { githubWrite: extras.githubWrite } : {}),
+    ...(extras.sendTakenIntegrationAsk
+      ? { sendTakenIntegrationAsk: extras.sendTakenIntegrationAsk }
+      : {}),
     ...(extras.checkCi ? { checkCi: extras.checkCi } : {}),
     ...(extras.openChange ? { openChange: extras.openChange } : {}),
     ...(extras.completionPresentation
@@ -26084,5 +26091,125 @@ describe("programs (INF-799 piece 2)", () => {
       "A program runs its parts in a project",
     );
     expect(tasks.list()).toHaveLength(0);
+  });
+});
+
+// INF-1108: the first mate's held integration call waits on the app's own
+// card, whose row the host files, and its outcome wakes the first mate once.
+// The captain's q1: "Yes, like any action, but its card highlights Only this
+// time, so Always allow takes a deliberate click".
+describe("the first mate's integration approval card (INF-1108)", () => {
+  function heldCall(id: string): IntegrationAsk {
+    return {
+      id,
+      kind: "integration",
+      by: "firstmate",
+      integration: "mcp-notes",
+      connection: "mcp-notes#1",
+      place: "Notes",
+      action: "add_note",
+      label: "Add a note",
+      description: "Adds a note to the end of the list.",
+      effect: "changes",
+      reason: "The captain asked me to remember the library books.",
+      signature: "add_note:changes",
+      input: JSON.stringify({ text: "Return the library books by Friday" }),
+      at: Date.now(),
+    };
+  }
+
+  function firstmateSetup() {
+    const sent: { rowId: string; askId: string | null; choice: string }[] = [];
+    const harness = setup(fakeCrewmate(), {
+      sendTakenIntegrationAsk: async (rowId, taken, choice) => {
+        sent.push({ rowId, askId: "ask" in taken ? taken.ask.id : null, choice });
+        if (!("ask" in taken))
+          return {
+            ok: false,
+            call: "",
+            place: "",
+            outcome: { kind: "refused", why: taken.refused },
+          };
+        return choice === "deny"
+          ? {
+              ok: false,
+              ask: taken.ask,
+              call: "add_note",
+              place: "Notes",
+              outcome: { kind: "refused", why: "The captain chose Not now. Nothing ran." },
+            }
+          : {
+              ok: true,
+              ask: taken.ask,
+              call: "add_note",
+              place: "Notes",
+              outcome: { kind: "ran" },
+              answer: "1. Return the library books by Friday",
+            };
+      },
+    });
+    // The real agent's notifyOp is the inbox's deduped wake path.
+    harness.supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) => {
+        harness.inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref);
+      },
+      retryConverse: vi.fn(),
+    });
+    const wakes = () =>
+      harness.inbox
+        .allFor(FIRSTMATE_RECIPIENT)
+        .map((row) => renderWake(row))
+        .filter((text) => text.includes(WRITE_ANSWERED_LEAD) || text.includes("sent nothing"));
+    return { ...harness, sent, wakes };
+  }
+
+  it("keeps the call on the card's own row, runs it once on the click, and wakes the first mate once", async () => {
+    const { supervisor, tasks, sent, wakes } = firstmateSetup();
+    const ask = heldCall("ia0000000001");
+    const cardId = supervisor.askIntegrationForFirstmate(ask);
+    const card = supervisor.cardsSnapshot().find((shown) => shown.id === cardId);
+    expect(card).toMatchObject({ author: "host", title: "Allow Add a note on Notes?" });
+    expect(card?.taskId).toBeUndefined();
+    expect(card?.body).toContain("Your first mate wants to use this action.");
+    expect(card?.body).toContain(ask.reason);
+    expect(card?.actions.find((action) => action.default)?.label).toBe(
+      INTEGRATION_APPROVAL_WORDS.once,
+    );
+    const row = tasks.openCardTaskFor(cardId);
+    expect(row?.delivery?.writeAsks).toEqual([expect.objectContaining({ id: ask.id })]);
+
+    supervisor.act(cardId, "once");
+    await tick();
+    expect(sent).toEqual([{ rowId: row?.id, askId: ask.id, choice: "once" }]);
+    expect(tasks.get(row?.id ?? "")?.delivery?.writeAsks?.[0]?.sentAt).toEqual(expect.any(Number));
+    expect(wakes()).toHaveLength(1);
+    expect(wakes()[0]).toContain(
+      `${WRITE_ANSWERED_LEAD} ${ask.id} (add_note) to Notes, once, and it ran.`,
+    );
+    expect(wakes()[0]).toContain("1. Return the library books by Friday");
+
+    // The card is answered: a second click or a close runs nothing and wakes nobody.
+    supervisor.act(cardId, "once");
+    supervisor.close(cardId);
+    await tick();
+    expect(sent).toHaveLength(1);
+    expect(wakes()).toHaveLength(1);
+  });
+
+  it("treats closing the card as Not now: nothing runs and the first mate hears it once", async () => {
+    const { supervisor, tasks, sent, wakes } = firstmateSetup();
+    const ask = heldCall("ia0000000002");
+    const cardId = supervisor.askIntegrationForFirstmate(ask);
+    const row = tasks.openCardTaskFor(cardId);
+    supervisor.close(cardId);
+    await tick();
+    expect(sent).toEqual([{ rowId: row?.id, askId: ask.id, choice: "deny" }]);
+    expect(wakes()).toEqual([
+      expect.stringContaining("To ask again, call the integration again with a reason."),
+    ]);
+    supervisor.act(cardId, "once");
+    await tick();
+    expect(sent).toHaveLength(1);
+    expect(wakes()).toHaveLength(1);
   });
 });

@@ -896,7 +896,7 @@ const actionLines = {
     change: "inf:integrations:add",
     current: "inf:integrations:list",
     value: integrationMcpAddSchema,
-    line: "Add an MCP server when asked: name is the captain's word for it, runs is what it runs as they gave it - a program and its arguments (npx -y @scope/server), or its https address. The app connects, keeps the server's tools as actions (read-only ones run, the rest ask them) and answers the row; a server that cannot connect is refused with why. Never put a key or token in runs.",
+    line: "Add an MCP server when asked: name is the captain's word for it, runs is what it runs as they gave it - a program and its arguments (npx -y @scope/server), or its https address. The app connects, keeps the server's tools as actions (each asks them until they choose Always allow) and answers the row; a server that cannot connect is refused with why. Never put a key or token in runs.",
     toRequest: (v) => [v],
     readValue: (c) => ({ integrations: integrationsBrief(c as IntegrationsView) }),
     done: (v) => `Added MCP server ${v.name}`,

@@ -248,7 +248,7 @@ it("keeps an old MCP ask and its event on the server after the GitHub name repai
               signedIn.value = false;
             },
           },
-          gateway: { read, readAsSeat: read, write },
+          gateway: { read, readAsSeat: read, write, writeAsSeat: write },
         }),
         mcpIntegration({
           root,

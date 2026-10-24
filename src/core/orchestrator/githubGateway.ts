@@ -66,7 +66,7 @@ type Target = {
   integration?: true;
 };
 
-/** Whose allowance the first mate's own reads count against: it has no task. */
+/** Whose allowance the first mate's own calls count against: it has no task. */
 const SEAT_CALLS = "seat:firstmate";
 
 /** The host's address a forge with none of its own stands for. */
@@ -133,6 +133,61 @@ export class GithubGatewayService {
     return this.answerWith(
       () => this.accountTarget(host),
       ({ api }) => this.readOn(SEAT_CALLS, api, input),
+    );
+  }
+
+  /**
+   * The first mate's change through the same sign-ins (INF-1108): the
+   * integration's approval rule let it run - Always allowed, or the
+   * captain's click on its held call - so nothing here asks again. It has no
+   * task, so its calls count against the seat's own allowance; merges and
+   * default-branch moves keep the merge card, and an outcome lost after the
+   * request left is unknown, never sent again.
+   */
+  writeAsSeat(input: GithubWriteInput, host?: string): Promise<string> {
+    return this.answerWith(
+      () => this.accountTarget(host),
+      async ({ api, forge }) => {
+        if (input.file !== undefined)
+          throw new ForgeError("refused", "A release file goes only through a task's own write.");
+        if (input.validationEffect !== undefined)
+          throw new ForgeError(
+            "refused",
+            "A validation effect binds a task's own write. Nothing was sent.",
+          );
+        const body = input.body;
+        let parsed: unknown;
+        if (body !== undefined) {
+          try {
+            parsed = JSON.parse(body);
+          } catch {
+            throw new ForgeError("refused", "body must be JSON text.");
+          }
+        }
+        const route = api.route(
+          input.method,
+          input.path,
+          body === undefined ? 0 : Buffer.byteLength(body),
+        );
+        if (!route.write)
+          throw new ForgeError("refused", "A change sends POST, PATCH, PUT or DELETE only.");
+        if (forge.kind === "github" || forge.kind === "gitlab")
+          await guardApiWrite(forge.kind, route, parsed, () => forge.defaultBranch());
+        const response = await this.send(
+          SEAT_CALLS,
+          api,
+          route.method,
+          route.path,
+          body,
+          undefined,
+          forge.host ?? GITHUB_HOST,
+          true,
+        );
+        if (response.status >= 500) throw new IntegrationOutcomeUnknown(render(response, api));
+        if (response.status >= 300) throw new ForgeError("refused", render(response, api));
+        return render(response, api);
+      },
+      true,
     );
   }
 

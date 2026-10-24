@@ -48,8 +48,9 @@ export type IntegrationsServiceOptions = {
   /** The keys the kinds sign in with: the bridge now, the secret manager later. */
   secrets: IntegrationSecrets;
   /**
-   * A task's unapproved action is kept with its reason and exact input;
-   * the host presents its card and the captain's choice takes it once.
+   * An unapproved action is kept with its reason and exact input - on the
+   * caller's task, or for the first mate on the row the host files - the
+   * host presents its card and the captain's choice takes it once.
    */
   asks?: IntegrationAskStore;
   /**
@@ -95,13 +96,23 @@ export type TaskIntegrations = {
   ) => Promise<IntegrationAnswer>;
 };
 
-/** Where a task's asks are kept: the task's own write asks. */
+/** Where asks are kept: a task's own write asks. */
 export type IntegrationAskStore = {
   keep: (taskId: string, ask: IntegrationAsk) => void;
   present?: (taskId: string, ask: IntegrationAsk) => void;
-  take: (taskId: string, askId: string) => { ask: WriteAsk } | { refused: string };
+  /**
+   * The first mate has no task (INF-1108): the host files the row its card
+   * gates (`TaskService.fileHostCardTask`), keeps the ask there and
+   * presents the card, answering with its id. Absent, the first mate's call
+   * is refused.
+   */
+  keepForFirstmate?: (ask: IntegrationAsk) => string;
+  take: (taskId: string, askId: string) => IntegrationAskTaken;
   record: (taskId: string, askId: string, outcome: WriteAskOutcome) => void;
 };
+
+/** A kept ask the captain's click took, once, or why it took none. */
+export type IntegrationAskTaken = { ask: WriteAsk } | { refused: string };
 
 /** What the captain's click on a kept integration ask did. */
 export type IntegrationAskSent = {
@@ -330,11 +341,12 @@ export class IntegrationsService {
         text: `${view.name} needs ${missing.join(" and ")} before it can do anything. The captain enters it in Settings → Integrations; never ask for it in a message, a card or a task.`,
         refused: "refused",
       };
-    // Piece 1 preserves the first mate's existing read-only reach; its own
-    // host-filed approval tasks are the continuation, not a task-less write path.
-    if (!this.allowed(row, spec) || (caller.kind === "firstmate" && spec.effect !== "reads"))
+    if (!this.allowed(row, spec))
       return this.keepAsk(caller, row, view.name, spec, parsed.data, reason);
-    return (await this.run(row, view.name, spec.name, parsed.data, caller)).answer;
+    const { answer } = await this.run(row, view.name, spec.name, parsed.data, caller);
+    return caller.kind === "firstmate" && spec.effect !== "reads" && !answer.refused
+      ? { ...answer, ran: spec.effect }
+      : answer;
   }
 
   /**
@@ -348,8 +360,21 @@ export class IntegrationsService {
     askId: string,
     choice: IntegrationApprovalChoice = "once",
   ): Promise<IntegrationAskSent> {
+    const taken = this.options.asks?.take(taskId, askId) ?? { refused: "nothing keeps asks here." };
+    return this.sendTaken(taskId, taken, choice);
+  }
+
+  /**
+   * Run an ask its owner already took, once: the first mate's ask is taken
+   * from its card's row in the same transaction that closes that row
+   * (INF-1108). It runs as whoever asked it.
+   */
+  async sendTaken(
+    taskId: string,
+    taken: IntegrationAskTaken,
+    choice: IntegrationApprovalChoice = "once",
+  ): Promise<IntegrationAskSent> {
     const asks = this.options.asks;
-    const taken = asks?.take(taskId, askId) ?? { refused: "nothing keeps asks here." };
     if ("refused" in taken)
       return { ok: false, call: "", place: "", outcome: { kind: "refused", why: taken.refused } };
     if (taken.ask.kind !== "integration") {
@@ -408,10 +433,13 @@ export class IntegrationsService {
     if (!parsed.success)
       return done({ kind: "refused", why: `its input no longer fits ${view.name}'s ${spec.name}` });
     if (choice === "always") this.grant(row, spec, true);
-    const { answer, unknown } = await this.run(row, view.name, spec.name, parsed.data, {
-      kind: "task",
-      taskId,
-    });
+    const { answer, unknown } = await this.run(
+      row,
+      view.name,
+      spec.name,
+      parsed.data,
+      ask.by === "firstmate" ? { kind: "firstmate" } : { kind: "task", taskId },
+    );
     if (unknown) return done({ kind: "unknown", why: answer.text });
     return answer.refused
       ? done({ kind: "refused", why: answer.text })
@@ -467,7 +495,11 @@ Do not repeat this call; read ${name} to check what happened first.`
     }
   }
 
-  /** The host keeps the exact call and presents its own card (INF-950). */
+  /**
+   * The host keeps the exact call and presents its own card (INF-950): on
+   * the caller's task, or for the first mate on the row the host files for
+   * that card (INF-1108).
+   */
   private keepAsk(
     caller: IntegrationCaller,
     row: Row,
@@ -476,19 +508,22 @@ Do not repeat this call; read ${name} to check what happened first.`
     input: unknown,
     reason?: string,
   ): IntegrationAnswer {
-    if (caller.kind !== "task" || !this.options.asks)
+    const asks = this.options.asks;
+    const firstmate = caller.kind === "firstmate";
+    if (!asks || (firstmate && !asks.keepForFirstmate))
       return {
         text: `Not run: ${name}'s ${spec.name} asks the captain. Start a crewmate whose brief names the call and its reason.`,
         refused: "refused",
       };
     if (typeof reason !== "string" || !reason.trim())
       return {
-        text: `Not run: ${name}'s ${spec.name} asks the captain. Call again with --reason explaining why this action is needed.`,
+        text: `Not run: ${name}'s ${spec.name} asks the captain. Call again with ${firstmate ? "reason" : "--reason"} explaining why this action is needed.`,
         refused: "invalid",
       };
     const ask: IntegrationAsk = {
       id: `ia${randomUUID().replace(/-/g, "").slice(0, 12)}`,
       kind: "integration",
+      ...(firstmate ? { by: "firstmate" as const } : {}),
       integration: row.connection.id,
       connection: row.ref,
       place: name,
@@ -501,11 +536,24 @@ Do not repeat this call; read ${name} to check what happened first.`
       input: JSON.stringify(input),
       at: (this.options.now ?? Date.now)(),
     };
-    this.options.asks.keep(caller.taskId, ask);
-    this.options.asks.present?.(caller.taskId, ask);
+    let card: string | undefined;
+    if (caller.kind === "task") {
+      asks.keep(caller.taskId, ask);
+      asks.present?.(caller.taskId, ask);
+    } else {
+      try {
+        card = asks.keepForFirstmate?.(ask);
+      } catch (error) {
+        return {
+          text: `Not run: ${name}'s ${spec.name} asks the captain, and the app could not keep the call: ${error instanceof Error ? error.message : String(error)}`,
+          refused: "refused",
+        };
+      }
+    }
     return {
       text: `Not run: ${name}'s ${spec.name} asks the captain. The app raised its approval card for ask ${ask.id}. Do not emit another card or repeat the call. You will hear the outcome once through write-answered.`,
       refused: "refused",
+      ...(card ? { card } : {}),
     };
   }
 

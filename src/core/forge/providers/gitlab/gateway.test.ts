@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { GITLAB } from "@shared/forges";
+import type { IntegrationAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
@@ -366,6 +367,7 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     "reaches %s through its integration and keeps writes for one click",
     async (host) => {
       const { service, tasks, seen } = await fixture({ host });
+      const firstmateAsks: IntegrationAsk[] = [];
       const integrations = new IntegrationsService({
         bindings: [
           forgeHostIntegration("gitlab", {
@@ -395,12 +397,17 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
               read: (task, input) => service.read(task, input, { host }),
               write: (task, input) => service.write(task, input, { host }, true),
               readAsSeat: (input) => service.readAsSeat(input, host),
+              writeAsSeat: (input) => service.writeAsSeat(input, host),
             }),
           }),
         ],
         store: new IntegrationSettingsStore(join(scratchDir("fm-host-integrations-"), "settings")),
         asks: {
           keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+          keepForFirstmate: (ask) => {
+            firstmateAsks.push(ask);
+            return `integration-ask-${ask.id}`;
+          },
           take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
           record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
         },
@@ -461,7 +468,9 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
           ).text,
         ),
       ).toMatchObject({ body: { username: "octo" } });
-      const readCount = seen.length;
+      // INF-1108: the first mate's change waits for the captain's click,
+      // then goes as the seat's own call; a merge still keeps the merge card.
+      let readCount = seen.length;
       expect(
         await integrations.call(
           { kind: "firstmate" },
@@ -473,6 +482,27 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
       ).toMatchObject({
         refused: "refused",
       });
+      expect(seen).toHaveLength(readCount);
+      expect(
+        await integrations.sendTaken("host-row", { ask: firstmateAsks[0]! }, "once"),
+      ).toMatchObject({ ok: true, outcome: { kind: "ran" } });
+      expect(seen.slice(readCount)).toEqual([
+        expect.objectContaining({
+          method: "POST",
+          path: expect.stringContaining("/merge_requests/1/notes"),
+        }),
+      ]);
+      await integrations.call(
+        { kind: "firstmate" },
+        id,
+        "write",
+        { method: "PUT", path: `${OWN}/merge_requests/1/merge` },
+        "Merge it for the captain.",
+      );
+      expect(
+        (await integrations.sendTaken("host-row", { ask: firstmateAsks[1]! }, "once")).outcome,
+      ).toMatchObject({ kind: "refused", why: expect.stringContaining("merge card") });
+      readCount = seen.length;
       integrations.configure(id, { actions: { read: false } });
       expect(
         await crew.call(

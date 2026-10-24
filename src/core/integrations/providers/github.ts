@@ -21,6 +21,11 @@ export type GithubIntegrationGateway = {
   write: (taskId: string, input: GithubWriteInput, through: "account") => Promise<string>;
   /** The first mate's read: it has no task, so its calls count as the seat's own. */
   readAsSeat: (input: GithubReadInput) => Promise<string>;
+  /**
+   * The first mate's change, once the integration's approval let it run
+   * (INF-1108): its calls count as the seat's own, under the same guards.
+   */
+  writeAsSeat: (input: GithubWriteInput) => Promise<string>;
 };
 
 export type GithubIntegrationOptions = {
@@ -101,13 +106,11 @@ export function githubIntegration(
               : await options.gateway.readAsSeat(read),
         };
       }
-      if (caller.kind !== "task")
-        return {
-          text: `Not sent: a change on ${label} asks the captain on a card, and only a crewmate's card can carry the exact call. Start a crewmate whose brief names the call.`,
-          refused: "refused",
-        };
       return {
-        text: await options.gateway.write(caller.taskId, input as GithubWriteInput, "account"),
+        text:
+          caller.kind === "task"
+            ? await options.gateway.write(caller.taskId, input as GithubWriteInput, "account")
+            : await options.gateway.writeAsSeat(input as GithubWriteInput),
       };
     },
   };

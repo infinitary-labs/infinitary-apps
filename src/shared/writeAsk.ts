@@ -36,13 +36,19 @@ export type ForgeWriteAsk = {
 };
 
 /**
- * An integration's action at Asks you, requested with the crewmate's reason (`docs/integrations.md`, "The rules"): kept the same
+ * An integration's action at Asks you, requested with the agent's reason (`docs/integrations.md`, "The rules"): kept the same
  * way, with the exact checked input, and run once on the captain's click
  * through the integration's own binding.
  */
 export type IntegrationAsk = {
   id: string;
   kind: "integration";
+  /**
+   * The first mate asked it, so it waits on the row the host filed for its
+   * card and runs as the first mate's call (INF-1108); absent, the task's
+   * crewmate asked it.
+   */
+  by?: "firstmate";
   /** The integration's id, such as `google`. */
   integration: string;
   /**

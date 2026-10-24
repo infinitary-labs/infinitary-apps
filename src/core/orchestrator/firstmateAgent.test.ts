@@ -22,6 +22,7 @@ import { parseServedInput, type ServedWakeOrigin } from "@shared/servedFrame";
 import { DEFAULT_SHARING } from "@shared/sharing";
 import { decode } from "@toon-format/toon";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { AdmissionClock } from "../../../tests/helpers/admissionClock";
 import {
   CLAUDE_ACCOUNT,
@@ -49,6 +50,12 @@ import {
 import { attachmentPath } from "../attachments";
 import { createClaudeSessionFactory } from "../claude/session";
 import { ForgeSignInStore, ForgeSignIns, type ForgeWhoAmI } from "../forge/signIns";
+import {
+  FileIntegrationSecrets,
+  type IntegrationBinding,
+  IntegrationSettingsStore,
+  IntegrationsService,
+} from "../integrations";
 import { KnowledgeService } from "../knowledge/knowledgeService";
 import { appPathsFor } from "../paths";
 import {
@@ -353,6 +360,8 @@ function setup(
     db?: ReturnType<typeof openInMemoryDatabase>;
     /** The computers that run work for this one, as the crew reads them. */
     machines?: CrewMachines;
+    /** The captain's integrations, over this setup's supervisor (docs/integrations.md). */
+    integrations?: (supervisor: CrewSupervisor) => IntegrationsService;
   } = {},
 ) {
   const paths = appPathsFor(scratchDir("infinitary-agent-"));
@@ -446,6 +455,7 @@ function setup(
       ...(knowledge ? { knowledge } : {}),
       ...(options.scheduler ? { scheduler: options.scheduler } : {}),
       ...(options.forges ? { forges: options.forges } : {}),
+      ...(options.integrations ? { integrations: options.integrations(supervisor) } : {}),
       flagDuplicate: (input) => supervisor.flagDuplicate(input),
       broadcastEvent: (event) => events.push(event),
       selfSourceDir,
@@ -487,6 +497,37 @@ function setup(
     removedPersonal,
     turns,
     paths,
+  };
+}
+
+/** A connection with one change action, the captain's notes, kept in memory. */
+function notesBinding(): IntegrationBinding {
+  const notes: string[] = [];
+  return {
+    kind: "mcp",
+    connections: () => [
+      {
+        id: "mcp-notes",
+        name: "Notes",
+        account: null,
+        health: "ok",
+        actions: [
+          {
+            name: "add_note",
+            label: "Add a note",
+            effect: "changes",
+            description: "Adds a note to the end of the list.",
+            input: z.strictObject({ text: z.string() }),
+          },
+        ],
+      },
+    ],
+    check: async () => {},
+    remove: () => {},
+    call: async (_id, _action, input) => {
+      notes.push((input as { text: string }).text);
+      return { text: notes.join("\n") };
+    },
   };
 }
 
@@ -7542,6 +7583,45 @@ describe("FirstmateAgent answer delivery", () => {
     expect(f.session.prompts).toHaveLength(1);
     expect(new InboxStore(f.db).allFor(FIRSTMATE_RECIPIENT)).toEqual([]);
     expect(noticeOf(f)).toBeUndefined();
+  });
+
+  // INF-1108: the first mate's held integration call raises the app's own
+  // approval card, so the message it answered is covered by that card.
+  it("covers a message the app raised an integration approval card for, on that card's row", async () => {
+    const f = setup({
+      silent: true,
+      integrations: (supervisor) =>
+        new IntegrationsService({
+          bindings: [notesBinding()],
+          store: new IntegrationSettingsStore(scratchDir("infinitary-agent-integrations-")),
+          secrets: new FileIntegrationSecrets(scratchDir("infinitary-agent-integration-keys-")),
+          asks: {
+            keep: (taskId, ask) => f.tasks.keepWriteAsk(taskId, ask),
+            keepForFirstmate: (ask) => supervisor.askIntegrationForFirstmate(ask),
+            take: (taskId, askId) => f.tasks.takeWriteAsk(taskId, askId),
+            record: (taskId, askId, outcome) =>
+              f.tasks.recordWriteAskOutcome(taskId, askId, outcome),
+          },
+        }),
+    });
+    await f.agent.converse("add my library books reminder to Notes");
+    const held = await toolsOf(f.specs)
+      .get("use_integration")
+      ?.execute("u1", {
+        name: "Notes",
+        action: "add_note",
+        input: { text: "Return the library books by Friday" },
+        reason: "The captain asked me to remember the library books.",
+      });
+    expect(held?.content[0]?.text).toContain("The app raised its approval card");
+    await finish(f, "The app is asking you on its card.");
+    expect(states(f)).toEqual(["covered"]);
+    expect(retries(f)).toEqual([]);
+    const card = f.supervisor
+      .cardsSnapshot()
+      .find((shown) => shown.id.startsWith("integration-ask-"));
+    expect(card).toBeDefined();
+    expect(f.tasks.listAsks()[0]?.taskId).toBe(f.tasks.openCardTaskFor(card?.id ?? "")?.id);
   });
 
   it("counts a steer the app only saved for a held account as an action", async () => {

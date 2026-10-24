@@ -50,7 +50,7 @@ Integration keys still use the temporary bridge below until INF-785 moves its wr
 - The click consumes the ask before the call and delivers its outcome once through `write-answered`.
 - Grants live per connection reference and action in `action-approvals.json`, beside the older strict settings file, and end on Settings changes, connection replacement, another account or a changed MCP description/read-only mark.
 - The captain-only `integration-action-rule` catalog line changes Asks you or Always allowed; the existing switch remains Off.
-- The first mate runs only Always allowed reads until its continuation supplies task rows for its calls; it starts a crewmate for other actions.
+- The first mate's held call waits on the row the host files for its approval card, and its outcome wakes it once.
 - Project forge delivery and event summaries stay outside this rule.
 - A paused integration answers nobody, and a call while a needed key is missing is refused.
 - Adding GitHub or Google is a sign-in, so it is the captain's own; `integration-remove` needs the captain's own words.
@@ -89,7 +89,7 @@ Integration keys still use the temporary bridge below until INF-785 moves its wr
 - [`../src/core/integrations/service.test.ts`](../src/core/integrations/service.test.ts): names, references, paused refusal, removal, repairs.
 - [`../src/core/integrations/secrets.test.ts`](../src/core/integrations/secrets.test.ts): file modes, no value in a view, a key applied once and replaced in the answer, an ask that runs once.
 - [`../src/core/integrations/providers/mcp/mcpIntegration.test.ts`](../src/core/integrations/providers/mcp/mcpIntegration.test.ts) and [`../src/core/integrations/providers/google/googleIntegration.test.ts`](../src/core/integrations/providers/google/googleIntegration.test.ts): kinds, asks, unknown outcomes, events.
-- [`../src/core/forge/providers/github/gateway.test.ts`](../src/core/forge/providers/github/gateway.test.ts): GitHub reads run, writes ask, the first mate's write is refused.
+- [`../src/core/forge/providers/github/gateway.test.ts`](../src/core/forge/providers/github/gateway.test.ts): GitHub reads run, writes ask, the first mate's write is held and then sent through its seat.
 - [`../src/core/placed/placedSessions.test.ts`](../src/core/placed/placedSessions.test.ts) ("the integrations command on a computer that runs work") and [`../src/core/axi/channel.test.ts`](../src/core/axi/channel.test.ts).
 - [`../src/core/orchestrator/schedulerEvents.test.ts`](../src/core/orchestrator/schedulerEvents.test.ts) and the journeys [`../tests/e2e/integrations-mcp.spec.ts`](../tests/e2e/integrations-mcp.spec.ts), [`../tests/e2e/integrations-google.spec.ts`](../tests/e2e/integrations-google.spec.ts), [`../tests/e2e/automation-events.spec.ts`](../tests/e2e/automation-events.spec.ts) and [`../tests/e2e/older-profile.spec.ts`](../tests/e2e/older-profile.spec.ts).
 

@@ -4,7 +4,7 @@ import { createServer, type IncomingMessage } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
-import type { ForgeWriteAsk } from "@shared/writeAsk";
+import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
@@ -721,6 +721,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
 
   it("INF-1007: an unrelated project's crew and first mate reach Enterprise through its own row", async () => {
     const { service, seen, tasks } = await fixture();
+    const firstmateAsks: IntegrationAsk[] = [];
     const host = "github.example.com";
     const integrations = new IntegrationsService({
       bindings: [
@@ -751,6 +752,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
             read: (task, input) => service.read(task, input, { host }),
             write: (task, input) => service.write(task, input, { host }, true),
             readAsSeat: (input) => service.readAsSeat(input, host),
+            writeAsSeat: (input) => service.writeAsSeat(input, host),
           }),
         }),
       ],
@@ -759,6 +761,10 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       ),
       asks: {
         keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+        keepForFirstmate: (ask) => {
+          firstmateAsks.push(ask);
+          return `integration-ask-${ask.id}`;
+        },
         take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
         record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
       },
@@ -814,7 +820,9 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
         ).text,
       ),
     ).toMatchObject({ status: 200 });
-    const count = seen.length;
+    // INF-1108: the first mate's change waits for the captain's click, then
+    // goes through the Enterprise sign-in as the seat's own call.
+    let count = seen.length;
     expect(
       await integrations.call(
         { kind: "firstmate" },
@@ -826,6 +834,17 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     ).toMatchObject({
       refused: "refused",
     });
+    expect(seen).toHaveLength(count);
+    expect(firstmateAsks).toEqual([
+      expect.objectContaining({ by: "firstmate", integration: row.id }),
+    ]);
+    expect(
+      await integrations.sendTaken("host-row", { ask: firstmateAsks[0]! }, "once"),
+    ).toMatchObject({ ok: true, outcome: { kind: "ran" } });
+    expect(seen.slice(count)).toEqual([
+      expect.objectContaining({ method: "POST", path: change.path }),
+    ]);
+    count = seen.length;
     integrations.configure(row.id, { paused: true });
     expect(
       await crew.call(
@@ -842,9 +861,11 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
   });
 
   // INF-775 piece 1: GitHub as an integration, every caller through the github.com sign-in;
-  // a read runs and a change asks the captain (the captain's q5).
-  it("reaches GitHub through the integration: reads run, a crewmate's change waits for the captain's click, the first mate's is refused", async () => {
+  // a read runs and a change asks the captain (the captain's q5). INF-1108: the
+  // first mate's change waits for the same click, then goes as its own call.
+  it("reaches GitHub through the integration: reads run, and a crewmate's or the first mate's change waits for the captain's click", async () => {
     const { service, seen, tasks } = await fixture();
+    const firstmateAsks: IntegrationAsk[] = [];
     const integrations = new IntegrationsService({
       bindings: [
         githubIntegration({
@@ -858,12 +879,17 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
             read: (task, input, through) => service.read(task, input, through),
             write: (task, input, through) => service.write(task, input, through, true),
             readAsSeat: (input) => service.readAsSeat(input),
+            writeAsSeat: (input) => service.writeAsSeat(input),
           },
         }),
       ],
       store: new IntegrationSettingsStore(join(scratchDir("fm-integrations-"), "integrations")),
       asks: {
         keep: (taskId, ask) => tasks.keepWriteAsk(taskId, ask),
+        keepForFirstmate: (ask) => {
+          firstmateAsks.push(ask);
+          return `integration-ask-${ask.id}`;
+        },
         take: (taskId, askId) => tasks.takeWriteAsk(taskId, askId),
         record: (taskId, askId, outcome) => tasks.recordWriteAskOutcome(taskId, askId, outcome),
       },
@@ -914,7 +940,8 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       },
     ]);
 
-    // The first mate reads as its seat, and has no card to carry a change.
+    // The first mate reads as its seat; its change is held for the host's
+    // card, then sent through the same sign-in as the seat's own call.
     const firstmate = { kind: "firstmate" } as const;
     const repos = await integrations.call(
       firstmate,
@@ -924,16 +951,38 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       "To perform the task’s requested action.",
     );
     expect(JSON.parse(repos.text)).toMatchObject({ status: 200 });
-    const before = seen.length;
-    const refused = await integrations.call(
+    let before = seen.length;
+    const held = await integrations.call(
       firstmate,
       "github",
       "write",
       comment,
-      "To perform the task’s requested action.",
+      "The captain asked me to thank the reporter.",
     );
-    expect(refused).toMatchObject({ refused: "refused" });
+    expect(held).toMatchObject({ refused: "refused" });
+    expect(held.text).toContain("The app raised its approval card");
     expect(seen).toHaveLength(before);
+    expect(firstmateAsks).toEqual([
+      expect.objectContaining({ by: "firstmate", action: "write", input: JSON.stringify(comment) }),
+    ]);
+    expect(
+      await integrations.sendTaken("host-row", { ask: firstmateAsks[0]! }, "once"),
+    ).toMatchObject({ ok: true, outcome: { kind: "ran" } });
+    expect(seen.slice(before)).toEqual([
+      {
+        method: "POST",
+        path: comment.path,
+        auth: "Bearer gho_fixture_owned_by_app",
+        body: comment.body,
+      },
+    ]);
+    // GitHub's refusal comes back as refused, never as sent.
+    const rejected = { ...comment, path: "/repos/octo/meter/issues/2/comments" };
+    await integrations.call(firstmate, "github", "write", rejected, "Thank the other reporter.");
+    expect(
+      await integrations.sendTaken("host-row", { ask: firstmateAsks[1]! }, "once"),
+    ).toMatchObject({ ok: false, outcome: { kind: "refused" } });
+    before = seen.length;
 
     // An action turned off in Settings reaches nobody.
     integrations.configure("github", { actions: { read: false } });

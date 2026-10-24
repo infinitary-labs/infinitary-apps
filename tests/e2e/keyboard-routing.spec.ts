@@ -134,6 +134,11 @@ test("command search opens from inside a card, says why a command cannot run, an
   await showCard(page, KEYBOARD_CARD_TITLES.inline);
   const note = shownCardFrame(page).getByRole("textbox", { name: "Note" });
   await note.fill("half a thought");
+  // The fill moves focus inside the card's own page, and the window hears
+  // of it a moment later: a key that reaches the window first opens search
+  // over the main message (INF-1132; docs/e2e-contracts.md, "Input waits
+  // for focus").
+  await focusOn(note);
   await pressWindowKey(app, "k", ["meta"]);
   await expect(search.dialog).toBeVisible();
   await expect(search.field).toBeFocused();

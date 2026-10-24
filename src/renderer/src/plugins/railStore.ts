@@ -24,9 +24,9 @@ import { useSyncExternalStore } from "react";
  *
  * Activity, Tasks and Knowledge start collapsed; every other panel starts open. A
  * missing key means that default. Only the captain's own clicks are
- * persisted from here - a collapse toggle, the whisper's reveal and the
- * create-your-own-panel slot's Hide; otherwise visibility and placement are
- * written by the core alone.
+ * persisted from here - a collapse toggle, the whisper's reveal, the
+ * create-your-own-panel slot's Hide and the project focus; otherwise
+ * visibility and placement are written by the core alone.
  */
 
 /** Built-in bottom docks start collapsed. */
@@ -60,6 +60,7 @@ function persist(next: Layout): void {
       hiddenPanels: { ...next.hiddenPanels },
       placements: { ...next.placements },
       ...(next.panelOrder ? { panelOrder: [...next.panelOrder] } : {}),
+      ...(next.focusedProjectId ? { focusedProjectId: next.focusedProjectId } : {}),
     })
     .catch(() => {
       // The in-memory record still serves this session.
@@ -88,6 +89,7 @@ export const railStore = {
       hiddenPanels: { ...next.hiddenPanels },
       placements: { ...next.placements },
       ...(next.panelOrder ? { panelOrder: [...next.panelOrder] } : {}),
+      ...(next.focusedProjectId ? { focusedProjectId: next.focusedProjectId } : {}),
     };
     notify();
   },
@@ -169,6 +171,23 @@ export const railStore = {
   placementOf(panelId: string, preferred: { x: RailSide; y: RailY }): { x: RailSide; y: RailY } {
     return effectivePlacement(current(), panelId, preferred);
   },
+  /** The project the window is focused on, as saved; null is All projects. */
+  focusedProject(): string | null {
+    return current().focusedProjectId ?? null;
+  },
+  /**
+   * Focus the window on one project, or on All projects with null: the
+   * captain's own pick on the top bar's pill, a Tasks or board chip, or a
+   * command (docs/project-focus.md). Saved with the layout, so it outlives
+   * a relaunch.
+   */
+  focusProject(projectId: string | null): void {
+    if (railStore.focusedProject() === projectId) return;
+    const { focusedProjectId: _was, ...rest } = current();
+    layout = projectId === null ? rest : { ...rest, focusedProjectId: projectId };
+    persist(layout);
+    notify();
+  },
   /** Tests only: forget every choice so defaults apply. */
   reset(): void {
     layout = null;
@@ -180,6 +199,15 @@ export const railStore = {
 export function useBodyFocusAsk(panelId: string): number {
   const read = () => railStore.bodyFocusAsk(panelId);
   return useSyncExternalStore(railStore.subscribe, read, read);
+}
+
+/** The saved focus, read as it changes; null is All projects. */
+export function useSavedFocus(): string | null {
+  return useSyncExternalStore(
+    railStore.subscribe,
+    railStore.focusedProject,
+    railStore.focusedProject,
+  );
 }
 
 export function usePanelCollapsed(panelId: string): boolean {

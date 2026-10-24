@@ -79,6 +79,7 @@ import { voiceController } from "../voice/voiceController";
 import { detectVoiceSupport, insertVoiceTranscript } from "../voice/voiceInput";
 import { recognizerPlace } from "../voice/whisperClient";
 import { pressesSoFar } from "./presses";
+import { heldProjectFocus } from "./projectFocus";
 
 /**
  * Shell state on real orchestrator data. The phase model matches the design
@@ -1708,6 +1709,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         entry?.panelCard?.aim ??
         undefined;
       const pastCardId = entry?.pastCardId;
+      // The project the window is focused on: the first mate's hint (docs/project-focus.md).
+      const focusedProjectId = heldProjectFocus() ?? undefined;
       set((s) => ({
         inputText: "",
         attachments: [],
@@ -1722,7 +1725,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       // Keep send(text) for the empty-stack case; object form carries the
       // optional on-screen card id or task id (and any pasted images).
       const turn =
-        imgs || pastes.length || visibleCardId || taskId || pastCardId
+        imgs || pastes.length || visibleCardId || taskId || pastCardId || focusedProjectId
           ? {
               text: text || undefined,
               ...(pastes.length
@@ -1732,6 +1735,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
               visibleCardId,
               taskId,
               pastCardId,
+              focusedProjectId,
             }
           : text;
       return window.infinitary.conversation.send(turn).then(

@@ -80,6 +80,9 @@ const panelIdSchema = z.string().min(1).max(64);
  * - `panelOrder`: optional most-recent More picks first, nearest each anchored end.
  * - `placements`: which rail and which end of it, overriding the panel's
  *   `preferredPlacement`. "put activity on the right".
+ * - `focusedProjectId`: the project the window is focused on (the top bar's
+ *   project pill, docs/project-focus.md); absent means All projects. It is
+ *   presentation only: no task is written to for it.
  *
  * The two newer records default to empty so a `layout` row written before
  * them still parses (a strict object would otherwise refuse it and lose the
@@ -91,6 +94,8 @@ export const layoutSchema = z.strictObject({
   placements: z.record(panelIdSchema, sidePanelPlacementSchema).default({}),
   /** Most recently chosen in More first; nearest its anchored end within its group. */
   panelOrder: z.array(panelIdSchema).optional(),
+  /** The focused project's id; absent is All projects. */
+  focusedProjectId: z.string().min(1).max(64).optional(),
 });
 export type Layout = z.infer<typeof layoutSchema>;
 

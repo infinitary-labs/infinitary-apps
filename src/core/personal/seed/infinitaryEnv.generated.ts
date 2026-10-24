@@ -1094,6 +1094,13 @@ declare module "@infinitary/contracts" {
      * does not offer.
      */
     openSettings: (section: string, item?: string) => Promise<boolean>;
+    /**
+     * Focuses the window on one project, by the id the board gave it, or on
+     * every project with null: the same focus as the top bar's project pill
+     * (\`view.focusedProjectId\`). Counts only from their own click or key in
+     * this panel or card; answers false for a project the board does not list.
+     */
+    focusProject: (projectId: string | null) => Promise<boolean>;
   };
 
   /**
@@ -1112,6 +1119,11 @@ declare module "@infinitary/contracts" {
      * summary (INF-237).
      */
     litTaskId: string | null;
+    /**
+     * The project the window is focused on (the top bar's project pill), or
+     * null for every project. A panel that lists tasks narrows to it.
+     */
+    focusedProjectId: string | null;
   };
 
   // --- moving tasks -----------------------------------------------------------------

@@ -8,6 +8,7 @@ import { pointNeedsBoardMessage } from "@shared/personal/manifest";
 import { useMemo } from "react";
 import { z } from "zod";
 import { pressesSoFar } from "../app/presses";
+import { projectFocus, useProjectFocus } from "../app/projectFocus";
 import { mainMessageRefusal, type ShellState, shownCard, useShellStore } from "../app/store";
 import { isView } from "../devices/viewWords";
 import { pluginHost } from "./host";
@@ -26,8 +27,9 @@ import { boardOnScreen, searchedTask } from "./reads/appExecutor";
  * checks that against what it presented; a gesture changes nothing in the
  * app's record - it opens, brings forward, rests or aims.
  *
- * Opening, bringing a card forward and aiming move the captain's focus or
- * the words he sends, so they count only from his own click or key in that
+ * Opening, bringing a card forward, aiming and focusing on a project
+ * (`focusProject`, the top bar's project pill, docs/project-focus.md) move
+ * the captain's focus or the words he sends, so they count only from his own click or key in that
  * page (`gate`: the window's user activation for a panel of his own, the
  * frame holding the window's focus for one from elsewhere); one made
  * otherwise does nothing and answers false. Resting is the pointer's or
@@ -48,6 +50,7 @@ export const PANEL_POINT_ACTIONS = [
   "point.peekTask",
   "point.showCard",
   "point.aim",
+  "point.focusProject",
 ] as const;
 
 /** The one pointing every panel's page has, whatever it reads: `point.draft`. */
@@ -205,6 +208,15 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
       shell.beginDraft(parsed.data);
       return true;
     },
+    focusProject: async (projectId) => {
+      need("focusProject");
+      const id = projectId === null ? null : idOf("focusProject", projectId);
+      if (id !== null && !boardOnScreen()?.projects.some((project) => project.id === id))
+        return false;
+      if (!(await page.gate())) return false;
+      projectFocus.pick(id);
+      return true;
+    },
     openSettings: async (section, item) => {
       const parsed = settingsAskSchema.safeParse({
         section,
@@ -270,6 +282,10 @@ export function framePointAction(
         return point.showCard(arg?.cardId as string);
       case "point.aim":
         return point.aim((arg?.taskId ?? null) as string | null);
+      case "point.focusProject":
+        return point.focusProject(
+          ((arg as { projectId?: unknown } | null)?.projectId ?? null) as string | null,
+        );
       case PANEL_DRAFT_ACTION:
         return point.draft(arg?.text as string);
       case PANEL_OPEN_SETTINGS_ACTION:
@@ -285,6 +301,7 @@ export const NO_VIEW: PanelView = Object.freeze({
   openTaskIds: Object.freeze([]) as unknown as string[],
   shownTaskId: null,
   litTaskId: null,
+  focusedProjectId: null,
 });
 
 /**
@@ -292,10 +309,15 @@ export const NO_VIEW: PanelView = Object.freeze({
  * key so a reader re-renders only when it moves: the tasks whose records
  * are on the stack, and the task of the entry on screen - a record, a
  * task's browser or Crewmate tab, or a panel card's aim (the task board's
- * selected tile), and the task lit by a rest anywhere in the window
- * (`litTaskId`, ./point/litTask.ts).
+ * selected tile), the task lit by a rest anywhere in the window
+ * (`litTaskId`, ./point/litTask.ts), and the project the window is focused
+ * on (`focusedProjectId`, ../app/projectFocus.ts).
  */
-export function panelViewKey(s: ShellState, litTaskId: string | null = null): string {
+export function panelViewKey(
+  s: ShellState,
+  litTaskId: string | null = null,
+  focusedProjectId: string | null = null,
+): string {
   const shown = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
   const openTaskIds = s.records.flatMap((held) => ("taskId" in held ? [held.taskId] : []));
   const shownTaskId =
@@ -304,22 +326,24 @@ export function panelViewKey(s: ShellState, litTaskId: string | null = null): st
     shown?.crewmateTaskId ??
     shown?.panelCard?.aim ??
     null;
-  return JSON.stringify([openTaskIds, shownTaskId, litTaskId]);
+  return JSON.stringify([openTaskIds, shownTaskId, litTaskId, focusedProjectId]);
 }
 
 /** The view a key names. */
 export function panelViewOf(key: string): PanelView {
-  const [openTaskIds, shownTaskId, litTaskId] = JSON.parse(key) as [
+  const [openTaskIds, shownTaskId, litTaskId, focusedProjectId = null] = JSON.parse(key) as [
     string[],
     string | null,
     string | null,
+    string | null | undefined,
   ];
-  return { openTaskIds, shownTaskId, litTaskId };
+  return { openTaskIds, shownTaskId, litTaskId, focusedProjectId };
 }
 
 /** `PanelProps.view`, following the stack: empty for a panel that does not read the board. */
 export function usePanelView(readsBoard: boolean): PanelView {
   const lit = useLitTaskId();
-  const key = useShellStore((s) => (readsBoard ? panelViewKey(s, lit) : ""));
+  const { focus } = useProjectFocus();
+  const key = useShellStore((s) => (readsBoard ? panelViewKey(s, lit, focus) : ""));
   return useMemo(() => (key ? panelViewOf(key) : NO_VIEW), [key]);
 }

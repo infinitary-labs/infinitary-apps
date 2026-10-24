@@ -107,6 +107,8 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `usage.unit`, Switch Usage units | window, run by the shell page | none: chosen by name (tokens, cost, dollars and estimate find it too) |
 | `allowance.recheck`, Recheck allowance | window, run by the shell page | none: chosen by name (quota, refresh, usage, limit, account and switch find it too) |
 | `devices.try-again`, Try again to reach your computers | window, run by the shell page | none: chosen by name (devices, ssh, reconnect and connect find it too), only where Devices shows |
+| `project-focus.open`, Focus on a project | window, run by the shell page | ⇧⌘P (filter, project and pill find it too) |
+| `project-focus.clear`, Show all projects | window, run by the shell page | none: chosen by name (filter, focus, project and clear find it too) |
 | `size.larger` | window | ⌘+ and ⌘= (and ⌃+, ⌃=) |
 | `size.smaller` | window | ⌘- (and ⌃-) |
 | `size.reset` | window | ⌘0 (and ⌃0) |
@@ -125,7 +127,7 @@ These keys are not commands and keep their own owners:
 - Tab and Shift+Tab, which move focus the platform's way;
 - the Mac's own editing keys (Cmd+C, Option+Delete, Ctrl+A, ...);
 - the dictation key, a lone right-hand modifier with its own tap-or-hold rules, which leave a shortcut held with right ⌘ or right ⌃ to that shortcut (`dictationKey.ts`; `docs/composer.md`, "Voice"; Settings → General → Dictation);
-- Escape, which closes the one topmost thing that is open (`App.tsx`; on the task board, in its own page, a move that asks before its Find's words, and its Find's words before the board; in the Tasks search, its words before the search; a maximized card restores before a record or a panel's card hides, "Cards and frames"), and the keys a menu, the picture viewer (a demo's play control and seek slider included), a slider or a card's own controls use inside themselves; in a card's body, an Escape nothing there used leaves the body for its card ("Cards and frames");
+- Escape, which closes the one topmost thing that is open (`App.tsx`; on the task board, in its own page, a move that asks before its Find's words, and its Find's words before the board; in the Tasks search, its words before the search; in the top bar's open project row, its menu before the row; a maximized card restores before a record or a panel's card hides, "Cards and frames"), and the keys a menu, the picture viewer (a demo's play control and seek slider included), a slider or a card's own controls use inside themselves; in a card's body, an Escape nothing there used leaves the body for its card ("Cards and frames");
 - the arrows, Home and End in a list or Settings' tabs ("Lists and Settings"), which belong to the list that has focus.
 
 ## A panel's commands
@@ -292,6 +294,8 @@ The main process's own commands, the size keys, are never refused by the page.
 - `allowance.recheck`, Recheck allowance, reads which login each account's store names and its allowance again, the way the spent-allowance card's button does, so a switched Claude login is heard at once (`docs/quota.md`, "A changed login").
 - `devices.try-again`, Try again to reach your computers, opens Settings at Devices and tries this Mac's own SSH connection once more to every Mac it stopped trying (`docs/devices.md`, "Through the home's SSH").
   Both refuse on a Mac that controls another, which has no Usage tab.
+- `project-focus.open`, Focus on a project, opens the top bar's project pill into its row with focus on the checked pill, where the arrows, Home and End move and Enter picks (`docs/project-focus.md`); it refuses in Settings and while there is only one project.
+- `project-focus.clear`, Show all projects, lets the window's project focus go; it refuses while every project is shown.
 - While Keyboard settings records a key every shell command refuses ("Settings is recording a key"), after the dictation key's pick.
 
 ## Parts of the window

@@ -49,7 +49,8 @@ import {
  * record, the board keeping its chip, view and selected tile while it
  * pages, the selected tile as the turn's hint, Find and its earlier
  * matches, the dropped list by name, Esc in its order, and a fresh board
- * after Hide. The board is the Tasks panel's card, drawn in a page of its
+ * after Hide that keeps the window's project focus (INF-1091: the chip is the
+ * top bar's focus, so Hide does not let it go). The board is the Tasks panel's card, drawn in a page of its
  * own; its helpers read inside it.
  */
 
@@ -347,10 +348,10 @@ test("the task board opens from the Tasks header and ⌘B, and the keyboard driv
       await expect(boardsOnStage(page)).toHaveCount(0);
     });
 
-    await test.step("after Hide the board starts fresh, and Show dropped tasks opens its list", async () => {
+    await test.step("after Hide the board starts fresh on the focused project, and Show dropped tasks opens its list", async () => {
       await expect(commandSearch(page).dialog).toHaveCount(0);
       await pressWindowKey(app, "b", ["meta"]);
-      await expect(boardEntry(page).locator('[data-board-chip="all"]')).toHaveAttribute(
+      await expect(boardEntry(page).locator('[data-board-chip="FM3K"]')).toHaveAttribute(
         "aria-pressed",
         "true",
       );

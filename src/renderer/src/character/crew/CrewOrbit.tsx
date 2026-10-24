@@ -9,6 +9,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { motionToken } from "../../design/motion";
 import { litTask, useLitTaskId } from "../../plugins/point/litTask";
 import { requestCharacterReceive, requestCharacterSendoff } from "../emoteSignal";
 import { useAnimationLoop } from "../motion";
@@ -27,6 +28,7 @@ import {
   drawPacket,
   type Rgb,
 } from "./crewmate";
+import { type FocusLightInput, type FocusLightState, lightFrame } from "./focusLight";
 import {
   type Box,
   CREW_HOVER,
@@ -111,6 +113,11 @@ export type CrewOrbitProps = {
     taught: Readonly<Record<CrewWord, boolean>>;
     onTaught: (word: CrewWord) => void;
   } | null;
+  /**
+   * The project in light (./focusLight.ts, docs/project-focus.md): crewmates
+   * of other projects dim, their names with them. Absent lights everyone.
+   */
+  focus?: FocusLightInput;
 };
 
 /** Clear air between a summary and the edge of where it may sit, px. */
@@ -272,6 +279,7 @@ export function CrewOrbit({
   interactive = true,
   theme,
   teach = null,
+  focus,
 }: CrewOrbitProps) {
   // A command bumps the version: the loop restarts on it, so a reduced-motion
   // still repaints the new roster.
@@ -683,16 +691,218 @@ export function CrewOrbit({
     setFocused(null);
   }, [interactive, setHovered]);
 
-  useAnimationLoop((real) => {
-    const reducedMotion = prefersReducedMotion();
-    // Everything painted below reads stage time; only the theme re-read and
-    // the pointer's rest are real time.
-    const now = stageClock.advance(real);
-    const frame = model.update(now, reducedMotion, crewRush.level(now));
-    // Faded behind the card stack: clocks, the model and its signals keep
-    // running; drawing and label writes wait until the character is shown.
-    if (skipHiddenPaint(pictureRef.current)) {
-      stageClock.target = stageRateTarget(null);
+  // The project focus's light per crewmate, eased in real time over the
+  // surface move, whatever the stage's own rate.
+  const focusRef = useRef(focus);
+  focusRef.current = focus;
+  const lightRef = useRef<{ state: FocusLightState; at: number; duration: number | null }>({
+    state: new Map(),
+    at: 0,
+    duration: null,
+  });
+
+  useAnimationLoop(
+    (real) => {
+      const reducedMotion = prefersReducedMotion();
+      // Everything painted below reads stage time; only the theme re-read and
+      // the pointer's rest are real time.
+      const now = stageClock.advance(real);
+      const light = lightRef.current;
+      light.duration ??= motionToken(document.documentElement, "--dur-med");
+      const frame = lightFrame(
+        model.update(now, reducedMotion, crewRush.level(now)),
+        focusRef.current ?? { project: null, projectOf: () => undefined },
+        light.state,
+        light.at === 0 ? 0 : real - light.at,
+        reducedMotion ? 0 : light.duration,
+      );
+      light.at = real;
+      // Faded behind the card stack: clocks, the model and its signals keep
+      // running; drawing and label writes wait until the character is shown.
+      if (skipHiddenPaint(pictureRef.current)) {
+        stageClock.target = stageRateTarget(null);
+        for (const cue of model.takeCues()) {
+          if (cue.kind === "sendoff") requestCharacterSendoff(cue.dx, cue.dy, cue.strength);
+          else requestCharacterReceive();
+        }
+        const label = `Crew - ${frame.working} working, ${frame.idle} idle`;
+        if (label !== ariaRef.current) {
+          ariaRef.current = label;
+          nearRef.current?.setAttribute("aria-label", label);
+        }
+        return;
+      }
+      const viewport = { width: viewportWidth, height: viewportHeight };
+      const box = sceneBox(frame.scene, viewport, extent);
+      for (const canvas of [nearRef.current, farRef.current]) {
+        if (!canvas) continue;
+        writeStyle(canvas, "width", `${box.width}px`);
+        writeStyle(canvas, "height", `${box.height}px`);
+        writeStyle(canvas, "left", `${(extent - box.width) / 2}px`);
+        writeStyle(canvas, "top", `${(extent - box.height) / 2}px`);
+      }
+      const near = layerOf(nearRef.current, box);
+      const far = layerOf(farRef.current, box);
+      if (!near || !far) return;
+      pictureRef.current = true;
+      const labelsVisible = crewModelLabelsVisible(
+        computers ? frame.crew.filter((c) => c.computerId === HOME_COMPUTER) : frame.crew,
+      );
+      if (singleOrbitRef.current !== labelsVisible) {
+        singleOrbitRef.current = labelsVisible;
+        setSingleOrbit(labelsVisible);
+      }
+      // Each cluster decides its names for itself, by the same rule as home.
+      const namedClusters = new Set<string>();
+      if (computers) {
+        if (labelsVisible) namedClusters.add(HOME_COMPUTER);
+        for (const cluster of computers.clusters()) {
+          if (cluster.id === HOME_COMPUTER) continue;
+          if (crewModelLabelsVisible(frame.crew.filter((c) => c.computerId === cluster.id)))
+            namedClusters.add(cluster.id);
+        }
+      }
+      const namedKey = [...namedClusters].sort().join(",");
+      if (namedRef.current !== namedKey) {
+        namedRef.current = namedKey;
+        setNamed(namedKey);
+      }
+      const scale = frame.scene
+        ? sceneFit(frame.scene, viewport, extent)
+        : 1 + frame.planeBlend * (Math.min(1, (viewportHeight - CREW_FIT.reservePx) / extent) - 1);
+      if (frame.scene && rootRef.current)
+        writeStyle(rootRef.current, "--crew-fit-scale", sceneFitCss(frame.scene, extent));
+      viewRef.current = { frame, now, scale, box };
+      // A crewmate that is gone, or going, lets its summary and its pause go.
+      const inspected = inspectingRef.current;
+      const marks = stageMarks(frame);
+      const there =
+        inspected !== null && marks.some((c) => c.id === inspected && c.phase !== "leaving");
+      if (inspected !== null && !there) {
+        setHovered(null);
+        setFocused(null);
+      }
+      // What the stage eases toward from the next frame on. Reduced motion has
+      // no rate: its one settled frame is already still.
+      const pointer = pointerRef.current;
+      if (reducedMotion) stageClock.settle();
+      else
+        stageClock.target = stageRateTarget(
+          interactiveRef.current
+            ? {
+                crew: frame.orbits.length > 0,
+                inZone:
+                  pointer !== null &&
+                  inCrewZone({ orbits: frame.orbits, crew: marks }, pointer.x, pointer.y, scale),
+                onCrewmate: there,
+                restedMs: pointer ? real - pointer.movedAt : Number.POSITIVE_INFINITY,
+              }
+            : null,
+        );
+      const rate = String(Math.round(stageClock.rate * 1000) / 1000);
+      if (near.canvas.dataset.stageRate !== rate) near.canvas.dataset.stageRate = rate;
+      const travel = String(Math.round(frame.travel * 100) / 100);
+      if (near.canvas.dataset.crewTravel !== travel) near.canvas.dataset.crewTravel = travel;
+      if (shownRef.current) placeSummary();
+      placeLit();
+      const present = new Set<string>();
+      for (const cm of frame.crew) {
+        const element = nameRefs.current.get(cm.id);
+        if (!element) continue;
+        if (element.parentElement && !element.parentElement.hasAttribute("data-painted"))
+          element.parentElement.setAttribute("data-painted", "");
+        present.add(cm.id);
+        const placement = crewModelLabelPlacement(cm, extent, scale, box.width / 2);
+        const transform = `translate(${placement.x}px, ${placement.y}px)`;
+        if (element.parentElement?.style.transform !== transform)
+          element.parentElement?.style.setProperty("transform", transform);
+        const glyphTarget = Boolean(
+          computers && (!namedClusters.has(cm.computerId ?? HOME_COMPUTER) || !names?.[cm.id]),
+        );
+        const width = `${glyphTarget ? Math.max(24, cm.size) : placement.width}px`;
+        if (element.style.width !== width) element.style.width = width;
+        const height = glyphTarget ? `${Math.max(24, cm.size)}px` : "";
+        if (element.style.height !== height) element.style.height = height;
+        if (element.classList.contains("fm-computer-crew-target") !== glyphTarget)
+          element.classList.toggle("fm-computer-crew-target", glyphTarget);
+        if (cm.computerId && element.dataset.crewComputer !== cm.computerId)
+          element.dataset.crewComputer = cm.computerId;
+        else if (!cm.computerId && element.dataset.crewComputer)
+          delete element.dataset.crewComputer;
+        const hidden = cm.unfold <= 0.01;
+        if (element.hidden !== hidden) element.hidden = hidden;
+        const opacity = String(cm.alpha * cm.unfold);
+        if (element.parentElement?.style.opacity !== opacity)
+          element.parentElement?.style.setProperty("opacity", opacity);
+      }
+      for (const [id, element] of nameRefs.current) if (!present.has(id)) element.hidden = true;
+      const others = programMarks(frame).filter((mark) => mark.phase !== "leaving");
+      const markKey = others.map((mark) => mark.id).join(" ");
+      if (markKeyRef.current !== markKey) {
+        markKeyRef.current = markKey;
+        setMarkIds(others.map((mark) => mark.id));
+      }
+      for (const mark of others) {
+        const anchor = markRefs.current.get(mark.id);
+        if (anchor)
+          writeStyle(
+            anchor,
+            "transform",
+            `translate(${extent / 2 + mark.x}px, ${extent / 2 + mark.y}px)`,
+          );
+      }
+      // A cluster's name follows its seat, which glides as the scene changes.
+      if (computers) {
+        for (const cluster of computers.clusters()) {
+          const element = clusterRefs.current.get(cluster.id);
+          if (element) writeStyle(element, "transform", clusterNameTransform(cluster, extent));
+        }
+      }
+      if (wordRef.current) placeWord();
+      // An identical dataset write still queues a MutationObserver record, so
+      // every per-frame DOM write compares first: a resting frame touches no DOM.
+      if (near.canvas.dataset.formation !== frame.formation) {
+        near.canvas.dataset.formation = frame.formation;
+      }
+      const blend = String(frame.planeBlend);
+      if (near.canvas.dataset.planeBlend !== blend) near.canvas.dataset.planeBlend = blend;
+      // Every crewmate on the stage counts on its plane; one names it only once
+      // it has arrived and orbits there.
+      const planeCounts = [0, 0, 0];
+      const planeCrew: string[][] = [[], [], []];
+      for (const c of frame.crew) {
+        if (c.phase === "leaving" || c.plane === undefined) continue;
+        planeCounts[c.plane] = (planeCounts[c.plane] ?? 0) + 1;
+        if (c.phase === "orbiting") planeCrew[c.plane]?.push(c.id);
+      }
+      const counts = planeCounts.join(",");
+      if (near.canvas.dataset.planeCounts !== counts) near.canvas.dataset.planeCounts = counts;
+      const orbiting = planeCrew.map((ids) => ids.join(" ")).join("|");
+      if (near.canvas.dataset.planeCrew !== orbiting) near.canvas.dataset.planeCrew = orbiting;
+      // Each task with parts by its branches, and the parts whose crewmate is
+      // drawn at its node, so a journey reads the constellation it painted.
+      const constellation = frame.programs
+        .map((p) => `${p.id}=${p.branches.map((b) => `${b.fromId}>${b.toId}`).join(" ")}`)
+        .join("|");
+      if (near.canvas.dataset.constellation !== constellation)
+        near.canvas.dataset.constellation = constellation;
+      const seated = frame.programs.flatMap((p) => p.nodes.map((n) => n.id)).join(" ");
+      if (near.canvas.dataset.constellationCrew !== seated)
+        near.canvas.dataset.constellationCrew = seated;
+      // Each wait and review arrow drawn, both ends on the stage as `paintFrame`
+      // requires, so a journey reads the arrows it painted.
+      const arrows = frame.links
+        .filter(
+          (link) =>
+            frame.crew.some((c) => c.id === link.fromId) &&
+            frame.crew.some((c) => c.id === link.toId),
+        )
+        .map((link) => `${link.kind}:${link.fromId}>${link.toId}`)
+        .join(" ");
+      if (near.canvas.dataset.crewArrows !== arrows) near.canvas.dataset.crewArrows = arrows;
+      if (rootRef.current?.style.getPropertyValue("--crew-plane-blend") !== blend) {
+        rootRef.current?.style.setProperty("--crew-plane-blend", blend);
+      }
       for (const cue of model.takeCues()) {
         if (cue.kind === "sendoff") requestCharacterSendoff(cue.dx, cue.dy, cue.strength);
         else requestCharacterReceive();
@@ -702,210 +912,34 @@ export function CrewOrbit({
         ariaRef.current = label;
         nearRef.current?.setAttribute("aria-label", label);
       }
-      return;
-    }
-    const viewport = { width: viewportWidth, height: viewportHeight };
-    const box = sceneBox(frame.scene, viewport, extent);
-    for (const canvas of [nearRef.current, farRef.current]) {
-      if (!canvas) continue;
-      writeStyle(canvas, "width", `${box.width}px`);
-      writeStyle(canvas, "height", `${box.height}px`);
-      writeStyle(canvas, "left", `${(extent - box.width) / 2}px`);
-      writeStyle(canvas, "top", `${(extent - box.height) / 2}px`);
-    }
-    const near = layerOf(nearRef.current, box);
-    const far = layerOf(farRef.current, box);
-    if (!near || !far) return;
-    pictureRef.current = true;
-    const labelsVisible = crewModelLabelsVisible(
-      computers ? frame.crew.filter((c) => c.computerId === HOME_COMPUTER) : frame.crew,
-    );
-    if (singleOrbitRef.current !== labelsVisible) {
-      singleOrbitRef.current = labelsVisible;
-      setSingleOrbit(labelsVisible);
-    }
-    // Each cluster decides its names for itself, by the same rule as home.
-    const namedClusters = new Set<string>();
-    if (computers) {
-      if (labelsVisible) namedClusters.add(HOME_COMPUTER);
-      for (const cluster of computers.clusters()) {
-        if (cluster.id === HOME_COMPUTER) continue;
-        if (crewModelLabelsVisible(frame.crew.filter((c) => c.computerId === cluster.id)))
-          namedClusters.add(cluster.id);
+      const empty =
+        frame.crew.length === 0 && frame.packets.length === 0 && frame.programs.length === 0;
+      if (empty && !paintedRef.current) return;
+      paintedRef.current = !empty;
+      if (
+        !empty &&
+        (lastRead.current === 0 || paintedTheme.current !== theme || real - lastRead.current > 400)
+      ) {
+        paintedTheme.current = theme;
+        // Live theme switches re-paint: the wire tokens follow data-theme.
+        const cs = getComputedStyle(near.canvas);
+        const accent = cs.getPropertyValue("--wire-accent") || cs.getPropertyValue("--accent");
+        const hot = cs.getPropertyValue("--wire-hot") || cs.getPropertyValue("--hot");
+        colorsRef.current = {
+          accent: parseRgb(accent, colorsRef.current.accent),
+          hot: parseRgb(hot, colorsRef.current.hot),
+          quiet: parseRgb(
+            cs.getPropertyValue("--fg-3"),
+            colorsRef.current.quiet ?? [148, 156, 168],
+          ),
+          boost: Number.parseFloat(cs.getPropertyValue("--wire-boost")) || 1,
+        };
+        lastRead.current = real;
       }
-    }
-    const namedKey = [...namedClusters].sort().join(",");
-    if (namedRef.current !== namedKey) {
-      namedRef.current = namedKey;
-      setNamed(namedKey);
-    }
-    const scale = frame.scene
-      ? sceneFit(frame.scene, viewport, extent)
-      : 1 + frame.planeBlend * (Math.min(1, (viewportHeight - CREW_FIT.reservePx) / extent) - 1);
-    if (frame.scene && rootRef.current)
-      writeStyle(rootRef.current, "--crew-fit-scale", sceneFitCss(frame.scene, extent));
-    viewRef.current = { frame, now, scale, box };
-    // A crewmate that is gone, or going, lets its summary and its pause go.
-    const inspected = inspectingRef.current;
-    const marks = stageMarks(frame);
-    const there =
-      inspected !== null && marks.some((c) => c.id === inspected && c.phase !== "leaving");
-    if (inspected !== null && !there) {
-      setHovered(null);
-      setFocused(null);
-    }
-    // What the stage eases toward from the next frame on. Reduced motion has
-    // no rate: its one settled frame is already still.
-    const pointer = pointerRef.current;
-    if (reducedMotion) stageClock.settle();
-    else
-      stageClock.target = stageRateTarget(
-        interactiveRef.current
-          ? {
-              crew: frame.orbits.length > 0,
-              inZone:
-                pointer !== null &&
-                inCrewZone({ orbits: frame.orbits, crew: marks }, pointer.x, pointer.y, scale),
-              onCrewmate: there,
-              restedMs: pointer ? real - pointer.movedAt : Number.POSITIVE_INFINITY,
-            }
-          : null,
-      );
-    const rate = String(Math.round(stageClock.rate * 1000) / 1000);
-    if (near.canvas.dataset.stageRate !== rate) near.canvas.dataset.stageRate = rate;
-    const travel = String(Math.round(frame.travel * 100) / 100);
-    if (near.canvas.dataset.crewTravel !== travel) near.canvas.dataset.crewTravel = travel;
-    if (shownRef.current) placeSummary();
-    placeLit();
-    const present = new Set<string>();
-    for (const cm of frame.crew) {
-      const element = nameRefs.current.get(cm.id);
-      if (!element) continue;
-      if (element.parentElement && !element.parentElement.hasAttribute("data-painted"))
-        element.parentElement.setAttribute("data-painted", "");
-      present.add(cm.id);
-      const placement = crewModelLabelPlacement(cm, extent, scale, box.width / 2);
-      const transform = `translate(${placement.x}px, ${placement.y}px)`;
-      if (element.parentElement?.style.transform !== transform)
-        element.parentElement?.style.setProperty("transform", transform);
-      const glyphTarget = Boolean(
-        computers && (!namedClusters.has(cm.computerId ?? HOME_COMPUTER) || !names?.[cm.id]),
-      );
-      const width = `${glyphTarget ? Math.max(24, cm.size) : placement.width}px`;
-      if (element.style.width !== width) element.style.width = width;
-      const height = glyphTarget ? `${Math.max(24, cm.size)}px` : "";
-      if (element.style.height !== height) element.style.height = height;
-      if (element.classList.contains("fm-computer-crew-target") !== glyphTarget)
-        element.classList.toggle("fm-computer-crew-target", glyphTarget);
-      if (cm.computerId && element.dataset.crewComputer !== cm.computerId)
-        element.dataset.crewComputer = cm.computerId;
-      else if (!cm.computerId && element.dataset.crewComputer) delete element.dataset.crewComputer;
-      const hidden = cm.unfold <= 0.01;
-      if (element.hidden !== hidden) element.hidden = hidden;
-      const opacity = String(cm.alpha * cm.unfold);
-      if (element.parentElement?.style.opacity !== opacity)
-        element.parentElement?.style.setProperty("opacity", opacity);
-    }
-    for (const [id, element] of nameRefs.current) if (!present.has(id)) element.hidden = true;
-    const others = programMarks(frame).filter((mark) => mark.phase !== "leaving");
-    const markKey = others.map((mark) => mark.id).join(" ");
-    if (markKeyRef.current !== markKey) {
-      markKeyRef.current = markKey;
-      setMarkIds(others.map((mark) => mark.id));
-    }
-    for (const mark of others) {
-      const anchor = markRefs.current.get(mark.id);
-      if (anchor)
-        writeStyle(
-          anchor,
-          "transform",
-          `translate(${extent / 2 + mark.x}px, ${extent / 2 + mark.y}px)`,
-        );
-    }
-    // A cluster's name follows its seat, which glides as the scene changes.
-    if (computers) {
-      for (const cluster of computers.clusters()) {
-        const element = clusterRefs.current.get(cluster.id);
-        if (element) writeStyle(element, "transform", clusterNameTransform(cluster, extent));
-      }
-    }
-    if (wordRef.current) placeWord();
-    // An identical dataset write still queues a MutationObserver record, so
-    // every per-frame DOM write compares first: a resting frame touches no DOM.
-    if (near.canvas.dataset.formation !== frame.formation) {
-      near.canvas.dataset.formation = frame.formation;
-    }
-    const blend = String(frame.planeBlend);
-    if (near.canvas.dataset.planeBlend !== blend) near.canvas.dataset.planeBlend = blend;
-    // Every crewmate on the stage counts on its plane; one names it only once
-    // it has arrived and orbits there.
-    const planeCounts = [0, 0, 0];
-    const planeCrew: string[][] = [[], [], []];
-    for (const c of frame.crew) {
-      if (c.phase === "leaving" || c.plane === undefined) continue;
-      planeCounts[c.plane] = (planeCounts[c.plane] ?? 0) + 1;
-      if (c.phase === "orbiting") planeCrew[c.plane]?.push(c.id);
-    }
-    const counts = planeCounts.join(",");
-    if (near.canvas.dataset.planeCounts !== counts) near.canvas.dataset.planeCounts = counts;
-    const orbiting = planeCrew.map((ids) => ids.join(" ")).join("|");
-    if (near.canvas.dataset.planeCrew !== orbiting) near.canvas.dataset.planeCrew = orbiting;
-    // Each task with parts by its branches, and the parts whose crewmate is
-    // drawn at its node, so a journey reads the constellation it painted.
-    const constellation = frame.programs
-      .map((p) => `${p.id}=${p.branches.map((b) => `${b.fromId}>${b.toId}`).join(" ")}`)
-      .join("|");
-    if (near.canvas.dataset.constellation !== constellation)
-      near.canvas.dataset.constellation = constellation;
-    const seated = frame.programs.flatMap((p) => p.nodes.map((n) => n.id)).join(" ");
-    if (near.canvas.dataset.constellationCrew !== seated)
-      near.canvas.dataset.constellationCrew = seated;
-    // Each wait and review arrow drawn, both ends on the stage as `paintFrame`
-    // requires, so a journey reads the arrows it painted.
-    const arrows = frame.links
-      .filter(
-        (link) =>
-          frame.crew.some((c) => c.id === link.fromId) &&
-          frame.crew.some((c) => c.id === link.toId),
-      )
-      .map((link) => `${link.kind}:${link.fromId}>${link.toId}`)
-      .join(" ");
-    if (near.canvas.dataset.crewArrows !== arrows) near.canvas.dataset.crewArrows = arrows;
-    if (rootRef.current?.style.getPropertyValue("--crew-plane-blend") !== blend) {
-      rootRef.current?.style.setProperty("--crew-plane-blend", blend);
-    }
-    for (const cue of model.takeCues()) {
-      if (cue.kind === "sendoff") requestCharacterSendoff(cue.dx, cue.dy, cue.strength);
-      else requestCharacterReceive();
-    }
-    const label = `Crew - ${frame.working} working, ${frame.idle} idle`;
-    if (label !== ariaRef.current) {
-      ariaRef.current = label;
-      nearRef.current?.setAttribute("aria-label", label);
-    }
-    const empty =
-      frame.crew.length === 0 && frame.packets.length === 0 && frame.programs.length === 0;
-    if (empty && !paintedRef.current) return;
-    paintedRef.current = !empty;
-    if (
-      !empty &&
-      (lastRead.current === 0 || paintedTheme.current !== theme || real - lastRead.current > 400)
-    ) {
-      paintedTheme.current = theme;
-      // Live theme switches re-paint: the wire tokens follow data-theme.
-      const cs = getComputedStyle(near.canvas);
-      const accent = cs.getPropertyValue("--wire-accent") || cs.getPropertyValue("--accent");
-      const hot = cs.getPropertyValue("--wire-hot") || cs.getPropertyValue("--hot");
-      colorsRef.current = {
-        accent: parseRgb(accent, colorsRef.current.accent),
-        hot: parseRgb(hot, colorsRef.current.hot),
-        quiet: parseRgb(cs.getPropertyValue("--fg-3"), colorsRef.current.quiet ?? [148, 156, 168]),
-        boost: Number.parseFloat(cs.getPropertyValue("--wire-boost")) || 1,
-      };
-      lastRead.current = real;
-    }
-    paintFrame(near, far, box, frame, colorsRef.current, now, inspectingRef.current);
-  }, `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${theme}`);
+      paintFrame(near, far, box, frame, colorsRef.current, now, inspectingRef.current);
+    },
+    `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${theme}:${focus?.project ?? ""}`,
+  );
 
   // A move to another display, or the size control's zoom, changes the pixel
   // ratio. The moving loop refits on its next frame; the reduced-motion still

@@ -42,11 +42,12 @@ Clicking a row is a pointing gesture, never a work change: a row waiting on you 
 One entry per task can remain open; each row reads selected while its record is open, even when paged away (FI3-309, replacing the gutter pane).
 Open task board in its header shows every task at once on the stage (`TaskBoard.prompt.md`).
 The panel has no buttons that change a task, no drag, no inline editing, no manual create - the record's action bar carries Drop task and the one next step (`TaskRecord`), and every other write happens by talking to the first mate.
-The filter (a key/title search and project chips) sits behind the search icon and is the panel's own state.
+The filter (a key/title search and project chips) sits behind the search icon; its words are the panel's own state, and its project chip is the window's project focus, the same as the top bar's project pill (`components/core/ProjectFocus`).
+While the window is focused on a project the panel lists only that project's tasks, the filter closed or open, and its collapsed summary counts only them.
 Close search sits 6px right of the field: a 24px icon button with Lucide `x` at 14px in `--fg-3`, the next stop after the field, labelled "Close search" with the key Esc.
 Search tasks still opens and closes the filter, and Find a task (⇧⌘F) still opens it with the caret in the field.
 Esc in the filter empties the words, and a second Esc closes it, as the task board's Find does.
-Closing the filter by Close search, Esc or Search tasks lets go of the words and the project chip, so every task shows again; a filter that is closed never narrows the list.
+Closing the filter by Close search, Esc or Search tasks lets go of the words, so every task of the focused project shows again; the project focus stays until All projects, the top bar's pill or Show all projects lets it go, and a closed filter's words never narrow the list.
 The field draws no clearing cross of its own: Esc and Close search do that job.
 The filter keeps the reach of the focus ring's glow (18px) clear on every side, because the panel's frame cuts whatever is drawn past its edge.
 The search ignores case and reads a curly apostrophe or quote in a title as the plain one a keyboard types, so `what's new` finds `What’s new in …`.

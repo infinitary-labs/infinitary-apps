@@ -446,6 +446,11 @@ export type TurnPayload =
       pastCardId?: string;
       /** The message this one sends again: Ask again on the answer-delivery notice. */
       retryOf?: string;
+      /**
+       * The project the captain's window is focused on (the top bar's
+       * project pill, docs/project-focus.md): a hint below a shown record.
+       */
+      focusedProjectId?: string;
     };
 
 const CARD_EXCERPT_LIMIT = 80;
@@ -566,6 +571,8 @@ export class FirstmateAgent {
   private unsubscribe: (() => void) | undefined;
   /** The whole last user turn, so a retry keeps its attachments. */
   private lastUserTurn: TurnPayload | undefined;
+  /** The project the captain's window was focused on at their latest turn (docs/project-focus.md). */
+  private captainFocus: string | undefined;
   private running = false;
   /**
    * The app is quitting: a turn that settles now is the next boot's to
@@ -820,6 +827,9 @@ export class FirstmateAgent {
     const aboutCardId =
       typeof turn === "string" ? undefined : turn.aboutCardId?.trim() || undefined;
     const pastCardId = typeof turn === "string" ? undefined : turn.pastCardId?.trim() || undefined;
+    // The window's focus rides every turn until the captain's next one says otherwise.
+    this.captainFocus =
+      typeof turn === "string" ? undefined : turn.focusedProjectId?.trim() || undefined;
     const trimmed = text.trim();
     if (!trimmed && !images) return;
     // An accepted turn owns copies of its pictures before anything records
@@ -3297,7 +3307,14 @@ export class FirstmateAgent {
     words?: string,
   ): string {
     const builtAt = Date.now();
-    const block = this.buildContextBlock(visibleCardId, hintTaskId, aboutCardId, pastCardId, words);
+    const block = this.buildContextBlock(
+      visibleCardId,
+      hintTaskId,
+      aboutCardId,
+      pastCardId,
+      words,
+      this.captainFocus,
+    );
     this.resolutionsSeenThrough = builtAt;
     this.threadsSeenThrough = builtAt;
     this.lastModelBucketsShown = this.modelBucketLines().join("\n");
@@ -3481,6 +3498,7 @@ export class FirstmateAgent {
     aboutCardId?: string,
     pastCardId?: string,
     words?: string,
+    focusedProjectId?: string,
   ): string {
     const repos = this.options.repos.list();
     const crew = this.options.supervisor.crewStatus();
@@ -3513,6 +3531,15 @@ export class FirstmateAgent {
       (hinted
         ? `about: ${hinted.key || hinted.id} "${hinted.title}" (${indexStatus(hinted)}) - task_id ${hinted.id}; the open card points at it`
         : undefined);
+    // The captain's window is focused on one project: a hint like the
+    // shown record, one step weaker, never a limit on what can be done.
+    const focusedProject = focusedProjectId
+      ? this.options.tasks.projects.get(focusedProjectId)
+      : undefined;
+    const focusLine =
+      focusedProject && focusedProject.archivedAt === null
+        ? `${focusedProject.key} "${focusedProject.name}" - the captain's window is focused on this project, so new work they ask for belongs to it unless they name another; a hint, never a limit`
+        : undefined;
     const knowledge = this.knowledgeForTurn(words, hinted?.repoId ?? undefined);
     const directions = this.options.knowledge
       ? renderDirections(
@@ -3616,6 +3643,7 @@ export class FirstmateAgent {
       self_source: this.options.selfSourceDir,
       ...(maybeCard ? { visible_card_hint: maybeCard } : {}),
       ...(about ? { about } : {}),
+      ...(focusLine ? { focused_project: focusLine } : {}),
     };
     return `[fm-op] context (not the user)\n${encode(context)}`;
   }

@@ -103,9 +103,12 @@ import {
  * after a refusal, and when a live change takes the focused tile away it
  * goes to the task where it is now, or the nearest row, and says so.
  *
- * What the board keeps while it pages with the cards - its chip, Find,
- * view, each lane's page, the selected tile and its scroll - is the card's
- * kept place (`card.keep`); Hide lets go of it. Where a key that put it up
+ * What the board keeps while it pages with the cards - Find, view, each
+ * lane's page, the selected tile and its scroll - is the card's kept place
+ * (`card.keep`); Hide lets go of it. The project chips are the window's
+ * project focus (`view.focusedProjectId`, the top bar's pill,
+ * docs/project-focus.md), so the board opens on the focused project and
+ * keeps it after Hide. Where a key that put it up
  * asks focus to go - its tiles, Find, a list, or the selected tile's menu -
  * is the card's data, answered once per time it was put up
  * (`card.revision`).
@@ -113,7 +116,6 @@ import {
 
 /** What the board keeps on its card while it pages: its place, and the last ask it answered. */
 type Place = {
-  projectId: string | null;
   query: string;
   view: BoardView;
   /** Each lane's page, from 0, as its view last showed it. */
@@ -146,7 +148,6 @@ const pageKeyOf = (view: BoardView, lane: BoardLane): PageKey =>
   view === "board" && lane === "backlog" ? "board-backlog" : lane;
 
 const FRESH: Place = {
-  projectId: null,
   query: "",
   view: "board",
   pages: {},
@@ -167,7 +168,6 @@ function placeOf(kept: StoreValue): Place {
     if (typeof page === "number" && page > 0) pages[key] = page;
   }
   return {
-    projectId: typeof k.projectId === "string" ? k.projectId : null,
     query: typeof k.query === "string" ? k.query : "",
     view: VIEWS.includes(k.view as BoardView) ? (k.view as BoardView) : "board",
     pages,
@@ -372,8 +372,16 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
   }, [reads, typed]);
 
   const chips = useMemo(() => (board ? boardChipsOf(board) : []), [board]);
-  // A chip whose project left the board lets go of the board.
-  const projectId = chips.some((chip) => chip.id === place.projectId) ? place.projectId : null;
+  // The window's project focus is the board's project (the top bar's pill,
+  // docs/project-focus.md): a chip here picks it, All projects clears it.
+  const projectId = windowView.focusedProjectId;
+  // A new focus, from here or anywhere, turns every lane back to its first page.
+  const focusSeen = useRef(projectId);
+  useEffect(() => {
+    if (focusSeen.current === projectId) return;
+    focusSeen.current = projectId;
+    patch({ pages: {} });
+  }, [projectId, patch]);
   const earlier: BoardEarlier | null = useMemo(
     () =>
       board && found?.tasks && found.query === typed
@@ -1339,7 +1347,7 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
                 // A chip's handle is its project's key, as on the Tasks panel.
                 data-board-chip={chip.id === null ? "all" : chip.label}
                 aria-pressed={projectId === chip.id ? "true" : "false"}
-                onClick={() => patch({ projectId: chip.id, pages: {} })}
+                onClick={() => void point.focusProject(chip.id).catch(() => false)}
               >
                 {chip.label}
               </button>

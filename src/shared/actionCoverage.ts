@@ -110,6 +110,8 @@ export const ACTION_FIELD_EXCEPTIONS: Partial<Record<CoreInvokeChannel, Record<s
   "inf:settings:layout:set": {
     panelOrder:
       "The captain's More-menu move saves rail order; the first mate's panel action changes rail and end, not order",
+    focusedProjectId:
+      "The window's project focus is the captain's pick in the top bar's pill or a project chip, and only a hint to the first mate (docs/project-focus.md)",
   },
   "inf:settings:decisions:set": {
     version: "Stored format version, not a control",

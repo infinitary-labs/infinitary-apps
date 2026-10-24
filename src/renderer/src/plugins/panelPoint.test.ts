@@ -13,7 +13,7 @@ import { shownCard, useShellStore } from "../app/store";
 const board = {
   seq: 1,
   at: 1,
-  projects: [],
+  projects: [{ id: "p-site", key: "WEB" }],
   links: [],
   tasks: [
     { id: "t-open", key: "FM-1", waitingCardId: null },
@@ -27,6 +27,11 @@ vi.mock("./reads/appExecutor", () => ({
   boardOnScreen: () => board,
   searchedTask: (id: string) => (id === found.id ? found : undefined),
 }));
+const picked = vi.fn((_projectId: string | null) => {});
+vi.mock("../app/projectFocus", () => ({
+  projectFocus: { pick: (id: string | null) => picked(id) },
+  useProjectFocus: () => ({ focus: null }),
+}));
 const opened = vi.fn(async (_value: { taskId: string; cardId?: string }) => {});
 vi.mock("./point/openTask", () => ({ openTask: (value: never) => opened(value) }));
 
@@ -38,6 +43,7 @@ const reader = { view: "reader", title: "Reading" };
 
 beforeEach(() => {
   opened.mockClear();
+  picked.mockClear();
   taskPeek.set(null);
   useShellStore.setState({ cards: [], records: [], cardIndex: 0, unreadCardIds: [] });
 });
@@ -130,6 +136,16 @@ describe("point", () => {
     vi.unstubAllGlobals();
   });
 
+  it("focuses the window on a project the board lists, or on every project, only from the captain's click or key (INF-1091: one focus)", async () => {
+    await expect(panelPoint("desk", page(false)).focusProject("p-site")).resolves.toBe(false);
+    await expect(panelPoint("desk", page(true)).focusProject("p-gone")).resolves.toBe(false);
+    expect(picked).not.toHaveBeenCalled();
+    await expect(panelPoint("desk", page(true)).focusProject("p-site")).resolves.toBe(true);
+    expect(picked).toHaveBeenLastCalledWith("p-site");
+    await expect(panelPoint("desk", page(true)).focusProject(null)).resolves.toBe(true);
+    expect(picked).toHaveBeenLastCalledWith(null);
+  });
+
   it("brings forward only a waiting card the board names, from a click or key", async () => {
     const focusCard = vi.fn(() => true);
     useShellStore.setState({ focusCard } as never);
@@ -200,6 +216,7 @@ describe("the view a panel that reads the board is handed", () => {
       openTaskIds: ["t-open"],
       shownTaskId: "t-open",
       litTaskId: null,
+      focusedProjectId: null,
     });
     shell().emitPanelCard("desk", { ...reader, id: "r" }, true);
     shell().aimPanelCard("desk", "r", "t-waits");
@@ -207,6 +224,7 @@ describe("the view a panel that reads the board is handed", () => {
       openTaskIds: ["t-open"],
       shownTaskId: "t-waits",
       litTaskId: null,
+      focusedProjectId: null,
     });
   });
 

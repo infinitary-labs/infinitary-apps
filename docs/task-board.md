@@ -32,7 +32,8 @@ Under about 700 px the columns scroll sideways with the rest of the body; text n
 
 While it is open the card keeps its project chip, Find, its view, each lane's page, the selected tile and its scroll (`card.keep`), so paging away and back finds it as it was.
 The Board's Backlog column keeps its page apart from the Backlog list's, since their pages are five and twenty long.
-Hide or Esc closes it and lets all of that go: the next board starts fresh on All projects and the Board view.
+Hide or Esc closes it and lets go of Find, the view, the pages and the selection: the next board starts fresh on the Board view.
+The project chip is the window's project focus, the same as the top bar's pill and the Tasks panel's chip (`docs/project-focus.md`), so Hide keeps it and the next board opens on the focused project.
 There is no setting for any of it.
 
 ## What it shows

@@ -277,7 +277,7 @@ What differs is decided by the system, never by the person's choice of desktop: 
 
 ## Index
 - `styles.css` → `tokens/` (colors, typography, spacing, effects, fonts)
-- `components/core/` — Button, IconButton, Input, Switch, GroupedPills, Badge, KeyCap, StatusDot, RowMenu, and CommandSearch, KeyboardSettings and TaskKey, the rule for every task key the app shows (prompt pages only)
+- `components/core/` — Button, IconButton, Input, Switch, GroupedPills, Badge, KeyCap, StatusDot, RowMenu, and CommandSearch, KeyboardSettings, ProjectFocus (the top bar's project pill) and TaskKey, the rule for every task key the app shows (prompt pages only)
 - `components/mate/` — Firstmate (4D character), Crewmate (3D mini), CrewStrip
 - `components/voice/` — VoiceInput (idle ↔ recording states)
 - `components/cards/` — ResponseCard, CardStack, TaskRecord (the record card's body), TaskCrewmate (a task's Crewmate tab: its crewmate's session as a transcript, and a prompt that steers it), TaskBrowser (a task's own browser on the stage), PanelCard (one of a panel's cards on the stack)

@@ -782,6 +782,11 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 128
+                  },
+                  "focusedProjectId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 64
                   }
                 }
               }
@@ -31371,6 +31376,11 @@
               "minLength": 1,
               "maxLength": 64
             }
+          },
+          "focusedProjectId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           }
         },
         "required": [
@@ -31452,6 +31462,11 @@
                   "minLength": 1,
                   "maxLength": 64
                 }
+              },
+              "focusedProjectId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               }
             },
             "required": [
@@ -31528,6 +31543,11 @@
               "minLength": 1,
               "maxLength": 64
             }
+          },
+          "focusedProjectId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
           }
         },
         "required": [
@@ -31711,6 +31731,11 @@
                   "minLength": 1,
                   "maxLength": 64
                 }
+              },
+              "focusedProjectId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               }
             },
             "required": [
@@ -54366,6 +54391,11 @@
                   "minLength": 1,
                   "maxLength": 64
                 }
+              },
+              "focusedProjectId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 64
               }
             },
             "required": [

@@ -155,6 +155,7 @@ import { focusTakenElsewhere } from "./focusRecovery";
 import { useCommandKeys } from "./keyHints";
 import { LastTurn } from "./LastTurn";
 import { pressesSoFar } from "./presses";
+import { useProjectFocus } from "./projectFocus";
 import { usePromptFoot } from "./promptFoot";
 import { LAST_TURN_LANE, LAST_TURN_RISE, promptFoldsRails, promptShellMax } from "./promptGeometry";
 import { firstTabbable, lastTabbable } from "./regions";
@@ -2326,6 +2327,17 @@ export const HomeMate = memo(function HomeMate() {
   );
   const listening = phase === "recording" || drafting;
   const { names, facts } = useCrewBoard();
+  // The project in light (docs/project-focus.md): the pill a pointer or the
+  // keyboard rests on in the open row, else the focus; All projects lights all.
+  const { focus, rest } = useProjectFocus();
+  const litProject = rest !== null ? (rest === "all" ? null : rest) : focus;
+  const crewFocus = useMemo(
+    () => ({
+      project: litProject,
+      projectOf: (taskId: string) => facts[taskId]?.task.projectId,
+    }),
+    [litProject, facts],
+  );
   const openRecord = useShellStore((s) => s.openRecord);
   const showNames = useShellStore((s) => s.showCrewModelNames);
   const theme = useShellStore((s) => s.theme);
@@ -2385,6 +2397,7 @@ export const HomeMate = memo(function HomeMate() {
           interactive={!showCards}
           theme={theme}
           teach={teach}
+          focus={crewFocus}
         >
           <Firstmate
             listening={listening}

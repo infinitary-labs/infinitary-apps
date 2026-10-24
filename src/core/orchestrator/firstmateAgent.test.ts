@@ -1059,6 +1059,16 @@ describe("FirstmateAgent", () => {
     f.db.close();
   });
 
+  it("tells the turn which project the captain's window is focused on, as a hint (INF-1091)", async () => {
+    const { agent, session, tasks } = setup();
+    const scratch = tasks.projects.scratch();
+    void agent.converse({ text: "fix the typo on the pricing page", focusedProjectId: scratch.id });
+    await drained(session, 1);
+    expect(decodeContext(session.prompts[0] as string).focused_project).toBe(
+      `${scratch.key} "${scratch.name}" - the captain's window is focused on this project, so new work they ask for belongs to it unless they name another; a hint, never a limit`,
+    );
+  });
+
   it("treats a reply on its own card as a captain turn about that card", async () => {
     const { session, supervisor } = setup();
     supervisor.addFirstmateCard({

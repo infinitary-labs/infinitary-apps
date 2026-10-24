@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "focus-on-a-project",
+      "kind": "feature",
+      "area": "projects",
+      "title": "Focus the window on one project",
+      "body": "A pill at the top of the window opens to the right into a row of your projects, each with what waits on you and what is working. Pick one and the Tasks panel and the task board show only its tasks, other projects' crewmates dim, and Firstmate files new work there unless you name another project. The arrow at the end of the row folds it back, as Esc does, and ⇧⌘P opens it from the keyboard. The pill keeps your choice across restarts and says how many tasks wait on you elsewhere.",
+      "picture": {
+        "dark": "focus-on-a-project-dark.webp",
+        "light": "focus-on-a-project-light.webp",
+        "alt": "The row of project pills open at the top of the window - All projects, infinitary, quota-lab and website, each with its waiting and working counts - resting on infinitary, whose three crewmates stay lit while the other three dim"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

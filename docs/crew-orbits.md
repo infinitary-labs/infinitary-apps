@@ -238,6 +238,14 @@ The near crew canvas publishes each arrow it draws as `data-crew-arrows`, `wait:
 `satellites.ts` owns the circle.
 The Tasks gutter is specified in the design skill's NowPanel.
 
+## The project focus
+
+While the window is focused on one project, or a pointer or the keyboard rests on a project's pill in the top bar's open row, every crewmate of another project drops to a quarter of its light (`OUT_OF_FOCUS_LIGHT`, the captain's staged level on INF-1091), and its model name and state word with it (`docs/project-focus.md`).
+A crewmate keeps its slot, plane, speed, colour and solid: nothing hides and nothing moves for the focus.
+The light eases over `--dur-med` each way and is a cut under reduced motion, where the stage repaints once for the change.
+A crewmate whose project the board does not name stays lit.
+The light is the last thing the orbit's frame passes through before it is painted (`lightFrame`, `src/renderer/src/character/crew/focusLight.ts`), so every painter and label reads the same alpha.
+
 ## Verification
 
 - `orbitalPlanes.test.ts`: retained exact geometry and absolute signed rates, measured travel of rendered frames, selected inner geometry for small rosters, depth/radius/bounds, inner-first activation at 8/9 and 20/21, overflow through 96, inward glides, churn, stable survivors, packets/cues and reduced motion.

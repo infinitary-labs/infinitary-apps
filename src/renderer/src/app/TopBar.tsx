@@ -1,10 +1,11 @@
 import type { WindowControl, WindowState } from "@shared/ipc";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { IconButton } from "../design";
 import { thisDesktop, WINDOW_CONTROLS, WINDOW_CONTROLS_CLEARANCE } from "../design/core/desktop";
 import { RemoteControlLine } from "../devices/RemoteControl";
 import { useCommandKeys } from "./keyHints";
+import { type BarRoom, ProjectFocusControl } from "./ProjectFocusControl";
 import { ReducedMotionIndicator } from "./ReducedMotionIndicator";
 import type { ShellView } from "./store";
 import { UpdateIndicator } from "./UpdateIndicator";
@@ -134,8 +135,21 @@ export function TopBar({ view, onSettings, onBack, backButtonRef }: TopBarProps)
   // A Mac's own buttons sit inset at the left; where the app draws them,
   // they take the right (design skill readme, "Linux desktop conventions").
   const appControls = thisDesktop().windowControls === "app";
+  const barRef = useRef<HTMLDivElement>(null);
+  const startRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  // The room the project row may open into: between what the bar holds at
+  // its left and its buttons at its right, in the bar's own coordinates.
+  const room = useCallback((): BarRoom | null => {
+    const bar = barRef.current?.getBoundingClientRect();
+    const start = startRef.current?.getBoundingClientRect();
+    const end = endRef.current?.getBoundingClientRect();
+    if (!bar || !start || !end) return null;
+    return { left: start.right - bar.left, right: end.left - bar.left };
+  }, []);
   return (
     <div
+      ref={barRef}
       data-topbar=""
       style={
         {
@@ -154,7 +168,7 @@ export function TopBar({ view, onSettings, onBack, backButtonRef }: TopBarProps)
         } as React.CSSProperties
       }
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+      <div ref={startRef} style={{ display: "flex", alignItems: "center", gap: 10 }}>
         {view === "settings" && (
           <IconButton label="Back" onClick={onBack} ref={backButtonRef} style={noDrag}>
             {Ico.back}
@@ -168,7 +182,13 @@ export function TopBar({ view, onSettings, onBack, backButtonRef }: TopBarProps)
         {/* Which Mac this app controls, when it controls another (docs/view.md). */}
         {view !== "settings" && <RemoteControlLine />}
       </div>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }} data-topbar-actions>
+      {/* The project pill, centred: focus the window on one project (docs/project-focus.md). */}
+      {view !== "settings" && <ProjectFocusControl room={room} />}
+      <div
+        ref={endRef}
+        style={{ display: "flex", alignItems: "center", gap: 6 }}
+        data-topbar-actions
+      >
         <UpdateIndicator />
         {view !== "settings" && <ReducedMotionIndicator />}
         {view !== "settings" && (

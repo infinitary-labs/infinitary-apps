@@ -364,6 +364,27 @@ describe("what the collapsed panel says it holds", () => {
       { text: "2 working" },
     ]);
   });
+
+  it("counts only the focused project's tasks while the window is focused on one (INF-1091)", () => {
+    const current = board({
+      projects: [project(), scratch],
+      tasks: [
+        task({ id: "a", waitingCardId: "card-a" }),
+        task({ id: "b" }),
+        task({ id: "c", projectId: "scratch", waitingCardId: "card-c" }),
+        task({ id: "d", projectId: "scratch" }),
+        task({ id: "e", projectId: "scratch" }),
+      ],
+    });
+    expect(summaryOf(current, "scratch")).toEqual([
+      { text: "1 waiting", strong: true },
+      { text: "2 working" },
+    ]);
+    expect(summaryOf(current, null)).toEqual([
+      { text: "2 waiting", strong: true },
+      { text: "3 working" },
+    ]);
+  });
 });
 
 describe("what a row says after its title about its computer", () => {

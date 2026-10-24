@@ -47,6 +47,9 @@ Any interruption (the crewmate closes or leaves, its color changes, a card cover
 No tour, legend, setting or dismiss control; colors, motion, the summary and the Tasks dots do not change.
 Under reduced motion the fade is opacity only.
 
+While the window is focused on one project, or a rest lights a project's pill in the top bar's row, every crewmate of another project keeps a quarter of its light, its name and state word with it (`components/core/ProjectFocus`).
+It keeps its slot, speed, colour and solid; nothing hides or moves for it, and the light eases over `--dur-med` each way, a cut under reduced motion.
+
 Reading a crewmate (captain, FI3-398, 2026-10-01; replaces "inspecting never pauses or changes the animation"): the character and its crew read ONE stage clock, so they slow and stop together and stay one coherent picture.
 While the pointer is over the formation - on or inside an occupied orbit as painted, or within 28px of one or of a crewmate - the whole stage eases to a tenth of its speed; while the pointer is on a crewmate it pauses completely; away from the formation, with nobody out, under a card, or with the window out of focus it runs at full speed.
 The zone follows each orbit's own tilted ellipse, and each other computer's cluster's, so empty air above and below the crew never slows the stage (captain, INF-56: "right now it seems my mouse is nowhere near the animation but it would already trigger the slow motion").

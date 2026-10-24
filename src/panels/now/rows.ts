@@ -228,20 +228,27 @@ export function onRail(board: PanelTaskBoard): boolean {
  * captain, the part that matters while any do, and how many are working.
  * Each task counts by its own state (`nowGroupOf`): a parent the Working
  * group shows only beside a working child is not working itself (FI3-1049).
+ * Focused on a project, only its tasks count, as the top bar's pill counts
+ * them (src/shared/projectFocus.ts).
  */
 export function failedStartCount(tasks: readonly PanelTaskRow[]): number {
   return tasks.filter((task) => startMarks(task).startNotice != null).length;
 }
 
-export function summaryOf(board: PanelTaskBoard): PanelSummaryPart[] {
+export function summaryOf(
+  board: PanelTaskBoard,
+  projectId: string | null = null,
+): PanelSummaryPart[] {
   let waiting = 0;
   let working = 0;
-  for (const task of board.tasks) {
+  const tasks =
+    projectId === null ? board.tasks : board.tasks.filter((task) => task.projectId === projectId);
+  for (const task of tasks) {
     const group = nowGroupOf(task);
     if (group === "waiting") waiting += 1;
     else if (group === "working") working += 1;
   }
-  const failed = failedStartCount(board.tasks);
+  const failed = failedStartCount(tasks);
   return [
     { text: `${waiting} waiting`, ...(waiting > 0 ? { strong: true } : {}) },
     { text: `${working} working` },

@@ -15,9 +15,12 @@ import { focusOn, pressWindowKey } from "./windowKeys";
 /**
  * Closing the Tasks panel's search (FI3-1068, the captain's choice on
  * FI3-1067): Close search beside the field, Esc in the search, and the
- * header's Search tasks each close it, and closing lets go of the words and
- * the project, so every task is listed again. Esc first empties the words,
- * and a second Esc closes; closed from the keyboard, focus goes to the list.
+ * header's Search tasks each close it, and closing lets go of the words, so
+ * every task is listed again. A project chip is the window's project focus
+ * (INF-1091: one focus with the top bar's pill), so closing keeps it: the
+ * list goes back to every task of that project, and All projects lets it go.
+ * Esc first empties the words, and a second Esc closes; closed from the
+ * keyboard, focus goes to the list.
  *
  * A panel whose only tasks are answered questions, as a new profile's
  * welcome is, lists no row, so its page draws nothing: Search tasks still
@@ -111,6 +114,8 @@ test("the Tasks search closes by its close, by Esc and by Search tasks, and ever
     const allChip = frame.locator('[data-now-project="all"]');
     const fmChip = frame.getByRole("button", { name: "FM3K", exact: true });
     const everyTaskListed = () => expect.poll(() => listedKeys(page)).toEqual(keys);
+    const fmKeys = keys.filter((key) => key?.startsWith("FM3K-"));
+    const everyFmTaskListed = () => expect.poll(() => listedKeys(page)).toEqual(fmKeys);
     /** Focus inside the panel's page, on a row or a group's header of its list. */
     const listHasFocus = () =>
       dockBody(page, "now")
@@ -130,15 +135,18 @@ test("the Tasks search closes by its close, by Esc and by Search tasks, and ever
       await expect(close).toBeFocused();
       await page.keyboard.press("Enter");
       await expect(filters).toBeHidden();
-      await everyTaskListed();
+      await everyFmTaskListed();
       await expect.poll(listHasFocus).toBe(true);
-      // Open again, the search starts empty, on every project. The press
-      // reaches the panel's own page after the click returns, so the caret
-      // in the field is what says the search is open to type in.
+      // Open again, the search starts empty, still on the focused project.
+      // The press reaches the panel's own page after the click returns, so
+      // the caret in the field is what says the search is open to type in.
       await searchTasks.click();
       await expect(query).toBeFocused();
       await expect(query).toHaveValue("");
+      await expect(fmChip).toHaveAttribute("aria-pressed", "true");
+      await allChip.evaluate((chip) => (chip as HTMLElement).click());
       await expect(allChip).toHaveAttribute("aria-pressed", "true");
+      await everyTaskListed();
     });
 
     await test.step("Esc empties the words, and a second Esc closes the search", async () => {
@@ -163,11 +171,13 @@ test("the Tasks search closes by its close, by Esc and by Search tasks, and ever
       await expect.poll(() => listedKeys(page)).toEqual([iconKey]);
       await searchTasks.click();
       await expect(filters).toBeHidden();
-      await everyTaskListed();
+      await everyFmTaskListed();
       await searchTasks.click();
       await expect(query).toBeFocused();
       await expect(query).toHaveValue("");
-      await expect(allChip).toHaveAttribute("aria-pressed", "true");
+      await expect(fmChip).toHaveAttribute("aria-pressed", "true");
+      await allChip.evaluate((chip) => (chip as HTMLElement).click());
+      await everyTaskListed();
     });
 
     await test.step("a press on Close search closes it and clears it", async () => {

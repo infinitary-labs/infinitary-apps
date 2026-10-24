@@ -64,9 +64,11 @@ import {
  * tasks button is pressed into the panel as an ask: its click opens or
  * closes the search, its key (Find a task) always opens it with the caret
  * in it. Close search beside the field closes it too, and Esc in the search
- * empties its words, then closes it. Closing lets go of the words and the
- * project, so every task shows again; closed from the keyboard, focus goes
- * to the list. Typed words also ask the app for closed work the board no
+ * empties its words, then closes it. Closing lets go of the words, so every
+ * task shows again; closed from the keyboard, focus goes to the list. The
+ * project chips are the window's project focus (`view.focusedProjectId`,
+ * the top bar's pill, docs/project-focus.md): a chip picks it, All clears
+ * it, and closing the search keeps it. Typed words also ask the app for closed work the board no
  * longer lists (`tasks.search`) and paint it as an `earlier` group.
  *
  * The rows of the tasks whose records are open on the stack are tinted
@@ -106,7 +108,6 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
     query: "",
     tasks: [],
   });
-  const [projectId, setProjectId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [searching, setSearching] = useState(false);
   const groupsRef = useRef<HTMLDivElement>(null);
@@ -190,16 +191,17 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
     if (!board || !rail) return;
     if (onRail(board)) rail.show(true);
     else rail.show(false, "There are no tasks yet");
-    rail.summarize(summaryOf(board));
-  }, [board, rail]);
+    rail.summarize(summaryOf(board, view.focusedProjectId));
+  }, [board, rail, view.focusedProjectId]);
 
   const chips = useMemo(() => (board ? projectChipsOf(board) : []), [board]);
   const singleProject = useMemo(
     () => (board ? hasSingleRegisteredRepoProject(board) : false),
     [board],
   );
-  // A project filter whose project left the list lets go of the list.
-  const project = chips.some((chip) => chip.id === projectId) ? projectId : null;
+  // The window's project focus is the panel's project filter (the top bar's
+  // pill, docs/project-focus.md): a chip here picks it, All clears it.
+  const project = view.focusedProjectId;
   const typed = query.trim();
   // Hover is view state, not new task data. Keep grouping, sorting and the
   // row objects stable until the board or the captain's filter changes.
@@ -297,13 +299,13 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
     };
   }, [reads, typed]);
 
-  // Closing the search lets go of its words and its project, so every task
-  // shows again; closed from the keyboard, focus goes to the list's stop.
+  // Closing the search lets go of its words, so every task of the focused
+  // project shows again; the focus itself stays, as the top bar's pill
+  // says. Closed from the keyboard, focus goes to the list's stop.
   const [listAsk, setListAsk] = useState(0);
   const closeSearch = useCallback((byKeyboard: boolean) => {
     setSearching(false);
     setQuery("");
-    setProjectId(null);
     if (byKeyboard) setListAsk((n) => n + 1);
   }, []);
 
@@ -502,7 +504,7 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
                 className="chip"
                 data-now-project={chip.id ?? "all"}
                 aria-pressed={project === chip.id ? "true" : "false"}
-                onClick={() => setProjectId(chip.id)}
+                onClick={() => void point.focusProject(chip.id)}
               >
                 {chip.key}
               </button>

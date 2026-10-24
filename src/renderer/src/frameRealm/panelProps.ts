@@ -108,6 +108,10 @@ function framePoint(
     // And open a Settings section, handing it an item to show.
     openSettings: async (section, item) =>
       answer("point.openSettings", { section, ...(item === undefined ? {} : { item }) }),
+    focusProject: async (projectId) => {
+      need("focusProject");
+      return answer("point.focusProject", { projectId });
+    },
   };
 }
 
@@ -125,7 +129,12 @@ function frameTasks(bridge: FrameBridgeApi): PanelTasks {
 export function frameView(state: unknown): PanelView {
   const view = (
     state as {
-      view?: { openTaskIds?: unknown; shownTaskId?: unknown; litTaskId?: unknown };
+      view?: {
+        openTaskIds?: unknown;
+        shownTaskId?: unknown;
+        litTaskId?: unknown;
+        focusedProjectId?: unknown;
+      };
     } | null
   )?.view;
   const openTaskIds = Array.isArray(view?.openTaskIds)
@@ -133,7 +142,9 @@ export function frameView(state: unknown): PanelView {
     : [];
   const shownTaskId = typeof view?.shownTaskId === "string" ? view.shownTaskId : null;
   const litTaskId = typeof view?.litTaskId === "string" ? view.litTaskId : null;
-  return { openTaskIds, shownTaskId, litTaskId };
+  const focusedProjectId =
+    typeof view?.focusedProjectId === "string" ? view.focusedProjectId : null;
+  return { openTaskIds, shownTaskId, litTaskId, focusedProjectId };
 }
 
 /**

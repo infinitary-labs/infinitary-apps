@@ -11,7 +11,8 @@ Open task board is a header button of the Tasks panel (`Panel.prompt.md`, "Heade
 Its label is "Open task board" with its key, `⌘B`, drawn after the words.
 A press opens the board at the front of the card stack, or brings the open board forward; there is never a second board.
 The board is a panel's card on the stack: it pages with the cards, it is never a card the first mate wrote or a feed line, and Hide (the × in the card's chrome) or Esc puts it away.
-While it is open it keeps its project chip, Find, view, each lane's page, selected tile and scroll across paging; after Hide the next board starts fresh on All projects and the Board view.
+While it is open it keeps Find, view, each lane's page, selected tile and scroll across paging; after Hide the next board starts fresh on the Board view.
+Its project chip is the window's project focus (`components/core/ProjectFocus`), so it opens on the focused project and Hide keeps it.
 It is a wide card of `fill` height: up to 800px, giving way to the docks like any wide card, the docks folding only when the stage is under 560px, and as tall as a card may be.
 Under about 700px the columns scroll sideways with the body; text never shrinks.
 The first mate's input stays under it.

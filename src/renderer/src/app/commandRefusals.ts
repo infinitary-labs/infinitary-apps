@@ -62,6 +62,8 @@ export type WindowFacts = {
   dialogOpen: boolean;
   browserControl?: boolean;
   computers?: { page: number; pages: number };
+  /** The top bar's project pill: whether it shows, and the focus that holds (docs/project-focus.md). */
+  projectFocus?: { shown: boolean; focus: string | null };
   /**
    * Why a panel's command cannot run now beyond what holds every key
    * (docs/keyboard.md, "A panel's commands"), from its panel as it stands.
@@ -223,6 +225,14 @@ const REFUSALS: Readonly<
         : !facts.computers || facts.computers.page + 1 >= facts.computers.pages
           ? "These are the last computers"
           : null,
+  "project-focus.open": (s, facts) =>
+    s.view !== "home"
+      ? IN_SETTINGS
+      : !facts.projectFocus?.shown
+        ? "There is only one project"
+        : null,
+  "project-focus.clear": (_s, facts) =>
+    facts.projectFocus?.focus ? null : "Every project is shown",
   "cards.previous": (s) => pageRefusal(s, -1),
   "cards.next": (s) => pageRefusal(s, 1),
   "cards.close": cardRefusal,

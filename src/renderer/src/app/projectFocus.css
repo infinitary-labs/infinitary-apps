@@ -1,0 +1,183 @@
+/*
+ * The top bar's project pill (docs/project-focus.md; the design skill's
+ * components/core/ProjectFocus.prompt.md): one pill centred in the bar that
+ * opens to the right into a row of project pills.
+ */
+
+[data-project-focus] {
+  position: absolute;
+  top: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  -webkit-app-region: no-drag;
+  white-space: nowrap;
+}
+
+[data-project-focus="closed"] {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.fm-pf-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--line-1);
+  background: transparent;
+  color: var(--fg-2);
+  font: 500 var(--text-sm) / 1 var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast);
+}
+
+.fm-pf-pill:hover {
+  background: var(--bg-3);
+}
+
+/* The focused pill: the one accent in the window's chrome. */
+.fm-pf-pill[aria-checked="true"],
+.fm-pf-pill[data-pf-focused] {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--fg-1);
+}
+
+/* A project with nothing waiting and nothing working reads dimmer. */
+.fm-pf-pill[data-pf-quiet] {
+  color: var(--fg-3);
+}
+
+.fm-pf-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font: 400 var(--text-xs) / 1 var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--fg-3);
+}
+
+.fm-pf-pill[aria-checked="true"] .fm-pf-n,
+.fm-pf-pill[data-pf-focused] .fm-pf-n {
+  color: var(--fg-2);
+}
+
+/* The arrow points where the row opens: to the right. */
+.fm-pf-arrow {
+  display: inline-flex;
+  color: var(--fg-3);
+  margin-right: -3px;
+}
+
+.fm-pf-tail {
+  border: 0;
+  background: none;
+  padding: 0 2px;
+  font: 400 var(--text-xs) / 1 var(--font-mono);
+  color: var(--fg-3);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fm-pf-tail:hover {
+  color: var(--fg-1);
+}
+
+[data-project-focus-row] {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Measured before it is drawn: the row as wide as every pill. */
+[data-project-focus="measuring"] {
+  visibility: hidden;
+}
+
+/*
+ * Opening: each pill glides from where the pill was to its place, its
+ * counts a beat after; closing plays it back. Zero durations (reduced
+ * motion) make both a cut.
+ */
+[data-project-focus="open"] .fm-pf-slide {
+  animation: fm-pf-in var(--dur-med) var(--ease-out) both;
+  animation-delay: var(--pf-delay, 0ms);
+}
+
+[data-project-focus="open"] .fm-pf-slide .fm-pf-n {
+  animation: fm-pf-fade var(--dur-fast) var(--ease-drift) both;
+  animation-delay: calc(var(--pf-delay, 0ms) + var(--dur-fast));
+}
+
+[data-project-focus="closing"] .fm-pf-slide {
+  transition:
+    transform var(--dur-quick) var(--ease-out),
+    opacity var(--dur-quick) var(--ease-out);
+  transform: translateX(var(--pf-from, 0px));
+  opacity: 0;
+}
+
+[data-project-focus="closing"] .fm-pf-slide[data-pf-keep] {
+  opacity: 1;
+}
+
+@keyframes fm-pf-in {
+  from {
+    transform: translateX(var(--pf-from, 0px));
+    opacity: 0;
+  }
+}
+
+@keyframes fm-pf-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.fm-pf-menu {
+  position: absolute;
+  top: 44px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-m);
+  box-shadow: var(--shadow-2, 0 8px 24px rgba(0, 0, 0, 0.4));
+}
+
+.fm-pf-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: transparent;
+  color: var(--fg-2);
+  font: 500 var(--text-sm) / 1 var(--font-ui);
+  cursor: pointer;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.fm-pf-item:hover {
+  background: var(--bg-3);
+}
+
+.fm-pf-item[aria-checked="true"] {
+  background: var(--accent-dim);
+  color: var(--fg-1);
+}

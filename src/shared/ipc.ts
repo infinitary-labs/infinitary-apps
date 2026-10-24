@@ -801,6 +801,11 @@ export const invokeContract = {
            * as history. A hint like the card, never the topic by itself.
            */
           pastCardId: z.string().min(1).max(128).optional(),
+          /**
+           * The project the window is focused on (the top bar's project
+           * pill, docs/project-focus.md): a hint below a shown record.
+           */
+          focusedProjectId: z.string().min(1).max(64).optional(),
         }),
       ]),
     ]),
@@ -3092,6 +3097,7 @@ export type FirstmateApi = {
             visibleCardId?: string;
             taskId?: string;
             pastCardId?: string;
+            focusedProjectId?: string;
           },
     ) => Promise<{ ok: true }>;
     /** The captain's newest message and the Firstmate's reply line beside it, or null before the first. */

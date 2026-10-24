@@ -243,6 +243,26 @@ export const KEYBOARD_COMMANDS = {
     risk: "navigate",
     keys: [],
   },
+  // The top bar's project pill (docs/project-focus.md): its row opens with
+  // focus on the pills, and focus leaves by name.
+  "project-focus.open": {
+    label: "Focus on a project",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "view",
+    keys: [{ key: "p", meta: true, shift: true }],
+    searchWords: ["filter", "project", "pill"],
+  },
+  "project-focus.clear": {
+    label: "Show all projects",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "view",
+    keys: [],
+    searchWords: ["filter", "focus", "project", "clear"],
+  },
   // ⇧⌘[ as a Mac reports it while ⌘ is down (`[` with Shift), and as the
   // shifted character other input reports (`{` with Shift).
   "cards.previous": {

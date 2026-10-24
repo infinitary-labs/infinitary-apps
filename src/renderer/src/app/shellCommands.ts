@@ -22,6 +22,7 @@ import { panelCommandRefusal, runPanelCommand } from "../plugins/panelCommands";
 import { cardStage } from "./cardStage";
 import { commandRefusal, shownEntry, type WindowFacts } from "./commandRefusals";
 import { available, modalOpen } from "./focusRecovery";
+import { projectFocus } from "./projectFocus";
 import { enterCard, moveToRegion } from "./regions";
 import { isHeldEntry, type ShellState, useShellStore } from "./store";
 import { markWindowKeys } from "./windowKeysMark";
@@ -229,6 +230,8 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "regions.previous": () => moveToRegion(-1),
   "computers.previous": () => crewOrbit().setPage(crewOrbit().page - 1),
   "computers.next": () => crewOrbit().setPage(crewOrbit().page + 1),
+  "project-focus.open": () => projectFocus.askOpen(),
+  "project-focus.clear": () => projectFocus.pick(null),
   "cards.previous": () => onShownCard((stage) => stage.page(-1)),
   "cards.next": () => onShownCard((stage) => stage.page(1)),
   "cards.close": () => onShownCard((stage) => stage.close()),
@@ -329,6 +332,7 @@ function windowFacts(): WindowFacts {
       return !!id && browserControlButton(id) !== null;
     })(),
     computers: { page: crewOrbit().page, pages: crewOrbit().pages },
+    projectFocus: { shown: projectFocus.state().shown, focus: projectFocus.state().focus },
     panelCommand: (id, recording) => panelCommandRefusal(pluginHost, id, recording),
   };
 }

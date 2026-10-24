@@ -3,7 +3,12 @@ import { expect, test } from "@playwright/test";
 import { CHECK_REFRESH_MS } from "../../src/core/orchestrator/checkWatch";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { CHECK_WORDS, MERGE_AFTER_FIXING_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
+import {
+  CHECK_WORDS,
+  MERGE_AFTER_FIXING_WORDS,
+  MERGE_ANYWAY_WORDS,
+  MERGE_WORDS,
+} from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -99,6 +104,8 @@ test("external check changes refresh the completion strip and task facts", async
     // On failed checks a click keeps the approval for a fix.
     await expect(merge(MERGE_AFTER_FIXING_WORDS)).toBeVisible();
     await expect(merge(MERGE_WORDS["merge-pr"])).toHaveCount(0);
+    // Beside it, Merge anyway merges this version as it is (INF-1137 friction 6).
+    await expect(merge(MERGE_ANYWAY_WORDS)).toBeVisible();
     const cards = await app.page.evaluate(() => window.infinitary.cards.list());
     const card = cards.find((c) => c.title === STALE_CHECKS_CARD);
     await app.page.screenshot({ path: test.info().outputPath("card-after-red.png") });

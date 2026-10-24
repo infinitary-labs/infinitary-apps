@@ -415,6 +415,7 @@ The captain's merge click on a completion card is an approval of that change, an
 - **The baseline.**
   When a crewmate's completion card clears the checks gate (`pendingCiGate`), `CrewSupervisor.recordCompletionOffer` keeps the shown offer's id with the head those checks read and its pull request (`delivery.completionOffers`, the newest four).
   A revision of the completion card already open on the stack clears that gate while the checks run, not only once they pass (INF-834 friction 4), so the captain reads the crewmate's new words at once; its offer is kept at the running head, its button then reads Merge when checks pass, and a new completion card still waits for green.
+  A new completion card also clears it on failed checks once every check seen failing at the version carries the crewmate's `check_change` diagnosis there (`diagnosedRed`, INF-1137 friction 6): the crewmate has read them and cannot clear them, so the captain decides.
   An offer that shows the same content at another head keeps no baseline.
   A new completion card supersedes any standing approval: the crewmate is asking again.
 - **The approval.**
@@ -426,6 +427,9 @@ The captain's merge click on a completion card is an approval of that change, an
 - **Its words (INF-23).**
   The completion card's merge says what a click does, on an offer a click would approve (`approvableOffer`, `CrewSupervisor.mergeLabel`): Merge when checks pass while the task's checks are still running, Merge after fixing errors once they failed (the captain's words), and Merge the pull request again once they pass.
   While the captain's override passes the checks at the card's version and the pull request is still at it, a click merges at once, so it reads Merge the pull request whatever the checks read (INF-756).
+  While the checks at the card's version have failed and no override passes them, the host draws Merge anyway beside the merge (`CrewSupervisor.mergeAnyway`, INF-1137 friction 6).
+  Its click is the captain's own word: it records the override on the checks for that version in his name, with the button's words as its reason, and the merge runs at once; GitHub's own rules still decide whether it merges.
+  It goes once the checks pass, the pull request moves past the card's version, or an override already passes them.
   `CardService.refreshSettleFacts` writes it with the fact strip whenever the task's record changes, so it follows each new reading.
   A click then keeps the approval waiting on the checks, and its feed line says what the merge waits for (`keptFeedLine`, by the task's last reading): the running checks, or a fix after failed ones.
   A fix brings a new version with fresh checks, so it comes back to the captain on a new completion card when it changed the work (a repair declared `changed-work`, under "Repairs" below); a fix declared to leave the approved work as it was, or the same version passing on a rerun, merges on the kept approval once the checks pass.
@@ -501,7 +505,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `live-proof` | soft | record | a Careful change's pull request and merge until live proof was accepted at this version | the override |
 | `waits` | soft | record | a close or completion card while a wait on other work stands | the override |
 | `parts` | soft | record | a close while the task's planned parts are open | `proceed_with_open`, or the override |
-| `checks` | soft | record | a completion card or merge while the checks failed or are running | the override |
+| `checks` | soft | record | a completion card or merge while the checks failed or are running | Merge anyway on the completion card, or the override |
 | `story` | soft | consent | a GitHub or GitLab pull request opened without its saved story | the override |
 | `rerun` | soft | made-up number | a second flake rerun | the override |
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |

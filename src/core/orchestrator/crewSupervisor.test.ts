@@ -25,6 +25,7 @@ import {
   type CardThread,
   cardAnswersBytes,
   cardPresentation,
+  MERGE_ANYWAY_ACTION,
   onStage,
   opensSettings,
   splitSettleFacts,
@@ -57,6 +58,7 @@ import {
   CARE_WORDS,
   changeLinesWords,
   MERGE_AFTER_FIXING_WORDS,
+  MERGE_ANYWAY_WORDS,
   MERGE_WHEN_CHECKS_PASS_WORDS,
   MERGE_WORDS,
   REVIEW_CAREFULLY_WORDS,
@@ -4098,7 +4100,8 @@ describe("CrewSupervisor", () => {
           .cards()
           .find((card) => card.id === h.card.id)
           ?.actions.find(
-            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge" &&
+              !action.passes,
           )?.label;
       expect(label()).toBe(MERGE_WORDS["merge-pr"]);
       const readings: [ForgeCheckState[], string][] = [
@@ -4140,7 +4143,8 @@ describe("CrewSupervisor", () => {
           .cards()
           .find((card) => card.id === h.card.id)
           ?.actions.find(
-            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge" &&
+              !action.passes,
           );
       const revise = (reply?: string, id = h.card.id) =>
         h.specs[0]?.onCard?.({
@@ -4545,7 +4549,8 @@ describe("CrewSupervisor", () => {
           .cards()
           .find((card) => card.id === h.card.id)
           ?.actions.find(
-            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge",
+            (action) => action.effect?.kind === "settle" && action.effect.mode === "merge" &&
+              !action.passes,
           )?.label;
 
       // INF-756: with his words passing the checks at the card's version, the
@@ -4587,6 +4592,91 @@ describe("CrewSupervisor", () => {
         await h.declare({});
         expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
         await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
+      });
+
+      /** The Merge anyway button on the completion card, as the card shows it now. */
+      const anywayOf = (h: Awaited<ReturnType<typeof approved>>) =>
+        h
+          .cards()
+          .find((card) => card.id === h.card.id)
+          ?.actions.find((action) => action.passes === "checks");
+
+      // INF-1137 friction 6, the captain's pick: "the red-check card lacks
+      // Merge anyway; PR #399 and PR #281 each took three questions".
+      it("offers Merge anyway beside the merge on failed checks, and its one click merges that version with his override recorded", async () => {
+        const h = await approved();
+        expect(anywayOf(h)).toBeUndefined();
+        h.forge.states = ["failure"];
+        await h.declare({});
+        await vi.waitFor(() => expect(mergeLabelOf(h)).toBe(MERGE_AFTER_FIXING_WORDS));
+        expect(anywayOf(h)).toMatchObject({
+          id: MERGE_ANYWAY_ACTION,
+          label: MERGE_ANYWAY_WORDS,
+          effect: { kind: "settle", mode: "merge" },
+        });
+        // Only the merge itself keeps the merge's words.
+        expect(
+          h.cards().find((card) => card.id === h.card.id)?.actions.map((action) => action.label),
+        ).toEqual(["Discard", REVIEW_CAREFULLY_WORDS, MERGE_ANYWAY_WORDS, MERGE_AFTER_FIXING_WORDS]);
+        // A body's script cannot press it.
+        expect(() => h.supervisor.act(h.card.id, MERGE_ANYWAY_ACTION, "frame")).toThrow();
+
+        h.supervisor.act(h.card.id, MERGE_ANYWAY_ACTION);
+        await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+        expect(h.tasks.get(h.taskId)?.delivery?.override).toMatchObject({
+          holds: ["checks"],
+          until: "version",
+          head: APPROVED,
+          words: `${MERGE_ANYWAY_WORDS}, on the card "Ready to merge"`,
+        });
+        expect(
+          h.tasks
+            .timeline(h.taskId)
+            .some((event) => event.actor === "captain" && event.text.includes(MERGE_ANYWAY_WORDS)),
+        ).toBe(true);
+      });
+
+      it("takes Merge anyway away once the checks pass, or the pull request moves past the card's version", async () => {
+        const h = await approved();
+        h.forge.states = ["failure"];
+        await h.declare({});
+        await vi.waitFor(() => expect(anywayOf(h)).toBeDefined());
+        h.forge.states = ["success"];
+        await h.declare({});
+        await vi.waitFor(() => expect(anywayOf(h)).toBeUndefined());
+        expect(mergeLabelOf(h)).toBe(MERGE_WORDS["merge-pr"]);
+        h.forge.headSha = "fixed0004";
+        h.forge.states = ["failure"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
+        expect(anywayOf(h)).toBeUndefined();
+      });
+
+      it("puts a new completion card up on failed checks only once every failed check at its version carries the crewmate's diagnosis", async () => {
+        const h = await approved();
+        h.forge.headSha = "fixed0004";
+        h.forge.states = ["failure"];
+        await h.declare({});
+        expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ headSha: "fixed0004", ci: "red" });
+        await expect(h.emit("Still red")).rejects.toThrow(/carries your diagnosis/);
+        expect(h.cards().some((card) => card.title === "Still red")).toBe(false);
+        await h.declare({
+          diagnosis: {
+            headSha: "fixed0004",
+            check: "linux-checks",
+            classification: "suspected-flake",
+            evidence: "The job timed out loading a window; it passed alone on main and on this branch.",
+          },
+        });
+        await repairTurn(h, async () => {
+          await h.emit("Still red");
+        });
+        const card = h.cards().find((entry) => entry.title === "Still red");
+        expect(card?.actions.find((action) => action.passes === "checks")?.label).toBe(
+          MERGE_ANYWAY_WORDS,
+        );
+        h.supervisor.act(card?.id ?? "", MERGE_ANYWAY_ACTION);
+        await vi.waitFor(() => expect(h.forge.merges).toEqual(["fixed0004"]));
       });
 
       it("never holds the first mate's merge on its own card, while a crewmate's question holds it until his words pass it", async () => {

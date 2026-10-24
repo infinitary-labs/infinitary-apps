@@ -197,3 +197,22 @@ export type CheckRepairLedger = {
   repairs: (CheckRepair & { outcome?: "passed" | "failed" | "superseded" })[];
   rerun?: CheckRerun;
 };
+
+/**
+ * Whether every check seen failing at the change's current version carries
+ * its crewmate's diagnosis there (INF-1137 friction 6): the closed fact that
+ * lets a completion card go up on failed checks, so the captain can merge
+ * it anyway. A version with no failure on record is not one.
+ */
+export function diagnosedRed(
+  delivery: { headSha?: string; ciRepair?: CheckRepairLedger } | null | undefined,
+): boolean {
+  const head = delivery?.headSha;
+  const ledger = delivery?.ciRepair;
+  if (!head || !ledger) return false;
+  const failed = ledger.failures.find((f) => f.headSha === head)?.checks ?? [];
+  return (
+    failed.length > 0 &&
+    failed.every((check) => ledger.diagnoses.some((d) => d.headSha === head && d.check === check))
+  );
+}

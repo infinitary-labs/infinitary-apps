@@ -72,6 +72,13 @@ export const MERGE_WHEN_CHECKS_PASS_WORDS = "Merge when checks pass";
  */
 export const MERGE_AFTER_FIXING_WORDS = "Merge after fixing errors";
 
+/**
+ * The button beside it on failed checks (INF-1137 friction 6): the click is
+ * the captain's own word that the failed checks do not hold this version,
+ * so the app merges it now.
+ */
+export const MERGE_ANYWAY_WORDS = "Merge anyway";
+
 /** The host's button on a card that merges past the branch rules (FI3-1571 piece 2). */
 export const SKIP_RULES_MERGE_WORDS = "Merge, skipping the rules";
 

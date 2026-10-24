@@ -306,6 +306,9 @@ export function isPreviewBody(body: string): boolean {
   return false;
 }
 
+/** The id of the Merge anyway action the host adds beside a merge on failed checks (`passes`). */
+export const MERGE_ANYWAY_ACTION = "merge-anyway";
+
 export const cardActionSchema = z.object({
   id: z.string(),
   label: z.string(),
@@ -332,6 +335,14 @@ export const cardActionSchema = z.object({
    * card it words; no agent declares it, and a body's script cannot press it.
    */
   care: rigorSchema.optional(),
+  /**
+   * The soft hold the captain's click passes at the card's version before
+   * its merge runs (INF-1137 friction 6, docs/delivery-rigor.md "Its
+   * words"): Merge anyway on failed checks. Only the host adds it, beside
+   * the merge it words; no agent declares it, and a body's script cannot
+   * press it.
+   */
+  passes: z.literal("checks").optional(),
 });
 export type CardAction = z.infer<typeof cardActionSchema>;
 

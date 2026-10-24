@@ -29,6 +29,7 @@ import {
   compareStack,
   FIRSTMATE_CARD_META,
   isPreviewBody,
+  MERGE_ANYWAY_ACTION,
   onStage,
   type PastCard,
   settleEffectOf,
@@ -44,6 +45,7 @@ import {
 import type { FmEvent } from "@shared/events";
 import { forgeRefusedText, forgeSignInTitle, LOCAL_PROJECTS_UNAFFECTED } from "@shared/forges";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
+import { MERGE_ANYWAY_WORDS } from "@shared/vocabulary";
 import { z } from "zod";
 import { parseStableCardId, resolveFirstmateCardId } from "../pi/cardTool";
 import { decidedCardWidth } from "../pi/cardWidth";
@@ -130,6 +132,8 @@ export type CardServiceHost = {
   settleFacts(taskId: string): string | undefined;
   /** The words a settle card's merge reads now, when the host names it; undefined leaves it. */
   mergeLabel?(card: Card): string | undefined;
+  /** Whether a settle card offers Merge anyway beside its merge now (INF-1137 friction 6). */
+  mergeAnyway?(card: Card): boolean;
   followupNotice(taskId: string): string | undefined;
   broadcastCrewCounts(): void;
   broadcastEvent: (event: FmEvent) => void;
@@ -322,15 +326,36 @@ export class CardService {
    */
   refreshSettleFacts(taskIds?: readonly string[]): void {
     let changed = false;
+    const merges = (action: Card["actions"][number]) =>
+      action.effect?.kind === "settle" && action.effect.mode === "merge" && !action.passes;
     const relabeled = (card: Card): Card => {
       const label = this.host.mergeLabel?.(card);
-      const merges = (action: Card["actions"][number]) =>
-        action.effect?.kind === "settle" && action.effect.mode === "merge";
       if (!label || !card.actions.some((action) => merges(action) && action.label !== label))
         return card;
       return {
         ...card,
         actions: card.actions.map((action) => (merges(action) ? { ...action, label } : action)),
+      };
+    };
+    // Merge anyway follows the record like the merge's words: it stands
+    // beside the merge while the host offers it, and goes when it does not.
+    const anyway = (card: Card): Card => {
+      const offered = card.actions.some((action) => action.passes === "checks");
+      const wanted = card.actions.some(merges) && this.host.mergeAnyway?.(card) === true;
+      if (offered === wanted) return card;
+      if (!wanted)
+        return { ...card, actions: card.actions.filter((action) => action.passes !== "checks") };
+      const at = card.actions.findIndex(merges);
+      const action: Card["actions"][number] = {
+        id: MERGE_ANYWAY_ACTION,
+        label: MERGE_ANYWAY_WORDS,
+        variant: "secondary",
+        effect: { kind: "settle", mode: "merge" },
+        passes: "checks",
+      };
+      return {
+        ...card,
+        actions: [...card.actions.slice(0, at), action, ...card.actions.slice(at)],
       };
     };
     const refreshed = (card: Card): Card => {
@@ -339,9 +364,9 @@ export class CardService {
         return card;
       const facts = this.host.settleFacts(card.taskId);
       const split = facts ? splitSettleFacts(card.body) : undefined;
-      if (!facts || !split) return relabeled(card);
+      if (!facts || !split) return anyway(relabeled(card));
       const body = split.body.slice(0, split.at) + facts + split.body.slice(split.at);
-      return relabeled(body === card.body ? card : { ...card, body });
+      return anyway(relabeled(body === card.body ? card : { ...card, body }));
     };
     for (const [id, card] of this.cards) {
       const next = refreshed(card);
@@ -2333,7 +2358,9 @@ export class CardService {
   ): { cardId: string; cardTitle: string; actionId: string; label: string } | undefined {
     for (const card of this.cards.values()) {
       if (card.taskId !== taskId) continue;
-      const merge = card.actions.find((action) => settleEffectOf(action)?.mode === "merge");
+      const merge = card.actions.find(
+        (action) => settleEffectOf(action)?.mode === "merge" && !action.passes,
+      );
       if (merge) {
         return { cardId: card.id, cardTitle: card.title, actionId: merge.id, label: merge.label };
       }

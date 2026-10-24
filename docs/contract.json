@@ -7070,6 +7070,10 @@
                       "standard",
                       "reviewed"
                     ]
+                  },
+                  "passes": {
+                    "type": "string",
+                    "const": "checks"
                   }
                 },
                 "required": [
@@ -8108,6 +8112,10 @@
                         "standard",
                         "reviewed"
                       ]
+                    },
+                    "passes": {
+                      "type": "string",
+                      "const": "checks"
                     }
                   },
                   "required": [
@@ -8630,6 +8638,10 @@
                         "standard",
                         "reviewed"
                       ]
+                    },
+                    "passes": {
+                      "type": "string",
+                      "const": "checks"
                     }
                   },
                   "required": [
@@ -9748,6 +9760,10 @@
                         "standard",
                         "reviewed"
                       ]
+                    },
+                    "passes": {
+                      "type": "string",
+                      "const": "checks"
                     }
                   },
                   "required": [
@@ -10452,6 +10468,10 @@
                     "standard",
                     "reviewed"
                   ]
+                },
+                "passes": {
+                  "type": "string",
+                  "const": "checks"
                 }
               },
               "required": [
@@ -49633,6 +49653,10 @@
                       "standard",
                       "reviewed"
                     ]
+                  },
+                  "passes": {
+                    "type": "string",
+                    "const": "checks"
                   }
                 },
                 "required": [

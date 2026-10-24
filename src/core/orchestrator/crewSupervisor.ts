@@ -45,6 +45,7 @@ import {
 } from "@shared/cards";
 import {
   type CheckChangeInput,
+  diagnosedRed,
   isRepairAssessment,
   REPAIR_ASSESSMENT_SOURCE,
 } from "@shared/checkRepair";
@@ -1508,6 +1509,7 @@ export class CrewSupervisor {
       closeAnsweredTask: (card, action, by) => this.settle.closeAnsweredTask(card, action, by),
       settleFacts: (taskId) => this.settleFacts(taskId),
       mergeLabel: (card) => this.mergeLabel(card),
+      mergeAnyway: (card) => this.mergeAnyway(card),
       followupNotice: (taskId) => this.followupNotice(taskId),
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
       broadcastEvent: options.broadcastEvent,
@@ -9651,9 +9653,14 @@ export class CrewSupervisor {
         return "checked";
       if (overall === "pending" && this.cards.openCompletionCard(taskId, input.id))
         return "running";
+      // A crewmate stopped only by failed checks it has read and diagnosed
+      // puts its card up (INF-1137 friction 6): the checks still hold the
+      // merge, and the card offers Merge anyway beside it for the captain.
+      if (overall === "red" && diagnosedRed(this.options.tasks.get(taskId)?.delivery))
+        return "checked";
       const state = overall === "no-pr" ? "nothing - no open PR was found" : CHECK_WORDS[overall];
       throw new CardRefusedError(
-        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Re-check them with the repository's own check tools, fix or wait, and emit the completion card again once they pass.${this.waitingReplyNote(taskId)}${overall === "no-pr" ? "" : ` ${softHoldWords("checks", "crewmate")}`}`,
+        `Card refused: the checks read ${state}, not passed; a merge decision must wait. Re-check them with the repository's own check tools, fix or wait, and emit the completion card again once they pass.${overall === "red" ? " If they still fail after you tried, it goes up once every failed check at this version carries your diagnosis (check_change diagnosis), and the app offers Merge anyway on it." : ""}${this.waitingReplyNote(taskId)}${overall === "no-pr" ? "" : ` ${softHoldWords("checks", "crewmate")}`}`,
         "checks",
         overall === "no-pr"
           ? "no open pull request was found for its branch"
@@ -12646,6 +12653,10 @@ export class CrewSupervisor {
     // first, so its notice waits on the crewmate's lane ahead of the choice
     // that starts it below, the way any choice on its card does.
     if (chosen.care && card.taskId && !closedAnswer) this.careFromCard(card.taskId, chosen.care);
+    // Merge anyway (INF-1137 friction 6): his click passes the checks at
+    // the card's version before the merge below runs, so it merges now.
+    if (chosen.passes === "checks" && source === "chrome" && card.taskId && !closedAnswer)
+      this.passChecksFromCard(card, chosen.label);
     switch (effect?.kind) {
       case "settle": {
         // Host-owned teardown: the host runs it instead of steering the
@@ -12784,6 +12795,45 @@ export class CrewSupervisor {
       return;
     }
     this.policiesChanged(taskId, { rigor: care }, before);
+  }
+
+  /**
+   * The captain's Merge anyway click (INF-1137 friction 6): his own word,
+   * one click, that the failed checks do not hold the version the card
+   * offers. It is the recorded override on the checks for that version
+   * (`HoldOverride`), in his name and with the button's words as its
+   * reason, so the merge it starts and every other site that reads the
+   * checks hold see the same record. A new version brings the hold back.
+   */
+  private passChecksFromCard(card: Card, label: string): void {
+    const taskId = card.taskId;
+    const record = taskId ? this.options.tasks.get(taskId) : undefined;
+    if (!taskId || !record) return;
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const offer = approvableOffer(record, repo, this.taskDelivery(taskId), {
+      cardId: card.id,
+      offerId: card.offerId,
+    });
+    const head = offer?.baseline.headSha ?? record.delivery?.headSha;
+    if (!head) return;
+    const override: HoldOverride = {
+      words: `${label}, on the card "${card.title}"`,
+      holds: ["checks"],
+      until: "version",
+      head,
+      at: this.now(),
+    };
+    this.options.tasks.recordDelivery(
+      taskId,
+      { override },
+      {
+        kind: "note",
+        actor: "captain",
+        feed: true,
+        text: overrideWords(override),
+        data: { news: true },
+      },
+    );
   }
 
   /** A choice on a crewmate's card, steered to its session through the task's durable lane. */
@@ -13019,6 +13069,26 @@ export class CrewSupervisor {
     const ci = record.delivery?.ci;
     if (ci === "red") return MERGE_AFTER_FIXING_WORDS;
     return ci === "pending" ? MERGE_WHEN_CHECKS_PASS_WORDS : MERGE_WORDS["merge-pr"];
+  }
+
+  /**
+   * Whether a completion card offers Merge anyway beside its merge
+   * (INF-1137 friction 6): on an offer a click would approve, while the
+   * pull request is still at the card's version and its checks there read
+   * failed, and the captain's override does not already pass them. Once
+   * they pass, or a new version comes, it goes.
+   */
+  private mergeAnyway(card: Card): boolean {
+    const record = card.taskId ? this.options.tasks.get(card.taskId) : undefined;
+    if (!record || record.delivery?.ci !== "red") return false;
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const offer = approvableOffer(record, repo, this.taskDelivery(record.id), {
+      cardId: card.id,
+      offerId: card.offerId,
+    });
+    const head = offer?.baseline.headSha;
+    if (!head || record.delivery.headSha !== head) return false;
+    return !overridePasses(record.delivery, "checks", head);
   }
 
   /** The held integration call is presented immediately by its owner, not the agent. */

@@ -141,9 +141,13 @@ export async function stagePrepared(page: Page): Promise<void> {
  * finds under the pointer in what the window last drew, and as a move ends
  * that can be stale: a press on the shown card's page then lands on the
  * window's own page, on the frame's element, so the page inside never hears
- * it and its field never takes focus. A journey whose native press goes
- * into the shown card's page right after the stage changed waits here, as
- * the captain clicks a card once it has come to rest.
+ * it and its field never takes focus. Before that, a card that replaces
+ * another is untouchable until its body draws: the stage keeps the drawing
+ * it replaces in front of it, behind a shield that takes the pointer, so a
+ * wheel turn aimed at it scrolls nothing (docs/renderer.md). A journey whose
+ * native press or wheel turn goes into the shown card right after the stage
+ * changed waits here, as the captain clicks or scrolls a card once it has
+ * come to rest.
  */
 export async function stageAtRest(page: Page): Promise<void> {
   await expect(page.locator('[data-card-layer] [data-stage-entry="outgoing"]')).toHaveCount(0);

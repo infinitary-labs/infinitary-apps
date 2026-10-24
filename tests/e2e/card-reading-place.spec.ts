@@ -6,7 +6,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { expandDock, nowFrame, pressRow, recordCard, recordFrame } from "./rails";
-import { cardScroller, showCard, shownCard } from "./stack";
+import { cardScroller, showCard, shownCard, stageAtRest } from "./stack";
 
 const checks = [
   "Read the release notes against the changes people will see.",
@@ -192,6 +192,11 @@ test("paging away from a past card and back keeps its reading place", async () =
       .evaluate((el) => (el as HTMLElement).click());
     const past = page.locator('[data-past-card="past-long"]');
     await expect(past).toBeVisible();
+    // Playwright reads it as visible at opacity 0: until its body draws, the
+    // stage keeps the record's drawing in front of it behind a shield, which
+    // takes a wheel turn aimed at the past card even once its body can scroll
+    // (docs/e2e-contracts.md). The captain scrolls it once it has come to rest.
+    await stageAtRest(page);
     const scroller = () => cardScroller(page);
     await expect
       .poll(() => scroller().evaluate((el) => el.scrollHeight - el.clientHeight > 400))

@@ -375,6 +375,8 @@ The fixture uses Pi with the mock provider’s Anthropic message format, matchin
 It also checks that the foreground notice sits under the top bar and over the iPad's landscape stage, waits on an iPhone on its side while the strip stays in the bar, and opens its own card on Home, retained offline drafts, an unconfirmed response with no automatic repeat, and a future-major home that allows reading but refuses changes.
 The home records read and connection counts across streaming, pushed card revisions and an idle period longer than both pairing deadlines.
 The journey also checks Control Center and removal while away with an owned endpoint that stalls TLS between authenticated refusals.
+The home counts the TCP connections to its own port, the refusals pairing gives and the stalled handshakes since the removal, and the journey expects exactly two refusals and one stall after every attempt at the home but the last.
+A starved simulator can outlast the phone's own handshake deadline at the home too, which sends no request and adds a round through the stalled address, so the count follows the phone's address order rather than the clock.
 The launcher truncates the actual saved Mac only inside its owned simulator's app container; the same journey captures the damaged-record explanation and joins again with a fresh confirmed link.
 Each part starts from its own fresh home and simulator; the Xcode scheme's `PHONE_TEST_HOME` setting names that home's private control interface.
 Native package tests exercise the Mac-produced link and certificate fixture and certificate/public-key compatibility without using a Mac Keychain.

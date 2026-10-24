@@ -1,9 +1,10 @@
 import { randomBytes } from "node:crypto";
+import { subscribe, unsubscribe } from "node:diagnostics_channel";
 import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage } from "node:http";
 import { createServer as createTCPServer, type Socket } from "node:net";
 import { join } from "node:path";
-import { startConnection } from "@core/connection/connection";
+import { type PairedDevice, startConnection } from "@core/connection/connection";
 import { claimLink } from "@core/devices/dial";
 import { createKeyIdentity } from "@core/devices/identity";
 import { absentKeychain } from "@core/host";
@@ -74,7 +75,14 @@ export async function startPhoneHome(
     voice: { modelReady: async () => false, ensureModel: async () => {} },
     keychain: absentKeychain,
   });
-  const readings = { cards: 0, feed: 0, connections: 0, stalledConnections: 0 };
+  const readings = {
+    cards: 0,
+    feed: 0,
+    connections: 0,
+    stalledConnections: 0,
+    homeAttempts: 0,
+    refusals: 0,
+  };
   const observations: unknown[] = [];
   let firstmateBusy = false;
   const stopConversationReading = core.events.subscribe((channel, payload) => {
@@ -147,6 +155,31 @@ export async function startPhoneHome(
   });
   await new Promise<void>((resolve) => stalledServer.listen(0, "127.0.0.1", resolve));
   const stalledPort = (stalledServer.address() as { port: number }).port;
+  // INF-1168: every TCP connection to the home's own port, whatever its handshake becomes. When the
+  // phone's own handshake deadline cuts a slow but genuine handshake here, no request arrives, so
+  // only this count sees that attempt.
+  const countAttempt = (message: unknown) => {
+    if ((message as { socket: Socket }).socket.localPort === port) readings.homeAttempts += 1;
+  };
+  subscribe("net.server.socket", countAttempt);
+  // A refusal is a connection request pairing admits no device for: the 401 a removed phone reads.
+  const pairing = core.services.devices;
+  const devices = new Proxy(pairing, {
+    get(target, name) {
+      if (name === "admit")
+        return (request: IncomingMessage) => {
+          let device: PairedDevice | null = null;
+          try {
+            device = target.admit(request);
+            return device;
+          } finally {
+            if (!device) readings.refusals += 1;
+          }
+        };
+      const value = Reflect.get(target, name);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
   let loseNextReply = false;
   // The core's own id for the hero card (a first mate card's id is the core's, not the one asked for).
   let heroId = "";
@@ -210,7 +243,7 @@ export async function startPhoneHome(
         return result;
       },
       events: core.events,
-      devices: core.services.devices,
+      devices,
       port,
       address: [],
       name: () => "Test Mac mini",
@@ -943,11 +976,13 @@ export async function startPhoneHome(
           await connection.settled();
           result = { ok: true };
           break;
-        case "POST remove":
+        case "POST remove": {
+          const before = { ...readings };
           for (const device of core.services.devices.list())
             await core.dispatch("inf:devices:remove", [device.id]);
-          result = { ok: true };
+          result = { ok: true, before };
           break;
+        }
         default:
           response.writeHead(404).end();
           return;
@@ -1001,6 +1036,7 @@ export async function startPhoneHome(
       boardHold = undefined;
       await new Promise<void>((resolve) => control.close(() => resolve()));
       await connection.close();
+      unsubscribe("net.server.socket", countAttempt);
       for (const socket of stalledSockets) socket.destroy();
       await new Promise<void>((resolve) => stalledServer.close(() => resolve()));
       stopConversationReading();

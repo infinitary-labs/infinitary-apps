@@ -362,13 +362,21 @@ import XCTest
         reach("In reach", timeout: 20)
         try await background()
         _ = try await home("link") // Keep the real home listening after its final phone is removed.
-        _ = try await home("remove")
+        let removed = try await home("remove")
         app.activate()
         XCTAssertTrue(app.staticTexts["Removed from your computer"].waitForPresence(timeout: 20), app.debugDescription)
         picture("removed-after-away")
         let removal = try await home("state", method: "GET")
-        XCTAssertEqual((removal["readings"] as? [String: Int])?["stalledConnections"], 1,
-            "Removal survives a stalled handshake with no HTTP response between authenticated refusals")
+        let before = try XCTUnwrap(removed["before"] as? [String: Int])
+        let after = try XCTUnwrap(removal["readings"] as? [String: Int])
+        func since(_ reading: String) throws -> Int { try XCTUnwrap(after[reading]) - XCTUnwrap(before[reading]) }
+        let readings = "before removal \(before), after \(after)"
+        XCTAssertEqual(try since("refusals"), 2, "Two authenticated refusals, and no more, prove removal: \(readings)")
+        // INF-1168: the phone tries the home, then the stalled address, each round. A starved simulator can also
+        // outlast the phone's own handshake deadline at the home, which sends no request and adds a round, so the
+        // address order, not the clock, fixes the count: one stall after every attempt at the home but the last.
+        XCTAssertEqual(try since("stalledConnections"), try since("homeAttempts") - 1,
+            "Removal survives a stalled handshake with no HTTP response between authenticated refusals: \(readings)")
         app.buttons["join-again"].tap()
         app.terminate(); try await launchPhoneApp(app)
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 10))

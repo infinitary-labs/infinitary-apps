@@ -494,10 +494,14 @@ The host makes each page (`src/main/host/taskBrowser.ts`, behind `HostTaskBrowse
 - It never reloads a page that answers a form that was sent ("A final submission").
 - A certificate error, a site's sign-in box and a request for a client certificate are refused and told to the core (`HostBrowserRefusal`).
 - Every page uses an ordinary Chrome user agent, without Infinitary's name and version or Electron's token; reloading and navigating keep it.
-  The host sets the same identity through Electron and through the page's protocol before its first asynchronous initialization, since native popup navigation ignores Electron's override alone (`electron/electron#45897`).
-  A website-opened second page keeps its native navigation, opener and form body, with the ordinary identity in its first request and its first script's `navigator.userAgent`.
+  The host sets it on each page through Electron, and makes it Electron's fallback (`app.userAgentFallback`) when the task browser is made, before any page opens.
+  A page a website opens loads its first document with the identity its renderer and session start from, since native popup navigation ignores Electron's per-page override (`electron/electron#45897`), so the fallback is what that page shows.
+  The page's protocol does not carry the identity: a command to a page opened without an opener reaches its renderer only after the first document commits, when its first script may already have run.
+  Holding that document until the command answers stalls the page whenever another protocol client, such as Playwright in the journeys, attached to it first.
+  The app's own windows show only its own files, so the fallback changes nothing a person sees there.
+  A website-opened second page keeps its native navigation, opener and form body, with the ordinary identity in its first request, its first script's `navigator.userAgent` and its first fetch.
   The host never reloads such a page to change its identity, since that could repeat a form submission.
-  `tests/e2e/task-browser-user-agent.spec.ts` checks real request headers, document scripts and fetches for opening, reloading, navigation, links, scripted popups, a blank popup followed by navigation, redirects and a form sent once.
+  `tests/e2e/task-browser-user-agent.spec.ts` checks real request headers, document scripts and fetches for opening, reloading, navigation, links, scripted popups, a blank popup followed by navigation, redirects and a form sent once, with the app's main process held still as each document commits, the way a busy computer holds it.
 - The host drives it over the browser's own protocol, attached to that one page and nothing else: the accessibility tree, an element's box, mouse and keyboard input at a point, typed text, a list's option, and the picture, at one pixel per point.
   It also reads a time element's `datetime` and a title tooltip off the page, and the core names them on the outline line, and where each element sits, so the core knows which lines the window shows.
   A whole-page picture is at least as wide as the window, so the scrollbar is not left out of its width.

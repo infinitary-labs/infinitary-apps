@@ -31,6 +31,13 @@ const SITE = `<!doctype html><title>Browser identity</title>
 </script>`;
 
 /**
+ * How long the app's main process holds still as each of the site's
+ * documents commits (INF-1139): longer than a page takes to run its first
+ * script, so that script runs before the main process hears of the commit.
+ */
+const COMMIT_PAUSE_MS = 200;
+
+/**
  * INF-985; docs/task-browser.md, "The page itself": sites see an ordinary
  * Chrome user agent, not the app's identity. The real core and Electron
  * host visit a loopback site, reload and navigate to another document. Both
@@ -39,6 +46,9 @@ const SITE = `<!doctype html><title>Browser identity</title>
  * request and first script, without reloading or replaying a submitted form.
  * Native links, window.open (including a blank page), a redirect and a POST
  * keep their usual opener, cookies and one-submission behavior.
+ * INF-1139: on a busy computer a page opened without an opener ran its first
+ * script with the app's identity. The app's main process holds still as each
+ * of the site's documents commits, so that ordering is the journey's own.
  * Runs with the hermetic launcher's disposable HOME, userData and claimed
  * loopback port; no account, public network or shared browser is used.
  */
@@ -101,6 +111,13 @@ test("sites and their popups see Chrome from the first request without replaying
   try {
     const chrome = await launched.app.evaluate(
       async ({ app }, input) => {
+        app.on("web-contents-created", (_event, contents) => {
+          contents.on("did-navigate", (_navigation, address) => {
+            if (!address.startsWith(input.url)) return;
+            const until = Date.now() + input.pause;
+            while (Date.now() < until) {}
+          });
+        });
         const { createRequire } = process.getBuiltinModule("node:module");
         const { TaskBrowsers, createTaskBrowserHost } = createRequire(
           `${app.getAppPath()}/package.json`,
@@ -109,7 +126,7 @@ test("sites and their popups see Chrome from the first request without replaying
           new TaskBrowsers({ host: createTaskBrowserHost(), evidenceDir: () => input.dir });
         return `Chrome/${process.versions.chrome}`;
       },
-      { bundle, dir },
+      { bundle, dir, url, pause: COMMIT_PAUSE_MS },
     );
     const call = (method: keyof CrewmateBrowser, input: unknown) =>
       launched.app.evaluate(

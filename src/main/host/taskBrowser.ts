@@ -88,6 +88,14 @@ const pageRefusals = new WeakMap<WebContents, (refusal: HostBrowserRefusal) => v
 const documentMethods = new WeakMap<WebContents, string>();
 let signInsAnswered = false;
 
+/** An identity without this app's name and version: an ordinary Chrome's. */
+function ordinaryUserAgent(userAgent: string): string {
+  return userAgent
+    .split(" ")
+    .filter((part) => !/^(Electron|firstmate|infinitary)/i.test(part))
+    .join(" ");
+}
+
 /**
  * Answer a task browser's session when its guard asks it to sign in, and
  * refuse a site's own sign-in box on a task page. Any other sign-in is not
@@ -369,13 +377,7 @@ async function drivePage(
   const contents = win.webContents;
   pageRefusals.set(contents, open.onRefused);
   // The page sees an ordinary browser, not this app's name and version.
-  contents.setUserAgent(
-    contents
-      .getUserAgent()
-      .split(" ")
-      .filter((part) => !/^(Electron|firstmate|infinitary)/i.test(part))
-      .join(" "),
-  );
+  contents.setUserAgent(ordinaryUserAgent(contents.getUserAgent()));
   // WebRTC reaches its peers only through the proxy, so never around the guard.
   contents.setWebRTCIPHandlingPolicy("disable_non_proxied_udp");
   const refuse = (event: { preventDefault: () => void }, url: string): void => {
@@ -509,11 +511,6 @@ async function drivePage(
       }
     }
   });
-  // Native window.open navigations ignore Electron's setUserAgent override
-  // (electron/electron#45897). Set the protocol override before our first
-  // await: it covers the popup's first request and first script without
-  // replacing its native navigation, opener or POST body, or reloading it.
-  await send("Emulation.setUserAgentOverride", { userAgent: contents.getUserAgent() });
   await send("Page.enable");
   await send("Runtime.enable");
   await send("Log.enable");
@@ -1007,5 +1004,12 @@ function pageStorage(ses: Session, send: ProtocolSend): HostPageStorage {
 
 /** The desktop's task browser: a fresh hidden page per open. */
 export function createTaskBrowserHost(): HostTaskBrowser {
+  // A page a website opens loads its first document with the identity its
+  // renderer and session start from: Electron's per-page override does not
+  // reach it (electron/electron#45897), and the page's protocol reaches a
+  // page with no opener only after that document commits. So the ordinary
+  // identity is Electron's fallback, set before any page opens. The app's
+  // own windows show only its own files, which do not read it.
+  app.userAgentFallback = ordinaryUserAgent(app.userAgentFallback);
   return { open: openTaskPage };
 }

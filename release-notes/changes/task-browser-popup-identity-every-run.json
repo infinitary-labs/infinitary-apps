@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-browser-popup-identity-every-run",
+      "reason": "Completes the unreleased task-browser-popup-identity fix: a second page a website opened without an opener could still show the app's name to its own first script on a busy computer. That note already describes the behavior as it ships, so a person meets nothing beyond it."
+    }
+  ]
+}

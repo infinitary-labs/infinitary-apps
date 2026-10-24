@@ -80,7 +80,7 @@ flowchart LR
 
 | Data | Use and destination | Storage owner |
 | --- | --- | --- |
-| Google access and refresh tokens | Authorize API calls; renew and revoke access. Applied by the integration secret interface, not returned as tool output. | `FileIntegrationSecrets`, `userData/integrations/secrets/google/secrets.json`, a 0600 file in a 0700 directory. Plaintext JSON, not app-encrypted. INF-785 owns migration to secret management after INF-30. |
+| Google access and refresh tokens | Authorize API calls; renew and revoke access. Applied by the integration secret interface, not returned as tool output. | `FileIntegrationSecrets`, `userData/integrations/secrets/google/secrets.json`, a 0600 file in a 0700 directory. Plaintext JSON, not app-encrypted. The protected Secrets owner ([Secrets](secrets.md)) exists, but the app does not construct it yet (INF-1109); moving these tokens into it is INF-785. |
 | Account address, scopes, expiry, sign-in health | Identify the row and maintain access. The address appears in Settings and agent context. | `GoogleSignInStore`, `userData/integrations/google.json`, 0600. |
 | Message identifiers, thread identifiers, labels, headers and snippets | Search and triage mail; query results reach the requesting agent and its model provider. | Gmail holds the mailbox; returned results persist in model sessions for 30 days, and in what agents write into task records and outputs. |
 | Message text and attachment metadata | Read a selected message; HTML is converted to text. The read action reports attachment names, types and sizes, not an attachment-download feature. | Results persist in sessions for 30 days, and in what agents write into reports, cards and user-requested files. |
@@ -324,7 +324,8 @@ The captain records it on a Mac of their own, since Google's consent page runs i
 
 - Use a Google account that holds only demo mail and a demo calendar, since Google's reviewers watch the video.
   Before recording, send that account two messages with the subject "Infinitary demo: invoice", and make a calendar named "Infinitary demo" with two events this week.
-- On the Mac that records, run an Infinitary build that asks the two narrower Calendar permissions, calendar.calendarlist.readonly and calendar.events.freebusy; an earlier build still asks calendar.readonly, which is no longer submitted.
+- On the Mac that records, run an installed Infinitary build that shows Google's notice when you click the Google chip, asks you for each Gmail and Calendar action, and asks the two narrower Calendar permissions, calendar.calendarlist.readonly and calendar.events.freebusy.
+  A build that opens Google's sign-in straight away, or still asks calendar.readonly, is older than the submitted behavior and is not recorded.
   Settings → Integrations must show the Google chip and no Google row; if a row is there, use its menu's Sign out and remove first.
 - Set your browser to English and keep its address bar visible.
   Press Shift-Command-5, choose Record Entire Screen, and turn the microphone on if you narrate; Google says voice or text narration speeds its review.
@@ -383,8 +384,10 @@ Send the demo account a message and wait up to a minute for your first mate's no
    Click the delete icon beside https://www.googleapis.com/auth/gmail.settings.basic, then Save.
    The app's code never asks for it and nothing in Infinitary reads or changes Gmail settings; Google requires every listed scope to be used and shown in the video.
 3. On the same Data access page delete https://www.googleapis.com/auth/calendar.readonly, click Add or remove scopes, tick calendar.calendarlist.readonly and calendar.events.freebusy under Google Calendar API, click Update, then Save.
-4. Add this sentence to https://getinfinitary.com/privacy, under its Google section, or ask your first mate to have the website's crewmate add it: "Infinitary's use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements."
+4. Ask your first mate to have the website's crewmate add this sentence to https://getinfinitary.com/privacy, under its Google section: "Infinitary's use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements."
    Google's Workspace policy requires that statement on the website or in the app, and reviewers look for it.
+   The same change brings that section up to date with "Storage, retention and your controls" and "Where your information goes" above: the 30 days, Delete Gmail and Calendar content, and messages written to mislead.
+   It is published once a release that shows Google's notice is out, since the sentence relies on the consent that notice asks for.
 5. Record and upload the demo video with the script below.
 6. Open Verification Center → Data access.
    For each scope Google lists, paste its Scope justification and Intended data usage from below, and the YouTube link into Demo video.
@@ -392,7 +395,6 @@ Send the demo account a message and wait up to a minute for your first mate's no
 7. On the Branding page, confirm the app name is Infinitary, the home page is https://getinfinitary.com, the privacy policy is https://getinfinitary.com/privacy, the authorized domain getinfinitary.com is verified in Search Console under your sign-in, and the branding status is published.
 8. Click Submit for verification.
 
-The third step applies only when Calendar moves to the narrower pair.
 Google answers by email to the project's owners; keep that address watched.
 Google's estimate for restricted-scope review is six weeks, and for gmail.modify Google then points you to the yearly security assessment (INF-905).
 Forward each question Google sends to your first mate, so a crewmate drafts the answer from the code.
@@ -400,7 +402,9 @@ Forward each question Google sends to your first mate, so a crewmate drafts the 
 The per-action confirmations and explicit Always allow choice implement INF-950.
 The in-app disclosure and accept before the sign-in starts is Google's notice ([Integrations](integrations.md#googles-notice), INF-949).
 Prompt-injection protection is the fence on data from outside, the per-action approval cards and revocable allowances, and the notice's account of what stays open ("Prompt injection" below, INF-951).
-Google's Workspace policy also asks for things the app does not do yet, which a reviewer may raise: tokens encrypted at rest (INF-30, INF-785) and a deletion route for Google-derived data (INF-952).
+Deleting Google-derived content is Delete Gmail and Calendar content and the 30-day replacement ([Task retention](task-retention.md#words-from-outside), INF-952); the same on a computer that runs work is INF-1094.
+Google's Workspace policy also asks for tokens encrypted at rest, which the app does not do yet and a reviewer may raise.
+The protected Secrets owner seals values under a root key held in the macOS Keychain or the Linux Secret Service ([Secrets](secrets.md)), but the app does not construct it yet (INF-1109), and moving Google's tokens into it is INF-785.
 
 ## Prompt injection
 
@@ -457,7 +461,7 @@ Do not invent an assurance level, penetration test, certification, scan result o
 | What does the application do? | Desktop AI-assisted email and calendar productivity, with user-approved changes, new-mail rules and selected-calendar change rules. | `googleIntegration.ts`, `gmail.ts`, `calendar.ts`, `IntegrationsTab.tsx`; the final demo must cover the submitted build. |
 | Where does restricted data travel? | Direct Google requests on the first mate's computer, results in local task/session stores and paired computers, and task context/results to selected AI providers. No publisher-operated Gmail proxy. | Data inventory above; downstream provider processing terms and model-request traces still required. |
 | What is the authorization model? | Installed-app authorization code flow, S256 PKCE, random state and a loopback callback. Google passwords stay with Google. Changes/sends are kept as exact single-use approval requests. | `signIn.ts`, `IntegrationsService.call/sendAsk`; attach real-consent evidence for the submitted application. |
-| Is user data encrypted at rest? | Not by the current integration store. Tokens are plaintext in a file restricted to the OS account; transcript and output encryption is not established. Do not answer Yes based on file modes or assumed disk encryption. | `secrets.ts`, `store.ts`; INF-785 covers token-store migration, but does not by itself establish protection for every derived record. |
+| Is user data encrypted at rest? | Not by the current integration store. Tokens are plaintext in a file restricted to the OS account; transcript and output encryption is not established. The protected Secrets owner is in the code but not constructed by the app. Do not answer Yes based on file modes, assumed disk encryption or code the app does not run. | `secrets.ts`, `store.ts`, `src/core/secrets/protected.ts`; INF-1109 constructs the owner and INF-785 moves the tokens into it, which does not by itself establish protection for every derived record. |
 | Can users revoke and delete? | Disconnect removes the local Google facts and keys and attempts revocation. Delete Gmail and Calendar content in Settings → General replaces what agents read in every saved conversation on that computer, and the same happens on its own 30 days after a read. Agents' own words, another computer's conversations, provider copies and exports remain. | `googleIntegration.ts` removal, `savedOutsideData.ts`, `docs/task-retention.md` "Words from outside"; deletion on a computer that runs work is still needed. |
 | Does any AI provider train on the data? | Not established for all supported subscription/provider configurations. The code's routing and a user's subscription do not demonstrate a no-training agreement. Google's notice tells the person before sign-in that their provider's terms and settings decide training and asks them to check. | Review each allowed downstream arrangement and its retention/human-access terms; the consent shown before sign-in is Google's notice (`INTEGRATION_NOTICES`). |
 | Are vulnerability management, incident response and owner MFA established? | The project has code review and automated checks, but no current assessment, organization-wide policy or owner-account setting is certified by this answer bank. | Owner/assessor evidence required; do not claim scans, staff training, response deadlines or Cloud Console MFA from code alone. |
@@ -499,7 +503,7 @@ Do not invent an assurance level, penetration test, certification, scan result o
 | 6.4.1: subdomain takeover | Unproven: no verified homepage/domain inventory is supplied here. | Domain owner and hosting evidence required; check DNS and decommissioned services before publishing. |
 | 6.5.1: secret logging | Partial: integration results redact kept token values and connection metadata excludes them. Message bodies can themselves contain sensitive information, and sessions keep Google's results for 30 days. | `secrets.ts`, `store.ts`, `service.ts`; assess logs and saved records with disposable credentials. |
 | 6.6.1: clearing client storage | Tokens are not stored in renderer localStorage. Disconnect removes local token/facts files; Google content in this computer's saved conversations goes after 30 days or on the Settings delete, while agents' own words and another computer's copies stay. | `store.ts`, `savedOutsideData.ts`, `docs/task-retention.md`; demonstrate deletion of derived and remote copies before claiming complete clearance. |
-| 6.7.1: secret storage | Gap: OS permissions and brokered use are present, but tokens are plaintext and same-account processes can read them. | `secrets.ts`; INF-785/INF-30 own secret-manager work; assess encrypted record storage separately. |
+| 6.7.1: secret storage | Gap: OS permissions and brokered use are present, but tokens are plaintext and same-account processes can read them. The protected Secrets owner seals values under a root key in the macOS Keychain or the Linux Secret Service, and is not yet constructed by the app. On Linux, a program of the same user can read the Secret Service while it is unlocked. | `secrets.ts`, `docs/secrets.md` "Native custody"; INF-1109 constructs the owner and INF-785 moves the tokens; assess encrypted record storage separately. |
 
 The Workspace policy additionally requires protection against prompt injection and limits general-model training and permanent copies.
 These obligations are not discharged by a CASA table or by telling an agent to regard mail as untrusted; "Prompt injection" above is the app's protection and the ways out it leaves open.

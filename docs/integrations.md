@@ -102,7 +102,7 @@ What the fence does not close, and how each way out stands, is in [Google verifi
 ## Keys
 
 A kind that signs in with a key the person makes, such as an MCP server's API key, declares its slots on its binding (`IntegrationSecretSlot`): a name and plain words, never a value.
-The values are kept behind one interface, `IntegrationSecrets` (`src/core/integrations/secrets.ts`), which the secret manager takes over when it lands (INF-30); until then the bridge `FileIntegrationSecrets` keeps them the way the forge keeps its sign-ins, one 0700 folder per integration under `userData/integrations/secrets/` and one 0600 `secrets.json` in it, written whole (the captain's q3 on INF-775).
+The values are kept behind one interface, `IntegrationSecrets` (`src/core/integrations/secrets.ts`), which the protected Secrets owner ([Secrets](secrets.md)) takes over once the app constructs it (INF-1109); until then the bridge `FileIntegrationSecrets` keeps them the way the forge keeps its sign-ins, one 0700 folder per integration under `userData/integrations/secrets/` and one 0600 `secrets.json` in it, written whole (the captain's q3 on INF-775).
 Moving every value into the secret manager and removing the bridge is INF-785.
 Nothing reads a value back through the interface.
 A binding uses one in the two ways the saved secret plan names: `request` applies it to one request, as a header or as one field of a form body, and gives back the answer (brokered use), and `launchEnv` hands it to a program the integration starts as a named variable (protected launch).

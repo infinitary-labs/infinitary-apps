@@ -14,6 +14,8 @@ import {
   type ScenarioAnswer,
   type ScenarioRequest,
   type ScriptedCall,
+  shellJobsRunning,
+  sinceLastUser,
 } from "../mockProvider";
 import { providerMessages } from "../providerRequest";
 
@@ -82,6 +84,19 @@ export const MOCK_CAP_RETRY_STEER =
 export const MOCK_REVIEWED_RETRY_REPORT =
   "Retried after the cap: F1 is fixed for good; pushed a new head.";
 export const MOCK_REVIEW_PASSED_STEER = "The review passed: emit your completion card now.";
+/**
+ * The builder's own reading after the journey pushes its fix (INF-1153, as
+ * INF-1148 did for agents-reach): the captain asks, the first mate relays
+ * it, and the builder takes check_change and, on green, reports its
+ * revalidated proof, so the app records both. A spec that wrote them into
+ * the running app's database collided with the app's own writes ("database
+ * is locked").
+ */
+export const MOCK_REVIEWED_READ_WORDS = "read the meter fix's checks where it now stands";
+export const MOCK_REVIEWED_READ_STEER =
+  "Take check_change on the fix you pushed; when its checks pass, revalidate that version.";
+const MOCK_REVIEWED_READ_REPORT =
+  "Took check_change on the pushed fix; its checks passed, and I revalidated that version.";
 const MOCK_REVIEWED_CARD_ACTIONS: ScriptedCardAction[] = [
   {
     id: "merge",
@@ -271,6 +286,25 @@ function crewmateMove({
   // fix on the auto-fix steer, the completion card once told the
   // review passed.
   if (!body.includes(REVIEWED_TIER_PROMPT_MARKER)) return undefined;
+  // Its reading after the journey pushes a fix: the checks at the new
+  // head, then on green its proof at that version, as its first report
+  // carried it. On red it has nothing more to say.
+  const turn = sinceLastUser(body);
+  if (turn.user.includes(MOCK_REVIEWED_READ_STEER)) {
+    const reading = turn.results.find((result) => /^overall: /m.test(result));
+    if (!reading) return { calls: [{ name: "check_change", args: {} }] };
+    const recorded = turn.results.some((result) =>
+      result.includes("Validation recorded at evidence revision"),
+    );
+    if (recorded || !/^overall: green$/m.test(reading)) return { text: "" };
+    const head = reading.match(/head ([a-f0-9]{40})/)?.[1];
+    if (!head) throw new Error("The scripted builder needs its actual checked version.");
+    return {
+      calls: [
+        { name: "report", args: { text: MOCK_REVIEWED_READ_REPORT, validation: proofAt(head) } },
+      ],
+    };
+  }
   if (latestUserTail.includes(MOCK_REVIEW_PASSED_STEER)) {
     if (hasToolResults) return { text: "done" };
     return {
@@ -321,6 +355,13 @@ function crewmateMove({
         },
       ],
     };
+  // INF-1149: the shell runs below the UI, so on a busy computer the save
+  // point can outlast the shell's limit and come back as a background job's
+  // receipt before the commit is on the branch. Its checks read then are the
+  // branch before it, and a proof at that head is refused once the commit
+  // lands. So the builder ends its turn quietly - its plan is not a report -
+  // and reads its checks once the job has exited.
+  if (shellJobsRunning(body)) return { text: "" };
   // Then its own check reading, as a real builder takes one before
   // it reports: the app records it, and the Firstmate reads it.
   if (!calledTool(body, "check_change")) return { calls: [{ name: "check_change", args: {} }] };
@@ -337,25 +378,21 @@ function crewmateMove({
       .join("\n")
       .match(/head ([a-f0-9]{40})/)?.[1];
     if (!head) throw new Error("The scripted builder needs its actual checked version.");
-    const {
-      revision: _revision,
-      deviceId: _deviceId,
-      at: _at,
-      ...run
-    } = noSurfaceProof(head).runs[0]!;
     return {
       calls: [
-        {
-          name: "report",
-          args: {
-            text: MOCK_REVIEWED_BUILDER_REPORT,
-            validation: { ...run, id: `fixture-${head}`, evidence: [] },
-          },
-        },
+        { name: "report", args: { text: MOCK_REVIEWED_BUILDER_REPORT, validation: proofAt(head) } },
       ],
     };
   }
   return { text: MOCK_REVIEWED_BUILDER_REPORT };
+}
+
+/** INF-125: the builder's proof that this history-only fixture has no running product, at `head`. */
+function proofAt(head: string) {
+  const proof = noSurfaceProof(head).runs[0];
+  if (!proof) throw new Error("The fixture's proof has its run.");
+  const { revision: _revision, deviceId: _deviceId, at: _at, ...run } = proof;
+  return { ...run, id: `fixture-${head}`, evidence: [] };
 }
 
 /** INF-125: the scripted pass carries the assigned proof judgment, not prose alone. */

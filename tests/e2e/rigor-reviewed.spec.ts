@@ -8,14 +8,12 @@ import {
 } from "../../src/core/orchestrator/wakes";
 import { openDatabase } from "../../src/core/storage/db";
 import { TaskStore } from "../../src/core/storage/taskStore";
-import { TaskService } from "../../src/core/tasks/taskService";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
 import { REVIEW_FINDING_LABEL } from "../../src/shared/cards";
 import { reportSummary } from "../../src/shared/feed";
 import { validationStateRevision } from "../../src/shared/liveValidation";
 import type { TaskView } from "../../src/shared/tasks";
 import { CARE_WORDS, CHECK_WORDS, MERGE_WORDS } from "../../src/shared/vocabulary";
-import { noSurfaceProof } from "../helpers/liveValidation";
 import { scratchDir } from "../helpers/scratchDirs";
 import { cardBody } from "./frames";
 import { type GitHubStub, seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
@@ -33,6 +31,7 @@ import { promptInput } from "./prompt";
 import { captainCardChoice, latestServedTurn, providerMessages } from "./providerRequest";
 import { putInLine, reportLine, startedLine, statusLine, taskLine } from "./rails";
 import { readSavedData } from "./savedData";
+import { captainWords } from "./scenarios/agentsReach";
 import {
   MOCK_CAP_RETRY_STEER,
   MOCK_REVIEW_ASK_CARD_TITLE,
@@ -44,6 +43,8 @@ import {
   MOCK_REVIEWED_CARD_TITLE,
   MOCK_REVIEWED_CHANGE,
   MOCK_REVIEWED_FIX_REPORT,
+  MOCK_REVIEWED_READ_STEER,
+  MOCK_REVIEWED_READ_WORDS,
   MOCK_REVIEWED_REFIX_REPORT,
   MOCK_REVIEWED_RETRY_REPORT,
   REREVIEW_PROMPT_MARKER,
@@ -108,32 +109,42 @@ function pushFix(branch: string, subject: string): string {
   return next;
 }
 
+/** The builder's readings so far (`builderReads`). */
+let readings = 0;
+
 /**
- * The builder's own check_change after it pushes: the app records the head
- * and the green checks on the task, which is what the Firstmate and the
- * review round read (it has no CI tool of its own).
+ * The builder's own check_change after it pushes, through the app: the
+ * captain asks, the first mate relays it, and the scripted builder reads the
+ * head and its green checks and revalidates it (`reviewedTier`), which is
+ * what the Firstmate and the review round read. The app is the one writer
+ * while it runs (INF-1153): a write from here could collide with its own
+ * and fail with "database is locked", as agents-reach's did (INF-1148).
  */
-function builderReads(taskId: string, head: string): void {
-  const db = openDatabase(userDataDir);
-  try {
-    // e2e-writer-ok: stands in for the builder's check_change, which the mock builder takes once, on its first report
-    const tasks = new TaskService({ db });
-    tasks.recordDelivery(taskId, {
-      ci: "green",
-      ciAt: Date.now(),
-      headSha: head,
-    });
-    // e2e-writer-ok: the scripted builder revalidates this fixture's history-only commit.
-    const {
-      revision: _revision,
-      deviceId: _deviceId,
-      at: _at,
-      ...run
-    } = noSurfaceProof(head).runs[0]!;
-    tasks.recordLiveValidation(taskId, { ...run, id: `fixture-${head}` }, { head });
-  } finally {
-    db.close();
-  }
+async function builderReads(taskId: string, head: string): Promise<void> {
+  // Each reading is its own captain turn, told apart by its count.
+  readings += 1;
+  const words = `${MOCK_REVIEWED_READ_WORDS} (reading ${readings})`;
+  const read = launched.mockProvider?.scriptFirstmateTurn(captainWords(words), [
+    { name: "steer_crewmate", args: { task_id: taskId, message: MOCK_REVIEWED_READ_STEER } },
+  ]);
+  if (!read) throw new Error("this journey runs on the mock provider");
+  const input = promptInput(launched.page);
+  await input.click();
+  await input.fill(words);
+  await input.press("Enter");
+  await expect
+    .poll(read.outcome, { timeout: 30_000 })
+    .toEqual(expect.objectContaining({ state: "closed" }));
+  const stored = () =>
+    readSavedData(userDataDir, (db) => new TaskStore(db).get(taskId)?.delivery ?? null);
+  await expect
+    .poll(stored, { timeout: 30_000 })
+    .toMatchObject({ ci: "green", headSha: head, validationHead: head });
+  await expect
+    .poll(() => stored()?.liveValidation?.runs.some((run) => run.head === head), {
+      timeout: 30_000,
+    })
+    .toBe(true);
 }
 
 /** The first board row that matches, once the board holds one. */
@@ -333,9 +344,19 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
     3: "fix: keep the meter steady",
   };
   for (const round of [2, 3]) {
-    // The builder's fix moved the head; the mock Firstmate re-reads CI
-    // (recording it) before steering the re-review, so the round counts.
-    builderReads(builder.id, pushFix(builderBranch, roundFixes[round] as string));
+    // The third round's fix answers the second's re-finding, so the
+    // Firstmate relays it to the builder first: the reading below is a
+    // captain turn this journey scripts, which answers only its own words
+    // and would leave a re-finding that rode along with them unrelayed.
+    if (round === 3)
+      await expect(
+        reportLine(page, builder.key).filter({
+          hasText: reportSummary(MOCK_REVIEWED_REFIX_REPORT),
+        }),
+      ).toBeVisible({ timeout: 30_000 });
+    // The builder's fix moved the head; its own reading records the head
+    // and its checks before the re-review, so the round counts.
+    await builderReads(builder.id, pushFix(builderBranch, roundFixes[round] as string));
     await input.click();
     await input.fill(REREVIEW_PROMPT_MARKER);
     await input.press("Enter");
@@ -343,9 +364,6 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
       .poll(detail, { timeout: 30_000 })
       .toMatchObject({ delivery: expect.objectContaining({ reviewRounds: round }) });
   }
-  await expect(
-    reportLine(page, builder.key).filter({ hasText: reportSummary(MOCK_REVIEWED_REFIX_REPORT) }),
-  ).toBeVisible({ timeout: 30_000 });
   await expect.poll(detail).toMatchObject({
     delivery: expect.objectContaining({ reviewRounds: 3, reviewCapAt: expect.any(Number) }),
   });
@@ -418,7 +436,7 @@ test("a reviewed task is held by its reviewer until the review passes, then merg
   //    review task, records the verdict and risk on the builder, releases
   //    the hold, and is one feed line - the builder's own.
   const FINAL_SHA = pushFix(builderBranch, "fix: finish the meter review");
-  builderReads(builder.id, FINAL_SHA);
+  await builderReads(builder.id, FINAL_SHA);
   await input.click();
   await input.fill(REREVIEW_PROMPT_MARKER);
   await input.press("Enter");

@@ -610,8 +610,8 @@ export function createCrewTools(delegate: CrewDelegate) {
       "delivery; both then close the task and remove its worktree. discard removes the " +
       "worktree without merging and closes the task as discarded. answered closes an idle answer task you opened " +
       "as an internal_step once a planned or started task names it as its basis or waits on it " +
-      "through a blocks link (the close clears that wait), or an answer task whose crewmate " +
-      "reported it finished. released closes a reported, idle work task only after you independently verify its " +
+      "through a blocks link (the close clears that wait) or once it reported its answer, " +
+      "or an answer task whose crewmate reported it finished. released closes a reported, idle work task only after you independently verify its " +
       "delivery through an external release process, with release_evidence; a missing change or " +
       "dismissed note alone is never proof. Closing the " +
       "captain's settle card keeps an idle task resumable. Its record and session stay. " +

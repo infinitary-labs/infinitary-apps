@@ -95,8 +95,9 @@ Absent is the captain's own ask, which is also every row from before the field.
 `settle_task` mode `answered` lets the first mate close an IDLE answer task it declared a step `done/answered` once a planned or started task names it as its `basis` - its answer carries on in that task's brief (`SettleService.closeAnswerUsedAsBasis`).
 It closes a step the same way when a live task waits on it through a `blocks` link (FI3-422): the step was run for that task, and its close as done is what clears the wait, so a finished check never holds that task's merge or has to be discarded; a task naming it as its basis comes first.
 The feed says where it went ("KEY answered: its answer carries on in KEY \"title\""), never "discarded".
+A step whose crewmate reported its answer closes the same way when nothing builds on it or waits on it (INF-1137): the first mate passed the answer on itself, as by a steer to a task already under way, and the feed reads "Answered: its crewmate reported the answer", so a finished investigation is never announced as dropped.
 The same mode closes an answer the captain asked for once its crewmate's report declared it finished (`delivery.finishedAt`, FI3-435), with nothing built on it required.
-It is refused, as text, on anything neither declared a step nor declared finished, on a task that is not an answer, one still working or never run, a step no live task builds on or waits on, one whose own answer card is still up, and one whose first mate card still asks the captain something, because the close would take that question down.
+It is refused, as text, on anything neither declared a step nor declared finished, on a task that is not an answer, one still working or never run, a step that reported nothing and no live task builds on or waits on, one whose own answer card is still up, and one whose first mate card still asks the captain something, because the close would take that question down.
 A first mate note on the task stays on the stack through the close, the same as a crewmate's note, until the captain closes it.
 Discard, cancel and `update_task drop` keep their own closes.
 

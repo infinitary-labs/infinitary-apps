@@ -728,6 +728,7 @@ Every close the first mate makes of started work carries its one sentence: `sett
 The sentence is a fact of the close (`closingSentence` in its timeline data).
 When the close leaves nothing of the task on the stack, the sentence goes up as the first mate's own note, titled with the task's key and its outcome (`merged`, `released` or `dropped`), with the pull request linked after a merge (`SettleService.leaveClosingNote`).
 A captain's click carries no sentence, an answer task's close takes none, and a task no crewmate started gets no note.
+A task whose crewmate reported its work finished gets no note either: that report comes only after the captain closed its outcome card, so their close already said what became of the work (INF-1137).
 The note has no actions, so it places no gate and nothing in the whose-turn sort reads it.
 Activity's line for a drop the first mate made reads `Dropped:` and the same sentence (`droppedLine`), and an `update_task` drop's reason is that sentence too.
 

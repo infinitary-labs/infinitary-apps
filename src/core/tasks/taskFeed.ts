@@ -75,10 +75,13 @@ export function taskFeedLine(record: FeedSubject, event: TaskEvent): FeedLine | 
             : "Stopped: nothing under it went ahead";
       } else if (
         reason === "answered" &&
-        (typeof data.basisOf === "string" || typeof data.waitedOnBy === "string")
+        (typeof data.basisOf === "string" ||
+          typeof data.waitedOnBy === "string" ||
+          data.reported === true)
       ) {
-        // An answer the next task took as its basis, or a step a live task
-        // waited on (settle_task answered): it was used, not thrown away.
+        // An answer the next task took as its basis, a step a live task
+        // waited on, or a step whose reported answer the first mate passed
+        // on itself (settle_task answered): it was used, not thrown away.
         line = `Answered: ${event.text.replace(/^answered - /, "")}`;
       } else if (reason === "released") {
         line = "Released outside this task";

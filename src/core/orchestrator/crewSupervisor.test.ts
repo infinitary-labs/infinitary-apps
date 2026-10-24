@@ -2217,6 +2217,43 @@ describe("CrewSupervisor", () => {
       expect(left(h.cards(), h.taskId)).toEqual([]);
     });
 
+    // INF-1137 friction 4: INF-1000, INI-10, DOP-56, DOP-58 and DOP-63 each
+    // got a "released", "merged" or "dropped" note right after the captain
+    // had closed the crewmate's own outcome card - the same news twice.
+    it("adds nothing when the captain already closed the crewmate's outcome card and it reported finished (INF-1137)", async () => {
+      const crewmate = fakeCrewmate();
+      const h = setup(crewmate);
+      const { taskId } = await h.supervisor.commission({
+        title: "Rebuild the runner image",
+        intent: intentOf("rebuild the runner image"),
+      });
+      await tick();
+      h.specs[0]?.onCard?.({
+        title: "The rebuilt image passed its live proof",
+        body: "<p>The rebuilt image passed its live proof.</p>",
+        actions: [],
+      });
+      h.specs[0]?.onReport?.("The rebuilt image passed its live proof.");
+      crewmate.finishPrompt();
+      await tick();
+      const note = h.cards().find((card) => card.taskId === taskId) as Card;
+      h.supervisor.close(note.id);
+      await tick();
+      h.specs[0]?.onReport?.("The captain closed my note and nothing is left.", undefined, {
+        finished: true,
+      });
+      crewmate.finishPrompt();
+      await tick();
+      expect(h.tasks.get(taskId)?.delivery?.finishedAt).toBeDefined();
+
+      await h.supervisor.withClosingSentence(taskId, SENTENCE, () =>
+        h.supervisor.settleTask(taskId, "discard"),
+      );
+      await tick();
+      expect(h.tasks.get(taskId)?.status).toBe("dropped");
+      expect(left(h.cards(), taskId)).toEqual([]);
+    });
+
     it("puts up the sentence when the first mate cancels idle work", async () => {
       const h = await idleTask();
       await h.supervisor.interruptCrewmate(h.taskId, "cancel", undefined, SENTENCE);
@@ -22422,7 +22459,8 @@ describe("closing an answer task another task builds on", () => {
     expect(tasks.waitingOn(build.taskId)).toEqual([]);
     expect(tasks.get(build.taskId)?.status).toBe("active");
 
-    // A link to work that already closed carries the answer nowhere.
+    // A link to work that already closed carries the answer nowhere: the
+    // step closes on its own report, never into the dropped task.
     const late = await supervisor.commission({
       title: "Reproduce the live cases on the dock",
       intent: stepIntent("run the dock's live cases"),
@@ -22433,12 +22471,44 @@ describe("closing an answer task another task builds on", () => {
     tasks.link(late.taskId, gone.id, "blocks", "firstmate");
     tasks.close(gone.id, { status: "dropped", reason: "cancelled", actor: "host" });
     await reportAndIdle(lateChecker, late.taskId, "checks: pass - eight of eight.");
-    const refused = await supervisor.closeAnswerUsedAsBasis(late.taskId);
-    expect(refused).toMatchObject({ ok: false });
-    expect(refused.text).toContain(
-      "no planned or started task names it as its basis or waits on it",
+    const closedLate = await supervisor.closeAnswerUsedAsBasis(late.taskId);
+    expect(closedLate).toMatchObject({ ok: true });
+    expect(closedLate.text).toContain("its crewmate reported the answer");
+    expect(closedLate.text).not.toContain("Fix the dock");
+  });
+
+  // INF-1137 friction 4: INF-1121 and DOP-60 reported their full answers,
+  // which the first mate passed on by a steer to a task already under way.
+  // No task named them as basis, so answered was refused and the first mate
+  // discarded them, announcing two finished investigations as "dropped".
+  it("closes a reported step nothing builds on as answered, never as a drop (INF-1137)", async () => {
+    const checker = fakeCrewmate();
+    const harness = setup(checker, { classifier: byTitle });
+    const { supervisor, tasks, cards } = harness;
+    const check = await supervisor.commission({
+      title: "Check the card-maximize journey on main",
+      intent: stepIntent("run the card-maximize journey on untouched main"),
+      shape: { internal_step: true },
+    });
+    await tick();
+    await reportAndIdle(
+      checker,
+      check.taskId,
+      "Answer: main does not fail the same way. All five runs passed.",
     );
-    expect(tasks.get(late.taskId)?.status).toBe("active");
+    const key = tasks.get(check.taskId)?.key ?? check.taskId;
+
+    const result = await supervisor.closeAnswerUsedAsBasis(key);
+    expect(result).toMatchObject({ ok: true });
+    const closed = tasks.get(check.taskId) as TaskRecord;
+    expect(closed).toMatchObject({ status: "done", closedReason: "answered" });
+    const close = tasks
+      .timeline(check.taskId)
+      .find((event) => (event.data as { reason?: string } | null)?.reason === "answered");
+    const line = taskFeedLine(closed, close as TaskEvent);
+    expect(line).toMatchObject({ kind: "ok", text: "Answered: its crewmate reported the answer" });
+    // No first mate note announces it: an answer's close takes no sentence.
+    expect(cards().filter((card) => card.taskId === check.taskId)).toEqual([]);
   });
 
   it("leaves an answer not declared a step - a repro or plan the captain asked for - to his click", async () => {
@@ -22472,7 +22542,7 @@ describe("closing an answer task another task builds on", () => {
     expect(tasks.get(reproduce.taskId)).toMatchObject({ status: "done", closedReason: "answered" });
   });
 
-  it("refuses a step still working, one nothing builds on, a change, and one whose card is up", async () => {
+  it("refuses a step still working, one with no report, a change, and one whose card is up", async () => {
     const working = fakeCrewmate();
     const unused = fakeCrewmate();
     const builder = fakeCrewmate();
@@ -22493,18 +22563,22 @@ describe("closing an answer task another task builds on", () => {
     expect(stillWorking).toMatchObject({ ok: false });
     expect(stillWorking.text).toContain("its crewmate is still working");
 
+    // A step that went idle without a report has no answer to close on.
     const lone = await supervisor.commission({
       title: "Plan the rename",
       intent: stepIntent("plan the rename"),
       ...step,
     });
     await tick();
-    await reportAndIdle(unused, lone.taskId, "Rename it Dock.");
+    unused.emit({ type: "turn_end", taskId: lone.taskId });
+    unused.finishPrompt();
+    await tick();
+    expect(tasks.get(lone.taskId)?.outcome).toBeNull();
     const nobody = await supervisor.closeAnswerUsedAsBasis(
       tasks.get(lone.taskId)?.key ?? lone.taskId,
     );
     expect(nobody).toMatchObject({ ok: false });
-    expect(nobody.text).toContain("no planned or started task names it as its basis");
+    expect(nobody.text).toContain("its crewmate has reported no answer yet");
 
     const change = await answered(harness, builder, "Implement the rename", true);
     const notAnswer = await supervisor.closeAnswerUsedAsBasis(change.key);

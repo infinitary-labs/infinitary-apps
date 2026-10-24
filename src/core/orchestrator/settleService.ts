@@ -397,7 +397,8 @@ export class SettleService {
   /**
    * The first mate's note on started work it closed (INF-547, the
    * captain's direction C with their answers): when the close leaves nothing
-   * of the task on their stack - no crewmate's story, no other note - its
+   * of the task on their stack - no crewmate's story, no other note - and
+   * the captain has not already closed the crewmate's outcome card, its
    * sentence goes up as the first mate's own note on that task. A note
    * holds nothing and asks nothing; only their close takes it down.
    */
@@ -408,6 +409,10 @@ export class SettleService {
   ): void {
     const outcome = closedWithoutClick(reason);
     if (!outcome || record.startedAt === null) return;
+    // The captain closed the crewmate's own outcome card and its crewmate
+    // reported the work finished: their close already said what became of
+    // it, so a note would only say it twice (INF-1137).
+    if (record.delivery?.finishedAt !== undefined) return;
     if ([...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
     const closed = this.host.tasks.get(record.id) ?? record;
     const prUrl = closed.delivery?.prUrl;
@@ -1103,11 +1108,15 @@ export class SettleService {
    * with one feed line naming where the answer went, never as a discard.
    * An answer the captain asked for closes here too once its crewmate's
    * report declared it finished - he closed its card and nothing is left
-   * (FI3-435) - with nothing built on it required.
+   * (FI3-435) - with nothing built on it required. So does a step whose
+   * crewmate reported its answer when no task builds on it (INF-1137): the
+   * first mate passed the answer on by a steer, and a finished answer is
+   * never closed as a discard.
    * Refused, as text, on a task that is not an answer, one neither declared
    * a step nor declared finished, one still working or never started, a
-   * step no live task builds on or waits on, one whose own answer card
-   * is still waiting on the captain - his choice is that card's close -
+   * step that reported nothing and no live task builds on or waits on, one
+   * whose own answer card is still waiting on the captain - his choice is
+   * that card's close -
    * and one whose Firstmate card still asks him something, because the
    * close would take that question down. A Firstmate note stays up.
    */
@@ -1154,9 +1163,13 @@ export class SettleService {
       ? undefined
       : this.host.tasks.blocking(record.id).find((task) => !TaskService.isClosed(task));
     const carriedBy = builtOn ?? waitedOnBy;
-    if (!carriedBy && !finished) {
+    // A step whose crewmate reported its answer has done its job even when
+    // no task builds on it: the first mate passed the answer on itself, by a
+    // steer (INF-1137). Without a report there is nothing to close on.
+    const reported = record.outcome !== null;
+    if (!carriedBy && !finished && !reported) {
       return refuse(
-        `no planned or started task names it as its basis or waits on it. Start or plan the step that builds on it with basis ${record.key || record.id} first.`,
+        `its crewmate has reported no answer yet, and no planned or started task names it as its basis or waits on it. Wait for its report, or start or plan the step that builds on it with basis ${record.key || record.id}.`,
       );
     }
     const card = this.host.cards.snapshot().find((entry) => holdsAnswerClose(entry, record.id));
@@ -1167,7 +1180,7 @@ export class SettleService {
           : `its card "${card.title}" still asks the captain something, and closing now would take it down before they have answered it.`,
       );
     }
-    if (!carriedBy) {
+    if (!carriedBy && finished) {
       await this.closeTask(record.id, {
         status: "done",
         reason: "answered",
@@ -1175,6 +1188,16 @@ export class SettleService {
         text: "answered - the captain read it and its crewmate finished",
       });
       return { ok: true, text: `Closed ${handle} as answered: the captain has read it.` };
+    }
+    if (!carriedBy) {
+      await this.closeTask(record.id, {
+        status: "done",
+        reason: "answered",
+        actor: "firstmate",
+        text: "answered - its crewmate reported the answer",
+        data: { reported: true },
+      });
+      return { ok: true, text: `Closed ${handle} as answered: its crewmate reported the answer.` };
     }
     const successor = `${carriedBy.key || carriedBy.id} "${carriedBy.title}"`;
     await this.closeTask(record.id, {

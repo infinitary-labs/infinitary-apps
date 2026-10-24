@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-popup-form-reload",
+      "kind": "fix",
+      "title": "Second browser pages report when a form cannot be reloaded",
+      "body": "When a submitted form opens a second page, the task’s browser now says it refused to reload instead of reporting success. The form is not sent again.",
+      "area": "tasks",
+      "noPicture": "This corrects a form-reload refusal and its command result, not the browser’s layout.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

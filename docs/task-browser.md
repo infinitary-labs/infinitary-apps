@@ -436,14 +436,17 @@ The handoff's description and both browser wakes that meet an unknown outcome ca
 
 **Never sent twice.**
 The browser never sends a form twice.
-The host page knows whether its document is the answer to a form that was sent - the browser's own request for it was a `POST`, read when it commits (`src/main/host/taskBrowser.ts`) - and refuses to reload it (`FORM_RESEND`, `src/core/host.ts`), whoever asks:
+The host page knows whether its document is the answer to a form that was sent - the browser's own request for it was a `POST`, read when it commits (`src/main/host/taskBrowser.ts`) - and refuses to reload it (`FORM_RESEND`, `src/core/host.ts`), whoever asks.
+Tracking starts in the session's first document-request callback, before the request continues: a second page without an opener can commit its document before its window reaches `drivePage`.
+The same refusal reaches every caller:
 
 - the crewmate's `infinitary-browser-axi reload` answers in words that it did not reload, and its line in the view reads `did not resend a form`;
 - the captain's Reload says why in one line under the view's foot line;
 - a saved sign-in's grant leaves the page as it is, and the crewmate's next answer says so.
 
 Going back or forward to a form's answer the browser did not keep shows nothing rather than sending it again (`ERR_CACHE_MISS`), and the crewmate's answer says that too.
-A redirect after the form, the way most sites answer one, is an ordinary page and reloads as one.
+A redirect after the form that changes its request to `GET`, the way most sites answer one, is an ordinary page and reloads as one.
+A redirect that keeps `POST` stays guarded, as does a move within the same document; navigating to a new `GET` document clears the guard.
 
 **Retries.**
 No retry of the app's replays a browser commitment.
@@ -557,6 +560,8 @@ The fifth journey has a crewmate meet a site whose certificate no one trusts and
 A journey in `tests/e2e/task-browser.spec.ts` has the captain take a browser from the view while its crewmate's wait on the page runs: that wait answers in full and the crewmate's next command refuses, the captain maximizes the view and signs in on the page at its new size with an invented account that no file and no model call holds, Hide resumes nothing, and Return control wakes the crewmate once.
 Another has one task's browser keep its own visits on a page this Mac serves, while a second task's page is refused that server's data and picture, its request to take over that server's site is refused with nothing paused, its own redirects to a public name that leads to this Mac and to a private address are refused, and its own open of the first task's page starts with none of that task's site data.
 `taskBrowsers.test.ts` holds that a form's answer is never reloaded - for the crewmate, the captain and a saved sign-in's grant - and that going back to one the browser did not keep is named; `wakes.test.ts` the return wake's words for an unconfirmed submission, and `cardTool.test.ts` the review knowledge in `browser_handoff`'s description.
+`task-browser-form-reload.spec.ts` sends real loopback forms through the native browser, including popups with and without an opener, and checks the host's refusal, both callers' answers and the server's single submission.
+It keeps the refusal across fragment moves and redirects retaining `POST`, and verifies reload after redirects to `GET` and navigation away from the response.
 `tests/e2e/task-browser-booking.spec.ts` runs a final submission on an invented airline (`tests/e2e/fakeAirline.ts`) on a Pi crewmate and a Claude crewmate, each crewmate's calls checked to have come through its own runtime, and a Claude crewmate's local check too.
 Its booking journey compares fares on a decision whose door reads View search; asks for a sign-in on a card the captain closes, after which the request is still reachable from the record and the captain takes control from the view; fills in the passenger once woken; stops on a review card naming the trip, the passenger, the seller, the total and currency, the baggage, the fare rules and what is uncertain, marking a total that rose since the search, with nothing paid; and once the captain pays on the page and returns control, leaves a note with the reference, the airline paid once and nothing the captain typed in a file or a model call.
 Its unpaid journey has the captain type invented card details on the review's payment page and hand it back without paying: the crewmate reads each card field as filled with its value hidden, its picture of the page is refused, no model call holds the card number, expiry or code and no file under the app's data the card number or expiry, while the page still holds them and the airline is paid nothing.

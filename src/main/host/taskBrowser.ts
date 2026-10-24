@@ -80,12 +80,31 @@ export function isTaskBrowserWindow(win: BrowserWindow): boolean {
 const guardSignIns = new Map<number, { username: string; password: string }>();
 /** Where each task page's refusals go, for the app-wide sign-in event. */
 const pageRefusals = new WeakMap<WebContents, (refusal: HostBrowserRefusal) => void>();
+/** The last document request and whether the page answers a sent form. */
+const documentRequests = new WeakMap<WebContents, { method: string; formAnswer: boolean }>();
+
 /**
- * How each task page last asked for a document of its own (`GET`, or
- * `POST` for a form it sent): read when the document commits, so the page
- * knows whether it is the answer to a form, which a reload would send again.
+ * Track from the session's request hook, before the document can commit.
+ * A popup without an opener can commit before did-create-window gives it
+ * to drivePage; installing these listeners there misses its first POST.
  */
-const documentMethods = new WeakMap<WebContents, string>();
+function noteDocumentRequest(contents: WebContents, method: string): void {
+  const previous = documentRequests.get(contents);
+  if (previous) {
+    previous.method = method;
+    return;
+  }
+  const state = { method, formAnswer: false };
+  documentRequests.set(contents, state);
+  contents.on("did-navigate", () => {
+    // A redirect that changes POST to GET is an ordinary page again.
+    state.formAnswer = state.method === "POST";
+  });
+  contents.on("did-fail-load", (_event, code, _description, _url, isMainFrame) => {
+    // A load replaced by another (-3) leaves the page where it was.
+    if (isMainFrame && code !== -3) state.formAnswer = state.method === "POST";
+  });
+}
 let signInsAnswered = false;
 
 /** An identity without this app's name and version: an ordinary Chrome's. */
@@ -319,7 +338,7 @@ async function openTaskPage(input: HostBrowserOpen): Promise<HostBrowserPage> {
   ses.on("will-download", (event) => event.preventDefault());
   ses.webRequest.onBeforeRequest({ urls: ["<all_urls>"] }, (details, callback) => {
     if (details.resourceType === "mainFrame" && details.webContents) {
-      documentMethods.set(details.webContents, details.method);
+      noteDocumentRequest(details.webContents, details.method);
     }
     callback({
       cancel: !input.allow({ url: details.url, topLevel: details.resourceType === "mainFrame" }),
@@ -527,16 +546,6 @@ async function drivePage(
   await layOut();
 
   let lastStatus: number | undefined;
-  // The answer to a form that was sent is never loaded again: a reload
-  // would send the form again (docs/task-browser.md, "A final submission").
-  // A redirect after the form is an ordinary page, and so is a failed load
-  // the form never reached.
-  let formAnswer = false;
-  const sentForm = (): boolean => documentMethods.get(contents) === "POST";
-  contents.on("did-fail-load", (_event, code, _description, _url, isMainFrame) => {
-    // A load replaced by another (-3) leaves the page where it was.
-    if (isMainFrame && code !== -3) formAnswer = sentForm();
-  });
   // A picture stream asked for while a new document commits may be lost
   // with the old one, so a watched page asks again once its document is in.
   const screencast = (): void => {
@@ -550,7 +559,6 @@ async function drivePage(
   let lastNav = "";
   contents.on("did-navigate", (_event, url, status) => {
     lastStatus = status > 0 ? status : undefined;
-    formAnswer = sentForm();
     // A full load is a new document even at the same address, so refs from
     // before a reload are gone.
     lastNav = url;
@@ -630,7 +638,7 @@ async function drivePage(
       return done;
     },
     reload: async () => {
-      if (formAnswer) return { ok: false, code: FORM_RESEND };
+      if (documentRequests.get(contents)?.formAnswer) return { ok: false, code: FORM_RESEND };
       const done = nextLoad(contents, SETTLE_MS);
       contents.reload();
       return done;

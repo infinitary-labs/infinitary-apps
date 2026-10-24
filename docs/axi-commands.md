@@ -119,6 +119,15 @@ A task on this Mac is granted it whenever the host has a command process, and a 
 Its kept answers follow the shell's limit as the browser's do.
 There, a call waits on this Mac at most until 750 milliseconds before the command process would be stopped, so the command always prints an answer, and a call not yet sent then is never sent.
 
+## The Secrets foundation command
+
+`infinitary-secrets-axi` uses the same launcher and isolated command process, with no browser dependency.
+The optional grant is exercised only with disposable adapters today; production tasks do not receive it.
+Bare invocation and `list` show linked metadata, `inject` submits an exact operation using references, and `status`/`cancel` read or withdraw unused requests.
+There is no value-returning getter, approval operation, raw output mode or global environment export.
+The channel's task label is organizational context, not authenticated secret authority.
+The operation boundary, backend requirements and current limitations are owned by [Secrets](../primitives/secrets.md) and [`secrets.md`](secrets.md).
+
 ## Tests
 
 `cli.test.ts` holds the runtime: content-first home, flags, help and version without a task, refused updates and literal content.

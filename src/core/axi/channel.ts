@@ -8,6 +8,7 @@ import { BROWSER_COMMAND } from "../browser/commandWords";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import type { HostChildProcess, HostChildSpawner } from "../host";
 import { INTEGRATIONS_COMMAND, isIntegrationAnswer, type TaskIntegrations } from "../integrations";
+import { type Injection, SECRETS_COMMAND, type SecretsCommand } from "../secrets/requests";
 import { ownTaskCommand } from "./names";
 import type {
   AxiCallMessage,
@@ -18,6 +19,7 @@ import type {
   IntegrationChannelAnswer,
   IntegrationOpInput,
 } from "./protocol";
+import type { SecretsAnswer } from "./secretsCommands";
 
 /**
  * The task channel (docs/axi-commands.md, "The channel"): how a crewmate's
@@ -65,10 +67,14 @@ export type { TaskShell } from "../session/session";
  * The tools a task was granted: its browser, and the integrations its
  * crewmate reaches (`infinitary-integrations-axi`, docs/integrations.md).
  */
-export type TaskTools = { browser?: CrewmateBrowser; integrations?: TaskIntegrations };
+export type TaskTools = {
+  browser?: CrewmateBrowser;
+  integrations?: TaskIntegrations;
+  secrets?: SecretsCommand;
+};
 
 /** What one operation answers, for either tool. */
-type OpAnswer = ChannelAnswer | IntegrationChannelAnswer;
+type OpAnswer = ChannelAnswer | IntegrationChannelAnswer | SecretsAnswer;
 
 export type AxiChannelOptions = {
   /** Starts the process that runs one command: a utility process in the app, a fork in tests. */
@@ -330,7 +336,8 @@ export class AxiChannel {
     const deadline = shellDeadline(received, form.get("cap"), form.get("started"));
     const has =
       (tool === BROWSER_COMMAND && grant.tools.browser !== undefined) ||
-      (tool === INTEGRATIONS_COMMAND && grant.tools.integrations !== undefined);
+      (tool === INTEGRATIONS_COMMAND && grant.tools.integrations !== undefined) ||
+      (tool === SECRETS_COMMAND && grant.tools.secrets !== undefined);
     if (!has) {
       answer(
         failed(
@@ -449,7 +456,9 @@ export class AxiChannel {
             message,
             AbortSignal.timeout(Math.max(0, stopsAt - CAP_MARGIN_MS - Date.now())),
           )
-        : this.operate(grant, message);
+        : tool === SECRETS_COMMAND
+          ? this.secret(grant, message)
+          : this.operate(grant, message);
     const settled = await within(work, deadline);
     if (settled === TIMEOUT) {
       grant.parked.set(tool, { command: message.command, work });
@@ -493,6 +502,38 @@ export class AxiChannel {
         text: `The integration could not do that: ${reason.replace(/\.$/, "")}.`,
         refused: "refused",
       };
+    }
+  }
+
+  /** Operation authority is checked by Secrets, never by this same-user bearer channel. */
+  private async secret(grant: Grant, message: AxiCallMessage): Promise<SecretsAnswer> {
+    const secrets = grant.tools.secrets;
+    if (!secrets) return { unavailable: true };
+    try {
+      switch (message.op) {
+        case "secrets.list":
+          return { secrets: await secrets.list(), requests: secrets.receipts() };
+        case "secrets.show": {
+          const ref = (message.input as { ref: string }).ref;
+          const secret = (await secrets.list()).find((secret) => secret.ref === ref);
+          return secret ? { secret } : { unavailable: true };
+        }
+        case "secrets.inject":
+          return { receipt: await secrets.inject(message.input as Injection) };
+        case "secrets.status": {
+          const receipt = secrets.status((message.input as { request: string }).request);
+          return receipt ? { receipt } : { unavailable: true };
+        }
+        case "secrets.cancel": {
+          const receipt = await secrets.cancel((message.input as { request: string }).request);
+          return receipt ? { receipt } : { unavailable: true };
+        }
+        default:
+          return { unavailable: true };
+      }
+    } catch {
+      // A backend error can contain a credential; no arbitrary text crosses this seam.
+      return { unavailable: true };
     }
   }
 

@@ -6,6 +6,7 @@ import type {
   BrowserInspectInput,
   BrowserNavigateInput,
 } from "../browser/taskBrowsers";
+import type { SecretsOp, SecretsReply } from "./secretsCommands";
 
 /**
  * What passes between the app and the command process that runs one
@@ -89,14 +90,14 @@ export type AxiCallMessage = {
   id: number;
   /** The command as the crewmate named it (`click`), for the words of a kept answer. */
   command: string;
-  op: BrowserOp | IntegrationOp;
+  op: BrowserOp | IntegrationOp | SecretsOp;
   input: unknown;
 };
 
 export type AxiResultMessage = {
   type: "result";
   id: number;
-  reply: BrowserReply | IntegrationReply;
+  reply: BrowserReply | IntegrationReply | SecretsReply;
 };
 
 export type AxiDoneMessage = { type: "done"; stdout: string; exitCode: number };

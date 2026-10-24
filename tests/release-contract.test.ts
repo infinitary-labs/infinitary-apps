@@ -468,6 +468,10 @@ describe("electron-builder configuration", () => {
     expect(readlinkSync(join(root, "resources/axi-bin/infinitary-integrations-axi"))).toBe(
       "infinitary-axi",
     );
+    // INF-1085's command ships even while its production grant remains unavailable.
+    expect(readlinkSync(join(root, "resources/axi-bin/infinitary-secrets-axi"))).toBe(
+      "infinitary-axi",
+    );
     // Firstmate 3000's name for the command stays, for a crewmate told it before the rename.
     expect(readlinkSync(join(root, "resources/axi-bin/fm-browser-axi"))).toBe("infinitary-axi");
   });

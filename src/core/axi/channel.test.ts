@@ -7,8 +7,10 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { BrowserAnswer, CrewmateBrowser } from "../browser/taskBrowsers";
+import { hostEnv } from "../hostEnv";
 import type { IntegrationAnswer, TaskIntegrations } from "../integrations";
 import { JobManager } from "../jobs/jobManager";
+import { type Injection, SECRETS_COMMAND, SecretRequests } from "../secrets/requests";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { BROWSER_COMMANDS } from "./browserCommands";
 import { AxiChannel, SHELL_CAP_ENV, SHELL_STARTED_ENV, type TaskShell } from "./channel";
@@ -490,5 +492,119 @@ describe("the infinitary-integrations-axi command", () => {
     const browserOnly = channel.grant("task-b", { browser: standIn("Sign up") });
     expect((await run(browserOnly, [])).stdout).toContain("code: NO_TOOL");
     expect((await shell(granted, ["snapshot"])).stdout).toContain("code: NO_TOOL");
+  });
+});
+
+// Intent: INF-1085 piece 1 and INF-1093's accepted exact-operation boundary.
+// Disposable adapters prove orchestration, NOT native custody or authentication.
+describe("the Secrets command's disposable operation proof", () => {
+  it("discovers, waits, executes once, withholds raw recipient output, reads status and cancels", async () => {
+    const channel = await openChannel();
+    const value = "invented-disposable-service-token";
+    let received: Injection | undefined;
+    let executions = 0;
+    let captured = "";
+    const owner = new SecretRequests({
+      list: async () => [{ ref: "s1", label: "Disposable staging", version: "1" }],
+      authenticate: async (_id, _digest, _expires, proof) => proof === "fixture-fresh-auth",
+      prepare: async (input) => {
+        received = input;
+        if (input.env.SERVICE_TOKEN !== "s1" || input.argv[0] !== "disposable-recipient")
+          return undefined;
+        return {
+          digest: "fixture-checked-recipient-and-version",
+          rule: "ask",
+          current: async () => true,
+          execute: async () => {
+            executions++;
+            // The actual recipient receives the invented value; its raw output stays private.
+            const base = hostEnv();
+            const result = await new Promise<{ exitCode: number }>((resolve, reject) => {
+              execFile(
+                process.execPath,
+                [
+                  "-e",
+                  "process.stdout.write(process.env.SERVICE_TOKEN); process.stderr.write(Buffer.from(process.env.SERVICE_TOKEN).toString('base64')); process.exitCode=7",
+                ],
+                {
+                  env: { PATH: base.PATH, SERVICE_TOKEN: value },
+                },
+                (error, stdout, stderr) => {
+                  captured = stdout + stderr;
+                  expect(stdout === value).toBe(true);
+                  expect(stderr === Buffer.from(value).toString("base64")).toBe(true);
+                  if (error && typeof error.code !== "number") reject(error);
+                  else resolve({ exitCode: error ? Number(error.code) : 0 });
+                },
+              );
+            });
+            return result;
+          },
+          dispose: async () => {
+            captured = "";
+          },
+        };
+      },
+    });
+    const grant = channel.grant("disposable-secrets", { secrets: owner });
+    const run = (args: string[]) => shell(grant, args, {}, SECRETS_COMMAND);
+    const outputs: string[] = [];
+    outputs.push((await run([])).stdout);
+    expect(outputs[0]).toContain("Disposable staging");
+    expect(decode((await run(["show", "s1"])).stdout)).toMatchObject({
+      secret: { ref: "s1", label: "Disposable staging" },
+    });
+    expect(decode((await run(["show", "not-linked"])).stdout)).toEqual({ unavailable: true });
+    const args = [
+      "inject",
+      "--env",
+      '{"SERVICE_TOKEN":"s1"}',
+      "--reason",
+      "Check staging",
+      "--id",
+      "staging-1",
+      "--",
+      "disposable-recipient",
+    ];
+    const waiting = await run(args);
+    expect(waiting.exitCode).toBe(0);
+    const receipt = (decode(waiting.stdout) as { receipt: { request: string; state: string } })
+      .receipt;
+    expect(receipt.state).toBe("waiting");
+    expect(executions).toBe(0);
+    outputs.push(waiting.stdout);
+    // The command process has exited, so another command can run while approval waits.
+    outputs.push((await run(["status", receipt.request])).stdout);
+    expect(received?.env).toEqual({ SERVICE_TOKEN: "s1" });
+    await owner.approve(receipt.request, "fixture-fresh-auth");
+    const completed = await run(["status", receipt.request]);
+    expect(decode(completed.stdout)).toMatchObject({
+      receipt: { state: "completed", exitCode: 7 },
+    });
+    outputs.push(completed.stdout, (await run(args)).stdout);
+    expect(executions).toBe(1);
+    expect(captured).toBe("");
+    const next = await run(args.map((arg) => (arg === "staging-1" ? "staging-2" : arg)));
+    const cancelled = (decode(next.stdout) as { receipt: { request: string } }).receipt;
+    outputs.push((await run(["cancel", cancelled.request])).stdout);
+    await owner.approve(cancelled.request, "fixture-fresh-auth");
+    expect(owner.status(cancelled.request)?.state).toBe("cancelled");
+    expect(executions).toBe(1);
+    expect(outputs.join("\n")).not.toContain(value);
+    expect(outputs.join("\n")).not.toContain(Buffer.from(value).toString("base64"));
+    for (const op of ["get", "approve", "export"]) expect((await run([op])).exitCode).not.toBe(0);
+    expect((await run(["inject", "--unexpected"])).exitCode).toBe(2);
+    for (const mapping of [
+      '{"SERVICE_TOKEN":"s1","SERVICE_TOKEN":"s2"}',
+      '{"SERVICE_TOKEN":"s1","SERVICE_\\u0054OKEN":"s2"}',
+      '{"NODE_OPTIONS":"s1"}',
+      '{"SERVICE_TOKEN":null}',
+    ]) {
+      const malformed = await run(args.map((arg, i) => (i === 2 ? mapping : arg)));
+      expect(malformed.exitCode).toBe(2);
+    }
+
+    const unavailable = channel.grant("ordinary-unmigrated-task", {});
+    expect((await shell(unavailable, [], {}, SECRETS_COMMAND)).stdout).toContain("NO_TOOL");
   });
 });

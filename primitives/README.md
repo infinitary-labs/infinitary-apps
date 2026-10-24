@@ -32,6 +32,7 @@ Lessons, a mail integration, a guided way of working and a particular panel are 
 | [Standing directions](standing-directions.md) | Carry the captain's ongoing instructions into relevant work. |
 | [Knowledge graph](knowledge-graph.md) | Keep requested references and captain-stated personal facts with evidence. |
 | [Automation](automation.md) | Start agent work from a time or an integration event. |
+| [Secrets](secrets.md) | Define credential custody and exact approved program/operation use; current foundation is disposable only. |
 | [Integrations](integrations.md) | Reach external services through declared connections and actions. |
 | [Task browsers](task-browsers.md) | Research, demonstrate and prepare website actions within one task. |
 | [Intelligence buckets](intelligence-buckets.md) | Route work to an appropriate model offering. |

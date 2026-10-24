@@ -8,6 +8,7 @@ import type {
   BrowserOp,
   IntegrationOp,
 } from "./protocol";
+import { type SecretsOp, secretsAxi } from "./secretsCommands";
 
 /**
  * The command process's entry (docs/axi-commands.md, "The channel"): one
@@ -58,7 +59,11 @@ function parentPort(): Port {
 
 /** A command's connection: each operation sent to the app and its reply, whatever the tool. */
 type Connection = {
-  call: (command: string, op: BrowserOp | IntegrationOp, input: unknown) => Promise<never>;
+  call: (
+    command: string,
+    op: BrowserOp | IntegrationOp | SecretsOp,
+    input: unknown,
+  ) => Promise<never>;
 };
 
 /** The commands this process can run, by the name the shell ran. */
@@ -68,6 +73,7 @@ const TOOLS: Record<
 > = {
   "infinitary-browser-axi": browserAxi as never,
   "infinitary-integrations-axi": integrationsAxi as never,
+  "infinitary-secrets-axi": secretsAxi as never,
 };
 
 const port = parentPort();

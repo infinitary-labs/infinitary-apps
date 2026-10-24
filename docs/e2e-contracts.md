@@ -170,14 +170,27 @@ The `e2e-text-lookup` Biome rule (`tests/lint/e2e-text-lookup.grit`, in `pnpm ch
 The `e2e-feed-line-prose` rule refuses typed words handed to `feedLine`: a string, a template, a regular expression, or a `new RegExp` built from one.
 A check whose subject is the words themselves, such as a word that must never reach the screen, says so in a `biome-ignore` naming the rule and why.
 
+## Waits run on the load clock
+
+A journey's waits measure the time the journey got to run, not the time that passed (INF-1083, the captain's choice "a deadline counts only the time the test gets to run, capped at 20 times its budget").
+On a busy Mac the runner, the app and its helpers can all stop for a minute at a time, and a wall-clock wait then fails work that was never slow.
+`tests/helpers/budgets.ts` starts the load clock in each Playwright test worker on an ordinary run; `playwright.config.ts` imports it, and each worker reloads that config.
+The clock ticks every 25 ms and counts each gap between ticks up to two ticks, so a stopped process's clock stops with it, and it counts only the share of processors left when the one-minute load per processor is above 1.
+Every wait deadline reads it through `patches/playwright@1.62.1.patch` and `patches/playwright-core@1.62.1.patch`: the test, hook and fixture slots, `test.step`'s timeout, `expect` and `expect.poll` and `toPass`, every action's and locator's timeout, explicit per-call ones included, and `waitForEvent`.
+Each wait also ends by its wall cap, 20 times its budget and at most 10 minutes (`waitCap`), so a wait whose work never comes still fails, by its own message, long before the whole check's limit.
+A journey's own failure timer in the test process goes through `budgetTimer`, as the app's quit grace in `launch.ts` and the microphone probe do; a poll interval, a deliberate pause or a product deadline stays a plain timer.
+A graded run (`INFINITARY_PERF_BUDGETS=1`) starts no clock, and every wait keeps its budget on the wall clock; so do the runner's own process and its whole-run limit.
+Test durations, traces and reports keep the wall clock either way.
+`tests/load-clock.test.ts` runs the real runner over a fixture and freezes its whole process group: a writer frozen 7 s past its 5 s budget still passes, a missing file fails at its budget on a quiet run and by the cap under a frozen runner, and a graded run fails the frozen writer at its budget.
+
 ## A crashed page
 
-`patches/playwright-core@1.62.1.patch` (`patchedDependencies` in `pnpm-workspace.yaml`) carries one line of Playwright's own fix, which its 1.64 beta already has: a reply that arrives after a page crashed is ignored.
+`patches/playwright-core@1.62.1.patch` (`patchedDependencies` in `pnpm-workspace.yaml`) also carries one line of Playwright's own fix, which its 1.64 beta already has: a reply that arrives after a page crashed is ignored.
 Without it, a page that crashes while it holds frames served at their own host fails the test with "Target crashed" or "Assertion error".
 Playwright sends the page one more call as each of those frames detaches, drops those calls when the crash arrives, and then treats Chromium's late answers as a broken connection.
 The main window holds the Tasks and Activity panel frames from launch, so a test that crashes it, like `tests/e2e/release-menu.spec.ts`, usually meets this.
 A working copy installed before the patch can keep Playwright's unpatched copy while `pnpm install` answers "Already up to date"; remove `node_modules/.pnpm-workspace-state-v1.json` and install again.
-The upgrade to a Playwright release that has the line removes the patch.
+The upgrade to a Playwright release that has the line removes that hunk; the load clock's hunks are ours and are made again on each upgrade.
 
 ## Guardrails
 

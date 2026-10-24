@@ -86,6 +86,7 @@ A stuck test then holds its run until the job's own time limit stops it, and the
 On a graded run a wait keeps a `timeout` it names, and one that names none waits for the rest of its test's budget, not vitest's one second, ending just before it so a stuck wait reports its own mismatch.
 A file sets no default window for its polls.
 `tests/wait-window.test.ts` holds both runs against a child the test freezes.
+A journey's waits read the same variable but are never without a clock: they run on the load clock, capped at 20 times their budget (`docs/e2e-contracts.md`, "Waits run on the load clock").
 A budget an author already set above the rule stays as it was, and a test whose time is a fixed product timeout rather than load-scaled work (hostEnv's hanging-shell test waits out a 3 s timeout) keeps the budget sized to that timeout.
 A file whose slowest test fits the 5 s default under the rule carries none.
 
@@ -114,6 +115,8 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/eval-auth-turn-taking.test.ts` | two processes on a scratch auth file and local fake OAuth server, for two provider ids | 5 s default |
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
 | `tests/wait-window.test.ts` | node children frozen with SIGSTOP and let go, against the waits of `tests/helpers/waitWindow.ts` | 10 s |
+| `tests/load-clock.test.ts` | four real Playwright runs of a fixture config, each process group frozen with SIGSTOP and let go, the longest waiting out its 20 s cap | 60 s |
+| `tests/starve-check.test.ts` | the load controller over real detached process trees, children stopped at birth, another user's descendant, cancellation and its experiment limit | 25 s |
 | `tests/mac-check-lock.test.ts` | actual workflow commands and the `test:phone` package script, held Node processes, `ps` and Python kernel-lock probes, on macOS/Linux | 5 s default |
 | `tests/virtual-mac-phone.test.ts` | guest-service settings, clean shutdown, runtime import and phone scripts against stand-ins, real git, bash and tar on a scratch working copy | 5 s default |
 | `tests/phone-release-process.test.ts` | the dispatched release command, temporary key fixtures and stand-in Xcode/upload commands; no signing or network | 5 s default |

@@ -112,6 +112,16 @@ export const PROBES = [
     ],
   },
   {
+    why: "real Playwright runs frozen by the test: journey waits on the load clock",
+    files: ["tests/load-clock.test.ts"],
+    paths: [
+      "patches/playwright-core@1.62.1.patch",
+      "patches/playwright@1.62.1.patch",
+      "tests/fixtures/load-clock/",
+      "tests/helpers/budgets.ts",
+    ],
+  },
+  {
     why: "whole-core sessions on the mock provider: the account evaluation and the benchmark's attempt",
     files: ["tests/account-eval.test.ts", "tests/bench-attempt.test.ts"],
     paths: [

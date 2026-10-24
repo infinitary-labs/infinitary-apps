@@ -16,6 +16,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { CONNECTION_PORT } from "@shared/connection";
+import { budgetTimer } from "../helpers/budgets";
 import { claimedPort } from "../helpers/claimedPort";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
 import { withoutRunnerSession } from "../helpers/runnerSession";
@@ -241,8 +242,8 @@ export function defaultClaudeStubDir(userDataDir: string): string {
 }
 
 /**
- * How long a graceful Electron quit gets before the harness stops waiting.
- * Well under Playwright's 60 s hook timeout, so a quit that never lands is
+ * How long a graceful Electron quit gets before the harness stops waiting,
+ * in load time on an ordinary run (`budgetTimer`). Well under Playwright's 60 s hook timeout, so a quit that never lands is
  * reported as one warning rather than failing the file's `afterAll`.
  */
 const CLOSE_GRACE_MS = 20_000;
@@ -310,9 +311,8 @@ async function quit(app: ElectronApplication, child: ChildProcess): Promise<void
   await Promise.race([
     graceful,
     new Promise<void>((resolve) => {
-      const timer = setTimeout(resolve, CLOSE_GRACE_MS);
-      timer.unref?.();
-      void graceful.finally(() => clearTimeout(timer));
+      const timer = budgetTimer(resolve, CLOSE_GRACE_MS).unref();
+      void graceful.finally(() => timer.cancel());
     }),
   ]);
   if (settled) return;

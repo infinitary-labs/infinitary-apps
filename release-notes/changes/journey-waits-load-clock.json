@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journey-waits-load-clock",
+      "reason": "Internal test infrastructure: journey waits count only the time the test got to run, each capped at 20 times its budget, the journey checks gain whole-run limits, and journeys on request can run under the load controller. No shipped app behavior changes."
+    }
+  ]
+}

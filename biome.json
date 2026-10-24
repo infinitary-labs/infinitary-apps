@@ -418,6 +418,8 @@
         "!tests/local-codesign.test.ts",
         "!tests/mac-check-lock.test.ts",
         "!tests/wait-window.test.ts",
+        "!tests/load-clock.test.ts",
+        "!tests/starve-check.test.ts",
         "!tests/virtual-mac-phone.test.ts",
         "!tests/phone-release-process.test.ts",
         "!tests/phone-certificates.test.ts",

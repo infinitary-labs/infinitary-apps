@@ -5,6 +5,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "@playwright/test";
 import { ciModeRefusal } from "./scripts/checks-mode.ts";
+// Each worker reloads this config, so each starts the load clock its waits run on (INF-1083).
+import "./tests/helpers/budgets";
 import { E2E_MAX_WORKERS, E2E_PROJECTS } from "./tests/e2e/lanes";
 import { runDir } from "./tests/e2e/runEvidence";
 
@@ -89,6 +91,9 @@ export default defineConfig({
   testDir: "tests/e2e",
   tsconfig: "./tsconfig.node.json",
   timeout: 60_000,
+  // The whole run's limit, which the workflow names (docs/testing.md,
+  // "Journey waits and check limits"); none on a run that names none.
+  globalTimeout: Number(process.env.INFINITARY_E2E_RUN_MINUTES ?? 0) * 60_000,
   // One private TMPDIR per run, required empty at the end (runTempRoot.ts).
   globalSetup: "./tests/e2e/globalSetup.ts",
   outputDir: run,

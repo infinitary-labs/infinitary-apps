@@ -35,8 +35,10 @@ allowBuilds:
   # dugite's own pinned manifest instead (docs/forge.md "The app's own git").
   dugite: false
 minimumReleaseAge: 0
-# Each patch but the first carries one fix its package's next release already
-# has; drop it when the package is upgraded to that release.
+# The @vitest/runner and playwright patches, and the load-clock hunks of the
+# playwright-core one, are ours and stay across upgrades; re-make them on an
+# upgrade. The other patches carry one fix their package's next release
+# already has; drop it when the package is upgraded to that release.
 # - @vitest/runner: ours, kept across upgrades. A test's or hook's time limit
 #   holds only on a run that grades budgets (INFINITARY_PERF_BUDGETS=1, on a
 #   quiet host); elsewhere a test waits for its work with no clock and the
@@ -46,11 +48,16 @@ minimumReleaseAge: 0
 #   import, found by parsing the chunk, never inside a string or comment that
 #   reads like an import (electron-vite 6.0.0-beta.4, docs/architecture.md
 #   section 10).
-# - playwright-core: one line of Playwright's own fix, which its 1.64 beta
-#   has: a reply that arrives after a page crashed is ignored instead of
-#   failing the test with "Target crashed" (docs/e2e-contracts.md, "A crashed
-#   page").
+# - playwright and playwright-core: on an ordinary run every wait deadline -
+#   test, hook, fixture, step, expect, poll, action and event - reads the load
+#   clock `tests/helpers/budgets.ts` starts in each test worker, and ends by
+#   its wall cap (INF-1083; docs/e2e-contracts.md, "Waits run on the load
+#   clock"). The core patch also keeps one line of Playwright's own fix, which
+#   its 1.64 beta has: a reply that arrives after a page crashed is ignored
+#   instead of failing the test with "Target crashed" (docs/e2e-contracts.md,
+#   "A crashed page"); only that hunk drops on the upgrade.
 patchedDependencies:
   '@vitest/runner@4.1.10': patches/@vitest__runner@4.1.10.patch
   electron-vite@5.0.0: patches/electron-vite@5.0.0.patch
   playwright-core@1.62.1: patches/playwright-core@1.62.1.patch
+  playwright@1.62.1: patches/playwright@1.62.1.patch

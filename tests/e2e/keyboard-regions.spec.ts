@@ -45,10 +45,10 @@ const CARET = 4;
 
 /** The Tasks row that holds the keyboard's focus, by its task's key. */
 function focusedRowKey(page: Page): Promise<string | null> {
+  // A missing focused row is a reading, not a five-second wait that fails.
   return nowFrame(page)
     .locator("[data-now-row]:focus")
-    .getAttribute("data-now-key", { timeout: 5_000 })
-    .catch(() => null);
+    .evaluateAll((rows) => rows[0]?.getAttribute("data-now-key") ?? null);
 }
 
 /**

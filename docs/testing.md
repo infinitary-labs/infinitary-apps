@@ -60,6 +60,14 @@ A full run never stops at its first failure: it reports every failure, later tes
 
 `INFINITARY_TEST_PROFILE=1` prints per-phase e2e launch timings (`tests/e2e/launch.ts`).
 
+## Journey waits and check limits
+
+A journey's waits run on the load clock and end by their wall cap, 20 times their budget and at most 10 minutes; a graded run keeps the wall clock (`docs/e2e-contracts.md`, "Waits run on the load clock").
+Above every wait sit the whole check's limits (INF-1083, the captain's check limits).
+A pull request's journeys and journeys on request end their run at 75 minutes (Playwright's `globalTimeout`, which `playwright.config.ts` reads from the workflow's `INFINITARY_E2E_RUN_MINUTES`) and their command at 90 (the step's `timeout-minutes`), on the Mac mini and on the hosted Linux overflow alike.
+The full Mac suite in `verify.yml` ends its run at 150 minutes and its command at 180.
+The Mac command's 90 minutes include its wait for the Mac check lease and the build, so a phone check holding the lease shortens the time left for the run.
+
 ## Notes
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.
@@ -288,6 +296,17 @@ The chooser places the named files exactly as it places a pull request's, closes
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
 Each request is its own concurrency group, so another request on the same branch, `main` included, never cancels it, whatever journeys either names (INF-941); only a newer push to a pull request replaces that pull request's older run.
 A request its requester no longer needs is cancelled by its run's id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
+
+The `starve` input runs the Mac journeys through the load controller, `scripts/starve-check.py`, inside the same lease and after the build.
+The controller runs the command's own process tree for 0.1 s, stops it for 0.2 s, and adds a 65-second stop after each 20 seconds of that, longer than the one-minute journey default.
+It walks the command's known processes and their children, detached sessions included, through `libproc` on macOS and `/proc` on Linux, never a system-wide listing, which on macOS can wait on an unrelated process part-way through exec.
+It rescans a stopped parent for children it started meanwhile, rechecks each process's identity before letting it go, and never signals a process outside the tree.
+It prints its schedule, the processes it found and the ones stopped at each long stop.
+Cancelled, it lets the tree go and gives it five seconds to end before killing what is left.
+Its own experiment limit is 15 minutes (`--timeout`, required, in seconds), and its run, pause and stall arguments reproduce another chosen load; compare unchanged and changed code with the same arguments.
+`tests/starve-check.test.ts` holds it over real detached process trees.
+The `perf` input sets `INFINITARY_PERF_BUDGETS=1` for the Mac command, for a quiet graded run.
+Neither input changes where the files are placed or the Linux overflow jobs.
 
 ## A journey's own scenarios
 

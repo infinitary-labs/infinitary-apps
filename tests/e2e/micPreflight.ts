@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import electronPath from "electron";
+import { budgetTimer } from "../helpers/budgets";
 import { inVirtualMac } from "./virtualMac";
 
 /**
@@ -49,12 +50,12 @@ export function probeMicrophone(): Promise<MicProbe> {
     const child = spawn(String(electronPath), [probe], {
       stdio: "ignore",
     });
-    const timer = setTimeout(() => {
+    const timer = budgetTimer(() => {
       child.kill("SIGKILL");
       resolve("no-answer");
     }, PROBE_BUDGET_MS);
     child.on("exit", (code) => {
-      clearTimeout(timer);
+      timer.cancel();
       resolve(code === 0 ? "opened" : "refused");
     });
   });

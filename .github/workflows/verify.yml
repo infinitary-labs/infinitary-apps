@@ -188,8 +188,12 @@ jobs:
       # slot ran journeys too (docs/testing.md, "E2E scheduling").
       - id: e2e
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.build.outcome == 'success' && steps.dev-signing.outcome == 'success' && steps.recorder.outcome == 'success' }}
+        # The run ends at 150 minutes and the command at 180 (INF-1083, the
+        # captain's check limits); a stuck wait ends sooner, at its own cap.
+        timeout-minutes: 180
         run: pnpm exec playwright test --workers=50%
         env:
+          INFINITARY_E2E_RUN_MINUTES: 150
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/e2e-results.json
       # What the e2e run leaves for whoever reads it (docs/testing.md):
       # Playwright's machine-readable result whenever the suite ran, and on a

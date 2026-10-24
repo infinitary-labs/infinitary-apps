@@ -122,6 +122,9 @@ jobs:
       # (scripts/e2e-alone.ts); the Mac-only ones skip here and run alone in
       # verify.yml's mac lane.
       - name: Run the journeys with the sandbox on, and affected resize callers on Mac
+        # A pull request's affected journeys end at 75 minutes and their
+        # command at 90 (INF-1083, the captain's check limits, as journeys.yml).
+        timeout-minutes: ${{ inputs.suite == 'affected' && 90 || 360 }}
         run: |
           on_screen() {
             xvfb-run -a -s "-screen 0 $SCREEN -noreset" sh -c '
@@ -163,6 +166,7 @@ jobs:
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/source-results.json
           SUITE: ${{ inputs.suite }}
           FILES: ${{ inputs.files }}
+          INFINITARY_E2E_RUN_MINUTES: ${{ inputs.suite == 'affected' && 75 || '' }}
           LANE: ${{ matrix.lane }}
           SHARD: ${{ matrix.shard }}
           SCREEN: 2560x1600x24

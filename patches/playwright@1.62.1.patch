@@ -1,0 +1,69 @@
+diff --git a/lib/common/index.js b/lib/common/index.js
+index 47801bdf4f53150f0d4f21623324682f3248ea88..256cda4ee3f7dbee22f50f8e26bdfd80d15a7bac 100644
+--- a/lib/common/index.js
++++ b/lib/common/index.js	
+@@ -2444,7 +2444,7 @@ var TestTypeImpl = class _TestTypeImpl {
+               testInfo._failWithError(e);
+             throw e;
+           }
+-        }, options.timeout ? monotonicTime() + options.timeout : 0);
++        }, options.timeout ? require("playwright-core/lib/coreBundle").iso.deadlineTime() + options.timeout : 0);
+         if (result2.timedOut)
+           throw new TimeoutError(`Step timeout of ${options.timeout}ms exceeded.`);
+         step.complete({});
+diff --git a/lib/matchers/expect.js b/lib/matchers/expect.js
+index c74f5ad64e739161cf1837442394448ab70e34ce..8324bfd204fa7ccc9a9db8b050f3e449cbaf7ef4 100644
+--- a/lib/matchers/expect.js
++++ b/lib/matchers/expect.js	
+@@ -13010,7 +13010,8 @@ function computeMatcherTitleSuffix(matcherName, receiver, args) {
+   return {};
+ }
+ function deadlineForMatcher(testInfo, timeout) {
+-  const startTime = monotonicTime();
++  // Infinitary (INF-1083): matcher and test deadlines share the load clock.
++  const startTime = require("playwright-core/lib/coreBundle").iso.deadlineTime();
+   const matcherDeadline = timeout ? startTime + timeout : 0;
+   const matcherMessage = `Timeout ${timeout}ms exceeded while waiting on the predicate`;
+   if (!testInfo)
+diff --git a/lib/worker/workerProcessEntry.js b/lib/worker/workerProcessEntry.js
+index 99730640b937be980bbf581a11f193adc45ff008..0c1635037b5d02c33eaa80df3a91fe34c38eb224 100644
+--- a/lib/worker/workerProcessEntry.js
++++ b/lib/worker/workerProcessEntry.js	
+@@ -353,7 +353,9 @@ var import_path3 = __toESM(require("path"));
+ // packages/playwright/src/worker/timeoutManager.ts
+ var colors = require("playwright-core/lib/utilsBundle").colors;
+ var { ManualPromise: ManualPromise2 } = require("playwright-core/lib/coreBundle").iso;
+-var { monotonicTime } = require("playwright-core/lib/coreBundle").iso;
++// Infinitary (INF-1083): test, hook and fixture slots count load time and end by
++// their wall cap (playwright-core's deadlineTimer); test durations keep the wall clock.
++var { deadlineTime: monotonicTime, deadlineTimer } = require("playwright-core/lib/coreBundle").iso;
+ var kMaxDeadline = 2147483647;
+ var TimeoutManager = class {
+   constructor(timeout) {
+@@ -406,7 +408,7 @@ var TimeoutManager = class {
+       ]);
+     } finally {
+       if (running.timer)
+-        clearTimeout(running.timer);
++        running.timer.cancel();
+       running.timer = void 0;
+       running.slot.elapsed += monotonicTime() - running.start;
+       this._running = void 0;
+@@ -416,7 +418,7 @@ var TimeoutManager = class {
+   }
+   _updateTimeout(running) {
+     if (running.timer)
+-      clearTimeout(running.timer);
++      running.timer.cancel();
+     running.timer = void 0;
+     if (this._ignoreTimeouts || !running.slot.timeout) {
+       running.deadline = kMaxDeadline;
+@@ -427,7 +429,7 @@ var TimeoutManager = class {
+     if (timeout <= 0)
+       running.timeoutPromise.reject(this._createTimeoutError(running));
+     else
+-      running.timer = setTimeout(() => running.timeoutPromise.reject(this._createTimeoutError(running)), timeout);
++      running.timer = deadlineTimer(() => running.timeoutPromise.reject(this._createTimeoutError(running)), running.deadline + 1);
+   }
+   defaultSlot() {
+     return this._defaultSlot;

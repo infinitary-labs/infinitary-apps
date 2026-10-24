@@ -13,6 +13,14 @@ on:
         description: Journey files to run, by name or path, separated by spaces or commas
         required: true
         type: string
+      starve:
+        description: Run the chosen Mac journeys under the load controller (scripts/starve-check.py)
+        type: boolean
+        default: false
+      perf:
+        description: Hold waits to their budgets on the wall clock, for a quiet run
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -162,13 +170,24 @@ jobs:
         # Shared command leases allow journeys from different PRs to overlap.
         # An exclusive phone command waits for active journeys, then runs alone.
         # 75m is twice the longest measured hold, a near-full selection beside another.
+        # The run ends at 75 minutes and the command at 90 (INF-1083, the
+        # captain's check limits); a stuck wait ends sooner, at its own cap.
+        timeout-minutes: 90
         run: |
           python3 scripts/with-mac-check.py --max-hold 75m shared "$HOME/Library/Caches/infinitary-ci/checks.lock" -- bash --noprofile --norc -e -o pipefail -c '
             test -n "$FILES"
             pnpm build
-            pnpm exec playwright test --no-deps $FILES
+            if [ "$STARVE" = true ]; then
+              # The requested load experiment has its own limit (docs/testing.md, "Journeys on request").
+              python3 scripts/starve-check.py --timeout 900 -- pnpm exec playwright test --no-deps $FILES
+            else
+              pnpm exec playwright test --no-deps $FILES
+            fi
           '
         env:
+          STARVE: ${{ inputs.starve }}
+          INFINITARY_E2E_RUN_MINUTES: 75
+          INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}
           FILES: ${{ needs.choose-journeys.outputs.files }}
           PLAYWRIGHT_JSON_OUTPUT_FILE: playwright-report/journeys-results.json
       - name: Keep the failed journeys' evidence

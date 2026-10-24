@@ -7,7 +7,8 @@ settings:
 patchedDependencies:
   '@vitest/runner@4.1.10': b84182a90f02c8c0b0cbf008497b77d4b8d5f065a61607507d2d6d7e2512b6b0
   electron-vite@5.0.0: 60e136d369686e9fbedf28afd014aeee35f6fbf0f78f7d0c277bfb63d93ecb7c
-  playwright-core@1.62.1: 770136d540fffcfa8a50d30cf464f902800ff7eb939761bb43d0e31d371114c3
+  playwright-core@1.62.1: 2252106b9b117dc5e5a0d17434aa02ed27eb357655144aede37ddac09e1e19cc
+  playwright@1.62.1: 2ccfcabfa7659e1f5f8f976083faf235473116c15cf5115242e685f887e1c296
 
 importers:
 
@@ -5156,7 +5157,7 @@ snapshots:
 
   '@playwright/test@1.62.1':
     dependencies:
-      playwright: 1.62.1
+      playwright: 1.62.1(patch_hash=2ccfcabfa7659e1f5f8f976083faf235473116c15cf5115242e685f887e1c296)
 
   '@protobufjs/aspromise@1.1.2': {}
 
@@ -7448,11 +7449,11 @@ snapshots:
 
   platform@1.3.6: {}
 
-  playwright-core@1.62.1(patch_hash=770136d540fffcfa8a50d30cf464f902800ff7eb939761bb43d0e31d371114c3): {}
+  playwright-core@1.62.1(patch_hash=2252106b9b117dc5e5a0d17434aa02ed27eb357655144aede37ddac09e1e19cc): {}
 
-  playwright@1.62.1:
+  playwright@1.62.1(patch_hash=2ccfcabfa7659e1f5f8f976083faf235473116c15cf5115242e685f887e1c296):
     dependencies:
-      playwright-core: 1.62.1(patch_hash=770136d540fffcfa8a50d30cf464f902800ff7eb939761bb43d0e31d371114c3)
+      playwright-core: 1.62.1(patch_hash=2252106b9b117dc5e5a0d17434aa02ed27eb357655144aede37ddac09e1e19cc)
     optionalDependencies:
       fsevents: 2.3.2
 

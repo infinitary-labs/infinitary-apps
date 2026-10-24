@@ -1,5 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import { quoted } from "../../src/renderer/src/app/lastTurnWords";
 import { askFirstmate, bubbleWords, mateBubble, yourBubble } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { intersects, minimumWindowSize, resizeWindow, settled } from "./layout";
@@ -16,7 +17,9 @@ import {
 } from "./mockProvider";
 import { heroShot, regionShot } from "./pictures";
 import { promptInput } from "./prompt";
-import { cardSurface } from "./stack";
+import { REPLY_NOTE_MARKER, REPLY_NOTE_WORDS, replyNote } from "./scenarios/replyNote";
+import { cardSurface, SHOWN_ENTRY } from "./stack";
+import { pressKey, runFromSearch } from "./windowKeys";
 
 /**
  * The last turn above the input (docs/composer.md "The last turn"): the
@@ -327,4 +330,73 @@ test("filing work with no closing words replies with the filed task instead of a
       name: "action-reply-line",
     });
   }
+});
+
+// INF-1103, the captain's words on INF-1102: "we should allow the first mate
+// response message here to be clickable, and clicking opens up a card that
+// shows the message as a note", built as the plan's approved answers: a
+// reading card the window holds, the words as the first mate wrote them,
+// and the captain's message in quotation marks as its title.
+test("the reply line opens the whole reply as a note, by click, Enter, Space and command search, and Esc closes it", async () => {
+  launched = await launchApp({ withMockProvider: true, scenarios: [replyNote] });
+  const { page } = launched;
+  await resizeWindow(launched.app, page, { width: 1280, height: 800 });
+  await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
+  const sent = `Can the Mac mini run our Linux checks, ${REPLY_NOTE_MARKER}`;
+  await askFirstmate(page, sent);
+  const kept = await page.evaluate(() => window.infinitary.conversation.lastTurn());
+  // The line is one line; the words as written are kept beside it.
+  expect(kept?.reply?.words).toBe(REPLY_NOTE_WORDS);
+  expect(kept?.reply?.text).not.toContain("\n");
+  await expect(bubbleWords(mateBubble(page))).toHaveText(kept?.reply?.text ?? "");
+
+  const note = page.locator(`${SHOWN_ENTRY} [data-reply-note]`);
+  const title = page.locator(`${SHOWN_ENTRY} [data-card-title]`);
+  const noteWords = () => note.evaluate((body) => body.textContent);
+  const turnsSent = () =>
+    page.evaluate(async () => (await window.infinitary.conversation.lastTurn())?.you);
+
+  await test.step("a click opens the note at the front, with your message as its title and the words as written", async () => {
+    await mateBubble(page).click();
+    await expect(note).toBeVisible();
+    await expect(title).toHaveText(quoted(sent));
+    expect(await noteWords()).toBe(REPLY_NOTE_WORDS);
+    await regionShot(cardSurface(page), test.info().outputPath("reply-note.png"));
+    if (process.env.FM_REPLY_NOTE_HERO === "1") {
+      await heroShot(launched.app, page, {
+        region: cardSurface(page),
+        anchors: [mateBubble(page)],
+        name: "reply-note",
+      });
+    }
+  });
+
+  await test.step("Esc closes it, and nothing was sent", async () => {
+    await page.keyboard.press("Escape");
+    await expect(note).toHaveCount(0);
+    expect(await turnsSent()).toBe(sent);
+  });
+
+  await test.step("Enter and Space on the focused line open it too", async () => {
+    for (const key of ["Enter", " "]) {
+      await pressKey(mateBubble(page), key);
+      await expect(note).toBeVisible();
+      expect(await noteWords()).toBe(REPLY_NOTE_WORDS);
+      await page.keyboard.press("Escape");
+      await expect(note).toHaveCount(0);
+    }
+  });
+
+  await test.step("after a relaunch, command search opens the same words", async () => {
+    const { userDataDir, homeDir } = launched;
+    await launched.close();
+    launched = await launchApp({ withMockProvider: true, userDataDir, homeDir });
+    const again = launched.page;
+    await expect(mateBubble(again)).toHaveAttribute("data-state", "reply");
+    await runFromSearch(launched.app, again, "firstmate.reply");
+    const reopened = again.locator(`${SHOWN_ENTRY} [data-reply-note]`);
+    await expect(reopened).toBeVisible();
+    expect(await reopened.evaluate((body) => body.textContent)).toBe(REPLY_NOTE_WORDS);
+    await expect(again.locator(`${SHOWN_ENTRY} [data-card-title]`)).toHaveText(quoted(sent));
+  });
 });

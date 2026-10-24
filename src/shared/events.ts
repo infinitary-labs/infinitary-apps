@@ -420,6 +420,8 @@ export const fmEventSchema = z.discriminatedUnion("type", [
     problem: z.boolean().optional(),
     /** Typed completion: absent is unknown, and the line stays. */
     eligibility: lastTurnEligibilitySchema.optional(),
+    /** The closing words as written, when they differ from `text` (src/shared/lastTurn.ts). */
+    words: z.string().optional(),
   }),
   /**
    * A task record changed (task-system P3): per-task invalidation for

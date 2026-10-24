@@ -150,7 +150,7 @@ import { type CrewSupervisor, QUIET_CARD_MS, QUIET_FEED_MS } from "./crewSupervi
 import { DecisionCapture, type ServedInput } from "./decisionCapture";
 import type { Flagship } from "./flagship";
 import type { LocalOrchestratorSeat } from "./localOrchestrator";
-import { type ReplyFacts, replyLine, startedReply } from "./replyLine";
+import { type ReplyFacts, replyLine, replyWords, startedReply } from "./replyLine";
 import { scheduleText } from "./scheduler";
 import {
   ALLOWANCE_CHECKING_WORDS,
@@ -4222,10 +4222,13 @@ export class FirstmateAgent {
    */
   private replyToLastMessage(read: readonly string[], problem: string | undefined): void {
     const text = problem ?? replyLine(this.replyFacts);
+    const words = problem ? undefined : replyWords(this.replyFacts);
     if (text)
       this.keepReplyLine(
         read,
-        problem ? { text, problem: true } : { text, eligibility: "completed" },
+        problem
+          ? { text, problem: true }
+          : { text, eligibility: "completed", ...(words ? { words } : {}) },
       );
   }
 

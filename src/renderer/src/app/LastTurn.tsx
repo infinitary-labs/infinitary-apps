@@ -10,6 +10,7 @@ import {
   subscribeFade,
   syncFade,
 } from "./lastTurnFade";
+import { CLOSE_QUOTE, OPEN_QUOTE } from "./lastTurnWords";
 import { useShellStore } from "./store";
 import "./lastTurn.css";
 
@@ -22,9 +23,10 @@ import "./lastTurn.css";
  * Firstmate works its line shows three dots and "Working…"; when the turn
  * ends it becomes the reply line the core chose (`firstmate_reply`). The
  * pair stays until the next message. A completed reply then fades after
- * 15 seconds of visible reading time (./lastTurnFade). Both lines are plain
- * text, never a control: resting on a cut line shows its whole text and
- * pauses that count.
+ * 15 seconds of visible reading time (./lastTurnFade). The captain's line
+ * is plain text; a finished or failed reply line is a button that opens the
+ * whole reply as a note (./ReplyNote, docs/composer.md "The reply note").
+ * Resting on a cut line shows its whole text and pauses that count.
  *
  * Its words and busy signal are shell state (./store `lastTurn`,
  * `firstmateBusy`); this component owns only the two moves a class change
@@ -36,9 +38,6 @@ import "./lastTurn.css";
 export const WORKING_WORDS = "Working…";
 /** A message that was only pictures. */
 export const PICTURE_ONLY_WORDS = "A picture";
-/** The marks around words someone said, drawn in --fg-3. */
-const OPEN_QUOTE = "\u201c";
-const CLOSE_QUOTE = "\u201d";
 /** A leaving pair or set of words is gone after --dur-fast. */
 const LEAVE_MS = 160;
 
@@ -88,11 +87,15 @@ function MateLine({ target, announce }: { target: Mate | null; announce: boolean
   const reply = shown?.kind === "reply" ? shown : null;
   const mateWords = reply ? reply.text : WORKING_WORDS;
   const mateFit = useOverflowTitle(shown ? mateWords : undefined);
+  const openReplyNote = useShellStore((s) => s.openReplyNote);
+  // A reply is a button that opens it whole; the working words are not.
+  const Bubble = reply ? "button" : "span";
   return (
     <>
       <div className="row mate">
         {shown && (
-          <span
+          <Bubble
+            {...(reply ? { type: "button" as const, onClick: () => openReplyNote() } : {})}
             data-last-turn-bubble="firstmate"
             data-state={shown.kind === "working" ? "working" : reply?.problem ? "problem" : "reply"}
             title={mateFit.title}
@@ -116,7 +119,7 @@ function MateLine({ target, announce }: { target: Mate | null; announce: boolean
               </span>
               {reply && <Quote mark={CLOSE_QUOTE} />}
             </span>
-          </span>
+          </Bubble>
         )}
       </div>
       {/* The reply is read out once as it arrives, never the working words. */}

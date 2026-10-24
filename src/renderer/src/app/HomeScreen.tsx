@@ -159,6 +159,7 @@ import { pressesSoFar } from "./presses";
 import { useProjectFocus } from "./projectFocus";
 import { usePromptFoot } from "./promptFoot";
 import { LAST_TURN_LANE, LAST_TURN_RISE, promptFoldsRails, promptShellMax } from "./promptGeometry";
+import { ReplyNoteCard } from "./ReplyNote";
 import { firstTabbable, lastTabbable } from "./regions";
 import { foldRails, type ShellLayout, useShellLayout } from "./shellLayout";
 import {
@@ -1409,7 +1410,11 @@ function EntrySurface({
   const kind = useCardKind(
     entry.recordTaskId
       ? "task-record"
-      : !entry.pastCardId && !entry.browserTaskId && !entry.crewmateTaskId && !entry.panelCard
+      : !entry.pastCardId &&
+          !entry.replyNote &&
+          !entry.browserTaskId &&
+          !entry.crewmateTaskId &&
+          !entry.panelCard
         ? cardPresentation(entry)
         : "",
   );
@@ -1477,6 +1482,9 @@ function EntrySurface({
         onPicture={onPicture}
       />
     );
+  }
+  if (entry.replyNote) {
+    return <ReplyNoteCard note={entry.replyNote} width="100%" onClose={onClose} onDrawn={drew} />;
   }
   if (entry.recordTaskId) {
     return (

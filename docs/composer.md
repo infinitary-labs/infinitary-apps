@@ -126,7 +126,8 @@ They replace the activity line that used to pass there; the Activity panel keeps
   The captain's words come first, `--text-sm` in `--fg-2` on an 18 px row; a message that was only pictures reads "A picture", with no quotation marks, since it said no words.
   The first mate's line sits 4 px below, the same `--text-sm` in `--fg-1` on an 18 px row.
   Each takes at most 80% of the width, and its words are cut with an ellipsis inside the marks; resting on a cut line shows its whole text.
-  Neither line is a control: a click does nothing, Tab passes over both, and neither draws an underline or a focus ring.
+  The captain's line is not a control: a click does nothing, Tab passes over it, and it draws no underline or focus ring.
+  A finished or failed reply line is a button that opens the reply note (below): it takes the pointer, a Tab stop and the focus ring, and no other chrome; the working words are not a button.
   The Activity panel keeps every line.
 - **Working.**
   While the first mate's busy signal is up (`firstmate_state`), its line shows three `--hot` dots, the ember the app uses for work in flight, each brightening in turn, and "Working…" in `--fg-3`, with no quotation marks.
@@ -148,6 +149,7 @@ They replace the activity line that used to pass there; the Activity panel keeps
   A failed or paused turn's line is `plainProblem`'s words for it, in `--danger` inside the `--fg-3` marks.
   A message the paused seat keeps says so at once: its receipt (`keptMessageWords`) is the reply line as well as a feed line.
   The core sends it as `firstmate_reply` before the busy signal falls, so the working words turn straight into it, and an operational wake never sends one.
+  When the closing words are the line and differ from it, the core keeps them as written beside it (`replyWords`, the reply's optional `words`), line breaks included, for the reply note.
 - **What stays.**
   A message sent replaces the pair at once (`user_turn`); one sent while the first mate is busy keeps the working dots.
   A completed reply fades after 15 seconds of visible reading time, then both lines dissolve in place over `--dur-slow` (700 ms), with no movement.
@@ -163,6 +165,15 @@ They replace the activity line that used to pass there; the Activity panel keeps
   Reduced motion cuts the dissolve to an instant and does not shorten the 15 seconds.
   Fading does not move focus, change the draft, or read the reply out again.
   The saved pair is the newest `captain_asks` row and the reply line kept beside it (`TaskService.setAskReply`, migration 68), read once as the window opens (`inf:conversation:last-turn`).
+- **The reply note.**
+  A click on the reply line, or Enter or Space on it, opens the whole reply as a note at the front of the stack, in front of any open card (INF-1102's plan, the captain's Approve and build, reversing "neither line is a control" for the reply line only).
+  The window holds it, as it holds a past card (`{ replyNote }` in `OpenRecord`, `store.ts`): nothing is saved or sent, and the first mate is not told.
+  Its title is the captain's message in quotation marks, so the card reads as the two lines unfolded; a message that was only pictures reads "A picture".
+  Its body is the reply as the first mate wrote it, line breaks kept and nothing read as formatting; a reply saved before the words were kept, a typed line and a problem show the line itself, a problem in `--danger`.
+  It has the Note chip and no buttons or reply row; the × or Esc closes it.
+  There is one reply note: opening it again brings it to the front with the newest reply, and it stays until it is closed, even after a new message.
+  Opening it does not change the fade.
+  Open the first mate's reply (`firstmate.reply`, `docs/keyboard.md`) opens it from command search while a reply is saved, after the line has faded too, and comes home from Settings first.
 - **Motion.**
   A new pair rises 6 px into place over `--dur-med` while the old one leaves over `--dur-fast`; the working words leave over `--dur-fast` and the reply rises 4 px in over `--dur-med`, its quotation marks with it.
   Under reduced motion the durations are zero, so every move is a cut, and the dots stand still.

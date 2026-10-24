@@ -100,6 +100,7 @@ Every reader takes the installed map ("The installed map"), never the catalog's 
 | `settings.open`, Open Settings | window, run by the shell page | ⌘, |
 | `settings.keyboard`, Open Keyboard settings | window, run by the shell page | none: chosen by name, or Keyboard Settings… in the app menu |
 | `whats-new.show`, Show what's new | window, run by the shell page | none: chosen by name (release, notes, changes and version find it too), or What’s New in the Help menu |
+| `firstmate.reply`, Open the first mate's reply | window, run by the shell page | none: chosen by name (answer, message, note and last find it too), or a click, Enter or Space on the reply line |
 | `settings.usage`, Open Usage | window, run by the shell page | none: chosen by name (tokens, models, cost and dollars find it too) |
 | `settings.automation`, Open Automation | window, run by the shell page | none: chosen by name (schedule, recurring, reminder and pause find it too) |
 | `automation.pause-all`, Pause all automations | window, run by the shell page | none: chosen by name (schedule, recurring and stop find it too) |
@@ -282,6 +283,8 @@ The main process's own commands, the size keys, are never refused by the page.
 - `whats-new.show`, Show what's new, goes home and asks the core's What's new door for the newest release note that listed changes: an open note comes to the front of the stack, a closed one comes back read-only (`showReleaseNote`, `docs/release-notes.md` "Reading a note again").
   It works from Settings too, and refuses until a note was shown ("No release notes yet").
   The Help menu's What’s New in Infinitary tells the page the same command.
+- `firstmate.reply`, Open the first mate's reply, goes home and opens the first mate's newest reply whole as a note at the front of the stack, as a click on the reply line above the input does, after the line has faded too (`docs/composer.md` "The reply note").
+  It works from Settings too, and refuses until a reply is saved ("Your first mate has not replied yet").
 - `settings.usage`, Open Usage, opens Settings at its Usage tab with focus on the unit switch; it works from Settings too (`docs/usage.md`).
 - `settings.automation`, Open Automation, opens Settings at its Automation tab with focus on New automation; it works from Settings too (`docs/automation.md`).
 - `settings.integrations`, Open Integrations, opens Settings at its Integrations tab with focus on its first row's chevron, or on its first chip while nothing is connected; it works from Settings too (`docs/integrations.md`).

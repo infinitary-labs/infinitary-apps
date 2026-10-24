@@ -248,6 +248,11 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   "settings.keyboard": () =>
     openSettingsAt("keyboard", KEYBOARD_SEARCH, (search) => search.focus({ preventScroll: true })),
   "whats-new.show": () => showReleaseNote(null),
+  "firstmate.reply": () => {
+    const s = useShellStore.getState();
+    if (s.view !== "home") s.setView("home");
+    s.openReplyNote();
+  },
   "settings.usage": openUsage,
   "settings.automation": openAutomation,
   "settings.integrations": openIntegrations,

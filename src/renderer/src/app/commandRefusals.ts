@@ -54,6 +54,7 @@ export type RefusalState = Pick<
   | "thisMac"
   | "devicesShown"
   | "pendingCardActions"
+  | "lastTurn"
 >;
 
 /** What a refusal reads beyond the store: the window's own facts. */
@@ -267,6 +268,8 @@ const REFUSALS: Readonly<
   // From anywhere, Settings included: it goes home to the note.
   "whats-new.show": (s) =>
     s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : "No release notes yet",
+  // From anywhere, Settings included: it goes home to the note.
+  "firstmate.reply": (s) => (s.lastTurn?.reply ? null : "Your first mate has not replied yet"),
   // Usage is the record of the Mac Firstmate lives on (docs/usage.md).
   "settings.usage": usageRefusal,
   // Automation is the home's own, like Usage: the schedules run on that Mac.

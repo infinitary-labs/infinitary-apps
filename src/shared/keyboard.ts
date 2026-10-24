@@ -415,6 +415,18 @@ export const KEYBOARD_COMMANDS = {
     keys: [],
     searchWords: ["release", "notes", "changes", "version"],
   },
+  // The first mate's newest reply, whole, as a note at the front
+  // (docs/composer.md "The reply note"): chosen by name, so it opens after
+  // the line above the input has faded too.
+  "firstmate.reply": {
+    label: "Open the first mate's reply",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["answer", "message", "note", "last"],
+  },
   // Settings → Usage (docs/usage.md), chosen by name: it has no default key.
   "settings.usage": {
     label: "Open Usage",

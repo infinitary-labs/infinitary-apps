@@ -841,6 +841,9 @@
                           "completed",
                           "queued"
                         ]
+                      },
+                      "words": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -45486,6 +45489,9 @@
                                     "completed",
                                     "queued"
                                   ]
+                                },
+                                "words": {
+                                  "type": "string"
                                 }
                               },
                               "required": [
@@ -48939,6 +48945,9 @@
                   "completed",
                   "queued"
                 ]
+              },
+              "words": {
+                "type": "string"
               }
             },
             "required": [

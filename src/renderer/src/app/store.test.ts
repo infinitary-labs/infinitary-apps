@@ -2269,6 +2269,47 @@ describe("the last turn above the input (./LastTurn, docs/composer.md)", () => {
     expect(state().lastTurn).toEqual({ you: "A newer message", reply: null });
   });
 
+  // INF-1103, the captain's Approve and build on INF-1102's plan: a click
+  // on the reply line opens "A reading card the window holds, like a past
+  // card", showing the words "As the first mate wrote them".
+  it("opens the reply whole as one held note at the front, which Esc's close takes away", () => {
+    useShellStore.setState({
+      cards: [card({ id: "decision", status: "ready", actions: DECIDE })],
+      records: [],
+      collapsedCardIds: [],
+      cardIndex: 0,
+    });
+    expect(state().openReplyNote()).toBe(false);
+    expect(state().records).toEqual([]);
+    state().applyEvent({ type: "user_turn", text: "Can the Mac mini run the Linux checks?" });
+    state().applyEvent({
+      type: "firstmate_reply",
+      text: "Looking at: - which checks run; - the risk.",
+      words: "Looking at:\n- which checks run;\n- the risk.",
+      eligibility: "completed",
+    });
+    expect(state().openReplyNote()).toBe(true);
+    const shown = () => shownCard(state().cards, state().cardIndex, [], state().records);
+    expect(shown()?.replyNote).toEqual({
+      you: "Can the Mac mini run the Linux checks?",
+      words: "Looking at:\n- which checks run;\n- the risk.",
+      problem: false,
+    });
+    expect(isHeldEntry(shown())).toBe(true);
+    // A newer reply: opening again brings the one note forward with it.
+    state().nextCard();
+    state().applyEvent({ type: "user_turn", text: "Merge it" });
+    state().applyEvent({ type: "firstmate_reply", text: "Something went wrong", problem: true });
+    state().openReplyNote();
+    expect(state().records).toEqual([
+      { replyNote: { you: "Merge it", words: "Something went wrong", problem: true } },
+    ]);
+    expect(shown()?.replyNote?.words).toBe("Something went wrong");
+    state().closeRecord();
+    expect(state().records).toEqual([]);
+    expect(shown()?.id).toBe("decision");
+  });
+
   it("still ends the first-run hint on the first send", () => {
     useShellStore.setState({
       firstRun: { welcomedAt: null, firstTurnAt: null, gateOpen: false },

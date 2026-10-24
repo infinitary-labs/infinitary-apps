@@ -56,7 +56,8 @@ A completed reply fades after 15 seconds of visible reading time, then both line
 The count pauses while the window is inactive, the message area is hidden, or the pointer or a selection rests on the lines, and a problem, a queued receipt, an unanswered message or an unknown line stays until the next message.
 After the dissolve the slot stays empty, the same 40 px and the same 10 px gap, so the input does not move, and there is no control to bring the lines back.
 A relaunch shows the saved pair again and starts a fresh 15 seconds for a known completed reply.
-Neither line is a control: the pointer stays an arrow, a click does nothing, Tab passes over both, and neither draws an underline or a focus ring; resting on a cut line shows its whole text.
+The captain's line is not a control: the pointer stays an arrow, a click does nothing, Tab passes over it, and it draws no underline or focus ring; resting on a cut line shows its whole text.
+A finished or failed reply line is a button with no chrome of its own (INF-1102's plan, the captain's Approve and build): it takes the pointer, a Tab stop and the focus ring, and a click, Enter or Space opens the whole reply as a note at the front of the stack, titled with the captain's message in quotation marks, its words as the first mate wrote them; × or Esc closes it (`docs/composer.md` "The reply note").
 
 Keys: Enter sends.
 Shift+Enter or Option+Enter adds a line (right Option is the default voice key; Enter while recording is ignored).

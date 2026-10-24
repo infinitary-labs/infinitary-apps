@@ -127,17 +127,26 @@ export type PanelCardEntry = {
 };
 
 /**
+ * The Firstmate's reply, read whole on a note the window holds
+ * (docs/composer.md "The reply note"): the captain's message it answered
+ * and the reply's words, as they stood when the line was opened.
+ */
+export type ReplyNote = { you: string; words: string; problem: boolean };
+
+/**
  * Shell-held views at the front of the stack; never persisted or emitted as
  * cards. A task's record, a closed card read again as a past card
- * (FI3-579), a task's own browser (docs/task-browser.md, "The view"), a
+ * (FI3-579), the Firstmate's reply read whole (docs/composer.md "The reply
+ * note"), a task's own browser (docs/task-browser.md, "The view"), a
  * task's Crewmate tab (docs/task-card-tabs.md), or a panel's card - the
  * task board is the Tasks panel's (docs/task-board.md): one entry per task,
- * whichever of its tabs it shows, one per saved card, and any number of
- * each panel's cards, one per card id.
+ * whichever of its tabs it shows, one per saved card, one reply note, and
+ * any number of each panel's cards, one per card id.
  */
 export type OpenRecord =
   | { taskId: string; from?: EntryFrom }
   | { pastCardId: string }
+  | { replyNote: ReplyNote }
   | { browserTaskId: string; from?: EntryFrom | BrowserViewFrom }
   | { crewmateTaskId: string; from?: EntryFrom }
   | { panelCard: PanelCardEntry };
@@ -159,6 +168,7 @@ export type BrowserViewFrom = EntryFrom & { session: string; generation: number 
 export type StackEntry = Card & {
   recordTaskId?: string;
   pastCardId?: string;
+  replyNote?: ReplyNote;
   browserTaskId?: string;
   browserFrom?: EntryFrom | BrowserViewFrom;
   crewmateTaskId?: string;
@@ -166,6 +176,8 @@ export type StackEntry = Card & {
 };
 const recordEntryId = (taskId: string) => `record:${taskId}`;
 const pastEntryId = (cardId: string) => `past:${cardId}`;
+/** The one reply note's stack entry. */
+export const REPLY_NOTE_ENTRY_ID = "reply-note";
 const browserEntryId = (taskId: string) => `browser:${taskId}`;
 const crewmateEntryId = (taskId: string) => `crewmate:${taskId}`;
 /** A panel's card's stack entry, by its panel and its id there. */
@@ -175,18 +187,21 @@ const heldEntryId = (held: OpenRecord) =>
     ? recordEntryId(held.taskId)
     : "pastCardId" in held
       ? pastEntryId(held.pastCardId)
-      : "browserTaskId" in held
-        ? browserEntryId(held.browserTaskId)
-        : "crewmateTaskId" in held
-          ? crewmateEntryId(held.crewmateTaskId)
-          : panelCardEntryId(held.panelCard.panel, held.panelCard.id);
+      : "replyNote" in held
+        ? REPLY_NOTE_ENTRY_ID
+        : "browserTaskId" in held
+          ? browserEntryId(held.browserTaskId)
+          : "crewmateTaskId" in held
+            ? crewmateEntryId(held.crewmateTaskId)
+            : panelCardEntryId(held.panelCard.panel, held.panelCard.id);
 /**
- * Whether a stack entry is shell-held (a task record, a past card, a browser
- * view, a Crewmate tab or a panel's card), not a card.
+ * Whether a stack entry is shell-held (a task record, a past card, the reply
+ * note, a browser view, a Crewmate tab or a panel's card), not a card.
  */
 export const isHeldEntry = (entry: StackEntry | undefined): boolean =>
   entry?.recordTaskId !== undefined ||
   entry?.pastCardId !== undefined ||
+  entry?.replyNote !== undefined ||
   entry?.browserTaskId !== undefined ||
   entry?.crewmateTaskId !== undefined ||
   entry?.panelCard !== undefined;
@@ -251,24 +266,26 @@ export function visibleStack(
           ? { recordTaskId: held.taskId }
           : "pastCardId" in held
             ? { pastCardId: held.pastCardId }
-            : "browserTaskId" in held
-              ? // The page is 1280 wide: the view takes the stage's full width.
-                {
-                  browserTaskId: held.browserTaskId,
-                  ...(held.from ? { browserFrom: held.from } : {}),
-                  width: "full" as const,
-                }
-              : "crewmateTaskId" in held
-                ? // A transcript reads best wide, as the browser view does.
-                  { crewmateTaskId: held.crewmateTaskId, width: "full" as const }
-                : // As wide as its panel asked: the stack's own widths. Wide, the
-                  // default, is the stack's own default too - up to 800 px,
-                  // giving way to the docks before it folds them, as the task
-                  // board and a record do.
+            : "replyNote" in held
+              ? { replyNote: held.replyNote }
+              : "browserTaskId" in held
+                ? // The page is 1280 wide: the view takes the stage's full width.
                   {
-                    panelCard: held.panelCard,
-                    ...(held.panelCard.width === "wide" ? {} : { width: held.panelCard.width }),
-                  }),
+                    browserTaskId: held.browserTaskId,
+                    ...(held.from ? { browserFrom: held.from } : {}),
+                    width: "full" as const,
+                  }
+                : "crewmateTaskId" in held
+                  ? // A transcript reads best wide, as the browser view does.
+                    { crewmateTaskId: held.crewmateTaskId, width: "full" as const }
+                  : // As wide as its panel asked: the stack's own widths. Wide, the
+                    // default, is the stack's own default too - up to 800 px,
+                    // giving way to the docks before it folds them, as the task
+                    // board and a record do.
+                    {
+                      panelCard: held.panelCard,
+                      ...(held.panelCard.width === "wide" ? {} : { width: held.panelCard.width }),
+                    }),
         title: "",
         meta: "",
         body: "",
@@ -904,6 +921,14 @@ export type ShellState = {
   /** Opens or focuses a closed card's front stack entry, read-only (FI3-579). */
   openPastCard: (cardId: string) => void;
   /**
+   * Opens the Firstmate's newest reply whole, as a note the window holds at
+   * the front (docs/composer.md "The reply note"); false while no reply is
+   * kept, and nothing opens.
+   */
+  openReplyNote: () => boolean;
+  /** Closes the reply note wherever it sits; the shown entry stays shown. */
+  closeReplyNote: () => void;
+  /**
    * Opens or focuses one task's browser view at the front (docs/task-browser.md),
    * from a card's live attachment when `from` names it ("From a card").
    */
@@ -934,7 +959,7 @@ export type ShellState = {
   aimPanelCard: (panel: string, id: string, taskId: string | null) => void;
   /** Takes every card of a panel off the stack: it was removed, or the panels went off. */
   closePanelCards: (panel: string) => void;
-  /** Hide or Esc: closes the shown record, past card, browser view, Crewmate tab or panel card, if one is shown. */
+  /** Hide or Esc: closes the shown record, past card, reply note, browser view, Crewmate tab or panel card, if one is shown. */
   closeRecord: () => void;
   /** Closes one task's record wherever it sits; the shown entry stays shown. */
   closeTaskRecord: (taskId: string) => void;
@@ -2125,6 +2150,29 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
       };
     }),
+  openReplyNote: () => {
+    const turn = get().lastTurn;
+    if (!turn?.reply) return false;
+    const replyNote: ReplyNote = {
+      you: turn.you,
+      words: turn.reply.words ?? turn.reply.text,
+      problem: turn.reply.problem === true,
+    };
+    set((s) => {
+      // One reply note: opening it again shows the newest reply at the front.
+      const records: OpenRecord[] = [
+        { replyNote },
+        ...s.records.filter((record) => !("replyNote" in record)),
+      ];
+      return {
+        records,
+        cardIndex: 0,
+        phase: derivePhase(s.recording, s.cards, s.firstmateBusy, s.collapsedCardIds, records),
+      };
+    });
+    return true;
+  },
+  closeReplyNote: () => set((s) => closeHeld(s, (record) => "replyNote" in record)),
   openBrowserView: (taskId, from) =>
     set((s) => {
       const records = [
@@ -2232,6 +2280,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     const entry = shownCard(s.cards, s.cardIndex, s.collapsedCardIds, s.records);
     if (entry?.recordTaskId) get().closeTaskRecord(entry.recordTaskId);
     else if (entry?.pastCardId) get().closePastCard(entry.pastCardId);
+    else if (entry?.replyNote) get().closeReplyNote();
     else if (entry?.browserTaskId) get().closeBrowserView(entry.browserTaskId);
     else if (entry?.crewmateTaskId) get().closeCrewmateView(entry.crewmateTaskId);
     else if (entry?.panelCard) get().closePanelCard(entry.panelCard.panel, entry.panelCard.id);
@@ -2418,6 +2467,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
         text: event.text,
         ...(event.problem ? { problem: true } : {}),
         ...(event.eligibility ? { eligibility: event.eligibility } : {}),
+        ...(event.words ? { words: event.words } : {}),
       };
       set((s) =>
         s.lastTurn

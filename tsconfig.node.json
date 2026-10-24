@@ -97,6 +97,7 @@
     "src/renderer/src/settings/projectsWords.ts",
     "src/renderer/src/cards/cardBodyWords.ts",
     "src/renderer/src/app/firstRunGateWords.ts",
+    "src/renderer/src/app/lastTurnWords.ts",
     "src/renderer/src/personal/panelBoundaryWords.ts",
     "src/renderer/src/plugins/panelTasks.ts",
     "src/panels/knowledge/words.ts"

@@ -31,6 +31,18 @@ export function replyLine(facts: ReplyFacts): string | undefined {
   return closing || typed;
 }
 
+/**
+ * The closing words as the Firstmate wrote them, line breaks kept, when they
+ * are the reply line and differ from it: the reply note shows them
+ * (docs/composer.md "The reply note"). Otherwise nothing, and the note shows
+ * the line.
+ */
+export function replyWords(facts: ReplyFacts): string | undefined {
+  const words = facts.closing?.trim();
+  const line = replyLine(facts);
+  return words && line !== undefined && words !== line ? words : undefined;
+}
+
 /** Starting work says what took effect, not just the work still to do. */
 export function startedReply(title: string): string {
   return `Started: ${title}`;

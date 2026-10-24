@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "reply-note",
+      "kind": "feature",
+      "area": "message-box",
+      "title": "Click your first mate's reply to read all of it",
+      "body": "The first mate's reply above the message box is now a button. Click it, or press Enter or Space on it, and the whole reply opens as a note in front of your cards, with its line breaks as the first mate wrote them and your message as its title. Close it with × or Esc. Open the first mate's reply in command search opens it too, even after the line has faded.",
+      "picture": {
+        "dark": "reply-note-dark.webp",
+        "light": "reply-note-light.webp",
+        "alt": "A note titled with the captain's question in quotation marks, showing the first mate's reply as a short list, above the reply line and the message box"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

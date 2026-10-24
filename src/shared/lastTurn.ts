@@ -25,6 +25,12 @@ export const lastTurnReplySchema = z.object({
   problem: z.boolean().optional(),
   /** Typed, never inferred from the words. Absent is unknown, and the line stays. */
   eligibility: lastTurnEligibilitySchema.optional(),
+  /**
+   * The Firstmate's closing words as it wrote them, line breaks kept, when
+   * they differ from the one-line `text`: the reply note shows them
+   * (docs/composer.md "The reply note"). Absent, the note shows `text`.
+   */
+  words: z.string().optional(),
 });
 export type LastTurnReply = z.infer<typeof lastTurnReplySchema>;
 

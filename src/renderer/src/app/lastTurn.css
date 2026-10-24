@@ -10,7 +10,10 @@
  * line takes at most 80% of the width and its words are cut with an
  * ellipsis inside the marks; the pair is 40 px tall and 10 px above the
  * input's top edge, in the slot hung from that edge, so it never moves the
- * input. Neither line is a control: no pointer, underline or focus ring.
+ * input. The captain's line is plain text: no pointer, underline or focus
+ * ring. A finished or failed reply line is a button (docs/composer.md "The
+ * reply note"): the pointer, a Tab stop and the focus ring, and no other
+ * chrome, so it still reads as a line of type.
  *
  * A pair enters with a 6 px rise over --dur-med; the pair a new message
  * replaces leaves over --dur-fast. The working words leave over --dur-fast
@@ -70,8 +73,8 @@
 }
 
 [data-last-turn-bubble] {
-  /* Plain text, never a control: it takes the pointer only so a cut line
-     shows its whole text on rest. */
+  /* It takes the pointer so a cut line shows its whole text on rest; the
+     captain's line is plain text, and the reply line a button (below). */
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -86,6 +89,18 @@
 }
 [data-last-turn-bubble="you"] {
   color: var(--fg-2);
+}
+/* The reply line as a button: the same line of type, with the pointer. */
+button[data-last-turn-bubble] {
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--radius-s);
+  background: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: inherit;
+  cursor: pointer;
 }
 
 /* The words inside their quotation marks: the marks stay whole, and the words are cut. */

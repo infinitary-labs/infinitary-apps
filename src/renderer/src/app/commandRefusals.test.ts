@@ -47,6 +47,7 @@ const HOME: RefusalState = {
   thisMac: null,
   devicesShown: true,
   pendingCardActions: {},
+  lastTurn: { you: "Is it done?", reply: { text: "Not yet." } },
 };
 const CLEAR: WindowFacts = { dialogOpen: false };
 

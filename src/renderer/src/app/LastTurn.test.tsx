@@ -85,11 +85,19 @@ describe("the last turn above the input", () => {
     expect(mate).toBeUndefined();
   });
 
-  it("draws both lines as plain text that nothing can click or reach by Tab", () => {
-    for (const busy of [true, false]) {
-      const { html } = render({ you: "Cut another alpha", reply: { text: "Got it" } }, busy);
-      expect(html).not.toMatch(/<(button|a|input)\b/);
-      expect(html).not.toMatch(/\b(tabindex|href)=|role="(button|link)"/);
+  // INF-1103, the captain's Approve and build on INF-1102's plan: the reply
+  // line is a button that opens the whole reply; the captain's own line and
+  // the working words stay plain text.
+  it("makes a finished or failed reply line the one button, and leaves the rest plain text", () => {
+    const working = render({ you: "Cut another alpha", reply: null }, true);
+    expect(working.html).not.toMatch(/<(button|a|input)\b/);
+    expect(working.html).not.toMatch(/\b(tabindex|href)=|role="(button|link)"/);
+    for (const reply of [{ text: "Got it" }, { text: "Something went wrong", problem: true }]) {
+      const { html } = render({ you: "Cut another alpha", reply });
+      expect(html.match(/<button\b[^>]*>/g)).toEqual([
+        expect.stringMatching(/data-last-turn-bubble="firstmate"/),
+      ]);
+      expect(html).toMatch(/<span[^>]*data-last-turn-bubble="you"/);
     }
   });
 });

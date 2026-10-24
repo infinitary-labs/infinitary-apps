@@ -1,5 +1,7 @@
 import { readStoredCredential } from "@earendil-works/pi-coding-agent";
 import { COPILOT_PROVIDER_ID } from "@shared/providers";
+import { isSuccess, type QuotaHttp, requestHeaders } from "../quota/http";
+import { asRecord } from "../quota/json";
 import type { ResolvedProviderAuth } from "./piAuth";
 
 export { COPILOT_PROVIDER_ID };
@@ -55,6 +57,34 @@ function enterpriseDomain(value: unknown): string | undefined {
   const trimmed = value.trim();
   try {
     return new URL(trimmed.includes("://") ? trimmed : `https://${trimmed}`).hostname || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * The GitHub username a Copilot account signed in as, read once after its
+ * sign-in lands so the account is named by it (INF-838). The read is
+ * GitHub's own `/user`, with the GitHub sign-in the meter reads and the
+ * read-user permission that sign-in already holds; nothing new is asked of
+ * GitHub. Undefined when the sign-in is unreadable or GitHub does not
+ * answer with a username: the account then keeps its positional name.
+ */
+export async function copilotGitHubLogin(
+  authPath: string,
+  http: QuotaHttp,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  const auth = copilotMeterAuth(authPath);
+  if (!auth) return undefined;
+  try {
+    const result = await http(`${auth.baseUrl}/user`, {
+      headers: requestHeaders(auth, { Accept: "application/json" }),
+      ...(signal ? { signal } : {}),
+    });
+    if (!isSuccess(result.status)) return undefined;
+    const login = asRecord(result.json)?.login;
+    return typeof login === "string" && login.trim().length > 0 ? login.trim() : undefined;
   } catch {
     return undefined;
   }

@@ -74,6 +74,8 @@ Copilot assumes github.com: Pi's Enterprise question is answered before it reach
 Sign in again answers it from the account's stored Enterprise address, so it asks nothing the account already knows.
 The code lasts as long as the provider says (`expiresAt` on the notice), not the app's own five-minute limit; an expired code reads "The code expired." with Get a new code.
 Cancel ends the wait at once over `inf:auth:cancel` and shows no error, and an approved sign-in brings the window forward.
+A new Copilot account is named by the GitHub username that signed in: once the sign-in lands, the Pi backend reads GitHub's `/user` once with the read-user permission the sign-in already holds (`copilotGitHubLogin` in `src/core/pi/copilotMeter.ts`) and reports it as the account's identity, so the row opens with no rename box.
+When GitHub does not answer with a username, the account keeps its positional name and the rename box opens as for any other.
 A sign-in that fails shows its reason beside the row or chip it started from (`data-settings-error="sign-in"`), not at the foot of the tab.
 `src/shared/providers.test.ts` owns the Enterprise address check, and `tests/e2e/copilot-sign-in.spec.ts` the journey.
 

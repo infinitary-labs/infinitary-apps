@@ -38,8 +38,9 @@ export const accountViewSchema = z.object({
   lastConnectedAt: z.number().optional(),
   /**
    * Who the provider says signed in - an email or org - where the provider
-   * reports one at all. Pi has no identity surface; Claude does. Never a
-   * credential, and never the internal account id.
+   * reports one at all: Claude's email, or the GitHub username a Copilot
+   * account signed in as. Never a credential, and never the internal
+   * account id.
    */
   identity: z.string().optional(),
   /** The plan the provider reports ("Max", "Pro"), when it reports one. */

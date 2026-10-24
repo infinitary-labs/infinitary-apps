@@ -922,8 +922,9 @@ export function SubscriptionsTab() {
       .then((added) => {
         // The sign-in finished in the browser: the window comes forward.
         void window.infinitary.app.controlWindow("front").catch(() => {});
-        // Invite a rename right away ("Personal", "Work #2" are editable).
-        setRenamingId(added.id);
+        // Invite a rename right away ("Personal", "Work #2" are editable),
+        // unless the sign-in named the account itself.
+        if (!added.identity) setRenamingId(added.id);
       })
       .catch((caught) => ended({ foot: provider.id }, provider.id, caught))
       .finally(() => {

@@ -14,13 +14,16 @@ import { pressKey, typeInto } from "./windowKeys";
  * INF-838): the chip goes straight to the code, github.com is assumed with a
  * GitHub Enterprise row, one press copies the code and opens GitHub, Cancel
  * ends the wait quietly, an expired code offers a new one, and signing in
- * again asks nothing the account already knows.
+ * again asks nothing the account already knows. A new account is named by
+ * the GitHub username that signed in.
  */
 
 /** The code GitHub's stand-in hands out, and the token it grants once approved. */
 const USER_CODE = "WDJB-MJHT";
 const ENTERPRISE = "acme.ghe.com";
 const GITHUB = "GitHub";
+/** The GitHub username the stand-in's `/user` answers with. */
+const USERNAME = "octocat";
 
 type StandIn = { approve: boolean; expiresIn: number; asked: string[]; opened: string[] };
 
@@ -64,6 +67,7 @@ async function standInGitHub(launched: LaunchedApp) {
           token: "tid=stand-in;exp=4000000000;proxy-ep=proxy.individual.githubcopilot.com",
           expires_at: 4000000000,
         });
+      if (url.pathname === "/user") return json({ login: "octocat", id: 583231, type: "User" });
       if (url.pathname.endsWith("/models")) return json({ data: [] });
       if (url.hostname === "127.0.0.1") return real(input, init);
       return new Response("{}", { status: 404 });
@@ -172,17 +176,18 @@ test("the first screen's Copilot chip goes straight to the code, by keys, throug
     await pressKey(expired.getByRole("button", { name: CODE_STEP_WORDS.newCode }), "Enter");
     await expect(step.locator("[data-code-step-code]")).toHaveText(USER_CODE);
 
-    // Approved on GitHub: the account is added and the step closes.
+    // Approved on GitHub: the account is added, named by the GitHub
+    // username that signed in, and the step closes.
     await setStandIn(launched, { approve: true });
     await expect
       .poll(
         async () =>
           (await page.evaluate(() => window.infinitary.accounts.list())).map(
-            (account) => account.providerId,
+            ({ providerId, label }) => ({ providerId, label }),
           ),
         { timeout: 20_000 },
       )
-      .toEqual([COPILOT_PROVIDER_ID]);
+      .toEqual([{ providerId: COPILOT_PROVIDER_ID, label: USERNAME }]);
     await expect(step).toHaveCount(0);
   } finally {
     await launched.close();

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "copilot-github-username",
+      "kind": "feature",
+      "title": "A new Copilot account is named by your GitHub username",
+      "body": "When you add a Copilot account, Infinitary names it by the GitHub username you signed in with, instead of Personal. You can still rename it from the account's menu.",
+      "area": "subscriptions",
+      "picture": {
+        "dark": "copilot-github-username-dark.webp",
+        "light": "copilot-github-username-light.webp",
+        "alt": "Settings, Intelligence, with two Copilot accounts: Work, and a new one named octocat by its GitHub username"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

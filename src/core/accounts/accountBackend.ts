@@ -38,8 +38,8 @@ export type AccountStatus = {
   authType?: "oauth" | "api_key";
   /**
    * Harness-reported identity for the label suggestion and the account line,
-   * when the backend has one. Pi has no identity surface; Claude reports an
-   * email address and a plan.
+   * when the backend has one. Claude reports an email address and a plan;
+   * Pi reports a Copilot account's GitHub username, read when it signs in.
    */
   identity?: { label?: string; plan?: string };
   /**

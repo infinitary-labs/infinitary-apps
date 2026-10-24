@@ -4,6 +4,7 @@ import { type AuthNotice, type AuthPromptView, CODE_STEP_WORDS } from "@shared/p
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { appPathsFor } from "../paths";
+import type { QuotaHttp } from "../quota/http";
 import type { AuthInteractionBridge } from "./piAuth";
 
 /**
@@ -32,12 +33,17 @@ const fakes = vi.hoisted(() => ({
   /** Holds runtime creation open, like Pi's slow catalog attach. */
   beforeCreate: undefined as (() => Promise<void>) | undefined,
   createFinished: { value: false },
+  /** The newest runtime's store paths, so a fake login writes where Pi would. */
+  lastCreate: undefined as { authPath: string } | undefined,
 }));
 
-vi.mock("@earendil-works/pi-coding-agent", async () => {
+vi.mock("@earendil-works/pi-coding-agent", async (importOriginal) => {
   const { mkdirSync } = await import("node:fs");
   const { dirname } = await import("node:path");
   return {
+    // Pi's own read of a stored credential, as the Copilot meter uses it.
+    readStoredCredential: (await importOriginal<typeof import("@earendil-works/pi-coding-agent")>())
+      .readStoredCredential,
     ModelRuntime: {
       create: vi.fn(
         async (options: { authPath: string; modelsPath: string; modelsStorePath?: string }) => {
@@ -50,6 +56,7 @@ vi.mock("@earendil-works/pi-coding-agent", async () => {
           mkdirSync(dirname(storePath), { recursive: true });
           writeFileSync(storePath, "{}");
           fakes.createFinished.value = true;
+          fakes.lastCreate = { authPath: options.authPath };
           return {
             login: vi.fn(
               (providerId: string, type: string, interaction: Parameters<LoginFn>[2]) => {
@@ -296,6 +303,73 @@ describe("PiAccountBackend code sign-in (INF-842)", () => {
     await vi.advanceTimersByTimeAsync(400);
     await turn();
     expect(settled).toBe(false);
+  });
+});
+
+describe("PiAccountBackend Copilot account name (INF-838)", () => {
+  afterEach(() => {
+    fakes.login = undefined;
+  });
+
+  /** Pi's Copilot login once GitHub approved: the GitHub sign-in it stores. */
+  const approved: LoginFn = async (providerId) => {
+    const { authPath } = fakes.lastCreate as { authPath: string };
+    writeFileSync(
+      authPath,
+      JSON.stringify({
+        [providerId]: {
+          type: "oauth",
+          refresh: "gho_signed_in",
+          access: "tid=signed-in;exp=4000000000;proxy-ep=proxy.individual.githubcopilot.com",
+          expires: 4_000_000_000_000,
+        },
+      }),
+    );
+  };
+
+  /** GitHub's `/user` answer, trimmed to the fields a real one opens with. */
+  function github(status: number) {
+    const asked: { url: string; authorization: string | undefined }[] = [];
+    const http: QuotaHttp = async (url, init) => {
+      asked.push({ url, authorization: init.headers?.Authorization });
+      return status === 200
+        ? {
+            status,
+            json: { login: "octocat", id: 583231, node_id: "MDQ6VXNlcjU4MzIzMQ==", type: "User" },
+          }
+        : { status, json: { message: "Bad credentials" } };
+    };
+    return { asked, http };
+  }
+
+  function namingVault(http: QuotaHttp) {
+    return AccountVault.create(appPathsFor(scratchDir("infinitary-pi-name-")), {
+      pi: new PiAccountBackend({ http }),
+    });
+  }
+
+  it("names a new Copilot account by the GitHub username it signed in as, read once", async () => {
+    fakes.login = approved;
+    const { asked, http } = github(200);
+    const subject = namingVault(http);
+    const account = await subject.add("github-copilot", "oauth", bridge());
+    expect(account.label).toBe("octocat");
+    expect(asked).toEqual([
+      { url: "https://api.github.com/user", authorization: "Bearer gho_signed_in" },
+    ]);
+    const [view] = await subject.views();
+    expect(view).toMatchObject({ label: "octocat", identity: "octocat" });
+    expect(asked).toHaveLength(1);
+  });
+
+  it("keeps the positional name when GitHub does not say who signed in", async () => {
+    fakes.login = approved;
+    const { http } = github(401);
+    const subject = namingVault(http);
+    const account = await subject.add("github-copilot", "oauth", bridge());
+    expect(account.label).toBe("Personal");
+    const [view] = await subject.views();
+    expect(view?.identity).toBeUndefined();
   });
 });
 

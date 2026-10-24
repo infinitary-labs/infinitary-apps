@@ -11,7 +11,8 @@ import {
   statusFromHealth,
 } from "../accounts/accountBackend";
 import type { CredentialHealth, RenewalOutcome, RenewReason } from "../accounts/credentialHealth";
-import { COPILOT_PROVIDER_ID, copilotEnterpriseHost } from "./copilotMeter";
+import { createQuotaHttp, type QuotaHttp } from "../quota/http";
+import { COPILOT_PROVIDER_ID, copilotEnterpriseHost, copilotGitHubLogin } from "./copilotMeter";
 import { CustomApiAccountOwner } from "./customApiAccounts";
 import { createModelRuntime } from "./modelRuntime";
 import { buildAuthInteraction } from "./piAuthInteraction";
@@ -43,6 +44,8 @@ export type PiAccountBackendOptions = {
   modelsPath?: string;
   /** A runtime's model list settled. The computer tells its home which models it serves. */
   onCatalogRefreshed?: () => void;
+  /** How a Copilot sign-in reads its GitHub username; production reads GitHub. */
+  http?: QuotaHttp;
 };
 
 /**
@@ -70,12 +73,21 @@ export class PiAccountBackend implements AccountBackend {
   private readonly loginTimeoutMs: number;
   private readonly modelsPath: string | undefined;
   private readonly onCatalogRefreshed: (() => void) | undefined;
+  private readonly http: QuotaHttp;
+  /**
+   * The GitHub username each Copilot account signed in as, read once when
+   * its sign-in lands, and reported as the account's identity so the vault
+   * names a new account by it (INF-838).
+   */
+  private readonly signedInAs = new Map<string, string>();
 
   constructor(options: PiAccountBackendOptions = {}) {
     this.loginIdleTimeoutMs = options.loginIdleTimeoutMs ?? LOGIN_IDLE_TIMEOUT_MS;
     this.loginTimeoutMs = options.loginTimeoutMs ?? LOGIN_TIMEOUT_MS;
     this.modelsPath = options.modelsPath;
     this.onCatalogRefreshed = options.onCatalogRefreshed;
+    // The platform's fetch as it stands at each read, not at construction.
+    this.http = options.http ?? createQuotaHttp((input, init) => fetch(input, init));
   }
 
   authTypes(): ("oauth" | "api_key")[] {
@@ -150,6 +162,11 @@ export class PiAccountBackend implements AccountBackend {
         signal: abort.signal,
       });
       enforceAuthFileMode(request.dir);
+      if (request.providerId === COPILOT_PROVIDER_ID) {
+        const login = await copilotGitHubLogin(authPathIn(request.dir), this.http, abort.signal);
+        if (login) this.signedInAs.set(request.accountId, login);
+        else this.signedInAs.delete(request.accountId);
+      }
     })();
     const swallowed = work.then(
       () => undefined,
@@ -221,9 +238,11 @@ export class PiAccountBackend implements AccountBackend {
     try {
       const runtime = await this.runtimeFor(account);
       if (!runtime.hasConfiguredAuth(account.providerId)) return { state: "unsigned" };
+      const login = this.signedInAs.get(account.accountId);
       return {
         state: "healthy",
         authType: runtime.isUsingOAuth(account.providerId) ? "oauth" : "api_key",
+        ...(login ? { identity: { label: login } } : {}),
       };
     } catch {
       return { state: "degraded", reason: "unknown" };
@@ -243,6 +262,7 @@ export class PiAccountBackend implements AccountBackend {
   }
 
   forget(accountId: string): void {
+    this.signedInAs.delete(accountId);
     this.runtimes.delete(accountId);
     this.ready.delete(accountId);
   }

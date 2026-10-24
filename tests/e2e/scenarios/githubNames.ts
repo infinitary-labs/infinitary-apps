@@ -1,6 +1,7 @@
 import { INTEGRATIONS_COMMAND } from "../../../src/core/integrations";
 import { INTEGRATION_KIND_NAMES } from "../../../src/shared/integrations";
-import { calledTool, type Scenario, sinceLastUser } from "../mockProvider";
+import { browserShellMessages, calledTool, type Scenario } from "../mockProvider";
+import { providerMessages } from "../providerRequest";
 
 /** INF-882: a crew read by each distinct name must reach its original connection. */
 export const GITHUB_NAMES_PROMPT = "read my GitHub account and my renamed server";
@@ -12,7 +13,18 @@ export const githubNames: Scenario =
   ({ body, isFirstmate, wantsStream }) => {
     if (isFirstmate || !wantsStream || !body.includes(GITHUB_NAMES_PROMPT)) return undefined;
     if (calledTool(body, "report")) return { text: "done" };
-    const results = sinceLastUser(body).results;
+    // A read past the Pi shell's limit answers with its job's receipt, and its
+    // answer comes later as the job's exit wake. Read through the shell reader
+    // the browser uses: the receipt is no answer, and the exit wake is the
+    // read's answer, never a new assignment (INF-1141). While the job runs,
+    // end the turn without words: its exit wake is the next turn, and words
+    // now would be one more report on the task.
+    const { readings, pending: running } = browserShellMessages(providerMessages(body));
+    if (running) return { text: "" };
+    const assignment = readings.findLastIndex((message) => message.role === "user");
+    const results = readings
+      .slice(assignment + 1)
+      .flatMap((message) => (message.role === "tool" ? [message.text] : []));
     const reads = [
       INTEGRATIONS_COMMAND,
       `${INTEGRATIONS_COMMAND} call GitHub read '{"path":"/user"}'`,

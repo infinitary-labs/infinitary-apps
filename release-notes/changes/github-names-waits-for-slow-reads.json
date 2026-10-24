@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "github-names-waits-for-slow-reads",
+      "reason": "Test only: the GitHub-names journey's stand-in crewmate reads an integrations command that outlasts the shell's limit from its job's exit, instead of reporting the job's receipt as that read's answer. A regression test replays a slow read at each of its reads."
+    }
+  ]
+}

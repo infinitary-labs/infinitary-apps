@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { type RefObject, useLayoutEffect, useRef, useState } from "react";
 import { motionEase, motionToken } from "../../design/motion";
 import { CREW_HOVER } from "./hover";
 
@@ -57,7 +57,11 @@ export function useSummaryPresence<T>(pointed: T | null): SummaryShown<T> {
   const live = useRef(state);
   live.current = state;
   const goneAt = useRef(Number.NEGATIVE_INFINITY);
-  useEffect(() => {
+  // A layout effect, so the beat's timer for an anchor the pointer left is
+  // cleared in the same commit that lets it go. A passive effect's cleanup
+  // runs a task later, and a timer due in between opened a summary for an
+  // anchor no longer pointed at, which then stayed.
+  useLayoutEffect(() => {
     const root = document.documentElement;
     const moving = motionToken(root, "--dur-quick") > 0;
     const next = summaryNext(live.current, pointed, performance.now() - goneAt.current, moving);

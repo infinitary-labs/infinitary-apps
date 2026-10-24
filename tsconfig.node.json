@@ -86,8 +86,10 @@
     // from it, and the rush reads the black hole's schedule.
     "src/renderer/src/character/crew/rush.ts",
     "src/renderer/src/character/blackhole.ts",
-    // The stage clock is pure too; the crew hover e2e reads its slow rate.
+    // The stage clock is pure too; the crew hover e2e reads its slow rate,
+    // and the summary's beat from the hover measures.
     "src/renderer/src/character/stageClock.ts",
+    "src/renderer/src/character/crew/hoverMeasures.ts",
     // The Crewmate tab's state is pure; placed-session checks read running calls through its owner.
     "src/renderer/src/cards/crewmateState.ts",
     // Words the e2e specs read from their owner (docs/e2e-contracts.md,

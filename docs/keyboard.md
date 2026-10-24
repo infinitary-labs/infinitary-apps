@@ -432,6 +432,8 @@ It takes focus only if the captain began no other press since the pointing: a cl
 A card that took focus in the middle of that press would turn away the click it ends in, such as one on the next Tasks row, because a frame's click counts only while its frame holds focus (INF-551).
 The window counts each press as it begins, a pointer going down or a key that is not a held key repeating, on its own page and inside every frame, whose bridge says so (`pressed`; `src/renderer/src/app/presses.ts`).
 So the card still comes forward and shows, and focus stays where the captain's press put it.
+A frame's notice reaches the window in the order the frame sent it, but the frame's process can send it late, after the window has read the task pointed at and drawn its card (INF-1146).
+A pointing from a panel therefore asks that panel's frame to answer (`hearFrameOut`, `FrameController.heard`), and the card decides on focus once every frame asked has answered, while it is still the card shown for that pointing.
 The request for focus belongs to the visit it was made for: when another card or a record comes forward before the card appears, the request is let go, so it never takes focus on a later visit.
 
 Focus stays put when a push draws a task's record anew.

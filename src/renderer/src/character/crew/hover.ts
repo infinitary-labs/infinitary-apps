@@ -1,33 +1,13 @@
+import { CREW_HOVER } from "./hoverMeasures";
 import type { CrewmateFrame, OrbitFrame } from "./orbit";
+
+export { CREW_HOVER } from "./hoverMeasures";
 
 // Pointing at the crew (FI3-398): where the stage's slow zone ends, which
 // crewmate the pointer is on, and where that crewmate's summary sits. The crew
 // are painted on canvases that ignore the pointer, so this is a hit test
 // against the frames the orbit already hands the painter. Pure geometry in
 // screen pixels measured from the formation's centre; no clock, no DOM.
-
-export const CREW_HOVER = {
-  /** The pointer is on a crewmate within its glyph's half-size plus this, px... */
-  padPx: 8,
-  /** ...and never within less than this, px. */
-  minPx: 18,
-  /** It stays on that crewmate out to this many times the acquire radius. */
-  release: 1.6,
-  /**
-   * The stage slows this far outside an occupied orbit or from a crewmate,
-   * px: past the reach of the largest glyph, so it slows just before the
-   * pointer lands.
-   */
-  zoneMarginPx: 28,
-  /** The summary opens this long after the pointer lands, ms. */
-  dwellMs: 130,
-  /** The corner brackets stand this far outside the glyph, px. */
-  bracketPadPx: 4,
-  /** Clear air between the crewmate and its summary, where the hairline runs, px. */
-  leadPx: 14,
-  /** The summary is never wider than this, px; a longer line ends in an ellipsis. */
-  maxWidthPx: 360,
-};
 
 type Target = Pick<CrewmateFrame, "id" | "x" | "y" | "size" | "depth" | "phase" | "unfold">;
 

@@ -3,6 +3,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { CREW_HOVER } from "../../src/renderer/src/character/crew/hoverMeasures";
 import { modelDisplayName } from "../../src/shared/modelDisplayName";
 import { modelFootnote } from "../../src/shared/modelReason";
 import type { NowGroup } from "../../src/shared/nowPanel";
@@ -528,6 +529,75 @@ test("a crewmate and its Tasks row light each other, and the stage keeps its spe
       await expect(formation).toHaveAttribute("data-crew-lit", second.id);
       expect(await crewInspecting(page)).toBeNull();
     });
+  } finally {
+    await app.close();
+  }
+});
+
+/**
+ * INF-1146 (crew-hover.spec.ts:514 in run 40092988228: a crew target stayed
+ * where none was expected): the summary's beat comes due just as the
+ * pointer leaves its crewmate, and nothing opens. The beat's timer is held
+ * in the page and comes due in the very task that lets the crewmate go,
+ * before any later task, so the order the failing run met by chance is the
+ * order of every run. The data: two crewmates. The completion signal: the
+ * window has let the crewmate go and the held beat has had its turn.
+ * Platform and shared resources: none beyond the hermetic launch.
+ */
+test("a pointer that leaves a crewmate as its summary's beat comes due opens no summary", async () => {
+  const fixture = await roster(2);
+  const app = await launchApp({ ...fixture, withMockProvider: true });
+  try {
+    const { page } = app;
+    await expect(crewModelNames(page)).toHaveCount(2);
+    await page.evaluate((beat) => {
+      type Held = { run: () => void; cleared: boolean };
+      const held = new Map<number, Held>();
+      const state = { held: 0, armed: false, letGo: false };
+      Object.assign(window, { heldBeats: state });
+      const setTimer = window.setTimeout.bind(window);
+      const clearTimer = window.clearTimeout.bind(window);
+      let next = -1;
+      window.setTimeout = ((handler: TimerHandler, delay?: number, ...args: unknown[]) => {
+        if (delay !== beat || typeof handler !== "function")
+          return setTimer(handler, delay, ...args);
+        const id = next--;
+        held.set(id, { run: () => handler(...args), cleared: false });
+        state.held += 1;
+        return id;
+      }) as typeof window.setTimeout;
+      window.clearTimeout = ((id?: number) => {
+        const timer = id === undefined ? undefined : held.get(id);
+        if (timer) timer.cleared = true;
+        else clearTimer(id);
+      }) as typeof window.clearTimeout;
+      // The window lets the crewmate go: every beat still held comes due now.
+      const formation = document.querySelector("[data-crew-formation]");
+      if (!formation) throw new Error("The crew formation is not drawn");
+      new MutationObserver(() => {
+        if (!state.armed || state.letGo || formation.hasAttribute("data-crew-inspecting")) return;
+        state.letGo = true;
+        for (const timer of held.values()) {
+          if (timer.cleared) continue;
+          timer.cleared = true;
+          timer.run();
+        }
+      }).observe(formation, { attributes: true, attributeFilter: ["data-crew-inspecting"] });
+    }, CREW_HOVER.dwellMs);
+    type Beats = { held: number; armed: boolean; letGo: boolean };
+    const read = () => page.evaluate(() => (window as unknown as { heldBeats: Beats }).heldBeats);
+
+    await pointAtCrewmate(page);
+    // The beat for the crewmate pointed at waits, held.
+    expect((await read()).held).toBeGreaterThan(0);
+    await page.evaluate(() => {
+      (window as unknown as { heldBeats: Beats }).heldBeats.armed = true;
+    });
+    await page.mouse.move(4, 400);
+    await expect.poll(async () => (await read()).letGo).toBe(true);
+    await nextFrame(page);
+    expect(await crewInspecting(page)).toBeNull();
+    await expect(page.locator("[data-crew-target]")).toHaveCount(0);
   } finally {
     await app.close();
   }

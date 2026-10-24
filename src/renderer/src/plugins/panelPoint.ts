@@ -17,6 +17,7 @@ import {
   useShellStore,
 } from "../app/store";
 import { isView } from "../devices/viewWords";
+import { hearFrameOut } from "./frames/frameFocus";
 import { pluginHost } from "./host";
 import { useLitTaskId } from "./point/litTask";
 import { openTask } from "./point/openTask";
@@ -139,10 +140,12 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
   };
   return {
     // Each pointing counts the captain's presses before it waits on the
-    // gate: a press he begins meanwhile keeps focus (app/presses.ts).
+    // gate: a press he begins meanwhile keeps focus (app/presses.ts), and
+    // one begun in the page's frame counts once the frame has answered.
     openTask: async (taskId) => {
       need("openTask");
       const since = pressesSoFar();
+      hearFrameOut(page.frame());
       const id = idOf("openTask", taskId);
       const task = listed(id);
       if (!task || !(await page.gate())) return false;
@@ -155,6 +158,7 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
     openRecord: async (taskId) => {
       need("openRecord");
       const since = pressesSoFar();
+      hearFrameOut(page.frame());
       const id = idOf("openRecord", taskId);
       const task = listed(id);
       if (!task || !(await page.gate())) return false;
@@ -184,6 +188,7 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
     showCard: async (cardId) => {
       need("showCard");
       const since = pressesSoFar();
+      hearFrameOut(page.frame());
       const id = z.string().min(1).max(128).safeParse(cardId);
       if (!id.success) throw new Error("point.showCard: name the card by its waitingCardId");
       const waits = boardOnScreen()?.tasks.some(

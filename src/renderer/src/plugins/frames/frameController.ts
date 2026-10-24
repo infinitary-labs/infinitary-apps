@@ -223,7 +223,10 @@ export type FrameMountSpec = {
   };
 };
 
-/** How long a footer click waits for the frame's fresh reading of its form. */
+/**
+ * How long the window waits on a frame's answer: a footer click's fresh
+ * reading of its form, a reveal, and a pointing heard out (`heard`).
+ */
 export const FRAME_COLLECT_TIMEOUT_MS = 1_000;
 
 /** How often an armed controller pings its frame. */
@@ -312,7 +315,11 @@ export class FrameController {
   private readonly subscriptions = new Map<number, () => void>();
   private watchdog: unknown = null;
   private pingSeq = 0;
+  /** The watchdog's own last ping; `heard` pings in between. */
+  private watchedSeq = 0;
   private answeredSeq = 0;
+  /** Each `heard` waiting on the pong to its own ping, by that ping's number. */
+  private readonly hearing = new Map<number, () => void>();
   private missed = 0;
   private unborn = 0;
   private mainAsked = 0;
@@ -517,6 +524,7 @@ export class FrameController {
       }
       case "pong":
         if (message.seq > this.answeredSeq) this.answeredSeq = message.seq;
+        for (const [seq, heard] of this.hearing) if (seq <= message.seq) heard();
         return;
       case "resize":
         if (message.document !== this.documentId) return;
@@ -665,12 +673,38 @@ export class FrameController {
     this.port.post({ fm: V, type: "focus" });
   }
 
+  /**
+   * Resolves once the frame has answered a ping sent now (INF-1146). The
+   * frame's messages reach the window in the order it sent them, however
+   * late its process sends them, so by then the window has heard every
+   * press that began in the frame before the ping reached it (`pressed`,
+   * app/presses.ts). A document not yet born has begun none; one that is
+   * gone, or silent for FRAME_COLLECT_TIMEOUT_MS (a wedged frame), resolves
+   * it too.
+   */
+  heard(): Promise<void> {
+    if (this.disposed || !this.ready) return Promise.resolve();
+    this.pingSeq += 1;
+    const seq = this.pingSeq;
+    return new Promise((resolve) => {
+      const timer = globalThis.setTimeout(() => answered(), FRAME_COLLECT_TIMEOUT_MS);
+      const answered = () => {
+        globalThis.clearTimeout(timer);
+        this.hearing.delete(seq);
+        resolve();
+      };
+      this.hearing.set(seq, answered);
+      this.port.post({ fm: V, type: "ping", seq });
+    });
+  }
+
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
     this.revealing?.resolve(undefined);
     for (const resolve of this.collecting.values()) resolve(undefined);
     this.collecting.clear();
+    for (const heard of this.hearing.values()) heard();
     this.disarmWatchdog();
     this.dropSubscriptions();
     this.stopStoreNotices?.();
@@ -751,7 +785,7 @@ export class FrameController {
         if (this.unborn >= FRAME_WATCHDOG_MISSES) this.unresponsive();
         return;
       }
-      if (this.answeredSeq < this.pingSeq) {
+      if (this.answeredSeq < this.watchedSeq) {
         this.missed += 1;
         if (this.missed >= FRAME_WATCHDOG_MISSES) {
           this.unresponsive();
@@ -761,6 +795,7 @@ export class FrameController {
         this.missed = 0;
       }
       this.pingSeq += 1;
+      this.watchedSeq = this.pingSeq;
       this.port.post({ fm: V, type: "ping", seq: this.pingSeq });
     }, FRAME_WATCHDOG_INTERVAL_MS);
   }
@@ -786,6 +821,7 @@ export class FrameController {
   private unresponsive(): void {
     this.disarmWatchdog();
     this.ready = false;
+    for (const heard of this.hearing.values()) heard();
     this.dropSubscriptions();
     this.spec.onUnresponsive?.();
   }

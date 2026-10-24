@@ -502,6 +502,40 @@ describe("FrameController", () => {
       expect(onUnresponsive).not.toHaveBeenCalled();
     });
 
+    // INF-1146: a pointing from a frame decides on focus once the frame has
+    // answered a ping sent then, so a press it began first has been heard.
+    it("hears a frame out on the answer to its own ping, which the watchdog counts as no miss", async () => {
+      const onUnresponsive = vi.fn();
+      const { controller, tick, pings } = armed(onUnresponsive);
+      const lastPing = () => {
+        const last = pings().at(-1);
+        return last?.type === "ping" ? last.seq : 0;
+      };
+      await expect(controller.heard()).resolves.toBeUndefined(); // no document born yet
+      controller.receive({ fm: 2, type: "ready" });
+      let heard = 0;
+      let asked = 0;
+      for (let round = 0; round < FRAME_WATCHDOG_MISSES; round++) {
+        tick();
+        const watched = lastPing();
+        void controller.heard().then(() => {
+          heard += 1;
+        });
+        asked = lastPing();
+        // The frame answers the watchdog's ping, sent before the pointing's;
+        // the pointing's answer is still on its way at the next tick.
+        controller.receive({ fm: 2, type: "pong", seq: watched });
+      }
+      tick();
+      expect(onUnresponsive).not.toHaveBeenCalled();
+      await flush();
+      // Each pointing was heard out by an answer to a later ping; the last is not yet.
+      expect(heard).toBe(FRAME_WATCHDOG_MISSES - 1);
+      controller.receive({ fm: 2, type: "pong", seq: asked });
+      await flush();
+      expect(heard).toBe(FRAME_WATCHDOG_MISSES);
+    });
+
     it("reports a frame that misses consecutive pings once, and stops pinging it", () => {
       const onUnresponsive = vi.fn();
       const { controller, tick, cleared, pings } = armed(onUnresponsive);

@@ -18,6 +18,35 @@ export function pressesSoFar(): number {
   return presses;
 }
 
+/**
+ * A frame's `pressed` reaches the page in the order the frame sent it, but
+ * apart from everything else the page does: the captain points from a
+ * frame and presses there at once, and the page can read the task
+ * pointed at and show its card before the press is heard, when the frame's
+ * process sends it late (INF-1146). So a pointing from a frame asks the
+ * frame to answer (`FrameController.heard`), and the card it brings forward
+ * decides on focus once every frame asked has answered: each has said by
+ * then every press it began before it answered.
+ */
+let unheard = 0;
+const deciding: (() => void)[] = [];
+
+/** A frame was asked to answer: presses it began may be on their way until `answered` settles. */
+export function hearOut(answered: Promise<unknown>): void {
+  unheard += 1;
+  const heard = () => {
+    unheard -= 1;
+    if (unheard === 0) for (const decide of deciding.splice(0)) decide();
+  };
+  void answered.then(heard, heard);
+}
+
+/** Runs `decide` now, or once every frame asked to answer has answered. */
+export function oncePressesHeard(decide: () => void): void {
+  if (unheard === 0) decide();
+  else deciding.push(decide);
+}
+
 /** Whether a frame's bridge says a press began in its window. */
 function pressNotice(event: MessageEvent): boolean {
   const data: unknown = event.data;

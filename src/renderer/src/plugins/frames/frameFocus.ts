@@ -1,4 +1,5 @@
 import { available } from "../../app/focusRecovery";
+import { hearOut } from "../../app/presses";
 import type { FrameController } from "./frameController";
 import { GESTURE_FOCUS_FRAMES } from "./gestureFocusFrames";
 
@@ -42,6 +43,15 @@ export function trackFrame(
 function controllerOf(frame: HTMLIFrameElement): FrameController | null {
   for (const entry of tracked) if (entry.frame.current === frame) return entry.controller;
   return null;
+}
+
+/**
+ * The captain pointed from `frame`: a press begun there since may still
+ * be on its way to the window until the frame answers (app/presses.ts).
+ */
+export function hearFrameOut(frame: HTMLIFrameElement | null): void {
+  const controller = frame ? controllerOf(frame) : null;
+  if (controller) hearOut(controller.heard());
 }
 
 /**

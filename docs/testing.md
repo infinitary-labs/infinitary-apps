@@ -48,6 +48,7 @@ This command is a batch check, not an editor, language-server or watch-mode migr
 The renderer and application lanes (`tests/e2e/lanes.ts`, `playwright.config.ts`) share at most `min(10, availableParallelism())` workers.
 The full Mac check (`verify.yml`) gives them half the processor (`--workers=50%`), because both Mac runner slots share one processor: with all of it, app launches starved past `firstWindow`'s 30 s while the other slot ran journeys too.
 Desktop is the one-worker lane and runs last, even after a failure.
+The lanes load only `*.spec.ts` files (`testMatch` in `playwright.config.ts`); a vitest `*.test.ts` beside them, such as a scenario's own test, runs in vitest's cohorts and never in Playwright.
 New spec files start in desktop.
 A file joins application once a review finds it needs no voice, paint budget, demo recording or other one-at-a-time resource, keeps its own HOME, userData, ports and service stand-ins, and passes under the parallel lanes' load in a full Mac and Linux run (`verify.yml`).
 Background work (`run-work.spec.ts`) and the browser booking journeys (`task-browser-booking.spec.ts`) are such files: scratch homes, loopback SSH fixtures, a `launchctl` stand-in and a local test airline.

@@ -89,6 +89,9 @@ process.env.PLAYWRIGHT_LAST_RUN_OUTPUT_FILE ??= join(
 
 export default defineConfig({
   testDir: "tests/e2e",
+  // A journey is a *.spec.ts; a *.test.ts beside one is vitest's (vitest.config.ts),
+  // and loading it here fails the whole listing (INF-1134). A lane's own testMatch wins.
+  testMatch: "**/*.spec.ts",
   tsconfig: "./tsconfig.node.json",
   timeout: 60_000,
   // The whole run's limit, which the workflow names (docs/testing.md,

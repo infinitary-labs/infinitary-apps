@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journeys-load-only-spec-files",
+      "reason": "Test only: the end-to-end runner loads only journey files, so a vitest file beside a journey's scenario no longer fails the test listing and the full end-to-end run. No product behavior changes and no test is skipped."
+    }
+  ]
+}

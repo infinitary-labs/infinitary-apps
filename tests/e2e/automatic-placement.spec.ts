@@ -23,6 +23,7 @@ import {
   mockModelsJson,
   SPAWN_PROMPT_MARKER,
 } from "./mockProvider";
+import { holdCpuBusy, homeReading, replayedCpu } from "./placementCpu";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { providerMessages, served } from "./providerRequest";
@@ -33,12 +34,11 @@ import { pressWindowKey, typeInto } from "./windowKeys";
 /**
  * A new task in a project set to Automatic, the default for every project
  * that lives on a host (docs/helper.md, "Automatic starts"), starts on this
- * computer from its own readings. Nothing here stands in for them: the
- * memory comes from this computer's own reading, including macOS page and
- * pressure reads on a Mac, the CPU from the sampler's real window, and the
- * program, project-access and identity
- * facts from the real git, ioreg or machine id. A Mac in ordinary use keeps
- * almost no memory page empty, so a rule that counted only empty pages left
+ * computer after a controlled busy-to-ready CPU transition (INF-1129,
+ * captain-approved). The real sampler consumes captured CPU counters;
+ * memory, including macOS page and pressure reads, and the program,
+ * project-access and identity facts still come from this computer. A Mac in
+ * ordinary use keeps almost no memory page empty, so counting only empty pages left
  * every such task waiting for a computer with room (FI3-1733); a virtual
  * machine, such as the hosted Linux runner, once read no identity and waited
  * the same way (FI3-1738). This journey runs that whole path on the
@@ -48,74 +48,85 @@ import { pressWindowKey, typeInto } from "./windowKeys";
 const PROJECT = "ledger";
 
 /**
- * The words a task waits with while this computer's own reading has too
- * little spare processing capacity for it, from their owner.
+ * The words a task waits with while the sampler reads too little spare
+ * processing capacity for it, from their owner.
  */
 const BUSY_WAIT = placementWait(
   [{ name: HERE.This, rejections: ["cpu-busy"], capacity: null }],
   PLACEMENT_DEMANDS.standard,
 ).words;
 
-/**
- * How long a task may wait for this computer's spare processing capacity.
- * The Mac mini that runs the Mac lane also runs the crew's own work, and its
- * processor has stayed too busy to start a task for minutes at a time
- * (INF-183); a task rightly waits through that, on its real readings.
- */
-const BUSY_MS = 6 * 60_000;
+/** Keep both successful and failed CI runs' observed task and sampler states. */
+async function recordCpuState(app: LaunchedApp, task: TaskDetail, phase: string): Promise<void> {
+  const reading = await homeReading(app);
+  await test.info().attach(`cpu-${phase}.json`, {
+    body: JSON.stringify({ task, reading }, null, 2),
+    contentType: "application/json",
+  });
+  console.info(
+    "Automatic placement observation:",
+    JSON.stringify({
+      phase,
+      task: task.key,
+      status: task.status,
+      startedAt: task.startedAt,
+      wait: task.runsOn?.reason,
+      reading,
+    }),
+  );
+}
+
+/** Wait for a compared task, rejecting waits unrelated to the CPU immediately. */
+async function placementState(detail: () => Promise<TaskDetail>): Promise<string> {
+  const task = await detail();
+  if (task.startedAt !== null) return "started";
+  const words = task.runsOn?.reason;
+  return words ?? PLACEMENT_WAIT;
+}
 
 /**
- * How long a task may go uncompared: one sweep, a tick on, with room. The
- * journeys that wait for a sweep shorten the tick to seconds (`SHORT_TICK`),
- * and the room is for a host too loaded to sweep on time. A start that has
- * not compared computers yet reads no wait words, or the wait for room
- * (PLACEMENT_WAIT).
+ * The order, not a wall-clock busy allowance: observed CPU wait, release,
+ * automatic start. No other work on the shared Mac can postpone the release.
  */
-const SWEEP_MS = 90_000;
-
-/** The longest `startsOnceThereIsRoom` waits: a sweep either side of a busy spell. */
-const STARTS_MS = BUSY_MS + 2 * SWEEP_MS;
-
-/**
- * Wait until `started` reads the task started, through up to BUSY_MS of
- * waits for this computer's spare processing capacity and a sweep at a time
- * uncompared. A wait for anything else - its memory (FI3-1733), its identity
- * (FI3-1738), a model (FI3-1739) - fails at once, and an allowance that runs
- * out fails, each in the task's own words.
- */
-async function startsOnceThereIsRoom(
+async function startsAfterCpuRelease(
+  app: LaunchedApp,
   detail: () => Promise<TaskDetail>,
-  started: (task: TaskDetail) => boolean,
+  release: () => Promise<void>,
 ): Promise<void> {
   let state = "";
-  let busySince: number | undefined;
-  let uncomparedSince: number | undefined;
   await expect
     .poll(
       async () => {
-        const task = await detail();
-        state = started(task)
-          ? "started"
-          : (task.runsOn?.reason ??
-            `no wait words: ${JSON.stringify({ status: task.status, runsOn: task.runsOn })}`);
-        if (state === "started") return state;
-        const words = task.startPolicy === "when-ready" ? task.runsOn?.reason : undefined;
-        const now = Date.now();
-        if (words === BUSY_WAIT) {
-          uncomparedSince = undefined;
-          busySince ??= now;
-          return now - busySince < BUSY_MS ? "waiting" : state;
-        }
-        if (words === undefined || words === PLACEMENT_WAIT) {
-          uncomparedSince ??= now;
-          return now - uncomparedSince < SWEEP_MS ? "waiting" : state;
-        }
+        state = await placementState(detail);
         return state;
       },
-      { message: "the task started, or waited for something else", timeout: STARTS_MS },
+      { timeout: 90_000 },
+    )
+    .not.toBe(PLACEMENT_WAIT);
+  expect(state).toBe(BUSY_WAIT);
+  const waiting = await detail();
+  expect(waiting).toMatchObject({ status: "open", startedAt: null, startPolicy: "when-ready" });
+  expect(waiting.placement).toBeUndefined();
+  await recordCpuState(app, waiting, "busy");
+
+  await release();
+  await expect
+    .poll(
+      async () => {
+        state = await placementState(detail);
+        return state === BUSY_WAIT || state === PLACEMENT_WAIT ? "waiting" : state;
+      },
+      { timeout: 90_000 },
     )
     .not.toBe("waiting");
   expect(state).toBe("started");
+  await expect
+    .poll(() => homeReading(app), { timeout: 90_000 })
+    .toMatchObject({
+      status: "fresh",
+      observation: { cpu: replayedCpu("available"), memory: { totalBytes: totalmem() } },
+    });
+  await recordCpuState(app, await detail(), "available");
 }
 
 /**
@@ -211,8 +222,8 @@ function ranOnItsBranch(app: LaunchedApp, key: string) {
   });
 }
 
-test("a new task in an Automatic project starts on this computer from its own readings", async () => {
-  test.setTimeout(STARTS_MS + 180_000);
+test("a new task in an Automatic project waits for CPU room, then starts with this computer's memory and identity", async () => {
+  test.setTimeout(180_000);
   const userDataDir = scratchDir("infinitary-automatic-placement-");
   seedAutomaticProject(userDataDir);
   const crew = seedGrokCrew(userDataDir);
@@ -226,26 +237,28 @@ test("a new task in an Automatic project starts on this computer from its own re
   const detail = () =>
     app.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id ?? "");
   try {
+    const release = await holdCpuBusy(app);
     const asked = await askForTask(app);
     const { key } = asked;
     id = asked.id;
 
+    await startsAfterCpuRelease(app, detail, release);
     // Automatic committed this computer (null names the home), not a wait.
-    // A start that read a busy processor, as a two-processor virtual machine
-    // can while the app itself starts, waits for the next sweep, a tick on.
-    await startsOnceThereIsRoom(detail, (task) => task.placement?.computerId === null);
+    expect((await detail()).placement?.computerId).toBeNull();
     const here = (await detail()).placement?.candidates.find(
       (candidate) => candidate.computerId === null,
     );
     expect(here?.rejections).toEqual([]);
-    // The reading it chose from is this computer's own, fresh, not a figure a test supplied.
+    // The sampler is real: only CPU counters are replayed; memory is this computer's own.
     expect(here?.reading).toMatchObject({
       status: "fresh",
-      observation: { memory: { totalBytes: totalmem() } },
+      observation: { cpu: replayedCpu("available"), memory: { totalBytes: totalmem() } },
     });
 
     // And the crewmate ran here, in a working copy of its own branch.
-    await expect(ranOnItsBranch(app, key)).toBeVisible({ timeout: 45_000 });
+    const report = ranOnItsBranch(app, key);
+    await expect(report).toBeVisible({ timeout: 45_000 });
+    console.info("Automatic placement execution:", await report.innerText());
   } finally {
     // The record as it stands, for a run that waited instead.
     if (id)
@@ -258,7 +271,7 @@ test("a new task in an Automatic project starts on this computer from its own re
 });
 
 test("a new task in an Automatic project whose routing names no model starts on this computer's own default", async () => {
-  test.setTimeout(STARTS_MS + 180_000);
+  test.setTimeout(180_000);
   const userDataDir = scratchDir("infinitary-automatic-default-");
   seedAutomaticProject(userDataDir);
   // No allowance catalog: routing names no model and defers to the runtime
@@ -270,11 +283,13 @@ test("a new task in an Automatic project whose routing names no model starts on 
   const detail = () =>
     app.page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id ?? "");
   try {
+    const release = await holdCpuBusy(app);
     const asked = await askForTask(app);
     id = asked.id;
-    // As above, a busy first reading starts on the next sweep, a tick on.
-    await startsOnceThereIsRoom(detail, (task) => task.startedAt !== null);
-    await expect(ranOnItsBranch(app, asked.key)).toBeVisible({ timeout: 45_000 });
+    await startsAfterCpuRelease(app, detail, release);
+    const report = ranOnItsBranch(app, asked.key);
+    await expect(report).toBeVisible({ timeout: 45_000 });
+    console.info("Automatic placement execution:", await report.innerText());
     // It ran on the default: no routing decision chose a model for it.
     expect((await detail()).tier).toBeNull();
   } finally {

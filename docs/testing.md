@@ -54,7 +54,9 @@ A file joins application once a review finds it needs no voice, paint budget, de
 Background work (`run-work.spec.ts`) and the browser booking journeys (`task-browser-booking.spec.ts`) are such files: scratch homes, loopback SSH fixtures, a `launchctl` stand-in and a local test airline.
 Desktop keeps the voice journeys (the dictation key and the microphone), the paint budgets tagged `@perf` (`tests/e2e/perf.ts`), and the demo recordings, which play at real speed.
 Devices (`devices.spec.ts`) stays in desktop: under the parallel lanes' load, adding a Mac by its address, which packs the app at background priority (`src/core/devices/appArchive.ts`), outlasts the journey's wait for the Mac to join.
-Automatic placement (`automatic-placement.spec.ts`) stays in desktop: it starts a task only once this computer's own processor has room, and the parallel lanes keep it busy for most of the journey's wait.
+Automatic placement (`automatic-placement.spec.ts`) stays in desktop pending the full Mac and Linux parallel-lane qualification; its memory and compatibility readings remain live.
+Its first two journeys replay captured busy and available CPU counters inside the isolated Electron process, releasing room only after observing the task's CPU wait (`tests/e2e/placementCpu.ts`, `docs/routing.md`).
+No product hook or shared runner setting changes, and the remaining refusal journeys keep live CPU readings.
 The task board (`task-board.spec.ts`) stays in desktop: a tile's summary lets go when its window loses focus, and on Linux's shared screen another journey's window can take that focus.
 `tests/e2e-lanes.test.ts` pins the files named here to desktop.
 A full run never stops at its first failure: it reports every failure, later tests still run, and desktop still runs after a failure in the parallel lanes; `tests/e2e-lanes.test.ts` runs the real lanes over fixture specs to hold this.

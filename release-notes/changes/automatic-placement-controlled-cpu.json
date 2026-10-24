@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "automatic-placement-controlled-cpu",
+      "reason": "The automatic-placement journey replays captured CPU counters in its isolated Electron process, verifies a busy task waits, then releases capacity and verifies automatic execution. Live memory and compatibility checks remain; no production behavior changes."
+    }
+  ]
+}

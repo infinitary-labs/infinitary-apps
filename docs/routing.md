@@ -144,10 +144,14 @@ A Mac reading without pressure, or without inactive and speculative bytes, count
 Anything else has no figure.
 A Mac in ordinary use keeps almost no page free, so free bytes alone would read a Mac with room as full.
 The observation still carries every raw count, and the figure is the only number a reader uses.
-`tests/e2e/automatic-placement.spec.ts` starts an Automatic project task on the computer that runs the suite, from that computer's own readings, once on a model routing names and once on that computer's own default when routing names none: the Mac mini on a pull request and in the full suite's Mac lane, and the hosted Linux virtual machines in the full suite.
-The Mac mini also runs the crew's own work, so its processor can stay too busy to start a task for minutes.
-The journey waits up to six minutes while the task waits for that computer's spare processing capacity, and one sweep while the task has not compared computers yet.
-A wait for anything else fails it at once, and an allowance that runs out fails it, each in the task's own words.
+`tests/e2e/automatic-placement.spec.ts` starts an Automatic project task on the computer that runs the suite, once on a model routing names and once on that computer's own default when routing names none: the Mac mini on a pull request and in the full suite's Mac lane, and the hosted Linux virtual machines in the full suite.
+Memory, macOS page and pressure reads, computer identity, program and project access remain that computer's own.
+The journey replays captured CPU counters only inside its isolated Electron process (`tests/e2e/placementCpu.ts`); production sampling and admission are unchanged.
+It first observes a fresh busy sample, asks for a task, checks that the task waits unstarted for CPU room, then releases available counters and checks that the next placement sweep starts it on its own branch.
+The sampler still measures counter deltas over its real window, and the journey checks its resulting CPU observation.
+A wait for anything other than CPU room or an outstanding comparison fails in the task's own words.
+The shared Mac's other work cannot hold the replay busy: release follows the observed wait, not elapsed time or the real processor becoming idle.
+The journey's ordinary load-clock deadlines still bound a missing comparison or start.
 It also holds a premium ask that computer cannot serve on the premium reset, and checks that the first mate hears once.
 
 ### Filtering, sharing and order

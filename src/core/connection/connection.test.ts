@@ -143,6 +143,19 @@ async function home(
   };
 }
 
+// INF-1156: the existing real TLS handshake carries optional authenticated alternatives.
+it("refreshes dial alternatives in a welcome without changing the paired identity", async () => {
+  const at = await home();
+  const grant = await at.join();
+  const client = await connectClient(grant);
+  try {
+    expect(client.welcome).toMatchObject({ addresses: at.pairing.offerTargets(true) });
+    expect(at.pairing.list().map((device) => device.id)).toContain(grant.deviceId);
+  } finally {
+    await client.close();
+  }
+});
+
 /**
  * A computer that runs work dials these homes from loopback, so it runs as a
  * user other than the one this process runs as, as another user on the

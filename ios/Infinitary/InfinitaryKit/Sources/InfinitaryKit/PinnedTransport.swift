@@ -30,15 +30,22 @@ public final class PinnedTransport: NSObject, URLSessionDelegate, URLSessionTask
     public func close() { session.invalidateAndCancel() }
 
     public func pair(_ link: JoinLink, name: String) async throws -> JoinedMac {
-        for address in link.addresses {
-            do { return try await pair(link, at: address, name: name) }
-            catch let error as URLError where [.cannotFindHost, .cannotConnectToHost, .dnsLookupFailed].contains(error.code) {
-                // These failures prove no connection opened, hence no invitation was sent.
-                continue
+        // Preflight is non-mutating: even a timeout here cannot spend the invitation.
+        // Once a pinned route answers, the one-use POST is never retried on another route.
+        for address in PhoneAddresses.preferred(link.addresses) {
+            do {
+                let request = URLRequest(url: try JoinLink.url(address, path: PhoneContract.connectionPath))
+                let (_, response) = try await session.data(for: request)
+                guard (response as? HTTPURLResponse)?.statusCode == 426 else { continue }
             } catch {
                 if rejectedPin.withLock({ $0 }) { throw PhoneError.wrongMac }
+                if Task.isCancelled { throw CancellationError() }
+                continue
+            }
+            do { return try await pair(link, at: address, name: name) }
+            catch {
+                if rejectedPin.withLock({ $0 }) { throw PhoneError.wrongMac }
                 if let error = error as? PhoneError { throw error }
-                // A timeout or lost reply may have spent the code. Never repeat that POST.
                 throw PhoneError.unavailable
             }
         }
@@ -73,7 +80,7 @@ public final class PinnedTransport: NSObject, URLSessionDelegate, URLSessionTask
         }
         guard result["kind"] as? String == "view", let id = result["deviceId"] as? String,
               !id.isEmpty, id.count <= 64 else { throw PhoneError.invalidReply }
-        return JoinedMac(addresses: [address] + link.addresses.filter { $0 != address },
+        return JoinedMac(addresses: PhoneAddresses.preferred(link.addresses),
                          pin: link.pin, deviceID: id, name: link.computer)
     }
 

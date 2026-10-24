@@ -6,6 +6,7 @@ import {
   deviceRoleSchema,
   deviceSystemSchema,
   deviceUserNameSchema,
+  dialAddressSchema,
   foundToolsSchema,
   KEY_TEXT_PATTERN,
 } from "./devices";
@@ -346,6 +347,8 @@ export const homeFrameSchema = z.union([
      * it controls. Absent when the home could not read it.
      */
     name: deviceNameSchema.optional(),
+    /** Authenticated routing alternatives; absent on an older home. */
+    addresses: z.array(dialAddressSchema).optional(),
     /**
      * For a computer that runs work alone: whether its version may take new
      * work from this home, which needs the same major (`takesWork`,

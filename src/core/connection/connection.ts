@@ -93,6 +93,8 @@ export type PairOutcome =
 export type PairedDevices = {
   /** Whether anything is paired or a link is open; the connection listens only while this holds. */
   any(): boolean;
+  /** Current alternatives, supplied only after the device authenticates. */
+  offerTargets?(phone?: boolean): string[];
   /**
    * Called after every change to what is paired, before the change returns;
    * answers its own unsubscribe.
@@ -600,6 +602,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           catchUp: missed ? "replay" : "reload",
           access: client.access,
           ...(name ? { name } : {}),
+          ...(devices.offerTargets ? { addresses: devices.offerTargets(true) } : {}),
           // A computer that runs work takes new work only on this home's own
           // major (docs/helper.md); a view is never sent work.
           ...(role === "work" ? { takesWork: takes } : {}),

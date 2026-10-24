@@ -17,6 +17,8 @@ public struct PhoneNotice: Equatable, Sendable {
 
 /// All product content is in memory. Only the joined computer's public routing facts persist.
 @MainActor @Observable public final class ReadOnlySession {
+    /// The last authenticated route, separate from saved preference. Never a route merely attempted.
+    public private(set) var reachedAddress: String?
     public private(set) var mac: JoinedMac
     public private(set) var cards: [PhoneCard] = []
     public private(set) var activity: [ActivityLine] = []
@@ -262,7 +264,7 @@ public struct PhoneNotice: Equatable, Sendable {
     private func run(generation current: Int) async {
         var attempt = 0
         while !Task.isCancelled && !removed && current == generation {
-            let addresses = mac.addresses + discoveries.filter { !mac.addresses.contains($0) }
+            let addresses = PhoneAddresses.preferred(mac.addresses + discoveries)
             for address in addresses {
                 if Task.isCancelled || removed || current != generation { return }
                 let transport = PinnedTransport(pin: mac.pin, phone: phone, purpose: .connection)
@@ -318,8 +320,10 @@ public struct PhoneNotice: Equatable, Sendable {
                         guard current == generation, !Task.isCancelled else { break }
                         if contact == "in-reach" {
                             attempt = 0; refused = 0
-                            if mac.addresses.first != address {
-                                mac.addresses = Array(([address] + mac.addresses.filter { $0 != address }).prefix(25))
+                            reachedAddress = address
+                            let preferred = Array(PhoneAddresses.preferred(mac.addresses + [address]).prefix(25))
+                            if mac.addresses != preferred {
+                                mac.addresses = preferred
                                 onMacChanged?(mac)
                             }
                         }
@@ -371,6 +375,14 @@ public struct PhoneNotice: Equatable, Sendable {
             refused = 0
             if let name = frame["name"] as? String, !name.isEmpty {
                 mac.name = name; onMacChanged?(mac)
+            }
+            if let alternatives = frame["addresses"] as? [String] {
+                // Metadata belongs to this pinned, authenticated socket, never to discovery.
+                // Keep old fallbacks (and the working route); refresh never restarts the socket.
+                let refreshed = Array(PhoneAddresses.preferred(alternatives + mac.addresses).prefix(25))
+                if !refreshed.isEmpty && refreshed != mac.addresses {
+                    mac.addresses = refreshed; onMacChanged?(mac)
+                }
             }
             contact = "reaching"
             for channel in initialReads {

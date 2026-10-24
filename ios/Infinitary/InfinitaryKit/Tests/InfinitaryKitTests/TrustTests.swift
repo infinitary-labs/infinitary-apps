@@ -46,3 +46,20 @@ struct TrustTests {
         #expect(SecKeyCopyExternalRepresentation(publicKey, nil) as Data? == key.publicKey.x963Representation)
     }
 }
+
+/// INF-1156: saved ordering is policy, not a claim that any private route is reachable.
+struct PhoneAddressTests {
+    @Test func privatePreferenceSurvivesLocalSuccessAndRecordRestoration() throws {
+        let local = "test-mac.local:47623", ip = "192.168.1.20:47623", privateIP = "100.101.7.3:47623"
+        let preferred = PhoneAddresses.preferred([local, ip, privateIP, local])
+        #expect(preferred == [privateIP, local, ip])
+        let record = JoinedMac(addresses: preferred, pin: String(repeating: "a", count: 43), deviceID: "phone", name: "Test Mac")
+        let restored = try JSONDecoder().decode(JoinedMac.self, from: JSONEncoder().encode(record))
+        #expect(PhoneAddresses.preferred([local] + restored.addresses) == [privateIP, local, ip])
+        #expect(PhoneAddresses.preferred([local, ip]) == [local, ip])
+        #expect(PhoneAddresses.preferred(["bad/address", "100.64.example:47623", "100.128.1.2:47623", privateIP]) == [privateIP, "100.64.example:47623", "100.128.1.2:47623"])
+        #expect(PhoneAddresses.isPrivate("100.64.0.1:47623"))
+        #expect(PhoneAddresses.isPrivate("100.127.255.254:47623"))
+        #expect(!PhoneAddresses.isPrivate("100.63.255.254:47623"))
+    }
+}

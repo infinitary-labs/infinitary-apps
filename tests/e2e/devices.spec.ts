@@ -20,6 +20,7 @@ import {
   deviceWords,
   PAIRING_LINK_PREFIX,
   parsePairingLink,
+  phoneRouteWords,
 } from "@shared/devices";
 import { deviceUpdateBody, deviceUpdateCardId, deviceUpdateTitle } from "@shared/deviceUpdateNudge";
 import type { FmEvent } from "@shared/events";
@@ -352,6 +353,30 @@ test("A phone opens its code by keyboard, joins read-only and can stop an unused
     await expect(page.locator("[data-phone-code]")).toHaveCount(0);
   } finally {
     await app.close();
+  }
+});
+
+/** INF-1156 accepted option A: keyboard opening explains the detected route without promising reachability. */
+test("phone links explain private preference and local-only fallback", async () => {
+  for (const addresses of ["192.168.1.20,100.101.7.3", "192.168.1.20"]) {
+    const app = await launchApp({ env: { INFINITARY_STAND_IN_ADDRESSES: addresses } });
+    try {
+      const { page } = app;
+      await openDevices(page);
+      await pressKey(page.locator('[data-device-add="phone"]'), "Enter");
+      const panel = page.locator('[data-panel-state="open"]');
+      const text = await panel.locator("[data-device-link]").innerText();
+      await expect(panel).toContainText(phoneRouteWords(text));
+      const link = parsePairingLink(text);
+      if (addresses.includes("100.101.7.3")) {
+        expect(link.at).toBe(`100.101.7.3:${app.connectionPort}`);
+        expect(link.also).toContain(`192.168.1.20:${app.connectionPort}`);
+      } else expect(link.at).not.toContain("100.101.7.3");
+      await pressKey(panel.getByRole("button", { name: "Stop it", exact: true }), "Enter");
+      await expect(page.locator("[data-phone-code]")).toHaveCount(0);
+    } finally {
+      await app.close();
+    }
   }
 });
 

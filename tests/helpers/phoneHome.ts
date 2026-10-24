@@ -164,8 +164,25 @@ export async function startPhoneHome(
   subscribe("net.server.socket", countAttempt);
   // A refusal is a connection request pairing admits no device for: the 401 a removed phone reads.
   const pairing = core.services.devices;
+  // INF-1156: only this disposable home can omit metadata or lose a pairing reply.
+  let routingAddresses: string[] | undefined;
+  let legacyRouting = false;
+  let losePairReply = false;
+  let pairCalls = 0;
   const devices = new Proxy(pairing, {
     get(target, name) {
+      if (name === "offerTargets")
+        return legacyRouting ? undefined : () => routingAddresses ?? target.offerTargets(true);
+      if (name === "claim")
+        return async (body: unknown, request: IncomingMessage) => {
+          pairCalls += 1;
+          const outcome = await target.claim(body, request);
+          if (losePairReply) {
+            losePairReply = false;
+            request.socket.destroy();
+          }
+          return outcome;
+        };
       if (name === "admit")
         return (request: IncomingMessage) => {
           let device: PairedDevice | null = null;
@@ -352,6 +369,40 @@ export async function startPhoneHome(
           result = { ok: true };
           break;
         }
+        case "POST routing-refresh":
+          routingAddresses = [`100.101.7.3:${port}`, `localhost:${port}`];
+          result = { addresses: routingAddresses, at: `127.0.0.1:${port}` };
+          break;
+        case "POST routing-legacy":
+          legacyRouting = true;
+          result = { ok: true };
+          break;
+        case "POST routing-reset":
+          routingAddresses = undefined;
+          legacyRouting = false;
+          losePairReply = false;
+          pairCalls = 0;
+          result = { ok: true };
+          break;
+        case "POST routing-link":
+        case "POST routing-lost-link": {
+          const invitation = core.services.devices.invite({
+            kind: "mac",
+            at: `127.0.0.1:${port}`,
+            phone: true,
+          });
+          const multiple = new URL(invitation.link);
+          // A held TLS handshake proves that even a preflight timeout may fall back safely.
+          multiple.searchParams.set("at", `127.0.0.1:${stalledPort}`);
+          multiple.searchParams.set("also", `127.0.0.1:${port},localhost:${port}`);
+          losePairReply = command === "routing-lost-link";
+          await connection.settled();
+          result = { link: multiple.toString(), at: `127.0.0.1:${port}` };
+          break;
+        }
+        case "GET routing-state":
+          result = { pairCalls, devices: core.services.devices.list(), readings: { ...readings } };
+          break;
         case "GET state":
           result = {
             devices: core.services.devices.list(),

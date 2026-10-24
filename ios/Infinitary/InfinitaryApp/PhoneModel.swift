@@ -93,7 +93,7 @@ import UIKit
         busy = true; proposal = nil; problem = nil
         joining = Task {
             defer { busy = false; joining = nil }
-            // Only proven pre-connection failures try another advertised address.
+            // A pinned non-mutating preflight selects a reachable route before joining.
             // A lost reply never retries; a fresh confirmed link can recover the same phone key.
             let transport = PinnedTransport(pin: link.pin, phone: identity, purpose: .pairing)
             defer { transport.close() }

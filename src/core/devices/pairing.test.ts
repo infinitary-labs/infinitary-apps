@@ -615,6 +615,31 @@ describe("device pairing", () => {
     expect(joined).toEqual([{ name: "MacBook Air", listed: 1 }]);
   });
 
+  // INF-1156 accepted option A: phone-only preference, with every local fallback retained.
+  it("prefers private addresses only for phone invitations and falls back locally", () => {
+    let interfaces = { en0: [iface("192.168.1.20")], utun4: [iface("100.101.7.3")] };
+    const { pairing } = pairingAt(undefined, undefined, { interfaces: () => interfaces });
+    pairing.noteNetworkName("test-mac.local");
+    const phone = parsePairingLink(pairing.invite({ kind: "mac", phone: true }).link);
+    expect(phone.at).toBe(`100.101.7.3:${CONNECTION_PORT}`);
+    expect(phone.also).toEqual([
+      `test-mac.local:${CONNECTION_PORT}`,
+      `192.168.1.20:${CONNECTION_PORT}`,
+    ]);
+    expect(parsePairingLink(pairing.invite({ kind: "mac" }).link).at).toBe(
+      `test-mac.local:${CONNECTION_PORT}`,
+    );
+    expect(
+      parsePairingLink(pairing.invite({ kind: "work", command: "another-user", phone: true }).link)
+        .at,
+    ).toBe(`127.0.0.1:${CONNECTION_PORT}`);
+    interfaces = { en0: [iface("192.168.1.20")], utun4: [] };
+    expect(parsePairingLink(pairing.invite({ kind: "mac", phone: true }).link)).toMatchObject({
+      at: `test-mac.local:${CONNECTION_PORT}`,
+      also: [`192.168.1.20:${CONNECTION_PORT}`],
+    });
+  });
+
   it("sends a link every address this Mac has, and no longer keeps a chosen one", () => {
     let interfaces: NodeJS.Dict<NetworkInterfaceInfo[]> = {
       lo0: [iface("127.0.0.1", true)],

@@ -11,6 +11,9 @@ The visual rules live in the design skill's `components/devices/PhoneView.prompt
 
 Settings → Devices → **A phone** on the Mac opens a locally generated QR code, the same one-use computer link, Copy link and Stop it.
 Every build of the Mac app offers **A phone**, installed and development alike (`docs/devices.md`, "Settings -> Devices").
+The panel explains whether its link prefers a detected private-network address, with local fallbacks, or offers local addresses only.
+Both devices need a permitted private-network route, and the computer must stay awake with Infinitary open; a detected address proves neither reachability nor the service that supplied it.
+MagicDNS discovery and broader VPN or IPv6-only private-address discovery are not included.
 The panel explains that the phone app comes from TestFlight for now, only to the people asked to test it, and is not in the App Store yet.
 A phone can scan that code, paste its link or open an `infinitary://join` link, then confirms the address of the Mac it is joining.
 Its first screen welcomes the person in the Mac's first-launch words, “Welcome aboard Infinitary”, with Nearby as one plain line, Scan the code prominent and Paste its link a plain secondary.
@@ -28,7 +31,9 @@ The Mac's identity is that pin, not the self-signed certificate's name or dates.
 `PinnedTransport` uses an ephemeral URLSession, TLS 1.3, the phone's client identity and the exact saved or scanned server pin, with no cookies, credential store, proxy configuration, cache or redirects.
 Pairing has short request deadlines; the socket uses a separate configuration whose deadlines outlast its heartbeat, not the pairing POST's timeouts.
 A join sends the invitation's kind and `system: "ios"`; the Mac returns HTTP 201 and kind `view` regardless of that invitation's computer kind.
-Only DNS and connection failures that prove no connection opened try the next advertised address.
+Before spending the invitation, a pinned, non-mutating `GET /connection` must return 426 from a reachable candidate.
+Private IPv4 candidates in `100.64.0.0/10` come first, followed by local names and addresses; an unavailable preflight, including a timeout, may try the next candidate.
+A wrong pin ends the attempt without sending the invitation, and once a candidate answers preflight the pairing POST never moves to another candidate.
 A timeout or missing reply never repeats a pairing request: the Mac may already have spent its code.
 An explicit `paired` refusal leaves a fresh invitation unspent, so that one confirmed invitation may use `again` once to recover the same phone identity.
 A wrong pin never sends the invitation to that address or replaces the saved pin.
@@ -65,7 +70,11 @@ Out of reach is said once, by the reach line under the top bar with the time the
 `ReadOnlySession.returns` counts the times the computer came back in reach after a failed attempt, so the app can mark a return without mistaking the ordinary reconnection when it opens for one.
 Background cancels the old connection generation, and activation starts it again; an inactive scene such as Control Center does not disconnect.
 A late callback from an old connection cannot clear or overwrite a newer connection.
-Nearby addresses may be tried with the original pin, and only an authenticated address is saved as preferred.
+Nearby addresses may be tried with the original pin.
+Each reconnect orders the saved and nearby alternatives with private IPv4 candidates first, without letting a successful local fallback permanently reverse that preference.
+The authenticated welcome may carry `addresses`, which refreshes the saved alternatives without changing the phone identity or home pin, erasing local fallbacks or interrupting the working socket.
+An older home that omits the field leaves the saved alternatives unchanged.
+The computer sheet displays the last authenticated address actually reached, separately from the saved preference; before any successful connection it shows no reached address.
 
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the saved Mac.
 Out of reach, **Forget this computer** asks for confirmation and clears the saved Mac and pin locally without claiming the Mac removed the phone.

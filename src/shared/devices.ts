@@ -519,6 +519,8 @@ export type DeviceCommandFor = z.infer<typeof deviceCommandForSchema>;
  */
 export const deviceInviteRequestSchema = z.strictObject({
   kind: deviceKindSchema,
+  /** A phone link prefers detected private-network addresses, retaining local fallbacks. */
+  phone: z.literal(true).optional(),
   /**
    * Where the link tells the device to dial; when absent, the private
    * address in use, or loopback for another user on this Mac or a Mac with none.
@@ -839,3 +841,16 @@ export const deviceWords = {
       : `Removed ${label}. ${namesInWords(runs)} ${runs.length === 1 ? "runs" : "run"} on ${HERE.this} now.`;
   },
 };
+
+/** The phone panel describes the invitation's actual order, never inferred reachability. */
+export function phoneRouteWords(link: string): string {
+  const { at } = parsePairingLink(link);
+  const host = at.split(":")[0] ?? "";
+  const octets = host.split(".").map(Number);
+  return octets.length === 4 &&
+    octets[0] === 100 &&
+    (octets[1] ?? 0) >= 64 &&
+    (octets[1] ?? 0) <= 127
+    ? "This link prefers your private network, with local addresses as fallbacks. Both devices need access to that network."
+    : "Only local addresses are available. Your phone needs to share this computer’s network.";
+}

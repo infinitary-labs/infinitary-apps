@@ -67,8 +67,9 @@ struct PhoneComputerSheet: View {
                     Text(session.mac.name).font(PhoneFont.title).accessibilityIdentifier("home-name")
                     Text("Your first mate lives here.").foregroundStyle(PhoneTheme.secondary)
                     PhoneReach(session: session)
-                    if let address = session.mac.addresses.first {
+                    if let address = session.reachedAddress {
                         Text(address).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
+                            .accessibilityIdentifier("reached-address")
                     }
                 }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
             }

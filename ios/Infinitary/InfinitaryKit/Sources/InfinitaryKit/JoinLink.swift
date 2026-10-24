@@ -73,3 +73,24 @@ public struct JoinedMac: Codable, Equatable, Sendable {
         self.addresses = addresses; self.pin = pin; self.deviceID = deviceID; self.name = name
     }
 }
+
+/// INF-1156 option A: route preference survives a successful local fallback and a relaunch.
+/// Only the existing shared IPv4 range is recognized; names are not resolved or guessed.
+public enum PhoneAddresses {
+    public static func isPrivate(_ address: String) -> Bool {
+        guard let host = try? JoinLink.url(address, path: "/").host else { return false }
+        let parts = host.split(separator: ".", omittingEmptySubsequences: false)
+        guard parts.count == 4, parts.allSatisfy({ part in UInt8(part).map { String($0) == part } ?? false }),
+              parts[0] == "100", let second = UInt8(parts[1]) else { return false }
+        return (64...127).contains(second)
+    }
+
+    public static func preferred(_ addresses: [String]) -> [String] {
+        var unique: [String] = []
+        for address in addresses where !unique.contains(address) {
+            guard (try? JoinLink.url(address, path: "/")) != nil else { continue }
+            unique.append(address)
+        }
+        return unique.filter(isPrivate) + unique.filter { !isPrivate($0) }
+    }
+}

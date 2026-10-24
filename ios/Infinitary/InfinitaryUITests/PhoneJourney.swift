@@ -149,6 +149,7 @@ import XCTest
         XCTAssertTrue(app.buttons["close-computer-details"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts["home-name"].label, "Test Mac mini")
         XCTAssertTrue(app.staticTexts["In reach"].exists, "The computer's sheet says its reach")
+        XCTAssertTrue(app.staticTexts["reached-address"].label.hasPrefix("127.0.0.1:"), "The sheet names the route reached, not the saved preference")
         XCTAssertTrue(app.buttons["leave"].exists)
         try await appearances("computer-details")
         app.buttons["close-computer-details"].tap()

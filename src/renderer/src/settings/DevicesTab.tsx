@@ -13,6 +13,7 @@ import {
   deviceWords,
   firewallWords,
   namesInWords,
+  phoneRouteWords,
   userDisplayName,
 } from "@shared/devices";
 import {
@@ -671,7 +672,7 @@ function HomeDevicesTab() {
         if (open?.state === "open") await window.infinitary.devices.stop(open.invite.id);
         const invite = await window.infinitary.devices.invite(
           what === "link" || what === "phone"
-            ? { kind: "mac" }
+            ? { kind: "mac", ...(what === "phone" ? { phone: true } : {}) }
             : what === "command"
               ? { kind: "mac", command: "another-mac" }
               : { kind: "work", command: "another-user" },
@@ -2198,7 +2199,12 @@ function OpenLink({
     <div className="fm-devices-panel" data-panel-state="open" data-panel-holds={words.thing}>
       <SectionLabel>{words.label}</SectionLabel>
       <div className="fm-devices-panel-say">{words.say.join(" ")}</div>
-      {make === "phone" && <PhoneCode link={invite.link} />}
+      {make === "phone" && (
+        <>
+          <div className="fm-devices-panel-say">{phoneRouteWords(invite.link)}</div>
+          <PhoneCode link={invite.link} />
+        </>
+      )}
       {firewall && <FirewallLine firewall={firewall} />}
       <div className="fm-devices-panel-line">
         <code className="fm-devices-link" data-device-link="">

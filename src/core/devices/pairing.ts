@@ -436,7 +436,7 @@ export class DevicePairing implements PairedDevices {
         ? [`${LOOPBACK_ADDRESS}:${this.port}`]
         : request.at
           ? [request.at]
-          : this.offerTargets();
+          : this.offerTargets(request.phone);
     const [at, ...also] = targets;
     return {
       id,
@@ -551,16 +551,18 @@ export class DevicePairing implements PairedDevices {
   /**
    * The addresses a new link carries, local name first when this computer is
    * on a local network, then each local address, then the private network.
+   * A phone asks for private addresses first, retaining the same local fallbacks.
    * Bridges are left out. With none, loopback, which reaches only this computer.
    */
-  offerTargets(): string[] {
+  offerTargets(phone = false): string[] {
     const offered = offeredAddresses(this.interfaces());
     const local = offered.filter((entry) => entry.network === "local");
     const priv = offered.filter((entry) => entry.network === "private");
     const hosts: string[] = [];
+    if (phone) for (const entry of priv) hosts.push(entry.address);
     if (local.length > 0 && this.networkName) hosts.push(this.networkName);
     for (const entry of local) hosts.push(entry.address);
-    for (const entry of priv) hosts.push(entry.address);
+    if (!phone) for (const entry of priv) hosts.push(entry.address);
     if (hosts.length === 0) hosts.push(LOOPBACK_ADDRESS);
     return hosts.map((host) => `${host}:${this.port}`);
   }

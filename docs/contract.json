@@ -278,6 +278,12 @@
               "maxLength": 64,
               "pattern": "^[^\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]+$"
             },
+            "addresses": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
             "takesWork": {
               "type": "boolean"
             },
@@ -2428,6 +2434,10 @@
                   "work",
                   "view"
                 ]
+              },
+              "phone": {
+                "type": "boolean",
+                "const": true
               },
               "at": {
                 "type": "string"

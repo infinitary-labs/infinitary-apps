@@ -778,7 +778,9 @@ It reaches the first mate through `app_state` and a feed line, so it is quoted t
 ## Where devices find this Mac
 
 A new link carries every address this computer has, with `CONNECTION_PORT`.
-The local network's name, such as `kuns-macbook-pro.local`, comes first when this computer is on a local network, then each local address, then the private network.
+An ordinary computer link offers the local network's name, such as `kuns-macbook-pro.local`, first when this computer is on a local network, then each local address, then the private network.
+A phone invitation (`phone: true`) instead offers detected private IPv4 addresses first, then the same local name and local addresses; computer invitations and SSH paths keep their order.
+The phone checks each candidate with a pinned non-mutating request before spending the invitation, preserves private-first order on reconnect and refreshes alternatives from the authenticated welcome (`docs/ios.md`).
 The first stays `at`.
 The rest ride `also`.
 Container bridges are left out.

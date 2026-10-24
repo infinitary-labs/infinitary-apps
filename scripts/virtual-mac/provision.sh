@@ -14,9 +14,12 @@ curl -fsSL "$NODE_DIST/SHASUMS256.txt" -o "$WORK/SHASUMS256.txt"
 NODE_TAR="$(awk '/darwin-arm64\.tar\.xz$/ { print $2 }' "$WORK/SHASUMS256.txt")"
 curl -fsSL "$NODE_DIST/$NODE_TAR" -o "$WORK/$NODE_TAR"
 (cd "$WORK" && grep " $NODE_TAR\$" SHASUMS256.txt | shasum -a 256 -c -)
+# Fresh clones must start with a complete setup-node cache, not download Node
+# again. fm-placer points the runner at this same path outside its wiped _work.
+export RUNNER_TOOL_CACHE="$HOME/tool-cache"
+NODE_HOME="$(/bin/bash "$SHARE/cache-node.sh" "$WORK/$NODE_TAR" "$RUNNER_TOOL_CACHE")"
 rm -rf "$HOME/node"
-mkdir -p "$HOME/node"
-tar -xJf "$WORK/$NODE_TAR" -C "$HOME/node" --strip-components 1
+ln -s "$NODE_HOME" "$HOME/node"
 export PATH="$HOME/node/bin:/opt/homebrew/bin:/usr/local/bin:$PATH" CI=true
 # The full Mac gate reads TOML through Python's standard library and checks
 # casks against the installed Homebrew, including its tap-trust command.

@@ -20,6 +20,36 @@ import { scratchDir } from "./helpers/scratchDirs";
 // whose "virtual Mac" is a folder and whose exec runs the guest's commands here, and a
 // stand-in node and pnpm inside the image, replacing only Xcode's simulator work.
 const execute = promisify(execFile);
+// INF-1068: a fresh image must expose Node to setup-node without a download.
+// Exercise the archive installer with the distribution's directory layout and
+// a version-reporting executable stand-in; the live proof uses the real archive.
+it("publishes only a verified Node installation in the runner tool-cache layout", async () => {
+  const root = scratchDir("infinitary-node-cache-");
+  const version = "24.14.1";
+  const name = `node-v${version}-darwin-arm64`;
+  const distribution = join(root, name);
+  const cache = join(root, "tool cache");
+  mkdirSync(join(distribution, "bin"), { recursive: true });
+  const binary = join(distribution, "bin/node");
+  writeFileSync(binary, `#!/bin/sh\necho v${version}\n`, { mode: 0o755 });
+  const archive = join(root, `${name}.tar.xz`);
+  const pack = () => execute("tar", ["-cJf", archive, "-C", root, name], { env: hostEnv() });
+  const install = () =>
+    execute("bash", ["scripts/virtual-mac/cache-node.sh", archive, cache], { env: hostEnv() });
+  await pack();
+  const destination = join(cache, "node", version, "arm64");
+  expect((await install()).stdout.trim()).toBe(destination);
+  expect(existsSync(`${destination}.complete`)).toBe(true);
+  expect(
+    (await execute(join(destination, "bin/node"), ["--version"], { env: hostEnv() })).stdout.trim(),
+  ).toBe(`v${version}`);
+  // A failed reinstall cannot retain an old completion marker.
+  writeFileSync(binary, "#!/bin/sh\necho v22.0.0\n", { mode: 0o755 });
+  await pack();
+  await expect(install()).rejects.toMatchObject({ code: 1 });
+  expect(existsSync(`${destination}.complete`)).toBe(false);
+});
+
 const IMAGE = "infinitary-lane";
 const CLONE = `${IMAGE}-phone`;
 

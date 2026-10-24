@@ -587,6 +587,10 @@ Each part checks itself as the image is built, and the image is renamed into pla
 
 The Mac mini's placement service (`dotfiles-private`) runs every project's Mac jobs in fresh clones of this one image, two at a time, and deletes each clone after its job.
 It brings its own GitHub runner into each clone, so the image holds none.
+Provisioning installs its checksum-verified Node archive under `$HOME/tool-cache/node/<version>/arm64`, checks the executable's version, then writes `arm64.complete` for `actions/setup-node`.
+`$HOME/node` links to that installation, preserving the guest services' and login shells' path.
+The placement service points virtual runners' `RUNNER_TOOL_CACHE` at `$HOME/tool-cache`, outside the runner's wiped `_work`, so the first job in a fresh clone finds Node without downloading a manifest or archive.
+After reboot, the image builder checks the completion marker, cached executable and shared installation before publishing the image.
 `provision.sh` fails the build unless the tools those jobs' workflows name are there: `git`, `gh`, `python3`, `perl`, `swift`, `xcodebuild` and `xcrun`, an Xcode 26 and the iOS 26.1 runtime sshhip's full simulator suite explicitly requests.
 The Xcode 26.4 base provides iOS 26.4, not that pinned fixture.
 Provisioning also updates the guest's Homebrew and installs its Python and Bash, refusing an image without `tomllib`, Homebrew's tap-trust command or Bash 4+ on the job's path.

@@ -77,6 +77,7 @@ cleanup() {
 trap cleanup EXIT
 
 cp "$ROOT/scripts/virtual-mac/provision.sh" "$SHARE/provision.sh"
+cp "$ROOT/scripts/virtual-mac/cache-node.sh" "$SHARE/cache-node.sh"
 cp "$ROOT/scripts/virtual-mac/guest-services.sh" "$SHARE/guest-services.sh"
 cp "$ROOT/scripts/virtual-mac/runtime.sh" "$SHARE/runtime.sh"
 # The working copy's own lockfile warms the image's pnpm store.
@@ -98,6 +99,8 @@ TOOL_CHECK='set -e; command -v python3; python3 -c "import tomllib"; bash -c '\'
 "$TART" exec "$BUILDING" /bin/bash -c "$TOOL_CHECK"
 "$TART" exec "$BUILDING" /bin/zsh -ilc "$TOOL_CHECK"
 "$TART" exec "$BUILDING" /bin/bash -lc "$TOOL_CHECK"
+# Verify the cache survived reboot and is the same installation on the job's PATH.
+"$TART" exec "$BUILDING" /bin/bash -c 'set -e; version="$("$HOME/node/bin/node" --version)"; cached="$HOME/tool-cache/node/${version#v}/arm64"; test -f "$cached.complete"; test "$("$cached/bin/node" --version)" = "$version"; test "$HOME/node/bin/node" -ef "$cached/bin/node"'
 shutdown_vm "$BUILDING"
 "$TART" delete "$NAME" > /dev/null 2>&1 || true
 "$TART" rename "$BUILDING" "$NAME"

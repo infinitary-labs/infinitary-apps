@@ -716,12 +716,12 @@ export const remoteLoginWords = {
       case "sandbox-off":
         return [
           `${name} would run Infinitary without its sandbox: its system keeps apps from making one.`,
-          `Install the Infinitary package for its system there, then paste a link from ${HERE.this} at its first launch instead. Nothing changed there.`,
+          "Install the Infinitary package for its system there, then add it with Run a command there instead. Nothing changed there.",
         ];
       case "cannot-install":
         return [
           `${name} cannot install software there.`,
-          `Use an account that can, or install Infinitary there and paste a link from ${HERE.this}. Nothing changed there.`,
+          "Use an account that can, or install Infinitary there and add it with Run a command there. Nothing changed there.",
         ];
       case "no-build":
         return [

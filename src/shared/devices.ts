@@ -541,9 +541,13 @@ export const deviceInviteSchema = z.strictObject({
   link: z.string().startsWith(PAIRING_LINK_PREFIX),
   kind: deviceKindSchema,
   expiresAt: z.number().int().nonnegative(),
-  /** The command that carries the link, when one was asked for: as secret as the link. */
+  /**
+   * The command that carries the link, when one was asked for: as secret as
+   * the link. Its length is bounded by the longest word Linux lets a program
+   * take (MAX_ARG_STRLEN, 128 KiB), so each word of a command within it can run.
+   */
   command: z
-    .strictObject({ for: deviceCommandForSchema, text: z.string().min(1).max(16_384) })
+    .strictObject({ for: deviceCommandForSchema, text: z.string().min(1).max(131_072) })
     .optional(),
 });
 export type DeviceInvite = z.infer<typeof deviceInviteSchema>;

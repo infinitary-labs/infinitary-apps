@@ -40,7 +40,7 @@ import { type HelperIO, homeDialAddress, joinHome } from "./join";
 import { HomeRoute, ROUTE_LEASE_MS } from "./route";
 import { type HelperRun, helperStatus, startHelper } from "./run";
 import type { HeldSignIns } from "./signIns";
-import { helperWords } from "./words";
+import { afterInstall, helperWords, INSTALLED_STAYS } from "./words";
 
 /**
  * What runs work for a home, joining and running (docs/helper.md), against
@@ -337,6 +337,35 @@ describe("joining a home as a computer that runs work", () => {
       reason: "expired",
     });
     expect(expired.said).toEqual(helperWords.expired(thisMac));
+  });
+
+  // Review INF-1241 R3: after the command installed the Ubuntu package, a stop leaves it
+  // installed, whichever way the join stops; INF-1194's live run stopped it as unreachable.
+  it("says Infinitary stays installed where a join the command installed it for stops", async () => {
+    const at = await home();
+    const link = await at.link();
+    expect(await join_(link, scratchDir("infinitary-helper-"), person().io)).toMatchObject({
+      ok: true,
+    });
+    const installed = (text: string, io: HelperIO) =>
+      joinHome({
+        text,
+        dataDir: scratchDir("infinitary-helper-"),
+        io,
+        device: { name: "MacBook Pro", user: BUILDER },
+        timeoutMs: 2_000,
+        agreed: true,
+      });
+    const used = person();
+    expect(await installed(link, used.io)).toMatchObject({ reason: "used" });
+    expect(used.said).toEqual([...afterInstall(helperWords.used(thisMac)), INSTALLED_STAYS]);
+    expect(afterInstall(helperWords.used(thisMac))).not.toEqual(helperWords.used(thisMac));
+
+    const later = await at.link();
+    await at.quit();
+    const nowhere = person();
+    expect(await installed(later, nowhere.io)).toMatchObject({ reason: "unreachable" });
+    expect(nowhere.said).toEqual([...helperWords.unreachable(thisMac), INSTALLED_STAYS]);
   });
 
   it("sets itself up in the background once joined, out of the folder's lock, and tells the home what it found", async () => {

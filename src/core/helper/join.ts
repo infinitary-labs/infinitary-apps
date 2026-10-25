@@ -27,7 +27,14 @@ import type { CleanUpResult } from "./cleanUp";
 import { homePlace } from "./homePlace";
 import { FolderBusyError, lockFolder, STOPPED_RUN_WAIT_MS, takeFolderWithin } from "./lock";
 import { homeDialOptions } from "./route";
-import { type HomePlace, helperWords, homeLabel, type InBackground } from "./words";
+import {
+  afterInstall,
+  type HomePlace,
+  helperWords,
+  homeLabel,
+  INSTALLED_STAYS,
+  type InBackground,
+} from "./words";
 
 /**
  * Joining a home as a computer that runs work (docs/helper.md): read the
@@ -78,6 +85,12 @@ export type JoinOptions = {
    * `app/` once the link is used.
    */
   fetched?: { app: string };
+  /**
+   * The command for another computer asked the person before it installed
+   * the Ubuntu package this runs from (docs/devices.md, "Joining by a
+   * command"), so it is not asked again.
+   */
+  agreed?: boolean;
   /** What it has here: git and Claude Code (`findTools`), unless a test stands in its own. */
   found?: () => Promise<FoundTools>;
   /**
@@ -167,6 +180,14 @@ export function homeDialAddress(
 }
 
 export async function joinHome(options: JoinOptions): Promise<JoinOutcome> {
+  if (!options.agreed) return joinWith(options);
+  // After the command installed the package this runs from, a stop leaves it installed.
+  const outcome = await joinWith({ ...options, io: installedIO(options.io) });
+  if (!outcome.ok) options.io.say([INSTALLED_STAYS]);
+  return outcome;
+}
+
+async function joinWith(options: JoinOptions): Promise<JoinOutcome> {
   const { io, dataDir } = options;
   const refuse = refuser(io);
   let link: PairingLink;
@@ -379,7 +400,7 @@ async function leaveFor(
     : await io.ask(
         [
           ...helperWords.askLeave(from),
-          ...(options.fetched
+          ...(options.fetched || options.agreed
             ? []
             : helperWords.ask(place, options.device.user.name, options.platform)),
         ],
@@ -489,7 +510,7 @@ async function joinWithLink(
     }
   }
 
-  if (!options.fetched && !asked) {
+  if (!options.fetched && !options.agreed && !asked) {
     const answer = await io.ask(
       helperWords.ask(place, options.device.user.name, options.platform),
       helperWords.prompt,
@@ -606,6 +627,13 @@ function alreadyJoined(
     "joined",
     helperWords.alreadyJoined(homeLabel(homePlace(already.grant, interfaces), already.name)),
   );
+}
+
+function installedIO(io: HelperIO): HelperIO {
+  return {
+    say: (lines) => io.say(afterInstall(lines)),
+    ask: (lines, prompt) => io.ask(afterInstall(lines), prompt),
+  };
 }
 
 function refuser(io: HelperIO) {

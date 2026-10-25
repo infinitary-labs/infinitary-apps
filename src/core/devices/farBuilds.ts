@@ -91,6 +91,24 @@ export class FarBuilds {
     }
   }
 
+  /**
+   * Where this version's Ubuntu package is published, for the line that
+   * updates an older one there; null where none is, or none could be read.
+   */
+  async ubuntuPackageDownload(): Promise<{ url: string; sha256: string } | null> {
+    try {
+      return (
+        (await this.options.published?.downloadFor({
+          system: "linux",
+          chip: "x64",
+          kind: "deb",
+        })) ?? null
+      );
+    } catch {
+      return null;
+    }
+  }
+
   /** The copy for a computer of `far`'s system on `chip`, or why there is none. */
   async for(
     far: FarSystem,

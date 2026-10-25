@@ -67,7 +67,7 @@ Chromium's own switches may stand before `work` (`workCommand`): an AppImage's r
 
 | Command | What it does |
 | --- | --- |
-| `join <link>` | Joins the home a link names (below), then sets itself to run in the background; with a link from the home it already joined, finds that home where the link says it is now (below, "Finding the home again"). Exits 0 joined or found, 1 refused. `join --fetched <app> <link>` is what the command for another Mac starts: the person agreed already, and `<app>` is the copy it got. `join --fetched <app> --from-home` is what the home starts over Remote Login, with the link on its input (below, "Started by the home"). |
+| `join <link>` | Joins the home a link names (below), then sets itself to run in the background; with a link from the home it already joined, finds that home where the link says it is now (below, "Finding the home again"). Exits 0 joined or found, 1 refused. `join --fetched <app> <link>` is what the command for another Mac starts: the person agreed already, and `<app>` is the copy it got. `join --agreed <link>` is what the command starts on Ubuntu with the package it just installed: the person agreed already, and nothing is kept in `app/`. `join --fetched <app> --from-home` is what the home starts over Remote Login, with the link on its input (below, "Started by the home"). |
 | `run` | Dials the home with the grant and keeps dialing while it is out of reach, until it is stopped or the home removes it. When a removal an earlier run could not finish waits here, it finishes that instead (below, "Removed"). |
 | `status` | Says what this user joined, where, since when, and whether it is running, without dialing. |
 | `version` | `Infinitary <app version> · contract <PROTOCOL_VERSION>`. |
@@ -98,6 +98,9 @@ That holds once it loaded its own sign-ins too: the work mode listens for SIGINT
    You can switch back."
 
 Started with `--fetched` by the command for another Mac, it asks nothing - the command asked before it got Infinitary - and keeps the copy it got in `app/` (cloned where the disk can) before it uses the link; a refused link keeps nothing.
+Started with `--agreed` by the command on Ubuntu, with the package it just installed, it asks nothing either and keeps no copy, since the package's program is the one that runs.
+Since the package stays, its words then never say nothing changed, and a refusal ends with the words that Infinitary stays installed on this computer (`afterInstall`, `INSTALLED_STAYS`).
+Started with `--background <file>`, as the command starts it, a join writes how its work runs in the background there (`running`, `at-login`, `failed` or `none`), which the command reads to say what keeps the work on after logout (`docs/devices.md`, "Joining by a command").
 A link that was used, expired, or closed, and a link from another home while the one kept still answers, each say what happened and that nothing changed ("That command was used already.
 Make a new one on the computer at 192.168.1.20.").
 A link from another home while the one kept does not answer asks to leave that one first (below, "Leaving a home that is gone").
@@ -1044,12 +1047,13 @@ A new join clears the note, and nothing tries again on its own; a join that find
 - `tests/e2e/run-work.spec.ts`, "an installed build runs the work mode": the built app with the installed flag answers its version and that it has joined nothing.
 - `tests/e2e/run-work.spec.ts`, "a Mac a command joined, stranded when the home's address changes": the built app, joined by the command for another Mac and stranded once the home moved, is found by the home's Add it at its address as the same computer with its sign-in kept, its stranded run stopped, and from then on reaches the home only through the home's SSH connection, which connects, and comes back by itself when the home moves again.
 - `tests/e2e/run-work.spec.ts`, "a Mac added by its address over Remote Login": the built app on the other side of a throwaway SSH server on loopback joins with the link on its input, keeps the copy, sets up its background and runs in reach of the home, then is updated while the home holds its connection, its grant kept as before the home said where it runs, and keeps the home's word from the update's arguments; once the home's address changes, it comes back by itself over the home's new connection with nothing run there; then it is removed over SSH.
+- `tests/e2e/run-work.spec.ts`, "on Linux with no screen, the command joins with the Infinitary installed there": the built app as the installed program, with no display, joins by the command with its own yes, downloading nothing, and the command names the line that keeps the work on after logout; "on Linux with no screen, the window says to use Run a command there": the window's two lines and exit 1.
 - `src/core/devices/computerUpdate.test.ts`: updated by its home over the connection - the home's copy got with its own key and kept, nothing got as another user on the home's Mac, the run ending for its background, and a copy that could not be got changing nothing; `tests/e2e/run-work.spec.ts`, "updated over the connection": the same with the built app.
 
 ## Not yet
 
-- A Linux computer's work while nobody is logged in as its user, except an Ubuntu 24.04 or 26.04 computer added by its address: that setup turns linger on for the account (`docs/devices.md`, "The Ubuntu package").
-  Anywhere else the service runs only while they are logged in, and linger stays theirs to turn on.
+- A Linux computer's work while nobody is logged in as its user where systemd does not let that user keep it: an Ubuntu 24.04 or 26.04 computer added by its address or by its command turns linger on for the account, and the command elsewhere turns it on where systemd allows it without a password, or prints the one `sudo loginctl enable-linger` line (`docs/devices.md`, "Joining by a command", "The Ubuntu package").
+  Anywhere else the service runs only while they are logged in.
 - The real check of a Linux computer joined by a link to the captain's own Mac, and of a Mac to a Linux home, on two computers of the captain's: the journeys run both ends on one computer, and GitHub's machines cannot reach each other.
 
 - The priority launchd gives the agent's run: no test loads an agent, so `background.test.ts` holds only the file that asks for it.

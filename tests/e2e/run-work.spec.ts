@@ -19,7 +19,7 @@ import { CLAUDE_CONTROL_PROFILE } from "../../src/core/claude/session";
 import { type HomeConnection, startConnection } from "../../src/core/connection/connection";
 import { claimLink } from "../../src/core/devices/dial";
 import { FarBuilds } from "../../src/core/devices/farBuilds";
-import { farSystemNamed } from "../../src/core/devices/farSystems";
+import { APPIMAGE_LIBRARIES, farSystemNamed } from "../../src/core/devices/farSystems";
 import { joinCommand, shellWord } from "../../src/core/devices/joinCommand";
 import { JoinedHome } from "../../src/core/devices/joinedHome";
 import { DevicePairing } from "../../src/core/devices/pairing";
@@ -29,7 +29,7 @@ import type { CoreDispatch } from "../../src/core/dispatcher";
 import { CoreEventBus } from "../../src/core/events";
 import { readInstalled, serviceLabel } from "../../src/core/helper/background";
 import { HomeRoute } from "../../src/core/helper/route";
-import { helperWords, macAsk } from "../../src/core/helper/words";
+import { afterLogout, helperWords, macAsk } from "../../src/core/helper/words";
 import { WorkingCopies } from "../../src/core/helper/workingCopies";
 import { hostEnv } from "../../src/core/hostEnv";
 import { writeLoginShellStub } from "../../src/core/loginShellStub";
@@ -39,6 +39,7 @@ import { WorkDevices } from "../../src/core/placed/workDevices";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { git } from "../../src/core/workspace/git";
 import { keptRefFor } from "../../src/core/workspace/workspaceService";
+import { NO_SCREEN_WORDS } from "../../src/main/noScreen";
 import { HERE } from "../../src/shared/deviceNames";
 import { deviceChipOf } from "../../src/shared/platform";
 import { claimedPort } from "../helpers/claimedPort";
@@ -212,6 +213,11 @@ async function home(
       return { forward, grant, publish };
     },
   };
+}
+
+/** The built app's own version, which `work version` answers and a command carries from its home. */
+function appVersion(): string {
+  return JSON.parse(readFileSync(join(builtAppDir(), "package.json"), "utf8")).version;
 }
 
 /** Whether this computer's background is a systemd user service, as on Linux, or a Mac's launchd agent. */
@@ -392,17 +398,50 @@ function onAMac(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
 
 /**
  * The environment a command for another computer runs in on a Linux
- * computer whose user can make a user namespace, so the AppImage it gets
- * keeps Chromium's sandbox on and the command goes on
- * (src/core/devices/joinCommand.ts): a stand-in `unshare` answers the
- * probe, which a hosted runner's kernel may refuse, as it answers in every
- * session of the test's SSH server (tests/helpers/sshServer.ts).
+ * computer where the AppImage it gets runs as it should, so the command goes
+ * on (src/core/devices/joinCommand.ts): stand-ins answer what a hosted
+ * runner's own system may lack or refuse - the `unshare` probe, which its
+ * kernel may refuse, as it answers in every session of the test's SSH server
+ * (tests/helpers/sshServer.ts); FUSE 2's `fusermount`; `ldconfig`'s list of
+ * the AppImage's libraries - and `loginctl`, which writes down what it was
+ * asked into `loginctl.asked` in `record` and refuses to keep this user's
+ * work on after logout, so no test changes the runner's own. Xvfb stays the system's own, which the work mode draws on.
  */
-function withNamespaces(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+function onLinuxThatRunsIt(
+  env: NodeJS.ProcessEnv,
+  record = scratchDir("infinitary-run-work-linux-record-"),
+): NodeJS.ProcessEnv {
   if (process.platform !== "linux") return env;
-  const bin = scratchDir("infinitary-run-work-namespaces-bin-");
-  writeFileSync(join(bin, "unshare"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  const bin = scratchDir("infinitary-run-work-linux-bin-");
+  const tool = (name: string, lines: readonly string[]) =>
+    writeFileSync(join(bin, name), ["#!/bin/sh", ...lines, ""].join("\n"), { mode: 0o755 });
+  tool("unshare", ["exit 0"]);
+  tool("fusermount", ["exit 0"]);
+  tool("ldconfig", [
+    `printf '\\t%s (libc6,x86-64) => /lib/x86_64-linux-gnu/%s\\n' ${[
+      "libc.so.6",
+      ...Object.values(APPIMAGE_LIBRARIES).flat(),
+    ]
+      .map((library) => `${library} ${library}`)
+      .join(" ")}`,
+  ]);
+  const asked = shellWord(join(record, "loginctl.asked"));
+  tool("loginctl", [
+    `printf '%s\\n' "$*" >> ${asked}`,
+    'if [ "$1" = show-user ]; then echo no; exit 0; fi',
+    "exit 1",
+  ]);
   return { ...env, PATH: `${bin}:${env.PATH ?? ""}` };
+}
+
+/**
+ * Where a Linux computer the command runs on says its release and keeps the
+ * Ubuntu package's program: neither there, so a hosted Ubuntu runner is
+ * read as Linux with no Infinitary installed, which gets the AppImage.
+ */
+function noUbuntuPackage() {
+  const dir = scratchDir("infinitary-run-work-linux-files-");
+  return { osRelease: join(dir, "os-release"), packageBin: join(dir, "infinitary") };
 }
 
 /**
@@ -763,6 +802,7 @@ test("the command for another user on this Mac starts this Mac's app, which asks
     link: await at.command(),
     homeName: "MacBook Pro",
     launcher: { executable: electronPath as unknown as string, args: [builtAppDir()] },
+    version: appVersion(),
   });
   const ran = terminal(command, me.env, "yes\n");
   expect(await ran.exited).toBe(0);
@@ -816,6 +856,7 @@ test("the command for another Mac gets Firstmate from the home, and the copy it 
     link,
     homeName: "MacBook Pro",
     launcher: { executable: "/unused", args: [] },
+    version: appVersion(),
   });
   const ran = terminal(command, me.env, "yes\n");
   expect(await ran.exited).toBe(0);
@@ -837,6 +878,81 @@ test("the command for another Mac gets Firstmate from the home, and the copy it 
   );
   expect(readFileSync(join(kept, "Contents", "MacOS", "Firstmate 3000"), "utf8")).toBe(
     readFileSync(program, "utf8"),
+  );
+});
+
+/** This environment with no screen: neither an X nor a Wayland display. */
+function noScreen(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  const { DISPLAY: _x, WAYLAND_DISPLAY: _wayland, ...rest } = env;
+  return rest;
+}
+
+/**
+ * INF-1181's accepted plan: on Linux with no display, Infinitary's window
+ * says in two plain lines to use Run a command there, and exits 1 without
+ * Chromium's crash. Data: the built app started as its window, with the
+ * display unset. Completion: the process exits. Linux only: a Mac always
+ * has its screen.
+ */
+test("on Linux with no screen, the window says to use Run a command there and exits 1", async () => {
+  test.skip(process.platform !== "linux", "only Linux starts with no screen");
+  const me = user();
+  const child = spawn(electronPath as unknown as string, [builtAppDir()], {
+    env: noScreen(me.env),
+    cwd: scratchDir("infinitary-run-work-cwd-"),
+  });
+  children.push(child);
+  let error = "";
+  child.stderr.on("data", (chunk) => {
+    error += String(chunk);
+  });
+  const code = await new Promise<number | null>((resolve) => child.once("exit", resolve));
+  expect(code).toBe(1);
+  expect(error).toBe(`${NO_SCREEN_WORDS.join("\n")}\n`);
+});
+
+/**
+ * INF-1181's accepted plan and the captain's "linger" pick. Promise: on
+ * Linux with no display, the command from Run a command there joins with
+ * the Infinitary installed there - nothing downloaded or got from the home -
+ * which asks its own yes and runs in the background, and the command's last
+ * lines name the one sudo line that keeps the work on after logout where
+ * systemd does not let this user. Data: the built app as the installed
+ * program, the display unset, a home with nothing to send. Completion: the
+ * command exits. Linux only: the command joins this way only there.
+ */
+test("on Linux with no screen, the command joins with the Infinitary installed there and names the line that keeps it on after logout", async () => {
+  test.skip(process.platform !== "linux", "the command joins with an installed copy on Linux");
+  const at = await home(ME.uid + 1);
+  const me = user();
+  const files = noUbuntuPackage();
+  writeFileSync(
+    files.packageBin,
+    `#!/bin/sh\nexec ${shellWord(electronPath as unknown as string)} ${shellWord(builtAppDir())} "$@"\n`,
+    { mode: 0o755 },
+  );
+  const record = scratchDir("infinitary-run-work-linux-record-");
+  const command = joinCommand({
+    for: "another-mac",
+    link: await at.link(),
+    homeName: "MacBook Pro",
+    launcher: { executable: "/unused", args: [] },
+    version: appVersion(),
+    linux: files,
+  });
+  const ran = terminal(command, noScreen(onLinuxThatRunsIt(me.env, record)), "yes\n");
+  expect(await ran.exited, ran.error()).toBe(0);
+  expect(ran.lines()).toEqual([
+    ...helperWords.ask(THIS_MAC, ME.name, process.platform),
+    `${helperWords.prompt}yes`,
+    ...helperWords.joined(THIS_MAC, "MacBook Pro", ME.name, "running"),
+    ...afterLogout(ME.name, false),
+  ]);
+  expect(at.pairing.list()).toEqual([expect.objectContaining({ kind: "work", user: ME.name })]);
+  expect(me.managerAsked().slice(-me.background.started.length)).toEqual(me.background.started);
+  // It asked systemd to keep the work on, without a password, and was refused.
+  expect(readFileSync(join(record, "loginctl.asked"), "utf8")).toContain(
+    `enable-linger --no-ask-password ${ME.name}`,
   );
 });
 
@@ -875,6 +991,7 @@ test("the command for another Mac downloads the published version, and the copy 
       link: await at.link(),
       homeName: "MacBook Pro",
       launcher: { executable: "/unused", args: [] },
+      version: appVersion(),
       download: {
         url: release.downloads[release.publicUrl] ?? "",
         sha256: release.sha256,
@@ -931,6 +1048,7 @@ test("updated over the connection: the copy a command kept gets the home's First
     link: await at.link(),
     homeName: "MacBook Pro",
     launcher: { executable: "/unused", args: [] },
+    version: appVersion(),
   });
   expect(await terminal(command, onAMac(me.env), "yes\n").exited).toBe(0);
   const [device] = at.pairing.list();
@@ -1002,6 +1120,7 @@ test("updated over the connection, the copy a command kept downloads the publish
       link: await at.link(),
       homeName: "MacBook Pro",
       launcher: { executable: "/unused", args: [] },
+      version: appVersion(),
     });
     expect(await terminal(command, onAMac(me.env), "yes\n").exited).toBe(0);
     const [device] = at.pairing.list();
@@ -1195,8 +1314,10 @@ test("a Mac a command joined, stranded when the home's address changes, is found
     link,
     homeName: "MacBook Pro",
     launcher: { executable: "/unused", args: [] },
+    version: appVersion(),
+    linux: noUbuntuPackage(),
   });
-  expect(await terminal(command, withNamespaces(them.env), "yes\n").exited).toBe(0);
+  expect(await terminal(command, onLinuxThatRunsIt(them.env), "yes\n").exited).toBe(0);
   const joined = new JoinedHome(them.dataDir, () => {}).read();
   if (!joined) throw new Error("Nothing joined there.");
   expect(joined.grant).not.toHaveProperty("via");

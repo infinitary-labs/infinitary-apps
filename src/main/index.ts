@@ -1,5 +1,7 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { hostPlatform } from "../core/platform";
+import { hasNoScreen, NO_SCREEN_WORDS } from "./noScreen";
 import { installMainProcessErrorHandlers } from "./processErrors";
 import { workCommand } from "./workCommand";
 
@@ -25,6 +27,10 @@ if (work) {
   // On Linux with no display, the work mode's own starts here, before
   // Chromium opens one (./ownDisplay.ts).
   if (await prepareWorkMode(work)) runWorkMode(work, dirname(fileURLToPath(import.meta.url)));
+} else if (hasNoScreen(hostPlatform(), process.env, process.argv)) {
+  // The window cannot open with no screen: say what to do instead, with no crash.
+  process.stderr.write(`${NO_SCREEN_WORDS.join("\n")}\n`);
+  process.exit(1);
 } else {
   const { startApp } = await import("./app");
   startApp(dirname(fileURLToPath(import.meta.url)));

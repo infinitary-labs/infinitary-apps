@@ -21,6 +21,7 @@ import {
   clientFrameSchema,
   FETCH_APP_PATH,
   FETCH_APP_REFUSAL_STATUS,
+  FETCH_APP_SHA256_HEADER,
   FETCH_APP_TYPES,
   type FetchAppRefusal,
   fetchAppRequestSchema,
@@ -235,7 +236,11 @@ export type ConnectionOptions = {
    * home's own when it suits, else the one published for them, got and
    * checked; null when there is none to send.
    */
-  build?: (system: DeviceSystem, chip: DeviceChip | undefined) => Promise<FarBuild | null>;
+  build?: (
+    system: DeviceSystem,
+    chip: DeviceChip | undefined,
+    kind?: "deb",
+  ) => Promise<FarBuild | null>;
 };
 
 export type HomeConnection = {
@@ -898,7 +903,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       let build: FarBuild | null = null;
       if (want?.system && options.build) {
         try {
-          build = await options.build(want.system, want.chip);
+          build = await options.build(want.system, want.chip, want.package);
         } catch (error) {
           onProblem(`could not get Infinitary for another system: ${String(error)}`);
           build = null;
@@ -924,6 +929,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
               : FETCH_APP_TYPES.appImage,
         "Cache-Control": "no-store",
         Connection: "close",
+        ...(build.form === "bundle" ? {} : { [FETCH_APP_SHA256_HEADER]: build.sha256 }),
       });
       if (sentTo !== null) {
         const deviceId = sentTo;

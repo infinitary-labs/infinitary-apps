@@ -1,3 +1,4 @@
+import { writeFileSync } from "node:fs";
 import { homedir, hostname, userInfo } from "node:os";
 import { createInterface } from "node:readline";
 import { settingFrom } from "@shared/envSettings";
@@ -160,28 +161,40 @@ function backgroundOf(
  * `--home <pin> --device <id>`, the home and computer the home expects this
  * folder to run work for (`expectedHomeSchema`), both public;
  * `--on-home-mac true|false`, whether this computer runs on the home's own
- * Mac, as the home's list found it; and the rest. Null when a flag names
- * nothing, or something it does not take.
+ * Mac, as the home's list found it; `--agreed`, the command for another
+ * computer asked before it installed this program; `--background <file>`,
+ * where a joined command learns how its work runs in the background
+ * (`InBackground`); and the rest. Null when a flag names nothing, or something it does not take.
  */
 function readFlags(rest: readonly string[]): {
   fetched?: string;
+  background?: string;
   fromHome: boolean;
+  agreed: boolean;
   expected?: ExpectedHome;
   onHomeMac?: boolean;
   words: string[];
 } | null {
   const words: string[] = [];
   let fetched: string | undefined;
+  let background: string | undefined;
   let homeKey: string | undefined;
   let deviceId: string | undefined;
   let onHomeMac: boolean | undefined;
   let fromHome = false;
+  let agreed = false;
   for (let index = 0; index < rest.length; index += 1) {
     const word = rest[index] as string;
-    if (word === "--fetched" || word === "--home" || word === "--device") {
+    if (
+      word === "--fetched" ||
+      word === "--background" ||
+      word === "--home" ||
+      word === "--device"
+    ) {
       const value = rest[index + 1];
       if (!value) return null;
       if (word === "--fetched") fetched = value;
+      else if (word === "--background") background = value;
       else if (word === "--home") homeKey = value;
       else deviceId = value;
       index += 1;
@@ -191,6 +204,7 @@ function readFlags(rest: readonly string[]): {
       onHomeMac = value === "true";
       index += 1;
     } else if (word === "--from-home") fromHome = true;
+    else if (word === "--agreed") agreed = true;
     else words.push(word);
   }
   const expected =
@@ -200,7 +214,9 @@ function readFlags(rest: readonly string[]): {
   if (expected && !expected.success) return null;
   return {
     ...(fetched ? { fetched } : {}),
+    ...(background ? { background } : {}),
     fromHome,
+    agreed,
     ...(expected?.success ? { expected: expected.data } : {}),
     ...(onHomeMac === undefined ? {} : { onHomeMac }),
     words,
@@ -300,6 +316,7 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
           user: { name: user.username, uid },
         },
         ...(fetched ? { fetched: { app: fetched } } : {}),
+        ...(flags.agreed ? { agreed: true } : {}),
         // The home's captain agreed to leave a home this user runs work for that does not answer.
         ...(sent?.leave ? { leave: true } : {}),
         // Over the home's SSH, every dial with the link goes through the socket it forwards here.
@@ -334,6 +351,13 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
               }
             : { firstmate: "refused", reason: outcome.reason },
         );
+      // The command reads this to say what keeps the work on after logout
+      // (docs/devices.md, "Joining by a command"); unwritten, it says nothing.
+      if (outcome.ok && flags.background) {
+        try {
+          writeFileSync(flags.background, outcome.background);
+        } catch {}
+      }
       return outcome.ok ? 0 : 1;
     }
     // The home's own, over Remote Login (docs/helper.md, "Started by the home").

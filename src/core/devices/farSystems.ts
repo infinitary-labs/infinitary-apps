@@ -246,6 +246,19 @@ const INSTALLER = [
   "fi",
 ];
 
+/**
+ * What a Linux computer lacks for the AppImage and its work, as
+ * `infinitary:needs=` lines, with the program that installs them there: the
+ * look's, and the command's before it asks (`joinCommand`).
+ */
+export const LINUX_TOOL_NEEDS: readonly string[] = [
+  "command -v git >/dev/null 2>&1 || printf 'infinitary:needs=git\\n'",
+  "command -v Xvfb >/dev/null 2>&1 || printf 'infinitary:needs=xvfb\\n'",
+  "command -v fusermount >/dev/null 2>&1 || printf 'infinitary:needs=fuse\\n'",
+  ...LIBRARY_NEEDS,
+  ...INSTALLER,
+];
+
 export const MACOS: FarSystem = {
   system: "macos",
   uname: "Darwin",
@@ -325,11 +338,7 @@ export const LINUX: FarSystem = {
   // runtime is FUSE 2's, which mounts it with `fusermount`, and the
   // libraries the AppImage needs, with the program that installs them.
   needs: [
-    "command -v git >/dev/null 2>&1 || printf 'infinitary:needs=git\\n'",
-    "command -v Xvfb >/dev/null 2>&1 || printf 'infinitary:needs=xvfb\\n'",
-    "command -v fusermount >/dev/null 2>&1 || printf 'infinitary:needs=fuse\\n'",
-    ...LIBRARY_NEEDS,
-    ...INSTALLER,
+    ...LINUX_TOOL_NEEDS,
     // The AppImage's own launcher turns Chromium's sandbox off where this
     // user cannot make a user namespace; it asks with the launcher's probe.
     `${SANDBOX_PROBE} || printf 'infinitary:sandbox=off\\n'`,

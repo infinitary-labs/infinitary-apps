@@ -80,6 +80,14 @@ export const fetchAppRequestSchema = z.strictObject({
   system: deviceSystemSchema.optional(),
   chip: deviceChipSchema.optional(),
   /**
+   * Asks for the Ubuntu package for that system and chip rather than its
+   * AppImage (`fetch-ubuntu-package.md`): the command for another computer
+   * asks it on Ubuntu 24.04 and 26.04 with no Infinitary installed, and
+   * installs it there (docs/devices.md, "Joining by a command"). Only this
+   * home's own command asks it, so no older home is ever asked it.
+   */
+  package: z.literal("deb").optional(),
+  /**
    * Asks only whether the code is still open, and sends nothing (from
    * protocol 8.15): the home answers 204, or the same refusal. A command
    * asks it before it downloads Firstmate from its published release
@@ -101,6 +109,13 @@ export const FETCH_APP_TYPES = {
   zip: "application/zip",
   appImage: "application/octet-stream",
 } as const;
+
+/**
+ * The header `FETCH_APP_PATH` answers a published build with: its SHA-256 in
+ * hex, which root checks the Ubuntu package against before it installs it
+ * (docs/devices.md, "Joining by a command").
+ */
+export const FETCH_APP_SHA256_HEADER = "x-infinitary-sha256";
 
 /**
  * What a device sends to `/pair`: the link's code, the kind it is, its own

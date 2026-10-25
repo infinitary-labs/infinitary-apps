@@ -247,7 +247,7 @@ import { TaskService } from "./tasks/taskService";
 import { TaskTempFiles } from "./tasks/taskTemp";
 import { WorkPresentation } from "./tasks/workPresentation";
 import { createAppTelemetry } from "./telemetry";
-import { readLinuxInstallation } from "./update/linuxInstall";
+import { linuxUpdateCommand, readLinuxInstallation } from "./update/linuxInstall";
 import { createInstalledUpdateChecker, type UpdateChecker } from "./update/updateChecker";
 import { findOnPath } from "./userBin";
 import { atUtilityQos } from "./utilityQos";
@@ -369,12 +369,13 @@ export type CoreServices = {
   appBundle: () => string | null;
   /**
    * The Firstmate a computer that names its system and chip gets from this
-   * one (docs/devices.md, "Infinitary for another system"), or null when there
-   * is none to send.
+   * one (docs/devices.md, "Infinitary for another system"), or its Ubuntu
+   * package when it asks for that (`deb`), or null when there is none to send.
    */
   farBuild: (
     system: DeviceSystem | undefined,
     chip: DeviceChip | undefined,
+    kind?: "deb",
   ) => Promise<FarBuild | null>;
   /**
    * Adding a Mac by its address over Remote Login, and updating Firstmate
@@ -1485,12 +1486,20 @@ export async function createServices(
         : null,
     chip: thisDeviceSystem().chip ?? null,
   });
-  /** The Firstmate for a computer of `system` on `chip`, or null when there is none to send. */
-  const farBuild = async (system: DeviceSystem | undefined, chip: DeviceChip | undefined) => {
+  /**
+   * The Firstmate for a computer of `system` on `chip`, or the Ubuntu package
+   * a command asks for to install there, or null when there is none to send.
+   */
+  const farBuild = async (
+    system: DeviceSystem | undefined,
+    chip: DeviceChip | undefined,
+    kind?: "deb",
+  ) => {
     const far = farSystemNamed(system);
     const on = far ? (chip ?? Object.values(far.chips)[0]) : undefined;
     if (!far || !on || !Object.values(far.chips).includes(on)) return null;
-    const build = await farBuilds.for(far, on);
+    if (kind && far.system !== "linux") return null;
+    const build = await farBuilds.for(far, on, kind);
     return "refusal" in build ? null : build;
   };
   const launcher = appLauncher({
@@ -1514,11 +1523,16 @@ export async function createServices(
       throw new Error(
         `Only the command for another user on ${HERE.this} adds one that only runs work.`,
       );
-    if (request.command === "another-mac" && !farBuilds.canSendAny())
+    // A Linux home that cannot send itself still makes it: a Linux computer
+    // with Infinitary installed joins with that copy, and any other says
+    // this computer has nothing to send it (docs/devices.md, "Joining by a command").
+    if (
+      request.command === "another-mac" &&
+      !farBuilds.canSendAny() &&
+      !(host.app.packaged && host.app.platform !== "darwin")
+    )
       throw new Error(
-        host.app.packaged && host.app.platform !== "darwin"
-          ? `This copy of Infinitary cannot send itself to another ${COMPUTER.one}: the command adds a Mac. Paste a link into Infinitary on the other ${COMPUTER.one} instead.`
-          : `This copy of Infinitary cannot send itself to another ${COMPUTER.one}; only an installed one can.`,
+        `This copy of Infinitary cannot send itself to another ${COMPUTER.one}; only an installed one can.`,
       );
     // A command for another Mac downloads this computer's published version
     // there first, looked up without downloading it here, and its link lasts
@@ -1526,10 +1540,13 @@ export async function createServices(
     // (docs/devices.md, "Joining by a command"); a development or
     // unpublished one gets it from here, with a link of the usual lifetime.
     const mac = farSystemNamed("macos");
-    const download =
+    const [download, ubuntuPackage] =
       request.command === "another-mac" && mac
-        ? await farBuilds.downloadFor(mac, Object.values(mac.chips)[0] ?? "arm64")
-        : null;
+        ? await Promise.all([
+            farBuilds.downloadFor(mac, Object.values(mac.chips)[0] ?? "arm64"),
+            farBuilds.ubuntuPackageDownload(),
+          ])
+        : [null, null];
     const invite = devices.invite(
       request,
       download ? { lastsMs: DOWNLOAD_COMMAND_LINK_TTL_MS } : {},
@@ -1545,6 +1562,14 @@ export async function createServices(
           homeName: await ownComputerName({ packaged: host.app.packaged, env: process.env }),
           launcher,
           ...(download ? { download: { ...download, expiresAt: invite.expiresAt } } : {}),
+          version: host.app.version,
+          // The one line that updates an older Ubuntu package there (captain's pick on INF-1181).
+          ...(ubuntuPackage
+            ? {
+                update:
+                  linuxUpdateCommand({ chip: "x64", package: "deb" }, ubuntuPackage) ?? undefined,
+              }
+            : {}),
         }),
       },
     };

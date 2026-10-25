@@ -620,6 +620,10 @@
               "x64"
             ]
           },
+          "package": {
+            "type": "string",
+            "const": "deb"
+          },
           "check": {
             "type": "boolean",
             "const": true
@@ -2537,7 +2541,7 @@
               "text": {
                 "type": "string",
                 "minLength": 1,
-                "maxLength": 16384
+                "maxLength": 131072
               }
             },
             "required": [

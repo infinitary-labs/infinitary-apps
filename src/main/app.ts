@@ -418,7 +418,7 @@ export function startApp(mainDir: string): void {
             // What a command on another Mac gets from this one, and what a
             // computer that names its system gets (docs/devices.md).
             app: () => core.services.appBundle(),
-            build: (system, chip) => core.services.farBuild(system, chip),
+            build: (system, chip, kind) => core.services.farBuild(system, chip, kind),
             ...(standInContract ? { protocolVersion: standInContract } : {}),
             ...(standInSpelling ? { speaks: standInSpelling } : {}),
           }),

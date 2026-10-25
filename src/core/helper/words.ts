@@ -36,6 +36,8 @@ function there(place: HomePlace): string {
 }
 
 const NOTHING_CHANGED = `Nothing changed on ${HERE.this}.`;
+/** The same, where the words before already said where. */
+const NOTHING_CHANGED_HERE = "Nothing changed.";
 
 /** A Mac that runs its home's work may also control it, from Firstmate opened there. */
 const OPEN_HERE = `Open Infinitary here any time to control it from ${HERE.this}, with no new link.`;
@@ -66,7 +68,7 @@ export const helperWords = {
 
   alreadyJoined: (home: string) => [`This user already runs work for ${home}.`, NOTHING_CHANGED],
 
-  busy: ["Infinitary is already running work as this user.", "Nothing changed."],
+  busy: ["Infinitary is already running work as this user.", NOTHING_CHANGED_HERE],
 
   /** Linux with no screen and no Xvfb: the work mode has nowhere to draw its hidden windows. */
   needsDisplay: [
@@ -120,7 +122,7 @@ export const helperWords = {
 
   sameUser: [
     `This is the user Infinitary already runs as. Log in as another user on ${HERE.this}, and run it there.`,
-    "Nothing changed.",
+    NOTHING_CHANGED_HERE,
   ],
 
   refused: (place: HomePlace) => [
@@ -397,12 +399,126 @@ export function needsCurl(home: string): string[] {
  * without Chromium's sandbox: it stops before anything, as adding that
  * computer by its address does (docs/devices.md, "Joining by a command").
  */
-export function sandboxOff(home: string): string[] {
+export function sandboxOff(): string[] {
   return [
     `Infinitary would run on ${HERE.this} without its sandbox: its system keeps apps from making one.`,
-    `Install the Infinitary package for this system, then paste a link from ${home} at its first launch instead.`,
+    "Install the Infinitary package for this system, then run this command again.",
     NOTHING_CHANGED,
   ];
+}
+
+/**
+ * The command on a Linux computer whose installed Infinitary is not the
+ * home's version (captain's pick on INF-1181, "stop and print the one line
+ * that updates the package"): it stops before anything. `update` is the line
+ * that updates an Ubuntu package, when there is one to name.
+ */
+export function otherVersion(home: string, version: string, update: string | null): string[] {
+  return [
+    `The Infinitary installed on ${HERE.this} is not version ${version}, which ${home} runs.`,
+    ...(update
+      ? ["Update it with this line, then run this command again:", update]
+      : [`Update it to version ${version}, then run this command again.`]),
+    NOTHING_CHANGED,
+  ];
+}
+
+/**
+ * The command on a Linux computer that lacks what the AppImage and its work
+ * need: it stops before it asks (docs/devices.md, "Joining by a command").
+ * `install` is the line that installs them with that computer's own
+ * installer, or null with `names` alone when it has none the command knows.
+ */
+export function commandNeeds(home: string, names: string, install: string | null): string[] {
+  return install
+    ? [
+        `Infinitary needs more on ${HERE.this} before it can run work for ${home}.`,
+        "Install it with this line, then run this command again:",
+        install,
+        NOTHING_CHANGED,
+      ]
+    : [
+        `Infinitary needs ${names} on ${HERE.this} before it can run work for ${home}.`,
+        "Install them with its software app or package manager, then run this command again.",
+        NOTHING_CHANGED,
+      ];
+}
+
+/** The command on Ubuntu 24.04 or 26.04 with no Infinitary, for an account that may not install it. */
+export function commandCannotInstall(): string[] {
+  return [
+    `Infinitary is not installed on ${HERE.this}, and this account cannot install software.`,
+    "Use an account that can, or install the Infinitary package for this system, then run this command again.",
+    NOTHING_CHANGED,
+  ];
+}
+
+/** Before the command installs the Ubuntu package, which sudo may ask this account's password for. */
+export const COMMAND_INSTALLING =
+  "Installing Infinitary, which may ask for this account's password.";
+
+/**
+ * The install did not finish: a wrong password, a package that did not match,
+ * or apt refused. `left` is what apt changed before it stopped: part of the
+ * package, or only packages it needs.
+ */
+export function commandInstallFailed(left?: "part" | "needs"): string[] {
+  if (!left) return [`Could not install Infinitary on ${HERE.this}.`, NOTHING_CHANGED];
+  return left === "part"
+    ? [
+        `Could not finish installing Infinitary on ${HERE.this}.`,
+        "Part of it stays installed, and this line removes it:",
+        "sudo apt-get remove -y infinitary",
+      ]
+    : [
+        `Could not finish installing Infinitary on ${HERE.this}.`,
+        "Packages it needs that apt installed stay installed.",
+      ];
+}
+
+/**
+ * A join after the command installed the Ubuntu package it runs from: the
+ * package stays whatever the join does, so its words never say nothing
+ * changed, and a join that stops ends with `INSTALLED_STAYS`.
+ */
+export function afterInstall(lines: readonly string[]): string[] {
+  return lines.filter((line) => line !== NOTHING_CHANGED && line !== NOTHING_CHANGED_HERE);
+}
+
+/** The last words of a join that stopped after the command installed the package it runs from. */
+export const INSTALLED_STAYS = `Infinitary stays installed on ${HERE.this}.`;
+
+/** That install turned on `user`'s linger, and the join then stopped: how to turn it off. */
+export function lingerStays(user: string): string[] {
+  return [
+    `Programs ${user} runs now keep running after ${user} logs out.`,
+    "To turn that off, an administrator runs this once:",
+    `sudo loginctl disable-linger ${user}`,
+  ];
+}
+
+/** The home has no Infinitary to send for this computer's system. */
+export function commandNothingToSend(home: string): string[] {
+  return [
+    `${home} cannot send Infinitary for ${HERE.this}.`,
+    "Install Infinitary here, then run this command again.",
+    NOTHING_CHANGED,
+  ];
+}
+
+/**
+ * After a Linux computer joined by the command: its work stays on after
+ * `user` logs out (systemd's linger), or the one line an administrator runs
+ * to allow it (captain's pick on INF-1181, "keep it on by itself when
+ * allowed, otherwise print the one sudo line").
+ */
+export function afterLogout(user: string, on: boolean): string[] {
+  return on
+    ? [`It keeps running after ${user} logs out.`]
+    : [
+        `To keep it running after ${user} logs out, an administrator runs this once:`,
+        `sudo loginctl enable-linger ${user}`,
+      ];
 }
 
 /**

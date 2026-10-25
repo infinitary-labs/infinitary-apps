@@ -1,6 +1,6 @@
 /**
  * A task command's name (docs/axi-commands.md, "The launcher"): every
- * `infinitary-<tool>-axi` in `resources/axi-bin` is a link to the one
+ * `infinitary-<tool>-axi` in `resources/axi-bin` is a copy of the one
  * launcher, and so is the `fm-<tool>-axi` name Firstmate 3000 gave it,
  * kept for a crewmate whose instructions predate the Infinitary rename. The
  * name it ran as says which command it is.

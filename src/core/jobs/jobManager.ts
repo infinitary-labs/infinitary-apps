@@ -1,8 +1,11 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
+import { join } from "node:path";
 import { hostEnv, SHELL_CAP_ENV, SHELL_ID_ENV, SHELL_STARTED_ENV, withTaskShell } from "../hostEnv";
 import type { TypedWake, WakeLane } from "../orchestrator/wakes";
 import { appendOverflow, capWithOverflow, overflowFilePath } from "../overflow";
+import { windowsBash } from "../pi/windowsBash";
+import { hostPlatform } from "../platform";
 import type { TaskShell } from "../session/session";
 import type { AppDatabase } from "../storage/db";
 import { type InterruptedJob, JobStore } from "../storage/jobStore";
@@ -71,6 +74,8 @@ type RunningJob = {
   command: string;
   startedAt: number;
   child: ReturnType<typeof spawn>;
+  /** It runs on Windows, which has no process groups (`killGroup`). */
+  windows: boolean;
   output: { text: string; truncated: boolean; overflowFile?: string };
   /** Who killed it (its owner's cancel, the app's quit): the exit is not news. */
   stoppedBy?: "owner" | "quit";
@@ -102,7 +107,18 @@ export type JobManagerOptions = {
    * (docs/helper.md, "Holding a conversation"). Absent means below.
    */
   belowUi?: boolean;
+  /** The system it runs on (tests); absent reads this computer's. */
+  platform?: NodeJS.Platform;
+  /** On Windows, the bash its commands run in (tests); absent asks Pi (`windowsBash`). */
+  windowsBash?: () => string | undefined;
 };
+
+/**
+ * What a command on Windows answers when the computer has no Git Bash to run
+ * it in, without starting anything.
+ */
+export const NO_GIT_BASH =
+  "This command did not run: crewmates' commands on Windows run in Git Bash, so install Git for Windows (https://gitforwindows.org) and run it again.";
 
 export class JobManager {
   private readonly jobs = new Map<string, RunningJob>();
@@ -172,11 +188,18 @@ export class JobManager {
     // it: read from two pipes, a line written earlier on one landed after a
     // later line on the other whenever the app reached them late (INF-689).
     // The command itself is bash's, word for word, so its errors quote it.
-    const shell = ["-c", 'exec "$@" 2>&1', "sh", "/bin/bash", "-c", input.command];
+    // Windows has no /bin/sh: Git Bash joins the output there, then becomes
+    // its own bash, and with none to run in the command answers at once.
+    const windows = (this.options.platform ?? hostPlatform()) === "win32";
+    const gitBash = windows ? (this.options.windowsBash ?? windowsBash)() : undefined;
+    if (windows && !gitBash) {
+      return Promise.resolve({ kind: "done", exitCode: 127, output: NO_GIT_BASH });
+    }
+    const sh = gitBash ?? "/bin/sh";
+    const bash = gitBash ? "/usr/bin/bash" : "/bin/bash";
+    const shell = ["-c", 'exec "$@" 2>&1', "sh", bash, "-c", input.command];
     const command =
-      this.options.belowUi === false
-        ? { file: "/bin/sh", args: shell }
-        : atUtilityQos("/bin/sh", shell);
+      this.options.belowUi === false ? { file: sh, args: shell } : atUtilityQos(sh, shell);
     const child = spawn(command.file, command.args, {
       cwd: input.cwd,
       // The person's search path, so node, pnpm and gh are there from a Dock
@@ -191,8 +214,11 @@ export class JobManager {
         }),
         input.shell,
       ),
-      // Its own process group, so killing a job kills what it spawned.
-      detached: true,
+      // Its own process group, so killing a job kills what it spawned. On
+      // Windows that would be a console of its own, so it shares none and
+      // shows no window: its tree is killed by process id (`killGroup`).
+      detached: !windows,
+      windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
     const job: RunningJob = {
@@ -201,6 +227,7 @@ export class JobManager {
       command: input.command,
       startedAt,
       child,
+      windows,
       output: { text: "", truncated: false },
     };
     const append = (chunk: Buffer) => {
@@ -344,6 +371,18 @@ export class JobManager {
 function killGroup(job: RunningJob, signal: NodeJS.Signals): void {
   const pid = job.child.pid;
   if (!pid) return;
+  if (job.windows) {
+    // Windows' own taskkill ends the job and every program under it, by
+    // force, as Pi's bash does; nothing there takes a gentler signal.
+    const root = process.env.SystemRoot ?? "C:\\Windows";
+    const kill = spawn(join(root, "System32", "taskkill.exe"), ["/F", "/T", "/PID", String(pid)], {
+      env: hostEnv(),
+      stdio: "ignore",
+      windowsHide: true,
+    });
+    kill.once("error", () => job.child.kill(signal));
+    return;
+  }
   try {
     process.kill(-pid, signal);
   } catch {

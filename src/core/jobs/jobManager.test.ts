@@ -7,9 +7,10 @@ import { captureLoginPath, resetLoginPathForTests } from "../hostEnv";
 import { plantProgram, writeLoginShellStub } from "../loginShellStub";
 import { renderWake } from "../orchestrator/wakes";
 import { initOverflowDir } from "../overflow";
+import { windowsBash } from "../pi/windowsBash";
 import { openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
-import { type JobExit, JobManager, jobExitWake } from "./jobManager";
+import { type JobExit, JobManager, jobExitWake, NO_GIT_BASH } from "./jobManager";
 
 // A command JobManager runs below the UI carries the real utility clamp and
 // says so in its own environment, so the clamp test below can tell it apart
@@ -55,6 +56,32 @@ describe("JobManager (R2: the exit is the wake)", () => {
     expect(outcome).toEqual({ kind: "done", exitCode: 0, output: "hello" });
     expect(exits).toEqual([]);
     expect(jobs.hasRunningJobs("t1")).toBe(false);
+  });
+
+  it("on Windows with no Git Bash, answers that Git for Windows is needed and never runs the Linux subsystem's bash", async () => {
+    // INF-1238 (D6): Pi's lookup falls back to the first bash.exe on the
+    // search path, which at shell-pc is WSL's; these are its two answers there
+    // with Git for Windows absent.
+    const wsl = () => ({
+      shell: "C:\\WINDOWS\\system32\\bash.exe",
+      args: ["-s"],
+      commandTransport: "stdin" as const,
+    });
+    const none = () => {
+      throw new Error("No bash shell found.");
+    };
+    const cwd = scratchDir("infinitary-job-windows-");
+    for (const find of [wsl, none]) {
+      const jobs = new JobManager({
+        onExit: () => {},
+        platform: "win32",
+        windowsBash: () => windowsBash(find),
+      });
+      const outcome = await jobs.run({ ownerId: "t1", command: "touch ran", cwd });
+      expect(outcome).toEqual({ kind: "done", exitCode: 127, output: NO_GIT_BASH });
+      expect(existsSync(join(cwd, "ran"))).toBe(false);
+      expect(jobs.hasRunningJobs("t1")).toBe(false);
+    }
   });
 
   it("tells a command the cap it answers within, and lays the session's shell over the host's", async () => {

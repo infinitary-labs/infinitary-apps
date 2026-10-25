@@ -138,7 +138,9 @@ export async function generateSelfSource({ outDir, writeRepoMap = false } = {}) 
   const archivePath = resolve(dest, "self-source.tar");
   try {
     git(["archive", `--output=${archivePath}`, "HEAD"]);
-    execFileSync("tar", ["-xf", archivePath, "-C", selfSourceDir]);
+    // Paths relative to the folder it fills: Git Bash's tar, first on a
+    // Windows crewmate's search path, reads `C:` as a remote host (INF-1238).
+    execFileSync("tar", ["-xf", join("..", "self-source.tar")], { cwd: selfSourceDir });
   } finally {
     rmSync(archivePath, { force: true });
   }

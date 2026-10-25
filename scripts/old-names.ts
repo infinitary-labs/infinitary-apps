@@ -250,8 +250,8 @@ export const RULES: readonly Rule[] = [
   },
   {
     class: "reader",
-    why: "Firstmate 3000's task command is a link to the same launcher",
-    path: /^resources\/axi-bin\/fm-browser-axi$/,
+    why: "every task command, Firstmate 3000's among them, is a copy of the same launcher",
+    path: /^resources\/axi-bin\/(fm|infinitary)-[a-z]+-axi$/,
   },
   {
     class: "reader",

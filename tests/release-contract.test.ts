@@ -2,10 +2,10 @@ import { execFileSync, spawnSync } from "node:child_process";
 import {
   chmodSync,
   existsSync,
+  lstatSync,
   mkdirSync,
   readdirSync,
   readFileSync,
-  readlinkSync,
   realpathSync,
   rmSync,
   statSync,
@@ -455,29 +455,31 @@ describe("electron-builder configuration", () => {
     expect(matches("Contents/Resources/gitx/darwin-arm64/bin/git", pattern)).toBe(false);
   });
 
-  it("ships the task commands' launcher outside the archive, executable, with each command a link to it", () => {
+  it("ships the task commands' launcher outside the archive, executable, with each command an identical copy of it", () => {
     // A crewmate's shell runs infinitary-browser-axi by path; a file inside app.asar cannot be run.
     const entries = (parsed.extraResources as Array<{ from?: unknown; to?: unknown }>).map(
       (entry) => ({ from: entry.from, to: entry.to }),
     );
     expect(entries).toContainEqual({ from: "resources/axi-bin", to: "axi-bin" });
-    expect(statSync(join(root, "resources/axi-bin/infinitary-axi")).mode & 0o111).toBe(0o111);
-    expect(readlinkSync(join(root, "resources/axi-bin/infinitary-browser-axi"))).toBe(
+    // Copies, not links: a Windows checkout writes a link as a text file, and
+    // the build's copy of the source cannot make one there (INF-1238).
+    const launcher = readFileSync(join(root, "resources/axi-bin/infinitary-axi"));
+    for (const name of [
       "infinitary-axi",
-    );
-    expect(readlinkSync(join(root, "resources/axi-bin/infinitary-integrations-axi"))).toBe(
-      "infinitary-axi",
-    );
-    // INF-1214's inbox command, which a person's own script runs.
-    expect(readlinkSync(join(root, "resources/axi-bin/infinitary-inbox-axi"))).toBe(
-      "infinitary-axi",
-    );
-    // INF-1085's command ships even while its production grant remains unavailable.
-    expect(readlinkSync(join(root, "resources/axi-bin/infinitary-secrets-axi"))).toBe(
-      "infinitary-axi",
-    );
-    // Firstmate 3000's name for the command stays, for a crewmate told it before the rename.
-    expect(readlinkSync(join(root, "resources/axi-bin/fm-browser-axi"))).toBe("infinitary-axi");
+      "infinitary-browser-axi",
+      "infinitary-integrations-axi",
+      // INF-1214's inbox command, which a person's own script runs.
+      "infinitary-inbox-axi",
+      // INF-1085's command ships even while its production grant remains unavailable.
+      "infinitary-secrets-axi",
+      // Firstmate 3000's name for the command stays, for a crewmate told it before the rename.
+      "fm-browser-axi",
+    ]) {
+      const path = join(root, "resources/axi-bin", name);
+      expect(lstatSync(path).isFile(), name).toBe(true);
+      expect(statSync(path).mode & 0o111, name).toBe(0o111);
+      expect(readFileSync(path).equals(launcher), name).toBe(true);
+    }
   });
 
   it("ships the app's own git helper outside the archive, executable", () => {

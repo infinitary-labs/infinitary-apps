@@ -16,11 +16,12 @@ Its record leaves the command's calls out, as it leaves out the app's own tools,
 
 ## The launcher
 
-`resources/axi-bin/infinitary-axi` is the one launcher, a POSIX shell script, and every `infinitary-<tool>-axi` in that folder is a link to it; the name it ran as says which command it is.
+`resources/axi-bin/infinitary-axi` is the one launcher, a POSIX shell script, and every `infinitary-<tool>-axi` in that folder is an identical copy of it; the name it ran as says which command it is.
+They are copies, not links, because a Windows checkout writes a link as a text file and the build's copy of the source cannot make one there.
 The packaged app ships the folder outside its archive (`electron-builder.yml`), and an unpackaged run uses the checkout's.
 The packaged app's run-as-node fuse is off, so a shell has no Node to run: the launcher uses only shell builtins and the system's curl (`/usr/bin/curl`, read with `-q` so no `~/.curlrc` adds options, and with no proxy).
 A bare `-v` answers at once from `INFINITARY_AXI_VERSION`, without the app.
-Anything else goes to the app as one request, each argument its own form field in order, with the command's name, the path it ran from, the shell's working folder, the shell's limit, when the shell started and the shell's id; the app's answer is the command's exit code on its first line and what it prints after it.
+Anything else goes to the app as one request, each argument its own form field in order, with the command's name, the path it ran from, the shell's working folder (in Windows form, `C:/...`, under Git Bash), the shell's limit, when the shell started and the shell's id; the app's answer is the command's exit code on its first line and what it prints after it.
 A shell with no channel, or a channel that does not answer, prints an error with code `NO_CHANNEL` and exits 1.
 
 ## The channel
@@ -155,4 +156,4 @@ When the shell itself becomes a background job, the helper ends the turn until t
 `tests/mockProvider.test.ts` exercises those answers through the provider's request interface using the shell tool's receipt and the host's rendered exit wake, including a job whose output itself asks for the next look.
 `channel.test.ts` also runs `infinitary-integrations-axi`: list, show and call reach only the integrations the task was granted, a refusal exits 1, a malformed input exits 2 before reaching them, and a task without the command is answered `NO_TOOL`.
 `placedSessions.test.ts` runs it from a Pi crewmate's shell on a computer that runs work, across the connection to this Mac's integrations (`docs/integrations.md`, "Tests").
-`tests/release-contract.test.ts` holds the launcher and its links shipped outside the archive.
+`tests/release-contract.test.ts` holds the launcher and its identical copies shipped outside the archive.

@@ -2,9 +2,10 @@
 # Infinitary's task commands on a crewmate's search path
 # (docs/axi-commands.md, "The launcher").
 #
-# Every infinitary-<tool>-axi name in this directory is a link to this one
-# file, and so is the fm-<tool>-axi name Firstmate 3000 gave it, kept for a
-# crewmate whose instructions predate the Infinitary rename; the name it ran
+# Every infinitary-<tool>-axi name in this directory is an identical copy of
+# this one file, and so is the fm-<tool>-axi name Firstmate 3000 gave it, kept
+# for a crewmate whose instructions predate the Infinitary rename: copies,
+# because a Windows checkout cannot make links. The name it ran
 # as says which command it is; infinitary-inbox-axi is the person's own,
 # run from any shell of theirs (below). The app puts this directory
 # first on the search path of a task's shell only when that task has the
@@ -73,6 +74,12 @@ if [ "$tool" = infinitary-inbox-axi ]; then
     exit 1
   fi
 fi
+# The working folder as the app names it: Git Bash on Windows says /c/...,
+# and pwd -W says C:/...
+cwd=$PWD
+case ${OSTYPE:-} in
+  msys* | cygwin*) cwd=$(pwd -W) ;;
+esac
 # Only this Mac's loopback and a port number.
 case $address in
   127.0.0.1:*) port=${address#127.0.0.1:} ;;
@@ -103,7 +110,7 @@ answer=$("$curl" -q --silent --show-error --noproxy '*' --max-time 120 \
   -H @"$key" \
   --data-urlencode "tool=$tool" \
   --data-urlencode "bin=$0" \
-  --data-urlencode "cwd=$PWD" \
+  --data-urlencode "cwd=$cwd" \
   --data-urlencode "cap=$cap" \
   --data-urlencode "started=$started" \
   --data-urlencode "shell=$shell" \

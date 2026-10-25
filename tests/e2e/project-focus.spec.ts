@@ -55,13 +55,16 @@ function repo(dir: string): string {
   return dir;
 }
 
-function seed(userDataDir: string): void {
+function seed(
+  userDataDir: string,
+  projects: readonly (typeof PROJECTS)[number][] = PROJECTS,
+): void {
   const db = openDatabase(userDataDir);
   const now = Date.now();
   const repos = db.prepare(
     "INSERT INTO repos (id, path, name, added_at, setup_kind, origin, delivery, autonomy) VALUES (?, ?, ?, ?, 'clone', ?, 'direct-pr', 0)",
   );
-  for (const project of PROJECTS)
+  for (const project of projects)
     repos.run(
       project.repoId,
       repo(join(userDataDir, project.name)),
@@ -70,10 +73,11 @@ function seed(userDataDir: string): void {
       `https://github.com/o/${project.name}.git`,
     );
   seedHostedOrigins(db, userDataDir);
-  for (const project of PROJECTS)
+  for (const project of projects)
     ensureRepoProject(db, { id: project.repoId, name: project.name }, now, project.key);
   const tasks = new TaskService({ db, strict: true });
-  for (const work of WORK) {
+  const repoIds = new Set<string>(projects.map((project) => project.repoId));
+  for (const work of WORK.filter((w) => repoIds.has(w.repoId))) {
     const worktreeDir = join(userDataDir, "worktrees", work.id);
     mkdirSync(worktreeDir, { recursive: true });
     // A crewmate that finished and went idle: on the stage, with its model's name.
@@ -85,7 +89,9 @@ function seed(userDataDir: string): void {
     });
   }
   // A step only the captain can take, set aside: its row waits on the captain.
-  for (const source of WAITS_ON) {
+  for (const source of WAITS_ON.filter((id) =>
+    WORK.some((w) => w.id === id && repoIds.has(w.repoId)),
+  )) {
     tasks.declareRequiredActions(
       source,
       {
@@ -294,6 +300,120 @@ test("under focus the stack holds other projects' cards back and Activity hides 
       await showCard(page, CARDS[1].title);
       await showCard(page, CARDS[2].title);
       await expect.poll(() => feedProjects(page)).toEqual(["INF", "LAB", "WEB"]);
+    });
+  } finally {
+    await launched.close();
+  }
+});
+
+test("with one project and an idle workspace the top bar shows no pill, and a workspace task gives the workspace one", async () => {
+  // INF-1292: one project of yours plus the app's own workspace showed the
+  // pill; the captain chose "while it has a task the Tasks panel lists, as
+  // Scratch does".
+  test.setTimeout(180_000);
+  const userDataDir = scratchDir("infinitary-project-focus-one-");
+  seed(userDataDir, [PROJECTS[0]]);
+  let launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    let { app, page } = launched;
+    const board = () => page.evaluate(() => window.infinitary.tasks.board());
+    await expect.poll(async () => (await board()).tasks.length).toBe(3);
+    // The app registered its own workspace, and the board says which it is.
+    const workspace = (await board()).projects.find((p) => p.repo?.kind === "personal");
+    expect(workspace?.repo?.name).toBe("personal");
+    await expect(page.locator("[data-crew-model-anchor]")).toHaveCount(2);
+    await expect(pill(page)).toHaveCount(0);
+
+    await test.step("a task in the workspace's backlog gives it a pill beside the project's", async () => {
+      await launched.close();
+      const db = openDatabase(userDataDir);
+      const { repo_id: repoId } = db
+        .prepare("SELECT repo_id FROM projects WHERE id = ?")
+        .get(workspace?.id) as { repo_id: string };
+      seedTask(new TaskService({ db, strict: true }), {
+        id: "per-1",
+        title: "Make the stage quieter at night",
+        repoId,
+        status: "queued",
+        startPolicy: "on-request",
+      });
+      db.close();
+      launched = await launchApp({ userDataDir, withMockProvider: true });
+      ({ app, page } = launched);
+      await expect(pill(page)).toContainText("All projects");
+      await pressWindowKey(app, "p", ["meta", "shift"]);
+      await expect(row(page)).toBeVisible();
+      await expect(option(page, workspace?.key ?? "")).toBeVisible();
+      await expect(option(page, "INF")).toBeVisible();
+      await expect(page.locator("[data-project-focus-option]")).toHaveCount(3);
+    });
+  } finally {
+    await launched.close();
+  }
+});
+
+test("a still click opens the row without dimming any crew, and moving onto a pill lights its project", async () => {
+  // INF-1292: the row opens under the pointer that pressed the pill, and the
+  // pill it lands on lit its project with no movement, dimming the rest.
+  test.setTimeout(180_000);
+  const userDataDir = scratchDir("infinitary-project-focus-pointer-");
+  seed(userDataDir);
+  const launched = await launchApp({ userDataDir, withMockProvider: true });
+  try {
+    const { page } = launched;
+    await expect
+      .poll(async () => (await page.evaluate(() => window.infinitary.tasks.board())).tasks.length)
+      .toBe(WORK.length + WAITS_ON.length);
+    for (const work of WORK) await expect.poll(() => crewLight(page, work.id)).toBeGreaterThan(0.6);
+    // Which row pill the browser says the pointer entered.
+    await page.evaluate(() => {
+      const entered: string[] = [];
+      (window as unknown as { entered: string[] }).entered = entered;
+      window.addEventListener(
+        "pointerover",
+        (event) => {
+          const option = (event.target as Element).closest("[data-project-focus-option]");
+          if (option) entered.push(option.getAttribute("data-project-focus-option") ?? "");
+        },
+        true,
+      );
+    });
+    const entered = () => page.evaluate(() => (window as unknown as { entered: string[] }).entered);
+    const box = await pill(page).boundingBox();
+    if (!box) throw new Error("the pill has no box");
+    const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+
+    await test.step("a click with the pointer held still opens the row and every crewmate stays lit", async () => {
+      await page.mouse.move(at.x, at.y);
+      await page.mouse.click(at.x, at.y);
+      await expect(row(page)).toBeVisible();
+      // The row's pills glide out under the still pointer, and the browser
+      // reports a project's pill entered, as the reporter's did.
+      await expect.poll(async () => (await entered()).some((key) => key !== "all")).toBe(true);
+      // The stage drew frames enough for the light's ease after that pill was
+      // entered, and no crewmate dimmed.
+      await page.evaluate(
+        () =>
+          new Promise<void>((done) => {
+            let left = 30;
+            const tick = () => (--left === 0 ? done() : requestAnimationFrame(tick));
+            requestAnimationFrame(tick);
+          }),
+      );
+      for (const work of WORK) expect(await crewLight(page, work.id)).toBeGreaterThan(0.6);
+    });
+
+    await test.step("moving onto a project's pill lights it, and onto All projects lights everyone", async () => {
+      const lab = await option(page, "LAB").boundingBox();
+      if (!lab) throw new Error("the quota-lab pill has no box");
+      await page.mouse.move(lab.x + lab.width / 2, lab.y + lab.height / 2, { steps: 3 });
+      await expect.poll(() => crewLight(page, "inf-1")).toBeLessThan(0.4);
+      await expect.poll(() => crewLight(page, "lab-1")).toBeGreaterThan(0.6);
+      const all = await option(page, "all").boundingBox();
+      if (!all) throw new Error("the All projects pill has no box");
+      await page.mouse.move(all.x + all.width / 2, all.y + all.height / 2, { steps: 3 });
+      for (const work of WORK)
+        await expect.poll(() => crewLight(page, work.id)).toBeGreaterThan(0.6);
     });
   } finally {
     await launched.close();

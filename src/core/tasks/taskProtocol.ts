@@ -938,7 +938,9 @@ export class TaskProtocol {
       id: project.id,
       key: project.key,
       name: project.name,
-      repo: repo ? { name: repo.name, delivery: repo.delivery, autonomy: repo.autonomy } : null,
+      repo: repo
+        ? { name: repo.name, delivery: repo.delivery, autonomy: repo.autonomy, kind: repo.kind }
+        : null,
       archived: project.archivedAt !== null,
       counts: counts.get(project.id) ?? {
         needsYou: 0,

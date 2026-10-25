@@ -36,6 +36,10 @@ const app = project("p-app", "INF", "infinitary");
 const site = project("p-site", "WEB", "website");
 const scratch = project("p-scratch", "SCR", "Scratch", { repo: null });
 const old = project("p-old", "OLD", "old-site", { archived: true });
+/** The app's own workspace as the board shows it (`ensurePersonal`). */
+const personal = project("p-personal", "PER", "personal", {
+  repo: { name: "personal", delivery: "local-only", autonomy: false, kind: "personal" },
+});
 
 describe("projectPillsOf", () => {
   it("counts each project's waiting and working tasks the way the Tasks summary does", () => {
@@ -67,6 +71,21 @@ describe("projectPillsOf", () => {
       tasks: [task("x1", "p-scratch"), task("o1", "p-old")],
     });
     expect(withScratch.projects.map((p) => p.key)).toEqual(["INF", "SCR"]);
+  });
+
+  // INF-1292: one project of yours plus the idle workspace showed the pill,
+  // and the captain chose "while it has a task the Tasks panel lists, as
+  // Scratch does".
+  it("keeps the app's own workspace only while it has a task, so one project shows no pill", () => {
+    const idle = projectPillsOf({ projects: [personal, app, scratch], tasks: [] });
+    expect(idle.projects.map((p) => p.key)).toEqual(["INF"]);
+    expect(pillShown(idle)).toBe(false);
+    const working = projectPillsOf({
+      projects: [personal, app, scratch],
+      tasks: [task("w1", "p-personal", { status: "open", activity: null })],
+    });
+    expect(working.projects.map((p) => p.key)).toEqual(["PER", "INF"]);
+    expect(pillShown(working)).toBe(true);
   });
 });
 

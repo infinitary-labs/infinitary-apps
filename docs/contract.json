@@ -25136,6 +25136,13 @@
                         },
                         "autonomy": {
                           "type": "boolean"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "project",
+                            "personal"
+                          ]
                         }
                       },
                       "required": [
@@ -31901,6 +31908,13 @@
                     },
                     "autonomy": {
                       "type": "boolean"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "project",
+                        "personal"
+                      ]
                     }
                   },
                   "required": [
@@ -51483,6 +51497,13 @@
                         },
                         "autonomy": {
                           "type": "boolean"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "project",
+                            "personal"
+                          ]
                         }
                       },
                       "required": [
@@ -54161,6 +54182,13 @@
                         },
                         "autonomy": {
                           "type": "boolean"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "project",
+                            "personal"
+                          ]
                         }
                       },
                       "required": [

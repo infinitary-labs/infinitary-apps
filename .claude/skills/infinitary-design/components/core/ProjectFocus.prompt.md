@@ -1,5 +1,5 @@
 The top bar's project pill: one pill, centred in the bar, that focuses the window on one project and opens into a row of project pills centred on the bar (`docs/project-focus.md`).
-It shows only while there are two projects or more.
+It shows only while there are two projects or more; Scratch and the app's own workspace count only while each has a task the Tasks panel lists.
 
 **The pill at rest.**
 A 26px pill with `--radius-pill`, a `--line-1` border and no fill; its name at `--text-sm` weight 500 in `--fg-2`, All projects or the focused project's name.
@@ -28,3 +28,4 @@ Focus on a project (⇧⌘P) opens the row with focus on the checked pill, and f
 
 **Light.**
 A pointer or the keyboard resting on a pill in the row lights that project's crew on the stage before anything is picked: every other project's crewmates keep a quarter of their light (`components/mate/Crewmate`).
+The pointer lights a pill only once it moves onto it; a pill the row opens under a still pointer lights nothing, so the press that opens the row never dims the crew.

@@ -6,7 +6,7 @@ import { modelReasonSchema } from "./modelReason";
 import { slotSchema } from "./modelSlots";
 import { placementSnapshotSchema } from "./placement";
 import { reasoningSchema } from "./reasoning";
-import { repoDeliverySchema } from "./repos";
+import { repoDeliverySchema, repoKindSchema } from "./repos";
 import { captainActionSchema, requiredActionStatusSchema } from "./requiredActions";
 import { reviewRiskSchema, reviewVerdictSchema, rigorSchema } from "./rigor";
 import { riskAssessmentSchema } from "./risk";
@@ -396,7 +396,16 @@ export const projectViewSchema = z.object({
   key: z.string(),
   name: z.string(),
   repo: z
-    .object({ name: z.string(), delivery: repoDeliverySchema, autonomy: z.boolean() })
+    .object({
+      name: z.string(),
+      delivery: repoDeliverySchema,
+      autonomy: z.boolean(),
+      /**
+       * The repository's kind: `personal` for the app's own workspace
+       * (`project-repo-kind.md`). An older home sends none, read as `project`.
+       */
+      kind: repoKindSchema.optional(),
+    })
     .nullable(),
   archived: z.boolean(),
   counts: z.object({

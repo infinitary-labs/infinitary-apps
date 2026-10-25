@@ -19,7 +19,9 @@ How the pill looks and moves is the design skill's `components/core/ProjectFocus
 
 ## Which projects get a pill
 
-Every project set up in Settings gets one, in the task board's order, and Scratch (the project with no repository) gets one while it has a task the Tasks panel lists.
+Every project set up in Settings gets one, in the task board's order.
+Scratch (the project with no repository) and the app's own workspace, personal, get one only while each has a task the Tasks panel lists (the captain's answer to INF-1292).
+The board's project view says which repository is the workspace (`repo.kind` is `personal`), so the rule reads a typed fact, never the name.
 An archived project gets none.
 The pill shows only while there are two projects or more; with one there is nothing to choose.
 A pill counts its project's tasks that wait on the captain and that work, each task once by its own state (`nowGroupOf`), so a pill and the Tasks panel's collapsed summary narrowed to its project always agree.
@@ -70,6 +72,7 @@ The row ends in the same arrow turned back, Close the project row, which folds i
 Esc, a press outside the row, the window changing size or losing focus, and a pick fold it too, playing the glide back into the pill.
 A row too wide for the bar's room ends in a +N pill that lists the rest in a menu; the focused project always keeps its pill in the row.
 A pointer or the keyboard resting on a pill lights that project's crew on the stage before anything is picked.
+The pointer lights a pill only once it moves onto it: the row opens under the pointer that pressed the folded pill, and a pill that lands under a still pointer lights nothing, so a click alone never dims the crew (INF-1292).
 The row is a radio group: the arrows, Home and End move along it, and Enter or Space picks.
 Opened by a key or the command, focus lands on the checked pill; folded, focus goes back to the pill.
 

@@ -147,10 +147,12 @@ function OptionPill({
       data-pf-quiet={item.id !== "all" && item.waiting + item.working === 0 ? "" : undefined}
       data-pf-keep={keep ? "" : undefined}
       style={slide}
-      onPointerEnter={(event) => {
-        rest.onPointerEnter(event);
-        projectFocus.setRest(item.id);
-      }}
+      onPointerEnter={rest.onPointerEnter}
+      // The stage lights the pill once the pointer moves onto it, never on
+      // enter: the row opens under the pointer that pressed the folded pill,
+      // and the browser reports that pill entered with no movement, which
+      // dimmed every crewmate on a still click (INF-1292).
+      onPointerMove={() => projectFocus.setRest(item.id)}
       onPointerLeave={(event) => {
         rest.onPointerLeave(event);
         projectFocus.setRest(null);

@@ -36,9 +36,11 @@ export type ProjectPills = {
 
 /**
  * Every project set up in Settings, in the task board's order, plus Scratch
- * (the project with no repository) while it has a task the Tasks panel
- * lists; an archived project gets none (the captain's answer to INF-1091's
- * question 8).
+ * (the project with no repository) and the app's own workspace (its repo of
+ * kind `personal`) while each has a task the Tasks panel lists; an archived
+ * project gets none (the captain's answer to INF-1091's question 8, and to
+ * INF-1292's: one project of yours and an idle workspace leave nothing to
+ * choose).
  */
 export function projectPillsOf(board: {
   projects: readonly FocusProjectInput[];
@@ -64,7 +66,9 @@ export function projectPillsOf(board: {
   const projects = board.projects
     .filter(
       (project) =>
-        !project.archived && (project.repo !== null || (counts.get(project.id)?.listed ?? 0) > 0),
+        !project.archived &&
+        ((project.repo !== null && project.repo.kind !== "personal") ||
+          (counts.get(project.id)?.listed ?? 0) > 0),
     )
     .map((project) => ({
       id: project.id,

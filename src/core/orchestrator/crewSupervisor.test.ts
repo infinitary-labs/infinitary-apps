@@ -34,7 +34,12 @@ import type { ChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import type { FmEvent } from "@shared/events";
-import { fixedHoldWords, softHoldWords } from "@shared/holds";
+import {
+  fixedHoldWords,
+  overrideTakenBackWords,
+  softHoldWords,
+  standingOverrideWords,
+} from "@shared/holds";
 import { INTEGRATION_APPROVAL_WORDS } from "@shared/integrations";
 import {
   AUTOMATIC_COMPUTER,
@@ -4491,6 +4496,31 @@ describe("CrewSupervisor", () => {
         h.forge.headSha = APPROVED;
         await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr");
         expect(h.forge.merges).toEqual([APPROVED]);
+      });
+
+      /**
+       * INF-1216's accepted plan: every crewmate turn on the task is served
+       * his standing words, and taking them back drops them from the next
+       * turn; the task status read shows what they pass and for how long.
+       */
+      it("serves his standing words to the crewmate's next turn and crew status, and that he took them back", async () => {
+        const h = await reviewedAtOlder();
+        const notices = () =>
+          h.inbox
+            .allFor(h.taskId)
+            .filter((row) => row.facts?.kind === "task-override-changed")
+            .map(renderWake);
+        h.supervisor.declareOverride(h.taskId, { words, holds: ["review"], until: "task" });
+        expect(notices()).toEqual([
+          standingOverrideWords({ words, holds: ["review"], until: "task" }),
+        ]);
+        expect(h.supervisor.crewStatus(h.taskId)[0]?.override).toEqual({
+          passes: "the review for the rest of this task",
+          words,
+        });
+        h.supervisor.withdrawOverride(h.taskId);
+        expect(notices().at(-1)).toBe(overrideTakenBackWords({ holds: ["review"] }));
+        expect(h.supervisor.crewStatus(h.taskId)[0]?.override).toBeUndefined();
       });
 
       it("passes them at every later version when his words cover the task's life, until he takes them back", async () => {
@@ -23256,8 +23286,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     supervisor.replyToCard(card ?? "", "see this", [pngImage]);
     await tick();
     expect(crewmate.promptCalls.slice(before)).toEqual([
-      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply keeps your card on their screen beside its thread; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
-      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply keeps your card on their screen beside its thread; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
+      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply keeps your card on their screen beside its thread; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it. When their words pass one of the app's holds or tell you to go on without asking them, report them verbatim with needs_firstmate naming this card's id, so the first mate records them as their standing override; carry on with what their words already allow.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
+      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply keeps your card on their screen beside its thread; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it. When their words pass one of the app's holds or tell you to go on without asking them, report them verbatim with needs_firstmate naming this card's id, so the first mate records them as their standing override; carry on with what their words already allow.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
     ]);
     expect(crewmate.promptImageCalls.at(-1)).toEqual([pngImage]);
   });

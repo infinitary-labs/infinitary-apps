@@ -105,6 +105,12 @@ export type CrewStatusEntry = {
    */
   stalled?: string;
   /**
+   * The captain's override standing on this task (INF-1216): what his
+   * words pass and for how long, `the rerun limit for this version`, and
+   * his words. Absent when none stands at the task's version.
+   */
+  override?: { passes: string; words: string };
+  /**
    * The host's refusal of this task's completion card, standing until one
    * goes up (FI3-401): the card's title, when (ISO 8601), the typed reason
    * and the host's words for it. A report saying the card went up is wrong

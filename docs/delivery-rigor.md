@@ -537,14 +537,24 @@ A soft hold with its own way (`escalation`, `program-bound`, `start-waits`) name
 **The override.**
 The captain's words are one recorded override on the task (`delivery.override`, `HoldOverride`): the captain's words, the soft holds the first mate declared they pass, and how long.
 How long is the first mate's reading of the captain's words: `version`, the version it was declared at, or `task`, the rest of the task's life.
-The first mate declares it with `update_task override` (`holds`, `until`), only in a turn that carries the captain's own words, and the host keeps those words as its reason without reading them.
-The host refuses it in any other turn, and a crewmate never records one: its refusal tells it to report the captain's words.
+The first mate declares it with `update_task override` (`holds`, `until`, `from`) on the captain's own words, and the host keeps those words as its reason without reading them.
+The words are the turn's own when the captain typed to the first mate, or the message `from` cites (INF-1216): the captain's newest reply under a card of the task (`from` is the card's id) or the captain's newest line in its Crewmate tab (`crewmate-tab`).
+The host reads a cited message from the steer that carried it to the crewmate (`CrewSupervisor.citedCaptainWords`), so it checks only closed facts: the message is the captain's, it is on this task, and the turn is not a scheduled check.
+A cited card on another task, a card with no reply the record can read, and any citation in a scheduled check are refused in words, with nothing recorded; a scheduled check still sees the override standing.
+The crewmate judges first whether the captain's reply or Crewmate tab line passes a hold or tells it to go on without asking: if it does, the crewmate reports those words with `needs_firstmate`, naming the card or the Crewmate tab, and the first mate records the override in the turn that report starts, with no second card to the captain.
+A crewmate never records one itself: its refusal tells it to report the captain's words.
+The first mate judges which holds the words pass and may record them before any refusal names a hold, when the captain's words grant ahead, such as "keep going and don't ask me again on this task".
+Only the captain's words take it back; stopping a crewmate leaves it standing.
 An override that names a fixed limit, or a soft hold with its own way, is refused whole before consent is read: nothing is recorded, and the refusal ends with each such hold's own sentence (`overrideRefusal`).
 Empty `holds` takes it back, and a new declaration replaces the old one.
 The row is a `note` event on the timeline with one feed line, quoting the captain's words and naming the holds and how long; a new event kind would be a contract major.
 Each site reads it with `overridePasses(delivery, kind, head)`: a task-long override always passes, and a version-long one passes only at the version it covers, so a new version brings the hold back.
 The captain's merge click reads the same record, since the settle boundary is one function for the captain's click and the first mate's merge.
 The completion card's fact strip shows an Override cell naming the holds the captain's words pass, and says the merge goes without live proof when live proof is one of them.
+The first mate's task line in its context and `crew_status` show the standing override: what it passes, for how long, and, in `crew_status`, the captain's words.
+Every crewmate turn on the task is served the standing words: the brief carries them when the work starts with one standing, and each new override, or its withdrawal, is a `task-override-changed` notice on the task's lane that rides the next turn, on this computer or another, and starts none of its own.
+The crewmate reads them as its consent for what they reach among its own consent asks (`RIGOR_SAFETY`), such as the captain's plan's allowance, and judges which those are; keychain or signing access, writes outside the project and browser handoffs still ask.
+The reviewer's brief carries them on every review turn (`reviewerOverrideWords`), so access or a step they cover is not a finding.
 When they pass the checks, its merge reads Merge the pull request on failed or running checks, since the click merges at once ("Its words" above).
 
 **The counted caps are soft.**

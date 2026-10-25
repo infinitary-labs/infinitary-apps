@@ -28,8 +28,10 @@ import { holdsSegment, latestServedTurn, providerMessages, served } from "../pro
  *    words name (asking first), tries the merge, and relays GitHub's rule,
  *    which no one's word passes, in its reply.
  * 3. The rerun limit: a crewmate reruns a failed job once, is refused a
- *    second, and reports; the first mate asks the captain, and his choice
- *    relayed as a steer lets the crewmate rerun it once more.
+ *    second, and asks the captain on its own card. His reply under it is
+ *    relayed to the first mate, which records it as his override in that
+ *    relay turn, citing the card (INF-1216), and steers the crewmate to
+ *    rerun it once more.
  * 4. The weekly audit rule's wake: the first mate starts the audit task in
  *    the project the rule names, and its crewmate answers on a card.
  */
@@ -91,12 +93,16 @@ const REACH_RERUN_EVIDENCE =
 const REACH_RERUN_REPORT =
   "The linux-checks job failed again after its one rerun, and a second rerun was refused:";
 export const REACH_RERUN_CARD_TITLE = "The meter retry check failed again after its one rerun";
-export const REACH_RERUN_AGAIN_LABEL = "Rerun it once more";
+/** The captain's reply under that card (INF-1216's journey, the plan's own words). */
+export const REACH_RERUN_REPLY = "keep going until the checks pass";
 export const REACH_RERUN_HOLDS: OverridableHold[] = ["rerun"];
+/** The crewmate's relay of his reply, naming the card it came under. */
+const REACH_RERUN_RELAY = "Relayed from card";
+const REACH_RERUN_ANSWER = "I passed your words to the first mate to record for this task.";
 export const REACH_RERUN_STEER =
-  "The captain chose to rerun the failed check once more: reserve the rerun again and run it.";
+  "The captain's words pass the rerun limit at this version: reserve the rerun again and run it.";
 const REACH_RERUN_DONE_REPORT =
-  "Reran the failed linux-checks job once more, as the captain chose.";
+  "Reran the failed linux-checks job once more, as the captain's words allow.";
 
 /**
  * The weekly audit rule as docs/agents-reach.md ("The weekly audit") gives
@@ -163,30 +169,31 @@ function firstmateMove({ body }: ScenarioRequest): ScenarioAnswer | undefined {
     return { text: "The merge did not go through." };
   }
 
-  // 3. The crewmate's report of the refused second rerun: one decision.
-  if (said("reported on task") && said(REACH_RERUN_REPORT)) {
-    if (results.length > 0 || body.includes(REACH_RERUN_CARD_TITLE))
-      return { text: "Asked the captain." };
+  // 3. The crewmate relays the captain's reply under its rerun card: the
+  //    first mate records it as his override in this turn, citing the card,
+  //    and steers the crewmate on.
+  if (said("reported on task") && said(REACH_RERUN_RELAY)) {
+    if (results.length > 0) return { text: "Recorded the captain's words; the rerun goes out." };
     const task = findCrewTaskId(body, REACH_RERUN_MARKER) ?? "missing";
+    const card = turn.segments
+      .map((segment) => new RegExp(`${REACH_RERUN_RELAY} (\\S+):`).exec(segment.body)?.[1])
+      .find(Boolean);
     return {
       calls: [
         {
-          name: "emit_card",
+          name: "update_task",
           args: {
-            task_id: task,
-            title: REACH_RERUN_CARD_TITLE,
-            body:
-              "<p>The linux-checks job failed again after the one rerun its crewmate may run.</p>" +
-              "<p>Another rerun needs your word; the evidence still points at a slow network step.</p>",
-            actions: [
-              { id: "rerun-again", label: REACH_RERUN_AGAIN_LABEL, default: true },
-              { id: "leave-red", label: "Leave it red" },
-            ],
+            task,
+            override: { holds: REACH_RERUN_HOLDS, until: "version", from: card ?? "missing" },
           },
         },
+        { name: "steer_crewmate", args: { task_id: task, message: REACH_RERUN_STEER } },
       ],
     };
   }
+  // The crewmate's report of the refused second rerun: its own card asks.
+  if (said("reported on task") && said(REACH_RERUN_REPORT))
+    return { text: "Its crewmate asked the captain on its card." };
 
   // 4. The weekly audit rule fired: start its task in the project it names.
   if (said("by automation") && said(JSON.stringify(REACH_AUDIT_RULE.name))) {
@@ -331,6 +338,26 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
       name: "github_write",
       args: { method: "POST", path: REACH_RERUN_PATH },
     } as const;
+    // The captain's reply under its card: answer in the thread, and relay
+    // his words, naming the card, so the first mate records them. Only the
+    // reply's own turn names the card; the standing words he gave, served
+    // on the crewmate's next turn, quote his reply too.
+    const card = new RegExp(`Card "${REACH_RERUN_CARD_TITLE}" \\((\\S+)\\)`).exec(user)?.[1];
+    if (card && user.includes(REACH_RERUN_REPLY)) {
+      if (results.length > 0) return { text: "" };
+      return {
+        calls: [
+          { name: "reply", args: { card_id: card, text: REACH_RERUN_ANSWER } },
+          {
+            name: "report",
+            args: {
+              text: `${REACH_RERUN_RELAY} ${card}: "${REACH_RERUN_REPLY}"`,
+              needs_firstmate: `Record the captain's words under card ${card} as their override on the rerun limit: "${REACH_RERUN_REPLY}"`,
+            },
+          },
+        ],
+      };
+    }
     if (user.includes(REACH_RERUN_STEER)) {
       if (results.length === 0) return { calls: [rerun] };
       if (results.length === 1 && results[0]?.startsWith("Rerun authorized once"))
@@ -375,7 +402,22 @@ function crewmateMove({ body, hasToolResults }: ScenarioRequest): ScenarioAnswer
     if (results.length === 5) return { calls: [rerun] };
     if (results.length === 6)
       return {
-        calls: [{ name: "report", args: { text: `${REACH_RERUN_REPORT} ${results[5]}` } }],
+        calls: [
+          {
+            name: "emit_card",
+            args: {
+              title: REACH_RERUN_CARD_TITLE,
+              body:
+                "<p>The linux-checks job failed again after the one rerun I may run.</p>" +
+                "<p>Another rerun needs your word; the evidence still points at a slow network step.</p>",
+              actions: [
+                { id: "leave-red", label: "Leave it red", default: true },
+                { id: "drop-it", label: "Drop the change" },
+              ],
+            },
+          },
+          { name: "report", args: { text: `${REACH_RERUN_REPORT} ${results[5]}` } },
+        ],
       };
     return { text: "done" };
   }

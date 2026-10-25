@@ -1,3 +1,4 @@
+import { reviewerOverrideWords } from "@shared/holds";
 import { describe, expect, it } from "vitest";
 import {
   basisSectionParts,
@@ -260,6 +261,24 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
     builderReport:
       "Intent: the meter test passes ten runs in a row. What changed: the test awaits the queue flush. Verified: pnpm test on the final commit. Risk: low. Not done: nothing.",
   };
+
+  // INF-1216: the reviewer's brief carries the captain's standing words, so access they cover is not a finding.
+  it("carries the captain's standing override, and none when no override stands", () => {
+    const override = {
+      words: "keep going until the checks pass",
+      holds: ["rerun" as const],
+      until: "task" as const,
+    };
+    const brief = renderReviewBrief(
+      { goal: "ignored", userWords: "make the meter test stop flaking" },
+      "direct-pr",
+      { ...facts, override },
+    );
+    expect(brief).toContain(reviewerOverrideWords(override));
+    expect(
+      renderReviewBrief({ goal: "ignored", userWords: "make it stop" }, "direct-pr", facts),
+    ).not.toContain("standing override");
+  });
 
   it("names the builder's evidence folder when the host knows it", () => {
     const brief = renderReviewBrief(

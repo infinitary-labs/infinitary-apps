@@ -1,6 +1,11 @@
 import { HERE } from "@shared/deviceNames";
 import type { DeviceSystem } from "@shared/devices";
-import { softHoldWords } from "@shared/holds";
+import {
+  type HoldOverride,
+  overrideTakenBackWords,
+  softHoldWords,
+  standingOverrideWords,
+} from "@shared/holds";
 import type { PlacementSystem } from "@shared/placement";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import {
@@ -117,6 +122,17 @@ export function idleThreadNudgeText(waiting?: readonly WakeNote[]): string {
 }
 
 /**
+ * The relay of standing words (INF-1216): the crewmate judges whether the
+ * captain's words pass a hold or stand in for asking them, and if so
+ * relays them, naming where they came, so the first mate records them as
+ * the override in the turn that report starts. Nothing in the host reads
+ * the words.
+ */
+function standingWordsRelay(where: string): string {
+  return `When their words pass one of the app's holds or tell you to go on without asking them, report them verbatim with needs_firstmate naming ${where}, so the first mate records them as their standing override; carry on with what their words already allow.`;
+}
+
+/**
  * The fixed host preamble every captain thread reply carries (cards-as-
  * threads phase 1, R4). It is the process direction the Firstmate used to
  * relay by hand on 27 of 40 turns, said once by the host instead: where to
@@ -142,6 +158,7 @@ export const THREAD_STEER_PREAMBLE = [
   "Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report.",
   "Their reply keeps your card on their screen beside its thread; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan.",
   "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.",
+  standingWordsRelay("this card's id"),
 ].join(" ");
 
 /**
@@ -293,6 +310,17 @@ export type WakeFacts =
       kind: "task-policies-changed";
       task: { id: string; key: string; title: string };
       policies: EffectiveTaskPolicies;
+    }
+  | {
+      /**
+       * The captain's standing override on the task changed (INF-1216): the
+       * one now standing, or the one he took back. Guidance for the next
+       * turn, like a policy notice, never a turn of its own.
+       */
+      kind: "task-override-changed";
+      task: { id: string; key: string; title: string };
+      override: Pick<HoldOverride, "words" | "holds" | "until">;
+      withdrawn?: true;
     }
   | {
       /** The idle ladder's first rung, to the crewmate. */
@@ -1565,6 +1593,7 @@ export const CREWMATE_TAB_STEER_LEAD = [
   "The captain typed this to you in your task's Crewmate tab, where they read your session as you work.",
   "Treat it as their direct guidance: do what their words need, and answer through your work and your next report, never with an acknowledgement or a card about having read it.",
   "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: report the captain's words verbatim with needs_firstmate, so the first mate runs it.",
+  standingWordsRelay("the Crewmate tab"),
   "The captain's words, verbatim:",
 ].join("\n");
 
@@ -1635,6 +1664,10 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return `The captain tried to answer validation question ${facts.card}, but nothing was approved: ${facts.reason} Its unusable actions were removed. Record a fresh request with a new identity and revise that same card for the current facts; do not repeat an unknown effect.`;
     case "task-policies-changed":
       return `Current policies for ${facts.task.key || facts.task.id}: ${JSON.stringify(facts.policies)}. These replace earlier delivery/care/merging instructions, not scope.${facts.policies.rigor.value === "reviewed" ? ` Careful contract: ${CAREFUL_LIVE_VALIDATION}` : ""} Keep working without restarting; never start queued work from this notice. Before the next push or merge, perform any validation/review the new care requires. Retain published work, the existing pull request, evidence, repair counts and all unrelated holds. A lower care removes only policy-owned requirements. Explicit self-merging permission can release an already-ready result: the first mate rechecks every requirement and uses the existing settle path, without another approval click. It grants no permission past other decisions, explicit withdrawal holds, dependencies, caps or failed checks. Ask-first cancels unsent merges; a merge already sent cannot be stopped. Read the current record before acting.${facts.policies.rigor.value === "reviewed" ? ` ${CAREFUL_NOTICE}` : ""}`;
+    case "task-override-changed":
+      return facts.withdrawn
+        ? overrideTakenBackWords(facts.override)
+        : standingOverrideWords(facts.override);
     case "idle-nudge":
       if (facts.thread) return idleThreadNudgeText(facts.waiting);
       if (facts.note) return idleNoteNudgeText(facts.note, facts.step === true);

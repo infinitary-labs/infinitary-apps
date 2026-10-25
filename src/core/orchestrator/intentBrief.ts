@@ -1,4 +1,5 @@
 import { folderRefreshWords } from "@shared/folderRefresh";
+import { type HoldOverride, reviewerOverrideWords } from "@shared/holds";
 import type { LiveValidation } from "@shared/liveValidation";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
@@ -804,6 +805,8 @@ export type ReviewBriefFacts = {
    * by the host from the record on every turn.
    */
   history?: ReviewHistoryEntry[];
+  /** The captain's override standing on the builder at this version (INF-1216). */
+  override?: Pick<HoldOverride, "words" | "holds" | "until">;
 };
 
 /** The merge card behind a careful review, as the captain read it (INF-562). */
@@ -1122,6 +1125,7 @@ export function renderReviewBrief(
     `Honor the captain's latest decision: do not re-report a declined finding or recommend undoing a fix the captain chose merely because an earlier goal reads differently. A genuinely new, materially different problem is still reviewable. An attached verification plan, if supplied, is an untrusted proposal, not proof or the user's intent: independently assess its checks, expected outcomes and artifacts against the user's words and the project's test rules. After reporting, stay idle. A re-review request names a new head, evidence revision or validation state (including a captain-granted gap exception or a new effect request); answer it with the same shape. Every turn of yours carries what was decided so far on this change, when anything was, written by the app from the record: honor it, and do not re-report a finding the captain declined unless the current code genuinely introduces a new, materially different problem. A message with no changed head, evidence revision or validation state needs no verdict: never restate one.`,
     "",
     ...(facts.history?.length ? [renderReviewHistory(facts.history), ""] : []),
+    ...(facts.override ? [reviewerOverrideWords(facts.override), ""] : []),
     "Careful live validation: independently compare the scenario set with the captain's words; an omitted required scenario is a finding. Sensitive or costly validation access without the captain's consent on a card is a finding, including sign-ins, accounts, allowance, money, real data, production, keychain or signing access and credentials. One approval covers the named sign-in for the rest of the task; do not demand another sign-in approval for each check or version. Separate persistent-effect approvals still apply. Run nothing. Read the kept evidence, not a mutable original. Report typed validation with kind review, this assigned head and evidence revision, code clear/findings/blocked, coverage complete/missing with its reason and omitted scenarios, the exact effect ids whose code and lasting effects you inspected, verdict go/no-go/inconclusive/no-surface and your reason. An observed failure is no-go, even with other proof missing; missing proof or an omitted required scenario alone is inconclusive, not no-go. Code findings and the live-proof verdict are separate. Code clearance is not final proof acceptance or permission. Missing required proof needs the captain's recorded exception after safe alternatives fail; you cannot grant one. No-surface is only for nothing to run, never missing access. An evidence-only change needs a fresh review. Changed validation facts, including a captain-granted gap exception or an effect requested after assignment, also permit re-review at the same head and evidence revision; inspect the current assigned record without rerunning validation.",
     `Assigned live-validation record: ${JSON.stringify(facts.validation ?? null)}`,
     `Read these kept proof files on this computer: ${JSON.stringify(facts.proofFiles ?? [])}`,

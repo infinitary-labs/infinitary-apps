@@ -3166,11 +3166,22 @@ export class FirstmateAgent {
       override: (input) =>
         asText(() => {
           const record = resolve(input.task);
-          // Consent is the one fact the host checks: the turn carries the
-          // captain's own words, which the row keeps and nothing reads.
-          const words = this.turnOrigin === "captain-turn" ? this.turnAsked.join("\n").trim() : "";
-          if (!words)
-            return "Override refused: only a turn that carries the captain's own words declares one. Relay their words when they give them.";
+          // Consent is the one fact the host checks: the words are the
+          // captain's own - this turn's, or the message on this task the
+          // first mate cites (INF-1216) - which the row keeps and nothing
+          // reads. A scheduled check carries none of his words.
+          let words: string;
+          if (input.from) {
+            if (!this.turnCanCreate)
+              return "Override refused: nothing was recorded. A scheduled check records no override, since no words of the captain's arrived with it; the one standing still applies.";
+            const cited = supervisor.citedCaptainWords(record.id, input.from);
+            if (!cited.ok) return cited.text;
+            words = cited.words;
+          } else {
+            words = this.turnOrigin === "captain-turn" ? this.turnAsked.join("\n").trim() : "";
+            if (!words)
+              return "Override refused: only the captain's own words declare one: this turn's, or their reply under a card of the task or line in its Crewmate tab, cited with from.";
+          }
           this.asks.attach(record.id, "update_task");
           const declared = supervisor.declareOverride(record.id, {
             words,
@@ -3631,6 +3642,7 @@ export class FirstmateAgent {
         ...(entry.review ? { review: entry.review } : {}),
         ...(entry.thread ? { thread: entry.thread } : {}),
         ...(entry.stalled ? { stalled: entry.stalled } : {}),
+        ...(entry.override ? { override: entry.override.passes } : {}),
       })),
       // Served only while another computer runs work, so one computer pays nothing (INF-992).
       ...(this.options.supervisor.computersListed() ? { computers: COMPUTERS_RULE } : {}),

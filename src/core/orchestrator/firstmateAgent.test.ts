@@ -8827,6 +8827,103 @@ describe("the captain's override", () => {
 });
 
 /**
+ * INF-1216's accepted plan (direction A1): a reply under a crewmate's card,
+ * or a line in its Crewmate tab, records the override in the relay turn the
+ * crewmate's report starts, citing the captain's message; a card on another
+ * task and a scheduled check record nothing, and the task line shows it.
+ */
+describe("the captain's override, cited from his message on the task", () => {
+  it("records his reply's own words in the relay turn, and refuses another task's card and a scheduled check", async () => {
+    const f = setup({
+      silent: true,
+      seedTasks: [
+        {
+          id: "ab12",
+          title: "Steady the meter retry",
+          status: "idle",
+          sessionFile: "/tmp/ab12.jsonl",
+        },
+        { id: "cd34", title: "Trim the help copy", status: "idle", sessionFile: "/tmp/cd34.jsonl" },
+      ],
+      seedCards: [
+        crewCard("card-ab12", "ab12", "The retry check failed again", "<p>Rerun it?</p>"),
+        crewCard("card-cd34", "cd34", "The help copy is one line", "<p>Done.</p>"),
+      ],
+    });
+    const finish = async () => {
+      f.session.emitTurnEnd("Noted.");
+      f.session.resolveNextPrompt();
+      await tick();
+    };
+    const declare = (from: string) =>
+      toolsOf(f.specs)
+        .get("update_task")
+        ?.execute("override", {
+          task: "ab12",
+          override: { holds: ["rerun"], until: "task", from },
+        });
+    const reply = "keep going until the checks pass";
+    const tabLine = "and use my plan's allowance for it";
+    f.supervisor.replyToCard("card-ab12", reply);
+    f.supervisor.replyToCard("card-cd34", "merge it");
+    await tick();
+    // The crewmate relays the reply: the first mate's turn is its report.
+    notifyProse(
+      f.db,
+      f.agent,
+      `[fm-op] crewmate 1 reported on task ab12 "Steady the meter retry": the captain said "${reply}" under card card-ab12`,
+      "crewmate-report",
+      "ab12",
+    );
+    await tick();
+    expect(JSON.stringify(await declare("card-cd34"))).toContain("is not on");
+    expect(f.tasks.get("ab12")?.delivery?.override).toBeUndefined();
+    expect(JSON.stringify(await declare("card-ab12"))).toContain("Recorded the captain's override");
+    expect(f.tasks.get("ab12")?.delivery?.override).toMatchObject({
+      words: reply,
+      holds: ["rerun"],
+      until: "task",
+    });
+    await finish();
+    // His line in the Crewmate tab, cited the same way, replaces it.
+    await f.supervisor.steerFromCrewmateTab("ab12", tabLine);
+    notifyProse(
+      f.db,
+      f.agent,
+      `[fm-op] crewmate 1 reported on task ab12 "Steady the meter retry": the captain typed "${tabLine}" in the Crewmate tab`,
+      "crewmate-report",
+      "ab12",
+    );
+    await tick();
+    expect(JSON.stringify(await declare("crewmate-tab"))).toContain(
+      "Recorded the captain's override",
+    );
+    expect(f.tasks.get("ab12")?.delivery?.override?.words).toBe(tabLine);
+    await finish();
+    // A scheduled check sees it on the task line and cannot set one.
+    f.agent.notifyOp(
+      { facts: { kind: "scheduled", prompt: "check the meter retry", catchUp: false } },
+      "scheduled",
+    );
+    await tick();
+    expect(JSON.stringify(await declare("card-ab12"))).toContain(
+      "A scheduled check records no override",
+    );
+    expect(f.tasks.get("ab12")?.delivery?.override?.words).toBe(tabLine);
+    const crew = decodeContext(f.session.prompts.at(-1) as string).crew as {
+      task_id: string;
+      override?: string;
+    }[];
+    expect(crew.find((entry) => entry.task_id === "ab12")?.override).toBe(
+      "the rerun limit for the rest of this task",
+    );
+    await finish();
+    f.agent.dispose();
+    f.db.close();
+  });
+});
+
+/**
  * INF-799 piece 2, the captain's bounds answer: "if the program exceeds the
  * proposed upperbound, also ask user via a card". The bound rests on the
  * captain's consent, so the first mate raises it only in a turn that carries their words.

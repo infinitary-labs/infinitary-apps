@@ -13,6 +13,7 @@ import {
   fixedHoldWords,
   overrideCellWords,
   overrideWords,
+  standingOverrideWords,
   withoutHoldWords,
 } from "../../src/shared/holds";
 import { LIVE_VALIDATION_WORDS } from "../../src/shared/liveValidation";
@@ -28,7 +29,7 @@ import { FM_SYSTEM_MARKER, REVIEWED_TIER_PROMPT_MARKER, SPAWN_PROMPT_MARKER } fr
 import { regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
-import { captainCardChoice, latestServedTurn, providerMessages } from "./providerRequest";
+import { latestServedTurn, providerMessages } from "./providerRequest";
 import {
   dockRegion,
   expandDock,
@@ -51,14 +52,13 @@ import {
   REACH_AUDIT_RULE,
   REACH_READ_STEER,
   REACH_READ_WORDS,
-  REACH_RERUN_AGAIN_LABEL,
   REACH_RERUN_CARD_TITLE,
   REACH_RERUN_CHANGE,
   REACH_RERUN_CHECK,
   REACH_RERUN_HOLDS,
   REACH_RERUN_MARKER,
   REACH_RERUN_PATH,
-  REACH_RERUN_STEER,
+  REACH_RERUN_REPLY,
   REACH_RULE_CHANGE,
   REACH_RULE_DONE_TITLE,
   REACH_RULE_HOLDS,
@@ -78,7 +78,7 @@ import {
   reviewedTier,
 } from "./scenarios/reviewedTier";
 import { settingsSection } from "./settings";
-import { factsStrip, showCard, shownCard } from "./stack";
+import { cardReply, factsStrip, showCard, shownCard } from "./stack";
 import { pressKey } from "./windowKeys";
 
 /**
@@ -482,13 +482,14 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     expect(github.merges()).toEqual(merged.map((change) => expect.objectContaining(change)));
   });
 
-  await test.step("3. the rerun limit refuses a second rerun, and the captain's word reopens it", async () => {
+  await test.step("3. the rerun limit refuses a second rerun, and the captain's reply under the crewmate's card reopens it", async () => {
     github.setChecks(FAILED);
     github.serveNext(REACH_RERUN_CHANGE);
     await send(`${SPAWN_PROMPT_MARKER} ${RERUN_TITLE}`);
     const task = await boardRow((row) => row.title === RERUN_TITLE);
     const card = await cardTitled(REACH_RERUN_CARD_TITLE);
-    expect(card.taskId).toBe(task.id);
+    // The crewmate asks on its own card: no second card of the first mate's.
+    expect(card).toMatchObject({ taskId: task.id, author: "crewmate" });
     expect(github.reruns()).toEqual([`POST ${REACH_RERUN_PATH}`]);
     // The crewmate's second reservation was refused in the rerun hold's words.
     expect(
@@ -499,31 +500,52 @@ test("the captain's words pass a soft hold once on the record, a fixed limit ref
     await showCard(page, REACH_RERUN_CARD_TITLE);
     await regionShot(shownCard(page, REACH_RERUN_CARD_TITLE), out("3-rerun-card.png"));
 
-    const action = card.actions.find((entry) => entry.label === REACH_RERUN_AGAIN_LABEL);
-    if (!action) throw new Error("the card offers another rerun");
-    const again = mockProvider.scriptFirstmateTurn(
-      captainCardChoice(
-        { id: card.id, title: card.title, taskId: task.id },
-        { id: action.id, label: action.label },
-      ),
-      [
-        {
-          name: "update_task",
-          args: { task: task.id, override: { holds: REACH_RERUN_HOLDS, until: "version" } },
-        },
-        { name: "steer_crewmate", args: { task_id: task.id, message: REACH_RERUN_STEER } },
-      ],
-    );
-    await page.getByRole("button", { name: REACH_RERUN_AGAIN_LABEL }).click();
-    await expect
-      .poll(again.outcome, { timeout: 30_000 })
-      .toEqual(expect.objectContaining({ state: "closed" }));
+    // INF-1216: the captain's reply under the crewmate's card. The crewmate
+    // relays it, and the first mate records it as his override in that
+    // relay turn, citing the card, with no card of its own.
+    const composer = cardReply(page);
+    await composer.field.fill(REACH_RERUN_REPLY);
+    await pressKey(composer.field, "Enter");
     await expect
       .poll(() => github.reruns(), { timeout: 30_000 })
       .toEqual([`POST ${REACH_RERUN_PATH}`, `POST ${REACH_RERUN_PATH}`]);
+    expect(stored(task.id)?.override).toMatchObject({
+      words: REACH_RERUN_REPLY,
+      holds: REACH_RERUN_HOLDS,
+      until: "version",
+    });
+    const rows = await overrideRows(task.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.text).toBe(
+      overrideWords({ words: REACH_RERUN_REPLY, holds: REACH_RERUN_HOLDS, until: "version" }),
+    );
+    await expect(feedLine(page, rows[0]?.text ?? "")).toHaveCount(1);
+    // The crewmate's next turn was served his standing words.
+    const crewmateTurns = (launched.mockProvider?.requestBodies() ?? [])
+      .filter((body) => body.includes(REACH_RERUN_MARKER) && !body.includes(FM_SYSTEM_MARKER))
+      .flatMap((body) => providerMessages(body))
+      .flatMap((message) => (message.role === "user" ? [message.text] : []));
+    expect(
+      crewmateTurns.some((text) =>
+        text.includes(
+          standingOverrideWords({
+            words: REACH_RERUN_REPLY,
+            holds: REACH_RERUN_HOLDS,
+            until: "version",
+          }),
+        ),
+      ),
+    ).toBe(true);
+    // No card of the first mate's asked him again.
+    expect(
+      (await page.evaluate(() => window.infinitary.cards.list())).filter(
+        (entry) => entry.taskId === task.id && entry.author === "firstmate",
+      ),
+    ).toEqual([]);
+
     // The crewmate reports once its write's answer is back, which the
     // gateway gives only after it dated the rerun it sent.
-    await expect(reportLine(page, task.key)).toHaveCount(2, { timeout: 30_000 });
+    await expect(reportLine(page, task.key)).toHaveCount(3, { timeout: 30_000 });
     const record = await detail(task.id);
     expect(stored(task.id)?.override).toMatchObject({
       holds: REACH_RERUN_HOLDS,

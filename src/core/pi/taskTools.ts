@@ -70,9 +70,16 @@ export type TaskToolsDelegate = {
   withdrawMerge(input: { task: string }): string;
   /**
    * Record the captain's override (docs/delivery-rigor.md, "The holds"):
-   * refused outside a turn that carries his words, which the host keeps.
+   * his words from this turn, or from the message `from` cites - his reply
+   * under a card of the task, or his line in its Crewmate tab - which the
+   * host keeps; refused without them, and in a scheduled check.
    */
-  override(input: { task: string; holds: OverridableHold[]; until: "version" | "task" }): string;
+  override(input: {
+    task: string;
+    holds: OverridableHold[];
+    until: "version" | "task";
+    from?: string;
+  }): string;
   /** He takes his override back. */
   withdrawOverride(input: { task: string }): string;
   /** A queued row starts now, past any reasoning re-ask (P0, WI-3). Refusals are text. */
@@ -296,16 +303,9 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "The id (d:...) of the standing direction behind this call's edit; the record names it.",
         }),
       ),
-      start_again: Type.Optional(
-        Type.Boolean({
-          description: "Start dropped work again, as above",
-        }),
-      ),
-      start_now: Type.Optional(
-        Type.Boolean({
-          description: "Start a queued task right now",
-        }),
-      ),
+      // What start_again and start_now do is said once, in the description above.
+      start_again: Type.Optional(Type.Boolean()),
+      start_now: Type.Optional(Type.Boolean()),
       drop: Type.Optional(Type.Boolean({ description: "Close the task as dropped" })),
       correct_required_action: Type.Optional(
         Type.Boolean({
@@ -325,10 +325,11 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             // own words below rather than by the schema (INF-762).
             holds: Type.Array(stringEnum(HOLD_KINDS)),
             until: stringEnum(["version", "task"]),
+            from: Type.Optional(Type.String()),
           },
           {
             description:
-              "Captain's words this turn pass soft holds refusals named, until as they mean; empty holds takes it back.",
+              "Captain's words (this turn's; or from: card id of a relayed reply, or crewmate-tab) pass soft holds you judge, until as they mean, even unrefused; empty holds takes it back.",
           },
         ),
       ),
@@ -378,9 +379,15 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
         const { holds, until } = params.override;
         const refusal = overrideRefusal(holds);
         if (refusal) return { text: refusal };
+        const from = params.override.from?.trim();
         return {
           text: holds.length
-            ? delegate.override({ task: params.task, holds: holds.filter(isOverridable), until })
+            ? delegate.override({
+                task: params.task,
+                holds: holds.filter(isOverridable),
+                until,
+                ...(from ? { from } : {}),
+              })
             : delegate.withdrawOverride({ task: params.task }),
         };
       }

@@ -85,6 +85,7 @@ The boxed prompt is the captain's direct door to the crewmate: Enter sends the l
 `CrewSupervisor.steerFromCrewmateTab` refuses in words, writing nothing, when no crewmate can be told anything: an empty line, a task not started, a closed one.
 Otherwise the steer is a typed wake (`crewmate-tab-line`, `CREWMATE_TAB_STEER_LEAD` then the captain's words verbatim), recorded as a `steered` event with `via: "crewmate-tab"` (`CREWMATE_TAB_VIA`, `src/shared/provenance.ts`) and the span of the captain's words, which Activity reads as `You told the crewmate: ...`, and one task-less feed line (`toldInCrewmateTabLine`).
 The first mate reads it on the task's timeline.
+When the line passes one of the app's holds or tells the crewmate to go on without asking, the crewmate relays it with `needs_firstmate`, and the first mate records it as the captain's override with `from` as `crewmate-tab`, the words read from that steer (`docs/delivery-rigor.md`, "The holds").
 A Pi or Claude crewmate takes it at its next step inside the running turn; an idle one takes it as a new turn.
 A refused line keeps its draft and says why under the prompt; a draft also survives the card hiding and showing again, in memory only.
 

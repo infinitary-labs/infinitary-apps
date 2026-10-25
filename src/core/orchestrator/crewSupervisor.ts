@@ -99,6 +99,8 @@ import {
   overrideSpan,
   overrideWords,
   softHoldWords,
+  standingOverride,
+  standingOverrideWords,
 } from "@shared/holds";
 import type { IntegrationApprovalChoice } from "@shared/integrations";
 import type { ValidationForgeWrite } from "@shared/liveValidation";
@@ -1723,10 +1725,14 @@ export class CrewSupervisor {
         row.facts?.kind !== "conversation-restart" &&
         !(running && row.facts?.kind === "turn-resumed"),
     );
-    // A policy notice alone is guidance, not permission to resume or start.
+    // A policy or override notice alone is guidance, not permission to resume or start.
     if (
       this.tasks.get(taskId)?.state !== "streaming" &&
-      rest.every((row) => row.facts?.kind === "task-policies-changed")
+      rest.every(
+        (row) =>
+          row.facts?.kind === "task-policies-changed" ||
+          row.facts?.kind === "task-override-changed",
+      )
     )
       return [];
     return rest;
@@ -1852,6 +1858,7 @@ export class CrewSupervisor {
         `${builder.key || builder.id} has no commits on its branch to review yet. Steer the crewmate to commit its work and report first.`,
       );
     const captainCard = this.captainCardFacts(builder);
+    const standing = standingOverride(builder.delivery, headSha);
     const proof = builder.delivery?.liveValidation?.runs.at(-1);
     if (proof)
       await verifyKeptValidationEvidence(
@@ -1885,6 +1892,7 @@ export class CrewSupervisor {
       ...(changeReading ? { changeReading } : {}),
       ...(captainCard ? { captainCard } : {}),
       history: reviewHistory(this.options.tasks, builder),
+      ...(standing ? { override: standing } : {}),
       proofFiles,
       validation: validation
         ? {
@@ -6405,6 +6413,10 @@ export class CrewSupervisor {
       sections.push([
         `Current task policies: ${JSON.stringify(policies)}. Read current policies before pushing or merging; later policy notices supersede this brief, not the scope.`,
       ]);
+    // The captain's override already standing when work (re)starts (INF-1216).
+    const standing = standingOverride(record?.delivery, record?.delivery?.headSha);
+    if (standing && record?.shape?.kind !== "review")
+      sections.push([standingOverrideWords(standing)]);
     const deliverable = this.deliverableOf(record);
     let base = brief;
     // Whatever the brief was rendered from: a crewmate's follow-up has no
@@ -8484,6 +8496,7 @@ export class CrewSupervisor {
         data: { news: true },
       },
     );
+    this.overrideNoticed(taskId, override);
     this.ladder.reopenForOverride(taskId, holds);
     // His kept merge click reads the same record: one waiting on a hold his
     // words pass runs now (a no-op when none stands).
@@ -8514,11 +8527,85 @@ export class CrewSupervisor {
         data: { news: true, overrideWithdrawn: override },
       },
     );
+    this.overrideNoticed(taskId, override, true);
     this.ladder.syncCaptainGate(taskId, this.now());
     return {
       ok: true,
       text: `Took back the captain's override on ${handle}: ${holdNames(override.holds)} hold again.`,
     };
+  }
+
+  /**
+   * The captain's override changed on a task (INF-1216): its crewmate is
+   * served his standing words, or that he took them back, on its durable
+   * lane, so its next turn reads them on this computer or another. A
+   * notice alone starts no turn (`deliverableRows`); a running turn hears
+   * it now. Its reviewer reads the override in every review turn's brief.
+   */
+  private overrideNoticed(taskId: string, override: HoldOverride, withdrawn = false): void {
+    const record = this.options.tasks.get(taskId);
+    if (!record) return;
+    this.options.inbox.enqueueSteerOnce(taskId, {
+      facts: {
+        kind: "task-override-changed",
+        task: { id: taskId, key: record.key, title: record.title },
+        override: { words: override.words, holds: override.holds, until: override.until },
+        ...(withdrawn ? { withdrawn: true as const } : {}),
+      },
+      once: `task-override:${withdrawn ? "withdrawn" : "standing"}:${override.at}`,
+    });
+    if (this.tasks.get(taskId)?.state === "streaming") void this.sweepTaskLane(taskId, this.now());
+  }
+
+  /**
+   * The captain's own message the first mate cites for an override
+   * (INF-1216): his newest reply under a card of this task (`from` is the
+   * card's id), or his newest line in its Crewmate tab (`crewmate-tab`),
+   * read from the steer that carried it to the crewmate. The host checks
+   * only that the message is his and on this task, and reads none of it.
+   */
+  citedCaptainWords(
+    taskId: string,
+    from: string,
+  ): { ok: true; words: string } | { ok: false; text: string } {
+    const record = this.options.tasks.get(taskId);
+    if (!record) throw new Error(`Unknown task "${taskId}".`);
+    const handle = record.key || record.id;
+    const cited = from.trim();
+    const tab = cited === CREWMATE_TAB_VIA;
+    let where = `${handle}'s Crewmate tab`;
+    if (!tab) {
+      const card = this.cards.get(cited) ?? this.cards.stored(cited);
+      if (!card)
+        return {
+          ok: false,
+          text: `Override refused: nothing was recorded. There is no card "${cited}"; pass from as the id of the card the captain replied under, or ${CREWMATE_TAB_VIA}.`,
+        };
+      if (card.taskId !== taskId)
+        return {
+          ok: false,
+          text: `Override refused: nothing was recorded. Card "${card.title}" is not on ${handle}, so the captain's reply there passes nothing on it.`,
+        };
+      where = `card "${card.title}"`;
+    }
+    const message = this.options.tasks
+      .timeline(taskId)
+      .findLast(
+        (event) =>
+          event.kind === "steered" &&
+          event.actor === "captain" &&
+          (tab
+            ? event.data?.via === CREWMATE_TAB_VIA
+            : event.data?.via === "thread" && event.data?.cardId === cited),
+      );
+    const span = message?.data?.words as { from: number; to: number } | undefined;
+    const words = message && span ? message.text.slice(span.from, span.to).trim() : "";
+    if (!words)
+      return {
+        ok: false,
+        text: `Override refused: nothing was recorded. The record holds no words the captain typed in ${where}.`,
+      };
+    return { ok: true, words };
   }
 
   /** The interrupt request or outcome's timeline event (R2 forward capture). */
@@ -8627,6 +8714,7 @@ export class CrewSupervisor {
         const stalled = this.ladder.stalledFact(record, this.now());
         const refused = record.delivery?.cardRefusal;
         const ci = ciFactOf(record.delivery, this.now());
+        const override = standingOverride(record.delivery, record.delivery?.headSha);
         // A personal task carries no delivery: it builds in place, and
         // saying "local-only" here would be a posture the Firstmate could
         // act on. The brief omits the line for the same reason.
@@ -8660,6 +8748,14 @@ export class CrewSupervisor {
           ...(review ? { review } : {}),
           ...(thread ? { thread } : {}),
           ...(stalled ? { stalled } : {}),
+          ...(override
+            ? {
+                override: {
+                  passes: `${holdNames(override.holds)} ${overrideSpan(override)}`,
+                  words: override.words,
+                },
+              }
+            : {}),
           ...(refused
             ? {
                 cardRefused: {
@@ -10267,8 +10363,8 @@ export class CrewSupervisor {
     // holds"): what his words passed, with his words and how long on rest.
     // A merge that went without the review or its live proof says so here.
     // One for an earlier version passes nothing now, so it shows nothing.
-    const override = record.delivery?.override;
-    if (override && (override.until === "task" || override.head === record.delivery?.headSha)) {
+    const override = standingOverride(record.delivery, record.delivery?.headSha);
+    if (override) {
       cell(
         "override",
         "Override",
@@ -12861,6 +12957,7 @@ export class CrewSupervisor {
         data: { news: true },
       },
     );
+    this.overrideNoticed(taskId, override);
   }
 
   /** A choice on a crewmate's card, steered to its session through the task's durable lane. */

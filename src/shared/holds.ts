@@ -163,15 +163,25 @@ export type HoldOverride = {
   at: number;
 };
 
+/** The override standing on a task at this version: one for the task's life, or one for this very version. */
+export function standingOverride(
+  delivery: { override?: HoldOverride } | null | undefined,
+  head?: string,
+): HoldOverride | undefined {
+  const override = delivery?.override;
+  if (!override) return undefined;
+  return override.until === "task" || (head !== undefined && head === override.head)
+    ? override
+    : undefined;
+}
+
 /** Whether a standing override passes this hold at this version. */
 export function overridePasses(
   delivery: { override?: HoldOverride } | null | undefined,
   kind: OverridableHold,
   head?: string,
 ): boolean {
-  const override = delivery?.override;
-  if (!override?.holds.includes(kind)) return false;
-  return override.until === "task" || (head !== undefined && head === override.head);
+  return standingOverride(delivery, head)?.holds.includes(kind) ?? false;
 }
 
 /** The holds an override passes, in the captain's words: `the review and the checks`. */
@@ -190,6 +200,31 @@ export function overrideSpan(override: Pick<HoldOverride, "until">): string {
 /** The override as its timeline row and the strip cell's title say it: what his words pass, for how long, and his words. */
 export function overrideWords(override: Pick<HoldOverride, "words" | "holds" | "until">): string {
   return `Your words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}"`;
+}
+
+/**
+ * The captain's standing override as a crewmate on the task is served it
+ * (INF-1216): his words, what they pass and for how long. His words also
+ * stand in for the crewmate's own consent asks they reach - the crewmate
+ * judges which - while the asks that reach outside the task or need him
+ * in person keep their own.
+ */
+export function standingOverrideWords(
+  override: Pick<HoldOverride, "words" | "holds" | "until">,
+): string {
+  return `The captain's standing override on this task, recorded by the first mate: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Where their words reach a consent ask of your own, such as their plan's allowance, they are that consent and you do not ask again; keychain or signing access, writes outside the project and browser handoffs still ask. Only their words take it back.`;
+}
+
+/** What the reviewer of a change is served while the captain's override stands on it (INF-1216). */
+export function reviewerOverrideWords(
+  override: Pick<HoldOverride, "words" | "holds" | "until">,
+): string {
+  return `The captain's standing override on this change: their words pass ${holdNames(override.holds)} ${overrideSpan(override)}: "${override.words}". Access or a step their words cover is not a finding.`;
+}
+
+/** What a crewmate is served when the captain takes his override back (INF-1216). */
+export function overrideTakenBackWords(override: Pick<HoldOverride, "holds">): string {
+  return `The captain took back their standing override on this task: ${holdNames(override.holds)} hold again, and their earlier words no longer stand in for your consent asks.`;
 }
 
 /** The facts strip's override cell: each hold his words pass, the live proof as going without it. */
@@ -211,8 +246,8 @@ export function softHoldWords(
   const hold = HOLDS[kind];
   if ("way" in hold) return `Soft hold ${kind}: it passes when ${hold.way}.`;
   return audience === "firstmate"
-    ? `Soft hold ${kind}: the captain's own words pass it; when their words in this turn do, declare it with update_task override.`
-    : `Soft hold ${kind}: only the captain's words pass it, relayed by the first mate; if they gave them, report them.`;
+    ? `Soft hold ${kind}: the captain's own words pass it; when their words in this turn, or their reply or Crewmate tab line a crewmate relays, pass it, declare it with update_task override (from cites a relayed one).`
+    : `Soft hold ${kind}: only the captain's words pass it, relayed by the first mate; if they gave them, report them, naming the card or the Crewmate tab they came in.`;
 }
 
 /** The sentence a fixed limit's refusal ends with: no one's word passes it. */

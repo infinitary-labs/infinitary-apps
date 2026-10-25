@@ -20,6 +20,7 @@ import {
   type TaskEvent,
 } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
+import { type TaskSession, taskSessionSchema } from "../storage/taskSessionStore";
 import type { TaskRecord } from "../storage/taskStore";
 
 /**
@@ -94,6 +95,7 @@ const taskLineSchema = z.object({
   worktreeDir: z.string(),
   branch: z.string(),
   sessionFile: nullableString,
+  sessions: z.array(taskSessionSchema).optional(),
   accountId: nullableString,
   difficulty: z.enum(["low", "medium", "high", "premium"]).nullable(),
   shape: workShapeSchema.nullable(),
@@ -194,6 +196,7 @@ export type TaskExportBundle = {
   header: z.infer<typeof headerLineSchema>;
   projects: ProjectRecord[];
   tasks: TaskRecord[];
+  sessions?: { taskId: string; session: TaskSession }[];
   /**
    * Timeline events, in export order (the timeline's), without storage ids,
    * each with the other tasks it concerns when it concerns any.
@@ -207,6 +210,7 @@ export type TaskExportBundle = {
 export type TaskExportSource = {
   projects: { list(): ProjectRecord[] };
   list(): TaskRecord[];
+  recordedSessions?(id: string): TaskSession[];
   timeline(id: string): TaskEvent[];
   /** Whom each event concerns, by event id. */
   eventConcerns(): Map<number, TaskConcern[]>;
@@ -250,7 +254,8 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
     ),
     ...tasks.map((task): TaskExportLine => {
       const { kind, ...rest } = task;
-      return { kind: "task", ...rest, taskKind: kind };
+      const sessions = source.recordedSessions?.(task.id) ?? [];
+      return { kind: "task", ...rest, taskKind: kind, ...(sessions.length ? { sessions } : {}) };
     }),
     ...events.map((event): TaskExportLine => {
       const { id, kind, ...rest } = event;
@@ -290,6 +295,7 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
     events: [],
     links: [],
     asks: [],
+    sessions: [],
   };
   let number = 0;
   for (const raw of lines) {
@@ -321,7 +327,8 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
         break;
       }
       case "task": {
-        const { kind: _kind, taskKind, ...rest } = line;
+        const { kind: _kind, taskKind, sessions, ...rest } = line;
+        for (const session of sessions ?? []) bundle.sessions?.push({ taskId: rest.id, session });
         bundle.tasks.push({ ...rest, kind: taskKind });
         break;
       }

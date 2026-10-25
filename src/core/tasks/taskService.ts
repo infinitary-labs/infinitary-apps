@@ -99,6 +99,7 @@ import {
 } from "../storage/askStore";
 import type { AppDatabase } from "../storage/db";
 import { type ProjectRecord, ProjectStore } from "../storage/projectStore";
+import { sessionFilesIn } from "../storage/sessionReader";
 import {
   type ConcernedTaskEvent,
   type InsertTaskEvent,
@@ -109,6 +110,7 @@ import {
   TaskEventStore,
 } from "../storage/taskEventStore";
 import { type TaskLink, TaskLinkStore, type TaskLinkType } from "../storage/taskLinkStore";
+import { conversationOf, type TaskSession, TaskSessionStore } from "../storage/taskSessionStore";
 import {
   type CardRefusal,
   type PendingSettleIntent,
@@ -779,6 +781,7 @@ export class TaskService {
   private readonly events: TaskEventStore;
   private readonly links: TaskLinkStore;
   private readonly asks: AskStore;
+  private readonly conversations: TaskSessionStore;
   readonly projects: ProjectStore;
   private readonly now: () => number;
   private readonly listeners = new Set<TaskChangeListener>();
@@ -792,6 +795,7 @@ export class TaskService {
     this.events = new TaskEventStore(options.db);
     this.links = new TaskLinkStore(options.db);
     this.asks = new AskStore(options.db);
+    this.conversations = new TaskSessionStore(options.db);
     this.projects = new ProjectStore(options.db);
     this.now = options.now ?? (() => Date.now());
     // Boot: a turn a dead process left streaming is interrupted, not
@@ -2840,9 +2844,67 @@ export class TaskService {
     return inboxIds.every((row) => nudged.has(row));
   }
 
-  setSessionFile(id: string, sessionFile: string | null): void {
-    const run = this.write(() => this.patch(id, { sessionFile, updatedAt: this.now() }));
+  /** The resume pointer and its conversation association commit together. */
+  setSessionFile(
+    id: string,
+    sessionFile: string | null,
+    facts?: Omit<TaskSession, "conversation" | "resume_token" | "opened_at" | "last_at">,
+  ): void {
+    const run = this.write(() => {
+      const now = this.now();
+      this.mustGet(id);
+      if (sessionFile && facts) {
+        this.conversations.record(id, {
+          ...facts,
+          conversation: conversationOf(sessionFile),
+          resume_token: sessionFile,
+          opened_at: now,
+          last_at: now,
+        });
+      }
+      this.patch(id, { sessionFile, updatedAt: now });
+    });
     run();
+  }
+
+  /** Durable rows only, for record export without inferred folder metadata. */
+  recordedSessions(id: string): TaskSession[] {
+    return this.conversations.list(id);
+  }
+
+  /** Recorded conversations plus unlabelled files retained before the association existed. */
+  sessions(id: string, folder?: { dir: string; computer: string }) {
+    const task = this.mustGet(id);
+    const rows: (Omit<TaskSession, "began" | "opened_at" | "last_at" | "resume_token"> & {
+      began: string | null;
+      opened_at: number | null;
+      last_at: number | null;
+      current: boolean;
+    })[] = this.conversations.list(id).map(({ resume_token, ...session }) => ({
+      ...session,
+      current:
+        task.sessionFile !== null &&
+        conversationOf(task.sessionFile) === conversationOf(resume_token),
+    }));
+    const known = new Set(rows.map((row) => conversationOf(row.file)));
+    for (const file of folder ? sessionFilesIn(folder.dir) : []) {
+      const conversation = conversationOf(file);
+      if (known.has(conversation)) continue;
+      rows.push({
+        conversation,
+        file,
+        computer: folder?.computer ?? null,
+        device_id: null,
+        provider: null,
+        model: null,
+        account_id: null,
+        opened_at: null,
+        last_at: null,
+        began: null,
+        current: task.sessionFile !== null && conversationOf(task.sessionFile) === conversation,
+      });
+    }
+    return rows;
   }
 
   /**
@@ -4152,6 +4214,7 @@ export class TaskService {
         .run(id, id);
       this.db.prepare("DELETE FROM task_events WHERE task_id = ?").run(id);
       this.db.prepare("DELETE FROM task_links WHERE from_id = ? OR to_id = ?").run(id, id);
+      this.db.prepare("DELETE FROM task_sessions WHERE task_id = ?").run(id);
       this.store.delete(id);
       this.pending.removed.add(id);
     });
@@ -4164,6 +4227,7 @@ export class TaskService {
       this.events.deleteAll();
       this.links.deleteAll();
       this.asks.deleteAll();
+      this.db.prepare("DELETE FROM task_sessions").run();
       this.pending.reset = true;
       return this.store.deleteAll();
     });
@@ -4248,6 +4312,10 @@ export class TaskService {
         this.store.insert(record);
         this.projects.raiseNextSeq(record.projectId, record.seq + 1);
         this.touch(record.id);
+      }
+      for (const { taskId, session } of bundle.sessions ?? []) {
+        if (!incoming.has(taskId)) throw new Error(`Session names an unknown task: ${taskId}`);
+        this.conversations.record(taskId, session);
       }
       for (const { concerns, ...event } of bundle.events) {
         const id = this.events.insert(event);

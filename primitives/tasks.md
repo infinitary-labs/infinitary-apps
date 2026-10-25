@@ -23,8 +23,9 @@ When a script should decide the steps (a loop, a fan-out, retries), use a progra
 ## Owner and entry points
 
 One writer each: `TaskService` over the task tables (`docs/task-record.md`).
-`TaskService` ([`../src/core/tasks/taskService.ts`](../src/core/tasks/taskService.ts)) is the one writer over `tasks`, `task_events`, `task_links` and `captain_asks`, and every change commits with the timeline event that explains it.
+`TaskService` ([`../src/core/tasks/taskService.ts`](../src/core/tasks/taskService.ts)) is the one writer over `tasks`, `task_events`, `task_links`, `task_sessions` and `captain_asks`, and every change commits with the timeline event that explains it.
 `TaskStore` ([`../src/core/storage/taskStore.ts`](../src/core/storage/taskStore.ts)) sits beneath it; `TaskStore.listReady` is the ready query.
+Conversation associations: `setSessionFile` writes the resume pointer and conversation row together; by-key `tasks` reads list recorded conversations and retained older files, and name an earlier stronger-model attempt without copying its sessions ([task record](../docs/task-record.md), "Conversations on a task").
 Graph writes: `create`, `setParent`, `moveToProject`, `link`, `unlink`, `fileFollowup`, `startAgain`, `updateFields`, `setGate`, `close`, `dropWithChildren`.
 Derived reads: `flagsOf` (`blocked`, `held`, `ready`, `deadBlocker`), `basisHolds` / `basisOf`, `builtOn`, `verdictReviewOf`, `closeRefusal`, `blockersHoldingClose`, `blockerRefusal`.
 Typed results: `resultSchemaRefusal` and `resultRefusal` in [`../src/core/tasks/taskResult.ts`](../src/core/tasks/taskResult.ts).

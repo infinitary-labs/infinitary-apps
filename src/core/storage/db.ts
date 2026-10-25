@@ -1075,6 +1075,22 @@ const MIGRATIONS: readonly Migration[] = [
   // were; CardStore is the only writer and no published view reads it.
   // Dropping the column reverses it.
   (db) => addColumn(db, "cards", "continues", "INTEGER"),
+  // One durable association per task conversation (INF-1288).
+  `CREATE TABLE task_sessions (
+    task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+    conversation TEXT NOT NULL,
+    resume_token TEXT NOT NULL,
+    file TEXT NOT NULL,
+    computer TEXT,
+    device_id TEXT,
+    provider TEXT,
+    model TEXT,
+    account_id TEXT,
+    opened_at INTEGER NOT NULL,
+    last_at INTEGER NOT NULL,
+    began TEXT NOT NULL,
+    PRIMARY KEY (task_id, conversation)
+  );`,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

@@ -1045,9 +1045,10 @@ describe("CrewSupervisor", () => {
     const codex = { provider: "openai-codex", id: "gpt-6.1-sol" };
     const crewmate = fakeCrewmate({
       model: claude,
+      sessionId: "0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b",
       resume: { backend: "claude", sessionId: "0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b" },
     });
-    const moved = fakeCrewmate({ model: codex });
+    const moved = fakeCrewmate({ model: codex, sessionId: "s-moved", resume: { backend: "pi", sessionFile: "/tmp/s-moved.jsonl" } });
     const { supervisor, tasks, specs, sessionSpecs } = setup(crewmate, {
       routedModel: claude,
       crewmates: [moved],
@@ -1075,6 +1076,11 @@ describe("CrewSupervisor", () => {
     expect(moved.promptCalls[0]).toContain(
       "your task moved to Codex, which cannot reopen a conversation another provider held",
     );
+    // INF-1288: moving creates a second association, not a rewritten history.
+    expect(tasks.sessions(taskId)).toMatchObject([
+      { conversation: crewmate.sessionId, provider: claude.provider, model: claude.id, began: "start", current: false },
+      { conversation: moved.sessionId, provider: codex.provider, model: codex.id, began: "move", current: true },
+    ]);
     expect(tasks.get(taskId)?.model).toBe("openai-codex/gpt-6.1-sol");
     expect(tasks.timeline(taskId).map((event) => [event.actor, event.text])).toContainEqual([
       "firstmate",
@@ -2489,6 +2495,10 @@ describe("CrewSupervisor", () => {
       intent: intentOf("add a shortcut that opens the Tasks panel"),
     });
     await tick();
+    // INF-1288: a start records the actual serving model, not the route's choice.
+    expect(tasks.sessions(taskId)).toMatchObject([
+      { conversation: crewmate.sessionId, provider: "fm-mock", model: "mock-1", began: "start", current: true },
+    ]);
     const dispatched = tasks.timeline(taskId).find((event) => event.kind === "dispatched");
     expect(dispatched?.data).toMatchObject({
       model: "fm-mock/mock-1",
@@ -6747,6 +6757,11 @@ describe("CrewSupervisor", () => {
       createdAt: Date.now(),
     });
 
+    const earlierToken = tasks.get("t-foreign")?.sessionFile ?? "";
+    tasks.setSessionFile("t-foreign", earlierToken, {
+      file: `/tmp/records/${earlierToken}.jsonl`, computer: HOME.the, device_id: "local",
+      provider: "anthropic-claude", model: "claude-fable-5", account_id: null, began: "start",
+    });
     await supervisor.steerCrewmate("t-foreign", "carry on");
     await tick();
     expect(specs[0]?.resumeToken).toBe("0f3a2c1e-5b6d-4e7f-8a9b-0c1d2e3f4a5b");
@@ -6759,6 +6774,18 @@ describe("CrewSupervisor", () => {
       "its earlier conversation could not be reopened, so it starts a fresh one",
     );
     expect(crewmate.promptCalls.at(-1)).toContain("carry on");
+    const replacedSessions = tasks.sessions("t-foreign");
+    expect(replacedSessions).toMatchObject([
+      { conversation: earlierToken, began: "start", current: false },
+      { conversation: "s1", began: "unopenable", current: true },
+    ]);
+    crewmate.finishPrompt();
+    await tick();
+    await supervisor.steerCrewmate("t-foreign", "Inspect the header too.");
+    await tick();
+    expect(tasks.sessions("t-foreign")).toHaveLength(2);
+    expect(tasks.sessions("t-foreign").filter((session) => session.current)).toHaveLength(1);
+    console.info("INF-1295 failed reopen association lifecycle", JSON.stringify({ replacedSessions, continuedSessions: tasks.sessions("t-foreign") }));
   });
 
   it("carries a crewmate whose conversation renewed under changed instructions into its new one", async () => {
@@ -6785,6 +6812,10 @@ describe("CrewSupervisor", () => {
       createdAt: Date.now(),
     });
     tasks.recordBrief("t-renew", ["Goal: count the rivets."]);
+    tasks.setSessionFile("t-renew", earlier, {
+      file: earlier, computer: HOME.the, device_id: "local", provider: "fm-mock",
+      model: "mock-1", account_id: null, began: "start",
+    });
 
     await supervisor.steerCrewmate("t-renew", "carry on");
     await tick();
@@ -6794,6 +6825,12 @@ describe("CrewSupervisor", () => {
       .find((event) => event.kind === "note" && event.text === crewmateRenewedNote(renewal));
     expect(note?.data).toMatchObject({ conversation: { from: earlier, changed: ["prompt"] } });
     expect(tasks.get("t-renew")?.sessionFile).toBe("/tmp/s-new.jsonl");
+    // INF-1288: renewal is recorded before the first turn completes.
+    expect(tasks.sessions("t-renew")).toMatchObject([
+      { conversation: "earlier", began: "start", file: earlier, current: false },
+      { conversation: "s-new", began: "renewal", file: "/tmp/s-new.jsonl", current: true },
+    ]);
+    console.info("INF-1295 local renewal associations", JSON.stringify(tasks.sessions("t-renew")));
     // Its first prompt says why, where its record and earlier conversation
     // are, and its brief, then the message that woke it.
     expect(crewmate.promptCalls).toHaveLength(1);

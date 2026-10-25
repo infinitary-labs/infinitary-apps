@@ -994,6 +994,8 @@ type TaskRuntime = {
   crewmate: string;
   workspace?: TaskWorkspace;
   session?: ModelSession;
+  /** Why the current conversation opened, including ids minted on its first turn. */
+  conversationBegan?: string;
   unsubscribe?: () => void;
   clientJobs?: number;
   /** When the client's background work last went from none to some: the job bound's clock. */
@@ -5635,7 +5637,7 @@ export class CrewSupervisor {
         model: session.modelRef() ?? routedModel,
         reasoning: session.reasoning(),
       });
-      this.options.tasks.setSessionFile(taskId, crewmateResumeToken(session.resume()) ?? null);
+      this.recordCrewSession(task, session, task.conversationBegan ?? "start");
       // Right after `dispatched`, so the timeline reads in a fixed order:
       // where the working copy came from and the commit it starts at.
       const acquired = task.workspace?.acquired ?? elsewhere?.acquired;
@@ -5864,6 +5866,43 @@ export class CrewSupervisor {
     return session;
   }
 
+  /** One association writer for starts, replacements, moves and completed turns. */
+  private recordCrewSession(
+    task: TaskRuntime,
+    session: ModelSession,
+    began: string,
+    machine = this.machineOf(task.id),
+  ): void {
+    task.conversationBegan = began;
+    const token = crewmateResumeToken(session.resume());
+    if (!token) return;
+    const folders =
+      machine === LOCAL_MACHINE_ID
+        ? { sessions: crewmateSessionsDir(this.options.paths, task.id) }
+        : this.options.machines?.folders(machine, task.id);
+    // A Claude token is not a path. Its durable copy belongs to the computer
+    // running the session, not to this computer's copy of the transcript.
+    const file = isAbsolute(token)
+      ? token
+      : folders
+        ? join(folders.sessions, `${token}.jsonl`)
+        : undefined;
+    if (!file) return;
+    const model = session.modelRef();
+    this.options.tasks.setSessionFile(task.id, token, {
+      file,
+      computer:
+        machine === LOCAL_MACHINE_ID
+          ? HOME.the
+          : (this.options.machines?.nameOf(machine) ?? `another ${COMPUTER.one}`),
+      device_id: machine,
+      provider: model?.provider ?? null,
+      model: model?.id ?? null,
+      account_id: task.accountId ?? null,
+      began,
+    });
+  }
+
   /**
    * A conversation that replaced the task's earlier one: a Claude
    * conversation resumed under changed instructions renews as it opens -
@@ -5886,8 +5925,6 @@ export class CrewSupervisor {
         news: false,
         data: { conversation: { from: renewal.from, changed: [...renewal.changed] } },
       });
-      const token = crewmateResumeToken(session.resume());
-      if (token) this.options.tasks.setSessionFile(task.id, token);
     }
     const restart: CrewmateRestart | undefined =
       renewal ??
@@ -5896,7 +5933,15 @@ export class CrewSupervisor {
           ? { from: unopenable, changed: "moved", to: movedTo }
           : { from: unopenable, changed: "unopenable" }
         : undefined);
-    if (restart) this.recordRestart(task, machine, restart);
+    if (restart) {
+      this.recordCrewSession(
+        task,
+        session,
+        renewal ? "renewal" : movedTo ? "move" : "unopenable",
+        machine,
+      );
+      this.recordRestart(task, machine, restart);
+    }
   }
 
   /**
@@ -7087,8 +7132,8 @@ export class CrewSupervisor {
     // only becomes resumable here. Re-reading the token every turn
     // is a no-op for backends whose token was known at creation - and a
     // missing token never erases a good one.
-    const resumeToken = crewmateResumeToken(task.session?.resume());
-    if (resumeToken) this.options.tasks.setSessionFile(task.id, resumeToken);
+    if (task.session)
+      this.recordCrewSession(task, task.session, task.conversationBegan ?? "resume");
     // The personal workspace (Step 4): a report is the turn's commit, and - with no
     // captain-turn witness - the task's completion: the host commits
     // the workspace with the report as the message and, once the commit
@@ -8182,8 +8227,7 @@ export class CrewSupervisor {
     task.unsubscribe = this.follow(task, session);
     // A moved task's record names the conversation it opened now, so a quit
     // before its first turn ends reopens this one.
-    const token = move ? crewmateResumeToken(session.resume()) : undefined;
-    if (token) this.options.tasks.setSessionFile(record.id, token);
+    this.recordCrewSession(task, session, task.conversationBegan ?? (move ? "move" : "resume"));
     livePersonal?.beginLiveTask(record.id);
     // A conversation on another computer may be in a turn this Mac follows
     // from here (`continuation_started`), which is no idle boundary.
@@ -11847,6 +11891,10 @@ export class CrewSupervisor {
   taskQueryReach(): TaskQueryReach {
     return {
       projectFolder: (repoId) => this.options.repos.get(repoId)?.path,
+      sessionFolderOf: (record) => ({
+        dir: crewmateSessionsDir(this.options.paths, record.id),
+        computer: HOME.the,
+      }),
       placeOf: (record) => {
         if (record.status === "open") return undefined;
         const machine = record.deviceId ?? LOCAL_MACHINE_ID;

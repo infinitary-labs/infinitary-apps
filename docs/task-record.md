@@ -3,6 +3,25 @@
 The task as a record (task-system P0) and the wire protocol over it (P3).
 `docs/architecture.md` §19 summarizes the whole task system; capture is `docs/task-capture.md`, the graph `docs/task-graph.md`, retention `docs/task-retention.md`.
 
+## Conversations on a task
+
+`TaskService.setSessionFile` commits the current resume pointer and its `task_sessions` association together.
+`CrewSupervisor.recordCrewSession` supplies the resume token, durable transcript file, computer and device, provider and model, account, and why the conversation opened at start, renewal, move, recovery and turn completion.
+A conversation key comes from its resume token: a Pi file name without its suffix, or a Claude conversation id, never a placed proxy's construction id.
+One row belongs to one conversation on one task; reopening it updates its last observed activity and serving metadata without replacing its first observation or opening reason.
+`opened_at` is when this association was first recorded, and `last_at` is the latest recorded lifecycle boundary, not a claim about a provider's message timestamp.
+A backend that mints its id during its first turn is recorded when the resume token becomes available; until then the runtime retains why it opened.
+The current resume pointer remains on `tasks` for the existing reopen protocol, and `current` is derived rather than stored on the conversation row.
+A by-key `tasks` read includes `sessions`; list reads stay compact.
+Each row names its transcript file and computer, model and provider, account, opening reason, timestamps and whether it is current.
+A stronger-model task names `earlier_attempt` by task key; reading that key lists that attempt's own sessions, never copies them onto its successor.
+For conversations retained before associations existed, the by-key read also lists this computer's session-folder files, including copies from another computer, through `sessionFilesIn`.
+A retained file already named by an association is not repeated, and served sidecars are not conversations.
+Unrecorded files have no model, account, reason or timestamps; their computer names the location of the retained copy, not an inferred original computer.
+Files still held only on an unreachable computer are not enumerated by this fallback.
+Recorded associations remain available without a readable transcript and survive task closure, timeline compaction, restart and JSONL record export/import.
+Only erasing an unstarted task or the D-13 purge removes their rows, through `TaskService`.
+
 ## The idle clock
 
 Four columns on the record (migration 45; new databases receive them with the record) hold the idle ladder's durable state, written only through `TaskService` like every other column: `idle_since` (`markIdle` at every idle boundary, `endIdle` when a turn the ladder did not start begins), `recovery_rung`, `recovery_count` and `recovery_at` (`recordRecovery`).

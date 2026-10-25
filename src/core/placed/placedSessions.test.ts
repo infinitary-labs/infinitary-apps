@@ -1679,6 +1679,11 @@ describe("a task that runs on a computer that runs work", () => {
     await expect.poll(() => home.tasks.get("t-renew")?.activity).toBe("idle");
     const earlier = home.tasks.get("t-renew")?.sessionFile ?? "";
     expect(earlier).not.toBe("");
+    // INF-1295/F1: identity follows the resume token, not a placed proxy's construction id.
+    const initialSessions = home.tasks.sessions("t-renew");
+    expect(initialSessions).toMatchObject([
+      { conversation: earlier, device_id: at.deviceId, began: "start", current: true },
+    ]);
     const briefed = home.tasks
       .timeline("t-renew")
       .filter((event) => event.kind === "briefed")
@@ -1692,6 +1697,24 @@ describe("a task that runs on a computer that runs work", () => {
     // The record names the new conversation before any turn of it, and the timeline says why.
     await expect.poll(() => home.tasks.get("t-renew")?.sessionFile).not.toBe(earlier);
     const renewed = home.tasks.get("t-renew")?.sessionFile;
+    const renewedSessions = home.tasks.sessions("t-renew");
+    expect(renewedSessions).toHaveLength(2);
+    expect(renewedSessions).toMatchObject([
+      {
+        conversation: earlier,
+        file: join(at.folders("t-renew").sessions, `${earlier}.jsonl`),
+        device_id: at.deviceId,
+        began: "start",
+        current: false,
+      },
+      {
+        conversation: renewed,
+        file: join(at.folders("t-renew").sessions, `${renewed}.jsonl`),
+        device_id: at.deviceId,
+        began: "renewal",
+        current: true,
+      },
+    ]);
     const renewal = { from: earlier, changed: ["prompt" as const] };
     const moved = () =>
       home.tasks
@@ -1716,6 +1739,9 @@ describe("a task that runs on a computer that runs work", () => {
     expect(claude.served().at(-1)?.said).toBe(`${told}\n\nMake it blue too.`);
     await expect.poll(() => home.tasks.get("t-renew")?.activity).toBe("idle");
 
+    const completedSessions = home.tasks.sessions("t-renew");
+    // The serving model becomes known on its first completed turn, before the home restarts.
+    expect(completedSessions[1]?.provider).toBe(CLAUDE_PROVIDER_ID);
     // A home restart while that computer still holds it: the same conversation, said nothing again.
     await at.restartHome();
     const after = at.home();
@@ -1726,6 +1752,16 @@ describe("a task that runs on a computer that runs work", () => {
     // What it was told stands once, in the conversation it goes on with.
     expect(since.split(told)).toHaveLength(2);
     expect(after.tasks.get("t-renew")?.sessionFile).toBe(renewed);
+    const restartedSessions = after.tasks.sessions("t-renew");
+    expect(restartedSessions).toHaveLength(2);
+    expect(restartedSessions.filter((session) => session.current)).toHaveLength(1);
+    expect(restartedSessions.map(({ last_at: _last, ...row }) => row)).toEqual(
+      completedSessions.map(({ last_at: _last, ...row }) => row),
+    );
+    console.info(
+      "INF-1295 remote Claude association lifecycle",
+      JSON.stringify({ initialSessions, renewedSessions, completedSessions, restartedSessions }),
+    );
     expect(
       after.tasks
         .timeline("t-renew")
@@ -1756,6 +1792,8 @@ describe("a task that runs on a computer that runs work", () => {
     const before = at.home().tasks.get("t-moved")?.sessionFile ?? "";
     expect(before.startsWith(`${older.sessions}/`)).toBe(true);
     const kept = readFileSync(before, "utf8");
+    const initialSessions = at.home().tasks.sessions("t-moved");
+    expect(initialSessions).toHaveLength(1);
 
     await at.stopComputer();
     await at.restartHome(() => at.moveComputer());
@@ -1803,6 +1841,19 @@ describe("a task that runs on a computer that runs work", () => {
       expect(readFileSync(file, "utf8")).toContain(text);
     }
     expect(readFileSync(before, "utf8")).toBe(kept);
+    const restartedSessions = at.home().tasks.sessions("t-moved");
+    expect(restartedSessions).toHaveLength(1);
+    expect(restartedSessions[0]).toMatchObject({
+      conversation: initialSessions[0]?.conversation,
+      file,
+      device_id: at.deviceId,
+      began: "start",
+      current: true,
+    });
+    console.info(
+      "INF-1295 remote Pi association continuity",
+      JSON.stringify({ initialSessions, restartedSessions }),
+    );
   });
 
   // INF-378's two divergent-record cases now belong to pi/placedMigration.test.ts.

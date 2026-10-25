@@ -511,9 +511,9 @@ export const TASKS_QUERY_TOOL_NAME = "tasks";
  * over Pi and over Claude's tool server alike.
  */
 export const TASKS_QUERY_TOOL_DESCRIPTION = [
-  "Lists beyond the context index: key/task_id, kind/status/title/project, parent/blockers/blocked tasks/children, ready/wait; no bodies.",
+  "Beyond context: key/task_id, kind/status/title/project, parent/blockers/blocked tasks/children, ready/wait; no bodies.",
   "Filters: project/status/key/id/title/goal/parent.",
-  "Key reads: ordered reports, last card, decisions, resolution offer/action/answers, brief, validation/review.",
+  "Key reads: ordered reports, last card, decisions, resolution offer/action/answers, brief, validation/review, sessions, earlier attempt.",
   "Resolution is facts; HANDOFF governs authorization. History grants none; later reports preserve prior specs.",
   "Paging names remaining fields/lengths; identical card bodies appear once.",
 ].join(" ");

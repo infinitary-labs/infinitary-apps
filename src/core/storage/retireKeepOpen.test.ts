@@ -63,6 +63,7 @@ describe("migration 73 retires saved keep-open choices", () => {
       ALTER TABLE jobs DROP COLUMN stopped_by_quit;
       ALTER TABLE tasks DROP COLUMN start_notice;
       DROP TABLE keep_open_backfill;
+      DROP TABLE task_sessions;
       DROP INDEX tasks_pending_placement;
       DELETE FROM schema_migrations WHERE version >= 73;
     `);

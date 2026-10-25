@@ -1,0 +1,175 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { renderTasksQueryResult } from "../pi/taskTools";
+import { DATABASE_VERSION, openDatabase, openInMemoryDatabase } from "../storage/db";
+import { exportTaskRecords, parseTaskExport } from "./taskExport";
+import { queryTasks } from "./taskQuery";
+import { TaskService } from "./taskService";
+
+// INF-1288 approved pieces: a table, one row per conversation, discoverable
+// by task key; a stronger-model attempt names, rather than copies, its source.
+function setup() {
+  const db = openInMemoryDatabase();
+  let now = 1_000;
+  const tasks = new TaskService({ db, repos: { get: () => undefined }, now: () => now });
+  const task = tasks.create({
+    id: "crew",
+    title: "Trace the saved conversations",
+    prompt: "p",
+    repoId: null,
+  });
+  return {
+    db,
+    tasks,
+    task,
+    advance: () => {
+      now += 100;
+    },
+  };
+}
+
+function facts(file: string, began = "start") {
+  return {
+    file,
+    computer: "Work computer",
+    device_id: "work",
+    provider: "openai-codex",
+    model: "gpt-5",
+    account_id: "work-account",
+    began,
+  };
+}
+
+describe("task conversation associations (INF-1288)", () => {
+  it("retains one row across turns, restarts and model changes, with a separate row for a replacement", () => {
+    const { db, tasks, advance } = setup();
+    const pi = "/work/crewmates/crew/sessions/2026-09-26_pi-1.jsonl";
+    tasks.setSessionFile("crew", pi, facts(pi));
+    advance();
+    tasks.setSessionFile("crew", pi, { ...facts(pi, "resume"), model: "gpt-6" });
+    const restarted = new TaskService({ db, repos: { get: () => undefined }, now: () => 1_200 });
+    restarted.setSessionFile("crew", pi, facts(pi, "resume"));
+    const claude = "5f0c2a4e-1111-4222-8333-944455556666";
+    const file = `/work/crewmates/crew/sessions/${claude}.jsonl`;
+    restarted.setSessionFile("crew", claude, {
+      ...facts(file, "move"),
+      provider: "anthropic-claude",
+      model: "claude-opus-4-1",
+    });
+    expect(restarted.sessions("crew")).toEqual([
+      {
+        ...facts(pi),
+        conversation: "2026-09-26_pi-1",
+        opened_at: 1_000,
+        last_at: 1_200,
+        current: false,
+      },
+      {
+        ...facts(file, "move"),
+        provider: "anthropic-claude",
+        model: "claude-opus-4-1",
+        conversation: claude,
+        opened_at: 1_200,
+        last_at: 1_200,
+        current: true,
+      },
+    ]);
+    db.close();
+  });
+
+  it("lists retained Pi and Claude files without inventing historical metadata or duplicating sidecars and recorded rows", () => {
+    const { db, tasks, task } = setup();
+    const dir = scratchDir("infinitary-task-sessions-");
+    const pi = join(dir, "2026-09-26_pi-1.jsonl");
+    const claude = "5f0c2a4e-1111-4222-8333-944455556666";
+    // Real on-disk dialects from sessionReader's provider fixtures.
+    writeFileSync(
+      pi,
+      `${JSON.stringify({ type: "session", version: 3, id: "pi-1", timestamp: "2026-09-26T10:00:00.000Z" })}\n`,
+    );
+    writeFileSync(
+      join(dir, `${claude}.jsonl`),
+      `${JSON.stringify({ type: "user", sessionId: claude, uuid: "u1", timestamp: "2026-09-26T10:00:00.000Z", message: { role: "user", content: "Trace the saved conversations" } })}\n`,
+    );
+    writeFileSync(
+      join(dir, `${claude}.served.jsonl`),
+      `${JSON.stringify({ kind: "contract", at: 1_000, version: "crewmate" })}\n`,
+    );
+    tasks.setSessionFile(task.id, claude);
+    const reach = { sessionFolderOf: () => ({ dir, computer: "Home computer" }) };
+    const query = () =>
+      queryTasks(tasks, { key: task.key }, undefined, undefined, undefined, undefined, reach);
+    const rows = query().rows[0]?.sessions;
+    expect(rows).toHaveLength(2);
+    expect(rows?.find((row) => row.current)).toMatchObject({
+      conversation: claude,
+      model: null,
+      began: null,
+      opened_at: null,
+      last_at: null,
+    });
+    tasks.setSessionFile(task.id, pi, facts(pi));
+    expect(query().rows[0]?.sessions).toHaveLength(2);
+    console.info(
+      "By-key task read with one recorded and one historical conversation:\n" +
+        renderTasksQueryResult(query()),
+    );
+    db.close();
+  });
+
+  it("names the earlier attempt by key, keeping its sessions on its own by-key read and off list reads", () => {
+    const { db, tasks, task } = setup();
+    const pi = "/work/crewmates/crew/sessions/pi-1.jsonl";
+    tasks.setSessionFile(task.id, pi, facts(pi));
+    const retry = tasks.create({
+      id: "retry",
+      title: "A stronger-model attempt",
+      prompt: "p",
+      repoId: null,
+      shape: { kind: "implement", escalate_from: task.id },
+    });
+    const read = queryTasks(tasks, { key: retry.key }).rows[0];
+    expect(read).toMatchObject({ earlier_attempt: task.key, sessions: [] });
+    expect(queryTasks(tasks, { key: read?.earlier_attempt }).rows[0]?.sessions).toHaveLength(1);
+    for (const row of queryTasks(tasks, {}).rows) expect(row).not.toHaveProperty("sessions");
+    console.info(
+      "Stronger-model task read:\n" +
+        renderTasksQueryResult({ rows: read ? [read] : [], total: 1 }),
+    );
+    db.close();
+  });
+
+  it("exports and reloads every recorded conversation, preserving the exact association", () => {
+    const { db, tasks } = setup();
+    const pi = "/work/crewmates/crew/sessions/pi-1.jsonl";
+    tasks.setSessionFile("crew", pi, facts(pi));
+    const lines = exportTaskRecords(tasks, 2_000);
+    const other = openInMemoryDatabase();
+    const imported = new TaskService({ db: other, repos: { get: () => undefined } });
+    imported.importRecords(parseTaskExport(lines));
+    expect(imported.sessions("crew")).toEqual(tasks.sessions("crew"));
+    expect(exportTaskRecords(imported, 2_000)).toEqual(lines);
+    other.close();
+    db.close();
+  });
+
+  it("upgrades a populated earlier database without changing its resume pointer", () => {
+    const dir = scratchDir("infinitary-task-session-migration-");
+    const old = openDatabase(dir, DATABASE_VERSION - 1);
+    const tasks = new TaskService({ db: old, repos: { get: () => undefined } });
+    tasks.create({ id: "old", title: "Earlier work", prompt: "p", repoId: null });
+    tasks.setSessionFile("old", "/work/old.jsonl");
+    old.close();
+    const upgraded = openDatabase(dir);
+    const current = new TaskService({ db: upgraded, repos: { get: () => undefined } });
+    expect(current.get("old")?.sessionFile).toBe("/work/old.jsonl");
+    expect(current.sessions("old")).toEqual([]);
+    current.setSessionFile("old", "/work/old.jsonl", facts("/work/old.jsonl", "resume"));
+    expect(current.sessions("old")).toHaveLength(1);
+    expect(current.purge()).toBe(1);
+    expect(upgraded.prepare("SELECT COUNT(*) AS n FROM task_sessions").get()).toEqual({ n: 0 });
+    upgraded.close();
+  });
+});

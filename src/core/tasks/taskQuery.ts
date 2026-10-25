@@ -55,6 +55,8 @@ export type TaskQueryReach = {
   projectFolder?: (repoId: string) => string | undefined;
   /** Where the task's crewmate ran, once one did. */
   placeOf?: (record: TaskRecord) => TaskQueryPlace | undefined;
+  /** This computer's retained files, including copies from another computer. */
+  sessionFolderOf?: (record: TaskRecord) => { dir: string; computer: string };
 };
 
 /** Closing metadata keeps distinct bodies; a body equal to the newest card is not repeated. */
@@ -84,6 +86,9 @@ function queryResolution(resolved: CardResolution, newestBody?: string): TaskQue
 }
 
 export type TaskQueryRow = {
+  /** Every conversation on this task; earlier attempts keep their own lists. By-key only. */
+  sessions?: ReturnType<TaskService["sessions"]>;
+  earlier_attempt?: string;
   policies?: EffectiveTaskPolicies;
   required_action?: CaptainAction;
   key: string;
@@ -280,6 +285,17 @@ export function queryTasks(
       const row = toRow(tasks, record, projectKeys, repoName, one ? cardBody : undefined, posture);
       return {
         ...row,
+        ...(one
+          ? {
+              sessions: tasks.sessions(record.id, reach.sessionFolderOf?.(record)),
+              ...(record.shape?.escalate_from
+                ? {
+                    earlier_attempt:
+                      tasks.resolve(record.shape.escalate_from)?.key ?? record.shape.escalate_from,
+                  }
+                : {}),
+            }
+          : {}),
         ...(resolved ? { resolution: queryResolution(resolved, row.card) } : {}),
         ...(one && record.delivery?.liveValidation
           ? {

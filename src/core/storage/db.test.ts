@@ -81,6 +81,8 @@ const LABEL_COLUMNS = ["missed_escalation", "missed_note", "missed_at"] as const
 const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) => index + 1);
 /** Migration 68's reply line, undone: the `captain_asks` column. */
 const REVERSE_MIGRATION_68 = "ALTER TABLE captain_asks DROP COLUMN reply;\n";
+/** INF-1288's conversation associations, removed before a pre-sessions schema comparison. */
+const REVERSE_TASK_SESSIONS = "DROP TABLE task_sessions;\n";
 /** Migration 80's delivery columns, undone. */
 const REVERSE_MIGRATION_80 =
   "ALTER TABLE schedule_runs DROP COLUMN inbox_id; ALTER TABLE schedule_runs DROP COLUMN delivery; ALTER TABLE schedule_runs DROP COLUMN settled_at; ALTER TABLE schedule_runs DROP COLUMN cancel_reason; ALTER TABLE schedule_runs DROP COLUMN tasks; ALTER TABLE schedule_runs DROP COLUMN cards;\n";
@@ -1377,7 +1379,8 @@ describe("migration 49 (a wake's durable once-identity, the primitives review P3
     // is the head: undoing it comes first.
     dropViews(reopened);
     reopened.exec(
-      REVERSE_MIGRATION_80 +
+      REVERSE_TASK_SESSIONS +
+        REVERSE_MIGRATION_80 +
         REVERSE_MIGRATION_79 +
         REVERSE_MIGRATION_78 +
         REVERSE_MIGRATION_71 +
@@ -1514,7 +1517,8 @@ describe("migration 50 (one decision ledger, the primitives review P6)", () => {
     // Reversible: the three tables back from their kinds, every row as it was.
     dropViews(upgraded);
     upgraded.exec(
-      REVERSE_MIGRATION_80 +
+      REVERSE_TASK_SESSIONS +
+        REVERSE_MIGRATION_80 +
         REVERSE_MIGRATION_79 +
         REVERSE_MIGRATION_78 +
         REVERSE_MIGRATION_71 +

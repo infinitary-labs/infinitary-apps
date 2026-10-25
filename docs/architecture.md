@@ -823,7 +823,9 @@ A development or end-to-end run may shorten the interval's period with `INFINITA
 
 The per-phase documents are the authority on their parts: `docs/task-capture.md`, `docs/task-graph.md`, `docs/ui-plugins.md`, `docs/task-retention.md`, `docs/dev-observe.md`.
 
-- **The record** (P0): `tasks` gained key, project, parent, kind, a status (`open | active | done | dropped`) with `activity` and `closed_reason`, intent, outcome, delivery facts and timestamps (migrations 17-19, fixture-tested); `src/core/tasks/taskService.ts` is the ONE writer over `tasks`, `task_events`, `task_links` and `captain_asks`, every change committing with the timeline event that explains it.
+- **The record** (P0): `tasks` gained key, project, parent, kind, a status (`open | active | done | dropped`) with `activity` and `closed_reason`, intent, outcome, delivery facts and timestamps (migrations 17-19, fixture-tested); `src/core/tasks/taskService.ts` is the ONE writer over `tasks`, `task_events`, `task_links`, `task_sessions` and `captain_asks`, every change committing with the timeline event that explains it.
+  Conversation associations live in their own `task_sessions` table, one row per conversation; by-key reads list them and retained older files, and name an earlier stronger-model attempt by its task key (INF-1288, captain-approved pieces 1 and 3; sessions storage and attempt choices).
+  `tasks.session_file` remains the current resume pointer; the association preserves earlier conversations independently of compacted timeline history (`docs/task-record.md`, "Conversations on a task").
   Settling closes instead of deleting (D2).
   The `delivered` status and the `finish` settle mode were retired together (cards/tasks/agents P2, WI-11, migration 30): an idle crewmate with unlanded work stays `active`, resumable and shown as working, until merged, landed, or discarded.
   Every close refusal is a structured `SettleRefusal` whose runnable ways ride the settle wake (WI-12).

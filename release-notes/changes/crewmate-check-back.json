@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-check-back",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A crewmate checks on its long-running work sooner",
+      "body": "When a crewmate's turn ends while a test run or build is still going, it now says when it will look again, and the app wakes it then. A run that stalls without printing anything is noticed at that time instead of after two hours. Your first mate also sees how long the run has gone and when the crewmate last reported.",
+      "noPicture": "This changes when a crewmate is woken and what the first mate reads, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

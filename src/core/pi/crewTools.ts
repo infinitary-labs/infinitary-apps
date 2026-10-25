@@ -105,6 +105,19 @@ export type CrewStatusEntry = {
    */
   stalled?: string;
   /**
+   * The task's oldest background job still running (INF-1244): how long it
+   * has run and its command, `running 1h 26m: pnpm test`, so a duration is
+   * read, never guessed.
+   */
+  job?: string;
+  /** How long ago its crewmate last reported (INF-1244): `1h 26m ago`. */
+  reported?: string;
+  /**
+   * The check-back its crewmate's last report named (INF-1244): when it is
+   * due and what it waits for, `in 20m: the unit tests`.
+   */
+  checkBack?: string;
+  /**
    * The captain's override standing on this task (INF-1216): what his
    * words pass and for how long, `the rerun limit for this version`, and
    * his words. Absent when none stands at the task's version.

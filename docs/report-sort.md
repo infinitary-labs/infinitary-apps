@@ -233,6 +233,14 @@ Past it, one wake names the job's command (`rule:job-bound`), once per job even 
 Nothing kills the job - the bound demands inspection, never an automatic kill.
 The job registry exposes the oldest running job per owner (`JobManager.oldestRunningJob`).
 
+**A check-back on a running job** (INF-1244): a silent job counts as moving for its whole bound, so a crewmate whose turn ends with one running names when it looks again.
+Its report's `check_back` carries the minutes until then and what it waits for; the host keeps it on the record (`delivery.checkBack`) and sets the task's `at-time` gate, so the task reads as moving until then (row 3).
+At that time the sweep ends the wait with one steer that names the task's oldest running job, its command and how long it has run (`timed-wait-over`).
+A job that ends first, or any other turn, clears it with the rest of the report's declaration.
+A turn that ends with a job running, no `check_back` and no wait on the captain or finished work gets one steer asking for a time, once per job (`check-back-ask`, `CrewSupervisor.askForCheckBack`).
+A check-back later than the bound never silences it: the job bound stays the backstop.
+`crew_status` and the first mate's crew line carry the oldest job's age and command (`job`), how long ago the crewmate last reported (`reported`) and the check-back (`check_back`), so the first mate reads durations rather than guessing them.
+
 **A provider outage is not idleness.**
 A turn the provider failed releases its guidance for the honest retry (`docs/inbox.md`), so the row stays deliverable and the task reads as moving; the retry's own wakes (the first failure, fifteen minutes still down, recovered) are the first mate's news of it.
 

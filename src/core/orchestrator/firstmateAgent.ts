@@ -3643,6 +3643,10 @@ export class FirstmateAgent {
         ...(entry.review ? { review: entry.review } : {}),
         ...(entry.thread ? { thread: entry.thread } : {}),
         ...(entry.stalled ? { stalled: entry.stalled } : {}),
+        // Durations to read, never guess (INF-1244).
+        ...(entry.job ? { job: entry.job } : {}),
+        ...(entry.reported ? { reported: entry.reported } : {}),
+        ...(entry.checkBack ? { check_back: entry.checkBack } : {}),
         ...(entry.override ? { override: entry.override.passes } : {}),
       })),
       // Served only while another computer runs work, so one computer pays nothing (INF-992).

@@ -780,6 +780,23 @@ export type WakeFacts =
       /** A timed wait on an active task is over: its steer. */
       kind: "timed-wait-over";
       reason?: string;
+      /**
+       * The task's oldest background job, still running when the wait ended
+       * (INF-1244): its command, already capped, and how long it has run.
+       */
+      job?: { command: string; runMs: number };
+    }
+  | {
+      /**
+       * Its crewmate's turn ended with a background job running and no
+       * check-back named (INF-1244): the one ask for a time, once per job.
+       */
+      kind: "check-back-ask";
+      /** The job's command, already capped. */
+      command: string;
+      runMs: number;
+      /** How long a job counts as the task moving (`JOB_BOUND_MS`). */
+      boundMs: number;
     }
   | {
       /**
@@ -1507,6 +1524,28 @@ export function jobBoundOnce(job: { jobId: string; startedAt: number }): string 
   return `job-bound:${job.jobId}:${job.startedAt}`;
 }
 
+/** A running job in a steer's words: its age and its command. */
+function jobWords(job: { command: string; runMs: number }): string {
+  return `background job is still running after ${formatDurationShort(job.runMs)}: "${job.command}".`;
+}
+
+/** The check-back ask's once-name: one ask per job (INF-1244). */
+export function checkBackAskOnce(job: { jobId: string; startedAt: number }): string {
+  return `check-back-ask:${job.jobId}:${job.startedAt}`;
+}
+
+/** The one ask for a check-back time while a job runs (INF-1244). */
+export function checkBackAsk(
+  job: { jobId: string; command: string; startedAt: number },
+  now: number,
+  boundMs: number,
+): TypedWake {
+  return {
+    facts: { kind: "check-back-ask", command: job.command, runMs: now - job.startedAt, boundMs },
+    once: checkBackAskOnce(job),
+  };
+}
+
 /** The job bound's one wake, once per job. */
 export function jobBoundWake(
   task: WakeTask,
@@ -1851,7 +1890,9 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
         ...(facts.answers?.length ? [REPLY_SETTINGS_HEAD, ...cardAnswerLines(facts.answers)] : []),
       ].join("\n");
     case "timed-wait-over":
-      return `The time this task was waiting for has come${facts.reason ? ` (${facts.reason})` : ""}. Carry on from where you stopped.`;
+      return `The time this task was waiting for has come${facts.reason ? ` (${facts.reason})` : ""}.${facts.job ? ` Your ${jobWords(facts.job)} Read its output so far: if it is stuck or waiting on something that will not come, stop it and say so; if it is still making progress, report again with check_back for your next look.` : ""} Carry on from where you stopped.`;
+    case "check-back-ask":
+      return `Your turn ended while your ${jobWords(facts)} Nothing tells you if it stalls until it ends or runs for ${formatDurationShort(facts.boundMs)}. Report again with check_back: how many minutes until you look at it again, and what you wait for. The app wakes you then with the job's facts. If you are not waiting on it, say so in that report.`;
     case "turn-resumed":
       return `${facts.stopped === "update" ? `Your last turn stopped part way while Infinitary${facts.computer ? ` on ${facts.computer}` : ""} was updated; it is back now.` : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`;
     case "merge-continued":

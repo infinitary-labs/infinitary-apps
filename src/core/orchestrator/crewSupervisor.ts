@@ -137,6 +137,7 @@ import {
   PROVIDER_CATALOG,
 } from "@shared/providers";
 import { formatResetText } from "@shared/quota";
+import { formatDurationShort } from "@shared/quotaSignals";
 import {
   DROP_REVIEW_STALE,
   dropMissingRefusal,
@@ -455,6 +456,8 @@ import { folderMissingText, pendingMergeLine } from "./settleWords";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
 import {
+  checkBackAsk,
+  checkBackAskOnce,
   conversationRestartWake,
   laneText,
   laneTurnText,
@@ -7173,6 +7176,7 @@ export class CrewSupervisor {
     } else if (report) {
       this.sortReport(task, report, filed, declared);
     }
+    if (!turnError && !options.interrupted && !paused) this.askForCheckBack(task, declared);
     // A captured settle owns this idle boundary. Do not start another queued
     // guidance turn before its normal close/CI gates run.
     const move = task.pendingMove;
@@ -7192,6 +7196,35 @@ export class CrewSupervisor {
     // over; a no-op when none stands (FI3-304).
     void this.settle.runMergeAuthorization(task.id).catch((caught: unknown) => {
       console.warn("[crew] kept merge could not run:", caught);
+    });
+  }
+
+  /**
+   * A turn ended with a background job still running and no check-back
+   * named (INF-1244): the crewmate is asked once, per job, when it will
+   * look at the job again, so a job that stalls silently is read within
+   * the time it names rather than at the job's bound. A turn that hands
+   * the task to the captain or ends it asks nothing.
+   */
+  private askForCheckBack(task: TaskRuntime, declared: ReportDeclaration | undefined): void {
+    if (declared?.checkBack || declared?.wait || declared?.finished) return;
+    if (this.bypassesSupervision(task.id)) return;
+    const running =
+      this.options.hasRunningJobs?.(task.id) === true || this.clientJobStart(task.id) !== undefined;
+    const job = running ? this.oldestJob(task.id) : undefined;
+    if (!job || this.options.inbox.woken(task.id, checkBackAskOnce(job))) return;
+    const ask = checkBackAsk(
+      { ...job, command: capWithOverflow(job.command, "check-back-command") },
+      this.now(),
+      JOB_BOUND_MS,
+    );
+    void this.steerInternal(task.id, ask, {
+      actor: "supervisor",
+      via: "supervision",
+      decision: null,
+      cardId: null,
+    }).catch((caught: unknown) => {
+      console.warn("[crew] the check-back ask was not delivered:", caught);
     });
   }
 
@@ -8713,6 +8746,7 @@ export class CrewSupervisor {
         const review = this.reviewState(record);
         const thread = this.cards.threadFact(record.id);
         const stalled = this.ladder.stalledFact(record, this.now());
+        const timing = this.timingFacts(record);
         const refused = record.delivery?.cardRefusal;
         const ci = ciFactOf(record.delivery, this.now());
         const override = standingOverride(record.delivery, record.delivery?.headSha);
@@ -8749,6 +8783,7 @@ export class CrewSupervisor {
           ...(review ? { review } : {}),
           ...(thread ? { thread } : {}),
           ...(stalled ? { stalled } : {}),
+          ...timing,
           ...(override
             ? {
                 override: {
@@ -8779,6 +8814,41 @@ export class CrewSupervisor {
             : { autonomy: autonomyForRecord(record, repo?.autonomy) }),
         };
       });
+  }
+
+  /**
+   * The durations a crew line reads rather than guesses (INF-1244): the
+   * oldest job still running and its age, how long ago the crewmate last
+   * reported, and the check-back its report named.
+   */
+  private timingFacts(record: TaskRecord): Pick<CrewStatusEntry, "job" | "reported" | "checkBack"> {
+    const now = this.now();
+    const running =
+      record.status === "active" &&
+      (this.options.hasRunningJobs?.(record.id) === true ||
+        this.clientJobStart(record.id) !== undefined);
+    const job = running ? this.oldestJob(record.id) : undefined;
+    const reportedAt =
+      record.status === "active" ? this.options.tasks.lastReportAt(record.id) : undefined;
+    const back = record.delivery?.checkBack;
+    return {
+      ...(job
+        ? {
+            job: `running ${formatDurationShort(now - job.startedAt)}: ${job.command.replace(/\s+/g, " ").slice(0, 80)}`,
+          }
+        : {}),
+      ...(reportedAt !== undefined
+        ? { reported: `${formatDurationShort(now - reportedAt)} ago` }
+        : {}),
+      ...(back
+        ? {
+            checkBack:
+              back.until > now
+                ? `in ${formatDurationShort(back.until - now)}: ${back.waitingFor}`
+                : `due ${formatDurationShort(now - back.until)} ago: ${back.waitingFor}`,
+          }
+        : {}),
+    };
   }
 
   /**
@@ -11512,6 +11582,11 @@ export class CrewSupervisor {
         );
       }
     }
+    if (declaration?.checkBack) {
+      receipt.push(
+        `When this turn ends, the app wakes you in ${formatDurationShort(declaration.checkBack.minutes * 60_000)} with your running job's facts, unless a turn starts before then.`,
+      );
+    }
     if (declaration?.needsFirstmate) {
       receipt.push(
         this.cards.threadAwaitingAuthor(task.id)
@@ -11549,6 +11624,11 @@ export class CrewSupervisor {
     if (wait && declared?.finished) {
       throw new Error("Report refused: pass waiting_on_captain or finished, not both.");
     }
+    if (declared?.checkBack && (wait || declared.finished)) {
+      throw new Error(
+        "Report refused: check_back is for work of your own still running; pass it without waiting_on_captain or finished.",
+      );
+    }
     const ask = declared?.needsFirstmate?.replace(/\s+/g, " ").trim();
     if (declared?.needsFirstmate !== undefined && !ask) {
       throw new Error(
@@ -11556,9 +11636,11 @@ export class CrewSupervisor {
       );
     }
     const result = this.checkResult(task, declared);
+    const checkBack = checkBackOf(declared);
     const needs = {
       ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
       ...(result ? { result } : {}),
+      ...(checkBack ? { checkBack } : {}),
     };
     if (declared?.finished) return { finished: true, ...needs };
     if (!wait) return Object.keys(needs).length > 0 ? needs : undefined;
@@ -14225,4 +14307,27 @@ function programReportText(
       ? `Its branch: the last commit of ${branch.key || branch.id} "${branch.title}".`
       : "Its script returned no branch, so there is nothing to ship.",
   ].join(" ");
+}
+
+/**
+ * A report's check-back, normalized, or a refusal with the fix (INF-1244):
+ * a positive number of minutes and what the crewmate waits for.
+ */
+function checkBackOf(
+  declared: ReportDeclaration | undefined,
+): ReportDeclaration["checkBack"] | undefined {
+  const back = declared?.checkBack;
+  if (!back) return undefined;
+  if (!Number.isFinite(back.minutes) || back.minutes <= 0) {
+    throw new Error(
+      "Report refused: check_back minutes must be a number above 0 - how long until you look at the job again.",
+    );
+  }
+  const waitingFor = back.waitingFor.replace(/\s+/g, " ").trim();
+  if (!waitingFor) {
+    throw new Error(
+      "Report refused: check_back needs waiting_for - what the running job is doing.",
+    );
+  }
+  return { minutes: back.minutes, waitingFor: waitingFor.slice(0, 300) };
 }

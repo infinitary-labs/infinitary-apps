@@ -112,16 +112,10 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
       description:
         "What you found, in plain words: the evidence on the current main line, what it breaks and for whom, and what you are unsure of",
     }),
-    blocks_me: Type.Optional(
-      Type.Boolean({
-        description:
-          "True only if your task genuinely cannot land until this does; it then stops your task from closing",
-      }),
-    ),
+    blocks_me: Type.Optional(Type.Boolean()),
     test_failure: Type.Optional(
       Type.Boolean({
-        description:
-          "True when this follow-up is a test failure. Requires test_path; the host refuses the filing without it.",
+        description: "A test failure; pass test_path too.",
       }),
     ),
     test_path: Type.Optional(
@@ -184,7 +178,16 @@ export const REPORT_TOOL = crewmateTool({
         },
         {
           description:
-            "Pass when nothing is left for you until the captain acts: your outcome card is up, or they may still want something after closing your card. reason says what they still have to read or decide; card_id names your open card they are to read, omitted when none is up. Your task then waits on them: nothing nudges you, and while your card is up the first mate is not woken until they close, click or reply under it, or you are steered. With no card of yours up they have nothing to answer, so the first mate is woken to ask them. Never while work of your own remains.",
+            "Pass when nothing is left for you until the captain acts: your outcome card is up, or they may still want something after closing your card. Your task then waits on them: nothing nudges you, and while your card is up the first mate is not woken until they close, click or reply under it, or you are steered. With no card of yours up they have nothing to answer, so the first mate is woken to ask them. Never while work of your own remains.",
+        },
+      ),
+    ),
+    check_back: Type.Optional(
+      Type.Object(
+        { minutes: Type.Number(), waiting_for: Type.String() },
+        {
+          description:
+            "Your job still runs as your turn ends: minutes until you look again, and what it does. The app wakes you then.",
         },
       ),
     ),
@@ -241,6 +244,14 @@ export const REPORT_TOOL = crewmateTool({
                     ...(params.waiting_on_captain.card_id
                       ? { cardId: params.waiting_on_captain.card_id }
                       : {}),
+                  },
+                }
+              : {}),
+            ...(params.check_back
+              ? {
+                  checkBack: {
+                    minutes: params.check_back.minutes,
+                    waitingFor: params.check_back.waiting_for,
                   },
                 }
               : {}),

@@ -57,6 +57,7 @@ import type { RiskDeclaration } from "@shared/risk";
 import { isFolderRepair, type WorkShape, type WorkShapeAsk } from "@shared/routingPolicy";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
+import { formatDurationShort } from "@shared/quotaSignals";
 import { queueStartedRefusal } from "@shared/taskQueue";
 import { threadWait } from "@shared/threadWait";
 import type { IntegrationAsk } from "@shared/writeAsk";
@@ -9367,6 +9368,9 @@ describe("background job results (R2)", () => {
     await tick();
     crewmate.finishPrompt();
     await tick();
+    // The job running at that end earns its one check-back ask (INF-1244).
+    crewmate.finishPrompt();
+    await tick();
     const record = tasks.get(taskId);
     if (!record) throw new Error("missing task");
     expect(record.activity).toBe("idle");
@@ -11892,6 +11896,11 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     });
     await tick();
     await endTurn(crewmate, taskId, "Done with step one.");
+    // A job running at that end earns its one check-back ask (INF-1244),
+    // which the crewmate answers without naming one.
+    if (harness.tasks.get(taskId)?.activity === "running") {
+      await endTurn(crewmate, taskId, "Not waiting on it.");
+    }
     const idleSince = harness.tasks.get(taskId)?.idleSince ?? 0;
     /** The tick at `ms` idle minutes past the clock's start. */
     const at = async (ms: number) => {
@@ -12980,6 +12989,95 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       await endTurn(crewmate, taskId, "Checks are green.");
       expect(tasks.get(taskId)?.idleSince).toBeGreaterThanOrEqual(steeredAt);
       expect(idleWakes(ops)).toEqual([]);
+    });
+
+    // INF-1244: INF-1191's crewmate ended its turn with a test run waiting
+    // silently on a lock, and nothing read it until the job's bound.
+    describe("a check-back on a running job (INF-1244)", () => {
+      const TEST_RUN = "pnpm test:unit && pnpm test:phone";
+      const checkBackAsks = (prompts: string[]) =>
+        prompts.filter((prompt) => prompt.includes("Report again with check_back"));
+
+      async function withJob() {
+        let started = hostNow;
+        const harness = await stopped({
+          hasRunningJobs: () => true,
+          oldestRunningJob: () => ({ jobId: "tests-1", command: TEST_RUN, startedAt: started }),
+        });
+        started = harness.idleSince;
+        return harness;
+      }
+
+      it("a turn that ends with a job running and names no time is asked once for one", async () => {
+        const { supervisor, crewmate, taskId } = await withJob();
+        // `stopped` ended the first turn with the job running: one ask went out.
+        expect(checkBackAsks(crewmate.promptCalls)).toHaveLength(1);
+        expect(checkBackAsks(crewmate.promptCalls)[0]).toContain(`"${TEST_RUN}"`);
+        await supervisor.steerCrewmate(taskId, "rebase onto main");
+        await tick();
+        await endTurn(crewmate, taskId, "Rebased; the tests still run.");
+        expect(checkBackAsks(crewmate.promptCalls)).toHaveLength(1);
+      });
+
+      it("holds the task until its time, then wakes the crewmate naming the job and its age", async () => {
+        const { supervisor, crewmate, specs, tasks, taskId, idleSince, at } = await withJob();
+        await supervisor.steerCrewmate(taskId, "rebase onto main");
+        await tick();
+        expect(() =>
+          specs[0]?.onReport?.("Waiting on the tests.", undefined, {
+            wait: { reason: "the merge" },
+            checkBack: { minutes: 20, waitingFor: "the tests" },
+          }),
+        ).toThrow("check_back is for work of your own still running");
+        const receipt = specs[0]?.onReport?.("Rebased; the tests run in the background.", undefined, {
+          checkBack: { minutes: 20, waitingFor: "the unit tests, then the native gate" },
+        });
+        expect(receipt).toContain("wakes you in 20m");
+        await endTurn(crewmate, taskId);
+        const reportedAt = hostNow;
+        expect(tasks.get(taskId)?.gate).toEqual({
+          kind: "at-time",
+          until: reportedAt + minutes(20),
+          reason: "the unit tests, then the native gate",
+        });
+        // The crew line reads the durations it would otherwise guess.
+        hostNow = reportedAt + minutes(5);
+        expect(supervisor.crewStatus(taskId)[0]).toMatchObject({
+          job: `running ${formatDurationShort(hostNow - idleSince)}: ${TEST_RUN}`,
+          reported: "5m ago",
+          checkBack: "in 15m: the unit tests, then the native gate",
+        });
+        const prompts = crewmate.promptCalls.length;
+        await at(reportedAt - idleSince + minutes(19));
+        await supervisor.sweepGates(hostNow);
+        expect(crewmate.promptCalls).toHaveLength(prompts);
+
+        hostNow = reportedAt + minutes(20);
+        await supervisor.sweepGates(hostNow);
+        await tick();
+        expect(crewmate.promptCalls).toHaveLength(prompts + 1);
+        const wake = crewmate.promptCalls.at(-1);
+        expect(wake).toContain("(the unit tests, then the native gate)");
+        expect(wake).toContain(
+          `still running after ${formatDurationShort(hostNow - idleSince)}: "${TEST_RUN}"`,
+        );
+        expect(tasks.get(taskId)?.gate).toBeNull();
+      });
+
+      it("a check-back past the job's bound leaves the bound as the backstop", async () => {
+        const { supervisor, crewmate, specs, ops, taskId, idleSince, at } = await withJob();
+        await supervisor.steerCrewmate(taskId, "rebase onto main");
+        await tick();
+        specs[0]?.onReport?.("The tests run in the background.", undefined, {
+          checkBack: { minutes: 300, waitingFor: "the tests" },
+        });
+        await endTurn(crewmate, taskId);
+        const sinceIdle = hostNow - idleSince;
+        await at(JOB_BOUND_MS - minutes(1));
+        expect(ops.filter((line) => line.includes("background job running"))).toHaveLength(0);
+        await at(Math.max(JOB_BOUND_MS, sinceIdle));
+        expect(ops.filter((line) => line.includes("background job running"))).toHaveLength(1);
+      });
     });
 
     it("a card the captain closes without choosing reaches its crewmate as its next turn (FI3-435)", async () => {

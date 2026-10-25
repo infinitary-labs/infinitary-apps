@@ -418,7 +418,16 @@ export type TaskDelivery = {
    * the task since (FI3-714).
    */
   needsFirstmate?: FirstmateAsk;
+  /**
+   * Beside a running job, when that report said its crewmate looks at it
+   * again and what it waits for (INF-1244, `check_back`): kept until its
+   * next turn starts, with the task's `at-time` gate it places.
+   */
+  checkBack?: CheckBack;
 };
+
+/** A crewmate's check-back: when its report named it, when it is due, and what it waits for. */
+export type CheckBack = { at: number; until: number; waitingFor: string };
 
 /** A wait on the captain a crewmate declared in its report: why, and the card he is to read. */
 export type CaptainWait = { at: number; reason: string; cardId?: string };

@@ -190,6 +190,14 @@ export class TaskEventStore {
     return row?.task_id;
   }
 
+  /** When a task's newest event of `kind` happened, if it has one. */
+  latestAt(taskId: string, kind: TaskEventKind): number | undefined {
+    const row = this.db
+      .prepare("SELECT MAX(at) AS at FROM task_events WHERE task_id = ? AND kind = ?")
+      .get(taskId, kind) as { at: number | null } | undefined;
+    return row?.at ?? undefined;
+  }
+
   /** The inbox rows the supervisor's own steers (the idle ladder's nudges) rode on a task. */
   ladderSteerRows(taskId: string): number[] {
     const rows = this.db

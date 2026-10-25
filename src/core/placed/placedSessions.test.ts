@@ -1545,6 +1545,7 @@ describe("a task that runs on a computer that runs work", () => {
   it("tells a crewmate waiting on a background job, as its next turn and once, that its computer's restart stopped the job (INF-367)", async () => {
     const at = await world(undefined, { jobs: true });
     const waiting = "The suite runs as a background job; I will pick up its result.";
+    const answered = "I pick up its result when it ends.";
     model([
       {
         tools: [
@@ -1555,14 +1556,17 @@ describe("a task that runs on a computer that runs work", () => {
         ],
       },
       { text: waiting },
+      // Its turn ended with the job running: the one check-back ask (INF-1244).
+      { text: answered },
       { text: "Running the suite again." },
     ]);
     const requests = api.requests.length;
     await at.start("t-job");
     const home = at.home();
-    await expect.poll(() => home.tasks.get("t-job")?.outcome).toBe(waiting);
+    await expect.poll(() => home.tasks.get("t-job")?.outcome).toBe(answered);
     const job = /background job ([0-9a-f]{8})/.exec(said(api.requests[requests + 1]))?.[1];
     expect(job).toBeDefined();
+    expect(said(api.requests[requests + 2])).toContain("Report again with check_back");
 
     // The computer restarts while the crewmate waits: the job ends with that run.
     await at.restartComputer();
@@ -1570,13 +1574,13 @@ describe("a task that runs on a computer that runs work", () => {
     const heard = said(api.requests.at(-1));
     expect(heard).toContain(`background job ${job} did not finish`);
     expect(heard).toContain(JSON.stringify('"sleep 600" was stopped').slice(1, -1));
-    expect(api.requests.length - requests).toBe(3);
+    expect(api.requests.length - requests).toBe(4);
     // Once: nothing is left there to tell again, and its lane is empty.
     expect(existsSync(join(at.folders("t-job").root, "jobs.json"))).toBe(false);
     expect(home.inbox.allFor("t-job")).toEqual([]);
     await at.restartComputer();
     await at.inReach("t-job");
-    expect(api.requests.length - requests).toBe(3);
+    expect(api.requests.length - requests).toBe(4);
   });
 
   // INF-379: a Claude crewmate's background work runs inside its client,

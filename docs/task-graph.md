@@ -50,7 +50,7 @@ A wait on another task ends the same way when that task closes: one `dependency-
 A baseline wait also resumes sooner, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake").
 A wait the first mate recorded can end sooner: a report from the task it waits on wakes the first mate, which passes on a finding the waiter was held for and removes the link (`docs/report-sort.md`, "A hold on a task's finding ends when that task reports it").
 The wait's end opens a new idle episode, so the turn it starts is the task's own.
-Phase 1 adds no writer of an active `at-time` gate.
+Its one writer on an active row is a crewmate's report that names `check_back` (`TaskService.recordReport`, `docs/report-sort.md` "A check-back on a running job"); the next turn's start clears it with the rest of that report's declaration.
 A crewmate declares a wait with `waiting_on_captain` (`docs/report-sort.md`); the host does not parse a free-text wait.
 
 A host card with actions and no task files an open `operation` row, `captain` gate ref = the card id (`TaskService.fileHostCardTask`), so the host's own asks count as waiting on the captain while their shown decisions are ready, like every other card.

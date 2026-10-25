@@ -412,13 +412,20 @@ export type ReportDeclaration = {
    * size and sha256, never content. The first mate's steer delivers them.
    */
   files?: HandoverFile[];
+  /**
+   * When its crewmate looks again at a job still running, in minutes from
+   * the report, and what it waits for (INF-1244, `check_back`): the task's
+   * `at-time` gate until then, whose end steers it with the job's facts.
+   */
+  checkBack?: { minutes: number; waitingFor: string };
 };
 
 function hasDeclaration(record: TaskRecord): boolean {
   return (
     Boolean(record.delivery?.captainWait) ||
     record.delivery?.finishedAt !== undefined ||
-    Boolean(record.delivery?.needsFirstmate)
+    Boolean(record.delivery?.needsFirstmate) ||
+    Boolean(record.delivery?.checkBack)
   );
 }
 
@@ -896,6 +903,11 @@ export class TaskService {
 
   timeline(id: string): TaskEvent[] {
     return this.events.listFor(id);
+  }
+
+  /** When the task's crewmate last reported (INF-1244: its crew line says how long ago). */
+  lastReportAt(id: string): number | undefined {
+    return this.events.latestAt(id, "report");
   }
 
   /**
@@ -3066,23 +3078,41 @@ export class TaskService {
     const finished = input.declared?.finished === true;
     const request = input.declared?.needsFirstmate;
     const result = input.declared?.result;
+    const declaredBack = input.declared?.checkBack;
+    const checkBack = declaredBack
+      ? { at, until: at + declaredBack.minutes * 60_000, waitingFor: declaredBack.waitingFor }
+      : undefined;
     const run = this.write(() => {
       const record = this.mustGet(id);
-      const declaring = Boolean(wait) || finished || Boolean(request);
+      const declaring = Boolean(wait) || finished || Boolean(request) || Boolean(checkBack);
       const delivery =
         declaring || hasDeclaration(record) || result
           ? this.mergeDelivery(record, {
               captainWait: wait ? { at, ...wait } : undefined,
               finishedAt: finished ? at : undefined,
               needsFirstmate: request ? { at, request } : undefined,
+              checkBack,
               // The latest result stands until a later report carries another.
               ...(result ? { result: { at, value: result } } : {}),
             })
           : undefined;
+      // A check-back is the task's timed wait (INF-1244): the sweep turns its
+      // end into a steer. A captain gate already standing outranks it.
+      const timed =
+        checkBack && (!record.gate || record.gate.kind === "at-time")
+          ? {
+              gate: {
+                kind: "at-time" as const,
+                until: checkBack.until,
+                reason: checkBack.waitingFor,
+              },
+            }
+          : {};
       this.patch(id, {
         outcome: input.text,
         outcomeSummary: summary,
         ...(delivery ? { delivery } : {}),
+        ...timed,
         updatedAt: at,
       });
       this.addEvent({
@@ -3098,6 +3128,9 @@ export class TaskService {
           ...(finished ? { finished: true } : {}),
           ...(input.declared?.needsFirstmate
             ? { needsFirstmate: input.declared.needsFirstmate }
+            : {}),
+          ...(checkBack
+            ? { checkBack: { until: checkBack.until, waitingFor: checkBack.waitingFor } }
             : {}),
           ...(result ? { result } : {}),
         },
@@ -3120,7 +3153,10 @@ export class TaskService {
           captainWait: undefined,
           finishedAt: undefined,
           needsFirstmate: undefined,
+          checkBack: undefined,
         }),
+        // A check-back's timed wait goes with it: the turn it waited for runs.
+        ...(record.delivery?.checkBack && record.gate?.kind === "at-time" ? { gate: null } : {}),
         updatedAt: this.now(),
       });
       return true;

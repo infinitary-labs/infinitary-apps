@@ -92,9 +92,25 @@ export const JOB_BOUND_MS = 2 * 60 * 60 * 1000;
 /** The honest retry's still-down wake (the captain's Q1 note: "can we make it 15?"). */
 export const STILL_DOWN_MS = 15 * 60 * 1000;
 
-/** The steer a timed wait on an active task ends with (the sweep's active branch). */
-export function timedWaitOver(gate: TaskGate): TypedWake {
-  return { facts: { kind: "timed-wait-over", ...(gate.reason ? { reason: gate.reason } : {}) } };
+/**
+ * The steer a timed wait on an active task ends with (the sweep's active
+ * branch), naming the task's oldest job when one still runs (INF-1244).
+ */
+export function timedWaitOver(gate: TaskGate, job?: RunningJob, now?: number): TypedWake {
+  return {
+    facts: {
+      kind: "timed-wait-over",
+      ...(gate.reason ? { reason: gate.reason } : {}),
+      ...(job && now !== undefined
+        ? {
+            job: {
+              command: capWithOverflow(job.command, "timed-wait-command"),
+              runMs: now - job.startedAt,
+            },
+          }
+        : {}),
+    },
+  };
 }
 
 /**
@@ -519,10 +535,14 @@ export class IdleLadder {
     this.checkStillDown(record, now);
     const runtime = this.host.runtime(taskId);
     if (runtime ? runtime.state !== "idle" : !TaskService.isResumable(record)) return;
-    const turn = idleTurn(this.witnesses(taskId, now));
+    const witnesses = this.witnesses(taskId, now);
+    const turn = idleTurn(witnesses);
     if (turn !== "asked" && this.endAnsweredAsk(record, now)) {
       record = this.host.tasks.get(taskId) ?? record;
     }
+    // A check-back later than the job's bound never silences the bound,
+    // which stays the backstop (INF-1244).
+    if (turn === "moving" && witnesses.timedWait) this.checkJobBound(record, now);
     if (turn === "captain" || turn === "moving") return;
     if (turn !== "thread") this.checkJobBound(record, now);
     this.climb(record, runtime, now, turn);
@@ -1511,7 +1531,7 @@ export class IdleLadder {
       this.syncCaptainGate(record.id, now);
       const gate = tasks.get(record.id)?.gate;
       if (gate?.kind === "at-time" && gate.until !== undefined && gate.until <= now) {
-        this.endTimedWait(record.id, gate);
+        this.endTimedWait(record.id, gate, now);
       }
       for (const ended of this.endedWaits(record)) this.endDependencyWait(record.id, ended);
     }
@@ -1544,10 +1564,13 @@ export class IdleLadder {
    * hears it as one steer on its own lane. The wait's end opens a new idle
    * episode, so the turn it starts is the task's own, not a ladder turn.
    */
-  private endTimedWait(taskId: string, gate: TaskGate): void {
+  private endTimedWait(taskId: string, gate: TaskGate, now: number): void {
     this.host.tasks.setGate(taskId, null);
     this.host.tasks.endIdle(taskId);
-    void this.host.steer(taskId, timedWaitOver(gate)).catch((caught: unknown) => {
+    const job = this.host.hasRunningJobs?.(taskId)
+      ? this.host.oldestRunningJob?.(taskId)
+      : undefined;
+    void this.host.steer(taskId, timedWaitOver(gate, job, now)).catch((caught: unknown) => {
       // No conversation to resume: the ladder reads the task on its own clock.
       console.warn("[crew] timed wait's steer not delivered:", caught);
     });

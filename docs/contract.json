@@ -42449,6 +42449,21 @@
                   "needsFirstmate": {
                     "type": "string"
                   },
+                  "checkBack": {
+                    "type": "object",
+                    "properties": {
+                      "minutes": {
+                        "type": "number"
+                      },
+                      "waitingFor": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "minutes",
+                      "waitingFor"
+                    ]
+                  },
                   "result": {
                     "type": "object",
                     "propertyNames": {

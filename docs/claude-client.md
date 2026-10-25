@@ -203,8 +203,13 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The client's own marks (`[1m]`, a dated snapshot) name the same model (`canonicalClaudeModelId`).
   Each change reaches the owner as the owner-only `model_served`, with the notice's original model and the provider's category (`cyber`).
   The supervisor writes the model onto the task record whenever it is not the one the record names (`CrewSupervisor.recordServedModel`), so the merge card's fact strip, the crew's labels and the task's own fact strip name the model doing the work, and a note on the timeline and the feed says what moved it; the routing ledger keeps the router's decision.
+  When the model answering is not the one the task's newest routing choice asked for, the first mate is told once per pair of models (`model-unasked`, INF-1272): both models by their Settings names, whether the client fell back after a refusal or opened on another model, and whether the captain named the asked one, so it can tell them.
   A reattach asks for the model the session was asked for, never the one the client swapped in.
   So does a resume that names no model: the client (2.1.289) restores a resumed session's last model and keeps a fallback it finds in the transcript, so the session reads the first session-wide fallback in the app's copy and asks for its original model.
+  A crewmate's reopen names one wherever it can (INF-1272): the supervisor asks for the model of the task's newest routing choice, its start's or its newest move's, at the effort a move works out - the captain's word on the task, else the model's Settings choice, else the level's default - here or on a computer that runs work (`CrewSupervisor.reopenedOn`).
+  A conversation that starts over after an update has no transcript to restore a model from, and the client opens it on its own default (Sonnet 5.5 on the installed 2.1.309), so without this a Fable task answered on another model and the timeline said it moved.
+  A fallback is not a routing choice, so a reopen after one asks for the original model; a task that never routed opens as its session restores it.
+  The crew contract's integration test holds it on the installed client: the new conversation's first request carries the model it was handed.
   The client books a fallback's retry under the model that answered it, so that turn's usage has a row per model (`docs/usage.md`).
   The app leaves the client's fallback as the client ships it: it passes no fallback model and does not set `CLAUDE_CODE_DISABLE_REFUSAL_FALLBACK`.
 - **The kind classifier on Claude (W1 S10).**

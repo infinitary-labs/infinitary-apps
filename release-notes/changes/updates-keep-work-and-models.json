@@ -1,0 +1,22 @@
+{
+  "entries": [
+    {
+      "id": "reopened-task-keeps-its-model",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "A task keeps its model after you update",
+      "body": "After an update, a Claude crewmate starts a new conversation when its instructions changed. That conversation used to open on Claude's own default model, so a task you started on Fable could carry on on another model. A reopened task now asks for the model and effort it was started or moved on, on this computer or on one that runs work.",
+      "noPicture": "This changes which model a reopened crewmate asks for, not a view or control.",
+      "provenance": { "origin": "change" }
+    },
+    {
+      "id": "update-needs-no-pause",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Updating the app needs no pause first",
+      "body": "Quitting or updating already pauses every running task, and the next launch carries each one on with your merge approvals kept. The first mate now knows this, so it no longer stops each task when you say you are about to update, and a merge you approved stands. A stop you or the first mate make still ends a merge approval.",
+      "noPicture": "This changes what the first mate does when you mention an update; the one line it adds to the activity list at launch is too small to show as a picture.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -554,8 +554,7 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Steer crewmate",
     description:
       "Send guidance, feedback, or a follow-up to a crewmate's running or idle task. " +
-      "The data plane only - use interrupt_crewmate for lifecycle control. The result " +
-      "says when a message was queued for the crewmate's next turn instead.",
+      "The result says when a message was queued for the crewmate's next turn instead.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from the context block or spawn" }),
       message: Type.String({ description: "What the crewmate should know or do next" }),
@@ -592,8 +591,9 @@ export function createCrewTools(delegate: CrewDelegate) {
     name: "interrupt_crewmate",
     label: "Interrupt crewmate",
     description:
-      "Lifecycle control for a task. mode 'interrupt' stops the current turn but keeps " +
-      "the crewmate steerable; mode 'cancel' ends the task. Never send lifecycle " +
+      "Lifecycle control for a task. mode 'interrupt' stops the current turn and ends a " +
+      "kept merge approval; the crewmate waits until steered. mode 'cancel' ends the task. " +
+      "Never send lifecycle " +
       "instructions as steer text.",
     parameters: Type.Object({
       task_id: Type.String(),

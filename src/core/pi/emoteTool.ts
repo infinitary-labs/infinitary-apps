@@ -24,9 +24,7 @@ export function createEmoteTool(request: (emote: FirstmateEmote) => void) {
     name: EMOTE_TOOL_NAME,
     label: "Emote",
     description: [
-      "Make the first mate's character perform one brief emote, motion only. Use this for a",
-      "fitting visible acknowledgement when no card is needed; it is visual only and does not",
-      "replace required work or a card. greet: hello. celebrate: good news. ponder: thinking it",
+      "Make the first mate's character perform one brief emote, motion only. greet: hello. celebrate: good news. ponder: thinking it",
       "over. confused: something went wrong. fidget: idle play. The reply emotes play as your",
       "turn ends: nod - got it, an instruction understood; salute - on it, work sent out; tick",
       "- all set, a change you made yourself; tuck - noted, something kept; aww - any time, the",

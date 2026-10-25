@@ -114,7 +114,7 @@ import {
   validationStateRevision,
 } from "@shared/liveValidation";
 import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
-import { offeringKey, parseOfferingKey } from "@shared/modelSlots";
+import { offeringKey, parseOfferingKey, type Slot } from "@shared/modelSlots";
 import {
   AUTOMATIC_COMPUTER,
   AUTOMATIC_WORD,
@@ -338,7 +338,7 @@ import {
   recordValidation as checkValidationTransition,
   StaleValidationDecisionError,
 } from "../tasks/liveValidation";
-import { modelMoveWords } from "../tasks/recordActivity";
+import { carryOnWords, modelMoveWords } from "../tasks/recordActivity";
 import {
   builtOnRows,
   queryTasks,
@@ -8139,7 +8139,9 @@ export class CrewSupervisor {
           machineId: machine,
           cwd,
           resumeToken: record.sessionFile,
-          ...(move ? { model: move.model, thinkingLevel: move.thinkingLevel } : {}),
+          ...(move
+            ? { model: move.model, thinkingLevel: move.thinkingLevel }
+            : this.reopenedOn(record)),
           ...this.crewmateHooks(task, livePersonal),
         },
         attachment.accountId,
@@ -8168,6 +8170,46 @@ export class CrewSupervisor {
     }
     this.broadcastCrewCounts();
     return task;
+  }
+
+  /**
+   * The effort a move or a reopen asks for on `model` at `level`: the
+   * captain's word on the task, else the model's Settings choice, else the
+   * level's default.
+   */
+  private effortFor(
+    record: TaskRecord,
+    model: { provider: string; id: string },
+    level: Slot,
+  ): NonNullable<CrewmateSpec["thinkingLevel"]> {
+    return (
+      record.shape?.override_reasoning ??
+      this.options.router?.reasoningChoice(model, level) ??
+      levelDefaultReasoning(level)
+    );
+  }
+
+  /**
+   * What a reopen asks for (INF-1272): the model of the task's newest
+   * routing choice, its start's or its newest move's, at the effort a move
+   * works out - here or on a computer that runs work. A Claude conversation
+   * that starts over after an update has no transcript to restore a model
+   * from, so without this it opens on the client's default. A client's
+   * fallback is not a routing choice, so the reopen asks for the original
+   * again. A task that never routed opens as its session restores it.
+   */
+  private reopenedOn(record: TaskRecord): Pick<CrewmateSpec, "model" | "thinkingLevel" | "quick"> {
+    const routed = this.options.router?.servedChoice(record.id);
+    if (!routed) return {};
+    const chosen =
+      record.shape?.override_reasoning ??
+      this.options.router?.reasoningChoice(routed.model, routed.slot);
+    return {
+      model: routed.model,
+      thinkingLevel: chosen ?? levelDefaultReasoning(routed.slot),
+      // As its start did: Quick care opens a rung lower unless an effort was chosen.
+      ...(record.shape?.rigor === "quick" && !chosen ? { quick: true } : {}),
+    };
   }
 
   /** The name a person knows a provider by: its catalog name, else its id. */
@@ -8333,10 +8375,7 @@ export class CrewSupervisor {
       const resumed = await this.resumeTask(taskId, {
         model: choice,
         ...(accountId ? { accountId } : {}),
-        thinkingLevel:
-          record.shape?.override_reasoning ??
-          this.options.router?.reasoningChoice(choice, level) ??
-          levelDefaultReasoning(level),
+        thinkingLevel: this.effortFor(record, choice, level),
         providerName: toName,
       });
       this.deliverPendingToTask(resumed);
@@ -10211,6 +10250,7 @@ export class CrewSupervisor {
     if (!record || TaskService.isClosed(record)) return;
     const served = `${event.model.provider}/${event.model.id}`;
     if (record.model === served) return;
+    this.noticeUnaskedModel(task, record, event);
     if (!record.model) {
       this.options.tasks.recordServedModel(task.id, event.model);
       return;
@@ -10243,6 +10283,41 @@ export class CrewSupervisor {
           : {}),
       },
     });
+  }
+
+  /**
+   * The first mate is told once when a task answers on a model its routing
+   * did not choose (INF-1272): both models, why, and whether the captain
+   * named the one asked for, so it can tell them. An answer back on the
+   * asked model, or on a task that never routed, says nothing.
+   */
+  private noticeUnaskedModel(
+    task: TaskRuntime,
+    record: TaskRecord,
+    event: Extract<SessionEvent, { type: "model_served" }>,
+  ): void {
+    const asked = this.options.router?.servedChoice(task.id)?.model;
+    if (!asked || offeringKey(asked) === offeringKey(event.model)) return;
+    const named = record.shape?.override_model_id;
+    const category = event.fallback?.category;
+    this.hooks.notifyOp(
+      {
+        facts: {
+          kind: "model-unasked",
+          task: { id: record.id, key: record.key || record.id, title: record.title },
+          asked: this.modelName(asked),
+          served: this.modelName(event.model),
+          cause: event.fallback ? "fallback" : "client",
+          ...(category ? { category } : {}),
+          named:
+            named !== undefined &&
+            (named.includes("/") ? named === offeringKey(asked) : named === asked.id),
+        },
+        once: `model-unasked:${offeringKey(asked)}:${offeringKey(event.model)}`,
+      },
+      "agent",
+      record.id,
+    );
   }
 
   /** One settled turn's tokens and cost, on the account and model that served it. */
@@ -10752,6 +10827,33 @@ export class CrewSupervisor {
    * honest firstmate notice. The firstmate lane is the agent's own to
    * drain; the tick only pokes it (startWatchdog).
    */
+  /**
+   * The launch's one feed line naming the tasks that carry on by themselves
+   * (INF-1272): each lane holding a message a quit, a restart or an update
+   * cut (`cuts`), or the `turn-resumed` wake a quit left for a turn no
+   * message was serving. A launch with none says nothing. No wake: the
+   * boot sweep carries them on, and the first mate needs to steer none.
+   */
+  announceCarryOn(): void {
+    const carrying: TaskRecord[] = [];
+    for (const recipient of this.options.inbox.recipientsWithRows()) {
+      if (recipient === FIRSTMATE_RECIPIENT || recipient === SUPERVISION_RECIPIENT) continue;
+      const record = this.options.tasks.get(recipient);
+      if (!record || TaskService.isClosed(record)) continue;
+      const cut = this.options.inbox
+        .allFor(recipient)
+        .some((row) => row.cuts > 0 || row.facts?.kind === "turn-resumed");
+      if (cut) carrying.push(record);
+    }
+    if (carrying.length === 0) return;
+    this.options.broadcastEvent({
+      type: "firstmate_note",
+      text: carryOnWords(
+        carrying.map((record) => ({ key: record.key || record.id, title: record.title })),
+      ),
+    });
+  }
+
   async sweepInbox(now: number): Promise<void> {
     if (this.sweepingInbox) return;
     this.sweepingInbox = true;

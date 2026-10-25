@@ -54,7 +54,12 @@ import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
 import type { RiskDeclaration } from "@shared/risk";
-import { isFolderRepair, type WorkShape, type WorkShapeAsk } from "@shared/routingPolicy";
+import {
+  isFolderRepair,
+  levelDefaultReasoning,
+  type WorkShape,
+  type WorkShapeAsk,
+} from "@shared/routingPolicy";
 import type { TaskBrowserFact } from "@shared/taskBrowser";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { formatDurationShort } from "@shared/quotaSignals";
@@ -107,6 +112,7 @@ import { type AppPaths, appPathsFor, crewmateEvidenceDir } from "../paths";
 import { packagedPlanStepLines } from "../personal/sequencesSkill";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
+import { carryOnWords } from "../tasks/recordActivity";
 import { createModelRuntime } from "../pi/modelRuntime";
 import { piSessionEvents } from "../pi/piEvents";
 import { CREWMATE_BROWSER_LINE, crewmateComputersNote } from "../pi/piResources";
@@ -454,6 +460,19 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
   const cardStore = new CardStore(db);
   for (const card of extras.savedCards ?? []) cardStore.upsert(card);
   const inbox = new InboxStore(db, clock);
+  /** Each task's newest routing choice, as the real router reads it off routing_decisions. */
+  const routedChoices = new Map<
+    string,
+    { model: { provider: string; id: string }; slot: import("@shared/modelSlots").Slot }
+  >();
+  const routed = (taskId: string, result: import("../routing/router").RouteResult) => {
+    if (result.choice)
+      routedChoices.set(taskId, {
+        model: result.choice,
+        slot: result.servedBucket ?? result.bucket,
+      });
+    return result;
+  };
   const router =
     extras.routedModel || extras.routeResult
       ? {
@@ -465,14 +484,16 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
             options?: { avoidProvider?: string },
           ) => {
             extras.onRouteDecide?.({ taskId, prompt, shape, ...options });
-            return (
+            return routed(
+              taskId,
               extras.routeResult ?? {
                 choice: extras.routedModel,
                 bucket: "high" as const,
                 rule: "R8" as const,
-              }
+              },
             );
           },
+          servedChoice: (taskId: string) => routedChoices.get(taskId),
           // A move's evaluation, never recorded until it is committed.
           preview: (_prompt: string, shape: WorkShape, options: { withoutProvider?: string }) => {
             const choice = extras.movePick?.(shape, options);
@@ -483,7 +504,9 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
               requiresReasoningWait: false,
             };
           },
-          commit: vi.fn(),
+          commit: vi.fn((taskId: string, preview: { result: import("../routing/router").RouteResult }) =>
+            routed(taskId, preview.result),
+          ),
           // The builder's served provider (R9): the routed model's, as the
           // real router reads it off routing_decisions.
           servedProvider: () => extras.routedModel?.provider,
@@ -598,6 +621,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     sessionSpecs,
     paths,
     repos,
+    router,
   };
 }
 
@@ -5073,6 +5097,18 @@ describe("CrewSupervisor", () => {
       expect(capped.forge.merges).toEqual([]);
     });
 
+    // INF-1272, the captain: "A stop still means something is wrong; only
+    // quits and updates keep the approval."
+    it("stands across a quit that cuts the crewmate's turn, where an interrupt ends it", async () => {
+      const harness = await kept();
+      const standing = harness.authorization();
+      await harness.supervisor.steerCrewmate(harness.taskId, "bring it up to date");
+      await harness.supervisor.disposeAll();
+      expect(harness.authorization()).toEqual(standing);
+      expect(harness.authorization()?.status).not.toBe("revoked");
+      expect(harness.forge.merges).toEqual([]);
+    });
+
     it("a new completion card supersedes it, and an interruption revokes it with a hold", async () => {
       const harness = await kept();
       await repairTurn(harness, async () => {
@@ -6282,6 +6318,268 @@ describe("CrewSupervisor", () => {
     // The move is announced as a feed line, never silent.
     const note = events.find((event) => event.type === "firstmate_note");
     expect(note && "text" in note ? note.text : "").toContain('Task "Old task" moved to Work #2');
+  });
+
+  // INF-1272, the captain: "a reopened task keeps its model". An update that
+  // changes a Claude crewmate's instructions starts its conversation over,
+  // with no transcript to restore a model from; the reopen asks for the
+  // model and effort its routing chose, here or on a computer that runs work.
+  describe("a reopen asks for the task's own model and effort (INF-1272)", () => {
+    const fable = { provider: "anthropic-claude", id: "claude-fable-5-1" };
+
+    /** The next launch: a new supervisor over the same record and routing ledger. */
+    function relaunch(
+      h: ReturnType<typeof setup>,
+      boot: FakeCrewmate,
+      machines?: CrewMachines,
+    ) {
+      const specs: CrewmateSpec[] = [];
+      const fresh = new CrewSupervisor({
+        ...crewSessions(h.paths, vi.fn(async () => boot), specs),
+        workspace: h.workspace,
+        repos: h.repos,
+        tasks: h.tasks,
+        cardStore: h.cardStore,
+        inbox: h.inbox,
+        paths: h.paths,
+        ...(h.router ? { router: h.router as unknown as import("../routing/router").Router } : {}),
+        ...(machines ? { machines } : {}),
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      return { fresh, specs };
+    }
+
+    const moves = (h: ReturnType<typeof setup>, taskId: string) =>
+      h.tasks.timeline(taskId).filter((event) => event.kind === "note" && event.data?.servedModel);
+
+    it("reopens a Fable crewmate at extra-high effort after a quit, with no model-move line", async () => {
+      const crewmate = fakeCrewmate({ model: fable });
+      const h = setup(crewmate, {
+        routeResult: { choice: fable, bucket: "premium", rule: "R0" },
+        reasoningChoice: () => "medium",
+      });
+      const { taskId } = await h.supervisor.commission({
+        title: "Project scopes",
+        intent: intentOf("build it on fable at extra high reasoning"),
+        shape: { override_model_id: "claude-fable-5-1", override_reasoning: "xhigh" },
+      });
+      await tick();
+      expect(h.specs[0]).toMatchObject({ model: fable, thinkingLevel: "xhigh" });
+      crewmate.finishPrompt();
+      await tick();
+      await h.supervisor.disposeAll();
+
+      // The update changed its instructions: its conversation starts over,
+      // and the client answers on whatever the reopen asked for.
+      const boot = fakeCrewmate({ model: fable });
+      const { fresh, specs } = relaunch(h, boot);
+      await fresh.steerCrewmate(taskId, "carry on");
+      await tick();
+      expect(specs[0]).toMatchObject({
+        resumeToken: "/tmp/s1.jsonl",
+        model: fable,
+        thinkingLevel: "xhigh",
+      });
+      boot.emit({ type: "model_served", model: fable });
+      expect(h.tasks.get(taskId)?.model).toBe("anthropic-claude/claude-fable-5-1");
+      expect(moves(h, taskId)).toEqual([]);
+      await fresh.disposeAll();
+    });
+
+    it("reopens a moved task on the model it moved to, and a fallback on the model it asked for", async () => {
+      const opus55 = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+      const opus48 = { provider: "anthropic-claude", id: "claude-opus-4-8" };
+      const codex = { provider: "openai-codex", id: "gpt-6.1-sol" };
+      const crewmate = fakeCrewmate({ model: opus55 });
+      const h = setup(crewmate, {
+        routedModel: opus55,
+        crewmates: [fakeCrewmate({ model: codex })],
+        movePick: (shape) => (shape.override_model_id === "openai-codex/gpt-6.1-sol" ? codex : undefined),
+        reasoningChoice: (ref) => (ref.provider === "openai-codex" ? "low" : undefined),
+      });
+      const { taskId } = await h.supervisor.commission({ title: "t", intent: intentOf("work") });
+      await tick();
+      crewmate.finishPrompt();
+      await tick();
+      // Claude Code moved the session after a safeguard stopped a reply: a
+      // fallback, never a routing choice.
+      crewmate.emit({ type: "model_served", model: opus48, fallback: { from: opus55 } });
+      expect(h.tasks.get(taskId)?.model).toBe("anthropic-claude/claude-opus-4-8");
+      await h.supervisor.disposeAll();
+
+      const boot = fakeCrewmate({ model: opus55 });
+      const reopened = relaunch(h, boot);
+      await reopened.fresh.steerCrewmate(taskId, "carry on");
+      await tick();
+      // No word on its effort and no Settings choice: the routed level's default.
+      expect(reopened.specs[0]).toMatchObject({
+        model: opus55,
+        thinkingLevel: levelDefaultReasoning("high"),
+      });
+      boot.finishPrompt();
+      await tick();
+
+      // The first mate moves it; the next launch reopens it where it moved.
+      expect(
+        reopened.fresh.requestMove(taskId, { by: "firstmate", model: "openai-codex/gpt-6.1-sol" })
+          .ok,
+      ).toBe(true);
+      await tick();
+      expect(reopened.specs.at(-1)).toMatchObject({ model: codex, thinkingLevel: "low" });
+      await reopened.fresh.disposeAll();
+      const again = relaunch(h, fakeCrewmate({ model: codex }));
+      await again.fresh.steerCrewmate(taskId, "carry on");
+      await tick();
+      expect(again.specs[0]).toMatchObject({ model: codex, thinkingLevel: "low" });
+      await again.fresh.disposeAll();
+    });
+
+    it("tells the first mate once when a task answers on a model it did not ask for", async () => {
+      const opus = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+      const crewmate = fakeCrewmate({ model: fable });
+      const h = setup(crewmate, {
+        routeResult: { choice: fable, bucket: "premium", rule: "R0" },
+        modelName: (model) => (model.id === fable.id ? "Fable 5.1" : "Opus 5.5"),
+      });
+      // The first mate's lane as it really is, so a once-named wake goes out once.
+      h.supervisor.setFirstmateHooks({
+        notifyOp: (wake, origin, ref) => h.inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref),
+        retryConverse: vi.fn(),
+      });
+      const { taskId } = await h.supervisor.commission({
+        title: "Orbit prototype",
+        intent: intentOf("build it on fable"),
+        shape: { override_model_id: "claude-fable-5-1" },
+      });
+      await tick();
+      const notices = () =>
+        h.inbox
+          .allFor(FIRSTMATE_RECIPIENT)
+          .filter((row) => row.facts?.kind === "model-unasked")
+          .map((row) => renderWake(row));
+      // The model asked for answers: nothing to tell.
+      crewmate.emit({ type: "model_served", model: fable });
+      expect(notices()).toEqual([]);
+      // Its conversation opened on the client's default instead.
+      crewmate.emit({ type: "model_served", model: opus });
+      const key = h.tasks.get(taskId)?.key || taskId;
+      expect(notices()).toEqual([
+        `[fm-op] ${key} "Orbit prototype" now answers on Opus 5.5, not on Fable 5.1, the model it asked for: its conversation opened on Opus 5.5 although the app asked for Fable 5.1. The captain named Fable 5.1 for this task.`,
+      ]);
+      // Back on Fable and off it again: the same move is told once.
+      crewmate.emit({ type: "model_served", model: fable });
+      crewmate.emit({ type: "model_served", model: opus });
+      expect(notices()).toHaveLength(1);
+    });
+
+    it("names the cause of a fallback, and says when the routing chose the model", async () => {
+      const opus48 = { provider: "anthropic-claude", id: "claude-opus-4-8" };
+      const opus55 = { provider: "anthropic-claude", id: "claude-opus-5-5" };
+      const crewmate = fakeCrewmate({ model: opus55 });
+      const h = setup(crewmate, { routedModel: opus55 });
+      const { taskId } = await h.supervisor.commission({ title: "Read logs", intent: intentOf("go") });
+      await tick();
+      crewmate.emit({
+        type: "model_served",
+        model: opus48,
+        fallback: { from: opus55, category: "cyber" },
+      });
+      const key = h.tasks.get(taskId)?.key || taskId;
+      expect(h.ops).toContain(
+        `[fm-op] ${key} "Read logs" now answers on claude-opus-4-8, not on claude-opus-5-5, the model it asked for: Claude Code moved it after claude-opus-5-5's safeguards stopped a reply (cyber). The app's routing chose claude-opus-5-5; the captain named no model.`,
+      );
+    });
+
+    it("names at launch the tasks a quit paused, which carry on by themselves", async () => {
+      const crewmate = fakeCrewmate({ model: fable });
+      const finished = fakeCrewmate({ model: fable });
+      const h = setup(crewmate, {
+        routeResult: { choice: fable, bucket: "premium", rule: "R0" },
+        crewmates: [finished],
+      });
+      const { taskId } = await h.supervisor.commission({
+        title: "Project scopes",
+        intent: intentOf("build it"),
+      });
+      await h.supervisor.commission({ title: "Skill packs", intent: intentOf("build it too") });
+      await tick();
+      // The second task's turn ended; the first is mid-turn when the app quits.
+      finished.finishPrompt();
+      await tick();
+      await h.supervisor.disposeAll();
+      h.inbox.resetInFlight();
+      const events: FmEvent[] = [];
+      const fresh = new CrewSupervisor({
+        ...crewSessions(h.paths, vi.fn(async () => fakeCrewmate({ model: fable }))),
+        workspace: h.workspace,
+        repos: h.repos,
+        tasks: h.tasks,
+        cardStore: h.cardStore,
+        inbox: h.inbox,
+        paths: h.paths,
+        broadcastEvent: (event) => events.push(event),
+        broadcastCards: () => {},
+      });
+      fresh.announceCarryOn();
+      // Only the task whose turn the quit cut; the one that had finished waits.
+      expect(events).toEqual([
+        {
+          type: "firstmate_note",
+          text: carryOnWords([
+            { key: h.tasks.get(taskId)?.key || taskId, title: "Project scopes" },
+          ]),
+        },
+      ]);
+      await fresh.disposeAll();
+    });
+
+    it("reopens a task on a computer that runs work asking for its own model and effort", async () => {
+      const crewmate = fakeCrewmate({ model: fable });
+      const h = setup(crewmate, {
+        routeResult: { choice: fable, bucket: "premium", rule: "R0" },
+        reasoningChoice: () => "xhigh",
+      });
+      const { taskId } = await h.supervisor.commission({
+        title: "Skill packs",
+        intent: intentOf("build it on fable"),
+      });
+      await tick();
+      crewmate.finishPrompt();
+      await tick();
+      await h.supervisor.disposeAll();
+      // The record now names the Mac mini, where its working copy lives.
+      h.tasks.setDevice(taskId, "mac-mini");
+      const boot = fakeCrewmate({ model: fable });
+      const opened: SessionSpec[] = [];
+      const factory = {
+        backend: "claude" as const,
+        controlProfile: PI_CONTROL_PROFILE,
+        open: async (spec: SessionSpec) => {
+          opened.push(spec);
+          return boot;
+        },
+      };
+      const machines = {
+        computers: () => [],
+        folders: () => ({ work: "/Users/kun/work/wt", sessions: "/Users/kun/work/sessions" }),
+        factories: () => ({ claude: factory, pi: { ...factory, backend: "pi" as const } }),
+        ready: () => true,
+        nameOf: () => "Kun's Mac mini",
+        placeOf: () => ({ where: "on Kun's Mac mini", name: "Kun's Mac mini" }),
+        served: async () => ({ accounts: new Map() }),
+        servingAccount: () => undefined,
+        accountOf: () => undefined,
+        cutOffOf: () => undefined,
+        knows: () => false,
+      } as unknown as CrewMachines;
+      const { fresh, specs } = relaunch(h, boot, machines);
+      await fresh.steerCrewmate(taskId, "carry on");
+      await tick();
+      expect(specs[0]).toMatchObject({ machineId: "mac-mini", model: fable, thinkingLevel: "xhigh" });
+      expect(opened[0]).toMatchObject({ machine: "mac-mini", model: fable });
+      await fresh.disposeAll();
+    });
   });
 
   it("reopens a recorded conversation only in its own backend's shape, and says when it starts fresh", async () => {

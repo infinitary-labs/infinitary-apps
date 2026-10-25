@@ -2913,6 +2913,7 @@ export async function createServices(
   // re-delivered (resuming their idle tasks) or reported as orphaned, and
   // the firstmate and supervision lanes each get one explicit drain instead
   // of waiting for an incidental trigger.
+  supervisor.announceCarryOn();
   void supervisor.sweepInbox(ticker.now());
   // The idle reconciler's boot sweep (docs/report-sort.md): a record the
   // ladder should already have acted on while the app was closed acts now,

@@ -667,6 +667,17 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: { tool: "spawn_crewmate", parameter: "shape" },
     says: "skipped_plan_because: On a direct build with no chosen basis",
   },
+  // INF-1272 makes room for the quit rule by saying two rules once.
+  {
+    rule: "an emote never stands in for a required card or work",
+    home: "core",
+    says: "use it only as fitting visual acknowledgement, never instead of a required card or action",
+  },
+  {
+    rule: "lifecycle control goes through interrupt_crewmate, never a steer",
+    home: { tool: "interrupt_crewmate" },
+    says: "Never send lifecycle instructions as steer text.",
+  },
 ];
 
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {

@@ -1044,6 +1044,24 @@ export type WakeFacts =
     }
   | {
       /**
+       * A task answered on a model its routing did not choose (INF-1272):
+       * the client moved it after a refusal, or opened its conversation on
+       * another model. Once per pair of models, so the first mate can tell
+       * the captain.
+       */
+      kind: "model-unasked";
+      task: { id: string; key: string; title: string };
+      /** The models by their Settings names: the one asked for, and the one answering. */
+      asked: string;
+      served: string;
+      cause: "fallback" | "client";
+      /** The provider's category for a fallback's refusal (`cyber`). */
+      category?: string;
+      /** The captain named the asked model for this task. */
+      named: boolean;
+    }
+  | {
+      /**
        * The Firstmate's seat moved on the captain's click (W1 S9): the first
        * turn after the move is told where it answers now, and - when the
        * move changed sessions - what the host saw of the turns it cannot
@@ -1940,6 +1958,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return renderAnswerMissing(facts);
     case "seat-moved":
       return renderSeatMoved(facts);
+    case "model-unasked":
+      return renderModelUnasked(facts);
     case "attachments-kept":
       return `${
         typeof facts.guidance === "string"
@@ -1993,6 +2013,17 @@ const SEAT_PAUSE_WORDS: Record<SeatPauseClass, string> = {
   client: `could not run on ${HERE.this}`,
   unavailable: "was no longer available",
 };
+
+function renderModelUnasked(facts: Extract<WakeFacts, { kind: "model-unasked" }>): string {
+  const why =
+    facts.cause === "fallback"
+      ? `Claude Code moved it after ${facts.asked}'s safeguards stopped a reply${facts.category ? ` (${facts.category})` : ""}`
+      : `its conversation opened on ${facts.served} although the app asked for ${facts.asked}`;
+  const who = facts.named
+    ? `The captain named ${facts.asked} for this task.`
+    : `The app's routing chose ${facts.asked}; the captain named no model.`;
+  return `[fm-op] ${facts.task.key} "${facts.task.title}" now answers on ${facts.served}, not on ${facts.asked}, the model it asked for: ${why}. ${who}`;
+}
 
 function renderSeatMoved(facts: Extract<WakeFacts, { kind: "seat-moved" }>): string {
   const seat = (entry: WakeSeat) => `${entry.provider} (${entry.model})`;

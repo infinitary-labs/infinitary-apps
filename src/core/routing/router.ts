@@ -320,6 +320,20 @@ export class Router {
   }
 
   /**
+   * The model and slot a task's newest routing decision chose - its start's
+   * or its newest move's - for a reopen to ask for again, so a conversation
+   * that starts over never opens on the client's own default. The slot is
+   * the one served, as `servedSlots` reads it. Undefined when the task never
+   * routed or the row's slot is not one.
+   */
+  servedChoice(taskId: string): { model: PiModelRef; slot: Slot } | undefined {
+    const row = this.options.decisions.routing({ taskIds: [taskId], chosen: true }).at(-1);
+    const slot = slotSchema.safeParse(row?.served ?? row?.bucket);
+    if (!row?.provider || !row.model || !slot.success) return undefined;
+    return { model: { provider: row.provider, id: row.model }, slot: slot.data };
+  }
+
+  /**
    * One offering named the way the captain knows it, through the one
    * model-name lookup (`ModelSlots.nameOf`): its Settings row's name
    * ("Fable 5"), the raw id otherwise. The settle card's model fact reads

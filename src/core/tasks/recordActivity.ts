@@ -470,6 +470,17 @@ export function modelMoveWords(move: { from?: string; to: string; fallback: bool
     : `Moved from ${move.from} to ${move.to}`;
 }
 
+/**
+ * The launch's feed line naming the tasks a quit, restart or update paused,
+ * which carry on by themselves (`CrewSupervisor.announceCarryOn`, INF-1272).
+ */
+export function carryOnWords(tasks: readonly { key: string; title: string }[]): string {
+  const named = tasks.map((task) => `${task.key} “${task.title}”`).join(", ");
+  return tasks.length === 1
+    ? `The app reopened, and 1 task carries on where it stopped: ${named}.`
+    : `The app reopened, and ${tasks.length} tasks carry on where they stopped: ${named}.`;
+}
+
 /** The typed facts of a move to another model, as `recordServedModel` writes them. */
 function modelMoveOf(
   data: Record<string, unknown>,

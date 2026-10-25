@@ -489,7 +489,8 @@ The captain's merge click on a completion card is an approval of that change, an
   Its answer clears it; a 200 merges only when GitHub says `merged`.
   A token that outlived its answer - a quit, a timeout - is read back by the pull request's number before anything is sent again: merged spends the approval and closes the task once, closed ends it, open at the same head runs every gate again.
 - **Ends.**
-  Consumed by the merge; revoked by an interruption (the captain's interrupt = revoke) or the captain's own words through `update_task withdraw_merge`; invalidated by changed work, a closed or swapped pull request, or a changed project, host or delivery; superseded by a new completion card or click; ended with its task.
+  Consumed by the merge; revoked by an interruption (the captain's interrupt = revoke, and the first mate's too: the captain chose in INF-1272 that a stop still ends it) or the captain's own words through `update_task withdraw_merge`; invalidated by changed work, a closed or swapped pull request, or a changed project, host or delivery; superseded by a new completion card or click; ended with its task.
+  A quit, restart or update is no interruption: the approval stands and the next launch runs it again (`SettleService.resumeMergeAuthorizations`), as a computer that runs work's update pause does.
   A revoked or work-changed end `holds` the task's merge for the captain: `autonomyRefusal` refuses a first mate merge whatever the project's autonomy, until the captain's new click.
   Contract 4.66's unversioned `delivery.mergeOrder` names no approved head, so the boot retires it and says so rather than carrying it forward.
 

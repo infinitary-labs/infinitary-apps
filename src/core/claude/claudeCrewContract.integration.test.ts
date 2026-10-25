@@ -125,6 +125,7 @@ function crewmate() {
       system: JSON.stringify(request?.body.system ?? []),
       messages: JSON.stringify(request?.body.messages ?? []),
       tools: (request?.body.tools ?? []).map((tool) => tool.name),
+      model: request?.body.model,
       raw: request?.raw ?? "",
     };
   };
@@ -170,6 +171,10 @@ it("starts a new conversation on the build's own instructions after an upgrade c
   expect(after.id).not.toBe(started.id);
   expect(after.system).toContain(NEW_RULE);
   expect(after.messages).not.toContain("cobalt");
+  // INF-1272: the new conversation has no transcript to restore a model
+  // from, so its first answer is on the model the reopen asked for, never
+  // the client's own default.
+  expect(after.model).toBe(MODEL);
   // The earlier conversation's record stays.
   expect(JSON.stringify(c.store.entries(started.id))).toContain("Remember the word cobalt.");
   // The new conversation resumes on that build from here on.

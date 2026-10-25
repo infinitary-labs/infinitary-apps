@@ -60,7 +60,7 @@ import { isClientIssueReason } from "@shared/claudeClient";
 import { type CrewSpeed, type SpeedSelection, speedNote } from "@shared/crewSpeed";
 import type { CrewSendResult } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
-import { COMPUTER, HERE } from "@shared/deviceNames";
+import { COMPUTER, HERE, HOME } from "@shared/deviceNames";
 import {
   deviceForgeGateReason,
   deviceForgeGateRef,
@@ -342,6 +342,7 @@ import {
   builtOnRows,
   queryTasks,
   type TaskQueryInput,
+  type TaskQueryReach,
   type TaskQueryRow,
 } from "../tasks/taskQuery";
 import { resultRefusal, resultSchemaRefusal } from "../tasks/taskResult";
@@ -11589,7 +11590,37 @@ export class CrewSupervisor {
       (taskId) => this.cards.newestForTask(taskId)?.body,
       (taskId) => this.cards.newestResolutionForTask(taskId),
       (record) => this.workPosture(record),
+      this.taskQueryReach(),
     );
+  }
+
+  /**
+   * What the `tasks` query names beyond the record (INF-1217): a project's
+   * folder, which is always on the computer where the first mate lives, and
+   * the computer a task's crewmate ran on with its evidence folder there,
+   * so a crewmate names a folder instead of searching the disk for it.
+   */
+  taskQueryReach(): TaskQueryReach {
+    return {
+      projectFolder: (repoId) => this.options.repos.get(repoId)?.path,
+      placeOf: (record) => {
+        if (record.status === "open") return undefined;
+        const machine = record.deviceId ?? LOCAL_MACHINE_ID;
+        if (machine === LOCAL_MACHINE_ID) {
+          return {
+            computer: HOME.the,
+            evidence_folder: crewmateEvidenceDir(this.options.paths, record.id),
+          };
+        }
+        const machines = this.options.machines;
+        const evidence = machines?.folders(machine, record.id)?.evidence;
+        const place = machines?.placeOf(machine);
+        const computer = place?.where.startsWith("as ")
+          ? `${place.who}, another user on ${HOME.the}`
+          : (machines?.nameOf(machine) ?? `another ${COMPUTER.one}`);
+        return { computer, ...(evidence ? { evidence_folder: evidence } : {}) };
+      },
+    };
   }
 
   /**

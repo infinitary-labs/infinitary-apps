@@ -35,7 +35,7 @@ import {
   TABS,
   type Tab,
 } from "../place";
-import { askWords } from "../words";
+import { askWords, DIRECTIONS_EVERYWHERE } from "../words";
 
 /**
  * The knowledge browser (docs/knowledge.md, "The browser"; the design
@@ -669,7 +669,7 @@ export default function KnowledgeBrowser({ card, reads, point, view }: PanelProp
               <option value="all">All projects</option>
               {listed.map((option) => (
                 <option key={option.scope} value={option.scope}>
-                  {option.private ? "Everywhere" : option.name}
+                  {option.private ? DIRECTIONS_EVERYWHERE : option.name}
                 </option>
               ))}
             </select>

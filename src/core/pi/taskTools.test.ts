@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
+import { HOME } from "@shared/deviceNames";
 import { describe, expect, it, vi } from "vitest";
 import { CLAUDE_MCP_UNCONDITIONAL_TEXT_CHARACTERS } from "../../../tests/helpers/claudeMcpLimit";
 import { pageTaskField, readPagedTaskQuery } from "../../../tests/helpers/taskQueryText";
 import { renderIntentBrief } from "../orchestrator/intentBrief";
+import { bindTool } from "../session/tools";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
 import { queryTasks, taskResolutionBody } from "../tasks/taskQuery";
@@ -15,6 +17,7 @@ import {
   renderTasksFieldPage,
   renderTasksQueryResult,
   TASK_QUERY_PAGE_CHARACTERS,
+  TASKS_QUERY_TOOL,
   type TaskToolsDelegate,
 } from "./taskTools";
 import { piToolsOf } from "./toolSpec";
@@ -554,4 +557,25 @@ it("leaves fitting reads byte for byte as before, including repeated report text
   } finally {
     db.close();
   }
+});
+
+// INF-1217, direction A: a crewmate asks for project folders instead of
+// searching the whole disk for one, which made macOS ask about other apps' data.
+it("answers project folders, and where they are, when a crewmate asks for projects", async () => {
+  const asked: unknown[] = [];
+  const tool = bindTool(TASKS_QUERY_TOOL, {
+    onQueryTasks: (input) => {
+      asked.push(input);
+      return {
+        rows: [],
+        total: 0,
+        projects: [{ key: "INF", name: "infinitary", folder: "/fleet/infinitary" }],
+      };
+    },
+  });
+  const text = (await tool.run({ projects: true })).text;
+  expect(asked).toEqual([{ projects: true }]);
+  expect(text).toContain(HOME.the);
+  expect(text).toContain('"folder": "/fleet/infinitary"');
+  expect(text).not.toBe("No tasks match.");
 });

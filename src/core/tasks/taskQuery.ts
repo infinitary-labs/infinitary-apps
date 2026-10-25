@@ -31,6 +31,30 @@ export type TaskQueryInput = {
   /** Children of this task (key or id). */
   parent?: string;
   limit?: number;
+  /**
+   * Every project instead of tasks: its key, name and folder on the
+   * computer where the first mate lives (INF-1217), so a crewmate names a
+   * project's folder instead of searching the disk for it.
+   */
+  projects?: boolean;
+};
+
+/** One project as the `projects` read names it. */
+export type TaskQueryProject = { key: string; name: string; folder?: string };
+
+/**
+ * Where a task's crewmate ran, as a by-key read names it (INF-1217): the
+ * computer, and its evidence folder there, so a file on another computer
+ * is a gap to report rather than a search.
+ */
+export type TaskQueryPlace = { computer: string; evidence_folder?: string };
+
+/** What the core's composition supplies beyond the record; each absent says nothing. */
+export type TaskQueryReach = {
+  /** A project's folder on the computer where the first mate lives. */
+  projectFolder?: (repoId: string) => string | undefined;
+  /** Where the task's crewmate ran, once one did. */
+  placeOf?: (record: TaskRecord) => TaskQueryPlace | undefined;
 };
 
 /** Closing metadata keeps distinct bodies; a body equal to the newest card is not repeated. */
@@ -137,6 +161,10 @@ export type TaskQueryRow = {
   pictures?: { name: string; path: string }[];
   live_validation?: LiveValidation;
   validation_assignment?: TaskDelivery["validationAssignment"];
+  /** The computer the task's crewmate ran on (INF-1217). By-key only. */
+  computer?: string;
+  /** Its evidence folder on that computer (INF-1217). By-key only. */
+  evidence_folder?: string;
   updated_at: string;
 };
 
@@ -209,7 +237,9 @@ export function queryTasks(
   resolution: (taskId: string) => CardResolution | undefined = () => undefined,
   /** Each live task's work posture, read as the board reads it; absent says nothing is known. */
   posture: (record: TaskRecord) => WorkPosture | undefined = () => undefined,
-): { rows: TaskQueryRow[]; total: number } {
+  reach: TaskQueryReach = {},
+): { rows: TaskQueryRow[]; total: number; projects?: TaskQueryProject[] } {
+  if (input.projects) return { rows: [], total: 0, projects: projectRows(tasks, reach) };
   const limit = Math.max(
     1,
     Math.min(input.limit ?? TASK_QUERY_DEFAULT_LIMIT, TASK_QUERY_MAX_LIMIT),
@@ -265,6 +295,7 @@ export function queryTasks(
         ...(one && record.delivery?.validationAssignment
           ? { validation_assignment: record.delivery.validationAssignment }
           : {}),
+        ...(one ? (reach.placeOf?.(record) ?? {}) : {}),
       };
     });
   return { rows, total: matched.length };
@@ -373,6 +404,17 @@ function toRow(
     ...(pictures.length > 0 ? { pictures } : {}),
     updated_at: new Date(record.updatedAt).toISOString(),
   };
+}
+
+/** Every project the record keeps, by key, with its folder where it has one. */
+function projectRows(tasks: TaskService, reach: TaskQueryReach): TaskQueryProject[] {
+  return tasks.projects
+    .list()
+    .filter((project) => project.archivedAt === null)
+    .map((project) => {
+      const folder = project.repoId ? reach.projectFolder?.(project.repoId) : undefined;
+      return { key: project.key, name: project.name, ...(folder ? { folder } : {}) };
+    });
 }
 
 /** The task's pictures by name and copy; a saved reference that points nowhere is left out. */

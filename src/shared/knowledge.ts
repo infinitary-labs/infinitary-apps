@@ -317,7 +317,7 @@ export const knowledgeDirectionChangeSchema = z.discriminatedUnion("op", [
     /** A new id of the caller's choosing; the app makes one when it is absent. */
     id: directionChangeIdSchema.optional(),
     text: directionChangeTextSchema,
-    /** `captain` for everywhere, or one project's id. */
+    /** `captain` for everywhere, read by the first mate alone; or one project's id, read by its crewmates too. */
     scope: scopeSchema.optional(),
     reason: directionChangeReasonSchema,
   }),

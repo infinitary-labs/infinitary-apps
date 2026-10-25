@@ -42064,6 +42064,9 @@
                     "type": "integer",
                     "minimum": 1,
                     "maximum": 100
+                  },
+                  "projects": {
+                    "type": "boolean"
                   }
                 }
               }
@@ -42095,6 +42098,27 @@
             "type": "integer",
             "minimum": 0,
             "maximum": 9007199254740991
+          },
+          "projects": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "folder": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "key",
+                "name"
+              ]
+            }
           }
         },
         "required": [

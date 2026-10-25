@@ -1323,7 +1323,11 @@ export class SessionHost {
             const answer = tasksAnswerSchema.parse(
               await this.call(held, "inf:work:tasks", { callId: randomUUID(), input }, signal),
             );
-            return { rows: answer.rows as TaskQueryRow[], total: answer.total };
+            return {
+              rows: answer.rows as TaskQueryRow[],
+              total: answer.total,
+              ...(answer.projects ? { projects: answer.projects } : {}),
+            };
           },
           toolSignal,
         ),

@@ -91,6 +91,8 @@ The captain's verbatim words, constraints, delivery and escalation context are n
 Queued intent tasks render from saved intent at dispatch (escalations retain their host-authored context).
 
 A by-key `tasks` read carries the latest `outcome` and `card`, complete chronological `reports` with event ids, saved timeline `decisions`, the explicit `basis`, and the most recent pinned `brief`.
+It names `computer`, the computer the task's crewmate ran on, and `evidence_folder`, its evidence folder there, so a crewmate reports a file on another computer as a gap instead of searching for it (INF-1217, `docs/macos-privacy.md`).
+A crewmate's `tasks` also takes `projects`: true answers every project's key, name and folder instead of tasks; the first mate's has no such parameter, which keeps it out of the first mate's fixed context.
 It also carries `built_on_by`: every task whose basis names this one, by key or id, open, done or dropped alike, each with its status, closing reason, short outcome and change (`TaskService.builtOn`, INF-976); the host's delivery machinery, such as a review, is not among them.
 Lists carry no bodies.
 A short closure report still replaces the latest outcome but cannot hide earlier full specifications.

@@ -220,7 +220,7 @@ The browser reads seven catalog entries, and the app's other surfaces two more (
 | `knowledge.concepts` | twenty concepts a page, by name or as `query` ranks them, each with its findings counted |
 | `knowledge.findings` | twenty findings a page, newest first or as `query` ranks them, each with its standing, filtered to `recheck` or `differing` |
 | `knowledge.entry` | one entry whole, at its current revision or an earlier one: connections and findings for a concept, kept sources with what they read like now, checks, revisions, disagreements and declared uses |
-| `knowledge.directions` | twenty current standing directions a page for one exact scope, or `all` for Everywhere plus registered projects, instructions before advice and each group newest first, with origin labels |
+| `knowledge.directions` | twenty current standing directions a page for one exact scope, or `all` for "Everywhere, first mate only" plus registered projects, instructions before advice and each group newest first, with origin labels |
 | `knowledge.direction` | one direction with current metadata and twenty Knowledge edits a page, including retired directions by identifier |
 | `knowledge.refs` | the entries among up to 32 ids a card body writes, in the order asked, each with its collection, current revision and standing; an id no collection the window reads holds is left out |
 | `knowledge.uses` | what one task's work declared it used, newest first, each entry and revision once: the revision it used as that revision said it, beside the current one, at most twenty with the total |
@@ -257,7 +257,7 @@ The browser keeps its place on its card while it pages (`card.keep`); Hide lets 
 
 Directions leads the Directions, Graph, Concepts and Findings tabs, not a factual claim in the graph or a search candidate.
 There is one captain-owned graph, with no Collection picker or Older notes.
-Directions lists all registered projects and Everywhere, with a Project filter; removed projects are excluded by identifier, so a same-name replacement cannot inherit their directions.
+Directions lists all registered projects and the captain scope, named "Everywhere, first mate only" because no crewmate reads it, with a Project filter; removed projects are excluded by identifier, so a same-name replacement cannot inherit their directions.
 Find and keyboard navigation remain; the Project filter never changes the graph.
 The inspector shows wording, applicability, origin and lifecycle, plus paged edit history.
 Ask about this drafts a question naming `d:<id>` for the Knowledge tool.

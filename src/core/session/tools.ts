@@ -19,7 +19,7 @@ import type { RecordInput } from "../knowledge/knowledgeService";
 import type { PanelCaptureResult, PanelPlaceResult } from "../personal/personalExtensions";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import type { CardRefusal, CardRefusalReason } from "../storage/taskStore";
-import type { TaskQueryInput, TaskQueryRow } from "../tasks/taskQuery";
+import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
 import type { ReportDeclaration } from "../tasks/taskService";
 
 /**
@@ -341,7 +341,7 @@ export type CrewmateToolDelegate = {
   onQueryTasks?: (
     input: TaskQueryInput,
     signal?: AbortSignal,
-  ) => Awaitable<{ rows: TaskQueryRow[]; total: number }>;
+  ) => Awaitable<{ rows: TaskQueryRow[]; total: number; projects?: TaskQueryProject[] }>;
   /**
    * The live-build checks (talk-to-personalize Step 4), handed only to a
    * crewmate on the personal workspace: the adherence lint over the extension's

@@ -106,6 +106,14 @@ export const KNOWLEDGE_LIMITS = {
 /** The collection Firstmate keeps for the captain alone, beside each project's. */
 export const PRIVATE_SCOPE = "captain";
 
+/**
+ * The captain scope's name where directions are listed (INF-1217): it
+ * applies in every project, and only the first mate reads it, never a
+ * crewmate (`directionVisible`). The Knowledge panel's Project filter
+ * says the same (`src/panels/knowledge/words.ts`).
+ */
+export const CAPTAIN_SCOPE_NAME = "Everywhere, first mate only";
+
 /** Who is asking: the host stamps it from the session, never from the model's words. */
 export type KnowledgeActor =
   | { kind: "firstmate"; origin: KnowledgeOrigin; canCreate: boolean }
@@ -1094,7 +1102,9 @@ export class KnowledgeService {
   }
 
   private directionScopeName(scope: string): string {
-    return scope === PRIVATE_SCOPE ? "Everywhere" : (this.deps.projects.get(scope)?.name ?? scope);
+    return scope === PRIVATE_SCOPE
+      ? CAPTAIN_SCOPE_NAME
+      : (this.deps.projects.get(scope)?.name ?? scope);
   }
 
   /** One concept or finding whole, at its current revision or an earlier one. */

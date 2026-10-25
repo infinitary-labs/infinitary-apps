@@ -1,14 +1,22 @@
+import { HOME } from "@shared/deviceNames";
 import { HOLD_KINDS, isOverridable, type OverridableHold, overrideRefusal } from "@shared/holds";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
 import type { WorkShapeAsk } from "@shared/routingPolicy";
 import type { TaskPolicyEdits } from "@shared/taskPolicies";
-import { Type } from "typebox";
+import { type Static, Type } from "typebox";
 import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief";
-import { bindTool, boundTool, callWithSignal, crewmateTool, stringEnum } from "../session/tools";
+import {
+  bindTool,
+  boundTool,
+  type CrewmateToolDelegate,
+  callWithSignal,
+  crewmateTool,
+  stringEnum,
+} from "../session/tools";
 import type { TaskLinkType } from "../storage/taskLinkStore";
 import type { TaskStartPolicy, TaskStatus } from "../storage/taskStore";
-import type { TaskQueryInput, TaskQueryRow } from "../tasks/taskQuery";
+import type { TaskQueryInput, TaskQueryProject, TaskQueryRow } from "../tasks/taskQuery";
 import { CONSTRAINTS_PARAM, PLACEMENT_REQUIREMENTS_PARAM, RESULT_SCHEMA_PARAM } from "./crewTools";
 
 /**
@@ -86,7 +94,11 @@ export type TaskToolsDelegate = {
   startNow(input: { task: string }): Promise<string>;
   startAgain(input: { task: string }): Promise<string>;
   link(input: { from: string; to: string; type: TaskLinkType; remove?: boolean }): string;
-  query(input: TaskQueryInput): { rows: TaskQueryRow[]; total: number };
+  query(input: TaskQueryInput): {
+    rows: TaskQueryRow[];
+    total: number;
+    projects?: TaskQueryProject[];
+  };
 };
 
 const PRIORITY = Type.Optional(
@@ -563,6 +575,12 @@ function renderOversizedRow(head: string, row: TaskQueryRow): string {
   return render();
 }
 
+/** The projects read as tool text: each project's key, name and folder. */
+export function renderProjectsResult(projects: readonly TaskQueryProject[]): string {
+  if (projects.length === 0) return "No projects.";
+  return `Each project's folder is on ${HOME.the}:\n${JSON.stringify(projects, null, 2)}`;
+}
+
 /** The query result as tool text. A read that fits is unchanged. A longer one pages. */
 export function renderTasksQueryResult(result: { rows: TaskQueryRow[]; total: number }): string {
   if (result.rows.length === 0) return "No tasks match.";
@@ -702,75 +720,106 @@ export function assembleTasksReads(reads: string[]): TaskQueryRow[] {
   });
 }
 
+/** What every `tasks` query takes, the Firstmate's and a crewmate's alike. */
+const TASKS_QUERY_PARAMETERS = {
+  project: Type.Optional(Type.String({ description: "A project key from the tasks index" })),
+  status: Type.Optional(
+    stringEnum(["open", "active", "done", "dropped", "live", "closed"], {
+      description: "live = open, active; closed = done, dropped",
+    }),
+  ),
+  key: Type.Optional(Type.String({ description: "One task by key or id" })),
+  field: Type.Optional(
+    Type.String({
+      description:
+        "On a by-key read, one field to page. A string is its text; any other field is JSON. Applies only with key.",
+    }),
+  ),
+  offset: Type.Optional(
+    Type.Integer({
+      minimum: 1,
+      description:
+        "1-based character offset into that field. Applies only with field. nextOffset continues.",
+    }),
+  ),
+  text: Type.Optional(Type.String({ description: "Substring over title and goal" })),
+  parent: Type.Optional(Type.String({ description: "List the children of this task" })),
+  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
+};
+
+const TASKS_QUERY_OBJECT = Type.Object(TASKS_QUERY_PARAMETERS);
+
+/**
+ * A crewmate's `tasks` query also lists project folders (INF-1217): it has
+ * files to find, which the Firstmate does not, so the Firstmate's fixed
+ * context does not carry the parameter.
+ */
+const PROJECTS_PARAMETER = Type.Optional(Type.Boolean({ description: "List project folders" }));
+
+function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTasks"]>) {
+  return async (
+    params: Static<typeof TASKS_QUERY_OBJECT> & { projects?: boolean },
+    signal?: AbortSignal,
+  ) => {
+    if ((params.field !== undefined || params.offset !== undefined) && !params.key) {
+      return { text: "field and offset apply only with a key." };
+    }
+    if (params.offset !== undefined && !params.field) {
+      return { text: "offset applies only with a field." };
+    }
+    const result = await callWithSignal(
+      onQueryTasks,
+      [
+        {
+          ...(params.project ? { project: params.project } : {}),
+          ...(params.status ? { status: params.status as TaskStatus | "live" | "closed" } : {}),
+          ...(params.key ? { key: params.key } : {}),
+          ...(params.text ? { text: params.text } : {}),
+          ...(params.parent ? { parent: params.parent } : {}),
+          ...(params.limit !== undefined ? { limit: params.limit } : {}),
+          ...(params.projects ? { projects: true } : {}),
+        },
+      ],
+      signal,
+    );
+    if (params.projects) return { text: renderProjectsResult(result.projects ?? []) };
+    if (params.field) {
+      const row = result.rows[0];
+      if (!row) return { text: "No tasks match." };
+      return { text: renderTasksFieldPage(row, params.field, params.offset ?? 1) };
+    }
+    return { text: renderTasksQueryResult(result) };
+  };
+}
+
 /**
  * The `tasks` query, one entry of the crewmate tool spec: every crewmate
  * gets it on either runtime, and the Firstmate's tool set carries the same
- * entry (`createTasksQueryTool`).
+ * entry without the projects parameter (`createTasksQueryTool`).
  */
 export const TASKS_QUERY_TOOL = crewmateTool({
   name: TASKS_QUERY_TOOL_NAME,
   label: "Tasks",
   description: TASKS_QUERY_TOOL_DESCRIPTION,
-  parameters: Type.Object({
-    project: Type.Optional(Type.String({ description: "A project key from the tasks index" })),
-    status: Type.Optional(
-      stringEnum(["open", "active", "done", "dropped", "live", "closed"], {
-        description: "live = open, active; closed = done, dropped",
-      }),
-    ),
-    key: Type.Optional(Type.String({ description: "One task by key or id" })),
-    field: Type.Optional(
-      Type.String({
-        description:
-          "On a by-key read, one field to page. A string is its text; any other field is JSON. Applies only with key.",
-      }),
-    ),
-    offset: Type.Optional(
-      Type.Integer({
-        minimum: 1,
-        description:
-          "1-based character offset into that field. Applies only with field. nextOffset continues.",
-      }),
-    ),
-    text: Type.Optional(Type.String({ description: "Substring over title and goal" })),
-    parent: Type.Optional(Type.String({ description: "List the children of this task" })),
-    limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 100 })),
-  }),
-  bind: ({ onQueryTasks }) =>
-    onQueryTasks &&
-    (async (params, signal) => {
-      if ((params.field !== undefined || params.offset !== undefined) && !params.key) {
-        return { text: "field and offset apply only with a key." };
-      }
-      if (params.offset !== undefined && !params.field) {
-        return { text: "offset applies only with a field." };
-      }
-      const result = await callWithSignal(
-        onQueryTasks,
-        [
-          {
-            ...(params.project ? { project: params.project } : {}),
-            ...(params.status ? { status: params.status as TaskStatus | "live" | "closed" } : {}),
-            ...(params.key ? { key: params.key } : {}),
-            ...(params.text ? { text: params.text } : {}),
-            ...(params.parent ? { parent: params.parent } : {}),
-            ...(params.limit !== undefined ? { limit: params.limit } : {}),
-          },
-        ],
-        signal,
-      );
-      if (params.field) {
-        const row = result.rows[0];
-        if (!row) return { text: "No tasks match." };
-        return { text: renderTasksFieldPage(row, params.field, params.offset ?? 1) };
-      }
-      return { text: renderTasksQueryResult(result) };
-    }),
+  parameters: Type.Object({ ...TASKS_QUERY_PARAMETERS, projects: PROJECTS_PARAMETER }),
+  bind: ({ onQueryTasks }) => onQueryTasks && tasksQueryRun(onQueryTasks),
+});
+
+const FIRSTMATE_TASKS_QUERY_TOOL = crewmateTool({
+  name: TASKS_QUERY_TOOL_NAME,
+  label: "Tasks",
+  description: TASKS_QUERY_TOOL_DESCRIPTION,
+  parameters: TASKS_QUERY_OBJECT,
+  bind: ({ onQueryTasks }) => onQueryTasks && tasksQueryRun(onQueryTasks),
 });
 
 /** The `tasks` query tool as the Firstmate's Pi session holds it. */
 export function createTasksQueryTool(
-  query: (input: TaskQueryInput) => { rows: TaskQueryRow[]; total: number },
+  query: (input: TaskQueryInput) => {
+    rows: TaskQueryRow[];
+    total: number;
+    projects?: TaskQueryProject[];
+  },
 ) {
-  return bindTool(TASKS_QUERY_TOOL, { onQueryTasks: query });
+  return bindTool(FIRSTMATE_TASKS_QUERY_TOOL, { onQueryTasks: query });
 }

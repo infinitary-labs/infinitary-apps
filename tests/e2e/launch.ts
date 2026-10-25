@@ -502,6 +502,10 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       // names its own, so no test listens on this Mac's own network
       // (docs/devices.md, "Macs nearby").
       INFINITARY_DNS_SD: standInDnsSd([]),
+      // The privacy watch reads a log reader that prints nothing and ends
+      // unless the spec names its own, so no test reads this Mac's own
+      // privacy log (docs/macos-privacy.md).
+      INFINITARY_PRIVACY_LOG: "/usr/bin/true",
       INFINITARY_CONNECTION_LOOPBACK_PORT: loopbackPort,
       INFINITARY_VOICE_MODEL_READY: options.voiceModelReady === false ? "0" : "1",
       // macOS's microphone answer is the spec's, never this Mac's own

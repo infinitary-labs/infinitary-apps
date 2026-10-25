@@ -826,7 +826,7 @@ const actionLines = {
     change: "inf:knowledge:direction:set",
     current: "inf:knowledge:directions",
     value: directionValueSchema,
-    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what they want, whatever began the turn: their words, their choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain, or a project id); revise takes id and text; retire takes id; expectedRevision is optional.",
+    line: "Add, revise or retire one of the captain's standing directions on your own judgment of what they want, whatever began the turn: their words, their choice on any card, a click. evidence is the reason its history keeps. add takes text and scope (captain: no crewmate reads it; or a project id); revise takes id and text; retire takes id; expectedRevision is optional.",
     toRequest: (v, _current, _expandHome, evidence) => [{ ...v, reason: evidence }],
     readValue: (current) => {
       const read = current as KnowledgeDirections;

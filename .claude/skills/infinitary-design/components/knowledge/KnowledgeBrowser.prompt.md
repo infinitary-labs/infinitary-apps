@@ -42,7 +42,7 @@ Under the title row, top to bottom:
 - **Its row**, over a `--line-1` hairline: Find, a small input ("Concept, alias or finding", or "Direction") at the right.
   There is one captain-owned graph and no Collection picker or Older notes control.
 - **The tabs**: Directions, Graph, Concepts and Findings, text buttons in `--text-sm` `--fg-2` as a `tablist`; the selected one is `--accent-dim` with an `--accent` border and `--fg-1`. ← → move between them.
-  On Directions, a Project filter at the right offers All projects, Everywhere, and registered projects.
+  On Directions, a Project filter at the right offers All projects, Everywhere, first mate only (the captain scope, which no crewmate reads), and registered projects.
   It filters only directions and leaves the graph unchanged.
 - **The body**: the tab's pane on the left and the inspector on the right, a `--line-1` rule between them; the inspector is 300px wide and both scroll on their own.
 - **The live line** under the body: what the last selection or camera move did, `--text-sm` `--fg-3` (`role="status"`), with no height while empty.
@@ -113,7 +113,7 @@ Keys as Concepts.
 
 ## Directions
 
-Directions is a read-only list across all registered projects plus Everywhere, using the same paged rows, Find, arrow keys and inspector.
+Directions is a read-only list across all registered projects plus the captain scope, using the same paged rows, Find, arrow keys and inspector.
 Its Project filter narrows this list; removed projects stay out, and a same-name replacement never inherits their directions.
 Each row shows the complete direction, its exact project applicability, and whether its recorded origin is the captain or advice from an agent or a crewmate report.
 Neither a direction nor a saved claim grants permission.

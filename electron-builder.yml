@@ -138,6 +138,10 @@ mac:
     # (docs/devices.md, "Macs nearby"). It adds no permission: listing Macs
     # nearby needs no entitlement and no Bonjour service list on macOS.
     NSLocalNetworkUsageDescription: Infinitary lists the computers on your network that have Remote Login on, so you can add one, reaches the computers you added, and lets your phone find this Mac.
+    # The sentence macOS shows when a crewmate's search reaches another
+    # app's data (docs/macos-privacy.md). macOS shows one sentence for every
+    # such question, so it cannot name the task; the task's own record does.
+    NSAppDataUsageDescription: A crewmate's search reached files that another app keeps. Infinitary's work rarely needs them, so Don't Allow is usually fine.
   # Per-arch native trees the universal merge must take as-is instead of
   # lipo-ing. @electron/universal lipo-s Mach-O files that differ across
   # slices; identical copies of a single-arch binary (same path, same SHA

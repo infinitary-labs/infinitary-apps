@@ -590,11 +590,16 @@ export const workRequests = {
         text: z.string().optional(),
         parent: z.string().optional(),
         limit: z.number().int().min(1).max(100).optional(),
+        // Every project and its folder instead of tasks (`project-folders.md`).
+        projects: z.boolean().optional(),
       }),
     }),
     response: z.object({
       rows: z.array(z.record(z.string(), z.unknown())),
       total: z.number().int().nonnegative(),
+      projects: z
+        .array(z.object({ key: z.string(), name: z.string(), folder: z.string().optional() }))
+        .optional(),
     }),
   },
   "inf:work:read-workflow": {

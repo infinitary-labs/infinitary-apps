@@ -54,6 +54,7 @@ Directions are instructions to weigh with the work, not data to search: they nev
 - A crewmate never writes a direction; it reports the captain's words or choice with `needs_firstmate`.
 - Project scope is exact: project directions follow the project identifier, never a matching name, and a removed project's directions do not pass to a same-name replacement.
 - Global directions stay private to the first mate; a crewmate receives only its own project's directions.
+  The captain scope's name says so ("Everywhere, first mate only", `CAPTAIN_SCOPE_NAME`), and so does the first mate's `direction` line, so an instruction meant for crewmates goes in a project's scope (INF-1217).
 
 ## Compositions
 

@@ -550,6 +550,23 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     );
   });
 
+  /**
+   * macOS shows this sentence when a crewmate's search reaches another
+   * app's data (INF-1217: the captain chose "Build A: fewer searches,
+   * explain and record"; docs/macos-privacy.md). Without it macOS shows
+   * only its own words, which never say why Infinitary asks.
+   */
+  it("says in our own words why a search reaches other apps' data, in the release and the local app", () => {
+    const release = loadYamlFile("electron-builder.yml").mac as Record<string, unknown>;
+    const info = release.extendInfo as Record<string, unknown>;
+    expect(info.NSAppDataUsageDescription).toBe(
+      "A crewmate's search reached files that another app keeps. Infinitary's work rarely needs them, so Don't Allow is usually fine.",
+    );
+    expect(mac.extendInfo as Record<string, unknown>).not.toHaveProperty(
+      "NSAppDataUsageDescription",
+    );
+  });
+
   it("signs after the fuse flip rather than in an earlier hook", () => {
     expect(dev.afterPack).toBeUndefined();
     expect(mac.afterPack).toBeUndefined();

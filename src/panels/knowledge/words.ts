@@ -20,6 +20,13 @@ export function collectionName(collection: Pick<PanelKnowledgeCollection, "name"
   return collection.private ? "Private" : collection.name;
 }
 
+/**
+ * The captain scope in the Directions filter (INF-1217): it applies in
+ * every project, and only the first mate reads it, never a crewmate. The
+ * first mate's own list names it the same (`CAPTAIN_SCOPE_NAME`).
+ */
+export const DIRECTIONS_EVERYWHERE = "Everywhere, first mate only";
+
 /** What the collapsed panel says while the collection cannot be read. */
 export const UNREADABLE_SUMMARY = "cannot be read";
 

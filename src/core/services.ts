@@ -188,6 +188,13 @@ import { createMediatedFetch, type MediatedFetch, noNetGrants } from "./plugins/
 import { PluginInstaller } from "./plugins/pluginInstaller";
 import { PluginRecords } from "./plugins/pluginRecords";
 import { ShellPreferencesService } from "./preferences/shellPreferences";
+import {
+  AppDataWatch,
+  runPrivacyLog,
+  SYSTEM_LOG,
+  systemProcessReader,
+  taskOfProcess,
+} from "./privacy/appDataWatch";
 import { quotaEntryForPiProvider } from "./quota/auth";
 import { buildModelsCatalog, effectiveFromProvider } from "./quota/catalog";
 import { managedFromClaudeAuthResult } from "./quota/claudeAuthResolve";
@@ -377,6 +384,12 @@ export type CoreServices = {
   homeAnnouncement: HomeAnnouncement;
   /** The door a phone signed in over SSH asks for a link at; closed at dispose. */
   phoneDoor?: PhoneDoor;
+  /**
+   * The privacy watch on macOS (docs/macos-privacy.md): each "data from
+   * other apps" question a crewmate's search raises, on its task's
+   * timeline; null where there is no privacy log to read.
+   */
+  privacyWatch: AppDataWatch | null;
   /**
    * This Mac's own SSH connection to each computer it added by its address
    * (docs/devices.md, "Through the home's SSH"): the shell starts it once it
@@ -1616,6 +1629,37 @@ export async function createServices(
     );
     return undefined;
   });
+  // The privacy watch: macOS's own log reader, or a development run's
+  // stand-in for it, so a test never reads this Mac's own privacy log
+  // (docs/macos-privacy.md). It finds a task by the working copy its
+  // process works in, among the live tasks this Mac runs.
+  const privacyLogStandIn = host.app.packaged
+    ? undefined
+    : settingFrom(process.env, "PRIVACY_LOG")?.trim();
+  const privacyLog = privacyLogStandIn || (hostPlatform() === "darwin" ? SYSTEM_LOG : undefined);
+  const privacyWatch = privacyLog
+    ? new AppDataWatch({
+        run: runPrivacyLog(privacyLog),
+        self: process.pid,
+        findTask: (pid) =>
+          taskOfProcess(pid, {
+            reader: systemProcessReader,
+            self: process.pid,
+            places: tasks
+              .list()
+              .filter(
+                (record) =>
+                  record.status === "active" &&
+                  !record.deviceId &&
+                  record.workspaceState === "present" &&
+                  Boolean(record.worktreeDir),
+              )
+              .map((record) => ({ taskId: record.id, dir: record.worktreeDir })),
+          }),
+        note: (taskId, text, facts) => tasks.noteProgress(taskId, text, "host", undefined, facts),
+      })
+    : null;
+  privacyWatch?.start();
   // Each computer that runs work signing in to its own subscriptions: what
   // Settings -> Intelligence draws, and what a task there is routed among.
   // A computer's word on its sign-ins reaches the crew once it exists: a
@@ -3152,6 +3196,7 @@ export async function createServices(
     nearbyMacs,
     homeAnnouncement,
     ...(phoneDoor ? { phoneDoor } : {}),
+    privacyWatch,
     sshConnections,
     workDevices,
     computerResources,

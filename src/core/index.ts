@@ -83,6 +83,7 @@ export async function startCore(host: HostCapabilities): Promise<Core> {
       services.nearbyMacs.dispose();
       services.homeAnnouncement.dispose();
       services.phoneDoor?.close();
+      services.privacyWatch?.dispose();
       // A clean quit is not a crash, however early it comes (Step 5).
       services.launchWatch.dispose();
       // Stop the Diagnostics retry and let an event already on the wire finish.

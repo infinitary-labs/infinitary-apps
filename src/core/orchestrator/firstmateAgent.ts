@@ -3277,6 +3277,7 @@ export class FirstmateAgent {
           (taskId) => this.options.supervisor.newestCardBody(taskId),
           (taskId) => this.options.supervisor.newestCardResolution(taskId),
           (record) => this.options.supervisor.workPosture(record),
+          this.options.supervisor.taskQueryReach(),
         ),
     };
   }

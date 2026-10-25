@@ -33,6 +33,7 @@ import {
 import type { ChangePresentation } from "@shared/changePresentation";
 import type { CheckChangeInput } from "@shared/checkRepair";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
+import { HOME } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
 import {
   fixedHoldWords,
@@ -101,7 +102,7 @@ import { hostEnv } from "../hostEnv";
 import { renderReferenceImport } from "../knowledge/context";
 import { KnowledgeService } from "../knowledge/knowledgeService";
 import { initOverflowDir } from "../overflow";
-import { type AppPaths, appPathsFor } from "../paths";
+import { type AppPaths, appPathsFor, crewmateEvidenceDir } from "../paths";
 import { packagedPlanStepLines } from "../personal/sequencesSkill";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
@@ -7857,6 +7858,38 @@ describe("the task graph (R1)", () => {
     } finally {
       protocol.dispose();
     }
+  });
+
+  /**
+   * INF-1217, direction A (the captain chose "Build A: fewer searches,
+   * explain and record"): crewmates searched the whole disk for a project's
+   * folder or another task's files, which made macOS ask about other apps'
+   * data. The `tasks` read names both places instead.
+   */
+  it("names each project's folder, and the computer and evidence folder a task ran with", async () => {
+    const crew = fakeCrewmate();
+    const { supervisor, tasks, specs, repos, paths } = setup(crew);
+    const personal = repos.ensurePersonal(paths.defaultWorkspaceDir);
+    await supervisor.commission({ title: "Find the retained archive", intent: intentOf("find it") });
+    await tick();
+    const ran = tasks.list().find((row) => row.title === "Find the retained archive");
+    if (!ran) throw new Error("The commissioned task is missing");
+    const read = await specs[0]?.onQueryTasks?.({ key: ran.key });
+    expect(read?.rows[0]).toMatchObject({
+      computer: HOME.the,
+      evidence_folder: crewmateEvidenceDir(paths, ran.id),
+    });
+    // A list stays the compact index.
+    const listed = await specs[0]?.onQueryTasks?.({});
+    expect(listed?.rows[0]).not.toHaveProperty("evidence_folder");
+    const project = tasks.projects.list().find((entry) => entry.repoId === personal.id);
+    const projects = await specs[0]?.onQueryTasks?.({ projects: true });
+    expect(projects?.rows).toEqual([]);
+    expect(projects?.projects).toContainEqual({
+      key: project?.key,
+      name: project?.name,
+      folder: personal.path,
+    });
   });
 
   it("delivers an external filing origin as provenance without claiming it is an accepted basis", async () => {

@@ -5,7 +5,13 @@ import { join } from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GRADES_BUDGETS } from "./helpers/budgets";
-import { logTime, PHOTOS_LOG, PHOTOS_STREAM_LOG, photosOpened } from "./helpers/phonePhotos";
+import {
+  logTime,
+  PHOTOS_LOG,
+  PHOTOS_STREAM_LOG,
+  photosOpened,
+  SCHEDULER_ANSWER_BUDGET_MS,
+} from "./helpers/phonePhotos";
 import { scratchDir } from "./helpers/scratchDirs";
 
 const { spawn } = vi.hoisted(() => ({ spawn: vi.fn() }));
@@ -142,5 +148,135 @@ describe("the phone gate's Photos readiness wait (INF-907)", () => {
     expect(run).toHaveBeenCalledTimes(1);
     expect(stream.kill).toHaveBeenCalledTimes(1);
     expect(readFileSync(join(evidence, PHOTOS_STREAM_LOG), "utf8")).toContain(openedLine);
+  });
+});
+
+// Real readings for INF-1170. Run 40057881038's iPad rest part, 9-xcrun.log: Photos' own failure, error 46110.
+const failedLine =
+  "2026-10-24 04:56:15.624 E  assetsd[9726:1bee4] [com.apple.photos.backend:Syndication] Library services operation failed to open syndication library, error: Error Domain=com.apple.photos.error Code=46110 \"Library identifier is already persisted for this URL, existing 'FA103C12-44FE-46EE-B7F3-0F96B2D17780' vs. requested '(null)'\" UserInfo={NSDebugDescription=Library identifier is already persisted for this URL, existing 'FA103C12-44FE-46EE-B7F3-0F96B2D17780' vs. requested '(null)', NSURL=file:///Users/admin/Library/Developer/CoreSimulator/Devices/4B099639-55CB-49F4-A820-A0AA791E742B/data/Library/Photos/Libraries/Syndication.photoslibrary/}";
+// Run 40085697806's iPhone rest part, 9-xcrun.log, the same failure later that day: here, Photos failing again.
+const failedAgainLine =
+  "2026-10-24 11:35:03.515 E  assetsd[10174:1e066] [com.apple.photos.backend:Syndication] Library services operation failed to open syndication library, error: Error Domain=com.apple.photos.error Code=46110 \"Library identifier is already persisted for this URL, existing '8BFE8443-427B-4F7B-A924-D79BC80CA580' vs. requested '(null)'\" UserInfo={NSDebugDescription=Library identifier is already persisted for this URL, existing '8BFE8443-427B-4F7B-A924-D79BC80CA580' vs. requested '(null)', NSURL=file:///Users/admin/Library/Developer/CoreSimulator/Devices/F75D828E-5D9B-441B-A1E9-D599346B30AA/data/Library/Photos/Libraries/Syndication.photoslibrary/}";
+// A fresh iPhone 16 on the Mac mini that failed the same way: its Photos, restarted and asked by the Photos app.
+const reopenedLine =
+  "2026-10-25 00:09:28.591 Df assetsd[81504:2e9fc0f] [com.apple.photos.backend:Syndication] Library services operation opened syndication photo library";
+// A fresh simulator on the Mac mini whose scheduler left Photos' call unanswered for eight minutes, until the
+// scheduler was restarted; Photos opened its library a moment after the restarted scheduler took the call up.
+const stalledAsk =
+  "2026-10-24 23:50:58.022 Df assetsd[46952:2db7e68] [com.apple.photos.backend:Backend] Submitting task request for background migration with identifier com.apple.assetsd.migration.16777233.1434045712";
+const stalledTaken =
+  "2026-10-24 23:59:03.938 Df dasd[81019:2e1bb60] [com.apple.duetactivityscheduler:client] SUBMITTING: com.apple.assetsd.migration.16777233.1434045712:C1C4FD";
+const stalledOpened =
+  "2026-10-24 23:59:04.076 Df assetsd[46952:2db81fc] [com.apple.photos.backend:Syndication] Library services operation opened syndication photo library";
+// The slowest healthy answer seen on the Mac mini: the scheduler took the call up after 16 seconds.
+const slowAsk =
+  "2026-10-25 00:11:30.969 Df assetsd[54710:2ec5bce] [com.apple.photos.backend:Backend] Submitting task request for background migration with identifier com.apple.assetsd.migration.16777233.1434270678";
+const slowTaken =
+  "2026-10-25 00:11:47.361 Df dasd[54560:2eca04b] [com.apple.duetactivityscheduler:client] SUBMITTING: com.apple.assetsd.migration.16777233.1434270678:844727";
+const slowOpened =
+  "2026-10-25 00:11:47.361 Df assetsd[54710:2eca0b6] [com.apple.photos.backend:Syndication] Library services operation opened syndication photo library";
+
+const restartPhotos = [
+  "simctl",
+  "spawn",
+  simulator,
+  "launchctl",
+  "kickstart",
+  "-k",
+  "user/foreground/com.apple.assetsd",
+];
+const restartScheduler = [
+  "simctl",
+  "spawn",
+  simulator,
+  "launchctl",
+  "kickstart",
+  "-k",
+  "user/foreground/com.apple.dasd",
+];
+const launchPhotos = ["simctl", "launch", simulator, "com.apple.mobileslideshow"];
+const quitPhotos = ["simctl", "terminate", simulator, "com.apple.mobileslideshow"];
+
+const waitWith = (evidence: string, run: (command: string, args: string[]) => Promise<string>) =>
+  photosOpened({
+    device: simulator,
+    booting: new Date(),
+    env: {},
+    evidence,
+    children: new Set<ChildProcess>(),
+    run,
+    failureLog,
+  });
+
+const commands = (run: { mock: { calls: unknown[][] } }) =>
+  run.mock.calls.map((call) => call[1] as string[]);
+
+describe("the phone gate's Photos readiness wait tells a failed or stalled Photos from a slow one (INF-1170)", () => {
+  it("restarts Photos once when it fails to open the library, then starts the part once it has", async () => {
+    const evidence = scratchDir("phone-photos-failed-");
+    const stream = startStream();
+    const run = vi.fn(async (_command: string, args: string[]) => {
+      if (args.includes("log")) queueMicrotask(() => stream.stdout.write(`${failedLine}\n`));
+      if (args.includes("launch")) queueMicrotask(() => stream.stdout.write(`${reopenedLine}\n`));
+      return args.includes("log") ? bootQuery : "";
+    });
+    await waitWith(evidence, run);
+    // Photos restarted, the Photos app asked for its libraries, and quit before the part's own app starts.
+    expect(commands(run).slice(1)).toEqual([restartPhotos, launchPhotos, quitPhotos]);
+    expect(readFileSync(join(evidence, PHOTOS_STREAM_LOG), "utf8")).toContain(failedLine);
+  });
+
+  it("ends the part at once when Photos fails again after the gate restarted it", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 9, 24, 4, 56, 20));
+    const evidence = scratchDir("phone-photos-failed-again-");
+    const stream = startStream();
+    const run = vi.fn(async (_command: string, args: string[]) => {
+      if (args.includes("--info")) return "kept log";
+      if (args.includes("log")) queueMicrotask(() => stream.stdout.write(`${failedLine}\n`));
+      if (args.includes("launch"))
+        queueMicrotask(() => stream.stdout.write(`${failedAgainLine}\n`));
+      return args.includes("log") ? bootQuery : "";
+    });
+    await expect(waitWith(evidence, run)).rejects.toThrow(
+      "Photos failed to open its shared-with-you library again after the gate restarted it",
+    );
+    // It kept the simulator's log since boot and restarted Photos only the once.
+    expect(commands(run).filter((args) => args.includes("--info"))).toHaveLength(1);
+    expect(commands(run).filter((args) => args.includes("kickstart"))).toEqual([restartPhotos]);
+    expect(commands(run).at(-1)).toEqual(quitPhotos);
+  });
+
+  it("restarts the scheduler when it leaves Photos' call unanswered past its budget", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const evidence = scratchDir("phone-photos-stalled-");
+    const stream = startStream();
+    const run = vi.fn(async (_command: string, args: string[]) => {
+      if (args.includes("log")) queueMicrotask(() => stream.stdout.write(`${stalledAsk}\n`));
+      if (args.includes("kickstart"))
+        queueMicrotask(() => stream.stdout.write(`${stalledTaken}\n${stalledOpened}\n`));
+      return args.includes("log") ? bootQuery : "";
+    });
+    const waiting = waitWith(evidence, run);
+    await vi.advanceTimersByTimeAsync(SCHEDULER_ANSWER_BUDGET_MS);
+    await waiting;
+    expect(commands(run).slice(1)).toEqual([restartScheduler]);
+  });
+
+  it("waits out a call the scheduler answers within its budget, restarting nothing", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const evidence = scratchDir("phone-photos-slow-");
+    const stream = startStream();
+    const run = vi.fn(async (_command: string, args: string[]) => {
+      if (args.includes("log")) queueMicrotask(() => stream.stdout.write(`${slowAsk}\n`));
+      return bootQuery;
+    });
+    const waiting = waitWith(evidence, run);
+    await vi.advanceTimersByTimeAsync(16_392);
+    stream.stdout.write(`${slowTaken}\n`);
+    await vi.advanceTimersByTimeAsync(SCHEDULER_ANSWER_BUDGET_MS);
+    stream.stdout.write(`${slowOpened}\n`);
+    await waiting;
+    expect(commands(run)).toHaveLength(1);
   });
 });

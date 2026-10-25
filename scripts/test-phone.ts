@@ -231,7 +231,6 @@ const onePart = async () => {
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
   const booting = new Date();
   await run("xcrun", ["simctl", "bootstatus", simulator, "-b"]);
-  await run("xcrun", ["simctl", "addmedia", simulator, join(REPO_ROOT, "release-notes/pictures/activity-settles-setting-runs-light.png")]);
   // Photos opens its libraries while the rest of the part gets ready; the part's tests start once it has.
   const photos = !values.waits && PHONE_PARTS.find((part) => part.name === values.part![0])?.photos
     ? photosOpened({ device: simulator, booting, env, evidence, children, run, failureLog: SIMULATOR_LOG }) : undefined;
@@ -245,6 +244,8 @@ const onePart = async () => {
     "-resultBundlePath", join(evidence, "phone.xcresult")];
   const plan = await planFor(values.xctestrun!, fixture.url);
   await photos;
+  // INF-1170: the part's library photo goes in once Photos is ready, so a restart of Photos never cuts its import short.
+  await run("xcrun", ["simctl", "addmedia", simulator, join(REPO_ROOT, "release-notes/pictures/activity-settles-setting-runs-light.png")]);
   simulatorLog = await observePhoneLog({ device: simulator, env, evidence, children,
     predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})` });
   const testing = new Date();

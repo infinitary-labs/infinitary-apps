@@ -355,7 +355,13 @@ This proof-only selection writes no whole-gate timing sample; an ordinary gate s
 Selected parts, starvation, grading and proof-only selection use the normal or placed runner route; the fixed virtual-Mac switch refuses those options rather than silently dropping them.
 A part that chooses a library photo (`talk` and `rest`) starts its tests only after the simulator's Photos says it has opened its shared-with-you library, because Photos hands over no chosen photo before then.
 With simulators booting side by side that took up to six minutes after boot, so the part waits while its home gets ready, and fails if Photos has not opened it twenty minutes after boot, or fifteen on a graded run.
-The part keeps that wait's own log output in `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs, before deleting the simulator.
+Photos can also fail to open that library, as with error 46110, or wait on a call that the simulator's background-task scheduler never takes up, and then its message never comes.
+The wait reads both in Photos' own log and tells them from a slow start.
+When Photos says it failed, the wait restarts Photos once and opens the Photos app so Photos opens its libraries again, and it ends the part at once if Photos fails again.
+When the scheduler has not taken up a call 30 seconds on the load clock after Photos made it, the wait restarts the scheduler once for that call, and the restarted scheduler takes the call up.
+Neither changes the ceiling after boot.
+The part adds its library photo only once Photos has opened the library, so a restart of Photos never cuts the photo's import short.
+The part keeps that wait's own log output, with Photos' calls and the scheduler's take-ups, in `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs, before deleting the simulator.
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character and task-start recordings with their posters beside the test results.
 The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
 Each retains real speed and holds the final frame for five seconds, within a fifteen-second cap.

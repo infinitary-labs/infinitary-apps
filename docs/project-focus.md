@@ -62,8 +62,10 @@ The hold moves with the focus and the board: the stack reads them as each cards 
 
 ## Opening and closing the row
 
-The pill carries an arrow pointing right, because the row opens to the right (the captain's words on INF-1091).
-A press on the pill, Enter or Space on it, the tail or Focus on a project (⇧⌘P) opens the row: All projects, then a pill per project, each gliding out to the right from where the pill was, its counts a beat after.
+The pill carries an arrow pointing right, because the projects open to the right of All projects (the captain's words on INF-1091, kept on INF-1196).
+A press on the pill, Enter or Space on it, the tail or Focus on a project (⇧⌘P) opens the row: All projects, then a pill per project, its counts a beat after.
+The row is centred on the bar, the same line as the folded pill, and each pill glides out from where the pill was, so the row fans out both ways (the captain's answer on INF-1196).
+A row wider than the bar's room is held 12px inside it.
 The row ends in the same arrow turned back, Close the project row, which folds it again.
 Esc, a press outside the row, the window changing size or losing focus, and a pick fold it too, playing the glide back into the pill.
 A row too wide for the bar's room ends in a +N pill that lists the rest in a menu; the focused project always keeps its pill in the row.

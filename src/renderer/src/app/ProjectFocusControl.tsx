@@ -13,9 +13,10 @@ import { projectFocus, useProjectFocus } from "./projectFocus";
  * components/core/ProjectFocus.prompt.md). At rest one pill sits centred in
  * the bar: All projects, or the focused project's name, with the Tasks
  * panel's waiting and working marks and a right-pointing arrow, because the
- * row opens to the right. Pressing it opens the row: All projects, then one
- * pill per project, gliding out to the right from where the pill was, and
- * at its end the same arrow turned back, which folds the row again. Esc, a
+ * projects open to the right of All projects. Pressing it opens the row,
+ * centred on the bar: All projects, then one pill per project, each gliding
+ * out from where the pill was so the row fans out both ways, and at its end
+ * the same arrow turned back, which folds the row again. Esc, a
  * press outside the row and a pick fold it too.
  *
  * Focused, the pill wears the accent border and a × beside it (Show all
@@ -226,7 +227,8 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
   }, [state.openAsk]);
 
   // Measured once every pill is in the row: how many fit, where the row
-  // sits, and where each pill glides from - the pill it opened out of.
+  // sits (centred on the bar), and where each pill glides from - the pill
+  // it opened out of.
   useLayoutEffect(() => {
     if (phase !== "measuring") return;
     const bar = rootRef.current?.offsetParent;
@@ -256,9 +258,11 @@ export function ProjectFocusControl({ room }: { room: () => BarRoom | null }) {
     }
     const withMore = shown.length < projects.length;
     const rowWidth = total(shown, withMore);
+    // Centred on the bar, the same line as the folded pill, held inside the room.
+    const centred = (bar as HTMLElement).clientWidth / 2 - rowWidth / 2;
     const left = Math.max(
       limits.left + EDGE_PX,
-      Math.min(anchor.current, limits.right - EDGE_PX - rowWidth),
+      Math.min(centred, limits.right - EDGE_PX - rowWidth),
     );
     const from: Record<string, number> = {};
     let x = left;

@@ -65,8 +65,30 @@ it("collects every spec once, isolates app boundaries and serializes voice, pain
     // INF-741: a tile's summary lets go when its window loses focus, which another
     // window can take on Linux's shared screen.
     "task-board.spec.ts",
+    // Its packaged launch ignores the per-test connection-port override.
+    "integrations-google.spec.ts",
   ];
   const applicationFiles = [
+    // INF-1258: the captain asked to move the reviewed recent journeys into parallel.
+    "card-close-flash.spec.ts",
+    "copilot-sign-in.spec.ts",
+    "crew-board-delta.spec.ts",
+    "integrations-inbox.spec.ts",
+    "macos-privacy.spec.ts",
+    "move-task.spec.ts",
+    "panel-header-alignment.spec.ts",
+    "program-grouping.spec.ts",
+    "program-run.spec.ts",
+    "project-focus.spec.ts",
+    "record-pointer.spec.ts",
+    "reply-progress.spec.ts",
+    "row-press-card-appears.spec.ts",
+    "self-merge-note.spec.ts",
+    "task-browser-form-reload.spec.ts",
+    "task-browser-sign-ins.spec.ts",
+    "task-browser-user-agent.spec.ts",
+    "thread-working-reveal.spec.ts",
+    "waiting-crewmate.spec.ts",
     "phase0-guardrails.spec.ts",
     "card-containment.spec.ts",
     "card-effect-gate.spec.ts",

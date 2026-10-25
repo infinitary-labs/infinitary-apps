@@ -68,7 +68,10 @@ Automatic placement (`automatic-placement.spec.ts`) stays in desktop pending the
 Its first two journeys replay captured busy and available CPU counters inside the isolated Electron process, releasing room only after observing the task's CPU wait (`tests/e2e/placementCpu.ts`, `docs/routing.md`).
 No product hook or shared runner setting changes, and the remaining refusal journeys keep live CPU readings.
 The task board (`task-board.spec.ts`) stays in desktop: a tile's summary lets go when its window loses focus, and on Linux's shared screen another journey's window can take that focus.
-`tests/e2e-lanes.test.ts` pins the files named here to desktop.
+Google integrations (`integrations-google.spec.ts`) stays in desktop: its released-build case uses the packaged bootstrap, which ignores the launcher's private connection-port override, so that file has not qualified for sharing.
+The application lane's recent journeys keep their existing assertions and fixtures: Copilot records its own clipboard writes and browser opens; the inbox links only inside scratch space; the privacy journey replays recorded log lines with its own process IDs; the browser journeys keep local sites and private sessions; and the task, card, panel and project journeys keep their own saved data and windows.
+Their keyboard and pointer checks use the launcher's per-page focus, not the operating system's foreground window; none records a real-speed demo or grades paint budgets.
+`tests/e2e-lanes.test.ts` pins these reviewed assignments and the files named here that stay in desktop.
 A full run never stops at its first failure: it reports every failure, later tests still run, and desktop still runs after a failure in the parallel lanes; `tests/e2e-lanes.test.ts` runs the real lanes over fixture specs to hold this.
 
 `INFINITARY_TEST_PROFILE=1` prints per-phase e2e launch timings (`tests/e2e/launch.ts`).

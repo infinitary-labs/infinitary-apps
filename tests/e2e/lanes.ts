@@ -31,6 +31,27 @@ export const RENDERER_SUITES = [
  * host's own load or window focus remain in the desktop lane (docs/testing.md).
  */
 export const APPLICATION_SUITES = [
+  // INF-1258: recent journeys with private fixtures; full Mac/Linux qualification.
+  "card-close-flash.spec.ts",
+  "copilot-sign-in.spec.ts",
+  "crew-board-delta.spec.ts",
+  "integrations-inbox.spec.ts",
+  "macos-privacy.spec.ts",
+  "move-task.spec.ts",
+  "panel-header-alignment.spec.ts",
+  "program-grouping.spec.ts",
+  "program-run.spec.ts",
+  "project-focus.spec.ts",
+  "record-pointer.spec.ts",
+  "reply-progress.spec.ts",
+  "row-press-card-appears.spec.ts",
+  "self-merge-note.spec.ts",
+  "task-browser-form-reload.spec.ts",
+  "task-browser-sign-ins.spec.ts",
+  "task-browser-user-agent.spec.ts",
+  "thread-working-reveal.spec.ts",
+  "waiting-crewmate.spec.ts",
+
   "activity-runs.spec.ts",
   "add-project.spec.ts",
   "agents-reach.spec.ts",

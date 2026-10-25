@@ -71,7 +71,9 @@ case "${1:-}" in
         *) usage ;;
       esac
     done
-    "$TART" exec "$NAME" /bin/bash -lc "/bin/bash '$SHARED/in/phone-job.sh' gate '$SHARED/out' $*"
+    recording=""
+    if [ "${PHONE_RECORDING:-}" = 1 ]; then recording="PHONE_RECORDING=1 "; fi
+    "$TART" exec "$NAME" /bin/bash -lc "${recording}/bin/bash '$SHARED/in/phone-job.sh' gate '$SHARED/out' $*"
     ;;
   delete)
     [ "$#" -eq 1 ] || usage

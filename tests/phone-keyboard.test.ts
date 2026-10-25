@@ -113,6 +113,30 @@ describe("the native chord's backboard registration witness (INF-355)", () => {
     },
   );
 
+  // INF-1066: the scene's registered arrows must use the same event-router witness.
+  // Reuse the captured BackBoard HID readings; the native journey supplies unmodified browsing proof.
+  it("normalizes real arrow registrations without inventing modifier-free readiness", async () => {
+    vi.useFakeTimers();
+    const reader = new PhoneKeyRegistrations();
+    reader.receive(registration);
+    for (const key of ["leftArrow", "rightArrow", "upArrow", "downArrow"]) {
+      await expect(reader.wait(pid, { key, modifiers: ["cmd"] })).resolves.toMatchObject({
+        pid,
+        key,
+        modifiers: ["cmd"],
+      });
+    }
+    await expect(reader.wait(pid, { key: " ", modifiers: ["cmd", "ctrl"] })).resolves.toMatchObject(
+      { pid, key: " " },
+    );
+    const missing = expect(reader.wait(pid, { key: "rightArrow", modifiers: [] })).rejects.toThrow(
+      "No backboard registration",
+    );
+    await vi.runAllTimersAsync();
+    await missing;
+    reader.close();
+  });
+
   it("never uses the wrong modifiers or a previous process's registration", async () => {
     vi.useFakeTimers();
     const reader = new PhoneKeyRegistrations();

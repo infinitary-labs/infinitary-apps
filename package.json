@@ -25,7 +25,7 @@
     "lint": "biome lint . && node scripts/lint-e2e-frames.ts && pnpm lint:adherence",
     "lint:adherence": "eslint --config eslint.adherence.config.mjs --no-config-lookup \"src/renderer/**/*.{ts,tsx}\"",
     "format": "biome format --write .",
-    "check": "biome check . && node scripts/lint-e2e-frames.ts && node scripts/old-names.ts && node scripts/holds.ts && node scripts/limits.ts && node scripts/generate-phone-contract.ts --check && node scripts/generate-phone-theme.ts --check && node scripts/generate-phone-cards.ts --check",
+    "check": "biome check . && node scripts/lint-e2e-frames.ts && node scripts/old-names.ts && node scripts/holds.ts && node scripts/limits.ts && node scripts/generate-phone-contract.ts --check && node scripts/generate-phone-theme.ts --check && node scripts/generate-phone-scene.ts --check && node scripts/generate-phone-cards.ts --check",
     "predev": "node scripts/copy-ort-assets.mjs && node scripts/prepare-local-codesign.mjs",
     "prebuild": "node scripts/refuse-build-during-e2e.ts && node scripts/copy-ort-assets.mjs && node scripts/generate-self-source.mjs && node scripts/release-notes.ts generate --dev --out packaging/generated/release-notes.json",
     "generate:self-source": "node scripts/generate-self-source.mjs",

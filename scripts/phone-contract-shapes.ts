@@ -56,6 +56,9 @@ export function assertPhoneReaderShapes(contract: ReaderContract): void {
   const event = contract.pushes["inf:event"]?.payload;
   const busy = (event?.anyOf ?? event?.oneOf)?.find((part) => part.properties?.type?.const === "firstmate_state");
   requireFields("firstmate_state", busy, { busy: "boolean" });
+  requireFields("inf:conversation:state", contract.requests["inf:conversation:state"]?.response, { busy: "boolean" });
+  requireRows("inf:computers:presence", contract.requests["inf:computers:presence"]?.response, { id: "string", name: "string" });
+  requireRows("inf:computers:presence push", contract.pushes["inf:computers:presence"]?.payload, { id: "string", name: "string" });
   const last = object(contract.requests["inf:conversation:last-turn"]?.response);
   requireFields("last turn", last, { you: "string" });
   requireFields("last reply", last?.properties?.reply, { text: "string" });

@@ -3,7 +3,8 @@ import XCTest
 
 /// INF-589 item 18, approved by the captain: the phone's character greets when the app opens or joins,
 /// and nods when a reply is sent, with the Mac character's own rules (src/renderer/src/character/machine.ts).
-/// Question 6's answer carries only those two emotes. Inputs replay what the phone hears in a real turn:
+/// INF-1066 expands the approved repertoire, retaining greeting, interruption and live-only coverage.
+/// Inputs replay what the phone hears in a real turn:
 /// firstmate_state busy, the first mate's firstmate_emote nod during the turn, then busy ending.
 @MainActor final class PhoneCharacterTests: XCTestCase {
     func testGreetsOnceOnFirstSightAndAgainAfterAJoin() {
@@ -61,16 +62,73 @@ import XCTest
         XCTAssertFalse(machine.request(.nod, now: 3.3), "No emote plays over listening")
     }
 
-    func testOnlyTheNodReachesCharactersOnScreen() {
+    func testEveryApprovedEmoteReachesOnlyCharactersOnScreen() {
         CharacterCues.greetingPending = false
-        let shown = CharacterMotion(), hidden = CharacterMotion()
-        _ = shown.advance(to: 0, state: .idle); _ = hidden.advance(to: 0, state: .idle)
-        CharacterCues.shown.add(shown)
-        defer { CharacterCues.shown.remove(shown) }
-        CharacterCues.reacted("salute")
-        XCTAssertEqual(shown.advance(to: 0.1, state: .idle).mode, .idle, "The phone carries no emote but the nod")
-        CharacterCues.reacted("nod")
-        XCTAssertEqual(shown.advance(to: 0.2, state: .idle).mode, .nod)
-        XCTAssertEqual(hidden.advance(to: 0.2, state: .idle).mode, .idle, "A character off screen does not save the nod for later")
+        for emote in CharacterMachine.Emote.allCases where CharacterMachine.seconds(emote) != nil {
+            let shown = CharacterMotion(), hidden = CharacterMotion()
+            _ = shown.advance(to: 0, state: .idle); _ = hidden.advance(to: 0, state: .idle)
+            CharacterCues.shown.add(shown)
+            CharacterCues.reacted(emote.rawValue)
+            XCTAssertEqual(shown.advance(to: 0.1, state: .idle).mode, emote)
+            XCTAssertEqual(hidden.advance(to: 0.1, state: .idle).mode, .idle, "Off-screen characters save no reactions")
+            CharacterCues.shown.remove(shown)
+        }
+    }
+
+    func testEveryReplyWaitsForTheTurnAndFirstReplyWins() {
+        for emote in CharacterMachine.Emote.allCases where emote.reply {
+            var machine = CharacterMachine(now: 0)
+            machine.setInputs(listening: false, busy: true, now: 0)
+            XCTAssertTrue(machine.request(emote, now: 0.1))
+            XCTAssertFalse(machine.request(emote == .nod ? .tick : .nod, now: 0.2))
+            XCTAssertEqual(machine.update(now: 0.3).mode, .working)
+            machine.setInputs(listening: false, busy: false, now: 1)
+            XCTAssertEqual(machine.update(now: 1).mode, emote)
+            XCTAssertEqual(machine.update(now: 1 + CharacterMachine.seconds(emote)! + 0.01).mode, .idle)
+        }
+    }
+
+    func testNativeRepliesMatchDesktopChoreographyReadings() throws {
+        struct Trace: Decodable { let emote: String; let progress: Double; let frame: CharacterReply }
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "PhoneSceneTraces.generated", withExtension: "json"))
+        let traces = try JSONDecoder().decode([Trace].self, from: Data(contentsOf: url))
+        for trace in traces {
+            let frame = CharacterReply.frame(try XCTUnwrap(CharacterMachine.Mode(rawValue: trace.emote)), trace.progress)
+            let expected = trace.frame
+            for key in [\CharacterReply.pitch, \.spin, \.rot, \.tx, \.ty, \.sx, \.sy, \.lid, \.happy, \.glow] {
+                XCTAssertEqual(frame[keyPath: key], expected[keyPath: key], accuracy: 0.000000001, "\(trace.emote) at \(trace.progress)")
+            }
+            XCTAssertEqual(frame.gaze?.x ?? 0, expected.gaze?.x ?? 0, accuracy: 0.000000001)
+            XCTAssertEqual(frame.gaze?.y ?? 0, expected.gaze?.y ?? 0, accuracy: 0.000000001)
+            XCTAssertEqual(frame.pointer, expected.pointer)
+            XCTAssertEqual(frame.suppressBlink, expected.suppressBlink)
+        }
+    }
+
+    func testFidgetsUseDesktopDurationsAndDoNotRepeatTheLastPick() {
+        for variant in CharacterMachine.Fidget.allCases {
+            var machine = CharacterMachine(now: 0, random: { 0 })
+            XCTAssertTrue(machine.request(.fidget, now: 0, variant: variant))
+            XCTAssertEqual(machine.variant, variant)
+            let duration = CharacterCatalog.shared.fidgets[variant.rawValue]! / 1000
+            XCTAssertEqual(machine.update(now: duration / 2).progress, 0.5, accuracy: 0.000001)
+            XCTAssertEqual(machine.update(now: duration).mode, .idle)
+            _ = machine.update(now: duration + 9)
+            XCTAssertEqual(machine.mode, .fidget)
+            XCTAssertNotEqual(machine.variant, variant)
+        }
+    }
+
+    func testDisplayClockExcludesStoppedTime() {
+        let clock = CharacterDisplayClock()
+        clock.setRunning(true)
+        clock.advance(timestamp: 10); clock.advance(timestamp: 10.01)
+        XCTAssertEqual(clock.now, 0.01, accuracy: 0.000001)
+        clock.setRunning(false)
+        XCTAssertFalse(clock.running)
+        clock.setRunning(true)
+        clock.advance(timestamp: 100); clock.advance(timestamp: 100.02)
+        XCTAssertEqual(clock.now, 0.03, accuracy: 0.000001)
+        clock.setRunning(false)
     }
 }

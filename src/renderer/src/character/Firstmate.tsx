@@ -82,6 +82,7 @@ import { drawReplyGarnish, isReplyEmote, type ReplyFrame, replyFrame } from "./r
 import { drawSaturnOver, drawSaturnUnder, placeSaturnVertices, type SaturnLayout } from "./saturn";
 import { type SkyDots, skyEnvelope } from "./sky";
 import { stageClock, stageNow } from "./stageClock";
+import { FM_STATES, type StateTargets } from "./targets";
 
 // The Firstmate: a 4D tesseract projection of lines and dots with a pair of
 // soft-light eyes in the inner cell - the captain-approved character design
@@ -206,20 +207,6 @@ function pointerMayDirect(
   return true;
 }
 
-type StateTargets = {
-  sa: number;
-  sb: number;
-  pulse: number;
-  glow: number;
-  shimmer: number;
-  breath: number;
-  flat: number;
-  scale: number;
-  lidBase: number;
-  eyeScale: number;
-  jitter: number;
-};
-
 /**
  * What crystalActive asks of the working targets, blended in by the crystal
  * amount: the double rotation stills, the nodes calm, the eyes open a little.
@@ -231,180 +218,6 @@ const CRYSTAL_TARGETS: Partial<StateTargets> = {
   shimmer: 0,
   lidBase: 0.12,
   eyeScale: 1.05,
-};
-
-const FM_STATES: Record<FirstmateState, StateTargets> = {
-  idle: {
-    sa: 0.05,
-    sb: 0.03,
-    pulse: 0.05,
-    glow: 0.35,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1,
-    lidBase: 0,
-    eyeScale: 1,
-    jitter: 0,
-  },
-  listening: {
-    sa: 0.015,
-    sb: 0.01,
-    pulse: 0.5,
-    glow: 1,
-    shimmer: 0,
-    breath: 0.09,
-    flat: 1,
-    scale: 1,
-    lidBase: 0,
-    eyeScale: 1.22,
-    jitter: 0,
-  },
-  working: {
-    sa: 1.15,
-    sb: 0.78,
-    pulse: 0.9,
-    glow: 1,
-    shimmer: 0.5,
-    breath: 0,
-    flat: 0,
-    scale: 1,
-    lidBase: 0.32,
-    eyeScale: 0.95,
-    jitter: 0,
-  },
-  greet: {
-    sa: 0.05,
-    sb: 0.04,
-    pulse: 0.1,
-    glow: 0.8,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1.06,
-    lidBase: 0,
-    eyeScale: 1.1,
-    jitter: 0,
-  },
-  celebrate: {
-    sa: 0.9,
-    sb: 0.6,
-    pulse: 0.8,
-    glow: 1,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1.1,
-    lidBase: 0,
-    eyeScale: 1.1,
-    jitter: 0,
-  },
-  ponder: {
-    sa: 0.05,
-    sb: 0.16,
-    pulse: 0.1,
-    glow: 0.5,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1,
-    lidBase: 0.28,
-    eyeScale: 1,
-    jitter: 0,
-  },
-  confused: {
-    sa: 0,
-    sb: 0,
-    pulse: 0.2,
-    glow: 0.6,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1,
-    lidBase: 0.1,
-    eyeScale: 1,
-    jitter: 1,
-  },
-  fidget: {
-    sa: 0.09,
-    sb: 0.06,
-    pulse: 0.1,
-    glow: 0.5,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1,
-    lidBase: 0,
-    eyeScale: 1,
-    jitter: 0,
-  },
-  // Reply emotes (./replies): the spin all but stops so the gesture reads,
-  // the way a person pauses to nod.
-  salute: {
-    sa: 0.04,
-    sb: 0.03,
-    pulse: 0.25,
-    glow: 0.7,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1.02,
-    lidBase: 0,
-    eyeScale: 1.14,
-    jitter: 0,
-  },
-  nod: {
-    sa: 0.04,
-    sb: 0.03,
-    pulse: 0.1,
-    glow: 0.6,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1.02,
-    lidBase: 0,
-    eyeScale: 1.06,
-    jitter: 0,
-  },
-  tick: {
-    sa: 0.05,
-    sb: 0.04,
-    pulse: 0.1,
-    glow: 0.6,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1,
-    lidBase: 0,
-    eyeScale: 1.06,
-    jitter: 0,
-  },
-  tuck: {
-    sa: 0.05,
-    sb: 0.04,
-    pulse: 0.15,
-    glow: 0.55,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 1,
-    lidBase: 0,
-    eyeScale: 1.1,
-    jitter: 0,
-  },
-  aww: {
-    sa: 0.03,
-    sb: 0.02,
-    pulse: 0.05,
-    glow: 0.75,
-    shimmer: 0,
-    breath: 0,
-    flat: 0,
-    scale: 0.98,
-    lidBase: 0,
-    eyeScale: 1.05,
-    jitter: 0,
-  },
 };
 
 type Rgb = [number, number, number];

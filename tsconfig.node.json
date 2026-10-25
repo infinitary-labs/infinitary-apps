@@ -64,6 +64,13 @@
     "src/renderer/src/settings/reasoningWords.ts",
     "src/renderer/src/settings/levelDrops.ts",
     "src/renderer/src/character/crew/orbitalPlanes.ts",
+    // The native scene generator consumes desktop geometry and motion without React.
+    "src/renderer/src/character/targets.ts",
+    "src/renderer/src/character/flicker.ts",
+    "src/renderer/src/character/crew/crewmate.ts",
+    "src/renderer/src/character/crew/constellation.ts",
+    "src/renderer/src/character/crew/orbit.ts",
+    "src/renderer/src/character/crew/satellites.ts",
     "src/renderer/src/character/crew/stateWords.ts",
     "src/renderer/src/character/crew/programWords.ts",
     // The built-in manifest is pure data; the side-rails e2e reads the

@@ -32,7 +32,10 @@ import XCTest
     request.timeoutInterval = 40
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     let names: [(XCUIElement.KeyModifierFlags, String)] = [(.command, "cmd"), (.shift, "shft"), (.option, "opt"), (.control, "ctrl")]
-    let canonicalKey = key == XCUIKeyboardKey.return.rawValue ? "\r" : key
+    let specialKeys = [XCUIKeyboardKey.return.rawValue: "\r", XCUIKeyboardKey.tab.rawValue: "\t",
+                       XCUIKeyboardKey.leftArrow.rawValue: "leftArrow", XCUIKeyboardKey.rightArrow.rawValue: "rightArrow",
+                       XCUIKeyboardKey.upArrow.rawValue: "upArrow", XCUIKeyboardKey.downArrow.rawValue: "downArrow"]
+    let canonicalKey = specialKeys[key] ?? key
     let modifierNames = names.filter { modifiers.contains($0.0) }.map { $0.1 }
     request.httpBody = try JSONSerialization.data(withJSONObject: [
         "key": canonicalKey, "modifiers": modifierNames
@@ -54,5 +57,5 @@ import XCTest
     // Xcode 26.4's typist generates no HID event for the Return constant (CR).
     // LF generates the actual Return key (usage page 7, code 0x28), routed as CR by backboardd.
     // Keep CR for the registration witness; send that physical key exactly once.
-    app.typeKey(canonicalKey == "\r" ? "\n" : key, modifierFlags: modifiers)
+    app.typeKey(canonicalKey == "\r" ? "\n" : canonicalKey == "\t" ? "\t" : key, modifierFlags: modifiers)
 }

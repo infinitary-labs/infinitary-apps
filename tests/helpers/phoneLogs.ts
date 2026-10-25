@@ -1,6 +1,7 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import { createWriteStream } from "node:fs";
 import { join } from "node:path";
+import { createInterface } from "node:readline";
 import { budgetTimer } from "./budgets.ts";
 
 /** INF-1122: keep the owned simulator's log before XCTest can tear its domain down.
@@ -14,12 +15,14 @@ export async function observePhoneLog({
   evidence,
   children,
   predicate,
+  onLine,
 }: {
   device: string;
   env: NodeJS.ProcessEnv;
   evidence: string;
   children: Set<ChildProcess>;
   predicate: string;
+  onLine?: (line: string) => void;
 }): Promise<{ close(): Promise<void> }> {
   const output = createWriteStream(join(evidence, "simulator-live.log"));
   const child = spawn(
@@ -40,6 +43,8 @@ export async function observePhoneLog({
     { env, stdio: ["ignore", "pipe", "pipe"] },
   );
   children.add(child);
+  const lines = onLine ? createInterface({ input: child.stdout }) : undefined;
+  if (onLine) lines?.on("line", onLine);
   let stopped = false;
   const exited = new Promise<void>((resolve) =>
     child.once("close", () => {
@@ -57,6 +62,7 @@ export async function observePhoneLog({
   const close = async () => {
     if (!stopped) child.kill("SIGTERM");
     await exited;
+    lines?.close();
     await written;
   };
   try {

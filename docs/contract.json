@@ -819,6 +819,25 @@
         ]
       }
     },
+    "inf:conversation:state": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "object",
+        "properties": {
+          "busy": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "busy"
+        ]
+      }
+    },
     "inf:conversation:last-turn": {
       "effect": "read",
       "reach": "views",
@@ -2062,6 +2081,40 @@
           "path",
           "custom"
         ]
+      }
+    },
+    "inf:computers:presence": {
+      "effect": "read",
+      "reach": "views",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[^\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]+$"
+            },
+            "inReach": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
       }
     },
     "inf:computers:resources": {
@@ -56097,6 +56150,34 @@
           "fileCount",
           "fraction"
         ]
+      }
+    },
+    "inf:computers:presence": {
+      "payload": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 64,
+              "pattern": "^[^\\p{Cc}\\p{Cf}\\p{Zl}\\p{Zp}]+$"
+            },
+            "inReach": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name"
+          ]
+        }
       }
     },
     "inf:devices": {

@@ -98,6 +98,7 @@ const NODE = `#!/bin/bash
 state="$TART_STAND_IN"
 evidence="\${@: -1}"
 echo "$PWD $*" >> "$state/gates"
+printf '%s\\n' "\${PHONE_RECORDING:-}" >> "$state/recordings"
 devices=iphone
 [ "$2" = --ipad ] && devices=ipad
 [ "$2" = --both ] && devices="iphone ipad"
@@ -118,7 +119,7 @@ const PNPM = `#!/bin/bash
 echo "$PWD $* $(cat package.json)" >> "$TART_STAND_IN/installs"
 `;
 
-function fixture() {
+function fixture(recording = false) {
   const root = scratchDir("infinitary-virtual-phone-");
   const state = join(root, "tart");
   const bin = join(state, "vms", IMAGE, "home", "node", "bin");
@@ -139,6 +140,7 @@ function fixture() {
     ...hostEnv(),
     TART: join(root, "tart.sh"),
     TART_STAND_IN: state,
+    PHONE_RECORDING: recording ? "1" : "",
     RUNNER_TEMP: join(root, "runner temp"),
     GIT_AUTHOR_NAME: "t",
     GIT_AUTHOR_EMAIL: "t@example.com",
@@ -188,6 +190,21 @@ function fixture() {
 }
 
 describe.skipIf(process.platform === "win32")("the phone check in a virtual Mac", () => {
+  // INF-1066: opt-in simulator evidence reaches the same isolated launcher on either CI route.
+  it.each([false, true])("passes recording=%s into the actual guest command", async (recording) => {
+    const f = fixture(recording);
+    try {
+      await f.commit();
+      const start = await f.phone("start", f.results);
+      expect(start.code, start.stdout).toBe(0);
+      const gate = await f.phone("gate", "iphone", "ipad");
+      expect(gate.code, gate.stdout).toBe(0);
+      expect(f.read("recordings")).toBe(recording ? "1\n" : "\n");
+      expect((await f.phone("delete")).code).toBe(0);
+    } finally {
+      f.close();
+    }
+  });
   it("runs each device in a fresh clone of the lane's image, returns its results and deletes the clone", async () => {
     const f = fixture();
     try {

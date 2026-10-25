@@ -486,6 +486,7 @@ import XCTest
     func testCharacterAndPastChoices() async throws {
         try await launchJoined()
         try await verifyConversationCharacter()
+        try await verifyNativeCrewScene()
         try await verifyReviewedCardChoices()
         try await verifyPastMessageContext()
     }
@@ -506,12 +507,159 @@ import XCTest
         app.buttons["send-message"].tap()
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'working'"), object: character, timeout: 20), .completed)
         picture("character-working")
+        _ = try await home("capture-stop")
+        try await verifySceneContact()
         let finished = try await home("character-finished")
         XCTAssertEqual(finished["busy"] as? Bool, false)
         XCTAssertEqual(finished["held"] as? Int, 0)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'idle'"), object: character, timeout: 20), .completed)
         picture("character-finished")
         _ = try await home("capture-stop")
+        try await background()
+        _ = try await home("scene-current-home")
+        app.activate()
+        reach("In reach", timeout: 20)
+        let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 'idle'"), object: character)
+        await fulfillment(of: [restored], timeout: 20)
+    }
+
+    /// INF-1066: an already-running real turn survives a relaunch via its initial snapshot;
+    /// an older home sends no unsupported reads and reports unknown until a real activity event.
+    private func verifySceneContact() async throws {
+        app.terminate()
+        try await launchPhoneApp(app)
+        reach("In reach", timeout: 20)
+        let character = app.otherElements["phone-character"]
+        let initialBusy = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 'working'"), object: character)
+        await fulfillment(of: [initialBusy], timeout: 20)
+        picture("native-scene-initial-busy")
+
+        try await background()
+        _ = try await home("scene-older-home")
+        app.activate()
+        reach("In reach", timeout: 20)
+        XCTAssertEqual(character.value as? String, "Activity unknown")
+        let legacy = try await home("scene-observations")
+        XCTAssertEqual(legacy["reads"] as? Int, 0, "An older home receives neither new read")
+        picture("native-scene-older-home-unknown")
+        // The caller finishes this same real held turn and verifies its live idle event before restoring the current home.
+    }
+
+    /// INF-1066: actual task records and a paired absent helper supply the desktop-sized scene.
+    /// The journey pans by touch, reads richer previews and opens the existing record; both simulator sizes run it.
+    /// Its home, model stand-in and recording are disposable. No real sign-in, signing or device is used.
+    private func verifyNativeCrewScene() async throws {
+        let fixture = try await home("scene-fixture")
+        let scene = app.scrollViews["crew-scene"]
+        XCTAssertTrue(scene.waitForExistence(timeout: 10))
+        let firstID = try XCTUnwrap((fixture["ordinary"] as? [String])?.first)
+        let remoteID = try XCTUnwrap(fixture["remote"] as? String)
+        let local = app.buttons["crew-task-" + firstID], remote = app.buttons["crew-task-" + remoteID]
+        XCTAssertTrue(local.waitForExistence(timeout: 10))
+        let character = app.otherElements["phone-character"]
+        let centered = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+            abs(character.frame.midX - scene.frame.midX) < 1 && abs(character.frame.midY - scene.frame.midY) < 1
+        }, object: nil)
+        await fulfillment(of: [centered], timeout: 10)
+        picture("native-scene-crew-home")
+        try await verifyCrewKeyboard(scene, character: character)
+        _ = try await home("capture-scene-start")
+        revealCrew(local, in: scene)
+        local.tap()
+        XCTAssertTrue(app.otherElements["crew-preview"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Check harbour marker 1"].exists)
+        picture("native-scene-task-preview")
+        app.buttons["close-crew-preview"].tap()
+        // A different computer remains a formation beside home, never a pager or a smaller version of every glyph.
+        revealCrew(remote, in: scene)
+        XCTAssertEqual(remote.value as? String, "Activity unknown")
+        picture("native-scene-remote-formation")
+        _ = try await home("capture-stop")
+        remote.tap()
+        XCTAssertTrue(app.staticTexts["Read the offshore chart"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Scene Mac"].exists)
+        picture("native-scene-remote-preview")
+        app.buttons["open-crew-task"].tap()
+        XCTAssertTrue(app.staticTexts["task-record-title"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["task-record-title"].label, "Read the offshore chart")
+        picture("native-scene-existing-task-record")
+        app.buttons["close-record"].tap()
+        let computerID = try XCTUnwrap(fixture["computer"] as? String), programID = try XCTUnwrap(fixture["program"] as? String)
+        let mark = app.buttons["crew-task-" + computerID + ":" + programID]
+        revealCrew(mark, in: scene)
+        // INF-1066: the whole 44-point square answers touch, so a tap near its corner, outside the drawn circle, opens it.
+        XCTAssertGreaterThanOrEqual(mark.frame.width + 0.001, 44); XCTAssertGreaterThanOrEqual(mark.frame.height + 0.001, 44)
+        mark.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
+        XCTAssertTrue(app.staticTexts["crew-program-counts"].waitForExistence(timeout: 10))
+        XCTAssertEqual(app.staticTexts["crew-program-counts"].label, try XCTUnwrap(fixture["programWords"] as? String))
+        picture("native-scene-program-preview")
+        app.buttons["close-crew-preview"].tap()
+        _ = try await home("scene-stage-finished")
+        let noParts = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 'Program, 0 running parts'"), object: mark)
+        await fulfillment(of: [noParts], timeout: 10)
+        picture("native-scene-between-program-stages")
+        _ = try await home("scene-cleanup")
+        XCTAssertTrue(remote.waitForNonExistence(timeout: 10), "A departed task must leave the scene and its touch targets")
+    }
+
+    /// INF-1066 and the project's keyboard rule: browse the same live scene without touching it.
+    /// The two simulator sizes own their home and keyboard; success is visible displacement and a real preview.
+    private func verifyCrewKeyboard(_ scene: XCUIElement, character: XCUIElement) async throws {
+        _ = try await home("capture-scene-keyboard-start")
+        // INF-1066: the captain chose visible-result proof for these unmodified keys.
+        // Command-Shift-C still needs BackBoard's exact-chord/current-process witness.
+        func pressBrowsingKey(_ key: String) throws {
+            guard waitForPhonePredicate(NSPredicate(format: "value == 'Browsing crew'"), object: scene, timeout: 10) == .completed else {
+                XCTFail("The browsing key was not sent: the scene is not browsing")
+                throw NSError(domain: "PhoneKeyboard", code: 4, userInfo: [NSLocalizedDescriptionKey: "Crew browsing is not active"])
+            }
+            // One actual input, no registration wait, native-focus assumption or retry.
+            app.typeKey(key == XCUIKeyboardKey.tab.rawValue ? "\t" : key, modifierFlags: [])
+        }
+        try await pressPhoneKey("c", modifiers: [.command, .shift], in: app)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'Browsing crew'"), object: scene, timeout: 10), .completed,
+                       "Browse crew enters the app's browsing mode")
+        let originalX = character.frame.midX
+        try pressBrowsingKey(XCUIKeyboardKey.rightArrow.rawValue)
+        let panResult = waitForPhonePredicate(NSPredicate { _, _ in character.frame.midX < originalX - 1 }, object: nil, timeout: 10)
+        XCTAssertEqual(panResult, .completed, "Right pans the actual scene")
+        picture("native-scene-keyboard-pan")
+        try pressBrowsingKey(XCUIKeyboardKey.leftArrow.rawValue)
+        let returnResult = waitForPhonePredicate(NSPredicate { _, _ in abs(character.frame.midX - originalX) < 1 }, object: nil, timeout: 10)
+        XCTAssertEqual(returnResult, .completed, "Left returns to the same world point")
+        try pressBrowsingKey(XCUIKeyboardKey.tab.rawValue)
+        let selectedCrew = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'crew-task-' AND value BEGINSWITH 'Selected, '")).firstMatch
+        XCTAssertTrue(selectedCrew.waitForPresence(timeout: 10), "Tab reaches a real crewmate")
+        XCTAssertTrue(selectedCrew.isHittable, "The selected crewmate is visible in the panned scene")
+        let selectedWords = selectedCrew.label.components(separatedBy: ", ")
+        let selectedKey = try XCTUnwrap(selectedWords.first)
+        let selectedTitle = selectedWords.dropFirst().joined(separator: ", ")
+        picture("native-scene-keyboard-crew-selection")
+        try pressBrowsingKey(" ")
+        let preview = app.otherElements["crew-preview"]
+        XCTAssertTrue(preview.waitForPresence(timeout: 10), "Space opens that crewmate's preview")
+        XCTAssertTrue(preview.staticTexts[selectedKey].exists)
+        XCTAssertTrue(preview.staticTexts[selectedTitle].exists, "The preview belongs to the crewmate selected by Tab")
+        picture("native-scene-keyboard-preview")
+        _ = try await home("capture-stop")
+        app.buttons["close-crew-preview"].tap()
+    }
+
+    /// INF-1066: each touch drag moves the scene by the target's current distance from the viewport's center,
+    /// read from both frames before the gesture, then holds so no momentum carries it past the target.
+    private func revealCrew(_ element: XCUIElement, in scene: XCUIElement) {
+        for _ in 0..<8 {
+            if element.isHittable { return }
+            let viewport = scene.frame, target = element.frame
+            // A finger drags content the opposite way the viewport travels; stay inside the viewport's inner area.
+            let reach = CGVector(dx: viewport.width * 0.4, dy: viewport.height * 0.4)
+            let dx = max(-reach.dx, min(reach.dx, viewport.midX - target.midX))
+            let dy = max(-reach.dy, min(reach.dy, viewport.midY - target.midY))
+            let start = scene.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            let end = start.withOffset(CGVector(dx: dx, dy: dy))
+            start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
+        }
+        XCTAssertTrue(element.isHittable, "Continuous panning must reach every visible crewmate")
     }
 
     /// INF-64 piece 4: a phone answers at the real home, not a local stand-in; opaque scripts cannot gain native effects.

@@ -28,9 +28,14 @@ public struct PhoneNotice: Equatable, Sendable {
     @ObservationIgnored private var threadRevisions: [String: Int] = [:]
     public private(set) var board: PhoneBoard?
     public private(set) var lastTurn: PhoneLastTurn?
-    /// Only the Mac's firstmate_state event establishes an active conversational turn.
-    /// The contract has no initial busy snapshot and no phone dictation/listening signal.
+    /// Only the home's busy snapshot or numbered firstmate_state event establishes a conversational turn.
+    /// An older home keeps event-only activity; there is still no phone dictation/listening signal.
     public private(set) var firstmateBusy = false
+    public private(set) var firstmateObserved = false
+    public private(set) var computers: [PhoneComputerPresence] = []
+    /// Every welcome settles its initial roster rather than replaying arrivals or packets.
+    public private(set) var sceneGeneration = 0
+    @ObservationIgnored private var sceneObservations = false
     public private(set) var workRevision = 0
     public private(set) var access = "read"
     public var notice: PhoneNotice?
@@ -57,6 +62,7 @@ public struct PhoneNotice: Equatable, Sendable {
     public var onRemoved: (() -> Void)?
     /// The Mac's first mate reacted (a firstmate_emote), heard live; a replay on reconnect is not a reaction now.
     public var onEmote: ((String) -> Void)?
+    public var onSceneSignal: ((PhoneSceneSignal) -> Void)?
     @ObservationIgnored private let phone: PhoneIdentity
     @ObservationIgnored private var loop: Task<Void, Never>?
     @ObservationIgnored private var socket: URLSessionWebSocketTask?
@@ -82,7 +88,10 @@ public struct PhoneNotice: Equatable, Sendable {
     /// How many times contact became in-reach, and the card reads waiting for the next time.
     @ObservationIgnored private var reaches = 0
     @ObservationIgnored private var reachWaiters: [UUID: CheckedContinuation<Void, Error>] = [:]
-    private let initialReads = [PhoneContract.cards, PhoneContract.feed, PhoneRequest.board.rawValue, PhoneRequest.lastTurn.rawValue]
+    private var initialReads: [String] {
+        [PhoneContract.cards, PhoneContract.feed, PhoneRequest.board.rawValue, PhoneRequest.lastTurn.rawValue]
+            + (sceneObservations ? [PhoneRequest.conversationState.rawValue, PhoneRequest.computers.rawValue] : [])
+    }
 
     /// No write is queued or retried. A lost reply is explicitly an unknown outcome.
     public func request<T: Decodable & Sendable>(_ channel: PhoneRequest, args: [Any] = [], as: T.Type = T.self) async throws -> T {
@@ -179,7 +188,8 @@ public struct PhoneNotice: Equatable, Sendable {
     private func failCalls() { for id in Array(calls.keys) { failCall(id) } }
 
     private func clearContent() {
-        cards = []; activity = []; board = nil; lastTurn = nil; notice = nil; firstmateBusy = false
+        computers = []
+        cards = []; activity = []; board = nil; lastTurn = nil; notice = nil; firstmateBusy = false; firstmateObserved = false
         threads = [:]; pastCards = []; showCardID = nil; threadRevisions = [:]; seenCards = []
         notified = [:]; awaited = []; primed = false; workRevision += 1
         wakeReachWaiters()
@@ -224,7 +234,7 @@ public struct PhoneNotice: Equatable, Sendable {
         generation += 1
         loop?.cancel(); loop = nil
         finishLeave(PhoneError.unavailable)
-        failCalls(); notice = nil; access = "read"; firstmateBusy = false
+        failCalls(); notice = nil; access = "read"; firstmateBusy = false; firstmateObserved = false
         socket?.cancel(with: .goingAway, reason: nil); socket = nil
         transport?.close(); transport = nil
         contact = "lost"
@@ -275,7 +285,7 @@ public struct PhoneNotice: Equatable, Sendable {
                     connection = socket; self.socket = socket
                     failCalls()
                     pending.removeAll(); waitingSince.removeAll(); dirty.removeAll(); ready.removeAll()
-                    access = "read"; firstmateBusy = false
+                    access = "read"; firstmateBusy = false; firstmateObserved = false
                     contact = heardAt == nil ? "reaching" : "lost"
                     var hello: [String: Any] = ["t": "hello", "protocolVersion": PhoneContract.version,
                         "as": "view", "system": "ios", "spellings": ["inf"], "appVersion": "0.1.0"]
@@ -348,7 +358,7 @@ public struct PhoneNotice: Equatable, Sendable {
                         }
                     }
                 }
-                failCalls(); firstmateBusy = false
+                failCalls(); firstmateBusy = false; firstmateObserved = false
                 transport.close()
                 guard current == generation else { return }
                 self.socket = nil; self.transport = nil
@@ -384,6 +394,9 @@ public struct PhoneNotice: Equatable, Sendable {
                     mac.addresses = refreshed; onMacChanged?(mac)
                 }
             }
+            sceneObservations = (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
+            if !sceneObservations { computers = [] }
+            sceneGeneration += 1
             contact = "reaching"
             for channel in initialReads {
                 guard self.socket === socket, !Task.isCancelled else { return }
@@ -403,6 +416,10 @@ public struct PhoneNotice: Equatable, Sendable {
                 observeCards(cards)
                 supersede(PhoneContract.cards)
             }
+            if frame["channel"] as? String == "inf:computers:presence", let payload = frame["payload"], sceneObservations {
+                computers = try JSONDecoder().decode([PhoneComputerPresence].self, from: JSONSerialization.data(withJSONObject: payload))
+                supersede(PhoneRequest.computers.rawValue)
+            }
             if frame["channel"] as? String == "inf:tasks", let payload = frame["payload"] {
                 board = try JSONDecoder().decode(PhoneBoard.self, from: JSONSerialization.data(withJSONObject: payload))
                 supersede(PhoneRequest.board.rawValue); workRevision += 1
@@ -412,7 +429,11 @@ public struct PhoneNotice: Equatable, Sendable {
                 try await refresh(PhoneRequest.board.rawValue, on: socket)
             }
             if frame["channel"] as? String == "inf:event", let event = frame["payload"] as? [String: Any], let type = event["type"] as? String {
-                if type == "firstmate_state", let busy = event["busy"] as? Bool { firstmateBusy = busy }
+                if type == "firstmate_state", let busy = event["busy"] as? Bool {
+                    firstmateBusy = busy; firstmateObserved = true
+                    if sceneObservations { supersede(PhoneRequest.conversationState.rawValue) }
+                }
+                if contact == "in-reach", let signal = PhoneSceneSignal.read(event) { onSceneSignal?(signal) }
                 if type == "firstmate_emote", contact == "in-reach", let emote = event["emote"] as? String { onEmote?(emote) }
                 if type == "user_turn" || type == "firstmate_reply" {
                     try await refresh(PhoneRequest.lastTurn.rawValue, on: socket)
@@ -461,6 +482,10 @@ public struct PhoneNotice: Equatable, Sendable {
             case PhoneContract.cards: cards = try JSONDecoder().decode([PhoneCard].self, from: bytes); observeCards(cards)
             case PhoneContract.feed: activity = try JSONDecoder().decode([ActivityLine].self, from: bytes)
             case PhoneRequest.board.rawValue: board = try JSONDecoder().decode(PhoneBoard.self, from: bytes); workRevision += 1
+            case PhoneRequest.conversationState.rawValue:
+                firstmateBusy = try JSONDecoder().decode(PhoneConversationState.self, from: bytes).busy
+                firstmateObserved = true
+            case PhoneRequest.computers.rawValue: computers = try JSONDecoder().decode([PhoneComputerPresence].self, from: bytes)
             case PhoneRequest.lastTurn.rawValue: lastTurn = try JSONDecoder().decode(PhoneLastTurn?.self, from: bytes)
             default: break
             }

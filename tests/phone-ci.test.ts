@@ -12,7 +12,7 @@ const workflow = yaml.load(readFileSync(".github/workflows/phone.yml", "utf8"));
 
 // The native job's actual condition, for the chooser's reading on a pull request, or for a run
 // started on request, whose chooser reads nothing.
-function eligible(run: boolean | "", event = "pull_request"): string {
+function eligible(run: boolean | "", event = "pull_request", evidenceRun = ""): string {
   const needs = new data.Dictionary({
     key: "choose-phone",
     value: new data.Dictionary({
@@ -24,12 +24,22 @@ function eligible(run: boolean | "", event = "pull_request"): string {
   const expression = workflow.jobs["native-phone"].if;
   const ast = new Parser(
     new Lexer(`!!(${expression})`).lex().tokens,
-    ["needs", "github"],
+    ["needs", "github", "inputs"],
     [],
   ).parse();
   return new Evaluator(
     ast,
-    new data.Dictionary({ key: "needs", value: needs }, { key: "github", value: github }),
+    new data.Dictionary(
+      { key: "needs", value: needs },
+      { key: "github", value: github },
+      {
+        key: "inputs",
+        value: new data.Dictionary({
+          key: "evidence_run",
+          value: new data.StringData(evidenceRun),
+        }),
+      },
+    ),
   )
     .evaluate()
     .coerceString();
@@ -159,6 +169,9 @@ describe("the native pull-request gate", () => {
     ".github/workflows/phone.yml",
     "scripts/test-phone.ts",
     "tests/helpers/phoneHome.ts",
+    "tests/helpers/phoneScene.ts",
+    "scripts/generate-phone-scene.ts",
+    "scripts/phone-recording.ts",
     // INF-355: changing the native registration witness must exercise its simulator consumer.
     "tests/helpers/phoneKeyboard.ts",
     // INF-663: the gate's checks before its simulator tests.
@@ -363,6 +376,8 @@ describe("the native pull-request gate", () => {
       starve: { type: "boolean", default: false },
       perf: { type: "boolean", default: false },
       waits: { type: "boolean", default: false },
+      evidence_run: { required: false, type: "string" },
+      recording: { required: false, type: "boolean", default: false },
     });
     const expression = workflow.jobs["native-phone"]["runs-on"].replace(/^\$\{\{\s*|\s*\}\}$/g, "");
     const ast = new Parser(new Lexer(expression).lex().tokens, ["vars", "inputs"], []).parse();
@@ -385,6 +400,41 @@ describe("the native pull-request gate", () => {
     }
     expect(workflow.jobs["native-phone"]["continue-on-error"]).toBeUndefined();
   });
+  // INF-1066: exporting attachments must not supersede a failed native check with a skipped check of the same name.
+  it.each(["", "40035937592"])(
+    "keeps the native-check name distinct for evidence_run=%s",
+    (evidenceRun) => {
+      const expression = workflow.jobs[NATIVE_JOB].name.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+      const ast = new Parser(new Lexer(expression).lex().tokens, ["inputs"], []).parse();
+      const inputs = new data.Dictionary({
+        key: "evidence_run",
+        value: new data.StringData(evidenceRun),
+      });
+      const name = new Evaluator(ast, new data.Dictionary({ key: "inputs", value: inputs }))
+        .evaluate()
+        .coerceString();
+      if (evidenceRun) expect(name).not.toBe(NATIVE_JOB);
+      else expect(name).toBe(NATIVE_JOB);
+    },
+  );
+  // INF-1066: record only on an explicit evidence request, never on ordinary checks.
+  it.each([false, true])(
+    "selects recording=%s through the native gate's real environment",
+    (recording) => {
+      const gate = workflow.jobs[NATIVE_JOB].steps.find((step: Step) => step.id === "both");
+      const expression = gate.env.PHONE_RECORDING.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+      const ast = new Parser(new Lexer(expression).lex().tokens, ["inputs"], []).parse();
+      const inputs = new data.Dictionary({
+        key: "recording",
+        value: new data.BooleanData(recording),
+      });
+      expect(
+        new Evaluator(ast, new data.Dictionary({ key: "inputs", value: inputs }))
+          .evaluate()
+          .coerceString(),
+      ).toBe(recording ? "1" : "");
+    },
+  );
   it("runs today's steps on the Mac mini while the virtual Mac switch is off", () => {
     const all = names(workflow.jobs[NATIVE_JOB].steps);
     expect(names(stepsThatRun(OFF))).toEqual(
@@ -539,4 +589,10 @@ describe("the phone check on request", () => {
     for (const virtualMac of [OFF, IN_TURN, TOGETHER])
       expect(names(stepsThatRun(virtualMac, "false").filter(isGate))).toEqual([BOTH]);
   });
+});
+
+// INF-1066: extracting a saved native scene capture uses Xcode, but starts no new device gate.
+it("exports existing native evidence without starting simulators", () => {
+  expect(eligible("", "workflow_dispatch", "40023566877")).toBe("false");
+  expect(eligible("", "workflow_dispatch")).toBe("true");
 });

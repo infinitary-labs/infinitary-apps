@@ -80,12 +80,17 @@ A Settings or browser door says to do it on the named computer and keeps the car
 Using a saved sign-in is a normal choice sent to that computer, not a request to open its browser here.
 While out of reach, the shown body remains readable, actions and the dimmed reply row are unavailable, and no change waits to be sent later.
 A stalled body leaves the native card controls usable and offers Retry in its place.
-An empty stage shows the native first mate; a crew count appears only when the connection supplies it.
+An empty stage shows the native first mate and desktop-sized crew and computer formations, panned continuously rather than paged or shrunk to fit.
+Crew retain their published tier, work posture and computer; programs show their live parts and dependency branches, and an unreachable computer shows frozen, unknown activity.
+A crewmate opens a native preview of its work, with Open task leading to the existing task record.
+Shift-Command-C, Browse crew, starts browsing, drawing an accent outline around its viewport; arrow keys pan it, Tab selects and reveals a crewmate, and Space opens that crewmate's preview.
+The selected crewmate has an accent outline and a selected accessibility value; Escape, editing, a preview or leaving Home ends browsing.
 The native character moves as the Mac's does: idle drifts slowly with eyes that blink and wander, listening breathes as two counter-rotating hexagons, and working speeds up with the ember, shimmer and halo.
-It greets once when the app opens or joins a computer, and nods when the first mate's reply carries a nod; it plays no other emote.
-Every state stops its timeline off-screen or in the background and shows a still pose under Reduce Motion.
-The join stage uses idle; the empty stage shows working only when the Mac's published `firstmate_state.busy` says a conversational turn is running, and returns to idle when it finishes.
-A stopped or lost connection clears that reading; until a new busy event arrives, the character stays idle because the connection has no initial busy snapshot.
+It greets once when the app opens or joins a computer, plays the Mac's full reaction and fidget repertoire, and holds a reply reaction until the real conversational turn finishes.
+Animation follows permitted display callbacks, requesting up to 120 frames a second, without claiming that a device delivers that rate.
+Every state stops its clock off-screen or in the background and shows a settled still pose under Reduce Motion.
+The join stage uses idle; the empty stage shows working only from the Mac's published conversation busy snapshot or numbered busy event, and returns to idle when that turn finishes.
+A stopped or lost connection clears that reading; an older home without the scene-observation capability stays unknown until a real busy event arrives.
 Listening remains a drawing capability, not a live phone state: native keyboard dictation supplies no public listening signal, and focus, typing, tasks and connection traffic never stand in for one.
 
 The conversation owner puts the message box at the foot of Home, with the last turn's two lines above it; Tasks and Activity run to the foot with nothing over them.

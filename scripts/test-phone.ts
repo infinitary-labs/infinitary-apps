@@ -7,6 +7,7 @@ import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
 import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpers/budgets.ts";
 import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
+import { capturePhoneKeyboardTimeout } from "../tests/helpers/phoneStacks.ts";
 import { logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
 import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
@@ -14,6 +15,7 @@ import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { startPhoneActivity } from "./phone-activity.ts";
 import { runEveryCheck } from "./phone-checks.ts";
+import { phoneRecording } from "./phone-recording.ts";
 import { PHONE_PARTS, type PhoneDevice, partSelection, phoneExecutionArguments, phoneJobs, runSideBySide, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -26,6 +28,8 @@ const { values } = parseArgs({ options: {
   evidence: { type: "string" },
   ipad: { type: "boolean", default: false },
   demo: { type: "boolean", default: false },
+  // CI needs no encoder: keep simctl's H.264 capture for conversion on the evidence reader's Mac.
+  "raw-demo": { type: "boolean", default: process.env.PHONE_RECORDING === "1" },
   waits: { type: "boolean", default: process.env.INFINITARY_PHONE_WAITS_ONLY === "1" },
   starve: { type: "boolean", default: process.env.INFINITARY_STARVE_CHECK === "1" },
   // INF-662 piece 1: check and build once, then the iPhone and the iPad side by side.
@@ -86,6 +90,7 @@ const run = async (command: string, args: string[]) => {
   if (status !== 0) throw Object.assign(new Error(`${command} failed (${status}); see ${log}`), { output });
   return output;
 };
+const demo = phoneRecording(values["raw-demo"] ? "raw" : values.demo ? "encoded" : "off", run);
 let simulator: string | undefined;
 const phoneBundle = "com.getinfinitary.infinitary";
 // The processes behind a failed part's photo and card steps: the app, its card pages and Photos.
@@ -98,6 +103,7 @@ const SYSTEM_LOG = 'process IN {"SpringBoard", "backboardd", "AccessibilityUISer
   + ' OR process ENDSWITH "-Runner" OR subsystem BEGINSWITH[c] "com.apple.accessibility"';
 let keyboard: Awaited<ReturnType<typeof observePhoneKeyboard>> | undefined;
 let simulatorLog: Awaited<ReturnType<typeof observePhoneLog>> | undefined;
+let timeoutStack: ReturnType<typeof capturePhoneKeyboardTimeout> | undefined;
 let recorder: ChildProcess | undefined;
 let recorded: Promise<void> | undefined;
 let recordingLog = "";
@@ -136,8 +142,8 @@ const recording = {
     writeFileSync(saved, bytes.subarray(0, bytes.length - 8));
   },
   start: async (name = "reconnect") => {
-    if (!values.demo || recorder || !simulator) return;
-    if (!["reconnect", "talk", "composer", "character", "conversation", "card-form", "card-paging", "card-reply", "card-picture", "card-recording", "review-recovery"].includes(name)) throw new Error("Unknown phone recording");
+    if (!demo.enabled || recorder || !simulator) return;
+    if (!["reconnect", "talk", "composer", "character", "conversation", "native-scene-pan", "native-scene-keyboard", "card-form", "card-paging", "card-reply", "card-picture", "card-recording", "review-recovery"].includes(name)) throw new Error("Unknown phone recording");
     const raw = join(root, `${name}.mp4`);
     recordings.push({ name, raw });
     recordingLog = "";
@@ -188,7 +194,7 @@ const everyPart = async () => {
     const began = Date.now();
     console.log(`${name}: began at ${new Date(began).toISOString()}`);
     const command = [process.execPath, "scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
-      ...(values.demo ? ["--demo"] : []), ...(values.waits ? ["--waits"] : []), "--part", part, "--evidence", folder(device, part), "--xctestrun", join(products, plan)];
+      ...demo.childArgs, ...(values.waits ? ["--waits"] : []), "--part", part, "--evidence", folder(device, part), "--xctestrun", join(products, plan)];
     if (values.starve) command.unshift("python3", "scripts/starve-check.py", "--timeout", "3600", "--stall-seconds", "12", "--");
     const child = spawn(command[0]!, command.slice(1), { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
     children.add(child);
@@ -237,7 +243,7 @@ const onePart = async () => {
   photos?.catch(() => {});
   keyboard = await observePhoneKeyboard({ simulator, env, evidence, children });
   const { startPhoneHome } = await runner.import<typeof import("../tests/helpers/phoneHome")>(join(REPO_ROOT, "tests/helpers/phoneHome.ts"));
-  if (values.demo) await run("ffmpeg", ["-version"]);
+  await demo.prepare();
   fixture = await startPhoneHome(root, recording);
   writeFileSync(join(evidence, "published-client.json"), JSON.stringify(await fixture.checkPublishedClient(), null, 2));
   const destination = ["-parallel-testing-enabled", "NO", "-destination", `platform=iOS Simulator,id=${simulator}`,
@@ -246,11 +252,21 @@ const onePart = async () => {
   await photos;
   // INF-1170: the part's library photo goes in once Photos is ready, so a restart of Photos never cuts its import short.
   await run("xcrun", ["simctl", "addmedia", simulator, join(REPO_ROOT, "release-notes/pictures/activity-settles-setting-runs-light.png")]);
+  // INF-1066: keep the talk journey's exact Photos/tap order and waits. Capture once
+  // at the actual UIKit fault, while the blocked stack still exists, not on retry.
+  if (values.part![0] === "talk") {
+    const owned = simulator;
+    timeoutStack = capturePhoneKeyboardTimeout({ evidence,
+      currentPid: async () => phoneApplicationPid(await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]), phoneBundle),
+      sample: async (pid, destination) => { await run("/usr/bin/sample", [String(pid), "1", "1", "-mayDie", "-file", destination]); },
+    });
+  }
   simulatorLog = await observePhoneLog({ device: simulator, env, evidence, children,
-    predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})` });
+    predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})`, onLine: timeoutStack?.receive });
   const testing = new Date();
   await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!, values.waits),
     ...phoneExecutionArguments(GRADES_BUDGETS), "test-without-building"])
+    .finally(async () => { await recording.stop(); await demo.finish(recordings, evidence); })
     .catch(async (error: Error & { output?: string }) => {
       // The CI job log names why a part failed; its results archive is often too large to fetch.
       for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed/.test(each)).slice(0, 20))
@@ -268,11 +284,6 @@ const onePart = async () => {
         .catch((problem: Error) => console.log(`The simulator's system log could not be kept: ${problem.message}`));
       throw error;
     });
-  if (values.demo) for (const { name, raw } of recordings) {
-    const crop = name === "reconnect" ? "crop=iw:trunc(ih*0.55/2)*2:0:0," : "";
-    await run("ffmpeg", ["-y", "-i", raw, "-vf", `${crop}scale=-2:720,pad=1280:720:(ow-iw)/2:(oh-ih)/2:color=black,tpad=stop_mode=clone:stop_duration=5`, "-r", "24", "-t", "15", "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", join(evidence, `${name}.mp4`)]);
-    await run("ffmpeg", ["-y", "-sseof", "-0.25", "-i", join(evidence, `${name}.mp4`), "-frames:v", "1", join(evidence, `${name}-poster.png`)]);
-  }
 };
 let failures: string[] = [];
 try {
@@ -282,6 +293,7 @@ try {
     failures = await runEveryCheck([
       () => run("node", ["scripts/generate-phone-contract.ts", "--check"]),
       () => run("node", ["scripts/generate-phone-theme.ts", "--check"]),
+      () => run("node", ["scripts/generate-phone-scene.ts", "--check"]),
       () => run("node", ["scripts/generate-phone-cards.ts", "--check"]),
       () => run("swift", ["test", "--package-path", "ios/Infinitary/InfinitaryKit", "--scratch-path", join(root, "swift-build")]),
     ], () => interrupted);
@@ -301,7 +313,10 @@ try {
       try { await recording.stop(); }
       finally {
         try { await keyboard?.close(); }
-        finally { await simulatorLog?.close(); }
+        finally {
+          try { await simulatorLog?.close(); }
+          finally { await timeoutStack?.close(); }
+        }
       }
     }
   } finally {

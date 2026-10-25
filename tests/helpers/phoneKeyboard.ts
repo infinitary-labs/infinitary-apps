@@ -30,13 +30,26 @@ export class PhoneKeyRegistrations {
     // ndjson retains a literal Return inside the quoted key; compact logs print it as \^M.
     // A carriage return must not make the whole modifier group's match disappear.
     for (const line of message.split("\n")) {
-      const group = /^\s+([a-z|]+): \((.*)\),?$/s.exec(line);
-      if (!group?.[1] || group[2] === undefined) continue;
-      const modifiers = group[1].split("|");
+      const group = /^\s+([a-z|]*): \((.*)\),?$/s.exec(line);
+      if (group?.[1] === undefined || group[2] === undefined) continue;
+      const modifiers = group[1] ? group[1].split("|") : [];
       for (const value of group[2].match(/"(?:\\.|[^"\\])*"|\([^)]*\)|[^,\s]+/g) ?? []) {
         let key = value;
         if (value === String.raw`"\^M"` || value === '"\r"') key = "\r";
-        else if (value.startsWith('"')) {
+        else if (value === String.raw`"\^I"` || value === String.raw`"\134t"` || value === '"\t"')
+          key = "\t";
+        else if (value.startsWith("(")) {
+          // BackBoard's HID spellings, not XCTest's opaque key constants.
+          const arrows: Record<string, string> = {
+            "(50:leftArrow)": "leftArrow",
+            "(4F:rightArrow)": "rightArrow",
+            "(52:upArrow)": "upArrow",
+            "(51:downArrow)": "downArrow",
+          };
+          const arrow = arrows[value];
+          if (!arrow) continue;
+          key = arrow;
+        } else if (value.startsWith('"')) {
           try {
             key = JSON.parse(value);
           } catch {

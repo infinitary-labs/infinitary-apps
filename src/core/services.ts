@@ -13,6 +13,7 @@ import { emptyTranscript } from "@shared/crewTranscript";
 import { isCustomApiProvider } from "@shared/customApi";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import {
+  computerPresenceOf,
   type DeviceChip,
   type DeviceInvite,
   type DeviceInviteRequest,
@@ -2530,7 +2531,10 @@ export async function createServices(
     },
     ssh: (deviceId) => sshConnections.state(deviceId),
     reachOf,
-    emit: (list) => emit("inf:devices", list),
+    emit: (list) => {
+      emit("inf:devices", list);
+      emit("inf:computers:presence", computerPresenceOf(list));
+    },
     onProblem: (text) => broadcastEvent({ type: "firstmate_note", text }),
     now: ticker.now,
     bootedAt,

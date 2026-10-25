@@ -306,8 +306,11 @@ describe("ipc contract", () => {
       "inf:cards:show-past",
       "inf:cards:thread",
       "inf:cards:typeface",
+      // INF-1066: the native scene reads public computer presence and initial busy state.
+      "inf:computers:presence",
       "inf:computers:resources",
       "inf:conversation:last-turn",
+      "inf:conversation:state",
       "inf:converse",
       "inf:crew:counts",
       "inf:feed:recent",

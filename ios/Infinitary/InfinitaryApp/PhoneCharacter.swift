@@ -1,3 +1,4 @@
+import InfinitaryKit
 import SwiftUI
 
 /// INF-209's native three-state first mate, moving as the Mac's character does (INF-589 item 18).
@@ -10,23 +11,29 @@ struct PhoneCharacter: View {
     @Environment(\.scenePhase) private var phase
     @SwiftUI.State private var visible = false
     @SwiftUI.State private var motion = CharacterMotion()
+    @SwiftUI.State private var clock = CharacterDisplayClock()
 
     var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 30, paused: reduceMotion || !visible || phase != .active)) { timeline in
-            if reduceMotion {
-                drawing(at: 0)
-            } else {
-                let pose = motion.advance(to: timeline.date.timeIntervalSinceReferenceDate, state: state)
-                Canvas { context, size in CharacterPainter.draw(pose, in: &context, size: size) }
-            }
+        Group {
+            if reduceMotion { drawing(at: 0) }
+            else { CharacterDrawing(clock: clock, motion: motion, state: state) }
         }
         .aspectRatio(1, contentMode: .fit)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Your first mate")
         .accessibilityValue(state.rawValue)
         .accessibilityIdentifier("phone-character")
-        .onAppear { visible = true; CharacterCues.shown.add(motion) }
-        .onDisappear { visible = false; CharacterCues.left(motion) }
+        .onAppear { visible = true; syncClock() }
+        .onDisappear { visible = false; clock.setRunning(false); CharacterCues.left(motion) }
+        .onChange(of: reduceMotion) { _, _ in syncClock() }
+        .onChange(of: phase) { _, _ in syncClock() }
+    }
+
+    private func syncClock() {
+        let running = visible && !reduceMotion && phase == .active
+        clock.setRunning(running)
+        if running { CharacterCues.shown.add(motion) }
+        else { CharacterCues.shown.remove(motion); motion.discardReactions() }
     }
 
     /// The still pose Reduce Motion shows, which the native snapshot test also photographs.
@@ -36,7 +43,19 @@ struct PhoneCharacter: View {
     }
 }
 
-/// The Mac's two moments the phone carries (INF-589 question 6): a greeting and the reply nod.
+/// Only this small subtree observes per-display updates; cards, composer and task records do not.
+private struct CharacterDrawing: View {
+    let clock: CharacterDisplayClock
+    let motion: CharacterMotion
+    let state: PhoneCharacter.State
+    @SwiftUI.State private var cache = CharacterPainter.Cache()
+    var body: some View {
+        let pose = motion.advance(to: clock.now, state: state)
+        Canvas { context, size in CharacterPainter.draw(pose, in: &context, size: size, cache: cache) }
+    }
+}
+
+/// Live-only reactions and the greeting handed between visible native scenes.
 @MainActor enum CharacterCues {
     /// The first character a person sees after the app opens or joins a computer greets once.
     static var greetingPending = true
@@ -52,78 +71,25 @@ struct PhoneCharacter: View {
         if motion.greeting { greetingPending = true }
     }
 
-    /// The Mac's first mate reacted to a reply; the phone plays only the nod, as the Mac's character does.
+    static let crews = NSHashTable<PhoneSceneMotion>.weakObjects()
+    static func signal(_ signal: PhoneSceneSignal) {
+        if signal.kind == .usage && signal.taskID == CharacterCatalog.shared.firstmateID {
+            for motion in shown.allObjects { motion.flicker(tokens: signal.tokens) }
+        } else { for scene in crews.allObjects { scene.receive(signal) } }
+    }
+
     static func reacted(_ emote: String) {
-        guard emote == "nod" else { return }
-        for motion in shown.allObjects { motion.nodRequested = true }
-    }
-}
-
-/// The Mac's FirstmateMachine (machine.ts), narrowed to the phone's states and its two emotes.
-struct CharacterMachine {
-    enum Mode: Equatable { case idle, listening, working, greet, nod }
-    enum Emote { case greet, nod }
-    /// EMOTE_DURATION_MS greet and REPLY_DURATION_MS nod, in seconds.
-    static func seconds(_ mode: Mode) -> Double? { mode == .greet ? 2.1 : mode == .nod ? 1.4 : nil }
-
-    private(set) var mode = Mode.idle
-    private var busy = false
-    private var enteredAt: Double
-    /// A nod asked for during the first mate's own turn, held for that turn's end.
-    private var heldNod = false
-
-    init(now: Double) { enteredAt = now }
-
-    private mutating func go(_ to: Mode, _ now: Double) { mode = to; enteredAt = now }
-
-    /// Listening interrupts everything; a starting turn only heats an emote, which plays on to its end;
-    /// a turn ending settles home, or into the nod held during it.
-    mutating func setInputs(listening: Bool, busy: Bool, now: Double) {
-        let fell = !busy && self.busy
-        self.busy = busy
-        let reply = fell && heldNod
-        if fell { heldNod = false }
-        if listening {
-            if mode != .listening { go(.listening, now) }
-            return
-        }
-        if mode == .listening { return go(busy ? .working : .idle, now) }
-        if Self.seconds(mode) != nil { return }
-        if reply { return go(.nod, now) }
-        if mode == .idle && busy { return go(.working, now) }
-        if mode == .working && !busy { go(.idle, now) }
-    }
-
-    /// An emote plays from idle or working only and never interrupts another; a nod during a turn waits for its end.
-    @discardableResult mutating func request(_ emote: Emote, now: Double) -> Bool {
-        if busy && emote == .nod {
-            heldNod = true
-            return true
-        }
-        guard mode == .idle || mode == .working else { return false }
-        go(emote == .greet ? .greet : .nod, now)
-        return true
-    }
-
-    /// Advances an emote's clock and returns home when it is done; the progress is 0 to 1.
-    mutating func update(now: Double) -> (mode: Mode, progress: Double) {
-        if let length = Self.seconds(mode), now - enteredAt >= length { go(busy ? .working : .idle, now) }
-        return (mode, Self.seconds(mode).map { min(1, (now - enteredAt) / $0) } ?? 0)
+        guard let emote = CharacterMachine.Emote(rawValue: emote), CharacterMachine.seconds(emote) != nil else { return }
+        for motion in shown.allObjects { motion.request(emote) }
     }
 }
 
 /// The Mac's per-state targets (FM_STATES), which the drawing eases toward.
-struct CharacterTargets: Sendable {
-    var sa, sb, pulse, glow, shimmer, breath, flat, scale, lidBase, eyeScale: Double
+struct CharacterTargets: Sendable, Decodable {
+    var sa, sb, pulse, glow, shimmer, breath, flat, scale, lidBase, eyeScale, jitter: Double
 
     static func of(_ mode: CharacterMachine.Mode) -> Self {
-        switch mode {
-        case .idle: Self(sa: 0.05, sb: 0.03, pulse: 0.05, glow: 0.35, shimmer: 0, breath: 0, flat: 0, scale: 1, lidBase: 0, eyeScale: 1)
-        case .listening: Self(sa: 0.015, sb: 0.01, pulse: 0.5, glow: 1, shimmer: 0, breath: 0.09, flat: 1, scale: 1, lidBase: 0, eyeScale: 1.22)
-        case .working: Self(sa: 1.15, sb: 0.78, pulse: 0.9, glow: 1, shimmer: 0.5, breath: 0, flat: 0, scale: 1, lidBase: 0.32, eyeScale: 0.95)
-        case .greet: Self(sa: 0.05, sb: 0.04, pulse: 0.1, glow: 0.8, shimmer: 0, breath: 0, flat: 0, scale: 1.06, lidBase: 0, eyeScale: 1.1)
-        case .nod: Self(sa: 0.04, sb: 0.03, pulse: 0.1, glow: 0.6, shimmer: 0, breath: 0, flat: 0, scale: 1.02, lidBase: 0, eyeScale: 1.06)
-        }
+        CharacterCatalog.shared.targets[mode.rawValue]!
     }
 
     func eased(toward target: Self, by k: Double) -> Self {
@@ -131,7 +97,7 @@ struct CharacterTargets: Sendable {
         return Self(sa: ease(sa, target.sa), sb: ease(sb, target.sb), pulse: ease(pulse, target.pulse),
                     glow: ease(glow, target.glow), shimmer: ease(shimmer, target.shimmer), breath: ease(breath, target.breath),
                     flat: ease(flat, target.flat), scale: ease(scale, target.scale), lidBase: ease(lidBase, target.lidBase),
-                    eyeScale: ease(eyeScale, target.eyeScale))
+                    eyeScale: ease(eyeScale, target.eyeScale), jitter: ease(jitter, target.jitter))
     }
 }
 
@@ -139,6 +105,8 @@ struct CharacterTargets: Sendable {
 struct CharacterPose: Sendable {
     var mode = CharacterMachine.Mode.idle
     var progress = 0.0
+    var variant: CharacterMachine.Fidget?
+    var flicker = 0.0
     var cur = CharacterTargets.of(.idle)
     var heat = 0.0
     var a = 0.4, b = 0.9, hs = 0.0
@@ -160,15 +128,15 @@ struct CharacterPose: Sendable {
 }
 
 /// The Mac's soft-light pulse and band (face.ts) and the nod's beat (replies.ts).
-private func pulse(_ t: Double, _ at: Double, _ width: Double) -> Double {
+func pulse(_ t: Double, _ at: Double, _ width: Double) -> Double {
     let u = (t - at) / width
     return u <= 0 || u >= 1 ? 0 : sin(u * .pi)
 }
-private func clamp01(_ x: Double) -> Double { max(0, min(1, x)) }
-private func band(_ t: Double, _ a: Double, _ wa: Double, _ b: Double, _ wb: Double) -> Double {
+func clamp01(_ x: Double) -> Double { max(0, min(1, x)) }
+func band(_ t: Double, _ a: Double, _ wa: Double, _ b: Double, _ wb: Double) -> Double {
     clamp01((t - a) / wa) * (1 - clamp01((t - b) / wb))
 }
-private func nodBeat(_ t: Double) -> Double { pulse(t, 0.05, 0.3) + pulse(t, 0.36, 0.24) * 0.6 }
+func nodBeat(_ t: Double) -> Double { pulse(t, 0.05, 0.3) + pulse(t, 0.36, 0.24) * 0.6 }
 
 /// The Mac's Spring, Blinker and Gaze (face.ts): blinks every few seconds, a wandering look at rest.
 private struct Spring {
@@ -237,7 +205,15 @@ private struct Gaze {
     private var pose = CharacterPose()
     private var vel = 0.5
     private var blinker = Blinker(), gaze = Gaze()
-    fileprivate var nodRequested = false
+    private var requests: [(CharacterMachine.Emote, CharacterMachine.Fidget?)] = []
+    func request(_ emote: CharacterMachine.Emote, variant: CharacterMachine.Fidget? = nil) { requests.append((emote, variant)) }
+    private var flickerAt = -Double.infinity, flickerBoost = 0.0
+    func flicker(tokens: Double) {
+        guard let last else { return }
+        flickerBoost = max(CharacterFlicker.intensity(tokens), flickerBoost * CharacterFlicker.envelope(last - flickerAt))
+        flickerAt = last
+    }
+    func discardReactions() { requests.removeAll(keepingCapacity: true); flickerBoost = 0 }
     var greeting: Bool { machine?.mode == .greet }
 
     func advance(to time: Double, state: PhoneCharacter.State) -> CharacterPose {
@@ -251,13 +227,16 @@ private struct Gaze {
         guard var machine else { return pose }
         // Inputs first, then the request: a nod asked for as a turn starts is held for that turn's end.
         machine.setInputs(listening: state == .listening, busy: state == .working, now: time)
-        if nodRequested { nodRequested = false; machine.request(.nod, now: time) }
+        for (emote, variant) in requests { machine.request(emote, now: time, variant: variant) }
+        requests.removeAll(keepingCapacity: true)
         let (mode, et) = machine.update(now: time)
         self.machine = machine
         let dt = min(max(0, time - (last ?? time)), 0.05)
         last = time
         pose.mode = mode
         pose.progress = et
+        pose.variant = machine.variant
+        pose.flicker = flickerBoost * CharacterFlicker.envelope(time - flickerAt)
         pose.cur = pose.cur.eased(toward: .of(mode), by: min(dt * 4, 1))
         pose.heat += ((state == .working ? 1 : 0) - pose.heat) * min(dt * 3, 1)
         vel += (0.5 - vel) * min(dt * 1.5, 1)
@@ -265,23 +244,41 @@ private struct Gaze {
         pose.b += pose.cur.sb * dt
         pose.hs += dt * vel * pose.cur.flat
         pose.milliseconds += dt * 1000
-        let look: (x: Double, y: Double)? = switch mode {
-        case .listening: (0, 0)
-        case .working: (0.12, 0.4)
-        case .nod: (0, 0.25 + 0.55 * nodBeat(et))
-        default: nil
+        let reply = CharacterReply.frame(mode, et)
+        var look: (x: Double, y: Double)? = reply.gaze.map { ($0.x, $0.y) }
+        switch mode {
+        case .listening: look = (0, 0)
+        case .working: look = (0.12, 0.4)
+        case .ponder: look = (-0.8, -0.9)
+        case .confused: look = (CharacterSky.twinkle(pose.milliseconds / 1000 * 6) * 0.8, CharacterSky.twinkle(pose.milliseconds / 1000 * 5 + 9) * 0.5)
+        case .fidget:
+            if machine.variant == .orbit {
+                let angle = -.pi / 2 + easeInOut(clamp01((et - 0.1) / 0.75)) * 2 * .pi
+                look = (cos(angle) * 0.9, sin(angle) * 0.7)
+            } else if machine.variant == .yawn { look = (0, -0.35 * pulse(et, 0.12, 0.62)) }
+            else if machine.variant == .blackhole { look = (0, 0.12) }
+            else if machine.variant == .saturn { look = (0, 0.1) }
+            else { look = (0, 0) }
+            if let constellation = CharacterCatalog.shared.constellations[machine.variant?.rawValue ?? ""] {
+                look = (constellation.gaze[0], constellation.gaze[1])
+            }
+        default: break
         }
         (pose.eyeX, pose.eyeY) = gaze.update(dt, look: look)
-        pose.lid = max(pose.cur.lidBase, blinker.update(dt, suppressed: mode == .listening))
+        pose.lid = max(pose.cur.lidBase, max(reply.lid, blinker.update(dt, suppressed: mode == .listening || mode == .celebrate || reply.suppressBlink)))
+        if machine.variant == .roll { pose.lid = max(pose.lid, band(et, 0.3, 0.15, 0.6, 0.22)) }
+        if machine.variant == .yawn { pose.lid = max(pose.lid, pulse(et, 0.12, 0.62) * 0.95) }
+        if machine.variant == .blackhole { pose.lid = max(pose.lid, CharacterSky.envelope(pose) * 0.3) }
+        if machine.variant == .galaxy { pose.lid = max(pose.lid, CharacterSky.envelope(pose) * CharacterCatalog.shared.galaxy["lid"]!) }
         pose.wink = mode == .greet ? band(et, 0.42, 0.1, 0.68, 0.12) : 0
-        pose.happy = mode == .greet ? band(et, 0.12, 0.18, 0.82, 0.18) : mode == .nod ? band(et, 0.1, 0.08, 0.68, 0.1) : 0
+        pose.happy = mode == .greet ? band(et, 0.12, 0.18, 0.82, 0.18) : mode == .celebrate ? band(et, 0.08, 0.15, 0.85, 0.15) : reply.happy
         return pose
     }
 }
 
 /// The Mac's drawFrame for the phone's states and emotes: the tesseract, its halo, and the two soft-light eyes.
 enum CharacterPainter {
-    private struct RGB {
+    struct RGB {
         var r, g, b: Double
         init(_ r: Double, _ g: Double, _ b: Double) { (self.r, self.g, self.b) = (r, g, b) }
         init(_ color: Color, in environment: EnvironmentValues) {
@@ -291,7 +288,7 @@ enum CharacterPainter {
         func mix(_ other: RGB, _ t: Double) -> RGB { RGB(r + (other.r - r) * t, g + (other.g - g) * t, b + (other.b - b) * t) }
         func color(_ opacity: Double) -> Color { Color(.sRGB, red: r / 255, green: g / 255, blue: b / 255, opacity: opacity) }
     }
-    private struct Point { var x, y, depth, w: Double }
+    fileprivate struct Point { var x, y, depth, w: Double }
 
     private static let edges: [(Int, Int)] = (0..<16).flatMap { i in
         (i + 1..<16).filter { j in (i ^ j).nonzeroBitCount == 1 }.map { (i, $0) }
@@ -307,35 +304,69 @@ enum CharacterPainter {
         return a.ring == b.ring && a.ring < 2 && ((a.k + 1) % a.n == b.k || (b.k + 1) % b.n == a.k)
     }
 
-    private struct Primitives {
+    fileprivate struct Primitives {
         var edgeAlpha = [Double](repeating: 0, count: 32), edgeMix = [Double](repeating: 0, count: 32)
         var edgeCore = [Double](repeating: 0, count: 32), edgeSkip = [Bool](repeating: true, count: 32)
         var dotAlpha = [Double](repeating: 0, count: 16), dotMix = [Double](repeating: 0, count: 16)
         var dotR = [Double](repeating: 0, count: 16), dotCore = [Double](repeating: 0, count: 16)
     }
 
-    static func draw(_ p: CharacterPose, in context: inout GraphicsContext, size: CGSize) {
+    /// The drawing owns these reusable inputs and buffers; theme resolution happens only on a theme change.
+    final class Cache {
+        fileprivate var points = [Point](repeating: Point(x: 0, y: 0, depth: 1, w: 0), count: 16)
+        fileprivate var prims = Primitives()
+        fileprivate var sky = [CharacterSky.Placed](repeating: .init(point: .zero), count: 16)
+        fileprivate var colors: Palette?
+        func palette(_ environment: EnvironmentValues) -> Palette {
+            if colors?.scheme != environment.colorScheme { colors = Palette(environment) }
+            return colors!
+        }
+    }
+    struct Palette {
+        let scheme: ColorScheme
+        let acc, dim, hot, bg: RGB
+        let boost, haloBoost: Double
+        init(_ environment: EnvironmentValues) {
+            scheme = environment.colorScheme
+            acc = RGB(PhoneTheme.wire, in: environment); dim = RGB(PhoneTheme.wireDim, in: environment)
+            hot = RGB(PhoneTheme.wireHot, in: environment); bg = RGB(PhoneTheme.background, in: environment)
+            boost = PhoneTheme.wireBoost(scheme); haloBoost = PhoneTheme.haloBoost(scheme)
+        }
+    }
+
+    static func draw(_ p: CharacterPose, in context: inout GraphicsContext, size: CGSize, cache: Cache = Cache()) {
+        #if DEBUG
+        let frameStarted = ProcessInfo.processInfo.systemUptime
+        defer { CharacterFrameMetrics.shared.record(start: frameStarted, source: context.environment.characterEvidenceSource, mode: p.mode.rawValue, heat: p.heat, rotation: p.a) }
+        #endif
         let s = min(size.width, size.height), c = s / 2
         context.translateBy(x: (size.width - s) / 2, y: (size.height - s) / 2)
         let environment = context.environment
-        let acc = RGB(PhoneTheme.wire, in: environment), dim = RGB(PhoneTheme.wireDim, in: environment)
-        let hot = RGB(PhoneTheme.wireHot, in: environment), bg = RGB(PhoneTheme.background, in: environment)
-        let boost = PhoneTheme.wireBoost(environment.colorScheme), haloBoost = PhoneTheme.haloBoost(environment.colorScheme)
+        let colors = cache.palette(environment)
+        let acc = colors.acc, dim = colors.dim, hot = colors.hot, bg = colors.bg
+        let boost = colors.boost, haloBoost = colors.haloBoost
         let cur = p.cur, heat = p.heat, now = p.milliseconds, et = p.progress
         let bright = acc.mix(hot, heat), dimUse = dim.mix(RGB(hot.r * 0.55, hot.g * 0.5, hot.b * 0.45), heat)
         let breathe = 1 + cur.breath * sin(now / 650)
         let R = s * 0.27 * breathe * cur.scale
 
-        // The greeting's bow and the nod's pitch and dip, baked into the projected points.
-        var rotation = 0.0, ty = 0.0, sx = 1.0, sy = 1.0, pitch = 0.0, replyGlow = 0.0
+        // Every body transform feeds the same projected points for the combined glow and crisp pass.
+        let reply = CharacterReply.frame(p.mode, et)
+        var rotation = reply.rot, ty = reply.ty * s, sx = reply.sx, sy = reply.sy
+        let pitch = reply.pitch, replyGlow = reply.glow
+        var spin = reply.spin
         if p.mode == .greet {
             let bow = sin(min(1, et / 0.55) * .pi) * 0.14
             rotation = bow * 0.5; ty = bow * s * 0.12
-        } else if p.mode == .nod {
-            let n = nodBeat(et)
-            pitch = -0.5 * n; ty = 0.045 * n * s; sx = 1 + 0.02 * n; sy = 1 - 0.04 * n
-            replyGlow = pulse(et, 0.05, 0.3) * 0.8
+        } else if p.mode == .ponder { rotation = -0.1 * sin(min(1, et * 1.4) * .pi) }
+        else if p.mode == .confused {
+            rotation = sin(et * .pi * 3) * 0.08 * sin(et * .pi)
+            spin += sin(et * .pi * 5) * 0.9 * sin(et * .pi) * 0.2
+        } else if p.mode == .fidget {
+            if p.variant == .roll { spin += easeInOut(clamp01((et - 0.08) / 0.75)) * .pi }
+            if p.variant == .yawn { let y = pulse(et, 0.12, 0.62); sy = 1 + 0.16 * y; sx = 1 - 0.09 * y }
         }
+        context.opacity *= CharacterSky.dim(p)
         let poseCos = cos(rotation), poseSin = sin(rotation)
         func posed(_ x: Double, _ y: Double) -> (x: Double, y: Double) {
             let dx = (x - c) * sx, dy = (y - c) * sy
@@ -348,13 +379,13 @@ enum CharacterPainter {
             Gradient(colors: [bright.color(glowA), bright.color(0)]), center: CGPoint(x: c, y: c), startRadius: 0, endRadius: s / 2))
 
         // Rotate xw and yz, then project 4D to 3D to 2D.
-        let ca = cos(p.a), sa = sin(p.a), cb = cos(p.b + pitch), sb = sin(p.b + pitch)
-        var points = (0..<16).map { i -> Point in
+        let ca = cos(p.a + spin), sa = sin(p.a + spin), cb = cos(p.b + pitch), sb = sin(p.b + pitch)
+        for i in 0..<16 {
             let x: Double = i & 1 != 0 ? 1 : -1, y: Double = i & 2 != 0 ? 1 : -1
             let z: Double = i & 4 != 0 ? 1 : -1, w: Double = i & 8 != 0 ? 1 : -1
             let x1 = x * ca - w * sa, w1 = x * sa + w * ca, y1 = y * cb - z * sb, z1 = y * sb + z * cb
             let k4 = 2.6 / (2.6 - w1 * 0.55), k3 = 3.4 / (3.4 - z1 * k4 * 0.5)
-            return Point(x: c + x1 * k4 * k3 * R * 0.5, y: c + y1 * k4 * k3 * R * 0.5, depth: (k4 + k3) / 2, w: w1)
+            cache.points[i] = Point(x: c + x1 * k4 * k3 * R * 0.5, y: c + y1 * k4 * k3 * R * 0.5, depth: (k4 + k3) / 2, w: w1)
         }
         let f = cur.flat * cur.flat * (3 - 2 * cur.flat)
         if f > 0.001 {
@@ -362,22 +393,31 @@ enum CharacterPainter {
             for i in 0..<16 {
                 let slot = slots[i]
                 if slot.ring == 2 {
-                    points[i].x += (c - points[i].x) * f; points[i].y += (c - points[i].y) * f
+                    cache.points[i].x += (c - cache.points[i].x) * f; cache.points[i].y += (c - cache.points[i].y) * f
                     continue
                 }
                 let angle = (slot.ring == 0 ? 1 : -1) * p.hs + Double(slot.k) / Double(slot.n) * 2 * .pi - .pi / 2
                 let radius = (slot.ring == 0 ? 1 : 0.62) * rf
-                points[i].x += (c + cos(angle) * radius - points[i].x) * f
-                points[i].y += (c + sin(angle) * radius - points[i].y) * f
+                cache.points[i].x += (c + cos(angle) * radius - cache.points[i].x) * f
+                cache.points[i].y += (c + sin(angle) * radius - cache.points[i].y) * f
             }
         }
-        for i in 0..<16 { (points[i].x, points[i].y) = posed(points[i].x, points[i].y) }
+        for i in 0..<16 {
+            let jitter = cur.jitter * sin(et * .pi) * 0.09 * R
+            cache.points[i].x += CharacterSky.twinkle(now / 1000 * 14 + Double(i) * 3.1) * jitter
+            cache.points[i].y += CharacterSky.twinkle(now / 1000 * 13 + Double(i) * 5.7) * jitter
+            let placed = CharacterSky.place(i, base: CGPoint(x: cache.points[i].x, y: cache.points[i].y), pose: p, c: c, r: R)
+            cache.sky[i] = placed
+            (cache.points[i].x, cache.points[i].y) = posed(placed.point.x, placed.point.y)
+            if let w = placed.w { cache.points[i].w += (w - cache.points[i].w) * placed.progress }
+        }
+
 
         // Resolve every edge and dot once; the halo and the crisp pass both replay them.
         let neon = heat
-        var prims = Primitives()
         for (i, (p0, q0)) in edges.enumerated() {
-            let P = points[p0], Q = points[q0]
+            cache.prims.edgeSkip[i] = true
+            let P = cache.points[p0], Q = cache.points[q0]
             let depth = (P.depth + Q.depth) / 2 - 0.9
             var alpha = max(0.3, min(0.9, 0.35 + depth * 0.5)) * boost
             if cur.shimmer > 0 { alpha *= 1 - cur.shimmer * 0.3 * (0.5 + 0.5 * sin(now / 240 + Double(i) * 2.7)) }
@@ -386,22 +426,23 @@ enum CharacterPainter {
             } else {
                 alpha += (min(1, 0.85 * boost) - alpha) * f
             }
+            alpha *= 1 - min(cache.sky[p0].progress, cache.sky[q0].progress) * 0.97
             if alpha < 0.02 { continue }
             let m = max(clamp01(0.5 + (P.w + Q.w) * 0.35), f * 0.9)
-            prims.edgeSkip[i] = false
-            prims.edgeMix[i] = m
-            prims.edgeAlpha[i] = min(1, alpha * (0.85 + 0.15 * m))
-            prims.edgeCore[i] = neon > 0.02 && m > 0.5 ? min(1, alpha) * neon * 0.85 : 0
+            cache.prims.edgeSkip[i] = false
+            cache.prims.edgeMix[i] = m
+            cache.prims.edgeAlpha[i] = min(1, alpha * (0.85 + 0.15 * m) * (1 + 0.9 * p.flicker * CharacterFlicker.wire(i, now)))
+            cache.prims.edgeCore[i] = max(neon > 0.02 && m > 0.5 ? min(1, alpha) * neon * 0.85 : 0, min(1, p.flicker * CharacterFlicker.wire(i, now) * 0.7))
         }
         for i in 0..<16 {
-            let P = points[i]
-            let fade = slots[i].ring == 2 ? 1 - f : 1
+            let P = cache.points[i]
+            let fade = (slots[i].ring == 2 ? 1 - f : 1) * cache.sky[i].fade
             let pulseK = 1 + cur.pulse * 0.6 * max(0, sin(now / 300 + Double(i) * 0.8))
             let m = max(clamp01(0.5 + P.w * 0.6), f)
-            prims.dotMix[i] = m
-            prims.dotR[i] = (2.1 + 0.7 * m) * pulseK * (s / 280)
-            prims.dotAlpha[i] = min(1, max(0.65, min(1, 0.6 + (P.depth - 0.9) * 0.5)) * boost) * fade
-            prims.dotCore[i] = heat > 0.02 && m > 0.4 && fade > 0.5 ? heat * fade : 0
+            cache.prims.dotMix[i] = m
+            cache.prims.dotR[i] = (2.1 + 0.7 * m) * pulseK * (s / 280) * cache.sky[i].scale
+            cache.prims.dotAlpha[i] = min(1, max(0.65, min(1, 0.6 + (P.depth - 0.9) * 0.5)) * boost) * fade
+            cache.prims.dotCore[i] = max(heat > 0.02 && m > 0.4 && fade > 0.5 ? heat * fade : 0, cache.sky[i].white)
         }
 
         // The halo: every hot primitive in one tint, accumulated, blurred once and laid under the wires.
@@ -413,10 +454,11 @@ enum CharacterPainter {
             let tint = hot.mix(RGB(255, 236, 200), 0.3)
             glow.drawLayer { mask in
                 mask.blendMode = .plusLighter
-                paint(prims, points, in: &mask) { _, _ in tint }
+                paint(cache.prims, cache.points, in: &mask) { _, _ in tint }
             }
         }
-        paint(prims, points, in: &context) { kind, mix in
+        CharacterSky.draw(p, over: false, context: &context, c: c, r: R, color: bright.color(1), background: bg.color(1))
+        paint(cache.prims, cache.points, in: &context) { kind, mix in
             switch kind {
             case .edge: dimUse.mix(bright, mix)
             case .edgeCore: bright.mix(RGB(255, 244, 224), 0.75)
@@ -425,15 +467,23 @@ enum CharacterPainter {
             }
         }
 
+        CharacterSky.draw(p, over: true, context: &context, c: c, r: R, color: bright.color(1), background: bg.color(1))
+
         // The eyes: two soft lights in the inner cell, with white-hot cores, on the wires' colour family.
         let eyeBase = acc.mix(hot, heat), eyeCol = eyeBase.mix(RGB(255, 246, 230), 0.45)
         let gxo = p.eyeX * R * 0.1, gyo = p.eyeY * R * 0.08
         let pxo = sin(p.a) * R * 0.05 * (1 - f), pyo = sin(p.b * 0.8) * R * 0.04 * (1 - f)
-        for side in [-1.0, 1.0] {
-            let e = posed(c + side * R * 0.34 + gxo + pxo, c - R * 0.1 + gyo + pyo)
+        let eyes = [-1.0, 1.0].map { side -> (Double, CharacterSky.Eye) in
+            let base = posed(c + side * R * 0.34 + gxo + pxo, c - R * 0.1 + gyo + pyo)
+            return (side, CharacterSky.eye(side, base: CGPoint(x: base.x, y: base.y), pose: p, c: c, r: R))
+        }.sorted { $0.1.z < $1.1.z }
+        let bodyOpacity = context.opacity
+        for (side, eye) in eyes {
+            let e = eye.point
+            context.opacity = bodyOpacity * eye.alpha
             let lid = max(p.lid, side == 1 ? p.wink : 0)
             let open = (1 - lid) * cur.eyeScale
-            let rw = R * 0.085 * cur.eyeScale
+            let rw = R * 0.085 * cur.eyeScale * eye.depth
             let socket = rw * 3.2
             context.fill(circle(e.x, e.y, socket), with: .radialGradient(Gradient(colors: [bg.color(0.75), bg.color(0)]),
                 center: CGPoint(x: e.x, y: e.y), startRadius: 0, endRadius: socket))
@@ -459,6 +509,10 @@ enum CharacterPainter {
                 let core = CGRect(x: e.x + gxo * 0.5 - rw * 0.62, y: e.y + gyo * 0.5 - rh * 0.62, width: rw * 1.24, height: rh * 1.24)
                 context.fill(Path(ellipseIn: core), with: .color(RGB(255, 248, 235).color(0.95)))
             }
+        }
+        context.opacity = bodyOpacity
+        CharacterGarnish.draw(p, in: &context, c: c, r: R, size: s, color: bright.color(1), eyes: eyes.map { $0.1.point }) { x, y in
+            let at = posed(x, y); return CGPoint(x: at.x, y: at.y)
         }
     }
 

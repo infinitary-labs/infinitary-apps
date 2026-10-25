@@ -86,6 +86,7 @@ import {
   decisionsViewSchema,
 } from "./decisions";
 import {
+  computerPresenceSchema,
   type DeviceAddresses,
   type DeviceInvite,
   type DeviceInviteRequest,
@@ -811,6 +812,14 @@ export const invokeContract = {
     ]),
     response: okSchema,
   },
+  // The conversation owner's current busy state, before the view hears live state changes.
+  "inf:conversation:state": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: z.object({ busy: z.boolean() }),
+  },
   // The last turn above the input (docs/composer.md "The last turn"): the
   // captain's newest message and the Firstmate's reply line kept beside it,
   // read once as the window opens; `user_turn` and `firstmate_reply` carry
@@ -931,6 +940,13 @@ export const invokeContract = {
     response: projectsFolderViewSchema,
   },
   // Shared live observations carry no sign-in or device-management authority.
+  "inf:computers:presence": {
+    effect: "read",
+    surface: "core",
+    reach: "views",
+    request: z.tuple([]),
+    response: z.array(computerPresenceSchema),
+  },
   "inf:computers:resources": {
     effect: "read",
     surface: "core",
@@ -3020,6 +3036,7 @@ export const pushContract = {
   "inf:voice:progress": { payload: voiceDownloadProgressSchema, surface: "core" },
   // Your devices, whole, after any change to the list or to what the home
   // reads of a computer that runs work (docs/devices.md, "Your devices").
+  "inf:computers:presence": { payload: z.array(computerPresenceSchema), surface: "core" },
   "inf:devices": { payload: z.array(deviceViewSchema), surface: "core" },
   "inf:computers:resources": { payload: computerResourcesSchema, surface: "core" },
   // Where devices find this Mac, whole, after it reads differently - the

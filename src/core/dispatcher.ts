@@ -22,7 +22,7 @@ import type { PastCard } from "@shared/cards";
 import { CREATE_PANEL_SLOT_ID } from "@shared/createPanelSlot";
 import { isCustomApiProvider } from "@shared/customApi";
 import { HERE } from "@shared/deviceNames";
-import { deviceRunsWork } from "@shared/devices";
+import { computerPresenceOf, deviceRunsWork } from "@shared/devices";
 import { settingFrom } from "@shared/envSettings";
 import { forgeOf } from "@shared/forge";
 import {
@@ -250,6 +250,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     },
 
     "inf:conversation:last-turn": () => services.tasks.lastTurn(),
+    "inf:conversation:state": () => ({ busy: services.firstmate.isBusy() }),
 
     "inf:task:abort": async (taskId) => {
       await services.supervisor.abort(taskId);
@@ -345,6 +346,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     "inf:repos:folder:set": (path) => services.repos.setProjectsFolder(path),
 
     "inf:computers:resources": () => services.computerResourceFeed.read(),
+    "inf:computers:presence": () => computerPresenceOf(services.computers.list()),
 
     // Devices and pairing (docs/devices.md): the link goes back to this
     // Mac's own window only; the catalog keeps making one the captain's.

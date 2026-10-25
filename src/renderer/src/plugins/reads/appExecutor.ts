@@ -1,3 +1,4 @@
+import { computerPresenceOf } from "@shared/devices";
 import type { CorePushChannel } from "@shared/ipc";
 import { type ComputerResourcesView, panelComputerResources } from "@shared/resources";
 import type { ProjectView, TaskBoard, TaskBoardDelta, TaskDetail, TaskView } from "@shared/tasks";
@@ -74,6 +75,8 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // Your devices (docs/devices.md): no read names it; Settings -> Devices subscribes directly.
   "inf:devices": (_channel, listener) => window.infinitary.devices.onDevices(listener),
   "inf:computers:resources": (_channel, listener) => resourcePushes(listener),
+  "inf:computers:presence": (_channel, listener) =>
+    window.infinitary.devices.onDevices((list) => listener(computerPresenceOf(list))),
   "inf:devices:addresses": (_channel, listener) => window.infinitary.devices.onAddresses(listener),
   "inf:devices:nearby": (_channel, listener) => window.infinitary.devices.onNearby(listener),
   "inf:devices:sign-in": (_channel, listener) => window.infinitary.devices.onSignIn(listener),

@@ -28,6 +28,12 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let startAttempt: StartAttempt?
     public let requiredAction: RequiredAction?
     public let activity: String?
+    public let tier: String?
+    public let executionDeviceId: String?
+    public let reviewOf: String?
+    public let program: Bool?
+    public let workPosture: WorkPosture?
+    public struct WorkPosture: Decodable, Sendable { public let state: String; public let reason: String }
     public let goal: String?
     public let startedAt: Double?
     public let moves: [String: PhoneMove]?
@@ -67,7 +73,7 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
         default: return "Not started"
         }
     }
-    public struct Place: Decodable, Sendable { public let `where`: String }
+    public struct Place: Decodable, Sendable { public let `where`: String; public let name: String? }
     public struct Intent: Decodable, Sendable { public let userWords: String }
     public struct Plan: Decodable, Sendable {
         public let items: [Item]
@@ -86,6 +92,8 @@ public struct PhoneBoard: Decodable, Sendable {
     public let seq: Int
     public let tasks: [PhoneTask]
     public let projects: [Project]
+    public let links: [Link]?
+    public struct Link: Decodable, Sendable { public let fromId: String; public let toId: String; public let type: String }
     public struct Project: Decodable, Sendable { public let id: String; public let name: String }
 
     /// Keep an active parent and its parts together, as the Mac's Tasks panel does.

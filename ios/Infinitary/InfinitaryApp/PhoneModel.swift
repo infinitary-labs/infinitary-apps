@@ -256,6 +256,7 @@ struct AddressJoin: Equatable {
             removed = true
         }
         session.onEmote = { emote in CharacterCues.reacted(emote) }
+        session.onSceneSignal = { signal in CharacterCues.signal(signal) }
         connection = session
         session.found(addresses: nearby.macs.map(\.address))
         if foreground { session.start() }

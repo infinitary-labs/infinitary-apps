@@ -192,15 +192,43 @@ Join, Leave and Forget ask in alerts, which keep the cancel choice in view; on i
 
 `PhoneCharacter` draws the Mac's character in a native Canvas with the numbers of the Mac's own character code (`src/renderer/src/character`), so the two move alike.
 At rest the tesseract drifts slowly and the eyes blink every few seconds and wander; listening breathes as two counter-rotating hexagons; working speeds up with the Mac's ember, shimmer and halo, with white-hot cores.
-It plays two of the Mac's emotes and no others: the greeting, on the first character a person sees after the app opens or joins a computer (`CharacterCues.greetOnNextSight`), and the nod.
+It plays the desktop repertoire natively: greet, celebrate, ponder, confused and the five reply reactions, with the roll, yawn, orbit, constellation, Saturn, galaxy, Algol and black-hole fidgets.
+The first character a person sees after opening or joining greets once (`CharacterCues.greetOnNextSight`).
 A turn that starts mid-greeting lets the greeting play on as the ember eases in, then the character works, as on the Mac.
 A character that leaves mid-greeting, such as the empty stage a join shows before its cards arrive, hands the greeting on to the next one shown.
-The nod plays when the Mac's first mate reacts to a reply with one (`firstmate_emote`), held until that turn ends as on the Mac; a reaction replayed while reconnecting is not played, and a character off screen does not keep one for later.
+A live `firstmate_emote` reaches the characters on screen; reply reactions wait for the turn to finish, with the first request winning as on the desktop.
+A reaction replayed while reconnecting is not played, and a character off screen does not keep one for later.
 The wire and halo boosts come from the design skill's tokens through `scripts/generate-phone-theme.ts`, like its colours.
-Its timeline is capped at 30 frames per second, paused when hidden or backgrounded, and still under Reduce Motion, with no emote.
+Its isolated display clock requests the permitted screen cadence up to 120 frames per second, with the iPhone ProMotion opt-in; iOS still chooses the delivered cadence under power and thermal constraints.
+The clock advances by elapsed time, excludes hidden/background time and stops callbacks while hidden, inactive or under Reduce Motion, which shows a settled pose without emotes.
+`scripts/generate-phone-scene.ts` generates native geometry, targets, timing and reply comparison traces from the desktop owners; the phone gate checks that they are current.
+Simulator callback timings measure that run, not physical ProMotion delivery, battery use or thermal behavior.
+The DEBUG-only cadence observer identifies its target Canvas and records its mode, warmed heat and rotation so another window cannot contaminate a sample.
+The same display-tick sample measures the isolated first mate and the production crowded scene with its real task roster, retaining drawing work, interval tails and the delivered display intervals separately.
+A main-run-loop observer retains its actual before-sources, before-waiting and after-waiting timestamps beside the warmup's display timestamps, without adding a wait or moving the 60-callback warmup, 240-callback sample or their deadlines.
+A gap identifies missing main-thread progress but does not identify the blocking stack or establish a flake.
 Its accessibility value stays the state the conversation owner supplies; an emote never changes it.
-The join stage uses idle; the empty stage follows the Mac's published busy event for working and idle, with the snapshot and listening limits described under “Disposable verification”.
-No crew count or joining time is invented: the current connection supplies neither, so those facts stay absent.
+The join stage uses idle; the empty stage follows the Mac's published busy snapshot and numbered busy events, never typing or a crew count.
+Homes that advertise `native-scene-observations` answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.
+A numbered push supersedes an older pending read; an older home retains event-only busy observation and unknown remote reach without sending unsupported requests.
+Joining shows only the first mate until real board facts arrive, and the accessibility value names unknown conversation activity until the home supplies a reading.
+`PhoneCrewScene` renders desktop-sized computer formations in a continuous native scroller, with touch panning and arrow keys rather than paging or shrinking the entire scene.
+Its native Browse crew command, Shift-Command-C, enters app-owned browsing with an accent viewport outline; arrow keys pan it, Tab selects a real crewmate and Space opens that crewmate's preview.
+While browsing, a scene-owned responder holds first-responder status and offers those unmodified keys as priority key commands, because SwiftUI shortcuts for them lose to the system's focus and text handling.
+Each crewmate and program answers touch across its 44-point square, not only the drawn circle.
+Where two squares overlap, each point belongs to the nearer center (`PhoneTouchCell`), so a tap on a crewmate's own center always reaches it.
+Selection has an accent outline and an accessibility value; Tab brings it into view without relying on SwiftUI's platform-focus reporting.
+Escape, editing, a preview, a task record, leaving Home or backgrounding stops browsing and releases that responder, so the unmodified commands do not take over other controls.
+Each crewmate retains the published tier, work posture, computer and review identity; programs draw only their live parts, with their actual dependency branches.
+Crew and computer previews name the work and its state, and Open task uses the existing native task record.
+A crowded program fan widens up to the desktop's widest spread and then moves its layer outward, keeping the desktop's projected spacing without shrinking the parts.
+A program seen running keeps its ring on each observed computer between stages, without finished, unstarted or remote-placeholder dots.
+Its preview counts finished, running and waiting work, shows their shares and names each running part and computer.
+The panned extent stays stable while work departs, and cross-computer flights reach the first mate with the desktop's distance-based timing.
+`PhoneSceneViewport` alone owns placement: it centers home on entry or reconnection and preserves the viewed world point as the roster or viewport changes; the scroller's resize anchor does not add another adjustment.
+Initial rosters and reconnects settle in place; an unreachable computer freezes its unknown activity, and hidden scenes discard transient report, steer, failure and usage effects.
+Orbital paths and program topology are prepared with the roster, outside the display callback; only the drawing subtree reads the clock.
+No joining time is invented.
 Joining still confirms the link's computer address, not a name obtained before authenticating that computer.
 The details sheet names the connected view's ability to answer cards, send messages and control tasks, or explains read-only access when the Mac requires an update.
 
@@ -348,6 +376,9 @@ XCTest timeouts are enabled in both modes: ordinary tests have 1200-second defau
 `PhoneWaitsTests` observes a real delayed file across a stalled reader, fails a missing file, expires a stalled clock at its wall cap and checks direct short-window observation.
 Typing waits for the message box's actual keyboard focus, and a choice after paging waits for the restored native form reading as well as its enabled action.
 The gate starts `simulator-live.log` before XCTest starts, so a failed test that tears down the simulator domain cannot erase the earlier app, WebKit and system log.
+In the talk part, the first actual UIKit keyboard-queue timeout triggers a one-second stack sample after the runner confirms that PID still belongs to its own simulator's app.
+It retains `keyboard-timeout-stack.log` and the capture outcome, joins the sampler before deleting the simulator, and never retries a capture or changes the photo-selection, tap or focus assertions.
+A run without that fault records that no reproduction or stack capture is claimed.
 The Cards journey keeps both its accessibility tree and the disposable home's card-state calls when a choice does not dismiss its card.
 A request to `phone.yml` can name `parts`, `starve` and `perf`; the load controller stops each part's owned process tree with twelve-second long stalls and a 60-minute experiment limit.
 The `waits` input (or `--waits`) selects only `PhoneWaitsTests` on both devices, so `perf: true, waits: true` proves the native deadline rule without also grading unrelated UI recovery latency.
@@ -362,9 +393,14 @@ When the scheduler has not taken up a call 30 seconds on the load clock after Ph
 Neither changes the ceiling after boot.
 The part adds its library photo only once Photos has opened the library, so a restart of Photos never cuts the photo's import short.
 The part keeps that wait's own log output, with Photos' calls and the scheduler's take-ups, in `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs, before deleting the simulator.
-Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character and task-start recordings with their posters beside the test results.
+The phone workflow's `evidence_run` request exports native-scene attachments from an existing run on the Xcode host, without building or starting a simulator.
+It keeps the selected images, timing readings and scene recordings in a small artifact separately from the complete result bundles.
+Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character, scene-panning and task-start recordings with their posters beside the test results.
+A manual phone workflow request with `recording` enabled passes `--raw-demo` through `PHONE_RECORDING=1`, including the virtual-Mac route; ordinary checks do not record.
+That mode keeps the simulator’s original silent H.264 capture as `*-raw.mp4` and needs no encoder on the test Mac.
+Convert those captures to the card’s bounded H.264 format and inspect their posters on the evidence reader’s computer before publication; `--demo` still performs that conversion where FFmpeg is installed.
 The reconnect recording crops the top of the phone view around the connection state and card; the card recordings keep the full native view.
-Each retains real speed and holds the final frame for five seconds, within a fifteen-second cap.
+An encoded demo retains real speed and holds the final frame for five seconds, within a fifteen-second cap; a raw capture preserves the complete recorded interaction.
 The runner creates and deletes its own simulator, scratch HOME, real-core home, mock provider, data and keys, never borrows or erases a person's simulator, and saves logs and the result bundle outside the working copy.
 The test home uses the real stores, dispatcher, pairing and TLS connection, with sample cards, feed lines and a task; its control interface listens only on loopback behind a fresh per-run token.
 The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
@@ -383,6 +419,12 @@ Every native journey launch goes through `launchPhoneApp`, which renews the owne
 A live subscription is not proof that it still supplies registrations after relaunch; the new subscription starts with no cached witnesses and observes both launch and the home's keyboard attachment.
 The runner joins the old output streams before appending the new subscription's gzip member, keeping all registrations in order.
 Hardware chords go through `pressPhoneKey`, which asks the test home for backboardd's acknowledgement of that chord's registration for the current app process, then sends the chord once.
+The scene's Command-Shift-C entry command keeps that exact-chord/current-process acknowledgement.
+For its unmodified arrows, Tab and Space, the captain-approved contract instead observes app-owned browsing before one actual keypress and verifies the result on screen; BackBoard excludes these commands from its routable registrations.
+There is no native-focus wait, priming input or retry.
+Its touch drags read the target's and the viewport's current frames for each drag's direction and distance, at most eight drags, and a program opens from a tap near its square's corner.
+The scene journey proves rightward panning, leftward return to the same world point, a visible real crewmate selected by Tab and that crewmate's matching preview opened by Space, retaining pictures and an optional keyboard recording.
+The registration parser still reads empty modifier groups and normalizes BackBoard's arrow and Tab spellings without treating rejected commands as acknowledgements.
 UIKit publishes an app's key commands to backboardd only while a hardware keyboard is attached when its deferred update runs after the next Core Animation commit, so for that wait the home attaches one to its owned simulator by setting the simulator-wide attached state `UIDevice` reads, the value backboardd itself writes when a keyboard connects, and detaches it again however the wait ends.
 XCTest's virtual keyboard connects and disconnects within a millisecond of each key press, so a priming press only races that publication, and once a press has detached it no app process launched afterwards publishes at launch.
 The native runner observes only its own simulator, and the isolated test home returns the acknowledgement to the key driver.
@@ -395,9 +437,9 @@ The talk part exercises details, keyboard dismissal, both card-paging shortcuts 
 The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.
 It also checks that the card and Tasks start and end where the message box does, the reading column.
 The fixture's display controls only change the launcher-owned simulator, never a developer's device or this Mac's appearance.
-App-hosted shell tests render each native character's still pose, play the greeting and the held reply nod through the character's machine, and read Activity from the real test home; the native journey also verifies the computer-authored task key.
+App-hosted shell tests render each native character's still pose, play the greeting, every held reply and every fidget through the character's machine, and read Activity from the real test home; the native journey also verifies the computer-authored task key.
 The empty-stage character consumes the Mac's `firstmate_state.busy` event, the same conversation-state owner as the desktop, and the journey holds and completes a real first-mate turn through the mock provider to verify working and idle.
-A stopped or lost connection clears the busy reading; the published connection has no initial busy snapshot, so a fresh session stays idle until a busy event arrives.
+A stopped or lost connection clears the busy reading; a home advertising `native-scene-observations` supplies an initial busy snapshot, while an older home stays unobserved until a busy event arrives.
 Native keyboard dictation exposes no listening signal: the phone never infers listening from focus or typing, and the listening drawing is not a live conversation state.
 Native hero pictures use the same crop in both themes from the simulator's full-resolution attachments; the desktop-only `heroShot` cannot capture a SwiftUI view.
 

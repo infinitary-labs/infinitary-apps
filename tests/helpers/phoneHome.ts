@@ -32,6 +32,7 @@ import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budget
 import { claimedPort } from "./claimedPort";
 import { standInDnsSd } from "./dnsSdStandIn";
 import type { PhoneChord, PhoneKeyWitness } from "./phoneKeyboard";
+import { phoneSceneFixture } from "./phoneScene";
 import { startScriptedClient } from "./scriptedClient";
 import { type SshServer, startSshServer } from "./sshServer";
 
@@ -76,6 +77,7 @@ export async function startPhoneHome(
     voice: { modelReady: async () => false, ensureModel: async () => {} },
     keychain: absentKeychain,
   });
+  const scene = phoneSceneFixture(core, userData, () => connection.settled());
   const readings = {
     cards: 0,
     feed: 0,
@@ -201,9 +203,14 @@ export async function startPhoneHome(
   let loseNextReply = false;
   // The core's own id for the hero card (a first mate card's id is the core's, not the one asked for).
   let heroId = "";
-  const connect = (protocolVersion = PROTOCOL_VERSION) => {
+  let sceneObservationReads = 0;
+  const connect = (protocolVersion = PROTOCOL_VERSION, sceneSupport = true) => {
     const connection = startConnection({
       dispatch: async (channel, args, actor) => {
+        if (channel === "inf:conversation:state" || channel === "inf:computers:presence") {
+          sceneObservationReads += 1;
+          if (!sceneSupport) throw new Error("This older home has no scene observation reads");
+        }
         if (channel === "inf:cards:list") readings.cards += 1;
         if (channel === "inf:feed:recent") readings.feed += 1;
         if (
@@ -266,6 +273,7 @@ export async function startPhoneHome(
       address: [],
       name: () => "Test Mac mini",
       protocolVersion,
+      ...(sceneSupport ? {} : { changes: [] }),
     });
     connection.onViewDevice(({ deviceId, contact }) => {
       if (contact === "in-reach") {
@@ -320,7 +328,8 @@ export async function startPhoneHome(
           const chord = JSON.parse(body);
           if (
             typeof chord.key !== "string" ||
-            chord.key.length !== 1 ||
+            (chord.key.length !== 1 &&
+              !["leftArrow", "rightArrow", "upArrow", "downArrow"].includes(chord.key)) ||
             !Array.isArray(chord.modifiers) ||
             !chord.modifiers.every(
               (value: unknown) =>
@@ -906,6 +915,18 @@ export async function startPhoneHome(
           observations.push({ check: "character-fixture", result });
           break;
         }
+        // INF-1066: an older home advertises no named additions and refuses unsupported scene reads.
+        case "POST scene-older-home":
+        case "POST scene-current-home":
+          await connection.close();
+          sceneObservationReads = 0;
+          connection = connect(PROTOCOL_VERSION, command === "scene-current-home");
+          await connection.settled();
+          result = { ok: true };
+          break;
+        case "POST scene-observations":
+          result = { reads: sceneObservationReads, busy: firstmateBusy };
+          break;
         case "POST character-finished": {
           if (!firstmateBusy || provider.heldFirstmate() !== 1)
             throw new Error("The character was not showing a real held conversational turn");
@@ -945,6 +966,25 @@ export async function startPhoneHome(
           );
           result = { writes: structuredClone(writes) };
           observations.push({ check: "past-card-message-context", result });
+          break;
+        case "POST scene-fixture":
+          result = await scene.create();
+          observations.push({ check: "native-scene-facts", result });
+          break;
+        case "POST scene-stage-finished":
+          result = await scene.finishParts();
+          break;
+        case "POST scene-cleanup":
+          scene.cleanup();
+          result = { ok: true };
+          break;
+        case "POST capture-scene-start":
+          await controls?.start("native-scene-pan");
+          result = { ok: true };
+          break;
+        case "POST capture-scene-keyboard-start":
+          await controls?.start("native-scene-keyboard");
+          result = { ok: true };
           break;
         case "POST talk-fixture": {
           // INF-64 piece 5: the existing provider holds a real Pi turn until the captain steers or interrupts it.
@@ -1106,7 +1146,17 @@ export async function startPhoneHome(
           !answer.value.some((card) => card.title === cardTitle)
         )
           throw new Error("The published-contract client did not read the test home's card");
-        return { welcome: client.welcome, cards: answer, kind: grant.kind };
+        const conversation = await client.ask("inf:conversation:state", []);
+        const computers = await client.ask("inf:computers:presence", []);
+        if (conversation.ok !== true || computers.ok !== true)
+          throw new Error("The published-contract phone could not read its scene observations");
+        return {
+          welcome: client.welcome,
+          cards: answer,
+          kind: grant.kind,
+          conversation,
+          computers,
+        };
       } finally {
         await client.close();
         core.services.devices.remove(grant.deviceId);

@@ -2,7 +2,7 @@ import { X509Certificate } from "node:crypto";
 import type { IncomingMessage } from "node:http";
 import type { NetworkInterfaceInfo } from "node:os";
 import { join } from "node:path";
-import { type DeviceView, parsePairingLink } from "@shared/devices";
+import { computerPresenceOf, type DeviceView, parsePairingLink } from "@shared/devices";
 import { afterEach, describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -191,7 +191,7 @@ function homeAt(address: string) {
 
 describe("a Mac that both controls this Firstmate and runs work", () => {
   it("reads its work, and whether Firstmate is open on it, on one row", () => {
-    const { pairing, connection, computers } = homeAt("192.168.65.2");
+    const { pairing, connection, computers, deviceId: miniId } = homeAt("192.168.65.2");
     const joined = pairing.claim(
       {
         code: parsePairingLink(pairing.invite({ kind: "mac" }).link).code,
@@ -206,9 +206,18 @@ describe("a Mac that both controls this Firstmate and runs work", () => {
     const deviceId = joined.grant.deviceId;
     const imac = () => computers.list().find((device) => device.id === deviceId);
     expect(imac()).toMatchObject({ kind: "mac", inReach: false, controlling: false, tasks: 0 });
+    // INF-1066: a native view receives only public identity/reach from these real pairing readings.
+    expect(computerPresenceOf(computers.list())).toEqual([
+      { id: miniId, name: "Mac mini", inReach: false },
+      { id: deviceId, name: "iMac", inReach: false },
+    ]);
     // Its work in reach, then Firstmate opened there.
     connection.tell({ deviceId, contact: "in-reach" });
     expect(imac()).toMatchObject({ inReach: true, controlling: false });
+    expect(computerPresenceOf(computers.list())).toEqual([
+      { id: miniId, name: "Mac mini", inReach: false },
+      { id: deviceId, name: "iMac", inReach: true },
+    ]);
     connection.tellView({ deviceId, contact: "in-reach" });
     expect(imac()).toMatchObject({ inReach: true, controlling: true, runs: [] });
     // Closing its window leaves its work in reach.

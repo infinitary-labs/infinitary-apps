@@ -26,6 +26,15 @@ on:
         description: Hold native waits to their wall budgets on a quiet run
         type: boolean
         default: false
+      recording:
+        description: "Capture the existing simulator journeys as silent demo recordings"
+        required: false
+        type: boolean
+        default: false
+      evidence_run:
+        description: "Export native scene attachments from an existing phone run without starting simulators"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -61,6 +70,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
   choose-phone:
+    if: inputs.evidence_run == ''
     runs-on: ubuntu-latest
     # INF-827: reading the newest passing check of main's part times.
     permissions:
@@ -123,8 +133,9 @@ jobs:
           if-no-files-found: ignore
           retention-days: 14
   native-phone:
+    name: ${{ inputs.evidence_run != '' && 'native-phone-not-requested' || 'native-phone' }}
     needs: choose-phone
-    if: github.event_name != 'pull_request' || needs.choose-phone.outputs.run == 'true'
+    if: inputs.evidence_run == '' && (github.event_name != 'pull_request' || needs.choose-phone.outputs.run == 'true')
     # No paid hosted-Mac fallback. MAC_RUNNER currently names this Mac mini's label.
     # INF-524: the repository variable PHONE_VIRTUAL_MAC moves the device gates into
     # a fresh virtual Mac, through the phone check's own runner, which takes no
@@ -238,6 +249,7 @@ jobs:
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
+          PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
       - name: Delete the virtual Mac
         if: ${{ always() && steps.vm.outcome != 'skipped' }}
         run: scripts/virtual-mac/phone.sh delete
@@ -284,3 +296,63 @@ jobs:
           path: ${{ runner.temp }}/phone/
           if-no-files-found: ignore
           retention-days: 14
+  # INF-1066: result bundles can exceed the workflow reader's download bound.
+  # Export selected evidence on the Xcode host without a simulator, build, sign-in or signing.
+  scene-evidence:
+    if: inputs.evidence_run != ''
+    runs-on: ${{ vars.MAC_RUNNER || 'mini-mac' }}
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: phone-results
+          run-id: ${{ inputs.evidence_run }}
+          github-token: ${{ github.token }}
+          path: ${{ runner.temp }}/scene-source
+      - name: Export native scene attachments
+        env:
+          SOURCE: ${{ runner.temp }}/scene-source
+          DEST: ${{ runner.temp }}/scene-evidence
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, shutil, subprocess
+          source, dest = pathlib.Path(os.environ['SOURCE']), pathlib.Path(os.environ['DEST'])
+          dest.mkdir(parents=True, exist_ok=True)
+          for bundle in source.rglob('*.xcresult'):
+              part = bundle.parent.name
+              if part not in ('rest', 'character'):
+                  continue
+              device = bundle.parent.parent.name
+              exported = source / ('exported-' + device + '-' + part)
+              subprocess.run(['xcrun', 'xcresulttool', 'export', 'attachments', '--path', str(bundle), '--output-path', str(exported)], check=True)
+              manifest = json.loads((exported / 'manifest.json').read_text())
+              def keep(value):
+                  if isinstance(value, list):
+                      for child in value: keep(child)
+                  elif isinstance(value, dict):
+                      file = value.get('exportedFileName')
+                      name = value.get('suggestedHumanReadableName', '')
+                      if file and name.startswith('native-scene-'):
+                          src = exported / pathlib.Path(file).name
+                          shutil.copyfile(src, dest / (device + '-' + part + '-' + pathlib.Path(name).stem + '-' + src.name))
+                      for child in value.values():
+                          if isinstance(child, (dict, list)): keep(child)
+              keep(manifest)
+              shutil.copyfile(exported / 'manifest.json', dest / (device + '-' + part + '-manifest.json'))
+          for clip in source.rglob('*.mp4'):
+              if clip.stem.removesuffix('-raw') not in ('native-scene-pan', 'native-scene-keyboard', 'conversation', 'character'):
+                  continue
+              device, part = clip.parent.parent.name, clip.parent.name
+              shutil.copyfile(clip, dest / (device + '-' + part + '-' + clip.name))
+              poster = clip.with_name(clip.stem + '-poster.png')
+              if poster.exists(): shutil.copyfile(poster, dest / (device + '-' + part + '-' + poster.name))
+          shutil.rmtree(source)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-scene-evidence
+          path: ${{ runner.temp }}/scene-evidence
+          retention-days: 14
+          if-no-files-found: error

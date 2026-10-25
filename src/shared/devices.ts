@@ -503,6 +503,19 @@ export const deviceViewSchema = z.strictObject({
 });
 export type DeviceView = z.infer<typeof deviceViewSchema>;
 
+/** Public scene facts only: no addresses, sign-ins, setup or removal authority. */
+export const computerPresenceSchema = deviceViewSchema.pick({
+  id: true,
+  name: true,
+  inReach: true,
+});
+export type ComputerPresence = z.infer<typeof computerPresenceSchema>;
+export function computerPresenceOf(devices: readonly DeviceView[]): ComputerPresence[] {
+  return devices
+    .filter((device) => deviceRunsWork(device.kind))
+    .map(({ id, name, inReach }) => ({ id, name, inReach }));
+}
+
 /**
  * Who a command is for (docs/devices.md, "Joining by a command"): another
  * Mac, which gets Firstmate from this one and joins as a Mac, or another

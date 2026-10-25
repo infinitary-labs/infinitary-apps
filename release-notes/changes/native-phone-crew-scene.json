@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "native-phone-crew-scene",
+      "kind": "feature",
+      "title": "Your crew on iPhone and iPad",
+      "body": "The first mate gains the computer's reactions and fidgets. Swipe through full-sized computer groups, tap a crewmate to preview their work, and open the existing task record. Animation follows the display's permitted rate instead of a fixed 30-frame schedule.",
+      "area": "devices",
+      "picture": {
+        "dark": "native-phone-crew-scene-dark.png",
+        "light": "native-phone-crew-scene-light.png",
+        "alt": "Infinitary's native scene with the first mate, orbiting crewmates, branching program work and another computer's formation"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

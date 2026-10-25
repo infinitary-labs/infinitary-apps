@@ -16,7 +16,7 @@ afterEach(() => {
 
 // INF-1122: actual failing phone runs could not start log show after XCTest tore
 // the simulator's domain down. A live stream must retain its earlier readings.
-const fixture = () => {
+const fixture = (onLine?: (line: string) => void) => {
   const child = Object.assign(new EventEmitter(), {
     stdout: new PassThrough(),
     stderr: new PassThrough(),
@@ -40,11 +40,28 @@ const fixture = () => {
     evidence,
     children,
     predicate: 'process == "Infinitary"',
+    onLine,
   });
   return { child, stop, evidence, children, observing };
 };
 
 describe("the native gate's pre-failure log", () => {
+  it("delivers complete readings immediately for fault-time diagnostics", async () => {
+    // INF-1066: the sampler must hear the real timeout before the typing wait ends.
+    const onLine = vi.fn();
+    const { child, observing } = fixture(onLine);
+    child.stdout.write("Filtering the log data using the requested predicate\n");
+    const log = await observing;
+    onLine.mockClear();
+    const reading =
+      "2026-10-24 16:41:17.302 F  Infinitary[7496:f94e] [com.apple.UIKit:KeyboardTaskQueue] -[UIKeyboardTaskQueue _lockWhenReadyForMainThread] Keyboard queue task timeout detected";
+    child.stdout.write(reading.slice(0, 80));
+    expect(onLine).not.toHaveBeenCalled();
+    child.stdout.write(`${reading.slice(80)}\n`);
+    expect(onLine).toHaveBeenCalledExactlyOnceWith(reading);
+    await log.close();
+  });
+
   it("keeps the earlier app reading when the simulator domain tears down", async () => {
     const { child, stop, evidence, children, observing } = fixture();
     child.stdout.write('Filtering the log data using "process == \\"Infinitary\\""\n');

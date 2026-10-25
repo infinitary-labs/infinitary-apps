@@ -30,15 +30,15 @@ struct PhoneCards: View {
                     replyLeaves: !card.value["holdsPlace"].flag && session.stack.count > 1)
                     .id("\(card.id):\(card.offerID ?? card.body):\(card.isPast)")
             } else {
-                // INF-1060: as on the Mac, the empty stage is the character alone.
-                PhoneCharacter(state: session.firstmateBusy ? .working : .idle).frame(width: 200, height: 200)
+                // INF-1060 keeps the empty stage free of placeholder words; INF-1066 adds its native crew.
+                PhoneCrewScene(session: session)
                     .frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, PhoneTheme.space5)
             }
             // INF-589 item 11: with no card to page, the pager hides; Past cards stays reachable while there are any.
             if let restoreProblem { Text(restoreProblem).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("restore-error") }
             if !session.stack.isEmpty || !session.pastCards.isEmpty || !session.minimizedCards.isEmpty { pager }
         }
-        .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: PhoneColumn.width).frame(maxWidth: .infinity)
+        .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: card == nil ? .infinity : PhoneColumn.width).frame(maxWidth: .infinity)
         .background(PhoneTheme.background)
         // INF-589 item 12: a soft tap once the computer accepts an answer or a reply; never on a page turn.
         .sensoryFeedback(.phone, trigger: sent)

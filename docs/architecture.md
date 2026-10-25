@@ -130,7 +130,11 @@ FYI events - spawns, reports, close-outs, host-raised notes - live in the feed.
 
 **Workspace inference.**
 No workspace picker exists.
-An explicitly named registered repo wins; a clear follow-up inherits its referent; otherwise the registry match from the per-turn context block; repo-less work lands in the default workspace; genuine ambiguity costs exactly one decision card.
+An explicitly named registered project wins; a clear follow-up inherits its referent; otherwise the first mate matches work against the project scopes last shown and asks when none or more than one fit.
+Each ordinary project has optional scope text set in Settings or by talking; the personal workspace takes none.
+A separate prominent scope snapshot lists all ordinary projects and "not set" for empty scopes, only after a project or scope changes or after context loss.
+Session attachment (including rebound and restart) and a backend-neutral successful-compaction event invalidate the in-process shown snapshot, so the next turn carries scopes again.
+The per-turn project index and focus hint do not repeat them, and the host never judges scope fit.
 
 **Context discipline** (inspired by prime-agent's context-as-variable and RLM runtime, deliberately without its IPython machinery): the per-turn context block is a compact index (repos, crew, quota one-liner) and `crew_status` is the query side; the host - the **crew supervisor** plus SQLite - is the authoritative registry, so the agent's transcript stays lossy and compactable without ever losing the fleet.
 `spawn_crewmate` follows the admission-handle discipline: it returns the task id immediately and results arrive only as `[fm-op]` messages through the **durable inbox** (delivered when the agent session is idle, surviving app quits; the wake diet, P3/WI-13, holds the first pending wake a short window so a burst drains as one turn, and a captain turn carries the pending wakes with it), and an unknown `repo_id` rejects the spawn loudly instead of silently defaulting.

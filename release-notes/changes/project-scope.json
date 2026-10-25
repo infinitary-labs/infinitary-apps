@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "project-scope",
+      "kind": "feature",
+      "title": "Tell your first mate what belongs in each project",
+      "body": "Each project has an optional Scope in Settings → Projects. Write what work belongs there, or tell your first mate to change it. Your first mate uses those scopes to choose where new work goes and asks when none or several fit. A project you name still wins, and follow-ups stay with their work's project.",
+      "area": "projects",
+      "picture": {
+        "dark": "project-scope-dark.webp",
+        "light": "project-scope-light.webp",
+        "alt": "Project details with a Scope box describing tools and dashboards for an astronomy club"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

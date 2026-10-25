@@ -15,7 +15,9 @@ import { type LaunchedApp, launchApp } from "./launch";
 import { LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT } from "./mockProvider";
 import { addedProjects, addFromSetupCard, projectRow } from "./projects";
 import { promptInput } from "./prompt";
+import { latestContext } from "./providerRequest";
 import { putInLine, reportLine, startedLine, taskKey } from "./rails";
+import { readSavedData } from "./savedData";
 import { ADOPT_REPO_PROMPT_MARKER, projectSetup } from "./scenarios/projectSetup";
 import {
   AMBIGUOUS_PROMPT_MARKER,
@@ -25,6 +27,7 @@ import {
   workspaceInference,
 } from "./scenarios/workspaceInference";
 import { cardMeta, shownCard } from "./stack";
+import { focusOn, pressKey } from "./windowKeys";
 
 /**
  * Workspace inference (phase C acceptance): with two managed repos, a
@@ -355,6 +358,70 @@ test("the captain can set project policy from the accordion in settings", async 
     )
     .toMatchObject({ delivery: "direct-pr", autonomy: true, rigor: "reviewed" });
   await page.keyboard.press("Escape");
+});
+
+// INF-1117 approved direction A: keyboard edits persist and reach the next
+// model context without repetition. Uses only the launcher's private HOME,
+// two local projects and mock model; completion is saved data and request content.
+test("Scope is saved by keys and shown once in the first mate's next context", async () => {
+  const { page, mockProvider, userDataDir } = launched;
+  const alpha = (await addedProjects(page)).find((repo) => repo.path === repoAlpha);
+  if (!alpha || !mockProvider) throw new Error("The isolated scope fixture must be ready");
+  const scope = "Tools and dashboards for our astronomy club.";
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("tab", { name: "Projects", exact: true }).click();
+  const row = projectRow(page, alpha.id);
+  const header = row.getByRole("button", { expanded: false });
+  // Settings loads projects asynchronously; counting before the row arrives
+  // used to skip opening it and tried to focus an absent details field.
+  await expect(header).toBeVisible();
+  await pressKey(header, "Enter");
+  await expect(row.getByRole("button", { expanded: true })).toBeVisible();
+  const name = row.getByRole("textbox", { name: "Project name", exact: true });
+  await focusOn(name);
+  await pressKey(name, "Tab");
+  const field = row.getByRole("textbox", { name: "Scope", exact: true });
+  await expect(field).toBeFocused();
+  await field.fill(scope);
+  const save = row.getByRole("button", { name: "Save details", exact: true });
+  await pressKey(save, "Enter");
+  await expect
+    .poll(() =>
+      readSavedData(userDataDir, (db) =>
+        db.prepare("SELECT scope FROM repos WHERE id = ?").get(alpha.id),
+      ),
+    )
+    .toEqual({ scope });
+  await pressKey(field, "Escape");
+  const contexts = () =>
+    mockProvider
+      .requestBodies()
+      .slice(before)
+      .map(
+        (body) =>
+          latestContext(body) as ReturnType<typeof latestContext> & { project_scopes?: unknown },
+      )
+      .filter(Boolean);
+  let before = mockProvider.requestBodies().length;
+  const input = promptInput(page);
+  await input.fill("What work belongs in the astronomy project?");
+  await pressKey(input, "Enter");
+  await expect.poll(contexts).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        project_scopes: expect.objectContaining({
+          projects: expect.arrayContaining([{ repo_id: alpha.id, name: alpha.name, scope }]),
+        }),
+      }),
+    ]),
+  );
+  await waitForFirstmateIdle(page);
+  before = mockProvider.requestBodies().length;
+  await input.fill("Thank you. What is next?");
+  await pressKey(input, "Enter");
+  await expect.poll(() => contexts().length).toBeGreaterThan(0);
+  expect(contexts().every((context) => context?.project_scopes === undefined)).toBe(true);
+  await waitForFirstmateIdle(page);
 });
 
 test("an agent-made removal shows up live in the settings list", async () => {

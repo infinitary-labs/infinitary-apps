@@ -621,6 +621,7 @@ export class FirstmateAgent {
   private threadsSeenThrough = 0;
   /** The model-bucket lines last shown, so an unchanged placement is not repeated every turn. */
   private lastModelBucketsShown: string | undefined;
+  private lastProjectScopesShown: string | undefined;
   /** After RUNAWAY_REFUSE_AFTER, idle turns wait for Retry rather than hang. */
   private runawayRefused = false;
   /** The running turn's failure text, for the ask it files. */
@@ -1441,6 +1442,7 @@ export class FirstmateAgent {
         ...(resume ? { resume } : {}),
       }),
     );
+    this.lastProjectScopesShown = undefined;
     this.rememberResume(session);
     this.unsubscribe = session.subscribe((event) => this.onSessionEvent(event));
     const renewal = session.takeRenewal();
@@ -3318,6 +3320,7 @@ export class FirstmateAgent {
     this.resolutionsSeenThrough = builtAt;
     this.threadsSeenThrough = builtAt;
     this.lastModelBucketsShown = this.modelBucketLines().join("\n");
+    this.lastProjectScopesShown = JSON.stringify(this.projectScopes());
     return block;
   }
 
@@ -3473,6 +3476,18 @@ export class FirstmateAgent {
     return lines;
   }
 
+  /** The snapshot whose lifetime is the current model context, not an app setting. */
+  private projectScopes() {
+    return this.options.repos
+      .list()
+      .filter((repo) => repo.kind !== "personal")
+      .map((repo) => ({
+        repo_id: repo.id,
+        name: repo.name,
+        scope: repo.scope || "not set",
+      }));
+  }
+
   /**
    * The model-bucket section only when what it would show has changed since
    * it was last shown (the captain's ask): an unchanged placement is not
@@ -3555,6 +3570,8 @@ export class FirstmateAgent {
     const captainResolutions = this.renderCaptainResolutions(Date.now());
     const threadActivity = this.renderThreadActivity(Date.now());
     const modelBuckets = this.renderModelBuckets();
+    const scopes = this.projectScopes();
+    const showScopes = JSON.stringify(scopes) !== this.lastProjectScopesShown;
     const introductionId = this.options.settings.getFirstRun().welcomeCardId;
     const introduction = introductionId
       ? this.options.tasks.taskForCard(introductionId)
@@ -3565,6 +3582,14 @@ export class FirstmateAgent {
     // envelope; the model-facing marker remains outside the data so served-frame
     // and Observe readers can continue to identify the context segment.
     const context = {
+      ...(showScopes
+        ? {
+            project_scopes: {
+              note: "Project scopes: use these to choose where new work goes. Not repeated until a project or scope changes, or this context is lost.",
+              projects: scopes,
+            },
+          }
+        : {}),
       repos: repos.map((repo) => ({
         name: repo.name,
         repo_id: repo.id,
@@ -4482,6 +4507,10 @@ export class FirstmateAgent {
   }
 
   private onSessionEvent(event: SessionEvent): void {
+    if (event.type === "context_compacted") {
+      this.lastProjectScopesShown = undefined;
+      return;
+    }
     if (event.type === "input_read") {
       const index = this.pendingReads.findIndex((input) => input.sha === event.textSha256);
       if (!this.running || index < 0) return;

@@ -6411,6 +6411,77 @@ describe("the task index nests children under their parent", () => {
   });
 });
 
+describe("INF-1117: scope snapshots follow changes and context lifetime", () => {
+  it("serves scopes again after an app restart even when the saved project is unchanged", async () => {
+    const before = setup();
+    const { repo } = await before.repos.setup({ kind: "adopt", path: process.cwd() });
+    before.repos.configure(repo.id, { scope: "Tools for our astronomy club." });
+    await before.agent.converse("What belongs here?");
+    before.session.resolveNextPrompt();
+    await vi.waitFor(() => expect(before.agent.isBusy()).toBe(false));
+    before.agent.dispose();
+    const after = setup({ db: before.db });
+    await after.agent.converse("And after restarting?");
+    expect(decodeContext(after.session.prompts[0] as string).project_scopes).toMatchObject({
+      projects: [{ repo_id: repo.id, scope: "Tools for our astronomy club." }],
+    });
+    after.session.resolveNextPrompt();
+    await vi.waitFor(() => expect(after.agent.isBusy()).toBe(false));
+  });
+
+  it("serves all project scopes once, then after edits, clearing, membership changes, compaction and reattachment", async () => {
+    const { agent, session, repos, events } = setup();
+    const { repo } = await repos.setup({ kind: "adopt", path: process.cwd() });
+    const scope = "Tools and dashboards for our astronomy club.";
+    repos.configure(repo.id, { scope });
+    const next = async () => {
+      await agent.converse("Where does this work belong?");
+      const context = decodeContext(session.prompts.at(-1) as string);
+      session.resolveNextPrompt();
+      await vi.waitFor(() => expect(agent.isBusy()).toBe(false));
+      return context;
+    };
+    const snapshot = (value: string) => ({
+      note: expect.any(String),
+      projects: [{ repo_id: repo.id, name: repo.name, scope: value }],
+    });
+    expect((await next()).project_scopes).toEqual(snapshot(scope));
+    expect((await next()).project_scopes).toBeUndefined();
+    repos.configure(repo.id, { scope: "Club observing tools, not our public website." });
+    expect((await next()).project_scopes).toEqual(
+      snapshot("Club observing tools, not our public website."),
+    );
+    repos.configure(repo.id, { scope: null });
+    expect((await next()).project_scopes).toEqual(snapshot("not set"));
+    expect((await next()).project_scopes).toBeUndefined();
+    session.emit({ type: "context_compacted" });
+    expect((await next()).project_scopes).toEqual(snapshot("not set"));
+    expect(events.some((event) => (event as { type: string }).type === "context_compacted")).toBe(
+      false,
+    );
+    expect((await next()).project_scopes).toBeUndefined();
+    await agent.rebind("scope-test-account");
+    expect((await next()).project_scopes).toEqual(snapshot("not set"));
+    const other = await repos.setup({ kind: "init", name: "website" });
+    expect((await next()).project_scopes).toMatchObject({
+      projects: [
+        { repo_id: repo.id, scope: "not set" },
+        { repo_id: other.repo.id, scope: "not set" },
+      ],
+    });
+    repos.unregister(other.repo.id);
+    expect((await next()).project_scopes).toEqual(snapshot("not set"));
+    const personalPath = scratchDir("infinitary-scope-personal-");
+    repos.ensurePersonal(personalPath);
+    expect((await next()).project_scopes).toBeUndefined();
+    expect(
+      decodeContext(session.prompts.at(-1) as string).repos.every(
+        (repo) => repo.scope === undefined,
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("models by intelligence bucket (only shown on change)", () => {
   const catalog: ModelsCatalogView = {
     generatedAt: "now",

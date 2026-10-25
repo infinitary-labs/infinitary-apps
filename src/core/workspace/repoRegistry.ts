@@ -84,17 +84,19 @@ type Row = {
   delivery: RepoDelivery;
   autonomy: number;
   rigor: Rigor | null;
+  scope: string | null;
   runs_on: string | null;
   placement_requirements_json?: string | null;
 };
 
 const ROW_COLUMNS =
-  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json";
+  "id, name, path, setup_kind, kind, origin, forge_kind, forge_host, delivery, autonomy, rigor, runs_on, placement_requirements_json, scope";
 
 function fromRow(row: Row): RepoView {
   return {
     id: row.id,
     name: row.name,
+    scope: row.scope,
     path: row.path,
     setupKind: row.setup_kind,
     kind: row.kind,
@@ -397,7 +399,7 @@ export class RepoRegistry {
       this.db.transaction(() => {
         this.db
           .prepare(
-            "UPDATE repos SET name = ?, path = ?, origin = ?, forge_kind = ?, forge_host = ?, delivery = ?, autonomy = ?, rigor = ?, runs_on = ?, placement_requirements_json = ? WHERE id = ?",
+            "UPDATE repos SET name = ?, path = ?, origin = ?, forge_kind = ?, forge_host = ?, delivery = ?, autonomy = ?, rigor = ?, runs_on = ?, placement_requirements_json = ?, scope = ? WHERE id = ?",
           )
           .run(
             name,
@@ -418,6 +420,7 @@ export class RepoRegistry {
                 ? (repo.placementRequirements ?? null)
                 : changes.placementRequirements,
             ),
+            changes.scope === undefined ? (repo.scope ?? null) : changes.scope,
             id,
           );
         this.projects.renameForRepo(id, name);
@@ -679,6 +682,7 @@ export class RepoRegistry {
     const repo: RepoView = {
       id: randomUUID().slice(0, 8),
       name: spec.name,
+      scope: null,
       path: spec.path,
       setupKind: spec.setupKind,
       kind: spec.kind ?? "project",

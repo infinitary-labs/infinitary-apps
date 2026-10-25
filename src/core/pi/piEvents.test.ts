@@ -209,6 +209,19 @@ describe("usageFromMessage", () => {
   });
 });
 
+describe("INF-1117: compaction invalidates context-scoped facts", () => {
+  it("reports successful compaction, not cancellation or failure", () => {
+    expect(
+      seatEventsFromPiEvent({ type: "compaction_end", aborted: false }, "firstmate"),
+    ).toContainEqual({ type: "context_compacted" });
+    for (const end of [{ aborted: true }, { errorMessage: "Summary failed" }]) {
+      expect(
+        seatEventsFromPiEvent({ type: "compaction_end", ...end }, "firstmate"),
+      ).not.toContainEqual({ type: "context_compacted" });
+    }
+  });
+});
+
 describe("seatEventsFromPiEvent (the Pi side of the seat seam)", () => {
   it("closes a failed turn_end as turn_failed, then turn_end, then turn_closed", () => {
     expect(
@@ -345,10 +358,11 @@ describe("completed context shortening usage", () => {
             costParts: { input: 0.1, output: 0.2, cacheRead: 0.03, cacheWrite: 0.04 },
           },
         },
+        { type: "context_compacted" },
       ]);
       expect(translate({ ...end })).toEqual([]);
       translate({ type: "compaction_start", reason });
-      expect(translate({ ...end })).toHaveLength(1);
+      expect(translate({ ...end })).toHaveLength(2);
     },
   );
   it.each([{ aborted: true }, { errorMessage: "failed" }, { result: undefined }, { result: {} }])(
@@ -359,7 +373,9 @@ describe("completed context shortening usage", () => {
         result: { usage },
         ...fields,
       });
-      expect(events).toHaveLength(1);
+      expect(events).toHaveLength("aborted" in fields || "errorMessage" in fields ? 1 : 2);
+      if (!("aborted" in fields) && !("errorMessage" in fields))
+        expect(events[1]).toEqual({ type: "context_compacted" });
       expect(events[0]).not.toHaveProperty("usage");
     },
   );

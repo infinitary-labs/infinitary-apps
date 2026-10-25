@@ -1496,6 +1496,9 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       uuid?: unknown;
       event?: { type?: unknown };
     };
+    if (record.type === "system" && record.subtype === "compact_boundary") {
+      this.emit({ type: "context_compacted" });
+    }
     if (this.spec.builtins === "coding" && result.backgroundJobs !== undefined) {
       this.emit({
         type: "background_work_changed",

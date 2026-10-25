@@ -863,6 +863,9 @@ export class SessionHost {
       held.account = this.options.accounts?.of(binding);
       held.renewal = session.takeRenewal();
       held.unsubscribe = session.subscribe((event) => {
+        // Context-scoped first-mate facts are local to their session owner;
+        // a placed crewmate has no snapshot to invalidate at home.
+        if (event.type === "context_compacted") return;
         // A cut-off is a fact about the account that served the turn: this
         // computer's own, kept in its own store and never the home's.
         if (event.type === "turn_failed" && event.cutOff && held.account)

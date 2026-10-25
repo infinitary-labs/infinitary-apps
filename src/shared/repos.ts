@@ -220,13 +220,14 @@ export const repoPolicyPatchSchema = z
     delivery: repoDeliverySchema.optional(),
     autonomy: z.boolean().optional(),
     rigor: rigorSchema.nullable().optional(),
+    scope: z.string().nullable().optional(),
     name: z.string().trim().min(1).max(120).optional(),
     path: z.string().trim().min(1).max(4096).optional(),
     origin: z.string().trim().min(1).max(4096).nullable().optional(),
   })
   .strict()
   .refine((patch) => Object.values(patch).some((value) => value !== undefined), {
-    message: "pass delivery, autonomy, rigor, name, path, origin, or several",
+    message: "pass delivery, autonomy, rigor, scope, name, path, origin, or several",
   });
 export type RepoPolicyPatch = z.infer<typeof repoPolicyPatchSchema>;
 
@@ -234,6 +235,8 @@ export const repoViewSchema = z.object({
   id: z.string(),
   /** The fleet name (unique; names the fleet-root entry), shown in surfaces. */
   name: z.string(),
+  /** What work belongs here, in the captain's words; personal takes no scope. */
+  scope: z.string().nullable().optional(),
   /** The repo's real working directory (external for adopted repos). */
   path: z.string(),
   setupKind: repoSetupKindSchema,

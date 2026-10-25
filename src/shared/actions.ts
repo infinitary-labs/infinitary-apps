@@ -333,13 +333,14 @@ const actionLines = {
       repoId: z.string().min(1),
       changes: repoPolicyPatchSchema,
     }),
-    line: "Change delivery, autonomy, rigor, declared computer requirements (placementRequirements: systems, chips, tools, profile; null restores defaults), name, path (an already moved folder, with no planned or working tasks), or origin (the folder’s current git address, never a git configuration write). Exact captain words apply; otherwise the app asks on its exact-change card. Origin always asks. Personal workspace settings stay fixed; keys and history stay.",
+    line: "Change scope (what work belongs here; null clears it), delivery, autonomy, rigor, declared computer requirements (placementRequirements: systems, chips, tools, profile; null restores defaults), name, path (an already moved folder, with no planned or working tasks), or origin (the folder’s current git address, never a git configuration write). Exact captain words apply; otherwise the app asks on its exact-change card. Origin always asks. Personal workspace settings stay fixed; keys and history stay.",
     toRequest: (v) => [v.repoId, v.changes],
     readValue: (c) => ({
       projects: (c as RepoView[]).map(
         ({
           id,
           name,
+          scope,
           path,
           origin,
           host,
@@ -351,6 +352,7 @@ const actionLines = {
         }) => ({
           id,
           name,
+          scope,
           path,
           origin,
           host,

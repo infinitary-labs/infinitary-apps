@@ -33,6 +33,8 @@ Setup is `clone` (with `origin`), `init` (with `name`) or `adopt` (with `path`),
 A key is chosen once at setup, normalized to capitals, 2-4 letters or digits, and never reused by another project, removed ones included.
 Delivery is `direct-pr` or `local-only`, defaulted by whether the project has a remote; autonomy is a flag (on means the agent may land green work itself); rigor is `quick`, `standard` or `reviewed`, with `standard` every project's standing value ([delivery rigor](../docs/delivery-rigor.md)).
 Each of the three is a repository default with a per-task ask on the captain's own words, derived live by its one function, so changing a project's default reaches work already in flight.
+Each ordinary project may carry nullable scope text describing what work belongs there, saved by `RepoRegistry.configure`; the personal workspace takes none.
+The first mate receives the scopes only when changed or after context loss (compaction or session attachment), and makes the routing judgment itself.
 A dispatch starts the task's worktree from `origin`'s default branch fetched at dispatch, from the last fetched commit when the fetch fails, and from the repository's own commit when it has no `origin`.
 A personal-workspace task has no worktree (its directory is the workspace), takes no rigor tier, refuses every settle mode, and closes as "built in place" when its report is committed.
 
@@ -45,7 +47,7 @@ A task on a computer that runs work keeps its working copy there; its close save
 
 ## Authority
 
-**Settings → Projects (2026-09-19)** may expose delivery, autonomy, and standing rigor (accordion with a row chevron).
+**Settings → Projects (2026-09-19)** may expose scope, delivery, autonomy, and standing rigor (accordion with a row chevron).
 Setup and removal are shared by Settings and `app_change` (`project-setup`, `project-remove`); the first mate removes a project only on the captain's own words.
 The personal workspace's row is locked and reads "builds in place".
 Settings writes through the same action-catalog dispatcher as `app_change` ([app-actions.md](app-actions.md)).

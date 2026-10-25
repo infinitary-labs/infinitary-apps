@@ -150,6 +150,10 @@ export function seatEventsFromPiEvent(
     return [{ type: "request_started" }, ...fmEventsFromPiEvent(event, taskId)];
   }
   const events: SessionEvent[] = fmEventsFromPiEvent(event, taskId, provider);
+  const compact = event as { aborted?: boolean; errorMessage?: string };
+  if (type === "compaction_end" && !compact.aborted && !compact.errorMessage) {
+    events.push({ type: "context_compacted" });
+  }
   if (type !== "turn_end") return events;
   const text = closingText((event as { message?: unknown }).message);
   events.push({ type: "turn_closed", ...(text ? { text } : {}) });

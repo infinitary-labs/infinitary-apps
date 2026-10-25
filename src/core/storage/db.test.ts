@@ -118,9 +118,36 @@ const REVERSE_MIGRATION_66 = `
 `;
 /** Migration 65's live attachment, undone: the `cards` column. */
 const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
-/** Reversing Runs on also removes migration 84's project requirements column. */
+it("INF-1117: upgrades existing projects with empty scope, saves it across reopen and reverses without losing rows", () => {
+  const dir = tmpUserData();
+  const legacy = openDatabase(dir, DATABASE_VERSION - 1);
+  const columns = columnNames(legacy, "repos");
+  legacy
+    .prepare(
+      "INSERT INTO repos (id, path, name, added_at, setup_kind, kind, delivery) VALUES ('scope-project', '/fleet/observatory', 'observatory', 1, 'init', 'project', 'local-only')",
+    )
+    .run();
+  legacy.close();
+  const upgraded = openDatabase(dir);
+  const registry = new RepoRegistry(upgraded, join(dir, "fleet"));
+  expect(registry.get("scope-project")?.scope).toBeNull();
+  const scope = "Tools and dashboards for our astronomy club.";
+  registry.configure("scope-project", { scope });
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  expect(new RepoRegistry(reopened, join(dir, "fleet")).get("scope-project")?.scope).toBe(scope);
+  dropViews(reopened);
+  reopened.exec("ALTER TABLE repos DROP COLUMN scope");
+  expect(columnNames(reopened, "repos")).toEqual(columns);
+  expect(reopened.prepare("SELECT id, name FROM repos").all()).toEqual([
+    { id: "scope-project", name: "observatory" },
+  ]);
+  reopened.close();
+});
+
+/** Reversing Runs on also removes the later project requirements and scope columns. */
 const REVERSE_MIGRATION_64 =
-  "ALTER TABLE repos DROP COLUMN placement_requirements_json; ALTER TABLE repos DROP COLUMN runs_on;\n";
+  "ALTER TABLE repos DROP COLUMN scope; ALTER TABLE repos DROP COLUMN placement_requirements_json; ALTER TABLE repos DROP COLUMN runs_on;\n";
 /** Reversing placed tasks also removes migration 84's commitment column and index. */
 const REVERSE_MIGRATION_63 =
   "DROP INDEX tasks_pending_placement; ALTER TABLE tasks DROP COLUMN placement_json; ALTER TABLE tasks DROP COLUMN device_id;\n";

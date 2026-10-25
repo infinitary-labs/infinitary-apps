@@ -343,22 +343,29 @@ export function ProjectsFolderRow() {
  */
 function ProjectDetails({ repo }: { repo: RepoView }) {
   const [name, setName] = useState(repo.name);
+  const [scope, setScope] = useState(repo.scope ?? "");
   const [path, setPath] = useState(repo.path);
   const [origin, setOrigin] = useState(repo.origin ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     setName(repo.name);
+    setScope(repo.scope ?? "");
     setPath(repo.path);
     setOrigin(repo.origin ?? "");
-  }, [repo.name, repo.path, repo.origin]);
-  const changed = name !== repo.name || path !== repo.path || (origin || null) !== repo.origin;
+  }, [repo.name, repo.scope, repo.path, repo.origin]);
+  const changed =
+    name !== repo.name ||
+    (scope || null) !== (repo.scope ?? null) ||
+    path !== repo.path ||
+    (origin || null) !== repo.origin;
   const save = async () => {
     setSaving(true);
     setError(null);
     try {
       await window.infinitary.repos.configure(repo.id, {
         ...(name !== repo.name ? { name } : {}),
+        ...((scope || null) !== (repo.scope ?? null) ? { scope: scope || null } : {}),
         ...(path !== repo.path ? { path } : {}),
         ...((origin || null) !== repo.origin
           ? { origin: origin || null, ...(!origin ? { delivery: "local-only" as const } : {}) }
@@ -386,6 +393,29 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
             mono
             value={name}
             onChange={(event) => setName(event.target.value)}
+          />
+        }
+      />
+      <PolicyRow
+        title="Scope"
+        description="What work belongs in this project. Your first mate reads it to choose where new work goes."
+        control={
+          <textarea
+            aria-label="Scope"
+            value={scope}
+            onChange={(event) => setScope(event.target.value)}
+            rows={4}
+            style={{
+              width: "100%",
+              fontFamily: "var(--font-ui)",
+              fontSize: "var(--text-base)",
+              color: "var(--fg-1)",
+              background: "var(--surface-input)",
+              border: "1px solid var(--line-1)",
+              borderRadius: "var(--radius-m)",
+              padding: "9px 14px",
+              resize: "vertical",
+            }}
           />
         }
       />

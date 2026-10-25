@@ -228,6 +228,8 @@ export type ClientBackgroundTask = { id: string; description: string };
  * the rest stay with the owner.
  */
 export type SessionEvent =
+  /** The backend replaced older context with a summary. Owner-only, never a feed event. */
+  | { type: "context_compacted" }
   | {
       type: "background_work_changed";
       count: number | undefined;

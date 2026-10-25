@@ -23,6 +23,50 @@ const WEBSITE: RepoView = {
 // The design skill's ChangeCard: "The primary Apply change and ghost Not now
 // are the only buttons" (INF-407).
 describe("the app's exact-change card", () => {
+  it("INF-1117: scopes use exact captain words or the existing Before/After change card", async () => {
+    let current = { ...WEBSITE, scope: "Our public website." };
+    const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
+    const changes = new ProjectChanges({
+      repos: { get: () => current, checkDetails: async () => {} } as unknown as RepoRegistry,
+      devices: () => [],
+      raiseCard: (card) => raised.push(card),
+      tell: () => {},
+    });
+    changes.bindDispatch((async (channel: string, args: unknown[]) => {
+      if (channel === "inf:repos:list") return [current];
+      if (channel === "inf:repos:configure") {
+        current = { ...current, ...(args[1] as object) };
+        return current;
+      }
+      throw new Error(`No ${channel} here.`);
+    }) as CoreDispatch);
+    const scope = "Public website and member announcements.";
+    await changes.request(
+      "project-settings",
+      { repoId: WEBSITE.id, changes: { scope } },
+      {
+        kind: "firstmate",
+        wake: "captain",
+        projectWords: true,
+        evidence: `Set website's scope to ${scope}`,
+      },
+    );
+    expect(current.scope).toBe(scope);
+    expect(raised).toHaveLength(0);
+    await changes.request(
+      "project-settings",
+      { repoId: WEBSITE.id, changes: { scope: null } },
+      { kind: "firstmate", wake: "other" },
+    );
+    expect(current.scope).toBe(scope);
+    expect(raised[0]?.body).toContain(scope);
+    expect(raised[0]?.body).toContain("Not set");
+    await changes.apply(
+      raised[0]?.actions[0]?.effect?.kind === "host" ? raised[0].actions[0].effect.arg : undefined,
+    );
+    expect(current.scope).toBeNull();
+  });
+
   it("offers a primary Apply change as the default and a ghost Not now", async () => {
     const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
     const changes = new ProjectChanges({

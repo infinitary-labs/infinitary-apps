@@ -13975,6 +13975,7 @@ function signInProvider(
 /** The session events that are also feed events: everything but owner-only session facts. */
 function isBroadcastEvent(event: SessionEvent): event is FmEvent {
   return (
+    event.type !== "context_compacted" &&
     event.type !== "background_work_changed" &&
     event.type !== "turn_closed" &&
     event.type !== "request_started" &&

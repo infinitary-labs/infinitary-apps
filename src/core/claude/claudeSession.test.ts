@@ -1090,6 +1090,19 @@ describe("the client's own continuations", () => {
     return { session, harness, starts, ends, steers };
   }
 
+  it("INF-1117: reports the client's compact boundary as an owner-only context fact", async () => {
+    const { session, harness } = await continuing();
+    const events: SessionEvent[] = [];
+    const unsubscribe = session.subscribe((event) => events.push(event));
+    harness().emit({
+      type: "system",
+      subtype: "compact_boundary",
+      compact_metadata: { trigger: "auto", pre_tokens: 160000 },
+    });
+    await vi.waitFor(() => expect(events).toContainEqual({ type: "context_compacted" }));
+    unsubscribe();
+  });
+
   it("replaces background membership and invalidates it when the client transport ends", async () => {
     const { session, harness } = await continuing();
     const counts: Array<number | undefined> = [];

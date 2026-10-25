@@ -227,6 +227,7 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     changes.runsOn = AUTOMATIC_COMPUTER;
   const labels: Record<string, string> = {
     name: "Name",
+    scope: "Scope",
     path: "Folder",
     origin: "Where it lives",
     delivery: "Where changes go",
@@ -236,6 +237,7 @@ function changeRows(offer: Offer, devices: readonly DeviceView[]): string {
     placementRequirements: "Computer requirements",
   };
   const words = (key: string, value: unknown): string => {
+    if (key === "scope") return value == null || value === "" ? "Not set" : String(value);
     if (key === "delivery") return PROJECT_DELIVERY_WORDS[value as RepoView["delivery"]];
     if (key === "autonomy") return value ? AUTONOMY_WORDS.putsInItself : AUTONOMY_WORDS.asksFirst;
     if (key === "rigor") return CARE_WORDS[(value ?? "standard") as NonNullable<RepoView["rigor"]>];

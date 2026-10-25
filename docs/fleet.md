@@ -31,7 +31,7 @@ A project already on the list is answered as it is, with the key it has.
 ## Changing a project
 
 Settings and the first mate use the same action catalog and dispatcher for every project change.
-`project-settings` changes delivery, autonomy, rigor, display name, folder and approved hosting address; `project-runs-on` changes where its next task runs.
+`project-settings` changes scope, delivery, autonomy, rigor, display name, folder and approved hosting address; `project-runs-on` changes where its next task runs.
 The global `projects-folder` setting still changes where new projects go on typed captain words.
 The first mate applies an exact change the captain named in the captain's words, quoting them as evidence, wherever they reach it: the captain's message, one the captain sends while a turn runs, the captain's reply a crewmate relays, or a schedule the captain set (INF-751).
 The first mate declares that judgment with `on_words: true`; an omitted declaration proposes instead.
@@ -41,7 +41,12 @@ Only that card's Apply change button applies the stored patch once; Not now or c
 The host refuses a card if the saved project changed since the offer, and revalidates the folder, address and devices on applying.
 The first mate hears the outcome once through `project-change` and reads current values before starting work that needs it.
 Removal still needs the captain's typed words, and adding still uses the setup card above.
-The personal workspace remains locked.
+The personal workspace remains locked and takes no scope.
+
+Scope is optional free text describing what work belongs in the project.
+Settings saves it with Save details, and talking uses the same exact-words or Before/After proposal path; null clears it.
+The first mate sees every project scope on attachment, after successful compaction, and after any project or scope change, never on an unchanged next turn.
+Only the first mate judges scope fit; an explicit project wins and follow-ups stay with their work.
 
 Name changes keep the project's id, key, sequence and task history, and update its fleet index without moving its files.
 Folder changes point at an already moved, existing git folder, are refused while tasks are planned or working, and never move files.
@@ -52,7 +57,7 @@ The address must still match git when the captain approves it, and a read failur
 Detection and registration read the configured origin address before git's transport rewrites, so a local mirror does not become the approved hosting address.
 Removing the origin also chooses Local merge and returns Runs on to this computer.
 A project with no approved address cannot choose Pull requests in Settings or through the first mate.
-The expanded Settings row offers Name, Folder and Where it lives with Save details, using the same dispatcher; its hosting field accepts the address the folder already points at rather than editing git configuration.
+The expanded Settings row offers Name, Scope, Folder and Where it lives with Save details, using the same dispatcher; its hosting field accepts the address the folder already points at rather than editing git configuration.
 How a project joined, its key and its workspace kind are provenance, not editable settings.
 
 ## Notes

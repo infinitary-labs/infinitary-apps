@@ -1157,6 +1157,16 @@
             "name": {
               "type": "string"
             },
+            "scope": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
             "path": {
               "type": "string"
             },
@@ -1417,6 +1427,16 @@
               },
               "name": {
                 "type": "string"
+              },
+              "scope": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
               },
               "path": {
                 "type": "string"
@@ -1762,6 +1782,16 @@
                   }
                 ]
               },
+              "scope": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
               "name": {
                 "type": "string",
                 "minLength": 1,
@@ -1799,6 +1829,16 @@
           },
           "name": {
             "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "path": {
             "type": "string"
@@ -4182,6 +4222,16 @@
           },
           "name": {
             "type": "string"
+          },
+          "scope": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "path": {
             "type": "string"

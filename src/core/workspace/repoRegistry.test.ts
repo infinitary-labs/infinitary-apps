@@ -61,6 +61,21 @@ describe("RepoRegistry.setup initial history", () => {
     vi.unstubAllEnvs();
   });
 
+  it("INF-1117: saves, preserves and clears the captain's project scope", async () => {
+    const { repo } = await registry.setup({ kind: "init", name: "observatory" });
+    const scope =
+      "Tools and dashboards for our astronomy club.\nPublic website work stays elsewhere.";
+    expect(repo.scope).toBeNull();
+    registry.configure(repo.id, { scope });
+    expect(new RepoRegistry(db, scratchDir("infinitary-reloaded-fleet-")).get(repo.id)?.scope).toBe(
+      scope,
+    );
+    registry.configure(repo.id, { autonomy: true });
+    expect(registry.get(repo.id)?.scope).toBe(scope);
+    registry.configure(repo.id, { scope: null });
+    expect(registry.get(repo.id)?.scope).toBeNull();
+  });
+
   it("adopts an unborn repo without committing or changing its staged files", async () => {
     const dir = scratchDir("infinitary-staged-");
     await git(dir, ["init", "-q", "-b", "main"]);
@@ -175,6 +190,7 @@ describe("RepoRegistry.ensurePersonal", () => {
       { delivery: "direct-pr" as const },
       { autonomy: false },
       { rigor: "standard" as const },
+      { scope: "Not for personal work" },
       { delivery: "local-only" as const, autonomy: true },
     ]) {
       expect(() => registry.configure(personal.id, patch)).toThrow(

@@ -1068,6 +1068,8 @@ const MIGRATIONS: readonly Migration[] = [
   // INF-947: which connection an event rule's integration id stood for. Null
   // is a rule saved before, which waits until its integration is picked again.
   (db) => addColumn(db, "schedules", "event_connection", "TEXT"),
+  // INF-1117: optional project scope; existing projects start empty.
+  (db) => addColumn(db, "repos", "scope", "TEXT"),
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

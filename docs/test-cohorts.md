@@ -6,6 +6,13 @@ A test that spawns real work carries a budget sized to that work; an in-memory t
 ## The cohorts and projects
 
 `pnpm test` runs every project, and so does `verify.yml`'s `linux-checks` lane.
+The full check's Mac unit stage runs only the reviewed files in `scripts/mac-unit-tests.ts`, through the same runner and cohorts.
+Those files contain native Mac cases, Mac-only branches or real Mac readings that Linux cannot cover; mixed files stay whole.
+Mock-only macOS tests need no Mac run.
+Linux keeps the unfiltered `pnpm test`, including every probe: no unit file moves off Linux or disappears from the full check.
+When adding a case that needs macOS, add its file to that list; the scratch Keychain probes retain their existing opt-in gates.
+`tests/release-contract.test.ts` uses real Vitest file discovery to check the Mac selection, its cohort assignments and its inclusion in the complete Linux suite.
+
 The PR checks (`ci.yml`) run the same projects on separate machines: `unit-tests` runs `pure`, `unit` and `unit-isolated`, each `integration-tests` job runs one `--shard` of `integration`, and `probe-tests` runs only the files of `probe` the change reaches ("Probes" below, `docs/testing.md`).
 
 | Project | Files | Rule |

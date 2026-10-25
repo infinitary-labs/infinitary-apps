@@ -2,7 +2,7 @@ name: verify
 
 # The full verification PR CI no longer pays for (captain decision B,
 # 2026-09-15; scout fm3000-ci-release-only-s1): the unit gate and the
-# Playwright e2e suite on hosted Linux, then the unit suite again, the e2e
+# Playwright e2e suite on hosted Linux, then Mac-specific unit files, the e2e
 # suite, the replay gate and the universal package smoke on macOS. It runs
 # inside every alpha before signing, and on demand for any ref:
 #
@@ -171,17 +171,18 @@ jobs:
         env:
           # Test time limits run on the load clock, and on the wall clock only on a graded run (docs/test-cohorts.md, "Budgets").
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '' }}
-      # The unit suite on macOS too: some suites are darwin-only (the local
-      # code signing contract in tests/local-codesign.test.ts, among others)
-      # and skip on the Linux PR check, so this is the only CI that runs them.
-      # About 25s in CI.
+      # Linux above runs every Vitest file, including every probe. Mac repeats
+      # only files with Mac-specific cases/readings; keep mixed files whole so
+      # none of their Mac-only cases is lost (scripts/mac-unit-tests.ts).
       - name: Read the temporary volume's filesystem type
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         run: node -e 'console.log(require("fs").statfsSync(require("os").tmpdir()).type)'
       - id: unit
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         timeout-minutes: 60
-        run: pnpm test
+        run: |
+          mac_tests="$(node scripts/mac-unit-tests.ts)"
+          pnpm test $mac_tests
       # The app built once, in both lanes: the mac lane's e2e suite and
       # package smoke both run on it.
       - id: build

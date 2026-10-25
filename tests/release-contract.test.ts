@@ -25,6 +25,7 @@ import type {
 import { describe, expect, it, vi } from "vitest";
 import { ALONE_RESULTS } from "../scripts/e2e-alone.ts";
 import { ARCHES, manifestEntry } from "../scripts/ensure-bundled-git.ts";
+import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import { presentationCommitMessage } from "../src/core/forge";
 import { compareSemver, isAlphaVersion } from "../src/core/update/semver";
 import { BUNDLE_ID, HOMEPAGE, renderCask } from "../src/core/update/tapPublication";
@@ -2396,7 +2397,7 @@ describe("the signed channel workflow", () => {
     expect(runsIn("linux-checks").toSorted()).toEqual([...new Set(prGate)].toSorted());
     expect(runsIn("mac")).toEqual(
       expect.arrayContaining([
-        "pnpm test",
+        'mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n',
         "pnpm build",
         "pnpm exec playwright test --workers=50%",
         "pnpm replay:gate",
@@ -2416,6 +2417,50 @@ describe("the signed channel workflow", () => {
       );
     }
   });
+
+  // Captain's accepted INF-1258 mac-unit-only option: all files still run
+  // on Linux, and Mac retains every reviewed native/mixed file. Discover via
+  // the real runner rather than matching strings in test source. --filesOnly
+  // never imports a test or enables the opt-in Keychain probes.
+  it("keeps the complete Linux suite and selects only the reviewed Mac files", () => {
+    const unit = (lane.steps ?? []).find((candidate) => candidate.id === "unit");
+    expect(unit?.run).toBe('mac_tests="$(node scripts/mac-unit-tests.ts)"\npnpm test $mac_tests\n');
+    const linuxTests = (lane.steps ?? []).filter(
+      (candidate) =>
+        candidate.run === "pnpm test" &&
+        workflowValue(candidate.if ?? "", {
+          matrix: { lane: "linux-checks" },
+          steps: { install: { outcome: "success" } },
+        }) === true,
+    );
+    expect(linuxTests).toHaveLength(1);
+    const filters = execFileSync(process.execPath, ["scripts/mac-unit-tests.ts"], {
+      cwd: root,
+      encoding: "utf8",
+    })
+      .trim()
+      .split("\n");
+    expect(filters).toEqual([...MAC_UNIT_FILES]);
+    const discover = (files: string[]) => {
+      const result = spawnSync(
+        "pnpm",
+        ["exec", "vitest", "list", "--filesOnly", ...files, "--json"],
+        { cwd: root, encoding: "utf8" },
+      );
+      expect(result.status, result.stderr).toBe(0);
+      return (JSON.parse(result.stdout) as { file: string; projectName: string }[]).map(
+        ({ file, projectName }) => ({ file: file.slice(root.length + 1), projectName }),
+      );
+    };
+    const linux = discover([]);
+    const mac = discover(filters);
+    expect(mac.map(({ file }) => file).sort()).toEqual([...MAC_UNIT_FILES].sort());
+    expect(new Set(mac.map(({ file }) => file)).size).toBe(MAC_UNIT_FILES.length);
+    // Every Mac file stays in its existing cohort and also runs on Linux;
+    // Linux has no filter, so new platform-independent files need no list edit.
+    expect(linux).toEqual(expect.arrayContaining(mac));
+    expect(linux.length).toBeGreaterThan(mac.length);
+  }, 15_000);
 
   it("signs only after full verification or explicitly inherited verification, never after a failed lane", () => {
     for (const required of ["true", "false", ""]) {

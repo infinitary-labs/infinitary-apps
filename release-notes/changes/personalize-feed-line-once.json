@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "personalize-feed-line-once",
+      "reason": "Drops a sentence from the first mate's personalize description that its prompt already says, to keep its fixed context inside the budget; nothing a person notices changes."
+    }
+  ]
+}

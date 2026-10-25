@@ -221,7 +221,7 @@ export function createPersonalizeTool(delegate: PersonalizeDelegate) {
     name: "personalize",
     label: "Personalize",
     description:
-      "Remove a surface, only on the captain's own turn, with evidence of their words. remove hides an app panel and forgets its records, removes a personal panel from the workspace in one commit, or takes an added panel away with its data. Name a surface by id from your-surfaces. Applied changes leave one feed line, never a card.",
+      "Remove a surface, only on the captain's own turn, with evidence of their words. remove hides an app panel and forgets its records, removes a personal panel from the workspace in one commit, or takes an added panel away with its data. Name a surface by id from your-surfaces.",
     parameters: Type.Object({
       action: stringEnum(["remove"]),
       evidence: Type.String({ description: "The captain's words that asked for this" }),

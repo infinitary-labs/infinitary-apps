@@ -678,6 +678,12 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: { tool: "interrupt_crewmate" },
     says: "Never send lifecycle instructions as steer text.",
   },
+  // INF-1316 brings main back inside the budget: personalize's description drops what the core says.
+  {
+    rule: "a surface removed with personalize is answered by its feed line, never a card",
+    home: "core",
+    says: "removing a surface is one personalize call, a lasting instruction for the panels built for the captain is one app_change direction scoped to the personal workspace, and the feed line is the whole answer - no card.",
+  },
 ];
 
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {

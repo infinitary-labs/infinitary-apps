@@ -30,7 +30,7 @@ The seven kinds:
 
 | kind | written when | carries |
 |---|---|---|
-| `offer` | a version of the card is written whose content differs from the last | the whole version: author, title, meta, model, where its task runs, body, actions, pictures, width, its live attachment, a declared asking or design-only fact, and its fingerprint |
+| `offer` | a version of the card is written whose content differs from the last | the whole version: author, title, meta, model, where its task runs, body, actions, pictures, width, its live attachment, a declared asking, design-only or continues fact, and its fingerprint |
 | `availability` | the stage's view of an offer changes | `available`, or `waiting` on `answer` or `close-out`, the cause, the offer it replaced, and whether this started or reopened the lifecycle |
 | `action` | an action is admitted | the action id and label as the offer declared them, closes / keeps open, the effect, the answers, the question definitions, the display fidelity and the task slice read before the choice |
 | `message_ref` | a thread line is written | the message id, who wrote it, and for a captain line the offer the captain was looking at |
@@ -40,7 +40,7 @@ The seven kinds:
 
 ### Lifecycles and offers
 
-`CardService.stamp` gives a card a `lifecycleId` when it is not on the stack, and a new `offerId` when its content fingerprint (sha256 over author, title, meta, model, body, actions, pictures, width, and the live attachment, where its task runs, and a declared asking or design-only fact when it has them) changes.
+`CardService.stamp` gives a card a `lifecycleId` when it is not on the stack, and a new `offerId` when its content fingerprint (sha256 over author, title, meta, model, body, actions, pictures, width, and the live attachment, where its task runs, and a declared asking, design-only or continues fact when it has them) changes.
 A card id reused after it left starts a new lifecycle that names its predecessor, so a reopen never rewrites an earlier episode.
 The two ids ride the card snapshot to the shell and are persisted on the row (`cards.lifecycle_id`, `cards.offer_id`), so a restart resumes the same lifecycle.
 

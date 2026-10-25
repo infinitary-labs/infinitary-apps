@@ -73,6 +73,7 @@ type Row = {
   risk_json: string | null;
   replies: number | null;
   holds_place: number | null;
+  continues: number | null;
   minimized: number | null;
   required_actions_json: string | null;
 };
@@ -172,6 +173,7 @@ function fromRow(row: Row): Card | undefined {
       : {}),
     ...(row.replies === 0 ? { replies: false } : {}),
     ...(row.holds_place === 1 ? { holdsPlace: true } : {}),
+    ...(row.continues === 1 ? { continues: true } : {}),
     ...(row.minimized === 1 ? { minimized: true } : {}),
     ...(row.lifecycle_id ? { lifecycleId: row.lifecycle_id } : {}),
     ...(row.offer_id ? { offerId: row.offer_id } : {}),
@@ -313,8 +315,8 @@ export class CardStore {
   upsert(card: Card): void {
     this.db
       .prepare(
-        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `INSERT INTO cards (id, task_id, kind, author, priority, title, meta, model, place, body, actions_json, status, created_at, pictures_json, awaiting, sent_back_at, width, lifecycle_id, offer_id, attachment_json, risk_json, replies, holds_place, required_actions_json, review_task_id, minimized, continues)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(id) DO UPDATE SET
            kind = excluded.kind,
            author = excluded.author,
@@ -339,7 +341,8 @@ export class CardStore {
            holds_place = excluded.holds_place,
            required_actions_json = excluded.required_actions_json,
            review_task_id = excluded.review_task_id,
-           minimized = excluded.minimized`,
+           minimized = excluded.minimized,
+           continues = excluded.continues`,
       )
       .run(
         card.id,
@@ -368,6 +371,7 @@ export class CardStore {
         card.requiredActions !== undefined ? JSON.stringify(card.requiredActions) : null,
         card.reviewTaskId ?? null,
         card.minimized ? 1 : null,
+        card.continues ? 1 : null,
       );
   }
 

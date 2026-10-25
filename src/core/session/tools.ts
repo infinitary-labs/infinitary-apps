@@ -121,6 +121,8 @@ export type EmittedCardInput = {
   asking?: boolean;
   /** Declared: this offer is design-only. Not inferred from its sentences. */
   designOnly?: boolean;
+  /** Declared: the captain's choice on it is not the task's answer (INF-1226). */
+  continues?: boolean;
 };
 
 /**

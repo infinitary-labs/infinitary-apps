@@ -171,6 +171,7 @@ A follow-up the classifier calls a change gets that line written again when it s
 An ask made of the origin never reaches it, and a posture the project changed while it waited does.
 
 The captain's choice on that card is the CLOSE (captain F2 A): it closes the row `done/answered`, because the deliverable was produced and the captain answered it.
+A card its crewmate declared `continues`, such as a consent before it uses something sensitive, is not that card, and its choice goes back to the crewmate (INF-1226).
 The captain's close control reaches the crewmate instead (FI3-435), which reports `finished` once the captain has read it, and the first mate closes the row with `settle_task answered`.
 The findings travel to a builder through `basis`: when `spawn_crewmate` names a verified basis, `renderBasisSection` carries that task's captain words and its report into the builder's brief, and names the file its card body is saved to whole (`docs/sequences.md`); any agent can read them back with the `tasks` query by key.
 

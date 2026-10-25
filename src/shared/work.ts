@@ -331,6 +331,8 @@ export const placedCardSchema = z.object({
   requiredActions: requiredActionsSchema.optional(),
   asking: z.boolean().optional(),
   designOnly: z.boolean().optional(),
+  /** The choice on it is not its task's answer (INF-1226, `Card.continues`). */
+  continues: z.boolean().optional(),
   /** The label of the card's door to its task's browser, from a crewmate whose task has one there. */
   browserButton: z.string().optional(),
   /** Its request that the captain take its browser over (docs/task-browser.md, "Asking for help"). */

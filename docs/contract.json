@@ -7514,6 +7514,10 @@
               "type": "boolean",
               "const": true
             },
+            "continues": {
+              "type": "boolean",
+              "const": true
+            },
             "awaiting": {
               "type": "string",
               "enum": [
@@ -8553,6 +8557,10 @@
                 "const": true
               },
               "designOnly": {
+                "type": "boolean",
+                "const": true
+              },
+              "continues": {
                 "type": "boolean",
                 "const": true
               },
@@ -41350,6 +41358,9 @@
                   "designOnly": {
                     "type": "boolean"
                   },
+                  "continues": {
+                    "type": "boolean"
+                  },
                   "browserButton": {
                     "type": "string"
                   },
@@ -50822,6 +50833,10 @@
               "const": true
             },
             "designOnly": {
+              "type": "boolean",
+              "const": true
+            },
+            "continues": {
               "type": "boolean",
               "const": true
             },

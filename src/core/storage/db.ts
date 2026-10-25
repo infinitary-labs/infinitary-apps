@@ -1070,6 +1070,11 @@ const MIGRATIONS: readonly Migration[] = [
   (db) => addColumn(db, "schedules", "event_connection", "TEXT"),
   // INF-1117: optional project scope; existing projects start empty.
   (db) => addColumn(db, "repos", "scope", "TEXT"),
+  // INF-1226: a crewmate's declaration that the captain's choice on its card
+  // is not its answer (`Card.continues`). Null keeps existing cards as they
+  // were; CardStore is the only writer and no published view reads it.
+  // Dropping the column reverses it.
+  (db) => addColumn(db, "cards", "continues", "INTEGER"),
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

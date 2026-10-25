@@ -126,8 +126,7 @@ export const FILE_FOLLOWUP_TOOL = crewmateTool({
     ),
     test_path: Type.Optional(
       Type.String({
-        description:
-          "The failing test's path. The host stores it and answers with the existing key instead of filing a second open row for the same path.",
+        description: "The failing test's path.",
       }),
     ),
   }),

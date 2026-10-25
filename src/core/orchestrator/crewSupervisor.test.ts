@@ -20286,6 +20286,74 @@ describe("the deliverable axis (Task B)", () => {
   });
 
   /**
+   * INF-1226: INF-1220 asked the captain's consent to sign a test app, and
+   * the captain's allow closed the task answered before anything was
+   * signed. A card its crewmate declares `continues` is something it goes
+   * on from, not its answer: the choice reaches the crewmate, and its
+   * answer card's choice closes the task. (`asking` alone is no such
+   * declaration: a planner's question card still closes its plan, as
+   * "parent tasks with planned children" holds.)
+   */
+  it("keeps the task open and steers its crewmate when the captain chooses on a card it declared continues", async () => {
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks, specs, cards, inbox, taskId } = await investigation(crewmate);
+    const consent = {
+      title: "Allow signing the Secrets test app on the Mac mini?",
+      body: "<p>I rebuilt INF-1109's unsigned Secrets test app on Kun's Mac mini.</p><p>Signing it needs your permission to use your Developer ID identity there.</p>",
+      continues: true as const,
+      actions: [
+        { id: "leave-blocked", label: "Leave blocked" },
+        { id: "allow-mac-mini-signing", label: "Allow signing on the Mac mini", default: true },
+      ],
+    };
+    specs[0]?.onCard?.(consent);
+    await tick();
+    const asked = cards().find((entry) => entry.taskId === taskId) as Card;
+    specs[0]?.onReport?.("The unsigned test app is rebuilt; signing waits on the captain's consent.");
+    crewmate.finishPrompt();
+    await tick();
+
+    supervisor.act(asked.id, "allow-mac-mini-signing");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "active" });
+    expect(crewmate.promptCalls.at(-1)).toBe(
+      renderWake({
+        facts: {
+          kind: "card-choice",
+          to: "crewmate",
+          source: "chrome",
+          card: { title: consent.title },
+          choice: { id: "allow-mac-mini-signing", label: "Allow signing on the Mac mini" },
+        },
+      }),
+    );
+    expect(inbox.pending(FIRSTMATE_RECIPIENT)).toEqual([]);
+
+    // Its answer, on a card it does not go on from, closes it.
+    specs[0]?.onCard?.({
+      title: "The Secrets test app is signed with your Developer ID identity",
+      body: "<p>Every signature names team 9T2J7MNUP9.</p><p>Each has hardened runtime and a timestamp.</p>",
+      actions: [
+        { id: "noted", label: "Got it", default: true },
+        { id: "recheck", label: "Check the signatures again" },
+      ],
+    });
+    await tick();
+    const answer = cards().find((entry) => entry.taskId === taskId) as Card;
+    specs[0]?.onReport?.("The Mac mini signed the Secrets test app.");
+    supervisor.act(answer.id, "noted");
+    await tick();
+    expect(tasks.get(taskId)).toMatchObject({ status: "done", closedReason: "answered" });
+    expect(answerClosedWakes(inbox)).toEqual([
+      expect.objectContaining({
+        event: "answer_task_closed",
+        card: { id: answer.id, title: answer.title },
+        choice: { id: "noted", label: "Got it", effect: null },
+      }),
+    ]);
+  });
+
+  /**
    * INF-990 friction 7: INF-945 carried no read-only constraint, its goal
    * asked for a preview before the buttons were built, the classifier
    * called it a plan, and the captain's "Build with this look" on the

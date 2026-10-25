@@ -633,6 +633,11 @@ export class SettleService {
     // A card that asks to send a kept write is never the answer (FI3-1571
     // piece 4): its click sends or declines the write, and the task goes on.
     if (card.actions.some((action) => action.effect?.kind === "request_write")) return false;
+    // Nor is a card its crewmate declared `continues` (INF-1226): something
+    // it goes on from, such as INF-1220's consent "Allow signing on the Mac
+    // mini" before anything was signed. Its choice reaches the crewmate, and
+    // the task goes on.
+    if (card.continues) return false;
     // Its own crewmate's card, never a Firstmate card that happens to name
     // the task (`cardEmitter` reads the emitter off the id).
     if (cardEmitter(card.id, card.taskId) !== "crewmate") return false;

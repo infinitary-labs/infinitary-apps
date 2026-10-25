@@ -483,6 +483,14 @@ export function renderPicturesSection(pictures: BriefPictures): string {
 }
 
 /**
+ * Which of an answer task's cards closes it (INF-1226): INF-1220's consent
+ * card closed its task answered before it signed anything. The crewmate
+ * declares the card it goes on from; the host reads only that declaration.
+ */
+const ANSWER_CONTINUES_CARD =
+  "A card whose choice you go on from rather than your answer, such as a consent before you use something sensitive, declares continues on each revision: that choice comes back to you, and the captain's choice on any other card of yours closes this task as answered.";
+
+/**
  * The one section the brief carries about what an answer task's answer
  * looks like, appended where `renderRigorSection` sits for a change
  * (captain lock 2 of 2026-09-19, visual-density audit section 6.1: the
@@ -491,6 +499,10 @@ export function renderPicturesSection(pictures: BriefPictures): string {
  * states the two facts a crewmate cannot see from inside its worktree: the
  * task ships nothing, and the worktree is scratch. A plan is its own step
  * since contract 4.6 (docs/sequences.md): an answer task like any other.
+ * Both shapes say which of its cards closes it (INF-1226): the captain's
+ * choice on a card its crewmate declared `continues` comes back to the
+ * crewmate, and a choice on any other closes the task answered
+ * (`SettleService.closeAnsweredTask`).
  */
 export function renderAnswerShapeSection(internalStep = false): string {
   if (internalStep) {
@@ -500,7 +512,8 @@ export function renderAnswerShapeSection(internalStep = false): string {
     return [
       "Answer shape: this task's deliverable is an answer, not a change - a step whose answer the next step builds on.",
       "Your report is that answer and is handed to the next step verbatim, so put all of it there: what you found and the evidence, including paths, commands and a reproduction.",
-      "Show a card, as any crewmate does, when the captain must decide or see something before the next step can start; it then opens with the answer in a sentence and draws it, with a figure for each part of the explanation, and their replies and choice come to you there, not through the first mate.",
+      "Show a card, as any crewmate does, when the captain must decide or see something before the next step can start; it then opens with the answer in a sentence and draws it, with a figure for each part of the explanation, and their replies come to you there, not through the first mate.",
+      ANSWER_CONTINUES_CARD,
       "When the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
       "Rigor: none - this task ships nothing.",
       "Your worktree is a laboratory: install, run, and edit there freely to find the answer, but commit nothing, push nothing, and open no pull request. Nothing in it ships; it is discarded when this task closes, and anything worth keeping goes in your report.",
@@ -512,6 +525,7 @@ export function renderAnswerShapeSection(internalStep = false): string {
     "The card opens with the answer in a sentence and then draws it - how the thing works, how the options differ, what the state or the layout is - with a figure for each part of the explanation.",
     "Names, numbers, quotes and caveats are prose beside the figure they qualify; the evidence a reader who digs would want, including paths and commands, goes in <details>.",
     "When your findings warrant a concrete next move, identify it and put it in the card's actions with one recommended default; do not invent an action when the answer is a pure fact, which stays a note.",
+    ANSWER_CONTINUES_CARD,
     "Your report stays the short factual account; the card is where the answer is shown.",
     "Your report is also the answer this task keeps, and work built on it starts from it: when the captain's replies change the answer, report it again in full - the final agreed version, with their tweaks and anything decided on the card - before they choose.",
     "Rigor: none - this task ships nothing; the card is the deliverable.",

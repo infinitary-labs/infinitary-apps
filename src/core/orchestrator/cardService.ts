@@ -1144,6 +1144,7 @@ export class CardService {
         ...(card.requiredActions !== undefined ? { requiredActions: card.requiredActions } : {}),
         ...(card.asking ? { asking: true as const } : {}),
         ...(card.designOnly ? { designOnly: true as const } : {}),
+        ...(card.continues ? { continues: true as const } : {}),
         ...(card.holdsPlace ? { holdsPlace: true as const } : {}),
       },
     });
@@ -1779,7 +1780,8 @@ export class CardService {
    *
    * On an ANSWER task the captain's choice is also the CLOSE (Task B,
    * captain F2 A): the card was the deliverable, and answering it closes
-   * the row `done/answered`. His close control is not a choice: it reaches
+   * the row `done/answered`, unless its crewmate declared the card
+   * `continues` (INF-1226). His close control is not a choice: it reaches
    * the crewmate, which judges whether the task is finished (FI3-435).
    * Returns whether it closed, because the click's ordinary round-trip to a
    * still-running crewmate has nowhere to go once the task is closed.
@@ -2672,6 +2674,7 @@ function offerFingerprint(card: Card): string {
         ...(card.requiredActions !== undefined ? [{ requiredActions: card.requiredActions }] : []),
         ...(card.asking ? [{ asking: true }] : []),
         ...(card.designOnly ? [{ designOnly: true }] : []),
+        ...(card.continues ? [{ continues: true }] : []),
         ...(card.holdsPlace ? [{ holdsPlace: true }] : []),
         ...(card.reviewTaskId ? [{ reviewTaskId: card.reviewTaskId }] : []),
       ]),
@@ -2815,6 +2818,7 @@ function buildEmittedCard(
     ...(input.requiredActions !== undefined ? { requiredActions: input.requiredActions } : {}),
     ...(input.asking ? { asking: true as const } : {}),
     ...(input.designOnly ? { designOnly: true as const } : {}),
+    ...(input.continues ? { continues: true as const } : {}),
     ...(input.holdsPlace ? { holdsPlace: true as const } : {}),
   };
 }

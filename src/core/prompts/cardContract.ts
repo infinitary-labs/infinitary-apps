@@ -334,6 +334,7 @@ export const CARD_PARAMS = {
   risk: RISK_PARAM,
   asking: "True on a question card, not a ready plan.",
   design_only: "True only as the declared design-only fact.",
+  continues: "True when its choice is not your answer.",
   task_id: "The task this card is about",
   review_task_id: "Review task relayed here; must review task_id. The app labels its findings.",
   standalone:

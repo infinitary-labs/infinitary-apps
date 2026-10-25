@@ -96,8 +96,10 @@ const REVERSE_MIGRATION_71 =
 /** Migration 71's table, for a fixture that seeds an older database through the one writer. */
 const MIGRATION_71_TABLE =
   "CREATE TABLE task_event_concerns (event_id INTEGER NOT NULL, task_id TEXT NOT NULL, relation TEXT NOT NULL, via TEXT, PRIMARY KEY (event_id, task_id));";
-/** INF-476's saved visibility column, undone without deleting card rows. */
-const REVERSE_MIGRATION_88 = "ALTER TABLE cards DROP COLUMN minimized;\n";
+/** INF-1226's declaration that a card's choice is not its task's answer, undone. */
+const REVERSE_MIGRATION_93 = "ALTER TABLE cards DROP COLUMN continues;\n";
+/** INF-476's saved visibility column, with the later card column undone, without deleting card rows. */
+const REVERSE_MIGRATION_88 = `${REVERSE_MIGRATION_93}ALTER TABLE cards DROP COLUMN minimized;\n`;
 /** Migration 77's optional continuity declaration, with its later columns undone. */
 const REVERSE_MIGRATION_77 = `${REVERSE_MIGRATION_88}ALTER TABLE cards DROP COLUMN review_task_id; ALTER TABLE cards DROP COLUMN required_actions_json; ALTER TABLE cards DROP COLUMN holds_place;\n`;
 /** Legacy card reversal chain removes later columns before migration 70's replies column. */
@@ -120,7 +122,7 @@ const REVERSE_MIGRATION_66 = `
 const REVERSE_MIGRATION_65 = "ALTER TABLE cards DROP COLUMN attachment_json;\n";
 it("INF-1117: upgrades existing projects with empty scope, saves it across reopen and reverses without losing rows", () => {
   const dir = tmpUserData();
-  const legacy = openDatabase(dir, DATABASE_VERSION - 1);
+  const legacy = openDatabase(dir, 91);
   const columns = columnNames(legacy, "repos");
   legacy
     .prepare(
@@ -1712,7 +1714,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
     // migration 69 (a merge card's risk) `risk_json`, and migration 70 (a
     // card that takes no reply) `replies`, migration 77 `holds_place`,
     // migration 82 `required_actions_json`, migration 87 `review_task_id`,
-    // and INF-476 `minimized`.
+    // INF-476 `minimized` and INF-1226 `continues`.
     expect(columnNames(upgraded, "cards")).toEqual([
       ...before,
       "duplicate_of",
@@ -1735,6 +1737,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
       "required_actions_json",
       "review_task_id",
       "minimized",
+      "continues",
     ]);
     expect(columnNames(upgraded, "card_revisions")).toEqual([
       "id",
@@ -3294,6 +3297,43 @@ it("INF-476 upgrades existing cards with no minimized state, persists a minimize
   expect(columnNames(reopened, "cards")).toEqual(columns);
   expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
     { id: review.id, status: "ready" },
+  ]);
+  reopened.close();
+});
+
+// INF-1226: a consent card its crewmate declared `continues` can wait across
+// a restart, and the captain's choice on it must still not close its task.
+it("INF-1226 upgrades existing cards with no continues declaration, keeps a declared card's across reopen and reverses without losing it", () => {
+  const dir = tmpUserData();
+  const old = openDatabase(dir, 92);
+  const columns = columnNames(old, "cards");
+  old
+    .prepare(
+      "INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES ('card-6f0d2a1c-allow-signing', '6f0d2a1c', 'card', 'crewmate', 30, 'Allow signing the Secrets test app on the Mac mini?', 'Sign the Secrets test app', '<p>Signing it needs your permission to use your Developer ID identity there.</p>', '[{\"id\":\"leave-blocked\",\"label\":\"Leave blocked\"},{\"id\":\"allow-mac-mini-signing\",\"label\":\"Allow signing on the Mac mini\",\"default\":true}]', 'ready', 1)",
+    )
+    .run();
+  old.close();
+  const upgraded = openDatabase(dir);
+  expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+  const store = new CardStore(upgraded);
+  const consent = store.get("card-6f0d2a1c-allow-signing");
+  if (!consent) throw new Error("The upgraded consent card is missing");
+  expect(consent).not.toHaveProperty("continues");
+  store.upsert({ ...consent, continues: true });
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  expect(new CardStore(reopened).get(consent.id)).toMatchObject({
+    continues: true,
+    status: "ready",
+    title: consent.title,
+  });
+  // A revision without the declaration removes it.
+  new CardStore(reopened).upsert(consent);
+  expect(new CardStore(reopened).get(consent.id)).not.toHaveProperty("continues");
+  reopened.exec(REVERSE_MIGRATION_93);
+  expect(columnNames(reopened, "cards")).toEqual(columns);
+  expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
+    { id: consent.id, status: "ready" },
   ]);
   reopened.close();
 });

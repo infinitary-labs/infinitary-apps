@@ -1013,6 +1013,14 @@ export const cardSchema = z.strictObject({
    */
   designOnly: z.literal(true).optional(),
   /**
+   * Its crewmate declared that the captain's choice on it is not its answer
+   * but something it goes on from, such as a consent before it uses
+   * something sensitive (INF-1226): on a task that only answers, the choice
+   * reaches the crewmate and the task stays open. Absent means it did not;
+   * the host does not infer it. Kept in `cards.continues`.
+   */
+  continues: z.literal(true).optional(),
+  /**
    * Off the stage until its author closes out (docs/card-threads.md "When
    * a card reaches the stage"; the captain's Q1, Q4 and Q5 A of
    * 2026-09-27): `answer` while the captain's reply is the newest line on
@@ -1535,6 +1543,7 @@ export const cardOfferPayloadSchema = z.strictObject({
   risk: riskAssessmentSchema.optional(),
   asking: z.literal(true).optional(),
   designOnly: z.literal(true).optional(),
+  continues: z.literal(true).optional(),
   holdsPlace: z.literal(true).optional(),
 });
 

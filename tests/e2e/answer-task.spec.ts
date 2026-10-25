@@ -23,6 +23,16 @@ import {
   taskKey,
 } from "./rails";
 import {
+  ANSWER_CONSENT_MARKER,
+  ANSWER_CONSENT_TITLE,
+  answerConsent,
+  CONSENT_ALLOW,
+  CONSENT_ALLOWED_STEER,
+  CONSENT_CARD_TITLE,
+  SIGNED_CARD_TITLE,
+  SIGNED_CHOICE,
+} from "./scenarios/answerConsent";
+import {
   ANSWER_MID_TURN_CARD_TITLE,
   ANSWER_MID_TURN_CHOICE,
   ANSWER_MID_TURN_MARKER,
@@ -273,6 +283,98 @@ test("closing the answer card reaches its crewmate, which reports it finished, a
     ).toBeVisible({ timeout: 30_000 });
     await expect(waiting.locator(`[data-now-key="${row.key}"]`)).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath("answer-close-after.png") });
+  } finally {
+    await own.close();
+  }
+});
+
+/**
+ * INF-1226: INF-1220 asked the captain's consent to sign a test app, and
+ * the captain's allow closed the task answered before anything was signed.
+ * A choice on a card its crewmate declared `continues` is not the task's
+ * answer: it reaches the crewmate, which goes on to its answer, and the
+ * choice on the answer card closes the task. Its own app, so it owns every
+ * prerequisite.
+ */
+test("a choice on an answer task's consent card resumes its crewmate, and the answer card's choice closes it", async () => {
+  const own = await launchApp({
+    withMockProvider: true,
+    scenarios: [answerConsent],
+    userDataDir: scratchDir("infinitary-answer-consent-"),
+  });
+  try {
+    const { page, mockProvider } = own;
+    const input = promptInput(page);
+    await input.click();
+    await input.fill(`${ANSWER_CONSENT_MARKER} ${ANSWER_CONSENT_TITLE}`);
+    await input.press("Enter");
+
+    const consent = shownCard(page, CONSENT_CARD_TITLE);
+    await expect(consent).toBeVisible({ timeout: 30_000 });
+    const [asked] = await page.evaluate(() => window.infinitary.cards.list());
+    if (!asked?.taskId) throw new Error("the consent card names no task");
+    const taskId = asked.taskId;
+    const detail = async (): Promise<TaskDetail> =>
+      page.evaluate((id) => window.infinitary.tasks.detail(id), taskId);
+    await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
+      deliverable: "answer",
+      status: "active",
+      waitingCardId: asked.id,
+    });
+    const { key, title } = await detail();
+
+    // The captain allows it. The task goes on: its crewmate hears the
+    // choice and shows its answer.
+    await consent.getByRole("button", { name: CONSENT_ALLOW.label }).click();
+    const signed = shownCard(page, SIGNED_CARD_TITLE);
+    await expect(signed).toBeVisible({ timeout: 30_000 });
+    expect(await detail()).toMatchObject({ status: "active", closedReason: null });
+    expect(
+      (mockProvider?.requestBodies() ?? []).some(
+        (body) =>
+          body.includes("You are a crewmate") &&
+          providerMessages(body).some(
+            (message) => message.role === "user" && message.text.includes(CONSENT_ALLOWED_STEER),
+          ),
+      ),
+    ).toBe(true);
+
+    // The captain's choice on the answer closes the task answered.
+    const [answer] = await page.evaluate(() => window.infinitary.cards.list());
+    if (!answer || answer.taskId !== taskId) throw new Error("the answer card is not the task's");
+    await signed.getByRole("button", { name: SIGNED_CHOICE.label }).click();
+    await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
+      status: "done",
+      closedReason: "answered",
+    });
+    await expect(statusLine(page, key).filter({ hasText: SIGNED_CHOICE.label })).toBeVisible({
+      timeout: 30_000,
+    });
+
+    // The first mate hears that one close, about the answer, never the consent.
+    const told = renderWake({
+      facts: {
+        kind: "answer-closed",
+        handoff: {
+          version: 1,
+          event: "answer_task_closed",
+          task: { id: taskId, key, title },
+          card: { id: answer.id, title: SIGNED_CARD_TITLE },
+          choice: { ...SIGNED_CHOICE, effect: null },
+          close: { status: "done", reason: "answered", actor: "captain" },
+        },
+      },
+    });
+    const served = () =>
+      (mockProvider?.requestBodies() ?? []).flatMap((body) =>
+        providerMessages(body)
+          .filter(
+            (message) => message.role === "user" && message.text.includes("answer_task_closed"),
+          )
+          .map((message) => message.text),
+      );
+    await expect.poll(served, { timeout: 30_000 }).not.toHaveLength(0);
+    expect(served().every((text) => text.includes(told))).toBe(true);
   } finally {
     await own.close();
   }

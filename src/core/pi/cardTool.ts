@@ -206,6 +206,8 @@ export type EmittedCard = {
   asking?: boolean;
   /** Declared: this offer is design-only. Not inferred from its sentences. */
   designOnly?: boolean;
+  /** Declared: the captain's choice on it is not the task's answer (INF-1226). */
+  continues?: boolean;
 };
 
 export type OnCardEmitted = (card: EmittedCard) => string | undefined | Promise<string | undefined>;
@@ -436,6 +438,7 @@ const crewmateCardParams = Type.Object({
   ),
   asking: Type.Optional(Type.Boolean({ description: CARD_PARAMS.asking })),
   design_only: Type.Optional(Type.Boolean({ description: CARD_PARAMS.design_only })),
+  continues: Type.Optional(Type.Boolean({ description: CARD_PARAMS.continues })),
   validation_request: Type.Optional(
     Type.Object(
       { request: Type.String(), action: Type.String() },
@@ -599,7 +602,8 @@ async function emitCard(
       params.browser_handoff ||
       params.browser_page ||
       params.asking ||
-      params.design_only
+      params.design_only ||
+      params.continues
     )
       throw new Error(
         "A saved-story completion gives presentation and one settle merge action, or no actions for a note when the task merges on its own, without body, risk, required_actions or browser controls; those facts come from its published version.",
@@ -702,6 +706,7 @@ async function emitCard(
       : {}),
     ...(params.asking ? { asking: true } : {}),
     ...(params.design_only ? { designOnly: true } : {}),
+    ...(params.continues ? { continues: true } : {}),
     // The attribution and attach-first fields exist only in the Firstmate's schema; a
     // crewmate's runtime never passes them.
     ...(firstmate && params.task_id?.trim() ? { taskId: params.task_id.trim() } : {}),

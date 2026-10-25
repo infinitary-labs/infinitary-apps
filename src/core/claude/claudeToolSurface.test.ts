@@ -149,6 +149,7 @@ it.each(["Pi", "Claude"] as const)(
         { browser_handoff: { site: "example.com", reason: "Sign in", after: "Check" } },
         { asking: true },
         { design_only: true },
+        { continues: true },
       ]) {
         await expect(run({ ...params, ...competing })).rejects.toThrow(/without body/);
       }

@@ -574,6 +574,20 @@ describe("the answer shape of a step the Firstmate declared (docs/sequences.md)"
       expect(asked).not.toContain("handed to the next step");
     }
   });
+
+  // INF-1226: INF-1220's consent card closed its task answered before it
+  // signed anything, so both shapes say which card closes the task.
+  it("tells both shapes that a card they go on from declares continues and does not close them", () => {
+    for (const shape of [renderAnswerShapeSection(true), renderAnswerShapeSection(false)]) {
+      expect(shape).toContain(
+        "a consent before you use something sensitive, declares continues on each revision",
+      );
+      expect(shape).toContain("any other card of yours closes this task as answered");
+    }
+    // A step's choice on a card it does not go on from closes it, so the
+    // step is no longer told every choice comes to it.
+    expect(renderAnswerShapeSection(true)).not.toContain("replies and choice come to you");
+  });
 });
 
 describe("the retired plan-first constraint (contract 4.6)", () => {

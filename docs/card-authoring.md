@@ -692,6 +692,12 @@ INF-924 made that box and the reply row one field, on the captain's Approve and 
 
 On a task whose deliverable is an ANSWER (`WorkShape.deliverable`, Task B of the crew-posture rationalization; `docs/delivery-rigor.md`), the card is the whole shipment: the brief says so, the task commits nothing, and a card carrying a `settle` effect is refused at the boundary the way the personal workspace's is.
 The captain's choice on it CLOSES the task `done/answered`, because the deliverable was produced and the captain answered it.
+A card whose choice the crewmate goes on from rather than its answer, such as a consent before it uses something sensitive, is not the deliverable, and the crewmate declares it `continues` (INF-1226: INF-1220's "Allow signing on the Mac mini" closed its task before anything was signed).
+The captain's choice on a `continues` card reaches the crewmate like a choice on any crewmate card, and the task goes on; the host reads only that declaration, never the card's words (`SettleService.closeAnsweredTask`).
+`asking` is not that declaration: a planner declares its question card `asking`, and the captain's choice on it still closes the plan.
+The declaration is optional and stored as `Card.continues` in `cards.continues`; a revision without it removes it.
+A card that asks to send a kept write is never the deliverable either, whatever it declares.
+`renderAnswerShapeSection` tells the crewmate which of its cards closes the task.
 The captain's close control is not a choice: like every crewmate card's close it reaches the crewmate (FI3-435, captain's answer "Send it to the crewmate like every other card"), which reports `finished` once the captain has read it and nothing is left, and the first mate then closes the task with `settle_task answered`.
 So the card carries the answer itself rather than a pointer to it: a builder spawned with `basis` naming that task receives this body verbatim, saved whole in a file its brief names, and any agent can read it back with the `tasks` query by key.
 

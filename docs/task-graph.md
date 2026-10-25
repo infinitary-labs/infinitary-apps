@@ -86,6 +86,7 @@ A click refused by a promised hold reads in plain words on the feed (captain, 20
 Because a marked edge gates closing, `flagsOf` reports `blocked` for **active** rows too: the task a `blocks_me` follow-up is filed against is exactly the one a crewmate is holding, and it must say it is held rather than look free until the merge refuses.
 
 A task whose deliverable is an answer closes on a third path (captain F2 A): the captain's choice on its own crewmate's card closes the row `done/answered`, and `merge-pr` and `land` are refused on it outright, because it ships nothing.
+A card its crewmate declared `continues`, something it goes on from such as a consent, and a card asking to send a kept write are not that card: their choice reaches the crewmate and the row stays active (INF-1226, `docs/card-authoring.md` "An answer task's card is its deliverable").
 A choice made while the crewmate is still working outranks the cancel of that turn (INF-721): the close stops the turn, and that turn's end, before or after the close, neither relabels the row nor drops the `answer-closed` wake the first mate is owed (`CrewSupervisor.stopRuntime` marks the runtime settling, and `finish` leaves the record to the close).
 The captain's close control is not a choice (FI3-435): it reaches the crewmate like every crewmate card's close, and once the crewmate reports `finished` the first mate closes the row with `settle_task answered`.
 The row lists under the now panel's `landed` group like any other closed work and reads `answered`.

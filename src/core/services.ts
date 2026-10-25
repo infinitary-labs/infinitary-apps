@@ -28,6 +28,7 @@ import type { FmEvent } from "@shared/events";
 import { feedLineFrom, feedRunOf } from "@shared/feed";
 import { GITHUB_COM, type KnownForgeHost, kindOfHost } from "@shared/forge";
 import { type ForgeChangeRow, type ForgeChangesView, forgeSignInCardId } from "@shared/forges";
+import { INBOX_WORDS } from "@shared/integrations";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { modelNames } from "@shared/modelDisplayName";
 import { offeringKey, parseOfferingKey, providerLabel } from "@shared/modelSlots";
@@ -122,8 +123,13 @@ import {
   githubIntegration,
   googleIntegration,
   googleSetup,
+  INBOX_COMMAND,
+  INBOX_EVENT,
+  INBOX_ID,
+  Inbox,
   IntegrationSettingsStore,
   IntegrationsService,
+  launcherDefaultDir,
   mcpIntegration,
   OutsideReads,
   SavedOutsideData,
@@ -336,6 +342,8 @@ export type CoreServices = {
   forges: ForgeSignIns;
   /** Integrations (docs/integrations.md): the one writer over userData/integrations/. */
   integrations: IntegrationsService;
+  /** The inbox integration's door, key and receipts (docs/integrations.md, "The inbox"). */
+  integrationInbox: Inbox;
   /** Words from outside in saved conversations: their sweep and the captain's delete. */
   savedOutsideData: SavedOutsideData;
   /**
@@ -1813,6 +1821,27 @@ export async function createServices(
   const integrationSecrets = new FileIntegrationSecrets(join(paths.integrationsDir, "secrets"));
   // Which conversations received fenced words, and when, so they go when due.
   const outsideReads = new OutsideReads(paths.integrationsDir);
+  // The inbox (docs/integrations.md, "The inbox"): a door the person's own
+  // programs drop events through, with the launcher's inbox command. Its
+  // link goes into /usr/local/bin, or where an unpackaged run names; a Linux
+  // package installs its own in /usr/bin.
+  const axiBinDir = host.app.packaged
+    ? join(host.app.resourcesDir, "axi-bin")
+    : join(host.app.appDir, "resources", "axi-bin");
+  const integrationInbox = new Inbox({
+    dir: join(paths.integrationsDir, INBOX_ID),
+    command: join(axiBinDir, INBOX_COMMAND),
+    defaultDir: launcherDefaultDir(
+      host.app.platform,
+      hostEnv().HOME ?? homedir(),
+      hostEnv().XDG_CONFIG_HOME,
+    ),
+    linkDir:
+      (host.app.packaged ? undefined : settingFrom(process.env, "INBOX_LINK_DIR")?.trim()) ||
+      "/usr/local/bin",
+    ...(host.app.packaged && host.app.platform === "linux" ? { installedDir: "/usr/bin" } : {}),
+    now: ticker.now,
+  });
   const integrations = new IntegrationsService({
     bindings: [
       githubIntegration({
@@ -1859,6 +1888,7 @@ export async function createServices(
         version: host.app.version,
         changed: () => integrationsChanged(),
       }),
+      integrationInbox.binding(),
       ...(standInIntegrationDir ? [standInIntegration({ dir: standInIntegrationDir })] : []),
     ],
     store: new IntegrationSettingsStore(paths.integrationsDir),
@@ -2093,9 +2123,7 @@ export async function createServices(
   const taskCommands = host.axiProcess
     ? await AxiChannel.open({
         spawner: host.axiProcess,
-        binDir: host.app.packaged
-          ? join(host.app.resourcesDir, "axi-bin")
-          : join(host.app.appDir, "resources", "axi-bin"),
+        binDir: axiBinDir,
         version: host.app.version,
         keysDir: paths.taskChannelDir,
         // A command that reached the app keeps Pi's shell waiting for its answer.
@@ -2107,6 +2135,14 @@ export async function createServices(
         return undefined;
       })
     : undefined;
+  // The inbox's person key reaches the channel, which admits it for the
+  // inbox command alone, and the launcher learns where the app listens.
+  if (taskCommands)
+    integrationInbox.serve({
+      address: taskCommands.address,
+      admit: (key, door) => taskCommands.admit(INBOX_ID, key, { inbox: door }),
+      shut: () => taskCommands.shut(INBOX_ID),
+    });
   if (browsers || taskCommands) {
     if (browsers) browserFactOf = (taskId) => browsers.fact(taskId);
     tasks.onChange((change) => {
@@ -2653,12 +2689,37 @@ export async function createServices(
       look: (integration, event, cursor, filter, connection) =>
         integrations.look(integration, event, cursor, filter, connection),
     },
+    // The inbox's receipts say an event was handled once its delivery was.
+    handled: (integration, events, at) => {
+      if (integration === INBOX_ID) integrationInbox.handled(events, at);
+    },
     // A rule's project is named in its prompt while it is live (docs/automation.md).
     projectOf: (id) => {
       const project = tasks.projects.get(id);
       return project && project.archivedAt === null
         ? { key: project.key, name: project.name }
         : undefined;
+    },
+  });
+  // A drop is looked at once, not at the next minute (docs/integrations.md, "The inbox").
+  integrationInbox.wakeThrough({
+    dropped: () => scheduler.lookNow(INBOX_ID),
+    listening: () => scheduler.listeners(INBOX_ID),
+    // The captain's word on INF-1214: adding the inbox turns its rule on
+    // too. A rule kept from before it was last turned off listens to this
+    // inbox again, its edits and its state kept.
+    added: (say) => {
+      const spec = { kind: "event", integration: INBOX_ID, event: INBOX_EVENT.name } as const;
+      const current = integrations.listenable(INBOX_ID, INBOX_EVENT.name)?.connection;
+      const kept = scheduler
+        .rules()
+        .filter((rule) => rule.spec.kind === "event" && rule.spec.integration === INBOX_ID);
+      for (const rule of kept)
+        if (rule.connection !== current) scheduler.update(rule.id, { reconnect: true }, { say });
+      if (kept.length === 0)
+        scheduler.create(spec, INBOX_WORDS.rulePrompt, true, INBOX_WORDS.ruleName, undefined, {
+          ...(say ? { say } : {}),
+        });
     },
   });
   const firstmate = new FirstmateAgent({
@@ -3186,6 +3247,7 @@ export async function createServices(
     workspace,
     forges: forgeSignIns,
     integrations,
+    integrationInbox,
     savedOutsideData,
     devices,
     computers,

@@ -1,7 +1,7 @@
 #!/bin/bash
 # The Ubuntu and Fedora packages' install script (electron-builder.linux.yml):
 # electron-builder 26.15.3's own templates/linux/after-install.tpl, with one
-# step added after its command link, marked below. electron-builder fills in
+# steps added after its command link, marked below. electron-builder fills in
 # each dollar-brace name it knows and refuses any other, so the added step
 # writes its shell variables without braces.
 
@@ -32,6 +32,19 @@ for OLD in /opt/firstmate-3000/firstmate-3000 /usr/bin/firstmate-3000; do
     mkdir -p "$(dirname "$OLD")"
     ln -sfn '/opt/${sanitizedProductName}/${executable}' "$OLD"
 done
+
+# Added: the inbox's command on everyone's path (docs/linux-packages.md,
+# "The inbox's command"; docs/integrations.md, "The inbox"), so a script
+# runs infinitary-inbox-axi by its short name. A path that already holds
+# something not of this package's is left as it is.
+INBOX=/usr/bin/infinitary-inbox-axi
+case "$(readlink "$INBOX" 2>/dev/null)" in
+    '/opt/${sanitizedProductName}/'*) ;;
+    *) if [ -e "$INBOX" ] || [ -L "$INBOX" ]; then INBOX=; fi ;;
+esac
+if [ -n "$INBOX" ]; then
+    ln -sfn '/opt/${sanitizedProductName}/resources/axi-bin/infinitary-inbox-axi' "$INBOX"
+fi
 
 # Check if user namespaces are supported by the kernel and working with a quick test:
 if ! { [[ -L /proc/self/ns/user ]] && unshare --user true; }; then

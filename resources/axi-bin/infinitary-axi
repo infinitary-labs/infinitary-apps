@@ -5,7 +5,8 @@
 # Every infinitary-<tool>-axi name in this directory is a link to this one
 # file, and so is the fm-<tool>-axi name Firstmate 3000 gave it, kept for a
 # crewmate whose instructions predate the Infinitary rename; the name it ran
-# as says which command it is. The app puts this directory
+# as says which command it is; infinitary-inbox-axi is the person's own,
+# run from any shell of theirs (below). The app puts this directory
 # first on the search path of a task's shell only when that task has the
 # tool (src/core/axi/channel.ts), with three variables: the loopback address
 # of the app's task channel, the file holding this task's key (a header line
@@ -42,6 +43,36 @@ fi
 
 address=${INFINITARY_AXI_ADDRESS:-${FM3000_AXI_ADDRESS:-}}
 key=${INFINITARY_AXI_KEY:-${FM3000_AXI_KEY:-}}
+cap=${INFINITARY_SHELL_CAP_MS:-${FM3000_SHELL_CAP_MS:-}}
+started=${INFINITARY_SHELL_STARTED_MS:-}
+shell=${INFINITARY_SHELL_ID:-}
+# The inbox is the person's own door, not a task's (docs/integrations.md,
+# "The inbox"): any program of this user runs it, from any shell, with the
+# person key and the running app's address read from the inbox's folder -
+# the one INFINITARY_INBOX names, or the release's data folder. No shell's
+# limit applies: the person's program waits for its receipt.
+if [ "$tool" = infinitary-inbox-axi ]; then
+  door=${INFINITARY_INBOX:-}
+  if [ -z "$door" ]; then
+    if [ -d "$HOME/Library/Application Support" ]; then
+      door="$HOME/Library/Application Support/infinitary/integrations/inbox"
+    else
+      door="${XDG_CONFIG_HOME:-$HOME/.config}/infinitary/integrations/inbox"
+    fi
+  fi
+  address=
+  key=$door/key
+  cap=
+  started=
+  shell=
+  if [ -r "$door/address" ]; then
+    IFS= read -r address <"$door/address" || :
+  fi
+  if [ ! -r "$key" ] || [ -z "$address" ]; then
+    printf 'error: Infinitary is not open, or its inbox is off, so nothing was recorded\ncode: NO_CHANNEL\nhelp[1]: Open Infinitary and turn the inbox on in Settings → Integrations, then run %s again\n' "$tool"
+    exit 1
+  fi
+fi
 # Only this Mac's loopback and a port number.
 case $address in
   127.0.0.1:*) port=${address#127.0.0.1:} ;;
@@ -73,9 +104,9 @@ answer=$("$curl" -q --silent --show-error --noproxy '*' --max-time 120 \
   --data-urlencode "tool=$tool" \
   --data-urlencode "bin=$0" \
   --data-urlencode "cwd=$PWD" \
-  --data-urlencode "cap=${INFINITARY_SHELL_CAP_MS:-${FM3000_SHELL_CAP_MS:-}}" \
-  --data-urlencode "started=${INFINITARY_SHELL_STARTED_MS:-}" \
-  --data-urlencode "shell=${INFINITARY_SHELL_ID:-}" \
+  --data-urlencode "cap=$cap" \
+  --data-urlencode "started=$started" \
+  --data-urlencode "shell=$shell" \
   "$@" "http://$address/run" 2>&1)
 status=$?
 code=${answer%%"$nl"*}

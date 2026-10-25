@@ -32,6 +32,9 @@ package() {
   rm -f "$pkgdir/opt/infinitary/resources/apparmor-profile"
   install -d "$pkgdir/usr/bin"
   ln -s /opt/infinitary/infinitary "$pkgdir/usr/bin/infinitary"
+  # The inbox's command by its short name (docs/linux-packages.md, "The
+  # inbox's command").
+  ln -s /opt/infinitary/resources/axi-bin/infinitary-inbox-axi "$pkgdir/usr/bin/infinitary-inbox-axi"
   # Firstmate 3000's program path, as the Ubuntu package leaves it
   # (docs/linux-packages.md, "The old program path"): what an older app set
   # up to start at login or in the background still starts this one.

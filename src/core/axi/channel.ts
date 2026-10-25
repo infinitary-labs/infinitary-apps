@@ -7,17 +7,25 @@ import { HERE } from "../../shared/deviceNames";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
 import type { HostChildProcess, HostChildSpawner } from "../host";
-import { INTEGRATIONS_COMMAND, isIntegrationAnswer, type TaskIntegrations } from "../integrations";
+import {
+  INBOX_COMMAND,
+  INTEGRATIONS_COMMAND,
+  type InboxDoor,
+  isIntegrationAnswer,
+  type TaskIntegrations,
+} from "../integrations";
 import { type Injection, SECRETS_COMMAND, type SecretsCommand } from "../secrets/requests";
 import { ownTaskCommand } from "./names";
-import type {
-  AxiCallMessage,
-  AxiChildMessage,
-  BrowserOp,
-  ChannelAnswer,
-  ChannelReply,
-  IntegrationChannelAnswer,
-  IntegrationOpInput,
+import {
+  AXI_KEY_HEADER,
+  type AxiCallMessage,
+  type AxiChildMessage,
+  type BrowserOp,
+  type ChannelAnswer,
+  type ChannelReply,
+  type InboxOpInput,
+  type IntegrationChannelAnswer,
+  type IntegrationOpInput,
 } from "./protocol";
 import type { SecretsAnswer } from "./secretsCommands";
 
@@ -71,6 +79,11 @@ export type TaskTools = {
   browser?: CrewmateBrowser;
   integrations?: TaskIntegrations;
   secrets?: SecretsCommand;
+  /**
+   * The inbox's door (docs/integrations.md, "The inbox"): only the person
+   * key `admit` takes holds it, never a task's.
+   */
+  inbox?: InboxDoor;
 };
 
 /** What one operation answers, for either tool. */
@@ -99,7 +112,7 @@ export const AXI_VERSION_ENV = "INFINITARY_AXI_VERSION";
 export { SHELL_CAP_ENV, SHELL_ID_ENV, SHELL_STARTED_ENV } from "../hostEnv";
 
 /** The header a request carries its key in; the key file is that one header line. */
-const KEY_HEADER = "x-infinitary-axi-key";
+const KEY_HEADER = AXI_KEY_HEADER;
 
 /** Time a command needs around its operation: the launcher, the process, the answer's way back. */
 const CAP_MARGIN_MS = 750;
@@ -259,6 +272,33 @@ export class AxiChannel {
     };
   }
 
+  /**
+   * Admit a person key the app keeps outside this folder (the inbox's,
+   * docs/integrations.md "The inbox"), for the tools it may reach and no
+   * task's. Admitted again, it takes the key and tools it is given now.
+   */
+  admit(id: string, key: string, tools: TaskTools): void {
+    if (this.closed) throw new Error("The task channel is closed.");
+    this.shut(id);
+    const grant: Grant = {
+      taskId: `person:${id}`,
+      keyFile: "",
+      digest: digestOf(key),
+      tools,
+      parked: new Map(),
+    };
+    this.grants.set(grant.taskId, grant);
+    this.byDigest.set(grant.digest, grant);
+  }
+
+  /** A person key answers nothing from now on; its file is its owner's to remove. */
+  shut(id: string): void {
+    const grant = this.grants.get(`person:${id}`);
+    if (!grant) return;
+    this.grants.delete(grant.taskId);
+    this.byDigest.delete(grant.digest);
+  }
+
   /** Whether a task holds a key now. */
   granted(taskId: string): boolean {
     return this.grants.has(taskId);
@@ -337,7 +377,8 @@ export class AxiChannel {
     const has =
       (tool === BROWSER_COMMAND && grant.tools.browser !== undefined) ||
       (tool === INTEGRATIONS_COMMAND && grant.tools.integrations !== undefined) ||
-      (tool === SECRETS_COMMAND && grant.tools.secrets !== undefined);
+      (tool === SECRETS_COMMAND && grant.tools.secrets !== undefined) ||
+      (tool === INBOX_COMMAND && grant.tools.inbox !== undefined);
     if (!has) {
       answer(
         failed(
@@ -458,7 +499,9 @@ export class AxiChannel {
           )
         : tool === SECRETS_COMMAND
           ? this.secret(grant, message, command.cwd)
-          : this.operate(grant, message);
+          : tool === INBOX_COMMAND
+            ? this.inbox(grant, message)
+            : this.operate(grant, message);
     const settled = await within(work, deadline);
     if (settled === TIMEOUT) {
       grant.parked.set(tool, { command: message.command, work });
@@ -506,6 +549,39 @@ export class AxiChannel {
       const reason = error instanceof Error ? error.message : String(error);
       return {
         text: `The integration could not do that: ${reason.replace(/\.$/, "")}.`,
+        refused: "refused",
+      };
+    }
+  }
+
+  /** One of the inbox's operations, through the door the person key holds. */
+  private async inbox(grant: Grant, message: AxiCallMessage): Promise<IntegrationChannelAnswer> {
+    const inbox = grant.tools.inbox;
+    if (!inbox) return { text: "This key has no inbox.", refused: "refused" };
+    try {
+      switch (message.op) {
+        case "inbox.note": {
+          const { text, requestId, source } = (message.input ?? {}) as InboxOpInput["inbox.note"];
+          return {
+            data: inbox.note({
+              text: String(text ?? ""),
+              ...(typeof requestId === "string" ? { requestId } : {}),
+              ...(typeof source === "string" ? { source } : {}),
+            }),
+          };
+        }
+        case "inbox.receipts": {
+          const { after } = (message.input ?? {}) as InboxOpInput["inbox.receipts"];
+          return { data: inbox.receipts(Number.isInteger(after) ? after : 0) };
+        }
+        case "inbox.status":
+          return { data: inbox.status() };
+        default:
+          return { text: "That is not an inbox operation.", refused: "invalid" };
+      }
+    } catch (error) {
+      return {
+        text: error instanceof Error ? error.message : String(error),
         refused: "refused",
       };
     }

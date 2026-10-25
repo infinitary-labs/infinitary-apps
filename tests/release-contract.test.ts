@@ -468,6 +468,10 @@ describe("electron-builder configuration", () => {
     expect(readlinkSync(join(root, "resources/axi-bin/infinitary-integrations-axi"))).toBe(
       "infinitary-axi",
     );
+    // INF-1214's inbox command, which a person's own script runs.
+    expect(readlinkSync(join(root, "resources/axi-bin/infinitary-inbox-axi"))).toBe(
+      "infinitary-axi",
+    );
     // INF-1085's command ships even while its production grant remains unavailable.
     expect(readlinkSync(join(root, "resources/axi-bin/infinitary-secrets-axi"))).toBe(
       "infinitary-axi",

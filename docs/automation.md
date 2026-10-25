@@ -116,7 +116,9 @@ It is the captain's q6 on INF-775: the app looks on its one tick at each kind's 
   A look runs beside the tick, one per rule at a time, through `IntegrationsService.look`.
 - Each rule keeps its own cursor at the integration (`schedules.event_cursor`, migration 89).
   Its first look only finds its place, so what arrived before it was turned on never fires.
+  An event that declares `atOnce` (the inbox's) is one whose integration says when something arrives: a rule on it finds its place as soon as it is made, turned on, resumed or repointed, and each arrival makes it look at once (`Scheduler.lookNow`), with a look already running looking again once it ends.
   Turning a rule on, resuming it or pointing it at another event clears its cursor, so a paused time is never replayed; an edit to only its name, prompt or project keeps it.
+- A delivery a first mate turn handled tells its integration which events it carried (`handled`), which the inbox's receipts read.
 - What arrived since the cursor is one run, recorded in one transaction with the new cursor and the delivery.
   A run keeps the events it carried by their ids (`schedule_runs.events`), and an event a run of the rule already carried is never sent again, even when a look overlaps.
 - While the rule's delivery waits unsent, new events fold into it as scheduled occurrences do: the message is rewritten with every event and says more arrived while it waited.

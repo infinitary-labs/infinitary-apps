@@ -1750,6 +1750,16 @@ export const invokeContract = {
     request: z.tuple([]),
     response: integrationsViewSchema,
   },
+  // The inbox's one-click link of its command into /usr/local/bin
+  // (docs/integrations.md, "The inbox"), only where that path is free and
+  // the folder writable without an administrator.
+  "inf:integrations:inbox-link": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: integrationsViewSchema,
+  },
   "inf:settings:firstmate-account:get": {
     effect: "read",
     surface: "core",
@@ -3616,6 +3626,8 @@ export type FirstmateApi = {
     ) => Promise<{ id: string; view: IntegrationsView }>;
     /** End the sign-in waiting for the browser. */
     cancelSignIn: () => Promise<IntegrationsView>;
+    /** Link the inbox's command into /usr/local/bin, where that is free and writable. */
+    linkInbox: () => Promise<IntegrationsView>;
     configure: (id: string, patch: IntegrationSettingsPatch) => Promise<IntegrationsView>;
     rule: (id: string, action: string, allowed: boolean) => Promise<IntegrationsView>;
     remove: (id: string) => Promise<IntegrationsView>;

@@ -1,5 +1,5 @@
 import type { ForgeSignInState } from "@shared/forges";
-import type { IntegrationEffect, IntegrationKind } from "@shared/integrations";
+import type { IntegrationDoorView, IntegrationEffect, IntegrationKind } from "@shared/integrations";
 import type { z } from "zod";
 
 /**
@@ -62,6 +62,11 @@ export type IntegrationEventSpec = {
   every: number;
   /** Closed string filters the kind accepts, drawn by the shared event editor. */
   filters?: readonly { name: string; label: string; defaultValue?: string }[];
+  /**
+   * The kind says when something arrives (the inbox's drop), so a rule
+   * finds its place the moment it listens and the next arrival fires it.
+   */
+  atOnce?: boolean;
 };
 
 /** One thing that happened, by the place's own id, in one line. */
@@ -90,6 +95,8 @@ export type IntegrationConnection = {
   actions: readonly IntegrationActionSpec[];
   /** What it can tell. */
   events?: readonly IntegrationEventSpec[];
+  /** The inbox's door, for Settings alone (`IntegrationView.door`). */
+  door?: IntegrationDoorView;
 };
 
 /** An action's answer: words for the caller, or a refusal that says why and what to do. */

@@ -120,6 +120,17 @@ A task on this Mac is granted it whenever the host has a command process, and a 
 Its kept answers follow the shell's limit as the browser's do.
 There, a call waits on this Mac at most until 750 milliseconds before the command process would be stopped, so the command always prints an answer, and a call not yet sent then is never sent.
 
+## The inbox command
+
+`infinitary-inbox-axi` (`src/core/axi/inboxCommands.ts`) is the one command a person runs rather than a crewmate: their own program drops an event into the inbox (`docs/integrations.md`, "The inbox").
+It uses the same launcher and command process, but its shell carries no task: the launcher reads the inbox's folder, `INFINITARY_INBOX` or else the release's own (`~/Library/Application Support/infinitary/integrations/inbox` on a Mac, `$XDG_CONFIG_HOME/infinitary/integrations/inbox` or `~/.config/...` on Linux), and sends its `key` file to the address in its `address` file.
+Neither file there means the app is closed or the inbox is off: it prints `NO_CHANNEL`, says nothing was recorded, and exits 1.
+It sends no shell limit, start or id, so no answer is kept for a later command.
+The channel admits the inbox's key as a grant of its own (`AxiChannel.admit`) that holds only the inbox's door, and `shut` revokes it.
+`note "<words>"` records one event and answers its id, whether this drop recorded it, and how many rules listen; `--request-id` makes a repeat record once, and `--source` names where it came from.
+`receipts --after <cursor>` lists what was recorded and handled after a cursor, and the bare command says whether the inbox is on and how many events it holds.
+A request id or source is one word of letters, digits and `._:@/+-`, at most 128; anything else, or a note with no words, is refused with exit 1.
+
 ## The Secrets foundation command
 
 `infinitary-secrets-axi` uses the same launcher and isolated command process, with no browser dependency.
@@ -137,6 +148,7 @@ The operation boundary, backend requirements and current limitations are owned b
 `channel.test.ts` runs the real launcher with `sh` and the system's curl against the real channel and the bundled command process: only the browser the key names is reached, the key file is 0600 in a 0700 folder and never in the environment, a forged, missing or revoked key reaches nothing, a request naming another host or carrying an origin is refused even with the task's key, the keys' folder is emptied when a channel opens and closes, refusals and malformed asks keep their exit codes, help and `-v` need no task, and a command past its shell's limit, counted from when the shell started while it can still answer, answers `running`, the next command `BUSY`, and the next look the kept answer, the action sent once.
 A click that finishes after that start-counted deadline and before the receipt-counted one answers `running`, a finished kept answer is given even when the later command's deadline has passed, a request that arrives after the limit has run out counts from receipt, and a start after receipt does not extend the limit.
 A command whose app is held up from before the channel's deadline until after Pi's limit still answers `running` through Pi's own shell, not as a background job.
+`src/core/integrations/providers/inbox.test.ts` runs `infinitary-inbox-axi` through the real launcher with `INFINITARY_INBOX`: closed or off it exits 1 with `NO_CHANNEL`, a drop and receipts answer, and a task's key cannot reach the inbox nor the inbox key a task's command.
 `jobManager.test.ts` holds Pi's shell telling a command its limit, when that shell started, on the wall clock the channel reads, and carrying the task's shell, and a shell whose task command reached the app waiting past the limit for its answer, at most one limit more, `hostEnv.test.ts` that a child does not inherit `INFINITARY_SHELL_CAP_MS`, `INFINITARY_SHELL_STARTED_MS`, `INFINITARY_SHELL_ID` or the older `FM3000_SHELL_CAP_MS` from the process that started the app, and that extra still sets the Infinitary names, `claudeSession.test.ts` the Claude client's, `crewSupervisor.test.ts` that a task on this Mac is granted its browser's command and prompt line where its browser binds and none without one, and `crewActions.test.ts` that the record leaves the command out.
 `tests/e2e/task-browser.spec.ts` and `tests/e2e/task-browser-booking.spec.ts` drive every browser journey through the command on Pi crewmates, and the booking journeys on Claude crewmates too, in the hermetic app; the scripted crewmate reads its answers through one helper (`toolAnswers` and `lookingAgain` in `tests/e2e/mockProvider.ts`), which looks again when the channel answered `running` or `BUSY`, and the take journey holds that its wait answered with `running`, its answer came with the next look, and it was run once.
 When the shell itself becomes a background job, the helper ends the turn until that job's exit wake supplies its output, ignoring the receipt's partial output and unrelated or repeated job exits rather than running the browser action again.

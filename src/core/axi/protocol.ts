@@ -18,6 +18,13 @@ import type { SecretsOp, SecretsReply } from "./secretsCommands";
  * process to the task its key named before it started.
  */
 
+/**
+ * The header a request carries its key in: a task's key file, and the
+ * inbox's (docs/integrations.md, "The inbox"), is that one header line,
+ * which the launcher's curl sends as it is.
+ */
+export const AXI_KEY_HEADER = "x-infinitary-axi-key";
+
 /** The task browser's operations a command may ask for: `CrewmateBrowser`'s, nothing more. */
 export type BrowserOp = "navigate" | "inspect" | "act" | "capture" | "close" | "pages";
 
@@ -46,6 +53,19 @@ export type IntegrationOpInput = {
   "integrations.call": { name: string; action: string; input: unknown; reason?: string };
 };
 
+/**
+ * The inbox's operations its command may ask for (docs/integrations.md,
+ * "The inbox"): drop one event, read the receipts after a cursor, and read
+ * how it stands - `InboxDoor`'s, nothing more.
+ */
+export type InboxOp = "inbox.note" | "inbox.receipts" | "inbox.status";
+
+export type InboxOpInput = {
+  "inbox.note": { text: string; requestId?: string; source?: string };
+  "inbox.receipts": { after: number };
+  "inbox.status": Record<string, never>;
+};
+
 /** An integrations answer: structured rows, a call's words, or a refusal's. */
 export type IntegrationChannelAnswer = {
   data?: Record<string, unknown>;
@@ -68,6 +88,8 @@ export type ChannelReply<Answer> =
 
 export type BrowserReply = ChannelReply<ChannelAnswer>;
 export type IntegrationReply = ChannelReply<IntegrationChannelAnswer>;
+/** The inbox answers as the integrations do: rows, or a refusal's words. */
+export type InboxReply = ChannelReply<IntegrationChannelAnswer>;
 
 /** The app's first and only instruction to a command process. */
 export type AxiRunMessage = {
@@ -90,7 +112,7 @@ export type AxiCallMessage = {
   id: number;
   /** The command as the crewmate named it (`click`), for the words of a kept answer. */
   command: string;
-  op: BrowserOp | IntegrationOp | SecretsOp;
+  op: BrowserOp | IntegrationOp | InboxOp | SecretsOp;
   input: unknown;
 };
 

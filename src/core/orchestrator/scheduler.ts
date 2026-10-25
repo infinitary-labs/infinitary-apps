@@ -52,6 +52,8 @@ export type ListenedEvent = {
   /** How often to look, in ticks. */
   every: number;
   filters?: readonly { name: string; label: string; defaultValue?: string }[];
+  /** The integration says when something arrives, so a rule finds its place as soon as it listens. */
+  atOnce?: boolean;
 };
 
 /** One look's answer: where to look from next and what arrived. */
@@ -102,6 +104,12 @@ export type SchedulerOptions = {
   projectOf?: (id: string) => { key: string; name: string } | undefined;
   /** Absent, no event rule can be made, and none looks. */
   events?: SchedulerEvents;
+  /**
+   * Told the events of an event rule's delivery once a first mate turn
+   * handled it, by the integration the rule listens to (the inbox's
+   * receipts, docs/integrations.md "The inbox").
+   */
+  handled?: (integration: string, events: string[], at: number) => void;
 };
 
 const TICK_MS = 60 * 1000;
@@ -296,6 +304,8 @@ export class Scheduler {
   private readonly looked = new Map<string, number>();
   /** Looks still running, one per rule at most. */
   private readonly looking = new Map<string, Promise<void>>();
+  /** Rules asked to look at once while a look was running: they look again after it. */
+  private readonly again = new Set<string>();
 
   constructor(private readonly options: SchedulerOptions) {
     const now = options.now;
@@ -377,16 +387,21 @@ export class Scheduler {
   /**
    * An enabled event rule looks at its event when its cadence comes round
    * (docs/automation.md, "Events"), one look per rule at a time; the tick
-   * does not wait for it.
+   * does not wait for it. `now` looks whatever the cadence says, and a rule
+   * still looking looks again once that look ends, so nothing dropped
+   * meanwhile waits for the next minute.
    */
-  private listen(record: ScheduleRecord): void {
+  private listen(record: ScheduleRecord, now = false): void {
     const events = this.options.events;
     if (!events || record.state !== "enabled" || record.spec.kind !== "event") return;
-    if (this.looking.has(record.id)) return;
+    if (this.looking.has(record.id)) {
+      if (now) this.again.add(record.id);
+      return;
+    }
     const found = events.find(record.spec.integration, record.spec.event);
     if (!found || found.connection !== record.connection) return;
     const last = this.looked.get(record.id);
-    if (last !== undefined && this.ticks - last < found.every) return;
+    if (!now && last !== undefined && this.ticks - last < found.every) return;
     this.looked.set(record.id, this.ticks);
     const look = this.look(record, found)
       .catch((error: unknown) =>
@@ -394,8 +409,46 @@ export class Scheduler {
           `[automation] ${record.id} could not look at ${found.name}: ${error instanceof Error ? error.message : String(error)}`,
         ),
       )
-      .finally(() => this.looking.delete(record.id));
+      .finally(() => {
+        this.looking.delete(record.id);
+        if (!this.again.delete(record.id)) return;
+        const current = this.options.store.get(record.id);
+        if (current) this.listen(current, true);
+      });
     this.looking.set(record.id, look);
+  }
+
+  /**
+   * Something arrived at an integration that can say so at once (the
+   * inbox's drop, docs/integrations.md "The inbox"): every turned-on rule
+   * listening to it looks now rather than at the next minute.
+   */
+  lookNow(integration: string): void {
+    for (const record of this.options.store.list())
+      if (record.spec.kind === "event" && record.spec.integration === integration)
+        this.listen(record, true);
+  }
+
+  /**
+   * A rule on an event its integration says at once finds its place now,
+   * so the next arrival fires it rather than only setting its place.
+   */
+  private placeAtOnce(record: ScheduleRecord): void {
+    if (record.spec.kind !== "event") return;
+    if (this.options.events?.find(record.spec.integration, record.spec.event)?.atOnce)
+      this.listen(record, true);
+  }
+
+  /** How many turned-on rules listen to an integration's events now. */
+  listeners(integration: string): number {
+    return this.options.store
+      .list()
+      .filter(
+        (record) =>
+          record.state === "enabled" &&
+          record.spec.kind === "event" &&
+          record.spec.integration === integration,
+      ).length;
   }
 
   /**
@@ -540,6 +593,13 @@ export class Scheduler {
         tasks: record.disposition.tasks.filter((task) => !about.has(task)),
         cards: record.disposition.cards,
       });
+      const spec = this.options.store.get(run.scheduleId)?.spec;
+      if (spec?.kind === "event" && run.events?.length)
+        this.options.handled?.(
+          spec.integration,
+          run.events.map((event) => event.id),
+          record.endedAt,
+        );
     }
     this.retire();
   }
@@ -677,6 +737,7 @@ export class Scheduler {
     };
     this.options.store.insert(record);
     this.announce(automationWords.created(draft, spec, trimmed), options);
+    this.placeAtOnce(record);
     return record;
   }
 
@@ -759,6 +820,7 @@ export class Scheduler {
       ),
       options,
     );
+    if (next.cursor === undefined) this.placeAtOnce(next);
     return next;
   }
 
@@ -796,6 +858,7 @@ export class Scheduler {
     };
     this.options.store.save(next);
     this.announce(automationWords.resumed(record), options);
+    this.placeAtOnce(next);
     return next;
   }
 

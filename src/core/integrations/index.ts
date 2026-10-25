@@ -16,7 +16,7 @@ export type {
   IntegrationSecretSlot,
 } from "./binding";
 export { IntegrationOutcomeUnknown } from "./binding";
-export { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "./commandWords";
+export { CREWMATE_INTEGRATIONS_LINE, INBOX_COMMAND, INTEGRATIONS_COMMAND } from "./commandWords";
 export {
   ClaudeFiles,
   conversationFiles,
@@ -41,6 +41,17 @@ export {
   type GoogleIntegrationOptions,
   googleIntegration,
 } from "./providers/google/googleIntegration";
+export {
+  INBOX_EVENT,
+  INBOX_FENCE,
+  INBOX_ID,
+  Inbox,
+  type InboxChannel,
+  type InboxDoor,
+  type InboxReceipt,
+  type InboxReceiptLine,
+  launcherDefaultDir,
+} from "./providers/inbox";
 export { type McpIntegrationOptions, mcpIntegration } from "./providers/mcp/mcpIntegration";
 export {
   STAND_IN_EVENT,

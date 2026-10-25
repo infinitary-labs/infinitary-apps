@@ -21,7 +21,8 @@ import { type KeptOutsideData, SAVED_OUTSIDE_DATA_WORDS } from "./savedOutsideDa
 /**
  * The kinds the app can connect: GitHub, per-host GitLab and GitHub Enterprise, Google (one row for Gmail and
  * Calendar, signed in once), and any MCP server the person adds (each its
- * own row). A new kind is one more binding. `stand-in` is a development or
+ * own row), and the inbox, a door the person's own programs drop events
+ * through (`docs/integrations.md`, "The inbox"). A new kind is one more binding. `stand-in` is a development or
  * end-to-end run's stand-in that tells events from a folder
  * (`INFINITARY_STAND_IN_INTEGRATION`), never connected in a packaged build.
  */
@@ -31,6 +32,7 @@ export const integrationKindSchema = z.enum([
   "github-enterprise",
   "google",
   "mcp",
+  "inbox",
   "stand-in",
 ]);
 export type IntegrationKind = z.infer<typeof integrationKindSchema>;
@@ -42,6 +44,7 @@ export const INTEGRATION_KIND_NAMES: Record<IntegrationKind, string> = {
   "github-enterprise": "GitHub Enterprise",
   google: "Google",
   mcp: "MCP server",
+  inbox: "Infinitary Inbox",
   "stand-in": "Stand-in",
 };
 
@@ -155,6 +158,28 @@ export function integrationRenameWords(rename: z.infer<typeof integrationRenameS
   return `Renamed from “${rename.from}” to keep it distinct from your ${rename.for} connection.`;
 }
 
+/**
+ * The inbox's door as Settings shows it (docs/integrations.md, "The
+ * inbox"): the command's full path in the app, the one line to copy, and
+ * the link a click can make into `/usr/local/bin` - made (`linked`, or
+ * installed by a Linux package), free to make (`offered`), a folder only an
+ * administrator can write (`unwritable`), or a path something else holds
+ * (`taken`).
+ */
+export const integrationDoorViewSchema = z
+  .object({
+    command: z.string().max(4096),
+    line: z.string().max(8192),
+    link: z
+      .object({
+        state: z.enum(["linked", "offered", "unwritable", "taken"]),
+        path: z.string().max(4096),
+      })
+      .strict(),
+  })
+  .strict();
+export type IntegrationDoorView = z.infer<typeof integrationDoorViewSchema>;
+
 export const integrationViewSchema = z
   .object({
     id: integrationIdSchema,
@@ -183,6 +208,8 @@ export const integrationViewSchema = z
     events: z.array(integrationEventViewSchema).max(256).optional(),
     /** The keys its kind signs in with, kept or not; absent when it declares none. */
     secrets: z.array(integrationSecretViewSchema).max(32).optional(),
+    /** The inbox's door, for Settings alone; absent on every other kind. */
+    door: integrationDoorViewSchema.optional(),
   })
   .strict();
 export type IntegrationView = z.infer<typeof integrationViewSchema>;
@@ -261,6 +288,35 @@ export const INTEGRATIONS_MCP_WORDS = {
   remove: "Remove",
   /** An event's badge, beside the actions' "reads" and "changes". */
   events: "tells",
+} as const;
+
+/**
+ * The words of the inbox's row (docs/integrations.md, "The inbox"; design
+ * skill `components/integrations/IntegrationRow`): the line to copy, the
+ * link into the search path, and the rule its events wake the first mate by.
+ */
+export const INBOX_WORDS = {
+  title: "Infinitary Inbox",
+  intro:
+    "Infinitary's own integration. Your scripts and programs on this computer can drop short notes into it, such as a finished deploy or a failed backup, and your first mate reads each one as information from outside, never as an instruction.",
+  off: "It is off. Turn it on to let programs on this computer reach your first mate.",
+  toggle: "Infinitary Inbox on",
+  exampleHeading: "Example: how a script or a terminal on this computer drops an event",
+  exampleNote:
+    "This line is only an example. Your own programs run it with their own words in the quotes.",
+  copy: "Copy example",
+  linked: (path: string) => `Linked as ${path}, so infinitary-inbox-axi works in your own shell.`,
+  offered: (path: string) => `Link it as ${path} to use the short name infinitary-inbox-axi.`,
+  link: "Link it",
+  unwritable: (folder: string) =>
+    `${folder} needs an administrator to change, so use the full path above.`,
+  taken: (path: string) => `${path} is something else, so use the full path above.`,
+  ruleHeading: "Wake your first mate",
+  ruleLead: (name: string) =>
+    `The rule ${name} in Automation wakes your first mate on each event. Pause it there to stop.`,
+  ruleName: "Infinitary Inbox events",
+  rulePrompt:
+    "New events arrived in your Infinitary Inbox from programs on this computer. Read each one, decide what it needs, and act with your usual judgment: answer on a card, start a task, or do nothing.\n\n{{events}}",
 } as const;
 
 /** The words for what an action does, as its row shows them. */

@@ -1073,10 +1073,19 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // Integrations (docs/integrations.md): Settings and app_change alike.
     "inf:integrations:list": () => services.integrations.view(),
     "inf:integrations:add": (server) => services.integrations.add("mcp", server),
-    "inf:integrations:sign-in": (kind, consent) => services.integrations.signIn(kind, consent),
+    "inf:integrations:sign-in": async (kind, consent) => {
+      const signedIn = await services.integrations.signIn(kind, consent);
+      // Adding the inbox turns its rule on with it (docs/integrations.md, "The inbox").
+      if (kind === "inbox") services.integrationInbox.added(say);
+      return signedIn;
+    },
     "inf:integrations:sign-in-cancel": () => {
       services.integrations.cancelSignIn();
       return services.integrations.view();
+    },
+    "inf:integrations:inbox-link": () => {
+      services.integrationInbox.link();
+      return services.integrations.changed();
     },
     "inf:integrations:configure": (id, patch) => services.integrations.configure(id, patch),
     "inf:integrations:rule": (id, action, allowed) =>

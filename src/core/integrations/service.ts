@@ -145,6 +145,7 @@ export type IntegrationListen = {
   /** How often the app looks, in the tick's minutes. */
   every: number;
   filters?: readonly { name: string; label: string; defaultValue?: string }[];
+  atOnce?: boolean;
 };
 
 /** A connection's reference as `referenceConnections` gives it. */
@@ -285,6 +286,7 @@ export class IntegrationsService {
       label: spec.label,
       every: spec.every,
       ...(spec.filters ? { filters: [...spec.filters] } : {}),
+      ...(spec.atOnce ? { atOnce: true } : {}),
     };
   }
 
@@ -1013,6 +1015,7 @@ Do not repeat this call; read ${name} to check what happened first.`
       health: row.connection.health,
       paused: row.settings.paused === true,
       ...(row.connection.runs !== undefined ? { runs: row.connection.runs } : {}),
+      ...(row.connection.door ? { door: row.connection.door } : {}),
       actions: row.connection.actions.map((spec) => {
         const enabled = !row.settings.off?.includes(spec.name);
         return {

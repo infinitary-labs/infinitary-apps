@@ -36,6 +36,13 @@ The removal script (`packaging/linux/scripts/after-remove.tpl`) takes the links 
 `scripts/check-linux-package.sh` checks that both paths lead to the installed program after each Ubuntu and Fedora install.
 The checks also install the Ubuntu and Fedora packages over Firstmate 3000's last published ones, as its own update does, and check the saved work it made moves ("The checks").
 
+## The inbox's command
+
+Each package puts the inbox's command on everyone's search path, so a script runs `infinitary-inbox-axi` by its short name (`docs/integrations.md`, "The inbox").
+The Ubuntu and Fedora install script links `/usr/bin/infinitary-inbox-axi` to `/opt/infinitary/resources/axi-bin/infinitary-inbox-axi`, leaving the path alone while it holds something not of this package's, and the removal script takes the link away on a removal alone while it still leads into `/opt/infinitary`.
+The Arch package owns the same link, and the Nix package links it in its `bin` to the command in its `lib/infinitary/resources/axi-bin`.
+Settings reads the `/usr/bin` link as linked; the Nix link is on the person's path but Settings does not look for it, so it offers the full path.
+
 ## Arch, Omarchy and NixOS
 
 The Arch recipe and the Nix package install the release's Ubuntu package, so the two systems run the same bytes as Ubuntu.

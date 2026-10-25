@@ -1,5 +1,6 @@
 import { FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
 import {
+  INBOX_WORDS,
   INTEGRATION_EFFECT_WORDS,
   INTEGRATION_KIND_NAMES,
   INTEGRATION_NOTICES,
@@ -9,6 +10,7 @@ import {
   INTEGRATIONS_MCP_WORDS,
   INTEGRATIONS_SIGN_IN_HOST,
   INTEGRATIONS_WORDS,
+  type IntegrationDoorView,
   type IntegrationKind,
   type IntegrationNotice,
   type IntegrationSettingsPatch,
@@ -19,6 +21,7 @@ import {
   NOTICE_ACCEPTED,
 } from "@shared/integrations";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
 import "./integrations.css";
@@ -47,7 +50,13 @@ import "./forges.css";
  * Infinitary uses from Gmail and Calendar and where it goes, which the
  * person accepts before anything is asked of Google (INF-949). While the
  * app waits for the browser to come back, an aside says so, opens the page
- * again or cancels, and the new row opens once it is back. Every change
+ * again or cancels, and the new row opens once it is back. The Infinitary
+ * Inbox, Infinitary's own integration, has its own section above the rest
+ * (the captain's reply on INF-1214): what it is and a switch, off until the
+ * person turns it on (docs/integrations.md, "The inbox"); on, it shows
+ * an example of the line a program runs to drop an event, a link for the
+ * short name, and the rule that wakes the first mate, which turning the
+ * inbox on adds and turns on (the captain's word on INF-1214). Every change
  * here goes through the same channels the first mate's `app_change` lines
  * reach.
  */
@@ -174,6 +183,16 @@ export function IntegrationsTab() {
     if (kind) startBrowserSignIn(kind);
   }, [pending, loaded, signIn, view, startBrowserSignIn]);
 
+  // The inbox has nothing to wait for: it is on when the answer comes back.
+  const turnOnInbox = () => {
+    setError(null);
+    window.infinitary.integrations
+      .signIn("inbox")
+      .then(({ view: next }) => setView(next))
+      .catch((caught: unknown) =>
+        setError(caught instanceof Error ? caught.message : String(caught)),
+      );
+  };
   const change = (run: () => Promise<IntegrationsView>) => {
     setError(null);
     run()
@@ -221,11 +240,24 @@ export function IntegrationsTab() {
     />
   );
 
+  const inbox = view.integrations.find((integration) => integration.kind === "inbox");
+  const connected = view.integrations.filter((integration) => integration.kind !== "inbox");
+
   return (
     <section
       data-integrations=""
       style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}
     >
+      <InboxSection
+        inbox={inbox}
+        loaded={loaded}
+        onTurn={(on) =>
+          on
+            ? turnOnInbox()
+            : change(() => window.infinitary.integrations.remove(inbox?.id ?? "inbox"))
+        }
+        onLink={() => change(() => window.infinitary.integrations.linkInbox())}
+      />
       <div>
         <div style={{ fontSize: "var(--text-md)", color: "var(--fg-1)", fontWeight: 500 }}>
           {INTEGRATIONS_WORDS.title}
@@ -236,12 +268,12 @@ export function IntegrationsTab() {
       </div>
       <SettingError error={error} />
       <div className="fm-forges-box" data-integrations-list="">
-        {loaded && view.integrations.length === 0 && (
+        {loaded && connected.length === 0 && (
           <div className="fm-forges-quiet" data-integrations-quiet="">
             {INTEGRATIONS_WORDS.quiet}
           </div>
         )}
-        {view.integrations.map((integration) => (
+        {connected.map((integration) => (
           <div key={integration.id}>
             <IntegrationRow
               integration={integration}
@@ -295,7 +327,12 @@ export function IntegrationsTab() {
           <div className="fm-forges-add">
             <div className="fm-connect-chips" data-connect-chips="foot">
               {view.addable
-                .filter((entry) => entry.kind !== "gitlab" && entry.kind !== "github-enterprise")
+                .filter(
+                  (entry) =>
+                    entry.kind !== "gitlab" &&
+                    entry.kind !== "github-enterprise" &&
+                    entry.kind !== "inbox",
+                )
                 .map((kind) => (
                   <span
                     key={kind.kind}
@@ -453,7 +490,11 @@ function integrationRowView(integration: IntegrationView): {
 } {
   if (integration.kind !== "mcp") {
     const row = forgeRowView({ name: integration.name, state: integration.health });
-    return { ...row, badge: "signed in", problem: row.reauth ? FORGE_SECTION_WORDS.reauth : null };
+    return {
+      ...row,
+      badge: "signed in",
+      problem: row.reauth ? FORGE_SECTION_WORDS.reauth : null,
+    };
   }
   const problem = integration.health === "unavailable" ? "could not reach it" : null;
   return {
@@ -640,6 +681,100 @@ function IntegrationActions({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * The Infinitary Inbox's own section (docs/integrations.md, "The inbox";
+ * the captain's reply on INF-1214: "it should be its own section, and
+ * default it's off, and we tell the user what it is, and that they can
+ * turn it on"): its name, what it is and a switch, then, while it is on,
+ * the example line, the link and the rule.
+ */
+function InboxSection({
+  inbox,
+  loaded,
+  onTurn,
+  onLink,
+}: {
+  inbox: IntegrationView | undefined;
+  loaded: boolean;
+  onTurn: (on: boolean) => void;
+  onLink: () => void;
+}) {
+  return (
+    <div className="fm-forges-box fm-integrations-inbox" data-inbox-section={inbox ? "on" : "off"}>
+      <div className="fm-integrations-inbox-head">
+        <div>
+          <div className="fm-integrations-inbox-title">{INBOX_WORDS.title}</div>
+          <p className="fm-integrations-door-lead">{INBOX_WORDS.intro}</p>
+        </div>
+        <Switch
+          checked={inbox !== undefined}
+          disabled={!loaded}
+          aria-label={INBOX_WORDS.toggle}
+          onChange={onTurn}
+        />
+      </div>
+      {loaded && !inbox && (
+        <p className="fm-integrations-door-note" data-inbox-off="">
+          {INBOX_WORDS.off}
+        </p>
+      )}
+      {inbox?.door && <InboxDoorPanel door={inbox.door} onLink={onLink} />}
+    </div>
+  );
+}
+
+/**
+ * The inbox's open part (docs/integrations.md, "The inbox"): an example of
+ * the line a program runs, in full and copied with one press, marked as an
+ * example; the short name's link where the folder takes one; and which
+ * rule wakes the first mate.
+ */
+function InboxDoorPanel({ door, onLink }: { door: IntegrationDoorView; onLink: () => void }) {
+  const { state, copy, status } = useCopyCode(door.line, true);
+  const { link } = door;
+  return (
+    <div className="fm-integrations-door" data-inbox-door={link.state}>
+      <div className="fm-integrations-keys-head">{INBOX_WORDS.exampleHeading}</div>
+      <div className="fm-integrations-door-line">
+        <code data-inbox-line="">{door.line}</code>
+        <span>
+          <Button
+            variant="secondary"
+            size="sm"
+            pending={state === "copying"}
+            pendingLabel="Copying..."
+            onClick={() => void copy()}
+          >
+            {INBOX_WORDS.copy}
+          </Button>
+          {status}
+        </span>
+      </div>
+      <p className="fm-integrations-door-note" data-inbox-example-note="">
+        {INBOX_WORDS.exampleNote}
+      </p>
+      <div className="fm-integrations-door-link" data-inbox-link={link.state}>
+        <span>
+          {link.state === "linked"
+            ? INBOX_WORDS.linked(link.path)
+            : link.state === "offered"
+              ? INBOX_WORDS.offered(link.path)
+              : link.state === "taken"
+                ? INBOX_WORDS.taken(link.path)
+                : INBOX_WORDS.unwritable(link.path.slice(0, link.path.lastIndexOf("/")))}
+        </span>
+        {link.state === "offered" && (
+          <Button variant="secondary" size="sm" onClick={onLink}>
+            {INBOX_WORDS.link}
+          </Button>
+        )}
+      </div>
+      <div className="fm-integrations-keys-head">{INBOX_WORDS.ruleHeading}</div>
+      <p className="fm-integrations-door-lead">{INBOX_WORDS.ruleLead(INBOX_WORDS.ruleName)}</p>
+    </div>
   );
 }
 

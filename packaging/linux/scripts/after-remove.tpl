@@ -1,7 +1,7 @@
 #!/bin/bash
 # The Ubuntu and Fedora packages' removal script (electron-builder.linux.yml):
 # electron-builder 26.15.3's own templates/linux/after-remove.tpl, with one
-# step added after its command link, marked below. electron-builder fills in
+# steps added after its command link, marked below. electron-builder fills in
 # each dollar-brace name it knows and refuses any other, so the added step
 # writes its shell variables without braces.
 
@@ -27,6 +27,17 @@ case "$1" in
             esac
         done
         rmdir /opt/firstmate-3000 2>/dev/null || true
+        ;;
+esac
+
+# Added: the inbox's command link after-install.tpl made goes on a removal
+# alone, and only while it still leads into this package's folder
+# (docs/linux-packages.md, "The inbox's command").
+case "$1" in
+    0|remove|purge)
+        case "$(readlink /usr/bin/infinitary-inbox-axi 2>/dev/null)" in
+            '/opt/${sanitizedProductName}/'*) rm -f /usr/bin/infinitary-inbox-axi ;;
+        esac
         ;;
 esac
 

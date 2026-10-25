@@ -106,7 +106,7 @@ Migration 29 rewrote every open card's actions into effects (`legacyActionEffect
 
 ## The host's settle facts
 
-On any card carrying a `settle` effect, the host appends its own fact strip (`CrewSupervisor.settleFacts`, captain ruling D4 of the v2.0 audit; restyled at v2.7 by the captain's design pass, 2026-09-19): one labeled single-line cell per fact - the project (or "Default workspace"), the crewmate's model right after it (the task record's model
+On any card carrying a `settle` effect, and on the story note of a task that merges on its own (INF-1219, "Work that closed without the captain's click"), the host appends its own fact strip (`CrewSupervisor.settleFacts`, captain ruling D4 of the v2.0 audit; restyled at v2.7 by the captain's design pass, 2026-09-19): one labeled single-line cell per fact - the project (or "Default workspace"), the crewmate's model right after it (the task record's model
 - what the session reported at dispatch, kept current when the backend moves the work to another model (`CrewSupervisor.recordServedModel`), review F1 - by its catalog display label), the task's effective care (Quick, Default or Careful, including a per-task ask), the PR number as a link when one is recorded on the task, and the CI state with a `StatusDot`-language dot and how long the checks have run or took by the host's own times (`running for 15m`, `passed in 14m · 5m ago`, `docs/forge.md` "The checks cell's time") - or "not read yet" on a direct-pr task no check has read yet.
   A Lines cell (`lines`), after the change, says what the whole offered change adds and deletes in mono (`+128 added · −42 deleted`, INF-820).
   The host reads it from git at the offered version - the head the last check reading saw, else the task's branch - against the merge base with the default branch, with renames found and binary files adding no text lines (`WorkspaceService.changeLines`), and keeps it on the task's delivery facts with both versions.
@@ -142,6 +142,7 @@ On any card carrying a `settle` effect, the host appends its own fact strip (`Cr
 ## The risk chart
 
 A merge card shows its crewmate's assessment of the change's risk as a radar at the card's top right (FI3-1127's plan, built in FI3-1128).
+So does the story note of a task that merges on its own, from the same saved story (INF-1219).
 It has seven dimensions, clockwise from the top, each at three levels in words: Blast radius, Behavior, Undo, Evidence, Sensitivity, Novelty and Dependencies (`RISK_WORDS`, `src/shared/risk.ts`).
 There is no overall level anywhere - not on the chart, the strip, the task record or the feed - so nothing sums the seven up: the shape and the dots are the reading.
 
@@ -154,6 +155,7 @@ The first mate's schema has no risk, so its cards carry none.
 
 The app validates the declaration and adds no measurements of the change.
 The assessment rides the card (`Card.risk`, `cards.risk_json`) and the task's delivery facts (`delivery.risk`), and a revision replaces both.
+A self-merging task's story note keeps them the same way; it is the one card with a risk and no actions, which is how the host and the stage know it takes the fact strip (`takesFactStrip`, `src/shared/cards.ts`).
 
 **The chart.**
 The card's chrome draws it (`RiskChart` in `src/renderer/src/design/cards/`), never the body: 128 px tall, level with the headline's top and flush with the card's content edge, as wide as its labels need (216 px for the seven names), with rings 80 px across (`riskRadarGeometry`).
@@ -722,7 +724,11 @@ No reader of whose turn it is finds a card by its id pattern any more - a card i
 
 The captain's words on INF-547: "the tasks were done but i never got any update."
 Started work that closes without the captain's click leaves them one card about it, and only their close takes it down.
-A crewmate whose task merges on its own shows its completion story before the merge, on a note with no actions: the same saved story a merge offer carries, with no button, risk chart or required actions (`CrewSupervisor.addCrewmateCard` refuses a saved-story note on a task that asks first).
+A crewmate whose task merges on its own shows its completion story before the merge, on a note with no actions: the same saved story a merge offer carries, with its risk chart and the merge card's fact strip, and with no button or required actions (`CrewSupervisor.addCrewmateCard` refuses a saved-story note on a task that asks first).
+The captain's words on INF-1219: "it misses the radar chart, and also it's not clear that this was a change merged by itself."
+The host opens that note with the merge line, written after the card lint: "Merges on its own", what happens next, and who set it, in the app's words from the setting (`pendingMergeLine`, `src/core/orchestrator/settleWords.ts`).
+At the merge, `SettleService` rewrites that line on the same note, as a revision the stage marks: merged on its own and when, the pull request linked, and the first mate's closing sentence (`mergedLine`).
+The note stays up, so no closing note of the first mate's goes up beside it.
 A crewmate on the personal workspace shows what it built on a note the same way, and the done close keeps notes.
 Every close the first mate makes of started work carries its one sentence: `settle_task` takes a top-level `closing_sentence` for every mode but `answered`, `interrupt_crewmate` takes it for `cancel`, and both refuse such a close without one.
 The sentence is a fact of the close (`closingSentence` in its timeline data).

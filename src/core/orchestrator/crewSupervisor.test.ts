@@ -165,7 +165,7 @@ import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } 
 import { REVIEW_FIX_RULES, renderRigorSection, type SpawnIntent } from "./intentBrief";
 import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
 import { PrCiService, type PrOutcome } from "./prCi";
-import { closingNoteTitle, droppedLine } from "./settleWords";
+import { closingNoteTitle, droppedLine, pendingMergeLine } from "./settleWords";
 import { Ticker } from "./ticker";
 import { renderReviewHistory } from "./reviewHistory";
 import {
@@ -6901,7 +6901,14 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
     expect(completionPresentation).toHaveBeenCalledWith(taskId, note.presentation);
     expect(card).toMatchObject({ author: "crewmate", title: story.title, actions: [] });
     expect(card?.body).toContain(presentationCardBody(story));
-    expect(card?.risk).toBeUndefined();
+    // INF-1219, the captain's words: "it misses the radar chart, and also
+    // it's not clear that this was a change merged by itself". The note
+    // keeps the story's risk, on the card and the task, opens with the line
+    // that says it merges on its own, and carries the merge card's facts.
+    expect(card?.risk).toEqual({ declared: METER_RISK });
+    expect(tasks.get(taskId)?.delivery?.risk).toEqual({ declared: METER_RISK });
+    expect(card?.body.startsWith(pendingMergeLine("project"))).toBe(true);
+    expect(card && splitSettleFacts(card.body)?.facts).toContain('data-fact="change"');
     expect(card?.requiredActions).toBeUndefined();
     expect(tasks.get(taskId)?.delivery?.completionOffers).toBeUndefined();
   });

@@ -34,6 +34,7 @@ import {
   type PastCard,
   settleEffectOf,
   splitSettleFacts,
+  takesFactStrip,
 } from "@shared/cards";
 import { NEEDS_REAUTH_CONSEQUENCE, restoreAccountEffect } from "@shared/credentialHealth";
 import { HERE } from "@shared/deviceNames";
@@ -360,8 +361,7 @@ export class CardService {
     };
     const refreshed = (card: Card): Card => {
       if (!card.taskId || (taskIds && !taskIds.includes(card.taskId))) return card;
-      if (!card.reviewTaskId && !card.actions.some((action) => action.effect?.kind === "settle"))
-        return card;
+      if (!takesFactStrip(card)) return card;
       const facts = this.host.settleFacts(card.taskId);
       const split = facts ? splitSettleFacts(card.body) : undefined;
       if (!facts || !split) return anyway(relabeled(card));
@@ -912,11 +912,9 @@ export class CardService {
     // A settle card carries the facts the host holds about its task -
     // project, crewmate model, posture, PR link, CI state (contract v2.0,
     // captain ruling D4; the fact strip at v2.7) - on add and on every
-    // in-place revision, so no prompt asks an agent to write them.
-    if (
-      context.taskId &&
-      (input.reviewTaskId || input.actions.some((action) => settleEffectOf(action)))
-    ) {
+    // in-place revision, so no prompt asks an agent to write them. So does
+    // the story note of a task that merges on its own (INF-1219).
+    if (context.taskId && takesFactStrip(input)) {
       const facts = this.host.settleFacts(context.taskId);
       if (facts) input = { ...input, body: `${input.body}${facts}` };
     }
@@ -2295,6 +2293,27 @@ export class CardService {
     });
     this.cards.set(card.id, card);
     this.placed(card);
+    this.scheduleBroadcast();
+  }
+
+  /**
+   * The host rewrites an open card's body in place, as a revision of the
+   * same card (`cardStore.revise`) with an offer of its own, so the stage
+   * marks what changed since the captain last looked: the merge line on a
+   * self-merging task's story note (INF-1219). A card no longer on the
+   * stack, or a body that is the same, changes nothing.
+   */
+  reviseBody(id: string, body: string): void {
+    const existing = this.cards.get(id);
+    if (!existing || existing.body === body) return;
+    const { card, offer } = this.stamp({ ...existing, body });
+    this.host.cardStore.transaction(() => {
+      this.host.cardStore.revise(card);
+      if (offer) this.noteOffer(card, "put", "host");
+      this.noteStage({ head: card, shown: card }, "put", { source: "host" });
+    });
+    this.cards.set(id, card);
+    this.staged.delete(id);
     this.scheduleBroadcast();
   }
 

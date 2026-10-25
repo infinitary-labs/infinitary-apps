@@ -529,6 +529,19 @@ export const SETTLE_FACT_VALUE_CLASS = "inf-fact-v";
 export const SETTLE_FACTS_OPEN = '<div class="inf-facts" data-facts>';
 
 /**
+ * Whether the host writes its fact strip on a card, and the stage draws it
+ * beside the buttons: a settle card, an independent review's card, and the
+ * story note of a task that merges on its own (INF-1219), which is the one
+ * card with a risk assessment and no actions - the risk rides only a merge
+ * offer and that note, both written by the host from the crewmate's story.
+ */
+export function takesFactStrip(card: Pick<Card, "actions" | "reviewTaskId" | "risk">): boolean {
+  if (card.reviewTaskId) return true;
+  if (card.actions.some((action) => settleEffectOf(action))) return true;
+  return card.risk !== undefined && card.actions.length === 0;
+}
+
+/**
  * A settle card's body without the host's fact strip, and the strip itself,
  * so the stage shows the strip beside the card's buttons rather than at the
  * end of a body that may scroll it out of view. The host appends its strip

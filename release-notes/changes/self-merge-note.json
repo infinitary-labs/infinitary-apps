@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "self-merge-note",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "Work that merges on its own says so",
+      "body": "When a task merges on its own, its note now shows the same risk chart and pull request facts as a card that asks you first. It opens with a line saying it merges on its own, and once your first mate merges it, that line says when it merged, with your first mate's reason.",
+      "picture": {
+        "dark": "self-merge-note-dark.webp",
+        "light": "self-merge-note-light.webp",
+        "alt": "A note for a merged change with its risk chart at the top right, a line reading Merged on its own at 8:20 PM with the pull request and the first mate's sentence, and the project, model, care, pull request, lines and checks along the bottom beside Chat"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

@@ -190,6 +190,7 @@ The first mate never judges a rigor, the same way it never judges a reasoning cl
 An explicit self-merging request (including a reset to an autonomous project) releases only a routine completion offer and its matching captain wait; unrelated decisions, dependencies, explicit withdrawals, repair caps and safety holds remain.
 The first mate then uses the existing settle operation, which rereads current checks, destination, review, consent and close requirements; permission is not evidence that they passed.
 A task that merges on its own puts no merge card in front of the captain: at green its crewmate shows its completion story on a note with no actions and reports `needs_firstmate` to merge (the report sort's row 0a wakes the first mate), and the first mate runs `settle_task merge-pr` with its closing sentence; Activity and the record say so.
+That note carries the risk chart and the merge card's fact strip, opens with a line saying it merges on its own, and at the merge the host rewrites that line to say it merged, with the first mate's sentence (`docs/card-authoring.md`, "Work that closed without the captain's click").
 The note stays until the captain closes it, and a merge that leaves nothing of the task on their stack puts up the first mate's sentence instead (`docs/card-authoring.md`, "Work that closed without the captain's click").
 When a standing direction's exception covers the final change, the crewmate emits the usual completion decision and asks the first mate to set the task to Asks first, citing the direction; a refused merge falls back to that card.
 The first mate applies the standing directions that bear on a task, merging included, when the captain starts it (`docs/inbox.md`, "A captain's Start is a wake").
@@ -417,7 +418,7 @@ It is the fourth HOST-enforced merge rule, beside the unpassed review, the CI ca
 Its one way out is not a tool the first mate can run - it is the button already in front of the captain, so the refusal names the open completion card's own merge action by card and action id (a `SettleWay` variant that carries a `card` rather than a `tool`), and says whose card is owed when none is up.
 The captain's click arrives as `actor: "captain"` and this rule never reads it.
 Three rows take no autonomy at all, for the reason they take no rigor - there is no merge to hold: a task on the personal workspace (it builds in place), an **answer** task (it commits nothing, and v3.8's deliverable hold refuses its merge whoever asks, so that refusal speaks first), and a task with **no repository** - the default workspace - because the hold enforces a REPOSITORY's standing answer and there is none to enforce there.
-The completion card's fact strip carries an `Autonomy on|off` cell, so the captain reads what a click will do, and `crew_status` and the context crew lines carry it per task.
+`crew_status` and the context crew lines carry it per task; the fact strip has no autonomy cell, and a task that merges on its own says so in its story note's merge line.
 
 **A kept merge approval (FI3-304).**
 The captain's merge click on a completion card is an approval of that change, and a refusal that is not a verdict on the work does not spend it.

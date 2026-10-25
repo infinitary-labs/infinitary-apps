@@ -90,6 +90,7 @@ A card whose click keeps nothing, such as a first mate's, keeps its words.
 
 **The risk chart.**
 A crewmate's merge card carries its risk as a radar the app draws at the card's top right, level with the title's top and flush with its content edge (FI3-1127's plan; the app's `docs/card-authoring.md`, "The risk chart").
+The story note of a task that merges on its own carries it the same way, with the merge card's fact strip beside Chat, and opens with its merge line in an `inf-panel` that keeps clear of the chart (INF-1219).
 It is 128 px tall - from the title's top through What changed when each section has one line - and as wide as its labels need, 216 px for the seven names, with rings 80 px across; the box keeps each label's width at its axis end, so a label on the outer ring never leaves it.
 Seven axes run clockwise from the top: Blast radius, Behavior, Undo, Evidence, Sensitivity, Novelty, Dependencies.
 Three faint rings and the axes are `--line-1`; the shape of the seven levels is filled `--accent-dim` and stroked `--accent` at 1.25, and answers to nothing; each vertex is a 4 px dot in its own level's color from the checks - low `--ok`, medium `--warn`, high `--danger` - with a 1.5 `--bg-2` ring.

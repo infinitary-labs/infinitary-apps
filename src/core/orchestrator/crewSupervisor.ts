@@ -448,7 +448,7 @@ import { reviewCoversHead } from "./reviewCarry";
 import { earlierHistory, reviewHistory } from "./reviewHistory";
 import { type RunReading, RunWatcher } from "./runWatch";
 import { describeStatus, isRoutineMergeCard, SettleService, type TaskClose } from "./settleService";
-import { folderMissingText } from "./settleWords";
+import { folderMissingText, pendingMergeLine } from "./settleWords";
 import { askedUnderCardLine, toldInCrewmateTabLine } from "./threadWords";
 import type { Ticker } from "./ticker";
 import {
@@ -8790,8 +8790,9 @@ export class CrewSupervisor {
         settleEffectOf(input.actions[0])?.mode === "merge";
       // A task that merges on its own shows the same story as a note before
       // its first mate merges it (INF-547, the captain's direction C): no
-      // button, since the merge is not theirs to click, and no risk chart or
-      // required actions, which ride only a merge offer.
+      // button, since the merge is not theirs to click, and no required
+      // actions, which ride only a merge offer. It keeps the story's risk
+      // chart, as the merge card does (INF-1219, direction A).
       const note = input.actions.length === 0 && this.taskAutonomy(task.id);
       if (!this.options.completionPresentation || (!offer && !note))
         throw new Error(
@@ -8804,7 +8805,12 @@ export class CrewSupervisor {
           const { presentationRevision: _revision, ...rest } = input;
           const shown = offer
             ? story
-            : { title: story.title, body: story.body, pictures: story.pictures };
+            : {
+                title: story.title,
+                body: story.body,
+                pictures: story.pictures,
+                riskDeclaration: story.riskDeclaration,
+              };
           return await this.addCrewmateCard(task, { ...rest, ...shown }, undefined, {
             revision,
             head,
@@ -9083,7 +9089,13 @@ export class CrewSupervisor {
               input.validationDecision.action,
           )
         : "");
-    const card = strip ? { ...shown, body: `${shown.body}${strip}` } : shown;
+    // The story note of a task that merges on its own opens with the line
+    // that says so, in the app's words from the setting (INF-1219); the
+    // merge rewrites it on the same note (`SettleService`).
+    const selfMergeNote = presentationChecked !== undefined && shown.actions.length === 0;
+    const autonomySource = this.policiesOf(this.options.tasks.get(task.id))?.autonomy.source;
+    const lead = selfMergeNote ? pendingMergeLine(autonomySource ?? "project") : "";
+    const card = strip || lead ? { ...shown, body: `${lead}${shown.body}${strip}` } : shown;
     // A request for the captain's help pauses the browser before the card
     // goes up (docs/task-browser.md, "Asking for help").
     const paused = handoff ? this.pauseForCaptain(task.id, handoff) : undefined;
@@ -9163,6 +9175,9 @@ export class CrewSupervisor {
         // The task keeps the risk of its newest completion card; one
         // without any leaves none standing.
         if (risk || current.delivery?.risk) this.options.tasks.recordDelivery(task.id, { risk });
+      } else if (selfMergeNote && risk) {
+        // So does the story note of a task that merges on its own.
+        this.options.tasks.recordDelivery(task.id, { risk });
       }
       return `${id}${revisionNotice(this.cards.revisionChanges(id))}`;
     };

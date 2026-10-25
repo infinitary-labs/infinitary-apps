@@ -53,8 +53,11 @@ import {
   closingNoteTitle,
   discardedText,
   folderNotUpdatedText,
+  hasMergeLine,
+  mergedLine,
   pullLeftOpenText,
   unlandedWorkText,
+  withMergeLine,
 } from "./settleWords";
 import type { AnswerTaskClosedPayload, TypedWake } from "./wakes";
 
@@ -427,6 +430,40 @@ export class SettleService {
       actions: [],
       taskId: record.id,
     });
+  }
+
+  /**
+   * The merge of a task that merges on its own, on its story note
+   * (INF-1219, the captain's direction A): the line that said it merges on
+   * its own is rewritten on the same note to say it merged, when, its pull
+   * request and the first mate's closing sentence. The note stays up, so no
+   * closing note of the first mate's goes up beside it.
+   */
+  private finishMergeNote(
+    record: TaskRecord,
+    actor: TaskClose["actor"],
+    sentence: string | undefined,
+  ): void {
+    const note = [...this.host.cards.values()].find(
+      (card) =>
+        card.taskId === record.id &&
+        card.author === "crewmate" &&
+        card.actions.length === 0 &&
+        hasMergeLine(card.body),
+    );
+    if (!note) return;
+    const delivery = (this.host.tasks.get(record.id) ?? record).delivery;
+    const label =
+      delivery?.prNumber !== undefined
+        ? `PR ${this.changeName(this.host.tasks.get(record.id) ?? record, delivery.prNumber)}`
+        : delivery?.changeLabel;
+    const line = mergedLine({
+      at: this.host.now(),
+      onItsOwn: actor !== "captain",
+      ...(label ? { change: { label, ...(delivery?.prUrl ? { url: delivery.prUrl } : {}) } } : {}),
+      ...(sentence ? { sentence } : {}),
+    });
+    this.host.cards.reviseBody(note.id, withMergeLine(note.body, line));
   }
 
   /** Where the task's project lives, in the person's words ("GitHub", "GitLab", a host's address). */
@@ -2516,6 +2553,7 @@ export class SettleService {
     // poking here cannot race the lane purge that precedes its insertion.
     if (answerHandoffQueued) this.host.pokeInbox();
     this.host.cards.retireTaskCards(taskId, close.reason, { keepNotes: close.status === "done" });
+    if (record && close.reason === "merged") this.finishMergeNote(record, close.actor, sentence);
     if (record && sentence) this.leaveClosingNote(record, close.reason, sentence);
     this.host.cards.scheduleBroadcast();
     this.host.broadcastCrewCounts();

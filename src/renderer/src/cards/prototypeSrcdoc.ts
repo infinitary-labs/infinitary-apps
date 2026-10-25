@@ -189,7 +189,9 @@ export const INSET_SPACER = '<div data-inf-inset="" aria-hidden="true"></div>';
  * around the chrome. From the body's third heading on - Before, After and
  * every section below - a heading clears it, so those take the body's whole
  * width whatever the chrome's height. A section the author wrapped counts
- * by the heading inside it.
+ * by the heading inside it. A bordered panel beside the box keeps its
+ * border clear of it too, as its lines do (the merge line of a self-merging
+ * task's note, INF-1219).
  */
 export const CARD_INSET_STYLE = `
   [data-inf-inset] {
@@ -197,6 +199,7 @@ export const CARD_INSET_STYLE = `
     width: max(0px, calc(var(--inf-inset-width, 0px) - var(--space-1)));
     height: var(--inf-inset-height, 0px);
   }
+  [data-inf-inset] ~ .inf-panel { display: flow-root; }
   [data-inf-inset] ~ :nth-child(n + 3 of :is(h1, h2, h3, h4, h5, h6, :has(:is(h1, h2, h3, h4, h5, h6)))) {
     clear: right;
   }

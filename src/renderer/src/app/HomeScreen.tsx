@@ -9,8 +9,8 @@ import {
   cardPresentation,
   cardTakesReplies,
   isPreviewBody,
-  settleEffectOf,
   splitSettleFacts,
+  takesFactStrip,
 } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import { type DictationSettings, dictationKeyLabel } from "@shared/dictation";
@@ -2006,13 +2006,11 @@ function StackedCard({
     }
   }, [bodyPending, showThread, bodyEntrance.onDrawn, onDrawn]);
   // A settle card's fact strip stands beside its buttons, in view however
-  // long the body is, and the body shows the rest (`splitSettleFacts`).
+  // long the body is, and the body shows the rest (`splitSettleFacts`); so
+  // does the strip on the note of a task that merges on its own.
   const split = useMemo(
-    () =>
-      card.reviewTaskId || card.actions.some((action) => settleEffectOf(action))
-        ? splitSettleFacts(card.body)
-        : undefined,
-    [card.actions, card.body, card.reviewTaskId],
+    () => (takesFactStrip(card) ? splitSettleFacts(card.body) : undefined),
+    [card],
   );
   const body = split?.body ?? card.body;
   // A merge card's risk chart is chrome at its top right (docs/card-authoring.md

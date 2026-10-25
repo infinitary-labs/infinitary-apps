@@ -3,6 +3,8 @@ import {
   type FolderRefreshCause,
   folderRefreshWords,
 } from "@shared/folderRefresh";
+import { POLICY_MERGING_WORDS } from "@shared/taskPolicies";
+import { escapeCardText } from "./cardText";
 import { FOLDER_REPAIR_TITLE, PULL_REPAIR_TITLE } from "./intentBrief";
 
 /**
@@ -116,4 +118,66 @@ export function closingNoteTitle(key: string, outcome: ClosedWithoutClick): stri
 /** Activity's line for a drop that carries the first mate's sentence. */
 export function droppedLine(sentence: string): string {
   return `Dropped: ${sentence}`;
+}
+
+/**
+ * The line a task that merges on its own opens its story note with
+ * (INF-1219, the captain's direction A): before the merge, the app's words
+ * from the setting; at the merge, the same line rewritten on the same note
+ * with when it merged, its pull request and the first mate's closing
+ * sentence. The host writes it after the card lint and finds it again by
+ * its `data-merge-line` mark, never by its words.
+ */
+export const MERGE_LINE_MARK = "data-merge-line";
+const MERGE_LINE_OPEN = `<p class="inf-panel" ${MERGE_LINE_MARK}>`;
+const MERGE_LINE = new RegExp(`${MERGE_LINE_OPEN}[\\s\\S]*?</p>`);
+
+/** Who set the task to merge on its own, in the app's words. */
+export const MERGE_SETTING_WORDS = {
+  task: "Set by your first mate for this task.",
+  project: "Set in this project's settings.",
+} as const;
+
+/** What the line says while the merge is still to come. */
+export const MERGES_NEXT_WORDS = "your first mate merges it once its checks pass.";
+
+/** The merged line's lead: on its own, or by the captain's own click. */
+export function mergedWords(at: string, onItsOwn: boolean): string {
+  return `${onItsOwn ? "Merged on its own" : "Merged"} at ${at}`;
+}
+
+/** The line before the merge. */
+export function pendingMergeLine(source: keyof typeof MERGE_SETTING_WORDS): string {
+  return `${MERGE_LINE_OPEN}<strong>${POLICY_MERGING_WORDS.on}</strong> · ${MERGES_NEXT_WORDS}<br><span class="inf-muted">${MERGE_SETTING_WORDS[source]}</span></p>`;
+}
+
+/** The line after the merge; `change` is the pull request as the card names it ("PR #476"). */
+export function mergedLine(input: {
+  at: number;
+  onItsOwn: boolean;
+  change?: { label: string; url?: string };
+  sentence?: string;
+}): string {
+  const time = new Date(input.at).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const change = input.change
+    ? ` · ${
+        input.change.url && /^https:\/\//.test(input.change.url)
+          ? `<a class="inf-mono" href="${escapeCardText(input.change.url)}">${escapeCardText(input.change.label)}</a>`
+          : `<span class="inf-mono">${escapeCardText(input.change.label)}</span>`
+      }`
+    : "";
+  const sentence = input.sentence?.trim()
+    ? `<br>Your first mate: “${escapeCardText(input.sentence.trim())}”`
+    : "";
+  return `${MERGE_LINE_OPEN}<strong>${mergedWords(time, input.onItsOwn)}</strong>${change}${sentence}</p>`;
+}
+
+/** Whether a body carries the merge line. */
+export function hasMergeLine(body: string): boolean {
+  return MERGE_LINE.test(body);
+}
+
+/** The body with its merge line put first, or the one it had replaced. */
+export function withMergeLine(body: string, line: string): string {
+  return hasMergeLine(body) ? body.replace(MERGE_LINE, () => line) : `${line}${body}`;
 }

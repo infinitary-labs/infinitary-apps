@@ -2159,6 +2159,7 @@ a:hover {
     width: max(0px, calc(var(--inf-inset-width, 0px) - var(--space-1)));
     height: var(--inf-inset-height, 0px);
   }
+  [data-inf-inset] ~ .inf-panel { display: flow-root; }
   [data-inf-inset] ~ :nth-child(n + 3 of :is(h1, h2, h3, h4, h5, h6, :has(:is(h1, h2, h3, h4, h5, h6)))) {
     clear: right;
   }

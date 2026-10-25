@@ -57,7 +57,7 @@ export function approvableOffer(
   delivery: RepoDelivery | undefined,
   card: { cardId: string; offerId?: string | undefined },
 ): { baseline: CompletionOffer; host: string; owner: string; name: string } | undefined {
-  if (!card.offerId || delivery !== "direct-pr") return undefined;
+  if (!card.offerId || delivery !== "direct-pr" || record.delivery?.checkTarget) return undefined;
   if (!repo || !record.repoId || !hasChangeRequests(repo.host?.kind) || !record.branch)
     return undefined;
   const location = forgeLocationOf(repo);

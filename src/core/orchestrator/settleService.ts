@@ -7,7 +7,7 @@ import type { FolderNoticed, FolderRefreshRefusal } from "@shared/folderRefresh"
 import { forgePlace, hasChangeRequests } from "@shared/forge";
 import { fixedHoldWords, overridePasses, softHoldWords, withoutHoldWords } from "@shared/holds";
 import { acceptedValidation } from "@shared/liveValidation";
-import type { MergeRelationship } from "@shared/mergeReview";
+import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
 import type { RepoDelivery } from "@shared/repos";
 import type { Deliverable } from "@shared/routingPolicy";
@@ -277,7 +277,10 @@ export type SettleServiceHost = {
   mergeReview?: (
     taskId: string,
     reviewId: string,
+    guard?: MergeGuard,
   ) => Promise<PrOutcome & { relationship?: MergeRelationship }>;
+  /** The requested merge's outcome reaches its still-open crewmate, including a kept merge. */
+  mergeContinued?: (taskId: string, review: MergeReview | undefined, result: SettleOutcome) => void;
   closePullRequest?: (taskId: string) => Promise<PrOutcome>;
   /** The pinned pull request by its number, for a kept approval's reconcile (FI3-304). */
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
@@ -921,50 +924,107 @@ export class SettleService {
   async requestMerge(
     taskId: string,
     reviewId: string,
+    unattended = false,
   ): Promise<SettleOutcome & { continued?: boolean }> {
+    const refuse = (result: SettleOutcome): SettleOutcome => {
+      const review = this.host.tasks
+        .get(taskId)
+        ?.delivery?.mergeReviews?.find((item) => item.id === reviewId);
+      if (!unattended) this.host.mergeContinued?.(taskId, review, result);
+      return result;
+    };
     if (this.settlingTasks.has(taskId)) {
-      return {
+      return refuse({
         ok: false,
         text: "Cannot merge: another settle is already in progress.",
         contention: true,
-      };
+      });
     }
     const record = this.host.tasks.get(taskId);
-    if (!record) return { ok: false, text: `Cannot merge: unknown task ${taskId}.` };
+    if (!record) return refuse({ ok: false, text: `Cannot merge: unknown task ${taskId}.` });
     if (record.status === "done" || record.status === "dropped") {
-      return {
+      return refuse({
         ok: false,
         text: `Cannot merge: task ${taskId} is already ${describeStatus(record)}.`,
-      };
+      });
     }
     if (!this.host.mergeReview) {
-      return {
+      return refuse({
         ok: false,
         text: "Cannot merge: where the project lives is not reachable from here.",
-      };
+      });
     }
+    const authorization = standingAuthorization(record.delivery);
+    const approved = authorization?.review?.id === reviewId ? authorization : undefined;
+    const review =
+      approved?.review ?? record.delivery?.mergeReviews?.find((item) => item.id === reviewId);
+    if (unattended && !approved)
+      return { ok: false, stop: "withdrawn", text: "The kept merge approval no longer stands." };
     this.settlingTasks.set(taskId, "merge-pr");
     try {
-      const result = await this.host.mergeReview(taskId, reviewId);
-      if (!result.ok) return result;
-      if (result.relationship === "referenced") {
-        this.host.tasks.atomic(
-          () => {
-            this.host.tasks.activateRequiredActions(taskId);
-            this.host.tasks.note(taskId, result.text, { news: true, feed: true, actor: "host" });
-          },
-          () => {},
-        );
-        this.host.broadcastEvent({
-          type: "firstmate_note",
-          text: result.text,
-        });
+      const result = await this.host.mergeReview(
+        taskId,
+        reviewId,
+        approved ? this.guardOf(taskId, approved, unattended) : undefined,
+      );
+      if (!result.ok) {
+        const kept = approved ? this.afterAttempt(taskId, approved, result) : undefined;
+        const outcome = kept
+          ? {
+              ...result,
+              text: `${result.text}\n\n${keptNote(kept.wait, kept.head, this.placeOf(record))}`,
+            }
+          : result;
+        if (kept?.changed && unattended)
+          this.noteWait(taskId, record.title, kept.head, result, kept.wait);
+        else if (kept?.changed) {
+          this.host.broadcastEvent({
+            type: "firstmate_note",
+            taskId,
+            text: keptFeedLine(
+              record.title,
+              kept.wait,
+              this.placeOf(record),
+              this.host.tasks.get(taskId)?.delivery?.ci,
+            ),
+          });
+        }
+        if (!unattended && review) this.host.mergeContinued?.(taskId, review, outcome);
+        return outcome;
+      }
+      if (result.relationship === "referenced" && review) {
+        this.finishReferenced(taskId, review, result);
         return { ...result, continued: true };
       }
       return this.closeMerged(record, "captain", result);
     } finally {
       this.settlingTasks.delete(taskId);
     }
+  }
+
+  private finishReferenced(taskId: string, review: MergeReview, result: SettleOutcome): void {
+    this.host.tasks.atomic(
+      () => {
+        const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
+        if (
+          authorization?.review?.id === review.id &&
+          candidateHead(authorization) === result.receipt?.head
+        )
+          this.consumeStanding(taskId, result.receipt);
+        else if (authorization?.review?.id === review.id)
+          this.endAuthorization(
+            taskId,
+            "invalidated",
+            "the pull request merged at a different version",
+            { feed: true },
+          );
+        this.host.tasks.activateRequiredActions(taskId);
+        this.host.tasks.note(taskId, result.text, { news: true, feed: true, actor: "host" });
+      },
+      () => {},
+    );
+    // The committed task note already reaches Activity through the task-event seam.
+    this.host.mergeContinued?.(taskId, review, result);
   }
 
   /**
@@ -1740,15 +1800,23 @@ export class SettleService {
    * click is one attempt, as before. A standing approval the click
    * replaces is superseded either way.
    */
-  authorizeMerge(taskId: string, approval: MergeApproval, proceedWithOpen: boolean): void {
+  authorizeMerge(
+    taskId: string,
+    approval: MergeApproval,
+    proceedWithOpen: boolean,
+    reviewId?: string,
+  ): void {
     const record = this.host.tasks.get(taskId);
     if (!record || TaskService.isClosed(record)) return;
     const now = this.host.now();
     const previous = record.delivery?.mergeAuthorization;
     const generation = (previous?.generation ?? 0) + 1;
-    const minted = this.mint(record, approval, proceedWithOpen, generation, now);
+    const minted = this.mint(record, approval, proceedWithOpen, generation, now, reviewId);
     if (minted) {
-      this.host.tasks.recordDelivery(taskId, { mergeAuthorization: minted });
+      this.host.tasks.recordDelivery(taskId, {
+        mergeAuthorization: minted,
+        ...(minted.review?.relationship === "referenced" ? { checkTarget: minted.review } : {}),
+      });
       this.host.tasks.note(
         taskId,
         `The captain approved merging ${this.changeName(record, minted.target.prNumber)} at ${minted.approvedHead}.`,
@@ -1767,11 +1835,28 @@ export class SettleService {
     proceedWithOpen: boolean,
     generation: number,
     now: number,
+    reviewId?: string,
   ): MergeAuthorization | undefined {
     const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    // An ambiguous baseline approves nothing: the offer must be about the
-    // pull request the task still names.
-    const offer = approvableOffer(record, repo, this.host.taskDelivery(record.id), approval);
+    const review = reviewId
+      ? record.delivery?.mergeReviews?.find((item) => item.id === reviewId)
+      : undefined;
+    const location = repo ? forgeLocationOf(repo) : undefined;
+    // A request review is a typed, head-bound offer. Rule-skipping clicks remain one-shot.
+    if (
+      reviewId &&
+      (this.host.taskDelivery(record.id) !== "direct-pr" ||
+        !review ||
+        review.skips ||
+        review.receipt ||
+        location?.host !== review.host ||
+        location.owner !== review.owner ||
+        location.name !== review.name)
+    )
+      return undefined;
+    const offer = review
+      ? { baseline: { headSha: review.headSha, prNumber: review.number }, ...review }
+      : approvableOffer(record, repo, this.host.taskDelivery(record.id), approval);
     const offerId = approval.offerId;
     if (!offer || !offerId || !record.repoId || !record.branch) return undefined;
     const { baseline } = offer;
@@ -1794,10 +1879,11 @@ export class SettleService {
         owner: offer.owner,
         name: offer.name,
         prNumber: baseline.prNumber,
-        branch: record.branch,
+        branch: review?.branch ?? record.branch,
         delivery: "direct-pr",
         method: "squash",
       },
+      ...(review ? { review } : {}),
       approvedHead: baseline.headSha,
       ...(record.delivery?.versionReadings?.[baseline.headSha]
         ? { changeReading: record.delivery.versionReadings[baseline.headSha] }
@@ -1939,6 +2025,11 @@ export class SettleService {
         if (now?.id !== authorization.id || now.generation !== authorization.generation) {
           return "the captain's merge approval ended";
         }
+        const identity = this.authorizationIdentity(record, now);
+        if (identity) {
+          this.endAuthorization(taskId, "invalidated", identity, { feed: true });
+          return identity;
+        }
         if (candidateHead(now) !== dispatchHead || dispatchHead !== head) {
           return "the pull request is not at the version the approval covers";
         }
@@ -2015,26 +2106,37 @@ export class SettleService {
    * task's review passed for this change. A failed identity
    * check ends the approval; the others are waits.
    */
+  private authorizationIdentity(
+    record: TaskRecord,
+    authorization: MergeAuthorization,
+  ): string | undefined {
+    const target = authorization.target;
+    const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
+    const location = repo ? forgeLocationOf(repo) : undefined;
+    return this.host.taskDelivery(record.id) !== "direct-pr"
+      ? "the project no longer delivers as a pull request"
+      : record.repoId !== target.repoId || !repo
+        ? "the task's project is no longer the one approved"
+        : !hasChangeRequests(repo.host?.kind) ||
+            location?.host !== target.host ||
+            location.owner !== target.owner ||
+            location.name !== target.name
+          ? "where the project lives changed"
+          : authorization.review?.relationship === "referenced"
+            ? record.delivery?.checkTarget?.number !== target.prNumber ||
+              record.delivery.checkTarget.branch !== target.branch
+              ? "the task's selected pull request is not the one approved"
+              : undefined
+            : record.branch !== target.branch || record.delivery?.prNumber !== target.prNumber
+              ? "the task's pull request is not the one approved"
+              : undefined;
+  }
+
   private preflight(
     record: TaskRecord,
     authorization: MergeAuthorization,
   ): { ended: true } | { wait: MergeWait } | undefined {
-    const target = authorization.target;
-    const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
-    const location = repo ? forgeLocationOf(repo) : undefined;
-    const identity =
-      this.host.taskDelivery(record.id) !== "direct-pr"
-        ? "the project no longer delivers as a pull request"
-        : record.repoId !== target.repoId || !repo
-          ? "the task's project is no longer the one approved"
-          : !hasChangeRequests(repo.host?.kind) ||
-              location?.host !== target.host ||
-              location.owner !== target.owner ||
-              location.name !== target.name
-            ? "where the project lives changed"
-            : record.branch !== target.branch || record.delivery?.prNumber !== target.prNumber
-              ? "the task's pull request is not the one approved"
-              : undefined;
+    const identity = this.authorizationIdentity(record, authorization);
     if (identity) {
       this.endAuthorization(record.id, "invalidated", identity, { feed: true });
       return { ended: true };
@@ -2152,6 +2254,12 @@ export class SettleService {
           checked.wait,
         );
       }
+      return;
+    }
+    if (authorization.review) {
+      const result = await this.requestMerge(taskId, authorization.review.id, true);
+      if (!result.ok && !standingAuthorization(this.host.tasks.get(taskId)?.delivery))
+        this.reportEnded(taskId, title, result);
       return;
     }
     let result: SettleOutcome;
@@ -2307,6 +2415,19 @@ export class SettleService {
     if (this.settlingTasks.has(taskId)) return;
     this.settlingTasks.set(taskId, "merge-pr");
     try {
+      const authorization = standingAuthorization(this.host.tasks.get(taskId)?.delivery);
+      if (authorization?.review?.relationship === "referenced") {
+        this.finishReferenced(taskId, authorization.review, {
+          ok: true,
+          text: `Merged ${this.changeName(this.host.tasks.get(taskId), pull.number)} on ${this.placeOf(this.host.tasks.get(taskId))}. The task stays open.`,
+          receipt: {
+            head: pull.headSha,
+            ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
+            already: true,
+          },
+        });
+        return;
+      }
       this.consumeStanding(taskId, {
         head: pull.headSha,
         ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),

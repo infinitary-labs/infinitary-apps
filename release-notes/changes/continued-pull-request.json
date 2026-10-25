@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "continued-pull-request",
+      "kind": "fix",
+      "title": "Keep your merge choice when work continues another pull request",
+      "body": "A task continuing an earlier pull request now shows that pull request’s checks. If a conflict stops your merge, Infinitary keeps your choice while the crewmate brings the branch up to date. The unchanged work merges after its checks pass, without another click. Changed work still needs your approval.",
+      "area": "tasks",
+      "noPicture": "This fixes tracking and merge recovery behind the existing task and card controls, without changing their layout.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

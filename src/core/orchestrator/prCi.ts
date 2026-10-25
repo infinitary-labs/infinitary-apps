@@ -486,9 +486,8 @@ export class PrCiService {
     if (!pull.headRepo || pull.headRepo.toLowerCase() !== project.toLowerCase()) {
       return `Merge review refused: pull request ${number} is not a branch in ${project}. Forks are out of scope.`;
     }
-    const owned =
-      pull.branch === record.branch ||
-      (record.delivery?.prNumber !== undefined && record.delivery.prNumber === number);
+    // A check reading names a PR; it does not transfer branch ownership.
+    const owned = pull.branch === record.branch;
     const relationship: MergeRelationship = owned ? "owned" : "referenced";
     if (relationship === "referenced" && forge.kind !== "github") {
       return "Merge review refused: a pull request this task did not open is supported on GitHub, including GitHub Enterprise, not on this host.";
@@ -525,13 +524,18 @@ export class PrCiService {
       at: this.now(),
     };
     const kept = [review, ...(record.delivery?.mergeReviews ?? [])].slice(0, MERGE_REVIEW_CAP);
-    this.options.tasks.recordDelivery(record.id, { mergeReviews: kept });
+    this.options.tasks.recordDelivery(record.id, {
+      mergeReviews: kept,
+      checkTarget: relationship === "referenced" ? review : undefined,
+    });
+    const checks = await this.run(taskId, "crewmate");
     const where = forge.place ?? "where the project lives";
     const whose =
       relationship === "owned"
         ? "This is the task's own pull request. A confirmed merge finishes the task."
         : "This pull request is not the task's. A confirmed merge keeps the task and its working copy, and dropping the task does not close the pull request.";
     return [
+      checks.text,
       `Merge review ${review.id} for ${forge.kind === "gitlab" ? "!" : "#"}${number} at ${pull.headSha} into ${pull.base} on ${where}.`,
       whose,
       "request_merge references this review. This request grants no approval and does not itself merge anything. With autonomy off, only the captain's merge button authorizes execution.",
@@ -580,9 +584,14 @@ export class PrCiService {
   async mergeReview(
     taskId: string,
     reviewId: string,
+    guard?: MergeGuard,
   ): Promise<PrOutcome & { relationship?: MergeRelationship }> {
     const record = this.options.tasks.get(taskId);
-    const review = record?.delivery?.mergeReviews?.find((item) => item.id === reviewId);
+    const approved = guard ? standingAuthorization(record?.delivery)?.review : undefined;
+    const review =
+      approved?.id === reviewId
+        ? approved
+        : record?.delivery?.mergeReviews?.find((item) => item.id === reviewId);
     if (!record || !review) {
       return { ok: false, text: `Cannot merge: merge review ${reviewId} is not on this task.` };
     }
@@ -600,17 +609,20 @@ export class PrCiService {
     }
     if (review.skips) return this.mergeSkippingRules(taskId, review);
     if (review.relationship === "owned") {
-      const outcome = await this.merge(taskId, {
-        head: review.headSha,
-        prNumber: review.number,
-        unattended: false,
-        beforeDispatch: () => undefined,
-      });
+      const outcome = await this.merge(
+        taskId,
+        guard ?? {
+          head: review.headSha,
+          prNumber: review.number,
+          unattended: false,
+          beforeDispatch: () => undefined,
+        },
+      );
       if (outcome.ok && outcome.receipt)
         this.storeReviewReceipt(taskId, review.id, outcome.receipt);
       return { ...outcome, relationship: "owned" };
     }
-    return this.mergeReferenced(taskId, review);
+    return this.mergeReferenced(taskId, review, guard);
   }
 
   private storeReviewReceipt(
@@ -693,9 +705,8 @@ export class PrCiService {
     if (!pull.headRepo || pull.headRepo.toLowerCase() !== project.toLowerCase()) {
       return `Merge review refused: pull request ${number} is not a branch in ${project}. Forks are out of scope.`;
     }
-    const owned =
-      pull.branch === record.branch ||
-      (record.delivery?.prNumber !== undefined && record.delivery.prNumber === number);
+    // A check reading names a PR; it does not transfer branch ownership.
+    const owned = pull.branch === record.branch;
     const relationship: MergeRelationship = owned ? "owned" : "referenced";
     const read = await this.readSkipState(forge, pull);
     if (!read.ok) return `Merge review refused: ${read.text}`;
@@ -720,9 +731,14 @@ export class PrCiService {
       at: this.now(),
     };
     const kept = [review, ...(record.delivery?.mergeReviews ?? [])].slice(0, MERGE_REVIEW_CAP);
-    this.options.tasks.recordDelivery(record.id, { mergeReviews: kept });
+    this.options.tasks.recordDelivery(record.id, {
+      mergeReviews: kept,
+      checkTarget: relationship === "referenced" ? review : undefined,
+    });
+    const checks = await this.run(taskId, "crewmate");
     const where = forge.place ?? "GitHub";
     return [
+      checks.text,
       `Merge review ${review.id} for #${number} at ${pull.headSha} into ${pull.base} on ${where}, skipping the branch rules.`,
       relationship === "owned"
         ? "This is the task's own pull request. A confirmed merge finishes the task."
@@ -1082,6 +1098,19 @@ export class PrCiService {
     const located = this.locate(taskId);
     if ("said" in located) return { ok: false, text: located.said };
     const { forge } = located;
+    const repo = located.record.repoId ? this.options.repos.get(located.record.repoId) : undefined;
+    const origin = forgeOf(repo?.origin);
+    if (
+      origin.host !== review.host ||
+      origin.owner !== review.owner ||
+      origin.name !== review.name
+    ) {
+      return {
+        ok: false,
+        text: "where the reviewed pull request lives changed.",
+        stop: "identity",
+      };
+    }
     if (forge.kind !== "github" || !forge.pull) {
       return { ok: false, text: "this host cannot merge a pull request the task did not open." };
     }
@@ -1202,16 +1231,18 @@ export class PrCiService {
   private async mergeReferenced(
     taskId: string,
     review: MergeReview,
+    guard?: MergeGuard,
   ): Promise<PrOutcome & { relationship: "referenced" }> {
-    const fresh = await this.readReviewTarget(taskId, review, true);
+    const candidate = guard ? { ...review, headSha: guard.head } : review;
+    const fresh = await this.readReviewTarget(taskId, candidate, !guard?.unattended);
     if (!fresh.ok) {
       if (fresh.text === "already-merged") {
         const located = this.locate(taskId);
         if (!("said" in located) && located.forge.pull) {
           const pull = await located.forge.pull(review.number).catch(() => undefined);
-          if (pull?.merged) {
+          if (pull?.merged && pull.headSha === candidate.headSha) {
             const receipt = {
-              head: review.headSha,
+              head: candidate.headSha,
               ...(pull.mergedSha ? { sha: pull.mergedSha } : {}),
             };
             this.storeReviewReceipt(taskId, review.id, receipt);
@@ -1227,7 +1258,10 @@ export class PrCiService {
       return {
         ok: false,
         relationship: "referenced",
-        text: `Cannot merge: ${fresh.text}`,
+        text:
+          guard && fresh.stop === "moved"
+            ? `Cannot merge: the pull request moved past the approved version. Declare its repair with check_change conflictRepair; the captain's approval is kept.`
+            : `Cannot merge: ${fresh.text}`,
         ...(fresh.stop ? { stop: fresh.stop } : {}),
         ...(fresh.stop === "checks" ? { notGreen: true } : {}),
       };
@@ -1241,11 +1275,18 @@ export class PrCiService {
       title: pull.title ?? review.title,
       body: "",
     };
+    let dispatched = false;
     try {
       if (hasChangeRequests(forge.kind))
         requireConventional(change.title ?? "", "pull request title");
-      const sent = await forge.putIn(change, review.headSha);
-      const receipt = { head: review.headSha, ...(sent?.sha ? { sha: sent.sha } : {}) };
+      const held = guard?.held?.();
+      if (held) return { ok: false, relationship: "referenced", stop: "guidance", text: held };
+      const stopped = guard?.beforeDispatch(candidate.headSha);
+      if (stopped)
+        return { ok: false, relationship: "referenced", stop: "withdrawn", text: stopped };
+      dispatched = true;
+      const sent = await forge.putIn(change, candidate.headSha);
+      const receipt = { head: candidate.headSha, ...(sent?.sha ? { sha: sent.sha } : {}) };
       this.storeReviewReceipt(taskId, review.id, receipt);
       return {
         ok: true,
@@ -1256,9 +1297,9 @@ export class PrCiService {
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       const after = await forge.pull?.(review.number).catch(() => undefined);
-      if (after?.merged && after.headSha === review.headSha) {
+      if (after?.merged && after.headSha === candidate.headSha) {
         const receipt = {
-          head: review.headSha,
+          head: candidate.headSha,
           ...(after.mergedSha ? { sha: after.mergedSha } : {}),
         };
         this.storeReviewReceipt(taskId, review.id, receipt);
@@ -1274,7 +1315,12 @@ export class PrCiService {
         relationship: "referenced",
         text: `Cannot merge: ${message}`,
         problem: message,
-        stop: /409/.test(message) ? "moved" : undefined,
+        stop: guard
+          ? ((await this.refusalStop(forge, guard, caught, message)) ??
+            (dispatched ? "outcome" : undefined))
+          : /409/.test(message)
+            ? "moved"
+            : undefined,
       };
     }
   }
@@ -1288,17 +1334,23 @@ export class PrCiService {
   async readWatched(taskId: string): Promise<WatchedReading> {
     const located = this.locate(taskId);
     if ("said" in located) return { kind: "failed", transient: false, problem: located.said };
-    const { record, branch, forge } = located;
+    const { record, forge } = located;
+    const branch = record.delivery?.checkTarget?.branch ?? located.branch;
     try {
-      let change = await forge.changeFor(branch);
+      let change = await this.checkChange(record, branch, forge);
       if (!change) {
-        const pull = await this.namedPull(forge, record.delivery?.prNumber);
+        const pull = await this.namedPull(
+          forge,
+          record.delivery?.checkTarget?.number ?? record.delivery?.prNumber,
+        );
+        this.assertCheckTarget(record);
         this.record(record.id, pull?.merged ? "merged" : "no-pr");
         if (pull?.merged) this.merged.set(record.id, { pull, forge });
         return { kind: "gone" };
       }
       change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
+      this.assertCheckTarget(record);
       const words = changeWords(forge, change);
       if (running(checks.items)) {
         if (record.delivery?.ci !== checks.overall || record.delivery.headSha !== change.headSha) {
@@ -1470,6 +1522,7 @@ export class PrCiService {
     const { record, branch, forge } = located;
     try {
       requireConventional(input.title, "pull request title");
+      this.options.tasks.recordDelivery(taskId, { checkTarget: undefined });
       await this.branchHome(record);
       const dir = await this.validateRange(record.repoId, record.repoDir, branch, forge);
       const existing = await forge.changeFor(branch);
@@ -2029,17 +2082,57 @@ export class PrCiService {
     return { record, branch: record.branch, forge: this.options.forgeFor(repo, dir) };
   }
 
+  private assertCheckTarget(record: NonNullable<ReturnType<TaskService["get"]>>): void {
+    if (
+      this.options.tasks.get(record.id)?.delivery?.checkTarget?.id !==
+      record.delivery?.checkTarget?.id
+    )
+      throw new Error("A newer pull request selection superseded this check reading.");
+  }
+
+  private async checkChange(
+    record: NonNullable<ReturnType<TaskService["get"]>>,
+    branch: string,
+    forge: Forge,
+  ): Promise<ForgeChange | null> {
+    const target = record.delivery?.checkTarget;
+    if (!target) return forge.changeFor(branch);
+    const repo = record.repoId ? this.options.repos.get(record.repoId) : undefined;
+    const origin = forgeOf(repo?.origin);
+    if (
+      origin.host !== target.host ||
+      origin.owner !== target.owner ||
+      origin.name !== target.name
+    ) {
+      throw new Error(
+        "The project no longer names the selected pull request's host and repository.",
+      );
+    }
+    const change = await forge.changeFor(target.branch);
+    if (change && (change.number !== target.number || change.branch !== target.branch)) {
+      throw new Error(
+        "The selected branch now names a different pull request; select the intended pull request again.",
+      );
+    }
+    return change;
+  }
+
   private async run(taskId: string, audience: Audience = "firstmate"): Promise<CheckRun> {
     const located = this.locate(taskId);
     if ("said" in located) return { text: located.said, recorded: false };
-    const { record, branch, forge } = located;
+    const { record, forge } = located;
+    const branch = record.delivery?.checkTarget?.branch ?? located.branch;
     try {
-      let change = await forge.changeFor(branch);
+      let change = await this.checkChange(record, branch, forge);
       if (!change) {
         // The pull request the task names may have been merged or closed
         // outside the app: read it by its number, never guessed from its
         // absence among the open ones (FI3-213).
-        const pull = await this.namedPull(forge, record.delivery?.prNumber);
+        const pull = await this.namedPull(
+          forge,
+          record.delivery?.checkTarget?.number ?? record.delivery?.prNumber,
+        );
+        this.assertCheckTarget(record);
         if (pull?.merged) {
           this.record(record.id, "merged");
           this.merged.set(record.id, { pull, forge });
@@ -2048,6 +2141,7 @@ export class PrCiService {
         // A repair declared before any pull request opened is read at its
         // own version, as one a pull request moved past is (INF-970).
         const earlier = await this.settleEarlierRepair(record.id, forge, branch, null);
+        this.assertCheckTarget(record);
         this.record(record.id, "no-pr");
         const after = this.options.tasks.get(record.id)?.delivery;
         return {
@@ -2063,7 +2157,9 @@ export class PrCiService {
       }
       change = await this.readyPrerequisite(taskId, forge, change);
       const checks = await forge.checks(change);
+      this.assertCheckTarget(record);
       const earlier = await this.settleEarlierRepair(record.id, forge, branch, change);
+      this.assertCheckTarget(record);
       const stillRunning = running(checks.items);
       this.record(
         record.id,
@@ -2158,6 +2254,13 @@ export class PrCiService {
   ): Promise<PrOutcome & { transient?: boolean; dispatched?: boolean }> {
     // A stale earlier success must never survive a failed re-check.
     this.checked.delete(taskId);
+    if (this.options.tasks.get(taskId)?.delivery?.checkTarget) {
+      return {
+        ok: false,
+        stop: "identity",
+        text: "Cannot settle a referenced pull request. Use its request_merge review; the task's own branch remains separate.",
+      };
+    }
     const status = await this.run(taskId);
     const reading = this.reading(taskId);
     const checked = this.checked.get(taskId);
@@ -2713,14 +2816,14 @@ export class PrCiService {
    * change that could not be read settles nothing.
    */
   private async settleBeforeRepair(located: {
-    record: { id: string };
+    record: NonNullable<ReturnType<TaskService["get"]>>;
     branch: string;
     forge: Forge;
   }): Promise<string | undefined> {
     if (!outstandingRepair(this.options.tasks.get(located.record.id)?.delivery?.ciRepair)) {
       return undefined;
     }
-    const change = await located.forge.changeFor(located.branch).then(
+    const change = await this.checkChange(located.record, located.branch, located.forge).then(
       (found) => ({ found }),
       () => undefined,
     );

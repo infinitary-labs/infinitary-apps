@@ -51,6 +51,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - An action carrying an effect is never declared to the body's frame (`bridgeActionIds` in [`src/renderer/src/cards/bridgeActions.ts`](../src/renderer/src/cards/bridgeActions.ts)), so a body's own script cannot settle a task.
 - Effects an agent may declare: `settle merge`, `settle discard` (always danger; `confirm` only when the body says work is unlanded), `open` a Settings section or the task browser, `request_merge` of a stored review, and `request_write` of a kept forge write.
 - The `host` effect kind belongs only to cards the app authors; every emit boundary refuses it from an agent.
+- An ordinary `request_merge` click keeps its exact reviewed target through a refused merge and an accepted unchanged repair, using the same merge-authorization owner as `settle merge`; rule-skipping clicks remain one-shot (`docs/forge.md`, "A requested merge").
 - On a completion offer the crewmate declares one `settle merge` and the host writes the merge-and-discard pair for the task's posture (`CrewSupervisor.withCompletionActions`, captain lock 3).
 - What a choice authorizes (`HANDOFF`, contract v4.41): Approve and build authorizes implementation, not merging; Save and defer keeps the plan and authorizes no build; Abandon files nothing.
 - Explicit build words in a reply authorize implementation, not merging; settings, selection, praise, dismissal, script-triggered actions and a preview's controls authorize neither.

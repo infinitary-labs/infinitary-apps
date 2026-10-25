@@ -480,16 +480,24 @@ Checks that failed or are still running are a soft hold (`checks`): the captain'
 `request_merge` is the agent-facing request to merge one reviewed pull request (FI3-1543).
 `check_change` with `pull` stores a review of that number in the task's project and returns its id.
 Preparing the review grants no approval and merges nothing.
+The selected referenced review becomes the task’s explicit check target (`delivery.checkTarget`), so status, `check_change` and the check watch follow that pull request’s branch and number rather than the task’s own branch (INF-1246).
+Opening the task’s own change or selecting its own pull request returns status to its own branch; a reading never transfers branch ownership.
 The card effect `request_merge` names that id.
 With autonomy off, only the captain's button authorizes the merge.
 The host derives whether the pull request is the task's own or one it adopted, such as a release tool's, from the records, not from the card.
 An owned merge uses the ordinary guarded path and finishes the task.
 A referenced merge is GitHub only, including Enterprise, same repository, into the default branch, and keeps the task and its working copy.
 A changed head, a failed or unreadable check, or a draft or protected branch sends no merge.
+An ordinary requested-merge click keeps the same head-bound approval as a completion click, including for a referenced pull request (INF-1246).
+Its immutable review snapshot lives on `delivery.mergeAuthorization`, independently of the capped review list, and the existing repair declarations, guidance hold, revocation and restart reconciliation apply.
+A behavior-preserving repair merges only at the accepted head after checks pass; changed work needs a new offer and click.
+A confirmed referenced merge consumes the approval and wakes the crewmate once without closing its task or removing its working copy.
+A host merge result is not new captain guidance about that approval.
 Only a pull request GitHub reads as clean at the reviewed head is sent, so a sign-in that could bypass the branch's rules never does.
 GitHub answers `mergeable: null` while a check it has just started works out a test merge, often just after the default branch moved, and asks to be read again shortly (INF-457).
 At the captain's click, that answer is read again after 1, 2, 3, 5, 8 and 11 seconds (`UNDECIDED_REREAD_MS` in `src/core/orchestrator/prCi.ts`), and every read is checked as the first one was.
-The merge goes as soon as GitHub reads clean at the reviewed head; a moved head or a closed pull request still sends nothing, and GitHub still undecided after half a minute refuses the click, saying how long it asked.
+The merge goes as soon as GitHub reads clean at the reviewed head; a moved head or a closed pull request still sends nothing, and GitHub still undecided after half a minute refuses the attempt, saying how long it asked.
+An ordinary click remains kept through that wait, while a closed or replaced pull request ends its approval.
 The card's own read before it goes up asks once.
 Evidence: `tests/e2e/request-merge.spec.ts` ("... waits while GitHub works out whether it can merge ...") merges an adopted pull request after two undecided answers, and `prCi.test.ts` (INF-457) holds the refusal after the wait and a version that moves during it.
 An absence declaration is stored only when it names that exact head, with evidence and a local gate.

@@ -2710,6 +2710,9 @@ describe("the captain's click on a pull request the task did not open, while Git
     forge.answers = answers;
     const harness = setup({ forge });
     await insertDirectPrTask(harness.tasks, harness.repos);
+    harness.repos.configure(harness.tasks.get("ab12cd34")!.repoId!, {
+      origin: "https://github.com/infinitary-labs/infinitary.git",
+    });
     const review: MergeReview = {
       id: "mrpr94clicked",
       relationship: "referenced",
@@ -2804,6 +2807,9 @@ describe("an absence declaration beside a check GitHub reported (INF-893)", () =
     const forge = new NotStartedForge();
     const { tasks, repos, service } = setup({ forge });
     await insertDirectPrTask(tasks, repos);
+    repos.configure(tasks.get("ab12cd34")!.repoId!, {
+      origin: "https://github.com/infinitary-labs/infinitary.git",
+    });
     const review: MergeReview = {
       id: "mrpr328absent",
       relationship: "referenced",

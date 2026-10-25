@@ -196,6 +196,8 @@ export type MergeAuthorization = {
   };
   /** The head the captain approved: the one the completion card's checks read. */
   approvedHead: string;
+  /** Ordinary request_merge approval; its snapshot survives review-list eviction. */
+  review?: MergeReview;
   /**
    * The approved head's change reading, stored at the captain's approval
    * (INF-416 G). Absent when that commit could not be read.
@@ -375,10 +377,12 @@ export type TaskDelivery = {
   mergeAuthorization?: MergeAuthorization;
   /**
    * Reviewed pull requests a `request_merge` card may name (FI3-1543).
-   * A referenced one is not this task's pull request and is never written
-   * as `prNumber`.
+   * Selecting a referenced one updates the displayed `prNumber` and checks,
+   * but only `checkTarget` selects it; the task's own branch remains its own.
    */
   mergeReviews?: MergeReview[];
+  /** Explicitly selected referenced pull request for status and check watches, never branch ownership. */
+  checkTarget?: MergeReview;
   /**
    * Writes the crewmate asked to send where a project lives, kept until the
    * captain's click sends one (FI3-1571 piece 4). `TaskService` is their one

@@ -731,6 +731,7 @@ export type CrewSupervisorOptions = {
   mergeReview?: (
     taskId: string,
     reviewId: string,
+    guard?: MergeGuard,
   ) => Promise<PrOutcome & { relationship?: MergeRelationship }>;
   /** Whether a stored review may be offered now. Absent in tests that publish unchecked. */
   reviewGate?: (taskId: string, reviewId: string) => Promise<string | undefined>;
@@ -1541,6 +1542,31 @@ export class CrewSupervisor {
       endLiveTask: (taskId) => options.personal?.endLiveTask(taskId),
       ...(options.mergePullRequest ? { mergePullRequest: options.mergePullRequest } : {}),
       ...(options.mergeReview ? { mergeReview: options.mergeReview } : {}),
+      mergeContinued: (taskId, review, outcome) => {
+        if (outcome.ok) void this.sweepGates(this.now());
+        const still = this.options.tasks.get(taskId);
+        if (!still || TaskService.isClosed(still)) return;
+        // A host result is not new captain guidance about the kept approval.
+        void this.steerInternal(
+          taskId,
+          {
+            facts: {
+              kind: "merge-continued",
+              ok: outcome.ok,
+              ...(outcome.stop === "outcome" ? { unknown: true } : {}),
+              change: review ? `#${review.number}` : "the reviewed pull request",
+              ...(outcome.receipt?.head || review?.headSha
+                ? { head: outcome.receipt?.head ?? review?.headSha }
+                : {}),
+              text: outcome.text,
+            },
+            ...(outcome.ok && review ? { once: `merge-continued:${review.id}` } : {}),
+          },
+          { actor: "supervisor", via: "supervision", decision: null, cardId: null },
+        ).catch((caught: unknown) => {
+          console.warn("[crew] merge continuation not delivered:", caught);
+        });
+      },
       ...(options.closePullRequest ? { closePullRequest: options.closePullRequest } : {}),
       ...(options.readPull ? { readPull: options.readPull } : {}),
       assessRepair: (taskId) => this.assessRepair(taskId),
@@ -9365,6 +9391,12 @@ export class CrewSupervisor {
       ) {
         if (card.actions.some((action) => settleEffectOf(action)?.mode === "merge"))
           this.recordCompletionOffer(task.id, id, checked, presentationChecked?.revision);
+        else
+          this.settle.endAuthorization(
+            task.id,
+            "superseded",
+            "its crewmate put up a new merge card",
+          );
         const offered = this.cards.get(id);
         if (card.requiredActions !== undefined && offered?.offerId)
           this.options.tasks.declareRequiredActions(task.id, {
@@ -12827,10 +12859,11 @@ export class CrewSupervisor {
     // agent never reaches here with a settle effect, so nothing else can.
     const approve =
       source === "chrome" &&
-      effect?.kind === "settle" &&
-      effect.mode === "merge" &&
       card.taskId &&
-      this.mergeModeFor(card.taskId) === "merge-pr"
+      (effect?.kind === "request_merge" ||
+        (effect?.kind === "settle" &&
+          effect.mode === "merge" &&
+          this.mergeModeFor(card.taskId) === "merge-pr"))
         ? () =>
             this.settle.authorizeMerge(
               card.taskId as string,
@@ -12841,7 +12874,8 @@ export class CrewSupervisor {
                 actionId,
                 ...interactionOf(submission),
               },
-              effect.proceedWithOpen ?? false,
+              effect.kind === "settle" ? (effect.proceedWithOpen ?? false) : false,
+              effect.kind === "request_merge" ? effect.review : undefined,
             )
         : undefined;
     const confirming = effect?.kind === "host" && effect.op === "confirm-required-action";
@@ -13034,30 +13068,8 @@ export class CrewSupervisor {
       case "request_merge": {
         // The declaration granted nothing. Only this chrome click runs it.
         if (!card.taskId || source !== "chrome") return {};
-        const taskId = card.taskId;
-        const reviewId = effect.review;
-        void this.settle.requestMerge(taskId, reviewId).then((outcome) => {
-          if (outcome.ok) void this.sweepGates(this.now());
-          const still = this.options.tasks.get(taskId);
-          if (!still || TaskService.isClosed(still)) return;
-          const review = this.mergeReviewOf(taskId, reviewId);
-          void this.steerCrewmate(
-            taskId,
-            {
-              facts: {
-                kind: "merge-continued",
-                ok: outcome.ok,
-                change: review ? `#${review.number}` : "the reviewed pull request",
-                ...(review ? { head: review.headSha } : {}),
-                text: outcome.text,
-              },
-              ...(outcome.ok ? { once: `merge-continued:${reviewId}` } : {}),
-            },
-            "captain",
-            { via: "card", cardId: card.id },
-          ).catch((caught: unknown) => {
-            console.warn("[crew] merge continuation not delivered:", caught);
-          });
+        void this.settle.requestMerge(card.taskId, effect.review).catch((caught: unknown) => {
+          console.warn("[crew] requested merge failed:", caught);
         });
         return {};
       }

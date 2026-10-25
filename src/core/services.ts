@@ -2273,7 +2273,7 @@ export async function createServices(
       });
     },
     mergePullRequest: (taskId, guard, beforeDispatch) => prCi.merge(taskId, guard, beforeDispatch),
-    mergeReview: (taskId, reviewId) => prCi.mergeReview(taskId, reviewId),
+    mergeReview: (taskId, reviewId, guard) => prCi.mergeReview(taskId, reviewId, guard),
     // An integration's ask runs through its binding; every other is a forge write.
     sendWriteAsk: (taskId, askId, choice) =>
       tasks.get(taskId)?.delivery?.writeAsks?.find((ask) => ask.id === askId)?.kind ===

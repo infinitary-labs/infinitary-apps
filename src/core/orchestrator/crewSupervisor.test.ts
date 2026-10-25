@@ -358,6 +358,8 @@ type SetupExtras = {
   ) => { jobId: string; command: string; startedAt: number } | undefined;
   killJobs?: (taskId: string) => void;
   mergePullRequest?: CrewSupervisorOptions["mergePullRequest"];
+  mergeReview?: CrewSupervisorOptions["mergeReview"];
+  reviewGate?: CrewSupervisorOptions["reviewGate"];
   readPull?: (taskId: string, prNumber: number) => Promise<ForgePull | undefined>;
   openChange?: (
     taskId: string,
@@ -552,6 +554,8 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     ...(extras.oldestRunningJob ? { oldestRunningJob: extras.oldestRunningJob } : {}),
     ...(extras.killJobs ? { killJobs: extras.killJobs } : {}),
     ...(extras.mergePullRequest ? { mergePullRequest: extras.mergePullRequest } : {}),
+    ...(extras.mergeReview ? { mergeReview: extras.mergeReview } : {}),
+    ...(extras.reviewGate ? { reviewGate: extras.reviewGate } : {}),
     ...(extras.closePullRequest ? { closePullRequest: extras.closePullRequest } : {}),
     ...(extras.readPull ? { readPull: extras.readPull } : {}),
     ...(extras.githubRead ? { githubRead: extras.githubRead } : {}),
@@ -3932,8 +3936,10 @@ describe("CrewSupervisor", () => {
       /** The merge request's answer when it refuses; undefined merges. */
       refuse: ForgeError | undefined;
       merged = false;
+      referencedBranch?: string;
       /** The heads GitHub merged, in order. */
       merges: string[] = [];
+      sends = 0;
       async listProjects() {
         return [];
       }
@@ -3944,7 +3950,7 @@ describe("CrewSupervisor", () => {
         return this.change(input.branch);
       }
       async changeFor(branch: string) {
-        return this.merged ? null : this.change(branch);
+        return this.merged || (this.referencedBranch && branch !== this.referencedBranch) ? null : this.change(branch);
       }
       /** Runs inside each checks read: what else happens while the gates are read. */
       duringChecks: () => void = () => {};
@@ -3954,6 +3960,7 @@ describe("CrewSupervisor", () => {
         return { overall: overallOfChecks(items), items };
       }
       async putIn(_change: ForgeChange, headSha: string) {
+        this.sends += 1;
         if (this.refuse) throw this.refuse;
         this.merges.push(headSha);
         this.merged = true;
@@ -3968,6 +3975,7 @@ describe("CrewSupervisor", () => {
           headSha: this.headSha,
           base: "main",
           readiness: this.readiness,
+          ...(this.referencedBranch ? { branch: this.referencedBranch, headRepo: "o/r", title: "fix: ship the meter" } : {}),
         };
       }
       async close() {}
@@ -3997,8 +4005,9 @@ describe("CrewSupervisor", () => {
      * its completion card up through the real checks gate and went idle:
      * the real check service, the real click, a GitHub stand-in.
      */
-    async function approved(where: { kind?: "github" | "gitlab" } = {}) {
+    async function approved(where: { kind?: "github" | "gitlab"; referenced?: boolean } = {}) {
       const forge = new KeptForge(where.kind);
+      if (where.referenced) forge.referencedBranch = "fm/task-earlier";
       let facts = cleanFacts;
       const crewmate = fakeCrewmate();
       let prCi: PrCiService | undefined;
@@ -4009,6 +4018,8 @@ describe("CrewSupervisor", () => {
       const harness = setup(crewmate, {
         checkCi: (id) => service().checkOverall(id),
         mergePullRequest: (id, guard, beforeDispatch) => service().merge(id, guard, beforeDispatch),
+        mergeReview: (id, reviewId, guard) => service().mergeReview(id, reviewId, guard),
+        reviewGate: (id, reviewId) => service().reviewGate(id, reviewId),
         readPull: (id, prNumber) => service().pullState(id, prNumber),
         openChange: (id, input) => service().open(id, input),
         checkChange: (id, input) => service().checkForCrew(id, input),
@@ -4052,12 +4063,16 @@ describe("CrewSupervisor", () => {
         repoId: repo.id,
       });
       await tick();
+      if (where.referenced) await service().checkForCrew(taskId, { pull: 7 });
+      const review = harness.tasks.get(taskId)?.delivery?.mergeReviews?.[0];
       const emit = (title: string) =>
         harness.specs[0]?.onCard?.({
           requiredActions: [],
           title,
           body: completionBody("<p>The PR is ready.</p><p>CI is green on the tested head.</p>"),
-          actions: [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
+          actions: review
+            ? [{ id: "merge", default: true, effect: { kind: "request_merge", review: review.id } }, { id: "not-now", label: "Not now" }]
+            : [{ id: "merge-pr", label: "Merge PR", default: true, effect: SETTLE_MERGE }],
         });
       await emit("Ready to merge");
       crewmate.finishPrompt();
@@ -4074,11 +4089,143 @@ describe("CrewSupervisor", () => {
         emit,
         declare,
         authorization,
+        checkService: service(),
         setFacts: (next: LineageFacts) => {
           facts = next;
         },
       };
     }
+
+    // INF-1246: a continued pull request has live check facts, and its one
+    // chrome click survives a conflict only for the declared unchanged work.
+    async function continued() {
+      const h = await approved({ referenced: true });
+      expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ prNumber: 7, ci: "green", headSha: APPROVED });
+      expect(h.authorization()).toBeUndefined();
+      expect(h.forge.merges).toEqual([]);
+      h.forge.readiness = "conflict";
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("conflict"));
+      expect(h.authorization()?.guidance).toBeUndefined();
+      h.forge.readiness = "clean";
+      return h;
+    }
+
+    it("INF-1246 follows a continued PR's current checks and merges its accepted repair once without closing the task", async () => {
+      const h = await continued();
+      h.forge.headSha = REPAIRED;
+      h.forge.states = ["pending"];
+      expect(await h.declare(repair("none"))).toContain("Repair accepted");
+      expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ prNumber: 7, ci: "pending", headSha: REPAIRED, ciWatch: { head: REPAIRED } });
+      h.crewmate.finishPrompt();
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("checks"));
+      expect(h.forge.merges).toEqual([]);
+      h.forge.states = ["success"];
+      expect(await h.checkService.readWatched(h.taskId)).toMatchObject({ kind: "settled", head: REPAIRED, overall: "green" });
+      await repairTurn(h, async () => {});
+      await vi.waitFor(() => expect(h.authorization()?.status).toBe("consumed"));
+      expect(h.forge.merges).toEqual([REPAIRED]);
+      expect(h.tasks.get(h.taskId)?.status).toBe("active");
+      expect(h.crewmate.promptCalls.join("\n")).toContain("The task stays open");
+    });
+
+    it("INF-1246 keeps an undeclared moved head unmerged and ends approval when the repair changes work", async () => {
+      const h = await continued();
+      h.forge.headSha = REPAIRED;
+      h.crewmate.finishPrompt();
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("repair"));
+      expect(h.forge.merges).toEqual([]);
+      await repairTurn(h, async () => { await h.declare(repair("changed-work")); });
+      expect(h.authorization()).toMatchObject({ status: "invalidated", holds: true });
+      expect(h.forge.merges).toEqual([]);
+    });
+
+    it("INF-1246 newer captain guidance holds a continued merge until its impact is declared", async () => {
+      const h = await continued();
+      await h.supervisor.steerCrewmate(h.taskId, "Keep the same approved work", "captain");
+      expect(h.authorization()?.guidance).toMatchObject({ latest: 1, declared: 0 });
+      h.forge.headSha = REPAIRED;
+      await h.declare(repair("none"));
+      h.crewmate.finishPrompt();
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("guidance"));
+      expect(h.forge.merges).toEqual([]);
+      await repairTurn(h, async () => { await h.declare({ captainGuidance: { mark: 1, impact: "none", evidence: "The captain asks for the same work." } }); });
+      await vi.waitFor(() => expect(h.forge.merges).toEqual([REPAIRED]));
+    });
+
+    it("INF-1246 resumes a continued approval after restart without depending on the capped review list", async () => {
+      const h = await continued();
+      h.forge.headSha = REPAIRED;
+      h.forge.states = ["pending"];
+      await h.declare(repair("none"));
+      h.crewmate.finishPrompt();
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("checks"));
+      await h.supervisor.disposeAll();
+      h.tasks.recordDelivery(h.taskId, { mergeReviews: [] });
+      h.forge.states = ["success"];
+      const tasks = new TaskService({ db: h.db, strict: true });
+      const prCi = new PrCiService({ tasks, repos: h.repos, forgeFor: () => h.forge });
+      const resumed = fakeCrewmate();
+      const supervisor = new CrewSupervisor({
+        ...crewSessions(h.paths, vi.fn(async () => resumed)),
+        workspace: h.workspace, repos: h.repos, tasks, cardStore: new CardStore(h.db),
+        inbox: new InboxStore(h.db), paths: h.paths,
+        mergeReview: (id, review, guard) => prCi.mergeReview(id, review, guard),
+        readPull: (id, number) => prCi.pullState(id, number),
+        broadcastEvent: () => {}, broadcastCards: () => {},
+      });
+      supervisor.setFirstmateHooks({ notifyOp: vi.fn(), retryConverse: vi.fn() });
+      await vi.waitFor(() => expect(tasks.get(h.taskId)?.delivery?.mergeAuthorization?.status).toBe("consumed"));
+      expect(h.forge.merges).toEqual([REPAIRED]);
+      expect(tasks.get(h.taskId)?.status).toBe("active");
+      resumed.finishPrompt();
+      await tick();
+      expect(h.forge.merges).toHaveLength(1);
+      await supervisor.disposeAll();
+    });
+
+    it("INF-1246 a new referenced merge offer supersedes the kept approval before any new click", async () => {
+      const h = await continued();
+      await h.emit("Read the merge again");
+      expect(h.authorization()?.status).toBe("superseded");
+      h.crewmate.finishPrompt();
+      await tick();
+      expect(h.forge.merges).toEqual([]);
+    });
+
+    it("INF-1246 a project change during the last check cannot redirect the approved merge", async () => {
+      const h = await continued();
+      h.forge.duringChecks = () => h.repos.configure(h.tasks.get(h.taskId)!.repoId!, { origin: "https://github.com/o/another.git" });
+      h.crewmate.finishPrompt();
+      await vi.waitFor(() => expect(h.authorization()?.status).toBe("invalidated"));
+      expect(h.forge.merges).toEqual([]);
+    });
+
+    it("INF-1246 keeps an unknown requested-merge outcome distinct from a refusal", async () => {
+      const h = await approved({ referenced: true });
+      h.forge.refuse = new ForgeError("transient", "The merge response was lost");
+      h.supervisor.act(h.card.id, "merge");
+      await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("outcome"));
+      await tick();
+      expect(h.authorization()?.attempt?.head).toBe(APPROVED);
+      expect(h.forge.sends).toBe(1);
+      expect(h.crewmate.promptCalls.at(-1)).toContain("is unknown");
+      expect(h.crewmate.promptCalls.at(-1)).not.toContain("Nothing was merged");
+      await h.supervisor.disposeAll();
+    });
+
+    it("INF-1246 a late watch reading cannot overwrite a newer selected pull request", async () => {
+      const h = await approved({ referenced: true });
+      const target = h.tasks.get(h.taskId)?.delivery?.checkTarget;
+      if (!target) throw new Error("Missing selected review");
+      h.forge.states = ["failure"];
+      h.forge.duringChecks = () => h.tasks.recordDelivery(h.taskId, {
+        checkTarget: { ...target, id: "new-review", number: 8, branch: "fm/task-next" },
+        prNumber: 8, headSha: REPAIRED, ci: "green",
+      });
+      expect(await h.checkService.readWatched(h.taskId)).toMatchObject({ kind: "failed" });
+      expect(h.tasks.get(h.taskId)?.delivery).toMatchObject({ prNumber: 8, headSha: REPAIRED, ci: "green" });
+    });
 
     /** That card clicked once, and the host refusing the merge for a conflict. */
     async function kept(where: { kind?: "github" | "gitlab" } = {}) {

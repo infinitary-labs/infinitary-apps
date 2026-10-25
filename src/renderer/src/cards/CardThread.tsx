@@ -43,6 +43,7 @@ import type { CollectAnswers } from "./PrototypeBody";
 import { RevisionLinks } from "./RevisionNavigation";
 import { useMessageEntrance, useWorkingEntrance } from "./SurfaceReveal";
 import { KeyedText } from "./TaskKey";
+import { useReplyDoing } from "./useReplyDoing";
 import { type ThreadWaitLine, useThreadWait } from "./useThreadWait";
 import "./cardThread.css";
 
@@ -565,12 +566,14 @@ export function ThreadCue({
 }) {
   const messages = useShellStore((s) => s.threads[cardId]) ?? [];
   const waiting = useThreadWait(card);
+  const doing = useReplyDoing(card, messages, working === true);
   const keys = useCommandKeys("cards.thread");
   return (
     <LatestLine
       cardId={cardId}
       messages={messages}
       working={working}
+      doing={doing}
       waiting={waiting}
       keyShortcuts={keys["aria-keyshortcuts"]}
       onOpen={onOpen}
@@ -584,12 +587,14 @@ export function ThreadCue({
  * the thread beside the card again. It says who wrote last and the newest
  * message on one line, or the waiting line's sentence with no who, and how
  * many messages there are, or `working` while the author's turn runs - the
- * same tail the message list ends with.
+ * same tail the message list ends with, so what the crewmate is doing on
+ * the reply stands in for the newest message while it works.
  */
 export function LatestLine({
   cardId,
   messages,
   working = false,
+  doing,
   waiting,
   keyShortcuts,
   onOpen,
@@ -597,6 +602,8 @@ export function LatestLine({
   cardId: string;
   messages: readonly CardMessage[];
   working?: boolean;
+  /** What the crewmate is doing on the reply while it works (`useReplyDoing`). */
+  doing?: string | undefined;
   /** The waiting line; `working` wins while a turn runs. */
   waiting?: ThreadWaitLine;
   /** Every key of the command that does the same, for assistive technology. */
@@ -605,7 +612,7 @@ export function LatestLine({
 }) {
   const last = messages.at(-1);
   if (!last) return null;
-  const waitingText = working ? undefined : waiting?.text;
+  const waitingText = working ? doing : waiting?.text;
   const who = WHO[last.who];
   const count = `${messages.length} ${messages.length === 1 ? "message" : "messages"}`;
   return (
@@ -645,7 +652,16 @@ export function LiveMessageList({
   working?: boolean;
 }) {
   const waiting = useThreadWait(card);
-  return <MessageList messages={messages} working={working} waiting={waiting} own={card.taskId} />;
+  const doing = useReplyDoing(card, messages, working === true);
+  return (
+    <MessageList
+      messages={messages}
+      working={working}
+      doing={doing}
+      waiting={waiting}
+      own={card.taskId}
+    />
+  );
 }
 
 /**
@@ -655,11 +671,14 @@ export function LiveMessageList({
 export function MessageList({
   messages,
   working = false,
+  doing,
   waiting,
   own,
 }: {
   messages: readonly CardMessage[];
   working?: boolean;
+  /** What the crewmate is doing on the reply, beside `working` (`useReplyDoing`). */
+  doing?: string | undefined;
   /** The waiting line; `working` wins while a turn runs. */
   waiting?: ThreadWaitLine;
   /** The id of the card's own task, whose key stays text in its lines (FI3-1271). */
@@ -669,15 +688,18 @@ export function MessageList({
   const count = messages.length;
   const workingEntrance = useWorkingEntrance();
   const waitingText = working ? undefined : waiting?.text;
+  // The list's live tail: the working row with what it names, or the
+  // waiting line.
+  const tail = working ? `working ${doing ?? ""}` : waitingText;
   useEffect(() => {
     // Hold at the bottom as messages arrive, as the working row comes (the
     // first mate's busy flag can land a render after the captain's reply,
     // INF-1231), and as the waiting line comes or changes; the newest is
     // always the one being answered. Nothing to hold to while the thread is
     // empty.
-    if (count === 0 && waitingText === undefined && !working) return;
+    if (count === 0 && tail === undefined) return;
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [count, waitingText, working]);
+  }, [count, tail]);
   return (
     <div
       data-thread-messages=""
@@ -695,7 +717,7 @@ export function MessageList({
         <Message key={message.id} message={message} own={own} />
       ))}
       {working ? (
-        <WorkingRow entrance={workingEntrance} />
+        <WorkingRow entrance={workingEntrance} doing={doing} />
       ) : (
         waiting && <WaitingRow key={waiting.text} waiting={waiting} entrance={workingEntrance} />
       )}
@@ -730,16 +752,44 @@ function WaitingRow({ waiting, entrance }: { waiting: ThreadWaitLine; entrance: 
   );
 }
 
-function WorkingRow({ entrance }: { entrance: boolean }) {
+/**
+ * `working` while the author's turn runs, and beside it, on a crewmate's
+ * card the captain replied under, what the crewmate did last since the
+ * captain's line - the description of the command it runs - so a long piece of work
+ * shows itself as it goes (INF-990 friction 3).
+ */
+function WorkingRow({ entrance, doing }: { entrance: boolean; doing?: string | undefined }) {
   const [reveal] = useState(entrance);
   return (
     <div
       data-thread-working=""
       aria-busy="true"
       data-stage-reveal={reveal ? "entrance" : "static"}
-      style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)", color: "var(--fg-3)" }}
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        gap: 8,
+        minWidth: 0,
+        fontSize: "var(--text-xs)",
+        color: "var(--fg-3)",
+      }}
     >
-      working
+      <span style={{ fontFamily: "var(--font-mono)", flex: "none" }}>working</span>
+      {doing && (
+        <span
+          data-thread-doing=""
+          title={doing}
+          style={{
+            minWidth: 0,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            lineHeight: "var(--leading-body)",
+          }}
+        >
+          {doing}
+        </span>
+      )}
     </div>
   );
 }

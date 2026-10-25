@@ -21638,6 +21638,48 @@ describe("CrewSupervisor: the card thread", () => {
     expect(harness.ops.at(-1)).toContain("Kept the retry as asked.");
   });
 
+  // INF-990 friction 3: a reply asking for a code change went 41 minutes
+  // with no sign of work. The crewmate's one interim line shows at once,
+  // and the captain's reply still waits for its real answer.
+  it("keeps the captain's reply waiting after the crewmate's interim line, until its answer", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, card } = await withCard(harness, { title: "Owner note" });
+    const awaiting = () =>
+      harness.supervisor.cardsSnapshot().find((shown) => shown.id === card.id)?.awaiting;
+
+    harness.supervisor.replyToCard(card.id, "rename review to audit and rerun the evaluations");
+    await tick();
+    const interim = "Renaming review to audit now; the evaluations take about twenty minutes.";
+    expect(
+      harness.specs[0]?.onReply?.({ cardId: card.id, text: interim, interim: true }),
+    ).toContain("still waits for your answer");
+    expect(harness.supervisor.cardThread(card.id).messages.map((m) => m.text)).toEqual([
+      "rename review to audit and rerun the evaluations",
+      interim,
+    ]);
+    expect(awaiting()).toBe("answer");
+    // A turn that ends after the interim line alone still owes the answer.
+    crewmate.emit({ type: "assistant_delta", taskId, text: "Renamed half of it." });
+    crewmate.emit({ type: "turn_end", taskId });
+    crewmate.finishPrompt();
+    await tick();
+    expect(harness.sorts.at(-1)?.rule).toBe("thread-unanswered");
+    expect(awaiting()).toBe("answer");
+
+    harness.specs[0]?.onReply?.({ cardId: card.id, text: "Renamed; the evaluations pass." });
+    expect(awaiting()).not.toBe("answer");
+  });
+
+  it("reads an interim line under a card nobody waits on as an ordinary reply", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { card } = await withCard(harness);
+    expect(
+      harness.specs[0]?.onReply?.({ cardId: card.id, text: "Still on it.", interim: true }),
+    ).toContain("Replied in the thread");
+  });
+
   it("carries the thread's state onto the crew line and the context section", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
@@ -23382,8 +23424,8 @@ describe("the served text of every remaining wake (the typed envelope, P3)", () 
     supervisor.replyToCard(card ?? "", "see this", [pngImage]);
     await tick();
     expect(crewmate.promptCalls.slice(before)).toEqual([
-      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply keeps your card on their screen beside its thread; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it. When their words pass one of the app's holds or tell you to go on without asking them, report them verbatim with needs_firstmate naming this card's id, so the first mate records them as their standing override; carry on with what their words already allow.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
-      `The captain replied in the thread on your card. Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report. Their reply keeps your card on their screen beside its thread; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan. Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it. When their words pass one of the app's holds or tell you to go on without asking them, report them verbatim with needs_firstmate naming this card's id, so the first mate records them as their standing override; carry on with what their words already allow.\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
+      `${THREAD_STEER_PREAMBLE}\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nthe checks failed on windows`,
+      `${THREAD_STEER_PREAMBLE}\nCard "Owner note" (card-${taskId}-1).\nThe captain's words, verbatim:\nsee this\n\n[attached: 1 picture: png]`,
     ]);
     expect(crewmate.promptImageCalls.at(-1)).toEqual([pngImage]);
   });

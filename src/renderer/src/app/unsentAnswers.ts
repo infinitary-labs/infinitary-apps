@@ -42,10 +42,14 @@ export function unsentComment(words: string | undefined, sent: CardAnswer[] | un
 }
 
 /**
- * Whether the captain's reply still waits on its answer (INF-770): his line
- * is the newest on the card's thread, so a close leaves the answer to the
- * record instead of the card.
+ * Whether the captain's reply still waits on its answer (INF-770), so a
+ * close leaves the answer to the record instead of the card: the card's
+ * own hold says so, which an author's interim line keeps (INF-990
+ * friction 3), or his line is the newest on the card's thread.
  */
-export function replyUnanswered(messages: readonly CardMessage[] | undefined): boolean {
-  return messages?.at(-1)?.who === "captain";
+export function replyUnanswered(
+  card: Pick<Card, "awaiting">,
+  messages: readonly CardMessage[] | undefined,
+): boolean {
+  return card.awaiting === "answer" || messages?.at(-1)?.who === "captain";
 }

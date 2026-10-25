@@ -345,11 +345,15 @@ export const readCatalog = {
       presentation: true,
       // A card closing or leaving changes the record's Cards row too.
       pushes: ["inf:tasks", "inf:tasks:delta", "inf:cards"],
-      // Its own browser's fact moves on every command the crewmate runs.
+      // Its own browser's fact moves on every command the crewmate runs,
+      // and so does its Now line, which a card's thread shows while the
+      // crewmate works on the captain's reply (INF-990 friction 3).
       events: (event, args) =>
         (event.type === "task_changed" ||
           event.type === "task_event" ||
-          event.type === "task_browser") &&
+          event.type === "task_browser" ||
+          event.type === "tool_start" ||
+          event.type === "tool_end") &&
         event.taskId === args.id,
     },
     description: "One task in full: goal, the captain's words, graph, report, timeline, delivery.",

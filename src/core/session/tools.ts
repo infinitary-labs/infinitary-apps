@@ -332,7 +332,10 @@ export type CrewmateToolDelegate = {
    * phase 1): prose the host renders as a message under the card, never a
    * second card. Returns the tool text, refusals included.
    */
-  onReply?: (input: { cardId: string; text: string }, signal?: AbortSignal) => Awaitable<string>;
+  onReply?: (
+    input: { cardId: string; text: string; interim?: boolean },
+    signal?: AbortSignal,
+  ) => Awaitable<string>;
   /**
    * The read-only tasks query (cards/tasks/agents P0, WI-4): every crewmate
    * can search the backlog before filing, the way every engineer can read

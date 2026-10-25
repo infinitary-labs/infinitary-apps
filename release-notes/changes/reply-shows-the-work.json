@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "reply-shows-the-work",
+      "kind": "feature",
+      "area": "cards",
+      "title": "A reply that asks for work shows the work as it happens",
+      "body": "When you reply under a crewmate's card and ask for a change, the thread now shows what the crewmate is doing on it, step by step, beside \"working\". For work that takes more than a few minutes, the crewmate first says in one line what it is doing, and its full answer still follows when the work is done.",
+      "picture": {
+        "dark": "reply-shows-the-work-dark.webp",
+        "light": "reply-shows-the-work-light.webp",
+        "alt": "A card's thread with your reply asking to rename review to audit, the crewmate's line \"Renaming review to audit now\", and under it \"working\" beside \"Rename review to audit across the app\""
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

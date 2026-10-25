@@ -352,6 +352,7 @@ The third is the last sentence it wrote in its session (`TaskDetail.said`), whic
 A message the app sent the crewmate and a compaction stay in Activity and never stand as Now, so a crewmate that did nothing since reads its last doing at its true age, and a stalled crewmate looks stalled.
 Before its first doing, Now is the task's own newest row but those, such as the start line; a row another task wrote is Activity's alone.
 Who wrote a row is its kind, a typed fact; Now never reads a row's words to choose.
+The same Now follows `working` in the thread of a crewmate's card the captain replied under, once it is newer than the captain's line, and the record's read re-reads on each of the crewmate's calls so it moves with the work (`docs/card-threads.md`, "The waiting line").
 
 ## Notes
 

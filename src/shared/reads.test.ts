@@ -214,6 +214,11 @@ describe("the read catalog", () => {
         { id: "t1" },
       ),
     ).toBe(true);
+    // A crewmate's call moves its Now line, which the thread of a card it
+    // works on shows (INF-990 friction 3).
+    const call = { type: "tool_start" as const, taskId: "t1", callId: "c1", toolName: "bash" };
+    expect(detail?.(call, { id: "t1" })).toBe(true);
+    expect(detail?.({ ...call, taskId: "t2" }, { id: "t1" })).toBe(false);
     expect(detail?.({ type: "firstmate_note", text: "x" }, { id: "t1" })).toBe(false);
     expect(readCatalog["tasks.detail"].args.safeParse({ id: "t1", extra: 1 }).success).toBe(false);
   });

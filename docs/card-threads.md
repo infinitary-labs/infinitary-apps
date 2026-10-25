@@ -105,7 +105,13 @@ The task timeline records each crewmate card's stage moment as its `card_raised`
 A return is never written at `report`.
 
 **The contract** (v4.14): the crewmate's thread steer preamble and `CARD_REPLY` say to do the work the captain's words need first, answer once - revise the card, or reply when nothing on it changes - then report, because the card comes back when you are done; never acknowledge or announce.
-Both say the captain sees that answer when the author's turn ends (INF-926).
+`CARD_REPLY` says the captain sees that answer when the author's turn ends (INF-926).
+
+**An interim line** (INF-990 friction 3: replies asking for code changes went 26 and 41 minutes with no sign of work): when the work will take more than a few minutes, the crewmate's steer preamble tells it to post one line first with `reply` and `interim` true, saying what it is doing.
+The line paints in the thread at once, like any author line, but it is declared, never inferred: `CardService.addMessage` keeps the card's `answer` hold, so the reply still waits, the waiting line or `working` follows, a revision without `reply` is still refused, and the whose-turn rule and the idle ladder still see an answer owed.
+Under a card nobody waits on, `interim` is an ordinary reply.
+The rule lives in the steer preamble and the tool's `interim` parameter, both crewmate-only, so the first mate's contract is unchanged.
+Closing a card asks first while its hold says a reply waits, as well as while the captain's line is the newest (`replyUnanswered`).
 
 ## The waiting line
 
@@ -126,7 +132,10 @@ Nothing reads anyone's words.
 - `settlement`: the task is being merged or discarded.
 - `guidance`: nothing else holds the author, and it has not answered yet.
 
-A running turn shows `working` alone.
+A running turn shows `working` in its place.
+On a crewmate's card the captain replied under, `working` is followed by what the crewmate did last since the captain's newest line: its task record's Now line (`nowOf`, `docs/task-record.md` "The Now line"), usually the description it gave the command it runs (`useReplyDoing`).
+The thread reads it off `tasks.detail` only while that turn runs, and that read re-reads on each of the crewmate's calls (`tool_start`, `tool_end`), so the line follows the work command by command; before its first doing since the reply, `working` stands alone.
+A collapsed thread's latest line shows the same words in place of the newest message.
 The message list holds its scroll at its foot as a message, the waiting line or `working` arrives, each on its own: on the first mate's card its busy flag lands a render after the captain's reply, so `working` scrolls the list again (INF-1231, `tests/e2e/thread-working-reveal.spec.ts`).
 When the hold ends, the checks finish or the author's turn starts, the posture moves and the line with it, with no thread message; the author's answer - a reply, or the host's `revised:` line
 - ends the wait and the line.

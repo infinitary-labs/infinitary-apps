@@ -58,9 +58,9 @@ export const REPLY_TOOL_NAME = "reply";
  * it stays well under the Claude transport's 2,048-character cap.
  */
 export const REPLY_TOOL_DESCRIPTION = [
-  "Answer the captain in the thread under one of your own cards: plain prose, a few sentences, rendered as a message beside the card.",
-  "Never a card and never actions - to change what the card says, call emit_card again with the same id, passing your answer as its reply so one call does both; the host puts one revised line in the thread before it.",
-  "Pass the card id emit_card returned. A card that is not yours takes no reply.",
+  "Answer the captain in the thread under one of your own cards: plain prose, a few sentences.",
+  "Never a card and never actions - to change what the card says, call emit_card again with the same id, passing your answer as its reply so one call does both.",
+  "Pass the card id emit_card returned.",
 ].join(" ");
 
 /**
@@ -312,13 +312,29 @@ export const REPLY_TOOL = crewmateTool({
   parameters: Type.Object({
     card_id: Type.String({ description: "The card whose thread you are answering in" }),
     text: Type.String({
-      description: "Your answer: plain prose, sentence case, a few sentences",
+      description: "Your answer, in sentence case",
     }),
+    interim: Type.Optional(
+      Type.Boolean({
+        description:
+          "True for one line saying what you are doing, before long work on the captain's reply; their reply keeps waiting for your answer.",
+      }),
+    ),
   }),
   bind: ({ onReply }) =>
     onReply &&
     (async (params, signal) => ({
-      text: await callWithSignal(onReply, [{ cardId: params.card_id, text: params.text }], signal),
+      text: await callWithSignal(
+        onReply,
+        [
+          {
+            cardId: params.card_id,
+            text: params.text,
+            ...(params.interim === true ? { interim: true } : {}),
+          },
+        ],
+        signal,
+      ),
     })),
 });
 

@@ -156,7 +156,8 @@ function standingWordsRelay(where: string): string {
 export const THREAD_STEER_PREAMBLE = [
   "The captain replied in the thread on your card.",
   "Do the work their words need first. Then always give one short answer in the thread, one to three sentences, whether or not the card changes: answer with reply(card_id, text) - prose only - and, when their words change what the card should say, also revise it with emit_card under the same id (pass the answer as its reply parameter to do both in one call; a revision without one is refused while they wait). Then report.",
-  "Their reply keeps your card on their screen beside its thread; they see your answer only when your turn ends, so never acknowledge their words or say what you are about to do: they read your answer, not your plan.",
+  "Their reply keeps your card on their screen beside its thread, and the thread shows what you are doing as you work; never acknowledge their words or announce a plan: they read your answer.",
+  "When the work will take more than a few minutes, first post one line with reply and interim true saying what you are doing; it keeps their reply waiting for your answer.",
   "Putting the change in, discarding it, a stronger model, or unrelated work is not yours: close your card with close_card and report the captain's words verbatim with needs_firstmate, so the first mate runs it.",
   standingWordsRelay("this card's id"),
 ].join(" ");

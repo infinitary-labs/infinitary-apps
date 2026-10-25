@@ -1540,10 +1540,14 @@ export class CardService {
     submission?: unknown,
     answers?: CardAnswer[],
     revision?: CardRevisionLinks,
+    interim = false,
   ): CardMessage {
     // The captain's line holds the card, still shown, until its author
     // answers and closes out; any other line - the author's answer, or the
     // host's "revised:" for a revision - ends his line being the newest.
+    // An author's interim line, declared as one, keeps the hold: it says
+    // what the author is doing, and the answer is still owed (INF-990
+    // friction 3).
     // An author's line brings back a card the captain put aside: the
     // Firstmate's at once, a crewmate's when its turn ends (INF-926).
     if (who === "firstmate") this.setMinimized(cardId, false);
@@ -1557,6 +1561,7 @@ export class CardService {
       actor: who,
       source: who === "host" ? "host" : "thread",
     };
+    const answered = !interim && card?.awaiting === "answer";
     let held: Card | undefined;
     const message = this.host.cardStore.transaction(() => {
       const message = this.host.cardStore.appendMessage({
@@ -1588,10 +1593,10 @@ export class CardService {
         });
       }
       if (who === "captain") held = this.writeHold(cardId, "answer", by);
-      else if (card?.awaiting === "answer") held = this.writeHold(cardId, "close-out", by);
+      else if (answered) held = this.writeHold(cardId, "close-out", by);
       return message;
     });
-    if (who === "captain" || card?.awaiting === "answer") this.applyHold(cardId, held);
+    if (who === "captain" || answered) this.applyHold(cardId, held);
     this.host.broadcastThread?.(this.thread(cardId));
     // An author's answer is a row on the card's task too (FI3-1189's rule
     // 1); the captain's reply already is one, through its steer or its ask.
@@ -1661,7 +1666,10 @@ export class CardService {
    * ownership one - a crewmate must not be able to write into another
    * task's conversation.
    */
-  replyFromCrewmate(taskId: string, input: { cardId: string; text: string }): string {
+  replyFromCrewmate(
+    taskId: string,
+    input: { cardId: string; text: string; interim?: boolean },
+  ): string {
     const id = input.cardId.trim();
     if (!id) return "reply needs card_id: the id emit_card returned.";
     const card = this.cards.get(id) ?? this.host.cardStore.get(id);
@@ -1674,7 +1682,13 @@ export class CardService {
     if (text.length > CARD_REPLY_MAX_CHARS) {
       return `A reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter, or revise the card.`;
     }
-    this.addMessage(id, "crewmate", text);
+    // An interim line keeps the captain's reply waiting for the answer
+    // only while one waits; under an answered card it is an ordinary reply.
+    const interim = input.interim === true && card.awaiting === "answer";
+    this.addMessage(id, "crewmate", text, undefined, undefined, undefined, interim);
+    if (interim) {
+      return `Posted in the thread on "${card.title}" (${id}); the captain's reply still waits for your answer when the work is done.`;
+    }
     const replied = `Replied in the thread on "${card.title}" (${id}).`;
     // An answer under another card leaves the captain's reply waiting
     // (INF-990 friction 4): the receipt names the card that still waits.

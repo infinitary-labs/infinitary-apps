@@ -1042,7 +1042,7 @@ function CardLayer({ onEmptied }: { onEmptied: () => void }) {
     const shell = useShellStore.getState();
     const unsent = unsentAnswers(card, shell.cardAnswers[cardId], shell.sentCardAnswers[cardId]);
     const wrote = unsentComment(shell.replyDrafts[cardId], shell.sentCardAnswers[cardId]);
-    if (unsent > 0 || wrote || replyUnanswered(shell.threads[cardId])) {
+    if (unsent > 0 || wrote || replyUnanswered(card, shell.threads[cardId])) {
       setConfirmingClose(cardId);
       setConfirmFocus(byKey);
       return;
@@ -2183,7 +2183,7 @@ function StackedCard({
           count={unsentAnswers(card, answers, sentAnswers)}
           wrote={unsentComment(words, sentAnswers)}
           unanswered={
-            replyUnanswered(messages)
+            replyUnanswered(card, messages)
               ? {
                   author:
                     card.author === "firstmate"

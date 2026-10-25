@@ -47,7 +47,9 @@ The thread column, top to bottom: a mono micro-label head (`THREAD` alone, `--te
 The head never repeats the card's author, model or close: the card beside it already carries them (the captain: "this thread panel should not repeat the task title and model name and the close button, because the attached card already has all of that"), and the card's own × closes the card and its thread.
 Its one control is **Collapse thread** at the head's right end, a 28px `IconButton` that is never an ×: a 16px rounded square with a panel line on its right and a chevron pointing LEFT, into the card, because the arrow says where the thread goes (Lucide's `panel-right-open` glyph, whose name is the reverse of its meaning here; the captain found arrows the other way round "the opposite of what user would expect").
 Its drawn label reads "Collapse thread" with the command's key (⌘\), and it names every key in `aria-keyshortcuts`.
-While its author is actively working, the message list ends with the muted mono text `working` alone, without a crewmate glyph or author prefix; derive this from task activity, never reply-in-flight state.
+While its author is actively working, the message list ends with the muted mono text `working`, without a crewmate glyph or author prefix; derive this from task activity, never reply-in-flight state.
+On a crewmate's card the captain replied under, what the crewmate did last since the captain's newest line follows it on the same row - its task record's Now line, the description it gave the command it runs - in the host line's voice, sans `--fg-3` at `--text-xs`, one line cut with an ellipsis, changing with each command (INF-990 friction 3: "no sign of work" for 41 minutes); before its first command since that line, `working` stands alone.
+A crewmate's interim line - one sentence it posts before long work, declared as interim - is an ordinary author message; the captain's reply still waits, so `working` or the waiting line follows it.
 While the captain's line is the newest on a crewmate's card and its author is not working, the list ends instead with the waiting line: one sentence in the host line's voice - `--fg-3` at `--text-xs`, body leading, sans, with no who and no accent - saying the reply is saved, what holds it and who goes next, and for a held account the way back ("Saved, not sent yet: your Claude plan's allowance is used up and resets 1:10pm.
 It goes to crewmate 7 then, on its own.").
 It is derived from the task's state, never a thread message, so it changes or leaves with that state and the card beside it does not change; `working` replaces it while a turn runs.
@@ -75,7 +77,7 @@ The body is the same one, never rebuilt, and the cut is the move: no tween, as t
 Between the hairline and the field sits the **latest line**, one button row that opens the thread again:
 
 - who wrote last in the thread's 34px mono column, in the who's own color (`you` in `--captain`, `crew` or `mate` in `--accent`, `app` in `--fg-3`);
-- the newest message on one line at `--text-sm` in `--fg-2`, cut with an ellipsis; a host line, or the waiting line's sentence in its place when it applies (with no who), is `--fg-3` at `--text-xs`;
+- the newest message on one line at `--text-sm` in `--fg-2`, cut with an ellipsis; a host line, or in its place the waiting line's sentence when it applies or the crewmate's Now line while it works on the reply (with no who), is `--fg-3` at `--text-xs`;
 - on the right in mono `--text-xs` `--fg-3`, "N messages", or `working` while the author's turn runs;
 - a 14px icon ending the row whose chevron points RIGHT, toward where the thread opens (`panel-right-close`).
 

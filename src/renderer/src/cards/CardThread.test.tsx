@@ -11,11 +11,30 @@ describe("card thread working state", () => {
     const idle = renderToStaticMarkup(<MessageList messages={[]} working={false} />);
 
     expect(active).toContain('data-thread-working="" aria-busy="true"');
-    expect(active).toContain("font-family:var(--font-mono)");
     expect(active).toContain("color:var(--fg-3)");
-    expect(active).toMatch(/<div data-thread-working=""[^>]*>working<\/div>/);
+    expect(active).toMatch(
+      /<div data-thread-working=""[^>]*><span style="font-family:var\(--font-mono\)[^"]*">working<\/span><\/div>/,
+    );
     expect(active).not.toContain("<canvas");
     expect(idle).not.toContain("data-thread-working");
+  });
+
+  // INF-990 friction 3: what the crewmate does on the reply shows beside
+  // `working`, open and collapsed, in place of the newest message.
+  it("names what the crewmate is doing on the reply beside working", () => {
+    const doing = "Rename review to audit across the app";
+    const open = renderToStaticMarkup(<MessageList messages={[]} working doing={doing} />);
+    expect(open).toMatch(/>working<\/span><span data-thread-doing="" title="[^"]*"[^>]*>Rename/);
+    const idle = renderToStaticMarkup(<MessageList messages={[]} doing={doing} />);
+    expect(idle).not.toContain(doing);
+    const asked: CardMessage[] = [
+      { id: 1, cardId: "c", who: "captain", text: "rename review to audit", at: 0 },
+    ];
+    const cue = renderToStaticMarkup(
+      <LatestLine cardId="c" messages={asked} working doing={doing} onOpen={() => {}} />,
+    );
+    expect(cue).toContain(`data-thread-cue-said="" data-quiet="">${doing}<`);
+    expect(cue).toContain('data-thread-cue-state="">working<');
   });
 });
 

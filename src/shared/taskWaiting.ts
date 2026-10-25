@@ -8,9 +8,19 @@ import type { ProjectView, TaskBoard, TaskView } from "./tasks";
  * eligible sibling. Never invent waiting ahead of the board, or change holds.
  */
 export function presentTask<T extends TaskView>(task: T, cards: readonly Card[]): T {
-  const minimized = cards.find(
-    (card) => card.minimized && (card.taskId === task.id || card.id === task.waitingCardId),
-  );
+  const associated = (card: Card) => card.taskId === task.id || card.id === task.waitingCardId;
+  // INF-1293: putting a card aside does not give the captain the turn while
+  // its author works or owes a reply. This masks only the placement shortcut:
+  // openTask still restores the actual minimized cards, and ready decisions
+  // and required captain actions keep their independent waiting associations.
+  const authorWorking =
+    task.status === "active" &&
+    (task.workPosture?.state === "active" ||
+      (!task.workPosture && task.activity === "running") ||
+      cards.some((card) => associated(card) && card.awaiting === "answer"));
+  const minimized = authorWorking
+    ? undefined
+    : cards.find((card) => card.minimized && associated(card));
   if (task.minimizedCardId !== minimized?.id) {
     const { minimizedCardId: _old, ...raw } = task;
     task = { ...raw, ...(minimized ? { minimizedCardId: minimized.id } : {}) } as T;

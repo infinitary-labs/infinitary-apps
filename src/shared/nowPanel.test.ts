@@ -76,6 +76,92 @@ describe("nowGroupOf", () => {
     expect(alone.tasks[0]).toMatchObject({ key: "", title: note.title, minimizedCardId: note.id });
     expect(nowGroupOf(alone.tasks[0]!)).toBe("waiting");
   });
+  // INF-1293 approved rule: work and author-owed replies outrank putting a
+  // card aside, without hiding a separate ready choice or changing the mark.
+  it.each([
+    { activity: "running", workPosture: undefined },
+    { activity: "idle", workPosture: { state: "active", reason: "job" } },
+    { activity: "idle", workPosture: { state: "active", reason: "guidance" } },
+    { activity: "idle", workPosture: { state: "active", reason: "checks" } },
+  ] as const)("keeps continuing work under Working: %j", (state) => {
+    const original = task({ status: "active", minimizedCardId: "launch-update", ...state });
+    const note: Card = {
+      id: "launch-update",
+      taskId: original.id,
+      author: "firstmate",
+      priority: 20,
+      title: "The launch review continues",
+      meta: "firstmate",
+      body: "<p>Checking the launch.</p>",
+      actions: [],
+      status: "ready",
+      createdAt: 1000,
+      minimized: true,
+    };
+    const board = { seq: 1, at: 1000, projects: [], tasks: [original], links: [] };
+    const projected = presentBoard(board, [note]);
+    expect(nowGroupOf(projected.tasks[0]!)).toBe("working");
+    expect(taskStatusWord(projected.tasks[0]!)).toBe("Working");
+    expect(note.minimized).toBe(true);
+    const choice = { ...note, id: "launch-choice", actions: [{ id: "go", label: "Launch" }] };
+    const ready = presentBoard({ ...board, tasks: [{ ...original, waitingCardId: choice.id }] }, [
+      note,
+      choice,
+    ]);
+    expect(nowGroupOf(ready.tasks[0]!)).toBe("waiting");
+    expect(taskStatusWord(ready.tasks[0]!)).toBe("Waiting on you");
+    const required = presentBoard(
+      {
+        ...board,
+        tasks: [
+          {
+            ...original,
+            requiredAction: {
+              cardId: "captain-action",
+              state: "ready",
+              result: "Approve the launch",
+            } as const,
+          },
+        ],
+      },
+      [note],
+    );
+    expect(nowGroupOf(required.tasks[0]!)).toBe("waiting");
+    expect(taskStatusWord(required.tasks[0]!)).toBe("Waiting on you");
+  });
+
+  it("keeps an unanswered minimized decision in Working while preserving a paused mark", () => {
+    const original = task({
+      status: "active",
+      activity: "idle",
+      workPosture: { state: "paused", reason: "access" },
+    });
+    const choice: Card = {
+      id: "launch-choice",
+      taskId: original.id,
+      author: "firstmate",
+      priority: 20,
+      title: "Choose the launch day",
+      meta: "firstmate",
+      body: "<p>Choose a day.</p>",
+      actions: [{ id: "go", label: "Friday" }],
+      status: "ready",
+      createdAt: 1000,
+      minimized: true,
+      awaiting: "answer",
+    };
+    const board = { seq: 1, at: 1000, projects: [], tasks: [original], links: [] };
+    const projected = presentBoard(board, [choice]);
+    expect(nowGroupOf(projected.tasks[0]!)).toBe("working");
+    expect(taskStatusWord(projected.tasks[0]!)).toBe("Idle");
+    expect(projected.tasks[0]!.workPosture).toEqual(original.workPosture);
+    // A completed reply restores the original minimized-card rule, not a
+    // new lifecycle rule for idle/finished notes.
+    const answered = presentBoard(board, [{ ...choice, awaiting: undefined }]);
+    expect(nowGroupOf(answered.tasks[0]!)).toBe("waiting");
+    expect(choice.minimized).toBe(true);
+  });
+
   it("puts anything that needs the captain first, whatever its status", () => {
     expect(nowGroupOf(task({ status: "open", waitingCardId: "ready", flags: needsYou }))).toBe(
       "waiting",

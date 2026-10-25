@@ -462,6 +462,9 @@ The snapshot is never reused as fresh scheduling evidence.
 A minimized message remains open, with its task and operational ready-decision association unchanged.
 The desktop’s `presentTask` overlays the optional `minimizedCardId` for presentation only, never a gate or a task move.
 `nowGroupOf` puts that task’s own row under waiting on you without an added word, even for a note on a finished task.
+On active tasks, `presentTask` masks that shortcut while work continues or an associated card’s typed `answer` hold says its author owes a reply.
+A ready decision or outstanding required captain action still puts the row under waiting on you; a paused author keeps its honest status mark.
+Masking changes only placement and its counts, not the card’s minimized state: clicking the Working row still restores its cards.
 The raw board includes finished tasks while they have minimized cards, however old; the phone keeps its existing card list.
 `presentBoard` gives a taskless minimized card one presentation-only row, titled by the card, never a saved task.
 The task board and compact Tasks count use that same projection, and restoring or withdrawing the last minimized card removes that presentation override.

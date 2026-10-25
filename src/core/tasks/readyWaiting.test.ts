@@ -504,6 +504,48 @@ describe("ready decisions are the sole waiting fact", () => {
     }
   });
 
+  it("INF-1293 keeps a put-aside reply with its author across board, detail and project counts until the choice is ready again", async () => {
+    const h = setup(true);
+    try {
+      h.tasks.create({
+        id: "t",
+        title: "Choose a route",
+        prompt: "Choose the safer route",
+        repoId: null,
+      });
+      h.tasks.dispatch("t", {
+        workspace: { repoDir: "r", worktreeDir: "w", branch: "b" },
+        accountId: null,
+        assignee: "crew",
+      });
+      h.tasks.setActivity("t", "idle");
+      h.subscribe("t");
+      const id = h.cards.emitCrewmateCard("t", decision, "route");
+      h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
+      h.cards.setMinimized(id, true);
+      await h.flush();
+      h.assertWaiting("t", id);
+      h.cards.addMessage(id, "captain", "Why is this route safer?");
+      await h.flush();
+      h.assertWaiting("t", null);
+      expect(h.cards.shown(id)).toMatchObject({ minimized: true, awaiting: "answer" });
+      // The turn is now running; answering alone cannot make the decision
+      // ready before its author's turn ends.
+      h.tasks.setActivity("t", "running");
+      h.cards.replyFromCrewmate("t", { cardId: id, text: "This route avoids the closed road." });
+      await h.flush();
+      h.assertWaiting("t", null);
+      h.tasks.setActivity("t", "idle");
+      h.cards.closeOut({ kind: "crewmate", taskId: "t" }, "idle");
+      await h.flush();
+      h.assertWaiting("t", id);
+      // CardService releases the put-aside lifecycle when the answer is ready.
+      expect(h.cards.shown(id)?.minimized).toBeUndefined();
+    } finally {
+      h.dispose();
+    }
+  });
+
   it("restart releases close-out but not unanswered replies; stable-id reopening begins hidden", async () => {
     const h = setup();
     try {

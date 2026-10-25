@@ -358,7 +358,8 @@ export function observeCheckRepair(
 /**
  * Closes the open attempt at `headSha`, which no reading can ever settle:
  * `superseded` when the change has moved past a version where the host holds
- * no check at all (INF-988), `void` when the host holds no commit there
+ * no check at all and no branch is at it (INF-988, INF-1185), `void` when the
+ * host holds no commit there
  * (INF-1184). Either spends nothing - no result was seen - and the next
  * repair may be declared.
  */

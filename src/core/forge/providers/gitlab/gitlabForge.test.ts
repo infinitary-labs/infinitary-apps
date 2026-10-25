@@ -390,6 +390,46 @@ describe("GitLabForge", () => {
     });
   });
 
+  // INF-1185: a repair at a version no check ran on stays open while a
+  // branch is still at it, where a pipeline can start. GitLab lists the
+  // branches that hold a commit, so only those whose head it is count.
+  it("lists the branches whose head is a version, not every branch that holds it", async () => {
+    const at = "a75f9eb4d0f888d5a7fee139a342cbb35a86af3b";
+    const branch = (name: string, id: string) =>
+      Response.json({
+        name,
+        commit: { id, short_id: id.slice(0, 8) },
+        merged: false,
+        default: false,
+      });
+    const holding = (names: string[]) =>
+      forgeAnswering((_method, path) => {
+        if (path === `/api/v4${PROJECT}/repository/commits/${at}/refs`)
+          return Response.json(names.map((name) => ({ type: "branch", name })));
+        if (
+          path ===
+          `/api/v4${PROJECT}/repository/branches/${encodeURIComponent("fm/task-1-evidence")}`
+        )
+          return branch("fm/task-1-evidence", at);
+        if (path === `/api/v4${PROJECT}/repository/branches/${encodeURIComponent("fm/task-1")}`)
+          return branch("fm/task-1", "21e5511e4c597e6475da40dcda2d8e0c6bec9e67");
+        return Response.json({ message: "404 Branch Not Found" }, { status: 404 });
+      });
+
+    // The change's branch holds the version but has moved past it, and a
+    // branch deleted since the list is at no version.
+    const { forge, fetcher } = holding(["fm/task-1", "fm/task-1-evidence", "fm/task-1-old"]);
+    expect(await forge.branchesAt(at)).toEqual(["fm/task-1-evidence"]);
+    expect(String(fetcher.mock.calls[0]?.[0])).toContain("type=branch");
+    expect(await holding([]).forge.branchesAt(at)).toEqual([]);
+
+    // A full page may hold more branches than it lists, so it says nothing.
+    const many = Array.from({ length: 100 }, (_, index) => `fm/task-${index + 2}`);
+    await expect(holding(many).forge.branchesAt(at)).rejects.toMatchObject({
+      failure: "transient",
+    });
+  });
+
   it("finds only a merge request from the project's own branch, never a fork's of the same name", async () => {
     const { forge } = forgeAnswering(() =>
       Response.json([request({ iid: 5, source_project_id: 99 }), request()]),

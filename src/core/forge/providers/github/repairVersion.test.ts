@@ -35,6 +35,8 @@ const FIXED = "a75f9eb4d0f888d5a7fee139a342cbb35a86af3b";
 /** The repair's version as it was declared, and a 40-character id GitHub holds no commit for. */
 const MISTYPED = `${FIXED}0761`;
 const UNHELD = "a75f9eb4d0f888d5a7fee139a342cbb35a86af3c";
+/** Where the evidence branch is now, past the repair's version (read on Oct 25). */
+const MOVED_ON = "bc5b153dd4f30530397be6f9ae6402297dbea9d1";
 const SOURCE_RUN = 40136674087;
 
 type Ended = "success" | "failure" | "skipped" | null;
@@ -373,8 +375,12 @@ const SOURCE_JOBS = [
   job(120999545294, sourceRun, NATIVE, "skipped", "2026-10-24T22:00:24Z", "2026-10-24T22:00:24Z"),
 ];
 
-/** The repair's two export runs: running when the repair was declared, then both passed. */
-const fixedVersion = (ended: boolean): Version => {
+/**
+ * The repair's two export runs: running when the repair was declared, then
+ * both passed. `failure` ends their scene-evidence jobs as the failed
+ * version's did.
+ */
+const fixedVersion = (ended: boolean, result: "success" | "failure" = "success"): Version => {
   const first = workflowRun(
     40137185822,
     833,
@@ -384,7 +390,7 @@ const fixedVersion = (ended: boolean): Version => {
     EVIDENCE,
     FIXED,
     108790850754,
-    ended ? "success" : null,
+    ended ? result : null,
     "2026-10-24T22:07:19Z",
     ended ? "2026-10-24T22:10:42Z" : "2026-10-24T22:08:00Z",
   );
@@ -397,7 +403,7 @@ const fixedVersion = (ended: boolean): Version => {
     EVIDENCE,
     FIXED,
     108790851057,
-    ended ? "success" : null,
+    ended ? result : null,
     "2026-10-24T22:07:19Z",
     ended ? "2026-10-24T22:10:00Z" : "2026-10-24T22:08:00Z",
   );
@@ -435,7 +441,7 @@ const fixedVersion = (ended: boolean): Version => {
         121001086182,
         second,
         "scene-evidence",
-        ended ? "success" : null,
+        ended ? result : null,
         "2026-10-24T22:08:00Z",
         ended ? "2026-10-24T22:09:59Z" : null,
       ),
@@ -451,7 +457,7 @@ const fixedVersion = (ended: boolean): Version => {
         121001085379,
         first,
         "scene-evidence",
-        ended ? "success" : null,
+        ended ? result : null,
         "2026-10-24T22:08:00Z",
         ended ? "2026-10-24T22:10:42Z" : null,
       ),
@@ -471,6 +477,11 @@ async function setup() {
     [SOURCE, { parents: [], runs: [sourceRun], checks: SOURCE_JOBS }],
     [FIXED, fixedVersion(false)],
   ]);
+  /** Each branch's head, as GitHub lists the branches a commit is the head of. */
+  const heads = new Map<string, string>([
+    [BRANCH, PR_HEAD],
+    [EVIDENCE, FIXED],
+  ]);
   const server = createServer(async (req, res) => {
     for await (const _ of req);
     const url = new URL(req.url ?? "/", "http://stand-in");
@@ -482,6 +493,7 @@ async function setup() {
     const run = /\/actions\/runs\/(\d+)(\/jobs)?$/.exec(path);
     const reads = /\/commits\/([0-9a-f]+)\/(check-runs|status)$/.exec(path);
     const commit = /\/git\/commits\/([^/]+)$/.exec(path);
+    const headOf = /\/commits\/([0-9a-f]+)\/branches-where-head$/.exec(path);
     if (req.method !== "GET") json({ message: "Not Found" }, 404);
     else if (path === PROJECT) {
       json({
@@ -526,6 +538,24 @@ async function setup() {
       const version = versions.get(sha);
       if (!version) json({ message: "Not Found" }, 404);
       else json({ sha, parents: version.parents.map((parent) => ({ sha: parent })) });
+    } else if (headOf) {
+      const sha = headOf[1] as string;
+      if (!versions.has(sha) && sha !== MOVED_ON)
+        json({ message: `No commit found for SHA: ${sha}` }, 422);
+      else
+        json(
+          [...heads].flatMap(([name, head]) =>
+            head === sha
+              ? [
+                  {
+                    name,
+                    commit: { sha, url: `https://api.github.com${PROJECT}/commits/${sha}` },
+                    protected: false,
+                  },
+                ]
+              : [],
+          ),
+        );
     } else if (path === `${PROJECT}/actions/runs`) {
       const listed = versions.get(url.searchParams.get("head_sha") ?? "")?.runs ?? [];
       json({ total_count: listed.length, workflow_runs: listed });
@@ -583,8 +613,15 @@ async function setup() {
     readWorkflow: async (runId: number) => (await readWorkflow.run({ runId })).text,
     checkChange: async (input: Parameters<typeof checkChange.run>[0]) =>
       (await checkChange.run(input)).text,
+    /** GitHub has not yet listed the repair's dispatched export runs, or any check there. */
+    exportsUnlisted: () => versions.set(FIXED, { parents: [SOURCE], runs: [], checks: [] }),
+    /** GitHub listed the repair's export runs, still running. */
+    exportsStarted: () => versions.set(FIXED, fixedVersion(false)),
     /** GitHub finished the repair's export runs. */
-    exportsEnded: () => versions.set(FIXED, fixedVersion(true)),
+    exportsEnded: (result: "success" | "failure" = "success") =>
+      versions.set(FIXED, fixedVersion(true, result)),
+    /** The evidence branch moved on past the repair's version. */
+    evidenceMovedOn: () => heads.set(EVIDENCE, MOVED_ON),
     /**
      * The attempt the host recorded before INF-1184 at a version GitHub holds
      * no commit for, after one unsuccessful repair earlier in the task.
@@ -684,5 +721,72 @@ describe("a repair declared at a version GitHub holds no commit for (INF-1184)",
       { ...next, outcome: "passed" },
     ]);
     expect(f.delivery()?.ciRounds).toBe(1);
+  });
+});
+
+/**
+ * INF-1185, filed from INF-1184's replay of INF-1066: with pull request #436
+ * open, the repair's export runs were dispatched on the evidence branch, and
+ * a repair declared there before GitHub listed them was closed as
+ * superseded at once, as a version the pull request moved past with no
+ * check is (INF-988). So its runs' result was never read, and one that
+ * failed would have spent no attempt. GitHub starts a run - on a push, or
+ * one dispatched on a branch - only at a branch's head, and the evidence
+ * branch was at the repair's version.
+ */
+describe("a repair declared on another branch before its runs are listed (INF-1185)", () => {
+  const unlisted = (id: string) =>
+    `Repair ${id} at ${FIXED} (the change is now at ${PR_HEAD}): no check has started there yet, and ${EVIDENCE} is still at that version, where a run can still start, so it has no result yet.`;
+
+  it.each([
+    {
+      result: "success" as const,
+      words: settled(REPAIR.id),
+      outcome: "passed",
+      rounds: undefined,
+    },
+    {
+      result: "failure" as const,
+      words: `Repair ${REPAIR.id} at ${FIXED} (the change is now at ${PR_HEAD}): scene-evidence completed / failure there (2 of 2 checks of that name did not pass), so it is an unsuccessful own repair (1/3).`,
+      outcome: "failed",
+      rounds: 1,
+    },
+  ])(
+    "keeps it open until its runs report, then settles it from their $result",
+    async ({ result, words, outcome, rounds }) => {
+      const f = await setup();
+      f.exportsUnlisted();
+
+      expect(await f.checkChange({ repair: REPAIR })).toContain(unlisted(REPAIR.id));
+      expect(f.repairs()).toEqual([REPAIR]);
+      // Still open, it holds the next repair back.
+      expect(
+        await f.checkChange({ repair: { ...REPAIR, id: `${REPAIR.id}-2`, headSha: PR_HEAD } }),
+      ).toContain(
+        `Repair refused: attempt ${REPAIR.id} at ${FIXED} has no result yet; read its checks with check_change once they finish, before starting another.`,
+      );
+
+      f.exportsStarted();
+      expect(await f.checkChange({})).toContain(
+        `Repair ${REPAIR.id} at ${FIXED} (the change is now at ${PR_HEAD}): that version's checks are still running, so it has no result yet.`,
+      );
+      f.exportsEnded(result);
+      expect(await f.checkChange({})).toContain(words);
+      expect(f.repairs()).toEqual([{ ...REPAIR, outcome }]);
+      expect(f.delivery()?.ciRounds).toBe(rounds);
+    },
+  );
+
+  it("supersedes it once no branch is at that version and nothing ran there", async () => {
+    const f = await setup();
+    f.exportsUnlisted();
+    expect(await f.checkChange({ repair: REPAIR })).toContain(unlisted(REPAIR.id));
+
+    f.evidenceMovedOn();
+    expect(await f.checkChange({})).toContain(
+      `Repair ${REPAIR.id} at ${FIXED} (the change is now at ${PR_HEAD}): no check ran there and no branch is at that version now, so none will start; it is superseded and spent no attempt.`,
+    );
+    expect(f.repairs()).toEqual([{ ...REPAIR, outcome: "superseded" }]);
+    expect(f.delivery()?.ciRounds).toBeUndefined();
   });
 });

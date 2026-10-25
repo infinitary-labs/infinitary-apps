@@ -295,6 +295,38 @@ export class GitLabForge implements Forge {
     return false;
   }
 
+  /**
+   * GitLab lists the branches that hold a commit (`refs`), not the ones it
+   * heads, so each listed branch's own head decides; one deleted since the
+   * list is at no version. A full page may hold more than it lists, so the
+   * answer is then unknown.
+   */
+  async branchesAt(sha: string): Promise<string[]> {
+    const refs = await this.read(
+      `${this.projectPath()}/repository/commits/${encodeURIComponent(sha)}/refs?type=branch&per_page=100`,
+    );
+    if (!Array.isArray(refs)) throw unreadable(this.place, `the branches holding ${sha}`);
+    if (refs.length >= 100) {
+      throw new ForgeError(
+        "transient",
+        `${this.place} lists more branches holding ${sha} than the app reads.`,
+      );
+    }
+    const at: string[] = [];
+    for (const ref of refs as { name?: unknown }[]) {
+      if (typeof ref?.name !== "string") continue;
+      try {
+        const branch = (await this.read(
+          `${this.projectPath()}/repository/branches/${encodeURIComponent(ref.name)}`,
+        )) as { commit?: { id?: unknown } } | null;
+        if (branch?.commit?.id === sha) at.push(ref.name);
+      } catch (caught) {
+        if (!(caught instanceof ForgeError && caught.failure === "not-found")) throw caught;
+      }
+    }
+    return at;
+  }
+
   async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
     const iid = numbered(change, this.place);
     const title = requireConventional(change.title ?? "", "pull request title");

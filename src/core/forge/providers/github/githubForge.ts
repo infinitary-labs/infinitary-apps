@@ -521,6 +521,23 @@ export class GitHubForge implements Forge {
     return false;
   }
 
+  /** GitHub's own list of the branches whose head is `sha`, which it answers whole. */
+  async branchesAt(sha: string): Promise<string[]> {
+    const listed = await this.request(
+      "GET",
+      `${this.repoPath()}/commits/${encodeURIComponent(sha)}/branches-where-head`,
+    );
+    if (!Array.isArray(listed)) {
+      throw new ForgeError(
+        "transient",
+        `${this.place}'s list of the branches at ${sha} could not be read.`,
+      );
+    }
+    return (listed as { name?: unknown }[]).flatMap((branch) =>
+      typeof branch?.name === "string" ? [branch.name] : [],
+    );
+  }
+
   /**
    * Every page of a list GitHub answers 100 at a time, with its
    * `total_count`: read until the count is reached or a page comes back

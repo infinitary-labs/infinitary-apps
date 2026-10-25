@@ -155,6 +155,7 @@ class FakeForge implements Forge {
     this.change = { ...change, draft: false, title: change.title?.replace(/^Draft: /, "") };
     return this.change;
   }
+  branchesAt?: Forge["branchesAt"];
   async checks(change: ForgeChange, movedPast?: string) {
     const headSha = movedPast ?? change.headSha;
     this.calls.push(`checks ${headSha}`);
@@ -1616,6 +1617,13 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
         held: () => new ForgeError("transient", "GitHub answered 502"),
         says: "its checks could not be read there (GitHub answered 502), so it has no result yet",
       },
+      {
+        // INF-1185: a branch may still be at it, where a run can start.
+        version: "holds no check and its branches cannot be read",
+        held: () => [],
+        branchesAt: () => Promise.reject(new ForgeError("transient", "GitHub answered 502")),
+        says: "no check has started there yet, and the branches at that version could not be read (GitHub answered 502), so it has no result yet",
+      },
     ])(
       "leaves it outstanding while its version $version, refusing the next repair",
       async (entry) => {
@@ -1623,6 +1631,7 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
         await insertDirectPrTask(tasks, repos);
         await declareSigningRepair(service, forge);
         forge.atHead[PR203.repaired] = entry.held();
+        if ("branchesAt" in entry) forge.branchesAt = entry.branchesAt;
         at(forge, PR203.current, PR203.atCurrent);
         const answer = await service.checkForCrew("ab12cd34", { repair: quarantineRepair });
         expect(answer).toContain(entry.says);

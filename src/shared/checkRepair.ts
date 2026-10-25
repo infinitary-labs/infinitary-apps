@@ -198,7 +198,8 @@ export type CheckRepairLedger = {
   diagnoses: (CheckDiagnosis & { at?: number })[];
   /**
    * `superseded`: the change moved past the attempt's version before the host
-   * ran any check there, so it can never have a result and spends nothing (INF-988).
+   * ran any check there, and no branch is at it for a run to start on (INF-1185),
+   * so it can never have a result and spends nothing (INF-988).
    * `void`: the project's host holds no commit at the declared version, as for a
    * mistyped id, so no check can ever run there; it spends nothing, and a
    * declaration with its id replaces it (INF-1184).

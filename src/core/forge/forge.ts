@@ -288,13 +288,20 @@ export interface Forge {
   markReady?(change: ForgeChange, beforeSend: () => void): Promise<ForgeChange>;
   /**
    * The checks on `change.headSha`, the change's head version, read by the one
-   * green rule; or, given `movedPast`, on that earlier version of the change an
-   * open repair was declared at (INF-685). The host starts nothing for a
-   * version the change has moved past, so that reading carries no marker of
-   * the change's own checks not having started (INF-988): an empty list there
-   * is every check the version will get.
+   * green rule; or, given `movedPast`, on another version an open repair was
+   * declared at (INF-685). The change's own checks never start on a version it
+   * has moved past, so that reading carries no marker of them not having
+   * started (INF-988); a run on a branch still at that version may start there
+   * yet (`branchesAt`, INF-1185).
    */
   checks(change: ForgeChange, movedPast?: string): Promise<ForgeChecks>;
+  /**
+   * The branches whose head is `sha` (INF-1185): the host starts a run - on a
+   * push, or one dispatched on a branch - only at a branch's head, so a
+   * version no branch is at gets no new check. Throws when it cannot say.
+   * Absent where the host cannot list them.
+   */
+  branchesAt?(sha: string): Promise<string[]>;
   /**
    * Whether the host holds `sha` as that exact full commit id (INF-1184):
    * false when it holds no such commit, as for a mistyped, shortened or

@@ -359,8 +359,11 @@ A repair declared at a version the pull request has since moved past is read at 
 A repair declared while its branch has no open pull request is read the same way at its own version (INF-970), so a repair of a workflow run's failed job gets its result before any pull request opens.
 That read writes only the repair ledger - the failures seen there, the attempt's result and any attempt it spends - so the change's own reading, its version and its check watch stay at the current head.
 A version still running, one that never ran the repaired check, or one the host cannot read is no result: the attempt stays outstanding and the next repair is refused with the reason.
-A version the open change moved past where the host holds no check at all - no check run, status or workflow run, as when the change conflicted until it moved on - can never have a result, because the host starts checks only on the change's head (INF-988).
-That attempt is closed as `superseded`, spends nothing, and the next repair may be declared.
+A version the open change moved past where the host holds no check at all - no check run, status or workflow run, as when the change conflicted until it moved on - gets none of the change's own checks (INF-988).
+A run can still start there only while a branch is at that version, because the host starts a run - on a push, or one dispatched on a branch - only at a branch's head, so the reading then asks the host which branches are (`branchesAt`, INF-1185).
+While one is, as an evidence branch whose dispatched runs GitHub has not listed yet, the attempt is no result yet; once those runs report, it settles from them like any other version, and a failed one spends an attempt.
+Once no branch is at that version, or where the host cannot list branches, the attempt is closed as `superseded`, spends nothing, and the next repair may be declared.
+A failed list of the branches is no result yet, like a failed reading of the checks.
 A repair names a version the host's checks will run at, so the declaration first asks the host whether it holds that exact full commit id (`holdsCommit`, INF-1184).
 A version it holds no commit at - a mistyped, shortened or lengthened id, or one never pushed - is refused with the reason, and nothing is recorded or spent.
 GitHub reads the checks of an id longer than 40 characters as the commit its first 40 characters name, so without that question such a repair would settle from another version's checks.

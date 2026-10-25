@@ -1,4 +1,5 @@
 import { calledTool, type Scenario, type ScenarioAnswer, sinceLastUser } from "../mockProvider";
+import { latestServedTurn } from "../providerRequest";
 
 /**
  * A program run to its result in the launched app (INF-799 piece 2, the
@@ -35,8 +36,19 @@ return { files: found.files, capped: done };
 /** The bound the first mate proposes: one finder and one part per file. */
 export const PROGRAM_BOUND = FILES.length + 1;
 
-/** The project the captain's words name, as `project <id>`. */
-const projectIn = (words: string) => words.match(/project (\S+)/)?.[1] ?? "missing";
+/**
+ * The project the captain's own words name, as `project <id>`. Only their
+ * segment is read: the host's context part beside it has its own prose,
+ * such as the project scopes note, and that is not the captain naming one.
+ */
+function captainProject(body: string): string {
+  const words = (latestServedTurn(body)?.segments ?? [])
+    .filter((segment) => segment.kind === "user" && segment.origin === "captain")
+    .map((segment) => segment.body)
+    .join("\n");
+  return words.match(/project (\S+)/)?.[1] ?? "missing";
+}
+
 const report = (text: string, result?: Record<string, unknown>): ScenarioAnswer => ({
   calls: [{ name: "report", args: { text, ...(result ? { result } : {}) } }],
 });
@@ -56,7 +68,7 @@ export const programRun: Scenario = () => {
               title: PROGRAM_TITLE,
               goal: "Cap what the meter renders, part by part.",
               user_words: PROGRAM_RUN_PROMPT,
-              repo_id: projectIn(user),
+              repo_id: captainProject(body),
               start_policy: "when-ready",
               blocked_by: [],
               program: { script: PROGRAM_SCRIPT, bound: PROGRAM_BOUND },

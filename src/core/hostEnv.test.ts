@@ -5,9 +5,11 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import {
   captureLoginPath,
+  configureSettingsPath,
   hostEnv,
   loginPathCapture,
   mergeSearchPath,
+  refreshLoginPath,
   resetLoginPathForTests,
   SHELL_CAP_ENV,
   SHELL_ID_ENV,
@@ -276,5 +278,51 @@ PATH='${bin}':"$PATH"`,
       if (saved.older === undefined) delete process.env[olderCap];
       else process.env[olderCap] = saved.older;
     }
+  });
+});
+
+/**
+ * A run started with a settings file (docs/run.md, "A settings file";
+ * INF-1228's approved plan, piece 4: "With it, the app finds programs where
+ * the file says and asks no login shell"). Nobody may be logged in to answer
+ * a shell there, as with a boot entry whose path is the system folders.
+ */
+describe("configureSettingsPath (a run's settings file names the folders)", () => {
+  const saved = { PATH: process.env.PATH, SHELL: process.env.SHELL };
+
+  beforeEach(() => {
+    resetLoginPathForTests();
+    process.env.PATH = SYSTEM_PATH;
+  });
+
+  afterEach(() => {
+    resetLoginPathForTests();
+    process.env.PATH = saved.PATH;
+    process.env.SHELL = saved.SHELL;
+  });
+
+  it("asks no shell, and a child finds programs in the file's folders, then the starter's", async () => {
+    const dir = scratch();
+    const tools = join(dir, "tools", "bin");
+    plantProgram(tools, "node", "v99.0.0-from-settings");
+    // The person's shell would put another node first, if anything asked it.
+    const nvm = join(dir, "nvm", "bin");
+    plantProgram(nvm, "node", "v99.0.0-from-shell");
+    const stub = writeLoginShellStub(join(dir, "shell"), {
+      interactive: `PATH='${nvm}':"$PATH"`,
+      login: `PATH='${nvm}':"$PATH"`,
+    });
+    process.env.SHELL = stub.shell;
+
+    configureSettingsPath([tools, "/usr/bin", "/bin"]);
+    expect(await captureLoginPath()).toEqual({
+      source: "settings",
+      entries: [tools, "/usr/bin", "/bin"],
+    });
+    expect(await refreshLoginPath()).toMatchObject({ source: "settings" });
+    expect(await runAsChild("node --version")).toBe("v99.0.0-from-settings");
+    // The file's folders, then what the starter's path adds, and no installer guesses.
+    expect(hostEnv().PATH?.split(":")).toEqual([tools, "/usr/bin", "/bin", "/usr/sbin", "/sbin"]);
+    expect(existsSync(stub.log)).toBe(false);
   });
 });

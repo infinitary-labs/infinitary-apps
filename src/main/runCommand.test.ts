@@ -9,6 +9,7 @@ import {
   programIdentity,
   runCommand,
   runningByCommand,
+  runOptions,
 } from "./runCommand";
 
 /**
@@ -38,6 +39,21 @@ describe("starting the app by a command", () => {
     ).toBeNull();
     // The entry of an unpackaged run is never read as the word.
     expect(runCommand(["/electron", "run"], true)).toBeNull();
+  });
+});
+
+describe("the words after run", () => {
+  // INF-1228's approved plan, piece 4: "`--settings <file>` names a file of settings".
+  it("takes nothing, or --settings and one file; any other words get the usage", () => {
+    expect(runOptions([])).toEqual({});
+    expect(runOptions(["--settings", "/Users/fm/infinitary.json"])).toEqual({
+      settings: "/Users/fm/infinitary.json",
+    });
+    expect(runOptions(["--settings"])).toBeNull();
+    expect(runOptions(["--settings", ""])).toBeNull();
+    expect(runOptions(["--settings", "a.json", "b.json"])).toBeNull();
+    expect(runOptions(["--setting", "a.json"])).toBeNull();
+    expect(runOptions(["now"])).toBeNull();
   });
 });
 

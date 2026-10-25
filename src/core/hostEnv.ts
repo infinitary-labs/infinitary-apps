@@ -19,12 +19,19 @@ import { installerDirs, type LoginShellMiss, readLoginShellPath } from "./userBi
  * nothing readable, `-lc` (asked alongside, so the fallback costs no extra
  * wait) answers; when both miss, the process path stands alone. The
  * outcome is recorded once (`loginPathCapture`, plus one log line).
+ *
+ * A run started with a settings file (`<app> run --settings`, docs/run.md)
+ * names its folders instead (`configureSettingsPath`): then no shell is
+ * asked at all, since nobody may be logged in to answer.
  */
 
-export type LoginPathSource = "interactive" | "login" | "process";
+export type LoginPathSource = "interactive" | "login" | "process" | "settings";
 
 export type LoginPathCapture = {
-  /** Which ask produced the entries; `process` means neither did. */
+  /**
+   * Which ask produced the entries; `process` means neither did, and
+   * `settings` that a settings file named them and no shell was asked.
+   */
   source: LoginPathSource;
   entries: readonly string[];
   /** Why the interactive ask did not answer, when it did not. */
@@ -53,10 +60,26 @@ export function captureLoginPath(env: NodeJS.ProcessEnv = process.env): Promise<
 }
 
 /**
+ * The folders a settings file names, in its order (`<app> run --settings`,
+ * docs/run.md), in place of the shell's answer, set before anything asks:
+ * every later `captureLoginPath` returns them and no shell is ever asked.
+ * Children then search these folders first and the process path after them,
+ * with no installer guesses (`hostPath`); Claude's locator asks no shell
+ * either (`claudeCli.ts`).
+ */
+export function configureSettingsPath(entries: readonly string[]): void {
+  captured = { source: "settings", entries: [...entries] };
+  capturing = undefined;
+  console.info(`[host-env] ${describeCapture(captured)}`);
+}
+
+/**
  * Ask again, for a caller that knows the answer changed (an install the app
- * ran on the person's behalf). Nothing calls it yet.
+ * ran on the person's behalf). Nothing calls it yet. A settings file's
+ * folders stay: there is no shell to ask.
  */
 export function refreshLoginPath(env: NodeJS.ProcessEnv = process.env): Promise<LoginPathCapture> {
+  if (captured?.source === "settings") return Promise.resolve(captured);
   captured = undefined;
   capturing = undefined;
   return captureLoginPath(env);
@@ -90,7 +113,8 @@ async function runCapture(env: NodeJS.ProcessEnv): Promise<LoginPathCapture> {
   return { source: "process", entries: [], interactiveMiss: first.miss, loginMiss: second.miss };
 }
 
-function describeCapture(result: LoginPathCapture): string {
+/** The one log line a capture leaves, after `[host-env] `. */
+export function describeCapture(result: LoginPathCapture): string {
   const misses = [
     result.interactiveMiss ? `interactive shell: ${result.interactiveMiss}` : "",
     result.loginMiss ? `login shell: ${result.loginMiss}` : "",
@@ -127,6 +151,21 @@ export function mergeSearchPath(
   for (const entry of installers) add(entry);
   for (const entry of processEntries) add(entry);
   return merged.join(delimiter);
+}
+
+/**
+ * The search path a child gets when a settings file named the folders: the
+ * file's folders in its order, then whatever the process path holds that the
+ * file does not, so the system folders a starter sets stay reachable behind
+ * them. Nothing is guessed: the installer directories count only when the
+ * file or the process path names them.
+ */
+function settingsSearchPath(
+  settingsEntries: readonly string[],
+  processPath: string | undefined,
+): string {
+  const processEntries = (processPath ?? "").split(delimiter).filter((entry) => entry.length > 0);
+  return [...new Set([...settingsEntries, ...processEntries])].join(delimiter);
 }
 
 /**
@@ -212,17 +251,17 @@ export function bundledGit(): BundledGit | undefined {
 }
 
 /**
- * The search path every child runs with (see `mergeSearchPath`), with the
+ * The search path every child runs with (see `mergeSearchPath`, or
+ * `settingsSearchPath` when a settings file named the folders), with the
  * app's git directory ahead of everything when there is one: `git` in a
  * crewmate's shell is the app's, and every other program the Mac has stays
  * visible behind it.
  */
 export function hostPath(): string {
-  const merged = mergeSearchPath(
-    captured?.entries ?? [],
-    process.env.PATH,
-    installerDirs(process.env),
-  );
+  const merged =
+    captured?.source === "settings"
+      ? settingsSearchPath(captured.entries, process.env.PATH)
+      : mergeSearchPath(captured?.entries ?? [], process.env.PATH, installerDirs(process.env));
   if (!bundled) return merged;
   const rest = merged.split(delimiter).filter((entry) => entry !== bundled?.shimDir);
   return [bundled.shimDir, ...rest].join(delimiter);

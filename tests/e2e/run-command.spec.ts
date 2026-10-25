@@ -1,14 +1,20 @@
 import { type ChildProcessWithoutNullStreams, spawn } from "node:child_process";
-import { existsSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import electronPath from "electron";
+import { describeCapture } from "../../src/core/hostEnv";
+import { writeLoginShellStub } from "../../src/core/loginShellStub";
 import {
+  RUN_LAST_STOP,
   RUN_MARKER,
+  RUN_SETTINGS_EXIT,
   RUN_UPDATED_EXIT,
   RUN_WORDS,
   RUNNING_BY_COMMAND,
+  type RunStop,
 } from "../../src/main/runCommand";
+import { readRunSettings } from "../../src/main/runSettings";
 import { claimedPort } from "../helpers/claimedPort";
 import { scratchDir } from "../helpers/scratchDirs";
 import { builtAppDir, defaultClaudeStubDir, hermeticEnv, launchApp } from "./launch";
@@ -25,6 +31,9 @@ import { readSavedData } from "./savedData";
  * person's, so it draws on its own (Xvfb, which every Linux package
  * requires), as a computer nobody is logged in to does.
  */
+
+/** The search path a boot entry starts a program with on a Mac. */
+const SYSTEM_PATH = "/usr/bin:/bin:/usr/sbin:/sbin";
 
 const children: ChildProcessWithoutNullStreams[] = [];
 test.afterEach(() => {
@@ -69,6 +78,8 @@ function run(env: Record<string, string>, args: string[] = []) {
   return {
     child,
     lines,
+    /** The notes the app's parts leave on its output, each starting with `[`. */
+    notes: () => out.split("\n").filter((line) => line.startsWith("[")),
     error: () => error,
     exited,
     /** Resolves once the run says it runs; rejects when it ends first. */
@@ -160,6 +171,62 @@ test("once the installed app is replaced, the run stops and ends for its starter
   renameSync(`${program}.new`, program);
   expect(await ran.exited, ran.error()).toBe(RUN_UPDATED_EXIT);
   expect(ran.lines()).toEqual([RUN_WORDS.started, ...RUN_WORDS.updated, RUN_WORDS.stopped]);
+});
+
+/**
+ * INF-1228's approved plan, piece 4: "`--settings <file>` names a file of
+ * settings. With it, the app finds programs where the file says and asks no
+ * login shell." The person's shell is a stand-in that notes every ask, and
+ * the starter's path is the system folders, as a boot entry's is.
+ */
+test("with a settings file, a run searches the file's folders and asks no login shell", async () => {
+  const userDataDir = scratchDir("infinitary-run-command-");
+  const shellDir = scratchDir("infinitary-run-command-shell-");
+  const shell = writeLoginShellStub(shellDir, {});
+  const env = await runEnv(userDataDir, { SHELL: shell.shell, PATH: SYSTEM_PATH });
+
+  // Without one, the core asks the person's shell as it starts.
+  const asked = run(env);
+  await asked.started();
+  asked.child.kill("SIGTERM");
+  expect(await asked.exited, asked.error()).toBe(0);
+  // The interactive ask and the fallback asked beside it, both noted before the next run.
+  await expect
+    .poll(() => (existsSync(shell.log) ? readFileSync(shell.log, "utf8").trim().split("\n") : []))
+    .toEqual(expect.arrayContaining(["-ilc", "-lc"]));
+  rmSync(shell.log);
+
+  const folders = [join(shellDir, "tools", "bin"), "/usr/bin", "/bin"];
+  const settings = join(shellDir, "infinitary.json");
+  writeFileSync(settings, `${JSON.stringify({ path: folders }, null, 2)}\n`);
+  const ran = run(env, ["--settings", settings]);
+  await ran.started();
+  expect(ran.notes()).toContain(
+    `[host-env] ${describeCapture({ source: "settings", entries: folders })}`,
+  );
+  ran.child.kill("SIGTERM");
+  expect(await ran.exited, ran.error()).toBe(0);
+  expect(ran.lines()).toEqual([RUN_WORDS.started, RUN_WORDS.stopped]);
+  expect(existsSync(shell.log)).toBe(false);
+});
+
+test("a settings file a run cannot use ends it with 78 and why, kept as its last stop", async () => {
+  const userDataDir = scratchDir("infinitary-run-command-");
+  const settings = join(scratchDir("infinitary-run-command-settings-"), "infinitary.json");
+  // A misspelled setting, which a run that ignored it would search nothing of.
+  writeFileSync(settings, JSON.stringify({ paths: ["/opt/homebrew/bin", "/usr/bin", "/bin"] }));
+  const ran = run(await runEnv(userDataDir), ["--settings", settings]);
+  expect(await ran.exited, ran.error()).toBe(RUN_SETTINGS_EXIT);
+  const reading = readRunSettings(settings);
+  if (reading.ok) throw new Error("The misspelled file was read as settings.");
+  const words = RUN_WORDS.settings(reading.file, reading.reason);
+  expect(said(ran.error())).toEqual(words);
+  expect(ran.lines()).toEqual([]);
+  // What status reads as the last stop (docs/run.md, "Reading status").
+  expect(
+    JSON.parse(readFileSync(join(userDataDir, RUN_LAST_STOP), "utf8")) as RunStop,
+  ).toMatchObject({ reason: "start-failed", exitCode: RUN_SETTINGS_EXIT, lines: words });
+  expect(existsSync(join(userDataDir, RUN_MARKER))).toBe(false);
 });
 
 test("words after run say how to use it and exit 2", async () => {

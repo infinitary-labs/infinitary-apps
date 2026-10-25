@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "run-settings-file",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Tell Infinitary started by a command where your programs are",
+      "body": "When a command starts Infinitary with no window, it can now name a settings file that lists the folders where your programs are. Your crew finds them there, even on a computer nobody is logged in to. A mistake in the file stops the start and says what to fix.",
+      "noPicture": "The settings file is read by a command started in a terminal or at boot, with no change to the app's windows.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

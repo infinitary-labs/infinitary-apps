@@ -6,7 +6,7 @@ It is for a computer or an account where nobody sits at Infinitary's window, suc
 ## Who owns what
 
 The app owns what no starter can do: running with no window, a clean stop, and an exit with its reason.
-Whatever runs the command owns everything about how it runs: when it starts (at boot, at login or by hand), as which account, whether it starts again after a crash or an update, its priority and its log.
+Whatever runs the command owns everything about how it runs: when it starts (at boot, at login or by hand), as which account, whether it starts again after a crash or an update, its priority, its log and its settings file.
 So the app adds no option per setup: a macOS boot entry, a Linux service, a login item and a terminal all run the same command.
 On screen the mode is called "started by a command", beside Settings' "Start at login"; the words server, service, daemon and headless stay off the app's screens (`docs/vocabulary.md`).
 
@@ -14,7 +14,7 @@ On screen the mode is called "started by a command", beside Settings' "Start at 
 
 `<app> run`, where `<app>` is `Infinitary.app/Contents/MacOS/Infinitary` on a Mac, `infinitary` from a Linux package, the AppImage file itself, or `electron . run` in a checkout.
 Chromium's own switches may stand before `run`, as they may before `work` (`commandWords`, `src/main/workCommand.ts`); `<app> work run` is the work mode's own command, never this one (`docs/helper.md`).
-Any word after `run` prints how to use it and exits 2.
+`<app> run --settings <file>` names a settings file ("A settings file" below); any other word after `run` prints how to use it and exits 2.
 
 The main entry (`src/main/index.ts`) reads the words before anything of the app loads (`runCommand`, `src/main/runCommand.ts`) and starts the app itself (`startApp`, `src/main/app.ts`) with no window:
 
@@ -49,6 +49,28 @@ When it cannot start, it says why on its error output and exits 1, where the app
 | The folder moved, a move holds it, or newer saved work is in it | the refusal page's title and reason, as two lines |
 | This account's Infinitary controls a first mate on another computer (`docs/view.md`) | "Infinitary here controls your first mate on another computer, so there is nothing for a command to run here." and "Leave it from Infinitary's window here first, then run this again." |
 | Anything else stopped its start | "Infinitary could not start: " and the reason |
+
+## A settings file
+
+`<app> run --settings <file>` names a file of settings, so whatever starts the command also decides where programs are found (INF-1228's approved plan, piece 4: "With it, the app finds programs where the file says and asks no login shell").
+Without one the core asks the person's login shell for its search path as it starts (`captureLoginPath`, `docs/architecture.md` §17), which needs a shell whose startup files answer, and nobody may be logged in to the account a boot entry starts.
+The file is one JSON object, read once as the run starts, relative to where the command runs when it is not a full path:
+
+```json
+{ "path": ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"] }
+```
+
+- **`path`** lists the folders where programs are, in the order they are searched, each a full path.
+  Every child the core starts - a crewmate's shell, an install, git and Claude's client - searches the app's own git first, then these folders, then whatever the process path holds that they do not, so the system folders a starter sets stay behind them (`configureSettingsPath`, `src/core/hostEnv.ts`).
+  Nothing is guessed: the installer folders the core adds to a shell's answer (`installerDirs`) count only when the file or the process path names them.
+- **No login shell is asked**: neither the search path's question as the core starts nor the last rung of Claude's locator (`primeClaudeExecutable`).
+  The run's output notes `[host-env] children search the settings path, <n> entries`.
+
+`path` is the only setting; any other name refuses rather than being ignored, so a misspelled `paths` never starts a run that searches none of the folders it meant.
+A file it cannot use ends the run before its core starts: it says "Infinitary could not use the settings file <file>: <reason>." and "Fix the file, then run this again." on its error output, keeps both lines as its last stop for `status`, and exits 78 (`EX_CONFIG`), so a starter can tell a file to fix from another failed start (`RUN_SETTINGS_EXIT`, `src/main/runCommand.ts`).
+The reasons are a missing or unreadable file, a folder, text that is not JSON, anything but one object, a setting it does not know, no `path`, a `path` that is not a list of folders, and a folder that is not a full path or holds the separator (`readRunSettings`, `src/main/runSettings.ts`).
+`--settings` with no file prints the usage and exits 2.
+The file is the starter's, as the account and the start are: the app never writes it, and it holds no sign-in, since Claude signs in only where someone is logged in ("Not yet").
 
 ## Reading status
 
@@ -116,14 +138,16 @@ A note a crashed run left names a process that is gone or holds no lock, so the 
 
 ## Not yet
 
-The rest of INF-1228's plan follows in order, each on its own: a `--settings` file for the search path and the rest (piece 4), control of everything the window does from another computer, a task's browser included (piece 6), and `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
+The rest of INF-1228's plan follows in order, each on its own: control of everything the window does from another computer, a task's browser included (piece 6), and `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
 Claude signs in only where someone is logged in: a Mac nobody is logged in to keeps Claude's login locked in its Keychain, and the crew there uses other subscriptions (captain's pick on question 3).
 Moving an existing record to another account is planned separately (question 7).
 
 ## Tests
 
 `tests/e2e/run-command.spec.ts` starts the built app as `<app> run` in the hermetic environment `launchApp` uses (`hermeticEnv`, `tests/e2e/launch.ts`), with no display on Linux: it runs and stops cleanly, a window opened beside it shows its page, a second run refuses, a replaced program ends it with 75, and a word after `run` exits 2.
+With a settings file and the system folders as its path, a run never asks a stand-in login shell that the same run without one asks, and notes the file's folders; a misspelled setting ends it with 78 and keeps why as its last stop.
 `src/main/runCommand.test.ts` holds the words after `run`, the window's reading of `run.json` and the lock, and the program's identity.
+`src/main/runSettings.test.ts` holds the settings file's reading and each reason it refuses one; `src/core/hostEnv.test.ts` holds the search path a child gets from it with no shell asked, and `src/core/claude/claudeCli.test.ts` the locator's login-shell rung it skips.
 `tests/e2e/status-command.spec.ts` starts the built commands in the same isolated environment and reads status before, during and after a run, a second start, a signal, an update, a forced end and a saved-data refusal, plus invalid arguments and a corrupt record.
 `src/main/runStatus.test.ts` owns the pure output contract, private retained stop, legacy marker compatibility, unknown readings and the platform capability mapping.
 `tests/e2e/link-command.spec.ts` starts the built commands in the same isolated environment: with nothing running `link` says so and makes no data, a word it does not take exits 2, and beside a run a computer's link joins once, a phone's printed code holds its printed link and joins, and `--json` answers a new link; once the run stops it says so again.

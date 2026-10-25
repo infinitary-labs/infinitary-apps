@@ -26,11 +26,31 @@ export function runCommand(argv: readonly string[], defaultApp: boolean): string
   return words?.[0] === "run" ? words.slice(1) : null;
 }
 
+/** What a run was asked for: the settings file it names, if any (./runSettings.ts). */
+export type RunOptions = { settings?: string };
+
+/**
+ * The words after `run`: nothing, or `--settings <file>`. Anything else is a
+ * mistake, answered with the usage, so a misspelled word never starts a run
+ * that ignores it.
+ */
+export function runOptions(args: readonly string[]): RunOptions | null {
+  if (args.length === 0) return {};
+  const [word, file, ...rest] = args;
+  if (word === "--settings" && file && rest.length === 0) return { settings: file };
+  return null;
+}
+
 /** What the command says to whoever reads its output, and why it ended when it did. */
 export const RUN_WORDS = {
   started: "Infinitary is running here with no window, started by a command.",
   stopped: "Infinitary stopped.",
-  usage: ["Usage: infinitary run", "Starts Infinitary here with no window, until it is stopped."],
+  usage: [
+    "Usage: infinitary run [--settings <file>]",
+    "Starts Infinitary here with no window, until it is stopped.",
+    "With --settings, programs are found in the folders the file lists, and no login shell is asked:",
+    '  { "path": ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"] }',
+  ],
   alreadyOpen: ["Infinitary is already open here, as this user.", "Quit it, then run this again."],
   handOver: [
     `Infinitary has work from ${APP_IDENTITIES.fm.app.release} to bring over first.`,
@@ -47,6 +67,10 @@ export const RUN_WORDS = {
   updated: [
     "Infinitary here was updated, so this run ends.",
     "Start it again to run the new version.",
+  ],
+  settings: (file: string, reason: string) => [
+    `Infinitary could not use the settings file ${file}: ${reason}.`,
+    "Fix the file, then run this again.",
   ],
   couldNotStart: (reason: string) => [`Infinitary could not start: ${reason}`],
   /** A refusal the window would show as a page of its own, as two lines. */
@@ -74,6 +98,13 @@ export const RUNNING_BY_COMMAND: DataRefusal = {
  * starts the new version too; a stop ends with 0.
  */
 export const RUN_UPDATED_EXIT = 75;
+
+/**
+ * The code a run ends with when its settings file cannot be used: "a
+ * configuration error" (`EX_CONFIG`), so a starter can tell a file to fix
+ * from a start that failed for another reason.
+ */
+export const RUN_SETTINGS_EXIT = 78;
 
 /** The file in the data folder that says a command runs Infinitary on it, and which process. */
 export const RUN_MARKER = "run.json";

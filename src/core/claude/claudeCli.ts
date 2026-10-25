@@ -6,7 +6,7 @@ import { delimiter, dirname, join } from "node:path";
 import { CLAUDE_CLIENT_MISSING_TEXT, claudeClientOutdatedText } from "@shared/claudeClient";
 import { settingFrom } from "@shared/envSettings";
 import { returnsToLoopback } from "@shared/signIns";
-import { hostEnv } from "../hostEnv";
+import { hostEnv, loginPathCapture } from "../hostEnv";
 import { hostPlatform, hostPlatformProfile } from "../platform";
 
 /**
@@ -162,14 +162,17 @@ function isExecutable(path: string): boolean {
  * non-interactive, bounded). A hit is remembered like any other; a miss is
  * not retried for `SHELL_LOOKUP_RETRY_MS`, so a machine with no client
  * does not spawn a shell on every status tick. An override is never
- * second-guessed here.
+ * second-guessed here, and a run whose settings file named the folders asks
+ * no shell (`configureSettingsPath`, `hostEnv.ts`): nobody may be logged in
+ * there to answer it.
  */
 export async function primeClaudeExecutable(
   env: NodeJS.ProcessEnv = hostEnv(),
+  options: ResolveClaudeOptions = {},
 ): Promise<string | undefined> {
-  const found = resolveClaudeExecutable(env);
+  const found = resolveClaudeExecutable(env, options);
   if (found !== undefined || settingFrom(env, "CLAUDE_CLI")?.trim()) return found;
-  if (hostPlatform() === "win32") return undefined;
+  if (hostPlatform() === "win32" || loginPathCapture()?.source === "settings") return undefined;
   if (Date.now() - shellFailedAt < SHELL_LOOKUP_RETRY_MS) return undefined;
   shellLookup ??= lookupThroughLoginShell(env).then((path) => {
     shellLookup = undefined;

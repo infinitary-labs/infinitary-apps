@@ -7,7 +7,7 @@ import { ownComputerName } from "@core/devices/computerName";
 import { JoinedHome } from "@core/devices/joinedHome";
 import { dueMove } from "@core/folderMove/due";
 import { startInBackground } from "@core/helper/background";
-import { hostPath } from "@core/hostEnv";
+import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { startCore } from "@core/index";
 import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
 import {
@@ -41,13 +41,16 @@ import { followRendererRecovery } from "./rendererRecovery";
 import {
   followInstalledProgram,
   markRunning,
+  RUN_SETTINGS_EXIT,
   RUN_UPDATED_EXIT,
   RUN_WORDS,
   RUNNING_BY_COMMAND,
   type RunEnd,
   runningByCommand,
+  runOptions,
 } from "./runCommand";
 import { readKeychainLock, runEnvironment } from "./runEnvironment";
+import { readRunSettings } from "./runSettings";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
 import { registerPrivilegedSchemes } from "./schemes";
 import { assertSecurityBaseline, installCsp, REQUIRED_WEB_PREFERENCES } from "./security/baseline";
@@ -203,7 +206,8 @@ function endRun(code: number, lines: readonly string[]): void {
  */
 export async function startApp(mainDir: string, run: RunStart | null = null): Promise<void> {
   const windowless = run !== null;
-  if (run && run.args.length > 0) {
+  const options = run ? runOptions(run.args) : {};
+  if (!options) {
     process.stderr.write(`${RUN_WORDS.usage.join("\n")}\n`, () => process.exit(2));
     return;
   }
@@ -348,6 +352,17 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
           process.stderr.write("[infinitary] Could not record why the command stopped.\n");
         }
       };
+      // A settings file names where programs are, so no shell is asked
+      // before the core starts (./runSettings.ts); one it cannot use ends
+      // the run, kept as its last stop for status to read.
+      if (options.settings !== undefined) {
+        const reading = readRunSettings(options.settings);
+        if (!reading.ok) {
+          endRun(RUN_SETTINGS_EXIT, RUN_WORDS.settings(reading.file, reading.reason));
+          return;
+        }
+        configureSettingsPath(reading.settings.path);
+      }
       // Electron quits on the first of these; a module loaded later that
       // listens itself (Pi's sign-in store, through signal-exit) would
       // otherwise take the signal and end the process before the core

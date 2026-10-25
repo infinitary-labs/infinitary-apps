@@ -1,5 +1,6 @@
 import {
   chmodSync,
+  existsSync,
   mkdirSync,
   readFileSync,
   symlinkSync,
@@ -9,8 +10,10 @@ import {
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { CLAUDE_CLIENT_MISSING_TEXT, claudeClientOutdatedText } from "@shared/claudeClient";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { configureSettingsPath, resetLoginPathForTests } from "../hostEnv";
+import { writeLoginShellStub } from "../loginShellStub";
 import {
   checkClaudeClient,
   claudeClientFloor,
@@ -19,6 +22,7 @@ import {
   compareVersions,
   parseClaudeVersion,
   pasteCodeLink,
+  primeClaudeExecutable,
   resetClaudeClientCache,
   resolveClaudeExecutable,
 } from "./claudeCli";
@@ -130,6 +134,30 @@ describe("resolveClaudeExecutable: the installed client (F14)", () => {
     chmodSync(join(home, "plain", "claude"), 0o644);
     const homes = [join(home, "dir"), join(home, "plain")];
     expect(resolveClaudeExecutable(hermetic(home), { homes })).toBe(undefined);
+  });
+});
+
+/**
+ * A run whose settings file named the folders asks no login shell (docs/run.md,
+ * "A settings file"; INF-1228's approved plan, piece 4: "With it, the app finds
+ * programs where the file says and asks no login shell").
+ */
+describe("primeClaudeExecutable: the login shell, its last rung", () => {
+  afterEach(() => resetLoginPathForTests());
+
+  it("asks the login shell when nothing else finds the client, but not where a settings file named the folders", async () => {
+    const home = tree();
+    const homes = [join(home, ".local", "bin")];
+    const stub = writeLoginShellStub(join(home, "shell"), {});
+    const env = { ...hermetic(home), SHELL: stub.shell };
+
+    configureSettingsPath(["/usr/bin", "/bin"]);
+    expect(await primeClaudeExecutable(env, { homes })).toBeUndefined();
+    expect(existsSync(stub.log)).toBe(false);
+
+    resetLoginPathForTests();
+    expect(await primeClaudeExecutable(env, { homes })).toBeUndefined();
+    expect(readFileSync(stub.log, "utf8").trim().split("\n")).toEqual(["-lc"]);
   });
 });
 

@@ -45,6 +45,22 @@ Protected identity and saved-Mac reads start on activation, not prewarm, and a f
 A saved-Mac read suggests unlocking only for `CocoaError(.fileReadNoPermission)` or unavailable protected data; other temporary read failures retain the record and offer another attempt.
 An undecodable record, invalid pin or invalid address discards only the saved Mac, retains the phone's identity, explains the local reset and allows a fresh confirmed link.
 
+### Joining by its address
+
+Under Paste its link, a plain **Join by its address** opens one field for the account and the computer, such as `kun@studio`, and an optional port, 22 when empty (INF-1183).
+The phone signs in to that computer over SSH with SwiftNIO SSH (`SSHJoin`), runs one fixed command there and joins with the one-use phone link the open Infinitary answers, as with a scanned code; SSH carries only the joining, and every connection after it is the pinned connection above.
+The commands are the home's own text, generated into `PhoneSSHCommand` from `src/shared/phoneLink.ts`, and the home's side is `docs/devices.md`, "A phone that joins by its address".
+The first sign-in to an address shows the computer's SSH fingerprint, as `ssh-keygen -l` prints it, and asks once: **Not this one** sends nothing, and the yes is kept in `TrustedHomes.json` by address and port.
+A different key at that address later stops the join before the phone signs in or sends anything.
+The phone signs in with its own key first: a P-256 key in the Secure Enclave where the phone has one, otherwise (a simulator) in this app's Keychain, this device only, never synchronized (`PhoneSSHKey`).
+When the computer refuses that key but takes a password, the phone asks for the account's password there once and signs in with it only to run the command that adds the phone's public key to that account's `~/.ssh/authorized_keys`; it then signs in again with the key.
+The password is never saved, shown or sent anywhere else; SwiftNIO SSH holds it as a string, so the phone cannot zero its bytes after use.
+Beside the password, **Copy this phone's key** copies the public key line, shown in full, for an account that takes no password; **Try again** signs in again once it is added.
+The link is never shown: the phone joins with it at once, trying the typed address first at the link's port, then the link's own addresses, and keeps the typed address among the saved alternatives.
+The join never repeats an uncertain pairing request, as above.
+Each refusal is said in plain words: the computer not reached, Remote Login off (every connection refused), the key refused, a wrong password, Infinitary not open, Infinitary there too old, and the phone too old for the home's answer.
+SwiftNIO SSH has no keyboard-interactive sign-in, so a computer that takes passwords only that way takes the copied key instead.
+
 ## Reading and returning
 
 The session sends a view hello and its current in-memory epoch/sequence cursor, then reads cards, Activity, the task board and the last turn.
@@ -317,7 +333,7 @@ Apple's internal-testing state means testers can install the build, not that a p
 On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the heavy checks run") it refuses before it waits and names `phone.yml` on request instead.
 Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
 Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
-The native journey is four tests in `PhoneJourney`, its parts: `join` (join and recover), `talk` (talk and tasks), `cards`, and `rest`, which runs the character and past choices with the app-hosted tests and any test no other part names (`scripts/phone-test-plan.ts`).
+The native journey is five tests in `PhoneJourney`, its parts: `join` (join and recover), `talk` (talk and tasks), `cards`, `address` (join by its address), and `rest`, which runs the character and past choices with the app-hosted tests and any test no other part names (`scripts/phone-test-plan.ts`).
 Each part on each device is its own gate with its own simulator and test home, and `--simulators` (default 6) sets how many run at once; they start longest part first, each part on the iPad before the iPhone.
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
 A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, which a pull request's phone check reads to keep within its budget.
@@ -348,6 +364,8 @@ The test home uses the real stores, dispatcher, pairing and TLS connection, with
 The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
 It first verifies the independent published-contract client can join and read the sample card.
 The join part covers a wrong Mac pin, joining, cards and feed, Activity scrolled to its last whole row, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
+The address part starts the Mac's own `sshd` beside its home (`tests/helpers/sshServer.ts`), run as the test's user with a scratch home folder and every session handed the home's data folder; it checks Not this one, the fingerprint asked again, the key refused, a wrong password's words, then adds the key the phone shows and joins.
+That `sshd` can check no password, so the password that lets the key in is checked by the package tests against an SSH server of their own (`SSHJoinTests`).
 Every other part first joins its own home, and reaches the state the single journey had reached before it: the talk part puts the hero card on the stage and relaunches the app.
 The cards part drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, a picture card drawn while the phone is still reaching after a reconnect, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.
 It checks both immediate script stalls and a stall during answer collection, and captures both appearances and the largest standard Dynamic Type size.

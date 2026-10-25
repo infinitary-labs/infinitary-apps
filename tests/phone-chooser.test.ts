@@ -7,6 +7,7 @@ import {
   phoneDecision,
   placeParts,
 } from "../scripts/affected-phone";
+import { PHONE_PARTS } from "../scripts/phone-test-plan";
 
 // INF-827 (the captain's approved INF-828 plan: "Run only the parts a change reaches; skip
 // changes to unused setup" and "A journeys-style budget, with the rest checked later on main",
@@ -55,6 +56,8 @@ describe("the phone check's parts on a pull request", () => {
       ["rest", 2, false],
       ["join", 2, false],
       ["talk", 2, false],
+      // A part main has no time for yet costs the slowest measured one.
+      ["address", 2, false],
     ]);
     expect(placed.find((part) => !part.kept)?.reason).toMatch(/nightly check of main/);
   });
@@ -78,7 +81,7 @@ describe("the phone check's parts on a pull request", () => {
 
   it("runs every part the change reaches when no part times can be read", () => {
     for (const times of [null, "", "{}", "not json"]) {
-      expect(kept("e3be41f53", times)).toEqual(["cards", "join", "rest", "talk"]);
+      expect(kept("e3be41f53", times)).toEqual(["address", "cards", "join", "rest", "talk"]);
       expect(choose("e3be41f53", times)![0]!.reason).toMatch(/no part times/);
     }
   });
@@ -91,7 +94,7 @@ describe("the phone check's parts on a pull request", () => {
       partReach(reasons, undefined, Object.keys(testFiles), read),
       partReach(reasons, change("2dbbedc52").testDiff, Object.keys(testFiles), () => undefined),
     ])
-      expect(reach.map((part) => part.distance)).toEqual([0, 0, 0, 0]);
+      expect(reach.map((part) => part.distance)).toEqual(PHONE_PARTS.map(() => 0));
   });
 
   it("runs the virtual Mac scripts' change, with every part, while the switch is on", () => {

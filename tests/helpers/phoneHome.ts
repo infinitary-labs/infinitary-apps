@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { subscribe, unsubscribe } from "node:diagnostics_channel";
-import { copyFileSync, mkdirSync, writeFileSync } from "node:fs";
+import { appendFileSync, copyFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage } from "node:http";
 import { createServer as createTCPServer, type Socket } from "node:net";
 import { join } from "node:path";
@@ -33,6 +33,7 @@ import { claimedPort } from "./claimedPort";
 import { standInDnsSd } from "./dnsSdStandIn";
 import type { PhoneChord, PhoneKeyWitness } from "./phoneKeyboard";
 import { startScriptedClient } from "./scriptedClient";
+import { type SshServer, startSshServer } from "./sshServer";
 
 /** INF-64 piece 2: a disposable real home, never a replacement for the wire or stores. */
 export async function startPhoneHome(
@@ -290,6 +291,7 @@ export async function startPhoneHome(
   });
   const token = randomBytes(24).toString("hex");
   let changed = 0;
+  let ssh: SshServer | undefined;
   const control = createServer(async (request, response) => {
     const [_, supplied, command] = (request.url ?? "").split("/");
     if (supplied !== token) {
@@ -398,6 +400,36 @@ export async function startPhoneHome(
           losePairReply = command === "routing-lost-link";
           await connection.settled();
           result = { link: multiple.toString(), at: `127.0.0.1:${port}` };
+          break;
+        }
+        // INF-1183: the home as a phone joins it by its address. The Mac's own sshd,
+        // run as this user, signs the phone in to a home folder of its own and
+        // hands every session this home's data folder, where its door is open.
+        // It offers a password and takes none, as it can check none.
+        case "POST ssh-start": {
+          const sshHome = join(root, "ssh-home");
+          mkdirSync(join(sshHome, ".ssh"), { recursive: true });
+          ssh ??= await startSshServer({
+            passwords: true,
+            home: sshHome,
+            env: { HOME: sshHome, INFINITARY_USER_DATA_DIR: userData },
+          });
+          result = { address: ssh.address, port: ssh.port };
+          break;
+        }
+        // The person adds the key the phone showed to their account there.
+        case "POST ssh-authorize": {
+          let line = "";
+          for await (const chunk of request) {
+            line += chunk.toString();
+            if (line.length > 1024) throw new Error("A key line is too large");
+          }
+          if (!/^ecdsa-sha2-nistp256 [A-Za-z0-9+/=]+ infinitary-phone$/.test(line.trim()))
+            throw new Error("The phone showed no key line");
+          appendFileSync(join(root, "ssh-home", ".ssh", "authorized_keys"), `${line.trim()}\n`, {
+            mode: 0o600,
+          });
+          result = { authorized: true };
           break;
         }
         case "GET routing-state":
@@ -1086,6 +1118,7 @@ export async function startPhoneHome(
       boardHold?.released.resolve();
       boardHold = undefined;
       await new Promise<void>((resolve) => control.close(() => resolve()));
+      await ssh?.stop();
       await connection.close();
       unsubscribe("net.server.socket", countAttempt);
       for (const socket of stalledSockets) socket.destroy();

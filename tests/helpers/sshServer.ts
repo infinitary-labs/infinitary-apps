@@ -162,10 +162,16 @@ function keygen(path: string, passphrase = ""): string {
  * password sign-in, as macOS's Remote Login does by default, and refuses
  * every password, since it runs as the test's own user. With `home`, it
  * also lets in the keys in that folder's `.ssh/authorized_keys`, as the
- * other user's home folder there.
+ * other user's home folder there. With `env`, every session there gets
+ * those variables, as that user's own settings would give them.
  */
 export async function startSshServer(
-  options: { forwarding?: boolean; passwords?: boolean; home?: string } = {},
+  options: {
+    forwarding?: boolean;
+    passwords?: boolean;
+    home?: string;
+    env?: Record<string, string>;
+  } = {},
 ): Promise<SshServer> {
   const dir = scratchDir("infinitary-sshd-");
   const hostKey = keygen(join(dir, "host"));
@@ -222,6 +228,7 @@ export async function startSshServer(
     ...(process.platform === "linux" && process.env.CHROME_DEVEL_SANDBOX
       ? [`CHROME_DEVEL_SANDBOX=${process.env.CHROME_DEVEL_SANDBOX}`]
       : []),
+    ...Object.entries(options.env ?? {}).map(([name, value]) => `"${name}=${value}"`),
   ];
   const config = join(dir, "sshd_config");
   writeFileSync(

@@ -193,6 +193,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/helper/fromHome.test.ts` | a folder held by a live process, waited for on the real clock | 5 s default |
 | `src/core/devices/computerUpdate.test.ts` | real TLS on loopback and the Mac's own tar, a computer's run started again on the real clock; on a Mac, a download from a local HTTPS release with curl, shasum, ditto and a stand-in codesign | 10 s |
 | `src/core/devices/farSystems.test.ts` | `/bin/sh` running the look, the removal and the controller a home sends, with the system's own tools the look asks | 30 s |
+| `src/core/devices/phoneDoor.test.ts` | each login shell this computer has (sh, bash, zsh, dash, tcsh, csh) running the phone's fixed commands, with the system's curl reaching the door on loopback | 5 s default (Mac slowest 0.1 s) |
 
 Measure with the project's own worker count and no ceiling, several times, and take each test's fastest run.
 Noise only ever adds time:

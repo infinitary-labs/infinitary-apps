@@ -3,6 +3,23 @@ import InfinitaryKit
 import Observation
 import UIKit
 
+/// INF-1183: joining a home by its address, one step at a time on its sheet.
+struct AddressJoin: Equatable {
+    enum Step: Equatable {
+        /// Signing in and asking the home for a link.
+        case working
+        /// First sight of the home's key: the person says yes, or Not this one.
+        case trust(SSHHostKey)
+        /// The home did not let the phone's key in; `password` says whether it takes one.
+        case keyRefused(password: Bool)
+        /// The join stopped; `problem` says why, and the person may try again.
+        case stopped
+    }
+    let address: SSHAddress
+    var step: Step
+    var problem: String?
+}
+
 @MainActor @Observable final class PhoneModel {
     var connection: ReadOnlySession?
     var proposal: JoinLink?
@@ -10,10 +27,14 @@ import UIKit
     var busy = false
     var removed = false
     let nearby = NearbyMacs()
+    var addressJoin: AddressJoin?
     private var identity: PhoneIdentity?
+    private var sshKey: PhoneSSHKey?
+    private var signingIn: Task<Void, Never>?
     private var joining: Task<Void, Never>?
     private var foreground = false
     private let savedURL: URL
+    private let trustedURL: URL
     private let loadIdentity: () throws -> PhoneIdentity
     private let readMac: () throws -> JoinedMac?
     private let protectedDataAvailable: @MainActor () -> Bool
@@ -24,6 +45,7 @@ import UIKit
         let url = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("JoinedMac.json")
         savedURL = url
+        trustedURL = url.deletingLastPathComponent().appendingPathComponent("TrustedHomes.json")
         self.loadIdentity = loadIdentity
         self.protectedDataAvailable = protectedDataAvailable
         self.readMac = readMac ?? {
@@ -84,7 +106,12 @@ import UIKit
     }
 
     func join() {
-        guard let link = proposal, !busy else { return }
+        guard let link = proposal else { return }
+        join(link)
+    }
+
+    private func join(_ link: JoinLink) {
+        guard !busy else { return }
         guard restore(), let identity else { proposal = nil; return }
         guard connection == nil else {
             proposal = nil; problem = "Leave or forget your saved computer before joining another."
@@ -104,6 +131,92 @@ import UIKit
                 proposal = nil; removed = false; CharacterCues.greetOnNextSight(); connect(mac)
             } catch { problem = error.localizedDescription }
         }
+    }
+
+    /// The phone's own key line, as the home's `authorized_keys` holds it.
+    var sshKeyLine: String? { (try? phoneSSHKey())?.line }
+
+    private func phoneSSHKey() throws -> PhoneSSHKey {
+        if let sshKey { return sshKey }
+        let key = try PhoneSSHKey.loadOrCreate()
+        sshKey = key
+        return key
+    }
+
+    /// Signs in to the typed address with the phone's key and joins with the link its home answers.
+    func joinByAddress(_ text: String, port: String) {
+        guard connection == nil, !busy, signingIn == nil else { return }
+        do {
+            addressJoin = AddressJoin(address: try SSHAddress(text, port: port), step: .working)
+            askForLink()
+        } catch { addressJoin = nil; problem = error.localizedDescription }
+    }
+
+    /// The person said this is their computer: keep the yes, then sign in.
+    func trustHome() {
+        guard let join = addressJoin, case .trust(let key) = join.step else { return }
+        var homes = trustedHomes()
+        homes.trust(key, for: join.address)
+        do { try keep(homes) } catch {
+            addressJoin?.problem = "Could not keep this computer’s fingerprint. Try again."
+            return
+        }
+        askForLink()
+    }
+
+    /// Lets the phone's key in with the password, typed once, then signs in with the key.
+    func sendPassword(_ password: String) {
+        guard let join = addressJoin, case .keyRefused(true) = join.step, signingIn == nil, !password.isEmpty else { return }
+        addressJoin?.step = .working; addressJoin?.problem = nil
+        signingIn = Task {
+            defer { signingIn = nil }
+            do {
+                try await SSHJoin.placeKey(join.address, trusted: trustedHomes().key(for: join.address),
+                                           key: try phoneSSHKey(), password: password)
+            } catch {
+                addressJoin?.step = .keyRefused(password: true)
+                addressJoin?.problem = error.localizedDescription
+                return
+            }
+            signingIn = nil
+            askForLink()
+        }
+    }
+
+    func tryAddressAgain() { if addressJoin != nil { askForLink() } }
+
+    func cancelAddressJoin() { signingIn?.cancel(); signingIn = nil; addressJoin = nil }
+
+    private func askForLink() {
+        guard let join = addressJoin, signingIn == nil else { return }
+        addressJoin?.step = .working; addressJoin?.problem = nil
+        signingIn = Task {
+            defer { signingIn = nil }
+            do {
+                let link = try await SSHJoin.link(join.address, trusted: trustedHomes().key(for: join.address),
+                                                  key: try phoneSSHKey())
+                guard addressJoin?.address == join.address else { return }
+                // The link is never shown: the phone joins with it at once, typed address first.
+                addressJoin = nil; problem = nil
+                self.join(link)
+            } catch SSHJoinError.unknownHost(let key) {
+                addressJoin?.step = .trust(key)
+            } catch SSHJoinError.keyRefused(_, let password) {
+                addressJoin?.step = .keyRefused(password: password)
+            } catch {
+                addressJoin?.step = .stopped
+                addressJoin?.problem = error.localizedDescription
+            }
+        }
+    }
+
+    private func trustedHomes() -> TrustedHomes {
+        (try? JSONDecoder().decode(TrustedHomes.self, from: Data(contentsOf: trustedURL))) ?? TrustedHomes()
+    }
+
+    private func keep(_ homes: TrustedHomes) throws {
+        try FileManager.default.createDirectory(at: trustedURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(homes).write(to: trustedURL, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }
 
     func leave() async {

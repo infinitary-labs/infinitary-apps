@@ -85,6 +85,7 @@ import { firewallKeepsOut } from "./devices/firewall";
 import { appBundleOf, joinCommand } from "./devices/joinCommand";
 import { NearbyMacs } from "./devices/nearby";
 import { DevicePairing } from "./devices/pairing";
+import { PhoneDoor } from "./devices/phoneDoor";
 import { PublishedBuilds, standInTapFetch } from "./devices/publishedBuilds";
 import { RemoteLogin } from "./devices/remoteLogin";
 import { systemSsh } from "./devices/ssh";
@@ -373,6 +374,8 @@ export type CoreServices = {
   nearbyMacs: NearbyMacs;
   /** This Mac's Bonjour announcement to a phone on its list; stopped at dispose. */
   macAnnouncement: MacAnnouncement;
+  /** The door a phone signed in over SSH asks for a link at; closed at dispose. */
+  phoneDoor?: PhoneDoor;
   /**
    * This Mac's own SSH connection to each computer it added by its address
    * (docs/devices.md, "Through the home's SSH"): the shell starts it once it
@@ -1595,6 +1598,18 @@ export async function createServices(
   });
   macAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin());
   devices.subscribe(() => macAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin()));
+  // A phone signed in to this computer over SSH asks the open app for a
+  // one-use phone link at its door (docs/devices.md, "A phone that joins by
+  // its address"); with no door, the phone says so and nothing joins.
+  const phoneDoor = await PhoneDoor.open({
+    dir: paths.phoneDoorDir,
+    invite: () => devices.invite({ kind: "mac", phone: true }).link,
+  }).catch((error: unknown) => {
+    console.warn(
+      `[devices] no phone door, so a phone cannot join by its address: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    return undefined;
+  });
   // Each computer that runs work signing in to its own subscriptions: what
   // Settings -> Intelligence draws, and what a task there is routed among.
   // A computer's word on its sign-ins reaches the crew once it exists: a
@@ -3130,6 +3145,7 @@ export async function createServices(
     remoteLogin,
     nearbyMacs,
     macAnnouncement,
+    ...(phoneDoor ? { phoneDoor } : {}),
     sshConnections,
     workDevices,
     computerResources,

@@ -7,9 +7,10 @@ import XCTest
     private let app = XCUIApplication()
     private var control: String { ProcessInfo.processInfo.environment["PHONE_TEST_HOME"]! }
 
-    private func home(_ command: String, method: String = "POST") async throws -> [String: Any] {
+    private func home(_ command: String, method: String = "POST", body: String? = nil) async throws -> [String: Any] {
         var request = URLRequest(url: URL(string: control + "/" + command)!)
         request.httpMethod = method
+        request.httpBody = body.map { Data($0.utf8) }
         let (data, response) = try await phoneTestSession.data(for: request)
         XCTAssertEqual((response as? HTTPURLResponse)?.statusCode, 200, String(data: data, encoding: .utf8) ?? "")
         return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
@@ -399,6 +400,71 @@ import XCTest
     }
 
     /// Part 2, cards: forms, paging, answers, pictures, recordings, threads, out-of-reach refusal and large type.
+    /// The address part, join by its address (INF-1183, the captain's plan "join a home from the iOS app by SSH
+    /// address"): the Mac's own sshd beside the test home signs the phone in, asks its fingerprint once,
+    /// refuses its key and a wrong password in plain words, lets in the key the phone shows, and the
+    /// phone joins with the link the home's door answers, never shown.
+    func testJoinByAddress() async throws {
+        try await launchFresh()
+        let ssh = try await home("ssh-start")
+        let address = try XCTUnwrap(ssh["address"] as? String)
+        let port = try XCTUnwrap(ssh["port"] as? Int)
+        // The port first, then the address, whose Return continues as Continue does.
+        func typeAddress() {
+            app.buttons["join-by-address"].tap()
+            let field = app.textFields["ssh-address"]
+            XCTAssertTrue(field.waitForPresence(timeout: 10), app.debugDescription)
+            app.textFields["ssh-port"].tap()
+            app.textFields["ssh-port"].typeText(String(port))
+            field.tap()
+            if app.staticTexts["Speed up your typing by sliding your finger across the letters to compose a word."].exists {
+                app.buttons["Continue"].tap()
+            }
+            field.typeText(address + "\n")
+        }
+        XCTAssertTrue(app.buttons["join-by-address"].waitForPresence(timeout: 10))
+        picture("join-with-address")
+        typeAddress()
+        // The first sign-in asks about the computer's key, and Not this one sends nothing.
+        let fingerprint = app.staticTexts["ssh-fingerprint"]
+        XCTAssertTrue(fingerprint.waitForPresence(timeout: 30), app.debugDescription)
+        XCTAssertTrue(fingerprint.label.hasPrefix("SHA256:"), fingerprint.label)
+        try await appearances("address-fingerprint")
+        app.buttons["ssh-not-this-one"].tap()
+        XCTAssertTrue(app.buttons["join-by-address"].waitForPresence(timeout: 10))
+        let declined = try await home("state", method: "GET")
+        XCTAssertEqual((declined["devices"] as? [Any])?.count, 0)
+        // Asked again, since no yes was kept; then trusted.
+        typeAddress()
+        XCTAssertTrue(fingerprint.waitForPresence(timeout: 30), app.debugDescription)
+        app.buttons["ssh-trust"].tap()
+        // The computer does not know this phone's key and takes a password.
+        let password = app.secureTextFields["ssh-password"]
+        XCTAssertTrue(password.waitForPresence(timeout: 30), app.debugDescription)
+        let key = app.staticTexts["ssh-public-key"]
+        XCTAssertTrue(key.exists)
+        try await appearances("address-password")
+        password.tap()
+        password.typeText("not the password")
+        app.buttons["ssh-send-password"].tap()
+        let problem = app.staticTexts["ssh-problem"]
+        XCTAssertTrue(problem.waitForPresence(timeout: 30), app.debugDescription)
+        XCTAssertEqual(problem.label, "127.0.0.1 did not take that password. Nothing was kept.")
+        picture("address-wrong-password")
+        // The person adds the key the phone shows to their account there, then tries again.
+        XCTAssertTrue(key.waitForPresence(timeout: 10))
+        _ = try await home("ssh-authorize", body: key.label)
+        app.buttons["ssh-try-again"].tap()
+        reach("In reach", timeout: 30)
+        let joined = try await home("state", method: "GET")
+        let devices = try XCTUnwrap(joined["devices"] as? [[String: Any]])
+        XCTAssertEqual(devices.count, 1)
+        XCTAssertEqual(devices.first?["kind"] as? String, "view")
+        XCTAssertEqual(devices.first?["system"] as? String, "ios")
+        XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10), app.debugDescription)
+        picture("address-joined")
+    }
+
     func testCards() async throws {
         try await launchJoined()
         try await verifyCards()

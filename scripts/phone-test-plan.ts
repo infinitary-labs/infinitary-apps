@@ -12,7 +12,7 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
   return keys;
 }
 
-// INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is four
+// INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is five
 // tests, and each runs alone from its own fresh simulator and test home, side by side with the
 // others. The order is the start order, longest first as measured on Oct 19 and 20: join and
 // recover 4.2 minutes, talk and tasks 3.7, cards 2.3, the character and past choices 0.7.
@@ -23,6 +23,8 @@ export const PHONE_PARTS = [
   { name: "join", test: "testJoinAndRecover", photos: false },
   { name: "talk", test: "testTalkAndTasks", photos: true },
   { name: "cards", test: "testCards", photos: false },
+  // INF-1183: joining a home by its address, against the Mac's own sshd beside the test home.
+  { name: "address", test: "testJoinByAddress", photos: false },
   // The last part runs every test no other part names: the app-hosted tests and any new one.
   { name: "rest", test: "testCharacterAndPastChoices", photos: true },
 ] as const;

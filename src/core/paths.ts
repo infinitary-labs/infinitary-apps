@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { PHONE_DOOR_FOLDER } from "../shared/phoneLink";
 
 /** The personal workspace's fleet-root name; the repo registry refuses it for anything else. */
 export const PERSONAL_WORKSPACE_NAME = "personal";
@@ -43,6 +44,13 @@ export type AppPaths = {
    * opens and closes the channel, written only by `AxiChannel`.
    */
   taskChannelDir: string;
+  /**
+   * The phone's door (docs/devices.md, "A phone that joins by its address"):
+   * 0700, its loopback address and key in two 0600 files, emptied each time
+   * the app opens and closes the door, written only by `PhoneDoor`. Its name
+   * is `PHONE_DOOR_FOLDER`, where the phone's fixed command looks.
+   */
+  phoneDoorDir: string;
   /** Pi's agentDir: app-scoped config root, never ~/.pi/agent. */
   piAgentDir: string;
   /** Per-crewmate session dirs: crewmates/<taskId>/sessions/. */
@@ -127,6 +135,7 @@ export function appPathsFor(userData: string): AppPaths {
     devicesDir: join(userData, "devices"),
     webSignInsDir: join(userData, "web-sign-ins"),
     taskChannelDir: join(userData, "task-channel"),
+    phoneDoorDir: join(userData, PHONE_DOOR_FOLDER),
     piAgentDir: join(userData, "pi-agent"),
     crewmatesDir: join(userData, "crewmates"),
     worktreesDir: join(userData, "worktrees"),

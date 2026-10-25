@@ -19,7 +19,29 @@ public struct JoinLink: Equatable, Sendable {
     public let pin: String
     public let code: String
     public let kind: String
-    public var computer: String { (try? Self.url(addresses[0], path: "/").host) ?? "your computer" }
+    /// INF-1183: the address its person typed, at the link's port, tried before the link's own.
+    public private(set) var first: String?
+    public var computer: String { (try? Self.url(first ?? addresses[0], path: "/").host) ?? "your computer" }
+
+    /// The routes in the order a join tries them: the typed address, then the link's own.
+    public var routes: [String] {
+        let rest = PhoneAddresses.preferred(addresses)
+        guard let first else { return rest }
+        return [first] + rest.filter { $0 != first }
+    }
+
+    /// This link, tried first at `address`.
+    public func trying(first address: String) -> JoinLink {
+        var link = self; link.first = address; return link
+    }
+
+    /// The typed host at the port the link names.
+    public func typedAddress(_ host: String) throws -> String {
+        guard let port = try Self.url(addresses[0], path: "/").port else { throw PhoneError.damagedLink }
+        let address = "\(host):\(port)"
+        _ = try Self.url(address, path: "/pair")
+        return address
+    }
 
     public init(_ text: String) throws {
         let text = text.trimmingCharacters(in: .whitespacesAndNewlines)

@@ -32,6 +32,7 @@ struct PhoneView: View {
     @Bindable var model: PhoneModel
     @State private var scanning = false
     @State private var pasting = false
+    @State private var addressing = false
     @State private var linkText = ""
     @State private var details = false
     @State private var settings = false
@@ -148,6 +149,12 @@ struct PhoneView: View {
                     .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { linkText = ""; pasting = false } } }
                 }.phoneSheetSurface()
             }
+            .sheet(isPresented: Binding(get: { addressing || model.addressJoin != nil },
+                                        set: { if !$0 { model.cancelAddressJoin(); addressing = false } })) {
+                PhoneAddressSheet(model: model, close: { addressing = false })
+            }
+            // Once the computer answers its link, the sheet closes and the phone joins with it.
+            .onChange(of: model.busy) { _, busy in if busy { addressing = false } }
             // An alert keeps Cancel beside Join; the link may come from a scan, a paste or another app, with no button to anchor to.
             .alert("Join \(model.proposal?.computer ?? "your computer")?", isPresented: Binding(
                 get: { model.proposal != nil && !model.busy },
@@ -203,6 +210,9 @@ struct PhoneView: View {
                 // A plain secondary, with no fill under it.
                 Button { pasting = true } label: { Text("Paste its link").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
                     .buttonStyle(.borderless).accessibilityIdentifier("paste-link")
+                // INF-1183: a computer away from this network, reached by the address its person signs in with.
+                Button { addressing = true } label: { Text("Join by its address").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
+                    .buttonStyle(.borderless).accessibilityIdentifier("join-by-address")
             }.controlSize(.large).disabled(model.busy)
         }
     }

@@ -70,6 +70,8 @@ describe("the phone journey's parts", () => {
       "iphone talk",
       "ipad cards",
       "iphone cards",
+      "ipad address",
+      "iphone address",
       "ipad rest",
       "iphone rest",
     ]);

@@ -32,7 +32,7 @@ public final class PinnedTransport: NSObject, URLSessionDelegate, URLSessionTask
     public func pair(_ link: JoinLink, name: String) async throws -> JoinedMac {
         // Preflight is non-mutating: even a timeout here cannot spend the invitation.
         // Once a pinned route answers, the one-use POST is never retried on another route.
-        for address in PhoneAddresses.preferred(link.addresses) {
+        for address in link.routes {
             do {
                 let request = URLRequest(url: try JoinLink.url(address, path: PhoneContract.connectionPath))
                 let (_, response) = try await session.data(for: request)
@@ -80,7 +80,7 @@ public final class PinnedTransport: NSObject, URLSessionDelegate, URLSessionTask
         }
         guard result["kind"] as? String == "view", let id = result["deviceId"] as? String,
               !id.isEmpty, id.count <= 64 else { throw PhoneError.invalidReply }
-        return JoinedMac(addresses: PhoneAddresses.preferred(link.addresses),
+        return JoinedMac(addresses: link.routes,
                          pin: link.pin, deviceID: id, name: link.computer)
     }
 

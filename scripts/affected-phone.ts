@@ -78,6 +78,11 @@ export const PART_OWNERS: Record<PhonePart, readonly string[]> = {
     "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/CardValues.swift",
     "scripts/generate-phone-cards.ts",
   ],
+  address: [
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/SSHJoin.swift",
+    "ios/Infinitary/InfinitaryKit/Sources/InfinitaryKit/PhoneSSHKey.swift",
+    "ios/Infinitary/InfinitaryApp/PhoneAddressSheet.swift",
+  ],
   rest: ["ios/Infinitary/InfinitaryApp/PhoneCharacter.swift"],
 };
 

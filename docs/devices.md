@@ -489,6 +489,22 @@ When Remote Login could not do it, the feed says so, and this Mac keeps a cleanu
 After thirty days it stops, and says so once: "Could not remove what Infinitary set up on Mac mini: this computer has not reached sam@mini.local in thirty days." and "It stays there, with any unmerged work, until it is deleted there by hand."
 Removed in reach, a computer this Mac reaches over its own SSH hears it through that connection, which stays until it went or fifteen seconds passed, and then gets the same cleanup as a backstop, which finds nothing of this home's left once it removed it itself.
 
+## A phone that joins by its address
+
+A phone away from this computer's network joins it once by the address its person signs in with, such as `kun@studio`, over SSH (INF-1183, Macs and Linux homes; the phone's side is `docs/ios.md`, "Joining by its address").
+Remote Login on a Mac, or an SSH server on Linux, and the person's own account are all it needs: nothing else is set up on this computer.
+SSH carries only the joining: the phone asks for an ordinary one-use phone link, joins with it as with a scanned code, and every connection after it is the pinned connection.
+The device it adds is listed in Devices for Remove like any phone, never as on this Mac, and the feed line says it joined.
+
+The phone runs one of two fixed commands, both in `src/shared/phoneLink.ts`, each one line for any login shell - sh, bash, zsh, fish or csh - whose script holds no single quote, backslash, `!` or newline.
+The link command looks in the account's data folders (`INFINITARY_USER_DATA_DIR`, then the release's and a development run's, on a Mac and on Linux) for the phone's door, and asks it with the system's curl.
+The door (`src/core/devices/phoneDoor.ts`, `AppPaths.phoneDoorDir`) is the task channel's pattern: while the app runs it listens on a loopback port and writes that address and a 256-bit key, as the header line curl sends, to two 0600 files in a 0700 folder, emptied when it opens and closes.
+Reading the key is the permission: only this account can, and it could already make a link at the keyboard.
+A request naming another host or carrying an `Origin` is refused before its key is read.
+The door answers one line, `infinitary-phone-link 1 link <link>`, from `DevicePairing.invite({ kind: "mac", phone: true })`, with the default ten minutes; no log or feed line carries the link.
+With no door, Chromium's `SingletonLock` in a data folder tells a running Infinitary that is too old, with no door, from none open; a Linux home with no curl says so.
+The key command, the one a password signs in for, adds the phone's public key line to that account's `~/.ssh/authorized_keys` once, making the folder and file only that account may change.
+
 ## Finding the home again
 
 A device keeps the address its link named (`at` in its grant), so after this Mac's address changes - the captain chose another, or the network gave it another - the device dials where this Mac was.
@@ -1027,9 +1043,15 @@ A link that expires with nothing paired stops the listener.
 | A Mac added by its address claims to run this first mate's work already | The look only reads a pin and an id, both public, and decides what the feed says and whether a Mac in reach is left alone. Finding this Mac again still needs the key on the list, shown in the handshake; any other key is told `removed` and joins anew with the captain's one-use link, as Add it would have. |
 | The connection this Mac keeps to a Mac it added by its address | Its own master and control socket, in a 0700 folder only this user enters, never the captain's shared connections; only the one forward the app adds, over the control socket with no setting read; every other request fails once the master is gone instead of connecting anew. A crash ends the controller there through its input, and silence through its 75-second lease. |
 | An address that reaches another Mac later | Updating, changing the address and removing each check there first that the folder runs work for this home as that computer, and touch nothing else. A host key that changed stops the connection until the captain's Try again. |
+| Something answers at the address a phone typed | The phone shows its SSH fingerprint and asks once, signs in to nothing before the yes, and stops before signing in at a different key later. The link it gets must still show this computer's pin before the phone sends its code. |
+| The phone's link door on this computer | It listens only on loopback, answers only the holder of its 0600 key in a 0700 folder - this account, which could already make a link - refuses a request naming another host or carrying an `Origin`, and its folder is emptied when the app opens and closes. |
+| The password a phone types once | It signs in only at the fingerprint the person said yes to, runs only the command that adds the phone's own public key, and is kept nowhere on the phone or here. |
 | A prompt-injected first mate asks to add an attacker's Mac by its address | It can only offer the card, which names the address; only the captain's click reaches it, and a Mac added runs no work until the captain sets a project to run on it. |
 
 ## Not yet
+
+- A real phone joining by its address from away, over a real network: the phone check signs in to this computer's own `sshd`, and a real phone away from home is checked only with the captain's separate consent.
+- A Linux home with no curl: the runners all have it, so its words are untested.
 
 - Checking this Mac's own SSH connection between two real Macs on a shared network, with nobody at the far one (FI3-970's acceptance): the tests stand in the far Mac as another folder on this one, over a throwaway SSH server.
 - Checking a real Mac add a real Linux computer by its address with the published AppImage: the tests stand in the far computer on the same one, Linux on hosted Ubuntu, and the AppImage with a stand-in.
@@ -1046,6 +1068,8 @@ A link that expires with nothing paired stops the listener.
 - A Mac that joined at its first launch keeps the app the person installed and its work follows that app; updating it from here keeps a copy in its work folder, as for a Mac a command added (`docs/helper.md`, "A Mac that also controls").
 
 ## Tests
+
+- `src/core/devices/phoneDoor.test.ts`: a phone's fixed commands, run as sshd runs them under each login shell this computer has, with the system's curl: the link the real pairing made, the Mac and Linux data folders, the door's modes and refusals, not open, too old, no link, and the key let in once.
 
 - `src/shared/devices.test.ts`: the link and the name, and every malformed link refused.
 - `src/core/devices/identity.test.ts`: the certificate carries its key and verifies, the home's key survives a restart, and its files are 0600 in a 0700 folder.

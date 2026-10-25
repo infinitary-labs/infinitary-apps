@@ -21,6 +21,13 @@ One line follows: “Your first mate lives on your Mac.
 Join it to read your cards and Activity here.”
 Nearby is one plain line under it, with no box: the way to find a computer, or each computer announcing Infinitary as a status dot, its name and Scan its code; a press opens the scanner, never trusts the announcement.
 Scan the code is the one prominent full-width control, and Paste its link a plain secondary below it with no fill.
+Join by its address is a second plain secondary under Paste its link, for a computer away from this network.
+It opens a sheet titled Join by its address: one callout line saying to type the account and computer as when signing in to it, with Remote Login or SSH on, a field with the placeholder `kun@studio`, an optional Port (22) field and a prominent Continue.
+While the phone signs in, the sheet shows only “Signing in to <computer>…” with a native progress indicator.
+The first sign-in asks once in the same sheet: the heading “Is this <computer>?”, one line, the fingerprint in the data face on the field's surface, a caption that the phone asks once and stops if the fingerprint changes, a prominent Trust <computer> and a plain Not this one.
+When the computer has not let this phone's key in, the sheet says so in one callout line; where it takes a password, a secure field “Your password on <computer>” and a prominent Sign in once come first, then a caption offering the key instead.
+The phone's public key line follows in the micro face on the field's surface, with the plain secondaries Copy this phone's key (Copied once pressed) and Try again.
+A refusal is one callout line in the warning color at the sheet's foot, in plain words; the link the computer answers is never shown, and the sheet closes as the phone joins.
 An alert names the computer address reached through the link, with Cancel beside Join, before the phone starts showing it; the authenticated computer name is not known before joining.
 The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.

@@ -383,6 +383,7 @@
         "!src/core/devices/dnsSd.test.ts",
         "!src/core/devices/computerUpdate.test.ts",
         "!src/core/devices/farSystems.test.ts",
+        "!src/core/devices/phoneDoor.test.ts",
         "!src/core/personal/panelInstructions.test.ts",
         "!src/core/personal/liveWorkspace.test.ts",
         "!src/core/personal/personalExtensions.test.ts",

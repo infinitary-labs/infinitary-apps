@@ -123,54 +123,42 @@ function checkRepairMove(
   if (user.includes(`${CI_REPAIR_MARKER} diagnose`)) {
     const headSha = CI_REPAIR_HEADS.find((head) => user.includes(head)) ?? "missing";
     const flake = headSha === CI_REPAIR_HEADS[2];
-    if (!results.length)
-      return {
-        calls: [
-          {
-            name: "check_change",
-            args: {
-              diagnosis: {
-                headSha,
-                check: "linux-checks",
-                classification: flake ? "suspected-flake" : "baseline-blocked",
-                evidence: flake
-                  ? "Failed standalone timeout log differs from the same-head successful verification"
-                  : "Separate owner reproduced the same failed assertion on untouched main, with log evidence",
-                ...(flake ? { changedTest: false } : { dependencyTask: CI_REPAIR_OWNER }),
-              },
-            },
-          },
-        ],
-      };
-    if (flake && results.length === 1)
-      return {
-        calls: [
-          {
-            name: "check_change",
-            args: {
-              rerun: {
-                headSha,
-                check: "linux-checks",
-                evidence: "Successful same-head verification and failed-job timeout log",
-              },
-            },
-          },
-        ],
-      };
-    // Try premature completion to exercise the actual card gate on failed checks.
-    if (flake && results.length === 2) return { calls: [card] };
-    if (results.length === (flake ? 3 : 1))
-      return {
-        calls: [
-          {
-            name: "report",
-            args: {
-              text: `${CI_REPAIR_MARKER} ${flake ? "rerun reserved; completion correctly refused until all checks pass" : "waiting for the evidenced separate baseline owner"}`,
-            },
-          },
-        ],
-      };
-    return { text: "Waiting." };
+    const diagnose: ScriptedCall = {
+      name: "check_change",
+      args: {
+        diagnosis: {
+          headSha,
+          check: "linux-checks",
+          classification: flake ? "suspected-flake" : "baseline-blocked",
+          evidence: flake
+            ? "Failed standalone timeout log differs from the same-head successful verification"
+            : "Separate owner reproduced the same failed assertion on untouched main, with log evidence",
+          ...(flake ? { changedTest: false } : { dependencyTask: CI_REPAIR_OWNER }),
+        },
+      },
+    };
+    const rerun: ScriptedCall = {
+      name: "check_change",
+      args: {
+        rerun: {
+          headSha,
+          check: "linux-checks",
+          evidence: "Successful same-head verification and failed-job timeout log",
+        },
+      },
+    };
+    const report: ScriptedCall = {
+      name: "report",
+      args: {
+        text: `${CI_REPAIR_MARKER} ${flake ? "completion correctly refused before the diagnosis; rerun reserved" : "waiting for the evidenced separate baseline owner"}`,
+      },
+    };
+    // At the flake it first tries premature completion, to exercise the
+    // actual card gate on failed checks: no check failing at this version
+    // carries a diagnosis yet, so the gate refuses. Once every one does, the
+    // card goes up with Merge anyway beside the merge (INF-1137 friction 6).
+    const move = (flake ? [card, diagnose, rerun, report] : [diagnose, report])[results.length];
+    return move ? { calls: [move] } : { text: "Waiting." };
   }
   if (!results.length) return { calls: [{ name: "check_change", args: {} }] };
   if (results.length === 1) {

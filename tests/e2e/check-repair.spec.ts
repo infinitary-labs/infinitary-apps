@@ -185,7 +185,7 @@ test("two baseline failures and one flake request diagnosis without a captain ca
         2,
       ),
     );
-    // The reservation itself is not green and cannot publish completion. A successful result can.
+    // The reservation itself is not green; a successful result publishes completion.
     github.setChecks([
       { name: "linux-checks", status: "completed", conclusion: "success" },
       { name: "deploy-preview", status: "completed", conclusion: "skipped" },

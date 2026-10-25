@@ -10380,22 +10380,41 @@ export class CrewSupervisor {
    * Read the lines the task's offered change adds and deletes and keep them
    * on its delivery facts (INF-820), when the version on offer or its base
    * moved since the last reading. The offered version is the head the last
-   * check reading saw, else the task's branch. A task on another computer
-   * has no branch here and keeps no reading. Recording the reading refreshes
+   * check reading saw, else the task's branch, read on the computer holding
+   * that working copy. Recording the reading refreshes
    * the open cards' strips; a closed card keeps the strip it was shown.
    */
   private readChangeLines(record: TaskRecord): void {
-    if (record.deviceId || !record.repoDir || !record.branch) return;
+    if (!record.deviceId && (!record.repoDir || !record.branch)) return;
     if (this.readingLines.has(record.id)) return;
     this.readingLines.add(record.id);
     void (async () => {
       const workspace = this.options.workspace;
-      const head =
-        record.delivery?.headSha ?? (await workspace.branchHead(record.repoDir, record.branch));
-      if (!head) return;
-      const reading = await workspace.changeLines(record.repoDir, head);
+      const remote = record.deviceId
+        ? await this.options.machines?.revision(
+            record.deviceId,
+            record.id,
+            record.delivery?.headSha,
+          )
+        : undefined;
+      const head = record.deviceId
+        ? remote?.headSha
+        : (record.delivery?.headSha ??
+          (await workspace.branchHead(record.repoDir, record.branch as string)));
+      if (!head || (record.delivery?.headSha && record.delivery.headSha !== head)) return;
+      const reading = record.deviceId
+        ? remote?.changeLines
+        : await workspace.changeLines(record.repoDir, head);
       if (!reading) return;
-      const kept = this.options.tasks.get(record.id)?.delivery?.changeLines;
+      const current = this.options.tasks.get(record.id);
+      // A read crossing the connection may finish after the offered version or placement moved.
+      if (
+        !current ||
+        current.deviceId !== record.deviceId ||
+        current.delivery?.headSha !== record.delivery?.headSha
+      )
+        return;
+      const kept = current.delivery?.changeLines;
       if (
         kept?.head === head &&
         kept.base === reading.base &&
@@ -10410,7 +10429,16 @@ export class CrewSupervisor {
       .catch(() => {
         // An unreadable change keeps no reading: the strip shows no Lines cell.
       })
-      .finally(() => this.readingLines.delete(record.id));
+      .finally(() => {
+        this.readingLines.delete(record.id);
+        const current = this.options.tasks.get(record.id);
+        if (
+          current &&
+          (current.deviceId !== record.deviceId ||
+            current.delivery?.headSha !== record.delivery?.headSha)
+        )
+          this.readChangeLines(current);
+      });
   }
 
   /**

@@ -1286,6 +1286,14 @@ export const workOrders = {
     response: z.object({
       headSha: commitSchema,
       changedFiles: z.array(z.string()),
+      /** Host-measured text lines at headSha; absent when unavailable or on an older computer. */
+      changeLines: z
+        .object({
+          base: commitSchema,
+          added: z.number().int().nonnegative(),
+          deleted: z.number().int().nonnegative(),
+        })
+        .optional(),
       /**
        * The change reading at that commit (INF-148). Absent from a computer
        * on an older contract, which then cannot carry a passed review.

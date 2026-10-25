@@ -358,7 +358,13 @@ export class WorkingCopies {
     const changedFiles = await this.workspace.reviewChangedFiles(workspace.repoDir, head);
     if (!changedFiles) throw new Error("The requested commit is not on this computer.");
     const changeReading = await this.workspace.reviewChangeReading(workspace.repoDir, head);
-    return { headSha: head, changedFiles, ...(changeReading ? { changeReading } : {}) };
+    const changeLines = await this.workspace.changeLines(workspace.repoDir, head);
+    return {
+      headSha: head,
+      changedFiles,
+      ...(changeReading ? { changeReading } : {}),
+      ...(changeLines ? { changeLines } : {}),
+    };
   }
 
   /**

@@ -121,6 +121,26 @@ describe("the working copies a computer that runs work keeps", () => {
     expect(copies.list()).toEqual(["t-one", "t-two"]);
   });
 
+  it("returns host-measured lines for the requested remote revision, not its newer branch (INF-1235)", async () => {
+    // Captain chose “Fix remote-task line counts”: real git on the work computer owns the numbers.
+    const { origin, main } = await project();
+    const { copies } = computer();
+    const { dir } = await copies.prepare("t-lines", { origin });
+    writeFileSync(join(dir, "README.md"), "# website\nA footer for the website.\n");
+    const first = await commitAll(dir, "fix: describe the footer");
+    writeFileSync(join(dir, "README.md"), "# revised website\n");
+    const second = await commitAll(dir, "fix: revise the website");
+    expect(await copies.revision("t-lines", first)).toMatchObject({
+      headSha: first,
+      changeLines: { base: main, added: 1, deleted: 0 },
+    });
+    expect(await copies.revision("t-lines")).toMatchObject({
+      headSha: second,
+      changeLines: { base: main, added: 1, deleted: 1 },
+    });
+    await expect(copies.revision("t-lines", "f".repeat(40))).rejects.toThrow();
+  });
+
   it("starts a later task from the origin's newest commit, fetched first", async () => {
     const { origin, seed } = await project();
     const { copies } = computer();

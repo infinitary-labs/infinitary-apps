@@ -59354,6 +59354,30 @@
                 "type": "string"
               }
             },
+            "changeLines": {
+              "type": "object",
+              "properties": {
+                "base": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
+                },
+                "added": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "deleted": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "base",
+                "added",
+                "deleted"
+              ]
+            },
             "changeReading": {
               "type": "string",
               "pattern": "^[0-9a-f]{64}$"

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "remote-merge-card-lines",
+      "kind": "fix",
+      "area": "cards",
+      "title": "Merge cards count changes made on another computer",
+      "body": "Work on another computer now shows measured lines added and deleted beside the offered change. Unavailable counts stay blank, and counts from an older offered change are not substituted.",
+      "picture": {
+        "dark": "remote-merge-card-lines-dark.webp",
+        "light": "remote-merge-card-lines-light.webp",
+        "alt": "A completion card for work on another computer shows Lines +1 added · −0 deleted"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

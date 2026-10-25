@@ -1915,6 +1915,54 @@ describe("a task that runs on a computer that runs work", () => {
     ).rejects.toThrow(/not this task's/);
   });
 
+  it("carries measured remote lines into the offered completion card (INF-1235)", async () => {
+    // Captain chose “Fix remote-task line counts”: real git and the paired connection,
+    // ending at the host-authored completion strip, with no provider sign-in or network git.
+    const project = await gitProject();
+    const at = await world();
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    home.repos.configure(repo.id, { rigor: "quick", delivery: "direct-pr" });
+    model([{ text: "Ready for the footer." }]);
+    await at.start("t-lines", "Describe the website footer.", repo.id);
+    await expect.poll(() => home.tasks.get("t-lines")?.activity).toBe("idle");
+    const dir = at.folders("t-lines").work;
+    writeFileSync(join(dir, "README.md"), "# website\nA footer for the website.\n");
+    const first = await commit(dir, "fix: describe the footer");
+    const reading = await home.placed.revision(at.deviceId, "t-lines", first);
+    expect(reading).toMatchObject({
+      headSha: first,
+      changeLines: { base: project.main, added: 1, deleted: 0 },
+    });
+    home.tasks.recordDelivery("t-lines", { headSha: first, ci: "green", ciAt: Date.now() });
+    await home.placed.answer(at.deviceId, "inf:work:card", {
+      task: "t-lines",
+      callId: "line-card",
+      card: {
+        id: "done",
+        title: "The website footer is ready",
+        body: "<h2>Why</h2><p>Describe the website footer.</p><h2>What changed</h2><p>I described the footer.</p><h2>Before</h2><p>The description named only the website.</p><h2>After</h2><p>The description includes the footer.</p>",
+        requiredActions: [],
+        actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+      },
+    });
+    await expect
+      .poll(() => home.cards().find((card) => card.taskId === "t-lines")?.body)
+      .toContain("+1 added · −0 deleted");
+    expect(home.tasks.get("t-lines")?.delivery?.changeLines).toMatchObject({
+      head: first,
+      base: project.main,
+      added: 1,
+      deleted: 0,
+    });
+    console.info("Remote revision response:", JSON.stringify(reading));
+    console.info(
+      "Persisted completion measurement:",
+      JSON.stringify(home.tasks.get("t-lines")?.delivery?.changeLines),
+    );
+    console.info("Completion strip:", home.cards().find((card) => card.taskId === "t-lines")?.body);
+  });
+
   it("refuses what a computer asks about a task this Mac does not run there", async () => {
     const at = await world();
     const home = at.home();

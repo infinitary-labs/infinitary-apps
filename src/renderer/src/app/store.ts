@@ -1874,7 +1874,8 @@ export const useShellStore = create<ShellState>()((set, get) => ({
     void sendTurn(get().inputText);
   },
   actOnCard: async (cardId, actionId, source = "chrome", value, collect, mounted) => {
-    if (get().pendingCardActions[cardId] || !get().cards.some((card) => card.id === cardId)) return;
+    const offered = get().cards.find((card) => card.id === cardId);
+    if (get().pendingCardActions[cardId] || !offered) return;
     const thisMac = get().thisMac;
     if (isView(thisMac) && changesOff(thisMac)) {
       // A body's own button while changes are off: refused, never sent later.
@@ -1948,9 +1949,12 @@ export const useShellStore = create<ShellState>()((set, get) => ({
       if (anythingElseOf(sentAnswers) !== undefined) {
         set((s) => ({ replyDrafts: withoutKey(s.replyDrafts, cardId) }));
       }
-      // Acceptance is the receipt, not the settle outcome. Do not revive
-      // the row while waiting for the core's coalesced cards push.
-      if (get().pendingCardActions[cardId] === request) {
+      // Acceptance closes only the chosen offer, never a newer offer the
+      // core already reissued under the same card id.
+      if (
+        get().pendingCardActions[cardId] === request &&
+        get().cards.find((card) => card.id === cardId)?.offerId === offered.offerId
+      ) {
         get().applyCards(get().cards.filter((card) => card.id !== cardId));
       }
       // The shell applies the effect the core returns and reads no action

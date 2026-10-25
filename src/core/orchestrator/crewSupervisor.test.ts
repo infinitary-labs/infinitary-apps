@@ -21163,6 +21163,119 @@ describe("task-level autonomy and the host's merge hold (contract v3.9)", () => 
  * turn, and never a close.
  */
 describe("CrewSupervisor: the card thread", () => {
+  function withRequiredAction() {
+    const h = setup(fakeCrewmate());
+    seedTask(h.tasks, {
+      id: "required-source",
+      title: "Update the setup files",
+      status: "completed",
+    });
+    h.tasks.declareRequiredActions(
+      "required-source",
+      {
+        cardId: "card-source",
+        offerId: "offer-source",
+        actions: [
+          {
+            id: "rebuild",
+            target: "the computer",
+            title: "Rebuild the setup",
+            consequence: "The new setup is not running yet.",
+            instructions: ["Rebuild using the updated files."],
+            criterion: "The rebuild succeeds.",
+            prerequisites: [],
+            completion: { kind: "manual", label: "The rebuild succeeded" },
+          },
+        ],
+      },
+      true,
+    );
+    const row = h.tasks.listOpen().find((task) => task.delivery?.captainAction);
+    expect(row).toBeDefined();
+    const taskId = row?.id ?? "missing";
+    h.supervisor.showRequiredAction(taskId);
+    const card = h.supervisor.cardsSnapshot().find((entry) => entry.taskId === taskId) as Card;
+    return { h, taskId, card };
+  }
+
+  it("INF-1137 friction 2 keeps failure output and repair replies on a required-action card without confirming it", async () => {
+    const { h, taskId, card } = withRequiredAction();
+    const converse = vi.fn();
+    h.supervisor.setFirstmateHooks({
+      notifyOp: vi.fn(),
+      retryConverse: vi.fn(),
+      converseAboutCard: converse,
+    });
+    const output = "It failed. Output: error: Cannot build fm-placer-0.1.0.drv";
+    h.supervisor.replyToCard(card.id, output);
+    expect(converse).toHaveBeenCalledWith(card.id, output, undefined);
+    expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
+    // Reopening and repeating a refused confirmation must not erase the pending reply.
+    h.supervisor.showRequiredAction(taskId);
+    expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
+    expect(h.tasks.get(taskId)?.status).toBe("open");
+    expect(h.supervisor.cardThread(card.id).messages).toMatchObject([
+      { who: "captain", text: output },
+    ]);
+    const answer =
+      "I have asked the crew to repair the setup files. Keep the rebuild unconfirmed until it succeeds.";
+    expect(
+      h.supervisor.addFirstmateCard({
+        id: card.id,
+        title: "Ignored replacement",
+        body: "<p>Ignored instructions</p>",
+        actions: [],
+        reply: answer,
+      }),
+    ).toBe(card.id);
+    const current = h.supervisor.cardsSnapshot().find((entry) => entry.id === card.id);
+    expect(current).toMatchObject({
+      body: card.body,
+      title: card.title,
+      actions: card.actions,
+      offerId: card.offerId,
+    });
+    expect(h.supervisor.cardThread(card.id).messages.at(-1)).toMatchObject({
+      who: "firstmate",
+      text: answer,
+    });
+    expect(h.tasks.get(taskId)?.status).toBe("open");
+    // Only the captain's explicit success confirmation completes the operation.
+    h.supervisor.act(card.id, "confirm");
+    expect(h.tasks.get(taskId)?.delivery?.captainAction?.state).toBe("confirmed");
+    await tick();
+  });
+  it("INF-1160 sends a normal required-action failure choice and its output, then reoffers the outstanding action", async () => {
+    const { h, taskId, card } = withRequiredAction();
+    const converse = vi.fn();
+    h.supervisor.setFirstmateHooks({
+      notifyOp: vi.fn(),
+      retryConverse: vi.fn(),
+      converseAboutCard: converse,
+    });
+    const output = "error: Cannot build fm-placer-0.1.0.drv";
+    const answers = [{ name: "anything_else", values: [], changed: true, written: output }];
+    expect(card.actions.find((action) => action.id === "failed")).toMatchObject({
+      label: "It failed",
+    });
+    h.supervisor.act(card.id, "failed", "chrome", { answers });
+    const reopened = h.supervisor.cardsSnapshot().find((entry) => entry.id === card.id) as Card;
+    expect(reopened.offerId).not.toBe(card.offerId);
+    expect(reopened).toMatchObject({
+      title: card.title,
+      body: card.body,
+      actions: card.actions,
+      awaiting: "answer",
+    });
+    expect(h.tasks.get(taskId)?.status).toBe("open");
+    expect(h.supervisor.cardThread(card.id).messages.at(-1)).toMatchObject({
+      who: "captain",
+      text: `It failed\n\n${output}`,
+    });
+    expect(converse).toHaveBeenCalledWith(card.id, `It failed\n\n${output}`, undefined);
+    expect(() => h.supervisor.act(card.id, "confirm")).toThrow();
+    await tick();
+  });
   /** Commission a task and give it one crewmate card; returns that card. */
   async function withCard(
     harness: ReturnType<typeof setup>,

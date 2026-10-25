@@ -941,10 +941,30 @@ export class CardService {
     const existing = resolved ? this.cards.get(resolved) : undefined;
     const owner =
       existing?.taskId ?? (resolved ? this.host.cardStore.get(resolved)?.taskId : undefined);
-    if ([owner, input.taskId].some((id) => id && this.host.tasks.get(id)?.delivery?.captainAction))
+    if (
+      [owner, input.taskId].some((id) => id && this.host.tasks.get(id)?.delivery?.captainAction)
+    ) {
+      // INF-1137 friction 2: answer on the required-action card without
+      // replacing the app's instructions, generation or completion controls.
+      const answer = input.reply?.trim();
+      if (
+        existing &&
+        existing.author === "firstmate" &&
+        owner &&
+        this.host.tasks.get(owner)?.delivery?.captainAction &&
+        (!input.taskId || input.taskId === owner) &&
+        context.author === "firstmate" &&
+        answer
+      ) {
+        if (answer.length > CARD_REPLY_MAX_CHARS)
+          throw new Error(`A reply is at most ${CARD_REPLY_MAX_CHARS} characters.`);
+        this.addMessage(existing.id, "firstmate", answer);
+        return existing.id;
+      }
       throw new Error(
-        "This required-action card keeps its app-owned instructions and confirmation. Use reply for help, update_task drop with a reason to cancel, or revise the declaration on its source card.",
+        "This required-action card keeps its app-owned instructions and confirmation. To answer here, emit_card with this same id and reply; the host keeps the body and controls unchanged. Use update_task drop with a reason to cancel, or revise the declaration on its source card.",
       );
+    }
     if (!existing && resolved && this.closedAwaitingAnswer.has(resolved)) {
       throw new Error(
         `Card refused: the captain closed card "${resolved}" while it waited on your answer to their reply, so that answer does not open it again. Give the answer in your report instead.`,
@@ -1767,6 +1787,7 @@ export class CardService {
         title: card.title,
         action,
         actor: by,
+        ...(answers ? { answers } : {}),
       });
       return false;
     }
@@ -2174,6 +2195,14 @@ export class CardService {
   /** Presentation state and the card commit together, so a crash cannot lose its first offer. */
   presentRequiredAction(taskId: string): boolean {
     if (!this.host.tasks.captainActionReady(taskId)) return false;
+    const current = this.host.tasks.get(taskId)?.delivery?.captainAction;
+    // Reopening an already shown generation must not erase a pending reply.
+    if (
+      current &&
+      current.presentedGeneration === current.generation &&
+      this.cards.has(current.cardId)
+    )
+      return true;
     this.host.tasks.atomic(
       () => {
         const action = this.host.tasks.presentCaptainAction(taskId);

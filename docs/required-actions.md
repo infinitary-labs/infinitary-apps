@@ -43,7 +43,14 @@ Not now, the close control, navigation, replies and opening Devices do not compl
 Deferred actions stay under Waiting on you in Tasks, with Show the card on the record.
 The existing card-button command and Tab/Enter reach the controls; reopening is a typed `show-card` task operation available to paired views too.
 The record survives restart without a worker, repeated cards or a new reminder scheduler.
-The first mate answers help with a thread reply, keeping the app-owned instructions and confirmation controls intact.
+It failed is an ordinary action button beside the completion button, with the same action keys and submission as every other choice.
+The captain can paste output into the card's field, then choose It failed to send the failure and those words together.
+The choice closes its offer without completing the operation; the host offers the outstanding action again on the same card and delivers the failure to the first mate through its thread.
+The first mate arranges repair through the crew and answers with repair status there.
+Chat still sends a reply without choosing an action.
+While the thread awaits the first mate's answer, manual confirmation is paused; the action stays outstanding and Not now remains available.
+The first mate uses `emit_card` with the same id, `task_id` and `reply` for help or status; the host writes only the thread line, keeping the app-owned instructions and confirmation controls intact.
+An answer does not complete the action or run the captain's instructions.
 Conversational cancellation uses the existing explicit drop with a reason.
 An explicit drop records cancellation separately and does not complete dependents.
 `update_task correct_required_action` reopens a mistaken confirmation while preserving its history; it does not reverse work already continued.

@@ -3526,8 +3526,17 @@ export class FirstmateAgent {
     const aboutCard = aboutCardId
       ? this.options.supervisor.cardsSnapshot().find((card) => card.id === aboutCardId)
       : undefined;
+    const requiredActionTask =
+      aboutCard?.taskId && this.options.tasks.get(aboutCard.taskId)?.delivery?.captainAction
+        ? aboutCard.taskId
+        : undefined;
+    // INF-1137 friction 2: guidance belongs to this conversation, not the
+    // fixed instructions every unrelated turn pays for.
+    const requiredActionGuide = requiredActionTask
+      ? `; required captain action task_id ${requiredActionTask}. Answer with emit_card using this same id, task_id and reply; the host preserves instructions and controls. For failure, read the output, arrange repair through the crew and keep repair status in this thread. Never confirm for the captain.`
+      : "";
     const aboutCardLine = aboutCard
-      ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread`
+      ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread${requiredActionGuide}`
       : undefined;
     const maybeCard = aboutCardLine ? undefined : shown ? maybeCardContextLine(shown) : undefined;
     // The task the turn points at (the open card, or the record card): the

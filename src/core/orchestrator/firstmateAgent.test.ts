@@ -1069,6 +1069,42 @@ describe("FirstmateAgent", () => {
     );
   });
 
+  it("INF-1137 serves required-action repair guidance only on that card's reply turn", async () => {
+    const f = setup();
+    seedTask(f.tasks, { id: "action-source", title: "Update setup", status: "completed" });
+    f.tasks.declareRequiredActions(
+      "action-source",
+      {
+        cardId: "card-source",
+        offerId: "offer-source",
+        actions: [
+          {
+            id: "rebuild",
+            title: "Rebuild the setup",
+            target: "the computer",
+            consequence: "The old setup is still running.",
+            instructions: ["Rebuild the updated setup."],
+            criterion: "The rebuild succeeds.",
+            prerequisites: [],
+            completion: { kind: "manual", label: "It succeeded" },
+          },
+        ],
+      },
+      true,
+    );
+    const action = f.tasks.listOpen().find((task) => task.delivery?.captainAction);
+    expect(action).toBeDefined();
+    f.supervisor.showRequiredAction(action?.id ?? "missing");
+    const cardId = action?.delivery?.captainAction?.cardId;
+    const about = decodeContext(f.agent.buildContextBlock(undefined, undefined, cardId)).about;
+    expect(about).toContain(`required captain action task_id ${action?.id}`);
+    expect(about).toContain("Answer with emit_card using this same id, task_id and reply");
+    expect(decodeContext(f.agent.buildContextBlock()).about).toBeUndefined();
+    await Promise.resolve();
+    f.agent.dispose();
+    f.db.close();
+  });
+
   it("treats a reply on its own card as a captain turn about that card", async () => {
     const { session, supervisor } = setup();
     supervisor.addFirstmateCard({

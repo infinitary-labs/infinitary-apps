@@ -2086,6 +2086,13 @@ function StackedCard({
               {group.actions.map((action) => {
                 const at = choiceIndex.get(action.id);
                 const choiceKey = at === undefined ? undefined : choiceKeys[at];
+                const answering =
+                  action.effect?.kind === "host" &&
+                  action.effect.op === "confirm-required-action" &&
+                  card.awaiting === "answer";
+                const actionOff = answering
+                  ? "Your first mate is answering on this card"
+                  : offWords;
                 return (
                   <Button
                     key={action.id}
@@ -2112,17 +2119,17 @@ function StackedCard({
                     }}
                     pending={pending?.actionId === action.id}
                     disabled={Boolean(pending)}
-                    off={offWords !== null || filesFirst}
+                    off={actionOff !== null || filesFirst}
                     note={
                       noticeCovers
                         ? undefined
-                        : (offWords ??
+                        : (actionOff ??
                           (filesFirst ? CARD_FILES_FIRST : thereWords(action)) ??
                           undefined)
                     }
                     // The notice shows the reason in place of the label; a
                     // screen reader on the button still hears it.
-                    aria-description={offWords ?? undefined}
+                    aria-description={actionOff ?? undefined}
                     aria-disabled={unanswered && action.default ? true : undefined}
                     // The offer this footer belongs to rides the click, read now.
                     onClick={() => {
@@ -2256,9 +2263,7 @@ function StackedCard({
             onAction(actionId, "frame", value, undefined, mountOf(card))
           }
           onPicture={onPicture}
-          // A starter's words go to the message box under the card, caret
-          // after them, sending nothing; refused while the box is held, as
-          // Go to the main message is.
+          // A starter's words go to the main message box without sending.
           onDraft={(text) => {
             const shell = useShellStore.getState();
             if (mainMessageRefusal(shell) === null) shell.beginDraft(text);

@@ -3,6 +3,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
+import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import {
@@ -14,7 +15,13 @@ import {
   recordCard,
   taskKeyLinks,
 } from "./rails";
-import { shownCard } from "./stack";
+import {
+  ACTION_REPAIR_REPLY,
+  FAILED_ACTION_OUTPUT,
+  requiredActionFailure,
+} from "./scenarios/requiredActionFailure";
+import { cardReply, shownCard } from "./stack";
+import { focusOn, pressKey } from "./windowKeys";
 
 /**
  * A Waiting on you row for a required action the captain put off with Not
@@ -96,6 +103,45 @@ test("a Waiting on you row for a deferred required action shows its card again, 
       row.key,
     ]);
     await page.screenshot({ path: test.info().outputPath("required-action-row.png") });
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-1137 friction 2: required-action failure output belongs on its own card.
+// Real saved action, isolated app + scripted first mate, completed by a visible
+// thread answer; no sign-in or shared device is touched (desktop lane).
+test("a failed required action sends its output to the first mate on the same card", async () => {
+  const userDataDir = scratchDir("infinitary-required-failure-");
+  const row = seed(userDataDir);
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [requiredActionFailure],
+  });
+  try {
+    const { app, page } = launched;
+    await resizeWindow(app, page, { width: 1280, height: 820 });
+    await expandDock(page, "now");
+    await openGroup(page, "waiting");
+    await pressRow(page, row.key);
+    const card = shownCard(page, ACTION_TITLE);
+    await expect(card).toBeVisible();
+    // Captain's revision: It failed is a normal footer choice, not a body starter.
+    const failure = card.getByRole("button", { name: /^It failed/ });
+    const reply = cardReply(page);
+    await reply.field.fill(FAILED_ACTION_OUTPUT);
+    await focusOn(failure);
+    await pressKey(failure, "Enter");
+    await expect(page.locator('[data-thread-message="firstmate"]').last()).toContainText(
+      ACTION_REPAIR_REPLY,
+    );
+    await expect(
+      cardBody(page, ACTION_TITLE).getByText("Your confirmation runs nothing."),
+    ).toBeVisible();
+    await expect(card.getByRole("button", { name: /I installed it/ })).toBeVisible();
+    const tasks = await page.evaluate(() => window.infinitary.tasks.board());
+    expect(tasks.tasks.find((task) => task.id === row.id)?.status).toBe("open");
   } finally {
     await launched.close();
   }

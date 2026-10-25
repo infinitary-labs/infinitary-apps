@@ -1936,6 +1936,21 @@ describe("card action receipts", () => {
     expect(useShellStore.getState().cards).toEqual([]);
   });
 
+  // Captain's INF-1160 revision: the ordinary failure choice reoffers the
+  // outstanding action; its closing receipt must not remove that new offer.
+  it("keeps a new offer pushed under the same card id before the old action's receipt", async () => {
+    const ipc = request();
+    const old = { ...ready, offerId: "offer-before" };
+    useShellStore.setState({ cards: [old] });
+    const sent = useShellStore.getState().actOnCard("choice", "land");
+    const reopened = { ...ready, offerId: "offer-after" };
+    useShellStore.getState().applyCards([reopened]);
+    ipc.resolve();
+    await sent;
+    expect(useShellStore.getState().cards).toEqual([reopened]);
+    expect(useShellStore.getState().pendingCardActions).toEqual({});
+  });
+
   it("still applies shell effects after a removal push arrived before the receipt", async () => {
     const ipc = request();
     const first = useShellStore.getState().actOnCard("choice", "settings");

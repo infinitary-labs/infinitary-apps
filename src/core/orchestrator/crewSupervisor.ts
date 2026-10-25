@@ -6,6 +6,7 @@ import { type AttachmentRef, attachmentWords, fileSizeWords } from "@shared/atta
 import { type CutOff, type CutOffClass, isAuthFailureMessage } from "@shared/authFailure";
 import { cardPictureFiles } from "@shared/cardPictures";
 import {
+  anythingElseOf,
   CARD_ANSWERS_BOUND_REFUSAL,
   CARD_ANSWERS_MAX_BYTES,
   CARD_ANSWERS_TOO_LONG,
@@ -12506,6 +12507,8 @@ export class CrewSupervisor {
       }
     }
     if (effect?.kind === "host" && effect.op === "confirm-required-action") {
+      if (this.cards.get(card.id)?.awaiting === "answer")
+        throw new CardChoiceUnavailableError("not-ready");
       const [id, generation] = (effect.arg ?? "").split(":");
       const action = associated?.delivery?.captainAction;
       if (
@@ -12749,6 +12752,15 @@ export class CrewSupervisor {
         return this.runHostOp(effect, answers);
       default:
         break;
+    }
+    if (source === "chrome" && card.taskId && associated?.delivery?.captainAction) {
+      // An ordinary conversational choice closes its offer, just like any
+      // card action. The outstanding operation is then offered again so its
+      // author can answer on the same card, without completing the action.
+      this.showRequiredAction(card.taskId);
+      const output = anythingElseOf(answers);
+      this.replyToCard(card.id, output ? `${chosen.label}\n\n${output}` : chosen.label);
+      return {};
     }
     if (cardId.startsWith(FIRSTMATE_CARD_PREFIX)) {
       // The answer to a Firstmate decision card returns to the agent.

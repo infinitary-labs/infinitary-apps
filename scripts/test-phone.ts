@@ -1,6 +1,7 @@
 /** INF-64 piece 2's native gate: disposable real home, a fresh simulator, no signing. */
 import { type ChildProcess, spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { userInfo } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline";
 import { parseArgs } from "node:util";
@@ -8,9 +9,10 @@ import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpe
 import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
 import { logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
 import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
-import { scratchDir } from "../tests/helpers/scratchDirs.ts";
+import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
+import { startPhoneActivity } from "./phone-activity.ts";
 import { runEveryCheck } from "./phone-checks.ts";
 import { PHONE_PARTS, type PhoneDevice, partSelection, phoneExecutionArguments, phoneJobs, runSideBySide, testHomeKeys } from "./phone-test-plan.ts";
 
@@ -45,6 +47,8 @@ const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ?
 const jobs = phoneJobs(devices, values.waits ? ["rest"] : values.part ?? PHONE_PARTS.map((part) => part.name));
 const simulators = Number(values.simulators);
 mkdirSync(evidence, { recursive: true });
+// Capture the account home before the disposable app/test HOME replaces it.
+const invokingHome = userInfo().homedir;
 const root = scratchDir("infinitary-native-");
 const home = join(root, "home");
 mkdirSync(home);
@@ -56,6 +60,9 @@ startPhoneLoadClock();
 const runner = await openModuleRunner();
 const { hostEnv } = await runner.import<typeof import("../src/core/hostEnv")>(join(REPO_ROOT, "src/core/hostEnv.ts"));
 const env = { ...hostEnv(), HOME: home, CFFIXED_USER_HOME: home };
+let activity: ReturnType<typeof startPhoneActivity>;
+try { activity = startPhoneActivity(env, invokingHome); }
+catch (error) { await runner.close(); throw error; }
 let number = 0;
 const children = new Set<ChildProcess>();
 let interrupted = false;
@@ -304,7 +311,14 @@ try {
           await run("xcrun", ["simctl", "shutdown", simulator]).catch(() => {});
           await run("xcrun", ["simctl", "delete", simulator]);
         }
-      } finally { await runner.close(); }
+      } finally {
+        try { await runner.close(); }
+        finally {
+          // Keep activity visible through the scratch owner's filesystem teardown too.
+          try { removeScratchDirs(); }
+          finally { activity.close(); }
+        }
+      }
     }
   }
 }

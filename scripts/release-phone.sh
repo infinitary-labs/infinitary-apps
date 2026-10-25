@@ -93,7 +93,7 @@ fi
 node scripts/phone-release.ts receipt accepted
 printf 'Apple accepted Infinitary %s (%s) for processing. Internal TestFlight availability is checked separately.\n' "$VERSION" "$BUILD_NUMBER"
 
-# Keep this inside the release command’s shared exclusive lease, after confirmed upload.
+# Keep this inside the release command, after confirmed upload.
 # A listing failure must not turn an accepted upload into a reason to upload again.
 if ! node scripts/phone-certificates.ts "$work/archive.log" "$work/export.log"; then
   echo "Certificate listing failed; upload remains accepted. No certificates were revoked." >&2

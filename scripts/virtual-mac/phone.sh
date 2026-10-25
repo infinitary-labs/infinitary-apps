@@ -1,6 +1,6 @@
 #!/bin/bash
 # phone.sh - the phone check's device gates in a fresh virtual Mac cloned
-# from the lane's image (image.sh), with no Mac check lease: phone.yml runs
+# from the lane's image (image.sh): phone.yml runs
 # it when the repository variable PHONE_VIRTUAL_MAC is set (docs/ios.md,
 # "The phone check in a virtual Mac"). Its clone has one fixed name, so one
 # phone check runs at a time (phone.yml's mac-mini-phone queue, which this

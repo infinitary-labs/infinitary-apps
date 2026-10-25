@@ -167,6 +167,9 @@ jobs:
       # code signing contract in tests/local-codesign.test.ts, among others)
       # and skip on the Linux PR check, so this is the only CI that runs them.
       # About 25s in CI.
+      - name: Read the temporary volume's filesystem type
+        if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
+        run: node -e 'console.log(require("fs").statfsSync(require("os").tmpdir()).type)'
       - id: unit
         if: ${{ !cancelled() && matrix.lane == 'mac' && steps.install.outcome == 'success' }}
         timeout-minutes: 60

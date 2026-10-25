@@ -639,7 +639,17 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
     expect(journeys.on).not.toHaveProperty("schedule");
     expect(journeys.on).not.toHaveProperty("push");
     const job = journeys.jobs["affected-journeys"];
-    expect(job?.["runs-on"]).toBe("${{ vars.MAC_RUNNER || 'macos-15' }}");
+    // INF-869: run the virtual side on an isolated label without changing shared vars.
+    const runner = (requested: string, configured: string) =>
+      workflowValue(job?.["runs-on"] ?? "", {
+        inputs: { mac_runner: requested },
+        vars: { MAC_RUNNER: configured },
+      });
+    expect(runner("", "mini-mac-any")).toBe("mini-mac-any");
+    expect(runner("", "")).toBe("macos-15");
+    expect(runner("mini-mac-inf906-019d7865-virtual", "mini-mac-any")).toBe(
+      "mini-mac-inf906-019d7865-virtual",
+    );
     const runs = (job?.steps ?? []).flatMap((step) => (step.run ? [step.run] : []));
     // The choice comes from the diff, and the suite is never started whole.
     const choices = (journeys.jobs["choose-journeys"]?.steps ?? []).flatMap((step) =>

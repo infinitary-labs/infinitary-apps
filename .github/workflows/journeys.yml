@@ -9,6 +9,9 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      mac_runner:
+        description: Optional Mac runner label for an isolated proof; unset keeps the project runner
+        type: string
       files:
         description: Journey files to run, by name or path, separated by spaces or commas
         required: true
@@ -124,7 +127,7 @@ jobs:
     # The implicit success() skips on chooser failure; zero skips by this
     # job's own condition, so its check passes without taking a Mac runner.
     if: needs.choose-journeys.outputs.count != '0'
-    runs-on: ${{ vars.MAC_RUNNER || 'macos-15' }}
+    runs-on: ${{ inputs.mac_runner || vars.MAC_RUNNER || 'macos-15' }}
     # Every crewmate works under "Application Support", and so does this job
     # (verify.yml): a check that only fails from a path with a space fails
     # here, not only in a working copy.
@@ -167,23 +170,18 @@ jobs:
         name: Build, then run the chosen journeys
         # --no-deps: the desktop lane is the other lanes' teardown and a
         # teardown project ignores the file filter (docs/testing.md).
-        # Shared command leases allow journeys from different PRs to overlap.
-        # An exclusive phone command waits for active journeys, then runs alone.
-        # 75m is twice the longest measured hold, a near-full selection beside another.
         # The run ends at 75 minutes and the command at 90 (INF-1083, the
         # captain's check limits); a stuck wait ends sooner, at its own cap.
         timeout-minutes: 90
         run: |
-          python3 scripts/with-mac-check.py --max-hold 75m shared "$HOME/Library/Caches/infinitary-ci/checks.lock" -- bash --noprofile --norc -e -o pipefail -c '
-            test -n "$FILES"
-            pnpm build
-            if [ "$STARVE" = true ]; then
-              # The requested load experiment has its own limit (docs/testing.md, "Journeys on request").
-              python3 scripts/starve-check.py --timeout 900 -- pnpm exec playwright test --no-deps $FILES
-            else
-              pnpm exec playwright test --no-deps $FILES
-            fi
-          '
+          test -n "$FILES"
+          pnpm build
+          if [ "$STARVE" = true ]; then
+            # The requested load experiment has its own limit (docs/testing.md, "Journeys on request").
+            python3 scripts/starve-check.py --timeout 900 -- pnpm exec playwright test --no-deps $FILES
+          else
+            pnpm exec playwright test --no-deps $FILES
+          fi
         env:
           STARVE: ${{ inputs.starve }}
           INFINITARY_E2E_RUN_MINUTES: 75

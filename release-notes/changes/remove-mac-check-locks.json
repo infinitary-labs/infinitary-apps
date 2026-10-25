@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "remove-mac-check-locks",
+      "reason": "Internal: check commands no longer take a Mac admission lease; standalone phone checks report process activity to the paired reboot watchdog instead, and the application does not change."
+    }
+  ]
+}

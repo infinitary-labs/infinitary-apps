@@ -8,6 +8,9 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
+      mac_runner:
+        description: Optional Mac runner label for an isolated proof; unset keeps the project runner
+        type: string
       parts:
         description: Parts to run, separated by spaces (empty runs all)
         type: string
@@ -131,26 +134,25 @@ jobs:
     # No journey or full check shares that scale set, so the runner the service
     # starts for it takes it, and the service gives it the next free virtual place
     # (docs/ios.md, "A phone check the placement service puts in a virtual Mac").
-    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
+    runs-on: ${{ vars.PHONE_VIRTUAL_MAC && 'mini-mac-vm' || inputs.mac_runner || vars.VIRTUAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
     # Reading the pull request's latest version and cancelling this run, if replaced.
     permissions:
       actions: write
       contents: read
       pull-requests: read
     # Only phone jobs queue here. Desktop jobs from other PRs remain parallel.
-    # The command leases below let a phone take its turn after active journeys.
     # INF-989 (captain: "let both virtual Macs run phone checks at once by ending
     # the one-at-a-time line"): a job on the placement service's virtual-Mac label
-    # gets its own fresh virtual Mac and takes no lease, so it gets a group of its
+    # gets its own fresh virtual Mac, so it gets a group of its
     # own and waits only for a free virtual place. The real Mac never takes that
     # label. On the Mac mini's runners, and with PHONE_VIRTUAL_MAC's one fixed
     # clone, the shared mac-mini-phone line keeps one phone check at a time.
     concurrency:
-      group: ${{ vars.VIRTUAL_MAC_RUNNER && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
+      group: ${{ !inputs.mac_runner && vars.VIRTUAL_MAC_RUNNER && !vars.PHONE_VIRTUAL_MAC && format('phone-{0}-{1}', github.run_id, github.run_attempt) || 'mac-mini-phone' }}
       queue: max
       cancel-in-progress: false
-    # Preserve the job's outer allowance for admission, setup, cleanup and upload.
-    # The device gate below has its own 60-minute limit on every runner route.
+    # Retain the job limit for setup, checks, cleanup and evidence upload.
+    # Commands run directly; the device gate has its own 60-minute limit on every route.
     timeout-minutes: 165
     env:
       PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
@@ -217,14 +219,9 @@ jobs:
       # test-phone owns a fresh HOME, real fixture and simulators, and disables signing.
       # It checks generated files, Swift trust, native recovery and the published client.
       # INF-662: one gate checks and builds once, then runs the iPhone and the iPad side by
-      # side, each on its own simulator and test home; either failing fails it. On the Mac
-      # mini it takes the Mac check lease once for both. In the virtual Mac it takes no
-      # lease: phone checks wait only for each other.
-      # INF-658 (captain: "Move phone checks off the Mac check lock once the virtual Mac
-      # runner works"): a job the placement service put in a fresh virtual Mac shares that
-      # Mac with no journeys, so it takes no lease either, with the 2 simulators at a time
-      # its 6 cores hold, as phone-job.sh runs them. The real Mac's place still takes it.
-      # INF-1083: every route has the approved 60-minute gate limit, including placed virtual Macs.
+      # side, each on its own simulator and test home; either failing fails it.
+      # A placed virtual Mac uses two simulators for its 6 cores and 16 GB.
+      # Real and virtual Mac checks may run concurrently without a command lease.
       # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the
       # parts the chooser kept; a run on request, and the virtual Mac switch, run every part.
       - id: both
@@ -235,7 +232,7 @@ jobs:
           parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done
           if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi
           if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
-          python3 scripts/with-mac-check.py --max-hold 60m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
+          node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
         env:
           PHONE_PARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.parts || needs.choose-phone.outputs.parts }}
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}

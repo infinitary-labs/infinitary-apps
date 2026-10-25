@@ -61,13 +61,12 @@ jobs:
     # the switch sets REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").
     runs-on: ${{ vars.REAL_MAC_RUNNER || vars.MAC_RUNNER || 'mini-mac' }}
     # TestFlight uploads keep a line of their own, apart from the phone checks'
-    # (INF-989); the device gates below still take the exclusive Mac check lease.
+    # (INF-989), without excluding desktop checks.
     concurrency:
       group: ios-testflight
       queue: max
       cancel-in-progress: false
-    # The native lane's 165-minute allowance, which includes waiting behind local
-    # phone gates that took the entry lock first, plus up to 60 for release work.
+    # Retain the native lane's job allowance plus up to 60 minutes for release work.
     timeout-minutes: 225
     defaults:
       run:
@@ -105,16 +104,14 @@ jobs:
           HOME="$install_home" CFFIXED_USER_HOME="$install_home" \
             INFINITARY_LOCAL_CODESIGN_DIR="$install_home/local-codesign" \
             pnpm install --frozen-lockfile --store-dir "$store"
-      # 40m is twice the longest measured device gate (docs/testing.md).
       - id: iphone
         name: Read and recover on iPhone
-        run: python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --evidence "$RUNNER_TEMP/phone/iphone"
+        run: node scripts/test-phone.ts --evidence "$RUNNER_TEMP/phone/iphone"
       - id: ipad
         name: Read and recover on iPad
         if: ${{ !cancelled() && steps.iphone.outcome != 'skipped' }}
-        run: python3 scripts/with-mac-check.py --max-hold 40m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --ipad --evidence "$RUNNER_TEMP/phone/ipad"
+        run: node scripts/test-phone.ts --ipad --evidence "$RUNNER_TEMP/phone/ipad"
       # Default success() is deliberate: either device failing means no signing or upload.
-      # A release job is never rerun, so its upload keeps the 60 minutes the job allows release work.
       - id: upload
         name: Archive and upload Infinitary
         env:
@@ -122,7 +119,7 @@ jobs:
           APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
           PHONE_RECEIPT: ${{ runner.temp }}/phone-upload.json
-        run: python3 scripts/with-mac-check.py --max-hold 60m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- bash scripts/release-phone.sh
+        run: bash scripts/release-phone.sh
       - name: Remove this release's temporary key and archive
         if: always()
         run: |

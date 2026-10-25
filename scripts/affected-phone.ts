@@ -10,7 +10,7 @@ import { PHONE_PARTS, type PhonePart } from "./phone-test-plan.ts";
 const INPUTS = [
   "ios/", "scripts/generate-phone-cards.ts", "scripts/generate-phone-contract.ts", "scripts/phone-contract-shapes.ts",
   ".github/workflows/phone.yml", "scripts/test-phone.ts", "tests/helpers/phoneHome.ts", "tests/helpers/phoneKeyboard.ts",
-  "scripts/with-mac-check.py", "scripts/phone-checks.ts",
+  "scripts/phone-checks.ts", "scripts/phone-activity.ts",
   // INF-662: each device's own test home in the one build's test plan.
   "scripts/phone-test-plan.ts",
 ] as const;

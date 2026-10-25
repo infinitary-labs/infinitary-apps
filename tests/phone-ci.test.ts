@@ -161,9 +161,9 @@ describe("the native pull-request gate", () => {
     "tests/helpers/phoneHome.ts",
     // INF-355: changing the native registration witness must exercise its simulator consumer.
     "tests/helpers/phoneKeyboard.ts",
-    "scripts/with-mac-check.py",
     // INF-663: the gate's checks before its simulator tests.
     "scripts/phone-checks.ts",
+    "scripts/phone-activity.ts",
     "scripts/phone-test-plan.ts",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
@@ -241,20 +241,22 @@ describe("the native pull-request gate", () => {
   });
   it("queues only phone jobs across PRs, leaving desktop PRs independent", () => {
     // The captain's review-cap choice replaces the former all-jobs queue.
-    // Real shared/exclusive command admission belongs to mac-check-lock.test.ts.
+    // Command overlap belongs to mac-check-lock.test.ts.
     // INF-989 (captain: "let both virtual Macs run phone checks at once by ending the
     // one-at-a-time line"): a job on the virtual-Mac label gets a group of its own; the Mac
     // mini's runners and PHONE_VIRTUAL_MAC's one fixed clone keep the shared line.
     const journeys = yaml.load(readFileSync(".github/workflows/journeys.yml", "utf8"));
     const native = workflow.jobs["native-phone"].concurrency;
     expect(journeys.jobs["affected-journeys"].concurrency).toBeUndefined();
-    const resolveGroup = (group: string, contexts: Plain) =>
-      group.replace(/\$\{\{(.*?)\}\}/g, (_: string, expression: string) => {
+    const resolveGroup = (group: string, given: Plain) => {
+      const contexts: Plain = { inputs: {}, ...given };
+      return group.replace(/\$\{\{(.*?)\}\}/g, (_: string, expression: string) => {
         const ast = new Parser(new Lexer(expression).lex().tokens, Object.keys(contexts), [
           { name: "format", minArgs: 1, maxArgs: 255 },
         ]).parse();
         return new Evaluator(ast, toData(contexts)).evaluate().coerceString();
       });
+    };
     // Two pull requests' runs, as GitHub names them.
     const runs = [
       { ref: "refs/pull/79/merge", run_id: "18800000001", run_attempt: "1" },
@@ -270,7 +272,7 @@ describe("the native pull-request gate", () => {
         vars: { VIRTUAL_MAC_RUNNER: "mini-mac-virtual", MAC_RUNNER: "mini-mac-any" },
         shared: false,
       },
-      // The Mac mini's own runners, where each gate takes the exclusive lease.
+      // The Mac mini's own runners keep the shared phone queue.
       { vars: { MAC_RUNNER: "mini-mac-any" }, shared: true },
       { vars: {}, shared: true },
       // PHONE_VIRTUAL_MAC reuses one fixed clone, whatever the other variables say.
@@ -291,6 +293,15 @@ describe("the native pull-request gate", () => {
     expect(
       resolveGroup(native.group, { github: { ...runs[0], run_attempt: "2" }, vars: virtual }),
     ).not.toBe(groups(virtual)[0]);
+    // INF-869: the real-Mac overlap proof selects a runner without changing shared vars.
+    const proofGroups = runs.map((github) =>
+      resolveGroup(native.group, {
+        github,
+        vars: virtual,
+        inputs: { mac_runner: "mini-mac-real" },
+      }),
+    );
+    expect(proofGroups).toEqual(["mac-mini-phone", "mac-mini-phone"]);
     expect(native.queue).toBe("max");
     expect(native["cancel-in-progress"]).toBe(false);
   });
@@ -354,14 +365,20 @@ describe("the native pull-request gate", () => {
       waits: { type: "boolean", default: false },
     });
     const expression = workflow.jobs["native-phone"]["runs-on"].replace(/^\$\{\{\s*|\s*\}\}$/g, "");
-    const ast = new Parser(new Lexer(expression).lex().tokens, ["vars"], []).parse();
+    const ast = new Parser(new Lexer(expression).lex().tokens, ["vars", "inputs"], []).parse();
     for (const configured of ["mini-mac", ""]) {
       const variables = new data.Dictionary({
         key: "MAC_RUNNER",
         value: new data.StringData(configured),
       });
       expect(
-        new Evaluator(ast, new data.Dictionary({ key: "vars", value: variables }))
+        new Evaluator(
+          ast,
+          new data.Dictionary(
+            { key: "vars", value: variables },
+            { key: "inputs", value: new data.Dictionary() },
+          ),
+        )
           .evaluate()
           .coerceString(),
       ).toBe("mini-mac");
@@ -373,7 +390,7 @@ describe("the native pull-request gate", () => {
     expect(names(stepsThatRun(OFF))).toEqual(
       all.filter((name) => !VIRTUAL_MAC_STEPS.includes(name)),
     );
-    // INF-662 piece 1: one gate takes the Mac check lease once, then checks and builds once
+    // INF-662 piece 1: one gate checks and builds once
     // and runs both devices side by side; the switch, when set, sends it to the virtual Mac.
     expect(
       stepsThatRun(OFF)
@@ -384,9 +401,9 @@ describe("the native pull-request gate", () => {
         // INF-827: the parts the chooser kept, none (every part) on a run on request.
         'parts=(); for part in $PHONE_PARTS; do parts+=(--part "$part"); done',
         'if [ -n "$PHONE_VIRTUAL_MAC" ]; then exec scripts/virtual-mac/phone.sh gate iphone ipad; fi',
-        // INF-658: a job placed in a virtual Mac runs the gate there without the lease.
+        // INF-658: a job placed in a virtual Mac uses two simulators.
         'if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi',
-        'python3 scripts/with-mac-check.py --max-hold 60m exclusive "$HOME/Library/Caches/infinitary-ci/checks.lock" -- node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"',
+        'node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"',
         "",
       ].join("\n"),
     ]);
@@ -402,6 +419,16 @@ describe("the native pull-request gate", () => {
     );
     for (const value of [OFF, IN_TURN, TOGETHER])
       expect(holds(`(${shell}) == '${value}'`, { vars: { PHONE_VIRTUAL_MAC: value } })).toBe(true);
+  });
+  it("selects the requested real Mac for the overlap proof without changing default variables", () => {
+    // INF-869 requires a real-Mac phone gate beside a virtual-Mac check.
+    const expression = workflow.jobs[NATIVE_JOB]["runs-on"].replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+    expect(
+      holds(`(${expression}) == 'mini-mac-real'`, {
+        vars: { VIRTUAL_MAC_RUNNER: "mini-mac-virtual", MAC_RUNNER: "mini-mac-any" },
+        inputs: { mac_runner: "mini-mac-real" },
+      }),
+    ).toBe(true);
   });
   it("runs the device gates in a fresh virtual Mac on its own runner when the switch is on", () => {
     const expression = workflow.jobs[NATIVE_JOB]["runs-on"];
@@ -421,7 +448,10 @@ describe("the native pull-request gate", () => {
           };
           for (const label of ["mini-mac", "mini-mac-vm", "mini-mac-any", "mini-mac-virtual"])
             expect(
-              holds(`(${expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "")}) == '${label}'`, { vars }),
+              holds(`(${expression.replace(/^\$\{\{\s*|\s*\}\}$/g, "")}) == '${label}'`, {
+                vars,
+                inputs: {},
+              }),
             ).toBe(runner(virtualMac, virtualRunner, macRunner) === label);
         }
     const inTurn = names(stepsThatRun(IN_TURN));
@@ -443,9 +473,7 @@ describe("the native pull-request gate", () => {
         (name) => DEVICE_GATES.includes(name) || VIRTUAL_MAC_STEPS.includes(name),
       ),
     ).toEqual(["Start a fresh virtual Mac", BOTH, "Delete the virtual Mac"]);
-    // In the virtual Mac no gate takes the Mac check lease: phone checks wait only for each
-    // other through the mac-mini-phone queue, which keeps one fixed clone at a time (the
-    // captain's answer on INF-79's rule).
+    // The phone switch keeps one fixed clone at a time without excluding desktop checks.
     expect(
       stepsThatRun(TOGETHER)
         .filter(isGate)

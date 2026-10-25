@@ -23,12 +23,7 @@ async function runRelease(failure = "", overrides: Partial<Record<string, string
   const temp = join(root, "temp");
   for (const directory of [bin, home, temp, join(root, "scripts"), join(root, "ios")])
     mkdirSync(directory);
-  for (const file of [
-    "release-phone.sh",
-    "phone-release.ts",
-    "phone-certificates.ts",
-    "with-mac-check.py",
-  ])
+  for (const file of ["release-phone.sh", "phone-release.ts", "phone-certificates.ts"])
     copyFileSync(resolve("scripts", file), join(root, "scripts", file));
   copyFileSync("ios/ExportOptions.plist", join(root, "ios/ExportOptions.plist"));
   copyFileSync("ios/Infinitary/Info.plist", join(root, "ios/Info.plist"));

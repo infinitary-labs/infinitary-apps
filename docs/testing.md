@@ -80,7 +80,7 @@ A unit test's limits and waits run on the same clock and cap, and each `ci.yml` 
 Above every wait sit the whole check's limits (INF-1083, the captain's check limits).
 A pull request's journeys and journeys on request end their run at 75 minutes (Playwright's `globalTimeout`, which `playwright.config.ts` reads from the workflow's `INFINITARY_E2E_RUN_MINUTES`) and their command at 90 (the step's `timeout-minutes`), on the Mac mini and on the hosted Linux overflow alike.
 The full Mac suite in `verify.yml` ends its run at 150 minutes and its command at 180.
-The Mac command's 90 minutes include its wait for the Mac check lease and the build, so a phone check holding the lease shortens the time left for the run.
+The Mac command's 90 minutes include the build and run; it does not wait for a command lease.
 
 ## Notes
 
@@ -144,13 +144,13 @@ In CI mode the three heavy checks refuse to start outside CI and name their rout
 | Check | Command that refuses | Its route in CI mode |
 | --- | --- | --- |
 | Journeys | `pnpm exec playwright test` naming a committed journey (`playwright.config.ts`) | a pull request runs the journeys its change reaches; on request, `journeys.yml` with the `files` it names ("Journeys on request") |
-| The phone check | `pnpm test:phone`, before it waits for the Mac check lease, and `scripts/test-phone.ts` | `phone.yml` on request ("The phone check on request") |
+| The phone check | `pnpm test:phone` and `scripts/test-phone.ts` | `phone.yml` on request ("The phone check on request") |
 | The replay gate | `pnpm replay:gate` | `replay.yml` on request (`docs/replay-harness.md`, "The gate") |
 
 Crewmates start each route the way they start a full verification: `github_write` to `POST /repos/{owner}/{repo}/actions/workflows/<workflow>/dispatches` with `{"ref":"<branch>"}` and the route's inputs (`docs/forge.md`, "Verification workflow requests").
 An accepted request is not a passing check: find the run, confirm its version, then read it.
 Typecheck, lint and the unit tests stay local in both modes, and they already run on every pull request.
-Pictures and demos for a card stay local too: they are evidence, not checks, and take no lease.
+Pictures and demos for a card stay local too: they are evidence, not checks.
 A throwaway picture or demo script is never committed, so the journey guard lets it run; an existing spec cannot take pictures in CI mode.
 Inside CI (`CI` is set) the heavy checks always run, because the Mac mini's runners run as the same user and read the same git settings.
 `INFINITARY_CHECKS=local` or `INFINITARY_CHECKS=ci` overrides the git setting for one run in a terminal; the app's crewmates do not see a shell profile's variables, which is why the setting is a git setting.
@@ -161,7 +161,7 @@ A value other than `ci` or `local` refuses rather than guess.
 
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).
 A change to the generated phone contract that touches only its `public static let version` line, a first-number change included, does not select it; `pnpm check` still verifies the file is current on every pull request.
-The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the command-lease helper `scripts/with-mac-check.py`, the check runner `scripts/phone-checks.ts` and the test plan helper `scripts/phone-test-plan.ts`.
+The setup inputs are `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, the activity writer `scripts/phone-activity.ts`, the check runner `scripts/phone-checks.ts` and the test plan helper `scripts/phone-test-plan.ts`.
 Setup the device gates never run does not select it: the chooser itself, the replacement helper `scripts/replaced-phone-runs.ts`, the local test home `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh` while `PHONE_VIRTUAL_MAC` is unset.
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
@@ -191,30 +191,13 @@ So does a run whose pull request merged or closed while it waited in the phone l
 On the Mac mini's own runners, native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
 A job on the virtual-Mac label (`VIRTUAL_MAC_RUNNER`) takes a group of its own, so phone checks run side by side in the virtual places (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac").
 Desktop journey jobs from different pull requests remain parallel.
-The actual desktop build/test command takes a shared lease through `scripts/with-mac-check.py`; the native device gate takes an exclusive lease against the same runner-account cache file, once for both devices.
-A waiting phone holds the entry lock while active desktops finish, so new desktops cannot continually pass it; after admission, command exit or cancellation releases the kernel lease.
-The helper holds the lease itself, as the command's parent, and starts the command in a session of its own that never inherits it, so the lease ends when the command exits, even if the command leaves background processes running (INF-649).
-The helper passes interrupt, termination and hangup on to the command's process group and exits with the command's status.
-Every wait prints a line: `waiting for checks queued ahead` at the entry lock and `waiting for active checks` at the lease, then which recorded checks hold the lease, since when and their limits.
-Each admitted command leaves a record in `checks.lock.holders/` beside the lock: its holder, its command's process group, when it was admitted and its maximum hold, which `--max-hold` gives on every wrapped command.
-The command waits at a gate until its record is written, so a check that finds its holder gone or stopped always has a record to act on, and a holder that dies before writing it leaves no command running (INF-692).
-The kernel lock alone decides who holds the lease; a record never blocks anyone.
-A waiting check reads the records every second.
-It takes the lease back at once from a holder whose command has ended, and from a holder past its maximum hold by stopping its command with SIGTERM, then SIGKILL after 30 seconds.
-The waiting check prints why, and the overdue command's job prints why and fails with status 124.
-A holder that dies loses the lease to the kernel at once; the next check admitted stops any command it left running before its own starts, and clears its record.
-A holder with no record, such as one started by an earlier version of the helper, cannot be taken back, and a waiting check says so.
-Each limit is about twice the longest hold measured in real runs of that command: 75 minutes for journeys and 40 minutes for the device gate, which runs both devices at once, local `pnpm test:phone` included.
-The release upload keeps the 60 minutes its job allows release work, because a release job is never rerun.
-A crewmate's local `pnpm test:phone` takes the same exclusive lease through its package script, so it waits behind pull-request journeys and CI phone gates; `scripts/test-phone.ts` never takes it itself.
-The runner slots must share one account; the helper uses stock Python and `fcntl`, never signing material.
-The native job's 165-minute limit allows 45 minutes for the device gate, 105 across admission waits and 15 for setup, cleanup and evidence upload; it changes no test deadline.
-The admission allowance covers the CI job waiting behind active desktop journeys (60 minutes) plus two local phone gates (45 minutes) that took the entry lock first.
-No desktop work runs between the iPhone and the iPad.
-Setup, evidence uploads, Linux jobs and the Linux choosers do not take the lease.
-`tests/mac-check-lock.test.ts` runs the actual workflow command strings and the `test:phone` package script with held scratch Node processes and real kernel probes to verify overlap, exclusion, failure, cancellation, the waiting lines, a leftover background process, a command that starts only once its lease is recorded, a killed holder, a holder that outlived its command and a lease held past its limit.
-With the repository variable `PHONE_VIRTUAL_MAC` set, the device gate runs in a fresh virtual Mac on its own runner and takes no lease (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
-A job the placement service runs inside a virtual Mac takes no lease either, because no journeys share that Mac (`docs/ios.md`, "A phone check the placement service puts in a virtual Mac"); `tests/mac-check-lock.test.ts` starts it beside running journeys.
+Desktop journeys and native phone gates run directly, without a command lease, so real and virtual Macs can check concurrently.
+The phone workflow keeps its configured concurrency groups; they do not exclude desktop checks or a local phone command.
+The native job retains its 165-minute job limit for setup, the device gate, cleanup and evidence upload; there is no command-admission wait.
+`pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
+`tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.
+With the repository variable `PHONE_VIRTUAL_MAC` set, the device gate runs in a fresh virtual Mac on its own runner (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
+A job the placement service runs inside a virtual Mac uses two simulators at a time; a real-Mac gate uses the device gate's default concurrency.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ### The phone check on request
@@ -223,7 +206,9 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 A run on request skips the chooser and runs every part of the device gate whatever changed; it starts no release, TestFlight or App Store step.
 It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
 No part on either device stops another, and inside the gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
-It takes the same line and runner as a pull request's phone check: its own fresh virtual Mac with no lease on the virtual-Mac label, otherwise the `mac-mini-phone` queue and the exclusive Mac check lease.
+For an isolated overlap proof, its optional `mac_runner` input selects a runner for that request only, as `verify.yml` does; shared runner variables stay unchanged.
+An explicit runner uses the shared `mac-mini-phone` queue; the fixed `PHONE_VIRTUAL_MAC` switch, when set, still takes precedence.
+Without that input, it takes the same line and runner as a pull request's phone check: its own fresh virtual Mac on the virtual-Mac label, otherwise the `mac-mini-phone` queue, without excluding desktop checks.
 
 ## Journeys on the pull request
 
@@ -326,10 +311,11 @@ Its on-demand `parts`, `starve` and `perf` inputs select native parts and reprod
 The names are read as a `Journeys:` trailer's are, separated by spaces or commas, and a name that is no journey fails the chooser (`scripts/affected-journeys.ts --named`).
 The chooser places the named files exactly as it places a pull request's, closest six minutes on the Mac mini and the rest on hosted Linux, and the run skips the pull request's Linux starter coverage.
 It is a computer's route for journeys in CI mode ("Where the heavy checks run"), such as a journey a change is still being written against.
+Its optional `mac_runner` input selects an isolated Mac runner for that request, as `verify.yml` does, without changing shared runner variables.
 Each request is its own concurrency group, so another request on the same branch, `main` included, never cancels it, whatever journeys either names (INF-941); only a newer push to a pull request replaces that pull request's older run.
 A request its requester no longer needs is cancelled by its run's id (`POST /repos/{owner}/{repo}/actions/runs/{id}/cancel`).
 
-The `starve` input runs the Mac journeys through the load controller, `scripts/starve-check.py`, inside the same lease and after the build.
+The `starve` input runs the Mac journeys through the load controller, `scripts/starve-check.py`, after the build.
 The controller runs the command's own process tree for 0.1 s, stops it for 0.2 s, and adds a 65-second stop after each 20 seconds of that, longer than the one-minute journey default.
 It walks the command's known processes and their children, detached sessions included, through `libproc` on macOS and `/proc` on Linux, never a system-wide listing, which on macOS can wait on an unrelated process part-way through exec.
 It rescans a stopped parent for children it started meanwhile, rechecks each process's identity before letting it go, and never signals a process outside the tree.

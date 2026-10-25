@@ -265,7 +265,7 @@ Release signing runs only in the separately dispatched TestFlight workflow below
 A branch dispatch is refused before Apple is contacted.
 Every job checks out the same full source commit recorded by the dispatch; the phone version is independent of the Mac's version and does not edit a version file or create a desktop release tag.
 The build number is the workflow run number followed by `.1`, such as `42.1`; validation refuses a run beyond 9999 rather than exceeding Apple's four-digit first component.
-The Mac job refuses release-job reruns immediately after Node setup, before dependency installation or either exclusive simulator lease; the upload command checks again before Xcode runs.
+The Mac job refuses release-job reruns immediately after Node setup, before dependency installation or either device gate; the upload command checks again before Xcode runs.
 GitHub can preserve an earlier resolve job's outputs while advancing another job's attempt, and an unclear upload must not be renumbered or resubmitted.
 A status-only request remains safe to rerun because it never uploads.
 A fresh dispatch creates another build, not a retry of a prior upload.
@@ -293,14 +293,14 @@ The captain's one-time Apple setup is:
 After preflight, the existing disposable iPhone and iPad gates run on `REAL_MAC_RUNNER` when it is set, otherwise on `MAC_RUNNER`, falling back only to `mini-mac`.
 Xcode signs the upload with the captain's certificates, so the job asks for the real Mac, never a virtual one (`docs/testing.md`, "The real Mac's place").
 Either failure prevents archive and upload; iPad still runs after an iPhone failure unless cancelled.
-The release job waits in a line of its own, `ios-testflight`, apart from the phone checks, and each device gate and the release command use the existing exclusive command lease while desktop jobs retain their parallel queues.
-The job allows the native lane's 165 minutes, which include waiting behind local phone gates that took the entry lock first, plus 60 minutes for release work; this changes no test deadline.
+The release job waits in a line of its own, `ios-testflight`, apart from the phone checks; its device gates and release command run directly without excluding desktop checks.
+The job retains the native lane's 165-minute allowance plus 60 minutes for release work; commands no longer wait for admission.
 Install-time checks use a scratch HOME and an empty local-signing directory, as in `phone.yml`.
 
 `scripts/release-phone.sh` uses ordinary Xcode automatic signing on the existing Mac runner with the same Apple team and API key as SSHHIP.
 This CI path is captain-approved; it is not permission for a crewmate to sign locally or inspect the person's keychains.
 There are no explicit `security`, Keychain or `codesign` commands; Xcode may reuse an existing development certificate rather than create one.
-After a confirmed upload, `scripts/phone-certificates.ts` lists safe cleanup candidates inside the release command's existing exclusive lease.
+After a confirmed upload, `scripts/phone-certificates.ts` lists safe cleanup candidates inside the release command.
 Only a runner named `mini-mac` or starting `mini-mac-` may select candidates, and an archive without a signing fingerprint selects nothing.
 It protects every SHA-1 signing identity printed by archive and export, including nested targets, rather than just the last identity.
 It reads all certificate pages through the existing host-checked App Store Connect reader, with a ten-page bound; malformed or incomplete listings fail closed.
@@ -329,8 +329,8 @@ Apple's internal-testing state means testers can install the build, not that a p
 
 ## Disposable verification
 
-`pnpm test:phone --evidence <absolute-folder-outside-the-project>` takes the same exclusive lease as CI's native gate, waiting behind pull-request journeys and CI phone gates, then runs the foundation's native gate on a Mac with Xcode, Swift 6.1 or newer, and an iOS 18 or newer simulator runtime.
-On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the heavy checks run") it refuses before it waits and names `phone.yml` on request instead.
+`pnpm test:phone --evidence <absolute-folder-outside-the-project>` runs the foundation's native gate directly on a Mac with Xcode, Swift 6.1 or newer, and an iOS 18 or newer simulator runtime.
+On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the heavy checks run") it refuses before starting the gate and names `phone.yml` on request instead.
 Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
 Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
 The native journey is five tests in `PhoneJourney`, its parts: `join` (join and recover), `talk` (talk and tasks), `cards`, `address` (join by its address), and `rest`, which runs the character and past choices with the app-hosted tests and any test no other part names (`scripts/phone-test-plan.ts`).
@@ -419,7 +419,7 @@ The runner waits for simulator boot completion before launching tests and uses o
 For interactive local development, `node scripts/phone-test-home.ts <output-json-outside-the-project>` keeps the same disposable real-core home open until interrupted.
 The output names its control address and scratch root, and is private to that run.
 `phone.yml` runs this same gate with `--both` for pull requests touching `ios/` or the phone-card or phone-contract generator and the contract shape guard.
-The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, its command-lease helper `scripts/with-mac-check.py`, its check runner `scripts/phone-checks.ts` and its test plan helper `scripts/phone-test-plan.ts`.
+The gate's own setup also selects it: `phone.yml`, `scripts/test-phone.ts`, `tests/helpers/phoneHome.ts`, `tests/helpers/phoneKeyboard.ts`, its activity writer `scripts/phone-activity.ts`, its check runner `scripts/phone-checks.ts` and its test plan helper `scripts/phone-test-plan.ts`.
 Setup the gate never runs does not: `scripts/affected-phone.ts`, `scripts/replaced-phone-runs.ts`, `scripts/phone-test-home.ts`, and the virtual Mac scripts `scripts/virtual-mac/phone.sh`, `phone-job.sh` and `vm.sh` while `PHONE_VIRTUAL_MAC` is unset.
 A pull request's gate runs only the parts the change reaches that fit a six-minute budget, closest first, with every part whose UI test code changed even past it; the nightly check of `main` runs every part (`docs/testing.md`, "The phone parts a pull request runs").
 Shared modules, connection/device code, general packages and the lockfile alone do not select it; a changed generated Swift file does, unless it changes only its `public static let version` line, which includes a new first number: the phone and the computer come from the same pull request, so they always agree on it, and `docs/contract.json` alone never selects the gate.
@@ -442,15 +442,14 @@ It stops the run of a pull request that merged or closed while the run waited in
 On the Mac mini's own runners, native jobs share the repository-wide `mac-mini-phone` concurrency group, with `queue: max` and cancellation disabled at the job level; GitHub keeps up to 100 pending phone jobs.
 A job on the placement service's virtual-Mac label takes a group of its own instead, so phone checks run side by side, one per free virtual place ("A phone check the placement service puts in a virtual Mac").
 Desktop jobs from different pull requests have no common job-level concurrency group, so they can run side by side.
-On the Mac, `scripts/with-mac-check.py` gives the desktop build/test command a shared kernel file lease and the native device gate an exclusive one, taken once for both devices; a gate inside a virtual Mac takes none ("A phone check the placement service puts in a virtual Mac").
-The `test:phone` package script takes that lease around `scripts/test-phone.ts`, and the script never takes it, because CI already wraps the script and a nested exclusive lease waits forever; the script also swaps `HOME` for a scratch home before anything else runs.
-The runner slots and a crewmate's `pnpm test:phone` use the same account and `$HOME/Library/Caches/infinitary-ci/checks.lock`; active desktop commands finish before a phone enters, and a waiting phone prevents new desktops passing it.
-The helper holds the lease as the command's parent and never passes it on, so it ends when the command exits, even if the command leaves background processes running; lock files are never unlinked.
-A waiting check prints that it waits and who holds the lease, and takes the lease back from a holder whose command ended, a dead holder's command or a command past its `--max-hold` limit (`docs/testing.md`, "Native phone checks on the pull request").
-No desktop work runs between the iPhone and the iPad: the one gate holds the lease for both.
+Desktop journeys and native device gates run directly, without a command lease, so real and virtual Mac checks can overlap.
+The `test:phone` package script checks the configured execution mode before running `scripts/test-phone.ts` directly; the gate owns a scratch HOME and disposable simulators.
+Before the gate starts any phone work, `scripts/phone-activity.ts` publishes a private, atomic activity record for its supervisor in `IDLE_REBOOT_PHONE_ACTIVITY_DIR`, or the invoking account's real `Library/Caches/infinitary-ci/phone-activity` folder, never the disposable HOME.
+Each invocation owns one uniquely named JSON file containing only `schemaVersion: 1`, its `pid` and `processStartedAt`, the normalized `LC_ALL=C TZ=UTC /bin/ps -o lstart=` reading for that PID.
+The supervisor stays alive through teardown and removes only its own file after cleanup; this is activity reporting, with no lock, admission wait, heartbeat or age expiry.
+The paired reader is dotfiles-private's `hosts/PHONE_ACTIVITY.md` contract and idle-reboot watchdog; producer and reader must merge together before the lock removals are complete.
 The device gate has a 60-minute step limit on every route: the real Mac, the fixed virtual-Mac switch and a placed virtual Mac.
-The real Mac's command lease also holds it to 60 minutes; the job retains its 165-minute outer limit for admission, setup, cleanup and upload.
-Setup, evidence upload, the choosers and Linux jobs remain independent.
+The native job retains its 165-minute job limit for setup, checks, cleanup and evidence upload, without command-admission waits.
 Neither device's failure is ignored: their parts run side by side, none stops another, and any failing fails the gate.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
@@ -464,28 +463,28 @@ Set, the job runs on the phone check's own runner, labelled `mini-mac-vm`, which
 The version rides in as a `git archive` of the checkout, because a pull request's checkout is shallow and a bundle of it cannot be fetched into an empty clone.
 The gate step then runs `phone.sh gate iphone ipad`, which runs `scripts/test-phone.ts --both --simulators 2` inside the clone, two simulators at a time for its 6 CPUs and 16 GB, and copies each device's results into `$RUNNER_TEMP/phone/<device>`, so `phone-results` keeps what the Mac mini's gate keeps, a failed device's included.
 The last step, `phone.sh delete`, stops and deletes the clone however the job ends, a cancelled or replaced run's included.
-No gate in the virtual Mac takes the Mac check lease, so phone checks wait only for each other, never for journeys (the captain's INF-517 answer on INF-79's rule).
+The phone workflow does not exclude journeys.
 The `mac-mini-phone` queue is what keeps one phone clone running at a time, so with this variable set every phone check takes that shared line whatever `VIRTUAL_MAC_RUNNER` says.
 Whatever its value, the gate is the same one step as on the Mac mini, `Read and recover on iPhone and iPad at once`, right after the replacement check.
 The script prints in UTC when the virtual Mac started and when each device began and ended.
 The image and its base image's download take about 80 GB together in tart's own `~/.tart` on the Mac mini.
 Set the variable only once that runner is registered, finds `tart` on its search path and the image is built; otherwise every phone check waits for the runner or fails at its first step.
 The Mac mini's idle watchdog counts a running `tart run` process as work for up to three hours, so it does not restart the Mac under a phone check.
-While the variable is set, a crewmate's own `pnpm test:phone` stays on the Mac mini under the lease and checks the iPhone alone, leaving both devices to the pull request's phone check; `github_read` of `/repos/{owner}/{repo}/actions/variables` lists the variable when it is set.
+While the variable is set, a crewmate's own `pnpm test:phone` stays on the Mac mini and checks the iPhone alone, leaving both devices to the pull request's phone check; `github_read` of `/repos/{owner}/{repo}/actions/variables` lists the variable when it is set.
 
 ### A phone check the placement service puts in a virtual Mac
 
 Once `MAC_RUNNER` names the placement service's label (`docs/testing.md`, "One image for every project"), `native-phone` runs on whichever place the service gives it, usually a fresh virtual Mac of its own.
-The gate step asks macOS whether it runs in a virtual Mac (`sysctl -n kern.hv_vmm_present`); there it runs `scripts/test-phone.ts --both --simulators 2` directly and takes no Mac check lease, because no journeys share that Mac (the captain's choice on INF-658: "Move phone checks off the Mac check lock once the virtual Mac runner works").
+The gate step asks macOS whether it runs in a virtual Mac (`sysctl -n kern.hv_vmm_present`); there it runs `scripts/test-phone.ts --both --simulators 2` directly.
 Two simulators at a time match the virtual Mac's 6 CPUs and 16 GB, as `phone-job.sh` runs them, and INF-621's two complete iPhone and iPad proofs passed in that image.
-On the real Mac's place, as on today's Mac mini runners, the gate still takes the exclusive lease, which a crewmate's `pnpm test:phone` and journeys on that Mac share.
+On the real Mac's place the gate runs directly too, using the gate's default simulator concurrency.
 Leave `PHONE_VIRTUAL_MAC` unset with the placement service: a job already inside a virtual Mac cannot start another one.
 
 The repository variable `VIRTUAL_MAC_RUNNER`, which `native-phone` reads before `MAC_RUNNER`, names the service's virtual-Mac label, `mini-mac-virtual`, so the phone check never takes the real Mac's place (INF-897).
 GitHub hands a scale set's new runner whichever of that set's waiting jobs it picks, not the one the service started it for, so in the scale set the other Mac jobs share, the service's choice does not hold.
 Under the virtual-Mac label the phone check shares its scale set only with `old-cask-upgrade.yml`'s check, which runs after a release that switched the old cask, on request, or for a pull request that changes it.
 On that label each phone check takes a concurrency group of its own, so phone checks no longer wait in one line: each waits only for a free virtual place, and both virtual places can run phone checks at once (the captain's choice on INF-989: "let both virtual Macs run phone checks at once by ending the one-at-a-time line").
-The real Mac never takes that label, so a phone check never takes its place or its Mac check lease.
+The real Mac never takes that label, so a phone check never takes its place.
 A runner the service starts for one phone check may take another waiting phone check, or that rarer check in the same set; either is a job that asked for a virtual Mac.
 The service gives a free virtual place first to the oldest job that asks for a virtual Mac (`Plan` in dotfiles-private's `pkgs/fm-placer/schedule.go`), so a released phone check starts on the next free virtual place instead of behind every Mac job already waiting.
 Unset, the job runs where `MAC_RUNNER` sends it, as before; `tests/phone-ci.test.ts` evaluates the job's runner for each setting.

@@ -18,7 +18,7 @@
     "typecheck": "node scripts/typecheck.ts --pretty",
     "test": "vitest run",
     "test:e2e": "pnpm build && playwright test",
-    "test:phone": "node scripts/checks-mode.ts phone && python3 scripts/with-mac-check.py --max-hold 40m exclusive \"$HOME/Library/Caches/infinitary-ci/checks.lock\" -- node scripts/test-phone.ts",
+    "test:phone": "node scripts/checks-mode.ts phone && node scripts/test-phone.ts",
     "test:probes": "node scripts/affected-probes.ts --run",
     "test:styles": "playwright test tests/renderer/railDocking.spec.ts --project styles --no-deps",
     "test:watch": "vitest",

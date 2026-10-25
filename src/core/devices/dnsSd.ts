@@ -60,7 +60,8 @@ export function runDnsSd(program: string): DnsSdRun {
 
 /**
  * A run of dns-sd that lasts until stopped, such as `-R` announcing this
- * Mac, which has no `-t` of its own: a shell holds it with this app's pipe,
+ * Mac, which has no `-t` of its own, or Avahi's `avahi-publish` announcing a
+ * Linux home, which has no end at all: a shell holds it with this app's pipe,
  * and kills it once the pipe closes - when the run is stopped, or when the
  * app is gone, however it went - so a quit or a crash leaves no announcement.
  * It ends by itself, as `runDnsSd`'s do, when dns-sd does.

@@ -81,7 +81,7 @@ export async function startCore(host: HostCapabilities): Promise<Core> {
       services.computerResources.dispose();
       services.devices.dispose();
       services.nearbyMacs.dispose();
-      services.macAnnouncement.dispose();
+      services.homeAnnouncement.dispose();
       services.phoneDoor?.close();
       // A clean quit is not a crash, however early it comes (Step 5).
       services.launchWatch.dispose();

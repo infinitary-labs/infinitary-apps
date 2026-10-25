@@ -2,18 +2,28 @@ import { type DeviceView, isPhone } from "@shared/devices";
 import type { DnsSdRun } from "./dnsSd";
 
 /**
- * How this Mac announces itself for a phone to join or reconnect (docs/devices.md,
+ * How this computer announces itself for a phone to join or reconnect (docs/devices.md,
  * "Announcing to a phone"): Bonjour's `_infinitary._tcp` in the local domain,
- * at the port the connection listens on, so the phone can find this Mac before
+ * at the port the connection listens on, so the phone can find this computer before
  * joining or after its address moved. It carries no key and no secret: the
- * phone proves this Mac by the invitation's or its saved public-key pin.
+ * phone proves this computer by the invitation's or its saved public-key pin.
  */
 export const ANNOUNCE_SERVICE = "_infinitary._tcp";
 
-export type MacAnnouncementOptions = {
-  /** dns-sd, or null where this computer cannot announce (not macOS, with no stand-in). */
+/** What macOS's own `dns-sd -R` is asked: the name, the service, the local domain and the port. */
+export function dnsSdAnnounceArgs(name: string, port: number): string[] {
+  return ["-R", name, ANNOUNCE_SERVICE, "local.", String(port)];
+}
+
+export type HomeAnnouncementOptions = {
+  /**
+   * What announces, held until stopped: a Mac's dns-sd, a Linux home's
+   * avahi-publish, or null where this computer has neither (and no stand-in).
+   */
   run: DnsSdRun | null;
-  /** The name this Mac announces under: its own name in System Settings. */
+  /** What that program is asked to announce `name` at `port`: `dnsSdAnnounceArgs` or `avahiAnnounceArgs`. */
+  args: (name: string, port: number) => readonly string[];
+  /** The name this computer announces under: a Mac's own name in System Settings, a Linux home's own name on the network. */
   name: () => Promise<string>;
   /** The port the connection listens on. */
   port: number;
@@ -26,13 +36,13 @@ const RETRY_FIRST_MS = 5_000;
 const RETRY_MOST_MS = 60_000;
 
 /**
- * Announces this Mac while a phone is on the list or a usable direct invitation is open,
- * with macOS's own `dns-sd -R`, held by this app's pipe (`runDnsSdHeld`) so it ends
- * with the app however that went. It stops when neither condition holds, and a run
- * that ends by itself restarts only while either condition still holds.
+ * Announces this computer while a phone is on the list or a usable direct invitation is open,
+ * with macOS's own `dns-sd -R` or Avahi's `avahi-publish`, held by this app's pipe
+ * (`runDnsSdHeld`) so it ends with the app however that went. It stops when neither
+ * condition holds, and a run that ends by itself restarts only while either condition still holds.
  */
-export class MacAnnouncement {
-  private readonly options: MacAnnouncementOptions;
+export class HomeAnnouncement {
+  private readonly options: HomeAnnouncementOptions;
   private readonly later: (ms: number, fire: () => void) => () => void;
   private running: { stop: () => void } | null = null;
   /** Whether a phone is listed or a usable direct invitation is open now. */
@@ -43,7 +53,7 @@ export class MacAnnouncement {
   /** Bumped by each start and stop, so a late name or a late end of an earlier run is ignored. */
   private turn = 0;
 
-  constructor(options: MacAnnouncementOptions) {
+  constructor(options: HomeAnnouncementOptions) {
     this.options = options;
     this.later =
       options.later ??
@@ -91,7 +101,7 @@ export class MacAnnouncement {
     void this.options.name().then(
       (name) => {
         if (stopped || turn !== this.turn) return;
-        child = run(["-R", name, ANNOUNCE_SERVICE, "local.", String(this.options.port)], {
+        child = run(this.options.args(name, this.options.port), {
           line: () => {},
           ended: () => {
             if (turn !== this.turn) return;
@@ -108,7 +118,7 @@ export class MacAnnouncement {
     );
   }
 
-  /** The run ended by itself (as when mDNSResponder restarted) while still wanted: start another, later each time. */
+  /** The run ended by itself (as when mDNSResponder restarted, or Avahi refused it) while still wanted: start another, later each time. */
   private again(): void {
     if (!this.wanted || this.disposed) return;
     const wait = this.retryMs;

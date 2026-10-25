@@ -1,12 +1,14 @@
 import type { DeviceView } from "@shared/devices";
 import { describe, expect, it } from "vitest";
-import { ANNOUNCE_SERVICE, MacAnnouncement } from "./announce";
+import { ANNOUNCE_SERVICE, dnsSdAnnounceArgs, HomeAnnouncement } from "./announce";
+import { avahiAnnounceArgs } from "./avahi";
 import type { DnsSdRun } from "./dnsSd";
 
 /**
  * INF-64 piece 1: while a phone is on the list, this Mac announces itself
  * over Bonjour so the phone can find it again (docs/devices.md, "Announcing
- * to a phone"). Against a stand-in for dns-sd in memory; never macOS's own.
+ * to a phone"); INF-95: so does a Linux home, with Avahi. Against a stand-in
+ * for dns-sd or avahi-publish in memory; never the system's own.
  */
 
 const device = (kind: DeviceView["kind"], system?: DeviceView["system"]): DeviceView =>
@@ -19,7 +21,10 @@ const device = (kind: DeviceView["kind"], system?: DeviceView["system"]): Device
     ...(system ? { system } : {}),
   }) as DeviceView;
 
-function announcer() {
+function announcer(
+  args: (name: string, port: number) => readonly string[] = dnsSdAnnounceArgs,
+  name = "Kun’s Mac mini",
+) {
   const started: string[][] = [];
   const stopped: number[] = [];
   const run: DnsSdRun = (args) => {
@@ -27,9 +32,10 @@ function announcer() {
     const at = started.length - 1;
     return { stop: () => stopped.push(at) };
   };
-  const announcement = new MacAnnouncement({
+  const announcement = new HomeAnnouncement({
     run,
-    name: async () => "Kun’s Mac mini",
+    args,
+    name: async () => name,
     port: 47623,
   });
   return { announcement, started, stopped };
@@ -67,6 +73,15 @@ describe("announcing to a phone", () => {
     expect(started).toEqual([["-R", "Kun’s Mac mini", ANNOUNCE_SERVICE, "local.", "47623"]]);
   });
 
+  // INF-95: a Linux home announces the same service with Avahi, so a phone paired to it finds it again.
+  it("asks a Linux home's avahi-publish for the same service under its name at the connection's port", async () => {
+    const { announcement, started } = announcer(avahiAnnounceArgs, "studio");
+    announcement.devicesChanged([device("view", "ios")]);
+    await settle();
+    expect(started).toEqual([["--no-fail", "--service", "studio", ANNOUNCE_SERVICE, "47623"]]);
+    announcement.dispose();
+  });
+
   it("stops once the last phone is gone, and again announces when a phone joins", async () => {
     const { announcement, started, stopped } = announcer();
     announcement.devicesChanged([device("view", "ios")]);
@@ -89,7 +104,12 @@ describe("announcing to a phone", () => {
     announcement.devicesChanged([]);
     await settle();
     expect(started).toEqual([]);
-    const none = new MacAnnouncement({ run: null, name: async () => "x", port: 1 });
+    const none = new HomeAnnouncement({
+      run: null,
+      args: dnsSdAnnounceArgs,
+      name: async () => "x",
+      port: 1,
+    });
     none.devicesChanged([device("view", "ios")]);
     expect(none.announcing).toBe(false);
   });
@@ -104,8 +124,9 @@ describe("announcing to a phone", () => {
       ends.push(() => heard.ended(false));
       return { stop: () => {} };
     };
-    const announcement = new MacAnnouncement({
+    const announcement = new HomeAnnouncement({
       run,
+      args: dnsSdAnnounceArgs,
       name: async () => "Mini",
       port: 1,
       later: (ms, fire) => {

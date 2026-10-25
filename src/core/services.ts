@@ -72,7 +72,8 @@ import { AdaptedDecisionModel, DecisionModels } from "./decisions/decisionModel"
 import { JevDecisionModel } from "./decisions/jev/jevClient";
 import { DecisionKeyStore } from "./decisions/jev/jevKeyStore";
 import { OpenRouterDecisionModel } from "./decisions/openRouterDecisionModel";
-import { MacAnnouncement } from "./devices/announce";
+import { dnsSdAnnounceArgs, HomeAnnouncement } from "./devices/announce";
+import { avahiAnnounceArgs } from "./devices/avahi";
 import { ownComputerName, ownNetworkNames } from "./devices/computerName";
 import { Computers } from "./devices/computers";
 import { DeviceSetup } from "./devices/deviceSetup";
@@ -372,8 +373,8 @@ export type CoreServices = {
    * a minute after the last ask.
    */
   nearbyMacs: NearbyMacs;
-  /** This Mac's Bonjour announcement to a phone on its list; stopped at dispose. */
-  macAnnouncement: MacAnnouncement;
+  /** This computer's Bonjour announcement to a phone on its list; stopped at dispose. */
+  homeAnnouncement: HomeAnnouncement;
   /** The door a phone signed in over SSH asks for a link at; closed at dispose. */
   phoneDoor?: PhoneDoor;
   /**
@@ -1589,15 +1590,20 @@ export async function createServices(
     user: thisUser(),
     changed: (view) => emit("inf:devices:nearby", view),
   });
-  // While a phone is on the list this Mac announces itself over Bonjour so
-  // the phone can find it again (docs/devices.md, "Announcing to a phone").
-  const macAnnouncement = new MacAnnouncement({
-    run: dnsSd ? runDnsSdHeld(dnsSd) : null,
+  // While a phone is on the list this computer announces itself over Bonjour
+  // so the phone can find it again (docs/devices.md, "Announcing to a
+  // phone"): with dns-sd, or on Linux with Avahi's avahi-publish where it has one.
+  const avahiPublish =
+    !dnsSd && hostPlatform() === "linux" ? findOnPath("avahi-publish", hostEnv()) : undefined;
+  const announcer = dnsSd || avahiPublish;
+  const homeAnnouncement = new HomeAnnouncement({
+    run: announcer ? runDnsSdHeld(announcer) : null,
+    args: dnsSd ? dnsSdAnnounceArgs : avahiAnnounceArgs,
     name: () => ownComputerName({ packaged: host.app.packaged, env: process.env }),
     port: devices.port,
   });
-  macAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin());
-  devices.subscribe(() => macAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin()));
+  homeAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin());
+  devices.subscribe(() => homeAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin()));
   // A phone signed in to this computer over SSH asks the open app for a
   // one-use phone link at its door (docs/devices.md, "A phone that joins by
   // its address"); with no door, the phone says so and nothing joins.
@@ -3144,7 +3150,7 @@ export async function createServices(
     farBuild,
     remoteLogin,
     nearbyMacs,
-    macAnnouncement,
+    homeAnnouncement,
     ...(phoneDoor ? { phoneDoor } : {}),
     sshConnections,
     workDevices,

@@ -1,3 +1,5 @@
+import { ANNOUNCE_SERVICE } from "./announce";
+
 /**
  * Linux's own way to hear what computers on this network announce, as
  * computers nearby read it (docs/devices.md, "Macs nearby"): Avahi's
@@ -18,6 +20,19 @@ export const AVAHI_BROWSE_ARGS = [
   "--no-db-lookup",
   "_ssh._tcp",
 ] as const;
+
+/**
+ * What Avahi's `avahi-publish` is asked as a Linux home announces itself to a
+ * phone (docs/devices.md, "Announcing to a phone"): the service under the
+ * name at the port, in the local domain at this computer's own host name, as
+ * dns-sd's `-R` does on a Mac. `--no-fail` waits for Avahi's
+ * daemon while it is not running, rather than ending; avahi-publish itself
+ * publishes again when the daemon comes back, and picks another name when
+ * one on the network is taken.
+ */
+export function avahiAnnounceArgs(name: string, port: number): string[] {
+  return ["--no-fail", "--service", name, ANNOUNCE_SERVICE, String(port)];
+}
 
 /** One line of `avahi-browse --parsable --resolve`. */
 export type AvahiLine =

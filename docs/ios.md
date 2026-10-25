@@ -18,7 +18,7 @@ The panel explains that the phone app comes from TestFlight for now, only to the
 A phone can scan that code, paste its link or open an `infinitary://join` link, then confirms the address of the Mac it is joining.
 Its first screen welcomes the person in the Mac's first-launch words, “Welcome aboard Infinitary”, with Nearby as one plain line, Scan the code prominent and Paste its link a plain secondary.
 Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplies a possible address, never a key or permission.
-The Mac announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works.
+The computer, a Mac or a Linux home with Avahi, announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works (`docs/devices.md`, "Announcing to a phone").
 Camera and Local Network permissions have separate explanations; a camera refusal offers pasting rather than reading the clipboard automatically.
 
 `InfinitaryKit` owns strict link parsing, the device identity, pinned transport and the view session (`ReadOnlySession`, the foundation’s original type).

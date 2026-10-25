@@ -670,12 +670,14 @@ export function MessageList({
   const workingEntrance = useWorkingEntrance();
   const waitingText = working ? undefined : waiting?.text;
   useEffect(() => {
-    // Hold at the bottom as messages arrive, and as the waiting line comes
-    // or changes; the newest is always the one being answered. Nothing to
-    // hold to while the thread is empty.
-    if (count === 0 && waitingText === undefined) return;
+    // Hold at the bottom as messages arrive, as the working row comes (the
+    // first mate's busy flag can land a render after the captain's reply,
+    // INF-1231), and as the waiting line comes or changes; the newest is
+    // always the one being answered. Nothing to hold to while the thread is
+    // empty.
+    if (count === 0 && waitingText === undefined && !working) return;
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [count, waitingText]);
+  }, [count, waitingText, working]);
   return (
     <div
       data-thread-messages=""

@@ -127,6 +127,7 @@ Nothing reads anyone's words.
 - `guidance`: nothing else holds the author, and it has not answered yet.
 
 A running turn shows `working` alone.
+The message list holds its scroll at its foot as a message, the waiting line or `working` arrives, each on its own: on the first mate's card its busy flag lands a render after the captain's reply, so `working` scrolls the list again (INF-1231, `tests/e2e/thread-working-reveal.spec.ts`).
 When the hold ends, the checks finish or the author's turn starts, the posture moves and the line with it, with no thread message; the author's answer - a reply, or the host's `revised:` line
 - ends the wait and the line.
   Every input is persisted (the card's hold, the account's cut-off, the task's check watch), so a restart or a reload shows the same line.

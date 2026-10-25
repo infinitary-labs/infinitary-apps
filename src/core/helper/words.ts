@@ -548,7 +548,7 @@ export function commandExpired(home: string, lastsMs: number = PAIRING_LINK_TTL_
 }
 
 /** A link's lifetime as the words say it: "ten minutes", "thirty minutes". */
-function minutesWords(ms: number): string {
+export function minutesWords(ms: number): string {
   const minutes = Math.round(ms / 60_000);
   return `${({ 10: "ten", 30: "thirty" } as Record<number, string>)[minutes] ?? minutes} minutes`;
 }

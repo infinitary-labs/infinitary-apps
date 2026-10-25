@@ -1,18 +1,17 @@
-import qrcode from "qrcode-generator";
 import { useMemo } from "react";
+import { PHONE_CODE_QUIET, phoneCodeModules } from "../../../shared/phoneCode";
 
 /** The one-use link, encoded locally; neither a request nor a saved picture. */
 export function PhoneCode({ link }: { link: string }) {
   const { size, path } = useMemo(() => {
-    const code = qrcode(0, "M");
-    code.addData(link, "Byte");
-    code.make();
-    const size = code.getModuleCount();
+    const modules = phoneCodeModules(link);
     const cells: string[] = [];
-    for (let y = 0; y < size; y++)
-      for (let x = 0; x < size; x++)
-        if (code.isDark(y, x)) cells.push(`M${x + 4} ${y + 4}h1v1h-1z`);
-    return { size: size + 8, path: cells.join("") };
+    modules.forEach((row, y) => {
+      row.forEach((dark, x) => {
+        if (dark) cells.push(`M${x + PHONE_CODE_QUIET} ${y + PHONE_CODE_QUIET}h1v1h-1z`);
+      });
+    });
+    return { size: modules.length + 2 * PHONE_CODE_QUIET, path: cells.join("") };
   }, [link]);
   return (
     <svg

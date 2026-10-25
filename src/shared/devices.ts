@@ -859,6 +859,24 @@ export const deviceWords = {
   },
 };
 
+/**
+ * What a new link says to the person who will use it, in Settings ->
+ * Devices' panel and from `infinitary link` (docs/run.md, "A link by
+ * command"): a computer's, pasted into Infinitary there at its first launch,
+ * and a phone's, scanned as its code or pasted there.
+ */
+export const LINK_SAY = {
+  computer: [
+    `Your first mate stays on ${HERE.this}. Your other ${COMPUTER.one} will show it and can run work for it.`,
+    `Paste this link into Infinitary on your other ${COMPUTER.one}, at its first launch.`,
+  ],
+  phone: [
+    `Your first mate stays on ${HERE.this}. Your phone shows its cards and Activity.`,
+    "Scan the code inside Infinitary on your phone, or paste this link there.",
+    "For now the phone app comes from TestFlight, only to people asked to test it; it is not in the App Store yet.",
+  ],
+} as const;
+
 /** The phone panel describes the invitation's actual order, never inferred reachability. */
 export function phoneRouteWords(link: string): string {
   const { at } = parsePairingLink(link);

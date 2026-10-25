@@ -4,8 +4,10 @@ import { request as httpRequest } from "node:http";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { parsePairingLink } from "../../shared/devices";
+import { PAIRING_LINK_TTL_MS, parsePairingLink } from "../../shared/devices";
 import {
+  LINK_COMMAND_PATH,
+  linkCommandAnswerSchema,
   PHONE_DOOR_FILES,
   PHONE_DOOR_FOLDER,
   PHONE_DOOR_KEY_HEADER,
@@ -64,25 +66,52 @@ async function openHome(data: string) {
   const pairing = new DevicePairing({ dir: join(data, "devices"), interfaces: () => ({}) });
   const door = await PhoneDoor.open({
     dir: join(data, PHONE_DOOR_FOLDER),
-    invite: () => pairing.invite({ kind: "mac", phone: true }).link,
+    invite: (phone) => pairing.invite({ kind: "mac", ...(phone ? { phone } : {}) }),
   });
   doors.push(door);
   return { pairing, door };
 }
 
-function post(address: string, headers: Record<string, string>): Promise<number> {
+function post(
+  address: string,
+  headers: Record<string, string>,
+  path = PHONE_DOOR_PATH,
+  method = "POST",
+): Promise<number> {
+  return ask(address, headers, path, method).then(({ status }) => status);
+}
+
+function ask(
+  address: string,
+  headers: Record<string, string>,
+  path: string,
+  method = "POST",
+): Promise<{ status: number; type: string | undefined; body: string }> {
   const [host, port] = address.split(":");
   return new Promise((resolve, reject) => {
-    const sent = httpRequest(
-      { host, port: Number(port), method: "POST", path: PHONE_DOOR_PATH, headers },
-      (response) => {
-        response.resume();
-        resolve(response.statusCode ?? 0);
-      },
-    );
+    const sent = httpRequest({ host, port: Number(port), method, path, headers }, (response) => {
+      let body = "";
+      response.setEncoding("utf8");
+      response.on("data", (chunk: string) => {
+        body += chunk;
+      });
+      response.on("end", () =>
+        resolve({
+          status: response.statusCode ?? 0,
+          type: response.headers["content-type"],
+          body,
+        }),
+      );
+    });
     sent.on("error", reject);
     sent.end();
   });
+}
+
+function doorKey(data: string): string {
+  return readFileSync(join(data, PHONE_DOOR_FOLDER, PHONE_DOOR_FILES.key), "utf8")
+    .split(": ")[1]
+    ?.trim() as string;
 }
 
 describe("the phone's link command", () => {
@@ -131,9 +160,7 @@ describe("the phone's link command", () => {
   it("refuses a request without the key, with another key, or from a web page", async () => {
     const data = scratchDir("infinitary-phone-door-data-");
     const { door } = await openHome(data);
-    const key = readFileSync(join(data, PHONE_DOOR_FOLDER, PHONE_DOOR_FILES.key), "utf8")
-      .split(": ")[1]
-      ?.trim() as string;
+    const key = doorKey(data);
     expect(await post(door.address, {})).toBe(401);
     expect(await post(door.address, { [PHONE_DOOR_KEY_HEADER]: "0".repeat(64) })).toBe(401);
     expect(
@@ -202,6 +229,83 @@ describe("the phone's link command", () => {
         await run("/bin/sh", PHONE_LINK_COMMAND, { HOME: home, INFINITARY_USER_DATA_DIR: data }),
       ),
     ).toEqual(["1", "none", "refused"]);
+  });
+});
+
+/**
+ * INF-1228's approved plan, piece 3: "`infinitary link` prints a link for
+ * another computer or a code for a phone". The command asks this door, with
+ * its key, for either kind of link (docs/run.md, "A link by command").
+ */
+describe("the door's answer to infinitary link", () => {
+  it("answers a computer's link and a phone's, as pairing made them, with when each expires", async () => {
+    const data = scratchDir("infinitary-link-door-data-");
+    const pairing = new DevicePairing({ dir: join(data, "devices"), interfaces: () => ({}) });
+    const asked: boolean[] = [];
+    const door = await PhoneDoor.open({
+      dir: join(data, PHONE_DOOR_FOLDER),
+      invite: (phone) => {
+        asked.push(phone);
+        return pairing.invite({ kind: "mac", ...(phone ? { phone } : {}) });
+      },
+    });
+    doors.push(door);
+    const key = { [PHONE_DOOR_KEY_HEADER]: doorKey(data) };
+    const codes: string[] = [];
+    for (const kind of ["computer", "phone"] as const) {
+      const said = await ask(door.address, key, `${LINK_COMMAND_PATH}?for=${kind}`);
+      expect(said.status).toBe(200);
+      expect(said.type).toBe("application/json; charset=utf-8");
+      const answer = linkCommandAnswerSchema.parse(JSON.parse(said.body));
+      if (!("link" in answer)) throw new Error(said.body);
+      expect(answer.expiresAt - Date.now()).toBeGreaterThan(PAIRING_LINK_TTL_MS - 60_000);
+      const link = parsePairingLink(answer.link);
+      expect(link.kind).toBe("mac");
+      expect(link.key).toBe(pairing.identity().pin);
+      codes.push(link.code);
+    }
+    // The phone's asks pairing for a phone's link; each is its own one-use link.
+    expect(asked).toEqual([false, true]);
+    expect(new Set(codes).size).toBe(2);
+  });
+
+  it("refuses the command's request without the key, from a web page, or for another kind", async () => {
+    const data = scratchDir("infinitary-link-door-data-");
+    const { door } = await openHome(data);
+    const key = doorKey(data);
+    const path = `${LINK_COMMAND_PATH}?for=computer`;
+    expect(await post(door.address, {}, path)).toBe(401);
+    expect(
+      await post(
+        door.address,
+        { [PHONE_DOOR_KEY_HEADER]: key, Origin: "https://example.com" },
+        path,
+      ),
+    ).toBe(403);
+    expect(await post(door.address, { [PHONE_DOOR_KEY_HEADER]: key }, path, "GET")).toBe(405);
+    expect(
+      await post(door.address, { [PHONE_DOOR_KEY_HEADER]: key }, `${LINK_COMMAND_PATH}?for=view`),
+    ).toBe(400);
+  });
+
+  it("says why pairing made no link, in pairing's own words", async () => {
+    const data = scratchDir("infinitary-link-door-data-");
+    doors.push(
+      await PhoneDoor.open({
+        dir: join(data, PHONE_DOOR_FOLDER),
+        invite: () => {
+          throw new Error("The saved device list cannot be read.");
+        },
+      }),
+    );
+    const door = doors.at(-1) as PhoneDoor;
+    const said = await ask(
+      door.address,
+      { [PHONE_DOOR_KEY_HEADER]: doorKey(data) },
+      `${LINK_COMMAND_PATH}?for=phone`,
+    );
+    expect(said.status).toBe(503);
+    expect(JSON.parse(said.body)).toEqual({ refused: "The saved device list cannot be read." });
   });
 });
 

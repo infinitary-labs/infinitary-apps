@@ -1,3 +1,6 @@
+import { z } from "zod";
+import { PAIRING_LINK_PREFIX } from "./devices";
+
 /**
  * Joining a home from the phone by its address (docs/ios.md, "Joining by its
  * address"; docs/devices.md, "A phone that joins by its address"): the phone
@@ -34,6 +37,30 @@ export const PHONE_LINK_NONE = {
 
 /** The door's request path on its loopback port. */
 export const PHONE_DOOR_PATH = "/phone-link";
+
+/**
+ * The same door answers this account's own `infinitary link` (docs/run.md,
+ * "A link by command") at this path: `?for=computer` or `?for=phone`, with
+ * the same key. Its answer is JSON, `linkCommandAnswerSchema`.
+ */
+export const LINK_COMMAND_PATH = "/link";
+
+/** What `infinitary link` asks the door for: a computer's link, or a phone's. */
+export const linkCommandForSchema = z.enum(["computer", "phone"]);
+export type LinkCommandFor = z.infer<typeof linkCommandForSchema>;
+
+/**
+ * The door's answer to `infinitary link`: the link pairing made and when it
+ * expires, or, with 503, why pairing made none, in pairing's own words.
+ */
+export const linkCommandAnswerSchema = z.union([
+  z.strictObject({
+    link: z.string().startsWith(PAIRING_LINK_PREFIX),
+    expiresAt: z.number().int().nonnegative(),
+  }),
+  z.strictObject({ refused: z.string().min(1) }),
+]);
+export type LinkCommandAnswer = z.infer<typeof linkCommandAnswerSchema>;
 
 /** The header the door's key travels in, as the one line of its key file. */
 export const PHONE_DOOR_KEY_HEADER = "x-infinitary-phone-key";

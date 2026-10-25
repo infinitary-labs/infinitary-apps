@@ -16,6 +16,7 @@ Both devices need a permitted private-network route, and the computer must stay 
 MagicDNS discovery and broader VPN or IPv6-only private-address discovery are not included.
 The panel explains that the phone app comes from TestFlight for now, only to the people asked to test it, and is not in the App Store yet.
 A phone can scan that code, paste its link or open an `infinitary://join` link, then confirms the address of the Mac it is joining.
+On a computer with no screen at hand, `infinitary link --phone` prints the same code and link in its terminal, from the Infinitary running there (`docs/run.md`, "A link by command").
 Its first screen welcomes the person in the Mac's first-launch words, “Welcome aboard Infinitary”, with Nearby as one plain line, Scan the code prominent and Paste its link a plain secondary.
 Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplies a possible address, never a key or permission.
 The computer, a Mac or a Linux home with Avahi, announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works (`docs/devices.md`, "Announcing to a phone").

@@ -6,6 +6,7 @@ import {
   deviceConnecting,
   deviceLabel,
   deviceRunsWork,
+  LINK_SAY,
   namesInWords,
 } from "../../../shared/devices";
 import { runsForAnotherFirstmate } from "../../../shared/sshConnection";
@@ -49,20 +50,13 @@ export const PANEL_WORDS: Record<
 > = {
   link: {
     label: "New link",
-    say: [
-      `Your first mate stays on ${HERE.this}. Your other ${COMPUTER.one} will show it and can run work for it.`,
-      `Paste this link into Infinitary on your other ${COMPUTER.one}, at its first launch.`,
-    ],
+    say: [...LINK_SAY.computer],
     copy: "Copy link",
     thing: "link",
   },
   phone: {
     label: "New link · a phone",
-    say: [
-      "Your first mate stays on this computer. Your phone shows its cards and Activity.",
-      "Scan the code inside Infinitary on your phone, or paste this link there.",
-      "For now the phone app comes from TestFlight, only to people asked to test it; it is not in the App Store yet.",
-    ],
+    say: [...LINK_SAY.phone],
     copy: "Copy link",
     thing: "link",
   },

@@ -1,6 +1,7 @@
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { hostPlatform } from "../core/platform";
+import { linkCommand, runLinkCommand } from "./linkCommand";
 import { hasNoScreen, NO_SCREEN_WORDS } from "./noScreen";
 import { installMainProcessErrorHandlers } from "./processErrors";
 import { runCommand } from "./runCommand";
@@ -12,9 +13,10 @@ import { workCommand } from "./workCommand";
  * that one. Started as `<app> work ...`, it runs work for another Mac's
  * Firstmate with no window (./work.ts, docs/helper.md); started as
  * `<app> run`, it is the app itself with no window (./runCommand.ts,
- * docs/run.md); any other start is the app itself, its window and its core
- * (./app.ts). Each is a chunk of its own, so the work mode never evaluates
- * the app's modules.
+ * docs/run.md); `<app> status` and `<app> link` read that app's status or ask
+ * it for a link, and start nothing (./runStatus.ts, ./linkCommand.ts); any
+ * other start is the app itself, its window and its core (./app.ts). Each is
+ * a chunk of its own, so the work mode never evaluates the app's modules.
  */
 
 // Own process failures before startup does any work. Electron otherwise
@@ -28,16 +30,15 @@ installMainProcessErrorHandlers();
 const work = workCommand(process.argv, Boolean(process.defaultApp));
 const run = work ? null : runCommand(process.argv, Boolean(process.defaultApp));
 const status = work || run ? null : statusCommand(process.argv, Boolean(process.defaultApp));
-if (work) {
-  const { prepareWorkMode, runWorkMode } = await import("./work");
-  // On Linux with no display, the work mode's own starts here, before
-  // Chromium opens one (./ownDisplay.ts).
-  if (await prepareWorkMode(work)) runWorkMode(work, dirname(fileURLToPath(import.meta.url)));
-} else if (status) {
-  // Read before readiness: no screen, lock, core, migration or saved-data write.
+const link = work || run || status ? null : linkCommand(process.argv, Boolean(process.defaultApp));
+
+/**
+ * The data folder `run` opens in this account, chosen as it chooses it but
+ * neither made nor opened: status and link read the app running on it.
+ */
+async function commandDataDir(): Promise<string> {
   const { app } = await import("electron");
   const { chooseUserDataDir, folderSpellingFor, readPackageJsonAt } = await import("./userDataDir");
-  const { runStatusCommand } = await import("./runStatus");
   const choice = chooseUserDataDir({
     packaged: app.isPackaged,
     env: process.env,
@@ -46,12 +47,28 @@ if (work) {
     readAppPackageJson: readPackageJsonAt(app.getAppPath()),
     spelling: folderSpellingFor({ packaged: app.isPackaged, env: process.env }),
   });
-  const result = runStatusCommand(
-    status,
-    choice.kind === "switch" ? app.getPath("userData") : choice.dir,
-  );
+  return choice.kind === "switch" ? app.getPath("userData") : choice.dir;
+}
+
+if (work) {
+  const { prepareWorkMode, runWorkMode } = await import("./work");
+  // On Linux with no display, the work mode's own starts here, before
+  // Chromium opens one (./ownDisplay.ts).
+  if (await prepareWorkMode(work)) runWorkMode(work, dirname(fileURLToPath(import.meta.url)));
+} else if (status) {
+  // Read before readiness: no screen, lock, core, migration or saved-data write.
+  const { runStatusCommand } = await import("./runStatus");
+  const result = runStatusCommand(status, await commandDataDir());
   const stream = result.error ? process.stderr : process.stdout;
   stream.write(result.error || result.out, () => process.exit(result.code));
+} else if (link) {
+  // Asked and answered before readiness, which waits for this module: no
+  // screen, Dock icon, lock or core. The running app's door makes the link.
+  if (hostPlatform() === "darwin") (await import("electron")).app.setActivationPolicy("prohibited");
+  const result = await runLinkCommand(link, await commandDataDir());
+  if (result.out) await new Promise((done) => process.stdout.write(result.out, done));
+  if (result.error) await new Promise((done) => process.stderr.write(result.error, done));
+  process.exit(result.code);
 } else if (run) {
   // Started by a command with no window (./runCommand.ts, docs/run.md): the
   // app's own start, which on Linux awaits a display of its own first.

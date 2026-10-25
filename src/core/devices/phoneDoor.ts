@@ -3,7 +3,11 @@ import { chmodSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import type { DeviceInvite } from "../../shared/devices";
 import {
+  LINK_COMMAND_PATH,
+  type LinkCommandAnswer,
+  linkCommandForSchema,
   PHONE_DOOR_FILES,
   PHONE_DOOR_KEY_HEADER,
   PHONE_DOOR_PATH,
@@ -31,6 +35,10 @@ import {
  * The answer is one line: the header, the door's version, then `link` and
  * the link, or `none refused` when pairing makes none. No log line, feed
  * line or error carries the link.
+ *
+ * The same door, with the same key, answers this account's own `infinitary
+ * link` (docs/run.md, "A link by command") at `LINK_COMMAND_PATH`: a link for
+ * another computer or for a phone, and when it expires, as JSON.
  */
 
 const LOOPBACK = "127.0.0.1";
@@ -38,8 +46,11 @@ const LOOPBACK = "127.0.0.1";
 export type PhoneDoorOptions = {
   /** The door's own folder (`AppPaths.phoneDoorDir`); emptied at open and close. */
   dir: string;
-  /** Makes a one-use phone link, as Settings -> Devices' A phone does. */
-  invite: () => string;
+  /**
+   * Makes a one-use link as Settings -> Devices does: a phone's, as its A
+   * phone does, or with `phone` false a computer's, as its link for a Mac.
+   */
+  invite: (phone: boolean) => Pick<DeviceInvite, "link" | "expiresAt">;
 };
 
 function digestOf(key: string): Buffer {
@@ -110,7 +121,8 @@ export class PhoneDoor {
       refuse(403);
       return;
     }
-    if ((request.url ?? "").split("?")[0] !== PHONE_DOOR_PATH) {
+    const [path, query] = (request.url ?? "").split("?");
+    if (path !== PHONE_DOOR_PATH && path !== LINK_COMMAND_PATH) {
       refuse(404);
       return;
     }
@@ -128,14 +140,43 @@ export class PhoneDoor {
       return;
     }
     request.resume();
+    if (path === LINK_COMMAND_PATH) {
+      this.answerCommand(new URLSearchParams(query).get("for"), response);
+      return;
+    }
     let words: string;
     try {
-      words = `link ${this.options.invite()}`;
+      words = `link ${this.options.invite(true).link}`;
     } catch {
       words = `none ${PHONE_LINK_NONE.refused}`;
     }
     response
       .writeHead(200, { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" })
       .end(`${PHONE_LINK_HEADER} ${PHONE_LINK_VERSION} ${words}\n`);
+  }
+
+  /** `infinitary link`'s answer: the link and when it expires, or why pairing made none. */
+  private answerCommand(asked: string | null, response: ServerResponse): void {
+    const kind = linkCommandForSchema.safeParse(asked);
+    if (!kind.success) {
+      response.writeHead(400).end();
+      return;
+    }
+    let status = 200;
+    let answer: LinkCommandAnswer;
+    try {
+      const { link, expiresAt } = this.options.invite(kind.data === "phone");
+      answer = { link, expiresAt };
+    } catch (error) {
+      // Pairing refuses before it makes a code, so its words carry no link.
+      status = 503;
+      answer = { refused: error instanceof Error ? error.message : String(error) };
+    }
+    response
+      .writeHead(status, {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+      })
+      .end(`${JSON.stringify(answer)}\n`);
   }
 }

@@ -1653,10 +1653,12 @@ export async function createServices(
   devices.subscribe(() => homeAnnouncement.devicesChanged(devices.list(), devices.phoneMayJoin()));
   // A phone signed in to this computer over SSH asks the open app for a
   // one-use phone link at its door (docs/devices.md, "A phone that joins by
-  // its address"); with no door, the phone says so and nothing joins.
+  // its address"); with no door, the phone says so and nothing joins. This
+  // account's own `infinitary link` asks the same door for a computer's link
+  // or a phone's (docs/run.md, "A link by command").
   const phoneDoor = await PhoneDoor.open({
     dir: paths.phoneDoorDir,
-    invite: () => devices.invite({ kind: "mac", phone: true }).link,
+    invite: (phone) => devices.invite({ kind: "mac", ...(phone ? { phone } : {}) }),
   }).catch((error: unknown) => {
     console.warn(
       `[devices] no phone door, so a phone cannot join by its address: ${error instanceof Error ? error.message : String(error)}`,

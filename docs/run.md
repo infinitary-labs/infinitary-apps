@@ -79,6 +79,27 @@ The environment is explicitly a snapshot **when the command started**, not a liv
 The status command itself never queries the Keychain or creates a display, so an SSH reader does not substitute its own session's capabilities for the command's.
 `src/main/runStatus.ts` owns the command's output; `src/main/runCommand.ts` remains the one writer of its marker and stop record.
 
+## A link by command
+
+`<app> link` prints a one-use link another computer's Infinitary joins with at its first launch, and `<app> link --phone` prints a code the phone app scans, with the same link under it (INF-1228's approved plan, piece 3).
+It asks the Infinitary running in this account, started by a command or with its window, so the link joins that app's first mate; it starts nothing, opens no window, takes no lock and works on Linux without a display.
+It finds the data folder as `status` does, and asks at that folder's phone door with the door's key (`docs/devices.md`, "A phone that joins by its address"), so `DevicePairing` makes the link exactly as Settings -> Devices does: one use, ten minutes, and for a phone the addresses a phone reaches first.
+The words above the link are the ones Settings -> Devices shows (`LINK_SAY`, `src/shared/devices.ts`), and the last line says how long it works.
+The phone's code is drawn from the same modules as the one in Settings -> Devices (`phoneCodeModules`, `src/shared/phoneCode.ts`), in half blocks, black on white whatever the terminal's own colors, with the margin a camera needs.
+`--json` prints one object instead, `schemaVersion` 1, `for` (`computer` or `phone`), `link` and `expiresAt`; it draws no code.
+A link prints with exit 0; any other word exits 2 with the usage.
+With no link it exits 1 and says why on its error output:
+
+| What it read | What it says |
+| --- | --- |
+| No door answers and no app holds the data folder | "Infinitary is not running here, as this user." and "Start it with infinitary run, or open it, then run this again." |
+| An app holds the folder but no door answers, as an older app | "Infinitary is open here, but it did not answer this command." and "Quit it and start it again, then run this again." |
+| This account's Infinitary controls a first mate on another computer (`docs/view.md`) | "Infinitary here controls your first mate on another computer." and "Make the link on that computer instead." |
+| Pairing made no link, as when the saved device list is unreadable | "Infinitary here could not make a link: " and pairing's reason |
+
+The link reaches this command's output alone: the door writes it to no log, and the command is this account's, as the door's key is.
+`src/main/linkCommand.ts` owns the command and its words.
+
 ## After an update
 
 Every account on a computer runs the one installed app, so updating it in one account replaces the program a command runs in another.
@@ -95,7 +116,7 @@ A note a crashed run left names a process that is gone or holds no lock, so the 
 
 ## Not yet
 
-The rest of INF-1228's plan follows in order, each on its own: `infinitary link` for a computer or a phone (piece 3), a `--settings` file for the search path and the rest (piece 4), control of everything the window does from another computer, a task's browser included (piece 6), and `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
+The rest of INF-1228's plan follows in order, each on its own: a `--settings` file for the search path and the rest (piece 4), control of everything the window does from another computer, a task's browser included (piece 6), and `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
 Claude signs in only where someone is logged in: a Mac nobody is logged in to keeps Claude's login locked in its Keychain, and the crew there uses other subscriptions (captain's pick on question 3).
 Moving an existing record to another account is planned separately (question 7).
 
@@ -105,3 +126,5 @@ Moving an existing record to another account is planned separately (question 7).
 `src/main/runCommand.test.ts` holds the words after `run`, the window's reading of `run.json` and the lock, and the program's identity.
 `tests/e2e/status-command.spec.ts` starts the built commands in the same isolated environment and reads status before, during and after a run, a second start, a signal, an update, a forced end and a saved-data refusal, plus invalid arguments and a corrupt record.
 `src/main/runStatus.test.ts` owns the pure output contract, private retained stop, legacy marker compatibility, unknown readings and the platform capability mapping.
+`tests/e2e/link-command.spec.ts` starts the built commands in the same isolated environment: with nothing running `link` says so and makes no data, a word it does not take exits 2, and beside a run a computer's link joins once, a phone's printed code holds its printed link and joins, and `--json` answers a new link; once the run stops it says so again.
+`src/main/linkCommand.test.ts` holds the words after `link`, the readings with no answering door, the printed code read back module by module, and the output; `src/core/devices/phoneDoor.test.ts` holds the door's answer and refusals.

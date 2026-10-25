@@ -544,7 +544,17 @@ The design follows the firstmate repo's PR poll: a watcher that is not a model, 
   A reading that changes none of them moves only the reading time, so an idle pull request adds no rows to the task record (`changesCheckState`).
   Settled readings record raw failure history and, only for an unsuccessful declared own repair, an attempt and its cap.
 - **Quiet refresh** continues every five minutes (`CHECK_REFRESH_MS`) for live tasks with a recorded open pull request, even after a watch ends, using the same reading and delivery facts.
-  It runs on the shared tick after a restart too, backs off unreadable checks and stops on task close or a reading that finds the pull request gone or merged.
+  It runs on the shared tick after a restart too and backs off unreadable checks.
+  The same tick reads each live task's recorded pull request by number, independently of check completion, dependencies or a captain gate.
+  A confirmed external merge immediately records `ci: merged`, but PR ownership alone never closes its task.
+  The crewmate declares `report.merge_completes_task` with that task's recorded PR number and checked head only when that merge finishes all its work; `TaskService` keeps the declaration until its next turn or report.
+  Only that matching declaration, an idle task with no running jobs or pending/in-flight instructions, and the existing child and dependency close checks allow `SettleService` to close the task as merged without a discard or another approval.
+  Otherwise the task, instructions, cards and working copy stay intact, and one durable wake per merged version tells the crewmate the merge happened so it can continue or declare completion without asking again.
+  An automatic close records the closed state synchronously before awaiting idle runtime shutdown, so new guidance cannot be accepted and then purged during that wait.
+  This monitor survives a plain-reply “I'll merge the PR” choice without interpreting the button's words; it follows the task's recorded pull request, not unrelated pull requests reviewed by that task.
+  A missing, unreadable or closed-but-unmerged pull request never closes the task, and its named read continues on later ticks.
+  A named pull request needs only the project's saved host identity, not a reachable working copy or local project folder.
+  A working copy on an unreachable computer remains recorded as present until `PlacedSessions` and `PlacedCopies` save its unmerged work and retire it on reconnection; the task itself is already done.
   It skips a task idle behind another task, the work posture the Tasks dot shows as blocked by another task (`CheckWatcherHost.idleBehindOtherWork`): the host does not read that task's checks while it waits, and its crewmate reads them itself on resuming.
   A settled result or same-head rerun updates displays without a diagnosis wake; a new head whose checks are running arms the ordinary bounded watch.
 - **Bound to the head**: a new head where the project lives re-arms the watch for it, and only the head it last saw is woken about.
@@ -654,7 +664,8 @@ The raw words stay on the error for the record and `plainProblem`; the kind is w
 ## Who reads it
 
 `PrCiService` (`src/core/orchestrator/prCi.ts`, the crewmate's `check_change` and the completion-card gate) asks the seam and records what it answers on the task's delivery facts: `changeLabel` from `label()`, and `prNumber`/`prUrl` only where the host has them.
-When the branch has no open change but the task names a pull request, the reading asks for it by its number with `pull`: merged outside the app, it records `ci: merged`, the strip reads "merged outside the app", and a put-in answers the merge already made and closes the task as merged without sending anything.
+When the branch has no open change but the task names a pull request, the reading asks for it by its number with `pull`: merged outside the app, it records `ci: merged`, and the strip reads "merged outside the app" until the shared watcher can close a task whose crewmate declared that merge finishes its work.
+A put-in made before that tick also answers the merge already made and closes the task without sending anything.
 The settle card's fact strip (`CrewSupervisor.settleFacts`) and the record card read that label and link - never parse a number back out of a URL.
 The record card still names where the change goes from the repository's `host` ("goes in on GitHub", "goes in on git.example.com").
 Settings → Projects shows the same place on a project whose changes go there, and nothing at all on a project kept on this Mac or one whose changes go straight in: the captain's constraint is that a forge is never required.

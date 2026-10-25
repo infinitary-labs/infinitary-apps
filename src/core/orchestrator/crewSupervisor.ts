@@ -1538,6 +1538,8 @@ export class CrewSupervisor {
       verifyValidationEvidence: (taskId) => this.verifyValidationEvidence(taskId),
       runtimeState: (taskId) => this.tasks.get(taskId)?.state,
       stopRuntime: (taskId) => this.stopRuntime(taskId),
+      hasRunningJobs: (taskId) =>
+        options.hasRunningJobs?.(taskId) === true || this.clientJobStart(taskId) !== undefined,
       announceReach: (taskId) => this.announceReach(taskId),
       ...(options.killJobs ? { killJobs: options.killJobs } : {}),
       ...(options.machines ? { placed: options.machines } : {}),
@@ -1663,6 +1665,9 @@ export class CrewSupervisor {
           tasks: options.tasks,
           inbox: options.inbox,
           read: readCheckWatch,
+          ...(options.readPull
+            ? { reconcileMerged: (taskId: string) => this.settle.reconcileExternalMerge(taskId) }
+            : {}),
           // The posture the Tasks dot shows as "Blocked by another task".
           idleBehindOtherWork: (record) => {
             const posture = this.workPosture(record);
@@ -11813,10 +11818,24 @@ export class CrewSupervisor {
         "Report refused: needs_firstmate needs a reason - what the first mate must do.",
       );
     }
+    const completion = declared?.mergeCompletesTask;
+    if (completion) {
+      const delivery = this.options.tasks.get(task.id)?.delivery;
+      if (
+        this.taskDelivery(task.id) !== "direct-pr" ||
+        delivery?.prNumber !== completion.prNumber ||
+        delivery?.headSha !== completion.headSha
+      ) {
+        throw new Error(
+          "Report refused: merge_completes_task must name this task's recorded pull request and checked version.",
+        );
+      }
+    }
     const result = this.checkResult(task, declared);
     const checkBack = checkBackOf(declared);
     const needs = {
       ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
+      ...(completion ? { mergeCompletesTask: completion } : {}),
       ...(result ? { result } : {}),
       ...(checkBack ? { checkBack } : {}),
     };

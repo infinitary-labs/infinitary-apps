@@ -253,6 +253,7 @@ export type SettleServiceHost = {
   /** Something reached the task's crewmate: the center's spark flies to it (INF-759). */
   announceReach?: (taskId: string) => void;
   killJobs?: (taskId: string) => void;
+  hasRunningJobs?: (taskId: string) => boolean;
   /**
    * A task whose working copy is on a computer that runs work
    * (docs/helper.md, "Its working copies"): what it holds unmerged there,
@@ -802,6 +803,78 @@ export class SettleService {
   }
 
   /**
+   * INF-458: observing a merge is not permission to perform one. The shared
+   * check watcher reads every live task's recorded pull request, even after
+   * a plain-reply "I'll merge it" choice or while its computer is unreachable.
+   * A merge is a forge fact; completion is the crewmate's declaration.
+   * Never infer completion from PR ownership, a button label or a missing branch.
+   */
+  async reconcileExternalMerge(taskId: string): Promise<boolean> {
+    const record = this.host.tasks.get(taskId);
+    if (
+      !record ||
+      TaskService.isClosed(record) ||
+      this.host.taskDelivery(taskId) !== "direct-pr" ||
+      this.settlingTasks.has(taskId)
+    )
+      return false;
+    this.settlingTasks.set(taskId, "merge-pr");
+    try {
+      const pull = await this.mergedOutside(record);
+      const current = this.host.tasks.get(taskId);
+      // A close or a different project/change took over while the read was out.
+      if (
+        !pull ||
+        !current ||
+        TaskService.isClosed(current) ||
+        current.repoId !== record.repoId ||
+        current.delivery?.prNumber !== pull.number
+      )
+        return false;
+      this.host.tasks.recordDelivery(taskId, {
+        ci: "merged",
+        headSha: pull.headSha,
+        ciAt: this.host.now(),
+        ciWatch: undefined,
+      });
+      const completion = current.delivery?.mergeCompletion;
+      if (
+        completion?.prNumber !== pull.number ||
+        completion.headSha !== pull.headSha ||
+        this.working(taskId) ||
+        current.activity === "starting" ||
+        current.activity === "running" ||
+        current.activity === "interrupted" ||
+        this.host.hasRunningJobs?.(taskId) ||
+        current.delivery?.checkBack ||
+        [...this.host.cards.values()].some(
+          (card) => card.taskId === taskId && card.actions.length > 0 && !isRoutineMergeCard(card),
+        ) ||
+        this.host.inbox.allFor(taskId).length > 0 ||
+        this.host.inbox.inFlight(taskId).length > 0 ||
+        this.closeGateRefusal(taskId, "merge-pr", false)
+      ) {
+        const once = `external-merge:${pull.number}:${pull.headSha}`;
+        if (!this.host.inbox.woken(taskId, once)) {
+          this.host.inbox.enqueueSteerOnce(taskId, {
+            facts: {
+              kind: "external-merge",
+              change: this.changeName(current, pull.number),
+              head: pull.headSha,
+            },
+            once,
+          });
+        }
+        return true;
+      }
+      await this.closeMergedOutside(taskId, "host", pull);
+      return true;
+    } finally {
+      this.settlingTasks.delete(taskId);
+    }
+  }
+
+  /**
    * The pull request the task names, when it reads merged by its number:
    * put in where the project lives outside the app (FI3-213). Undefined
    * when there is none, it is not merged, or it cannot be read.
@@ -820,7 +893,7 @@ export class SettleService {
    */
   private async closeMergedOutside(
     taskId: string,
-    actor: "captain" | "firstmate",
+    actor: TaskClose["actor"],
     pull: ForgePull,
   ): Promise<SettleOutcome> {
     if (this.working(taskId)) {
@@ -845,17 +918,21 @@ export class SettleService {
   /** A merged task's close: the record, the managed checkout, and the gates it releases. */
   private async closeMerged(
     record: TaskRecord,
-    actor: "captain" | "firstmate",
+    actor: TaskClose["actor"],
     result: PrOutcome,
   ): Promise<SettleOutcome> {
     const taskId = record.id;
-    await this.closeTask(taskId, {
-      status: "done",
-      reason: "merged",
-      actor,
-      text: result.text,
-      delivery: { landedMode: "pr", landedAt: this.host.now() },
-    });
+    await this.closeTask(
+      taskId,
+      {
+        status: "done",
+        reason: "merged",
+        actor,
+        text: result.text,
+        delivery: { landedMode: "pr", landedAt: this.host.now() },
+      },
+      { recordBeforeStop: actor === "host" },
+    );
     let refreshText = "";
     const repo = record.repoId ? this.host.repos.get(record.repoId) : undefined;
     if (
@@ -889,7 +966,7 @@ export class SettleService {
    */
   private folderNotUpdated(
     record: TaskRecord,
-    actor: "captain" | "firstmate",
+    actor: TaskClose["actor"],
     refusal: FolderRefreshRefusal,
     reach: string | undefined,
   ): string {
@@ -905,7 +982,7 @@ export class SettleService {
     );
     this.host.tasks.note(record.id, text, {
       news: true,
-      feed: actor === "firstmate",
+      feed: actor !== "captain",
       data: {
         feedLine: true,
         folderRefresh: {
@@ -2609,14 +2686,18 @@ export class SettleService {
    * observable "settled" signal (the phase3 e2e polls for it), so the
    * record closes before it goes.
    */
-  async closeTask(taskId: string, close: TaskClose): Promise<void> {
+  async closeTask(
+    taskId: string,
+    close: TaskClose,
+    options: { recordBeforeStop?: boolean } = {},
+  ): Promise<void> {
     // The close reaches its crewmate, which leaves once the spark lands; a
     // superseded one hands over to its successor, whose start is its spark.
     if (close.reason !== "superseded") this.host.announceReach?.(taskId);
     this.host.killJobs?.(taskId);
     this.host.endLiveTask(taskId);
     const stopping = this.host.stopRuntime(taskId);
-    if (stopping) {
+    if (stopping && !options.recordBeforeStop) {
       await stopping;
       this.releaseSettleBoundary(taskId);
     }
@@ -2679,6 +2760,13 @@ export class SettleService {
       });
     } else {
       this.host.inbox.purgeTask(taskId);
+    }
+    // External observation closes at the synchronous idle boundary, before
+    // stopping can yield: new guidance must see a closed record, not be purged
+    // later after it was accepted on a task that still appeared open.
+    if (stopping && options.recordBeforeStop) {
+      await stopping;
+      this.releaseSettleBoundary(taskId);
     }
     // The durable handoff becomes visible only after its close transaction;
     // poking here cannot race the lane purge that precedes its insertion.
@@ -2828,6 +2916,10 @@ export class SettleService {
     record: TaskRecord,
     options: { keepAlways?: boolean; force?: boolean; noteKept?: boolean } = {},
   ): Promise<"removed" | "kept" | "none"> {
+    // PlacedSessions observes the closed record and PlacedCopies saves and
+    // retires its copy there, at reconnect if necessary. A remote path must
+    // never be inspected here or marked removed before that owner confirms it.
+    if (record.deviceId) return record.workspaceState === "present" ? "kept" : "none";
     const taskId = record.id;
     const workspace = workspaceOf(record);
     const stillPresent = () => this.host.tasks.get(taskId)?.workspaceState === "present";

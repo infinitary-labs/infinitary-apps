@@ -68,12 +68,12 @@ export const REPLY_TOOL_DESCRIPTION = [
  * when it reports - through this tool, or by ending with text.
  */
 export const REPORT_TOOL_DESCRIPTION = [
-  "Report to the first mate: what you finished and verified, what you found, or what blocks you.",
-  "The first mate hears only an explicit report, or your final message when a turn ends with text; a turn that ends silently - after a background job result you only noted, for example - reports nothing.",
-  "Call it when you have something new for the captain: plain words, lead with the outcome, a few sentences.",
-  "Always pass summary too: one plain sentence saying what happened (not a heading, not the ask restated); the captain reads it as the task's headline.",
-  "Never for progress (that is note_progress) and never to repeat a report you already made.",
-  "If your current policies say autonomy on, the task merges on its own: at green, when no standing direction's exception covers your final change, put up your completion story as a note with no actions, then report needs_firstmate to merge the pull request. When an exception covers it, emit the usual completion card and report needs_firstmate to set the task to ask first, citing the direction.",
+  "Report verified work, findings or blockers to the first mate.",
+  "The first mate hears only an explicit report, or your final message when a turn ends with text; ending silently reports nothing.",
+  "For new outcomes, lead with the result in a few plain sentences.",
+  "Always pass summary: one plain sentence saying what happened, the task's headline.",
+  "Not progress (note_progress) or repeated reports.",
+  "Autonomy on: at green, show the completion story as a note without actions; report needs_firstmate to merge. A standing exception needs a completion decision and needs_firstmate to set ask-first, citing the direction.",
 ].join(" ");
 
 export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
@@ -191,6 +191,18 @@ export const REPORT_TOOL = crewmateTool({
         },
       ),
     ),
+    merge_completes_task: Type.Optional(
+      Type.Object(
+        {
+          pr_number: Type.Integer({ minimum: 1 }),
+          head_sha: Type.String({ pattern: "^[a-f0-9]{40,64}$" }),
+        },
+        {
+          description:
+            "Name this task's recorded PR and checked head only when that merge completes all work. Clears on new turns/reports; restate after manual-merge choices if complete. Authorizes no merge.",
+        },
+      ),
+    ),
     finished: Type.Optional(
       Type.Boolean({
         description:
@@ -256,6 +268,14 @@ export const REPORT_TOOL = crewmateTool({
                 }
               : {}),
             ...(params.finished ? { finished: true } : {}),
+            ...(params.merge_completes_task
+              ? {
+                  mergeCompletesTask: {
+                    prNumber: params.merge_completes_task.pr_number,
+                    headSha: params.merge_completes_task.head_sha,
+                  },
+                }
+              : {}),
             ...(params.needs_firstmate !== undefined
               ? { needsFirstmate: params.needs_firstmate }
               : {}),

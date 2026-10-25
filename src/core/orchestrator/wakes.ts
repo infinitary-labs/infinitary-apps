@@ -875,6 +875,12 @@ export type WakeFacts =
       text: string;
     }
   | {
+      /** A confirmed external merge left the task open: completion belongs to its crewmate. */
+      kind: "external-merge";
+      change: string;
+      head: string;
+    }
+  | {
       /**
        * The captain's click on a kept write (FI3-1571 piece 4): sent once,
        * with the host's answer; unknown, never sent again; or nothing sent.
@@ -1915,6 +1921,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       return `Your turn ended while your ${jobWords(facts)} Nothing tells you if it stalls until it ends or runs for ${formatDurationShort(facts.boundMs)}. Report again with check_back: how many minutes until you look at it again, and what you wait for. The app wakes you then with the job's facts. If you are not waiting on it, say so in that report.`;
     case "turn-resumed":
       return `${facts.stopped === "update" ? `Your last turn stopped part way while Infinitary${facts.computer ? ` on ${facts.computer}` : ""} was updated; it is back now.` : "Your last turn stopped part way when the app closed - a quit or an update; it is open again."} ${RESUME_CHECK}`;
+    case "external-merge":
+      return `The project's host confirms ${facts.change} merged at ${facts.head}. This task remains open because completion was not declared or work still remains. Read its remaining work and instructions; continue them, or report merge_completes_task for this PR and version when the merge finishes all your work. Do not ask for another merge or discard.`;
     case "merge-continued":
       return facts.ok
         ? `[fm-op] ${MERGE_CONTINUED_LEAD} ${facts.change}${facts.head ? ` at ${facts.head}` : ""}. The task stays open. Continue from that result. Dropping this task does not close that pull request. ${facts.text}`

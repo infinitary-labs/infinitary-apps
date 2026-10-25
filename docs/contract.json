@@ -42517,6 +42517,24 @@
                   "finished": {
                     "type": "boolean"
                   },
+                  "mergeCompletesTask": {
+                    "type": "object",
+                    "properties": {
+                      "prNumber": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "headSha": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{40,64}$"
+                      }
+                    },
+                    "required": [
+                      "prNumber",
+                      "headSha"
+                    ]
+                  },
                   "needsFirstmate": {
                     "type": "string"
                   },

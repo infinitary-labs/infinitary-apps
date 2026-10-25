@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "external-merge-closes-task",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Merging outside Infinitary finishes ready tasks here too",
+      "body": "Infinitary notices when you merge a task's pull request elsewhere. It closes the task only when its crewmate declared that merge finishes the work; unfinished tasks stay open. An unreachable computer's working copy is removed when it reconnects, with unpublished work saved first.",
+      "noPicture": "The change is automatic task closure and deferred cleanup after an external merge, not a new visual surface.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

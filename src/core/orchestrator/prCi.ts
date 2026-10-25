@@ -1345,7 +1345,10 @@ export class PrCiService {
         );
         this.assertCheckTarget(record);
         this.record(record.id, pull?.merged ? "merged" : "no-pr");
-        if (pull?.merged) this.merged.set(record.id, { pull, forge });
+        if (pull?.merged) {
+          this.options.tasks.recordDelivery(record.id, { headSha: pull.headSha });
+          this.merged.set(record.id, { pull, forge });
+        }
         return { kind: "gone" };
       }
       change = await this.readyPrerequisite(taskId, forge, change);
@@ -2135,6 +2138,7 @@ export class PrCiService {
         this.assertCheckTarget(record);
         if (pull?.merged) {
           this.record(record.id, "merged");
+          this.options.tasks.recordDelivery(record.id, { headSha: pull.headSha });
           this.merged.set(record.id, { pull, forge });
           return { text: mergedWords(forge, pull, audience), recorded: true };
         }
@@ -2466,9 +2470,14 @@ export class PrCiService {
    * Undefined where the host has no pull requests or the task no change.
    */
   async pullState(taskId: string, prNumber: number): Promise<ForgePull | undefined> {
-    const located = this.locate(taskId);
-    if ("said" in located) return undefined;
-    return this.pullOf(located.forge, prNumber);
+    const record = this.options.tasks.get(taskId);
+    const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+    if (!record || !repo || deliveryForRecord(record, repo.delivery) !== "direct-pr")
+      return undefined;
+    // Reading a named pull request needs the project's saved host identity,
+    // not a local branch or folder (nor an in-reach work computer).
+    const forge = this.options.forgeFor(repo);
+    return forge.pull ? this.pullOf(forge, prNumber) : undefined;
   }
 
   /**
@@ -2992,11 +3001,12 @@ function watchWords(
 function mergedWords(forge: Forge, pull: ForgePull, audience: Audience): string {
   const next =
     audience === "crewmate"
-      ? "Nothing is left to merge: emit the completion decision, and the captain's click closes this task as merged."
-      : "Nothing is left to merge: settle_task merge-pr closes this task as merged.";
+      ? "Nothing is left to merge. Continue any remaining work, or report merge_completes_task with this PR number and head when its merge finishes the task. No second merge decision is needed."
+      : "Nothing is left to merge. Read the task's remaining work before closing it; a merged PR alone does not mean its work is complete.";
   return [
     "overall: merged",
     `${numberLabel(forge, pull.number)} was merged ${placeWords(forge)} outside the app${pull.mergedSha ? ` as ${pull.mergedSha}` : ""}.`,
+    `head: ${pull.headSha}`,
     next,
   ].join("\n");
 }

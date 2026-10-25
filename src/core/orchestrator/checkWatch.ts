@@ -116,6 +116,8 @@ export type CheckWatcherHost = {
    * finished checks are not refreshed while it waits. Absent = never.
    */
   idleBehindOtherWork?(record: TaskRecord): boolean;
+  /** Read the task's named pull request and close it only on a confirmed external merge. */
+  reconcileMerged?(taskId: string): Promise<boolean>;
   /** The supervisor's own steer on the task's durable lane. */
   steer(taskId: string, wake: TypedWake): Promise<unknown>;
 };
@@ -136,25 +138,19 @@ export class CheckWatcher {
       if (this.reading.has(record.id)) return false;
       const delivery = record.delivery;
       if (delivery?.ciWatch) return delivery.ciWatch.nextAt <= now;
-      // Finished checks remain live while the task owns an open pull request.
-      // This is display refresh only, not a new diagnosis turn. A task idle
-      // behind another task is not read until that work moves it again
-      // (INF-721 friction 6): its crewmate reads them itself on resuming.
+      // A named pull request stays monitored until the task closes. Only
+      // its checks skip refresh behind another task (INF-721 friction 6);
+      // its merge can still be confirmed without starting a model turn.
       return (
         delivery?.prNumber !== undefined &&
-        delivery.ci !== "merged" &&
-        delivery.ci !== "no-pr" &&
         now >=
           Math.max(delivery.ciAt ?? 0, this.refreshAfter.get(record.id) ?? 0) + CHECK_REFRESH_MS &&
-        this.host.idleBehindOtherWork?.(record) !== true
+        (this.host.reconcileMerged !== undefined || this.refreshesChecks(record))
       );
     });
     await Promise.all(
       due.map((record) =>
-        (record.delivery?.ciWatch
-          ? this.pollTask(record.id, now)
-          : this.refreshTask(record.id, now)
-        ).catch((caught: unknown) => {
+        this.pollRecord(record, now).catch((caught: unknown) => {
           // One task's bookkeeping failing never stops the others' reads.
           console.warn("[crew] check watch could not read a task:", caught);
         }),
@@ -162,21 +158,40 @@ export class CheckWatcher {
     );
   }
 
+  private refreshesChecks(record: TaskRecord): boolean {
+    return (
+      record.delivery?.ci !== "merged" &&
+      record.delivery?.ci !== "no-pr" &&
+      this.host.idleBehindOtherWork?.(record) !== true
+    );
+  }
+
+  /** Merge facts outlive check watches, captain choices, dependencies and app restarts. */
+  private async pollRecord(record: TaskRecord, now: number): Promise<void> {
+    this.reading.add(record.id);
+    this.refreshAfter.set(record.id, now);
+    try {
+      if (record.delivery?.prNumber !== undefined && this.host.reconcileMerged) {
+        if (await this.host.reconcileMerged(record.id)) return;
+      }
+      const after = this.host.tasks.get(record.id);
+      if (!after || TaskService.isClosed(after)) return;
+      if (after.delivery?.ciWatch) await this.pollTask(record.id, now);
+      else if (this.refreshesChecks(after)) await this.refreshTask(record.id, now);
+    } finally {
+      this.reading.delete(record.id);
+    }
+  }
+
   private async refreshTask(taskId: string, now: number): Promise<void> {
     const head = this.host.tasks.get(taskId)?.delivery?.headSha;
-    this.reading.add(taskId);
-    this.refreshAfter.set(taskId, now);
-    try {
-      const read = await this.host.read(taskId);
-      const after = this.host.tasks.get(taskId);
-      if (!after || TaskService.isClosed(after) || after.delivery?.ciWatch) return;
-      // A new push whose checks are running gets the existing bounded watch.
-      // Same-head reruns only refresh the display, as do settled readings.
-      if (read.kind === "pending" && read.head !== head) {
-        this.host.tasks.recordDelivery(taskId, { ciWatch: armWatch(undefined, read.head, now) });
-      }
-    } finally {
-      this.reading.delete(taskId);
+    const read = await this.host.read(taskId);
+    const after = this.host.tasks.get(taskId);
+    if (!after || TaskService.isClosed(after) || after.delivery?.ciWatch) return;
+    // A new push whose checks are running gets the existing bounded watch.
+    // Same-head reruns only refresh the display, as do settled readings.
+    if (read.kind === "pending" && read.head !== head) {
+      this.host.tasks.recordDelivery(taskId, { ciWatch: armWatch(undefined, read.head, now) });
     }
   }
 
@@ -192,7 +207,6 @@ export class CheckWatcher {
       this.clear(taskId);
       return;
     }
-    this.reading.add(taskId);
     let read: WatchedReading;
     try {
       read = await this.host.read(taskId);
@@ -202,8 +216,6 @@ export class CheckWatcher {
         transient: true,
         problem: caught instanceof Error ? caught.message : String(caught),
       };
-    } finally {
-      this.reading.delete(taskId);
     }
     // The task closed while the read was out: nothing wakes a closed task.
     const after = this.host.tasks.get(taskId);

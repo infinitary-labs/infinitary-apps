@@ -402,6 +402,8 @@ export type ReportDeclaration = {
   validation?: KeptValidationInput;
   wait?: { reason: string; cardId?: string };
   finished?: boolean;
+  /** The crewmate, not a forge reading, declares whether this merge finishes its work. */
+  mergeCompletesTask?: { prNumber: number; headSha: string };
   needsFirstmate?: string;
   /**
    * The report's typed result (INF-799 piece 1), already checked against
@@ -426,6 +428,7 @@ function hasDeclaration(record: TaskRecord): boolean {
   return (
     Boolean(record.delivery?.captainWait) ||
     record.delivery?.finishedAt !== undefined ||
+    record.delivery?.mergeCompletion !== undefined ||
     Boolean(record.delivery?.needsFirstmate) ||
     Boolean(record.delivery?.checkBack)
   );
@@ -3146,12 +3149,15 @@ export class TaskService {
       : undefined;
     const run = this.write(() => {
       const record = this.mustGet(id);
-      const declaring = Boolean(wait) || finished || Boolean(request) || Boolean(checkBack);
+      const completion = input.declared?.mergeCompletesTask;
+      const declaring =
+        Boolean(wait) || finished || Boolean(request) || Boolean(checkBack) || Boolean(completion);
       const delivery =
         declaring || hasDeclaration(record) || result
           ? this.mergeDelivery(record, {
               captainWait: wait ? { at, ...wait } : undefined,
               finishedAt: finished ? at : undefined,
+              mergeCompletion: completion ? { ...completion, at } : undefined,
               needsFirstmate: request ? { at, request } : undefined,
               checkBack,
               // The latest result stands until a later report carries another.
@@ -3188,6 +3194,9 @@ export class TaskService {
           ...(input.usage ? { usage: input.usage } : {}),
           ...(wait ? { waitingOnCaptain: wait } : {}),
           ...(finished ? { finished: true } : {}),
+          ...(input.declared?.mergeCompletesTask
+            ? { mergeCompletesTask: input.declared.mergeCompletesTask }
+            : {}),
           ...(input.declared?.needsFirstmate
             ? { needsFirstmate: input.declared.needsFirstmate }
             : {}),
@@ -3214,6 +3223,7 @@ export class TaskService {
         delivery: this.mergeDelivery(record, {
           captainWait: undefined,
           finishedAt: undefined,
+          mergeCompletion: undefined,
           needsFirstmate: undefined,
           checkBack: undefined,
         }),

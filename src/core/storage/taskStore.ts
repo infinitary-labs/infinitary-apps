@@ -415,6 +415,8 @@ export type TaskDelivery = {
    */
   captainWait?: CaptainWait;
   finishedAt?: number;
+  /** The crewmate declared this exact merge finishes the task; cleared on its next turn/report. */
+  mergeCompletion?: { prNumber: number; headSha: string; at: number };
   /**
    * Beside either, what that report asked the Firstmate to do (FI3-710,
    * `needs_firstmate`), kept until the crewmate's next turn starts so the

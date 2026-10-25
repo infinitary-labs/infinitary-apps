@@ -557,6 +557,12 @@ export const workRequests = {
           validation: keptValidationInputSchema.optional(),
           wait: z.object({ reason: z.string(), cardId: z.string().optional() }).optional(),
           finished: z.boolean().optional(),
+          mergeCompletesTask: z
+            .object({
+              prNumber: z.number().int().positive(),
+              headSha: z.string().regex(/^[a-f0-9]{40,64}$/),
+            })
+            .optional(),
           needsFirstmate: z.string().optional(),
           /** When it looks at its running job again (`report-check-back.md`); the home keeps it. */
           checkBack: z.object({ minutes: z.number(), waitingFor: z.string() }).optional(),

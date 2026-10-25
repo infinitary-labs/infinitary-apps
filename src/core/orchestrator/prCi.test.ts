@@ -2888,10 +2888,14 @@ describe("a pull request merged outside the app (FI3-213)", () => {
     const { tasks, service, forge } = await mergedOutside();
     const text = await service.checkForCrew("ab12cd34");
     expect(text).toBe(
-      "overall: merged\n#23 was merged on GitHub outside the app as squash01.\nNothing is left to merge: emit the completion decision, and the captain's click closes this task as merged.",
+      "overall: merged\n#23 was merged on GitHub outside the app as squash01.\nhead: feedbeef\nNothing is left to merge. Continue any remaining work, or report merge_completes_task with this PR number and head when its merge finishes the task. No second merge decision is needed.",
     );
     expect(forge.calls).toEqual(["changeFor fm/task-ab12cd34", "pull 23"]);
-    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ ci: "merged", prNumber: 23 });
+    expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
+      ci: "merged",
+      prNumber: 23,
+      headSha: "feedbeef",
+    });
     expect(
       tasks
         .timeline("ab12cd34")
@@ -2900,7 +2904,7 @@ describe("a pull request merged outside the app (FI3-213)", () => {
     ).toMatchObject({ ci: "merged" });
     const crew = await service.checkForCrew("ab12cd34");
     expect(crew).toContain("overall: merged");
-    expect(crew).toContain("emit the completion decision, and the captain's click closes");
+    expect(crew).toContain("report merge_completes_task");
   });
 
   it("answers a put-in with the merge already made and sends nothing", async () => {

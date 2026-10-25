@@ -36,7 +36,10 @@ jobs:
           node-version: 24
           cache: pnpm
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: pnpm replay:gate
       - uses: actions/upload-artifact@v4
         if: always()

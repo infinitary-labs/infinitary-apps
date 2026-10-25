@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "linux-local-node-headers",
+      "reason": "Internal: Linux checks build native dependencies with the headers already installed beside Node, avoiding a second header download; the app does not change."
+    }
+  ]
+}

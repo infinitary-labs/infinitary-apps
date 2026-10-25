@@ -132,8 +132,16 @@ jobs:
           node-version: 24
           cache: ${{ matrix.lane != 'mac' && 'pnpm' || '' }}
           cache-dependency-path: Application Support/firstmate/pnpm-lock.yaml
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
       - id: install
         run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      - uses: ./Application Support/firstmate/.github/actions/prove-node-headers
+        if: matrix.lane == 'linux-checks'
+        with:
+          working-directory: Application Support/firstmate
       # An install never signs (docs/local-code-signing.md), so the mac lane
       # signs the dev Electron here, the way `pnpm dev` does on a person's
       # Mac: e2e runs on it signed, and the codesign stage checks it.

@@ -51,7 +51,15 @@ jobs:
         with:
           node-version: 24
           cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+          # Prove the actual pnpm lifecycle cannot download Node headers.
+          NPM_PACKAGE_CONFIG_NODE_GYP_DISTURL: http://127.0.0.1:9
+          NPM_PACKAGE_CONFIG_NODE_GYP_DEVDIR: ${{ runner.temp }}/install-header-cache
+      - uses: ./.github/actions/prove-node-headers
       - run: pnpm typecheck
       - run: pnpm check
       - run: pnpm lint:adherence
@@ -67,7 +75,11 @@ jobs:
         with:
           node-version: 24
           cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: pnpm test --project pure --project unit --project unit-isolated
         timeout-minutes: 30
 
@@ -88,7 +100,11 @@ jobs:
         with:
           node-version: 24
           cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: pnpm test --project integration --shard=${{ matrix.shard }}/${{ strategy.job-total }}
         timeout-minutes: 30
 
@@ -109,7 +125,11 @@ jobs:
         with:
           node-version: 24
           cache: ${{ !vars.LINUX_RUNNER && 'pnpm' || '' }}
+      - uses: ./.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       - run: pnpm test:probes --base "$BASE"
         timeout-minutes: 30
         env:

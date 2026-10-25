@@ -1,0 +1,42 @@
+name: Prove local Node headers
+description: Force a database source build without cached or downloadable headers, then exercise SQL.
+inputs:
+  working-directory:
+    description: Checkout containing the installed dependencies.
+    default: .
+runs:
+  using: composite
+  steps:
+    - name: Prove database source build without header downloads
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
+      run: |
+        # node-addon-api puts its absolute include path in a make argument.
+        # Build a disposable copy outside the spaced checkout used by verify.
+        proof="$(mktemp -d "$RUNNER_TEMP/node-headers-proof.XXXXXX")"
+        trap 'rm -rf "$proof"' EXIT
+        mkdir -p "$proof/node_modules"
+        package="$(node -p 'require("node:path").dirname(require.resolve("better-sqlite3/package.json"))')"
+        addon="$(node -p 'require("node:path").dirname(require.resolve("node-addon-api/package.json", { paths: [require.resolve("better-sqlite3/package.json")] }))')"
+        cp -R "$package" "$proof/node_modules/better-sqlite3"
+        cp -R "$addon" "$proof/node_modules/node-addon-api"
+        cd "$proof"
+        export NPM_PACKAGE_CONFIG_NODE_GYP_DEVDIR="$proof/empty-node-gyp-headers"
+        export NPM_PACKAGE_CONFIG_NODE_GYP_DISTURL=http://127.0.0.1:9
+        npm run build-release --prefix "$(node -p 'require("node:path").dirname(require.resolve("better-sqlite3/package.json"))')"
+        node --input-type=module -e '
+          import assert from "node:assert/strict";
+          import Database from "better-sqlite3";
+          import { createRequire } from "node:module";
+          import { dirname, join } from "node:path";
+          const require = createRequire(import.meta.url);
+          const nativeBinding = join(dirname(require.resolve("better-sqlite3/package.json")), "build/Release/better_sqlite3.node");
+          const db = new Database(":memory:", { nativeBinding });
+          db.exec("CREATE TABLE proof (value TEXT)");
+          db.prepare("INSERT INTO proof VALUES (?)").run("local headers");
+          assert.equal(db.prepare("SELECT value FROM proof").get().value, "local headers");
+          db.close();
+          console.log("Source-built database writes and reads successfully without downloading headers");
+        '

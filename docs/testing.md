@@ -97,6 +97,10 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The hosted runner has two processors and a personal account is offered no larger one, so the jobs run side by side; together they run `verify.yml`'s `linux-checks` lane, which runs every probe, and `tests/release-contract.test.ts` holds every vitest project to one job or to shards that cover it, the probe project to its chooser.
   Every job runs on the label the repository variable `LINUX_RUNNER` names, the placement service's `shell-pc-linux` places (a fresh two-processor VM per job on the Windows PC, five at once), and on GitHub's hosted `ubuntu-latest` when the variable is unset; `tests/release-contract.test.ts` evaluates each job's runner both ways.
   The shell PC job image supplies Node 24 and a pre-filled pnpm store, so `ci.yml` disables setup-node's pnpm cache when `LINUX_RUNNER` is set; hosted jobs keep caching.
+  Linux dependency installs use `.github/actions/node-headers`, which finds the running Node archive's `include/node` headers and refuses an image missing them; only the install receives that root as `NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR`.
+  Uppercase preserves the setting through pnpm's lifecycle environment filter.
+  That setting belongs only to the install, so later Electron rebuilds keep their own headers.
+  `ci.yml` also forces a better-sqlite3 source build with an empty header cache and an unreachable header server, then writes and reads a database.
   The same workflow contract test evaluates the cache input for both runners.
   A new test file joins its cohort's job on its own; a new kind of check joins one of the jobs, never a step with a condition.
   The Linux jobs have no release-branch exemption: they must actually run to provide the required project verification, even though the generic forge verdict accepts conditional skipped checks.

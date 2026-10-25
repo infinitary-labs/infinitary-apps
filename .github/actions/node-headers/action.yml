@@ -1,0 +1,19 @@
+name: Local Node headers
+description: Find the headers shipped beside Node for Linux dependency installs.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        # pnpm filters lowercase npm_* from lifecycle scripts; callers use
+        # node-gyp's case-insensitive NPM_PACKAGE_CONFIG_NODE_GYP_* settings.
+        if [[ "$RUNNER_OS" == Linux ]]; then
+          # setup-node's archive (including the shell PC's preinstalled copy)
+          # already has matching headers. Fail here if an image omits them;
+          # do not fall back to node-gyp's network download.
+          node_root="$(node -p 'require("node:path").dirname(require("node:path").dirname(require("node:fs").realpathSync(process.execPath)))')"
+          test -f "$node_root/include/node/node.h"
+          test -f "$node_root/include/node/common.gypi"
+          test -f "$node_root/include/node/config.gypi"
+          printf 'INFINITARY_NODE_HEADERS=%s\n' "$node_root" >> "$GITHUB_ENV"
+        fi

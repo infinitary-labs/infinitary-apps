@@ -67,7 +67,11 @@ jobs:
       - name: Install virtual display and desktop libraries
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y xvfb xdotool libgtk-3-0 libnss3 libasound2t64 libgbm1
+      - uses: ./Application Support/firstmate/.github/actions/node-headers
       - run: pnpm install --frozen-lockfile
+        # Scope Node headers to this install, never to Electron rebuilds.
+        env:
+          NPM_PACKAGE_CONFIG_NODE_GYP_NODEDIR: ${{ env.INFINITARY_NODE_HEADERS }}
       # An unpacked Electron download has no installer to configure its
       # sandbox helper. Do that only in this disposable hosted Linux job.
       - name: Configure Electron's sandbox helper

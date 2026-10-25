@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-chooser-served-words",
+      "reason": "Internal: a pull request's journey check now also runs the journeys whose stand-in reads words the change serves the model, by a pattern of its own or a tool it scripts; the app is unchanged."
+    }
+  ]
+}

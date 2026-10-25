@@ -39,7 +39,12 @@ import { callsMethod, changedMessages, PRELOAD } from "./window-messages.ts";
  * 8. its changed path matches a targeted fallback row below, even when no
  *    hook, symbol or sentence changed; or
  * 9. a commit of the change names it in a `Journeys:` trailer: the author
- *    knows the change reaches it where no rule above reads that reach.
+ *    knows the change reaches it where no rule above reads that reach; or
+ * 10. it, or a helper most journeys do not import, reads words a string of
+ *    `src/` serves, and the change alters what it reads: a pattern of its
+ *    own with a word of four or more letters matches differently, or a tool
+ *    its stand-in scripts by name (one most journeys do not script) appears
+ *    a different number of times. Only strings of two or more words count.
  *
  * A fragment inside a longer quote, a hook name inside a longer token, and a
  * sentence held only by the stand-in do not select every journey that reaches
@@ -175,6 +180,79 @@ export function tokensOfDiff(diff: string): { hooks: Set<string>; sentences: Set
       for (const phrase of side) if (!phrases[1 - index]?.has(phrase)) sentences.add(phrase);
   }
   return { hooks, sentences };
+}
+
+/**
+ * The quoted strings of two or more words each source file's diff adds and
+ * removes, keyed by file: the served words a stand-in reads by pattern or by
+ * a tool's name (`readsServedWords`). App unit tests serve nothing.
+ */
+export function servedStrings(diff: string): Map<string, { added: string[]; removed: string[] }> {
+  const byFile = new Map<string, { added: string[]; removed: string[] }>();
+  for (const part of diff.split(/^diff --git /m)) {
+    const path = part.match(/a\/(\S+)/)?.[1];
+    if (!path?.startsWith("src/") || /\.(?:test|spec)\.[^ /]+$/.test(path)) continue;
+    const sides = { added: [] as string[], removed: [] as string[] };
+    for (const line of part.split("\n")) {
+      if (!/^[+-](?![+-])/.test(line)) continue;
+      // A comment serves nothing.
+      if (/^\s*(?:\/\/|\*|\/\*)/.test(line.slice(1))) continue;
+      const into = line.startsWith("+") ? sides.added : sides.removed;
+      for (const [, , text] of line.slice(1).matchAll(/(["'`])((?:(?!\1)[^\\\n]|\\.)*)\1/g))
+        // A single word is a value of the code, such as `"checked"`, not served words.
+        if (/\S\s+\S/.test(text ?? "")) into.push(text ?? "");
+    }
+    if (sides.added.length || sides.removed.length) byFile.set(path, sides);
+  }
+  return byFile;
+}
+
+/**
+ * The regular-expression literals a journey's text reads words with, each
+ * holding a literal word of four or more letters: a pattern with none, such
+ * as `/(\S+)/`, matches any words and names no change.
+ */
+export function patternsIn(text: string): RegExp[] {
+  const found: RegExp[] = [];
+  for (const [, body, flags] of text.matchAll(
+    /(?<=[(=,:!&|?]\s*)\/((?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[*])(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])*)\/([dgimsuy]*)/g,
+  )) {
+    const literal = (body ?? "").replace(/\\./g, " ").replace(/\[[^\]]*\]/g, " ");
+    if (!/[A-Za-z]{4,}/.test(literal)) continue;
+    try {
+      found.push(new RegExp(body ?? "", (flags ?? "").replace(/[gy]/g, "")));
+    } catch {
+      // Not a pattern, such as a division that looks like one.
+    }
+  }
+  return found;
+}
+
+/** The tools a stand-in scripts by name, as `name: "check_change"`. */
+export function scriptedTools(text: string): Set<string> {
+  return new Set(
+    [...text.matchAll(/\bname:\s*["']([a-z]+(?:_[a-z]+)+)["']/g)].map(([, tool]) => tool ?? ""),
+  );
+}
+
+/**
+ * Whether the words a reader takes from a file's served strings differ
+ * between the two sides: the same match on both sides is moved, not changed.
+ */
+function readsDifferently(
+  sides: { added: string[]; removed: string[] },
+  reader: (text: string) => string[],
+): string | undefined {
+  const count = (strings: string[]) => {
+    const seen = new Map<string, number>();
+    for (const text of strings) for (const word of reader(text)) seen.set(word, (seen.get(word) ?? 0) + 1);
+    return seen;
+  };
+  const added = count(sides.added);
+  const removed = count(sides.removed);
+  for (const [word, times] of added) if (removed.get(word) !== times) return word;
+  for (const [word, times] of removed) if (added.get(word) !== times) return word;
+  return undefined;
 }
 
 /**
@@ -421,6 +499,7 @@ export function select({
   const { hooks, sentences } = tokensOfDiff(sourceDiff);
   const owned = ownedHooks(changed, read, readBefore, sourceDiff);
   const symbols = symbolsOfDiff(sourceDiff);
+  const served = servedStrings(sourceDiff);
   const messages = readBefore
     ? changedMessages(changed, read, readBefore)
     : { methods: new Map<string, string>(), reads: new Map<string, string>() };
@@ -463,6 +542,11 @@ export function select({
     }
     return known;
   };
+  // A tool most journeys script names no change to the one that reads it.
+  const toolUsers = new Map<string, number>();
+  if (served.size > 0)
+    for (const spec of specs)
+      for (const tool of scriptedTools(narrowOf(spec))) toolUsers.set(tool, (toolUsers.get(tool) ?? 0) + 1);
   const reasons: Reasons = new Map();
   const add = (spec: string, why: string) => {
     const list = reasons.get(spec) ?? [];
@@ -506,6 +590,28 @@ export function select({
     for (const sentence of sentences)
       if (holdsPhrase(narrowText, sentence))
         add(spec, `holds "${sentence}", which the change adds or removes`);
+    if (served.size > 0) {
+      const patterns = patternsIn(narrowText);
+      const tools = [...scriptedTools(narrowText)].filter(
+        (tool) => (toolUsers.get(tool) ?? 0) <= specs.length / 2,
+      );
+      for (const [file, sides] of served) {
+        for (const pattern of patterns) {
+          const global = new RegExp(pattern.source, `${pattern.flags}g`);
+          const word = readsDifferently(sides, (text) => [...text.matchAll(global)].map(([match]) => match));
+          if (word !== undefined)
+            add(spec, `reads "${word}" with ${pattern}, words ${file} serves that the change adds or removes`);
+        }
+        for (const tool of tools) {
+          const word = readsDifferently(sides, (text) =>
+            [...text.matchAll(new RegExp(`(?<![A-Za-z0-9_])${tool}(?![A-Za-z0-9_])`, "g"))].map(
+              ([match]) => match,
+            ),
+          );
+          if (word !== undefined) add(spec, `scripts ${tool}, which words ${file} serves add or remove`);
+        }
+      }
+    }
     for (const [file, drawn] of owned) {
       // Only a hook the journey's own text mentions can be one it reads.
       const reads = [...drawn].find((hook) => narrowText.includes(hook) && holdsHook(narrowText, hook));

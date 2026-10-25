@@ -688,3 +688,61 @@ describe("journeys a request names", () => {
     expect(() => named(" , ")).toThrow("Name at least one journey to run");
   });
 });
+
+/**
+ * INF-1255: a core change reaches a journey through the words it serves the
+ * model, which the journey's stand-in reads by pattern or answers by a
+ * tool's name. The chooser chose neither journey these two merges broke.
+ */
+describe("words the core serves that a stand-in reads (INF-1255)", () => {
+  type Merge = {
+    pull: string;
+    changed: string[];
+    sourceDiff: string;
+    files: Record<string, string>;
+    specs: string[];
+  };
+  const { merges } = JSON.parse(
+    readFileSync(
+      new URL("./fixtures/affected-journeys/served-words.json", import.meta.url),
+      "utf8",
+    ),
+  ) as { merges: Merge[] };
+  const merge = (pull: string) => merges.find((entry) => entry.pull === pull) as Merge;
+  const chosen = ({ changed, sourceDiff, files, specs }: Merge) =>
+    Object.fromEntries(select({ changed, sourceDiff, specs, read: (file) => files[file] }));
+
+  it("chooses check-repair for Merge anyway, whose refusal names check_change (PR #462)", () => {
+    expect(chosen(merge("#462"))).toEqual({
+      "tests/e2e/check-repair.spec.ts": [
+        "scripts check_change, which words src/core/orchestrator/crewSupervisor.ts serves add or remove",
+      ],
+    });
+  });
+
+  it("chooses program-run for project scopes, whose note its pattern reads (PR #470)", () => {
+    expect(chosen(merge("#470"))).toEqual({
+      "tests/e2e/program-run.spec.ts": [
+        'reads "project or" with /project (\\S+)/, words src/core/orchestrator/firstmateAgent.ts serves that the change adds or removes',
+      ],
+    });
+  });
+
+  it("does not count served words that only moved, or a one-word value of the code", () => {
+    const real = merge("#470");
+    const added = real.sourceDiff
+      .split("\n")
+      .filter((line) => line.startsWith("+") && !line.startsWith("+++"));
+    // The same note removed from one place and added at another serves the same words.
+    const moved = [
+      ...real.sourceDiff.split("\n"),
+      ...added.map((line) => `-${line.slice(1)}`),
+    ].join("\n");
+    expect(chosen({ ...real, sourceDiff: moved })).toEqual({});
+    // The gate's own answer "checked" beside the tool's name is code, not words it serves.
+    const repair = merge("#462");
+    const header = repair.sourceDiff.slice(0, repair.sourceDiff.indexOf("@@"));
+    const value = `${header}@@ -9653 +9653 @@\n-        return "checked";\n+        return "check_change";\n`;
+    expect(chosen({ ...repair, sourceDiff: value })).toEqual({});
+  });
+});

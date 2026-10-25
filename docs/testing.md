@@ -236,7 +236,7 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
 
 1. a spec file the change edits;
 2. a spec whose import closure reaches a changed helper and imports one of its changed exports, directly or through another helper: one under `tests/e2e/`, a shared one elsewhere under `tests/` such as `tests/helpers/`, or a script.
-   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7 instead, which match words in the spec and its helpers under `tests/e2e/`;
+   The closure stops at a module of `src/`: a product change reaches a journey through rules 3 to 7 and 10 instead, which match words in the spec and its helpers under `tests/e2e/`;
 3. a spec that imports a changed module of `src/shared/` and names a symbol that module's diff adds or removes (a declared property of four or more letters or an export, with at least one capital letter);
 4. a spec, or a helper most journeys do not import, that names a `data-*` hook, as a whole token, that the change adds or removes in `src/`;
 5. a spec, or a helper most journeys do not import, that holds a sentence of two or more words as its own quoted string, one the change adds or removes in a string of `src/`;
@@ -245,7 +245,11 @@ Twenty-one failing sites in five days were certain breaks after an intentional p
    Import edits, unowned setup, absent hunks and deleted owners retain conservative coverage;
 7. a spec, or a helper most journeys do not import, that calls a `window.infinitary` method, or names a read, whose message between the window and the core the change edits (`scripts/window-messages.ts`);
 8. a targeted fallback row matches a changed path, even without a changed hook, symbol or sentence;
-9. a commit of the change names the journey in a `Journeys:` trailer.
+9. a commit of the change names the journey in a `Journeys:` trailer;
+10. a spec, or a helper most journeys do not import, that reads words a string of `src/` serves, when the change alters what it reads.
+    It reads them with a regular expression of its own holding a word of four or more letters, or its stand-in scripts a tool by name, as `name: "check_change"`, that most journeys do not script.
+    Only quoted strings of two or more words on the diff's lines count; a comment, and a one-word value of the code such as `"checked"`, serve nothing.
+    The rule compares the pattern's matches, or the tool's mentions, on the removed and added strings of each file, so words that only moved choose nothing.
 
 A journey calls the window's interface directly, such as `window.infinitary.retention.scope()`, so a changed answer breaks it with no hook, sentence or symbol of its own changing.
 `knowledge-gate.spec.ts` compares that answer whole, so a new field in it breaks the journey (INF-1136).
@@ -256,6 +260,11 @@ The journey names the method by its whole path, as `window.infinitary.retention.
 A comment or a line break is not code, so an edited comment on a channel chooses nothing.
 A schema the contract imports from another module is not followed: the task and card schemas there change with most changes, and most journeys call a method that carries them.
 A change that reaches a journey through such a schema names it in a `Journeys:` trailer.
+
+A core change reaches a journey through the words it serves the model, which the journey's stand-in reads with no hook, sentence or symbol of its own changing, so rule 10 reads them (INF-1255).
+Project scopes (PR #470) added a context note holding "a project or scope", and `programRun.ts` read the project the captain named with `/project (\S+)/`, so the note named the project "or".
+Merge anyway (PR #462) let a completion card up once every failed check carries its `check_change` diagnosis, and its refusal says so; `checkRepair.ts` scripts `check_change` and relied on that refusal.
+A sentence of a template literal that spans lines carries no quote on its own line, so rule 10 does not read it; a change that reaches a journey that way names it in a `Journeys:` trailer.
 
 The fallback table beside the existing selector unions these files into its result, deduplicating files and preserving existing reasons:
 

@@ -44,8 +44,10 @@ import {
   RUN_UPDATED_EXIT,
   RUN_WORDS,
   RUNNING_BY_COMMAND,
+  type RunEnd,
   runningByCommand,
 } from "./runCommand";
+import { readKeychainLock, runEnvironment } from "./runEnvironment";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
 import { registerPrivilegedSchemes } from "./schemes";
 import { assertSecurityBaseline, installCsp, REQUIRED_WEB_PREFERENCES } from "./security/baseline";
@@ -180,15 +182,15 @@ const STOP_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
 /** How often a run reads whether the installed app was updated. */
 const PROGRAM_READ_EVERY_MS = 60_000;
 
-/** Takes away a run's note in its data folder (`markRunning`) once it holds one. */
-let leaveRun: () => void = () => {};
+/** Records why an owned run ended and removes its live marker. */
+let leaveRun: (end?: RunEnd) => void = () => {};
 
 /**
  * Ends a run that cannot go on: its lines reach whoever reads its output
  * before the process ends, with its code.
  */
 function endRun(code: number, lines: readonly string[]): void {
-  leaveRun();
+  leaveRun({ reason: "start-failed", exitCode: code, lines: [...lines] });
   process.stderr.write(`${lines.join("\n")}\n`, () => app.exit(code));
 }
 
@@ -267,6 +269,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
   const hideWindow =
     Boolean(isolatedUserDataDir) || (isDev && settingFrom(process.env, "HIDE_WINDOW") === "1");
 
+  let ownDisplay = false;
   if (windowless) {
     // The one-time move asks its person in a window of its own, so a run
     // leaves it to the window.
@@ -277,12 +280,15 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
     // On Linux a run draws its hidden pages - a task's browser, a card's
     // demo checked before it goes up - on a display of its own, which
     // outlives any desktop session, as the work mode does (./ownDisplay.ts).
-    if (
-      !(await startOwnDisplay({
+    ownDisplay = Boolean(
+      await startOwnDisplay({
         platform: hostPlatform(),
         env: process.env,
         dataDir: app.getPath("userData"),
-      })) &&
+      }),
+    );
+    if (
+      !ownDisplay &&
       hostPlatform() === "linux" &&
       !process.env.DISPLAY &&
       !process.env.WAYLAND_DISPLAY
@@ -317,8 +323,31 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
     let stopRun: () => void = () => {};
     // 0 for a stop; an update ends the run with a code its starter starts again on.
     let runExitCode = 0;
+    let runEnd: RunEnd = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.stopped] };
     if (windowless) {
-      leaveRun = markRunning(app.getPath("userData"), process.pid, new Date());
+      // Scratch data is not a sandbox for the Mac's Keychain. Never query it in an isolated launch.
+      const keychain =
+        isolatedUserDataDir || userDataChoice.kind === "switch"
+          ? "unknown"
+          : await readKeychainLock();
+      const finish = markRunning(
+        app.getPath("userData"),
+        process.pid,
+        new Date(),
+        runEnvironment({
+          platform: hostPlatform(),
+          env: process.env,
+          ownDisplay,
+          keychain: () => keychain,
+        }),
+      );
+      leaveRun = (end) => {
+        try {
+          finish(end);
+        } catch {
+          process.stderr.write("[infinitary] Could not record why the command stopped.\n");
+        }
+      };
       // Electron quits on the first of these; a module loaded later that
       // listens itself (Pi's sign-in store, through signal-exit) would
       // otherwise take the signal and end the process before the core
@@ -329,14 +358,23 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
         stopping = true;
         app.quit();
       };
-      for (const signal of STOP_SIGNALS) process.on(signal, () => stopRun());
+      for (const signal of STOP_SIGNALS)
+        process.on(signal, () => {
+          if (stopping) return;
+          runEnd = {
+            reason: "signal",
+            exitCode: 0,
+            lines: [`Infinitary stopped after ${signal}.`],
+          };
+          stopRun();
+        });
       // The last line once the core stopped, then the process ends with its code.
       let ended = false;
       app.on("will-quit", (event) => {
         if (ended) return;
         ended = true;
         event.preventDefault();
-        leaveRun();
+        leaveRun(runEnd);
         process.stdout.write(`${RUN_WORDS.stopped}\n`, () => app.exit(runExitCode));
       });
     }
@@ -373,6 +411,12 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
         async (question) => {
           if (windowless) {
             process.stderr.write(`${question.message}\n${question.detail}\n`);
+            if (question.id === "git")
+              runEnd = {
+                reason: "start-failed",
+                exitCode: 1,
+                lines: [question.message, question.detail],
+              };
             return question.id === "git" ? "quit" : "open";
           }
           const { response } = await dialog.showMessageBox({
@@ -632,6 +676,11 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
           updated: () => {
             process.stdout.write(`${RUN_WORDS.updated.join("\n")}\n`);
             runExitCode = RUN_UPDATED_EXIT;
+            runEnd = {
+              reason: "updated",
+              exitCode: RUN_UPDATED_EXIT,
+              lines: [...RUN_WORDS.updated],
+            };
             stopRun();
           },
         });

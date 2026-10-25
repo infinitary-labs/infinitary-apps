@@ -4,6 +4,7 @@ import { hostPlatform } from "../core/platform";
 import { hasNoScreen, NO_SCREEN_WORDS } from "./noScreen";
 import { installMainProcessErrorHandlers } from "./processErrors";
 import { runCommand } from "./runCommand";
+import { statusCommand } from "./runStatus";
 import { workCommand } from "./workCommand";
 
 /**
@@ -26,11 +27,31 @@ installMainProcessErrorHandlers();
 // the top level, rather than left to resolve after it.
 const work = workCommand(process.argv, Boolean(process.defaultApp));
 const run = work ? null : runCommand(process.argv, Boolean(process.defaultApp));
+const status = work || run ? null : statusCommand(process.argv, Boolean(process.defaultApp));
 if (work) {
   const { prepareWorkMode, runWorkMode } = await import("./work");
   // On Linux with no display, the work mode's own starts here, before
   // Chromium opens one (./ownDisplay.ts).
   if (await prepareWorkMode(work)) runWorkMode(work, dirname(fileURLToPath(import.meta.url)));
+} else if (status) {
+  // Read before readiness: no screen, lock, core, migration or saved-data write.
+  const { app } = await import("electron");
+  const { chooseUserDataDir, folderSpellingFor, readPackageJsonAt } = await import("./userDataDir");
+  const { runStatusCommand } = await import("./runStatus");
+  const choice = chooseUserDataDir({
+    packaged: app.isPackaged,
+    env: process.env,
+    hasUserDataDirSwitch: app.commandLine.hasSwitch("user-data-dir"),
+    appData: app.getPath("appData"),
+    readAppPackageJson: readPackageJsonAt(app.getAppPath()),
+    spelling: folderSpellingFor({ packaged: app.isPackaged, env: process.env }),
+  });
+  const result = runStatusCommand(
+    status,
+    choice.kind === "switch" ? app.getPath("userData") : choice.dir,
+  );
+  const stream = result.error ? process.stderr : process.stdout;
+  stream.write(result.error || result.out, () => process.exit(result.code));
 } else if (run) {
   // Started by a command with no window (./runCommand.ts, docs/run.md): the
   // app's own start, which on Linux awaits a display of its own first.

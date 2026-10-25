@@ -31,7 +31,9 @@ The main entry (`src/main/index.ts`) reads the words before anything of the app 
   Voice is not prepared, and an installed Linux app's checks at start (`docs/linux-packages.md`, "What the app checks at start") are said instead of asked: with no git it exits 1, and with Chromium's sandbox off it says so and runs, since its starter chose to start it that way.
 
 Once its core runs, it says "Infinitary is running here with no window, started by a command." on its output; the notes the app's parts leave go to the same output, each starting with `[`.
-While it holds the folder it keeps `run.json` there, with its process number, and takes it away as it ends.
+While it holds the folder it keeps `run.json` there, with its process number, start time and an environment reading, and takes it away as it ends.
+Before removing the marker it writes `run-last-stop.json` with the reason, lines, exit code and stop time; both files are private to the account and replaced atomically.
+A refused second start owns neither file, so it cannot replace the running command's reading.
 
 ## Stopping and its reasons
 
@@ -47,6 +49,35 @@ When it cannot start, it says why on its error output and exits 1, where the app
 | The folder moved, a move holds it, or newer saved work is in it | the refusal page's title and reason, as two lines |
 | This account's Infinitary controls a first mate on another computer (`docs/view.md`) | "Infinitary here controls your first mate on another computer, so there is nothing for a command to run here." and "Leave it from Infinitary's window here first, then run this again." |
 | Anything else stopped its start | "Infinitary could not start: " and the reason |
+
+## Reading status
+
+`<app> status` prints the command's status in words; `<app> status --json` prints one JSON object and exits without opening a window or starting the core (INF-1228's approved plan, piece 2).
+It uses the same data-folder selection as `run`, including the installed release/development distinction and isolated development overrides, but creates no folder, takes no lock, performs no move and reads no database or credential.
+It works on Linux without a display or Xvfb.
+An ordinary result, running or stopped, exits 0; an unreadable record or unconfirmed lock holder exits 1, and any arguments other than the optional `--json` exit 2.
+
+The JSON's `schemaVersion` is 1, `running` is true, false or null (unknown), `run` names the live command or is null, `lastStop` holds the last recorded stop or is null, `environment` holds the last command's dated reading or is null, and `problems` lists unreadable evidence.
+This is the status of `run`, not a health check of the first mate, its subscriptions or its crew.
+A live lock without a command marker answers unknown rather than guessing that the window is a command.
+A command's marker left after its process disappeared or lost the lock reports an unrecorded stop, with null stop time and exit code; it never claims the preceding clean stop explains this one.
+The marker written by piece 1 remains readable, with no environment reading.
+A fresh account has no last stop, and failures before a command owns the folder leave no new stop record.
+Handled failures after it owns the folder retain their reason, including incompatible saved data and a missing core; updates retain exit 75.
+An orderly quit retains exit 0; a signal delivered to Node also retains its name, while Electron's native quit path records a clean quit without inventing which signal caused it.
+
+The environment is explicitly a snapshot **when the command started**, not a live probe of the running session:
+
+- `display`: `own` when Linux starts Xvfb, `session` when the session names a display, `none` when Linux has neither, or `unknown` on macOS.
+  A named display alone proves no drawing, and macOS drawing with nobody logged in still waits for piece 7's disposable-Mac check.
+- `keychain`: on a Mac, the default Keychain's `locked`, `unlocked`, `absent` or `unknown` state, read silently through Security.framework's metadata-only `SecKeychainGetStatus`, never an item or a password.
+  An unlocked Keychain promises no sign-in, and a lock changed after start does not change this dated reading.
+  Isolated launches never touch the person's Keychain and record unknown; other systems record `not-applicable`, which makes no claim about Linux's separate keyring.
+- `voice`: `unavailable`, since a run does not prepare voice.
+- `notifications`: `unknown`, since delivery in that session has not been checked.
+
+The status command itself never queries the Keychain or creates a display, so an SSH reader does not substitute its own session's capabilities for the command's.
+`src/main/runStatus.ts` owns the command's output; `src/main/runCommand.ts` remains the one writer of its marker and stop record.
 
 ## After an update
 
@@ -64,7 +95,7 @@ A note a crashed run left names a process that is gone or holds no lock, so the 
 
 ## Not yet
 
-The rest of INF-1228's plan follows in order, each on its own: `infinitary status --json` with what the place lacks (piece 2), `infinitary link` for a computer or a phone (piece 3), a `--settings` file for the search path and the rest (piece 4), control of everything the window does from another computer, a task's browser included (piece 6), and `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
+The rest of INF-1228's plan follows in order, each on its own: `infinitary link` for a computer or a phone (piece 3), a `--settings` file for the search path and the rest (piece 4), control of everything the window does from another computer, a task's browser included (piece 6), and `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
 Claude signs in only where someone is logged in: a Mac nobody is logged in to keeps Claude's login locked in its Keychain, and the crew there uses other subscriptions (captain's pick on question 3).
 Moving an existing record to another account is planned separately (question 7).
 
@@ -72,3 +103,5 @@ Moving an existing record to another account is planned separately (question 7).
 
 `tests/e2e/run-command.spec.ts` starts the built app as `<app> run` in the hermetic environment `launchApp` uses (`hermeticEnv`, `tests/e2e/launch.ts`), with no display on Linux: it runs and stops cleanly, a window opened beside it shows its page, a second run refuses, a replaced program ends it with 75, and a word after `run` exits 2.
 `src/main/runCommand.test.ts` holds the words after `run`, the window's reading of `run.json` and the lock, and the program's identity.
+`tests/e2e/status-command.spec.ts` starts the built commands in the same isolated environment and reads status before, during and after a run, a second start, a signal, an update, a forced end and a saved-data refusal, plus invalid arguments and a corrupt record.
+`src/main/runStatus.test.ts` owns the pure output contract, private retained stop, legacy marker compatibility, unknown readings and the platform capability mapping.

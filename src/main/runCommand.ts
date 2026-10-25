@@ -1,8 +1,10 @@
-import { readFileSync, readlinkSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { readFileSync, readlinkSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { DataRefusal } from "@core/storage/dataFolderRefusal";
 import { APP_IDENTITIES } from "@shared/codeNames";
 import { COMPUTER, HERE } from "@shared/deviceNames";
+import { z } from "zod";
+import { type RunEnvironment, RunEnvironmentSchema } from "./runEnvironment";
 import { commandWords } from "./workCommand";
 
 /**
@@ -76,18 +78,63 @@ export const RUN_UPDATED_EXIT = 75;
 /** The file in the data folder that says a command runs Infinitary on it, and which process. */
 export const RUN_MARKER = "run.json";
 
-type RunMarker = { pid: number; startedAt: string };
+export const RUN_LAST_STOP = "run-last-stop.json";
+export const RunMarkerSchema = z.object({
+  pid: z.number().int().positive(),
+  startedAt: z.string().datetime(),
+  environment: RunEnvironmentSchema.optional(),
+});
+export type RunMarker = z.infer<typeof RunMarkerSchema>;
+export const RunStopSchema = RunMarkerSchema.extend({
+  stoppedAt: z.string().datetime(),
+  reason: z.enum(["quit", "signal", "updated", "start-failed"]),
+  exitCode: z.number().int().nonnegative(),
+  lines: z.array(z.string()),
+});
+export type RunStop = z.infer<typeof RunStopSchema>;
+export type RunEnd = Pick<RunStop, "reason" | "exitCode" | "lines">;
 
 /**
  * Notes in the data folder that this process runs it by a command, once it
  * holds the folder's single-instance lock; the window opened beside it reads
- * this to say so. The process takes it away as it ends.
+ * this to say so. The process keeps its last stop separately, then takes
+ * the live marker away as it ends. A failed second start owns neither file.
  */
-export function markRunning(dataDir: string, pid: number, now: Date): () => void {
+export function markRunning(
+  dataDir: string,
+  pid: number,
+  now: Date,
+  environment?: RunEnvironment,
+): (end?: RunEnd) => void {
   const path = join(dataDir, RUN_MARKER);
-  const marker: RunMarker = { pid, startedAt: now.toISOString() };
-  writeFileSync(path, `${JSON.stringify(marker)}\n`, { mode: 0o600 });
-  return () => rmSync(path, { force: true });
+  const marker: RunMarker = {
+    pid,
+    startedAt: now.toISOString(),
+    ...(environment && { environment }),
+  };
+  writeRunRecord(path, marker);
+  let ended = false;
+  return (end = { reason: "quit", exitCode: 0, lines: [RUN_WORDS.stopped] }) => {
+    if (ended) return;
+    ended = true;
+    writeRunRecord(join(dataDir, RUN_LAST_STOP), {
+      ...marker,
+      ...end,
+      stoppedAt: new Date().toISOString(),
+    } satisfies RunStop);
+    rmSync(path, { force: true });
+  };
+}
+
+/** Readers see either complete reading; every new file is private to the account. */
+function writeRunRecord(path: string, value: RunMarker | RunStop): void {
+  const pending = `${path}.${process.pid}.tmp`;
+  try {
+    writeFileSync(pending, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+    renameSync(pending, path);
+  } finally {
+    rmSync(pending, { force: true });
+  }
 }
 
 /**
@@ -115,7 +162,7 @@ export function runningByCommand(
 }
 
 /** The process Chromium's lock link names; undefined where there is no link to read, null for none. */
-function lockHolder(dataDir: string): number | null | undefined {
+export function lockHolder(dataDir: string): number | null | undefined {
   let link: string;
   try {
     link = readlinkSync(join(dataDir, "SingletonLock"));
@@ -126,7 +173,7 @@ function lockHolder(dataDir: string): number | null | undefined {
   return Number.isInteger(pid) && pid > 0 ? pid : null;
 }
 
-function processAlive(pid: number): boolean {
+export function processAlive(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;

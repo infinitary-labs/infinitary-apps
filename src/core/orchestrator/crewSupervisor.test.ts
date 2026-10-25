@@ -11755,6 +11755,8 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
       /** The sign-in this Mac has saved for the browser's site, if any. */
       saved?: { site: string; savedAt: number };
       grant?: () => Promise<{ ok: true } | { ok: false; text: string }>;
+      /** A read-only check whose deliverable is an answer (INF-1317), not a booking. */
+      readOnly?: boolean;
     } = {},
   ) {
     const crewmate = fakeCrewmate();
@@ -11791,11 +11793,34 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
           answers.grant ? answers.grant() : { ok: true },
       ),
     };
-    const h = setup(crewmate, { now: hostClock, browsers });
-    const { taskId } = await h.supervisor.commission({
-      title: "Help me book a flight to Lisbon",
-      intent: intentOf("help me book a flight to Lisbon"),
+    const h = setup(crewmate, {
+      now: hostClock,
+      browsers,
+      ...(answers.readOnly
+        ? {
+            classifier: {
+              classify: async () =>
+                ({ kind: "research", source: "classifier:test", version: "kc1" }) as const,
+            },
+          }
+        : {}),
     });
+    const { taskId } = await h.supervisor.commission(
+      answers.readOnly
+        ? {
+            title: "Check Microsoft account readiness for Windows signing",
+            intent: {
+              ...intentOf(
+                "a read-only report on whether my Microsoft directory, paid Azure subscription and Individual billing can serve Artifact Signing Basic",
+              ),
+              constraints: [{ kind: "read-only" }],
+            },
+          }
+        : {
+            title: "Help me book a flight to Lisbon",
+            intent: intentOf("help me book a flight to Lisbon"),
+          },
+    );
     await tick();
     /** The turn ends: a card it emitted goes on the stage. */
     const endTurn = async () => {
@@ -11807,6 +11832,43 @@ describe('the captain takes a task\'s browser over (docs/task-browser.md, "Takin
     const saved = () => h.cardStore.listOpen().find((card) => card.taskId === taskId);
     return { ...h, crewmate, taskId, emitCard, saved, browsers, held, shown, calls, endTurn };
   }
+
+  /**
+   * INF-1317 (INF-1322): a read-only check asked the captain to sign in to
+   * Azure, and his "Open browser and sign in" closed the task answered,
+   * which stopped the browser he had just taken. A hand-off card is never
+   * an answer task's answer: the click hands the browser over and the task
+   * waits for Return control, and any other choice reaches the crewmate.
+   */
+  it("keeps a read-only answer task open when the captain chooses on its browser hand-off card", async () => {
+    const h = await crewmateWithBrowser({ readOnly: true });
+    expect(h.tasks.get(h.taskId)?.shape).toMatchObject({ deliverable: "answer" });
+    await h.emitCard.run(REQUEST);
+    h.specs.at(-1)?.onReport?.("The sign-in card is up; I resume when control returns.");
+    await h.endTurn();
+    const card = h.saved() as Card;
+    expect(card.attachment).toMatchObject({ kind: "browser", handoff: true });
+
+    const result = h.supervisor.act(card.id, "sign-in");
+    await tick();
+    expect(result.effect).toMatchObject({ kind: "open", target: "browser" });
+    expect(h.browsers.takeControl).toHaveBeenCalledWith(h.taskId, {
+      session: "run-1",
+      generation: 2,
+    });
+    expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", closedReason: null });
+
+    // "Leave waiting" on a second hand-off card goes back to the crewmate.
+    await h.emitCard.run(REQUEST);
+    h.specs.at(-1)?.onReport?.("The sign-in card is up again.");
+    await h.endTurn();
+    const again = h.saved() as Card;
+    h.supervisor.act(again.id, "leave");
+    await tick();
+    expect(h.tasks.get(h.taskId)).toMatchObject({ status: "active", closedReason: null });
+    expect(h.crewmate.steer).toHaveBeenCalledTimes(1);
+    expect(h.crewmate.steer.mock.calls[0]?.[0]).toContain('chose "Leave waiting"');
+  });
 
   it("pauses the browser before the request card goes up, and the captain's click hands it over in silence", async () => {
     const h = await crewmateWithBrowser();

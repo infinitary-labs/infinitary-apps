@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "sign-in-keeps-read-only-check",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Signing in no longer ends a read-only check",
+      "body": "When a crewmate checking something for you asks you to sign in, pressing Open browser and sign in now hands you its browser and the task waits for you. Before, the press ended the task and closed the sign-in page you had just opened.",
+      "noPicture": "The card and the browser look the same; what changed is that the task stays open after the press.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

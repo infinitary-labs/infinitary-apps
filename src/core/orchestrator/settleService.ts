@@ -641,6 +641,11 @@ export class SettleService {
     // mini" before anything was signed. Its choice reaches the crewmate, and
     // the task goes on.
     if (card.continues) return false;
+    // Nor is a card that hands the captain its browser (INF-1322): INF-1317's
+    // "Open browser and sign in" closed its read-only check answered, and the
+    // close stopped the browser the captain had just taken. The crewmate goes
+    // on from Return control, or hears any other choice on the card.
+    if (card.attachment?.kind === "browser" && card.attachment.handoff) return false;
     // Its own crewmate's card, never a Firstmate card that happens to name
     // the task (`cardEmitter` reads the emitter off the id).
     if (cardEmitter(card.id, card.taskId) !== "crewmate") return false;

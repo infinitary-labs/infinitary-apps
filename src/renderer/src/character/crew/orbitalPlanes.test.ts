@@ -1,8 +1,19 @@
 import { describe, expect, it } from "vitest";
-import selected from "../../../../../tests/fixtures/crew-orbits/captain-selected-settings.json";
+import staged from "../../../../../tests/fixtures/crew-orbits/growing-ring-settings.json";
 import { type CrewmateFrame, CrewOrbit, DEFAULT_ORBIT } from "./orbit";
-import { CROWDED_PLANES, planePhase, projectPlane } from "./orbitalPlanes";
+import { CROWDED_PLANES, planePhase, planeRadius, projectPlane } from "./orbitalPlanes";
 import { CREW_RUSH, streakArc } from "./rush";
+
+// The captain's accepted growing ring (INF-1179's orbit_layout and answers).
+const ring = staged.orbit_layout.product;
+const DEG = Math.PI / 180;
+const cap = (k: number) => ring.capRadiusPx - k * ring.orbitStepPx;
+/** The staged rule's radius for orbit k with n crew on it while it is the innermost. */
+const grown = (k: number, n: number) =>
+  Math.min(
+    cap(k),
+    ring.startRadiusPx + ((cap(k) - ring.startRadiusPx) * (n - 1)) / (ring.seatsPerOrbit - 1),
+  );
 
 const adaptive = () => new CrewOrbit(0, { ...DEFAULT_ORBIT }, () => 0.37, "adaptive");
 function seed(m: CrewOrbit, count: number) {
@@ -22,58 +33,77 @@ function angle(f: CrewmateFrame) {
   return Math.atan2(v / Math.cos((p.inclination * Math.PI) / 180), u);
 }
 const wrapped = (n: number) => Math.atan2(Math.sin(n), Math.cos(n));
+/** Crew on each orbit in a frame, departing crew not counted. */
+const countsOf = (f: { crew: CrewmateFrame[] }) =>
+  CROWDED_PLANES.map((_, p) => f.crew.filter((c) => c.phase !== "leaving" && c.plane === p).length);
+/** Where a member's orbit puts it in this frame, at the radius its crew give the orbit. */
+const onOrbit = (f: { crew: CrewmateFrame[] }, c: CrewmateFrame) =>
+  projectPlane(c.plane ?? 0, angle(c), planeRadius(c.plane ?? 0, countsOf(f)));
 
 describe("approved product formation", () => {
-  it("projects the exact retained FI3-340 geometry and signed angular travel", () => {
-    selected.orbit_settings.orbits.forEach((p, i) => {
-      expect(CROWDED_PLANES[i]?.capacity).toBe(p.count);
-      for (const angle of [0, Math.PI / 2, (p.phaseDeg * Math.PI) / 180]) {
-        const point = projectPlane(i, angle);
-        const u = p.radiusPx * Math.cos(angle);
-        const v = p.radiusPx * Math.sin(angle) * Math.cos((p.tiltDeg * Math.PI) / 180);
-        const node = (p.orientationDeg * Math.PI) / 180;
-        expect(point.x).toBeCloseTo(u * Math.cos(node) - v * Math.sin(node), 12);
-        expect(point.y).toBeCloseTo(u * Math.sin(node) + v * Math.cos(node), 12);
-        expect(point.z).toBeCloseTo(
-          p.radiusPx * Math.sin(angle) * Math.sin((p.tiltDeg * Math.PI) / 180),
+  it("projects the captain's staged two orbits with their tilts, turns and signed travel", () => {
+    expect(CROWDED_PLANES).toHaveLength(ring.maxOrbits);
+    CROWDED_PLANES.forEach((p, k) => {
+      expect(p.radius).toBe(cap(k));
+      expect(p.capacity).toBe(ring.seatsPerOrbit);
+      const tilt = 8 + ((((ring.firstTiltDeg - 8 + k * ring.tiltStepDeg) % 74) + 74) % 74);
+      const node = (ring.firstNodeDeg + k * ring.nodeStepDeg) * DEG;
+      expect(p.inclination).toBe(tilt);
+      expect(p.node).toBeCloseTo(node, 3);
+      expect(p.phase).toBeCloseTo(k * ring.phaseStepRad, 12);
+      const speed =
+        ring.speedDegPerSec * (ring.alternateDirection && k % 2 ? -1 : 1) * (1 + 0.75 * k);
+      expect(planePhase(k, 1000)).toBeCloseTo(-speed * DEG, 12);
+      for (const a of [0, Math.PI / 2, p.phase]) {
+        const point = projectPlane(k, a, 200);
+        const u = 200 * Math.cos(a);
+        const v = 200 * Math.sin(a) * Math.cos(tilt * DEG);
+        expect(point.x).toBeCloseTo(u * Math.cos(p.node) - v * Math.sin(p.node), 12);
+        expect(point.y).toBeCloseTo(u * Math.sin(p.node) + v * Math.cos(p.node), 12);
+        expect(point.z).toBeCloseTo(200 * Math.sin(a) * Math.sin(tilt * DEG), 12);
+      }
+    });
+    // The second orbit sits on today's middle plane's tilt, turned the other way and spinning back.
+    expect(CROWDED_PLANES[1].inclination).toBe(65);
+    expect(Math.sign(CROWDED_PLANES[1].speedDegPerSec)).toBe(
+      -Math.sign(CROWDED_PLANES[0].speedDegPerSec),
+    );
+  });
+
+  it("paints the starting phases with both orbits full", () => {
+    const m = adaptive();
+    seed(m, ring.maxOrbits * ring.seatsPerOrbit);
+    const frame = m.update(0, true);
+    CROWDED_PLANES.forEach((p, plane) => {
+      for (let slot = 0; slot < p.capacity; slot++) {
+        const c = frame.crew.find((c) => c.id === `c${plane * p.capacity + slot}`);
+        if (!c) throw new Error("Missing seated crew");
+        expect(c.plane).toBe(plane);
+        expect(wrapped(angle(c) - (p.phase + (slot / p.capacity) * Math.PI * 2))).toBeCloseTo(
+          0,
           12,
         );
       }
-      expect(planePhase(i, 1000)).toBeCloseTo((-p.speedDegPerSec * Math.PI) / 180, 12);
-      expect(CROWDED_PLANES[i]?.phase).toBeCloseTo((p.phaseDeg * Math.PI) / 180, 12);
     });
   });
 
-  it("paints the retained starting phases at full selected capacity", () => {
-    const m = adaptive();
-    seed(m, 40);
-    const frame = m.update(0, true);
-    let offset = 0;
-    selected.orbit_settings.orbits.forEach((p, plane) => {
-      for (let slot = 0; slot < p.count; slot++) {
-        const c = frame.crew.find((c) => c.id === `c${offset + slot}`);
-        if (!c) throw new Error("Missing selected crew");
-        expect(c.plane).toBe(plane);
-        expect(
-          wrapped(angle(c) - ((p.phaseDeg * Math.PI) / 180 + (slot / p.count) * Math.PI * 2)),
-        ).toBeCloseTo(0, 12);
+  it.each([1, 2, 9, 12, 23, 24])(
+    "widens the first orbit a notch with every arrival, at %i crew",
+    (count) => {
+      const m = adaptive();
+      seed(m, count);
+      const f = m.update(0, true);
+      expect(f.formation).toBe("planes");
+      expect(f.crew.every((c) => c.plane === 0)).toBe(true);
+      for (const c of f.crew) {
+        const projected = projectPlane(0, angle(c), grown(0, count));
+        expect(c.x).toBeCloseTo(projected.x, 10);
+        expect(c.y).toBeCloseTo(projected.y, 10);
+        expect(Math.hypot(c.x, c.y, projected.z)).toBeCloseTo(grown(0, count), 8);
       }
-      offset += p.count;
-    });
-  });
-
-  it.each([1, 6, 8])("uses the selected inner geometry even at %i crew", (count) => {
-    const m = adaptive();
-    seed(m, count);
-    const f = m.update(0, true);
-    expect(f.formation).toBe("planes");
-    expect(f.crew.every((c) => c.plane === 0)).toBe(true);
-    for (const c of f.crew) {
-      const projected = projectPlane(0, angle(c));
-      expect(c.x).toBeCloseTo(projected.x, 10);
-      expect(c.y).toBeCloseTo(projected.y, 10);
-    }
-  });
+      expect(f.orbits).toHaveLength(1);
+    },
+  );
 
   it("settles an asynchronous boot roster even after an empty frame", () => {
     const m = adaptive();
@@ -85,47 +115,70 @@ describe("approved product formation", () => {
     expect(m.takeCues()).toEqual([]);
   });
 
-  it.each([8, 9, 20, 21, 40, 41, 48, 60, 96])(
-    "seeds %i crew on inner-first, depth-sorted planes",
-    (count) => {
-      const m = adaptive();
-      seed(m, count);
-      const f = m.update(0);
-      expect(f.formation).toBe("planes");
-      expect(f.planeBlend).toBe(1);
-      expect(f.count).toBe(count);
-      expect(f.crew).toHaveLength(count);
-      const counts = CROWDED_PLANES.map((_, p) => f.crew.filter((c) => c.plane === p).length);
-      const expected: Record<number, number[]> = {
-        8: [8, 0, 0],
-        9: [8, 1, 0],
-        20: [8, 12, 0],
-        21: [8, 12, 1],
-        40: [8, 12, 20],
-        41: [9, 12, 20],
-        48: [14, 14, 20],
-        60: [20, 20, 20],
-        96: [32, 32, 32],
-      };
-      expect(counts).toEqual(expected[count]);
-      expect(f.crew.map((c) => c.depth)).toEqual(f.crew.map((c) => c.depth).sort((a, b) => a - b));
-      for (const c of f.crew) {
-        const p = CROWDED_PLANES[c.plane ?? 0];
-        const projected = projectPlane(c.plane ?? 0, angle(c));
-        expect(c.x).toBeCloseTo(projected.x, 10);
-        expect(c.y).toBeCloseTo(projected.y, 10);
-        expect(c.depth).toBeCloseTo(0.5 + projected.z / 512, 10);
-        expect(Math.hypot(c.x, c.y, projected.z)).toBeCloseTo(p?.radius ?? 0, 8);
-        expect(Math.abs(c.x) + c.size / 2).toBeLessThan(280);
-        expect(Math.abs(c.y) + c.size / 2).toBeLessThan(280);
-        expect(c.phase).toBe("orbiting");
-        expect(c.spark).toBe(0);
-      }
-      expect(m.takeCues()).toEqual([]);
-    },
-  );
+  it.each([
+    { count: 24, counts: [24, 0], radii: [grown(0, 24)] },
+    { count: 25, counts: [24, 1], radii: [cap(0), grown(1, 1)] },
+    { count: 36, counts: [24, 12], radii: [cap(0), grown(1, 12)] },
+    { count: 48, counts: [24, 24], radii: [cap(0), cap(1)] },
+    // No third orbit: past 48 the orbit with fewer crew takes the arrival, the first on a tie.
+    { count: 49, counts: [25, 24], radii: [cap(0), cap(1)] },
+    { count: 50, counts: [25, 25], radii: [cap(0), cap(1)] },
+    { count: 72, counts: [36, 36], radii: [cap(0), cap(1)] },
+    { count: 96, counts: [48, 48], radii: [cap(0), cap(1)] },
+  ])("seeds $count crew on two depth-sorted orbits", ({ count, counts, radii }) => {
+    const m = adaptive();
+    seed(m, count);
+    const f = m.update(0);
+    expect(f.formation).toBe("planes");
+    expect(f.planeBlend).toBe(1);
+    expect(f.count).toBe(count);
+    expect(f.crew).toHaveLength(count);
+    expect(countsOf(f)).toEqual(counts);
+    expect(f.orbits).toHaveLength(radii.length);
+    expect(f.crew.map((c) => c.depth)).toEqual(f.crew.map((c) => c.depth).sort((a, b) => a - b));
+    for (const c of f.crew) {
+      const radius = radii[c.plane ?? 0] ?? 0;
+      const projected = projectPlane(c.plane ?? 0, angle(c), radius);
+      expect(c.x).toBeCloseTo(projected.x, 10);
+      expect(c.y).toBeCloseTo(projected.y, 10);
+      expect(c.depth).toBeCloseTo(0.5 + projected.z / 512, 10);
+      expect(Math.hypot(c.x, c.y, projected.z)).toBeCloseTo(radius, 8);
+      expect(Math.abs(c.x) + c.size / 2).toBeLessThan(280);
+      expect(Math.abs(c.y) + c.size / 2).toBeLessThan(280);
+      expect(c.phase).toBe("orbiting");
+      expect(c.spark).toBe(0);
+    }
+    expect(m.takeCues()).toEqual([]);
+  });
 
-  it("moves painted positions at +8, −20 and −4 degrees per second", () => {
+  it("widens the orbit on its springs as a crewmate arrives, never snapping", () => {
+    const m = adaptive();
+    seed(m, 12);
+    const before = advance(m, 0, 4000);
+    m.spawn("new", "working", 4000);
+    let frame = m.update(4000);
+    for (const c of before.crew) {
+      const next = frame.crew.find((n) => n.id === c.id);
+      expect(next?.x).toBe(c.x);
+      expect(next?.y).toBe(c.y);
+    }
+    for (let t = 4016; t <= 9000; t += 16) {
+      const next = m.update(t);
+      for (const c of before.crew) {
+        const old = frame.crew.find((n) => n.id === c.id);
+        const current = next.crew.find((n) => n.id === c.id);
+        if (old && current)
+          expect(Math.hypot(current.x - old.x, current.y - old.y)).toBeLessThan(8);
+      }
+      frame = next;
+    }
+    for (const c of frame.crew) {
+      const projected = projectPlane(0, angle(c), grown(0, 13));
+      expect(Math.hypot(c.x - projected.x, c.y - projected.y)).toBeLessThan(0.5);
+    }
+  });
+
+  it("moves painted positions at +8 and −14 degrees per second", () => {
     const m = adaptive();
     seed(m, 40);
     const before = advance(m, 0, 20000);
@@ -142,22 +195,17 @@ describe("approved product formation", () => {
   });
 
   it.each([
-    { starting: 9, remaining: [8, 0, 0], moved: ["c8"] },
-    { starting: 20, remaining: [8, 11, 0], moved: ["c8"] },
-    { starting: 40, remaining: [8, 12, 19], moved: ["c8", "c20"] },
+    { starting: 25, remaining: [24, 0], moved: ["c24"] },
+    { starting: 48, remaining: [24, 23], moved: ["c24"] },
   ])(
-    "glides the oldest later crew inward at the $starting-crew boundary",
+    "glides the inner orbit's oldest crewmate out to refill the first at $starting crew",
     ({ starting, remaining, moved }) => {
       const m = adaptive();
       seed(m, starting);
       const before = m.update(0);
       m.leave("c0", "home", 0);
       const immediate = m.update(0);
-      expect(
-        CROWDED_PLANES.map(
-          (_, p) => immediate.crew.filter((c) => c.phase !== "leaving" && c.plane === p).length,
-        ),
-      ).toEqual(remaining);
+      expect(countsOf(immediate)).toEqual(remaining);
       for (const c of immediate.crew) {
         if (c.phase !== "leaving" && !moved.includes(c.id)) {
           const old = before.crew.find((previous) => previous.id === c.id);
@@ -189,61 +237,76 @@ describe("approved product formation", () => {
       }
       expect(travelled).toBe(true);
       expect(frame.crew.filter((c) => c.phase !== "leaving").length).toBe(starting - 1);
-      if (starting > 9) {
-        for (const id of moved) {
-          const current = frame.crew.find((c) => c.id === id);
-          if (!current) throw new Error("Lost inward-moving member");
-          const projected = projectPlane(current.plane ?? 0, angle(current));
-          expect(Math.hypot(current.x - projected.x, current.y - projected.y)).toBeLessThan(0.1);
-        }
+      for (const id of moved) {
+        const current = frame.crew.find((c) => c.id === id);
+        if (!current) throw new Error("Lost outward-moving member");
+        expect(current.plane).toBe(0);
+        const projected = onOrbit(frame, current);
+        expect(Math.hypot(current.x - projected.x, current.y - projected.y)).toBeLessThan(0.1);
       }
     },
   );
 
-  it("takes the oldest member of the nearest occupied plane after heavy overflow churn", () => {
+  it("shrinks the inner orbit as it loses crew and closes it once empty", () => {
     const m = adaptive();
-    seed(m, 60);
-    // Exhaust the middle plane, then vacate an inner slot: outer's oldest moves in.
-    const before = m.update(0);
-    for (const c of before.crew.filter((c) => c.plane === 1)) m.leave(c.id, "home", 0);
-    const outerOldest = before.crew
-      .filter((c) => c.plane === 2)
-      .sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))[0];
-    m.leave("c0", "home", 0);
-    const f = m.update(0, true);
-    expect(f.crew.find((c) => c.id === outerOldest?.id)?.plane).toBe(1);
-    expect(f.count).toBe(39);
+    seed(m, 30);
+    m.leave("c29", "home", 0);
+    const shrunk = m.update(0, true);
+    expect(countsOf(shrunk)).toEqual([24, 5]);
+    for (const c of shrunk.crew.filter((c) => c.plane === 1))
+      expect(Math.hypot(c.x, c.y, onOrbit(shrunk, c).z)).toBeCloseTo(grown(1, 5), 8);
+    for (const id of ["c24", "c25", "c26", "c27", "c28"]) m.leave(id, "home", 0);
+    const closed = m.update(0, true);
+    expect(countsOf(closed)).toEqual([24, 0]);
+    expect(closed.orbits).toHaveLength(1);
   });
 
-  it("compacts survivors then regrows without sending them back outward", () => {
+  it("refills the first orbit from the inner orbit's oldest after overflow churn", () => {
     const m = adaptive();
-    seed(m, 20);
-    for (let i = 0; i < 12; i++) m.leave(`c${i}`, "home", 0);
-    const eight = advance(m, 0, 4000);
-    expect(eight.crew.map((c) => c.plane)).toEqual(Array(8).fill(0));
+    seed(m, 60);
+    const before = m.update(0);
+    expect(countsOf(before)).toEqual([30, 30]);
+    const innerOldest = before.crew
+      .filter((c) => c.plane === 1)
+      .sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))[0];
+    // Seven leave the first orbit: it falls below its seats, so the inner orbit's oldest glides out.
+    const first = before.crew.filter((c) => c.plane === 0).slice(0, 7);
+    for (const c of first) m.leave(c.id, "home", 0);
+    const f = m.update(0, true);
+    expect(f.crew.find((c) => c.id === innerOldest?.id)?.plane).toBe(0);
+    expect(countsOf(f)).toEqual([24, 29]);
+    expect(f.count).toBe(53);
+  });
+
+  it("compacts survivors then opens the inner orbit without sending them back", () => {
+    const m = adaptive();
+    seed(m, 30);
+    for (let i = 0; i < 6; i++) m.leave(`c${i}`, "home", 0);
+    const full = advance(m, 0, 4000);
+    expect(full.crew.map((c) => c.plane)).toEqual(Array(24).fill(0));
     m.spawn("new", "working", 4000);
-    const nine = m.update(4000);
-    expect(nine.crew.filter((c) => c.plane === 0)).toHaveLength(8);
-    expect(nine.crew.find((c) => c.id === "new")?.plane).toBe(1);
-    for (const c of eight.crew) {
-      const next = nine.crew.find((n) => n.id === c.id);
+    const opened = m.update(4000);
+    expect(opened.crew.filter((c) => c.plane === 0)).toHaveLength(24);
+    expect(opened.crew.find((c) => c.id === "new")?.plane).toBe(1);
+    for (const c of full.crew) {
+      const next = opened.crew.find((n) => n.id === c.id);
       expect(next?.x).toBe(c.x);
       expect(next?.y).toBe(c.y);
     }
   });
 
-  it("does not send an inward-moving crewmate back out on a fast eight-to-nine bounce", () => {
+  it("does not send an outward-moving crewmate back in on a fast 24-to-25 bounce", () => {
     const m = adaptive();
-    seed(m, 9);
+    seed(m, 25);
     m.leave("c0", "home", 0);
     const shrinking = m.update(0);
-    expect(shrinking.crew.find((c) => c.id === "c8")?.plane).toBe(0);
+    expect(shrinking.crew.find((c) => c.id === "c24")?.plane).toBe(0);
     m.spawn("new", "working", 0);
     const growing = m.update(0);
-    expect(growing.crew.find((c) => c.id === "c8")?.plane).toBe(0);
+    expect(growing.crew.find((c) => c.id === "c24")?.plane).toBe(0);
     expect(growing.crew.find((c) => c.id === "new")?.plane).toBe(1);
-    expect(growing.crew.find((c) => c.id === "c8")?.x).toBe(
-      shrinking.crew.find((c) => c.id === "c8")?.x,
+    expect(growing.crew.find((c) => c.id === "c24")?.x).toBe(
+      shrinking.crew.find((c) => c.id === "c24")?.x,
     );
   });
 
@@ -300,7 +363,7 @@ describe("approved product formation", () => {
   });
 
   it("projects packets and steer cues along the real plane rather than the old ring", () => {
-    for (const plane of [0, 1, 2]) {
+    for (const plane of [0, 1]) {
       const m = adaptive();
       seed(m, 40);
       const f = advance(m, 0, 10000);
@@ -314,19 +377,20 @@ describe("approved product formation", () => {
       m.signal(c.id, "steer", 10000);
       const cue = m.takeCues().at(-1);
       if (cue?.kind !== "sendoff") throw new Error("Missing cue");
-      expect(cue.dx).toBeCloseTo(c.x / (CROWDED_PLANES[plane]?.radius ?? 1), 8);
-      expect(cue.dy).toBeCloseTo(c.y / (CROWDED_PLANES[plane]?.radius ?? 1), 8);
+      const radius = planeRadius(plane, countsOf(f));
+      expect(cue.dx).toBeCloseTo(c.x / radius, 8);
+      expect(cue.dy).toBeCloseTo(c.y / radius, 8);
     }
   });
 
-  it("snaps an inward-moving member to the inner projection under reduced motion", () => {
+  it("snaps an outward-moving member to the first orbit's projection under reduced motion", () => {
     const m = adaptive();
-    seed(m, 20);
+    seed(m, 30);
     m.leave("c0", "home", 0);
-    const c = m.update(0, true).crew.find((member) => member.id === "c8");
-    if (!c) throw new Error("Inward-moving member missing");
+    const c = m.update(0, true).crew.find((member) => member.id === "c24");
+    if (!c) throw new Error("Outward-moving member missing");
     expect(c.plane).toBe(0);
-    const projected = projectPlane(0, angle(c));
+    const projected = projectPlane(0, angle(c), cap(0));
     expect(c.x).toBeCloseTo(projected.x, 10);
     expect(c.y).toBeCloseTo(projected.y, 10);
     expect(c.depth).toBeCloseTo(0.5 + projected.z / 512, 10);
@@ -334,17 +398,19 @@ describe("approved product formation", () => {
 
   it("settles threshold changes, arrivals, packets and departures under reduced motion", () => {
     const m = adaptive();
-    seed(m, 8);
+    seed(m, 24);
     m.update(0, true);
     m.spawn("new", "idle", 1);
     const crowded = m.update(1, true);
+    expect(countsOf(crowded)).toEqual([24, 1]);
     expect(crowded.planeBlend).toBe(1);
     expect(crowded.crew.every((c) => c.spark === 0 && c.unfold === 1)).toBe(true);
     m.signal("new", "report", 2);
     m.leave("new", "home", 2);
     const small = m.update(2, true);
     expect(small.planeBlend).toBe(1);
-    expect(small.count).toBe(8);
+    expect(small.count).toBe(24);
+    expect(small.orbits).toHaveLength(1);
     expect(small.packets).toEqual([]);
   });
 });
@@ -364,7 +430,7 @@ describe("the black hole's rush", () => {
 
   it("races every orbit at the top speed in its own direction, evenly spaced on its slots", () => {
     const m = adaptive();
-    seed(m, 40);
+    seed(m, 48);
     const before = advance(m, 0, 20_000);
     expect(before.travel).toBe(1);
     // Six frames at the top of the rush: 96 ms of stage time, 36 times the travel.
@@ -443,7 +509,7 @@ describe("the black hole's rush", () => {
 
   it("trails each racing crewmate with a streak along its own orbit, and only while racing", () => {
     const m = adaptive();
-    seed(m, 40);
+    seed(m, 48);
     advance(m, 0, 10_000);
     expect(m.update(10_016, false, 0).crew.some((c) => c.streak)).toBe(false);
     const f = rushed(m, 10_032, 10_200, 1);

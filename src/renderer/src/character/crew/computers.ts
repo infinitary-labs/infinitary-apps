@@ -13,7 +13,7 @@ import {
   type OrbitFrame,
   type PacketDirection,
 } from "./orbit";
-import { CROWDED_PLANES } from "./orbitalPlanes";
+import { outerPlaneRadius } from "./orbitalPlanes";
 
 export const HOME_COMPUTER = "home";
 export const COMPUTERS_PER_PAGE = 6;
@@ -43,16 +43,6 @@ export const CLUSTER_LAYOUT = {
   /** The scene never shrinks below this share of its size. */
   minFit: 0.3,
 } as const;
-
-/** The outer occupied orbit's radius for a roster that fills inner-first, px. */
-export function outerPlaneRadius(count: number): number {
-  let filled = 0;
-  for (const plane of CROWDED_PLANES) {
-    filled += plane.capacity;
-    if (count <= filled) return plane.radius;
-  }
-  return CROWDED_PLANES[CROWDED_PLANES.length - 1]?.radius ?? 0;
-}
 
 export type ComputerCluster = {
   id: string;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { crewModelLabelPlacement, crewModelLabelsVisible } from "./modelLabels";
+import { CREW_NAMES_UP_TO } from "./orbitalPlanes";
 
 describe("single active orbit labels", () => {
   it("hides an empty roster and shows any one occupied orbit", () => {
@@ -15,6 +16,17 @@ describe("single active orbit labels", () => {
     expect(crewModelLabelsVisible([inner, middle])).toBe(false);
     expect(crewModelLabelsVisible([inner, { ...middle, phase: "leaving" }])).toBe(true);
     expect(crewModelLabelsVisible([{ ...inner, phase: "leaving" }])).toBe(false);
+  });
+  it("hides names once the one orbit holds more than eight crew (captain, INF-1179)", () => {
+    const first = { plane: 0, phase: "orbiting" as const };
+    expect(crewModelLabelsVisible(Array(CREW_NAMES_UP_TO).fill(first))).toBe(true);
+    expect(crewModelLabelsVisible(Array(CREW_NAMES_UP_TO + 1).fill(first))).toBe(false);
+    expect(
+      crewModelLabelsVisible([
+        ...Array(CREW_NAMES_UP_TO).fill(first),
+        { ...first, phase: "leaving" },
+      ]),
+    ).toBe(true);
   });
 });
 

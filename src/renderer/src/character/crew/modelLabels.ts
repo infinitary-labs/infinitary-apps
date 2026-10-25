@@ -1,21 +1,22 @@
 import type { CrewmateFrame } from "./orbit";
+import { CREW_NAMES_UP_TO } from "./orbitalPlanes";
 
 /** The captain's reviewed model-name treatment, in actual screen pixels. */
 export const CREW_MODEL_LABEL = { maxWidthPx: 128, gapPx: 4, edgePx: 8 };
 
-/** Active painted orbits, not a copied roster threshold. Departing crew do not
- * keep an orbit active; historical ring-mode frames all share the same orbit.
+/** Active painted orbits and the crew on them. Departing crew do not count;
+ * historical ring-mode frames all share the same orbit.
  */
 export function crewModelLabelsVisible(
   crew: readonly Pick<CrewmateFrame, "plane" | "phase" | "computerId">[],
 ): boolean {
+  const active = crew.filter((frame) => frame.phase !== "leaving");
   return (
+    active.length <= CREW_NAMES_UP_TO &&
     new Set(
-      crew
-        .filter((frame) => frame.phase !== "leaving")
-        .map((frame) =>
-          frame.computerId ? `${frame.computerId}:${frame.plane ?? 0}` : (frame.plane ?? 0),
-        ),
+      active.map((frame) =>
+        frame.computerId ? `${frame.computerId}:${frame.plane ?? 0}` : (frame.plane ?? 0),
+      ),
     ).size === 1
   );
 }

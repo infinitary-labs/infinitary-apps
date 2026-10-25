@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
-import { CROWDED_PLANES } from "../../src/renderer/src/character/crew/orbitalPlanes";
+import { CREW_NAMES_UP_TO } from "../../src/renderer/src/character/crew/orbitalPlanes";
 import { modelDisplayName } from "../../src/shared/modelDisplayName";
 import {
   crewModelName,
@@ -160,8 +160,9 @@ test("crew model names default on, toggle immediately and survive restart indepe
   }
 });
 
-test("names switched off stay off while the crew grows to a second orbit and back to one", async () => {
-  const count = CROWDED_PLANES[0].capacity;
+// Names show only while the one orbit has eight crew or fewer (captain, INF-1179).
+test("names switched off stay off while the crew grows past eight and back", async () => {
+  const count = CREW_NAMES_UP_TO;
   const fixture = await roster(count);
   // Only the local mock may serve new turns. The existing isolated idle tasks
   // keep their assigned identities even when their catalog is unavailable.
@@ -190,7 +191,7 @@ test("names switched off stay off while the crew grows to a second orbit and bac
     await switchNames();
     await expect.poll(showNames).toBe(false);
     await expect(crewModelNames(page)).toHaveCount(0);
-    // One more crewmate than the first orbit holds, then back.
+    // One more crewmate than names show for, then back.
     await send(`${SPAWN_PROMPT_MARKER} ${title}`);
     await expect.poll(onStage, { timeout: 30_000 }).toBe(count + 1);
     await send(`${CANCEL_PROMPT_MARKER}${title}`);

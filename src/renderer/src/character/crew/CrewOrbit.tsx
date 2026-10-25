@@ -40,6 +40,7 @@ import {
 import { markOf, programMarks, stageMarks } from "./marks";
 import { CREW_MODEL_LABEL, crewModelLabelPlacement, crewModelLabelsVisible } from "./modelLabels";
 import type { CrewOrbit as CrewOrbitModel, OrbitFrame } from "./orbit";
+import { CROWDED_PLANES } from "./orbitalPlanes";
 import { crewRush } from "./rush";
 import {
   CREW_STATE_WORD,
@@ -868,8 +869,8 @@ export function CrewOrbit({
       if (near.canvas.dataset.planeBlend !== blend) near.canvas.dataset.planeBlend = blend;
       // Every crewmate on the stage counts on its plane; one names it only once
       // it has arrived and orbits there.
-      const planeCounts = [0, 0, 0];
-      const planeCrew: string[][] = [[], [], []];
+      const planeCounts = CROWDED_PLANES.map(() => 0);
+      const planeCrew: string[][] = CROWDED_PLANES.map(() => []);
       for (const c of frame.crew) {
         if (c.phase === "leaving" || c.plane === undefined) continue;
         planeCounts[c.plane] = (planeCounts[c.plane] ?? 0) + 1;

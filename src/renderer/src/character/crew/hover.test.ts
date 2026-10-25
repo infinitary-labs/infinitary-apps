@@ -12,7 +12,7 @@ import {
   type SummaryRoom,
 } from "./hover";
 import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
-import { CROWDED_PLANES, projectPlane } from "./orbitalPlanes";
+import { planeRadius, projectPlane } from "./orbitalPlanes";
 
 const mate = (id: string, x: number, y: number, extra = {}) => ({
   id,
@@ -51,11 +51,11 @@ function outside(frame: OrbitFrame, points: { x: number; y: number }[], scale = 
   return points.filter((p) => !inCrewZone(frame, p.x, p.y, scale));
 }
 
-/** How far a plane's orbit is painted above its centre, px. */
-function topOf(plane: number): number {
+/** How far a plane's orbit at `radius` is painted above its centre, px. */
+function topOf(plane: number, radius: number): number {
   let top = 0;
   for (let deg = 0; deg < 360; deg += 0.1)
-    top = Math.max(top, -projectPlane(plane, (deg * Math.PI) / 180).y);
+    top = Math.max(top, -projectPlane(plane, (deg * Math.PI) / 180, radius).y);
   return top;
 }
 
@@ -87,7 +87,8 @@ function place(model: ComputerOrbits, id: string, computer: string | null, now =
 describe("the slow zone", () => {
   it("is over the crew's orbit, not the air above and below it", () => {
     const frame = homeStage(3).update(0, true);
-    const top = topOf(0);
+    const radius = planeRadius(0, [3]);
+    const top = topOf(0, radius);
     // On the orbit and inside it, the character included.
     expect(inCrewZone(frame, 0, 0)).toBe(true);
     expect(inCrewZone(frame, 0, -top)).toBe(true);
@@ -96,12 +97,12 @@ describe("the slow zone", () => {
     expect(inCrewZone(frame, 0, -(top + MARGIN + 1))).toBe(false);
     expect(inCrewZone(frame, 0, top + MARGIN + 1)).toBe(false);
     // ...though the orbit itself reaches that far out along its own axis.
-    const far = CROWDED_PLANES[0].radius + MARGIN - 0.5;
+    const far = radius + MARGIN - 0.5;
     const tip = tipOf(0);
     expect(inCrewZone(frame, tip.x * far, tip.y * far)).toBe(true);
     expect(inCrewZone(frame, 0, -far)).toBe(false);
   });
-  it.each([1, 8, 9, 20, 21, 40])(
+  it.each([1, 8, 24, 25, 36, 48, 60])(
     "slows wherever a crewmate would take the pointer, with %i out",
     (count) => {
       const frame = homeStage(count).update(0, true);
@@ -110,38 +111,39 @@ describe("the slow zone", () => {
   );
   it("covers every occupied orbit by its own shape, and grows as one opens", () => {
     const three = homeStage(3).update(0, true);
-    const twelve = homeStage(12).update(0, true);
-    const far = CROWDED_PLANES[1].radius + MARGIN - 0.5;
+    const thirty = homeStage(30).update(0, true);
+    const far = planeRadius(1, [24, 6]) + MARGIN - 0.5;
     const tip = tipOf(1);
     expect(inCrewZone(three, tip.x * far, tip.y * far)).toBe(false);
-    expect(inCrewZone(twelve, tip.x * far, tip.y * far)).toBe(true);
-    // The second orbit is flatter: above the centre the zone ends where it did.
-    const top = Math.max(topOf(0), topOf(1));
-    expect(inCrewZone(twelve, 0, -(top + MARGIN + 1))).toBe(false);
+    expect(inCrewZone(thirty, tip.x * far, tip.y * far)).toBe(true);
+    // The second orbit sits inside the first: above the centre the zone ends at the taller one.
+    const top = Math.max(topOf(0, planeRadius(0, [24, 6])), topOf(1, planeRadius(1, [24, 6])));
+    expect(inCrewZone(thirty, 0, -(top + MARGIN + 1))).toBe(false);
   });
   it("measures the margin in screen pixels when the formation is fitted", () => {
     const frame = homeStage(3).update(0, true);
     const scale = 0.75;
     const tip = tipOf(0);
-    const edge = CROWDED_PLANES[0].radius * scale + MARGIN;
+    const edge = planeRadius(0, [3]) * scale + MARGIN;
     expect(inCrewZone(frame, tip.x * (edge - 0.5), tip.y * (edge - 0.5), scale)).toBe(true);
     expect(inCrewZone(frame, tip.x * (edge + 0.5), tip.y * (edge + 0.5), scale)).toBe(false);
     expect(outside(frame, reachOf(frame, scale), scale)).toEqual([]);
   });
   it("does not exist with nobody out, and ignores a departing crewmate and its orbit", () => {
     expect(homeStage(0).update(0, true).orbits).toEqual([]);
-    const model = homeStage(9);
-    const outer = model.update(0, true).crew.find((c) => c.plane === 1);
-    if (!outer) throw new Error("The ninth crewmate is not on the second orbit");
-    model.leave(outer.id, "home", 16);
+    const model = homeStage(25);
+    const inner = model.update(0, true).crew.find((c) => c.plane === 1);
+    if (!inner) throw new Error("The 25th crewmate is not on the second orbit");
+    model.leave(inner.id, "home", 16);
     const frame = model.update(32);
-    const leaving = frame.crew.find((c) => c.id === outer.id);
+    const leaving = frame.crew.find((c) => c.id === inner.id);
     expect(leaving?.phase).toBe("leaving");
-    const far = CROWDED_PLANES[1].radius + MARGIN - 0.5;
-    const tip = tipOf(1);
-    expect(inCrewZone(frame, tip.x * far, tip.y * far)).toBe(false);
+    // Its orbit is gone: the zone is the first orbit's alone, as with 24 out.
+    expect(frame.orbits).toEqual(homeStage(24).update(0, true).orbits);
     // Nor does the departing crewmate itself hold the zone.
-    expect(inCrewZone(frame, leaving?.x ?? 0, leaving?.y ?? 0)).toBe(false);
+    expect(inCrewZone({ orbits: [], crew: frame.crew }, leaving?.x ?? 0, leaving?.y ?? 0)).toBe(
+      false,
+    );
     const alone = homeStage(1);
     alone.leave("c0", "away", 16);
     expect(alone.update(32).orbits).toEqual([]);
@@ -168,7 +170,7 @@ describe("the slow zone", () => {
     if (!a || !orbit) throw new Error("The landing frame has no crewmate or orbit");
     const ring = DEFAULT_ORBIT.radius;
     const idle = ring * (1 + DEFAULT_ORBIT.idleOffset);
-    const inner = CROWDED_PLANES[0].radius;
+    const inner = planeRadius(0, [2]);
     const cos = Math.cos(orbit.angle);
     const sin = Math.sin(orbit.angle);
     const along = ((a.x - orbit.x) * cos + (a.y - orbit.y) * sin) / orbit.major;
@@ -217,7 +219,7 @@ describe("the slow zone", () => {
     expect(inCrewZone(frame, cluster.x, cluster.y)).toBe(true);
     // Straight above the character, as far out as the cluster, and above the cluster's own orbit.
     expect(inCrewZone(frame, 0, -Math.abs(cluster.x))).toBe(false);
-    const top = topOf(0) * CLUSTER_LAYOUT.sizeShare;
+    const top = topOf(0, planeRadius(0, [6])) * CLUSTER_LAYOUT.sizeShare;
     expect(inCrewZone(frame, cluster.x, cluster.y - (top + MARGIN + 1))).toBe(false);
   });
   it("follows an unreachable computer's cluster as it moves aside for home", () => {
@@ -228,7 +230,7 @@ describe("the slow zone", () => {
     model.settleBootRoster(0);
     const before = model.update(0, true);
     const from = model.clusters().find((c) => c.id === "peer")?.x;
-    // Home opens a second orbit, so the cluster's seat glides outward.
+    // Home's orbit widens with eight more crew, so the cluster's seat glides outward.
     for (let i = 4; i < 12; i++) place(model, `home${i}`, null, 16);
     const peerReach = (frame: OrbitFrame) =>
       reachOf({ ...frame, crew: frame.crew.filter((c) => c.computerId === "peer") });

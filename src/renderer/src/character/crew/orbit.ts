@@ -11,8 +11,9 @@
 // are a preference, not a position: every crewmate's polar coordinates ride
 // springs toward its slot, so a spawn or a departure re-spaces the others
 // with one calm glide, never a jump. The adaptive home formation places crew
-// on the approved inner-first planes (orbitalPlanes.ts); geometry
-// blends while the existing lifecycle, springs and cues remain the owners.
+// on the captain's growing ring (orbitalPlanes.ts): one orbit widens as crew
+// arrive, a second opens inside it past its seats; geometry blends while the
+// existing lifecycle, springs and cues remain the owners.
 //
 // The spawn is the Firstmate sending someone out: a spark condenses in the
 // inner cell, leaves tangentially (the same swirl the pretend black hole's
@@ -46,7 +47,7 @@ import {
   type ProgramPart,
   runningParts,
 } from "./constellation";
-import { CROWDED_PLANES, planePhase, projectPlane } from "./orbitalPlanes";
+import { CROWDED_PLANES, planePhase, planeRadius, projectPlane } from "./orbitalPlanes";
 import { CREW_RUSH, streakArc } from "./rush";
 import { SCENE_REACH_PX, satelliteFits, satelliteOffset, satellitePhase } from "./satellites";
 
@@ -280,7 +281,7 @@ export type DependencyLink = { fromId: string; toId: string; kind: "wait" | "rev
 
 /**
  * A task with parts as a branching constellation (./constellation.ts): the
- * program's mark on the inner orbit, a node for every running part whose
+ * program's mark on the first orbit, a node for every running part whose
  * crewmate is drawn there, and a branch for every link it hangs from. A
  * finished or unstarted part draws nothing (INF-1037). Px from the
  * Firstmate's center, like a crewmate.
@@ -384,7 +385,7 @@ type ProgramState = {
   id: string;
   parts: ProgramPart[];
   /**
-   * The mark's seat on the inner orbit, travelling with it: an occupant
+   * The mark's seat on the first orbit, travelling with it: an occupant
    * like a crewmate, so the plane spaces crew and marks evenly together
    * (INF-999) and a newcomer enters the widest gap between them all.
    */
@@ -632,7 +633,7 @@ export class CrewOrbit {
       changed = true;
       seats = true;
     }
-    // A mark that takes or gives up its seat re-spaces the inner orbit.
+    // A mark that takes or gives up its seat re-spaces the first orbit.
     if (seats) this.respacePlanes();
     if (changed) this.bump();
   }
@@ -685,8 +686,8 @@ export class CrewOrbit {
     const count = this.roster().length + 1;
     const ringR = ringRadiusFor(count, this.tuning);
     const counts = CROWDED_PLANES.map((_, i) => this.roster().filter((m) => m.plane === i).length);
-    // Fill each plane to its selected capacity before opening the next.
-    // Beyond all three capacities, keep the old least-populated overflow rule.
+    // Fill each orbit's seats before opening the next. Past both, the orbit
+    // with fewer crew takes the arrival, the first on a tie.
     const plane = counts.findIndex((n, i) => n < (CROWDED_PLANES[i]?.capacity ?? 0));
     const chosenPlane = plane < 0 ? counts.indexOf(Math.min(...counts)) : plane;
     const waits = status === "working" && checks;
@@ -897,7 +898,7 @@ export class CrewOrbit {
   }
 
   /**
-   * The marks seated on the inner orbit: each program's root that is not
+   * The marks seated on the first orbit: each program's root that is not
    * leaving. They count as occupants wherever the plane is spaced, so no
    * crewmate is ever seated on a mark and no two marks share a seat.
    */
@@ -908,7 +909,7 @@ export class CrewOrbit {
       .sort((a, b) => a.id.localeCompare(b.id));
   }
 
-  /** Every occupant of a plane as a seat: its crew, and on the inner orbit the marks too. */
+  /** Every occupant of a plane as a seat: its crew, and on the first orbit the marks too. */
   private planeSeats(plane: number, roster: Crewmate[]): PlaneSeat[] {
     const crew = roster.filter((c) => c.plane === plane).map(crewSeat);
     return plane === 0 ? [...crew, ...this.seatedRoots().map(markSeat)] : crew;
@@ -1025,11 +1026,16 @@ export class CrewOrbit {
    * ring's idle one blending to the plane's own. The ring is one orbit
    * whatever the planes.
    */
-  private orbitPaths(planes: ReadonlySet<number>, ringR: number, mix: number): OrbitPath[] {
+  private orbitPaths(
+    planes: ReadonlySet<number>,
+    ringR: number,
+    mix: number,
+    counts: readonly number[],
+  ): OrbitPath[] {
     const ringOut = ringR * (1 + this.tuning.idleOffset);
     const traced = mix === 0 ? [...planes].slice(0, 1) : [...planes];
     return traced.map((plane) => {
-      const radius = ringOut + ((CROWDED_PLANES[plane]?.radius ?? ringOut) - ringOut) * mix;
+      const radius = ringOut + (planeRadius(plane, counts) - ringOut) * mix;
       const centre = this.projectScene({ x: 0, y: 0, depth: 0.5 }, radius);
       const along = (angle: number) => {
         const point = this.projectScene(this.scenePoint(plane, angle, radius), radius);
@@ -1037,6 +1043,13 @@ export class CrewOrbit {
       };
       return ellipseOf(centre, along(0), along(Math.PI / 2));
     });
+  }
+
+  /** Crew on each orbit, those leaving not counted: what sizes the growing ring. */
+  private planeCounts(): number[] {
+    const counts = CROWDED_PLANES.map(() => 0);
+    for (const c of this.roster()) counts[c.plane] = (counts[c.plane] ?? 0) + 1;
+    return counts;
   }
 
   private layout(): { ringR: number; glyphK: number; n: number } {
@@ -1108,6 +1121,7 @@ export class CrewOrbit {
       }
     }
     const mix = this.planeBlend.x;
+    const counts = this.planeCounts();
     const slotTime = settled && this.crowded ? 0 : now + this.lead;
     const coreR = ringR * CORE_FRACTION;
     const crewFrames: CrewmateFrame[] = [];
@@ -1150,8 +1164,7 @@ export class CrewOrbit {
       // Slot targets: the ring's slow revolution plus the crewmate's posture.
       const idleOut = 1 + tuning.idleOffset * (1 - c.work);
       const ringTarget = ringR * idleOut;
-      const targetR =
-        ringTarget + ((CROWDED_PLANES[c.plane]?.radius ?? ringTarget) - ringTarget) * mix;
+      const targetR = ringTarget + (planeRadius(c.plane, counts) - ringTarget) * mix;
       let a: number;
       let r: number;
       let alpha = 1;
@@ -1331,14 +1344,14 @@ export class CrewOrbit {
     }
     for (const id of gone) this.crew.delete(id);
     if (gone.length > 0) this.bump();
-    // A mark glides to its seat when the inner orbit re-spaces, as a crewmate does.
+    // A mark glides to its seat when the first orbit re-spaces, as a crewmate does.
     for (const program of this.programs.values()) {
       if (settled) {
         program.rootAngle.x = program.rootSlot;
         program.rootAngle.v = 0;
       } else program.rootAngle.step(program.rootSlot, dt);
     }
-    const layouts = this.layoutPrograms(slotTime, ringR, mix);
+    const layouts = this.layoutPrograms(slotTime, ringR, mix, counts);
     const seats = new Map<string, Seat>();
     for (const layout of layouts) {
       if (layout.program.leaving) continue;
@@ -1361,7 +1374,7 @@ export class CrewOrbit {
 
     return {
       crew: mix > 0 ? crewFrames.sort((a, b) => a.depth - b.depth) : crewFrames,
-      orbits: this.orbitPaths(occupied, ringR, mix),
+      orbits: this.orbitPaths(occupied, ringR, mix, counts),
       packets,
       links,
       programs,
@@ -1378,20 +1391,21 @@ export class CrewOrbit {
 
   /**
    * Each program's mark and the layout of its parts, in scene space before a
-   * remote cluster's projection. The mark rides the inner orbit at its own
+   * remote cluster's projection. The mark rides the first orbit at its own
    * angle; the planes must be settled in, as for a waiting crewmate's circle.
    */
   private layoutPrograms(
     slotTime: number,
     ringR: number,
     mix: number,
+    counts: readonly number[],
   ): Array<{
     program: ProgramState;
     root: { x: number; y: number; z: number; depth: number; radius: number };
     places: Map<string, NodePlace>;
   }> {
     if (this.formation !== "adaptive" || mix < 0.999) return [];
-    const radius = ringR + ((CROWDED_PLANES[0]?.radius ?? ringR) - ringR) * mix;
+    const radius = ringR + (planeRadius(0, counts) - ringR) * mix;
     // A remote computer's group draws at a share of the scene's size, its
     // glyphs at nearly full size: the gap between crewmates is kept on screen.
     const a = this.projectScene({ x: 0, y: 0, depth: 0.5 }, radius);

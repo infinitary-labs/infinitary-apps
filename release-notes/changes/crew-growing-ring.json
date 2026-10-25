@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "crew-growing-ring",
+      "kind": "improvement",
+      "title": "Your crew gather on a growing ring",
+      "body": "Crewmates now start on one ring around your first mate, which widens a little with each new crewmate. Past 24, a second ring opens inside it, tilted differently and turning the other way. There are never more than two rings; with more than 48 crewmates, both rings fit them closer together.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "crew-growing-ring-dark.webp",
+        "light": "crew-growing-ring-light.webp",
+        "alt": "Thirty-three crewmates around the first mate: 24 on a wide outer ring and 9 on a smaller, differently tilted ring inside it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

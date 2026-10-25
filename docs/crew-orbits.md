@@ -1,54 +1,56 @@
 # Crew orbital formation
 
-The home character uses the captain's FI3-340 selection for every live work crew roster (working **or** idle).
-The inner orbit fills first; the other planes activate only when its capacity is reached.
+The home character seats every live work crew roster (working **or** idle) on the captain's growing ring, INF-1179's accepted plan.
+One orbit widens as crew arrive; once its seats are full, a second orbit opens inside it, on another tilt and spinning the other way.
+No third orbit ever opens.
 There is no permanent orbit guide.
 Model-name labels are described below; their visibility does not change the formation or motion.
 The pointer does: near it the whole stage slows, and on a crewmate it pauses and that crewmate's summary opens ("Slowing near the pointer and the crewmate summary" below).
 
 ## Approved configuration
 
-The exact retained captain answer is preserved in `tests/fixtures/crew-orbits/captain-selected-settings.json`, retrieved from FI3-340's captain-selected settings file (not the browser's test capture).
-This supersedes the September 22 relative-speed tuning.
+The captain's submitted settings and answers are preserved in `tests/fixtures/crew-orbits/growing-ring-settings.json`, from INF-1179's Approve and build (captain: "let's only allow 2 orbits. just keep packing the two orbits after 48?").
+They supersede FI3-340's three fixed planes.
+`orbitalPlanes.ts` derives both orbits from them (`GROWING_RING`, `CROWDED_PLANES`, `planeRadius`).
 
-| Plane | Radius | Capacity | Tilt | Signed travel | Orientation | Starting phase |
+| Orbit | Radius | Seats | Tilt | Signed travel | Orientation | Starting phase |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| Inner | 164 px | 8 | 42° | +8°/s | −24.064227395494573° | 0° |
-| Middle | 210 px | 12 | 65° | −20°/s | +21.772396214971284° | 30.36676314193363° |
-| Outer | 256 px | 20 | 16° | −4°/s | −40.10704565915762° | 60.73352628386726° |
+| First | 150 px, growing to 256 px | 24 | 42° | +8°/s | −0.42 rad | 0 |
+| Second (inside) | 150 px, growing to 210 px | 24 | 65° | −14°/s | −0.42 rad + 46° | 0.53 rad |
 
-Positive speed follows the original ring's decreasing angular direction, matching the playground.
-Travel is absolute degrees per second, not a multiplier of a Keplerian period; reverse changes orbital travel, not the crewmate's own spin.
-Orientations are exactly −0.42, +0.38 and −0.70 radians, starting phases 0, 0.53 and 1.06 radians.
+The first orbit starts on today's inner plane, so a lone crewmate differs from the old formation only by its radius.
+Each orbit inside caps one 46 px step smaller, tilts 23° more, turns 46° further and spins against the one outside it, 1.75 times as fast.
+The innermost open orbit grows a notch with every arrival, from 150 px with one crewmate to its cap with 24: radius = 150 + (cap − 150) × (n − 1) ÷ 23.
+Every orbit outside it holds at its cap, so the formation never grows past its 560 px square.
+Positive speed follows the original ring's decreasing angular direction.
+Travel is absolute degrees per second; reverse changes orbital travel, not the crewmate's own spin.
 Paths are off and no orbit is highlighted.
-Preview playback is not a production accessibility override: reduced motion still paints one settled frame.
+Reduced motion paints one settled frame.
 
 The paths are 3D circles with a shared center and distinct radii.
 The camera is orthographic; position and depth derive from the same projection.
 Differently inclined paths can cross **on screen** without intersecting in 3D.
-The chosen unequal speeds are stylized choreography, not circular orbits under one shared gravity field.
-The original no-overlap observations in the historical prototype do not apply to this more strongly inclined approved configuration.
+The unequal speeds are stylized choreography, not circular orbits under one shared gravity field.
 
 ## Lifecycle
 
 `crewSignal.ts` constructs the one shared `CrewOrbit` in `adaptive` mode, and the existing home view paints it.
-`orbitalPlanes.ts` is the single home of the approved constants and projection.
+`orbitalPlanes.ts` is the single home of the approved constants, the growth rule and the projection.
 The explicit `ring` mode remains available for the historical comparison and regression tests; `DEFAULT_ORBIT` is unchanged.
 
-Production uses the selected inner plane even for a small roster; the historical single-ring geometry survives only in explicit `ring` mode.
-Geometry, radius and angular slots follow the existing springs.
+Production uses the first orbit even for a small roster; the historical single-ring geometry survives only in explicit `ring` mode.
+Geometry, radius and angular slots follow the existing springs, so an orbit that widens or shrinks glides there.
 A settled boot roster is placed on its planes immediately, without re-emitting already active crewmates.
 Waits and tasks with parts come from the board the Tasks panel reads (`tasks.board` through the read executor), so above the board's delta trigger (more than 500 rows or 256 KiB) the folded deltas move them as a snapshot does, and a gap reads the board again.
 Reduced motion snaps the formation and lifecycle clips to their settled state.
 
-The inner plane fills to eight crew, then middle to twelve, then outer to twenty.
-Middle activates at nine total crew; outer at twenty-one.
-Beyond forty, overflow continues on the existing least-populated plane (ties favor inner): 41 crew are 9/12/20, 48 are 14/14/20, and 60 are 20/20/20.
-These are placement capacities, never limits on tasks or changes to routing.
-Every plane keeps its crew evenly spaced: on boot, and again whenever a crewmate joins or leaves it, the plane's members keep their order around the circle and glide (on their existing angle springs) to even slots, rotated as little as possible.
-Arrivals enter at the widest vacant angular gap in the first plane below capacity, then the plane re-spaces.
-When a member leaves, the oldest member of the next occupied plane glides into the plane, cascading from outer to middle only if needed.
-No member changes plane except by that fill; fast threshold bounces do not reverse the move.
+The first orbit fills to 24 crew; the 25th opens the second orbit inside it, which fills to another 24.
+Past 48 each arrival joins whichever orbit has fewer crew, the first on a tie, and both orbits pack tighter at their caps: 49 crew are 25/24, 60 are 30/30 and 72 are 36/36.
+These are placement seats, never limits on tasks or changes to routing.
+Every orbit keeps its crew evenly spaced: on boot, and again whenever a crewmate joins or leaves it, the orbit's members keep their order around the circle and glide (on their existing angle springs) to even slots, rotated as little as possible.
+Arrivals enter at the widest vacant angular gap in the first orbit below its seats, then the orbit re-spaces.
+When a member of the first orbit leaves while it is below its seats, the oldest member of the second orbit glides out to refill it; the second orbit then shrinks a notch, and closes once it is empty.
+No member changes orbit except by that refill; fast threshold bounces do not reverse the move.
 The member's plane projection follows a spring, like its existing angle and radius; reduced motion settles it immediately.
 Reports, steers, launch trails and first mate cues use the same projected path as the member; home/away departures, failure nudges and working/idle colors are retained.
 Crowded glyphs use the approved roughly 25-pixel base; idle crew retain the slow spin and cool light rather than moving beyond the outer canvas boundary.
@@ -77,15 +79,15 @@ A cluster shows its machine name only while it has crew and a computer other tha
 The home orbit keeps its original owner, radius, glyph size, motion, expressions, model names and height-fit transform in every scene, including multiple computers.
 The first mate stays at its original 300 px size.
 
-**Every cluster is the home formation at half its size** (`CLUSTER_LAYOUT.sizeShare`): the same three planes, tilts, capacities, directions and degrees per second, only scaled, so one 82 px orbit holds up to eight crew, a second at 105 px opens from nine and a third at 128 px from twenty-one, and a cluster grows in steps as home does.
+**Every cluster is the home formation at half its size** (`CLUSTER_LAYOUT.sizeShare`): the same growing ring, tilts, seats, directions and degrees per second, only scaled, so one orbit widens from 75 px to 128 px over its first 24 crew and a second opens inside it from the 25th, growing to 105 px, as home does.
 Remote glyphs keep their 23 px (18 px past twelve crew) with home's depth cue, nearer larger.
-Model names follow the home rule cluster by cluster, under the same Appearance switch: shown while that cluster has one occupied orbit, hidden once a second opens (`crewModelLabelsVisible` over that cluster's frames); a hidden name stays readable to the keyboard.
+Model names follow the home rule cluster by cluster, under the same Appearance switch: shown while that cluster has one occupied orbit with eight crew or fewer, hidden past that (`crewModelLabelsVisible` over that cluster's frames); a hidden name stays readable to the keyboard.
 
 **Seats.**
 The clusters with crew on the page sit in two wings (`ComputerOrbits.targets`): the first computer in pairing order right of the home formation, the second left, the third right again, stacked top to bottom within a wing and centered on the first mate's height.
 A wing stands beyond the home formation's edge - its outer occupied orbit plus half a glyph - by a 40 px gap plus its widest cluster's radius, and stacked clusters keep that gap plus room for a name between them.
 A computer with no crew keeps no seat, so the others close up; its first crewmate seats it.
-A seat glides on a spring when the formations around it grow or shrink (home's ninth crewmate moves both wings 46 px out), a new seat appears in place, and reduced motion settles seats at once.
+A seat glides on a spring when the formations around it grow or shrink (each of home's first 24 crew moves both wings about 4.6 px out), a new seat appears in place, and reduced motion settles seats at once.
 The machine name sits 20 px under the cluster's edge and follows its seat.
 
 **The crew layer is the window.**
@@ -168,11 +170,11 @@ Any other parent, such as a task that only holds a plan and its build, or one wi
 A home that sends no `program` draws no constellation on a newer view (`src/shared/contract-changes/task-program.md`).
 A basis or a branch-from that is not also a recorded wait draws no branch, since the board does not carry them; a program's runner files each part's inputs as its waits.
 
-The root is a small hollow ring with a seat of its own on the inner orbit (INF-999): the inner orbit's spacing counts each root as an occupant beside its crewmates, so a program first draws at the widest gap, a newcomer enters at the widest gap among crew and roots, and every seat re-spaces evenly as programs come and go, each root gliding on a spring to its new seat.
+The root is a small hollow ring with a seat of its own on the first orbit, the one a lone crewmate takes, so it never jumps when the second opens (INF-999, INF-1179): the first orbit's spacing counts each root as an occupant beside its crewmates, so a program first draws at the widest gap, a newcomer enters at the widest gap among crew and roots, and every seat re-spaces evenly as programs come and go, each root gliding on a spring to its new seat.
 With several work computers a program draws a copy of its ring in the group of each computer that runs its parts, each copy with the crewmates running there (INF-1037, the captain's choice A), so every crewmate stays where its work runs.
 A computer's copy goes once its parts there finish; with none running anywhere, between stages, the rings stay where they were drawn, or one draws at home.
 Every copy is the same task: pointing at either opens its summary beside it, and the keyboard reaches one (`programMarks`, `markOf`).
-`constellation.test.ts` holds two marks of different tasks on the inner orbit more than a glyph's width apart at boot, for a minute of frames, and through a newcomer and a new program; crew on the other planes cross it on screen by design.
+`constellation.test.ts` holds two marks of different tasks on the first orbit more than a glyph's width apart at boot, for a minute of frames, and through a newcomer and a new program; crew on the other planes cross it on screen by design.
 `layoutProgram` lays the parts in layers outward from it: the first layer 60 px out and each later one 0.82 of the one before, each layer spread evenly across 70 degrees round the root's outward direction and ordered by its parents' mean angle, so a chain stays straight and a barrier's join sits between its branches.
 Running crewmates keep their full size and stay a glyph's width (25 px on screen) apart: a crowded layer widens its fan, up to 180 degrees, and past that moves outward.
 A remote computer's group draws at half the scene's size with its glyphs at nearly full size, so its layout asks for the same room on screen.
@@ -250,7 +252,7 @@ The light is the last thing the orbit's frame passes through before it is painte
 
 ## Verification
 
-- `orbitalPlanes.test.ts`: retained exact geometry and absolute signed rates, measured travel of rendered frames, selected inner geometry for small rosters, depth/radius/bounds, inner-first activation at 8/9 and 20/21, overflow through 96, inward glides, churn, stable survivors, packets/cues and reduced motion.
+- `orbitalPlanes.test.ts`: the staged two orbits' geometry and signed rates from the captain's settings, measured travel of rendered frames, the first orbit's growth a notch per arrival, its widening on the springs, depth/radius/bounds, the second orbit's opening at 25 and packing through 96, outward refills, the inner orbit's shrinking and closing, churn, stable survivors, packets/cues and reduced motion.
 - `tests/e2e/crew-planes.spec.ts`: real storage → boot board → 48 crew at the minimum window: all on the stage, clear of the prompt, and a crewmate's summary still opens whole in the window.
 - The `orbit`, `crewSignal`, painter/cue and `crew-orbit.spec.ts` tests exercise the unchanged lifecycle, commissioning, solids, posture and review cues.
   Each named `crew-orbit.spec.ts` case launches a fresh app; cancellation commissions its own visible idle crewmate before removing it, and reduced motion starts with an empty crew.
@@ -301,9 +303,9 @@ An unknown model falls back to its ID; before assignment the label stays empty (
 Known OpenRouter maker prefixes are removed for display by the namespace-keyed exact map in `src/shared/modelDisplayName.ts`.
 Unknown/custom labels remain unchanged; catalog labels, provider/model identity and routing are untouched.
 
-The captain's crowding revision shows labels only while exactly one orbit is active.
-The second occupied orbit hides all labels; returning to one restores labels only if the Settings switch remains on.
-This reads the painted frames' occupied planes, never a copied roster threshold, and excludes departing crew from active occupancy.
+Labels show only while exactly one orbit is active and it holds eight crew or fewer (captain, INF-1179: "Show names only while the single orbit has eight crew or fewer, as today"), since the growing ring seats up to 24 on one orbit.
+A ninth crewmate or a second occupied orbit hides all labels; returning to eight on one orbit restores them only if the Settings switch remains on.
+This reads the painted frames' occupied planes and the crew on them (`CREW_NAMES_UP_TO`), and excludes departing crew.
 Empty rosters show no names.
 
 A name fades in by opacity alone over `--dur-med` with `--ease-out` each time it shows: a model assigned while its crewmate orbits, a reroute's new name, the return from two orbits to one, the switch turned on, and every time the stage is drawn again (at launch and back from Settings).
@@ -312,7 +314,7 @@ Labels narrow at the canvas edge and ellipsize, never shrink the type.
 The formation’s fit is countered for the text so it remains 11 px even at the minimum window height.
 A name is part of its crewmate: pointing at it, or focusing it from the keyboard, opens that crewmate's summary - which carries the complete display name - and pauses the stage like pointing at the crewmate itself; a click or Enter opens its task record, and Esc lets it go.
 The separate full-name plate under the formation is gone (captain, FI3-398: "fold it in").
-The selected multi-plane formation and choreography remain unchanged; its extra orbits simply carry no labels.
+The formation and choreography do not change for the labels.
 Labels hide with the character’s mounted, inert frame behind cards and do not take focus there.
 The last turn above the input is separate (`docs/composer.md` "The last turn").
 
@@ -325,7 +327,7 @@ It reads these frames - only phase `orbiting` with the working blend settled - a
 It hides with the character's frame behind cards, hides while its crewmate's summary is open, and never changes a color, a motion or a summary.
 
 `tests/e2e/crew-model-labels.spec.ts` verifies real catalog names, complete-name access through the summary (pointer and keyboard), default/on/off/restart behavior, unscaled text and bounds in both themes and narrow/roomy windows.
-It also exercises live 8 → 9 → 8 transitions, removes hidden names from accessibility and inspection, and preserves manual off through both transitions.
+It also exercises live 8 → 9 → 8 transitions on the one orbit, removes hidden names from accessibility and inspection, and preserves manual off through both transitions.
 The existing crew journey specs retain the motion, formation, lifecycle and tier checks.
 Product captures are written by `crew-model-labels.spec.ts` into the run's own results folder.
 No private prototype code is imported.
@@ -371,7 +373,7 @@ A part of a task with parts takes its seat at its node only once the planes have
 So a journey's `pointAtCrewmate` waits for settled planes and the crewmate it wants, then points at a seated part's name or sweeps the orbit for any other crewmate.
 The pause begins the moment a crewmate is acquired.
 It ends when the pointer leaves it, on Esc (which keeps it closed until the pointer has left that crewmate), under a card, or when the crewmate itself is gone.
-It works at every crew size and on all three orbits, independent of the model-name switch.
+It works at every crew size and on both orbits, independent of the model-name switch; the sweep follows each orbit at the radius its crew give it (`planeRadius`).
 A click on the crewmate being read calls the shell's `openRecord(taskId)` - the record its Tasks row opens - and is not a tap on the character behind it.
 
 **The summary.**
@@ -465,7 +467,7 @@ A rush still settling when the next black hole begins carries on from its level.
 
 Only travel speeds up.
 The extra travel is a lead on the orbit's own clock, and every angle spring moves with its target, so the crew race rigidly on their evenly spaced slots instead of trailing them.
-Every orbit keeps its direction and relative pace, so the inner (+8°/s) and middle (−20°/s) orbits race in opposite directions.
+Every orbit keeps its direction and relative pace, so the first (+8°/s) and second (−14°/s) orbits race in opposite directions.
 Spawns, departures, packets, nudges, flickers and tiers keep their own pace, and the lead stays where the rush left it, so nothing jumps when it ends.
 An orbiting crewmate trails a streak of its own light, lifted a quarter toward white-hot, along its own projected path, thinning and fading away from it (`drawCrewmate`).
 The first mate's own black hole is untouched.

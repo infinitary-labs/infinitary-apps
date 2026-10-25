@@ -24,14 +24,14 @@ Crowded formation fitting scales positions and glyphs, not label text.
 Known OpenRouter maker prefixes are omitted using the model’s namespace and an exact prefix map, never by splitting arbitrary names at a colon.
 Unknown/custom names retain their wording.
 Settings → Appearance → Crew model names defaults on and persists through restart; it affects only these labels, never the first mate or tier solids.
-Show these names only while exactly one orbit is active; hide all names when a second orbit appears, then restore them at one orbit if the switch is still on.
+Show these names only while exactly one orbit is active and it holds eight crew or fewer; hide all names past that, then restore them if the switch is still on.
 A name fades in by opacity alone over `--dur-med` (`--ease-out`) whenever it shows, a reroute's new name included, and over an even `--dur-fade` under reduced motion; hiding is immediate.
 Automatic hiding never writes the stored choice.
 The strip and feed still carry activity.
 Reduced motion: every crewmate appears settled on its slot, one still frame.
 
 The black hole's rush (captain, 2026-10-01, tuned on the playable preview): while the first mate plays its pretend black hole, every crewmate races its orbit at up to 36 times its travel speed - ramping up over 1.6s from the wind-up, holding, and settling back over 2s from the unwind (or from the moment the black hole is cut short), smoothstep both ways, never a cut.
-Each orbit keeps its direction, so the inner and middle orbits race in opposite directions, and the crew stay evenly spaced on their slots.
+Each orbit keeps its direction, so the two orbits race in opposite directions, and the crew stay evenly spaced on their slots.
 A crewmate's own spin takes a quarter of the boost, so its solid still reads.
 While racing, an orbiting crewmate trails a speed streak along its own path: its own light lifted a quarter toward white-hot, thinning and fading over the arc swept in the last 0.06s (at most 1.5rad).
 Arrivals, departures, packets and every other cue keep their pace; the pointer's slowdown and pause apply to the rush; reduced motion plays none of it.
@@ -83,11 +83,10 @@ Reduced motion: the scene is already still, so only the summary applies.
 Keep small (≤32px); crewmates never become a focal point.
 Prefer CrewStrip for overviews.
 
-Approved orbital formation (FI3-340, captain, 2026-09-30): use the selected inner plane from the first crew; fill inner to 8, then middle to 12, then outer to 20.
-Middle opens at 9 total, outer at 21.
-Travel is +8 / −20 / −4 degrees per second, with tilts 42° / 65° / 16°.
-Above 40, retain least-populated-plane overflow.
-When a member leaves, the oldest member on the next occupied plane glides inward with only necessary moves; a fast capacity-boundary bounce never undoes the move.
+Approved growing ring (INF-1179, captain, 2026-10-24): one orbit on the 42° plane widens from 150 px a notch with every arrival to 256 px at 24 crew.
+The 25th opens a second orbit inside it, tilted 65°, spinning the other way at −14 against +8 degrees per second, growing from 150 px to 210 px over its own 24; the first holds at its cap.
+Never open a third orbit: past 48, an arrival joins the orbit with fewer crew and both pack tighter.
+When a member of the first orbit leaves, the oldest member of the second glides out to refill it with only necessary moves; the second shrinks and closes once empty, and a fast boundary bounce never undoes the move.
 Exact radii, orientations, phases and lifecycle rules are in `docs/crew-orbits.md`; `orbitalPlanes.ts` owns the constants.
 Draw far-to-near and never add permanent orbit paths or plane-specific colors.
 Projected crossings are intentional; these unequal signed speeds are stylized choreography.
@@ -112,7 +111,7 @@ Clearing the wait removes the cue and the offset glides home on the existing spr
 Reduced motion paints one settled frame.
 Row inspection does not pause the stage; pointing at the glyph still does.
 
-A task split into parts (captain's INF-799 choice, the branching constellation): the parent is a small hollow ring on the inner orbit, travelling with it, and only its running parts draw, each as its crewmate on a branch (INF-1037); a finished, unstarted or dropped part draws nothing.
+A task split into parts (captain's INF-799 choice, the branching constellation): the parent is a small hollow ring on the first orbit, travelling with it, and only its running parts draw, each as its crewmate on a branch (INF-1037); a finished, unstarted or dropped part draws nothing.
 A running part hangs from the ring, or from a running part it still waits on under a released wait.
 Layers grow outward from the ring, 60 px for the first and each later one 0.82 of the one before, each layer spread evenly across 70 degrees and ordered by its parents' angles so a chain stays straight.
 Crewmates keep their full size and a glyph's width (25 px) apart: a crowded layer widens its fan up to 180 degrees, then moves outward; the whole graph scales about the ring when a node would leave the stage.

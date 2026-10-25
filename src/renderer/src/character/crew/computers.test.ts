@@ -6,10 +6,11 @@ import {
 } from "@shared/dependencyVisual";
 import type { DeviceView } from "@shared/devices";
 import { describe, expect, it } from "vitest";
-import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER, outerPlaneRadius } from "./computers";
+import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER } from "./computers";
 import { crewHit } from "./hover";
 import { markOf, programMarks, stageMarks } from "./marks";
 import { CrewOrbit, DEFAULT_ORBIT, remoteTripMs } from "./orbit";
+import { outerPlaneRadius } from "./orbitalPlanes";
 
 const device = (id: string, patch: Partial<DeviceView> = {}): DeviceView => ({
   id,
@@ -120,7 +121,8 @@ describe("computer constellations", () => {
       device("user", { onThisMac: true }),
       device("view", { kind: "view" }),
     ]);
-    for (let i = 0; i < 9; i++) seed(model, `a${i}`, "a");
+    // One more than the first orbit's seats: the 25th opens the second.
+    for (let i = 0; i < 25; i++) seed(model, `a${i}`, "a");
     seed(model, "b", "b");
     seed(model, "home", "user");
     model.settleBootRoster(0);
@@ -130,7 +132,7 @@ describe("computer constellations", () => {
         .filter((c) => c.computerId === "a")
         .map((c) => c.plane)
         .sort(),
-    ).toEqual([0, 0, 0, 0, 0, 0, 0, 0, 1]);
+    ).toEqual([...Array(24).fill(0), 1]);
     expect(frame.crew.find((c) => c.id === "b")?.plane).toBe(0);
     expect(frame.crew.find((c) => c.id === "home")?.computerId).toBe(HOME_COMPUTER);
     const before = frame.crew.map((c) => [c.id, c.x, c.y]);
@@ -651,9 +653,11 @@ describe("the multi-computer stage (FI3-1519)", () => {
       prev = x;
     }
     const after = required(model.clusters().find((c) => c.id === "a"));
-    expect(after.x - before.x).toBeCloseTo(outerPlaneRadius(9) - outerPlaneRadius(8), 1);
-    expect(worstStep).toBeLessThan(8);
-    expect(worstStep).toBeGreaterThan(0.5);
+    // The growing ring widens a notch with the ninth crewmate, and the wing glides that far.
+    const grown = outerPlaneRadius(9) - outerPlaneRadius(8);
+    expect(after.x - before.x).toBeCloseTo(grown, 1);
+    expect(worstStep).toBeLessThan(grown / 4);
+    expect(worstStep).toBeGreaterThan(0);
   });
 
   it("keeps remote crew at their own pace through the black hole's rush, with no streak", () => {
@@ -711,10 +715,14 @@ describe("the multi-computer stage (FI3-1519)", () => {
     model.signal("a0", "report", 3000);
     let packetGone = 0;
     let gone = 0;
+    // Where it falls home from: the frame before it leaves.
+    let leaving = distance;
     // One continuous clock: the report at 3 s, the finish at 5 s.
     for (let now = 3016; now <= 7000; now += 16) {
       if (now === 5000) model.leave("a0", "home", now);
       const frame = model.update(now);
+      const a0 = frame.crew.find((c) => c.id === "a0");
+      if (now === 4984 && a0) leaving = Math.hypot(a0.x, a0.y);
       if (!packetGone && now < 5000 && frame.packets.length === 0) packetGone = now - 3000;
       if (!gone && now > 5000 && !frame.crew.some((c) => c.id === "a0")) gone = now - 5000;
     }
@@ -722,7 +730,7 @@ describe("the multi-computer stage (FI3-1519)", () => {
       Math.abs(packetGone - remoteTripMs(DEFAULT_ORBIT.packetMs, distance)),
     ).toBeLessThanOrEqual(32);
     expect(packetGone).toBeGreaterThan(DEFAULT_ORBIT.packetMs);
-    expect(Math.abs(gone - remoteTripMs(DEFAULT_ORBIT.homeMs, distance))).toBeLessThanOrEqual(32);
+    expect(Math.abs(gone - remoteTripMs(DEFAULT_ORBIT.homeMs, leaving))).toBeLessThanOrEqual(32);
     expect(gone).toBeGreaterThan(DEFAULT_ORBIT.homeMs);
     expect(model.takeCues()).toContainEqual({ kind: "receive" });
   });

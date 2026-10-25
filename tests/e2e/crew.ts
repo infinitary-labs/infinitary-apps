@@ -1,6 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect } from "@playwright/test";
-import { CROWDED_PLANES, projectPlane } from "../../src/renderer/src/character/crew/orbitalPlanes";
+import {
+  CROWDED_PLANES,
+  planeRadius,
+  projectPlane,
+} from "../../src/renderer/src/character/crew/orbitalPlanes";
 
 /** Model text is a DOM layer following the actual orbit, not canvas text. */
 export function crewModelNames(page: Page) {
@@ -49,7 +53,7 @@ export async function crewModelNameLayout(page: Page) {
 /** The visible orbit's typed placement, not a reconstruction from painted pixels.
  * The orbit's first frame writes it, so a read right after launch waits for
  * that frame; a throw inside `expect.poll` would end the poll at once. */
-export async function crewPlaneCounts(page: Page): Promise<[number, number, number]> {
+export async function crewPlaneCounts(page: Page): Promise<number[]> {
   const near = page.locator('canvas[data-crew-layer="near"]');
   await expect(near, "Crew placement is not painted yet").toHaveAttribute(
     "data-plane-counts",
@@ -58,10 +62,9 @@ export async function crewPlaneCounts(page: Page): Promise<[number, number, numb
   const counts = await near.getAttribute("data-plane-counts");
   if (counts === null) throw new Error("Crew placement is not painted yet");
   const values = counts.split(",").map(Number);
-  const [inner, middle, outer] = values;
-  if (values.length !== 3 || inner === undefined || middle === undefined || outer === undefined)
+  if (values.length !== CROWDED_PLANES.length || values.some(Number.isNaN))
     throw new Error("Crew placement is incomplete");
-  return [inner, middle, outer];
+  return values;
 }
 
 /** Busy-state wait, not a visibility promise: cards hide the still-running frame. */
@@ -233,10 +236,12 @@ export async function pointAtCrewmate(
       : seated[0];
   if (atNode) return pointAtSeatedCrewmate(page, atNode);
   const { x, y, scale } = await crewFormation(page);
+  const counts = await crewPlaneCounts(page);
   for (let plane = 0; plane < CROWDED_PLANES.length; plane++) {
     if (!orbiting[plane]?.length) continue;
     for (let degrees = 0; degrees < 360; degrees += 2) {
-      const at = projectPlane(plane, (degrees * Math.PI) / 180);
+      // The growing ring's orbit sits at the radius its crew give it.
+      const at = projectPlane(plane, (degrees * Math.PI) / 180, planeRadius(plane, counts));
       const point = { x: x + at.x * scale, y: y + at.y * scale };
       await page.mouse.move(point.x, point.y);
       await nextFrame(page);

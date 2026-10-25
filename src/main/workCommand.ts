@@ -9,6 +9,17 @@
  * (`--ozone-platform=headless`). Any other start is the app itself.
  */
 export function workCommand(argv: readonly string[], defaultApp: boolean): string[] | null {
+  const words = commandWords(argv, defaultApp);
+  return words?.[0] === "work" ? words.slice(1) : null;
+}
+
+/**
+ * The words the app was started with, past the executable, the entry of an
+ * unpackaged run and Chromium's own switches before them; null with none.
+ * The work mode reads `work ...` from them, and the command that starts the
+ * app with no window `run ...` (./runCommand.ts).
+ */
+export function commandWords(argv: readonly string[], defaultApp: boolean): string[] | null {
   let index = 1;
   const switches = () => {
     while (argv[index]?.startsWith("--")) index += 1;
@@ -18,5 +29,5 @@ export function workCommand(argv: readonly string[], defaultApp: boolean): strin
     index += 1;
     switches();
   }
-  return argv[index] === "work" ? argv.slice(index + 1) : null;
+  return index < argv.length ? argv.slice(index) : null;
 }

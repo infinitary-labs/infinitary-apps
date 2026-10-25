@@ -98,7 +98,7 @@ An installed Linux app checks two things before it opens its window (`src/main/l
 - Chromium's sandbox is on.
 
 When either is missing it asks in a system dialog, Quit by default or Open anyway, saying what to install or which package to use.
-A Mac and a run from source never ask.
+A Mac and a run from source never ask, and the app started by a command says them instead of asking (`docs/run.md`).
 
 ## The checks
 

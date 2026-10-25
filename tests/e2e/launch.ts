@@ -389,6 +389,59 @@ async function connectionPort(userDataDir: string): Promise<number> {
 }
 
 /**
+ * The environment every hermetic start of the app runs in, whatever starts
+ * it: a throwaway data folder and HOME, Pi offline, and every reach to this
+ * computer's own network and privacy log stood in. `launchApp` adds its
+ * voice, microphone and Claude stand-ins; a spec that starts the built app
+ * as a command of its own (`<app> run`) starts it in this one too.
+ */
+export function hermeticEnv(input: {
+  userDataDir: string;
+  homeDir: string;
+  loopbackPort: string;
+}): Record<string, string> {
+  const { userDataDir, homeDir, loopbackPort } = input;
+  return {
+    // Nothing of the session that ran the tests (tests/helpers/runnerSession.ts),
+    // even when this launch runs outside the e2e global setup.
+    ...(withoutRunnerSession(process.env) as Record<string, string>),
+    // Never inherit a leftover Vite dev server: e2e must load the bundle.
+    ELECTRON_RENDERER_URL: "",
+    INFINITARY_USER_DATA_DIR: userDataDir,
+    HOME: homeDir,
+    // Chromium's own Linux temporary files belong to this app, not the
+    // run root, including when a process aborts during startup.
+    TMPDIR: scratchDir("infinitary-app-tmp-"),
+    CFFIXED_USER_HOME: homeDir,
+    // Linux desktop libraries follow XDG rather than HOME when these are
+    // inherited. Keep every app's caches and configuration private too.
+    XDG_CONFIG_HOME: join(homeDir, ".config"),
+    XDG_CACHE_HOME: join(homeDir, ".cache"),
+    XDG_DATA_HOME: join(homeDir, ".local", "share"),
+    // Pi's own switch for startup network operations. The app asks Pi for
+    // the live pi.dev model catalog (docs/architecture.md §16.3); e2e must
+    // stay hermetic, so the suite runs the static-fallback path instead.
+    PI_OFFLINE: "1",
+    // A seeded Grok API key's allowance read goes to a port nothing
+    // listens on (9, discard), never to xAI with a made-up key; a spec
+    // that serves the read names its own stub in `env`.
+    INFINITARY_GROK_KEY_URL: "http://127.0.0.1:9/v1/api-key",
+    // A task browser resolves only the names a spec gives it, so no page
+    // reaches a real network (docs/task-browser.md, "Where a page may go").
+    INFINITARY_TASK_BROWSER_HOSTS: "{}",
+    // Macs nearby listen through a stand-in that finds none unless the spec
+    // names its own, so no test listens on this Mac's own network
+    // (docs/devices.md, "Macs nearby").
+    INFINITARY_DNS_SD: standInDnsSd([]),
+    // The privacy watch reads a log reader that prints nothing and ends
+    // unless the spec names its own, so no test reads this Mac's own
+    // privacy log (docs/macos-privacy.md).
+    INFINITARY_PRIVACY_LOG: "/usr/bin/true",
+    INFINITARY_CONNECTION_LOOPBACK_PORT: loopbackPort,
+  };
+}
+
+/**
  * Launches the built app (out/) against a throwaway userData dir and a
  * throwaway HOME so e2e runs never touch real state - and provably never
  * touch ~/.pi. Callers use close() to shut everything down.
@@ -471,42 +524,7 @@ export async function launchApp(options: LaunchOptions = {}): Promise<LaunchedAp
       ...virtualMacSwitches(),
     ],
     env: {
-      // Nothing of the session that ran the tests (tests/helpers/runnerSession.ts),
-      // even when this launch runs outside the e2e global setup.
-      ...(withoutRunnerSession(process.env) as Record<string, string>),
-      // Never inherit a leftover Vite dev server: e2e must load the bundle.
-      ELECTRON_RENDERER_URL: "",
-      INFINITARY_USER_DATA_DIR: userDataDir,
-      HOME: homeDir,
-      // Chromium's own Linux temporary files belong to this app, not the
-      // run root, including when a process aborts during startup.
-      TMPDIR: scratchDir("infinitary-app-tmp-"),
-      CFFIXED_USER_HOME: homeDir,
-      // Linux desktop libraries follow XDG rather than HOME when these are
-      // inherited. Keep every app's caches and configuration private too.
-      XDG_CONFIG_HOME: join(homeDir, ".config"),
-      XDG_CACHE_HOME: join(homeDir, ".cache"),
-      XDG_DATA_HOME: join(homeDir, ".local", "share"),
-      // Pi's own switch for startup network operations. The app asks Pi for
-      // the live pi.dev model catalog (docs/architecture.md §16.3); e2e must
-      // stay hermetic, so the suite runs the static-fallback path instead.
-      PI_OFFLINE: "1",
-      // A seeded Grok API key's allowance read goes to a port nothing
-      // listens on (9, discard), never to xAI with a made-up key; a spec
-      // that serves the read names its own stub in `env`.
-      INFINITARY_GROK_KEY_URL: "http://127.0.0.1:9/v1/api-key",
-      // A task browser resolves only the names a spec gives it, so no page
-      // reaches a real network (docs/task-browser.md, "Where a page may go").
-      INFINITARY_TASK_BROWSER_HOSTS: "{}",
-      // Macs nearby listen through a stand-in that finds none unless the spec
-      // names its own, so no test listens on this Mac's own network
-      // (docs/devices.md, "Macs nearby").
-      INFINITARY_DNS_SD: standInDnsSd([]),
-      // The privacy watch reads a log reader that prints nothing and ends
-      // unless the spec names its own, so no test reads this Mac's own
-      // privacy log (docs/macos-privacy.md).
-      INFINITARY_PRIVACY_LOG: "/usr/bin/true",
-      INFINITARY_CONNECTION_LOOPBACK_PORT: loopbackPort,
+      ...hermeticEnv({ userDataDir, homeDir, loopbackPort }),
       INFINITARY_VOICE_MODEL_READY: options.voiceModelReady === false ? "0" : "1",
       // macOS's microphone answer is the spec's, never this Mac's own
       // (src/main/voice/micAccess.ts); a spec names another in `env`.

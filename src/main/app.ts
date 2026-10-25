@@ -10,7 +10,10 @@ import { startInBackground } from "@core/helper/background";
 import { hostPath } from "@core/hostEnv";
 import { startCore } from "@core/index";
 import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
-import { UnsupportedSavedDataError } from "@core/storage/savedDataCompatibility";
+import {
+  SAVED_DATA_REFUSAL_TITLE,
+  UnsupportedSavedDataError,
+} from "@core/storage/savedDataCompatibility";
 import { createInstalledUpdateChecker } from "@core/update/updateChecker";
 import { APP_IDENTITIES, readSpellings } from "@shared/codeNames";
 import { settingFrom } from "@shared/envSettings";
@@ -32,8 +35,17 @@ import { broadcast, registerIpc } from "./ipc";
 import { followWindowCommands, shellCommands } from "./keyboard";
 import { deferCoreDisposal } from "./lifecycle";
 import { answerStartupAsks, STARTUP_ASK_BUTTONS, startupAsks } from "./linuxStartup";
+import { startOwnDisplay } from "./ownDisplay";
 import { handlePluginProtocol } from "./plugins/pluginProtocol";
 import { followRendererRecovery } from "./rendererRecovery";
+import {
+  followInstalledProgram,
+  markRunning,
+  RUN_UPDATED_EXIT,
+  RUN_WORDS,
+  RUNNING_BY_COMMAND,
+  runningByCommand,
+} from "./runCommand";
 import { showDataRefusal, showSavedDataRefusal } from "./savedDataRefusal";
 import { registerPrivilegedSchemes } from "./schemes";
 import { assertSecurityBaseline, installCsp, REQUIRED_WEB_PREFERENCES } from "./security/baseline";
@@ -159,12 +171,43 @@ function createMainWindow(
   return win;
 }
 
+/** The app started as `<app> run` (./runCommand.ts): the words after `run`. */
+export type RunStart = { args: readonly string[] };
+
+/** The signals that stop a run: Ctrl-C, its starter stopping it, its terminal closing. */
+const STOP_SIGNALS = ["SIGINT", "SIGTERM", "SIGHUP"] as const;
+
+/** How often a run reads whether the installed app was updated. */
+const PROGRAM_READ_EVERY_MS = 60_000;
+
+/** Takes away a run's note in its data folder (`markRunning`) once it holds one. */
+let leaveRun: () => void = () => {};
+
 /**
- * The app itself, with its window and its core. `mainDir` is where the main
- * build lives (out/main): the entry says it, since this module is a chunk
- * of its own beneath it.
+ * Ends a run that cannot go on: its lines reach whoever reads its output
+ * before the process ends, with its code.
  */
-export function startApp(mainDir: string): void {
+function endRun(code: number, lines: readonly string[]): void {
+  leaveRun();
+  process.stderr.write(`${lines.join("\n")}\n`, () => app.exit(code));
+}
+
+/**
+ * The app itself, with its core and, unless a command started it with no
+ * window (`run`, ./runCommand.ts, docs/run.md), its window. `mainDir` is
+ * where the main build lives (out/main): the entry says it, since this
+ * module is a chunk of its own beneath it. A run awaits its display on Linux
+ * before Chromium opens one, so the entry awaits this.
+ */
+export async function startApp(mainDir: string, run: RunStart | null = null): Promise<void> {
+  const windowless = run !== null;
+  if (run && run.args.length > 0) {
+    process.stderr.write(`${RUN_WORDS.usage.join("\n")}\n`, () => process.exit(2));
+    return;
+  }
+  // No Dock icon, no menu bar, never brought forward: macOS lists a run as
+  // background-only, as it does the work mode.
+  if (windowless && hostPlatform() === "darwin") app.setActivationPolicy("prohibited");
   const rendererSource = defaultRendererSourceOptions(mainDir);
 
   // Privileged schemes must be registered before the app is ready, all in
@@ -224,18 +267,81 @@ export function startApp(mainDir: string): void {
   const hideWindow =
     Boolean(isolatedUserDataDir) || (isDev && settingFrom(process.env, "HIDE_WINDOW") === "1");
 
+  if (windowless) {
+    // The one-time move asks its person in a window of its own, so a run
+    // leaves it to the window.
+    if (move) {
+      endRun(1, RUN_WORDS.handOver);
+      return;
+    }
+    // On Linux a run draws its hidden pages - a task's browser, a card's
+    // demo checked before it goes up - on a display of its own, which
+    // outlives any desktop session, as the work mode does (./ownDisplay.ts).
+    if (
+      !(await startOwnDisplay({
+        platform: hostPlatform(),
+        env: process.env,
+        dataDir: app.getPath("userData"),
+      })) &&
+      hostPlatform() === "linux" &&
+      !process.env.DISPLAY &&
+      !process.env.WAYLAND_DISPLAY
+    ) {
+      endRun(1, RUN_WORDS.needsDisplay);
+      return;
+    }
+  }
+
   // A Mac keeps Firstmate in its Dock with the window closed; another
   // desktop keeps it working with its icon in the top bar (./trayIcon.ts).
   const keepsWorkingClosed = hostPlatform() === "darwin" || desktop.closeToIcon;
   // Opens the window again where closing it left Firstmate working with none.
   let reopen: () => void = () => {};
 
+  // Beside a run there is no window to open: the window says a command
+  // started Infinitary here, and quits. It asks first, since a process the
+  // lock refused never becomes ready to say so.
+  if (!windowless && runningByCommand(app.getPath("userData"))) {
+    void app.whenReady().then(() => showDataRefusal(hideWindow, RUNNING_BY_COMMAND));
+    return;
+  }
   // Single instance: a second launch focuses the existing window instead,
   // or, where closing kept Firstmate working with no window, opens it again.
+  // A second run says so and exits.
   if (!app.requestSingleInstanceLock()) {
-    app.quit();
+    if (windowless) endRun(1, RUN_WORDS.alreadyOpen);
+    else app.quit();
   } else {
+    // A run notes that it holds the folder, for a window opened beside it,
+    // and stops cleanly on a signal (below).
+    let stopRun: () => void = () => {};
+    // 0 for a stop; an update ends the run with a code its starter starts again on.
+    let runExitCode = 0;
+    if (windowless) {
+      leaveRun = markRunning(app.getPath("userData"), process.pid, new Date());
+      // Electron quits on the first of these; a module loaded later that
+      // listens itself (Pi's sign-in store, through signal-exit) would
+      // otherwise take the signal and end the process before the core
+      // stops, as it would in the work mode (./work.ts).
+      let stopping = false;
+      stopRun = () => {
+        if (stopping) return;
+        stopping = true;
+        app.quit();
+      };
+      for (const signal of STOP_SIGNALS) process.on(signal, () => stopRun());
+      // The last line once the core stopped, then the process ends with its code.
+      let ended = false;
+      app.on("will-quit", (event) => {
+        if (ended) return;
+        ended = true;
+        event.preventDefault();
+        leaveRun();
+        process.stdout.write(`${RUN_WORDS.stopped}\n`, () => app.exit(runExitCode));
+      });
+    }
     app.on("second-instance", () => {
+      if (windowless) return;
       const win = appWindows()[0];
       if (win) {
         if (win.isMinimized()) win.restore();
@@ -252,9 +358,11 @@ export function startApp(mainDir: string): void {
       contents.setWindowOpenHandler(() => ({ action: "deny" }));
     });
 
-    void app.whenReady().then(async () => {
+    const starting = app.whenReady().then(async () => {
       // An installed Linux app with no git, or with its sandbox off (an
       // AppImage promises neither), asks before it opens (./linuxStartup.ts).
+      // A run has nobody to ask: with no git it says so and exits, and with
+      // its sandbox off it says so and runs, as its starter chose.
       const opens = await answerStartupAsks(
         startupAsks({
           platform: hostPlatform(),
@@ -263,6 +371,10 @@ export function startApp(mainDir: string): void {
           sandboxOff: app.commandLine.hasSwitch("no-sandbox"),
         }),
         async (question) => {
+          if (windowless) {
+            process.stderr.write(`${question.message}\n${question.detail}\n`);
+            return question.id === "git" ? "quit" : "open";
+          }
           const { response } = await dialog.showMessageBox({
             type: "warning",
             title: "Infinitary",
@@ -276,6 +388,7 @@ export function startApp(mainDir: string): void {
         },
       );
       if (!opens) {
+        if (windowless) runExitCode = 1;
         app.quit();
         return;
       }
@@ -342,7 +455,8 @@ export function startApp(mainDir: string): void {
       // when the window first asks (docs/architecture.md section 8, "Where
       // speech runs").
       const voicePlace = speechPlace(voiceHelperOptions);
-      void voicePlace();
+      // A run has nobody to speak to it.
+      if (!windowless) void voicePlace();
       const voiceHost = {
         ...host,
         voice: {
@@ -449,14 +563,25 @@ export function startApp(mainDir: string): void {
       // here: nothing is started on it (./savedDataRefusal.ts).
       const refusal = dataFolderRefusal(app.getPath("userData"));
       if (refusal) {
-        await showDataRefusal(hideWindow, refusal);
+        if (windowless) endRun(1, RUN_WORDS.refusal(refusal));
+        else await showDataRefusal(hideWindow, refusal);
         return;
       }
       try {
         await shell.start();
       } catch (error) {
         if (!(error instanceof UnsupportedSavedDataError)) throw error;
+        if (windowless) {
+          endRun(1, RUN_WORDS.refusal({ title: SAVED_DATA_REFUSAL_TITLE, message: error.message }));
+          return;
+        }
         await showSavedDataRefusal(hideWindow);
+        return;
+      }
+      // A run is this computer's own first mate: an app that controls one
+      // elsewhere has nothing to run with no window.
+      if (windowless && !shell.core()) {
+        endRun(1, RUN_WORDS.controls);
         return;
       }
       // The host serves model files; download policy and the trail run through core dispatch.
@@ -484,6 +609,35 @@ export function startApp(mainDir: string): void {
         lib: { dir: join(mainDir, "../frame-lib"), pins: frameLibPins },
       });
       handlePluginProtocol(() => shell.personalCacheDir());
+      // A 5-minute setInterval fires once late after a sleep and then drifts,
+      // which is exactly when a reading is most likely to be both wrong and
+      // fixable. The shell owns this trigger because only the shell can see the
+      // machine wake; the core just gets told. (Coming back online is the
+      // renderer's own `online` event, which already has a refresh channel.)
+      powerMonitor.on("resume", () => shell.resumed());
+      powerMonitor.on("suspend", () => shell.suspended());
+      if (windowless) {
+        deferCoreDisposal(app, () => shell.dispose());
+        // Both a run and the app a person updates are this one installed
+        // program: once it is replaced, the run stops its crew as a quit does
+        // and ends, so its starter starts the new version.
+        followInstalledProgram({
+          path:
+            (isDev && settingFrom(process.env, "RUN_PROGRAM")) ||
+            process.env.APPIMAGE ||
+            process.execPath,
+          every:
+            (isDev && Number(settingFrom(process.env, "RUN_PROGRAM_EVERY_MS"))) ||
+            PROGRAM_READ_EVERY_MS,
+          updated: () => {
+            process.stdout.write(`${RUN_WORDS.updated.join("\n")}\n`);
+            runExitCode = RUN_UPDATED_EXIT;
+            stopRun();
+          },
+        });
+        process.stdout.write(`${RUN_WORDS.started}\n`);
+        return;
+      }
       const ownCore = shell.core();
       if (ownCore) host.presence.setShowInDock(ownCore.services.settings.getShowInDock());
       // The window material follows the window's appearance, so the captain's
@@ -527,13 +681,6 @@ export function startApp(mainDir: string): void {
         .then(followReleaseNotes)
         .catch(() => {});
       win.on("focus", () => shell.windowFocused());
-      // A 5-minute setInterval fires once late after a sleep and then drifts,
-      // which is exactly when a reading is most likely to be both wrong and
-      // fixable. The shell owns this trigger because only the shell can see the
-      // machine wake; the core just gets told. (Coming back online is the
-      // renderer's own `online` event, which already has a refresh channel.)
-      powerMonitor.on("resume", () => shell.resumed());
-      powerMonitor.on("suspend", () => shell.suspended());
       app.on("activate", () => {
         if (appWindows().length === 0) {
           createMainWindow(mainDir, rendererSource, frameMounts, shell, hideWindow);
@@ -557,8 +704,18 @@ export function startApp(mainDir: string): void {
 
       deferCoreDisposal(app, () => shell.dispose());
     });
+    // The window's start leaves a failure to the process's own handlers
+    // (./processErrors.ts); a run that could not start ends with its reason,
+    // never as a process with no core.
+    if (windowless)
+      starting.catch((error: unknown) => {
+        endRun(1, RUN_WORDS.couldNotStart(error instanceof Error ? error.message : String(error)));
+      });
+    else void starting;
 
     app.on("window-all-closed", () => {
+      // A run's only windows are hidden pages: the last of them closing is no reason to quit.
+      if (windowless) return;
       if (isDev || !keepsWorkingClosed) {
         app.quit();
       }
@@ -567,6 +724,7 @@ export function startApp(mainDir: string): void {
     // app's own closing is told apart from "all closed" (./windows.ts).
     app.on("browser-window-created", (_event, created) => {
       created.once("closed", () => {
+        if (windowless) return;
         if (appWindows().length > 0 || BrowserWindow.getAllWindows().length === 0) return;
         if (isDev || !keepsWorkingClosed) app.quit();
       });

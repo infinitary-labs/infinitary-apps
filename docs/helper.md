@@ -76,6 +76,7 @@ Chromium's own switches may stand before `work` (`workCommand`): an AppImage's r
 | `connect --from-home` | The far end of the home's own SSH connection: keeps the route this computer's work dials for as long as that connection lasts (below, "Through the home's SSH"). |
 
 Anything else prints how to use it and exits 2.
+`<app> run`, with no `work`, is the app itself with no window, its own core and record included (`docs/run.md`).
 Ctrl-C or a stop signal quits the app; the command ends first, says so, and the app exits with its code.
 That holds once it loaded its own sign-ins too: the work mode listens for SIGINT, SIGTERM and SIGHUP itself from its start, so a module that listens later (Pi's sign-in store, through signal-exit) never ends the process by the signal instead (`src/main/work.ts`).
 

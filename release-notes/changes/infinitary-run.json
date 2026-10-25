@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "infinitary-run",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Start Infinitary with no window from a command",
+      "body": "Infinitary can now run with no window, started by a command: infinitary run on Linux, or Infinitary.app/Contents/MacOS/Infinitary run on a Mac. Your first mate, tasks and crew keep working until the command is stopped. Whatever runs the command decides when it starts, such as when the computer starts up or when you log in. When it cannot start, it says why and ends. After you update Infinitary, it ends so that whatever started it can start the new version. If you open Infinitary's window in the same account while the command runs, the window says a command started Infinitary there.",
+      "noPicture": "The command's own lines appear in a terminal or a log, and the one window it adds is the existing saved-work page with new words.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "journey-wall-duration",
+      "reason": "Internal test reporting and CI journey placement: report wall-clock slot durations while retaining load-clock timeout budgets. No app surface changes."
+    }
+  ]
+}

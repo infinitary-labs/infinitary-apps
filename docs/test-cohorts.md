@@ -120,7 +120,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/module-runner.test.ts` | plain Node core imports and task-export CLI, occupied WebSocket port | 15 s |
 | `tests/wait-window.test.ts` | node children frozen with SIGSTOP and let go, against the waits of `tests/helpers/waitWindow.ts`; four nested vitest runs of a fixture config, each process group frozen, the longest waiting out its 30 s cap | 10 s; 90 s on the nested runs |
 | `tests/control-connection.test.ts` | real loopback POSTs across a frozen disposable control server, plus finite idle expiry | 20 s |
-| `tests/load-clock.test.ts` | four real Playwright runs of a fixture config, each process group frozen with SIGSTOP and let go, the longest waiting out its 20 s cap | 60 s |
+| `tests/load-clock.test.ts` | five real Playwright runs of a fixture config, four process groups frozen with SIGSTOP and let go, the longest waiting out its 20 s cap | 60 s |
 | `tests/starve-check.test.ts` | the load controller over real detached process trees, children stopped at birth, a parent waiting in vfork on its stopped child, another user's descendant, cancellation and its experiment limit | 25 s |
 | `tests/phone-activity.test.ts` | two live phone-activity supervisors, real process-start readings and private atomic files through cleanup | 5 s default |
 | `tests/mac-check-lock.test.ts` | actual workflow commands and the `test:phone` package script, held Node workloads checking concurrent starts, failure status and cancellation, on macOS/Linux | 5 s default |

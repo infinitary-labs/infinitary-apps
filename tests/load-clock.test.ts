@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { availableParallelism, loadavg } from "node:os";
 import { join } from "node:path";
 import { expect, it, vi } from "vitest";
@@ -14,7 +14,7 @@ import { scratchDir } from "./helpers/scratchDirs";
  * controller (scripts/starve-check.py) freezes a journey: runner, worker and
  * the writer the worker started, all at once.
  */
-// Four runs side by side, each with a deliberate freeze; the longest waits out its 20 s cap (25 s measured).
+// Five runs side by side, four with a deliberate freeze; the longest waits out its 20 s cap (25 s measured).
 vi.setConfig({ testTimeout: 60_000 });
 const repoRoot = join(__dirname, "..");
 const playwrightCli = join(repoRoot, "node_modules", "@playwright", "test", "cli.js");
@@ -23,7 +23,13 @@ const config = join(__dirname, "fixtures", "load-clock", "playwright.config.ts")
 /** How a run is frozen once its test is waiting: one long stop, or long stops with slivers of running between. */
 type Freeze = { stopMs: number; runMs: number } | undefined;
 
-type Outcome = { status: string; error: string; waitedMs: number };
+type Outcome = {
+  status: string;
+  error: string;
+  waitedMs: number;
+  duration: number;
+  bodyDuration: number;
+};
 
 async function run(
   title: string,
@@ -93,9 +99,10 @@ async function run(
   });
   type Suite = {
     suites?: Suite[];
-    specs?: { tests: { results: { status: string; errors?: { message?: string }[] }[] }[] }[];
+    specs?: { tests: { results: Result[] }[] }[];
   };
-  const results = (suite: Suite): { status: string; errors?: { message?: string }[] }[] => [
+  type Result = { status: string; duration: number; errors?: { message?: string }[] };
+  const results = (suite: Suite): Result[] => [
     ...(suite.specs ?? []).flatMap((spec) => spec.tests.flatMap((test) => test.results)),
     ...(suite.suites ?? []).flatMap(results),
   ];
@@ -106,6 +113,8 @@ async function run(
     status: result.status,
     error: (result.errors ?? []).map((error) => error.message ?? "").join("\n"),
     waitedMs: doneAt - waitingAt,
+    duration: result.duration,
+    bodyDuration: Number(readFileSync(join(signals, "body-duration"), "utf8")),
   };
 }
 
@@ -114,25 +123,51 @@ const slowdown = () => Math.max(1, (loadavg()[0] ?? 0) / availableParallelism())
 
 it("counts only the time a journey gets to run, and ends every wait by its wall cap", async () => {
   const slowedBefore = slowdown();
-  const [frozenWriter, gradedWriter, quietMissing, starvedMissing] = await Promise.all([
-    // A writer frozen 7 s past its 5 s budget: the poll's clock stops with it.
-    run("a frozen writer's file", 5_000, { stopMs: 7_000, runMs: Number.POSITIVE_INFINITY }),
-    // The same freeze on a graded run fails at the budget: graded runs keep the wall clock.
-    run("a frozen writer's file", 5_000, { stopMs: 7_000, runMs: Number.POSITIVE_INFINITY }, true),
-    // A file that never comes fails at about its budget when nothing freezes the run.
-    run("a missing file", 2_000, undefined),
-    // Under a runner frozen all but 20 ms in every 3 s, its 1 s budget would take
-    // over 40 s to count, so the wall cap of 20 s ends it.
-    run("a missing file", 1_000, { stopMs: 3_000, runMs: 20 }),
-  ]);
+  const [frozenWriter, frozenAfterHook, gradedWriter, quietMissing, starvedMissing] =
+    await Promise.all([
+      // A writer frozen 7 s past its 5 s budget: the poll's clock stops with it.
+      run("a frozen writer's file", 5_000, { stopMs: 7_000, runMs: Number.POSITIVE_INFINITY }),
+      // The report includes wall time spent in the separate after-hooks timeout slot too.
+      run("a frozen after hook's file", 5_000, { stopMs: 7_000, runMs: Number.POSITIVE_INFINITY }),
+      // The same freeze on a graded run fails at the budget: graded runs keep the wall clock.
+      run(
+        "a frozen writer's file",
+        5_000,
+        { stopMs: 7_000, runMs: Number.POSITIVE_INFINITY },
+        true,
+      ),
+      // A file that never comes fails at about its budget when nothing freezes the run.
+      run("a missing file", 2_000, undefined),
+      // Under a runner frozen all but 20 ms in every 3 s, its 1 s budget would take
+      // over 40 s to count, so the wall cap of 20 s ends it.
+      run("a missing file", 1_000, { stopMs: 3_000, runMs: 20 }),
+    ]);
   const slowed = Math.max(slowedBefore, slowdown());
-  console.log(JSON.stringify({ frozenWriter, gradedWriter, quietMissing, starvedMissing, slowed }));
+  console.log(
+    JSON.stringify({
+      frozenWriter,
+      frozenAfterHook,
+      gradedWriter,
+      quietMissing,
+      starvedMissing,
+      slowed,
+    }),
+  );
 
   expect(frozenWriter.status).toBe("passed");
   expect(frozenWriter.waitedMs).toBeGreaterThan(7_000);
+  // INF-1258: reports and PR Mac placement need wall time, including the freeze,
+  // even though the timeout budget correctly excludes it.
+  expect(frozenWriter.duration).toBeGreaterThanOrEqual(7_000);
+  expect(frozenWriter.bodyDuration).toBeGreaterThanOrEqual(7_000);
+
+  expect(frozenAfterHook.status).toBe("passed");
+  expect(frozenAfterHook.waitedMs).toBeGreaterThan(7_000);
+  expect(frozenAfterHook.duration).toBeGreaterThanOrEqual(7_000);
 
   expect(gradedWriter.status).toBe("failed");
   expect(gradedWriter.error).toContain("Timeout 5000ms exceeded");
+  expect(gradedWriter.duration).toBeGreaterThanOrEqual(7_000);
 
   expect(quietMissing.status).toBe("failed");
   expect(quietMissing.error).toContain("Timeout 2000ms exceeded");

@@ -23,9 +23,15 @@ async function poll(file: string) {
     .toBe(true);
 }
 
-test.afterEach(() => writeFileSync(join(signals, "done"), ""));
+// biome-ignore lint/correctness/noEmptyPattern: Playwright requires destructured fixtures before testInfo.
+test.afterEach(async ({}, testInfo) => {
+  // INF-1258: the duration exposed to afterEach must also stay on wall time.
+  writeFileSync(join(signals, "body-duration"), String(testInfo.duration));
+  if (testInfo.title === "a frozen after hook's file") await writtenFile();
+  writeFileSync(join(signals, "done"), "");
+});
 
-test("a frozen writer's file", async () => {
+async function writtenFile() {
   const file = join(signals, "written");
   // The writer needs a second of its own time; the freeze around it is what delays the file.
   spawn(
@@ -37,7 +43,10 @@ test("a frozen writer's file", async () => {
     { stdio: "ignore" },
   );
   await poll(file);
-});
+}
+
+test("a frozen writer's file", writtenFile);
+test("a frozen after hook's file", async () => {});
 
 test("a missing file", async () => {
   await poll(join(signals, "never"));

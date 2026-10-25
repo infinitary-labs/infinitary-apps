@@ -231,11 +231,6 @@ export const RULES: readonly Rule[] = [
     why: "a name another program or a saved hash keeps: the Ollama alias, placement salts, an exported corpus's format",
     line: /fm3000-context-|fm3000-linux-machine-v1|fm3000-physical-v1|fm3000\.human-supervision/,
   },
-  {
-    class: "identity",
-    why: "the GitHub sign-in app's registered name, renamed by the captain (step 16)",
-    line: /OAuth App|"Firstmate 3000" OAuth/,
-  },
   // --- readers: the files that read what an older version wrote, and their tests
   {
     class: "reader",

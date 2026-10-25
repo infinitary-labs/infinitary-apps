@@ -710,7 +710,7 @@ The app's own sign-in to the host a project lives on - GitHub, for now - is a SI
 `docs/forge.md` is the one home; the load-bearing parts:
 
 - **The flow.**
-  GitHub's OAuth device flow for the owner's registered OAuth App (`GITHUB_OAUTH_CLIENT_ID` in `src/core/forge/providers/github/oauth.ts`, a public identifier; there is no client secret).
+  GitHub's OAuth device flow for the Infinitary OAuth App, which the infinitary-labs organization owns (`GITHUB_OAUTH_CLIENT_ID` in `src/core/forge/providers/github/oauth.ts`, a public identifier; there is no client secret).
   Scopes `repo workflow read:org`.
   `INFINITARY_GITHUB_OAUTH_URL` and `INFINITARY_GITHUB_API_URL` point it at a local stub in dev and e2e only.
 - **The store.**

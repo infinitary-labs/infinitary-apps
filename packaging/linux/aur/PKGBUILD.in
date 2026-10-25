@@ -7,7 +7,7 @@ pkgver=@PKGVER@
 pkgrel=1
 pkgdesc="Your own AI studio: a first mate and crew that work for you"
 arch=('x86_64')
-url="https://github.com/infinitary-labs/homebrew-tap"
+url="https://getinfinitary.com/"
 license=('Apache-2.0')
 # git: Linux ships no git of its own; the app's crew works through the system's.
 # xorg-server-xvfb: running work for another computer, the app draws its

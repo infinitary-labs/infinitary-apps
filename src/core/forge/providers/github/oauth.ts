@@ -3,9 +3,10 @@ import { GITHUB_ENTERPRISE, serverHostName } from "@shared/forges";
 
 /**
  * The app's own GitHub sign-in (git integration PR 1.2, `docs/forge.md`):
- * GitHub's OAuth device flow for the "Firstmate 3000" OAuth App the owner
- * registered. The device flow needs no client secret, so the only thing
- * the app carries is the client id, which GitHub treats as public.
+ * GitHub's OAuth device flow for the Infinitary OAuth App, which the
+ * infinitary-labs organization owns. The device flow needs no client
+ * secret, so the only thing the app carries is the client id, which GitHub
+ * treats as public.
  *
  * The flow: ask GitHub for a code (`requestDeviceCode`), show the person
  * the code and GitHub's page, and ask GitHub every `interval` seconds
@@ -26,7 +27,11 @@ import { GITHUB_ENTERPRISE, serverHostName } from "@shared/forges";
  * packaged app can only ever sign in at github.com.
  */
 
-/** The owner's registered OAuth App ("Firstmate 3000"): a public identifier. */
+/**
+ * The Infinitary OAuth App's client id: a public identifier. Every released
+ * version sends it, so it never changes - renaming the app and moving it to
+ * infinitary-labs kept it (INF-875).
+ */
 export const GITHUB_OAUTH_CLIENT_ID = "Ov23li7sdJT3pjNDf3E7";
 
 /**

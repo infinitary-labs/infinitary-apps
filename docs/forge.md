@@ -43,6 +43,7 @@ Bitbucket is recognised by name and behaves as a plain host.
 ## The app's own sign-in (PR 1.2)
 
 The owner's verdicts: an OAuth App with the device flow; ignore any GitHub sign-in already on the Mac; and nothing ever makes a host look required.
+The OAuth App is Infinitary, owned by the infinitary-labs organization, with `https://getinfinitary.com/` as its homepage; renaming it and moving it there kept its client id, which every released version sends (INF-875).
 GitHub, each GitLab host and each GitHub Enterprise host are shown in Settings -> Integrations (`docs/integrations.md`); Projects keeps the pointer and other computers' own GitHub sign-ins.
 
 - **The flow** (`providers/github/oauth.ts`): `POST /login/device/code` with the registered client id `GITHUB_OAUTH_CLIENT_ID` (public; there is no secret) and the scopes `repo workflow read:org`, then `POST /login/oauth/access_token` every `interval` seconds - `authorization_pending` waits, `slow_down` adds five seconds (or takes GitHub's new interval), `expired_token` ends as "The code expired." with a fresh code on request, `access_denied` ends quietly.

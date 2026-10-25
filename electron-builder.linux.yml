@@ -11,9 +11,13 @@ extends: ./electron-builder.yml
 productName: infinitary
 artifactName: infinitary-${version}-linux-${arch}.${ext}
 # Electron names its window after the desktop entry, so the desktop's top
-# bar and switcher put the running window under the app's own icon.
+# bar and switcher put the running window under the app's own icon. The
+# Ubuntu package's Homepage and the Fedora package's URL are the homepage
+# here, Infinitary's website (HOMEPAGE in src/core/update/tapPublication.ts);
+# without one electron-builder names the repository, which is private.
 extraMetadata:
   desktopName: infinitary.desktop
+  homepage: https://getinfinitary.com/
 
 linux:
   target:

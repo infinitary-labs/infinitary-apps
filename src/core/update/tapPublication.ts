@@ -41,6 +41,14 @@ export const BUNDLE_ID = APP_IDENTITIES[OWN_IDENTITY].bundleId;
 /** The app the casks install, by its file name. */
 export const APP_BUNDLE = `${APP_IDENTITIES[OWN_IDENTITY].app.release}.app`;
 
+/**
+ * Infinitary's website, every cask's homepage on both taps - and every Linux
+ * package's (`docs/linux-packages.md`), whose templates the release contract
+ * holds to this - never a repository: the captain's site address
+ * (FI3-1780's question 4, INF-12). Homebrew's style wants the slash.
+ */
+export const HOMEPAGE = "https://getinfinitary.com/";
+
 /** What a channel's cask calls the app it installs. */
 const CASK_NAMES: Record<UpdateChannel, string> = {
   stable: APP_IDENTITIES[OWN_IDENTITY].app.release,
@@ -228,7 +236,7 @@ export function renderCask(
     `  url "${urlTemplate}"`,
     `  name ${rubyString(CASK_NAMES[channel])}`,
     `  desc "Calm desktop first mate that runs AI crew on your own subscriptions"`,
-    `  homepage "https://github.com/${TAP.repo}"`,
+    `  homepage ${rubyString(HOMEPAGE)}`,
     "",
     `  conflicts_with cask: ${rubyString(tap.caskTokens[other])}`,
     "  depends_on macos: :ventura",

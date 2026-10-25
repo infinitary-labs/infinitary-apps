@@ -27,7 +27,7 @@ import { ALONE_RESULTS } from "../scripts/e2e-alone.ts";
 import { ARCHES, manifestEntry } from "../scripts/ensure-bundled-git.ts";
 import { presentationCommitMessage } from "../src/core/forge";
 import { compareSemver, isAlphaVersion } from "../src/core/update/semver";
-import { BUNDLE_ID, renderCask } from "../src/core/update/tapPublication";
+import { BUNDLE_ID, HOMEPAGE, renderCask } from "../src/core/update/tapPublication";
 import {
   buildDownloadUrl,
   buildUpdateTarget,
@@ -3300,9 +3300,24 @@ describe("the private alpha (roadmap 1.2)", () => {
     ).toThrow(/sha256/);
   });
 
-  it("points the cask's homepage at the public tap, never the private repository", () => {
-    expect(stableCask).toContain('homepage "https://github.com/infinitary-labs/homebrew-tap"');
-    expect(stableCask).not.toContain('"https://github.com/infinitary-labs/infinitary"');
+  // The captain's site address (FI3-1780's question 4, INF-12): every cask,
+  // on Infinitary's tap and Firstmate 3000's, links to Infinitary's website,
+  // never a repository.
+  it("points the cask's homepage at Infinitary's website, never a repository", () => {
+    const oldCask = renderCask(
+      "stable",
+      {
+        version: "1.2.3",
+        sha256: CASK_SHA256,
+        downloadUrl: `https://github.com/${FIRSTMATE_TAP.repo}/releases/download/${FIRSTMATE_TAP.stableTagPrefix}1.2.3/Infinitary-1.2.3-universal.zip`,
+      },
+      notice,
+      FIRSTMATE_TAP,
+    );
+    for (const cask of [stableCask, alphaCask, oldCask]) {
+      expect(/^ {2}homepage "([^"]*)"$/m.exec(cask)?.[1]).toBe(HOMEPAGE);
+    }
+    expect(HOMEPAGE).toMatch(/^https:\/\/getinfinitary\.com\/$/);
   });
 
   it("carries the one-paragraph alpha notice as the cask's caveats, before the channel paragraph", () => {
@@ -3555,6 +3570,23 @@ describe("the Linux packages", () => {
     expect(() =>
       renderRecipes({ version: "0.4.0", debName: "a.deb", sha256, url: "http://x/a.deb" }),
     ).toThrow(/https/);
+  });
+
+  // The captain's site address (FI3-1780's question 4, INF-12): every Linux
+  // package links to Infinitary's website, as the casks do. electron-builder
+  // names the repository, which is private, when the metadata has none.
+  it("names Infinitary's website as every package's homepage", async () => {
+    const { renderRecipes, tapUrl } = await import("../scripts/linux-recipes.ts");
+    const debName = "infinitary-0.4.0-linux-amd64.deb";
+    const recipes = renderRecipes({
+      version: "0.4.0",
+      debName,
+      sha256: "ab".repeat(32),
+      url: tapUrl("0.4.0", debName),
+    });
+    expect((linuxConfig.extraMetadata as { homepage?: string }).homepage).toBe(HOMEPAGE);
+    expect(/^url="([^"]*)"$/m.exec(recipes.pkgbuild)?.[1]).toBe(HOMEPAGE);
+    expect(/^ {4}homepage = "([^"]*)";$/m.exec(recipes.nix)?.[1]).toBe(HOMEPAGE);
   });
 
   it("checks each package on a clean copy of its system and keeps the files on the run alone", () => {

@@ -17,6 +17,7 @@ Every alpha and stable publishes them on the tap's release beside the Mac zip, w
 | Any other Linux | `infinitary-<version>-linux-x86_64.AppImage` | electron-builder |
 
 The app installs to `/opt/infinitary` with the command `infinitary`.
+Every package names Infinitary's website, `https://getinfinitary.com/`, as its homepage: the Ubuntu package's `Homepage` and the Fedora package's `URL` come from `extraMetadata.homepage` in `electron-builder.linux.yml`, since electron-builder otherwise names the repository, which is private, and the Arch recipe's `url` and the Nix package's `meta.homepage` are in their templates.
 Each package names itself in the app's resources folder, `resources/package-type` (`deb`, `rpm`, `arch` or `nix`), which the update notice reads to know how this installation updates; the deb and rpm get theirs from `packaging/linux/package-type/` through electron-builder's `fpm` option, and the AppImage is told by its runtime instead.
 The install folder takes the package's name rather than the app's because Chromium splits a sandbox-helper path that holds a space; people read "Infinitary" in the desktop entry.
 Each package carries only Linux's own speech library and koffi's Linux addon, unpacked from the archive.

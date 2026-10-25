@@ -67,7 +67,9 @@ A card awaiting an answer never collapses into its task record while it waits.
 
 **The first mate's own cards** keep working as they did (the captain's Q3 A): they go up and redraw at once, its turn's end is its close-out, and its closing words are its thread answer - for the reply its turn was about and, since contract v4.14, for one it read mid-turn - unless it revised the card, whose `reply` is then its answer.
 Those closing words are one sentence, and the same words show as its reply line beside the captain's message (INF-772, the captain's "both places"; `docs/composer.md` "The last turn").
-When the answer needs a crewmate, that crewmate shows it on its own card; the first mate answers the thread with one line naming it, never a new card.
+When the answer needs the crewmate of the task the card is on, the first mate steers it with the card's id and asks it to answer in that thread with `reply`, and answers the thread with one line naming it, never a new card (INF-1273: an answer on a separate card waited 22 minutes for its crewmate's turn to end).
+`CardService.replyFromCrewmate` accepts a card whose `taskId` is the crewmate's task, whoever wrote it, so the line paints in the first mate's thread at once while the crewmate works on; the card keeps its author, choices and place.
+A card on no task, or on another task, refuses that reply.
 
 **The hidden state lives in the core** (the captain's Q4 A): `Card.awaiting` on the card snapshot - `answer` while the captain's line is the newest on the thread, `close-out` while the author has written and not yet closed out, absent on a card the stage shows; a card waiting for its first close-out is off the stage, while a replied-under card, stamped, remains on it.
 A card an older version sent away on a reply carries no stamp and stays off the stage until its author answers.
@@ -105,7 +107,7 @@ The task timeline records each crewmate card's stage moment as its `card_raised`
 A return is never written at `report`.
 
 **The contract** (v4.14): the crewmate's thread steer preamble and `CARD_REPLY` say to do the work the captain's words need first, answer once - revise the card, or reply when nothing on it changes - then report, because the card comes back when you are done; never acknowledge or announce.
-`CARD_REPLY` says the captain sees that answer when the author's turn ends (INF-926).
+A thread line shows as soon as it is sent, so `CARD_REPLY` and the steer preamble say to answer once the research the question needs is done, before unrelated work (INF-1273); only a card body or revision waits for the author's close-out (INF-926).
 
 **An interim line** (INF-990 friction 3: replies asking for code changes went 26 and 41 minutes with no sign of work): when the work will take more than a few minutes, the crewmate's steer preamble tells it to post one line first with `reply` and `interim` true, saying what it is doing.
 The line paints in the thread at once, like any author line, but it is declared, never inferred: `CardService.addMessage` keeps the card's `answer` hold, so the reply still waits, the waiting line or `working` follows, a revision without `reply` is still refused, and the whose-turn rule and the idle ladder still see an answer owed.

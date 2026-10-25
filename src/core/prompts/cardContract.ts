@@ -136,7 +136,7 @@ export const CARD_REPLY = [
   "CARD REPLIES",
   "Captain replies carry card ids.",
   "Do the work first; always answer in-thread in one to three sentences. For changed cards, emit_card with SAME id and answer as reply; otherwise reply.",
-  "A reply never moves the card: it stays beside its thread. They see answers when your turn ends: give results, never acknowledgements or promises.",
+  "A reply never moves the card: it stays beside its thread. Answers show once sent: give results when research is done, before other work, never acknowledgements or promises.",
   "Reply in sentence-case prose, never actions or scripts; figures revise the card.",
   "Replies resolve nothing; buttons stay: a reply is not a closing choice and does not authorize merging. Never close merely for a reply.",
   "For merging, discarding, a stronger model or unrelated work, close your card and report the captain's words verbatim with needs_firstmate; the first mate acts.",

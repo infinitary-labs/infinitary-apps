@@ -917,6 +917,49 @@ describe("CardService", () => {
     ]);
     expect(cards.threadFact("t1")).toBe("thread: 1 message, last from crewmate");
   });
+
+  // INF-1273: an answer the first mate asks its task's crewmate for lands in
+  // the thread the captain asked under, at once, not on a card of its own.
+  it("takes a crewmate's answer under a first mate card on its task while the crewmate works on", () => {
+    const { tasks, cardStore, threads, make } = setup();
+    seedTask(tasks, { id: "build", title: "Build the Linux AppImage", status: "running" });
+    seedTask(tasks, { id: "other", title: "Fix the footer", status: "running" });
+    const cards = make();
+    const id = cards.addFirstmateCard({
+      title: "Review the AppImage before release",
+      body: "<p>The AppImage builds on the Linux lane; review it before the alpha.</p>",
+      actions: [
+        { id: "ship", label: "Ship it", default: true },
+        { id: "hold", label: "Hold" },
+      ],
+      taskId: "build",
+    });
+    cards.addMessage(id, "captain", "Does it start on a machine without FUSE?");
+    cards.addMessage(id, "firstmate", "I asked crewmate 3 to answer here.");
+    const pushed = threads.length;
+    const before = cards.get(id);
+    const taskBefore = tasks.get("build");
+
+    expect(cards.replyFromCrewmate("other", { cardId: id, text: "Yes." })).toMatch(/not yours/);
+    expect(
+      cards.replyFromCrewmate("build", {
+        cardId: id,
+        text: "Yes: without FUSE it extracts itself and starts, which I checked in a clean container.",
+      }),
+    ).toMatch(/^Replied in the thread/);
+
+    expect(threads.length).toBe(pushed + 1);
+    expect(threads.at(-1)?.messages.map((message) => message.who)).toEqual([
+      "captain",
+      "firstmate",
+      "crewmate",
+    ]);
+    expect(cardStore.messages(id).at(-1)?.text).toMatch(/^Yes: without FUSE/);
+    expect([...cards.values()].map((card) => [card.id, card.author])).toEqual([[id, "firstmate"]]);
+    expect(cards.get(id)?.actions).toEqual(before?.actions);
+    expect(tasks.get("build")).toEqual(taskBefore);
+    expect(taskBefore?.status).toBe("active");
+  });
 });
 
 /**

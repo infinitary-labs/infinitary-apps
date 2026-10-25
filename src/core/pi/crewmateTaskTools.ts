@@ -58,7 +58,7 @@ export const REPLY_TOOL_NAME = "reply";
  * it stays well under the Claude transport's 2,048-character cap.
  */
 export const REPLY_TOOL_DESCRIPTION = [
-  "Answer the captain in the thread under one of your own cards: plain prose, a few sentences.",
+  "Answer the captain in the thread under one of your own cards, or a first mate card on your task: plain prose, a few sentences.",
   "Never a card and never actions - to change what the card says, call emit_card again with the same id, passing your answer as its reply so one call does both.",
   "Pass the card id emit_card returned.",
 ].join(" ");

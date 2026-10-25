@@ -7,26 +7,43 @@ import {
   KEYBOARD_CARDS_PROMPT_MARKER,
   keyboardCards,
 } from "./scenarios/keyboardCards";
-import { pager, showCard, shownCard, shownEntry, stagePrepared } from "./stack";
+import { pager, SHOWN_ENTRY, showCard, shownCard, shownEntry, stagePrepared } from "./stack";
 import { pressWindowKey } from "./windowKeys";
 
 /**
- * Holds the shown card's reveal - the stage's own move, not the opacity
- * transition the entry also runs - in flight until paging interrupts it: no
- * sleep or wall-clock race decides whether we exercised the cancellation path.
+ * Holds the reveal of the card the stage shows next - the stage's own move,
+ * not the opacity transition the entry also runs - from its first frame
+ * until paging interrupts it. It is armed before the page that starts the
+ * reveal: a reveal looked for once the card was up had sometimes finished
+ * already, with ten of these journeys running at once, so no sleep or
+ * wall-clock race decides whether we exercised the cancellation path.
  */
-async function holdReveal(page: Page): Promise<void> {
+async function holdNextReveal(page: Page): Promise<void> {
+  await page.evaluate((shown) => {
+    const animate = Element.prototype.animate;
+    Element.prototype.animate = function (keyframes, options) {
+      const animation = animate.call(this, keyframes, options);
+      if (this.matches(shown)) {
+        Element.prototype.animate = animate;
+        animation.pause();
+      }
+      return animation;
+    };
+  }, SHOWN_ENTRY);
+}
+
+/** The shown card's own reveal is the one held, still in flight. */
+async function expectRevealHeld(page: Page): Promise<void> {
   await shownEntry(page).evaluate((entry) => {
-    const reveal = entry
+    const held = entry
       .getAnimations()
-      .find(
+      .some(
         (animation) =>
-          animation.playState === "running" &&
+          animation.playState === "paused" &&
           !(animation instanceof CSSTransition) &&
           !(animation instanceof CSSAnimation),
       );
-    if (!reveal) throw new Error("the selected card's reveal must still be running");
-    reveal.pause();
+    if (!held) throw new Error("the selected card's reveal must be held in flight");
   });
 }
 
@@ -45,8 +62,9 @@ test("a fast page back prepares the successor after interrupting the shown card'
     await expect(pager(page, 2)).toBeVisible({ timeout: 30_000 });
     await showCard(page, KEYBOARD_CARD_TITLES.served);
     await stagePrepared(page);
+    await holdNextReveal(page);
     await showCard(page, KEYBOARD_CARD_TITLES.inline);
-    await holdReveal(page);
+    await expectRevealHeld(page);
     const position = Number(
       await page.locator("[data-card-pager]").getAttribute("data-pager-position"),
     );
@@ -70,12 +88,15 @@ test("a fast page back prepares the successor after interrupting the shown card'
  * next selection must cut that reveal short too. Here the reveal is held and
  * the page waits for the drawing to go before paging away and back, so the
  * order the failing run met under load is the order of every run. The data:
- * the mock provider's keyboard cards. The completion signal: the shown card's
- * successor is prepared. Platform and shared resources: none beyond the
- * hermetic launch.
+ * the keyboard-cards scenario's two notes. The completion signal: the shown
+ * card's successor is prepared. Platform and shared resources: none beyond
+ * the hermetic launch.
  */
 test("a page back prepares the successor after interrupting a reveal whose drawing had already gone", async () => {
-  const { app, page, close } = await launchApp({ withMockProvider: true });
+  const { app, page, close } = await launchApp({
+    scenarios: [keyboardCards],
+    withMockProvider: true,
+  });
   try {
     const prompt = promptInput(page);
     await prompt.fill(`${SPAWN_PROMPT_MARKER} ${KEYBOARD_CARDS_PROMPT_MARKER}`);
@@ -83,8 +104,9 @@ test("a page back prepares the successor after interrupting a reveal whose drawi
     await expect(pager(page, 2)).toBeVisible({ timeout: 30_000 });
     await showCard(page, KEYBOARD_CARD_TITLES.served);
     await stagePrepared(page);
+    await holdNextReveal(page);
     await showCard(page, KEYBOARD_CARD_TITLES.inline);
-    await holdReveal(page);
+    await expectRevealHeld(page);
     // The drawing the page replaced has gone; the reveal is still in flight.
     await expect(page.locator('[data-card-layer] [data-stage-entry="outgoing"]')).toHaveCount(0);
     const position = Number(

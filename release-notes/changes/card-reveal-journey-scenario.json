@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "card-reveal-journey-scenario",
+      "reason": "Internal tests: the page-back reveal journey loads the keyboard-cards scenario it prompts for, and holds each card's reveal from its first frame so the hold no longer races the reveal; the app is unchanged."
+    }
+  ]
+}

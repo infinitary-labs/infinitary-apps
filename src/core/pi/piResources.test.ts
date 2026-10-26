@@ -99,8 +99,10 @@ describe("where a crewmate keeps its evidence", () => {
 
 describe("continuation instructions served at the seven moments", () => {
   it("serves spawn, filing, completion, report triage and wrong-card steer in their existing channels", () => {
-    expect(buildCrewmateSystemPrompt()).toContain(
-      'file the rest as a follow-up titled "Continue: …"',
+    // INF-1410: delivery points to the filing tool, which owns the full continuation rule.
+    expect(buildCrewmateSystemPrompt()).toContain("follow file_followup's Continue rule");
+    expect(CREWMATE_TOOLS.find((tool) => tool.name === "file_followup")?.description).toContain(
+      "end that turn without a card, and wait for the first mate to link it",
     );
     expect(buildCrewmateSystemPrompt()).toContain(
       "No intermediate card of yours can merge the pull request",
@@ -155,15 +157,19 @@ describe("selective filing reaches every agent that acts on it", () => {
   it("has every crewmate file defects and safety risks, keep optional ideas in its report and finish its own work", () => {
     for (const backend of [undefined, "pi", "claude"] as const) {
       const prompt = buildCrewmateSystemPrompt(backend);
-      expect(prompt).toContain("only some of it is filed");
-      expect(prompt).toContain(
-        "A concrete defect you can show on the current main line, or a credible risk to the person's data, accounts, signing material or merges, is filed with file_followup",
+      expect(prompt).toContain("Do no unrelated work on the side");
+      expect(prompt).toContain("Use file_followup for discoveries by its rules");
+      expect(filing?.description).toContain(
+        "a bug you can show on the current main line, or a credible risk to the person's data, accounts, signing material or merges",
       );
-      expect(prompt).toContain("stays in your report, unfiled");
-      expect(prompt).toContain("is yours to finish, never a filing");
-      expect(prompt).toContain('filed, as a "Continue: …" follow-up');
+      expect(filing?.description).toContain("Not for an optional improvement");
+      expect(filing?.description).toContain("that is one line in your report");
+      expect(filing?.description).toContain(
+        "Not for work your own change needs to be finished, or documents it makes stale: those are yours",
+      );
+      expect(filing?.description).toContain("title beginning Continue:");
       expect(prompt).toContain(
-        "When your change meets the whole goal of another open task, name that key and the evidence in your report",
+        "When your change meets another open task's whole goal, name its key and evidence",
       );
       expect(prompt).not.toContain("never done on the side and never dropped");
     }
@@ -471,9 +477,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1)", () => {
     expect(core).toContain("You choose no model and no reasoning class");
     // Since v4.59 each fact's rule has one home, spawn_crewmate's shape,
     // and the core points at it instead of saying it a second time.
-    expect(core).toContain(
-      "The facts ride spawn_crewmate's shape, each set only as its rule there says.",
-    );
+    expect(core).toContain("Pass only known facts in spawn_crewmate's shape.");
     expect(SHAPE_GROUP_DESCRIPTION).toContain(
       "basis: The task (id or key) whose report is this work's spec, or whose reproduction it fixes.",
     );
@@ -615,7 +619,13 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.1, interaction P1 WI-9 and WI-12)",
 
   it("answers with a default: a next step is a decision, a pure fact is a note", () => {
     expect(core).toContain(
-      "If the answer implies a next step, emit one decision card: the step you would take is its default action. If it is a pure fact, emit one note.",
+      "Emit the answer by CARD_AUTHORING's decision/note rule and emit_card's default-action rule",
+    );
+    expect(FIRSTMATE_CARD_AUTHORING).toContain(
+      "An answer that implies any potential next step for the captain, even an optional one, is a decision; only a pure fact with no next step is a note.",
+    );
+    expect(FIRSTMATE_EMIT_CARD_DESCRIPTION).toContain(
+      "marks exactly one default, the step you would take",
     );
     expect(core).toContain("the captain's choice there closes the task");
   });
@@ -766,12 +776,11 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     // Captain rulings 2026-09-19: rigor derives from the user's words and
     // the repository's configured rigor alone; escalation routes a
     // stronger model, never more ceremony.
+    // Override consent and unchanged defaults are asserted on SHAPE_GROUP_DESCRIPTION below.
     expect(core).toContain(
-      "Rigor is how carefully a crewmate ships and the host derives it: standard unless the user's words (rigor_ask) or the repository's configured rigor say otherwise; escalation never changes rigor.",
+      "The host derives rigor (standard by default), delivery and autonomy from repository settings; escalation never changes rigor.",
     );
-    expect(core).toContain(
-      "Delivery is the repository's posture and autonomy is who merges a green result, each the repository's default for every task: pass delivery_ask or autonomy_ask only when the user said so in words for this task.",
-    );
+    expect(core).toContain("Their spawn fields carry the captain-only override rules");
     // What each ask takes, and that the repository's default stays as it
     // was, is the field's own rule (v4.59).
     expect(SHAPE_GROUP_DESCRIPTION).toContain(
@@ -831,7 +840,7 @@ describe("FIRSTMATE_PROMPT_CORE (contract v3.3, delivery rigor phase 2: the revi
     );
     // The rule sits with the escalation trigger it extends: the stronger
     // model is still only the captain's say-so (v3.1).
-    expect(core.indexOf("Rigor is how carefully a crewmate ships")).toBeGreaterThan(
+    expect(core.indexOf("The host derives rigor")).toBeGreaterThan(
       core.indexOf("Escalation is the user's move."),
     );
   });
@@ -1089,9 +1098,8 @@ describe("the card contract is re-homed by kind (contract v3.6, captain lock 1)"
       "the card is the deliverable and the captain's choice on it closes the task",
     );
     expect(prompt).toContain("your completion is a note showing what you built, then your report");
-    expect(prompt).toContain(
-      "the outcome card for finished change work: a completion decision when there is a pull request or branch for the captain to merge, or a note when there is none, when the task merges on its own, or when it builds in place on the personal workspace",
-    );
+    // The descriptor assertions above hold each outcome shape; the persona points there.
+    expect(prompt).toContain("Follow emit_card's contract for the outcome card");
   });
 
   it("keeps the crewmate's completion trigger and drops the buttons the host attaches (lock 3)", () => {
@@ -1200,7 +1208,6 @@ describe("asking before sensitive keychain access (INF-880, submitted answer 9)"
     "security, codesign",
     "consent on a card",
     "~/.firstmate-3000/local-codesign",
-    "a secret in a command line",
     "scratch HOME with INFINITARY_LOCAL_CODESIGN_DIR",
   ];
 
@@ -1208,6 +1215,7 @@ describe("asking before sensitive keychain access (INF-880, submitted answer 9)"
     for (const backend of [undefined, "pi", "claude"] as const) {
       const prompt = buildCrewmateSystemPrompt(backend);
       for (const part of rule) expect(prompt, `${backend}: ${part}`).toContain(part);
+      expect(prompt).toContain("Keep secrets off command lines and out of printed output");
     }
   });
 
@@ -1216,6 +1224,7 @@ describe("asking before sensitive keychain access (INF-880, submitted answer 9)"
       createCrewTools({} as never) as unknown as { name: string; description: string }[]
     ).find((tool) => tool.name === "spawn_crewmate");
     for (const part of rule) expect(spawn?.description, part).toContain(part);
+    expect(spawn?.description).toContain("a secret in a command line");
     expect(spawn?.description.length).toBeLessThan(CLAUDE_TOOL_DESCRIPTION_CAP);
   });
 });
@@ -1285,7 +1294,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain(
       "When the captain's own words ask you to run a program (their verbatim words in the brief, a reply under your card, a line in the task's Crewmate tab, or a written-in card answer), run it. A rule here that names a program, a sign-in or the keychain governs your own choices, never those words.",
     );
-    expect(prompt).toContain("Keep any secret off the command line and out of what you print.");
+    expect(prompt).toContain("Keep secrets off command lines and out of printed output.");
   });
 
   it("names the captain's computers to every crewmate once one runs work (INF-992)", () => {
@@ -1328,7 +1337,12 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     const prompt = buildCrewmateSystemPrompt();
     expect(prompt).toContain("Your task arrives as a structured intent");
     expect(prompt).toContain("The user's words outrank every elaboration, including your own.");
-    expect(prompt).toContain("Record that brief with note_progress on your task's timeline");
+    expect(prompt).toContain(
+      "Record that brief and acceptance plan with note_progress, not as message text (a report)",
+    );
+    expect(CREWMATE_TOOLS.find((tool) => tool.name === "note_progress")?.description).toContain(
+      "the final report leaves every item done or skipped",
+    );
     expect(prompt).not.toContain("Put this self-brief at the top of your first message");
   });
 
@@ -1337,11 +1351,11 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain(
       "A card is only allowed when: 1. work cannot move forward without a captain decision, or 2. the captain cannot move forward without seeing that fact.",
     );
-    expect(prompt).toContain("its description is the card contract");
+    expect(prompt).toContain("Follow emit_card's contract for the outcome card");
     // A close reaches its author (FI3-435): the crewmate judges it and its
     // report declares the outcome, rather than staying silently idle.
     expect(prompt).toContain(
-      "When they close one of your cards without choosing, you are told, and you judge what the close meant.",
+      "When a card closes without a choice, judge whether anything remains; a close grants no permission.",
     );
     expect(prompt).not.toContain("Closing your completion card keeps you idle and steerable.");
     // The call mechanics - the completion trigger, the labels, that every
@@ -1430,7 +1444,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).toContain("drive it to green yourself");
     expect(prompt).toContain("before writing the final report or emitting the completion decision");
     // The completion decision itself is gated on green, not merely on push.
-    expect(prompt).toContain("a completion decision emitted on anything but green");
+    expect(prompt).toContain("Never emit a completion decision on anything but green");
     // Genuinely blocked is a report, never a card of its own.
     expect(prompt).toContain(
       "say so in your report as a blocker instead of emitting one; that is the escalation, not a card",
@@ -1513,7 +1527,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     expect(prompt).not.toContain("run the repository's full gate");
     expect(prompt).toContain("validate the change yourself, evidence first");
     expect(prompt).toContain(
-      "demonstrate it working end-to-end the way an end user would actually experience it",
+      "Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each",
     );
     // The captain's wording (2026-09-24): the evidence is the few concrete
     // things an end user would do, each shown by as many product-level
@@ -1523,7 +1537,7 @@ describe("buildCrewmateSystemPrompt (contract v2.0: policy only, one note per ba
     // that cannot run is named, never dropped. No spec or command is named -
     // the repository's own instructions own those.
     expect(prompt).toContain(
-      "Show that the intent is met with evidence. Turn the intent into the few concrete things an end user would do and the result each should produce, and gather evidence for each one: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy or a commit; no local path or private thread enters the description. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
+      "Demonstrate the intent end-to-end: list the concrete actions an end user would take and their expected results; gather evidence for each: product-level artifacts that directly show the behavior working, such as screenshots, recordings, rendered UI, CLI transcripts, API responses, persisted state, or logs. Use as many artifacts as it takes; when the change has a visible surface, that includes pictures of it. Unit tests passing, generic pass/fail output, and reading the code are not evidence on their own. Keep every artifact you gather - pictures, recordings, transcripts, logs - in your task's evidence folder, outside the working copy, and never add one to the working copy or a commit; no local path or private thread enters the description. Verified states what each artifact showed, or what stopped you gathering it. A picture the repository's own instructions keep with the change, such as a release note's hero picture, is part of the change, not evidence: commit it where they say. Show image artifacts on the completion card by their path in the evidence folder.",
     );
     expect(prompt.match(/unit tests passing/gi)).toHaveLength(1);
     expect(prompt).toContain(

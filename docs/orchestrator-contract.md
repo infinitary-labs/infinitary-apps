@@ -163,9 +163,15 @@ A rule that the core, a tool description and a parameter each stated is said onc
 A change that would cross it trims first.
 The boundary is not a second number a revision raises.
 `tests/crewmate-fixed-context.test.ts` holds a crewmate's fixed part, for each runtime and kind of work, to a boundary derived from the same floor and reserve: the conversation is promised at least as much room as the fixed part takes, so the boundary is half of what the floor leaves after the reserve.
+A room-restoring trim measures the same served prompt and tool schemas at both ends of the preceding fourteen days, including the sequences seed for the first mate and the largest backend/procedure case for a crewmate.
+When that window crosses the fresh-history rename, read the earlier tree in the archive named by the root commit rather than shortening the window.
+Report net growth, the chosen growth horizon, the restored room and the forecast's limits with the change's verification; these are measurements, not a second failing ceiling that makes the restored room unusable.
+Do not raise the boundaries or spend the promised conversation room.
 Each revision file says what its words cost, and names the one home of each rule it adds.
 The test's ledger names, for every rule taken out of one text, the text that still says it: the core, a tool, a wake, or the refusal that answers the call breaking it.
 The crewmate prompt follows the same homes: its tools say how `check_change`, `read_workflow`, `github_write` and `report` work, their refusals hold the repair, rerun and baseline limits, and the prompt keeps which move comes when.
+`file_followup` owns filing eligibility, duplicate searches, dependencies and continuations; `note_progress` owns the plan format, `report` owns waiting and finished declarations, and `emit_card` owns completion-card shapes.
+The general validation resource rule owns secret handling on every tier; the core keeps the specific Keychain consent and isolation instructions.
 
 ## An answer's closing receipt
 

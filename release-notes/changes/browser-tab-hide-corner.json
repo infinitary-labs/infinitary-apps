@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "browser-tab-hide-corner",
+      "kind": "fix",
+      "title": "A task's browser keeps its close button in the card's corner",
+      "body": "On the Browser tab of a task's card, the close button and the button that enlarges the card now sit in the card's top-right corner beside the task's status and key, where they are on the Info and Crewmate tabs and on every other card. The browser's own row keeps only its own buttons, so the close button no longer sits beside Take control and More, where it looked like it might close the page. The page is drawn a little smaller to make room for the card's title.",
+      "area": "tasks",
+      "picture": {
+        "dark": "browser-tab-hide-corner-dark.webp",
+        "light": "browser-tab-hide-corner-light.webp",
+        "alt": "A task's Browser tab with the task's status, key and close button in the card's top row, above the title, the tabs and the browser's own row"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

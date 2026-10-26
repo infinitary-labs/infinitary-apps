@@ -232,6 +232,8 @@ The captain's own view shows the whole address.
 The captain opens a task's browser from the Browser line in its record's facts, under Progress: the site, who is driving or what stopped it, then `Open`.
 `Open` brings the task's browser view to the front of the stack in the record's place, a shell-held entry like the record (`TaskBrowserView`, `src/renderer/src/cards/`), one entry per task between the two.
 The view is the Browser tab of the task's card, whose tab strip shows Info and a Browser tab for each page (`docs/task-card-tabs.md`).
+Its top is the record's own (`RecordPaneChrome`): the status pill, the task's key, the size control and Hide in the card's corner, the title and the strip, so Hide stays where it is on every card; the browser's own row of Back, Forward, Reload, the status line, the control button and More sits under it.
+A stopped browser has no row: the top names the task over the stopped panel.
 While it is shown the captain's words reach the first mate with the task as their hint, as a shown record's do; Hide or Esc puts it away and the browser keeps running.
 
 What the view reads is the task's browser fact, which `tasks.detail` carries (`TaskBrowsers.fact`, typed by `taskBrowserFactSchema` in `src/shared/taskBrowser.ts`).

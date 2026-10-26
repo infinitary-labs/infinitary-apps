@@ -24,26 +24,32 @@ import {
   type TaskBrowserInput,
   VIEW_DRIVER_WORDS,
 } from "@shared/taskBrowser";
+import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import type React from "react";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useCommandKeys } from "../app/keyHints";
 import { useShellStore } from "../app/store";
-import { Button, IconButton, MicroLabel, RowMenu, StatusDot } from "../design";
-import { CardCorner, CardSizeContext } from "../design/cards/CardSize";
+import { useModelNames } from "../app/useModelNames";
+import { Button, IconButton, RowMenu, StatusDot } from "../design";
+import { CardSizeContext } from "../design/cards/CardSize";
 import { CARD_MAX_HEIGHT, cardFloor } from "../design/cards/ResponseCard";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useRestLabel } from "../design/core/restLabel";
 import { browserShownThereWords, isView } from "../devices/viewWords";
 import { appReadExecutor } from "../plugins/reads/appExecutor";
-import { TAB_STRIP_HEIGHT, TaskTabStrip } from "./TaskTabStrip";
+import { RecordPaneChrome } from "./RecordPaneChrome";
+import { recordPillToneOf } from "./recordFooter";
+import { TaskTabStrip } from "./TaskTabStrip";
 import { hasCrewmateTab } from "./taskTabs";
 
 /**
  * A task's own browser on the stage (docs/task-browser.md, "The view"; the
- * design skill's `components/cards/TaskBrowser`): one row of chrome, the
- * live page, a foot line and Hide, where the captain watches the crewmate
- * drive. A shell-held stack entry like the record.
+ * design skill's `components/cards/TaskBrowser`): the task card's own top -
+ * the record's chrome with Hide in its corner, the title and the tabs - then
+ * one row of browser chrome, the live page and a foot line, where the
+ * captain watches the crewmate drive. A shell-held stack entry like the
+ * record.
  *
  * The page is a picture: the host streams the hidden page's own pictures
  * while this view is up, and the view draws the newest on a canvas. The page
@@ -66,9 +72,13 @@ const FOOT_HEIGHT = 36;
 const NOTICE_HEIGHT = 32;
 /** The return question's row: its line, then the tick that remembers the site's sign-in. */
 const QUESTION_HEIGHT = 44 + 28;
-/** The page's room: the card's cap less the row above it, any lines under it, and the foot line. */
-const pageMaxHeight = (notice: boolean, question: boolean) =>
-  `calc(${CARD_MAX_HEIGHT} - ${CHROME_HEIGHT + FOOT_HEIGHT + 2 + (notice ? NOTICE_HEIGHT + 1 : 0) + (question ? QUESTION_HEIGHT + 1 : 0) + TAB_STRIP_HEIGHT}px)`;
+/**
+ * The page's room: the card's cap less the surface's own border, the card's
+ * top as it draws (`top`), the row above the page with its hairline, any
+ * lines under it, and the foot line with its hairline.
+ */
+const pageMaxHeight = (notice: boolean, question: boolean, top: number) =>
+  `calc(${CARD_MAX_HEIGHT} - ${2 + top + CHROME_HEIGHT + 1 + FOOT_HEIGHT + 1 + (notice ? NOTICE_HEIGHT + 1 : 0) + (question ? QUESTION_HEIGHT + 1 : 0)}px)`;
 
 /** The row's tint and dot for who holds the browser: his violet, attention's ember, or none. */
 const ROW_TINT: Partial<Record<TaskBrowserDriver, string>> = {
@@ -319,7 +329,25 @@ function icon(paths: string[]) {
 const BACK = icon(["m15 18-6-6 6-6"]);
 const FORWARD = icon(["m9 18 6-6-6-6"]);
 const RELOAD = icon(["M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8", "M21 3v5h-5"]);
-const HIDE = icon(["M18 6 6 18", "m6 6 12 12"]);
+
+/**
+ * How tall the card's top draws, followed as it changes: a long title wraps,
+ * so the page's room is measured rather than counted. Answers the ref
+ * callback the top takes.
+ */
+function useTopHeight(): [(node: HTMLDivElement | null) => void, number] {
+  const [top, setTop] = useState<HTMLDivElement | null>(null);
+  const [height, setHeight] = useState(0);
+  useLayoutEffect(() => {
+    if (!top) return;
+    const measure = () => setHeight(top.offsetHeight);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(top);
+    return () => observer.disconnect();
+  }, [top]);
+  return [setTop, height];
+}
 
 /** A frame's JPEG, decoded off the base64 the host sent. */
 function bitmapOf(frame: TaskBrowserFrame): Promise<ImageBitmap> {
@@ -497,6 +525,8 @@ export function TaskBrowserView({
   const [moving, setMoving] = useState<"take" | "return" | null>(null);
   const canvas = useWatchedPage(taskId);
   const maximized = useContext(CardSizeContext)?.maximized ?? false;
+  const modelName = useModelNames();
+  const [topRef, topHeight] = useTopHeight();
   const controlKeys = useCommandKeys("browser.control");
   // On a Mac controlling another, the page shows only there (docs/view.md).
   const thisMac = useShellStore((s) => s.thisMac);
@@ -604,12 +634,33 @@ export function TaskBrowserView({
         {STALE_ATTACHMENT_WORDS[standing]}
       </div>
     );
-  const hide = (
-    <CardCorner>
-      <IconButton label="Hide" onClick={onClose}>
-        {HIDE}
-      </IconButton>
-    </CardCorner>
+  const facts = detail ? taskFactsOf(detail, modelName) : null;
+  // The record's own top, as the Info and Crewmate tabs draw it, so Hide and
+  // the size control stay in the card's corner whichever tab is shown. The
+  // card's tab strip names each page Browser and its title; picking another
+  // page is the controller's, as navigation is.
+  const top = (
+    <div
+      ref={topRef}
+      style={{ display: "flex", flexDirection: "column", flexShrink: 0, minWidth: 0 }}
+    >
+      <RecordPaneChrome
+        reading={facts?.status ?? null}
+        pillTone={detail ? recordPillToneOf(detail) : "neutral"}
+        taskKey={detail ? detail.key : unreadable ? "this record could not be read" : null}
+        title={facts?.title ?? ""}
+        tabs={
+          <TaskTabStrip
+            taskId={taskId}
+            shown="browser"
+            browser={fact}
+            crewmate={detail ? hasCrewmateTab(detail) : false}
+            captain={captain}
+          />
+        }
+        onClose={onClose}
+      />
+    </div>
   );
 
   if (there !== null || !fact || fact.state === "stopped") {
@@ -638,21 +689,7 @@ export function TaskBrowserView({
         aria-label="Task browser"
         style={SURFACE}
       >
-        <TaskTabStrip
-          taskId={taskId}
-          shown="browser"
-          browser={fact}
-          crewmate={detail ? hasCrewmateTab(detail) : false}
-          captain={false}
-        />
-        <div data-browser-chrome="" style={{ ...ROW, gap: "var(--space-3)", paddingLeft: 16 }}>
-          <MicroLabel style={{ flexShrink: 0 }}>Browser</MicroLabel>
-          <span style={{ ...LINE, flex: 1, color: "var(--fg-1)" }}>{detail?.title ?? ""}</span>
-          <button type="button" style={LINK} data-browser-record="" onClick={openRecord}>
-            Task record
-          </button>
-          {hide}
-        </div>
+        {top}
         {notice}
         <div
           data-browser-stopped={stopped?.stopped ?? ""}
@@ -794,17 +831,6 @@ export function TaskBrowserView({
       </Button>
     );
   const question = captain && !fact.own;
-  // The card's tab strip names each page Browser and its title; picking
-  // another page is the controller's, as navigation is.
-  const strip = (
-    <TaskTabStrip
-      taskId={taskId}
-      shown="browser"
-      browser={fact}
-      crewmate={detail ? hasCrewmateTab(detail) : false}
-      captain={captain}
-    />
-  );
 
   return (
     <section
@@ -814,7 +840,7 @@ export function TaskBrowserView({
       aria-label="Task browser"
       style={SURFACE}
     >
-      {strip}
+      {top}
       <div
         data-browser-chrome=""
         data-browser-control={driver}
@@ -885,7 +911,6 @@ export function TaskBrowserView({
             },
           ]}
         />
-        {hide}
       </div>
       {question && (
         <div
@@ -975,7 +1000,7 @@ export function TaskBrowserView({
           justifyContent: fit ? "center" : "flex-start",
           alignItems: "flex-start",
           background: "var(--bg-1)",
-          maxHeight: pageMaxHeight(notice !== null, question),
+          maxHeight: pageMaxHeight(notice !== null, question, topHeight),
           overflow: fit ? "hidden" : "auto",
           minHeight: 0,
           flex: "1 1 auto",
@@ -1001,7 +1026,7 @@ export function TaskBrowserView({
                   width: "auto",
                   height: "auto",
                   maxWidth: "100%",
-                  maxHeight: pageMaxHeight(notice !== null, question),
+                  maxHeight: pageMaxHeight(notice !== null, question, topHeight),
                 }
               : // At its own size: one pixel of the picture per point.
                 { display: "block", flex: "none" }

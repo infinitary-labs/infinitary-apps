@@ -27,7 +27,10 @@ A browser the click started is the captain's own: its control button is `Close p
 `Close page` stops it, and the view shows the stopped panel; no crewmate is told.
 It works on a task that has closed, so a game's note can play it after its task is done.
 
-**One row of chrome**, `--space-2` padding, a `--line-1` hairline under it, nothing above it:
+**The card's top** is the task record's own (`TaskRecord.prompt.md`), as the Crewmate tab's is (`TaskCrewmate.prompt.md`): the status pill and its reason and the task key, with the size control (`ResponseCard.prompt.md`, "Maximize") and Hide, the card's top-right cross (`IconButton`, label `Hide`), in its corner; the title under them; then the tab strip ("The tab strip" below).
+Hide sits in that corner on every tab of the task's card, in every state of the view, as on every other card, and never beside the browser's own controls, so it reads as putting the card away and never as closing the page (the captain on INF-1502: the close button was not where it usually is on cards, so what clicking it would do was unclear).
+
+**One row of browser chrome** under the card's top, `--space-2` padding, a `--line-1` hairline under it:
 
 - Back, Forward and Reload, 28 px icon buttons (Lucide `chevron-left`, `chevron-right`, `rotate-cw`).
   Navigation belongs to whoever has control, and watching is not control, so while the captain watches all three are marked off (`../core/IconButton.prompt.md`): dimmed, still Tab stops, their labels saying why (`Back · the crewmate is driving`).
@@ -36,7 +39,7 @@ It works on a task that has closed, so a game's note can play it after its task 
   It is one line and never wraps: the action gives way first with an ellipsis, then who is driving; the site never does.
   The whole line, with the page's title and address, is on hover.
 - The control button, a small Button before More: `Take control` (secondary) while the crewmate drives or nobody does, `Take control` (primary) while the browser is paused for the captain's help, `Return control` (primary) while the captain has control, and none while the captain's Take control is finishing the crewmate's command or Return control is on its way.
-- More, a small ghost Button, the size control (`ResponseCard.prompt.md`, "Maximize"), and Hide, the surface's own cross (`IconButton`, label `Hide`).
+- More, a small ghost Button, last in the row.
 
 **What the crewmate just did** is one short line at a time, replaced by the next, never a list: `opened /signup`, `read the page`, `waited for "Thanks"`, `typed into "Email"`, `typed into "Email" and pressed Enter`, `clicked "Create account"`, `chose "Economy" in "Class"`, `pressed Tab`, `scrolled down`, `went back`, `reloaded the page`, `photographed the page`.
 A name is the control's own accessible name, cut at 40 characters; what was typed is never shown.
@@ -122,7 +125,7 @@ The sharing notice and a refusal line take room from the page without resizing i
 It is a live picture of the task's page, redrawn whenever the page changes, so the captain watches exactly what the crewmate's browser shows.
 While the captain watches, the pointer and the keys do nothing to it, and its cursor stays the default; while the captain has control they are the captain's on the page ("Taking control").
 Until the first picture arrives the page's place is an empty `--bg-1` block at the page's proportions, with no spinner.
-**The tab strip** (the task card's own, shared with the record, `components/cards/TaskRecord`, "Tabs") sits above the row, 32 px, with a `--line-1` hairline under it.
+**The tab strip** (the task card's own, shared with the record, `components/cards/TaskRecord`, "Tabs") sits under the title and above the row, 32 px, with a `--line-1` hairline under it.
 Its tabs are `Info`, `Crewmate` once a crewmate has started the task (`components/cards/TaskCrewmate`), then one `Browser · <page title>` tab per page the task's browser holds, in `--text-sm` weight 400, `--space-1` by `--space-2` padding, one line that gives way with an ellipsis at 45% of the strip, whole on hover.
 A page with no title reads `Browser`, and a stopped browser's one tab reads `Browser`.
 The site is never in a tab: nearly every page is a localhost port, so it stays in the row and the foot line.
@@ -147,7 +150,7 @@ While it uses a saved sign-in it names it instead: `signed in on aurora.example 
 | Returned | `busy` dot · site · the crewmate is driving · fresh look at the page | the page |
 | Final payment: the crewmate's review card asked | as Paused for your help, then You have control on the payment page | the page; Return control after the captain pays, so the crewmate reads the confirmation |
 | Outcome unknown: the site never confirmed | as Paused for your help, from the crewmate's decision that says so | the page where the site lists it, for the captain to check; the crewmate never pays again |
-| Stopped | the row names the task instead: micro label `BROWSER`, the title, `Task record`, then Hide | one centred sentence of why, a second line, Open again and its caption; no foot line |
+| Stopped | no browser row: the card's top names the task, with Hide in its corner | one centred sentence of why, a second line, Open again and its caption; no foot line |
 | Unavailable | as Stopped | why it cannot open now, Open again still offered |
 | Shown on another computer: this computer controls the first mate on MacBook Pro | as Stopped | `This task's browser shows only on MacBook Pro.` over `Watch it and take control of it there.`; no Open again (`../devices/RemoteControl.prompt.md`) |
 

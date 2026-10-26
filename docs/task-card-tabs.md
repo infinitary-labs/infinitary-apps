@@ -27,6 +27,7 @@ Initial opening still waits for populated frame readiness; returning never revea
 Tabs of the same task crossfade; replacing a tab does not play the longer entrance for closing a whole card.
 Hide or Esc closes the task's card whichever tab is shown, and the card behind it comes up.
 The record keeps its own width; the Crewmate tab and the browser view take the stage's full width.
+All three draw the record's own top (`RecordPaneChrome`): the status pill and the key with the size control and Hide in the card's corner, the title, then the strip, so Hide is in the same place whichever tab is shown.
 Each shown tab points the first mate's turn at its task, as the record does.
 
 Another page than the browser's current one is the controller's to pick, as navigation is (`docs/task-browser.md`, "The view").

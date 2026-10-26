@@ -1,11 +1,11 @@
-import { readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { ForgeSignInState } from "@shared/forges";
 import type { IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { integrationNameSchema } from "../../shared/integrations";
+import { INTEGRATION_ACTIONS_MAX, integrationNameSchema } from "../../shared/integrations";
 import {
   FileIntegrationSecrets,
   githubIntegration,
@@ -14,6 +14,7 @@ import {
 } from ".";
 import type { IntegrationActionSpec, IntegrationBinding } from "./binding";
 import { IntegrationOutcomeUnknown } from "./binding";
+import { OLDER_BUILD_OFF_MAX } from "./store";
 
 /**
  * INF-775 piece 1: Settings -> Integrations and the first mate's
@@ -729,5 +730,224 @@ describe("per-action approval (INF-950)", () => {
     service.setRule("mcp-notes", "list_notes", true);
     await service.remove("mcp-notes");
     expect(service.view().integrations[0]?.actions[0]?.rule).toBe("ask");
+  });
+});
+
+// INF-1407: a connection may list INTEGRATION_ACTIONS_MAX actions, but an
+// older build's strict settings reader took at most 64 off ones, and so
+// did this one, reading every saved name, pause and off action as the
+// defaults once a 65th was off. These are the GitHub MCP server's own tools.
+describe("off actions past an older build's count (INF-1407)", () => {
+  const tools = [
+    "add_issue_comment",
+    "add_sub_issue",
+    "assign_copilot_to_issue",
+    "cancel_workflow_run",
+    "create_and_submit_pull_request_review",
+    "create_branch",
+    "create_gist",
+    "create_issue",
+    "create_or_update_file",
+    "create_pending_pull_request_review",
+    "create_pull_request",
+    "create_repository",
+    "delete_file",
+    "delete_pending_pull_request_review",
+    "delete_workflow_run_logs",
+    "dismiss_notification",
+    "download_workflow_run_artifact",
+    "fork_repository",
+    "get_code_scanning_alert",
+    "get_commit",
+    "get_dependabot_alert",
+    "get_discussion",
+    "get_discussion_comments",
+    "get_file_contents",
+    "get_issue",
+    "get_issue_comments",
+    "get_job_logs",
+    "get_latest_release",
+    "get_me",
+    "get_notification_details",
+    "get_pull_request",
+    "get_pull_request_comments",
+    "get_pull_request_diff",
+    "get_pull_request_files",
+    "get_pull_request_reviews",
+    "get_pull_request_status",
+    "get_release_by_tag",
+    "get_secret_scanning_alert",
+    "get_tag",
+    "get_team_members",
+    "get_teams",
+    "get_workflow_run",
+    "get_workflow_run_logs",
+    "get_workflow_run_usage",
+    "list_branches",
+    "list_code_scanning_alerts",
+    "list_commits",
+    "list_dependabot_alerts",
+    "list_discussion_categories",
+    "list_discussions",
+    "list_gists",
+    "list_issue_types",
+    "list_issues",
+    "list_notifications",
+    "list_pull_requests",
+    "list_releases",
+    "list_secret_scanning_alerts",
+    "list_starred_repositories",
+    "list_sub_issues",
+    "list_tags",
+    "list_workflow_jobs",
+    "list_workflow_run_artifacts",
+    "list_workflow_runs",
+    "list_workflows",
+    "manage_notification_subscription",
+    "manage_repository_notification_subscription",
+    "mark_all_notifications_read",
+    "merge_pull_request",
+    "push_files",
+    "remove_sub_issue",
+    "reprioritize_sub_issue",
+    "request_copilot_review",
+    "rerun_failed_jobs",
+    "rerun_workflow_run",
+    "run_workflow",
+    "search_code",
+    "search_issues",
+    "search_orgs",
+    "search_pull_requests",
+    "search_repositories",
+    "search_users",
+    "star_repository",
+    "submit_pending_pull_request_review",
+    "unstar_repository",
+    "update_gist",
+    "update_issue",
+    "update_pull_request",
+    "update_pull_request_branch",
+  ];
+  // The strict reader builds before INF-1407 parsed settings.json with.
+  const olderBuild = z.record(
+    z.string().min(1).max(48),
+    z.strictObject({
+      name: integrationNameSchema.optional(),
+      paused: z.boolean().optional(),
+      off: z.array(z.string().min(1).max(48)).max(OLDER_BUILD_OFF_MAX).optional(),
+    }),
+  );
+
+  function fixture() {
+    const dir = join(scratchDir("fm-integration-off-"), "integrations");
+    const store = new IntegrationSettingsStore(dir);
+    const actions = tools.map((name) => ({
+      name,
+      label: name.replaceAll("_", " "),
+      effect:
+        name.startsWith("get_") || name.startsWith("list_")
+          ? ("reads" as const)
+          : ("changes" as const),
+      description: `The GitHub MCP server's ${name} tool.`,
+      input: z.strictObject({}),
+    }));
+    const binding: IntegrationBinding = {
+      kind: "mcp",
+      many: true,
+      connections: () => [
+        { id: "mcp-github", name: "GitHub MCP server", account: "octo", health: "ok", actions },
+        { id: "mcp-notes", name: "Notes", account: null, health: "ok", actions: [] },
+      ],
+      check: async () => {},
+      remove: () => {},
+      call: async () => {
+        throw new Error("turning actions off calls no tool");
+      },
+    };
+    const open = () =>
+      new IntegrationsService({
+        bindings: [binding],
+        store,
+        secrets: new FileIntegrationSecrets(join(dir, "secrets")),
+      });
+    const offIn = (service: IntegrationsService) => {
+      const row = service.roster().find((entry) => entry.id === "mcp-github");
+      if (!row) throw new Error("the GitHub MCP server must stay connected");
+      return (row.actions as { name: string; rule: string }[])
+        .filter((action) => action.rule === "never")
+        .map((action) => action.name);
+    };
+    return { store, open, offIn };
+  }
+
+  it("keeps every off action, name and pause past 64, and an older build still reads them", () => {
+    expect(tools.length).toBeGreaterThan(OLDER_BUILD_OFF_MAX);
+    expect(tools.length).toBeLessThanOrEqual(INTEGRATION_ACTIONS_MAX);
+    const { store, open, offIn } = fixture();
+    const service = open();
+    service.configure("mcp-github", { name: "Work GitHub", paused: true });
+    service.configure("mcp-notes", { paused: true, actions: {} });
+    // Settings turns them off one at a time; the 65th is where it broke.
+    for (const name of tools) service.configure("mcp-github", { actions: { [name]: false } });
+    const restarted = open();
+    expect(offIn(restarted)).toEqual(tools);
+    expect(restarted.show("Work GitHub")).toMatchObject({ id: "mcp-github", paused: true });
+    expect(restarted.show("Notes")).toMatchObject({ id: "mcp-notes", paused: true });
+    const older = olderBuild.parse(
+      JSON.parse(readFileSync(join(store.root, "settings.json"), "utf8")),
+    );
+    expect(older["mcp-github"]).toEqual({
+      name: "Work GitHub",
+      paused: true,
+      off: tools.slice(0, OLDER_BUILD_OFF_MAX),
+    });
+    expect(older["mcp-notes"]).toEqual({ paused: true });
+
+    // Turned back on below the count, each stays on and the rest stay off.
+    const on = tools.slice(0, tools.length - OLDER_BUILD_OFF_MAX + 2);
+    for (const name of on) restarted.configure("mcp-github", { actions: { [name]: true } });
+    expect(offIn(open())).toEqual(tools.slice(on.length));
+    expect(
+      olderBuild.safeParse(JSON.parse(readFileSync(join(store.root, "settings.json"), "utf8")))
+        .success,
+    ).toBe(true);
+    for (const name of tools) restarted.configure("mcp-github", { actions: { [name]: true } });
+    expect(offIn(open())).toEqual([]);
+    expect(open().show("Work GitHub")).toMatchObject({ paused: true });
+  });
+
+  it("reads the settings a build before INF-1407 wrote with more than 64 off actions", () => {
+    const { store, open, offIn } = fixture();
+    const off = tools.slice(0, OLDER_BUILD_OFF_MAX + 1);
+    mkdirSync(store.root, { recursive: true });
+    writeFileSync(
+      join(store.root, "settings.json"),
+      JSON.stringify({ "mcp-github": { name: "Work GitHub", paused: true, off } }),
+    );
+    const service = open();
+    expect(offIn(service)).toEqual(off);
+    expect(service.show("Work GitHub")).toMatchObject({ id: "mcp-github", paused: true });
+    // Its next change writes the shape an older build reads again.
+    service.configure("mcp-github", { actions: { [tools.at(-1)!]: false } });
+    expect(
+      olderBuild.safeParse(JSON.parse(readFileSync(join(store.root, "settings.json"), "utf8")))
+        .success,
+    ).toBe(true);
+    expect(offIn(open())).toEqual([...off, tools.at(-1)]);
+  });
+
+  it("keeps an action off when an older build turned on another, and forgets the list with the connection", () => {
+    const { store, open, offIn } = fixture();
+    const service = open();
+    for (const name of tools) service.configure("mcp-github", { actions: { [name]: false } });
+    const file = join(store.root, "settings.json");
+    // An older build turns the first action on in the only file it reads.
+    const settings = olderBuild.parse(JSON.parse(readFileSync(file, "utf8")));
+    settings["mcp-github"]!.off = settings["mcp-github"]!.off!.slice(1);
+    writeFileSync(file, JSON.stringify(settings));
+    expect(offIn(open())).toEqual(tools);
+    // An older build forgets the connection: nothing it left behind applies.
+    writeFileSync(file, JSON.stringify({}));
+    expect(offIn(open())).toEqual([]);
   });
 });

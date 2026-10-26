@@ -9,19 +9,31 @@ import { z } from "zod";
  * keyed by integration id - its name, whether it is paused, and which
  * actions are off. No sign-in is kept here: a kind's sign-in stays with
  * its own owner. `IntegrationsService` is its one writer.
- * Name-repair explanations live separately: older builds strictly parse
- * settings.json, so adding a field there would lose every saved setting.
+ * Name-repair explanations and off actions past an older build's count live
+ * separately: older builds strictly parse settings.json, so adding a field
+ * there, or a longer off list, would lose every saved setting.
  */
 
 const SETTINGS_FILE = "settings.json";
 const REPAIRS_FILE = "name-repairs.json";
+const MORE_OFF_FILE = "actions-off.json";
 const CONNECTIONS_FILE = "connections.json";
 
+/**
+ * The most off actions an older build's strict reader takes in one
+ * settings.json entry (INF-1407); one more and it reads every setting as
+ * the defaults. A connection that has had more keeps its whole off list in
+ * actions-off.json, and settings.json its first ones.
+ */
+export const OLDER_BUILD_OFF_MAX = 64;
+
+const actionNameSchema = z.string().min(1).max(48);
 const entrySchema = z
   .object({
     name: integrationNameSchema.optional(),
     paused: z.boolean().optional(),
-    off: z.array(z.string().min(1).max(48)).max(64).optional(),
+    // Any length: a build before INF-1407 wrote every off action here.
+    off: z.array(actionNameSchema).optional(),
   })
   .strict();
 export type IntegrationSettings = z.infer<typeof entrySchema> & {
@@ -30,6 +42,7 @@ export type IntegrationSettings = z.infer<typeof entrySchema> & {
 
 const idSchema = z.string().min(1).max(48);
 const fileSchema = z.record(idSchema, entrySchema);
+const moreOffSchema = z.record(idSchema, z.array(actionNameSchema));
 const repairsSchema = z.record(
   idSchema,
   z.strictObject({
@@ -80,21 +93,51 @@ export class IntegrationSettingsStore {
     } catch {
       // Older installations have no name-repair file.
     }
+    // A whole off list applies only while the connection still has its
+    // settings: an older build that forgot the connection leaves it behind.
+    // Joined, an action off in either file stays off.
+    for (const [id, off] of Object.entries(this.moreOff())) {
+      const entry = all[id];
+      if (entry) entry.off = [...new Set([...(entry.off ?? []), ...off])].sort();
+    }
     return all;
   }
 
-  /** Keep the old settings shape readable, with name-bound explanations alongside it. */
+  /**
+   * Keep the old settings shape readable, with name-bound explanations and
+   * the whole off lists an older build cannot read alongside it.
+   */
   write(all: Record<string, IntegrationSettings>): void {
     const settings: z.infer<typeof fileSchema> = {};
     const repairs: z.infer<typeof repairsSchema> = {};
+    const more: z.infer<typeof moreOffSchema> = {};
+    const kept = this.moreOff();
     for (const [id, { renamed, ...entry }] of Object.entries(all)) {
       settings[id] = entry;
+      // Once a connection has had more off actions than an older build
+      // reads, its whole list stays here while any is off, so dropping back
+      // under the count never depends on two files written together.
+      if (entry.off && (entry.off.length > OLDER_BUILD_OFF_MAX || (kept[id] && entry.off.length))) {
+        more[id] = entry.off;
+        settings[id] = { ...entry, off: entry.off.slice(0, OLDER_BUILD_OFF_MAX) };
+      }
       if (renamed && entry.name) repairs[id] = { name: entry.name, renamed };
     }
-    // Write explanations first: if interrupted, they apply only after the
-    // corresponding atomic settings write, and the old name can be repaired again.
+    // Write explanations and whole off lists first: if interrupted, they
+    // apply only beside the matching settings, and joined with the older
+    // settings every action off in the new list is still off.
     this.writeFile(REPAIRS_FILE, repairs);
+    this.writeFile(MORE_OFF_FILE, more);
     this.writeFile(SETTINGS_FILE, settings);
+  }
+
+  /** Each connection's whole off list past an older build's count; unreadable reads as none. */
+  private moreOff(): z.infer<typeof moreOffSchema> {
+    try {
+      return moreOffSchema.parse(JSON.parse(readFileSync(join(this.root, MORE_OFF_FILE), "utf8")));
+    } catch {
+      return {};
+    }
   }
 
   /** Each id's connection reference; an unreadable file reads as none, so every one is made again. */

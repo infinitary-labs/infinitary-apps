@@ -13,6 +13,8 @@ A kind connects once, as GitHub does, or many times, as MCP servers do; a kind a
 The row's own settings - a name of the person's choosing, paused, and which actions are off - live in `userData/integrations/settings.json`, 0600 in a 0700 folder, written whole (`IntegrationSettingsStore`).
 An automatic name repair keeps its previous name and the connection whose name it conflicted with (`renamed`) in the same store's `name-repairs.json`, until the person chooses a name themselves.
 The explanation matches the resulting name; an older build still reads `settings.json` unchanged, and a name it changes cannot inherit stale words.
+An older build reads at most 64 off actions in one entry and reads every saved setting as the defaults past that (`OLDER_BUILD_OFF_MAX`), while a connection may have 256 actions.
+A connection that has had more off actions keeps its whole off list in the same store's `actions-off.json`, written before `settings.json`, which keeps its first 64; the store reads an action as off when either file has it off, and only while `settings.json` still has the connection.
 No sign-in is kept there: a kind's sign-in stays with its own owner, and a key it signs in with is kept apart ("Keys").
 Which connection each id stands for is the same store's `connections.json` ("Which connection").
 The wire shape Settings draws and the first mate reads is `src/shared/integrations.ts`.

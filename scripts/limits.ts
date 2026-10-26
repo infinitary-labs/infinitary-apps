@@ -140,6 +140,9 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/core/hostEnv.ts": {
     SHELL_CAP_ENV: record("the operation goes on; the command prints running: and how to read it"),
   },
+  "src/core/integrations/store.ts": {
+    OLDER_BUILD_OFF_MAX: outside("an older build reads the first ones; the whole list is in actions-off.json"),
+  },
   "src/core/jobs/jobManager.ts": {
     SYNC_CAP_MS: record("the command goes on as a background job; its exit wakes the owner"),
     OUTPUT_CAP: physical("tail kept; the rest spills to a file the output names"),

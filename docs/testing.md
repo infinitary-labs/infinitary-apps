@@ -211,7 +211,14 @@ The fixture, simulator identity and unsigned Xcode configuration are described i
 ### The phone check on request
 
 `phone.yml` also runs on request (`workflow_dispatch`), such as the nightly check of `main`: `POST /repos/{owner}/{repo}/actions/workflows/phone.yml/dispatches` with `{"ref":"main","return_run_details":true}`.
-A run on request skips the chooser and runs every part of the device gate whatever changed; it starts no release, TestFlight or App Store step.
+A default run on request skips the chooser and runs every part of the device gate whatever changed; the nightly request stays on this default.
+For a crewmate checking its own branch, send `{"ref":"<branch>","inputs":{"affected":"true"},"return_run_details":true}` to select touched parts conservatively.
+The optional `base` input defaults to `origin/main`.
+This selection reuses `PART_OWNERS` and the Swift function reach reader, without a timing budget.
+Shared phone inputs, unreadable comparisons or test changes, and the fixed `PHONE_VIRTUAL_MAC` route run every part instead.
+An affected request with no reached parts skips the native job; the summary and `phone-placement` artifact record the selection.
+Explicit `parts` still overrides automatic selection for diagnostic runs.
+Neither route starts a release, TestFlight or App Store step.
 It has no pull request, so `scripts/replaced-phone-runs.ts` cancels nothing and never stops its gate.
 No part on either device stops another, and inside the gate a failed generator check or Swift package test no longer skips the simulator tests (`scripts/phone-checks.ts`); every failure is reported and fails the job.
 For an isolated overlap proof, its optional `mac_runner` input selects a runner for that request only, as `verify.yml` does; shared runner variables stay unchanged.

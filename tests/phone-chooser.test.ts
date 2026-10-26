@@ -6,6 +6,7 @@ import {
   partTimes,
   phoneDecision,
   placeParts,
+  requestedParts,
 } from "../scripts/affected-phone";
 import { PHONE_PARTS } from "../scripts/phone-test-plan";
 
@@ -99,5 +100,37 @@ describe("the phone check's parts on a pull request", () => {
 
   it("runs the virtual Mac scripts' change, with every part, while the switch is on", () => {
     expect(choose("da171d24e", TIMES, true)?.every((part) => part.kept)).toBe(true);
+  });
+});
+
+// Captain's INF-1258 selection: requested phone checks run touched parts, uncertainty runs all.
+describe("affected phone requests", () => {
+  function request(commit: string, unreadable = false, uiOnly = false) {
+    const { paths, testDiff, testFiles } = change(commit);
+    const reasons = phoneDecision(
+      uiOnly ? paths.filter((path) => path.includes("InfinitaryUITests/")) : paths,
+    ).reasons;
+    return requestedParts(
+      reasons,
+      partReach(
+        reasons,
+        unreadable ? undefined : testDiff,
+        Object.keys(testFiles),
+        (path) => testFiles[path],
+      ),
+    ).map((each) => each.part);
+  }
+  it("runs only cards for the real generated card-runtime change, without timing data", () => {
+    expect(request("e3be41f53")).toEqual(["cards"]);
+  });
+  it("runs every reached part, not just the closest or one fitting a time budget", () => {
+    // Replay only the real UI-test hunks: its other product edits include shared style.
+    expect(request("2dbbedc52", false, true)).toEqual(["join", "talk"]);
+    expect(request("2dbbedc52")).toEqual(PHONE_PARTS.map((part) => part.name));
+  });
+  it("runs all parts for shared gate setup or an unreadable test diff", () => {
+    const all = PHONE_PARTS.map((part) => part.name);
+    expect(request("a7aa5e974")).toEqual(all);
+    expect(request("2dbbedc52", true)).toEqual(all);
   });
 });

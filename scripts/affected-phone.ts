@@ -351,6 +351,14 @@ export function placeParts(
   });
 }
 
+/** Requested checks run every directly reached part; shared or unreadable inputs run all. */
+export function requestedParts(reasons: readonly string[], reach: PartReach[]): PartReach[] {
+  const unknown = reasons.some((path) =>
+    !path.startsWith(UI_TESTS) && !path.startsWith(APP_TESTS) &&
+    !EVERY.some((part) => matches(PART_OWNERS[part], path)));
+  return unknown ? reach : reach.filter((each) => each.distance < 2);
+}
+
 function main(): void {
   const { values } = parseArgs({ options: {
     base: { type: "string", default: "origin/main" },
@@ -358,6 +366,7 @@ function main(): void {
     // The newest passing on-request check of main's part-times.json.
     times: { type: "string" },
     placement: { type: "string" },
+    request: { type: "boolean", default: false },
   } });
   const root = fileURLToPath(new URL("..", import.meta.url));
   const git = (args: string[]) => execFileSync("git", args, { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"], maxBuffer: 64 * 1024 * 1024 });
@@ -389,7 +398,10 @@ function main(): void {
     // An unreadable comparison counts every part edited.
     const reach = paths ? partReach(decision.reasons, testDiff, testFiles, read)
       : EVERY.map((part): PartReach => ({ part, distance: 0, why: "the change could not be read" }));
-    placement = placeParts(reach, partTimes(values.times ? readFile(values.times) : undefined), { virtualMac });
+    placement = values.request
+      ? (values.request && paths && !virtualMac ? requestedParts(decision.reasons, reach) : reach)
+        .map((each) => ({ ...each, kept: true, reason: "requested affected parts" }))
+      : placeParts(reach, partTimes(values.times ? readFile(values.times) : undefined), { virtualMac });
   }
   const kept = placement.filter((each) => each.kept).map((each) => each.part);
   console.log(`run=${decision.run}`);

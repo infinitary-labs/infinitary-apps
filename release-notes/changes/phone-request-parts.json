@@ -1,0 +1,1 @@
+{"entries":[],"exclusions":[{"id":"phone-request-parts","reason":"Internal phone workflow: affected crewmate requests select touched parts conservatively; PR gates retain their timing reader and six-minute budget, and nightly gates remain full."}]}

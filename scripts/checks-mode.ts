@@ -28,7 +28,7 @@ const ROUTES: Record<HeavyCheck, { name: string; route: string }> = {
   },
   phone: {
     name: "The phone check",
-    route: `start phone.yml on your branch: ${DISPATCHES}/phone.yml/dispatches with {"ref":"<branch>"}.`,
+    route: `start phone.yml on your branch: ${DISPATCHES}/phone.yml/dispatches with {"ref":"<branch>","inputs":{"affected":"true"}}. Omit affected for every part.`,
   },
   "replay-gate": {
     name: "The replay gate",

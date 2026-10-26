@@ -97,13 +97,20 @@ type Step = {
   "timeout-minutes"?: number;
   env?: Record<string, string>;
 };
-type Plain = { [key: string]: string | Plain };
+type Plain = { [key: string]: string | boolean | Plain };
 const STATUS = ["success", "always", "cancelled", "failure"];
 
 function toData(value: Plain): data.Dictionary {
   const dictionary = new data.Dictionary();
   for (const [key, item] of Object.entries(value))
-    dictionary.add(key, typeof item === "string" ? new data.StringData(item) : toData(item));
+    dictionary.add(
+      key,
+      typeof item === "string"
+        ? new data.StringData(item)
+        : typeof item === "boolean"
+          ? new data.BooleanData(item)
+          : toData(item),
+    );
   return dictionary;
 }
 
@@ -469,9 +476,11 @@ describe("the native pull-request gate", () => {
     ]);
     // The gate reads the chooser's parts, which a run on request leaves empty.
     expect(stepsThatRun(OFF).find(isGate)?.env?.PHONE_PARTS).toBe(
-      "${{ github.event_name == 'workflow_dispatch' && inputs.parts || needs.choose-phone.outputs.parts }}",
+      "${{ inputs.parts || needs.choose-phone.outputs.parts }}",
     );
-    expect(workflow.jobs["choose-phone"].outputs.parts).toBe("${{ steps.select.outputs.parts }}");
+    expect(workflow.jobs["choose-phone"].outputs.parts).toBe(
+      "${{ steps.select.outputs.parts || steps.request-select.outputs.parts }}",
+    );
     // The gates' shell sees the switch as the repository sets it, empty when unset.
     const shell = workflow.jobs[NATIVE_JOB].env.PHONE_VIRTUAL_MAC.replace(
       /^\$\{\{\s*|\s*\}\}$/g,
@@ -755,5 +764,64 @@ describe("the chooser's part times", () => {
     const reading = await choose([cards, full], expired);
     expect(reading.outputs.id).toBeUndefined();
     expect(reading.summaries).toEqual([]);
+  });
+});
+
+// INF-1258: the captain picked touched parts only for crewmate requests, not PR/nightly gates.
+describe("affected request routing", () => {
+  const steps = workflow.jobs["choose-phone"].steps as Step[];
+  const request = steps.find((step) => step.id === "request-select")!;
+  it("chooses only for opted-in requests, leaving nightly and explicit diagnostics alone", () => {
+    for (const [event, affected, parts, expected] of [
+      ["workflow_dispatch", true, "", true],
+      ["workflow_dispatch", false, "", false],
+      ["workflow_dispatch", true, "cards", false],
+      ["pull_request", false, "", false],
+    ] as const) {
+      // Boolean inputs must remain BooleanData, not the truthy string "false".
+      expect(
+        holds(condition(request), {
+          github: { event_name: event },
+          inputs: { affected, parts },
+        }),
+      ).toBe(expected);
+    }
+  });
+  it("passes selected parts into the device gate and honors explicit diagnostic parts", () => {
+    const expression = (workflow.jobs[NATIVE_JOB].steps as Step[])
+      .find((step) => step.id === "both")!
+      .env!.PHONE_PARTS!.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+    const ast = new Parser(new Lexer(expression).lex().tokens, ["inputs", "needs"], []).parse();
+    for (const [parts, chosen, expected] of [
+      ["", "cards", "cards"],
+      ["join", "cards", "join"],
+      ["", "", ""],
+    ])
+      expect(
+        new Evaluator(
+          ast,
+          toData({
+            inputs: { parts: parts! },
+            needs: { "choose-phone": { outputs: { parts: chosen! } } },
+          }),
+        )
+          .evaluate()
+          .coerceString(),
+      ).toBe(expected);
+  });
+  it("starts selected requests, skips an empty affected request, and keeps default full runs", () => {
+    for (const [affected, parts, chosen, expected] of [
+      [true, "", "cards", true],
+      [true, "", "", false],
+      [false, "", "", true],
+      [true, "join", "", true],
+    ] as const)
+      expect(
+        holds(workflow.jobs[NATIVE_JOB].if, {
+          github: { event_name: "workflow_dispatch" },
+          inputs: { affected, parts },
+          needs: { "choose-phone": { outputs: { run: "", parts: chosen } } },
+        }),
+      ).toBe(expected);
   });
 });

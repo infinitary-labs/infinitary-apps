@@ -11,6 +11,14 @@ on:
       mac_runner:
         description: Optional Mac runner label for an isolated proof; unset keeps the project runner
         type: string
+      affected:
+        description: Run only parts touched by this branch (unknown scope runs all)
+        type: boolean
+        default: false
+      base:
+        description: Comparison ref for affected requests
+        type: string
+        default: origin/main
       parts:
         description: Parts to run, separated by spaces (empty runs all)
         type: string
@@ -78,7 +86,7 @@ jobs:
       contents: read
     outputs:
       run: ${{ steps.select.outputs.run }}
-      parts: ${{ steps.select.outputs.parts }}
+      parts: ${{ steps.select.outputs.parts || steps.request-select.outputs.parts }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -151,8 +159,15 @@ jobs:
         env:
           BASE_REF: origin/${{ github.base_ref }}
           PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
+      - id: request-select
+        name: Choose affected parts for a crewmate request
+        if: github.event_name == 'workflow_dispatch' && inputs.affected && !inputs.parts
+        run: node scripts/affected-phone.ts --request --base "$BASE_REF" --head HEAD --placement "$RUNNER_TEMP/phone-placement.json" >> "$GITHUB_OUTPUT"
+        env:
+          BASE_REF: ${{ inputs.base || 'origin/main' }}
+          PHONE_VIRTUAL_MAC: ${{ vars.PHONE_VIRTUAL_MAC }}
       - name: Keep the chosen and left parts
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' || inputs.affected
         uses: actions/upload-artifact@v4
         with:
           name: phone-placement
@@ -162,7 +177,7 @@ jobs:
   native-phone:
     name: ${{ inputs.evidence_run != '' && 'native-phone-not-requested' || 'native-phone' }}
     needs: choose-phone
-    if: inputs.evidence_run == '' && (github.event_name != 'pull_request' || needs.choose-phone.outputs.run == 'true')
+    if: inputs.evidence_run == '' && (github.event_name != 'pull_request' || needs.choose-phone.outputs.run == 'true') && (!inputs.affected || inputs.parts || needs.choose-phone.outputs.parts != '')
     # No paid hosted-Mac fallback. MAC_RUNNER currently names this Mac mini's label.
     # INF-524: the repository variable PHONE_VIRTUAL_MAC moves the device gates into
     # a fresh virtual Mac, through the phone check's own runner, which takes no
@@ -261,7 +276,8 @@ jobs:
       # A placed virtual Mac uses two simulators for its 6 cores and 16 GB.
       # Real and virtual Mac checks may run concurrently without a command lease.
       # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the
-      # parts the chooser kept; a run on request, and the virtual Mac switch, run every part.
+      # parts the chooser kept. Affected requests use directly reached parts; default requests
+      # and the fixed virtual Mac switch run every part.
       # INF-1343: on a pull request the first failed part stops the others, so a failing check frees
       # its Mac at once; a run on request runs every part to its end for the chooser's part times.
       - id: both
@@ -274,7 +290,7 @@ jobs:
           if [ "$(sysctl -n kern.hv_vmm_present 2> /dev/null)" = 1 ]; then exec node scripts/test-phone.ts --both "${parts[@]}" --simulators 2 --evidence "$RUNNER_TEMP/phone"; fi
           node scripts/test-phone.ts --both "${parts[@]}" --evidence "$RUNNER_TEMP/phone"
         env:
-          PHONE_PARTS: ${{ github.event_name == 'workflow_dispatch' && inputs.parts || needs.choose-phone.outputs.parts }}
+          PHONE_PARTS: ${{ inputs.parts || needs.choose-phone.outputs.parts }}
           INFINITARY_PHONE_WAITS_ONLY: ${{ inputs.waits && '1' || '0' }}
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}

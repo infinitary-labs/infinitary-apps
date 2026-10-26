@@ -1386,7 +1386,7 @@ export class CardService {
     }
     let moved = false;
     const released: string[] = [];
-    for (const card of [...this.cards.values()]) {
+    for (let card of [...this.cards.values()]) {
       const mine =
         author.kind === "firstmate"
           ? this.firstmateAnswers(card)
@@ -1394,13 +1394,26 @@ export class CardService {
       if (!mine) continue;
       if (reason === "report" && this.reachedStage(card)) continue;
       if (this.asideUntilTurnEnd.delete(card.id)) moved = true;
+      let wrote = false;
       if (card.awaiting !== "answer" && card.lifecycleId) {
         if (this.host.cardStore.releaseRevisions(card.id, card.lifecycleId)) {
           moved = true;
+          wrote = true;
           released.push(card.id);
         }
       }
       const staged = this.staged.has(card.id);
+      // The captain put the card aside while its author's newer write - a
+      // revision or an answer - waited here, so he never saw it: it comes
+      // back with it, the same as a write on a card already aside (INF-1472).
+      const written = wrote || staged || card.awaiting === "close-out";
+      if (card.minimized && card.awaiting !== "answer" && written) {
+        const { minimized: _aside, ...back } = card;
+        this.host.cardStore.upsert(back);
+        this.cards.set(card.id, back);
+        card = back;
+        moved = true;
+      }
       if (card.awaiting === "close-out") this.release(card, reason);
       else if (card.awaiting === "answer") continue;
       else if (staged) {

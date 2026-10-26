@@ -218,6 +218,43 @@ describe("CardService", () => {
     db.close();
   });
 
+  // INF-1472 (the captain: "i minimized INF-1177's card earlier when it was
+  // working ... but it never popped itself back up"): a card put aside after
+  // its crewmate wrote on it, before that crewmate's turn ends, still comes
+  // back at the turn end with the newer write.
+  it("INF-1472 brings back a card put aside while its crewmate's write waits on its turn end", () => {
+    const { tasks, make } = setup();
+    seedTask(tasks, { id: "launch", title: "Prepare the launch checklist", status: "idle" });
+    const cards = make();
+    const id = cards.emitCrewmateCard("launch", { ...decision, id: "launch-choice" }, "m");
+    cards.closeOut({ kind: "crewmate", taskId: "launch" }, "idle");
+    const shown = () => cards.snapshot().find((card) => card.id === id);
+    // A revision written, then put aside while the stage still holds the earlier version.
+    cards.emitCrewmateCard(
+      "launch",
+      { ...decision, id, body: "<p>Keep Friday for the review.</p>" },
+      "m",
+    );
+    expect(shown()?.body).toBe(decision.body);
+    cards.setMinimized(id, true);
+    expect(shown()?.minimized).toBe(true);
+    cards.closeOut({ kind: "crewmate", taskId: "launch" }, "report");
+    expect(shown()?.minimized).toBe(true);
+    cards.closeOut({ kind: "crewmate", taskId: "launch" }, "idle");
+    expect(shown()).toMatchObject({ body: "<p>Keep Friday for the review.</p>" });
+    expect(shown()?.minimized).toBeUndefined();
+    // A thread answer written, then put aside before the turn ends.
+    cards.addMessage(id, "captain", "Why Friday?");
+    cards.replyFromCrewmate("launch", { cardId: id, text: "Friday keeps the review beside it." });
+    cards.setMinimized(id, true);
+    cards.closeOut({ kind: "crewmate", taskId: "launch" }, "idle");
+    expect(shown()?.minimized).toBeUndefined();
+    // Put aside with nothing new written, it stays aside at the turn end.
+    cards.setMinimized(id, true);
+    cards.closeOut({ kind: "crewmate", taskId: "launch" }, "idle");
+    expect(shown()?.minimized).toBe(true);
+  });
+
   it("keeps marked replies available through restart and still closes every choice", () => {
     const { tasks, make } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });

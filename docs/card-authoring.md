@@ -950,6 +950,7 @@ It is independent from `awaiting`, resolution, offers, task status, the captain 
 The Mac stack and pager omit minimized cards, and so does the phone's stack, which lists them under Minimized in its pager menu (`docs/ios.md`, "Cards on the phone").
 Every Mac showing this first mate shares that fact, including after a restart.
 A crewmate's revision or answer brings the card back unread when that crewmate's turn ends, never at a report mid-turn (INF-926); the first mate's own answer brings it back at once.
+It comes back the same way when the captain put it aside after that write, while the stage still showed the earlier version (INF-1472).
 Task records, past cards, the task board, browser views and crewmate views keep Hide and have no Put aside.
 
 The renderer keeps answers and reply drafts in their existing in-session stores while a card is minimized.

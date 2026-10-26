@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "aside-card-returns-at-turn-end",
+      "kind": "fix",
+      "title": "A card you put aside comes back when its crewmate finishes the update you had not seen",
+      "body": "If you put a card aside in the moments after a crewmate changed it or answered under it, but before that crewmate finished, the card could stay aside with the change you never saw. It now comes back when the crewmate finishes, the same as a card you put aside earlier.",
+      "area": "cards",
+      "noPicture": "The card looks the same; the fix only brings it back at the moment it was already meant to return.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
@@ -34,6 +34,7 @@ import {
 } from "./modelsBoard";
 import { promptInput } from "./prompt";
 import { feedLineOf } from "./rails";
+import { savedText } from "./savedText";
 import { expectNoCard, shownCard } from "./stack";
 
 /**
@@ -184,15 +185,6 @@ function savedPasswords(allows: boolean, holds: () => boolean = () => true) {
     },
   };
   return { keychain, queries };
-}
-
-function savedText(dir: string): { file: string; text: string }[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return savedText(path);
-    if (!entry.isFile()) return [];
-    return [{ file: path, text: readFileSync(path, "latin1") }];
-  });
 }
 
 /** Replaces the system browser here with a recorder of the links it is asked to open. */

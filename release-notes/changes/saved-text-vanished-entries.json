@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "saved-text-vanished-entries",
+      "reason": "Test-only repair: the device sign-in and Devices journeys share one saved-file search that leaves out a file the running app renamed or removed after the search listed its folder, and still fails on any other read error, without changing app behavior or weakening assertions."
+    }
+  ]
+}

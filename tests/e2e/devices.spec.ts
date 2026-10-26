@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
 import { dirname, join } from "node:path";
 import { ownNetworkNames } from "@core/devices/computerName";
@@ -58,6 +58,7 @@ import { APP_CATALOG_PROMPT_MARKER } from "./mockProvider";
 import { addedProjects } from "./projects";
 import { promptInput } from "./prompt";
 import { feedLine, feedLineOf } from "./rails";
+import { savedText } from "./savedText";
 import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
 
 const appPackage = JSON.parse(
@@ -71,16 +72,6 @@ const appPackage = JSON.parse(
  * with it, Stop it closes a link, and Remove - in place or from a card -
  * cuts a device off. No card, feed line, record or saved file holds a link.
  */
-
-/** Every file under `dir`, as bytes read as text, for a search. */
-function savedText(dir: string): { file: string; text: string }[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) return savedText(path);
-    if (!entry.isFile()) return [];
-    return [{ file: path, text: readFileSync(path, "latin1") }];
-  });
-}
 
 async function ask(page: Page, action: string, value: unknown) {
   const input = promptInput(page);

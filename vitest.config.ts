@@ -99,6 +99,8 @@ const isolatedUnit = [
   "tests/helpers/database.test.ts",
   // It loads the Claude SDK through the seat's harness.
   "tests/helpers/claudeSeatHarness.test.ts",
+  // It wraps node:fs's listing to remove an entry the way a running app does.
+  "tests/e2e/savedText.test.ts",
 ];
 
 export default defineConfig({

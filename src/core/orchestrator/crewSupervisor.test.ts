@@ -15682,6 +15682,39 @@ describe("the task graph (task-system P2)", () => {
     expect(legacyStateOf(tasks.get(step.id))).toBe("running");
   });
 
+  it("ends the quit after a running ready sweep, which starts nothing more (INF-1440)", async () => {
+    // INF-1440: the account evaluation closed its database once the quit
+    // returned, while a ready sweep it had not waited for still wrote to it.
+    const classified = deferred<{ kind: "implement"; source: string; version: string }>();
+    const { supervisor, tasks, sessions } = setup(fakeCrewmate(), {
+      classifier: { classify: () => classified.promise },
+    });
+    const first = supervisor.plan({
+      title: "Correct the queue guidance",
+      intent: intentOf("correct the queue guidance"),
+      startPolicy: "when-ready",
+      priority: 1,
+    });
+    const second = supervisor.plan({
+      title: "Restore the authorization limit",
+      intent: intentOf("restore the authorization limit"),
+      startPolicy: "when-ready",
+    });
+    const ended: string[] = [];
+    // Waits on the first row's classification.
+    const sweeping = supervisor.sweepGates(Date.now()).then(() => ended.push("sweep"));
+    const quitting = supervisor.disposeAll().then(() => ended.push("quit"));
+    await tick();
+    expect(ended).toEqual([]);
+    classified.resolve({ kind: "implement", source: "classifier:test", version: "kc1" });
+    await Promise.all([sweeping, quitting]);
+    expect(ended).toEqual(["sweep", "quit"]);
+    await supervisor.sweepGates(Date.now());
+    expect(sessions.open).not.toHaveBeenCalled();
+    expect(tasks.get(first.id)?.status).toBe("open");
+    expect(tasks.get(second.id)?.status).toBe("open");
+  });
+
   it("spawns under a parent and behind blockers, resolving keys", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, sessions } = setup(crewmate);

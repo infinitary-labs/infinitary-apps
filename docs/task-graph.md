@@ -33,6 +33,7 @@ The successor inherits the predecessor's parent only while that parent is still 
 
 `TaskStore.listReady()` is the sweep's dispatch list: open work, no gate, `start_policy = when-ready`, no `blocks` edge from a task that is not `done`; priority first, then age.
 `CrewSupervisor.sweepGates` runs it on the shared 60 s tick, after any close (`closeTask` sweeps), after any graph change (`graphChanged`), on quota refresh, and once at boot.
+The quit (`CrewSupervisor.disposeAll`) runs no new sweep and starts nothing, a start still waiting before its claim included, and it waits, at most `QUIT_SETTLE_MS`, for a sweep already running to end, so a host closes its database only after the sweep's last write; the next launch's sweep starts what the quit left.
 On-request rows never appear in it; a captain-held row waits on its card.
 
 ## Gates on active rows

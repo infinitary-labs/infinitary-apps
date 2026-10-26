@@ -1486,6 +1486,8 @@ export class CrewSupervisor {
   private watchdog: (() => void)[] | undefined;
   /** Sessions let go of mid-turn, each until it is gone (`releaseSession`). */
   private readonly releasing = new Set<Promise<void>>();
+  /** Ready sweeps running now, each until it ends (`sweepGates`). */
+  private readonly sweeping = new Set<Promise<void>>();
   /** The app is quitting: a turn that settles now is not the crew's to act on. */
   private disposed = false;
   /**
@@ -11361,9 +11363,17 @@ export class CrewSupervisor {
   /**
    * The ready sweep over open and active rows (docs/task-graph.md; the
    * ladder's `sweepGates`). Runs on the shared tick, after any close, after
-   * a graph change, on quota refresh, and once at boot.
+   * a graph change, on quota refresh, and once at boot. The quit runs no
+   * new sweep and waits for one already running (`disposeAll`).
    */
-  async sweepGates(now: number): Promise<void> {
+  sweepGates(now: number): Promise<void> {
+    if (this.disposed) return Promise.resolve();
+    const sweep: Promise<void> = this.sweepReady(now).finally(() => this.sweeping.delete(sweep));
+    this.sweeping.add(sweep);
+    return sweep;
+  }
+
+  private async sweepReady(now: number): Promise<void> {
     this.cards.fileMissingHostCardTasks();
     for (const record of this.options.tasks.listOpen()) {
       const action = record.delivery?.captainAction;
@@ -12169,6 +12179,8 @@ export class CrewSupervisor {
       requested?: { by: "firstmate" | "captain"; from?: typeof TASK_CARD_VIA; panel?: string };
     } = {},
   ): Promise<void> {
+    // The quit starts nothing; the next launch's sweep starts it.
+    if (this.disposed) return;
     // A Start waiting for the Firstmate's directions begins only through it.
     if (this.pendingStarts.has(taskId)) return;
     let record = this.options.tasks.get(taskId);
@@ -12273,7 +12285,8 @@ export class CrewSupervisor {
       const routed =
         selected?.routed ??
         (ready ? await this.routeTask(taskId, record.prompt, shape, target) : undefined);
-      // From here to the claim nothing waits.
+      // From here to the claim nothing waits; a quit that came meanwhile starts nothing.
+      if (this.disposed) return;
       if (moved()) return this.dispatchQueuedTask(taskId, options);
       if (!routed?.choice && signInWait()) return;
       if (!ignoreAsk && routed && requiresReasoningWait(shape, routed)) {
@@ -14379,9 +14392,10 @@ export class CrewSupervisor {
   }
 
   /**
-   * The quit: every crewmate is let go of, a running turn cut. The returned
-   * promise waits, at most `QUIT_SETTLE_MS`, for the cut turns to settle so
-   * their usage is kept.
+   * The quit: every crewmate is let go of, a running turn cut, and nothing
+   * more starts. The returned promise waits, at most `QUIT_SETTLE_MS`, for
+   * the cut turns to settle so their usage is kept, and for a ready sweep
+   * already running to end, so its writes land before the database closes.
    */
   disposeAll(): Promise<void> {
     this.disposed = true;
@@ -14414,14 +14428,19 @@ export class CrewSupervisor {
     return this.settled(QUIT_SETTLE_MS);
   }
 
-  /** Resolves once every session let go of mid-turn is gone, or `boundMs` has passed. */
+  /**
+   * Resolves once every session let go of mid-turn is gone and every ready
+   * sweep has ended, or `boundMs` has passed. A sweep that failed is its
+   * caller's to hear, never the quit's.
+   */
   private settled(boundMs: number): Promise<void> {
-    if (this.releasing.size === 0) return Promise.resolve();
+    const pending = [...this.releasing, ...this.sweeping];
+    if (pending.length === 0) return Promise.resolve();
     let timer: ReturnType<typeof setTimeout> | undefined;
     const bound = new Promise<void>((resolve) => {
       timer = setTimeout(resolve, boundMs);
     });
-    return Promise.race([Promise.all(this.releasing).then(() => {}), bound]).finally(() =>
+    return Promise.race([Promise.allSettled(pending).then(() => {}), bound]).finally(() =>
       clearTimeout(timer),
     );
   }

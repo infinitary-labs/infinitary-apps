@@ -86,6 +86,12 @@ export type HomeLinkState = {
   readonly heardAt: number | null;
   /** The home took this device off its list; it never dials again. */
   readonly removed: boolean;
+  /**
+   * For a view: the newest welcome said the first mate was started by a
+   * command, so this view asks what its window would (docs/run.md,
+   * "Control from another computer"). False before any welcome.
+   */
+  readonly startedByCommand: boolean;
 };
 
 /** A request the device could not put to the home: it is out of reach, or it went mid-request. */
@@ -122,8 +128,11 @@ export type HomeLinkOptions = {
   appVersion?: string;
   /** Opens the WebSocket; `dialHome` unless a test stands in its own. */
   dial?: (grant: DeviceGrant) => Promise<WebSocket>;
-  /** Every push the home numbers, in order, replayed ones included. */
-  onPush: (channel: string, payload: unknown) => void;
+  /**
+   * Every push the home numbers, in order, replayed ones included:
+   * `replayed` for one a welcome sent again because the device missed it.
+   */
+  onPush: (channel: string, payload: unknown, replayed: boolean) => void;
   /**
    * What the home asks this device (a computer that runs work, its orders):
    * the answer, or a refusal thrown. Absent, every request is refused.
@@ -206,8 +215,11 @@ export class HomeLink {
     onHomeMac: null,
     heardAt: null,
     removed: false,
+    startedByCommand: false,
   };
   private lastHeard: number | null = null;
+  /** The newest push the latest welcome numbered: one at or before it is a replay. */
+  private welcomedAt = 0;
   private socket: WebSocket | null = null;
   /** The socket the home welcomed; requests ride only this. */
   private open: WebSocket | null = null;
@@ -448,7 +460,11 @@ export class HomeLink {
         if (frame.t === "push") {
           if (this.cursor) this.cursor = { epoch: this.cursor.epoch, seq: frame.seq };
           try {
-            this.options.onPush(ownChannel(frame.channel), frame.payload);
+            this.options.onPush(
+              ownChannel(frame.channel),
+              frame.payload,
+              frame.seq <= this.welcomedAt,
+            );
           } catch {
             // One listener's failure is not the connection's.
           }
@@ -485,6 +501,7 @@ export class HomeLink {
 
   private welcome(socket: WebSocket, frame: Extract<HomeFrame, { t: "welcome" }>): void {
     this.cursor = { epoch: frame.epoch, seq: frame.seq };
+    this.welcomedAt = frame.seq;
     this.spelling = spellingFor(
       readSpellings(frame.spellings),
       this.options.speaks ?? OWN_SPELLING,
@@ -501,6 +518,7 @@ export class HomeLink {
       name: frame.name ?? this.current.name,
       takesWork: frame.takesWork ?? null,
       onHomeMac: frame.onHomeMac ?? this.current.onHomeMac,
+      startedByCommand: frame.startedByCommand === true,
     });
     try {
       this.options.onCaughtUp?.(frame.catchUp);
@@ -666,7 +684,8 @@ export class HomeLink {
       next.takesWork === this.current.takesWork &&
       next.onHomeMac === this.current.onHomeMac &&
       next.heardAt === this.current.heardAt &&
-      next.removed === this.current.removed
+      next.removed === this.current.removed &&
+      next.startedByCommand === this.current.startedByCommand
     )
       return;
     this.current = next;

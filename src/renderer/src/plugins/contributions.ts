@@ -22,6 +22,12 @@ export type SettingsSectionBinding = {
    * (docs/view.md); every other section stays on the Mac where Firstmate lives.
    */
   onAView?: boolean;
+  /**
+   * Offered as well on an app that controls a first mate started by a
+   * command, where nobody sits to open it (docs/run.md, "Control from
+   * another computer").
+   */
+  onAViewOfACommand?: boolean;
 } & (
   | { Component: ComponentType; frame?: undefined }
   /** Tier 2: a template mounted in the frame vehicle, fed by declared reads. */

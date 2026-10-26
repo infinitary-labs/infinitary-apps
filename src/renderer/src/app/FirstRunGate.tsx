@@ -20,7 +20,7 @@ import {
 } from "../accounts/signInFlight";
 import { Button } from "../design";
 import { JoinAnotherMac } from "../devices/JoinAnotherMac";
-import { isView, leftLine } from "../devices/viewWords";
+import { controlsAll, isView, leftLine } from "../devices/viewWords";
 import {
   FRESH_CHECK_ACTION,
   FRESH_CHECK_PENDING,
@@ -33,6 +33,7 @@ import {
   GATE_TITLE,
   gateIntro,
   gateRecoveryTitle,
+  gateRunLine,
   gateStaysOn,
 } from "./firstRunGateWords";
 import { useShellStore } from "./store";
@@ -53,7 +54,9 @@ import "./firstRunGate.css";
  * Under the chips, a second group joins Firstmate on another Mac instead
  * (docs/view.md); after this app left one, a line says which. An app that
  * controls another Mac shows that Mac's gate with nothing to connect here:
- * sign-ins stay on the Mac where Firstmate lives.
+ * sign-ins stay on the Mac where Firstmate lives. One that controls a first
+ * mate a command started shows its chips, since nobody sits at that
+ * computer to sign in (docs/run.md, "Control from another computer").
  *
  * When the gate is open only because the custom connection the Firstmate
  * was chosen on needs one fresh check (`FreshCheck`, saved checks an earlier
@@ -65,6 +68,8 @@ export function FirstRunGate() {
   const loadFirstRun = useShellStore((s) => s.loadFirstRun);
   const thisMac = useShellStore((s) => s.thisMac);
   const view = isView(thisMac);
+  // A view whose first mate signs in where it lives, not here.
+  const there = view && !controlsAll(thisMac);
   const left = thisMac?.role === "home" ? thisMac.left : null;
   const [joining, setJoining] = useState(false);
   const open = firstRun?.gateOpen === true;
@@ -100,7 +105,7 @@ export function FirstRunGate() {
   }, []);
 
   useEffect(() => {
-    if (!shown || view) return;
+    if (!shown || there) return;
     refresh();
     const offPrompt = window.infinitary.auth.onPrompt((incoming) => {
       setPrompt(incoming);
@@ -111,7 +116,7 @@ export function FirstRunGate() {
       offPrompt();
       offNotice();
     };
-  }, [shown, view, refresh]);
+  }, [shown, there, refresh]);
 
   // A provider that signs in either way asks which first; one way goes at once.
   const [methodChoice, setMethodChoice] = useState<ProviderView | null>(null);
@@ -268,14 +273,19 @@ export function FirstRunGate() {
                 ? gateRecoveryTitle()
                 : GATE_HOME_TITLE}
         </p>
-        {!connecting && view && (
+        {!connecting && there && (
           <p className="fm-gate-sub">
             {fresh
               ? freshCheckThere(thisMac.name)
               : `Connect one on ${thisMac.name}, where your first mate lives.`}
           </p>
         )}
-        {!connecting && !joining && !view && fresh && (
+        {!connecting && view && !there && !fresh && (
+          <p className="fm-gate-sub" data-run-line="">
+            {gateRunLine(thisMac.name)}
+          </p>
+        )}
+        {!connecting && !joining && !there && fresh && (
           <div className="fm-gate-check" data-fresh-check={fresh.accountId}>
             {checkError ? (
               <p role="alert" className="fm-gate-error" data-fresh-check-line="">
@@ -309,7 +319,7 @@ export function FirstRunGate() {
             )}
           </p>
         )}
-        {!connecting && !joining && !view && (
+        {!connecting && !joining && !there && (
           <ProviderChips
             providers={providers}
             accounts={accounts}

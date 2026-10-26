@@ -54,7 +54,7 @@ import {
 } from "./subscriptionsWords";
 import { useSettingSave } from "./useSettingSave";
 import "./subscriptions.css";
-import { HERE } from "@shared/deviceNames";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 
 /**
  * The Subscriptions tab, Instruments direction (captain's pick from the
@@ -770,6 +770,7 @@ export function AccountRow({
 const NO_ACCOUNTS: AccountView[] = [];
 
 export function SubscriptionsTab() {
+  const place = useFirstMatePlace();
   const [providers, setProviders] = useState<ProviderView[]>([]);
   // The list is the saved state an account's edit returns to when refused.
   const accountsSave = useSettingSave(() => window.infinitary.accounts.list());
@@ -1207,7 +1208,7 @@ export function SubscriptionsTab() {
       </div>
       {grouped && (
         <div style={{ ...LABEL_STYLE, marginBottom: ROW_GAP }} data-sign-ins-group="this-mac">
-          {HERE.This}
+          {place.This}
         </div>
       )}
       <div

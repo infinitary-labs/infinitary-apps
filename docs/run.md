@@ -122,6 +122,32 @@ With no link it exits 1 and says why on its error output:
 The link reaches this command's output alone: the door writes it to no log, and the command is this account's, as the door's key is.
 `src/main/linkCommand.ts` owns the command and its words.
 
+## Control from another computer
+
+Nobody sits at a computer whose first mate a command started, so another computer's Infinitary that joins it controls everything its window would (INF-1228's approved plan, piece 6, the captain's answer control=all: "everything the window does, including subscription and custom API sign-ins, projects, computers, phones, integrations, and card buttons that open Settings").
+The connection's welcome to a view says so with `startedByCommand: true` (`docs/connection.md`, "The handshake and the numbering"), and the view's `thisMac` carries it (`controlsAll`, `src/renderer/src/devices/viewWords.ts`).
+A first mate with its window sends no such field, and a view of it stays as `docs/view.md` says.
+
+- **What a view asks.**
+  The connection answers such a view every `home` request as well as every `views` one, as the captain at another computer, but those that stay on this computer (`RUN_HOME_ONLY_CHANNELS` and `isRunViewInvokeChannel`, `src/shared/ipc.ts`): its computers and phones and the addresses they find it at, a task's browser and a page from a task's project, and what is only ever this computer's own - its look, voice, panels and their extensions, Knowledge, Observe, release notes, Dock and update.
+  The view asks the same set (`ViewBackend.dispatch`) and also shows the pushes its Settings follow: a sign-in's steps, the sign-ins where projects live, integrations and Diagnostics (`RUN_VIEW_PUSHES`, `src/main/view/viewBackend.ts`).
+  Its look, keys and update notice stay its own, as on any view.
+- **Settings.**
+  Settings shows General, Projects, Intelligence, Usage and Integrations as well as the four tabs any view shows (`onAViewOfACommand`, `showsSection`), and their keyboard commands work there (`src/renderer/src/app/commandRefusals.ts`).
+  Their words name the computer the first mate lives on where they would say this computer (`firstMatePlace`, `useFirstMatePlace`).
+  General leaves out that computer's Start at login, Dock, dictation and panels, which are its own and have nobody there.
+  A project's folder is typed as its path on that computer, since a folder picker here shows only this computer's folders: Choose folder on the projects folder's row, and Folder on Mac mini in Add project (`FOLDER_THERE_WORDS`, `src/renderer/src/settings/addProjectWords.ts`); that computer checks the path and says why one cannot be used.
+- **First launch.**
+  Its first launch shows the subscription chips under the line `gateRunLine` makes: "Connect one for your first mate on Mac mini.
+  A command started it there, so it signs in from here."
+- **Pages it would open.**
+  A page the first mate would open in a browser, such as a sign-in's consent page, goes to each computer that controls it as the push `inf:app:open-page` instead (`startCore`'s `startedByCommand`, `src/core/index.ts`), and that computer's Infinitary opens it in its own browser, once, as it arrives; one a welcome replays after a drop is old news and is not opened (`ViewBackend.openPage`).
+  A sign-in that shows a code or asks for a pasted answer shows it on that computer as in the window.
+  A sign-in whose page sends the browser back to the first mate's own loopback address finishes only when that browser runs on the same computer, or through the sign-in's code or a pasted address where the provider offers one.
+- **Card buttons.**
+  A card's button that opens a Settings section is sent and opens it there (`docs/view.md`, "Card buttons that open Settings"), but one that opens Devices, whose computers and phones cannot be changed from another computer yet, says so and sends nothing (`devicesNotHereWords`).
+  A request card's take-over of a task's browser says the browser cannot be shown there yet (`browserNotHereWords`).
+
 ## After an update
 
 Every account on a computer runs the one installed app, so updating it in one account replaces the program a command runs in another.
@@ -138,7 +164,8 @@ A note a crashed run left names a process that is gone or holds no lock, so the 
 
 ## Not yet
 
-The rest of INF-1228's plan follows in order, each on its own: control of everything the window does from another computer, a task's browser included (piece 6), and `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
+The rest of INF-1228's plan follows in order, each on its own: from another computer, its computers and phones, through the same pairing (piece 6), and a task's browser shown and taken over there (piece 6, the captain's answer browser=build); then `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
+Google's sign-in from another computer waits too: its page sends the browser back to the first mate's own loopback address.
 Claude signs in only where someone is logged in: a Mac nobody is logged in to keeps Claude's login locked in its Keychain, and the crew there uses other subscriptions (captain's pick on question 3).
 Moving an existing record to another account is planned separately (question 7).
 
@@ -152,3 +179,5 @@ With a settings file and the system folders as its path, a run never asks a stan
 `src/main/runStatus.test.ts` owns the pure output contract, private retained stop, legacy marker compatibility, unknown readings and the platform capability mapping.
 `tests/e2e/link-command.spec.ts` starts the built commands in the same isolated environment: with nothing running `link` says so and makes no data, a word it does not take exits 2, and beside a run a computer's link joins once, a phone's printed code holds its printed link and joins, and `--json` answers a new link; once the run stops it says so again.
 `src/main/linkCommand.test.ts` holds the words after `link`, the readings with no answering door, the printed code read back module by module, and the output; `src/core/devices/phoneDoor.test.ts` holds the door's answer and refusals.
+`tests/e2e/run-control.spec.ts` starts the built app as `<app> run` with the mock provider and Google's stand-in, joins a second app at its first launch with the link `link --json` prints, and from it opens Intelligence with a card's Open settings button, Usage and Integrations by command, saves a projects folder typed as its path there after a missing one is refused, and signs in to Google, whose page that app's browser opens; once the run stops its own data holds both.
+`src/core/connection/connection.test.ts`, `src/shared/ipc.test.ts`, `src/core/devices/homeLink.test.ts`, `src/main/shell.test.ts` and `src/core/core.test.ts` hold what such a view may ask and is refused, the welcome's field, a replayed page left unopened, and the page the real core sends instead of opening it; `src/renderer/src/devices/viewWords.test.tsx`, `src/renderer/src/settings/SettingsScreen.test.tsx` and `src/renderer/src/app/commandRefusals.test.ts` hold the sections, words and commands.

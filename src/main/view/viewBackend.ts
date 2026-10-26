@@ -9,7 +9,9 @@ import { splitDialAddress, type ThisMac } from "@shared/devices";
 import {
   type CoreInvokeChannel,
   type InvokeResponse,
+  isRunViewInvokeChannel,
   isViewInvokeChannel,
+  openPageSchema,
   PROTOCOL_VERSION,
   type PushChannel,
   parseInvokeRequest,
@@ -28,6 +30,10 @@ import { ViewLook } from "./viewLook";
  *   update notice: this Mac's installed app and the release page it opens.
  * - Everything else stays on the other Mac - its settings, sign-ins, voice,
  *   panels and Observe - and is refused here without being sent.
+ * - Of a first mate started by a command, nobody sits at that computer, so
+ *   its settings and sign-ins are asked from here too: every channel but
+ *   those that stay there (`RUN_HOME_ONLY_CHANNELS`, docs/run.md, "Control
+ *   from another computer"), and a page it would open opens here.
  *
  * Only the pushes a view shows reach the window; the other Mac's own look
  * is never one of them. A change asked while that Mac is out of reach is
@@ -48,6 +54,19 @@ export const VIEW_PUSHES: ReadonlySet<PushChannel> = new Set<PushChannel>([
   "inf:models:changed",
   "inf:tasks",
   "inf:tasks:delta",
+]);
+
+/**
+ * The pushes a view of a first mate started by a command shows as well:
+ * what its Settings follow - a sign-in's steps, the sign-ins where projects
+ * live, integrations and Diagnostics.
+ */
+export const RUN_VIEW_PUSHES: ReadonlySet<PushChannel> = new Set<PushChannel>([
+  "inf:auth:prompt",
+  "inf:auth:notice",
+  "inf:forges",
+  "inf:integrations",
+  "inf:sharing",
 ]);
 
 /** Channels answered from this Mac's own look. */
@@ -84,6 +103,12 @@ export type ViewBackendOptions = {
   onRemoved: () => void;
   /** This Mac's own installed app's update checker. */
   updates: UpdateChecker;
+  /**
+   * Opens a page in this computer's browser: one a first mate started by a
+   * command would have opened (`inf:app:open-page`). Absent, such a page is
+   * not opened.
+   */
+  openPage?: (url: string) => Promise<void>;
   /** Opens the link to the other Mac; tests stand in their own. */
   link?: (options: HomeLinkOptions) => Link;
   /**
@@ -123,9 +148,13 @@ export class ViewBackend {
       // A Mac that also runs this home's work says this connection controls it.
       as: "view",
       ...(options.dial ? { dial: options.dial } : {}),
-      onPush: (channel, payload) => {
+      onPush: (channel, payload, replayed) => {
         if (channel === "inf:cards") this.observeCards(payload);
-        if (VIEW_PUSHES.has(channel as PushChannel))
+        if (channel === "inf:app:open-page") this.openPage(payload, replayed);
+        if (
+          VIEW_PUSHES.has(channel as PushChannel) ||
+          (this.link.state().startedByCommand && RUN_VIEW_PUSHES.has(channel as PushChannel))
+        )
           options.broadcast(channel as PushChannel, payload);
       },
       onCaughtUp: (catchUp) => {
@@ -160,6 +189,7 @@ export class ViewBackend {
       heardAt: state.heardAt,
       caughtUp: this.caughtUp,
       ...(this.record.grant.kind === "mac" ? { runsWork: true } : {}),
+      ...(state.startedByCommand ? { startedByCommand: true } : {}),
     };
   }
 
@@ -170,8 +200,10 @@ export class ViewBackend {
   ): Promise<InvokeResponse<C>> {
     if (OWN_LOOK.has(channel)) return (await this.ownLook(channel, rawArgs)) as InvokeResponse<C>;
     if (OWN_APP.has(channel)) return (await this.ownApp(channel)) as InvokeResponse<C>;
-    if (!isViewInvokeChannel(channel))
-      throw new Error(`${channel} is answered only on ${HOME.the}.`);
+    const asks = this.link.state().startedByCommand
+      ? isRunViewInvokeChannel(channel)
+      : isViewInvokeChannel(channel);
+    if (!asks) throw new Error(`${channel} is answered only on ${HOME.the}.`);
     // The window's preload reads the answer against the contract, as it reads this Mac's own.
     return (await this.link.invoke(channel, rawArgs)) as InvokeResponse<C>;
   }
@@ -257,6 +289,20 @@ export class ViewBackend {
       default:
         throw new Error(`${channel} is not ${HERE.this}'s own.`);
     }
+  }
+
+  /**
+   * A page the first mate started by a command would have opened, opened
+   * here as it arrives. One a welcome sent again after a drop is old news
+   * and is not opened, and neither is one from any other first mate.
+   */
+  private openPage(payload: unknown, replayed: boolean): void {
+    if (replayed || !this.link.state().startedByCommand || !this.options.openPage) return;
+    const page = openPageSchema.safeParse(payload);
+    if (!page.success) return;
+    void this.options.openPage(page.data.url).catch(() => {
+      // The sign-in's own steps still offer its page to open by hand.
+    });
   }
 
   private observeCards(payload: unknown): void {

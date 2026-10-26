@@ -13,10 +13,10 @@ import type React from "react";
 import { useId, useState } from "react";
 import { Button, Input } from "../design";
 import { useRestLabel } from "../design/core/restLabel";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import { CopyCodeButton, useCopyCode } from "./CopyCode";
 import { CustomApiDialog, CustomApiForm } from "./CustomApiForm";
 import "./connectChips.css";
-import { HERE } from "@shared/deviceNames";
 
 /**
  * The provider chip row and the sign-in aside, shared by the first-launch
@@ -175,6 +175,7 @@ export function ProviderChips({
   custom,
 }: ProviderChipsProps) {
   const [customOpen, setCustomOpen] = useState(false);
+  const home = useFirstMatePlace();
   const groups = groupProviders(providers);
   const connected = new Map<string, AccountView>();
   for (const account of accounts) {
@@ -194,7 +195,7 @@ export function ProviderChips({
       const why =
         account.detail ??
         unavailable?.detail ??
-        (account.connected ? undefined : `${provider.name} is not signed in on ${HERE.this} yet.`);
+        (account.connected ? undefined : `${provider.name} is not signed in on ${home.this} yet.`);
       return (
         <ConnectedAccount
           key={provider.id}
@@ -217,7 +218,7 @@ export function ProviderChips({
     const name = claudeTaken
       ? place === "there"
         ? "Claude uses the login there"
-        : `Claude uses the login on ${HERE.this}`
+        : `Claude uses the login on ${home.this}`
       : account
         ? `Add another ${provider.name} account`
         : `Connect ${provider.name}`;

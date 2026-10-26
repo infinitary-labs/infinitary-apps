@@ -3829,6 +3829,59 @@ describe("the connection serves the core to paired devices", () => {
  * sets, keeps the link and the listener on 127.0.0.1 at its own port, wired
  * as the app wires it; a packaged build ignores it.
  */
+/**
+ * INF-1228, the captain's answer control=all: a first mate started by a
+ * command has no window, so the computer that controls it does everything
+ * that window would, its sign-ins included, and a page it would open in a
+ * browser opens there (docs/run.md, "Control from another computer").
+ */
+describe("a first mate started by a command, controlled from another computer", () => {
+  let userDataDir: string;
+  let core: Core;
+  let shell: ReturnType<typeof fakeHost>;
+  let connection: ReturnType<typeof startConnection>;
+  let at: string;
+
+  beforeAll(async () => {
+    userDataDir = scratchDir("infinitary-core-run-");
+    process.env.PI_OFFLINE = "1";
+    shell = fakeHost(userDataDir);
+    core = await startCore(shell.host, { startedByCommand: true });
+    at = `127.0.0.1:${await claimedPort()}`;
+    connection = startConnection({
+      dispatch: core.dispatch,
+      events: core.events,
+      devices: core.services.devices,
+      port: Number(at.split(":")[1]),
+      startedByCommand: true,
+    });
+  }, 60_000);
+
+  afterAll(async () => {
+    await connection?.close();
+    await core?.dispose();
+    rmSync(userDataDir, { recursive: true, force: true });
+  });
+
+  it("answers the controlling computer's Settings and opens a page there, never on its own computer", async () => {
+    const { link } = await core.dispatch("inf:devices:invite", [{ kind: "mac", at }]);
+    await connection.settled();
+    const view = await connectClient(
+      await claimLink(link, { ...AT_FIRST_LAUNCH, name: "MacBook Air" }),
+    );
+    expect(view.welcome.startedByCommand).toBe(true);
+    // A request only its window could ask before.
+    expect(await view.invoke("inf:accounts:list", [])).toEqual(
+      await core.dispatch("inf:accounts:list", []),
+    );
+
+    await core.dispatch("inf:update:open-release", []);
+    const page = await view.push((push) => push.channel === "inf:app:open-page");
+    expect((page.payload as { url: string }).url).toMatch(/^https:\/\//);
+    expect(shell.opened).toEqual([]);
+  });
+});
+
 describe("words typed on a paired Mac are the captain's own words", () => {
   // The captain's pick on FI3-709: a paired view is the captain at another
   // Mac, so what he types there may ask the Firstmate for an own-words change.

@@ -290,6 +290,10 @@
             "onHomeMac": {
               "type": "boolean"
             },
+            "startedByCommand": {
+              "type": "boolean",
+              "const": true
+            },
             "spellings": {
               "maxItems": 16,
               "type": "array",
@@ -57637,6 +57641,21 @@
           "deviceId",
           "providerId",
           "step"
+        ]
+      }
+    },
+    "inf:app:open-page": {
+      "payload": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4096
+          }
+        },
+        "required": [
+          "url"
         ]
       }
     }

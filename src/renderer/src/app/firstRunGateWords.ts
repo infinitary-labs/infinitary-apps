@@ -61,6 +61,15 @@ export function freshCheckThere(mac: string): string {
   return `Check it on ${mac}, where your first mate lives.`;
 }
 
+/**
+ * The line under the heading on a computer that controls a first mate a
+ * command started, which has no window of its own to sign in from
+ * (docs/run.md, "Control from another computer").
+ */
+export function gateRunLine(mac: string): string {
+  return `Connect one for your first mate on ${mac}. A command started it there, so it signs in from here.`;
+}
+
 export const FRESH_CHECK_ACTION = "Check again";
 export const FRESH_CHECK_PENDING = "Checking...";
 

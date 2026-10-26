@@ -45,6 +45,9 @@ const PUSHES: Record<Exclude<CorePushChannel, "inf:event">, ReadApi["onPush"]> =
   // once for every subscriber (./sharedPush.ts).
   "inf:tasks": (_channel, listener) => boardPushes(listener),
   "inf:tasks:delta": (_channel, listener) => boardDeltaPushes(listener),
+  // A first mate started by a command sends it to each computer that
+  // controls it, whose main process opens the page (docs/run.md): no window hears it.
+  "inf:app:open-page": () => () => {},
   "inf:auth:prompt": (_channel, listener) => window.infinitary.auth.onPrompt(listener),
   "inf:auth:notice": (_channel, listener) => window.infinitary.auth.onNotice(listener),
   // Personal extensions (talk-to-personalize Step 2): no read names these

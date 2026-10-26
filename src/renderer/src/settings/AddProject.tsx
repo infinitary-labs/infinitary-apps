@@ -4,8 +4,11 @@ import type { RepoSetupSpec, RepoView } from "@shared/repos";
 import { useEffect, useState } from "react";
 import { useShellStore } from "../app/store";
 import { Button, Input } from "../design";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { isView } from "../devices/viewWords";
 import {
   FOLDER_HERE_WORDS,
+  FOLDER_THERE_WORDS,
   newProjectWords,
   OTHER_HOST_WORDS,
   projectSignInWords,
@@ -13,6 +16,9 @@ import {
   TASK_KEY_WORDS,
   taskKeyTyped,
 } from "./addProjectWords";
+
+/** The add row's mode that takes a folder's path on the first mate's computer. */
+const FOLDER_MODE = "folder";
 
 /** Design skill components/projects/AddProject. Setup continues if Settings closes. */
 export function AddProject({
@@ -22,8 +28,13 @@ export function AddProject({
   repos: RepoView[];
   onAdded: (repo: RepoView) => void;
 }) {
+  const thisMac = useShellStore((s) => s.thisMac);
+  // A view adds a folder on the first mate's computer by its path there.
+  const there = isView(thisMac) ? thisMac.name : null;
+  const place = useFirstMatePlace();
   const [forges, setForges] = useState<ForgesView | null>(null);
   const [mode, setMode] = useState<string | null>(null);
+  const [folderPath, setFolderPath] = useState("");
   const [name, setName] = useState("");
   const [link, setLink] = useState("");
   const [search, setSearch] = useState("");
@@ -88,6 +99,7 @@ export function AddProject({
     setSearch("");
     setLink("");
     setName("");
+    setFolderPath("");
   };
   const add = async (spec: RepoSetupSpec, key: string) => {
     setBusy(key);
@@ -164,7 +176,10 @@ export function AddProject({
           size="sm"
           style={{ borderRadius: "var(--radius-pill)" }}
           disabled={!!busy}
-          onClick={() => void chooseFolder()}
+          {...(there ? { "aria-expanded": mode === FOLDER_MODE } : {})}
+          onClick={() =>
+            there ? chooseMode(mode === FOLDER_MODE ? null : FOLDER_MODE) : void chooseFolder()
+          }
         >
           <svg
             width="12"
@@ -177,7 +192,7 @@ export function AddProject({
           >
             <path d="M5 12h14M12 5v14" />
           </svg>
-          {FOLDER_HERE_WORDS}
+          {there ? FOLDER_THERE_WORDS.button(there) : FOLDER_HERE_WORDS}
         </Button>
         {forges?.hosts.map((entry) => (
           <Button
@@ -268,7 +283,29 @@ export function AddProject({
             paddingTop: "var(--space-3)",
           }}
         >
-          {mode === "new" ? (
+          {mode === FOLDER_MODE && there ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void add({ kind: "adopt", path: folderPath.trim() }, "folder");
+              }}
+            >
+              <label htmlFor="add-project-folder-path">{FOLDER_THERE_WORDS.label(there)}</label>
+              <div style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}>
+                <Input
+                  id="add-project-folder-path"
+                  value={folderPath}
+                  onChange={(event) => setFolderPath(event.target.value)}
+                  disabled={!!busy}
+                  required
+                  mono
+                />
+                <Button type="submit" size="sm" disabled={!!busy || !folderPath.trim()}>
+                  {busy === "folder" ? "Adding..." : FOLDER_THERE_WORDS.add}
+                </Button>
+              </div>
+            </form>
+          ) : mode === "new" ? (
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -289,7 +326,7 @@ export function AddProject({
                   {busy === "new" ? "Adding..." : "Start project"}
                 </Button>
               </div>
-              <p style={{ color: "var(--fg-3)" }}>{newProjectWords(folder)}</p>
+              <p style={{ color: "var(--fg-3)" }}>{newProjectWords(folder, place)}</p>
             </form>
           ) : (
             host && (

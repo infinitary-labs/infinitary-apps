@@ -9,6 +9,7 @@ import { dueMove } from "@core/folderMove/due";
 import { startInBackground } from "@core/helper/background";
 import { configureSettingsPath, hostPath } from "@core/hostEnv";
 import { startCore } from "@core/index";
+import { isAllowedOpenExternalUrl } from "@core/openExternal";
 import { dataFolderRefusal } from "@core/storage/dataFolderRefusal";
 import {
   SAVED_DATA_REFUSAL_TITLE,
@@ -575,7 +576,9 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
               }
             : {}),
         },
-        startCore: () => startCore(voiceHost),
+        // Started by a command, a page the core would open goes to each
+        // computer that controls it (docs/run.md, "Control from another computer").
+        startCore: () => startCore(voiceHost, { startedByCommand: windowless }),
         // The same core for paired devices (docs/connection.md). It listens
         // only while a device is paired or a link to pair one is open
         // (docs/devices.md).
@@ -594,6 +597,8 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
             build: (system, chip, kind) => core.services.farBuild(system, chip, kind),
             ...(standInContract ? { protocolVersion: standInContract } : {}),
             ...(standInSpelling ? { speaks: standInSpelling } : {}),
+            // ...and a view of it asks what its window would (docs/run.md).
+            startedByCommand: windowless,
           }),
         broadcast: (channel, payload) => {
           broadcast(channel, payload as never);
@@ -609,6 +614,11 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
           // only a person's app starts itself again.
           if (!isolatedUserDataDir) app.relaunch();
           app.quit();
+        },
+        // A page a first mate started by a command would open opens here,
+        // where the person is (docs/run.md, "Control from another computer").
+        openPage: async (url) => {
+          if (isAllowedOpenExternalUrl(url)) await host.openExternal(url);
         },
         // A view runs no core, and still tells this Mac when its own app has an update.
         updates: createInstalledUpdateChecker({

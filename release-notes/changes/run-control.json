@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "run-control-sign-in",
+      "kind": "feature",
+      "area": "devices",
+      "title": "Set up Infinitary started by a command from another computer",
+      "body": "When a command starts Infinitary with no window, the computer that controls it now shows its Settings: General, Projects, Intelligence, Usage and Integrations. Connect its subscriptions there, choose its projects folder by its path, and use a card's Open settings button. A sign-in page opens in the browser of the computer you are using.",
+      "picture": {
+        "dark": "run-control-sign-in-dark.webp",
+        "light": "run-control-sign-in-light.webp",
+        "alt": "Connect a subscription to begin, over a line saying a command started your first mate on Mac mini so it signs in from here, and the subscription chips."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -3,7 +3,8 @@ import { type RepoView, runsHereOnly } from "@shared/repos";
 import { type DeviceSignIns, devicePlace, signInPlace } from "@shared/signIns";
 import { useEffect, useState } from "react";
 import "./devices.css";
-import { COMPUTER, HERE } from "@shared/deviceNames";
+import { COMPUTER } from "@shared/deviceNames";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import { awayWord } from "./devicesWords";
 
 /**
@@ -69,8 +70,9 @@ export function RunsOnControl({
   computers: readonly DeviceSignIns[];
   onChoose: (deviceId: string | null) => void;
 }) {
+  const place = useFirstMatePlace();
   if (runsHereOnly(repo))
-    return <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>{HERE.This}</span>;
+    return <span style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}>{place.This}</span>;
   const macs = computers.filter((computer) => !computer.onThisMac);
   const users = computers.filter((computer) => computer.onThisMac);
   const gone =
@@ -91,7 +93,7 @@ export function RunsOnControl({
       onChange={(event) => onChoose(event.target.value || null)}
     >
       <option value={AUTOMATIC_COMPUTER}>{AUTOMATIC_WORD}</option>
-      <option value="">{HERE.This}</option>
+      <option value="">{place.This}</option>
       {macs.length > 0 && <optgroup label={`Your ${COMPUTER.many}`}>{macs.map(option)}</optgroup>}
       {users.length > 0 && <optgroup label="As another user">{users.map(option)}</optgroup>}
       {gone && repo.runsOn && (

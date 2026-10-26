@@ -1,4 +1,3 @@
-import { HERE } from "@shared/deviceNames";
 import {
   DIAGNOSTIC_EVENT_NAMES,
   DIAGNOSTIC_EVENTS,
@@ -16,6 +15,7 @@ import type React from "react";
 import { useEffect, useState } from "react";
 import termsSource from "../../../../DATA-TERMS.md?raw";
 import { Button, Disclosure, Empty, Switch } from "../design";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingError, SettingRow } from "./settingRows";
 import { useSettingSave } from "./useSettingSave";
 
@@ -45,7 +45,9 @@ import { useSettingSave } from "./useSettingSave";
 const CHANNELS: readonly SharingChannel[] = ["diagnostics", "contribution"];
 
 /** The install ID's promise, said wherever the ID is. */
-export const INSTALL_ID_NOTE = `The install ID is random, tied to nothing about you or ${HERE.this}, and replaced with a new one whenever Diagnostics is turned off and back on.`;
+export function installIdNote(place: { this: string }): string {
+  return `The install ID is random, tied to nothing about you or ${place.this}, and replaced with a new one whenever Diagnostics is turned off and back on.`;
+}
 
 /** The rows' words: one function, so a build's honesty is a fact of the view, not the copy. */
 export function sharingRowDescription(view: SharingView, channel: SharingChannel): string {
@@ -93,6 +95,7 @@ export function SharingSectionView({
   onViewer,
   onTerms,
 }: SharingSectionViewProps) {
+  const place = useFirstMatePlace();
   const pendingCount = preview
     ? preview.diagnostics.pending.length +
       (view?.termsPublished ? preview.contribution.pendingCount : 0)
@@ -131,7 +134,7 @@ export function SharingSectionView({
         ) : null}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, margin: "0 -6px 0" }}>
           <Disclosure
-            label={`What would leave ${HERE.this}`}
+            label={`What would leave ${place.this}`}
             count={pendingCount}
             open={viewerOpen}
             onToggle={onViewer}
@@ -236,6 +239,7 @@ const viewerNote: React.CSSProperties = {
 
 /** The one identifier every event carries, shown as it goes. */
 function InstallId({ installId }: { installId: string | null }) {
+  const place = useFirstMatePlace();
   return (
     <div data-sharing-install-id style={{ display: "flex", flexDirection: "column", gap: 4 }}>
       <div style={viewerHeading}>Anonymous install ID</div>
@@ -249,7 +253,7 @@ function InstallId({ installId }: { installId: string | null }) {
       >
         {installId ?? "none while Diagnostics is off"}
       </code>
-      <div style={viewerNote}>{INSTALL_ID_NOTE}</div>
+      <div style={viewerNote}>{installIdNote(place)}</div>
     </div>
   );
 }

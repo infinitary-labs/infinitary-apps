@@ -71,6 +71,7 @@ A Mac (`mac`, `docs/devices.md`) both controls that Mac's first mate from its wi
   The top bar shows the same update notice, with this Mac's version, channel and upgrade command, and View release opens that version's release page here.
   The other Mac is never asked: its own notice is about its own app.
 - Anything else is refused here, without being sent: "answered only on the computer where your first mate lives".
+- Of a first mate a command started, with nobody at that computer, every `home` channel but those that stay there is asked of it too (`docs/run.md`, "Control from another computer").
 
 Only the pushes a view shows reach the window (`VIEW_PUSHES`): the feed's events, the cards and their threads, quota, model names and the task board.
 The other Mac's look, settings, sign-ins, voice and panels are its own.
@@ -129,6 +130,7 @@ Settings shows four tabs: Appearance, this Mac's own look ("Set on this computer
 MacBook Pro keeps its own."); Keyboard, this Mac's own keys; Automation, the other Mac's own automations, read and changed there, where they run (`docs/automation.md`, "On a computer that controls another"); and Devices, which on a view is `ControllingTab` (`src/renderer/src/settings/ControllingTab.tsx`): which Mac this one controls, when it joined and at what address, and Leave.
 Everything else stays on the other Mac: its settings, sign-ins, projects, voice, panels, Observe, notifications and Diagnostics.
 Its Notifications switch governs this Mac's notifications too ("Notifications", above).
+Of a first mate a command started, General, Projects, Intelligence, Usage and Integrations show here too, asked of that computer (`docs/run.md`, "Control from another computer").
 
 ## Card buttons that open Settings
 
@@ -139,6 +141,7 @@ Instead `actOnCard` sends nothing, and the card says where to do it (`settingsTh
 Its settings and sign-ins stay there."
 The card stays on both Macs, so its button is still there on the other Mac.
 The card's other buttons, such as Move to Grok beside Sign in, are sent as before, and while changes are off every button is marked off.
+Of a first mate a command started, such a button is sent and opens its section here, but one that opens Devices says that computer's computers and phones cannot be changed from here yet (`docs/run.md`, "Control from another computer").
 
 ## A task's browser on a view
 
@@ -156,6 +159,8 @@ A task's browser shows its page only in the window of the Mac where the first ma
   When the sign-in cannot be used, the browser stays paused there and the feed says why, as on that Mac (`docs/task-browser.md`, "Saved sign-ins").
 - **The view itself.**
   The card's door and the record's Open still open the task's browser view, which shows the stopped panel's shape in place of a page (`browserShownThereWords`): "This task's browser shows only on MacBook Pro." over "Watch it and take control of it there.", with no Open again.
+- **Of a first mate a command started**, nobody can watch it there, and showing it here is the next part of INF-1228's piece 6 (`docs/run.md`, "Not yet").
+  Until then the take-over and the view say so (`browserNotHereWords`): "This task's browser on MacBook Pro cannot be shown here yet.", the view over "A command started Infinitary on MacBook Pro, with no window to show it in."
 
 ## Leave, and Remove at the other Mac
 
@@ -180,8 +185,9 @@ The first-launch gate stays derived (`docs/first-launch.md`); the line only says
 - `src/core/devices/homeLink.test.ts`: the device's side against the real connection and pairing - welcome with the other Mac's name, a read held while reaching, a change refused while out of reach and never sent, an exact catch-up after a drop, a request in flight refused and not asked again, Remove seen live and while away, Leave heard and unheard.
 - `src/main/shell.test.ts`: the switch - joining stops this Mac's core and asks the other Mac, a view's own look, what is refused without being sent, pushes filtered, starting as a view with no core, Leave in place or by relaunch, Remove there, each join refusal, and this Mac's own update notice and release page while the other Mac is newer, never asked of it.
   Its notifications: the other Mac's new card and finished report post here as that Mac's notifier makes them, never with this window in front or for what was there at joining, follow that Mac's switch, post after a replay and seed after a reload.
+  Of a first mate a command started: what it asks of that Mac, its sign-in's steps shown, a page it sends opened here once and a replayed one not, and none of that from a first mate with its window.
 - `src/core/core.test.ts`, "the connection serves the core to paired devices": a card picture by its name from the real core, a demo recording's pieces with its size, a project font by its name, and Leave named in the feed.
-- `src/renderer/src/devices/viewWords.test.tsx`: the words, the top line, the join aside's steps and Leave's question.
+- `src/renderer/src/devices/viewWords.test.tsx`: the words, the top line, the join aside's steps and Leave's question, and of a first mate a command started the card buttons it sends, its browser's words and where its Settings say it lives.
 - `src/renderer/src/attachments/intake.test.ts`: on a view, a dropped or chosen picture or text file is applied and any other file is refused by one notice, never a path.
 - `src/shared/cards.test.ts` and `src/core/orchestrator/crewSupervisor.test.ts`: which buttons open Settings, and that the core's answer to each click agrees.
 - `src/renderer/src/app/store.test.ts`, "card action receipts": on a view, a button that opens Settings sends nothing and the card says where to do it, while its other buttons are sent; a request card's take-over sends nothing and says so, while its saved sign-in is sent and opens no browser view.

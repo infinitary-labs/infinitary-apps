@@ -378,6 +378,13 @@ export const homeFrameSchema = z.union([
      * say (protocol 9.1).
      */
     onHomeMac: z.boolean().optional(),
+    /**
+     * For a view: the first mate was started by a command, with no window,
+     * so a view asks everything its window would but what stays there
+     * (`RUN_HOME_ONLY_CHANNELS`, docs/run.md "Control from another
+     * computer"). Absent otherwise, and from an older home.
+     */
+    startedByCommand: z.literal(true).optional(),
     spellings: spellingsSchema,
     changes: changesSchema,
   }),

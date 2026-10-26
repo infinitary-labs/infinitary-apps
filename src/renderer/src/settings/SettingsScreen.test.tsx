@@ -18,7 +18,7 @@ describe("Settings column", () => {
     expect(style.boxSizing).toBe("border-box");
   });
 
-  it("offers a Mac that controls another only its own keys, its own look, the automations that run there and Leave", () => {
+  it("offers a Mac that controls another only its own keys, its own look, the automations that run there and Leave, and all but Observe of a first mate started by a command", () => {
     const remove = registerBuiltinPlugin(pluginHost);
     try {
       const sections = orderSettingsSections(pluginHost.settingsSections.list());
@@ -40,6 +40,22 @@ describe("Settings column", () => {
       ]);
       expect(sectionsFor(sections, { role: "home", left: null })).toEqual(sections);
       expect(sectionsFor(sections, null)).toEqual(sections);
+      // INF-1228, the captain's answer control=all: nobody sits at a first
+      // mate started by a command, so its Settings are opened from here,
+      // beside this Mac's own look and keys.
+      expect(
+        sectionsFor(sections, { ...view, startedByCommand: true }).map((section) => section.id),
+      ).toEqual([
+        "general",
+        "appearance",
+        "keyboard",
+        "projects",
+        "subscriptions",
+        "usage",
+        "automation",
+        "integrations",
+        "devices",
+      ]);
     } finally {
       remove();
     }

@@ -46,6 +46,7 @@ import {
   type CoreInvokeChannel,
   contractAccess,
   invokeContract,
+  isRunViewInvokeChannel,
   isViewInvokeChannel,
   isWorkInvokeChannel,
   PROTOCOL_VERSION,
@@ -132,16 +133,22 @@ export type PairedDevices = {
 
 /**
  * What a connection in each role may ask (docs/devices.md): a view the
- * channels whose reach is `views`, as the captain at another Mac; a
- * computer's work the channels whose reach is `work`, as itself, about a
- * conversation it holds for this home (src/shared/work.ts).
+ * channels whose reach is `views`, as the captain at another Mac, and of a
+ * first mate started by a command every `home` channel but those that stay
+ * there (docs/run.md, "Control from another computer"); a computer's work
+ * the channels whose reach is `work`, as itself, about a conversation it
+ * holds for this home (src/shared/work.ts).
  */
 function askerOf(
   device: PairedDevice,
   role: DeviceRole,
   channel: CoreInvokeChannel,
+  startedByCommand: boolean,
 ): CoreActor | null {
-  if (role === "view") return isViewInvokeChannel(channel) ? { kind: "captain" } : null;
+  if (role === "view")
+    return (startedByCommand ? isRunViewInvokeChannel(channel) : isViewInvokeChannel(channel))
+      ? { kind: "captain" }
+      : null;
   return isWorkInvokeChannel(channel) ? { kind: "device", deviceId: device.id } : null;
 }
 
@@ -219,6 +226,12 @@ export type ConnectionOptions = {
   maxBufferedBytes?: number;
   /** Where the connection says it could not listen. */
   onProblem?: (text: string) => void;
+  /**
+   * The first mate was started by a command, with no window (docs/run.md):
+   * a view's welcome says so, and a view asks every `home` channel but
+   * those that stay on this computer (`RUN_HOME_ONLY_CHANNELS`).
+   */
+  startedByCommand?: boolean;
   /**
    * This Mac's own name, which the welcome tells a device (a view says the
    * Mac it controls by it). Read at each welcome; absent, the welcome names
@@ -398,6 +411,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
   const onProblem = options.onProblem ?? ((text) => console.warn(`[connection] ${text}`));
   const homeVersion = options.protocolVersion ?? PROTOCOL_VERSION;
   const homeChanges = options.changes ?? CONTRACT_CHANGES.names;
+  const startedByCommand = options.startedByCommand === true;
   const speaks = options.speaks ?? OWN_SPELLING;
   let run: Run | null = null;
   let closed = false;
@@ -616,6 +630,7 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
           ...(role === "work" && client.device.onThisMac !== undefined
             ? { onHomeMac: client.device.onThisMac }
             : {}),
+          ...(role === "view" && startedByCommand ? { startedByCommand: true } : {}),
           spellings: SPELLINGS,
           ...(homeChanges.length ? { changes: homeChanges } : {}),
         }),
@@ -660,7 +675,9 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
         return;
       }
       const channel = frame.channel as CoreInvokeChannel;
-      const actor = client.role ? askerOf(client.device, client.role, channel) : null;
+      const actor = client.role
+        ? askerOf(client.device, client.role, channel, startedByCommand)
+        : null;
       if (!actor) {
         reply({
           ok: false,

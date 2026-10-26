@@ -18,6 +18,38 @@ export function isView(thisMac: ThisMac | null): thisMac is ViewMac {
 }
 
 /**
+ * This app controls a first mate started by a command (docs/run.md,
+ * "Control from another computer"): nobody sits at that computer, so its
+ * Settings, its sign-ins and the card buttons that open them are here.
+ */
+export function controlsAll(thisMac: ThisMac | null): boolean {
+  return isView(thisMac) && thisMac.startedByCommand === true;
+}
+
+/**
+ * Whether this app shows a Settings section: all of them where the first mate
+ * lives; on a Mac that controls another, those it keeps (docs/view.md), and
+ * of a first mate started by a command those nobody could open there.
+ */
+export function showsSection(
+  thisMac: ThisMac | null,
+  section: { readonly onAView?: boolean; readonly onAViewOfACommand?: boolean },
+): boolean {
+  if (!isView(thisMac)) return true;
+  return section.onAView === true || (controlsAll(thisMac) && section.onAViewOfACommand === true);
+}
+
+/**
+ * Where the first mate lives, as a sentence in its Settings names it: this
+ * computer, or that computer by its name from one that controls all of it.
+ */
+export function firstMatePlace(thisMac: ThisMac | null): { this: string; This: string } {
+  return isView(thisMac) && controlsAll(thisMac)
+    ? { this: thisMac.name, This: thisMac.name }
+    : HERE;
+}
+
+/**
  * Whether this Mac may change anything on the other one right now: only
  * while it is in reach and the two Firstmates are close enough. Changes
  * are refused at once otherwise, and never sent later.
@@ -60,11 +92,32 @@ export function browserThereWords(mac: ViewMac): string {
 }
 
 /**
- * What a card's button says when it is done only on the other Mac, so this
- * one never sends it: one that opens one of its Settings sections, or one
- * that hands the captain a task's browser. Null for every other button.
+ * What a card's button that opens the Devices section of a first mate
+ * started by a command says: its computers and phones are not changed from
+ * another computer yet, and nobody sits at that one.
+ */
+export function devicesNotHereWords(mac: ViewMac): string {
+  return `${mac.name}'s computers and phones cannot be changed from here yet.`;
+}
+
+/** What a request card's take-over button of a first mate started by a command says. */
+export function browserNotHereWords(mac: ViewMac): string {
+  return `This task's browser on ${mac.name} cannot be shown here yet.`;
+}
+
+/**
+ * What a card's button says when this app never sends it: one that opens
+ * one of the other Mac's Settings sections, or one that hands the captain a
+ * task's browser. Of a first mate started by a command, every Settings
+ * section is here but Devices. Null for every other button.
  */
 export function doneThereWords(mac: ViewMac, action: Pick<CardAction, "effect">): string | null {
+  if (mac.startedByCommand === true) {
+    if (action.effect?.kind === "open" && action.effect.target === "devices")
+      return devicesNotHereWords(mac);
+    if (takesTaskBrowser(action)) return browserNotHereWords(mac);
+    return null;
+  }
   if (opensSettings(action)) return settingsThereWords(mac);
   if (takesTaskBrowser(action)) return browserThereWords(mac);
   return null;
@@ -72,6 +125,11 @@ export function doneThereWords(mac: ViewMac, action: Pick<CardAction, "effect">)
 
 /** What a task's browser view shows in place of its page, which shows only on the other Mac. */
 export function browserShownThereWords(mac: ViewMac): { lead: string; detail: string } {
+  if (mac.startedByCommand === true)
+    return {
+      lead: browserNotHereWords(mac),
+      detail: `A command started Infinitary on ${mac.name}, with no window to show it in.`,
+    };
   return {
     lead: `This task's browser shows only on ${mac.name}.`,
     detail: "Watch it and take control of it there.",

@@ -2,7 +2,7 @@ import type { ThisMac } from "@shared/devices";
 import { type KeyboardEvent, useEffect, useId, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
 import { hasShellPainted } from "../design/reveals";
-import { isView } from "../devices/viewWords";
+import { showsSection } from "../devices/viewWords";
 import type { SettingsSectionContribution } from "../plugins/contributions";
 import { FrameMount } from "../plugins/frames/FrameMount";
 import { orderSettingsSections, pluginHost, useContributions } from "../plugins/host";
@@ -58,12 +58,11 @@ function useOfferedSections(sections: readonly SettingsSectionContribution[]) {
   );
 }
 
-/** On a Mac that controls another, only the sections it keeps (docs/view.md); otherwise all. */
-export function sectionsFor<T extends Pick<SettingsSectionContribution, "onAView">>(
-  sections: readonly T[],
-  thisMac: ThisMac | null,
-): T[] {
-  return isView(thisMac) ? sections.filter((section) => section.onAView === true) : [...sections];
+/** The sections this app shows (`showsSection`, docs/view.md). */
+export function sectionsFor<
+  T extends Pick<SettingsSectionContribution, "onAView" | "onAViewOfACommand">,
+>(sections: readonly T[], thisMac: ThisMac | null): T[] {
+  return sections.filter((section) => showsSection(thisMac, section));
 }
 
 export function SettingsScreen() {

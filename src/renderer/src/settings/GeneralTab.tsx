@@ -16,6 +16,7 @@ import { type ReactNode, useCallback, useEffect, useRef, useState } from "react"
 import { useShellStore } from "../app/store";
 import { Button, Input, KeyCap, Switch } from "../design";
 import { thisDesktop } from "../design/core/desktop";
+import { isView } from "../devices/viewWords";
 import { purgedTasksText, YOUR_PANELS_WORDS } from "./generalWords";
 import { LocalSeatSection } from "./LocalSeatSection";
 import { OutsideDataRow } from "./OutsideDataRow";
@@ -454,6 +455,10 @@ function DictationRow() {
 }
 
 export function GeneralTab() {
+  // On a computer that controls a first mate a command started, its login,
+  // Dock, dictation and panels are that computer's own, with nobody there:
+  // their rows stay off this tab (docs/run.md, "Control from another computer").
+  const remote = isView(useShellStore((s) => s.thisMac));
   // Presence (D-17): dock on, start-at-login off by default; both live in
   // main (login item with the OS, dock visibility persisted).
   const presenceSave = useSettingSave(() => window.infinitary.presence.get());
@@ -472,9 +477,9 @@ export function GeneralTab() {
   const [kept, setKept] = useState<readonly KeptOutsideData[]>([]);
 
   useEffect(() => {
-    void presenceSave.refresh();
+    if (!remote) void presenceSave.refresh();
     void notificationSave.refresh();
-  }, [presenceSave.refresh, notificationSave.refresh]);
+  }, [remote, presenceSave.refresh, notificationSave.refresh]);
 
   useEffect(() => {
     let live = true;
@@ -529,23 +534,25 @@ export function GeneralTab() {
     <div>
       <SectionLabel>General</SectionLabel>
       <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
-        <SettingRow
-          id="start-at-login"
-          error={presenceField === "startAtLogin" ? presenceSave.error : null}
-          title="Start at login"
-          description="Launch Infinitary when you sign in."
-          control={
-            <Switch
-              checked={presence?.startAtLogin ?? false}
-              disabled={!presence || presenceSave.saving}
-              onChange={(checked) =>
-                presence && savePresence({ ...presence, startAtLogin: checked }, "startAtLogin")
-              }
-            />
-          }
-        />
+        {!remote && (
+          <SettingRow
+            id="start-at-login"
+            error={presenceField === "startAtLogin" ? presenceSave.error : null}
+            title="Start at login"
+            description="Launch Infinitary when you sign in."
+            control={
+              <Switch
+                checked={presence?.startAtLogin ?? false}
+                disabled={!presence || presenceSave.saving}
+                onChange={(checked) =>
+                  presence && savePresence({ ...presence, startAtLogin: checked }, "startAtLogin")
+                }
+              />
+            }
+          />
+        )}
         {/* Only a Mac has a Dock (design skill readme, "Linux desktop conventions"). */}
-        {thisDesktop().dock && (
+        {!remote && thisDesktop().dock && (
           <SettingRow
             id="show-in-dock"
             error={presenceField === "showInDock" ? presenceSave.error : null}
@@ -575,8 +582,8 @@ export function GeneralTab() {
             />
           }
         />
-        <DictationRow />
-        <YourPanelsRow />
+        {!remote && <DictationRow />}
+        {!remote && <YourPanelsRow />}
         <SettingRow
           id="purge-task-data"
           title="Purge task data"

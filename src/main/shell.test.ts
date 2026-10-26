@@ -52,7 +52,7 @@ function shown(id: string, overrides: Partial<Card> = {}): Card {
 
 /** The Mac where Firstmate lives: what it was asked, its pairing, and links to it. */
 async function otherMac(
-  options: { protocolVersion?: string } = {},
+  options: { protocolVersion?: string; startedByCommand?: boolean } = {},
   pairingOptions: { joinsFromAnotherMac?: boolean } = {},
 ) {
   const asked: string[] = [];
@@ -217,6 +217,8 @@ function shell(
   const restartWindows = vi.fn();
   const relaunch = vi.fn();
   const pushes: { channel: string; payload: unknown }[] = [];
+  // The pages this Mac opened in its browser for the other Mac.
+  const opened: string[] = [];
   const joined = new JoinedHome(joinedDir, () => {});
   const startConnectionSpy = vi.fn(
     (): HomeConnection => ({
@@ -245,6 +247,9 @@ function shell(
       show: (notification) => notified.push(notification),
     },
     deviceName: async () => "MacBook Air",
+    openPage: async (url) => {
+      opened.push(url);
+    },
     restartWindows,
     relaunch,
     view: {
@@ -276,6 +281,7 @@ function shell(
     restartWindows,
     relaunch,
     pushes,
+    opened,
     notified,
     window,
     sockets,
@@ -457,6 +463,70 @@ describe("the app as a view of another Mac", () => {
           (push.payload as { contact: string }).contact === "closed",
       ),
     ).toBe(true);
+  });
+
+  // INF-1228, the captain's answer control=all: nobody sits at a first mate
+  // started by a command, so this Mac does what its window would there.
+  it("of a first mate started by a command, asks what its window would and opens the pages it sends", async () => {
+    const mini = await otherMac({ startedByCommand: true });
+    const air = shell();
+    await air.shell.start();
+    await air.shell.join(await mini.link());
+    await air.until(() => air.view().contact === "in-reach");
+    expect(air.view()).toMatchObject({ role: "view", startedByCommand: true });
+
+    // Its Settings are asked there; the stand-in core's refusal is its answer.
+    await expect(air.shell.dispatch("inf:settings:routing:get", [])).rejects.toThrow(
+      "malformed request",
+    );
+    expect(mini.asked).toContain("inf:settings:routing:get");
+    // This Mac's own look stays here, and its devices stay there.
+    await air.shell.dispatch("inf:settings:appearance:set", [{ theme: "dark", size: 110 }]);
+    expect(air.shell.preferences.get().appearance).toEqual({ theme: "dark", size: 110 });
+    await expect(
+      air.shell.dispatch("inf:devices:invite", [{ kind: "view", at: "127.0.0.1:1" }]),
+    ).rejects.toThrow("answered only on the computer where your first mate lives");
+    expect(mini.asked.filter((channel) => /appearance|devices/.test(channel))).toEqual([]);
+
+    // A sign-in's steps reach the window, and its page opens in this Mac's browser.
+    const page = "https://auth.openai.com/oauth/authorize?client_id=app";
+    mini.events.emit("inf:auth:notice", {
+      providerId: "openai-codex",
+      kind: "auth_url",
+      message: "Finish signing in with your browser.",
+      url: page,
+    });
+    mini.events.emit("inf:app:open-page", { url: page });
+    await air.until(() => air.opened.length === 1);
+    expect(air.opened).toEqual([page]);
+    expect(air.pushes.map((push) => push.channel)).toContain("inf:auth:notice");
+    expect(air.pushes.map((push) => push.channel)).not.toContain("inf:app:open-page");
+
+    // One sent while this Mac was away is old news when the welcome replays it.
+    air.sockets.at(-1)?.terminate();
+    mini.events.emit("inf:app:open-page", { url: `${page}&again` });
+    mini.events.emit("inf:models:changed", { ok: true });
+    await air.until(() => air.pushes.some((push) => push.channel === "inf:models:changed"));
+    expect(air.opened).toEqual([page]);
+  });
+
+  it("of a first mate with its window, shows neither its sign-ins nor the pages it would open", async () => {
+    const pro = await otherMac();
+    const air = shell();
+    await air.shell.start();
+    await air.shell.join(await pro.link());
+    await air.until(() => air.view().contact === "in-reach");
+    expect(air.view().startedByCommand).toBeUndefined();
+    pro.events.emit("inf:auth:notice", {
+      providerId: "openai-codex",
+      kind: "info",
+      message: "Signing in.",
+    });
+    pro.events.emit("inf:app:open-page", { url: "https://auth.openai.com/oauth/authorize" });
+    pro.events.emit("inf:models:changed", { ok: true });
+    await air.until(() => air.pushes.some((push) => push.channel === "inf:models:changed"));
+    expect(air.opened).toEqual([]);
+    expect(air.pushes.map((push) => push.channel)).not.toContain("inf:auth:notice");
   });
 
   it("answers this Mac's own update notice while the other Mac is newer, and never asks it", async () => {

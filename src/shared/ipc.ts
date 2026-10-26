@@ -2942,6 +2942,81 @@ export function isViewInvokeChannel(channel: CoreInvokeChannel): channel is View
 
 export const VIEW_INVOKE_CHANNELS = CORE_INVOKE_CHANNELS.filter(isViewInvokeChannel);
 
+/**
+ * The `home` channels a paired view still may not ask when the first mate
+ * was started by a command (docs/run.md, "Control from another computer").
+ * Nobody sits at that computer, so a view asks every other one its window
+ * would. These stay there: its computers and phones and the address they
+ * find it at, a task's browser and a page from a task's project, and what
+ * is only ever that computer's own - its look, voice, panels and their
+ * extensions, Knowledge, Observe, release notes, Dock and update.
+ */
+export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<CoreInvokeChannel>([
+  "inf:devices:list",
+  "inf:devices:invite",
+  "inf:devices:add",
+  "inf:devices:nearby",
+  "inf:devices:update",
+  "inf:devices:remove",
+  "inf:devices:keep",
+  "inf:devices:try-again",
+  "inf:devices:change-address",
+  "inf:devices:shown",
+  "inf:devices:stop",
+  "inf:devices:addresses",
+  "inf:devices:address:set",
+  "inf:cards:open-page",
+  "inf:browser:stop",
+  "inf:browser:reopen",
+  "inf:browser:take",
+  "inf:browser:return",
+  "inf:settings:appearance:set",
+  "inf:settings:layout:set",
+  "inf:settings:panels:set",
+  "inf:settings:dictation:get",
+  "inf:settings:dictation:set",
+  "inf:voice:status",
+  "inf:voice:ensure-model",
+  "inf:plugins:fetch",
+  "inf:plugins:personal:list",
+  "inf:plugins:personal:mounts",
+  "inf:plugins:invoke",
+  "inf:plugins:db",
+  "inf:sql:query",
+  "inf:knowledge:enabled",
+  "inf:knowledge:collections",
+  "inf:knowledge:graph",
+  "inf:knowledge:concepts",
+  "inf:knowledge:findings",
+  "inf:knowledge:entry",
+  "inf:knowledge:directions",
+  "inf:knowledge:direction",
+  "inf:knowledge:direction:set",
+  "inf:knowledge:refs",
+  "inf:knowledge:uses",
+  "inf:observe:enabled",
+  "inf:observe:sessions",
+  "inf:observe:detail",
+  "inf:observe:live",
+  "inf:release-notes:list",
+  "inf:release-notes:show",
+  "inf:presence:get",
+  "inf:presence:set",
+  "inf:update:status",
+  "inf:update:open-release",
+  "inf:update:install",
+]);
+
+/**
+ * Whether a paired view may ask a core channel of a first mate started by
+ * a command: a `views` channel, or a `home` one outside
+ * `RUN_HOME_ONLY_CHANNELS`.
+ */
+export function isRunViewInvokeChannel(channel: CoreInvokeChannel): boolean {
+  const { reach } = invokeContract[channel];
+  return reach === "views" || (reach === "home" && !RUN_HOME_ONLY_CHANNELS.has(channel));
+}
+
 /** Core channels only a computer that runs work asks (see ChannelReach). */
 export type WorkInvokeChannel = {
   [C in CoreInvokeChannel]: (typeof invokeContract)[C]["reach"] extends "work" ? C : never;
@@ -2995,6 +3070,10 @@ const recordedKeySchema = z.object({
   shift: z.boolean(),
 });
 export type RecordedKey = z.infer<typeof recordedKeySchema>;
+
+/** A page to open in a browser, by its address (`inf:app:open-page`). */
+export const openPageSchema = z.object({ url: z.string().min(1).max(4096) }).strict();
+export type OpenPage = z.infer<typeof openPageSchema>;
 
 /** Push channels (main to renderer). Payloads are validated in the preload. */
 export const pushContract = {
@@ -3063,6 +3142,11 @@ export const pushContract = {
   "inf:window:state": { payload: windowStateSchema, surface: "host" },
   // One picture of a watched task's page, to the window that watches it.
   "inf:browser:frame": { payload: taskBrowserFrameSchema, surface: "host" },
+  // A page a first mate started by a command would open in a browser, such
+  // as a sign-in's: nobody sits at that computer, so each computer that
+  // controls it opens the page instead (docs/run.md, "Control from another
+  // computer"). Only such a first mate sends it.
+  "inf:app:open-page": { payload: openPageSchema, surface: "core" },
 } as const;
 
 export type PushChannel = keyof typeof pushContract;

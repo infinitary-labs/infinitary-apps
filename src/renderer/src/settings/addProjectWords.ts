@@ -4,13 +4,25 @@ import { HERE } from "../../../shared/deviceNames";
 /** Said after adding a folder that had no git yet. */
 export const STARTED_GIT_WORDS = "Started git in this folder with an empty first commit.";
 
-/** Where a new project starts, and where its changes merge. */
-export function newProjectWords(folder: string): string {
-  return `An empty project in ${folder}. Its changes merge on ${HERE.this}; you can change that in its row.`;
+/** Where a new project starts, and where its changes merge: this computer, or the first mate's by its name. */
+export function newProjectWords(folder: string, place: { this: string } = HERE): string {
+  return `An empty project in ${folder}. Its changes merge on ${place.this}; you can change that in its row.`;
 }
 
 /** The button that adds a folder already on this computer. */
 export const FOLDER_HERE_WORDS = `Folder on ${HERE.this}`;
+
+/**
+ * On a computer that controls a first mate a command started, a folder is
+ * added from that computer by its path there, since a folder picker here
+ * shows only this computer's folders (docs/run.md, "Control from another
+ * computer").
+ */
+export const FOLDER_THERE_WORDS = {
+  button: (mac: string) => `Folder on ${mac}`,
+  label: (mac: string) => `The folder's path on ${mac}`,
+  add: "Add folder",
+} as const;
 
 /** Said after a pasted link for a host other than the one chosen. */
 export const OTHER_HOST_WORDS = "For another host, ask your first mate.";

@@ -1,4 +1,3 @@
-import { HERE } from "@shared/deviceNames";
 import {
   AUTOMATIC_SIGN_IN_LABEL,
   AUTOMATIC_SIGN_IN_NOTICE,
@@ -7,6 +6,7 @@ import {
 } from "@shared/taskBrowser";
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "../design";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingError } from "./settingRows";
 
 /**
@@ -166,6 +166,7 @@ export function WebsiteSignInsSectionView({
 }
 
 export function WebsiteSignInsSection() {
+  const place = useFirstMatePlace();
   const [view, setView] = useState<SavedSignInsView | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -183,7 +184,7 @@ export function WebsiteSignInsSection() {
       const result = await window.infinitary.browser.removeSignIn(site);
       if (!result.ok) setError(result.text);
     } catch {
-      setError(`${HERE.This} could not remove that sign-in right now. Try again.`);
+      setError(`${place.This} could not remove that sign-in right now. Try again.`);
     } finally {
       setRemoving(null);
       await load();
@@ -201,7 +202,7 @@ export function WebsiteSignInsSection() {
       );
       if (!result.ok) setError(result.text);
     } catch {
-      setError(`${HERE.This} could not change that permission right now.`);
+      setError(`${place.This} could not change that permission right now.`);
     } finally {
       setRemoving(null);
       await load();

@@ -75,6 +75,11 @@ export type ShellOptions = {
   relaunch: () => void;
   /** This Mac's own installed app's update checker, which a view answers its update notice from. */
   updates: UpdateChecker;
+  /**
+   * Opens a page in this computer's browser, for a view of a first mate
+   * started by a command (`ViewBackendOptions.openPage`).
+   */
+  openPage?: (url: string) => Promise<void>;
   now?: () => number;
   /** Opens a view; tests stand in their own link. */
   view?: Pick<ViewBackendOptions, "link">;
@@ -427,6 +432,7 @@ export class Shell {
       onThisMac: (thisMac) => this.options.broadcast("inf:devices:this-mac", thisMac),
       onRemoved: () => void this.removedThere(),
       updates: this.options.updates,
+      ...(this.options.openPage ? { openPage: this.options.openPage } : {}),
       ...(this.options.view?.link ? { link: this.options.view.link } : {}),
     });
     this.mode = { kind: "view", view };

@@ -16,7 +16,7 @@ import {
   shownCard,
   useShellStore,
 } from "../app/store";
-import { isView } from "../devices/viewWords";
+import { showsSection } from "../devices/viewWords";
 import { hearFrameOut } from "./frames/frameFocus";
 import { pluginHost } from "./host";
 import { useLitTaskId } from "./point/litTask";
@@ -240,7 +240,7 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
       }
       const offered = pluginHost.settingsSections.get(parsed.data.section);
       const shell = useShellStore.getState();
-      if (!offered || (isView(shell.thisMac) && offered.onAView !== true)) return false;
+      if (!offered || !showsSection(shell.thisMac, offered)) return false;
       if (!(await page.gate())) return false;
       useShellStore.setState({
         view: "settings",

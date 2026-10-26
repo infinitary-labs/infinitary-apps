@@ -713,6 +713,12 @@ export const thisMacSchema = z.discriminatedUnion("role", [
     heardAt: z.number().int().nonnegative().nullable(),
     caughtUp: z.number().int().nonnegative(),
     runsWork: z.boolean().optional(),
+    /**
+     * The first mate there was started by a command, with no window, so
+     * this app controls everything its window would (docs/run.md, "Control
+     * from another computer").
+     */
+    startedByCommand: z.boolean().optional(),
   }),
 ]);
 export type ThisMac = z.infer<typeof thisMacSchema>;

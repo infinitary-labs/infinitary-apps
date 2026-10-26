@@ -9,11 +9,13 @@ import {
   HOST_INVOKE_CHANNELS,
   INVOKE_CHANNELS,
   invokeContract,
+  isRunViewInvokeChannel,
   PLACED_WORK_SINCE,
   PROTOCOL_VERSION,
   PUSH_CHANNELS,
   parseInvokeRequest,
   pushContract,
+  RUN_HOME_ONLY_CHANNELS,
   speaksChangePresentations,
   takesWork,
   VIEW_INVOKE_CHANNELS,
@@ -383,6 +385,16 @@ describe("ipc contract", () => {
     ]);
     for (const channel of WORK_INVOKE_CHANNELS)
       expect(VIEW_INVOKE_CHANNELS as readonly string[]).not.toContain(channel);
+  });
+
+  // INF-1228, the captain's answer control=all: a view of a first mate
+  // started by a command asks what its window would, but for the requests
+  // that stay on that computer, each one only its window could ask.
+  it("lets a view of a first mate started by a command ask every request of its window but those that stay there", () => {
+    for (const channel of RUN_HOME_ONLY_CHANNELS)
+      expect(invokeContract[channel].reach, channel).toBe("home");
+    for (const channel of VIEW_INVOKE_CHANNELS) expect(isRunViewInvokeChannel(channel)).toBe(true);
+    for (const channel of WORK_INVOKE_CHANNELS) expect(isRunViewInvokeChannel(channel)).toBe(false);
   });
 });
 

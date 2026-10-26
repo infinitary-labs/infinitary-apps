@@ -28,6 +28,7 @@ import {
   useRestLabel,
 } from "../design";
 import { focusWithRing } from "../design/focus";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import {
   type FailureContext,
   type PlacedFailure,
@@ -137,7 +138,9 @@ export function CustomApiForm({
   const api = client ?? hereClient;
   const apiRef = useRef(api);
   apiRef.current = api;
-  const who = place?.who ?? HERE.this;
+  // A first mate started by a command keeps its connections where it lives.
+  const home = useFirstMatePlace();
+  const who = place?.who ?? home.this;
   const [profiles, setProfiles] = useState<CustomCapabilityProfile[]>([]);
   const [profileFailure, setProfileFailure] = useState(false);
   useEffect(() => {

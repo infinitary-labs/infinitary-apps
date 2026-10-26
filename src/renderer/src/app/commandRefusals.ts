@@ -18,7 +18,7 @@ import {
   tabTargetOf,
   tabTaskOf,
 } from "../cards/taskTabs";
-import { changesOff, changesOffWords, isView } from "../devices/viewWords";
+import { changesOff, changesOffWords, controlsAll, isView } from "../devices/viewWords";
 import {
   isHeldEntry,
   mainMessageRefusal,
@@ -127,11 +127,18 @@ function tabRefusal(s: RefusalState, command: TabCommand): string | null {
 
 /** A Mac that controls another has no Usage tab: the usage is the other Mac's. */
 function usageRefusal(s: RefusalState): string | null {
-  return isView(s.thisMac) ? `Usage is on ${s.thisMac.name}` : null;
+  return usageRefusalFor("Usage")(s);
 }
 
-function usageRefusalFor(tab: string): (s: RefusalState) => string | null {
-  return (s) => (isView(s.thisMac) ? `${tab} is on ${s.thisMac.name}` : null);
+/**
+ * A tab that is the other Mac's; of a first mate started by a command, whose
+ * computer has no window, `ofACommand` tabs open here instead (docs/run.md).
+ */
+function usageRefusalFor(tab: string, ofACommand = true): (s: RefusalState) => string | null {
+  return (s) =>
+    isView(s.thisMac) && !(ofACommand && controlsAll(s.thisMac))
+      ? `${tab} is on ${s.thisMac.name}`
+      : null;
 }
 
 /** The pager's way: where the shown entry stands in the stack. */
@@ -275,10 +282,10 @@ const REFUSALS: Readonly<
   // Usage is the record of the Mac Firstmate lives on (docs/usage.md).
   "settings.usage": usageRefusal,
   // Automation is the home's own, like Usage: the schedules run on that Mac.
-  "settings.automation": usageRefusalFor("Automation"),
+  "settings.automation": usageRefusalFor("Automation", false),
   // Integrations sign in as the person on the home, like Projects.
   "settings.integrations": usageRefusalFor("Integrations"),
-  "automation.pause-all": usageRefusalFor("Automation"),
+  "automation.pause-all": usageRefusalFor("Automation", false),
   "usage.unit": usageRefusal,
   // The allowance is read where the first mate lives, from any Mac.
   "allowance.recheck": () => null,

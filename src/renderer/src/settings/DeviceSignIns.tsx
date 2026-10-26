@@ -23,10 +23,10 @@ import {
   RemoteCustomConnection,
 } from "../accounts/CustomApiForm";
 import "../accounts/customApi.css";
-import { HERE } from "@shared/deviceNames";
 import { useShellStore } from "../app/store";
 import type { RowMenuItem } from "../design";
 import { Button, Input } from "../design";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
 import { awayWord } from "./devicesWords";
 import { LABEL_GAP, ROW_GAP, SECTION_GAP } from "./settingRows";
 
@@ -110,6 +110,7 @@ export function DeviceSignInGroups({
   /** Whether any group draws, so this Mac's list takes its own label. */
   onGroups?: (any: boolean) => void;
 }) {
+  const home = useFirstMatePlace();
   const [shown, setShown] = useState(false);
   const [devices, setDevices] = useState<DeviceSignIns[]>([]);
   const [flows, setFlows] = useState<Record<string, Flow>>({});
@@ -376,7 +377,7 @@ export function DeviceSignInGroups({
                   }}
                 >
                   {device.unanswered
-                    ? `${place.who} did not say what it is signed in to. It may need ${HERE.this}'s version of Infinitary.`
+                    ? `${place.who} did not say what it is signed in to. It may need ${home.this}'s version of Infinitary.`
                     : "No sign-ins yet."}
                 </div>
               )}
@@ -457,6 +458,7 @@ export function DeviceSignInAside({
   onAnswer: (value: string | null) => void;
   onStop: () => void;
 }) {
+  const home = useFirstMatePlace();
   const { prompt, notice, ended, link } = flow;
   const openLink = link
     ? () => void window.infinitary.app.openExternal(link).catch(() => {})
@@ -554,7 +556,7 @@ export function DeviceSignInAside({
           {stopButton}
         </form>
         <div style={MONO_NOTE_STYLE}>
-          It goes to {place.who} once. {HERE.This} keeps no copy.
+          It goes to {place.who} once. {home.This} keeps no copy.
         </div>
       </>
     );

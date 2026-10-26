@@ -88,7 +88,9 @@ afterEach(async () => {
  * writes, as a home that moved to Infinitary writes its own, and `changes`
  * the contract changes its welcome lists.
  */
-async function home(options: { speaks?: Spelling; changes?: readonly string[] } = {}) {
+async function home(
+  options: { speaks?: Spelling; changes?: readonly string[]; startedByCommand?: boolean } = {},
+) {
   const core = standInCore();
   const left: DeviceView[] = [];
   const pairing = new DevicePairing({
@@ -108,6 +110,7 @@ async function home(options: { speaks?: Spelling; changes?: readonly string[] } 
       heartbeatMs: 60_000,
       ...(options.speaks ? { speaks: options.speaks } : {}),
       ...(options.changes ? { changes: options.changes } : {}),
+      ...(options.startedByCommand ? { startedByCommand: true } : {}),
     });
     await connection.settled();
   };
@@ -164,6 +167,8 @@ function follow(
 ) {
   const states: HomeLinkState[] = [];
   const pushes: { channel: string; payload: unknown }[] = [];
+  /** Each push's place: sent again by a welcome, or new. */
+  const replays: boolean[] = [];
   const catchUps: ("replay" | "reload")[] = [];
   const sockets: WebSocket[] = [];
   /** Every frame on the wire, as the device wrote it and as it heard it. */
@@ -186,7 +191,10 @@ function follow(
     },
     ...(options.speaks ? { speaks: options.speaks } : {}),
     ...(options.changes ? { changes: options.changes } : {}),
-    onPush: (channel, payload) => pushes.push({ channel, payload }),
+    onPush: (channel, payload, replayed) => {
+      pushes.push({ channel, payload });
+      replays.push(replayed);
+    },
     onCaughtUp: (catchUp) => catchUps.push(catchUp),
     onState: (state) => states.push(state),
     ...(options.onInvoke ? { onInvoke: options.onInvoke } : {}),
@@ -197,7 +205,7 @@ function follow(
   const until = async (check: () => boolean) => {
     await expect.poll(check, { timeout: 4_000, interval: 10 }).toBe(true);
   };
-  return { link, states, pushes, catchUps, sockets, wire, until };
+  return { link, states, pushes, replays, catchUps, sockets, wire, until };
 }
 
 /**
@@ -307,6 +315,20 @@ describe("the device's side of the connection", () => {
     expect(at.pairing.list()[0]).toMatchObject({ kind: "view", ...thisDeviceSystem() });
   });
 
+  // INF-1228, the captain's answer control=all: a view of a first mate
+  // started by a command asks what its window would.
+  it("hears from the welcome whether the first mate was started by a command", async () => {
+    const run = follow(await (await home({ startedByCommand: true })).join());
+    run.link.start();
+    await run.until(() => run.link.state().contact === "in-reach");
+    expect(run.link.state().startedByCommand).toBe(true);
+
+    const windowed = follow(await (await home()).join());
+    windowed.link.start();
+    await windowed.until(() => windowed.link.state().contact === "in-reach");
+    expect(windowed.link.state().startedByCommand).toBe(false);
+  });
+
   it("holds a read asked while it is still reaching the home, and sends it once welcomed", async () => {
     const at = await home();
     const air = follow(await at.join());
@@ -357,6 +379,11 @@ describe("the device's side of the connection", () => {
       "inf:cards",
       "inf:models:changed",
     ]);
+    // The two it missed came again with the welcome, and it can tell them
+    // from a new push: a page to open is opened only as it arrives.
+    at.events.emit("inf:cards", []);
+    await air.until(() => air.pushes.length === 4);
+    expect(air.replays).toEqual([false, true, true, false]);
     // It never said the home was out of reach: the drop was mended at once.
     expect(air.states.some((state) => state.contact === "lost")).toBe(false);
   });

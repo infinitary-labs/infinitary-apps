@@ -61,6 +61,7 @@ The home answers `welcome` with its own contract version, its journal's `epoch` 
 A `work` connection's welcome also carries `takesWork`: whether its version may take new work from this home, which needs the home's own major and `PLACED_WORK_SINCE` or later (`takesWork`, `src/shared/ipc.ts`; `docs/helper.md`, "Versions").
 It carries `onHomeMac` too, from protocol 9.1: whether that computer joined from this Mac itself, as the home's list found it (`onThisMac`, `docs/devices.md`, "Where a computer joins from"), which the computer keeps on its grant and its work's priority follows (`docs/helper.md`, "In the background"); absent while the list does not say.
 Whatever it says, the home hears what a `work` device said of its versions and its changes (`onWorkVersion`), and may ask it the update order, and from protocol 8.15 the download order and how far that download got (`docs/devices.md`, "Updating over the connection" and "Downloading over the connection").
+A `view` connection's welcome carries `startedByCommand: true` when the home's first mate was started by a command, with no window (`docs/run.md`, "Control from another computer"); a home with its window, and an older one, leaves it out.
 A computer's join dials once only to hear the home's name and `onHomeMac`, and its hello says so with `nameOnly`: the home welcomes it as any device, and tells nothing of it - never that computer in reach, its version, or a connection to ask (`docs/devices.md`, "Held on the local network").
 
 A device allows 10 seconds for the pinned TLS dial (`HOME_DIAL_TIMEOUT_MS`), then another 10 seconds for the WebSocket upgrade and welcome (`HOME_WELCOME_TIMEOUT_MS`).
@@ -90,6 +91,7 @@ A device asks with `invoke` (`id`, `channel`, `args`) and gets one `result` per 
   A view asking one is refused as asked only by a computer that runs work.
 - A core channel whose `reach` is `home` is refused as answered only on the computer where the first mate lives, and a host channel or an unknown name as not a request this home answers.
   Neither reaches the core.
+  A home whose first mate a command started forwards a view's `home` request too, as the captain, but those that stay there (`RUN_HOME_ONLY_CHANNELS`, `docs/run.md`, "Control from another computer").
 - A device whose `access` is `read` is answered its reads and sent every push; a channel whose `effect` is `change` is refused, until the device is updated, and does not reach the core.
 - A device may send `leave` instead of a request: the home takes it off the list, as Remove does, and closes it as `unpaired` (`docs/devices.md`, "Leave").
 
@@ -104,6 +106,7 @@ Every core channel in `src/shared/ipc.ts` declares its `reach`, and the type of 
 A view may ask what the captain does on the stage of another Mac: talking, cards and their threads, task records and their bar, and the reads that draw them (cards and their pictures, tasks, projects, the feed, the crew strip, quota, model names, the captain's appearance and layout, the first-launch state).
 It may also read and change the automations that run there (`inf:automation:*`, `docs/automation.md`).
 Everything else stays home's: settings, sign-ins and accounts, paired devices, project setup, voice, added panels and their data, Observe, SQL, diagnostics, retention, and anything that acts on the home Mac's own screen.
+Of a first mate a command started, only paired devices, a task's browser and what is that computer's own stay there, and such a home sends its views `inf:app:open-page` with a page it would have opened in a browser.
 `src/shared/ipc.test.ts` pins the list, so widening it is deliberate.
 
 ## Closing

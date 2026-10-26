@@ -6,7 +6,12 @@ import { connect, createServer as createTlsServer } from "node:tls";
 import { CONNECTION_CLOSE, PAIR_PATH } from "@shared/connection";
 import { HOME } from "@shared/deviceNames";
 import { type DeviceGrant, type DeviceKind, parsePairingLink } from "@shared/devices";
-import { HOME_CAPABILITIES, PLACED_WORK_SINCE, PROTOCOL_VERSION } from "@shared/ipc";
+import {
+  HOME_CAPABILITIES,
+  PLACED_WORK_SINCE,
+  PROTOCOL_VERSION,
+  RUN_HOME_ONLY_CHANNELS,
+} from "@shared/ipc";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { connectClient } from "../../../tests/helpers/connectionClient";
@@ -672,6 +677,31 @@ describe("the home's connection", () => {
         "not a request this home answers",
       );
     expect(at.asked.map((ask) => ask.channel)).toEqual(["inf:app:healthcheck", "inf:cards:act"]);
+  });
+
+  // INF-1228, the captain's answer control=all: a computer that controls a
+  // first mate started by a command, which has no window, does everything
+  // that window would; a home with its window keeps the rule above.
+  it("answers a view of a first mate started by a command every home request but those that stay there", async () => {
+    const run = await home({ startedByCommand: true });
+    const a = await connectClient(await run.join("view"));
+    expect(a.welcome.startedByCommand).toBe(true);
+
+    await expect(a.invoke("inf:settings:routing:set", [{}])).rejects.toThrow("malformed request");
+    for (const channel of RUN_HOME_ONLY_CHANNELS)
+      await expect(a.invoke(channel, [{}])).rejects.toThrow(`answered only on ${HOME.the}`);
+    await expect(a.invoke("inf:work:progress", [{}])).rejects.toThrow(
+      "asked only by a computer that runs work",
+    );
+    expect(run.asked.map((ask) => ask.channel)).toEqual(["inf:settings:routing:set"]);
+    expect(run.asked[0]?.actor).toEqual({ kind: "captain" });
+
+    // Only a view hears it, and only from a home a command started.
+    const builder = await connectClient(await run.join("work", "Builder"));
+    expect(builder.welcome.startedByCommand).toBeUndefined();
+    const windowed = await home();
+    const b = await connectClient(await windowed.join("view"));
+    expect(b.welcome.startedByCommand).toBeUndefined();
   });
 
   it("answers a device on the home's major in full, and only the reads of any other", async () => {

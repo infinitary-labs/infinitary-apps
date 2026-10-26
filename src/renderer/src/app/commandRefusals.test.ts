@@ -53,6 +53,31 @@ const HOME: RefusalState = {
 const CLEAR: WindowFacts = { dialogOpen: false };
 
 describe("why a window command cannot run now", () => {
+  // INF-1228, the captain's answer control=all: of a first mate started by a
+  // command, the tabs nobody could open there open here; Automation, already
+  // its own on any Mac that controls another, keeps its own rule.
+  it("opens Usage and Integrations on a Mac that controls a first mate started by a command", () => {
+    const view = {
+      role: "view",
+      name: "Mac mini",
+      address: "192.168.1.30",
+      joinedAt: 0,
+      contact: "in-reach",
+      readOnly: null,
+      heardAt: null,
+      caughtUp: 1,
+    } as const;
+    const windowed = { ...HOME, thisMac: view };
+    const run = { ...HOME, thisMac: { ...view, startedByCommand: true } };
+    for (const command of ["settings.usage", "usage.unit", "settings.integrations"] as const) {
+      expect(commandRefusal(command, windowed, CLEAR)).toMatch(/ is on Mac mini$/);
+      expect(commandRefusal(command, run, CLEAR)).toBeNull();
+    }
+    expect(commandRefusal("settings.automation", run, CLEAR)).toBe(
+      commandRefusal("settings.automation", windowed, CLEAR),
+    );
+  });
+
   it("refuses Try again where Devices is not offered, as on a Mac that controls another", () => {
     expect(commandRefusal("devices.try-again", HOME, CLEAR)).toBeNull();
     expect(commandRefusal("devices.try-again", { ...HOME, devicesShown: false }, CLEAR)).toBe(

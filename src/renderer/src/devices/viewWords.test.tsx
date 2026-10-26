@@ -1,13 +1,19 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { HERE } from "../../../shared/deviceNames";
 import { ControllingTabView } from "../settings/ControllingTab";
 import { joinedWhen } from "../settings/DevicesTab";
 import { JoinAnotherMacView, type JoinAnotherMacViewProps } from "./JoinAnotherMac";
 import { RemoteControlLineView } from "./RemoteControl";
 import {
+  browserNotHereWords,
+  browserShownThereWords,
   changesOff,
   changesOffWords,
   clockTime,
+  devicesNotHereWords,
+  doneThereWords,
+  firstMatePlace,
   JOIN_RUNS_WORK,
   joinRefusalWords,
   leftLine,
@@ -101,6 +107,36 @@ describe("controlling another Mac", () => {
     const words = settingsThereWords(PRO);
     expect(words).toBe("Do this on MacBook Pro. Its settings and sign-ins stay there.");
     expect(words).not.toMatch(NEVER);
+  });
+
+  // INF-1228, the captain's answer control=all: of a first mate started by a
+  // command, a button that opens Settings opens it here; Devices and a
+  // task's browser come later, and the button says so before the click.
+  it("does a card's Settings button here for a first mate started by a command, and says what cannot be done yet", () => {
+    const mini: ViewMac = { ...PRO, name: "Mac mini", startedByCommand: true };
+    const open = (target: "subscriptions" | "projects" | "settings" | "devices") => ({
+      effect: { kind: "open", target } as const,
+    });
+    for (const target of ["subscriptions", "projects", "settings"] as const) {
+      expect(doneThereWords(mini, open(target))).toBeNull();
+      expect(doneThereWords(PRO, open(target))).toBe(settingsThereWords(PRO));
+    }
+    expect(doneThereWords(mini, open("devices"))).toBe(
+      "Mac mini's computers and phones cannot be changed from here yet.",
+    );
+    const browser = { effect: { kind: "open", target: "browser" } as const };
+    expect(doneThereWords(mini, browser)).toBe(
+      "This task's browser on Mac mini cannot be shown here yet.",
+    );
+    expect(browserShownThereWords(mini)).toEqual({
+      lead: "This task's browser on Mac mini cannot be shown here yet.",
+      detail: "A command started Infinitary on Mac mini, with no window to show it in.",
+    });
+    expect(firstMatePlace(mini)).toEqual({ this: "Mac mini", This: "Mac mini" });
+    expect(firstMatePlace(PRO)).toEqual(HERE);
+    expect(firstMatePlace(null)).toEqual(HERE);
+    for (const words of [devicesNotHereWords(mini), browserNotHereWords(mini)])
+      expect(words).not.toMatch(NEVER);
   });
 
   it("asks once in place before it leaves, with Stay first, and says what Leave does", () => {

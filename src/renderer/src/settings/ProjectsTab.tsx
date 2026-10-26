@@ -10,10 +10,14 @@ import {
 } from "@shared/vocabulary";
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
+import { useShellStore } from "../app/store";
 import { Badge, Button, GroupedPills, Input, Switch } from "../design";
 import { useCutWords } from "../design/core/overflowTitle";
 import { useInPlaceReveal } from "../design/reveals";
+import { useFirstMatePlace } from "../devices/useFirstMatePlace";
+import { isView } from "../devices/viewWords";
 import { AddProject } from "./AddProject";
+import { FOLDER_THERE_WORDS } from "./addProjectWords";
 import { ForgeSection } from "./ForgeSection";
 import { PROJECT_POLICY_WORDS, PROJECT_SETUP_WORDS } from "./projectsWords";
 import { RemoveProject } from "./RemoveProject";
@@ -250,12 +254,28 @@ export function ProjectsFolderRow() {
   const [choosing, setChoosing] = useState(false);
   const [pickError, setPickError] = useState<string | null>(null);
   const pathCut = useCutWords(folder.value?.path);
+  // A view takes the folder's path on the first mate's computer, since a
+  // folder picker here shows only this computer's folders (docs/run.md).
+  const there = useShellStore((s) => (isView(s.thisMac) ? s.thisMac.name : null));
+  const [typed, setTyped] = useState<string | null>(null);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
+  const saveTyped = () => {
+    const path = typed?.trim();
+    if (!path) return;
+    void save(() => window.infinitary.repos.setFolder(path)).then((saved) => {
+      if (saved) setTyped(null);
+    });
+  };
+
   const choose = () => {
+    if (there) {
+      setTyped(folder.value?.path ?? "");
+      return;
+    }
     setChoosing(true);
     setPickError(null);
     void window.infinitary.app
@@ -308,6 +328,34 @@ export function ProjectsFolderRow() {
           </div>
         )
       }
+      {...(there && typed !== null
+        ? {
+            detail: (
+              <form
+                style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  saveTyped();
+                }}
+              >
+                <Input
+                  aria-label={FOLDER_THERE_WORDS.label(there)}
+                  mono
+                  value={typed}
+                  onChange={(event) => setTyped(event.target.value)}
+                  disabled={folder.saving}
+                  autoFocus
+                />
+                <Button type="submit" size="sm" disabled={!typed.trim() || folder.saving}>
+                  Save
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setTyped(null)}>
+                  Cancel
+                </Button>
+              </form>
+            ),
+          }
+        : {})}
       error={pickError ?? folder.error}
       control={
         <span
@@ -342,6 +390,7 @@ export function ProjectsFolderRow() {
  * they did before - nothing here suggests a project needs a host.
  */
 function ProjectDetails({ repo }: { repo: RepoView }) {
+  const place = useFirstMatePlace();
   const [name, setName] = useState(repo.name);
   const [scope, setScope] = useState(repo.scope ?? "");
   const [path, setPath] = useState(repo.path);
@@ -433,7 +482,7 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
       />
       <PolicyRow
         title="Where it lives"
-        description="Enter the address your folder points at, or leave it empty for this computer."
+        description={`Enter the address your folder points at, or leave it empty for ${place.this}.`}
         control={
           <Input
             aria-label="Where the project lives"

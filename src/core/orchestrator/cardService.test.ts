@@ -690,7 +690,7 @@ describe("CardService", () => {
   });
 
   it("records the answers a choice carried on the row and the task's card_resolved event (contract 4.22)", () => {
-    const { tasks, make } = setup();
+    const { tasks, cardStore, make } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
     const cards = make();
     const id = cards.emitCrewmateCard("t1", decision, "m");
@@ -707,7 +707,14 @@ describe("CardService", () => {
 
     cards.resolve(card, "right", "right", answers);
     const resolved = tasks.timeline("t1").find((event) => event.kind === "card_resolved");
-    expect(resolved?.data).toEqual({ cardId: id, action: "right", answers });
+    // INF-1296: the event names the card evidence's record of the same choice.
+    const choice = cardStore.observations(id).find((entry) => entry.kind === "action");
+    expect(resolved?.data).toEqual({
+      cardId: id,
+      action: "right",
+      answers,
+      observation: choice?.id,
+    });
     // The Firstmate's resolutions line reads them back off the row.
     expect(cards.captainResolutionsSince(0, 5)).toEqual([
       expect.objectContaining({ action: "right", answers }),
@@ -715,13 +722,14 @@ describe("CardService", () => {
   });
 
   it("records no answers for a choice that carried none", () => {
-    const { tasks, make } = setup();
+    const { tasks, cardStore, make } = setup();
     seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
     const cards = make();
     const id = cards.emitCrewmateCard("t1", decision, "m");
     cards.resolve(cards.get(id) as Card, "left", "left");
     const resolved = tasks.timeline("t1").find((event) => event.kind === "card_resolved");
-    expect(resolved?.data).toEqual({ cardId: id, action: "left" });
+    const choice = cardStore.observations(id).find((entry) => entry.kind === "action");
+    expect(resolved?.data).toEqual({ cardId: id, action: "left", observation: choice?.id });
     expect(cards.captainResolutionsSince(0, 5)[0]).not.toHaveProperty("answers");
   });
 

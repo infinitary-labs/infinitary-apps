@@ -4839,6 +4839,7 @@ export class CrewSupervisor {
       : undefined;
     const latest = submitted?.success ? submitted.data : resolution?.answers;
     const answers = latest ? cardAnswerLines(latest) : undefined;
+    const result = this.options.tasks.latestResult(basis.id);
     const rawBody = offer?.body ?? card?.body;
     const cardBody = rawBody
       ? cardPictureFiles(rawBody, this.options.paths.crewmatesDir)
@@ -4849,7 +4850,7 @@ export class CrewSupervisor {
       title: basis.title,
       ...(basis.intent?.userWords ? { userWords: basis.intent.userWords } : {}),
       ...(basis.outcome ? { outcome: basis.outcome } : {}),
-      ...(basis.delivery?.result ? { result: basis.delivery.result.value } : {}),
+      ...(result ? { result: result.value } : {}),
       reports: timeline
         .filter((event) => event.kind === "report")
         .map((event) => ({ event_id: event.id, text: event.text })),

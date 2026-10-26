@@ -326,14 +326,15 @@ function toRow(
   posture: (record: TaskRecord) => WorkPosture | undefined = () => undefined,
 ): TaskQueryRow {
   const history = cardBody ? tasks.timeline(record.id) : [];
-  const reports = history
-    .filter((event) => event.kind === "report")
-    .map((event) => ({ event_id: event.id, text: event.text }));
+  const reports = cardBody
+    ? tasks.reportEntries(record.id).map((entry) => ({ event_id: entry.eventId, text: entry.text }))
+    : [];
+  const result = cardBody ? tasks.latestResult(record.id) : undefined;
   const briefed = history.filter((event) => event.kind === "briefed").at(-1);
   const brief = briefed ? tasks.servedBrief(briefed) : undefined;
   const decisions = history
     .filter((event) => event.kind === "card_resolved")
-    .map((event) => ({ event_id: event.id, text: event.text, data: event.data }));
+    .map((event) => ({ event_id: event.id, text: event.text, data: decisionData(event.data) }));
   const flags = tasks.flagsOf(record);
   const parent = record.parentId ? tasks.get(record.parentId) : undefined;
   // An active row names what holds it now, by the board's own rule
@@ -412,7 +413,7 @@ function toRow(
     ...(cardBody && record.shape?.result_schema
       ? { result_schema: record.shape.result_schema }
       : {}),
-    ...(cardBody && record.delivery?.result ? { result: record.delivery.result.value } : {}),
+    ...(result ? { result: result.value } : {}),
     ...(cardBody ? { reports, decisions, ...(brief ? { brief } : {}) } : {}),
     ...(cardBody && record.outcome ? { outcome: record.outcome } : {}),
     ...(cardBody && record.outcomeSummary ? { outcome_summary: record.outcomeSummary } : {}),
@@ -451,4 +452,15 @@ function body(
 ): { card: string } | undefined {
   const card = cardBody(taskId);
   return card ? { card } : undefined;
+}
+
+/**
+ * A decision's data as the by-key read has always shown it: the card
+ * evidence alias a newer event carries (`observation`) is the unified
+ * timeline's, not the reader's.
+ */
+function decisionData(data: Record<string, unknown> | null): Record<string, unknown> | null {
+  if (!data || !("observation" in data)) return data;
+  const { observation: _alias, ...rest } = data;
+  return rest;
 }

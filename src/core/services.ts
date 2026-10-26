@@ -246,6 +246,7 @@ import { CrewLiveText, CrewTranscripts } from "./tasks/crewTranscript";
 import { TaskProtocol } from "./tasks/taskProtocol";
 import { TaskService } from "./tasks/taskService";
 import { TaskTempFiles } from "./tasks/taskTemp";
+import { TaskTimeline } from "./tasks/taskTimeline";
 import { WorkPresentation } from "./tasks/workPresentation";
 import { createAppTelemetry } from "./telemetry";
 import { linuxUpdateCommand, readLinuxInstallation } from "./update/linuxInstall";
@@ -297,6 +298,12 @@ export type CoreServices = {
   supervisor: CrewSupervisor;
   /** The one task writer (task-system P0/P1); the record every surface reads. */
   tasks: TaskService;
+  /**
+   * The one reader of a task's durable entries (docs/task-record.md, "The
+   * unified timeline"): task events, card evidence and threads, and its
+   * crewmate's actions, read-only.
+   */
+  timeline: TaskTimeline;
   /** The task protocol's reads and emitter (P3): board, detail, projects, feed. */
   taskProtocol: TaskProtocol;
   firstmate: FirstmateAgent;
@@ -947,6 +954,11 @@ export async function createServices(
     appTools: new Set(CREWMATE_TOOLS.map((tool) => tool.name)),
   });
   crewActionsOf = (record) => crewActions.of(record);
+  const timeline = new TaskTimeline({
+    tasks,
+    cards: cardStore,
+    actions: (record) => crewActions.sourced(record),
+  });
   crewSaidOf = (record) => crewActions.said(record);
   crewTranscripts = new CrewTranscripts({
     recordDirOf: (taskId) => crewmateSessionsDir(paths, taskId),
@@ -3216,6 +3228,7 @@ export async function createServices(
   });
   return {
     paths,
+    timeline,
     auth,
     vault,
     flagship,

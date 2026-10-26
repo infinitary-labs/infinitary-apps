@@ -152,6 +152,7 @@ A change can keep what an older release saved readable while reading it differen
 `older-profile.spec.ts` then opens the profile again, the upgrade a person makes, and checks the result they need.
 For a profile whose only connection is a custom API, the first-launch gate names that connection right after the upgrade and asks for its one fresh check, never for a subscription.
 That check, from the gate, brings back Firstmate's answers, the offered models and the crew slots chosen before the upgrade, without a restart.
+A task's history an older release saved - its latest result also copied onto the task's delivery facts, and card choice events that name no card evidence (`docs/task-record.md`, "The unified timeline") - reads the same after the upgrade and a restart, in the record and through the first mate's by-key `tasks` read, and a report written later takes over the result while the older copy stays saved.
 A change that makes something an earlier release saved read differently adds the earlier form to `olderProfile.ts`, and a journey to `older-profile.spec.ts` when the change reaches a part of the app no journey there opens.
 
 ## Custom HTTP approval compatibility

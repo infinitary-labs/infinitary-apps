@@ -886,7 +886,22 @@ export class CardStore {
     });
   }
 
-  private messageById(id: number): CardMessage | undefined {
+  /**
+   * The thread lines under every card about a task, oldest first, up to
+   * `upTo` when a reader pages from a fixed cut (`TaskTimeline`).
+   */
+  messagesForTask(taskId: string, upTo = Number.MAX_SAFE_INTEGER): CardMessage[] {
+    const rows = this.db
+      .prepare(
+        `SELECT ${MESSAGE_COLUMNS} FROM card_messages m
+         WHERE m.card_id IN (SELECT id FROM cards WHERE task_id = ?) AND m.id <= ? ORDER BY m.id`,
+      )
+      .all(taskId, upTo) as MessageRow[];
+    return rows.map(messageOf);
+  }
+
+  /** One thread line by its id; undefined once its card is gone. */
+  messageById(id: number): CardMessage | undefined {
     const row = this.db
       .prepare(`SELECT ${MESSAGE_COLUMNS} FROM card_messages m WHERE m.id = ?`)
       .get(id) as MessageRow | undefined;
@@ -1001,6 +1016,28 @@ export class CardStore {
       const observation = observationOf(row);
       return observation ? [observation] : [];
     });
+  }
+
+  /**
+   * Every observation about a task's cards, every lifecycle, oldest first,
+   * up to `upTo` when a reader pages from a fixed cut (`TaskTimeline`).
+   */
+  observationsForTask(taskId: string, upTo = Number.MAX_SAFE_INTEGER): CardObservation[] {
+    const rows = this.db
+      .prepare("SELECT * FROM card_observations WHERE task_id = ? AND seq <= ? ORDER BY seq")
+      .all(taskId, upTo) as ObservationRow[];
+    return rows.flatMap((row) => {
+      const observation = observationOf(row);
+      return observation ? [observation] : [];
+    });
+  }
+
+  /** One observation by its id; undefined when it is gone or its payload no longer reads. */
+  observationById(id: string): CardObservation | undefined {
+    const row = this.db.prepare("SELECT * FROM card_observations WHERE id = ?").get(id) as
+      | ObservationRow
+      | undefined;
+    return row ? observationOf(row) : undefined;
   }
 
   /** The newest availability of one offer on a lifecycle, if any. */

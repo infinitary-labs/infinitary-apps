@@ -356,7 +356,8 @@ class RunningProgram {
   private settledValue(part: TaskRecord): { value: unknown } | undefined {
     if (part.status === "dropped") return { value: null };
     if (part.status !== "done") return undefined;
-    if (part.shape?.result_schema) return { value: part.delivery?.result?.value ?? null };
+    if (part.shape?.result_schema)
+      return { value: this.host.tasks.latestResult(part.id)?.value ?? null };
     return { value: part.outcome ?? null };
   }
 

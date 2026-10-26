@@ -242,8 +242,10 @@ export type MergeAuthorization = {
 /** Delivery facts, as they become known (check_pr_ci, land, merge-pr, review). */
 export type TaskDelivery = {
   /**
-   * The task's latest typed result (INF-799 piece 1): the newest report that
-   * carried one, as the host checked it against the task's `result_schema`.
+   * The task's latest typed result as a release before INF-1296 piece 1
+   * kept it: a copy of the newest report's. Nothing writes it now; the
+   * report entries hold the result, and `TaskService.latestResult` still
+   * reads a copy saved before, with the precedence it had.
    */
   result?: { at: number; value: Record<string, unknown> };
   /** Versioned public story and native-upload receipts; only TaskService writes them. */

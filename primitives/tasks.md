@@ -29,6 +29,7 @@ Conversation associations: `setSessionFile` writes the resume pointer and conver
 Graph writes: `create`, `setParent`, `moveToProject`, `link`, `unlink`, `fileFollowup`, `startAgain`, `updateFields`, `setGate`, `close`, `dropWithChildren`.
 Derived reads: `flagsOf` (`blocked`, `held`, `ready`, `deadBlocker`), `basisHolds` / `basisOf`, `builtOn`, `verdictReviewOf`, `closeRefusal`, `blockersHoldingClose`, `blockerRefusal`.
 Typed results: `resultSchemaRefusal` and `resultRefusal` in [`../src/core/tasks/taskResult.ts`](../src/core/tasks/taskResult.ts).
+Reports and results as entries: `reportEntryOf` and `latestResultOf` in [`../src/core/tasks/reportEntry.ts`](../src/core/tasks/reportEntry.ts); one task's entries from every owner, read only: `TaskTimeline` in [`../src/core/tasks/taskTimeline.ts`](../src/core/tasks/taskTimeline.ts), its shape in [`../src/shared/timeline.ts`](../src/shared/timeline.ts).
 Settling and its refusals: `SettleService` ([`../src/core/orchestrator/settleService.ts`](../src/core/orchestrator/settleService.ts)), returning a structured `SettleRefusal`.
 Agent tools: the first mate's `create_task`, `update_task`, `link_tasks` and `tasks` in [`../src/core/pi/taskTools.ts`](../src/core/pi/taskTools.ts); the crewmate's `file_followup`, `note_progress` and read-only `tasks` in [`../src/core/pi/crewmateTaskTools.ts`](../src/core/pi/crewmateTaskTools.ts) and [`../src/core/claude/claudeTaskTools.ts`](../src/core/claude/claudeTaskTools.ts).
 
@@ -98,7 +99,7 @@ Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.
 
 ## Where the detail lives
 
-- [The task record and its protocol](../docs/task-record.md): "Derived, never stored: the basis and the review join", "A typed result and where a working copy starts", "Starting dropped work again".
+- [The task record and its protocol](../docs/task-record.md): "Derived, never stored: the basis and the review join", "A typed result and where a working copy starts", "The unified timeline", "Starting dropped work again".
 - [Task graph](../docs/task-graph.md): "The graph", "The ready query", "Gates on active rows", "Follow-ups are not children", "The close rules", "Tools".
 - [Sequences](../docs/sequences.md): "The decision", "The host pieces it runs on (all generic)".
 - [Architecture](../docs/architecture.md) §19 "The task system"; [task retention](../docs/task-retention.md); [the whose-turn rule](../docs/report-sort.md).

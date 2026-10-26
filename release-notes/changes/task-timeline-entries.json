@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-timeline-entries",
+      "reason": "Internal: a report's result is kept on its report alone and read through one task timeline reader that no view uses yet; every task's record, Activity and the first mate's reads show the same as before."
+    }
+  ]
+}

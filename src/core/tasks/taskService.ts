@@ -129,6 +129,7 @@ import { compactBrief, expandBrief, reportHash } from "./briefReceipt";
 import { baselineStands } from "./dependencyWaits";
 import { holdingWaits, holdKindOf } from "./holdingWaits";
 import { decideValidation, recordValidation } from "./liveValidation";
+import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import type { TaskExportBundle } from "./taskExport";
 import { liveWaitCycle, waitCycleWords } from "./waitCycles";
 
@@ -407,8 +408,8 @@ export type ReportDeclaration = {
   needsFirstmate?: string;
   /**
    * The report's typed result (INF-799 piece 1), already checked against
-   * the task's `result_schema` when it has one: kept on the report's event
-   * and, as the task's latest result, on its delivery facts.
+   * the task's `result_schema` when it has one: kept on the report's event,
+   * the one record of it (`latestResult` reads the newest, INF-1296).
    */
   result?: Record<string, unknown>;
   /**
@@ -910,6 +911,31 @@ export class TaskService {
 
   timeline(id: string): TaskEvent[] {
     return this.events.listFor(id);
+  }
+
+  /** One timeline event by its id, whatever its task; undefined once it is gone. */
+  event(eventId: number): TaskEvent | undefined {
+    return this.events.get(eventId);
+  }
+
+  /** Every report on the task as its typed entry, oldest first (docs/task-record.md). */
+  reportEntries(id: string): ReportEntry[] {
+    return this.events
+      .listFor(id)
+      .filter((event) => event.kind === "report")
+      .map(reportEntryOf);
+  }
+
+  /**
+   * The task's latest typed result (INF-799): the newest report entry that
+   * carried one, or the copy an older release kept on its delivery facts
+   * while no later report carried another (`latestResultOf`).
+   */
+  latestResult(id: string): TaskResult | undefined {
+    const record = this.store.get(id);
+    if (!record) return undefined;
+    const newest = this.events.latestWithObject(id, "report", "result");
+    return latestResultOf(newest ? reportEntryOf(newest) : undefined, record.delivery?.result);
   }
 
   /** When the task's crewmate last reported (INF-1244: its crew line says how long ago). */
@@ -3152,16 +3178,16 @@ export class TaskService {
       const completion = input.declared?.mergeCompletesTask;
       const declaring =
         Boolean(wait) || finished || Boolean(request) || Boolean(checkBack) || Boolean(completion);
+      // The result rides the report's event alone (INF-1296 piece 1): the
+      // latest one stands until a later report carries another.
       const delivery =
-        declaring || hasDeclaration(record) || result
+        declaring || hasDeclaration(record)
           ? this.mergeDelivery(record, {
               captainWait: wait ? { at, ...wait } : undefined,
               finishedAt: finished ? at : undefined,
               mergeCompletion: completion ? { ...completion, at } : undefined,
               needsFirstmate: request ? { at, request } : undefined,
               checkBack,
-              // The latest result stands until a later report carries another.
-              ...(result ? { result: { at, value: result } } : {}),
             })
           : undefined;
       // A check-back is the task's timed wait (INF-1244): the sweep turns its
@@ -4730,6 +4756,11 @@ export class TaskService {
       actor?: TaskEventActor;
       /** The captain's answers to the body's own questions (contract 4.22). */
       answers?: CardAnswer[];
+      /**
+       * The card evidence's observation of the same choice or close: the
+       * explicit alias the unified timeline folds this event into.
+       */
+      observation?: string;
     },
   ): void {
     const at = this.now();
@@ -4746,6 +4777,7 @@ export class TaskService {
           cardId: input.cardId,
           action: input.action,
           ...(input.answers ? { answers: input.answers } : {}),
+          ...(input.observation ? { observation: input.observation } : {}),
         },
         ref: input.cardId,
         feed: false,

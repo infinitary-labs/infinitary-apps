@@ -25,6 +25,9 @@ export type CrewActionsOptions = {
   appTools: ReadonlySet<string>;
 };
 
+/** An action and where it was read: its session file's name and its place among that file's actions. */
+export type SourcedAction = TaskActionLine & { file: string; index: number };
+
 /** The longest an action's line reads; a longer one ends in an ellipsis. */
 export const ACTION_TEXT_MAX = 160;
 
@@ -64,6 +67,22 @@ export class CrewActions {
   of(task: TaskRecord): TaskActionLine[] {
     const actions = this.files(task).flatMap((file) => this.read(file, task.worktreeDir));
     return actions.sort((a, b) => a.at - b.at);
+  }
+
+  /**
+   * Every action with where it was read, file by file (the unified
+   * timeline's source identity, `TaskTimeline`): the kept session's file
+   * name and the action's place among that file's actions. A session only
+   * grows, so a place names the same action at every read.
+   */
+  sourced(task: TaskRecord): SourcedAction[] {
+    return this.files(task).flatMap((file) =>
+      this.read(file, task.worktreeDir).map((action, index) => ({
+        ...action,
+        file: basename(file),
+        index,
+      })),
+    );
   }
 
   /**

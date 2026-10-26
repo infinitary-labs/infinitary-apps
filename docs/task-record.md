@@ -141,7 +141,11 @@ The brief prints it in a "Result shape" section with one sentence saying the rep
 The crewmate's `report` takes `result`, a JSON object, checked with the JSON Schema validator the app ships (typebox's `Schema`).
 A result that does not fit, or a missing one where a schema stands, is refused as tool text naming the first failing field, such as `result.files[0] must be string`, so the crewmate reports again; a report that declares `waiting_on_captain` or `needs_firstmate` is taken without one.
 A task with no schema keeps whatever object its report carried.
-A checked result is stored on the report's event (`data.result`) and, as the task's latest result, on its delivery facts (`delivery.result`), where it stands until a later report carries another.
+A checked result is stored on the report's event (`data.result`) and nowhere else: the report event is the one record of a report and the result it carried.
+`reportEntryOf` (`src/core/tasks/reportEntry.ts`) reads a report event as a typed, versioned entry - its words, summary, result and what it declared - and leaves out, never guesses, a field an older writer stored in another shape.
+The task's latest result is the newest report entry that carried one (`TaskService.latestResult`), and it stands until a later report carries another.
+A release before INF-1296 also copied the latest result onto the task's delivery facts (`delivery.result`); that copy stays saved as it was and is still read with the precedence it had, so it stands unless a report written after it carried a newer result.
+The by-key `tasks` read, the program runner and a brief's basis all read the latest result through `latestResult`.
 The report wake carries it as a typed fact after "Its result, as declared:", a by-key `tasks` read carries `result` and `result_schema`, and a brief whose basis carries one prints it after that task's report under the same words.
 A crewmate's report text that ends a turn without the tool carries no result.
 A task running on another computer carries its result home on the report order (`report-result.md`); the home starts a task with a schema there only when that computer lists the change.
@@ -154,6 +158,19 @@ A task that branches from another starts only on this Mac.
 Both fields change only on open work that has not started, like `basis`, and both are the first mate's own, so no host stamp writes them (`CAPTAIN_OWNED_SHAPE_FIELDS`).
 `update_task` clears either one with an empty value, `{}` or an empty string.
 The tools serve both parameters bare, with no description, and the served sequences guide's preamble says their rule once, to keep the first mate's fixed context inside its boundary (`tests/firstmate-fixed-context.test.ts`).
+
+## The unified timeline
+
+`TaskTimeline` (`src/core/tasks/taskTimeline.ts`) reads every durable entry of one task in one versioned shape (`TimelineEntry`, `src/shared/timeline.ts`): the task's events and the events that concern it, its cards' evidence and thread lines, and its crewmate's actions from the kept sessions (INF-1296 piece 1).
+Each owner keeps its records; the reader writes nothing, and an entry grants nothing.
+An entry carries its time as recorded (null when the source holds none), who did it, a one-line summary, its content kind with that kind's version, and an exact reference to its source: a task event by id, a card observation by id with the offer, interaction and thread message it names, a thread line by message id, or a session action by file name and place.
+Every task event kind and card observation kind maps to exactly one content kind (`EVENT_CONTENT`, `OBSERVATION_CONTENT`), and a new kind fails the build until it has one.
+Two records are read as one entry only where an owner named them the same occurrence: a card's thread reference folds into its thread line, and a card choice event that names its card evidence (`card_resolved`'s `data.observation`, written since INF-1296) folds into that evidence as an alias.
+Nothing is folded on matching words or nearby times, so an older choice that names no evidence stays visible from both owners.
+Links are the owners' own: a choice, close or thread line replies to its offer, an offer revises the one it replaced, an effect's receipt names the interaction that caused it, and an event about another task names that task and how it stands.
+The order is stable: undated entries first, then by time, then by source (task events, card evidence, thread lines, actions), then by each source's own order.
+`read` pages that order behind a cursor holding the cut it was taken at, so a page never shifts when later entries arrive; `expand` opens one entry's exact source record, or says it is gone or not this task's.
+Nothing in a view reads the timeline yet; Activity, the record and the by-key `tasks` read keep their own readers.
 
 ## Starting dropped work again
 

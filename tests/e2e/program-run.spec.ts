@@ -87,7 +87,7 @@ test("a program files its parts as child tasks, hands each result on, and closes
       rule: "R11",
       bucket: FIND_INTELLIGENCE,
     });
-    expect(finder?.delivery?.result?.value).toEqual({ files: FILES });
+    expect(tasks.latestResult(finder?.id ?? "")?.value).toEqual({ files: FILES });
     const caps = FILES.map((file) => parts.find((part) => part.title === `${CAP_PROMPT} ${file}.`));
     for (const part of caps) {
       expect(part?.status).toBe("done");
@@ -102,7 +102,7 @@ test("a program files its parts as child tasks, hands each result on, and closes
     expect(parts.map((part) => part.shape?.program_part?.call).sort()).toEqual([0, 1, 2]);
 
     // Section 3: the program closed done with the value its script returned.
-    expect(tasks.get(programId)?.delivery?.result?.value).toEqual({
+    expect(tasks.latestResult(programId)?.value).toEqual({
       files: FILES,
       capped: FILES.map(capped),
     });
@@ -111,7 +111,7 @@ test("a program files its parts as child tasks, hands each result on, and closes
       "Program intelligence record",
       JSON.stringify({
         status: tasks.get(programId)?.status,
-        result: tasks.get(programId)?.delivery?.result?.value,
+        result: tasks.latestResult(programId)?.value,
         parts: parts.map((part) => ({
           label: part.shape?.program_part?.label,
           intelligence: part.shape?.program_part?.intelligence,

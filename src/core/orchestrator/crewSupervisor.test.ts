@@ -17634,7 +17634,7 @@ describe("decision actions", () => {
 
   it("carries a footer click's answers to the author in words, and records them on the close (contract 4.22)", async () => {
     const crewmate = fakeCrewmate();
-    const { supervisor, cardId, tasks, taskId } = await decisionOnScreen(crewmate);
+    const { supervisor, cardStore, cardId, tasks, taskId } = await decisionOnScreen(crewmate);
     const answers = [
       { name: "runner", values: ["ci"], labels: ["On the checks only"], changed: true },
       { name: "notes", values: [], changed: false },
@@ -17646,7 +17646,9 @@ describe("decision actions", () => {
       `Card "Two ways to fix the flaky test": the user chose "Mock the clock" (mock-clock).\nThe user's answers to the card's questions:\n- runner: "On the checks only" (ci), changed\n- notes: no answer, as proposed`,
     );
     const resolved = tasks.timeline(taskId).find((event) => event.kind === "card_resolved");
-    expect(resolved?.data).toEqual({ cardId, action: "mock-clock", answers });
+    // INF-1296: the event names the card evidence's record of the same choice.
+    const choice = cardStore.observations(cardId).find((entry) => entry.kind === "action");
+    expect(resolved?.data).toEqual({ cardId, action: "mock-clock", answers, observation: choice?.id });
   });
 
   it("refuses a footer click whose answers do not parse or pass the value bound, leaving the card up", async () => {
@@ -27263,7 +27265,7 @@ describe("programs (INF-799 piece 2)", () => {
       capped: ["Capped src/meter.ts at 4 KiB.", "Capped src/gauge.ts at 4 KiB."],
       branch: "part 2",
     };
-    expect(h.tasks.get(h.program.id)?.delivery?.result?.value).toEqual(result);
+    expect(h.tasks.latestResult(h.program.id)?.value).toEqual(result);
     const ended = h.ops.find((line) => line.includes(`the program on task ${h.program.key}`)) ?? "";
     expect(ended).toContain("finished after 3 parts.");
     expect(ended).toContain(JSON.stringify(result));
@@ -27292,7 +27294,7 @@ describe("programs (INF-799 piece 2)", () => {
     expect(h.tasks.updateFields(h.program.id, { programBound: 2 }, "firstmate")).toEqual(["bound 2"]);
     await h.report(1, "Capped gauge.ts.");
     await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
-    expect(h.tasks.get(h.program.id)?.delivery?.result?.value).toEqual({ value: "capped" });
+    expect(h.tasks.latestResult(h.program.id)?.value).toEqual({ value: "capped" });
     // A script that returns no branch leaves nothing to ship; the host picks no part for it (captain, F5).
     const ended = h.ops.find((line) => line.includes("finished after 2 parts.")) ?? "";
     expect(ended).toContain("Its script returned no branch, so there is nothing to ship.");
@@ -27328,7 +27330,7 @@ describe("programs (INF-799 piece 2)", () => {
     );
     await h.report(0, "Capped the meter.");
     await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
-    expect(h.tasks.get(h.program.id)?.delivery?.result?.value).toEqual({ capped: 1, branch: empty });
+    expect(h.tasks.latestResult(h.program.id)?.value).toEqual({ capped: 1, branch: empty });
     const ended = h.ops.find((line) => line.includes(`the program on task ${h.program.key}`)) ?? "";
     expect(ended).toContain("Its script returned no branch, so there is nothing to ship.");
   });
@@ -27382,7 +27384,7 @@ describe("programs (INF-799 piece 2)", () => {
     h.sessions[0]?.emit({ type: "turn_end", taskId: part.id });
     h.sessions[0]?.finishPrompt();
     await vi.waitFor(() => expect(h.tasks.get(h.program.id)?.status).toBe("done"), PROGRAM_WAIT);
-    expect(h.tasks.get(h.program.id)?.delivery?.result?.value).toEqual({
+    expect(h.tasks.latestResult(h.program.id)?.value).toEqual({
       value: "Capped the meter.",
     });
   });
@@ -27434,7 +27436,7 @@ describe("programs (INF-799 piece 2)", () => {
         () => expect(restartedTasks.get(h.program.id)?.status).toBe("done"),
         PROGRAM_WAIT,
       );
-      expect(restartedTasks.get(h.program.id)?.delivery?.result?.value).toEqual({
+      expect(restartedTasks.latestResult(h.program.id)?.value).toEqual({
         value: "Capped the meter.",
       });
       expect(restartedTasks.children(h.program.id)).toHaveLength(1);

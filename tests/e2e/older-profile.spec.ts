@@ -1,16 +1,25 @@
 import { writeFileSync } from "node:fs";
 import { expect, type Page, test } from "@playwright/test";
+import type { Card } from "@shared/cards";
 import { GATED_CHECK_PLACEHOLDER } from "@shared/firstRun";
 import type { Slot } from "@shared/modelSlots";
+import { CardService } from "../../src/core/orchestrator/cardService";
+import { CardStore } from "../../src/core/storage/cardStore";
+import { openDatabase } from "../../src/core/storage/db";
+import { ACTIVITY_PLACES } from "../../src/core/tasks/recordActivity";
+import { seedTask } from "../../src/core/tasks/seedTask";
+import { TaskService } from "../../src/core/tasks/taskService";
+import { TaskTimeline } from "../../src/core/tasks/taskTimeline";
 import { freshCheckTitle } from "../../src/renderer/src/app/firstRunGateWords";
 import { INTEGRATIONS_MCP_WORDS, integrationRenameWords } from "../../src/shared/integrations";
+import type { TaskDetail } from "../../src/shared/tasks";
 import { SAMPLE_NOTES, serveNotesHttp } from "../helpers/mcpStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
 import { startCustomApiFixture } from "./customApiFixture";
 import { STUB_LOGIN, startGitHubStub } from "./githubStub";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
-import { SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
+import { SPAWN_PROMPT_MARKER, sinceLastUser, startMockProvider } from "./mockProvider";
 import {
   closeModelPanel,
   levelLane,
@@ -20,12 +29,19 @@ import {
 } from "./modelsBoard";
 import { asSavedByOlderRelease, seedLegacyGithubServer } from "./olderProfile";
 import { promptInput } from "./prompt";
+import { openGroup, pressRow, recordCard, recordFrame } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   GITHUB_NAMES_PROMPT,
   GITHUB_NAMES_REPORT,
   GITHUB_SERVER_NAME,
   githubNames,
 } from "./scenarios/githubNames";
+import {
+  UPGRADED_TASK_FIELDS,
+  UPGRADED_TASK_PROMPT,
+  upgradedTaskRead,
+} from "./scenarios/upgradedTaskRead";
 import { settingsSection } from "./settings";
 import { closeOpenCards } from "./stack";
 import { pressKey, runFromSearch, typeInto } from "./windowKeys";
@@ -366,5 +382,280 @@ test("GitHub sign-in keeps distinct integration names and the crew reaches both"
     await launched?.close();
     await github.close();
     await notes.close();
+  }
+});
+
+const HISTORY_ID = "upgraded-history";
+const KEPT = { kept: "flush", runs: 10 };
+const NEWER = { kept: "flush", runs: 12 };
+
+/** The task services a seeding or a read between launches writes through, on the stopped app's data. */
+function taskWriters(userDataDir: string, at = Date.now() - 60 * 60_000) {
+  const db = openDatabase(userDataDir);
+  const now = () => (at += 60_000);
+  const tasks = new TaskService({ db, strict: true, now });
+  const cardStore = new CardStore(db);
+  const cards = new CardService({
+    now,
+    tasks,
+    cardStore,
+    syncCaptainGate: () => {},
+    noteCapAnswered: () => {},
+    closeAnsweredTask: () => false,
+    settleFacts: () => undefined,
+    followupNotice: () => undefined,
+    broadcastCrewCounts: () => {},
+    broadcastEvent: () => {},
+    broadcastCards: () => {},
+    broadcastThread: () => {},
+  });
+  return { db, tasks, cardStore, cards };
+}
+
+/**
+ * A finished task's history as this build writes it, through its own
+ * writers: its brief, an update, a decision card with a thread and the
+ * captain's choice, the report that carried its typed result, and its close.
+ */
+function seedHistory(userDataDir: string): string {
+  const { db, tasks, cards } = taskWriters(userDataDir);
+  try {
+    seedTask(tasks, {
+      id: HISTORY_ID,
+      title: "Rerun the practice release's Mac check",
+      intent: { goal: "The practice release passes.", userWords: "rerun the practice release" },
+      status: "idle",
+    });
+    tasks.recordBrief(HISTORY_ID, ["Goal: The practice release passes."]);
+    tasks.noteProgress(HISTORY_ID, "The rerun failed on a different journey; reading its log.");
+    const card = cards.emitCrewmateCard(
+      HISTORY_ID,
+      {
+        id: "which-fix",
+        title: "Which fix should I keep?",
+        body: "<p>Two fixes pass the practice release.</p>",
+        actions: [
+          { id: "flush", label: "Await the queue flush", default: true },
+          { id: "retry", label: "Keep the retry" },
+        ],
+      },
+      "Rerun",
+    );
+    cards.addMessage(card, "captain", "does the flush cover windows too?");
+    cards.addMessage(card, "crewmate", "Yes: the flush runs on every platform.");
+    cards.resolve(cards.get(card) as Card, "flush", "flush");
+    tasks.recordReport(HISTORY_ID, {
+      text: "The Mac check passes with the queue flush. I kept it and removed the retry.",
+      summary: "The Mac check passes with the queue flush.",
+      declared: { result: KEPT },
+    });
+    tasks.close(HISTORY_ID, { status: "done", reason: "merged", actor: "host" });
+    const key = tasks.get(HISTORY_ID)?.key;
+    if (!key) throw new Error("The seeded task has no key.");
+    return key;
+  } finally {
+    db.close();
+  }
+}
+
+type SavedEvent = Pick<
+  TaskDetail["events"][number],
+  "id" | "at" | "actor" | "kind" | "text" | "data"
+>;
+
+/** What the app's data holds for the task, read from its rows, not through a reader. */
+function savedRows(userDataDir: string) {
+  return readSavedData(userDataDir, (db) => {
+    const events = (
+      db
+        .prepare(
+          "SELECT id, at, actor, kind, text, data_json FROM task_events WHERE task_id = ? ORDER BY at, id",
+        )
+        .all(HISTORY_ID) as (Omit<SavedEvent, "data"> & { data_json: string | null })[]
+    ).map(({ data_json, ...event }) => ({
+      ...event,
+      data: data_json ? (JSON.parse(data_json) as Record<string, unknown>) : null,
+    }));
+    const delivery = db
+      .prepare("SELECT delivery_json FROM tasks WHERE id = ?")
+      .pluck()
+      .get(HISTORY_ID) as string | null;
+    return {
+      events,
+      copy: (delivery ? JSON.parse(delivery).result : undefined) as
+        | { at: number; value: Record<string, unknown> }
+        | undefined,
+    };
+  });
+}
+
+/** The first mate's `tasks` read by key, one field per call, as the tool returned them. */
+async function firstmateRead(app: LaunchedApp, key: string): Promise<Record<string, unknown>> {
+  const prompt = `${UPGRADED_TASK_PROMPT} ${key}`;
+  await askFirstmate(app.page, prompt);
+  const read = (app.mockProvider?.requestBodies() ?? [])
+    .map(sinceLastUser)
+    .filter((turn) => turn.user.includes(prompt))
+    .find((turn) => turn.results.length === UPGRADED_TASK_FIELDS.length);
+  if (!read) throw new Error("The first mate did not read every field.");
+  return Object.fromEntries(
+    UPGRADED_TASK_FIELDS.map((field, index) => {
+      const page = read.results[index] ?? "";
+      const header = page.match(
+        /^field (\w+) as (text|json), offset 1, nextOffset none, length \d+\n/,
+      );
+      expect(header?.[1], `the ${field} page`).toBe(field);
+      const text = page.slice(header?.[0].length ?? 0);
+      return [field, header?.[2] === "json" ? JSON.parse(text) : text];
+    }),
+  );
+}
+
+/**
+ * INF-1296 piece 1, the captain's "i want to make sure this gets good e2e
+ * test coverage to ensure exsiting users don't get regressed during this
+ * migration". Promised result: a task's history an older release saved - a
+ * result copied onto the task's delivery facts and a card choice that names
+ * no card evidence - reads the same after the upgrade and a restart, in the
+ * record and through the first mate's `tasks` read, and a report this build
+ * writes later takes over the result without rewriting the older copy.
+ * Data: a task written through the app's own writers, rewritten into the
+ * older release's form (`asSavedByOlderRelease`). Completion: the first
+ * mate's answer after its four reads, and the saved rows read back after
+ * the app quits. Prerequisites: the hermetic launcher. Shared resources:
+ * none.
+ */
+test("a task's history an older release saved reads the same after the upgrade", async () => {
+  const userDataDir = scratchDir("infinitary-upgraded-history-");
+  const key = seedHistory(userDataDir);
+  const older = asSavedByOlderRelease(userDataDir);
+  const saved = savedRows(userDataDir);
+  const reports = saved.events.filter((event) => event.kind === "report");
+  const decisions = saved.events.filter((event) => event.kind === "card_resolved");
+  // Something was rewritten, or the journey would open this build's own profile.
+  expect(older.resultCopies).toEqual([{ taskId: HISTORY_ID, at: reports[0]?.at }]);
+  expect(older.decisions).toEqual(decisions.map((event) => event.id));
+  expect(saved.copy).toEqual({ at: reports[0]?.at, value: KEPT });
+  const briefWords = (() => {
+    const { db, tasks } = taskWriters(userDataDir);
+    try {
+      const briefed = tasks.timeline(HISTORY_ID).find((event) => event.kind === "briefed");
+      return briefed ? tasks.servedBrief(briefed) : "";
+    } finally {
+      db.close();
+    }
+  })();
+  expect(briefWords).toContain("Goal: The practice release passes.");
+
+  const launch = () =>
+    launchApp({ withMockProvider: true, scenarios: [upgradedTaskRead], userDataDir });
+  /** What the older release showed: its rows, its copied result, its choice's data. */
+  const expectAsSaved = async (
+    app: LaunchedApp,
+    result: Record<string, unknown>,
+  ): Promise<TaskDetail> => {
+    const detail: TaskDetail = await app.page.evaluate(
+      (id) => window.infinitary.tasks.detail(id),
+      HISTORY_ID,
+    );
+    const rows = savedRows(userDataDir).events;
+    expect(
+      detail.events.map(({ id, at, actor, kind, text, data }) => ({
+        id,
+        at,
+        actor,
+        kind,
+        text,
+        data,
+      })),
+    ).toEqual(rows);
+    // Nothing about the task is left out of Activity: every event but the evidence is a row or under one.
+    expect(
+      detail.activityLog
+        .flatMap((row) => [row.id, ...(row.folded ?? []).map((line) => line.id)])
+        .sort((a, b) => a - b),
+    ).toEqual(
+      rows
+        .filter((event) => ACTIVITY_PLACES[event.kind] !== "evidence")
+        .map((event) => event.id)
+        .sort((a, b) => a - b),
+    );
+    expect(await firstmateRead(app, key)).toEqual({
+      reports: rows
+        .filter((event) => event.kind === "report")
+        .map((event) => ({ event_id: event.id, text: event.text })),
+      result,
+      decisions: decisions.map((event) => ({
+        event_id: event.id,
+        text: event.text,
+        data: event.data,
+      })),
+      brief: briefWords,
+    });
+    return detail;
+  };
+
+  let app: LaunchedApp | undefined = await launch();
+  try {
+    const upgraded =
+      await test.step("upgrade: the record and the first mate's read show what the older release saved", async () => {
+        if (!app) throw new Error("The app did not launch.");
+        const detail = await expectAsSaved(app, KEPT);
+        // The captain opens the record by keys and reads the report's row.
+        await openGroup(app.page, "landed");
+        await pressRow(app.page, key);
+        await expect(recordCard(app.page)).toHaveAttribute("data-task-record", HISTORY_ID);
+        await expect(recordFrame(app.page).locator('[data-record-event="report"]')).toHaveCount(1);
+        return detail;
+      });
+
+    await test.step("restart: the same history reads the same", async () => {
+      await app?.close();
+      app = await launch();
+      const detail = await expectAsSaved(app, KEPT);
+      expect(detail.activityLog).toEqual(upgraded.activityLog);
+    });
+
+    await test.step("a newer report's result takes over, and the older copy stays saved as it was", async () => {
+      await app?.close();
+      app = undefined;
+      const { db, tasks } = taskWriters(userDataDir, Date.now());
+      try {
+        tasks.recordReport(HISTORY_ID, {
+          text: "Two more nightly runs passed with the queue flush.",
+          declared: { result: NEWER },
+        });
+      } finally {
+        db.close();
+      }
+      app = await launch();
+      await expectAsSaved(app, NEWER);
+      await app.close();
+      app = undefined;
+      expect(savedRows(userDataDir).copy).toEqual(saved.copy);
+    });
+
+    await test.step("the unified timeline reads every entry the upgraded task holds, once", () => {
+      const { db, tasks, cardStore } = taskWriters(userDataDir);
+      try {
+        const entries = new TaskTimeline({ tasks, cards: cardStore }).entries(HISTORY_ID);
+        const ids = entries.map((entry) => entry.id);
+        expect(new Set(ids).size).toBe(ids.length);
+        // The older choice names no card evidence, so its event and the evidence both stay.
+        for (const event of savedRows(userDataDir).events)
+          expect(ids).toContain(`task-event:${event.id}`);
+        expect(ids.filter((id) => id.startsWith("card-observation:")).length).toBe(
+          cardStore.observationsForTask(HISTORY_ID).filter((row) => row.kind !== "message_ref")
+            .length,
+        );
+        expect(ids.filter((id) => id.startsWith("card-message:"))).toHaveLength(
+          cardStore.messagesForTask(HISTORY_ID).length,
+        );
+      } finally {
+        db.close();
+      }
+    });
+  } finally {
+    await app?.close();
   }
 });

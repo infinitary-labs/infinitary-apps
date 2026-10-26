@@ -7,6 +7,7 @@ import { mcpIntegration } from "../../src/core/integrations/providers/mcp/mcpInt
 import { openDatabase } from "../../src/core/storage/db";
 import { atUtilityQos } from "../../src/core/utilityQos";
 import { INTEGRATION_KIND_NAMES } from "../../src/shared/integrations";
+import { deliveryForRecord, type RepoDelivery } from "../../src/shared/repos";
 
 /**
  * A profile as an older release saved it (docs/saved-data-compatibility.md,
@@ -49,6 +50,10 @@ export function olderCheckProfile(protocol: CustomProtocol, profile: string): st
 export type OlderProfile = {
   /** Each custom model check rewritten: its connection, its model, and the profile before and after. */
   customChecks: { accountId: string; model: string; from: string; to: string }[];
+  /** Each task given the copy of its latest result an older release kept on its delivery facts. */
+  resultCopies: { taskId: string; at: number }[];
+  /** Each card choice event whose card evidence alias was taken out. */
+  decisions: number[];
 };
 
 /**
@@ -57,7 +62,67 @@ export type OlderProfile = {
  * returns says what it rewrote, so a journey can tell it was not a no-op.
  */
 export function asSavedByOlderRelease(userDataDir: string): OlderProfile {
-  return { customChecks: olderCustomChecks(userDataDir) };
+  return { customChecks: olderCustomChecks(userDataDir), ...olderTaskHistory(userDataDir) };
+}
+
+/**
+ * Each task's history as a release before INF-1296 piece 1 saved it. That
+ * release also kept the newest report's result on the task's delivery
+ * facts (`delivery.result`, `{ at, value }` with the report's own time),
+ * and its card choice events named no card evidence (`observation`).
+ */
+function olderTaskHistory(userDataDir: string): Pick<OlderProfile, "resultCopies" | "decisions"> {
+  if (!existsSync(join(userDataDir, "firstmate.db"))) return { resultCopies: [], decisions: [] };
+  const db = openDatabase(userDataDir);
+  try {
+    const resultCopies = db
+      .prepare(
+        `SELECT e.task_id AS taskId, e.at, json_extract(e.data_json, '$.result') AS value,
+           t.delivery_json AS delivery, t.shape_json AS shape, r.delivery AS repoDelivery
+         FROM task_events e JOIN tasks t ON t.id = e.task_id LEFT JOIN repos r ON r.id = t.repo_id
+         WHERE e.kind = 'report' AND json_valid(e.data_json)
+           AND json_type(e.data_json, '$.result') = 'object'
+           AND e.id = (SELECT id FROM task_events WHERE task_id = e.task_id AND kind = 'report'
+             AND json_valid(data_json) AND json_type(data_json, '$.result') = 'object'
+             ORDER BY at DESC, id DESC LIMIT 1)`,
+      )
+      .all() as {
+      taskId: string;
+      at: number;
+      value: string;
+      delivery: string | null;
+      shape: string | null;
+      repoDelivery: RepoDelivery | null;
+    }[];
+    const copy = db.prepare("UPDATE tasks SET delivery_json = ? WHERE id = ?");
+    for (const row of resultCopies) {
+      // That release's writer kept the delivery mode it found, or the task's posture.
+      const delivery = row.delivery ? JSON.parse(row.delivery) : {};
+      const mode =
+        delivery.mode ??
+        deliveryForRecord(
+          { shape: row.shape ? JSON.parse(row.shape) : null },
+          row.repoDelivery ?? undefined,
+        );
+      const result = { at: row.at, value: JSON.parse(row.value) };
+      copy.run(JSON.stringify({ ...delivery, mode, result }), row.taskId);
+    }
+    const decisions = (
+      db
+        .prepare(
+          `SELECT id FROM task_events WHERE kind = 'card_resolved' AND json_valid(data_json)
+           AND json_type(data_json, '$.observation') IS NOT NULL`,
+        )
+        .all() as { id: number }[]
+    ).map((row) => row.id);
+    const unalias = db.prepare(
+      "UPDATE task_events SET data_json = json_remove(data_json, '$.observation') WHERE id = ?",
+    );
+    for (const id of decisions) unalias.run(id);
+    return { resultCopies: resultCopies.map(({ taskId, at }) => ({ taskId, at })), decisions };
+  } finally {
+    db.close();
+  }
 }
 
 /**

@@ -495,6 +495,7 @@ export class CardService {
     // moves: a choice that could not be kept is never shown as made. What
     // the choice grants (`alongside`: a merge approval, FI3-304) commits in
     // the same transaction.
+    let observation: string | undefined;
     this.host.cardStore.transaction(() => {
       // A script-fired action may close a card, but it is not a captain
       // resolution in the next context block or a replayed human click.
@@ -503,12 +504,12 @@ export class CardService {
         by === "captain" ? resolution : `script:${resolution}`,
         answers,
       );
-      this.noteAction(card, action, { closes: true, answers, by, evidence });
+      observation = this.noteAction(card, action, { closes: true, answers, by, evidence });
       alongside?.();
     });
     this.cards.delete(card.id);
     this.staged.delete(card.id);
-    const closedAnswer = this.recordResolution(card, action, by, answers);
+    const closedAnswer = this.recordResolution(card, action, by, answers, observation);
     this.scheduleBroadcast();
     return closedAnswer;
   }
@@ -519,11 +520,12 @@ export class CardService {
    * dismissal of the offer he was looking at, never a choice.
    */
   dismiss(card: Card, submission?: unknown): void {
+    let observation: string | undefined;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(card.id, "close");
       if (card.taskId && this.host.tasks.get(card.taskId)?.delivery?.captainAction)
         this.host.tasks.deferCaptainAction(card.taskId);
-      this.noteExit(card, "captain", "close-control", {
+      observation = this.noteExit(card, "captain", "close-control", {
         reason: "dismissed",
         display: displayOf(readSubmission(submission), card),
       });
@@ -541,7 +543,7 @@ export class CardService {
     }
     this.cards.delete(card.id);
     this.staged.delete(card.id);
-    this.recordResolution(card, "dismissed", "captain");
+    this.recordResolution(card, "dismissed", "captain", undefined, observation);
     this.scheduleBroadcast();
   }
 
@@ -1229,9 +1231,9 @@ export class CardService {
       by: "captain" | "firstmate" | "crewmate";
       evidence?: CardInteractionEvidence | undefined;
     },
-  ): void {
+  ): string | undefined {
     const { lifecycleId, offerId } = shown;
-    if (!lifecycleId || !offerId) return;
+    if (!lifecycleId || !offerId) return undefined;
     const action = shown.actions.find((entry) => entry.id === actionId);
     const evidence = input.evidence;
     const source = evidence?.source ?? (input.by === "captain" ? "chrome" : "frame");
@@ -1248,8 +1250,9 @@ export class CardService {
         : answered
           ? { questionsGap: "absent" }
           : {};
-    this.host.cardStore.observe({
-      id: randomUUID(),
+    const id = randomUUID();
+    const kept = this.host.cardStore.observe({
+      id,
       kind: "action",
       cardId: shown.id,
       lifecycleId,
@@ -1278,6 +1281,7 @@ export class CardService {
         interactionSource: submission ? "shell" : "host",
       },
     });
+    return kept ? id : undefined;
   }
 
   /** How a lifecycle ended without a declared action. */
@@ -1286,11 +1290,12 @@ export class CardService {
     actor: CardObservationActor,
     source: CardObservationSource,
     payload: CardObservationPayload<"exit">,
-  ): void {
+  ): string | undefined {
     const { lifecycleId, offerId } = card;
-    if (!lifecycleId) return;
-    this.host.cardStore.observe({
-      id: randomUUID(),
+    if (!lifecycleId) return undefined;
+    const id = randomUUID();
+    const kept = this.host.cardStore.observe({
+      id,
       kind: "exit",
       cardId: card.id,
       lifecycleId,
@@ -1305,6 +1310,7 @@ export class CardService {
         ...(payload.note ? { note: payload.note.slice(0, CARD_OBSERVATION_NOTE_MAX) } : {}),
       },
     });
+    return kept ? id : undefined;
   }
 
   /**
@@ -1474,16 +1480,17 @@ export class CardService {
       throw new Error(`Crewmate cannot close card "${id}" (not emitted by this task).`);
     }
     const why = reason?.trim() || "closed";
+    let observation: string | undefined;
     this.host.cardStore.transaction(() => {
       this.host.cardStore.resolve(id, why);
-      this.noteExit(card, actor.kind, "tool", {
+      observation = this.noteExit(card, actor.kind, "tool", {
         reason: "author-withdrawal",
         ...(reason?.trim() ? { note: why } : {}),
       });
     });
     this.cards.delete(id);
     this.staged.delete(id);
-    this.recordResolution(card, "closed", actor.kind);
+    this.recordResolution(card, "closed", actor.kind, undefined, observation);
     this.scheduleBroadcast();
     return `Closed card "${card.title}" (${id}).`;
   }
@@ -1745,12 +1752,13 @@ export class CardService {
    */
   flagDuplicate(input: { cardId: string; duplicateOf: string; note: string }): DuplicateResult {
     const open = this.cards.get(input.cardId);
+    let observation: string | undefined;
     const result = this.host.cardStore.transaction(() => {
       const result = this.host.cardStore.flagDuplicate(input);
       if (result.status === "flagged" && open) {
         this.host.cardStore.resolve(open.id, "duplicate");
         // The Firstmate's tool stamps the label the captain confirmed.
-        this.noteExit(open, "firstmate", "tool", {
+        observation = this.noteExit(open, "firstmate", "tool", {
           reason: "duplicate",
           duplicateOf: input.duplicateOf,
           ...(input.note.trim() ? { note: input.note.trim() } : {}),
@@ -1762,7 +1770,7 @@ export class CardService {
     if (open) {
       this.cards.delete(open.id);
       this.staged.delete(open.id);
-      this.recordResolution(open, "closed", "captain");
+      this.recordResolution(open, "closed", "captain", undefined, observation);
       this.scheduleBroadcast();
     }
     this.host.broadcastEvent({
@@ -1785,12 +1793,16 @@ export class CardService {
    * the crewmate, which judges whether the task is finished (FI3-435).
    * Returns whether it closed, because the click's ordinary round-trip to a
    * still-running crewmate has nowhere to go once the task is closed.
+   * `observation` is the card evidence's record of the same choice or
+   * close, which the task's event names as that occurrence (its alias on
+   * the unified timeline, docs/task-record.md).
    */
   private recordResolution(
     card: Card,
     action: string,
     by: "captain" | "firstmate" | "crewmate" = "captain",
     answers?: CardAnswer[],
+    observation?: string,
   ): boolean {
     const tasks = this.host.tasks;
     let closedAnswer = false;
@@ -1802,6 +1814,7 @@ export class CardService {
         action,
         actor: by,
         ...(answers ? { answers } : {}),
+        ...(observation ? { observation } : {}),
       });
       return false;
     }
@@ -1812,6 +1825,7 @@ export class CardService {
         action,
         actor: by,
         ...(answers ? { answers } : {}),
+        ...(observation ? { observation } : {}),
       });
       this.host.noteCapAnswered(card, action, by, card.author === "firstmate");
       // The card leaving releases the captain gate it held (the owner's

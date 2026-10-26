@@ -180,6 +180,26 @@ export class TaskEventStore {
     }));
   }
 
+  /** One event by its id, whatever its task; undefined once it is gone (compacted or erased). */
+  get(id: number): TaskEvent | undefined {
+    const row = this.db.prepare("SELECT * FROM task_events WHERE id = ?").get(id) as
+      | Row
+      | undefined;
+    return row ? fromRow(row) : undefined;
+  }
+
+  /** The newest event of `kind` on a task whose data holds an object under `key`. */
+  latestWithObject(taskId: string, kind: TaskEventKind, key: string): TaskEvent | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT * FROM task_events WHERE task_id = ? AND kind = ?
+         AND CASE WHEN json_valid(data_json) THEN json_type(data_json, '$.' || ?) END = 'object'
+         ORDER BY at DESC, id DESC LIMIT 1`,
+      )
+      .get(taskId, kind, key) as Row | undefined;
+    return row ? fromRow(row) : undefined;
+  }
+
   /** The task whose newest event of `kind` carries `ref` (a card id → its task). */
   latestTaskForRef(kind: TaskEventKind, ref: string): string | undefined {
     const row = this.db

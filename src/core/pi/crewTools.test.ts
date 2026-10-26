@@ -468,7 +468,7 @@ describe("crew tools", () => {
       ?.execute("t1", { task_id: "ab12", mode: "cancel", closing_sentence: "  " });
     expect(cancel?.content[0]?.text).toBe(closingSentenceMissing("cancel"));
     expect(delegate.interruptCrewmate).not.toHaveBeenCalled();
-    for (const mode of ["merge-pr", "land", "discard", "released"] as const) {
+    for (const mode of ["merge-pr", "land", "discard", "released", "finished"] as const) {
       const settled = await byName.get("settle_task")?.execute("t1", { task_id: "ab12", mode });
       expect(settled?.content[0]?.text).toBe(closingSentenceMissing(mode));
     }
@@ -553,6 +553,28 @@ describe("crew tools", () => {
       undefined,
       undefined,
       "v1.2.3 published and verified",
+      sentence,
+    );
+  });
+
+  // INF-1279: success in a project folder reaches the task owner with its own evidence.
+  it("routes finished folder work with completion evidence, never release evidence", async () => {
+    const { delegate, byName } = toolset();
+    const evidence = "Checked the folder and verified that the captain's draft is intact.";
+    const sentence = "The project folder was checked.";
+    await byName.get("settle_task")?.execute("t1", {
+      task_id: "ab12",
+      mode: "finished",
+      completion_evidence: evidence,
+      release_evidence: "not the evidence for this mode",
+      closing_sentence: sentence,
+    });
+    expect(delegate.settleTask).toHaveBeenCalledWith(
+      "ab12",
+      "finished",
+      undefined,
+      undefined,
+      evidence,
       sentence,
     );
   });

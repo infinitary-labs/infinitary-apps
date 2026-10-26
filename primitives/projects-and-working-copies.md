@@ -6,7 +6,7 @@ A project binds work to its files and to its delivery rules, and a working copy 
 
 Register every repository the fleet works in as one project with a stable id, a task key, a workspace kind, where it lives (its approved hosting address and forge kind) and its standing delivery, autonomy and rigor.
 Give each task that changes code its own git worktree and branch, started from the default branch fetched at dispatch, so tasks never share a checkout.
-Let the personal workspace be the one project kind that builds in place, with no worktree and no delivery.
+The personal workspace builds in place, with no worktree and no delivery; ordinary work explicitly declared `in_folder` also runs in its project's folder without a task working copy (`docs/task-record.md`).
 Ship a change through the project's posture: a pull or merge request through the forge seam, or a local land, and retire the working copy when the task closes.
 
 ## When to use it, and when not
@@ -38,7 +38,8 @@ The first mate receives the scopes only when changed or after context loss (comp
 A dispatch starts the task's worktree from `origin`'s default branch fetched at dispatch, from the last fetched commit when the fetch fails, and from the repository's own commit when it has no `origin`.
 A personal-workspace task has no worktree (its directory is the workspace), takes no rigor tier, refuses every settle mode, and closes as "built in place" when its report is committed.
 
-A done/dropped close always retires the worktree and branch (captain: "cleaned up period. no exceptions"), saving unlanded work to `refs/infinitary/kept/<task-id>` first.
+Verified folder work can close `done/finished` through the existing settle owner with completion evidence; it has no task working copy to retire and its project folder stays untouched.
+A done/dropped close always retires the task's worktree and branch (captain: "cleaned up period. no exceptions"), saving unlanded work to `refs/infinitary/kept/<task-id>` first.
 Git ancestry decides only whether a save is needed, never whether the tree goes, because a squash-merged change reads as unlanded forever.
 The one exception is a save that fails, which keeps the tree exactly as it was and says so in the feed.
 Retiring a worktree never happens on the settle path: `removeTaskWorktree` moves the tree aside by rename (into the warm pool, or the trash) and returns, and deleting its files runs in the background and at boot (`sweepPool`, `sweepTrash`).

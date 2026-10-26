@@ -451,9 +451,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   },
   // Taken out of a tool's text, where the core already says it.
   {
-    rule: "an idle finished crewmate stays resumable until merged or discarded",
+    rule: "idle crew stays resumable until explicitly settled (WI-11, INF-1279)",
     home: "core",
-    says: "An idle crewmate that finished its work is not settled until you merge or discard it - it stays resumable until then.",
+    says: "An idle crewmate stays resumable until you settle it.",
   },
   {
     rule: "crew_status outranks memory",

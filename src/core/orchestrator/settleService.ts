@@ -10,7 +10,7 @@ import { acceptedValidation } from "@shared/liveValidation";
 import type { MergeRelationship, MergeReview } from "@shared/mergeReview";
 import { plainProblem, type TypedFailure } from "@shared/plainProblem";
 import type { RepoDelivery } from "@shared/repos";
-import type { Deliverable } from "@shared/routingPolicy";
+import { type Deliverable, isFolderWork } from "@shared/routingPolicy";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import type { TaskDeliveryMode } from "@shared/tasks";
@@ -1394,6 +1394,81 @@ export class SettleService {
       ok: true,
       text: `Closed ${handle} as answered: its answer carries on in ${successor}.`,
     };
+  }
+
+  /**
+   * INF-1279: the first mate declares verified success for ordinary folder
+   * work. Evidence is its judgment, not a host interpretation of report
+   * prose. The folder is not a task working copy: never inspect, commit,
+   * merge, push, clean or retire it as part of recording completion.
+   */
+  async closeFinishedFolderWork(
+    taskRef: string,
+    completionEvidence: string,
+  ): Promise<{ text: string; refusal?: SettleRefusal }> {
+    const record = this.host.resolveTaskRef(taskRef, "task_id");
+    const handle = `${record.key || record.id} "${record.title}"`;
+    const refuse = (why: string) => ({ text: `Cannot close ${handle} as finished: ${why}` });
+    if (this.settlingTasks.has(record.id) || record.pendingSettle)
+      return refuse("another settle is already in progress.");
+    if (
+      record.kind !== "work" ||
+      this.host.deliverableOf(record) !== "change" ||
+      !isFolderWork(record.shape?.in_place) ||
+      this.host.isPersonalTask(record.id)
+    )
+      return refuse(
+        "this mode is for work run in a project's folder, not an answer or a change to merge.",
+      );
+    if (record.worktreeDir || record.branch || record.deviceId)
+      return refuse(
+        "this task has a working copy or branch of its own; use its delivery path instead.",
+      );
+    if (record.status !== "active" || record.activity !== "idle" || this.working(record.id))
+      return refuse("wait for its crewmate to finish and report first.");
+    if (!record.outcome?.trim()) return refuse("its crewmate has not reported the result yet.");
+    const evidence = completionEvidence.trim();
+    if (!evidence) return refuse("name the completed result and the evidence that verifies it.");
+    if (record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel)
+      return refuse("this task has its own pull request; use its delivery path instead.");
+    if (
+      this.host.hasRunningJobs?.(record.id) ||
+      record.delivery?.checkBack ||
+      this.host.inbox.allFor(record.id).length ||
+      this.host.inbox.inFlight(record.id).length
+    )
+      return refuse("work or guidance is still outstanding; let its crewmate finish it first.");
+    if (
+      !overridePasses(record.delivery, "decisions", record.delivery?.headSha) &&
+      (record.gate ||
+        record.delivery?.captainWait ||
+        this.host.cards.snapshot().some((card) => card.taskId === record.id && card.actions.length))
+    )
+      return refuse(
+        `another decision or hold still needs attention. ${softHoldWords("decisions", "firstmate")}`,
+      );
+    const gate =
+      this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
+    if (gate) return { text: gate.text, refusal: gate };
+    this.settlingTasks.set(record.id, "finished");
+    try {
+      // All reads above are synchronous. Commit before stopping can yield,
+      // so newly arriving guidance sees a closed task rather than being lost.
+      await this.closeTask(
+        record.id,
+        {
+          status: "done",
+          reason: "finished",
+          actor: "firstmate",
+          text: `finished: ${evidence}`,
+          data: { completionEvidence: evidence },
+        },
+        { recordBeforeStop: true },
+      );
+      return { text: `Closed ${handle} as finished: ${evidence}` };
+    } finally {
+      this.settlingTasks.delete(record.id);
+    }
   }
 
   /**

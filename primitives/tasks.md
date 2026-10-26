@@ -57,6 +57,7 @@ Every relation below is one kind of the checked relationship contract, with its 
 
 Close rules: a parent closes only when every child is closed, except host delivery children (`isDeliveryChild`); a task does not close while a marked blocker is still live work (a soft hold the captain may override); a container no crewmate holds completes with its children.
 An answer task closes `done/answered` on the captain's choice on its crewmate's card, unless the crewmate declared that card `continues`, or through `settle_task answered` when it was declared an internal step and a live task builds on it or waits on it.
+Reported work declared `in_folder` can close `done/finished` through `settle_task finished` with the first mate's explicit completion evidence, through the same settle and task owners, without touching the project folder (`docs/task-record.md`).
 Host closes (a failed turn, a cancel) are unguarded so a record can always record what happened.
 Retiring the working copy and branch on close belongs to [projects-and-working-copies.md](projects-and-working-copies.md).
 

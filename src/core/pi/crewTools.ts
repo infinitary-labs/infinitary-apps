@@ -186,10 +186,10 @@ export type CrewDelegate = {
    */
   settleTask(
     taskId: string,
-    mode: "merge-pr" | "land" | "discard" | "answered" | "released",
+    mode: "merge-pr" | "land" | "discard" | "answered" | "released" | "finished",
     confirm?: boolean,
     proceedWithOpen?: boolean,
-    releaseEvidence?: string,
+    evidence?: string,
     closingSentence?: string,
   ): Promise<{ text: string; refusal?: SettleRefusal }>;
 };
@@ -624,20 +624,22 @@ export function createCrewTools(delegate: CrewDelegate) {
     name: "settle_task",
     label: "Settle task",
     description:
-      "Close a task. merge-pr rechecks the " +
-      "checks and merges the pull request (on a plain Git host, a fast-forward of the default " +
-      "branch); land merges the local branch into the local checkout, never for direct-PR " +
-      "delivery; both then close the task and remove its worktree. discard removes the " +
-      "worktree without merging and closes the task as discarded. answered closes an idle answer task you opened " +
-      "as an internal_step once a planned or started task names it as its basis or waits on it " +
-      "through a blocks link (the close clears that wait) or once it reported its answer, " +
-      "or an answer task whose crewmate reported it finished. released closes a reported, idle work task only after you independently verify its " +
-      "delivery through an external release process, with release_evidence; a missing change or " +
-      "dismissed note alone is never proof. Its record and session stay. " +
+      "merge-pr rechecks and merges the pull request (fast-forwards the default " +
+      "branch on plain Git); land merges locally, never for direct-PR. Both close and remove the worktree. " +
+      "discard removes it unmerged and records discarded. answered closes an idle answer " +
+      "declared internal_step once a live task builds on it or waits on it, or it reported its answer; " +
+      "also an answer its crewmate reported finished. released closes a reported, idle work task only after you independently verify its " +
+      "delivery through an external release process, with release_evidence. finished closes verified, reported, idle " +
+      "in_folder work as done with completion_evidence; files and git stay. " +
+      "Missing changes or dismissed cards prove nothing. Never discard successful folder work or use finished to bypass merging. " +
+      "Records and sessions stay. " +
       "Use crew_status to pick the task id; never guess among several matches.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from crew_status or spawn" }),
-      mode: stringEnum(["merge-pr", "land", "discard", "answered", "released"]),
+      mode: stringEnum(["merge-pr", "land", "discard", "answered", "released", "finished"]),
+      completion_evidence: Type.Optional(
+        Type.String({ description: "For finished: the completed result and what proves it" }),
+      ),
       release_evidence: Type.Optional(
         Type.String({ description: "For released: the release and what proves delivery" }),
       ),
@@ -662,7 +664,7 @@ export function createCrewTools(delegate: CrewDelegate) {
         params.mode,
         params.confirm,
         params.proceed_with_open,
-        params.release_evidence,
+        params.mode === "finished" ? params.completion_evidence : params.release_evidence,
         ...(params.mode !== "answered" && sentence ? [sentence] : []),
       );
       return { text, ...(refusal ? { details: { refusal } } : {}) };

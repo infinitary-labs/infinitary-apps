@@ -100,12 +100,13 @@ export function pullLeftOpenText(repair: { key: string; filed: boolean }): strin
  * click (INF-547), from the close's own reason: the word the first mate's
  * note leads with and the one Activity's line for a drop opens with.
  */
-export type ClosedWithoutClick = "merged" | "released" | "dropped";
+export type ClosedWithoutClick = "merged" | "released" | "finished" | "dropped";
 
 /** The close reasons a first mate's closing sentence rides, by what they mean. */
 export function closedWithoutClick(reason: string): ClosedWithoutClick | undefined {
   if (reason === "merged" || reason === "landed") return "merged";
   if (reason === "released") return "released";
+  if (reason === "finished") return "finished";
   if (reason === "discarded" || reason === "cancelled") return "dropped";
   return undefined;
 }

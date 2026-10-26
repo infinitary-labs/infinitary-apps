@@ -738,10 +738,9 @@ describe("FIRSTMATE_PROMPT_CORE (contract v1.4 and v1.7, host-run settle outcome
     expect(served.match(/effect-free action labeled "Try a premium model"/g)).toHaveLength(1);
   });
 
-  it("keeps an idle crewmate resumable until it is merged, landed, or discarded (WI-11)", () => {
-    expect(core).toContain(
-      "An idle crewmate that finished its work is not settled until you merge or discard it - it stays resumable until then.",
-    );
+  it("keeps idle crew resumable until explicitly settled, including verified folder work (WI-11, INF-1279)", () => {
+    expect(core).toContain("An idle crewmate stays resumable until you settle it.");
+    expect(core).toContain("answered for an answer, finished for verified folder work");
     // What released needs is settle_task's own rule (INF-490; the ledger names it).
     expect(core).not.toContain("use released only with verified evidence");
     // The `finish` mode and the `delivered` status are gone from the contract.

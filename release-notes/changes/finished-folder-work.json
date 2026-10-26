@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "finished-folder-work",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "Successful folder work finishes as done",
+      "body": "Work completed and checked in your project's folder can now finish as done instead of discarded. Your existing files and unpushed work stay untouched.",
+      "picture": {
+        "dark": "finished-folder-work-dark.webp",
+        "light": "finished-folder-work-light.webp",
+        "alt": "The completed folder check appears as Done in its task record."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

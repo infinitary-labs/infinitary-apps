@@ -10270,6 +10270,11 @@ export class CrewSupervisor {
     return this.settle.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen, actor);
   }
 
+  /** Verified folder work closes without touching the project's files or git state. */
+  closeFinishedFolderWork(taskRef: string, completionEvidence: string) {
+    return this.settle.closeFinishedFolderWork(taskRef, completionEvidence);
+  }
+
   /** A verified external release closes work without a task-owned change. */
   closeExternallyReleased(taskRef: string, releaseEvidence: string) {
     return this.settle.closeExternallyReleased(taskRef, releaseEvidence);

@@ -103,13 +103,17 @@ A first mate note on the task stays on the stack through the close, the same as 
 Discard, cancel and `update_task drop` keep their own closes.
 
 A **container completes with its children**.
-A parent that never started - on request, no crewmate, no working copy, no card of its own open - has nothing of its own to settle, and no tool closes a task done without landing it, so nothing else could close it.
+A parent that never started - on request, no crewmate, no working copy, no card of its own open - has nothing of its own to settle, so the ready sweep closes it.
 Once every child is closed, the ready sweep (`CrewSupervisor.completeContainers`, which runs after any close) closes it through `TaskService` as the host: `done/finished` when at least one child is done, else `dropped/cancelled`, with one feed line ("KEY done: everything under it is finished", or "stopped: nothing under it went ahead").
 A parent that carries a crewmate, ever started, or still has an open child is never touched, and `closeRefusal` is unchanged.
 
 `settle_task` in every mode, `landTask`, and `mergePrTask` check these first.
 An externally delivered work task may close `done/released` only through an explicit `settle_task released` with a specific verified release named in `release_evidence`; it needs an idle reported change task, no task-owned proposed change and a successfully inspected working copy with no unlanded edits or commits.
 The release evidence is recorded in its close event.
+Ordinary work declared `in_folder` closes `done/finished` through `settle_task finished` after the first mate verifies its reported result and supplies `completion_evidence` (INF-1279).
+`SettleService.closeFinishedFolderWork` records the declaration through the existing close owner without inspecting or changing the project folder, preserving edits, staged work, stashes and unpushed commits.
+Only an idle, reported change task with no task-owned working copy, branch or proposed change qualifies; outstanding jobs, guidance, check-backs, captain waits, questions, pending settles and the child or dependency holds refuse the close.
+The host checks these typed facts, never the meaning of the evidence; verification remains the first mate's judgment, not a publication-specific state or a substitute for merging.
 A missing proposed change, a note dismissal or an unverified assertion never closes work; the host does not infer delivery from either.
 Each close refusal is a structured `SettleRefusal` (`{ refused, task, tasks, ways, text }`, cards/tasks/agents P2 WI-12): the tool returns its `.text`, and the ways out ride the settle wake as a fenced JSON block the first mate carries as effect buttons - a merge that keeps a task's open children planned is `settle_task` with `proceed_with_open`.
 `update_task drop` on a parent with open children needs `confirm`, which drops the open descendants as `superseded` (deepest first) and then the parent as `cancelled`; work a crewmate holds (an `active` row, idle included) is never dropped from a field edit - that stays with settle_task and its unlanded-work guard.

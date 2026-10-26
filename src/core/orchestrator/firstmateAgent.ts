@@ -2349,21 +2349,16 @@ export class FirstmateAgent {
       // label read, so `escalate_from` is reachable only from a turn that
       // carries the captain's own words.
       isCaptainTurn: () => this.turnOrigin === "captain-turn",
-      settleTask: async (
-        taskId,
-        mode,
-        confirm,
-        proceedWithOpen,
-        releaseEvidence,
-        closingSentence,
-      ) => {
+      settleTask: async (taskId, mode, confirm, proceedWithOpen, evidence, closingSentence) => {
         this.asks.attach(taskId, "settle_task");
         const settle = async (): Promise<{ text: string; refusal?: SettleRefusal }> =>
           mode === "answered"
             ? { text: (await supervisor.closeAnswerUsedAsBasis(taskId)).text }
             : mode === "released"
-              ? await supervisor.closeExternallyReleased(taskId, releaseEvidence ?? "")
-              : await supervisor.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen);
+              ? await supervisor.closeExternallyReleased(taskId, evidence ?? "")
+              : mode === "finished"
+                ? await supervisor.closeFinishedFolderWork(taskId, evidence ?? "")
+                : await supervisor.settleTaskDetailed(taskId, mode, confirm, proceedWithOpen);
         // The close carries the first mate's sentence (INF-547), keyed by
         // the record whichever reference named it.
         const result = closingSentence

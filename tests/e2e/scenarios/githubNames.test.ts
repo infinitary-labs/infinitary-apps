@@ -2,7 +2,8 @@ import { expect, test } from "vitest";
 import { renderIntegrationReply } from "../../../src/core/axi/integrationCommands";
 import { INTEGRATIONS_COMMAND } from "../../../src/core/integrations";
 import { type BashOutcome, jobExitWake, SYNC_CAP_MS } from "../../../src/core/jobs/jobManager";
-import { renderWake } from "../../../src/core/orchestrator/wakes";
+import { JOB_BOUND_MS } from "../../../src/core/orchestrator/idleLadder";
+import { checkBackAsk, renderWake } from "../../../src/core/orchestrator/wakes";
 import { createEventBashTool } from "../../../src/core/pi/bashTool";
 import { frameServedInput } from "../../../src/shared/servedFrame";
 import { SAMPLE_NOTES } from "../../helpers/mcpStandIn";
@@ -80,6 +81,22 @@ const GITHUB_ACCOUNT = renderIntegrationReply(
   },
   [],
 );
+const GITHUB_KEPT = renderIntegrationReply("call", { kind: "running", command: "call" }, []);
+const GITHUB_COLLECTED = renderIntegrationReply(
+  "integrations",
+  {
+    kind: "earlier",
+    command: "call",
+    answer: {
+      text: JSON.stringify(
+        { status: 200, ok: true, requestId: null, nextPath: null, body: { login: STUB_LOGIN } },
+        null,
+        2,
+      ),
+    },
+  },
+  [],
+);
 const NOTES = SAMPLE_NOTES.map((note, index) => `${index + 1}. ${note}`).join("\n");
 const NOTES_ANSWER = renderIntegrationReply(
   "call",
@@ -104,8 +121,11 @@ async function bashAnswer(command: string, outcome: BashOutcome) {
   return (await tool.execute("bash", { command }, undefined, undefined, context)).content;
 }
 
-/** A read the crewmate runs, what it printed, and whether it outlasted the shell. */
-type Read = { command: string; printed: string; slow?: true };
+/**
+ * A read the crewmate runs, what it printed, whether it outlasted the shell,
+ * and whether the host asked when it will look again before the job exited.
+ */
+type Read = { command: string; printed: string; slow?: true; nudged?: true };
 
 const CASES: { slow: string; reads: Read[] }[] = [
   {
@@ -140,6 +160,18 @@ const CASES: { slow: string; reads: Read[] }[] = [
       { command: READ_GITHUB, printed: GITHUB_ACCOUNT },
       { command: LIST_NOTES, printed: NOTES_KEPT },
       { command: LIST, printed: NOTES_COLLECTED, slow: true },
+    ],
+  },
+  {
+    // INF-1436, the order older-profile's Mac run captured: GitHub's read was
+    // kept, the command collecting it outlasted the shell, and the host's
+    // check-back ask came between its receipt and its exit wake.
+    slow: "the command collecting GitHub's kept read, with the host's ask between",
+    reads: [
+      { command: LIST, printed: LISTED },
+      { command: READ_GITHUB, printed: GITHUB_KEPT },
+      { command: LIST, printed: GITHUB_COLLECTED, slow: true, nudged: true },
+      { command: LIST_NOTES, printed: NOTES_ANSWER },
     ],
   },
 ];
@@ -192,6 +224,27 @@ for (const { slow, reads } of CASES) {
       if (!read.slow) continue;
       // The receipt is no answer: the turn ends without words or another read.
       expect(next()).toEqual({ text: "" });
+      if (read.nudged) {
+        // The host's ask while the job runs is a user message, never a new
+        // assignment: the turn still ends without words or another read.
+        messages.push({
+          role: "user",
+          content: frameServedInput([
+            {
+              kind: "wake",
+              origin: "agent",
+              body: renderWake(
+                checkBackAsk(
+                  { jobId, command: read.command, startedAt: 0 },
+                  SYNC_CAP_MS,
+                  JOB_BOUND_MS,
+                ),
+              ),
+            },
+          ]).text,
+        });
+        expect(next()).toEqual({ text: "" });
+      }
       messages.push({
         role: "user",
         content: frameServedInput([

@@ -1,4 +1,5 @@
-import { calledTool, type Scenario } from "../mockProvider";
+import { browserShellMessages, calledTool, type Scenario } from "../mockProvider";
+import { providerMessages } from "../providerRequest";
 
 /**
  * A crewmate on a Mac with no git of its own on the search path (git
@@ -12,27 +13,35 @@ export const MOCK_GIT_REPORT_PREFIX = "The working copy's git answers";
 /** The crewmate asks its working copy's git, then reports what came back. */
 export const gitStatus: Scenario =
   () =>
-  ({ body, isFirstmate, anthropicMessages, wantsStream, latestUserTail, hasToolResults }) => {
-    // Claude's client sends each tool result as the latest user message,
-    // so on its wire the marker is earlier in the conversation.
-    const asked =
-      latestUserTail.includes(GIT_STATUS_PROMPT_MARKER) ||
-      (anthropicMessages && body.includes(GIT_STATUS_PROMPT_MARKER));
-    if (isFirstmate || !asked || !wantsStream) return undefined;
-    if (!hasToolResults) {
+  ({ body, isFirstmate, wantsStream, latestUserTail }) => {
+    if (isFirstmate || !wantsStream) return undefined;
+    // The assignment starts at the brief that asked; Claude's client sends
+    // each tool result as the latest user message, and the host's ask while
+    // a job runs is one too, so neither is a new assignment (INF-1436).
+    const messages = providerMessages(body);
+    const assignment = messages.findLastIndex(
+      (message) => message.role === "user" && message.text.includes(GIT_STATUS_PROMPT_MARKER),
+    );
+    if (assignment < 0) return undefined;
+    if (latestUserTail.includes(MOCK_GIT_REPORT_PREFIX) || calledTool(body, "report")) {
+      return { text: "done" };
+    }
+    // A git past the Pi shell's limit answers with its job's receipt, and its
+    // output comes later as the job's exit wake. The receipt is no answer:
+    // end the turn without words while the job runs (INF-1141's rule).
+    const { readings, pending } = browserShellMessages(messages);
+    if (pending) return { text: "" };
+    // Only what came back from the shell, never the request's tools section.
+    const result = readings
+      .slice(assignment + 1)
+      .findLast((message) => message.role === "tool")?.text;
+    if (result === undefined) {
       return {
         calls: [
           { name: "bash", args: { command: "git --version && git status --short --branch" } },
         ],
       };
     }
-    if (latestUserTail.includes(MOCK_GIT_REPORT_PREFIX) || calledTool(body, "report")) {
-      return { text: "done" };
-    }
-    // Only what came back from the shell: the tool result follows the
-    // call, or is the latest user message itself on Claude's wire.
-    const call = latestUserTail.indexOf('"tool_calls"');
-    const result = call >= 0 ? latestUserTail.slice(call) : latestUserTail;
     const version = result.match(/git version \d+\.\d+\.\d+/)?.[0];
     const branch = result.match(/## [^\s"\\]+/)?.[0];
     const answer =

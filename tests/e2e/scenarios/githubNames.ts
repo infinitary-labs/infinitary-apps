@@ -21,7 +21,12 @@ export const githubNames: Scenario =
     // now would be one more report on the task.
     const { readings, pending: running } = browserShellMessages(providerMessages(body));
     if (running) return { text: "" };
-    const assignment = readings.findLastIndex((message) => message.role === "user");
+    // The assignment starts at the commission that asked for these reads. A
+    // later user message - the host's nudge while a job runs, say - is no new
+    // assignment: the results before it are still this one's (INF-1436).
+    const assignment = readings.findLastIndex(
+      (message) => message.role === "user" && message.text.includes(GITHUB_NAMES_PROMPT),
+    );
     const results = readings
       .slice(assignment + 1)
       .flatMap((message) => (message.role === "tool" ? [message.text] : []));

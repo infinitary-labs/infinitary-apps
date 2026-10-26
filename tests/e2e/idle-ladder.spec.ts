@@ -1,7 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { expect, test } from "@playwright/test";
-import { stallCardTitle } from "../../src/core/orchestrator/idleLadder";
+import { expect, type Page, test } from "@playwright/test";
+import { stallCardId, stallCardTitle } from "../../src/core/orchestrator/idleLadder";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
@@ -28,8 +28,25 @@ import { cardSurface, expectNoCard, shownCard } from "./stack";
 const TASK_TITLE = "Tidy the docs";
 /** How long it has been idle when the app launches. */
 const IDLE_MS = 90 * 60_000;
-const TITLE = stallCardTitle(TASK_TITLE, formatDurationShort(IDLE_MS));
 const WAIT_TITLE = "Publish the docs";
+
+/**
+ * The stall card's title, derived from its own record: the host names how
+ * long the task has been stuck from the same moment it saves as the card's
+ * `createdAt` (`raiseStallCard`), so a launch slowed by a loaded Mac reads
+ * "1h 31m" and is still exact (INF-1436: the fixed "1h 30m" held only when
+ * the card went up within 30 seconds of seeding).
+ */
+async function stallTitle(page: Page, taskId: string, taskTitle: string, idleSince: number) {
+  const id = stallCardId(taskId);
+  const createdAt = async () =>
+    (await page.evaluate(() => window.infinitary.cards.list())).find((card) => card.id === id)
+      ?.createdAt;
+  await expect.poll(createdAt).toBeDefined();
+  const raisedAt = await createdAt();
+  if (raisedAt === undefined) throw new Error(`Expected the card ${id}`);
+  return stallCardTitle(taskTitle, formatDurationShort(raisedAt - idleSince));
+}
 
 test("a crewmate stuck past every nudge and wake is the app's own card, and Drop task ends it", async () => {
   const userDataDir = scratchDir("infinitary-idle-ladder-");
@@ -45,25 +62,27 @@ test("a crewmate stuck past every nudge and wake is the app's own card, and Drop
     outcome: "I updated the index. The glossary still needs a pass.",
   });
   const now = Date.now();
+  const idleSince = now - IDLE_MS;
   tasks.recordRecovery("stuck-task", {
     rung: 2,
     count: 2,
     at: now - 35 * 60_000,
-    idleSince: now - IDLE_MS,
+    idleSince,
   });
   db.close();
 
   const launched = await launchApp({ userDataDir });
   try {
     const { page } = launched;
-    await expect(shownCard(page, TITLE)).toBeVisible();
+    const title = await stallTitle(page, "stuck-task", TASK_TITLE, idleSince);
+    await expect(shownCard(page, title)).toBeVisible();
     // Its head names the task once, by the key that leads it as on every
     // card about a task (INF-418: it read "SCR-1 · SCR-1").
     const key = await taskKey(page, TASK_TITLE);
-    const head = shownCard(page, TITLE).locator("[data-card-head]");
+    const head = shownCard(page, title).locator("[data-card-head]");
     await expect(taskKeyLinks(head.locator("[data-card-key]"))).toHaveText([key]);
     expect((await head.innerText()).split(key)).toHaveLength(2);
-    const body = cardBody(page, TITLE);
+    const body = cardBody(page, title);
     await expect(body.getByText("What it last said: I updated the index.")).toBeVisible();
     for (const label of ["Continue", DROP_TASK_LABEL, "Discard"]) {
       await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
@@ -78,7 +97,7 @@ test("a crewmate stuck past every nudge and wake is the app's own card, and Drop
     await page.screenshot({ path: test.info().outputPath("idle-ladder-stall-card.png") });
 
     await page.getByRole("button", { name: DROP_TASK_LABEL, exact: true }).click();
-    await expectNoCard(page, TITLE);
+    await expectNoCard(page, title);
     await expect
       .poll(async () =>
         page.evaluate(async () => {
@@ -182,18 +201,19 @@ test("a crewmate's declared wait on the captain with no card up is put to him on
   // same hold rather than placing it afresh.
   tasks.setGate("waiting-task", { kind: "captain", reason });
   const now = Date.now();
+  const idleSince = now - IDLE_MS;
   tasks.recordRecovery("waiting-task", {
     rung: 2,
     count: 2,
     at: now - 35 * 60_000,
-    idleSince: now - IDLE_MS,
+    idleSince,
   });
   db.close();
 
   const launched = await launchApp({ userDataDir });
   try {
     const { page } = launched;
-    const title = stallCardTitle(WAIT_TITLE, formatDurationShort(IDLE_MS));
+    const title = await stallTitle(page, "waiting-task", WAIT_TITLE, idleSince);
     await expect(shownCard(page, title)).toBeVisible();
     // It names what the crewmate waits on him to do.
     await expect(cardBody(page, title).getByText(reason)).toBeVisible();

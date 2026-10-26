@@ -246,7 +246,7 @@ export class Inbox {
     const { command, defaultDir, linkDir, installedDir } = this.options;
     const named =
       this.options.dir === defaultDir ? "" : `INFINITARY_INBOX=${quoted(this.options.dir)} `;
-    const line = `${named}${quoted(command)} note "Deploy finished"`;
+    const line = `${named}${quoted(command)} note "Confirm you have received this"`;
     const installed = installedDir ? join(installedDir, INBOX_COMMAND) : undefined;
     if (installed && this.leadsHere(installed))
       return { command, line, link: { state: "linked", path: installed } };

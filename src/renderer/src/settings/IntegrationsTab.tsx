@@ -51,14 +51,14 @@ import "./forges.css";
  * person accepts before anything is asked of Google (INF-949). While the
  * app waits for the browser to come back, an aside says so, opens the page
  * again or cancels, and the new row opens once it is back. The Infinitary
- * Inbox, Infinitary's own integration, has its own section above the rest
- * (the captain's reply on INF-1214): what it is and a switch, off until the
- * person turns it on (docs/integrations.md, "The inbox"); on, it shows
- * an example of the line a program runs to drop an event, a link for the
- * short name, and the rule that wakes the first mate, which turning the
- * inbox on adds and turns on (the captain's word on INF-1214). Every change
- * here goes through the same channels the first mate's `app_change` lines
- * reach.
+ * Inbox, Infinitary's own integration, has its own box under the
+ * connections (the captain's reply on INF-1214, moved by INF-1474): what
+ * it is and a switch, off until the person turns it on
+ * (docs/integrations.md, "The inbox"); on, it shows the line a program
+ * runs to send a note and, behind More, a link for the short name and the
+ * rule that tells the first mate, which turning the inbox on adds and
+ * turns on (the captain's word on INF-1214). Every change here goes
+ * through the same channels the first mate's `app_change` lines reach.
  */
 
 const EMPTY: IntegrationsView = { integrations: [], addable: [] };
@@ -248,16 +248,6 @@ export function IntegrationsTab() {
       data-integrations=""
       style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}
     >
-      <InboxSection
-        inbox={inbox}
-        loaded={loaded}
-        onTurn={(on) =>
-          on
-            ? turnOnInbox()
-            : change(() => window.infinitary.integrations.remove(inbox?.id ?? "inbox"))
-        }
-        onLink={() => change(() => window.infinitary.integrations.linkInbox())}
-      />
       <div>
         <div style={{ fontSize: "var(--text-md)", color: "var(--fg-1)", fontWeight: 500 }}>
           {INTEGRATIONS_WORDS.title}
@@ -390,6 +380,16 @@ export function IntegrationsTab() {
           </div>
         )}
       </div>
+      <InboxSection
+        inbox={inbox}
+        loaded={loaded}
+        onTurn={(on) =>
+          on
+            ? turnOnInbox()
+            : change(() => window.infinitary.integrations.remove(inbox?.id ?? "inbox"))
+        }
+        onLink={() => change(() => window.infinitary.integrations.linkInbox())}
+      />
     </section>
   );
 }
@@ -685,11 +685,11 @@ function IntegrationActions({
 }
 
 /**
- * The Infinitary Inbox's own section (docs/integrations.md, "The inbox";
- * the captain's reply on INF-1214: "it should be its own section, and
- * default it's off, and we tell the user what it is, and that they can
- * turn it on"): its name, what it is and a switch, then, while it is on,
- * the example line, the link and the rule.
+ * The Infinitary Inbox's own box (docs/integrations.md, "The inbox"; the
+ * captain's reply on INF-1214: "it should be its own section, and default
+ * it's off, and we tell the user what it is, and that they can turn it
+ * on"): its name, what it is and a switch, then, while it is on, the line
+ * to copy, one note, and More.
  */
 function InboxSection({
   inbox,
@@ -727,17 +727,17 @@ function InboxSection({
 }
 
 /**
- * The inbox's open part (docs/integrations.md, "The inbox"): an example of
- * the line a program runs, in full and copied with one press, marked as an
- * example; the short name's link where the folder takes one; and which
- * rule wakes the first mate.
+ * The inbox's open part (docs/integrations.md, "The inbox"; INF-1474, the
+ * captain's wording B, shown whole on their reply to INF-1475): the line a
+ * program runs, in full and copied with one press, and one note; then the
+ * short name's link where the folder takes one or already holds it (the
+ * captain's q4: nothing where it cannot be made), and which rule to pause.
  */
 function InboxDoorPanel({ door, onLink }: { door: IntegrationDoorView; onLink: () => void }) {
   const { state, copy, status } = useCopyCode(door.line, true);
   const { link } = door;
   return (
     <div className="fm-integrations-door" data-inbox-door={link.state}>
-      <div className="fm-integrations-keys-head">{INBOX_WORDS.exampleHeading}</div>
       <div className="fm-integrations-door-line">
         <code data-inbox-line="">{door.line}</code>
         <span>
@@ -756,23 +756,20 @@ function InboxDoorPanel({ door, onLink }: { door: IntegrationDoorView; onLink: (
       <p className="fm-integrations-door-note" data-inbox-example-note="">
         {INBOX_WORDS.exampleNote}
       </p>
-      <div className="fm-integrations-door-link" data-inbox-link={link.state}>
-        <span>
-          {link.state === "linked"
-            ? INBOX_WORDS.linked(link.path)
-            : link.state === "offered"
-              ? INBOX_WORDS.offered(link.path)
-              : link.state === "taken"
-                ? INBOX_WORDS.taken(link.path)
-                : INBOX_WORDS.unwritable(link.path.slice(0, link.path.lastIndexOf("/")))}
-        </span>
-        {link.state === "offered" && (
-          <Button variant="secondary" size="sm" onClick={onLink}>
-            {INBOX_WORDS.link}
-          </Button>
-        )}
-      </div>
-      <div className="fm-integrations-keys-head">{INBOX_WORDS.ruleHeading}</div>
+      {(link.state === "linked" || link.state === "offered") && (
+        <div className="fm-integrations-door-link" data-inbox-link={link.state}>
+          <span>
+            {link.state === "linked"
+              ? INBOX_WORDS.linked(link.path)
+              : INBOX_WORDS.offered(link.path.slice(0, link.path.lastIndexOf("/")))}
+          </span>
+          {link.state === "offered" && (
+            <Button variant="secondary" size="sm" onClick={onLink}>
+              {INBOX_WORDS.link}
+            </Button>
+          )}
+        </div>
+      )}
       <p className="fm-integrations-door-lead">{INBOX_WORDS.ruleLead(INBOX_WORDS.ruleName)}</p>
     </div>
   );

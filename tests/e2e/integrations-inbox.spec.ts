@@ -76,6 +76,7 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   await expect(section).toHaveAttribute("data-inbox-section", "on");
   const door = tab.locator("[data-inbox-door]");
   await expect(door).toBeVisible();
+  await expect(door).toContainText(INBOX_WORDS.exampleNote);
 
   // The short name's link, by one press, into the folder this run names.
   const link = door.getByRole("button", { name: INBOX_WORDS.link });
@@ -89,9 +90,8 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   const command = readlinkSync(linked);
   expect(line).toContain(command);
 
-  // Turning the inbox on turned its rule on too (the captain's word on INF-1214), named on the row.
+  // Turning the inbox on turned its rule on too (the captain's word on INF-1214), named in the box.
   await expect(door).toContainText(INBOX_WORDS.ruleLead(INBOX_WORDS.ruleName));
-  await expect(door).toContainText(INBOX_WORDS.exampleNote);
   await expect
     .poll(async () =>
       (await page.evaluate(async () => (await window.infinitary.automation.list()).rules)).map(

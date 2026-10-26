@@ -215,7 +215,7 @@
   color: var(--fg-3);
 }
 
-/* The Infinitary Inbox's own section, above the connections. */
+/* The Infinitary Inbox's own box, under the connections. */
 .fm-integrations-inbox {
   padding: var(--space-4);
   display: flex;

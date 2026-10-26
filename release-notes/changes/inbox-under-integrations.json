@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "inbox-under-integrations",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "The Infinitary Inbox sits under your integrations, in fewer words",
+      "body": "In Settings, Integrations, the Infinitary Inbox box now follows your connections instead of standing over them, and says what it does in about half the words. Turned on, it shows the line your scripts run beside Copy, one note, where the short name stands, and the rule to pause.",
+      "picture": {
+        "dark": "inbox-under-integrations-dark.webp",
+        "light": "inbox-under-integrations-light.webp",
+        "alt": "Settings, Integrations with the connections box and its chips first, then the Infinitary Inbox box under them, its switch on, the line a script runs beside Copy, one note, the short name's link and the rule to pause."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

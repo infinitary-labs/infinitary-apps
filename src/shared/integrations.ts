@@ -285,29 +285,25 @@ export const INTEGRATIONS_MCP_WORDS = {
 } as const;
 
 /**
- * The words of the inbox's row (docs/integrations.md, "The inbox"; design
- * skill `components/integrations/IntegrationRow`): the line to copy, the
- * link into the search path, and the rule its events wake the first mate by.
+ * The words of the inbox's box (docs/integrations.md, "The inbox"; design
+ * skill `components/integrations/IntegrationRow`; INF-1474, the captain's
+ * wording B, shown whole on their reply): the line to copy and one note,
+ * then the short name's link where one can be made or already was, and
+ * the rule its notes reach the first mate by.
  */
 export const INBOX_WORDS = {
   title: "Infinitary Inbox",
   intro:
-    "Infinitary's own integration. Your scripts and programs on this computer can drop short notes into it, such as a finished deploy or a failed backup, and your first mate reads each one as information from outside, never as an instruction.",
-  off: "It is off. Turn it on to let programs on this computer reach your first mate.",
+    "Scripts on this computer can send your first mate a short note, such as a finished deploy. Each note is information, never an instruction.",
+  off: "Turn it on to see the line your scripts run.",
   toggle: "Infinitary Inbox on",
-  exampleHeading: "Example: how a script or a terminal on this computer drops an event",
   exampleNote:
-    "This line is only an example. Your own programs run it with their own words in the quotes.",
-  copy: "Copy example",
-  linked: (path: string) => `Linked as ${path}, so infinitary-inbox-axi works in your own shell.`,
-  offered: (path: string) => `Link it as ${path} to use the short name infinitary-inbox-axi.`,
+    "Run it from any script or terminal, with your own words in the quotes. Your first mate is told at once.",
+  copy: "Copy",
+  linked: (path: string) => `Linked as ${path}, so the short name works too.`,
+  offered: (folder: string) => `Link it into ${folder} to use the short name infinitary-inbox-axi.`,
   link: "Link it",
-  unwritable: (folder: string) =>
-    `${folder} needs an administrator to change, so use the full path above.`,
-  taken: (path: string) => `${path} is something else, so use the full path above.`,
-  ruleHeading: "Wake your first mate",
-  ruleLead: (name: string) =>
-    `The rule ${name} in Automation wakes your first mate on each event. Pause it there to stop.`,
+  ruleLead: (name: string) => `To stop, pause the rule ${name} in Automation.`,
   ruleName: "Infinitary Inbox events",
   rulePrompt:
     "New events arrived in your Infinitary Inbox from programs on this computer. Read each one, decide what it needs, and act with your usual judgment: answer on a card, start a task, or do nothing.\n\n{{events}}",

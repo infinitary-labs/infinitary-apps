@@ -375,9 +375,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: "When the user names a model, pass override_model_id (start_now starts it now): it keeps its key and links; never drop it to spawn a replacement.",
   },
   {
-    rule: "a step you add yourself is declared internal, the captain's own ask never is",
+    rule: "work the captain did not ask for is declared internal, the captain's own ask never is",
     home: { tool: "spawn_crewmate", parameter: "shape" },
-    says: "internal_step: True when you add this task yourself as an internal step of a sequence you run: its answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result themselves",
+    says: "internal_step: True when the captain did not ask for this work: a step of a sequence you run, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result - by message, card choice or schedule",
   },
   {
     rule: "the same internal-step rule on a planned step",

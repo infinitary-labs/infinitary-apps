@@ -180,7 +180,12 @@ import {
 } from "./crewSupervisor";
 import { crewHoldWays } from "./holds";
 import { type AccountServeability, JOB_BOUND_MS, STALL_WAKE_MS, STILL_DOWN_MS } from "./idleLadder";
-import { REVIEW_FIX_RULES, renderRigorSection, type SpawnIntent } from "./intentBrief";
+import {
+  FLEET_STARTED_CHANGE_WORDS,
+  REVIEW_FIX_RULES,
+  renderRigorSection,
+  type SpawnIntent,
+} from "./intentBrief";
 import { keptFeedLine, type LineageFacts } from "./mergeAuthorization";
 import { PrCiService, type PrOutcome } from "./prCi";
 import { closingNoteTitle, droppedLine, pendingMergeLine } from "./settleWords";
@@ -2288,6 +2293,73 @@ describe("CrewSupervisor", () => {
       expect(taskFeedLine(record, close)?.text).toBe(droppedLine(SENTENCE));
     });
 
+    // INF-1467, the captain's words: "tasks the fleet decided to start that
+    // the captain didn't ask for should not report to the captain". INF-1461
+    // was a change step the first mate opened itself for INF-643's crewmate
+    // and discarded with its sentence once its files were handed over.
+    it("puts no note up when it drops or cancels work it marked its own, and Activity still says Dropped: (INF-1467)", async () => {
+      const crewmate = fakeCrewmate();
+      const h = setup(crewmate);
+      const step = async (title: string) => {
+        const { taskId } = await h.supervisor.commission({
+          title,
+          intent: intentOf(title.toLowerCase()),
+          shape: { internal_step: true },
+        });
+        await tick();
+        crewmate.finishPrompt();
+        await tick();
+        expect(legacyStateOf(h.tasks.get(taskId))).toBe("idle");
+        return taskId;
+      };
+      const discarded = await step("Bring INF-643's branch up to date on the Mac mini");
+      const sentence =
+        "INF-1461 handed INF-643's updated branch over as a bundle, so its own copy on the Mac mini is no longer needed.";
+      await h.supervisor.withClosingSentence(discarded, sentence, () =>
+        h.supervisor.settleTask(discarded, "discard"),
+      );
+      await tick();
+      expect(h.tasks.get(discarded)?.status).toBe("dropped");
+      expect(left(h.cards(), discarded)).toEqual([]);
+      const record = h.tasks.get(discarded);
+      const close = h.tasks.timeline(discarded).find((event) => event.kind === "status");
+      if (!record || !close) throw new Error("The discard left no close");
+      expect(taskFeedLine(record, close)?.text).toBe(droppedLine(sentence));
+
+      const cancelled = await step("Rebuild the runner image");
+      await h.supervisor.interruptCrewmate(cancelled, "cancel", undefined, SENTENCE);
+      await tick();
+      expect(legacyStateOf(h.tasks.get(cancelled))).toBe("cancelled");
+      expect(left(h.cards(), cancelled)).toEqual([]);
+    });
+
+    // INF-1467, the captain's answer: "Also a note when it finds something
+    // you should see" - the crewmate on a change the captain did not ask for
+    // is told what it may still put in front of them.
+    it("tells the crewmate on a change the first mate marked its own what it may show the captain (INF-1467)", async () => {
+      for (const internalStep of [true, false]) {
+        const crewmate = fakeCrewmate();
+        const h = setup(crewmate);
+        await h.supervisor.commission({
+          title: "Bring the branch up to date",
+          intent: intentOf("bring the branch up to date"),
+          ...(internalStep ? { shape: { internal_step: true } } : {}),
+        });
+        await tick();
+        expect(crewmate.promptCalls[0]?.includes(FLEET_STARTED_CHANGE_WORDS)).toBe(internalStep);
+      }
+    });
+
+    it("lets the first mate mark a filing its own before it starts, and refuses once it has (INF-1467)", async () => {
+      const h = await idleTask();
+      expect(() => h.tasks.updateFields(h.taskId, { internalStep: true }, "firstmate")).toThrow(
+        "internal_step can only change on open work that has not started.",
+      );
+      h.tasks.create({ id: "t-filed", title: "A crewmate's filing", prompt: "p", repoId: null });
+      h.tasks.updateFields("t-filed", { internalStep: true }, "firstmate");
+      expect(h.tasks.get("t-filed")?.shape?.internal_step).toBe(true);
+    });
+
     it("adds nothing when the captain's own click closes the work", async () => {
       const h = await idleTask();
       // Even with the first mate's sentence pending, their close carries none.
@@ -4052,7 +4124,9 @@ describe("CrewSupervisor", () => {
      * its completion card up through the real checks gate and went idle:
      * the real check service, the real click, a GitHub stand-in.
      */
-    async function approved(where: { kind?: "github" | "gitlab"; referenced?: boolean } = {}) {
+    async function approved(
+      where: { kind?: "github" | "gitlab"; referenced?: boolean; internalStep?: boolean } = {},
+    ) {
       const forge = new KeptForge(where.kind);
       if (where.referenced) forge.referencedBranch = "fm/task-earlier";
       let facts = cleanFacts;
@@ -4108,6 +4182,7 @@ describe("CrewSupervisor", () => {
         title: "Ship the meter",
         intent: intentOf("Ship the meter fix"),
         repoId: repo.id,
+        ...(where.internalStep ? { shape: { internal_step: true } } : {}),
       });
       await tick();
       if (where.referenced) await service().checkForCrew(taskId, { pull: 7 });
@@ -4494,6 +4569,30 @@ describe("CrewSupervisor", () => {
         expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
         expect(left(h)).toEqual([
           { author: "crewmate", title: "The meter reads on time", actions: [] },
+        ]);
+      });
+
+      // INF-1467, the captain's answer: "Keep the note for merges and
+      // releases; drops, cancels and answers go quiet" - work the first
+      // mate marked its own still says when it merged.
+      it("still puts up the sentence when work the first mate marked its own merges (INF-1467)", async () => {
+        const h = await approved({ internalStep: true });
+        const repoId = h.tasks.get(h.taskId)?.repoId;
+        if (!repoId) throw new Error("Missing project");
+        h.repos.configure(repoId, { autonomy: true });
+        await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+          h.supervisor.settleTask(h.taskId, "merge-pr"),
+        );
+        await tick();
+        const record = h.tasks.get(h.taskId);
+        expect(record).toMatchObject({ status: "done", closedReason: "merged" });
+        expect(record?.shape?.internal_step).toBe(true);
+        expect(left(h)).toEqual([
+          {
+            author: "firstmate",
+            title: closingNoteTitle(record?.key ?? "", "merged"),
+            actions: [],
+          },
         ]);
       });
 

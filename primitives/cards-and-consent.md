@@ -86,7 +86,7 @@ A question that needs a structured answer uses the questions in the body ([decis
 - Completion merge offer: a crewmate's finished change, with the host's merge and discard pair, settle facts, risk chart and required actions.
 - Plan and preview approval: Approve and build, Save and defer and Abandon under `HANDOFF`.
 - The idle ladder's stall card (`card-stall-<task>`) with Continue, Drop task and Discard.
-- The first mate's closing note on started work it closed without the captain's click (`SettleService.leaveClosingNote`).
+- The first mate's closing note on started work it closed without the captain's click (`SettleService.leaveClosingNote`); work the first mate marked its own (`shape.internal_step`) gets one only for a merge or a release.
 - The answer-delivery notice `card-ask-<message>` (`docs/task-capture.md`) and the project setup card `card-project-setup-<project>` (`docs/fleet.md`).
 - Required captain actions after a merge, confirmed by their host button (`docs/required-actions.md`).
 

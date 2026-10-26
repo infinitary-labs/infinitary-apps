@@ -415,6 +415,12 @@ export class SettleService {
   ): void {
     const outcome = closedWithoutClick(reason);
     if (!outcome || record.startedAt === null) return;
+    // Work the first mate marked its own at the start (INF-1467, the
+    // captain's direction A): the captain did not ask for it, so only a
+    // merge or a release - code reaching their project without their
+    // click - puts a note up. A drop or a finish stays on the record and
+    // in Activity.
+    if (record.shape?.internal_step && outcome !== "merged" && outcome !== "released") return;
     // The captain closed the crewmate's own outcome card and its crewmate
     // reported the work finished: their close already said what became of
     // it, so a note would only say it twice (INF-1137).

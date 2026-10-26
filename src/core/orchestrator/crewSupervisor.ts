@@ -411,6 +411,7 @@ import {
   type CaptainCardFacts,
   deliverableFor,
   type EscalationBriefFacts,
+  FLEET_STARTED_CHANGE_WORDS,
   FOLDER_REPAIR_TITLE,
   type FolderBriefFacts,
   joinParts,
@@ -6602,6 +6603,8 @@ export class CrewSupervisor {
           ref: branchFrom.ref,
         }),
       ]);
+    if (deliverable === "change" && record?.shape?.internal_step)
+      sections.push([FLEET_STARTED_CHANGE_WORDS]);
     if (deliverable === "change") {
       const basis = this.basisFacts(record);
       if (basis) sections.push(basisSectionParts(await this.withCardFile(taskId, basis)));

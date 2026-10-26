@@ -62,6 +62,8 @@ export type TaskToolsDelegate = {
     resultSchema?: Record<string, unknown> | null;
     /** The task whose last commit it starts at (INF-799); empty clears it. */
     branchFrom?: string;
+    /** Whether the work is the first mate's own, not the captain's ask (INF-1467). */
+    internalStep?: boolean;
     /** A program's new bound on its task() calls (INF-799), on the captain's words. */
     programBound?: number;
     /** The model the user named (override_model_id); empty clears it. */
@@ -263,6 +265,12 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             "Attach the plan/spec task (key or id) to open work that has not started; empty clears it.",
         }),
       ),
+      internal_step: Type.Optional(
+        Type.Boolean({
+          description:
+            "As spawn_crewmate's shape.internal_step, on open work before it starts, such as a crewmate's filing you start unasked.",
+        }),
+      ),
       result_schema: Type.Optional(RESULT_SCHEMA_PARAM),
       branch_from: Type.Optional(Type.String()),
       program_bound: Type.Optional(Type.Integer()),
@@ -443,6 +451,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
             }
           : {}),
         ...(params.branch_from !== undefined ? { branchFrom: params.branch_from } : {}),
+        ...(params.internal_step !== undefined ? { internalStep: params.internal_step } : {}),
         ...(params.program_bound !== undefined ? { programBound: params.program_bound } : {}),
         ...(params.crew_speed !== undefined ? { speed: params.crew_speed } : {}),
         ...(params.override_model_id !== undefined ? { model: params.override_model_id } : {}),

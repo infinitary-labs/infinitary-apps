@@ -3028,6 +3028,7 @@ export class FirstmateAgent {
               ...(input.programBound !== undefined ? { programBound: input.programBound } : {}),
               ...(input.basis !== undefined ? { basis: input.basis } : {}),
               ...handOff,
+              ...(input.internalStep !== undefined ? { internalStep: input.internalStep } : {}),
               ...(input.speed !== undefined ? { speed: input.speed } : {}),
               ...(input.model !== undefined && !moveTo ? { model: input.model } : {}),
               ...(input.reasoning !== undefined ? { reasoning: input.reasoning } : {}),

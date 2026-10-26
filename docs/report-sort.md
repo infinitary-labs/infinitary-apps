@@ -205,6 +205,7 @@ The ladder holds its clock at each tick the wake still waits (`InboxStore.holdsU
 
 **The first mate's closing note** (INF-547, the captain's choice of 2026-10-19) is the other card the host raises about work: started work the first mate closed without the captain's click, when nothing else of the task is on their stack and its crewmate has not reported the work finished after the captain closed its outcome card.
 It carries the first mate's own sentence, has no actions, places no gate, and no rung reads it (`docs/card-authoring.md`, "Work that closed without the captain's click").
+Work the first mate marked its own (`shape.internal_step`) gets it only for a merge or a release (INF-1467).
 
 **A request the first mate leaves unanswered is raised again** (FI3-714, filed from FI3-710).
 A crewmate's request that the first mate act wakes it once, at the report (row 0a).

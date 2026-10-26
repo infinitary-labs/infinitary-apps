@@ -209,7 +209,7 @@ export function closingSentenceMissing(mode: string): string {
 
 /** What `internal_step` means, shared by spawn_crewmate and create_task. */
 export const INTERNAL_STEP_DESCRIPTION =
-  'True when you add this task yourself as an internal step of a sequence you run: its answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result themselves ("show me the repro first"): that stays theirs to close.';
+  "True when the captain did not ask for this work: a step of a sequence you run, a helper another task needs, a crewmate's request, or work you start unasked. Its drop or finish puts no note up; a merge or release still does. A step's answer goes to the next step, and once that step has started you close it with settle_task answered. Omit it when the captain asked for this result - by message, card choice or schedule (\"show me the repro first\"): that stays theirs to close.";
 
 /**
  * What `basis` means, shared by spawn_crewmate and create_task: a planned

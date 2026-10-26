@@ -744,6 +744,11 @@ The sentence is a fact of the close (`closingSentence` in its timeline data).
 When the close leaves nothing of the task on the stack, the sentence goes up as the first mate's own note, titled with the task's key and its outcome (`merged`, `released` or `dropped`), with the pull request linked after a merge (`SettleService.leaveClosingNote`).
 A captain's click carries no sentence, an answer task's close takes none, and a task no crewmate started gets no note.
 A task whose crewmate reported its work finished gets no note either: that report comes only after the captain closed its outcome card, so their close already said what became of the work (INF-1137).
+Work the first mate marked its own (`shape.internal_step`) gets a note only when it merges or releases (INF-1467).
+The captain's words on INF-1467: "tasks the fleet decided to start that the captain didn't ask for should not report to the captain."
+The first mate sets that mark when it starts work the captain did not ask for - a step of a sequence it runs, a helper another task needs, a crewmate's request, or work it starts unasked, including a crewmate's filing it starts (`update_task internal_step`, on open work before it starts); work started by the captain's message, card choice or schedule is theirs.
+A drop, cancel or finish of such work stays on the task's record and in Activity, and a merge or release still leaves its one note, because code reached the project without the captain's click.
+The crewmate on such a change is told to show the captain a card only for what only they can give - a merge click, a consent, a sign-in - or a note for something it found that they should see (`FLEET_STARTED_CHANGE_WORDS`, `src/core/orchestrator/intentBrief.ts`).
 The note has no actions, so it places no gate and nothing in the whose-turn sort reads it.
 Activity's line for a drop the first mate made reads `Dropped:` and the same sentence (`droppedLine`), and an `update_task` drop's reason is that sentence too.
 

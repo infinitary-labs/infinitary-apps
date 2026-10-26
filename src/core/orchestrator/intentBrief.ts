@@ -556,6 +556,16 @@ export function renderAnswerShapeSection(internalStep = false): string {
 }
 
 /**
+ * The brief's line for a change the first mate marked its own
+ * (`shape.internal_step`, INF-1467, the captain's direction A with their
+ * answer "Also a note when it finds something you should see"): the
+ * captain did not ask for it, so its crewmate puts up only what the
+ * captain must give or should see, and a drop or finish goes quiet.
+ */
+export const FLEET_STARTED_CHANGE_WORDS =
+  "Your first mate started this work itself; the captain did not ask for it. Show the captain a card only for what only they can give - a merge click, a consent, a sign-in - or a note for something you found that they should see. Your report goes to the first mate, and if this task closes without a merge or release, no note reaches the captain.";
+
+/**
  * The result shape a task declared (INF-799 piece 1), printed where the
  * brief says what the task's answer looks like: the JSON Schema the host
  * checks the report's `result` against, and the one sentence that says so.

@@ -296,6 +296,12 @@ export type UpdateTaskPatch = {
   resultSchema?: Record<string, unknown> | null;
   /** The task, by key, unstarted work starts from (INF-799), already checked; empty clears it. */
   branchFrom?: string;
+  /**
+   * Whether open work that has not started is the first mate's own, not the
+   * captain's ask (`shape.internal_step`, INF-1467): set when it starts a
+   * crewmate's filing unasked.
+   */
+  internalStep?: boolean;
   /** A program's new bound on its task() calls (INF-799), on the captain's words. */
   programBound?: number;
   /**
@@ -1906,6 +1912,17 @@ export class TaskService {
         throw new TaskGraphRefusal("A basis can only change on open work that has not started.");
       }
       if (
+        patch.internalStep !== undefined &&
+        (record.status !== "open" ||
+          record.startedAt !== null ||
+          record.placement ||
+          record.kind !== "work")
+      ) {
+        throw new TaskGraphRefusal(
+          "internal_step can only change on open work that has not started.",
+        );
+      }
+      if (
         (patch.resultSchema !== undefined || patch.branchFrom !== undefined) &&
         (record.status !== "open" ||
           record.startedAt !== null ||
@@ -2002,6 +2019,14 @@ export class TaskService {
           ...(patch.resultSchema ? { result_schema: patch.resultSchema } : {}),
         };
         changes.push(patch.resultSchema ? "result shape set" : "result shape cleared");
+      }
+      if (patch.internalStep !== undefined) {
+        const { internal_step: _oldStep, ...shape } = update.shape ??
+          record.shape ?? { kind: "unclear" as const };
+        if (patch.internalStep !== (record.shape?.internal_step === true)) {
+          update.shape = { ...shape, ...(patch.internalStep ? { internal_step: true } : {}) };
+          changes.push(patch.internalStep ? "marked an internal step" : "internal step cleared");
+        }
       }
       if (patch.branchFrom !== undefined) {
         const branchFrom = patch.branchFrom.trim() || undefined;

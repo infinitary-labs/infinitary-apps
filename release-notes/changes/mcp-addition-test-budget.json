@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "mcp-addition-test-budget",
+      "reason": "Tests only: the core test that adds three MCP servers carries a budget sized to its measured run on the Linux checks, and the next test waits for its work to end."
+    }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-repair-label-rule",
+      "reason": "Internal development process: project instructions tell a main-repair crewmate to label its own pull request; no app view changes."
+    }
+  ]
+}

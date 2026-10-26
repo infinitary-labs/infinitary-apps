@@ -164,6 +164,22 @@ Inside CI (`CI` is set) the heavy checks always run, because the Mac mini's runn
 A value other than `ci` or `local` refuses rather than guess.
 `tests/checks-mode.test.ts` runs each command with a scratch home's git settings.
 
+## A main repair's priority label
+
+Our own runners queue a main repair's checks ahead of other work when its pull request carries the `fixes-main` label.
+The label is a project rule for infinitary-labs/infinitary only, not app behavior and not a setting (INF-1423, direction A).
+A crewmate that repairs a failing main follows these steps:
+
+1. It records the evidence that main fails, then confirms its own open pull request targets main from the same repository and its exact task branch.
+   Diagnosis may come before or after the pull request exists, and resumed work repeats the confirmation.
+2. It adds only `fixes-main` through the generic GitHub label tools, keeps every other label, and reads the labels back before requesting checks on that branch.
+3. When it withdraws the repair, it removes only `fixes-main`.
+   A write whose outcome is uncertain is checked by reading, never repeated blindly.
+4. A closed pull request keeps the label as history: the service ignores it while the pull request is closed.
+   Reopening restores eligibility, so the crewmate reassesses whether the pull request is still a main repair.
+
+Priority never interrupts running work, and capacity, test gates and merge consent are unchanged.
+
 ## Native phone checks on the pull request
 
 `phone.yml` selects the iPhone and iPad gate for `ios/`, the phone-card generator, the phone-contract generator with its shape guard, and the gate's own setup (`scripts/affected-phone.ts`).

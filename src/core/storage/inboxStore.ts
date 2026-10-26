@@ -648,6 +648,18 @@ export class InboxStore {
   }
 
   /**
+   * Whether the captain's choice on a card still waits on the recipient's
+   * lane, not yet handed to a turn: its author has not heard the answer
+   * (INF-1389 friction 1, `CardService` refuses a revision written blind).
+   */
+  holdsUndeliveredChoice(recipient: string, cardId: string): boolean {
+    return this.allFor(recipient).some((row) => {
+      const facts = row.facts as { kind?: unknown; card?: { id?: unknown } } | undefined;
+      return facts?.kind === "card-choice" && facts.card?.id === cardId;
+    });
+  }
+
+  /**
    * Boot sweep: rows a dead process left in-flight go back to pending and
    * re-deliver (at-least-once). A quit or crash cut the turn serving them,
    * which is not the crewmate refusing them: each is given its attempt back

@@ -1528,6 +1528,10 @@ export class CrewSupervisor {
       mergeLabel: (card) => this.mergeLabel(card),
       mergeAnyway: (card) => this.mergeAnyway(card),
       followupNotice: (taskId) => this.followupNotice(taskId),
+      choiceUnheard: (card) => {
+        const lane = card.id.startsWith(FIRSTMATE_CARD_PREFIX) ? FIRSTMATE_RECIPIENT : card.taskId;
+        return lane !== undefined && options.inbox.holdsUndeliveredChoice(lane, card.id);
+      },
       broadcastCrewCounts: () => this.broadcastCrewCounts(),
       broadcastEvent: options.broadcastEvent,
       broadcastCards: options.broadcastCards,
@@ -13380,7 +13384,7 @@ export class CrewSupervisor {
           kind: "card-choice",
           to: "crewmate",
           source,
-          card: { title: card.title },
+          card: { title: card.title, id: card.id },
           choice,
           ...(browserGone ? { browserGone } : {}),
         },

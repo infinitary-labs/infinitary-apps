@@ -6,8 +6,16 @@ import type { LaunchedApp } from "./launch";
 import { FM_THREAD_CARD_TITLE } from "./mockProvider";
 import { served } from "./providerRequest";
 
-/** A marked version of the existing thread fixture, through the real emitted-card interface. */
-export async function emitContinuityCard(app: LaunchedApp, words: string): Promise<void> {
+/**
+ * A marked version of the existing thread fixture, through the real
+ * emitted-card interface. `asks: false` raises it as a note: after the
+ * captain chose on it, its id comes back only as a note (INF-1389 friction 1).
+ */
+export async function emitContinuityCard(
+  app: LaunchedApp,
+  words: string,
+  { asks = true }: { asks?: boolean } = {},
+): Promise<void> {
   await waitForFirstmateIdle(app.page);
   if (!app.mockProvider) throw new Error("Card continuity requires the mock provider");
   const answer = app.mockProvider.scriptFirstmateTurn(
@@ -18,12 +26,14 @@ export async function emitContinuityCard(app: LaunchedApp, words: string): Promi
         args: {
           id: "fm-thread-card",
           title: FM_THREAD_CARD_TITLE,
-          body: '<p>Lead with the caption, not the chips.</p><p>The chips are still there; they just are not the first thing you read.</p><label for="tone">Tone</label><input id="tone" name="tone" value="calm">',
+          body: `<p>Lead with the caption, not the chips.</p><p>The chips are still there; they just are not the first thing you read.</p>${asks ? '<label for="tone">Tone</label><input id="tone" name="tone" value="calm">' : ""}`,
           holds_place: true,
-          actions: [
-            { id: "chips-first", label: "Lead with the chips" },
-            { id: "caption-first", label: "Lead with the caption", default: true },
-          ],
+          actions: asks
+            ? [
+                { id: "chips-first", label: "Lead with the chips" },
+                { id: "caption-first", label: "Lead with the caption", default: true },
+              ]
+            : [],
           standalone: true,
         },
       },

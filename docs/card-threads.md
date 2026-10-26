@@ -34,9 +34,15 @@ The captain's close of a crewmate's card the captain replied under holds through
 After the close-out the crewmate may raise the id again, a new card, as after any close.
 The first mate's own cards keep Q4a: their close wakes nobody and the next context block lists it.
 
+A card the captain answered with a choice stays answered (INF-1389 friction 1, the captain's "Start now"): `CardService.refuseAnsweredRevision` reads how the card ended (`CardStore.past`) before an emit under its id opens it again.
+While the choice still waits on the author's lane, not yet handed to a turn (`InboxStore.holdsUndeliveredChoice`, the first mate's lane for its own cards and the task's lane for a crewmate's), every emit under the id is refused, and the refusal carries the choice and the answers to the card's questions, because that revision was written without them.
+Once the author has heard the choice, an emit with actions under the id is refused, since it would ask the same question again: a new question is a new card with its own title.
+One without actions only tells the captain something, such as which crewmate took the work, and shows as a note.
+A card the captain closed without choosing, or one a script or its author closed, can still come back under its id.
+
 A reply does hand the turn to the author, and it never moves the card (INF-770 direction A, captain-approved 2026-10-21): the card stays shown in its place with the thread beside it, the pager and the arrows do not change, and the waiting line says who answers next.
 Put aside and Close are the only ways a card leaves the captain's screen, and each says what it does on rest (`docs/card-authoring.md`, "Put a card aside" and "Close").
-An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each newly arriving marked card comes forward, including the same stable id raised again after a choice, but a revision or thread answer never undoes the captain's paging away.
+An author may declare `holds_place` on `emit_card` (`Card.holdsPlace`): each newly arriving marked card comes forward, including the same stable id raised again as a note after a choice, but a revision or thread answer never undoes the captain's paging away.
 Every choice still closes the card immediately; nothing keeps its page running while its author writes.
 The card's body and scroll stay the same elements as the thread opens: only the surface's columns change.
 Its field moves from above the card's buttons to the thread's foot and keeps the focus through the send and the move, so a second reply is typed straight away (`docs/composer.md`, "The card reply row").

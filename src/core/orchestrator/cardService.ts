@@ -22,6 +22,7 @@ import {
   type CardSubmission,
   type CardThread,
   type CardWidth,
+  cardAnswerLines,
   cardQuestionsBytes,
   cardQuestionsSchema,
   cardSubmissionSchema,
@@ -136,6 +137,12 @@ export type CardServiceHost = {
   /** Whether a settle card offers Merge anyway beside its merge now (INF-1137 friction 6). */
   mergeAnyway?(card: Card): boolean;
   followupNotice(taskId: string): string | undefined;
+  /**
+   * Whether the captain's choice on this card still waits on its author's
+   * lane, not yet handed to a turn (`InboxStore.holdsUndeliveredChoice`).
+   * Absent reads as heard.
+   */
+  choiceUnheard?(card: Card): boolean;
   broadcastCrewCounts(): void;
   broadcastEvent: (event: FmEvent) => void;
   broadcastCards: (cards: Card[]) => void;
@@ -982,6 +989,7 @@ export class CardService {
         `Card refused: the captain closed card "${resolved}" while it waited on your answer to their reply, so that answer does not open it again. Give the answer in your report instead.`,
       );
     }
+    if (!existing && resolved) this.refuseAnsweredRevision(resolved, input);
     if (existing && resolved) {
       // An update is never the whole answer: while the captain's reply waits
       // on its author, the revision carries the author's short answer too.
@@ -1093,6 +1101,35 @@ export class CardService {
     this.placed(card);
     this.scheduleBroadcast();
     return id;
+  }
+
+  /**
+   * A card the captain answered with a choice stays answered (INF-1389
+   * friction 1): an emit under its id is refused while the choice has not
+   * reached its author, the refusal carrying the choice, since that
+   * revision was written without it. Once the author has heard it, a
+   * revision with actions would ask the same question again, so a new
+   * question is a new card; one without actions only tells the captain
+   * something and shows as a note. A card closed without choosing can come back.
+   */
+  private refuseAnsweredRevision(id: string, input: EmittedCardInput): void {
+    const past = this.host.cardStore.past(id);
+    if (past?.ending.how !== "chose" || (past.ending.by && past.ending.by !== "captain")) return;
+    const stored = this.host.cardStore.get(id);
+    const choice = `"${past.ending.label ?? past.ending.actionId ?? "an action"}"`;
+    if (stored && this.host.choiceUnheard?.(stored)) {
+      const answers = past.answers.length
+        ? ` Their answers to the card's questions:\n${cardAnswerLines(past.answers).join("\n")}`
+        : "";
+      throw new Error(
+        `Card refused: the captain already answered card "${id}" ("${past.title}") by choosing ${choice}, and that answer has not reached you yet, so this revision was written without it.${answers} Act on that answer; it also reaches you as its own message. The card stays closed.`,
+      );
+    }
+    if (input.actions.length > 0) {
+      throw new Error(
+        `Card refused: the captain already answered card "${id}" ("${past.title}") by choosing ${choice}, so a card with actions under its id would ask them that question again. Ask a new question on a new card, without this id and under a title of its own; a revision without actions, which only tells them something, shows as a note. The card stays closed.`,
+      );
+    }
   }
 
   /**

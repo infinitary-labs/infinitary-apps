@@ -9,10 +9,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { CardStore } from "../storage/cardStore";
 import { openDatabase, openInMemoryDatabase } from "../storage/db";
+import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { revisionNotice } from "./cardChanges";
-import { CardService } from "./cardService";
+import { CardService, FIRSTMATE_CARD_PREFIX } from "./cardService";
 import { idleTurn, type ReportSortFacts, sortReport } from "./reportSort";
 
 function setup(db = openInMemoryDatabase(), now = () => 1000) {
@@ -212,9 +213,10 @@ describe("CardService", () => {
     const shown = restored.shown(id) as Card;
     expect(restored.resolve(shown, "right", "right")).toBe(false);
     expect(restored.get(id)).toBeUndefined();
+    // After the captain's choice its id comes back only as a note (INF-1389 friction 1).
     const again = restored.emitCrewmateCard(
       "t1",
-      { ...decision, id: "round", holdsPlace: true },
+      { ...decision, actions: [], id: "round", holdsPlace: true },
       "m",
     );
     expect(again).toBe(id);
@@ -645,6 +647,126 @@ describe("CardService", () => {
     cards.emitCrewmateCard("t1", { ...decision, id, body: "<p>Again.</p>" }, "m");
     cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
     expect(cards.snapshot().map((card) => card.id)).toEqual([id]);
+  });
+
+  // INF-1389 friction 1, the captain's "Start now": a card the captain answered came back as a new question.
+  describe("a card the captain answered", () => {
+    function answered() {
+      const { db, tasks, cardStore } = setup();
+      const inbox = new InboxStore(db, { now: () => 1000 });
+      const cards = new CardService({
+        now: () => 1000,
+        tasks,
+        cardStore,
+        syncCaptainGate: () => {},
+        noteCapAnswered: () => {},
+        closeAnsweredTask: () => false,
+        settleFacts: () => undefined,
+        followupNotice: () => undefined,
+        choiceUnheard: (card) =>
+          inbox.holdsUndeliveredChoice(
+            card.id.startsWith(FIRSTMATE_CARD_PREFIX) ? FIRSTMATE_RECIPIENT : (card.taskId ?? ""),
+            card.id,
+          ),
+        broadcastCrewCounts: () => {},
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      // The 1:48 PM card: the first mate asked, the captain chose, and the
+      // choice went on the first mate's lane while its turn still ran.
+      const question = {
+        id: "inf-1320-next",
+        title: "INF-1320 closed: what next?",
+        body: "<p>The fix merged, but the bug it names may still be there.</p>",
+        actions: [
+          { id: "investigate", label: "Investigate the bug", default: true },
+          { id: "leave", label: "Leave it" },
+        ],
+      };
+      const id = cards.addFirstmateCard(question);
+      const answers = [
+        { name: "scope", values: ["cards"], labels: ["Only the cards"], changed: true },
+      ];
+      cards.resolve(cards.shown(id) as Card, "investigate", "investigate", answers);
+      const row = inbox.enqueue(
+        FIRSTMATE_RECIPIENT,
+        {
+          facts: {
+            kind: "card-choice",
+            to: "firstmate",
+            source: "chrome",
+            card: { id, title: question.title },
+            choice: { id: "investigate", label: "Investigate the bug", answers },
+          },
+        },
+        undefined,
+        "captain",
+      );
+      return { cards, cardStore, inbox, question, id, row };
+    }
+
+    it("refuses any revision written before the choice reached its author, carrying the choice", () => {
+      const { cards, cardStore, question, id } = answered();
+      for (const revision of [question, { ...question, actions: [] }]) {
+        expect(() => cards.addFirstmateCard(revision)).toThrow(
+          /already answered card .* by choosing "Investigate the bug", and that answer has not reached you yet[\s\S]*scope: "Only the cards" \(cards\)/,
+        );
+      }
+      expect(cards.get(id)).toBeUndefined();
+      expect(cardStore.chosenAction(id)).toBe("investigate");
+    });
+
+    it("once heard, refuses a revision that still asks and shows one that only tells as a note", () => {
+      const { cards, cardStore, inbox, question, id, row } = answered();
+      inbox.markDelivered([row]);
+      expect(() => cards.addFirstmateCard(question)).toThrow(
+        /would ask them that question again\. Ask a new question on a new card/,
+      );
+      expect(cardStore.chosenAction(id)).toBe("investigate");
+      const told = cards.addFirstmateCard({
+        ...question,
+        title: "Investigating the bug INF-1320 names",
+        actions: [],
+      });
+      expect(told).toBe(id);
+      expect(cards.get(id)).toMatchObject({ actions: [] });
+    });
+
+    it("refuses a crewmate's revision while its choice waits on the task's lane", () => {
+      const { tasks, cardStore, db } = setup();
+      seedTask(tasks, { id: "t1", title: "Build it", status: "idle" });
+      const inbox = new InboxStore(db, { now: () => 1000 });
+      const cards = new CardService({
+        now: () => 1000,
+        tasks,
+        cardStore,
+        syncCaptainGate: () => {},
+        noteCapAnswered: () => {},
+        closeAnsweredTask: () => false,
+        settleFacts: () => undefined,
+        followupNotice: () => undefined,
+        choiceUnheard: (card) => inbox.holdsUndeliveredChoice(card.taskId ?? "", card.id),
+        broadcastCrewCounts: () => {},
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      const id = cards.emitCrewmateCard("t1", decision, "m");
+      cards.closeOut({ kind: "crewmate", taskId: "t1" }, "report");
+      cards.resolve(cards.shown(id) as Card, "left", "left");
+      const row = inbox.enqueue("t1", {
+        facts: {
+          kind: "card-choice",
+          to: "crewmate",
+          source: "chrome",
+          card: { id, title: decision.title },
+          choice: { id: "left", label: "Left" },
+        },
+      });
+      const note = { ...decision, id, actions: [] };
+      expect(() => cards.emitCrewmateCard("t1", note, "m")).toThrow(/by choosing "Left"/);
+      inbox.markDelivered([row]);
+      expect(cards.emitCrewmateCard("t1", note, "m")).toBe(id);
+    });
   });
 
   it("keeps a recorded note that takes no reply that way across a restart, and every other card as it was", () => {
@@ -1281,8 +1403,9 @@ describe("CardService evidence", () => {
       submission: { id: "gesture-0006", offerId: first.offerId },
     });
 
-    // The same id comes back: a new lifecycle linked to the one before.
-    cards.addFirstmateCard({ ...decision, id: "fm-pick", taskId: "t1" });
+    // The same id comes back, as a note after the choice (INF-1389
+    // friction 1): a new lifecycle linked to the one before.
+    cards.addFirstmateCard({ ...decision, actions: [], id: "fm-pick", taskId: "t1" });
     const second = cards.shown(id) as Card;
     expect(second.lifecycleId).not.toBe(first.lifecycleId);
     const opened = only(cardStore, id, "availability").find(

@@ -54,7 +54,8 @@ test("a declared continuity card keeps replies, closes choices, returns forward 
     );
     await expectNoCard(page, FM_THREAD_CARD_TITLE);
     await expect(shownCard(page, OTHER)).toBeVisible();
-    await emitContinuityCard(app, `${request} again`);
+    // Its id comes back after the choice only as a note, which still comes forward.
+    await emitContinuityCard(app, `${request} again`, { asks: false });
     await expect(shownCard(page, FM_THREAD_CARD_TITLE)).toBeVisible();
     expect(
       await page.evaluate(

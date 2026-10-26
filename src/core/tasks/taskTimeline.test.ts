@@ -232,10 +232,11 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
     const offerEntry = world.timeline
       .entries("rerun")
       .find((entry) => entry.content.kind === "card-offer");
-    // The crewmate revises the card afterwards; the offer it showed is unchanged.
+    // The crewmate revises the card afterwards, as a note since the captain
+    // chose on it (INF-1389 friction 1); the offer it showed is unchanged.
     const revised = world.cards.emitCrewmateCard(
       "rerun",
-      { ...decision, body: "<p>Revised after the windows run.</p>" },
+      { ...decision, actions: [], body: "<p>Revised after the windows run.</p>" },
       "Rerun",
     );
     expect(revised).toBe(cardId);

@@ -1038,6 +1038,71 @@ const PR203 = {
 };
 
 /**
+ * GitHub's own reading of PR #203 (INF-643) at three later versions, read on
+ * 2026-10-26: the source of its last repair, where the verify run's two
+ * installed-update jobs failed (the pull request's own checks, all passed,
+ * left out); that repair's version, where every pull request check finished
+ * but no verify run ever started, and no branch is at it now; and the
+ * reviewed integration the pull request moved to, where all 45 checks passed.
+ * The ten package checks and the overflow journey shards, all passed, are
+ * left out of the last two. INF-1488 carries the repair to the integration.
+ */
+const PR203_INTEGRATION = {
+  /** Verify run 40168241408's version. */
+  source: "48f1391d6ab8d6953fa4fc15f5372b6669a688c8",
+  /** The repair's own version. */
+  stranded: "abaf009482c881d9750cb5c0561f4acaede1cde2",
+  integrated: "ff19bd110f1b6416b11f43c83e56ac507569964c",
+  intel: "Verify signed installer and updater / Intel",
+  atSource: (
+    [
+      ["Verify signed installer and updater / Build signed verification copies", "success"],
+      ["matrix.lane", "skipped"],
+      ["linux-e2e", "skipped"],
+      ["Verify signed installer and updater / Intel", "failure"],
+      ["Verify signed installer and updater / Apple silicon", "failure"],
+    ] as const
+  ).map(([name, state]) => ({ name, state })),
+  atStranded: (
+    [
+      ["cancel-replaced", "success"],
+      ["choose-phone", "success"],
+      ["native-phone", "failure"],
+      ["affected-journeys", "success"],
+      ["linux-source / source-desktop (desktop)", "success"],
+      ["linux-source / source-desktop (parallel)", "success"],
+      ["unit-tests", "success"],
+      ["integration-tests (1/2)", "success"],
+      ["probe-tests", "success"],
+      ["integration-tests (2/2)", "success"],
+      ["typecheck-lint-build", "success"],
+      ["choose-journeys", "success"],
+      ["build", "success"],
+      ["upgrade (alpha rehearsal)", "success"],
+    ] as const
+  ).map(([name, state]) => ({ name, state })),
+  atIntegrated: (
+    [
+      ["affected-journeys", "success"],
+      ["native-phone", "success"],
+      ["scene-evidence", "skipped"],
+      ["cancel-replaced", "success"],
+      ["upgrade (alpha rehearsal)", "success"],
+      ["integration-tests (2/2)", "success"],
+      ["choose-phone", "success"],
+      ["probe-tests", "success"],
+      ["linux-source / source-desktop (desktop)", "success"],
+      ["typecheck-lint-build", "success"],
+      ["linux-source / source-desktop (parallel)", "success"],
+      ["integration-tests (1/2)", "success"],
+      ["build", "success"],
+      ["unit-tests", "success"],
+      ["choose-journeys", "success"],
+    ] as const
+  ).map(([name, state]) => ({ name, state })),
+};
+
+/**
  * GitHub's own reading of PR #372 (INF-886) at its pager repair's version, read
  * on 2026-10-23 in the order GitHub listed it, its sixteen overflow journey
  * shards left out. GitHub lists a check name once per workflow run, so the
@@ -1644,6 +1709,165 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
         expect(tasks.get("ab12cd34")?.delivery).toMatchObject({ headSha: PR203.current });
       },
     );
+  });
+
+  // INF-1488: INF-643's repair was declared at a version whose pull request
+  // checks all ran but whose signed Intel check never started, and the pull
+  // request moved to a reviewed integration carrying the same repair.
+  describe("a repair whose check never started at a version the change moved past", () => {
+    const { source, stranded, integrated, intel } = PR203_INTEGRATION;
+    const prerequisiteRepair = {
+      id: "installer-command-and-homebrew-prerequisite-integrated",
+      sourceHead: source,
+      headSha: stranded,
+      check: intel,
+      evidence:
+        "GitHub started no checks on the earlier version because of a conflict; the integration keeps the diagnostic and Homebrew-prerequisite helpers unchanged.",
+    };
+    const carriedRepair = {
+      ...prerequisiteRepair,
+      headSha: integrated,
+      evidence:
+        "The prior repair version never ran this signed Intel check; the fixture repair patch is unchanged in the verified range-diff.",
+    };
+    /** INF-643's history: the Intel job failed, the repair declared, its version's own checks finished. */
+    async function strandRepair(service: PrCiService, forge: FakeForge) {
+      forge.change = { ...(forge.change as ForgeChange), headSha: source };
+      forge.atHead[source] = PR203_INTEGRATION.atSource;
+      await service.checkForCrew("ab12cd34");
+      await service.checkForCrew("ab12cd34", {
+        diagnosis: {
+          headSha: source,
+          check: intel,
+          classification: "own-regression",
+          evidence: "Verify run 40168241408: stapler validation lost its command output on Intel",
+        },
+      });
+      forge.change = { ...(forge.change as ForgeChange), headSha: stranded };
+      forge.atHead[stranded] = PR203_INTEGRATION.atStranded.map((check) => ({
+        ...check,
+        state: "pending" as const,
+      }));
+      await service.checkForCrew("ab12cd34", { repair: prerequisiteRepair });
+      forge.atHead[stranded] = PR203_INTEGRATION.atStranded;
+      await service.checkForCrew("ab12cd34");
+      forge.change = { ...(forge.change as ForgeChange), headSha: integrated };
+      forge.atHead[integrated] = PR203_INTEGRATION.atIntegrated;
+    }
+
+    it("carries it to the change's version when declared again as itself, so only its result there decides it", async () => {
+      const { tasks, repos, service, forge } = setup({ now: () => 9000 });
+      await insertDirectPrTask(tasks, repos);
+      await strandRepair(service, forge);
+      // A new attempt is still refused, naming the way to carry the open one.
+      const refused = await service.checkForCrew("ab12cd34", {
+        repair: { ...carriedRepair, id: "installer-prerequisite-after-phone-integration" },
+      });
+      expect(refused).toContain(
+        `Repair ${prerequisiteRepair.id} at ${stranded} (the change is now at ${integrated}): no check named ${intel} reported there, so it has no result. None can start there now that the change moved past it`,
+      );
+      expect(refused).toContain(
+        `Repair refused: attempt ${prerequisiteRepair.id} at ${stranded} has no result yet, and none can start there. If ${integrated} carries that same repair, carry it forward before starting another: declare it again under id ${prerequisiteRepair.id}, with source head ${source}, check ${intel} and headSha ${integrated}.`,
+      );
+      expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.repairs).toEqual([prerequisiteRepair]);
+
+      const carried = await service.checkForCrew("ab12cd34", { repair: carriedRepair });
+      expect(carried).toContain(
+        `Repair ${prerequisiteRepair.id} carried forward from ${stranded} to ${integrated}: ${intel} never started at ${stranded} and none can start there now.`,
+      );
+      expect(carried).not.toContain("Repair refused");
+      expect(carried).toContain("overall: green");
+      let delivery = tasks.get("ab12cd34")?.delivery;
+      expect(delivery?.ciRepair?.repairs).toEqual([
+        {
+          ...carriedRepair,
+          carried: [{ headSha: stranded, evidence: prerequisiteRepair.evidence, at: 9000 }],
+        },
+      ]);
+      expect(delivery?.ciRounds).toBeUndefined();
+      expect(
+        tasks
+          .timeline("ab12cd34")
+          .some((event) => event.text?.includes(`Repair ${prerequisiteRepair.id} carried forward`)),
+      ).toBe(true);
+      // Declaring it again there is a repeat, not another move.
+      expect(await service.checkForCrew("ab12cd34", { repair: carriedRepair })).not.toContain(
+        "Repair refused",
+      );
+      expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.repairs).toHaveLength(1);
+
+      // Every other check passing there is no result of the signed check.
+      await service.checkForCrew("ab12cd34");
+      expect(tasks.get("ab12cd34")?.delivery?.ciRepair?.repairs[0]?.outcome).toBeUndefined();
+
+      // The signed run there decides it, and spends one attempt only on failing.
+      forge.atHead[integrated] = [
+        ...PR203_INTEGRATION.atIntegrated,
+        { name: intel, state: "failure" as const },
+      ];
+      await service.checkForCrew("ab12cd34");
+      delivery = tasks.get("ab12cd34")?.delivery;
+      expect(delivery?.ciRepair?.repairs.map((repair) => repair.outcome)).toEqual(["failed"]);
+      expect(delivery).toMatchObject({ ciRounds: 1, ciRedHead: integrated });
+      // Every version's failures stay on record.
+      expect(delivery?.ciRepair?.failures).toEqual([
+        {
+          headSha: source,
+          checks: [intel, "Verify signed installer and updater / Apple silicon"],
+        },
+        { headSha: stranded, checks: ["native-phone"] },
+        { headSha: integrated, checks: [intel] },
+      ]);
+    });
+
+    it.each([
+      {
+        when: "a branch is still at its version",
+        branchesAt: async () => ["fm/evidence-abaf009"],
+        declared: carriedRepair,
+        says: "fm/evidence-abaf009 is still at that version, where a run can still start.",
+      },
+      {
+        when: "the branches at its version cannot be read",
+        branchesAt: () => Promise.reject(new ForgeError("transient", "GitHub answered 502")),
+        declared: carriedRepair,
+        says: "The branches at that version could not be read (GitHub answered 502), so a run may still start there.",
+      },
+      {
+        when: "its version's checks are still running",
+        atStranded: PR203_INTEGRATION.atStranded.map((check) =>
+          check.name === "native-phone" ? { ...check, state: "pending" as const } : check,
+        ),
+        declared: carriedRepair,
+        says: "that version's checks are still running, so it has no result yet.",
+      },
+      {
+        when: "it names a version the change is not at",
+        declared: { ...carriedRepair, headSha: PR203.current },
+        says: `Repair refused: attempt ${prerequisiteRepair.id} carries forward only as itself - source head ${source} and check ${intel} - to the change's current version ${integrated}, which no other attempt names.`,
+      },
+      {
+        when: "it names another check",
+        declared: {
+          ...carriedRepair,
+          check: "Verify signed installer and updater / Apple silicon",
+        },
+        says: `Repair refused: attempt ${prerequisiteRepair.id} carries forward only as itself`,
+      },
+    ])("does not carry it when $when", async (entry) => {
+      const { tasks, repos, service, forge } = setup();
+      await insertDirectPrTask(tasks, repos);
+      await strandRepair(service, forge);
+      if (entry.branchesAt) forge.branchesAt = entry.branchesAt;
+      if (entry.atStranded) forge.atHead[stranded] = entry.atStranded;
+      const answer = await service.checkForCrew("ab12cd34", { repair: entry.declared });
+      expect(answer).toContain(entry.says);
+      expect(answer).toContain("Repair refused");
+      expect(answer).not.toContain("carried forward from");
+      const delivery = tasks.get("ab12cd34")?.delivery;
+      expect(delivery?.ciRepair?.repairs).toEqual([prerequisiteRepair]);
+      expect(delivery?.ciRounds).toBeUndefined();
+    });
   });
 
   // INF-991: PR #372's pager repair read as passed or failed depending on

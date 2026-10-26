@@ -203,8 +203,15 @@ export type CheckRepairLedger = {
    * `void`: the project's host holds no commit at the declared version, as for a
    * mistyped id, so no check can ever run there; it spends nothing, and a
    * declaration with its id replaces it (INF-1184).
+   * `carried`: the versions an open attempt was declared at before the
+   * crewmate carried it forward to the change's newer version (INF-1488),
+   * oldest first, each with the evidence declared there and when it moved:
+   * its repaired check never started at any of them.
    */
-  repairs: (CheckRepair & { outcome?: "passed" | "failed" | "superseded" | "void" })[];
+  repairs: (CheckRepair & {
+    outcome?: "passed" | "failed" | "superseded" | "void";
+    carried?: { headSha: string; evidence: string; at: number }[];
+  })[];
   rerun?: CheckRerun;
 };
 

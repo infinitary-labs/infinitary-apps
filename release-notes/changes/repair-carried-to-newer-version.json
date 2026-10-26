@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "repair-carried-to-newer-version",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A crewmate's fix carries over when its check never ran before the pull request moved on",
+      "body": "When a crewmate fixed a check that runs only when started on purpose, such as a signed install check, and its pull request was brought up to date before that check ran, the app refused every later fix. The crewmate can now carry the same fix to the newer version, where that check's own result decides it, without counting against its three tries.",
+      "noPicture": "Nothing new appears on screen; the crewmate's fix moves to the pull request's newer version instead of being refused.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

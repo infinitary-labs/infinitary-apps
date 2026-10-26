@@ -82,10 +82,48 @@ export function observeRunFailures(
 }
 
 /**
+ * What the host found reading the open attempt at a version the open change
+ * has moved past (INF-1488): its repaired check never started there - no
+ * check of that name, none still running, no failure of it on record - and no
+ * branch is at that version for a run to start on, so no reading there can
+ * ever settle it. `current` is the change's version it may be carried to.
+ */
+export type StrandedRepair = { headSha: string; current: string };
+
+/**
+ * The open attempt a repair declaration carries forward (INF-1488): the same
+ * attempt - its id, source head and check - declared again at the change's
+ * current version, while its own version is stranded and no other attempt
+ * names the version it moves to. The crewmate's evidence says the repair is
+ * the same there; the host checks only these closed facts.
+ */
+function carriedAttempt(
+  ledger: CheckRepairLedger,
+  repair: CheckChangeInput["repair"] & {},
+  stranded: StrandedRepair | undefined,
+): CheckRepairLedger["repairs"][number] | undefined {
+  const attempt = outstandingRepair(ledger);
+  if (
+    !attempt ||
+    stranded?.headSha !== attempt.headSha ||
+    stranded.current !== repair.headSha ||
+    attempt.id !== repair.id ||
+    attempt.sourceHead !== repair.sourceHead ||
+    attempt.check !== repair.check
+  )
+    return undefined;
+  const taken = ledger.repairs.some(
+    (r) => r !== attempt && r.outcome !== "void" && r.headSha === repair.headSha,
+  );
+  return taken ? undefined : attempt;
+}
+
+/**
  * A declaration is validated as a closed typed fact, never parsed out of prose.
  * `target` is what the project's host answered about a repair's version
  * (INF-1184): `held` false when it holds no commit there, absent when it could
- * not say; `where` names the host in the refusal.
+ * not say; `where` names the host in the refusal. `stranded` is what reading
+ * the open attempt's own version found, when no reading there can settle it.
  */
 export function declareCheckAction(
   tasks: TaskService,
@@ -93,7 +131,8 @@ export function declareCheckAction(
   input: CheckChangeInput,
   at: number,
   target?: { held?: boolean; where: string },
-): { text: string; read: boolean } {
+  stranded?: StrandedRepair,
+): { text: string; read: boolean; carried?: true } {
   const task = tasks.get(taskId);
   if (!task) return { read: false, text: "Check declaration refused: task not found." };
   const ledger = structuredClone(task.delivery?.ciRepair ?? empty());
@@ -203,6 +242,33 @@ export function declareCheckAction(
         read: false,
         text: `Repair refused: no commit ${repair.headSha} exists ${target.where}, so no check can run there. Push the repaired version and declare its full commit id; nothing was recorded and no attempt was spent.`,
       };
+    // A stranded attempt declared again as itself at the change's version
+    // moves there, spending nothing: no reading at its old version can ever
+    // settle it, and only its repaired check's result decides it (INF-1488).
+    const carried = carriedAttempt(ledger, repair, stranded);
+    if (carried) {
+      const from = carried.headSha;
+      carried.carried = [
+        ...(carried.carried ?? []),
+        { headSha: from, evidence: carried.evidence, at },
+      ];
+      carried.headSha = repair.headSha;
+      carried.evidence = repair.evidence;
+      tasks.recordDelivery(
+        taskId,
+        { ciRepair: ledger },
+        {
+          kind: "ci",
+          text: `Repair ${carried.id} carried forward from ${from} to ${repair.headSha}: ${carried.check} never started there`,
+          actor: "crewmate",
+        },
+      );
+      return {
+        read: true,
+        carried: true,
+        text: `Repair ${carried.id} carried forward from ${from} to ${repair.headSha}: ${carried.check} never started at ${from} and none can start there now. Its result at ${repair.headSha} decides it, and only an unsuccessful result there spends an attempt; carrying it spent none.`,
+      };
+    }
     // A void attempt named a version no check can run at, so its id and
     // version stay free for the declaration that corrects it (INF-1184).
     const previous = ledger.repairs.find(
@@ -213,11 +279,14 @@ export function declareCheckAction(
         same(previous, repair) &&
         previous.id === repair.id &&
         previous.sourceHead === repair.sourceHead;
+      const open = outstandingRepair(ledger);
       return {
         read,
         text: read
           ? "Repair already recorded; repeated observations spend nothing."
-          : "Repair refused: that id or target head already names a different attempt.",
+          : open && open.id === repair.id && stranded?.headSha === open.headSha
+            ? `Repair refused: attempt ${open.id} carries forward only as itself - source head ${open.sourceHead} and check ${open.check} - to the change's current version ${stranded.current}, which no other attempt names.`
+            : "Repair refused: that id or target head already names a different attempt.",
       };
     }
     const source = ledger.diagnoses.find(
@@ -232,7 +301,10 @@ export function declareCheckAction(
     if (outstanding)
       return {
         read: false,
-        text: `Repair refused: attempt ${outstanding.id} at ${outstanding.headSha} has no result yet; read its checks with check_change once they finish, before starting another.`,
+        text:
+          stranded?.headSha === outstanding.headSha
+            ? `Repair refused: attempt ${outstanding.id} at ${outstanding.headSha} has no result yet, and none can start there. If ${stranded.current} carries that same repair, carry it forward before starting another: declare it again under id ${outstanding.id}, with source head ${outstanding.sourceHead}, check ${outstanding.check} and headSha ${stranded.current}.`
+            : `Repair refused: attempt ${outstanding.id} at ${outstanding.headSha} has no result yet; read its checks with check_change once they finish, before starting another.`,
       };
     ledger.repairs = [...ledger.repairs.filter((r) => r.id !== repair.id), repair];
   }

@@ -376,6 +376,12 @@ A run can still start there only while a branch is at that version, because the 
 While one is, as an evidence branch whose dispatched runs GitHub has not listed yet, the attempt is no result yet; once those runs report, it settles from them like any other version, and a failed one spends an attempt.
 Once no branch is at that version, or where the host cannot list branches, the attempt is closed as `superseded`, spends nothing, and the next repair may be declared.
 A failed list of the branches is no result yet, like a failed reading of the checks.
+A version the open change moved past whose checks all finished without the repaired one - as when only a dispatched verification runs it, and the change moved to a reviewed integration first - leaves the attempt stranded once no branch is at it, by the same branch rule (INF-1488).
+Its other checks passing there or at the newer version is no result of the repaired check, so a stranded attempt is not superseded: it stays outstanding, and a different repair is still refused.
+The crewmate carries it forward instead, declaring it again under the same id, source head and check at the change's current version, with its evidence that the repair is the same there.
+The host checks only the closed facts - the attempt's version is stranded, the target is the change's current version and no other attempt names it - and moves the attempt there, keeping each earlier version and its evidence in `carried`.
+Carrying spends nothing and writes no outcome; failures and diagnoses at every version stay on record, and the repaired check's result at the new version settles it like any other, a failed one spending an attempt.
+A failure of the repaired check on record at its version means it did start there, so that attempt is not stranded; neither is one at a version still running or one a branch is still at.
 A repair names a version the host's checks will run at, so the declaration first asks the host whether it holds that exact full commit id (`holdsCommit`, INF-1184).
 A version it holds no commit at - a mistyped, shortened or lengthened id, or one never pushed - is refused with the reason, and nothing is recorded or spent.
 GitHub reads the checks of an id longer than 40 characters as the commit its first 40 characters name, so without that question such a repair would settle from another version's checks.

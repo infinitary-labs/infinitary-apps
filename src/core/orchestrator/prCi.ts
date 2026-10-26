@@ -56,6 +56,7 @@ import {
   observeCheckRepair,
   outstandingRepair,
   repairCheck,
+  type StrandedRepair,
 } from "./checkRepair";
 import { armWatch, type WatchedCheck, type WatchedReading } from "./checkWatch";
 import type { MainBranchReading } from "./mainCheckWake";
@@ -231,6 +232,13 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 /** The checked change, and the forge that answered, for the put-in that follows. */
 type CheckedChange = { change: ForgeChange; forge: Forge };
 
+/**
+ * One line for reading an open repair at a version the change is no longer
+ * at, and, when no reading there can ever settle it, that fact for the
+ * declaration that carries it forward (INF-1488).
+ */
+type EarlierRepair = { text: string; stranded?: StrandedRepair };
+
 /** A merge's refusal on the saved story names the soft hold the captain's words pass (INF-1365). */
 function storyHeld(caught: unknown): never {
   const message = caught instanceof Error ? caught.message : String(caught);
@@ -401,7 +409,7 @@ export class PrCiService {
     if (checkInput.diagnosis || checkInput.repair || checkInput.rerun) {
       const located = this.locate(taskId);
       let id: string;
-      let earlier: string | undefined;
+      let earlier: EarlierRepair | undefined;
       let target: { held?: boolean; where: string } | undefined;
       if ("said" in located) {
         // Only a repair is settled by its version's checks, which a task that
@@ -429,9 +437,13 @@ export class PrCiService {
         checkInput,
         this.now(),
         target,
+        earlier?.stranded,
       );
-      if (!declaration.read) return [earlier, declaration.text].filter(Boolean).join("\n");
-      declared = [declared, earlier].filter(Boolean).join("\n");
+      if (!declaration.read) return [earlier?.text, declaration.text].filter(Boolean).join("\n");
+      // A carried repair's own line replaces the reading that offered it.
+      declared = [declared, declaration.carried ? declaration.text : earlier?.text]
+        .filter(Boolean)
+        .join("\n");
     }
     const run = await this.run(taskId, "crewmate");
     const reading = run.signIn ? crewSignInText(run.signIn) : run.text;
@@ -2166,7 +2178,7 @@ export class PrCiService {
             hasChangeRequests(forge.kind)
               ? `overall: no-pr\nNo open PR found for branch ${branch}.${pull ? ` ${numberLabel(forge, pull.number)} was closed without merging.` : ""}`
               : `overall: no-pr\nNothing pushed for branch ${branch}${forge.place ? ` on ${forge.place}` : ""} yet.`,
-            ...(earlier ? [earlier] : []),
+            ...(earlier ? [earlier.text] : []),
             ...(after?.ciCapAt === undefined ? [] : checkRepairWords(after)),
           ].join("\n"),
           recorded: true,
@@ -2203,7 +2215,7 @@ export class PrCiService {
           `overall: ${checks.overall}`,
           ...(this.readinessProblem(taskId, change) ? [this.readinessProblem(taskId, change)] : []),
           ...(checks.items.length > 0 ? lines : ["- no checks reported on the head SHA"]),
-          ...(earlier ? [earlier] : []),
+          ...(earlier ? [earlier.text] : []),
           ...cap,
           ...diagnosis,
           ...watchWords(forge, audience, watched && cap.length === 0, earlyOwed),
@@ -2731,15 +2743,19 @@ export class PrCiService {
    * open change moved past with no check at all there is superseded and
    * spends nothing, since the host starts none for it now (INF-988), unless
    * a branch is still at it, as an evidence branch whose dispatched runs
-   * GitHub has not listed yet is: that is no result yet (INF-1185). Answers
-   * one line for the reading, or nothing when no such attempt is open.
+   * GitHub has not listed yet is: that is no result yet (INF-1185). A version
+   * it moved past whose other checks all finished without the repaired one,
+   * with no branch at it, stays outstanding but stranded: no reading there
+   * can settle it, so the crewmate may carry it to the change's version
+   * (INF-1488). Answers one line for the reading, with that fact when it
+   * holds, or nothing when no such attempt is open.
    */
   private async settleEarlierRepair(
     taskId: string,
     forge: Forge,
     branch: string,
     change: ForgeChange | null,
-  ): Promise<string | undefined> {
+  ): Promise<EarlierRepair | undefined> {
     const delivery = this.options.tasks.get(taskId)?.delivery;
     const attempt = outstandingRepair(delivery?.ciRepair);
     if (!attempt || attempt.headSha === change?.headSha) return undefined;
@@ -2756,7 +2772,9 @@ export class PrCiService {
           text: `Repair ${attempt.id} void at ${attempt.headSha}: no such commit ${where}`,
         },
       );
-      return `${name}: no commit ${attempt.headSha} exists ${where}, so no check can run there; it is void and spent no attempt, and its id may name the repair at its pushed version.`;
+      return {
+        text: `${name}: no commit ${attempt.headSha} exists ${where}, so no check can run there; it is void and spent no attempt, and its id may name the repair at its pushed version.`,
+      };
     }
     let checks: ForgeCheck[];
     try {
@@ -2767,7 +2785,9 @@ export class PrCiService {
       ).items;
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
-      return `${name}: its checks could not be read there (${message}), so it has no result yet.`;
+      return {
+        text: `${name}: its checks could not be read there (${message}), so it has no result yet.`,
+      };
     }
     if (change && checks.length === 0) {
       // The open change moved past a version the host ran nothing on, and it
@@ -2778,10 +2798,14 @@ export class PrCiService {
         at = await forge.branchesAt?.(attempt.headSha);
       } catch (caught) {
         const message = caught instanceof Error ? caught.message : String(caught);
-        return `${name}: no check has started there yet, and the branches at that version could not be read (${message}), so it has no result yet.`;
+        return {
+          text: `${name}: no check has started there yet, and the branches at that version could not be read (${message}), so it has no result yet.`,
+        };
       }
       if (at && at.length > 0) {
-        return `${name}: no check has started there yet, and ${at.join(", ")} ${at.length === 1 ? "is" : "are"} still at that version, where a run can still start, so it has no result yet.`;
+        return {
+          text: `${name}: no check has started there yet, and ${at.join(", ")} ${at.length === 1 ? "is" : "are"} still at that version, where a run can still start, so it has no result yet.`,
+        };
       }
       this.options.tasks.recordDelivery(
         taskId,
@@ -2791,9 +2815,11 @@ export class PrCiService {
           text: `Repair ${attempt.id} superseded at earlier head ${attempt.headSha}: no check ran there`,
         },
       );
-      return at
-        ? `${name}: no check ran there and no branch is at that version now, so none will start; it is superseded and spent no attempt.`
-        : `${name}: no check ran there and none will start now that the change moved past it, so it is superseded and spent no attempt.`;
+      return {
+        text: at
+          ? `${name}: no check ran there and no branch is at that version now, so none will start; it is superseded and spent no attempt.`
+          : `${name}: no check ran there and none will start now that the change moved past it, so it is superseded and spent no attempt.`,
+      };
     }
     const round = observeCheckRepair(delivery, attempt.headSha, checks, this.now());
     const outcome = round.ciRepair?.repairs.find((r) => r.id === attempt.id)?.outcome;
@@ -2824,13 +2850,42 @@ export class PrCiService {
             ? ` (all ${target.named} checks of that name passed)`
             : ` (${target.unpassed} of ${target.named} checks of that name did not pass)`;
       const read = `${name}: ${attempt.check} ${describeCheckState(target.check.state)} there${named}`;
-      return outcome === "passed"
-        ? `${read}, so it passed and spent no attempt.`
-        : `${read}, so it is an unsuccessful own repair (${round.ciRounds ?? 0}/${CI_ROUND_CAP}).`;
+      return {
+        text:
+          outcome === "passed"
+            ? `${read}, so it passed and spent no attempt.`
+            : `${read}, so it is an unsuccessful own repair (${round.ciRounds ?? 0}/${CI_ROUND_CAP}).`,
+      };
     }
-    return checks.some((check) => check.state === "pending")
-      ? `${name}: that version's checks are still running, so it has no result yet.`
-      : `${name}: no check named ${attempt.check} reported there, so it has no result.`;
+    if (checks.some((check) => check.state === "pending"))
+      return { text: `${name}: that version's checks are still running, so it has no result yet.` };
+    const none = `${name}: no check named ${attempt.check} reported there, so it has no result.`;
+    // The repaired check never started at a version the open change moved
+    // past, though others ran there: once no branch is at it, none can start
+    // there, and the attempt may be carried to the change's version
+    // (INF-1488). A failure of it on record there says it did start.
+    const failedThere = round.ciRepair?.failures.some(
+      (failure) => failure.headSha === attempt.headSha && failure.checks.includes(attempt.check),
+    );
+    if (!change || failedThere) return { text: none };
+    let at: string[] | undefined;
+    try {
+      at = await forge.branchesAt?.(attempt.headSha);
+    } catch (caught) {
+      const message = caught instanceof Error ? caught.message : String(caught);
+      return {
+        text: `${none} The branches at that version could not be read (${message}), so a run may still start there.`,
+      };
+    }
+    if (at && at.length > 0) {
+      return {
+        text: `${none} ${at.join(", ")} ${at.length === 1 ? "is" : "are"} still at that version, where a run can still start.`,
+      };
+    }
+    return {
+      text: `${none} None can start there now that the change moved past it: if ${change.headSha} carries this same repair, carry it forward by declaring it again under id ${attempt.id}, with source head ${attempt.sourceHead}, check ${attempt.check} and headSha ${change.headSha}. Its result there decides it, and carrying it spends no attempt.`,
+      stranded: { headSha: attempt.headSha, current: change.headSha },
+    };
   }
 
   /**
@@ -2851,7 +2906,7 @@ export class PrCiService {
     record: NonNullable<ReturnType<TaskService["get"]>>;
     branch: string;
     forge: Forge;
-  }): Promise<string | undefined> {
+  }): Promise<EarlierRepair | undefined> {
     if (!outstandingRepair(this.options.tasks.get(located.record.id)?.delivery?.ciRepair)) {
       return undefined;
     }

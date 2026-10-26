@@ -3,26 +3,33 @@ import XCTest
 /// INF-1083's approved phone half: real files exercise the same owner as every UI observation.
 /// No app, provider account or external resource. These tests ride with the existing rest part.
 @MainActor final class PhoneWaitsTests: XCTestCase {
-    func testDelayedFileSurvivesAStallOnlyWhenNotGrading() async throws {
+    func testDelayedFileSurvivesAStallOnlyWhenNotGrading() throws {
         let flag = try XCTUnwrap(ProcessInfo.processInfo.environment["INFINITARY_PERF_BUDGETS"])
         XCTAssertTrue(["0", "1"].contains(flag), "The launcher must pass its budget reading")
         let file = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: file) }
-        let writer = Task.detached {
-            try await Task.sleep(for: .milliseconds(200))
-            try Data("work completed".utf8).write(to: file)
+        // INF-1396: the writer is its own thread, never a task. While every shared task thread is
+        // busy, a detached task's write waits past the whole wall cap and the reader never sees it.
+        let written = DispatchSemaphore(value: 0)
+        let writer = Thread {
+            Thread.sleep(forTimeInterval: 0.2)
+            try? Data("work completed".utf8).write(to: file)
+            written.signal()
         }
+        writer.qualityOfService = .userInteractive
+        writer.start()
         var first = true
         let observed = waitForPhonePredicate(NSPredicate { _, _ in
             if first {
                 first = false
-                // A real stalled reader, not extra headroom: the writer continues during the stall.
+                // A real stalled reader, not extra headroom: the writer continues during the stall,
+                // and the stall ends only once the write has finished, never by racing two sleeps.
                 Thread.sleep(forTimeInterval: 0.3)
+                written.wait()
                 return false
             }
             return FileManager.default.fileExists(atPath: file.path)
         }, object: file as NSURL, timeout: 0.1)
-        try await writer.value
         XCTAssertEqual(try String(contentsOf: file, encoding: .utf8), "work completed")
         XCTAssertEqual(observed, flag == "1" ? .timedOut : .completed)
         print("Delayed native completion file: grades=\(flag), result=\(observed)")

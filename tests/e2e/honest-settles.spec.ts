@@ -9,7 +9,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import {
   PROJECT_POLICY_WORDS,
-  PROJECT_SETUP_WORDS,
+  PROJECT_ROW_WORDS,
 } from "../../src/renderer/src/settings/projectsWords";
 import { forgeSignInTitle } from "../../src/shared/forges";
 import { plainProblem } from "../../src/shared/plainProblem";
@@ -17,7 +17,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp } from "./launch";
 import { seedHostedOrigins } from "./projectSeed";
-import { projectRow } from "./projects";
+import { projectRow, projectRowWords } from "./projects";
 import { feedLine } from "./rails";
 import { shownCard } from "./stack";
 
@@ -130,11 +130,14 @@ test("discarding a task that never opened a pull request asks GitHub nothing and
     const feed = (await feedTexts(page)).join("\n");
     expect(feed).not.toMatch(/Could not close|ENOENT|\bgh\b|PR/);
 
-    // Settings → Projects says how the project arrived in the captain's word.
+    // Settings → Projects says only how the project differs from a new one:
+    // its folder sits outside the projects folder, so the row calls it
+    // linked and shows where it is (INF-1495).
     await page.getByRole("button", { name: "Settings", exact: true }).click();
     await page.getByRole("tab", { name: "Projects" }).click();
     const header = page.getByRole("button", { name: "hosted, collapsed" });
-    await expect(header).toContainText(PROJECT_SETUP_WORDS.clone);
+    await expect(projectRowWords(page, "repo-hosted")).toHaveText([PROJECT_ROW_WORDS.linked]);
+    await expect(header.locator("[data-project-path]")).toHaveText(repo.repoDir);
     await header.click();
     await expect(
       projectRow(page, "repo-hosted").getByText(PROJECT_POLICY_WORDS.delivery),

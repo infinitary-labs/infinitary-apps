@@ -10,13 +10,14 @@ import {
 import { basename, join } from "node:path";
 import { type ElectronApplication, expect, type Page, test } from "@playwright/test";
 import type { OpenDialogOptions } from "electron";
+import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { cardBody } from "./frames";
 import { startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
 import { type MockProviderServer, startMockProvider } from "./mockProvider";
-import { addedProjects, addFromSetupCard, projectRow } from "./projects";
+import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
 import { promptInput } from "./prompt";
 import {
   CLONE_REPO_PROMPT_MARKER,
@@ -145,7 +146,15 @@ test("new projects go in the folder chosen in Settings, and the choice survives 
       expect(readlinkSync(link)).toBe(path);
     }
     row = await openProjectsSettings(page);
-    await expect(projectRow(page, nebula?.id as string)).toContainText(join(chosen, "nebula"));
+    // In the projects folder, nebula's closed row names no folder; opening it
+    // shows where it is (INF-1495).
+    const nebulaRow = projectRow(page, nebula?.id as string);
+    await expect(projectRowWords(page, nebula?.id as string)).toHaveText([
+      PROJECT_ROW_WORDS.localMerge,
+    ]);
+    await expect(nebulaRow.locator("[data-project-path]")).toHaveCount(0);
+    await nebulaRow.getByRole("button", { expanded: false }).click();
+    await expect(nebulaRow.getByLabel("Project folder")).toHaveValue(join(chosen, "nebula"));
     await page.screenshot({ path: test.info().outputPath("projects-folder-new-projects.png") });
     await page.keyboard.press("Escape");
 
@@ -160,6 +169,15 @@ test("new projects go in the folder chosen in Settings, and the choice survives 
     await row.getByRole("button", { name: "Use default" }).click();
     await expect(row.locator("[data-projects-folder-path]")).toHaveText(fleet);
     await expect(row.getByText("default", { exact: true })).toBeVisible();
+    // nebula stays in the chosen folder, now outside the projects folder, so
+    // its closed row calls it linked and shows where it is (INF-1495).
+    await expect(projectRowWords(launched.page, nebula?.id as string)).toHaveText([
+      PROJECT_ROW_WORDS.linked,
+      PROJECT_ROW_WORDS.localMerge,
+    ]);
+    await expect(
+      projectRow(launched.page, nebula?.id as string).locator("[data-project-path]"),
+    ).toHaveText(join(chosen, "nebula"));
     await launched.page.screenshot({ path: test.info().outputPath("projects-folder-default.png") });
     await launched.page.keyboard.press("Escape");
     await ask(launched.page, `${INIT_REPO_PROMPT_MARKER}comet`);

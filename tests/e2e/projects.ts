@@ -19,6 +19,14 @@ export function projectRow(page: Page, id: string): Locator {
 }
 
 /**
+ * The quiet words after a closed Settings -> Projects row's name, one locator
+ * per word: only how the project differs from a new one (`projectRowWords`).
+ */
+export function projectRowWords(page: Page, id: string): Locator {
+  return projectRow(page, id).locator("[data-project-word]");
+}
+
+/**
  * The setup card a Firstmate proposal put up for the project named `name`
  * (docs/fleet.md, "Asking the first mate to add a project"), as the stage shows it.
  */

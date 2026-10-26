@@ -3,14 +3,13 @@ import { existsSync, lstatSync, readdirSync, readlinkSync, writeFileSync } from 
 import { basename, join } from "node:path";
 import { expect, test } from "@playwright/test";
 import Database from "better-sqlite3";
-import { PROJECT_SETUP_WORDS } from "../../src/renderer/src/settings/projectsWords";
-import { AUTONOMY_WORDS, PROJECT_DELIVERY_WORDS } from "../../src/shared/vocabulary";
+import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
 import { DISCARD_PROMPT_MARKER, LAND_PROMPT_MARKER } from "./mockProvider";
-import { addedProjects, addFromSetupCard, projectRow } from "./projects";
+import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
 import { promptInput } from "./prompt";
 import { putInLine, startedLine, taskKey } from "./rails";
 import {
@@ -103,17 +102,19 @@ test("adopts a local repo by asking the agent and refuses a missing folder", asy
   expect(lstatSync(link).isSymbolicLink()).toBe(true);
   expect(readlinkSync(link)).toBe(registeredRepo);
 
-  // Settings shows the fleet: posture badges on the collapsed row (a linked
-  // repo with no remote defaults to local-only, ask-first). Remove
-  // lives only in an open row.
+  // Settings shows the fleet: the collapsed row says only how it differs
+  // from a new project - linked from outside the projects folder, with its
+  // path, and a repo with no remote merges locally; asking first is the
+  // default, so the row does not say it. Remove lives only in an open row.
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("tab", { name: "Projects" }).click();
   const [linked] = await addedProjects(page);
   const row = projectRow(page, linked?.id ?? "");
   await expect(row.getByText(registeredRepo)).toBeVisible();
-  await expect(row.getByText(PROJECT_SETUP_WORDS.adopt)).toBeVisible();
-  await expect(row.getByText(PROJECT_DELIVERY_WORDS["local-only"])).toBeVisible();
-  await expect(row.getByText(AUTONOMY_WORDS.asksFirst)).toBeVisible();
+  await expect(projectRowWords(page, linked?.id ?? "")).toHaveText([
+    PROJECT_ROW_WORDS.linked,
+    PROJECT_ROW_WORDS.localMerge,
+  ]);
   await expect(page.getByRole("button", { name: /^Remove / })).toHaveCount(0);
   await page.keyboard.press("Escape");
 });

@@ -20,7 +20,10 @@ import {
 /** The add row's mode that takes a folder's path on the first mate's computer. */
 const FOLDER_MODE = "folder";
 
-/** Design skill components/projects/AddProject. Setup continues if Settings closes. */
+/**
+ * Design skill components/projects/AddProject: the foot of the projects list
+ * box, above the folder line. Setup continues if Settings closes.
+ */
 export function AddProject({
   repos,
   onAdded,
@@ -150,10 +153,7 @@ export function AddProject({
       aria-label="Add project"
       data-add-project
       style={{
-        background: "var(--bg-1)",
-        border: "1px solid var(--line-1)",
-        borderRadius: "var(--radius-m)",
-        padding: "var(--space-4)",
+        padding: "var(--space-4) var(--space-4) var(--space-3)",
         fontSize: "var(--text-sm)",
         overflowWrap: "anywhere",
       }}

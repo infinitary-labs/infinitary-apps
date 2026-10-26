@@ -1,5 +1,6 @@
-// Settings → Projects (components/projects/): where your projects live, the projects folder, one row
-// per project that opens to its settings, and Add project. All data is fake; nothing is cloned or created.
+// Settings → Projects (components/projects/): where your projects live, then one list box: a row per
+// project that opens to its settings and says only how it differs from a new project, Add project, and
+// the projects folder on one line under it. All data is fake; nothing is cloned or created.
 (()=>{
 const NS=window.InfinitaryDesignSystem_94f559;
 const {Button,Input,Switch,Badge}=NS;
@@ -20,6 +21,15 @@ const DEFAULT_FOLDER="~/Library/Application Support/infinitary/fleet";
 const DELIVERY=[{value:"direct-pr",label:"pull requests"},{value:"local-only",label:"local merge"}];
 const CARE=[{value:"quick",label:"Quick"},{value:"standard",label:"Default"},{value:"reviewed",label:"Careful"}];
 const autonomyWords=(p)=>p.autonomy?"Merges on its own":"Asks first";
+const inFolder=(p,folder)=>p.path===folder||p.path.startsWith(`${folder}/`);
+// What a closed row says after the name: only what differs from a new project.
+const rowWords=(p,folder)=>p.personal?["builds in place"]:[
+  !inFolder(p,folder)&&"linked",
+  p.delivery==="local-only"&&"local merge",
+  p.autonomy&&"merges on its own",
+  p.rigor==="quick"&&"Quick care",
+  p.rigor==="reviewed"&&"Careful care",
+].filter(Boolean);
 const REPOS=[{name:"octo/website",added:true},{name:"octo/notes",private:true},{name:"octo/design-site"}];
 
 // Where your projects live (components/projects/ForgeRow): optional, and it reads as optional.
@@ -54,22 +64,15 @@ function WhereProjectsLive({signedIn,onSignedIn}){
   </div>;
 }
 
-// Projects folder (components/projects/ProjectsFolder): the first row of the list.
-function ProjectsFolderRow({folder,setFolder}){
+// Projects folder (components/projects/ProjectsFolder): one line under Add project.
+function ProjectsFolderLine({folder,setFolder}){
   const custom=folder!==DEFAULT_FOLDER;
-  return <div style={{...box,display:"flex",alignItems:"center",justifyContent:"space-between",gap:16,padding:"14px 18px"}}>
-    <div style={{minWidth:0}}>
-      <div style={{fontSize:"var(--text-base)",color:"var(--fg-1)",fontWeight:500}}>Projects folder</div>
-      <div style={{fontSize:"var(--text-sm)",color:"var(--fg-3)"}}>Where your first mate keeps the projects it clones or starts for you. Projects already set up stay where they are.</div>
-      <div style={{display:"flex",alignItems:"center",gap:8,marginTop:8,minWidth:0}}>
-        <span title={folder} style={{...mono,color:"var(--fg-2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{folder}</span>
-        {!custom&&<Badge tone="outline">default</Badge>}
-      </div>
-    </div>
-    <span style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-      {custom&&<Button variant="ghost" size="sm" onClick={()=>setFolder(DEFAULT_FOLDER)}>Use default</Button>}
-      <Button variant="secondary" size="sm" onClick={()=>setFolder("~/code")}>Choose folder</Button>
-    </span>
+  return <div style={{display:"flex",alignItems:"center",gap:8,padding:"0 18px 14px",minWidth:0,fontSize:"var(--text-sm)"}}>
+    <span style={{color:"var(--fg-3)",whiteSpace:"nowrap"}}>New projects go in</span>
+    <span title={folder} style={{...mono,color:"var(--fg-2)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>{folder}</span>
+    {!custom&&<span style={{...mono}}>default</span>}
+    <Button variant="ghost" size="sm" onClick={()=>setFolder("~/code")}>Choose folder</Button>
+    {custom&&<Button variant="ghost" size="sm" onClick={()=>setFolder(DEFAULT_FOLDER)}>Use default</Button>}
   </div>;
 }
 
@@ -96,23 +99,17 @@ function RemoveLine({project,onRemove}){
 }
 
 // One project: a row that opens to where its changes go, whether it asks before merging, and its care.
-function ProjectRow({project,open,onToggle,onPatch,onRemove}){
+function ProjectRow({project,folder,open,onToggle,onPatch,onRemove}){
   const p=project;
-  return <div style={{...box,borderColor:open?"var(--line-2)":"var(--line-1)",overflow:"hidden"}}>
+  const words=rowWords(p,folder);
+  return <div style={{borderBottom:"1px solid var(--line-1)"}}>
     <button type="button" aria-expanded={open} onClick={onToggle} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,width:"100%",padding:"12px 18px",background:"transparent",border:"none",cursor:"pointer",textAlign:"left",color:"inherit",font:"inherit"}}>
       <span style={{display:"flex",alignItems:"baseline",gap:12,minWidth:0}}>
         <span style={{fontFamily:"var(--font-mono)",fontSize:"var(--text-sm)",color:"var(--fg-1)",whiteSpace:"nowrap"}}>{p.name}</span>
-        <span style={{...mono,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.path}</span>
+        {words.length>0&&<span style={{...mono,whiteSpace:"nowrap"}}>{words.join(" · ")}</span>}
+        {!p.personal&&!inFolder(p,folder)&&<span style={{...mono,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>{p.path}</span>}
       </span>
       <span style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-        {!open&&<span style={{display:"flex",alignItems:"center",gap:6}}>
-          <Badge tone="outline">{p.setup}</Badge>
-          {p.personal?<Badge tone="outline">builds in place</Badge>:<>
-            {p.delivery==="direct-pr"&&p.lives&&<Badge tone="outline">{p.lives}</Badge>}
-            <Badge tone="outline">{DELIVERY.find(d=>d.value===p.delivery).label}</Badge>
-            <Badge tone={p.autonomy?"outline":"accent"}>{autonomyWords(p)}</Badge>
-          </>}
-        </span>}
         <span style={{display:"inline-flex",color:"var(--fg-3)",transform:open?"rotate(180deg)":"none",transition:"transform var(--dur-fast) var(--ease-out)"}}>{chevron}</span>
       </span>
     </button>
@@ -146,7 +143,7 @@ function AddProjectRow({folder,signedIn,onAdd}){
   const chip=(text,onClick)=><Button variant="secondary" size="sm" icon={plus} style={{borderRadius:"var(--radius-pill)"}} onClick={onClick}>{text}</Button>;
   const formLabel={display:"block",fontSize:"var(--text-sm)",color:"var(--fg-2)",marginBottom:8};
   const clone=(full)=>{setAdded(s=>new Set([...s,full]));onAdd({name:full.split("/")[1],path:`${folder}/${full.split("/")[1]}`,setup:"cloned",lives:"on GitHub",delivery:"direct-pr",autonomy:false,rigor:"standard"});};
-  return <div style={box}>
+  return <div>
     <div style={{display:"flex",alignItems:"center",flexWrap:"wrap",gap:10,padding:"12px 18px"}}>
       <span style={label}>Add project</span>
       {chip("Folder on this computer",()=>{setForm(null);onAdd({name:"notes",path:"~/code/notes",setup:"linked",delivery:"local-only",autonomy:false,rigor:"standard"});})}
@@ -192,7 +189,7 @@ function ProjectsTab(){
   const [signedIn,setSignedIn]=React.useState(true);
   const [folder,setFolder]=React.useState(DEFAULT_FOLDER);
   const [projects,setProjects]=React.useState([
-    {id:"website",name:"website",path:"~/code/website",setup:"cloned",lives:"on GitHub",delivery:"direct-pr",autonomy:false,rigor:"standard"},
+    {id:"website",name:"website",path:`${DEFAULT_FOLDER}/website`,setup:"cloned",lives:"on GitHub",delivery:"direct-pr",autonomy:false,rigor:"standard"},
     {id:"api",name:"api",path:"~/code/api",setup:"linked",delivery:"local-only",autonomy:true,rigor:"quick"},
     {id:"personal",name:"personal",path:`${DEFAULT_FOLDER}/personal`,setup:"created",personal:true,autonomy:true}
   ]);
@@ -207,14 +204,14 @@ function ProjectsTab(){
   return <div>
     <WhereProjectsLive signedIn={signedIn} onSignedIn={setSignedIn}/>
     <div style={label}>Projects</div>
-    <div style={intro}>Add a project here or ask your first mate. For each project, set where its changes go, whether your first mate merges on its own, and how carefully it works.</div>
-    <div style={{display:"flex",flexDirection:"column",gap:10}}>
-      <ProjectsFolderRow folder={folder} setFolder={setFolder}/>
-      {projects.map(p=><ProjectRow key={p.id} project={p} open={openId===p.id}
+    <div style={intro}>Add a project here or ask your first mate, and open one to change how it works. A row says only what is set differently from a new project, which is offered as pull requests where it lives, waits for your word before merging, takes Default care and runs on a computer chosen automatically.</div>
+    <div style={{...box,overflow:"hidden"}}>
+      {projects.map(p=><ProjectRow key={p.id} project={p} folder={folder} open={openId===p.id}
         onToggle={()=>setOpenId(id=>id===p.id?null:p.id)}
         onPatch={(changes)=>patch(p.id,changes)}
         onRemove={()=>{setProjects(list=>list.filter(x=>x.id!==p.id));setOpenId(null);}}/>)}
       <AddProjectRow folder={folder} signedIn={signedIn} onAdd={add}/>
+      <ProjectsFolderLine folder={folder} setFolder={setFolder}/>
     </div>
   </div>;
 }

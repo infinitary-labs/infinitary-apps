@@ -1,4 +1,3 @@
-import { forgePlace } from "@shared/forge";
 import type { RepoPolicyPatch, RepoView } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { DeviceSignIns } from "@shared/signIns";
@@ -11,7 +10,7 @@ import {
 import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
-import { Badge, Button, GroupedPills, Input, Switch } from "../design";
+import { Button, GroupedPills, Input, Switch } from "../design";
 import { useCutWords } from "../design/core/overflowTitle";
 import { useInPlaceReveal } from "../design/reveals";
 import { useFirstMatePlace } from "../devices/useFirstMatePlace";
@@ -19,22 +18,21 @@ import { isView } from "../devices/viewWords";
 import { AddProject } from "./AddProject";
 import { FOLDER_THERE_WORDS } from "./addProjectWords";
 import { ForgeSection } from "./ForgeSection";
-import { PROJECT_POLICY_WORDS, PROJECT_SETUP_WORDS } from "./projectsWords";
+import { PROJECT_POLICY_WORDS, PROJECT_ROW_WORDS, projectRowWords } from "./projectsWords";
 import { RemoveProject } from "./RemoveProject";
 import { RunsOnControl, runsOnDescription, runsOnWhere, useWorkComputers } from "./RunsOn";
-import { LABEL_GAP, ROW_GAP, SettingError, SettingRow } from "./settingRows";
+import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
 import { useSettingSave } from "./useSettingSave";
 
 /**
  * The Projects settings tab: the managed fleet (decision D-8, fleet-root
  * revision). Setup, settings and removal share the `app_change` catalog with
- * Firstmate. Where new projects
- * go is one folder row; delivery, autonomy, and standing rigor are
- * accordion rows that write the same policy `app_change project-settings` already
- * writes.
+ * Firstmate. One list box holds every project, Add project and, on one
+ * line under it, where new projects go (INF-1495, direction A). A closed row
+ * says only how the project differs from a new one (`projectRowWords`);
+ * delivery, autonomy, and standing rigor are accordion rows that write the
+ * same policy `app_change project-settings` already writes.
  */
-
-const KIND_LABEL: Record<RepoView["setupKind"], string> = PROJECT_SETUP_WORDS;
 
 const DELIVERY_OPTIONS = [
   { value: "direct-pr" as const, label: PROJECT_DELIVERY_WORDS["direct-pr"] },
@@ -100,6 +98,8 @@ export function ProjectsTab() {
   // Eligible projects expose Automatic even before another computer is added.
   const computers = useWorkComputers();
   const [runsOnError, setRunsOnError] = useState<string | null>(null);
+  const folder = useProjectsFolder();
+  const folderPath = folder.value?.path ?? null;
 
   useEffect(() => {
     const refresh = () => void window.infinitary.repos.list().then(setRepos);
@@ -188,18 +188,24 @@ export function ProjectsTab() {
         Projects
       </div>
       <div style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)", marginBottom: ROW_GAP }}>
-        Add a project here or ask your first mate. For each project, set where its changes go,
-        whether your first mate merges on its own, and how carefully it works.
+        Add a project here or ask your first mate, and open one to change how it works. A row says
+        only what is set differently from a new project, which is offered as pull requests where it
+        lives, waits for your word before merging, takes Default care and runs on a computer chosen
+        automatically.
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: ROW_GAP }}>
-        <ProjectsFolderRow />
+      <div
+        style={{
+          background: "var(--bg-1)",
+          border: "1px solid var(--line-1)",
+          borderRadius: "var(--radius-m)",
+          overflow: "hidden",
+        }}
+      >
         {repos.length === 0 && (
           <div
             style={{
-              padding: "14px 18px",
-              background: "var(--bg-1)",
-              border: "1px solid var(--line-1)",
-              borderRadius: "var(--radius-m)",
+              padding: "12px 18px",
+              borderBottom: "1px solid var(--line-1)",
               fontSize: "var(--text-sm)",
               color: "var(--fg-3)",
             }}
@@ -211,6 +217,7 @@ export function ProjectsTab() {
           <ProjectRow
             key={repo.id}
             repo={repo}
+            folder={folderPath}
             open={openId === repo.id}
             onToggle={() => setOpenId((current) => (current === repo.id ? null : repo.id))}
             onPatch={(changes) => patch(repo.id, changes)}
@@ -236,6 +243,7 @@ export function ProjectsTab() {
             setOpenId(repo.id);
           }}
         />
+        <ProjectsFolderLine folder={folder} />
       </div>
     </div>
   );
@@ -243,13 +251,13 @@ export function ProjectsTab() {
 
 /**
  * Where new projects go (design skill `components/projects/ProjectsFolder`):
- * the folder Firstmate clones into and starts new projects in, picked with
- * the system's folder picker. Choosing writes nothing until the core
- * accepts the folder; a refusal is shown beside the control and the row
- * reads the saved folder again. Projects already set up never move.
+ * one line under Add project naming the folder Firstmate clones into and
+ * starts new projects in, picked with the system's folder picker. Choosing
+ * writes nothing until the core accepts the folder; a refusal is shown under
+ * the line and the line reads the saved folder again. Projects already set
+ * up never move.
  */
-export function ProjectsFolderRow() {
-  const folder = useSettingSave(() => window.infinitary.repos.folder());
+function ProjectsFolderLine({ folder }: { folder: ReturnType<typeof useProjectsFolder> }) {
   const { refresh, save } = folder;
   const [choosing, setChoosing] = useState(false);
   const [pickError, setPickError] = useState<string | null>(null);
@@ -294,80 +302,60 @@ export function ProjectsFolderRow() {
 
   const busy = choosing || folder.saving;
   return (
-    <SettingRow
-      id="projects-folder"
-      title="Projects folder"
-      description="Where your first mate keeps the projects it clones or starts for you. Projects already set up stay where they are."
-      detail={
-        folder.value && (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "var(--space-2)",
-              marginTop: "var(--space-2)",
-              minWidth: 0,
-            }}
-          >
-            <span
-              data-projects-folder-path
-              {...pathCut}
-              style={{
-                minWidth: 0,
-                fontFamily: "var(--font-mono)",
-                fontSize: "var(--text-xs)",
-                color: "var(--fg-2)",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {folder.value.path}
-            </span>
-            {!folder.value.custom && <Badge tone="outline">default</Badge>}
-          </div>
-        )
-      }
-      {...(there && typed !== null
-        ? {
-            detail: (
-              <form
-                style={{ display: "flex", gap: "var(--space-2)", marginTop: "var(--space-2)" }}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  saveTyped();
+    <div
+      data-setting="projects-folder"
+      style={{ padding: "0 var(--space-4) var(--space-4)", fontSize: "var(--text-sm)" }}
+    >
+      {there && typed !== null ? (
+        <form
+          style={{ display: "flex", gap: "var(--space-2)" }}
+          onSubmit={(event) => {
+            event.preventDefault();
+            saveTyped();
+          }}
+        >
+          <Input
+            aria-label={FOLDER_THERE_WORDS.label(there)}
+            mono
+            value={typed}
+            onChange={(event) => setTyped(event.target.value)}
+            disabled={folder.saving}
+            autoFocus
+          />
+          <Button type="submit" size="sm" disabled={!typed.trim() || folder.saving}>
+            Save
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => setTyped(null)}>
+            Cancel
+          </Button>
+        </form>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", minWidth: 0 }}>
+          <span style={{ color: "var(--fg-3)", whiteSpace: "nowrap" }}>New projects go in</span>
+          {folder.value && (
+            <>
+              <span
+                data-projects-folder-path
+                {...pathCut}
+                style={{
+                  minWidth: 0,
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--text-xs)",
+                  color: "var(--fg-2)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
                 }}
               >
-                <Input
-                  aria-label={FOLDER_THERE_WORDS.label(there)}
-                  mono
-                  value={typed}
-                  onChange={(event) => setTyped(event.target.value)}
-                  disabled={folder.saving}
-                  autoFocus
-                />
-                <Button type="submit" size="sm" disabled={!typed.trim() || folder.saving}>
-                  Save
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => setTyped(null)}>
-                  Cancel
-                </Button>
-              </form>
-            ),
-          }
-        : {})}
-      error={pickError ?? folder.error}
-      control={
-        <span
-          style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", flexShrink: 0 }}
-        >
-          {folder.value?.custom && (
-            <Button variant="ghost" size="sm" disabled={busy} onClick={useDefault}>
-              Use default
-            </Button>
+                {folder.value.path}
+              </span>
+              {!folder.value.custom && (
+                <span style={{ color: "var(--fg-3)", fontSize: "var(--text-xs)" }}>default</span>
+              )}
+            </>
           )}
           <Button
-            variant="secondary"
+            variant="ghost"
             size="sm"
             disabled={!folder.value || folder.saving}
             pending={choosing}
@@ -376,19 +364,23 @@ export function ProjectsFolderRow() {
           >
             Choose folder
           </Button>
-        </span>
-      }
-    />
+          {folder.value?.custom && (
+            <Button variant="ghost" size="sm" disabled={busy} onClick={useDefault}>
+              Use default
+            </Button>
+          )}
+        </div>
+      )}
+      <SettingError error={pickError ?? folder.error} />
+    </div>
   );
 }
 
-/**
- * Where a project's proposed changes go, in the person's words ("on
- * GitHub", "on git.example.com"), or nothing (git integration PR 1.1). Only
- * a project whose changes are offered where it lives says so: a project
- * kept on this Mac, and one whose changes go straight in, read exactly as
- * they did before - nothing here suggests a project needs a host.
- */
+/** The projects folder as Settings last read it, shared by the rows and the folder line. */
+function useProjectsFolder() {
+  return useSettingSave(() => window.infinitary.repos.folder());
+}
+
 function ProjectDetails({ repo }: { repo: RepoView }) {
   const place = useFirstMatePlace();
   const [name, setName] = useState(repo.name);
@@ -508,14 +500,9 @@ function ProjectDetails({ repo }: { repo: RepoView }) {
   );
 }
 
-function hostWords(repo: RepoView): string | null {
-  if (repo.kind === "personal" || repo.delivery !== "direct-pr" || !repo.host) return null;
-  const place = forgePlace({ kind: repo.host.kind, host: repo.host.name });
-  return place ? `on ${place}` : null;
-}
-
 function ProjectRow({
   repo,
+  folder,
   open,
   onToggle,
   onPatch,
@@ -525,6 +512,8 @@ function ProjectRow({
   runsOnError,
 }: {
   repo: RepoView;
+  /** The projects folder, or null while it is unread. */
+  folder: string | null;
   open: boolean;
   onToggle: () => void;
   onPatch: (changes: RepoPolicyPatch) => void;
@@ -536,17 +525,15 @@ function ProjectRow({
 }) {
   const personal = repo.kind === "personal";
   const runsWhere = computers ? runsOnWhere(repo, computers) : null;
-  const lives = hostWords(repo);
+  const words = projectRowWords(repo, folder, runsWhere);
+  const showPath = !personal && folder !== null && words.includes(PROJECT_ROW_WORDS.linked);
   const autonomyLabel = repo.autonomy ? AUTONOMY_WORDS.putsInItself : AUTONOMY_WORDS.asksFirst;
   const reveal = useInPlaceReveal(open);
   return (
     <div
       data-project={repo.id}
       style={{
-        background: "var(--bg-1)",
-        border: `1px solid ${open ? "var(--line-2)" : "var(--line-1)"}`,
-        borderRadius: "var(--radius-m)",
-        overflow: "hidden",
+        borderBottom: "1px solid var(--line-1)",
       }}
     >
       <button
@@ -580,35 +567,42 @@ function ProjectRow({
           >
             {repo.name}
           </span>
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "var(--text-xs)",
-              color: "var(--fg-3)",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {repo.path}
-          </span>
-        </span>
-        <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-          {!open && (
-            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <Badge tone="outline">{KIND_LABEL[repo.setupKind]}</Badge>
-              {personal ? (
-                <Badge tone="outline">builds in place</Badge>
-              ) : (
-                <>
-                  {lives && <Badge tone="outline">{lives}</Badge>}
-                  <Badge tone="outline">{PROJECT_DELIVERY_WORDS[repo.delivery]}</Badge>
-                  <Badge tone={repo.autonomy ? "outline" : "accent"}>{autonomyLabel}</Badge>
-                  {runsWhere && <Badge tone="accent">{`runs ${runsWhere}`}</Badge>}
-                </>
-              )}
+          {words.length > 0 && (
+            <span
+              data-project-words
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--text-xs)",
+                color: "var(--fg-3)",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {words.map((word, index) => (
+                <span key={word}>
+                  {index > 0 && " · "}
+                  <span data-project-word>{word}</span>
+                </span>
+              ))}
             </span>
           )}
+          {showPath && (
+            <span
+              data-project-path
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "var(--text-xs)",
+                color: "var(--fg-3)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                minWidth: 0,
+              }}
+            >
+              {repo.path}
+            </span>
+          )}
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
           <span
             style={{
               display: "inline-flex",

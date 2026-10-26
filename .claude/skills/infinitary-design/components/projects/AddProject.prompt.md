@@ -1,4 +1,4 @@
-Settings → Projects ends with an Add project row, in the Add account foot shape: a wrapping row of small secondary pill Buttons with a plus, “Folder on this computer”, one “{host name} repo” per ForgesView.hosts, then “New project”.
+Settings → Projects' one list box ends with an Add project row, in the Add account foot shape, with the projects folder's line under it (`ProjectsFolder`): a wrapping row of small secondary pill Buttons with a plus, “Folder on this computer”, one “{host name} repo” per ForgesView.hosts, then “New project”.
 No host or sign-in is required.
 The personal workspace is never a choice.
 The row ends with a labeled "Task key" field, pushed to the right and wrapping with the pills: a mono Input the height of a small Button, just wide enough for its placeholder "From its name".

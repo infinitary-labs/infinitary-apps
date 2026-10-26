@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import { hostEnv } from "../../src/core/hostEnv";
+import { PROJECT_ROW_WORDS } from "../../src/renderer/src/settings/projectsWords";
 import {
   AUTONOMY_SWITCH_NAME,
   AUTONOMY_WORDS,
@@ -13,7 +14,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { waitForFirstmateIdle } from "./crew";
 import { type LaunchedApp, launchApp } from "./launch";
 import { LAND_PROMPT_MARKER, MOCK_FM_CHAT_TEXT } from "./mockProvider";
-import { addedProjects, addFromSetupCard, projectRow } from "./projects";
+import { addedProjects, addFromSetupCard, projectRow, projectRowWords } from "./projects";
 import { promptInput } from "./prompt";
 import { latestContext } from "./providerRequest";
 import { putInLine, reportLine, startedLine, taskKey } from "./rails";
@@ -208,13 +209,18 @@ test("an agent-made posture change shows up live in the settings badges", async 
 
   await page.getByRole("button", { name: "Settings" }).click();
   await page.getByRole("tab", { name: "Projects" }).click();
-  // Both adopted projects ask first. Other settings can offer autonomy as
-  // an option, so read each project's own row and its stored flag.
+  // Both adopted projects ask first, the default, so each closed row says
+  // only that it is linked and merges locally (INF-1495). Other settings can
+  // offer autonomy as an option, so read each project's own row and its
+  // stored flag.
+  const askingFirst = [PROJECT_ROW_WORDS.linked, PROJECT_ROW_WORDS.localMerge];
   await expect.poll(storedAutonomy).toEqual({ alpha: false, beta: false });
-  for (const row of [alphaRow, betaRow]) {
+  for (const [row, repo] of [
+    [alphaRow, alpha],
+    [betaRow, beta],
+  ] as const) {
     await expect(row.getByRole("button", { expanded: false })).toBeVisible();
-    await expect(row.getByText(AUTONOMY_WORDS.asksFirst, { exact: true })).toBeVisible();
-    await expect(row.getByText(AUTONOMY_WORDS.putsInItself, { exact: true })).toHaveCount(0);
+    await expect(projectRowWords(page, repo.id)).toHaveText(askingFirst);
   }
   const before = await storedAutonomy();
   const priorOperations = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.filter(
@@ -230,12 +236,11 @@ test("an agent-made posture change shows up live in the settings badges", async 
     `${CONFIGURE_REPO_PROMPT_MARKER}${beta.name} autonomous`,
   );
   await expect.poll(storedAutonomy, { timeout: 30_000 }).toEqual({ alpha: false, beta: true });
-  await expect(betaRow.getByText(AUTONOMY_WORDS.putsInItself, { exact: true })).toBeVisible({
-    timeout: 30_000,
-  });
-  await expect(betaRow.getByText(AUTONOMY_WORDS.asksFirst, { exact: true })).toHaveCount(0);
-  await expect(alphaRow.getByText(AUTONOMY_WORDS.asksFirst, { exact: true })).toBeVisible();
-  await expect(alphaRow.getByText(AUTONOMY_WORDS.putsInItself, { exact: true })).toHaveCount(0);
+  await expect(projectRowWords(page, beta.id)).toHaveText(
+    [...askingFirst, PROJECT_ROW_WORDS.mergesOnItsOwn],
+    { timeout: 30_000 },
+  );
+  await expect(projectRowWords(page, alpha.id)).toHaveText(askingFirst);
   const newOperations = (await page.evaluate(() => window.infinitary.tasks.board())).tasks.filter(
     (t) =>
       t.kind === "operation" &&
@@ -296,7 +301,11 @@ test("the captain can set project policy from the accordion in settings", async 
   const header = row.getByRole("button", { expanded: false });
   const testInfo = test.info();
   await expect(header).toBeVisible();
-  await expect(header.getByText(AUTONOMY_WORDS.asksFirst, { exact: true })).toBeVisible();
+  // Asking first is the default, so the closed row does not say it.
+  await expect(projectRowWords(page, alpha.id)).toHaveText([
+    PROJECT_ROW_WORDS.linked,
+    PROJECT_ROW_WORDS.localMerge,
+  ]);
   await row.screenshot({ path: testInfo.outputPath("collapsed-asks-first.png") });
   await header.click();
   await expect(row.getByRole("button", { expanded: true })).toBeVisible();
@@ -333,7 +342,10 @@ test("the captain can set project policy from the accordion in settings", async 
 
   // Collapsing and reopening keep the stored permission and switch state.
   await row.getByRole("button", { expanded: true }).click();
-  await expect(header.getByText(AUTONOMY_WORDS.putsInItself, { exact: true })).toBeVisible();
+  await expect(projectRowWords(page, alpha.id)).toHaveText([
+    PROJECT_ROW_WORDS.linked,
+    PROJECT_ROW_WORDS.mergesOnItsOwn,
+  ]);
   await expect.poll(storedAutonomy).toBe(true);
   await row.screenshot({ path: testInfo.outputPath("collapsed-merges-on-its-own.png") });
   await header.click();

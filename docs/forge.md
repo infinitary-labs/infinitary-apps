@@ -668,7 +668,7 @@ When the branch has no open change but the task names a pull request, the readin
 A put-in made before that tick also answers the merge already made and closes the task without sending anything.
 The settle card's fact strip (`CrewSupervisor.settleFacts`) and the record card read that label and link - never parse a number back out of a URL.
 The record card still names where the change goes from the repository's `host` ("goes in on GitHub", "goes in on git.example.com").
-Settings → Projects shows the same place on a project whose changes go there, and nothing at all on a project kept on this Mac or one whose changes go straight in: the captain's constraint is that a forge is never required.
+Settings → Projects names no place on a closed row, which says only how a project differs from a new one; the open row's Where it lives shows the address, and stays empty on a project kept on this Mac: the captain's constraint is that a forge is never required.
 
 The first mate reads the same facts (git integration PR 1.3).
 Its context block's `lives` fact is the host's kind from the origin, and - only where the project's changes go there - the app's sign-in on it, from `ForgeSignIns.signInOn`: `github (signed in as octo)`, `github (not signed in)`, `github (GitHub no longer accepts the sign-in)`, `github (signed in as octo; not reachable just now)`; a plain host names its address (`git (git.example.com)`), and a project kept on this Mac is `none` or, when it has a host but its work goes straight in, the bare kind with no sign-in at all.

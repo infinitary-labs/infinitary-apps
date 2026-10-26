@@ -137,7 +137,7 @@ A first mate with its window sends no such field, and a view of it stays as `doc
   Settings shows General, Projects, Intelligence, Usage and Integrations as well as the four tabs any view shows (`onAViewOfACommand`, `showsSection`), and their keyboard commands work there (`src/renderer/src/app/commandRefusals.ts`).
   Their words name the computer the first mate lives on where they would say this computer (`firstMatePlace`, `useFirstMatePlace`).
   General leaves out that computer's Start at login, Dock, dictation and panels, which are its own and have nobody there.
-  A project's folder is typed as its path on that computer, since a folder picker here shows only this computer's folders: Choose folder on the projects folder's row, and Folder on Mac mini in Add project (`FOLDER_THERE_WORDS`, `src/renderer/src/settings/addProjectWords.ts`); that computer checks the path and says why one cannot be used.
+  A project's folder is typed as its path on that computer, since a folder picker here shows only this computer's folders: Choose folder on the projects folder's line under Add project, and Folder on Mac mini in Add project (`FOLDER_THERE_WORDS`, `src/renderer/src/settings/addProjectWords.ts`); that computer checks the path and says why one cannot be used.
 - **First launch.**
   Its first launch shows the subscription chips under the line `gateRunLine` makes: "Connect one for your first mate on Mac mini.
   A command started it there, so it signs in from here."

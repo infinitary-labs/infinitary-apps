@@ -650,12 +650,39 @@ import XCTest
         app.buttons["close-crew-preview"].tap()
     }
 
+    // INF-1399: isHittable also accepts a sliver of a clipped 44-point target, and a touch XCTest then
+    // chooses at the scene's clipping edge opens nothing. The target is ready only once its whole frame
+    // lies inside the scene's viewport.
+    private func crewReadyToTap(_ hittable: Bool, frame: CGRect, in viewport: CGRect) -> Bool {
+        hittable && !frame.isEmpty && viewport.contains(frame)
+    }
+
+    /// INF-1399: the touch run 40341452314's iPhone rest part made, at the scene's right edge, with the scene
+    /// as it stood with and without the Past cards row; it lay inside both frames, and must drag on, not tap.
+    func testCrewRevealRejectsRecordedClippingEdge() {
+        let target = CGRect(x: 372.6666666666667, y: 392, width: 44, height: 44)
+        let recordedTouch = CGPoint(x: 376.83334350585938, y: 414)
+        let withoutPast = CGRect(x: 16, y: 137, width: 361, height: 554.3333333333334)
+        let withPast = CGRect(x: 16, y: 193, width: 361, height: withoutPast.height - 56)
+        for viewport in [withoutPast, withPast] {
+            XCTAssertTrue(viewport.contains(recordedTouch))
+            XCTAssertTrue(target.contains(recordedTouch))
+            XCTAssertFalse(crewReadyToTap(true, frame: target, in: viewport), "The recorded edge must drag on, not tap")
+            let centered = target.offsetBy(dx: viewport.midX - target.midX, dy: viewport.midY - target.midY)
+            XCTAssertTrue(crewReadyToTap(true, frame: centered, in: viewport))
+            XCTAssertFalse(crewReadyToTap(false, frame: centered, in: viewport))
+        }
+    }
+
     /// INF-1066: each touch drag moves the scene by the target's current distance from the viewport's center,
     /// read from both frames before the gesture, then holds so no momentum carries it past the target.
     private func revealCrew(_ element: XCUIElement, in scene: XCUIElement) {
         for _ in 0..<8 {
-            if element.isHittable { return }
             let viewport = scene.frame, target = element.frame
+            if crewReadyToTap(element.isHittable, frame: target, in: viewport) {
+                print("INF-1399 fully revealed crew: scene=\(viewport), target=\(target)")
+                return
+            }
             // A finger drags content the opposite way the viewport travels; stay inside the viewport's inner area.
             let reach = CGVector(dx: viewport.width * 0.4, dy: viewport.height * 0.4)
             let dx = max(-reach.dx, min(reach.dx, viewport.midX - target.midX))
@@ -664,7 +691,7 @@ import XCTest
             let end = start.withOffset(CGVector(dx: dx, dy: dy))
             start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.3)
         }
-        XCTAssertTrue(element.isHittable, "Continuous panning must reach every visible crewmate")
+        XCTAssertTrue(crewReadyToTap(element.isHittable, frame: element.frame, in: scene.frame), "Continuous panning must bring the whole crewmate inside the scene before tapping")
     }
 
     /// INF-64 piece 4: a phone answers at the real home, not a local stand-in; opaque scripts cannot gain native effects.

@@ -13,11 +13,12 @@ export function testHomeKeys(plan: Record<string, unknown>): string[] {
 }
 
 // INF-662 piece 2 (the captain's "Both at once, journey in parts"): the phone journey is five
-// tests, and each runs alone from its own fresh simulator and test home, side by side with the
-// others. The order is the start order, longest first as measured on Oct 19 and 20: join and
-// recover 4.2 minutes, talk and tasks 3.7, cards 2.3, the character and past choices 0.7.
-// INF-804: `photos` marks a part that chooses a library photo; its runner waits for Photos to open
-// its shared-with-you library first, since Photos hands over no chosen photo before then.
+// tests, and each runs alone from its own test home and a clean app on its device's one simulator
+// (INF-1438), the devices side by side. The order is the start order, longest first as measured
+// on Oct 19 and 20: join and recover 4.2 minutes, talk and tasks 3.7, cards 2.3, the character and
+// past choices 0.7.
+// INF-804: `photos` marks a part that chooses a library photo; the gate waits for its device's Photos
+// to open its shared-with-you library first, since Photos hands over no chosen photo before then.
 export const PHONE_JOURNEY = "InfinitaryUITests/PhoneJourney";
 export const PHONE_PARTS = [
   { name: "join", test: "testJoinAndRecover", photos: false },
@@ -55,7 +56,8 @@ export function partSelection(name: string, waitsOnly = false): string[] {
   return PHONE_PARTS.slice(0, -1).map((part) => `-skip-testing:${PHONE_JOURNEY}/${part.test}`);
 }
 
-/** Every device's parts in start order: each part on the slower iPad first, then on the iPhone. */
+/** Every device's parts in start order: each part on the slower iPad first, then on the iPhone.
+ * INF-1438: the gate runs each device's parts in this order on the one simulator it starts for that device. */
 export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHONE_PARTS.map((part) => part.name)) {
   for (const part of parts) partSelection(part);
   const order: PhoneDevice[] = ["ipad", "iphone"];
@@ -86,6 +88,53 @@ export async function runSideBySide<Job, Result>(jobs: Job[], slots: number, run
     }
   };
   await Promise.all(Array.from({ length: Math.min(slots, jobs.length) }, worker));
+  if (errors.length) throw errors[0];
+  return results;
+}
+
+/** What a device's lane needs from the gate: the device it starts once, each of its jobs on that device, and its end. */
+export type DeviceLane<Job extends { device: string }, Device, Result> = {
+  /** Starts the device once, before its first job; a failure here leaves every job of the lane unstarted. */
+  open: (device: Job["device"], stopping: AbortSignal) => Promise<Device>;
+  /** Runs one job on the opened device; the signal aborts when the lanes stop. */
+  run: (job: Job, opened: Device, stopping: AbortSignal) => Promise<Result>;
+  /** Ends the device after the lane's last job, whether it ran, failed or stopped. */
+  close: (opened: Device) => Promise<void>;
+};
+
+/** INF-1438 (the captain's "Start each simulated device once per phone check, not once per part"): runs
+ * the jobs of each device in order on one device the lane opens once and closes at its end, the devices'
+ * lanes side by side, at most `slots` at a time. One job's failure stops none of the others, unless
+ * `stopAfter` holds for a job's result or a job throws: then no lane starts another job and the signal each
+ * running job holds aborts, while every opened device still closes. A job that never started leaves its
+ * result undefined, and the first error is thrown once every lane has ended. */
+export async function runDeviceLanes<Job extends { device: string }, Device, Result>(jobs: Job[], slots: number,
+  lane: DeviceLane<Job, Device, Result>, stopAfter?: (result: Result) => boolean): Promise<(Result | undefined)[]> {
+  const devices = [...new Set(jobs.map((job) => job.device))] as Job["device"][];
+  const results: (Result | undefined)[] = jobs.map(() => undefined);
+  const errors: unknown[] = [];
+  const stopping = new AbortController();
+  const failed = (error: unknown) => {
+    errors.push(error);
+    if (stopAfter) stopping.abort();
+  };
+  await runSideBySide(devices, slots, async (device) => {
+    if (stopping.signal.aborted) return;
+    let opened: Device;
+    try { opened = await lane.open(device, stopping.signal); }
+    catch (error) { return failed(error); }
+    try {
+      for (const [index, job] of jobs.entries()) {
+        if (job.device !== device || stopping.signal.aborted) continue;
+        try {
+          results[index] = await lane.run(job, opened, stopping.signal);
+          if (stopAfter?.(results[index]!)) stopping.abort();
+        } catch (error) { failed(error); }
+      }
+    } finally {
+      await lane.close(opened).catch((error) => errors.push(error));
+    }
+  });
   if (errors.length) throw errors[0];
   return results;
 }

@@ -194,7 +194,7 @@ The same command logs also live in the smaller `phone-logs` artifact, independen
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
 Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job, and on a pull request the first failed part stops the other parts.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
-That gate checks and builds once, then runs the phone journey's five parts on the iPhone and the iPad, ten in all, each on its own simulator and test home, six at a time (`docs/ios.md`, "Disposable verification").
+That gate checks and builds once, starts one simulator per device, and runs the phone journey's five parts on each, ten in all, one after the other on their device's simulator with the two devices side by side, each part with its own test home and a clean app (`docs/ios.md`, "Disposable verification").
 
 ### The phone parts a pull request runs
 
@@ -209,7 +209,7 @@ With none readable, or with `PHONE_VIRTUAL_MAC` set, every part the change reach
 The job summary names each kept and left part with its distance, minutes and reason, and the `phone-placement` artifact keeps the same as JSON.
 A part the pull request leaves is checked after it merges, by the nightly check of `main`; an author who wants every part first runs the phone check on request on their branch.
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.
-Unlike the desktop journey workflow, a device gate that already started finishes and deletes its own simulators.
+Unlike the desktop journey workflow, a device gate that already started finishes and deletes the simulator it started for each device.
 A manual rerun of a replaced version stops before its gate.
 So does a run whose pull request merged or closed while it waited in the phone line, so it never holds that line for a device gate; the nightly check of `main` checks what merged.
 On the Mac mini's own runners, native jobs share `mac-mini-phone` across pull requests, with `queue: max` and `cancel-in-progress: false` at the job level; up to 100 phone jobs can wait without newer jobs replacing them.
@@ -221,7 +221,7 @@ The native job retains its 165-minute job limit for setup, the device gate, clea
 `pnpm test:phone` checks the configured execution mode, then runs `scripts/test-phone.ts` directly.
 `tests/mac-check-lock.test.ts` executes the workflow and package command strings with held workloads to verify overlap, failure status and cancellation.
 With the repository variable `PHONE_VIRTUAL_MAC` set, the device gate runs in a fresh virtual Mac on its own runner (`docs/ios.md`, "The phone check in a virtual Mac"); `tests/phone-ci.test.ts` evaluates the job's steps both ways, and `tests/virtual-mac-phone.test.ts` runs its scripts against a stand-in tart.
-A job the placement service runs inside a virtual Mac uses two simulators at a time; a real-Mac gate uses the device gate's default concurrency.
+A job the placement service runs inside a virtual Mac runs both devices side by side, one simulator each; a real-Mac gate uses the device gate's default concurrency, which is the same two.
 The fixture, simulator identity and unsigned Xcode configuration are described in `docs/ios.md`, "Disposable verification".
 
 ### The phone check on request

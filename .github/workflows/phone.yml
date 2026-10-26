@@ -53,7 +53,7 @@ permissions:
 # native job has not started its device gate, and a replaced version ends its own
 # run before that gate, a manual rerun of an older version included. INF-895: so
 # does a run whose pull request merged or closed while it waited in the phone line.
-# A started gate is never cancelled: it deletes its own simulator.
+# A started gate is never cancelled: it deletes its own simulators.
 
 jobs:
   cancel-replaced:
@@ -272,7 +272,8 @@ jobs:
       # test-phone owns a fresh HOME, real fixture and simulators, and disables signing.
       # It checks generated files, Swift trust, native recovery and the published client.
       # INF-662: one gate checks and builds once, then runs the iPhone and the iPad side by
-      # side, each on its own simulator and test home; either failing fails it.
+      # side, each device on one simulator it starts once (INF-1438) and each part on its own
+      # test home; either failing fails it.
       # A placed virtual Mac uses two simulators for its 6 cores and 16 GB.
       # Real and virtual Mac checks may run concurrently without a command lease.
       # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the

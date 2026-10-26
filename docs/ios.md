@@ -380,12 +380,14 @@ On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the
 Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
 Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
 The native journey is five tests in `PhoneJourney`, its parts: `join` (join and recover), `talk` (talk and tasks), `cards`, `address` (join by its address), and `rest`, which runs the character and past choices with the app-hosted tests and any test no other part names (`scripts/phone-test-plan.ts`).
-Each part on each device is its own gate with its own simulator and test home, and `--simulators` (default 6) sets how many run at once; they start longest part first, each part on the iPad before the iPhone.
+The gate starts one simulator per device, once, and runs that device's parts on it one after the other, in the order `scripts/phone-test-plan.ts` lists them; each part is its own gate with its own test home and a clean app, and `--simulators` (default 6) sets how many devices run side by side (INF-1438, the captain's "Start each simulated device once per phone check, not once per part").
+Before every part the gate uninstalls the previous part's app and UI test runner, resets the simulator's Keychain and permission answers, sets light appearance and the default type size, detaches the hardware keyboard, and checks the app is gone; a simulator Xcode shut down after a failed part boots again.
+The parent owns each simulator from create to delete, and passes it to the part's own process with `--simulator` beside `--xctestrun`; a lane whose simulator cannot start leaves its parts unstarted, and the gate names them.
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
 A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, which a pull request's phone check reads to keep within its budget.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
 Any part failing fails the gate, and by default no part stops another.
-With `--stop-early`, which a pull request's phone check sets through `INFINITARY_PHONE_STOP_EARLY`, the first failed part ends the parts still running, each deleting its own simulator as an interrupted part does, and starts no other; the gate names the failed, stopped and unstarted parts and writes no `part-times.json`.
+With `--stop-early`, which a pull request's phone check sets through `INFINITARY_PHONE_STOP_EARLY`, the first failed part ends the part still running on the other device, as an interrupted part does, and starts no other; every started simulator is still deleted, and the gate names the failed, stopped and unstarted parts and writes no `part-times.json`.
 A run on request runs every part to its end.
 Every explicit native observation goes through `InfinitaryUITests/PhoneWaits.swift`: element presence and absence, predicate reads and the disposable home's control requests.
 On ordinary runs it samples the same load clock as journeys, with 25 ms ticks, at most two ticks counted across a stall, and a share reduced by one-minute load per active processor above 1.
@@ -407,14 +409,16 @@ The `waits` input (or `--waits`) selects only `PhoneWaitsTests` on both devices,
 This proof-only selection writes no whole-gate timing sample; an ordinary gate still runs every selected product journey and native test.
 Selected parts, starvation, grading and proof-only selection use the normal or placed runner route; the fixed virtual-Mac switch refuses those options rather than silently dropping them.
 A part that chooses a library photo (`talk` and `rest`) starts its tests only after the simulator's Photos says it has opened its shared-with-you library, because Photos hands over no chosen photo before then.
-With simulators booting side by side that took up to six minutes after boot, so the part waits while its home gets ready, and fails if Photos has not opened it twenty minutes after boot, or fifteen on a graded run.
+With simulators booting side by side that took up to six minutes after boot, and the gate waits for it once per device, from the device's start beside its first part: the wait reads what Photos logged since boot, so a library Photos opened during boot counts, and it fails if Photos has not opened it twenty minutes after boot, or fifteen on a graded run.
 Photos can also fail to open that library, as with error 46110, or wait on a call that the simulator's background-task scheduler never takes up, and then its message never comes.
 The wait reads both in Photos' own log and tells them from a slow start.
 When Photos says it failed, the wait restarts Photos once and opens the Photos app so Photos opens its libraries again, and it ends the part at once if Photos fails again.
 When the scheduler has not taken up a call 30 seconds on the load clock after Photos made it, the wait restarts the scheduler once for that call, and the restarted scheduler takes the call up.
-Neither changes the ceiling after boot.
-The part adds its library photo only once Photos has opened the library, so a restart of Photos never cuts the photo's import short.
-The part keeps that wait's own log output, with Photos' calls and the scheduler's take-ups, in `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs, before deleting the simulator.
+Neither changes the ceiling.
+The gate adds the library photo once Photos has opened the library, once per device, so a restart of Photos never cuts the photo's import short.
+Minutes after boot Photos runs a background migration of its library whose actions wait on services the simulator lacks, until the simulator's scheduler ends the migration ten to sixteen minutes later, and a photo added meanwhile waits as long (INF-1438).
+So when Photos has not taken the photo 30 seconds on the load clock after the gate added it, the gate restarts Photos once, adds the photo again, and lets the part start once Photos has opened its shared-with-you library again, within two minutes.
+The gate keeps that wait's own log output, with Photos' calls and the scheduler's take-ups, in the device's `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs; a failed wait fails every part on that device that chooses a photo, and the device's other parts still run.
 The phone workflow's `evidence_run` request exports native-scene attachments from an existing run that kept `phone-results`, a failed or recording one, on the Xcode host, without building or starting a simulator.
 It keeps the selected images, timing readings and scene recordings in a small artifact separately from the complete result bundles.
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character, scene-panning and task-start recordings with their posters beside the test results.
@@ -476,7 +480,7 @@ The journey also checks Control Center and removal while away with an owned endp
 The home counts the TCP connections to its own port, the refusals pairing gives and the stalled handshakes since the removal, and the journey expects exactly two refusals and one stall after every attempt at the home but the last.
 A starved simulator can outlast the phone's own handshake deadline at the home too, which sends no request and adds a round through the stalled address, so the count follows the phone's address order rather than the clock.
 The launcher truncates the actual saved Mac only inside its owned simulator's app container; the same journey captures the damaged-record explanation and joins again with a fresh confirmed link.
-Each part starts from its own fresh home and simulator; the Xcode scheme's `PHONE_TEST_HOME` setting names that home's private control interface.
+Each part starts from its own fresh home and a clean app on its device's one simulator; the Xcode scheme's `PHONE_TEST_HOME` setting names that home's private control interface.
 Native package tests exercise the Mac-produced link and certificate fixture and certificate/public-key compatibility without using a Mac Keychain.
 App-hosted tests repair a missing certificate in the disposable simulator's own Keychain and inject protected-data read failures to check retry and the joining explanation.
 They refuse to run on a physical device, and the iOS identity API itself refuses creation on macOS.
@@ -506,7 +510,7 @@ It also keeps, in a log of its own, what the simulator's system logged from the 
 Its package install also uses a scratch HOME and an empty local-signing directory, so the install-time signature check never reads this Mac's signing material.
 A newer push never waits behind its pull request's older phone run: `phone.yml` has no run-level concurrency group.
 Its `cancel-replaced` job cancels the pull request's older phone runs whose native job has not started its device gate, so a replaced version gives up its place in the Mac mini's line (`scripts/replaced-phone-runs.ts`).
-A device gate that already started is never cancelled; it finishes and deletes its own simulators.
+A device gate that already started is never cancelled; it finishes and deletes the simulator it started for each device.
 No simulator exists right before the gate, so there a replaced version cancels its own run instead of starting the gate; a failed reading of the pull request runs the gate.
 That check also stops a manual rerun of a replaced version, which no newer run cancels, about a minute after it reaches the Mac mini.
 It stops the run of a pull request that merged or closed while the run waited in the phone line the same way, so a merged pull request never holds that line for a device gate; the nightly check of `main` checks what merged.

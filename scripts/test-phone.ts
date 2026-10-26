@@ -1,4 +1,4 @@
-/** INF-64 piece 2's native gate: disposable real home, a fresh simulator, no signing. */
+/** INF-64 piece 2's native gate: disposable real home, one simulator per device, no signing. */
 import { type ChildProcess, spawn } from "node:child_process";
 import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { userInfo } from "node:os";
@@ -8,15 +8,15 @@ import { parseArgs } from "node:util";
 import { budgetTimer, GRADES_BUDGETS, startPhoneLoadClock } from "../tests/helpers/budgets.ts";
 import { observePhoneLog } from "../tests/helpers/phoneLogs.ts";
 import { capturePhoneKeyboardTimeout } from "../tests/helpers/phoneStacks.ts";
-import { logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
-import { observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
+import { libraryPhotoAdded, logTime, photosOpened } from "../tests/helpers/phonePhotos.ts";
+import { hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, phoneApplicationPid, withPhoneHardwareKeyboard } from "../tests/helpers/phoneKeyboard.ts";
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { startPhoneActivity } from "./phone-activity.ts";
 import { runEveryCheck } from "./phone-checks.ts";
 import { phoneRecording } from "./phone-recording.ts";
-import { PHONE_PARTS, type PhoneDevice, partSelection, phoneExecutionArguments, phoneJobs, runSideBySide, testHomeKeys } from "./phone-test-plan.ts";
+import { PHONE_PARTS, type PhoneDevice, partSelection, phoneExecutionArguments, phoneJobs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -34,14 +34,15 @@ const { values } = parseArgs({ options: {
   starve: { type: "boolean", default: process.env.INFINITARY_STARVE_CHECK === "1" },
   // INF-662 piece 1: check and build once, then the iPhone and the iPad side by side.
   both: { type: "boolean", default: false },
-  // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many simulators at once.
+  // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many devices at once.
   part: { type: "string", multiple: true },
   // INF-1343 (the captain's "Stop a failing pull request check at its first failed part"): the first
   // failed part ends the parts still running and starts no other; a pull request's check sets it.
   "stop-early": { type: "boolean", default: process.env.INFINITARY_PHONE_STOP_EARLY === "1" },
   simulators: { type: "string", default: "6" },
-  // One part on one device: its test plan from the gate's build.
+  // One part on one device: its test plan from the gate's build, and the simulator the gate started for it.
   xctestrun: { type: "string" },
+  simulator: { type: "string" },
 } });
 if (process.platform !== "darwin") throw new Error("The native gate needs Xcode on a Mac");
 if (!values.evidence) throw new Error("Pass --evidence with a folder outside the working copy");
@@ -50,6 +51,7 @@ if (evidence === REPO_ROOT || evidence.startsWith(REPO_ROOT + "/"))
   throw new Error("Native evidence must stay outside the working copy");
 if (values.both && (values.ipad || values.xctestrun)) throw new Error("--both runs the iPhone and the iPad itself");
 if (values.xctestrun && values.part?.length !== 1) throw new Error("--xctestrun runs exactly one --part");
+if (!!values.xctestrun !== !!values.simulator) throw new Error("A part needs both its built plan and the gate's simulator");
 const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ? "ipad" : "iphone"];
 const jobs = phoneJobs(devices, values.waits ? ["rest"] : values.part ?? PHONE_PARTS.map((part) => part.name));
 const simulators = Number(values.simulators);
@@ -78,8 +80,9 @@ for (const signal of ["SIGINT", "SIGTERM"] as const) process.once(signal, () => 
   interrupted = true;
   for (const child of children) child.kill("SIGTERM");
 });
-const run = async (command: string, args: string[]) => {
-  if (interrupted && !cleaningUp) throw new Error("The native gate was interrupted");
+// A cleanup command, such as deleting a simulator the gate started, still runs after an interruption.
+const run = async (command: string, args: string[], cleanup = false) => {
+  if (interrupted && !cleaningUp && !cleanup) throw new Error("The native gate was interrupted");
   const child = spawn(command, args, { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
   children.add(child);
   let output = "";
@@ -94,8 +97,11 @@ const run = async (command: string, args: string[]) => {
   return output;
 };
 const demo = phoneRecording(values["raw-demo"] ? "raw" : values.demo ? "encoded" : "off", run);
-let simulator: string | undefined;
+// The part's simulator, which the gate started and owns; the part only uses it.
+let simulator: string | undefined = values.simulator;
 const phoneBundle = "com.getinfinitary.infinitary";
+// The UI test runner Xcode installs beside the app, which a part's `xcodebuild` reinstalls.
+const runnerBundle = `${phoneBundle}.uitests.xctrunner`;
 // The processes behind a failed part's photo and card steps: the app, its card pages and Photos.
 const SIMULATOR_LOG = 'process == "Infinitary" OR process BEGINSWITH "com.apple.WebKit" OR process CONTAINS[c] "photo"'
   + ' OR process == "assetsd" OR process == "mediaanalysisd"'
@@ -178,8 +184,79 @@ const recording = {
 let fixture: Awaited<ReturnType<typeof import("../tests/helpers/phoneHome").startPhoneHome>> | undefined;
 const project = ["-project", "ios/Infinitary/Infinitary.xcodeproj", "-scheme", "Infinitary",
   "-xcconfig", "ios/Infinitary/SimulatorTests.xcconfig"];
-// Builds once for any simulator, then runs each part on each device as its own gate from that
-// build, with its own simulator and test home, at most --simulators at once.
+// INF-1438 (the captain's "Start each simulated device once per phone check, not once per part"): the gate
+// owns one simulator per device, from create to delete, and runs the device's parts on it one after the
+// other, each as its own gate with its own test home and a clean app. Do not borrow or erase a developer's
+// simulator.
+const ownedSimulators = new Set<string>();
+type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: Promise<void> };
+const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
+  const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
+  const runtime = catalog.runtimes.filter((item: { identifier: string; isAvailable: boolean; version: string }) =>
+    item.isAvailable && item.identifier.includes(".iOS-") && Number(item.version.split(".")[0]) >= 18)
+    .sort((a: { version: string }, b: { version: string }) => b.version.localeCompare(a.version, undefined, { numeric: true }))[0];
+  const kind = catalog.devicetypes.find((item: { name: string }) => item.name === (device === "ipad" ? "iPad Pro 11-inch (M4)" : "iPhone 16"));
+  if (!runtime || !kind) throw new Error("Install an iOS 18 or newer simulator runtime and the requested device type in Xcode");
+  const owned = (await run("xcrun", ["simctl", "create", "Infinitary isolated test", kind.identifier, runtime.identifier])).trim();
+  ownedSimulators.add(owned);
+  // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
+  const booted = new Date();
+  await run("xcrun", ["simctl", "bootstatus", owned, "-b"]);
+  console.log(`${device}: started simulator ${owned} in ${((Date.now() - booted.getTime()) / 60_000).toFixed(1)} minutes`);
+  return { device, owned, booted };
+};
+const deleteSimulator = async (owned: string) => {
+  await run("xcrun", ["simctl", "shutdown", owned], true).catch(() => {});
+  await run("xcrun", ["simctl", "delete", owned], true);
+  ownedSimulators.delete(owned);
+};
+const simulatorState = async (owned: string): Promise<string> => {
+  const listed = JSON.parse(await run("xcrun", ["simctl", "list", "devices", "-j"])).devices as Record<string, { udid: string; state: string }[]>;
+  const state = Object.values(listed).flat().find((item) => item.udid === owned)?.state;
+  if (!state) throw new Error(`The gate's simulator ${owned} is gone`);
+  return state;
+};
+const installedApps = async (owned: string): Promise<Record<string, unknown>> => {
+  const listed = join(root, `${owned}-apps.plist`);
+  writeFileSync(listed, await run("xcrun", ["simctl", "listapps", owned]));
+  return JSON.parse(await run("plutil", ["-convert", "json", "-o", "-", listed]));
+};
+// Every part starts from a clean app on the device: the previous part's app and test runner, Keychain,
+// permission answers, appearance, type size and hardware keyboard are gone, as on a new simulator.
+const readyForPart = async (lane: Lane, name: string) => {
+  const { owned, device } = lane;
+  const state = await simulatorState(owned);
+  if (state !== "Booted") {
+    // INF-1265's run 40260276185: Xcode shut a device down after a failed part, and the parts after it failed to start.
+    console.log(`${name}: the simulator was ${state} after the previous part; booting it again`);
+    lane.booted = new Date();
+    // Photos opens its library again after the boot; a part that chooses a photo waits for it again.
+    lane.photos = undefined;
+    await run("xcrun", ["simctl", "bootstatus", owned, "-b"]);
+  }
+  const apps = await installedApps(owned);
+  for (const bundle of [phoneBundle, runnerBundle]) if (apps[bundle]) await run("xcrun", ["simctl", "uninstall", owned, bundle]);
+  await run("xcrun", ["simctl", "keychain", owned, "reset"]);
+  await run("xcrun", ["simctl", "privacy", owned, "reset", "all"]);
+  await run("xcrun", ["simctl", "ui", owned, "appearance", "light"]);
+  await run("xcrun", ["simctl", "ui", owned, "content_size", "large"]);
+  await run("xcrun", hardwareKeyboardArguments(owned, false));
+  if ((await installedApps(owned))[phoneBundle]) throw new Error(`${device}: the previous part's app survived its uninstall`);
+};
+// The library photo a part that chooses a photo picks.
+const LIBRARY_PHOTO = "release-notes/pictures/activity-settles-setting-runs-light.png";
+// A device's Photos is made ready once, from the device's start beside its first part: the wait for Photos to
+// open its library since boot, then the library photo. INF-1170: the photo goes in once Photos is ready, so a
+// restart of Photos never cuts its import short; INF-1438: and again after the restart that frees a photo
+// Photos' background migration held. A part that chooses a photo waits for the whole of it.
+const photosReady = (lane: Lane, stopping: AbortSignal) => lane.photos ??= (async () => {
+  await photosOpened({ device: lane.owned, booting: lane.booted, stopping, env,
+    evidence: values.both ? join(evidence, lane.device) : evidence, children, run, failureLog: SIMULATOR_LOG });
+  await libraryPhotoAdded({ device: lane.owned, picture: join(REPO_ROOT, LIBRARY_PHOTO), run });
+})();
+// Builds once for any simulator, then runs each device's parts in order on the one simulator it starts
+// for that device, each part as its own gate from that build with its own test home, the devices side
+// by side, at most --simulators of them at once.
 const everyPart = async () => {
   await run("xcodebuild", [...project, "-destination", "generic/platform=iOS Simulator",
     "-derivedDataPath", join(root, "DerivedData"), `ARCHS=${process.arch === "x64" ? "x86_64" : "arm64"}`, "build-for-testing"]);
@@ -189,19 +266,34 @@ const everyPart = async () => {
   if (!plan || plans.length !== 1) throw new Error(`The build made ${plans.length} test plans, not one`);
   // A --both run keeps a folder per device, as piece 1 did; each part writes its own folder in it.
   const folder = (device: PhoneDevice, part: string) => values.both ? join(evidence, device, part) : join(evidence, part);
+  if (values.both) for (const device of devices) mkdirSync(join(evidence, device), { recursive: true });
   // INF-827: each part's minutes on each device, which a pull request's chooser reads from the
   // newest passing check of main (scripts/affected-phone.ts).
   const times: Record<string, Record<string, number>> = {};
-  const gate = async ({ device, part }: { device: PhoneDevice; part: string }, stopping: AbortSignal) => {
+  const gate = async ({ device, part }: { device: PhoneDevice; part: string }, lane: Lane, stopping: AbortSignal) => {
     const name = `${device} ${part}`;
     const began = Date.now();
+    const minutes = () => ((Date.now() - began) / 60_000).toFixed(1);
+    const ended = (outcome: "passed" | "stopped" | "failed") => {
+      (times[part] ??= {})[device] = Date.now() - began;
+      return { name, outcome };
+    };
     console.log(`${name}: began at ${new Date(began).toISOString()}`);
+    try {
+      await readyForPart(lane, name);
+      if (!values.waits && PHONE_PARTS.find((each) => each.name === part)?.photos) await photosReady(lane, stopping);
+    } catch (error) {
+      console.log(`${name}: ${(error as Error).message}`);
+      console.log(`${name}: ${stopping.aborted ? "stopped after another part failed" : "failed before its tests"} after ${minutes()} minutes`);
+      return ended(stopping.aborted ? "stopped" : "failed");
+    }
     const command = [process.execPath, "scripts/test-phone.ts", ...(device === "ipad" ? ["--ipad"] : []),
-      ...demo.childArgs, ...(values.waits ? ["--waits"] : []), "--part", part, "--evidence", folder(device, part), "--xctestrun", join(products, plan)];
+      ...demo.childArgs, ...(values.waits ? ["--waits"] : []), "--part", part, "--evidence", folder(device, part),
+      "--xctestrun", join(products, plan), "--simulator", lane.owned];
     if (values.starve) command.unshift("python3", "scripts/starve-check.py", "--timeout", "3600", "--stall-seconds", "12", "--");
     const child = spawn(command[0]!, command.slice(1), { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
     children.add(child);
-    // Another part failed: this one ends as an interrupted part does, deleting its own simulator.
+    // Another part failed: this one ends as an interrupted part does.
     let stopped = false;
     const stop = () => { stopped = true; child.kill("SIGTERM"); };
     stopping.addEventListener("abort", stop, { once: true });
@@ -210,12 +302,26 @@ const everyPart = async () => {
     const status = await new Promise<number | null>((resolveExit, reject) => {
       child.once("error", reject); child.once("close", resolveExit);
     }).finally(() => { children.delete(child); stopping.removeEventListener("abort", stop); });
-    console.log(`${name}: ${stopped ? "stopped after another part failed" : `ended with ${status}`} after ${((Date.now() - began) / 60_000).toFixed(1)} minutes`);
-    (times[part] ??= {})[device] = Date.now() - began;
-    return { name, outcome: status === 0 ? "passed" : stopped ? "stopped" : "failed" };
+    console.log(`${name}: ${stopped ? "stopped after another part failed" : `ended with ${status}`} after ${minutes()} minutes`);
+    return ended(status === 0 ? "passed" : stopped ? "stopped" : "failed");
   };
   // Any part failing fails the gate; with --stop-early the first failure stops the rest.
-  const outcomes = await runSideBySide(jobs, simulators, gate, values["stop-early"] ? (({ outcome }) => outcome === "failed") : undefined);
+  const outcomes = await runDeviceLanes(jobs, simulators, {
+    open: async (device, stopping) => {
+      const lane = await startSimulator(device).catch((error: Error) => {
+        throw new Error(`${device}: its simulator could not start, so none of its parts ran: ${error.message}`);
+      });
+      // Photos gets ready beside the device's first part; the device's first part that chooses a photo hears how it went.
+      if (!values.waits && jobs.some((job) => job.device === device && PHONE_PARTS.find((each) => each.name === job.part)?.photos))
+        photosReady(lane, stopping).catch(() => {});
+      return lane;
+    },
+    run: gate,
+    close: async ({ device, owned }) => {
+      console.log(`${device}: deleting simulator ${owned}`);
+      await deleteSimulator(owned);
+    },
+  }, values["stop-early"] ? (({ outcome }) => outcome === "failed") : undefined);
   const named = (outcome: string) => outcomes.filter((each) => each?.outcome === outcome).map((each) => each!.name);
   const [failed, stopped] = [named("failed"), named("stopped")];
   const unstarted = jobs.filter((_, index) => !outcomes[index]).map(({ device, part }) => `${device} ${part}`);
@@ -238,43 +344,27 @@ const planFor = async (built: string, url: string) => {
   }
   return plan;
 };
+// One part on the simulator the gate started for its device, with its own test home; the gate made the
+// device clean before it and waited for Photos where the part chooses a photo.
 const onePart = async () => {
-  // Do not borrow or erase a developer's simulator. Own exactly one, from create to delete.
-  const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
-  const runtime = catalog.runtimes.filter((item: { identifier: string; isAvailable: boolean; version: string }) =>
-    item.isAvailable && item.identifier.includes(".iOS-") && Number(item.version.split(".")[0]) >= 18)
-    .sort((a: { version: string }, b: { version: string }) => b.version.localeCompare(a.version, undefined, { numeric: true }))[0];
-  const device = catalog.devicetypes.find((item: { name: string }) => item.name === (values.ipad ? "iPad Pro 11-inch (M4)" : "iPhone 16"));
-  if (!runtime || !device) throw new Error("Install an iOS 18 or newer simulator runtime and the requested device type in Xcode");
-  simulator = (await run("xcrun", ["simctl", "create", "Infinitary isolated test", device.identifier, runtime.identifier])).trim();
-  // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
-  const booting = new Date();
-  await run("xcrun", ["simctl", "bootstatus", simulator, "-b"]);
-  // Photos opens its libraries while the rest of the part gets ready; the part's tests start once it has.
-  const photos = !values.waits && PHONE_PARTS.find((part) => part.name === values.part![0])?.photos
-    ? photosOpened({ device: simulator, booting, env, evidence, children, run, failureLog: SIMULATOR_LOG }) : undefined;
-  photos?.catch(() => {});
-  keyboard = await observePhoneKeyboard({ simulator, env, evidence, children });
+  const owned = simulator!;
+  keyboard = await observePhoneKeyboard({ simulator: owned, env, evidence, children });
   const { startPhoneHome } = await runner.import<typeof import("../tests/helpers/phoneHome")>(join(REPO_ROOT, "tests/helpers/phoneHome.ts"));
   await demo.prepare();
   fixture = await startPhoneHome(root, recording);
   writeFileSync(join(evidence, "published-client.json"), JSON.stringify(await fixture.checkPublishedClient(), null, 2));
-  const destination = ["-parallel-testing-enabled", "NO", "-destination", `platform=iOS Simulator,id=${simulator}`,
+  const destination = ["-parallel-testing-enabled", "NO", "-destination", `platform=iOS Simulator,id=${owned}`,
     "-resultBundlePath", join(evidence, "phone.xcresult")];
   const plan = await planFor(values.xctestrun!, fixture.url);
-  await photos;
-  // INF-1170: the part's library photo goes in once Photos is ready, so a restart of Photos never cuts its import short.
-  await run("xcrun", ["simctl", "addmedia", simulator, join(REPO_ROOT, "release-notes/pictures/activity-settles-setting-runs-light.png")]);
   // INF-1066: keep the talk journey's exact Photos/tap order and waits. Capture once
   // at the actual UIKit fault, while the blocked stack still exists, not on retry.
   if (values.part![0] === "talk") {
-    const owned = simulator;
     timeoutStack = capturePhoneKeyboardTimeout({ evidence,
       currentPid: async () => phoneApplicationPid(await run("xcrun", ["simctl", "spawn", owned, "launchctl", "list"]), phoneBundle),
       sample: async (pid, destination) => { await run("/usr/bin/sample", [String(pid), "1", "1", "-mayDie", "-file", destination]); },
     });
   }
-  simulatorLog = await observePhoneLog({ device: simulator, env, evidence, children,
+  simulatorLog = await observePhoneLog({ device: owned, env, evidence, children,
     predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})`, onLine: timeoutStack?.receive });
   const testing = new Date();
   await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!, values.waits),
@@ -286,12 +376,12 @@ const onePart = async () => {
         console.log(line);
       console.log("The pre-failure simulator log is kept in simulator-live.log, even if XCTest tore its domain down.");
       // INF-804: what the app, Photos and WebKit logged on this simulator, kept with the command logs.
-      await run("xcrun", ["simctl", "spawn", simulator!, "log", "show", "--last", "20m", "--style", "compact", "--info",
+      await run("xcrun", ["simctl", "spawn", owned, "log", "show", "--last", "20m", "--style", "compact", "--info",
         "--predicate", SIMULATOR_LOG])
         .then(() => console.log(`The simulator's log is in ${number}-xcrun.log`))
         .catch((problem: Error) => console.log(`The simulator's log could not be kept: ${problem.message}`));
       // INF-819: what the simulator's system logged from the part's first test to its failure, in its own log.
-      await run("xcrun", ["simctl", "spawn", simulator!, "log", "show", "--start", logTime(testing), "--style", "compact",
+      await run("xcrun", ["simctl", "spawn", owned, "log", "show", "--start", logTime(testing), "--style", "compact",
         "--info", "--predicate", SYSTEM_LOG])
         .then(() => console.log(`The simulator's system log is in ${number}-xcrun.log`))
         .catch((problem: Error) => console.log(`The simulator's system log could not be kept: ${problem.message}`));
@@ -315,8 +405,8 @@ try {
   await (values.xctestrun ? onePart() : everyPart());
   if (failures.length > 0) throw new Error(`The simulator tests passed, but ${failures.length} earlier check(s) failed: ${failures.join("; ")}`);
   console.log(values.waits ? `Native wait-clock tests passed on ${devices.join(" and ")}, with disposable simulators and homes.`
-    : values.xctestrun ? `The ${values.part![0]} part passed on its own simulator and disposable Mac.`
-    : `Every part passed on ${devices.join(" and ")}, each on its own simulator and disposable Mac.`);
+    : values.xctestrun ? `The ${values.part![0]} part passed on the gate's simulator and its own disposable Mac.`
+    : `Every part passed on ${devices.join(" and ")}, each device started once and every part on its own disposable Mac.`);
 } finally {
   cleaningUp = true;
   try {
@@ -336,10 +426,9 @@ try {
     try { await fixture?.close(); }
     finally {
       try {
-        if (simulator) {
-          await run("xcrun", ["simctl", "shutdown", simulator]).catch(() => {});
-          await run("xcrun", ["simctl", "delete", simulator]);
-        }
+        // A lane deletes its own simulator at its end; this catches one a failure left behind.
+        for (const owned of [...ownedSimulators]) await deleteSimulator(owned).catch((error: Error) =>
+          console.log(`The gate's simulator ${owned} could not be deleted: ${error.message}`));
       } finally {
         try { await runner.close(); }
         finally {

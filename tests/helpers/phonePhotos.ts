@@ -46,10 +46,14 @@ const logStamp = (date: Date) =>
  * INF-1170: when Photos says it failed to open the library, the wait restarts Photos once and asks it for its
  * libraries again; when Photos' call to the scheduler goes unanswered past its budget, the wait restarts the
  * scheduler, which takes the call up again. The ceiling after boot is the same either way.
+ * INF-1438: on the simulator the gate starts once for a device's every part, the wait begins when the device
+ * starts, beside its first part; the query since boot finds a library Photos opened before the stream began,
+ * and `stopping` ends the wait when the gate stops.
  */
 export async function photosOpened({
   device,
   booting,
+  stopping,
   env,
   evidence,
   children,
@@ -58,6 +62,7 @@ export async function photosOpened({
 }: {
   device: string;
   booting: Date;
+  stopping?: AbortSignal;
   env: NodeJS.ProcessEnv;
   evidence: string;
   children: Set<ChildProcess>;
@@ -194,8 +199,12 @@ export async function photosOpened({
             " and a part that chooses a photo needs it",
         ),
       ),
-    booting.getTime() + (GRADES_BUDGETS ? 15 : 20) * 60_000 - Date.now(),
+    Math.max(0, booting.getTime() + (GRADES_BUDGETS ? 15 : 20) * 60_000 - Date.now()),
   );
+  const stop = () =>
+    fail(new Error("The gate stopped before Photos opened its shared-with-you library"));
+  stopping?.addEventListener("abort", stop, { once: true });
+  if (stopping?.aborted) stop();
   stream.once("error", fail);
   stream.once("close", () => {
     children.delete(stream);
@@ -255,11 +264,141 @@ export async function photosOpened({
   } finally {
     settled = true;
     clearTimeout(deadline);
+    stopping?.removeEventListener("abort", stop);
     for (const stall of stalls.values()) stall.cancel();
     stream.kill("SIGTERM");
     writeFileSync(join(evidence, PHOTOS_STREAM_LOG), heard.map((line) => `${line}\n`).join(""));
     await recovering;
     // The part's own app starts on a simulator with nothing else in front.
     if (photosApp) await run("xcrun", ["simctl", "terminate", device, PHOTOS_APP]).catch(() => {});
+  }
+}
+
+// INF-1438: minutes after boot Photos runs a background migration of its library whose actions wait on services
+// the simulator lacks, until the simulator's scheduler ends the migration ten to sixteen minutes later, and a
+// photo added meanwhile waits as long (Oct 26's talk parts: 13.7 and 18.8 minutes). A healthy Photos takes the
+// photo within a second, and a restarted one within a second more.
+export const PHOTO_TAKEN_BUDGET_MS = 30_000;
+// A restarted Photos opened its libraries again within two seconds; the wait asks every few seconds.
+export const PHOTOS_REOPEN_BUDGET_MS = 120_000;
+const REOPEN_ASK_MS = 5_000;
+const PHOTOS_DAEMON = "user/foreground/com.apple.assetsd";
+
+/**
+ * Puts the library photo in the simulator's Photos, which has opened its library. When Photos has not taken it
+ * within its budget, its background migration holds the library (INF-1438): the wait restarts Photos, which
+ * starts that migration over later, adds the photo again, and ends once Photos has opened its shared-with-you
+ * library again, which a part that chooses a photo needs as much as the photo.
+ */
+export async function libraryPhotoAdded({
+  device,
+  picture,
+  run,
+}: {
+  device: string;
+  picture: string;
+  run: (command: string, args: string[]) => Promise<string>;
+}): Promise<void> {
+  const add = () => {
+    const adding = run("xcrun", ["simctl", "addmedia", device, picture]);
+    adding.catch(() => {});
+    return adding;
+  };
+  // Whether Photos took the photo within the budget, the add failed, or Photos is still holding it.
+  const within = async (adding: Promise<string>) => {
+    let budget: DeadlineTimer | undefined;
+    const stalled = new Promise<"stalled">((resolve) => {
+      budget = budgetTimer(() => resolve("stalled"), PHOTO_TAKEN_BUDGET_MS);
+    });
+    try {
+      return await Promise.race([
+        adding.then(
+          () => "taken" as const,
+          () => "failed" as const,
+        ),
+        stalled,
+      ]);
+    } finally {
+      budget?.cancel();
+    }
+  };
+  const seconds = PHOTO_TAKEN_BUDGET_MS / 1000;
+  const added = Date.now();
+  const first = add();
+  const outcome = await within(first);
+  if (outcome === "taken") {
+    console.log(
+      `Photos took the library photo ${Math.round((Date.now() - added) / 1000)} seconds after the gate added it`,
+    );
+    return;
+  }
+  if (outcome === "failed") throw await first.catch((error: Error) => error);
+  const restarted = new Date();
+  console.log(
+    `Photos had not taken the library photo ${seconds} seconds after the gate added it;` +
+      " its background migration holds the library, so the gate restarts Photos and adds the photo again",
+  );
+  await run("xcrun", [
+    "simctl",
+    "spawn",
+    device,
+    "launchctl",
+    "kickstart",
+    "-k",
+    PHOTOS_DAEMON,
+  ]).catch((error: Error) => {
+    throw new Error(
+      `Photos had not taken the library photo and could not be restarted: ${error.message}`,
+    );
+  });
+  // The add the migration held ends with the restart, taken or not, and no longer counts.
+  const again = add();
+  const after = await within(again);
+  if (after === "failed") throw await again.catch((error: Error) => error);
+  if (after === "stalled")
+    throw new Error(
+      `Photos had not taken the library photo ${seconds} seconds after the gate added it again, after restarting Photos,` +
+        " and a part that chooses a photo needs it",
+    );
+  let late = false;
+  const limit = budgetTimer(() => {
+    late = true;
+  }, PHOTOS_REOPEN_BUDGET_MS);
+  try {
+    for (;;) {
+      const since = await run("xcrun", [
+        "simctl",
+        "spawn",
+        device,
+        "log",
+        "show",
+        "--style",
+        "compact",
+        "--start",
+        logTime(restarted),
+        "--predicate",
+        PHOTOS_LOG,
+      ]);
+      const reopened = since
+        .split("\n")
+        .some(
+          (line) =>
+            PHOTOS_OPENED.test(line) && (STAMP.exec(line)?.[0] ?? "") >= logStamp(restarted),
+        );
+      if (reopened) {
+        console.log(
+          `Photos took the library photo and opened its shared-with-you library again ${Math.round((Date.now() - restarted.getTime()) / 1000)} seconds after its restart`,
+        );
+        return;
+      }
+      if (late)
+        throw new Error(
+          `Photos had not opened its shared-with-you library ${PHOTOS_REOPEN_BUDGET_MS / 60_000} minutes after the gate restarted it,` +
+            " and a part that chooses a photo needs it",
+        );
+      await new Promise((resolve) => setTimeout(resolve, REOPEN_ASK_MS));
+    }
+  } finally {
+    limit.cancel();
   }
 }

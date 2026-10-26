@@ -6,8 +6,11 @@ import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { GRADES_BUDGETS } from "./helpers/budgets";
 import {
+  libraryPhotoAdded,
   logTime,
+  PHOTO_TAKEN_BUDGET_MS,
   PHOTOS_LOG,
+  PHOTOS_REOPEN_BUDGET_MS,
   PHOTOS_STREAM_LOG,
   photosOpened,
   SCHEDULER_ANSWER_BUDGET_MS,
@@ -127,6 +130,66 @@ describe("the phone gate's Photos readiness wait (INF-907)", () => {
       "The simulator's Photos log stopped before Photos opened its shared-with-you library",
     );
     expect(run).toHaveBeenCalledTimes(2);
+  });
+
+  // INF-1438: the gate starts the wait when the device starts, beside its first part, and the stream sees only
+  // what follows its start; a library Photos opened before then, during boot, is in the log since boot.
+  it("finds a library Photos opened before the stream began, in the log since boot", async () => {
+    const evidence = scratchDir("phone-photos-before-stream-");
+    startStream();
+    const booting = new Date();
+    const run = vi.fn(async (_command: string, _args: string[]) => `${bootQuery}${openedLine}\n`);
+    await photosOpened({
+      device: simulator,
+      booting,
+      env: {},
+      evidence,
+      children: new Set<ChildProcess>(),
+      run,
+      failureLog,
+    });
+    // The query since boot, not a failure log: Photos' message from before the stream was enough.
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(run).toHaveBeenLastCalledWith("xcrun", [
+      "simctl",
+      "spawn",
+      simulator,
+      "log",
+      "show",
+      "--style",
+      "compact",
+      "--start",
+      logTime(booting),
+      "--predicate",
+      PHOTOS_LOG,
+    ]);
+  });
+
+  it("ends the wait when the gate stops, keeping its stream", async () => {
+    const evidence = scratchDir("phone-photos-stopped-");
+    const stream = startStream();
+    const stopping = new AbortController();
+    const run = vi.fn(async (_command: string, args: string[]) => {
+      if (args.includes("--info")) return "kept log";
+      queueMicrotask(() => stopping.abort());
+      return bootQuery;
+    });
+    await expect(
+      photosOpened({
+        device: simulator,
+        booting: new Date(),
+        stopping: stopping.signal,
+        env: {},
+        evidence,
+        children: new Set<ChildProcess>(),
+        run,
+        failureLog,
+      }),
+    ).rejects.toThrow("The gate stopped before Photos opened its shared-with-you library");
+    expect(stream.kill).toHaveBeenCalledTimes(1);
+    expect(readFileSync(join(evidence, PHOTOS_STREAM_LOG), "utf8")).toContain(
+      `Filtering the log data using "${PHOTOS_LOG}"`,
+    );
   });
 
   it("starts the part once Photos says so, keeping its stream and no failure log", async () => {
@@ -278,5 +341,109 @@ describe("the phone gate's Photos readiness wait tells a failed or stalled Photo
     stream.stdout.write(`${slowOpened}\n`);
     await waiting;
     expect(commands(run)).toHaveLength(1);
+  });
+});
+
+// INF-1438: on Oct 26's run Photos took the library photo only once the simulator's scheduler had ended its
+// background migration, 13.7 and 18.8 minutes into the talk parts; restarting Photos freed it within a second.
+describe("the phone gate's library photo add (INF-1438)", () => {
+  const picture = "/repo/release-notes/pictures/activity-settles-setting-runs-light.png";
+  const addArguments = ["simctl", "addmedia", simulator, picture];
+  const restartArguments = [
+    "simctl",
+    "spawn",
+    simulator,
+    "launchctl",
+    "kickstart",
+    "-k",
+    "user/foreground/com.apple.assetsd",
+  ];
+  // Photos' message after its restart, stamped after it on the simulator's clock.
+  const reopenedAfter = (restarted: Date) =>
+    `${logTime(new Date(restarted.getTime() + 2000))}.674 Df assetsd[22515:7c8199a] [com.apple.photos.backend:Syndication] Library services operation opened syndication photo library`;
+
+  it("takes the photo Photos accepts within its budget, restarting nothing", async () => {
+    const run = vi.fn(async (_command: string, _args: string[]) => "");
+    await libraryPhotoAdded({ device: simulator, picture, run });
+    expect(run.mock.calls).toEqual([["xcrun", addArguments]]);
+  });
+
+  it("restarts Photos when it has not taken the photo within its budget, adds it again and waits for the library to open again", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    let releaseHeld!: (error: Error) => void;
+    const restarted = { at: new Date(0) };
+    let asked = 0;
+    const run = vi.fn((_command: string, args: string[]) => {
+      if (args[1] === "addmedia")
+        return restarted.at.getTime()
+          ? Promise.resolve("")
+          : new Promise<string>((_, reject) => {
+              releaseHeld = reject;
+            });
+      if (args.includes("kickstart")) {
+        restarted.at = new Date();
+        // The held add ends with the restart, as a failed command.
+        queueMicrotask(() => releaseHeld(new Error("xcrun failed (1)")));
+        return Promise.resolve("");
+      }
+      // Photos opens its library again two seconds after the restart; the first look comes before it.
+      return Promise.resolve(
+        ++asked === 1 ? bootQuery : `${bootQuery}${reopenedAfter(restarted.at)}\n`,
+      );
+    });
+    const adding = libraryPhotoAdded({ device: simulator, picture, run });
+    await vi.advanceTimersByTimeAsync(PHOTO_TAKEN_BUDGET_MS - 1);
+    expect(run).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(run.mock.calls.slice(1, 3)).toEqual([
+      ["xcrun", restartArguments],
+      ["xcrun", addArguments],
+    ]);
+    await vi.advanceTimersByTimeAsync(5_000);
+    await adding;
+    expect(run.mock.calls.slice(3).map(([, args]) => args.slice(3, 5))).toEqual([
+      ["log", "show"],
+      ["log", "show"],
+    ]);
+    expect(run.mock.calls.at(-1)?.[1]).toContain(logTime(restarted.at));
+  });
+
+  it("ends the part when Photos has not taken the photo again after its restart", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const run = vi.fn((_command: string, args: string[]) =>
+      args[1] === "addmedia" ? new Promise<string>(() => {}) : Promise.resolve(""),
+    );
+    const adding = libraryPhotoAdded({ device: simulator, picture, run });
+    const failed = expect(adding).rejects.toThrow(
+      "Photos had not taken the library photo 30 seconds after the gate added it again, after restarting Photos",
+    );
+    await vi.advanceTimersByTimeAsync(2 * PHOTO_TAKEN_BUDGET_MS);
+    await failed;
+    expect(run.mock.calls.map(([, args]) => args[1])).toEqual(["addmedia", "spawn", "addmedia"]);
+  });
+
+  it("ends the part when a restarted Photos has not opened its library again in time", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    let releaseHeld!: (error: Error) => void;
+    let restarted = false;
+    const run = vi.fn((_command: string, args: string[]) => {
+      if (args[1] === "addmedia")
+        return restarted
+          ? Promise.resolve("")
+          : new Promise<string>((_, reject) => {
+              releaseHeld = reject;
+            });
+      if (args.includes("kickstart")) {
+        restarted = true;
+        queueMicrotask(() => releaseHeld(new Error("xcrun failed (1)")));
+      }
+      return Promise.resolve(bootQuery);
+    });
+    const adding = libraryPhotoAdded({ device: simulator, picture, run });
+    const failed = expect(adding).rejects.toThrow(
+      "Photos had not opened its shared-with-you library 2 minutes after the gate restarted it",
+    );
+    await vi.advanceTimersByTimeAsync(PHOTO_TAKEN_BUDGET_MS + PHOTOS_REOPEN_BUDGET_MS + 5_000);
+    await failed;
   });
 });

@@ -80,12 +80,14 @@ struct PhoneView: View {
                 }
                 if let session = model.connection, !model.removed {
                     ToolbarItem(placement: .topBarTrailing) {
-                        // The computer's name lives in its sheet; the glyph's dot says the reach, and VoiceOver hears the words.
+                        // The computer's name lives in its sheet, and VoiceOver hears the reach as words.
+                        // INF-1328: a dot asks for attention, so it shows only while the computer is out of reach.
                         Button { details = true } label: {
                             PhoneSymbol.computer.image
                                 .overlay(alignment: .topTrailing) {
-                                    Circle().fill(session.contact == "in-reach" ? PhoneTheme.accent : PhoneTheme.warning)
-                                        .frame(width: 7, height: 7).offset(x: 3, y: -3)
+                                    if session.contact == "lost" || session.contact == "closed" {
+                                        Circle().fill(PhoneTheme.warning).frame(width: 7, height: 7).offset(x: 3, y: -3)
+                                    }
                                 }
                                 .frame(minWidth: 44, minHeight: 44)
                         }

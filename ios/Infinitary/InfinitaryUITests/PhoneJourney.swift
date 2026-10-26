@@ -166,7 +166,8 @@ import XCTest
         XCTAssertTrue(settings.isHittable); XCTAssertEqual(settings.label, "Settings")
         let strip = [app.buttons["tab-home"], app.buttons["tab-tasks"], app.buttons["tab-activity"]]
         XCTAssertLessThan(settings.frame.maxX, strip[0].frame.minX, "Settings sits left of the strip")
-        XCTAssertLessThan(strip[0].frame.maxX, strip[1].frame.minX); XCTAssertLessThan(strip[1].frame.maxX, strip[2].frame.minX)
+        // INF-1328: the segmented control draws its tabs edge to edge, in order and never overlapping.
+        XCTAssertLessThanOrEqual(strip[0].frame.maxX, strip[1].frame.minX); XCTAssertLessThanOrEqual(strip[1].frame.maxX, strip[2].frame.minX)
         XCTAssertLessThan(strip[2].frame.maxX, app.buttons["computer-details"].frame.minX, "The computer sits right of the strip")
         XCTAssertTrue(strip[0].isSelected, "Home is the lit tab")
         let stripFrames = strip.map { $0.frame.integral }

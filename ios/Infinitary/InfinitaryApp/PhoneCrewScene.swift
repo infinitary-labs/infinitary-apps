@@ -37,6 +37,8 @@ struct PhoneCrewScene: View {
                     .frame(width: viewport.content.width, height: viewport.content.height)
             }
             .scrollPosition($position).defaultScrollAnchor(.topLeading)
+            // The captain pans the scene by touch; scroll bars at its edges say nothing (INF-1328).
+            .scrollIndicators(.hidden)
             .onScrollGeometryChange(for: CGPoint.self) { $0.contentOffset } action: { _, point in pan = point }
             .overlay {
                 RoundedRectangle(cornerRadius: PhoneTheme.controlRadius)

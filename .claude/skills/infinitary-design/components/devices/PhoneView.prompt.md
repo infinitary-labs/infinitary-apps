@@ -33,8 +33,8 @@ The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
 
 Once joined, the top bar is one row: a Settings button at the left, the Home, Tasks and Activity strip in the middle and the computer button at the right; the computer's name is in its sheet, not the bar.
-The strip is words only, the current tab lit in the accent on a quiet lens, with a dot beside Home while a card is unread; on iOS 26 the bar sets it on glass, and on iOS 18 it takes the field's fill and hairline.
-The computer button is the Lucide computer glyph with a reach dot at its corner, the accent in reach and the warning color otherwise; VoiceOver hears the reach as its value.
+The strip is Apple's segmented control of three icons, a house for Home, a checklist for Tasks and a pulse line for Activity, with VoiceOver reading each tab's name; on iOS 26 the system draws it on glass, and it carries no unread dot.
+The computer button is the Lucide computer glyph; a dot in the warning color sits at its corner only while the computer is out of reach, because a dot asks for attention, and VoiceOver hears the reach as its value.
 In reach the bar says nothing more.
 Out of reach is said once, by one line under the bar on every tab with its dot, state and last-heard time; no strip above the content or line on a card repeats it, and only the current in-memory view remains.
 The message capsule and a card's reply row dim, and one line under the message box says only “Changes are off until <computer> is back.”, as the Mac says it.

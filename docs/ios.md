@@ -96,7 +96,7 @@ The computer sheet displays the last authenticated address actually reached, sep
 Leave is available in reach and asks for confirmation, sends the connection's Leave frame, waits for removal and forgets the saved Mac.
 Out of reach, **Forget this computer** asks for confirmation and clears the saved Mac and pin locally without claiming the Mac removed the phone.
 Both choices live in the computer's sheet, opened by the top bar's right-hand computer button or Command-I; neither is an always-visible destructive toolbar action.
-That button is the computer glyph with a reach dot at its corner, the accent in reach and the warning color otherwise, and VoiceOver reads the reach as its value; the computer's name is in the sheet, not the bar.
+That button is the computer glyph, with a dot in the warning color at its corner only while the computer is out of reach, and VoiceOver reads the reach as its value; the computer's name is in the sheet, not the bar.
 A removal close or repeated authenticated refusal clears cards and feed, forgets the Mac, and offers joining with a new link on a screen shaped like the first one, with one prominent Join again.
 A failed address with no HTTP response does not erase an earlier authenticated refusal; a welcome or a different HTTP response does.
 Neither reconnection nor discovery queues or retries a mutation.
@@ -110,7 +110,7 @@ The stack follows the Mac's: a card minimized on any Mac leaves the phone's stac
 A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments, thread and reply row scroll between them in one native scroller.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
 On a short stage, such as an iPhone on its side, where the pinned head and choices would take more room than the body keeps, the whole card scrolls in that one scroller instead.
-The session keeps which offers the stage drew while the person could see it, so a dot sits beside Home in the top bar while a card is unread, VoiceOver hears the count there, and the next chevron's dot marks an unread card ahead.
+The session keeps which offers the stage drew while the person could see it, so the next chevron's dot marks an unread card ahead.
 Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.
 Ordinary arrivals keep the shown card in place; a new `holdsPlace` card comes forward, and a departure chooses an unread card before the first card.
 Form and reply drafts live only in memory and survive paging.
@@ -171,8 +171,9 @@ The native journey requires a completely visible card heading and scrolls real b
 Card and task owners keep their selected records and replies.
 `PhoneMessageContext` carries only the shown current or past card, Home's visibility and the open task record into the composer; hidden cards and dismissed records supply no hint.
 The top bar is the one-row bar the captain chose (INF-1062): a Settings button at its left, the strip of Home, Tasks and Activity in its middle and the computer button at its right; there is no bottom tab bar.
-The strip is the app's own control, `PhoneTabStrip`: words only, the current tab lit in the accent on a quiet lens, a dot beside Home while a card is unread, read by VoiceOver as a tab bar whose Home carries the unread count.
-The strip's words keep the bar's own size at every type setting, as the system's bars do, because at the default size the strip already fills the room between Settings and the computer on an iPhone 16; at an accessibility size a long press on a tab shows its name large.
+The strip, `PhoneTabStrip`, is Apple's segmented control, which iOS 26 draws on glass (INF-1328): a house for Home, a checklist for Tasks and a pulse line for Activity (INF-1334), read by VoiceOver as a tab bar of the tabs' names.
+It carries no unread dot; the notice under the bar and the next chevron's dot mark an unread card.
+The strip keeps the bar's own size at every type setting, as the system's bars do, so the bar's buttons never move around it.
 Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and Command-I the computer.
 `PhoneWorkspace` holds the tabs in the system tab controller with its own bar hidden, so each tab keeps its draft, scroll position and search while another is shown, and a tab that is away leaves the view hierarchy: nothing in it is drawn, pressable or read, and a keyboard typing into the message box closes with the tab it leaves.
 Home is one column: the stage, then the last turn and the message box under it, in the layout rather than floating over it; Tasks and Activity run to the foot with nothing over them, so the last row is whole and pressable after scrolling to the end.
@@ -215,7 +216,7 @@ The join stage uses idle; the empty stage follows the Mac's published busy snaps
 Homes that advertise `native-scene-observations` answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.
 A numbered push supersedes an older pending read; an older home retains event-only busy observation and unknown remote reach without sending unsupported requests.
 Joining shows only the first mate until real board facts arrive, and the accessibility value names unknown conversation activity until the home supplies a reading.
-`PhoneCrewScene` renders home's formation and every other computer's at the desktop's share of it in a continuous native scroller, with touch panning and arrow keys rather than paging or shrinking the entire scene.
+`PhoneCrewScene` renders home's formation and every other computer's at the desktop's share of it in a continuous native scroller, with touch panning and arrow keys rather than paging or shrinking the entire scene, and no scroll bars.
 The phone draws the desktop's orbits at `PhoneSceneRoster.ringScale`, derived so that eight crewmates on the first orbit stay inside the narrowest portrait iPhone (375 points), the captain's ask; crew glyphs and the first mate keep the desktop's size.
 Crew sit on the desktop's growing two-orbit ring (`docs/crew-orbits.md`): the first orbit widens with each crewmate up to its seats, the next arrival opens the second orbit inside it, and no third orbit opens.
 `PhoneSceneRoster.SeatBook` remembers each crewmate's orbit and seat across board reads as the desktop's orbit does, logical membership counting every running part for allocation and growth, and each computer's area follows its first orbit's size.

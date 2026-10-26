@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "ios-top-bar-glass",
+      "kind": "improvement",
+      "area": "devices",
+      "title": "A calmer top bar on your iPhone and iPad",
+      "body": "Home, Tasks and Activity are now icons in Apple's own control, on glass like the buttons beside them: a house, a checklist and a pulse line. The computer button shows an orange dot only while your computer is out of reach, and the scene in the middle no longer flashes scroll bars as you pan it.",
+      "picture": {
+        "dark": "ios-top-bar-glass-dark.png",
+        "light": "ios-top-bar-glass-light.png",
+        "alt": "The phone's top bar: Settings at the left, the house, checklist and pulse icons in one glass control with the house lit, and the computer button at the right with no dot."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

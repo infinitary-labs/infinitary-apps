@@ -32,6 +32,15 @@ enum PhoneTab: CaseIterable {
         }
     }
     var identifier: String { "tab-" + title.lowercased() }
+    /// INF-1334, the captain's icons: a house for Home, a checklist for the tasks, and a pulse line for Activity,
+    /// the shape of the app's own activity glyph.
+    var symbol: String {
+        switch self {
+        case .home: "house"
+        case .tasks: "checklist"
+        case .activity: "waveform.path.ecg"
+        }
+    }
     /// Command-1, Command-2 and Command-3, in the strip's order.
     var key: KeyEquivalent {
         switch self {
@@ -83,7 +92,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             // INF-1062: the strip sits in the bar's middle; a landscape iPad shows the stage beside its sidebar and needs none.
             if !wide {
                 ToolbarItem(placement: .principal) {
-                    PhoneTabStrip(tabs: tabs, selection: $selection, unread: session.unreadCards)
+                    PhoneTabStrip(tabs: tabs, selection: $selection)
                 }
             }
         }
@@ -191,59 +200,33 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     }
 }
 
-/// INF-1062, the captain's one-row bar: Home, Tasks and Activity as words in the bar's middle, the current one lit in
-/// the accent on a quiet lens, and a dot beside Home while a card is unread. VoiceOver reads a tab bar and Home's count.
-/// The words keep the bar's own size at every type setting, as the system's bars do: at the default size the strip
-/// already fills the room between Settings and the computer on an iPhone 16, so growing words would truncate and keep
-/// the bar relaying out around its buttons. At an accessibility size a long press shows a tab's name large instead.
+/// INF-1062, the captain's one-row bar: Home, Tasks and Activity in the bar's middle. INF-1328: the captain chose
+/// Apple's segmented control, so iOS 26 draws it on glass with the system's own lit tab and no unread dot; the notice
+/// pill and the stage's next chevron still mark an unread card. INF-1334: each tab is an icon, and VoiceOver reads its
+/// name in a tab bar. The icons keep the bar's own size at every type setting, as the system's bars do.
 struct PhoneTabStrip: View {
     let tabs: [PhoneTab]
     @Binding var selection: PhoneTab
-    let unread: Int
 
     var body: some View {
-        HStack(spacing: 2) {
+        Picker("Tabs", selection: $selection) {
             ForEach(tabs, id: \.self) { tab in
-                Button { selection = tab } label: {
-                    HStack(spacing: 5) {
-                        Text(tab.title).lineLimit(1).minimumScaleFactor(0.75)
-                        if tab == .home && unread > 0 {
-                            Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
-                        }
-                    }
-                    .font(PhoneFont.callout).fontWeight(.medium)
-                    .foregroundStyle(selection == tab ? PhoneTheme.accent : PhoneTheme.secondary)
-                    .padding(.horizontal, PhoneTheme.space3)
-                    .frame(minHeight: 32)
-                    .background { if selection == tab { Capsule().fill(PhoneTheme.text.opacity(0.08)) } }
-                    .contentShape(Capsule())
-                }
-                .buttonStyle(.plain)
-                .keyboardShortcut(tab.key, modifiers: .command)
-                .accessibilityShowsLargeContentViewer { Text(tab.title) }
-                .accessibilityLabel(tab.title)
-                .accessibilityValue(tab == .home && unread > 0 ? (unread == 1 ? "1 unread card" : "\(unread) unread cards") : "")
-                .accessibilityAddTraits(selection == tab ? .isSelected : [])
-                .accessibilityIdentifier(tab.identifier)
+                Image(systemName: tab.symbol).accessibilityLabel(tab.title).tag(tab).accessibilityIdentifier(tab.identifier)
             }
         }
-        .padding(3)
+        .pickerStyle(.segmented).labelsHidden().fixedSize()
         .dynamicTypeSize(...DynamicTypeSize.large)
-        .modifier(PhoneStripSurface())
+        // A segmented control takes no key equivalents of its own, so Command-1, -2 and -3 ride unseen buttons beside it.
+        .background {
+            ForEach(tabs, id: \.self) { tab in
+                Button(tab.title) { selection = tab }.keyboardShortcut(tab.key, modifiers: .command)
+                    .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
+            }
+        }
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(.isTabBar)
         .accessibilityLabel("Tabs")
         .accessibilityIdentifier("phone-tabs")
-    }
-}
-
-/// On iOS 26 the bar already sets each of its items on glass, so the strip is bare there; the iOS 18 bar is a plain
-/// band, so the strip takes the field's fill and hairline, as the sheets do.
-private struct PhoneStripSurface: ViewModifier {
-    @ViewBuilder func body(content: Content) -> some View {
-        if #available(iOS 26, *) { content } else {
-            content.background(PhoneTheme.panel, in: Capsule()).overlay { Capsule().strokeBorder(PhoneTheme.line) }
-        }
     }
 }
 

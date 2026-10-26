@@ -271,7 +271,7 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
   {
     rule: "what a spawn's intent carries",
     home: { tool: "spawn_crewmate" },
-    says: "Pass a structured intent - a one-sentence goal, the user's words verbatim, typed constraints, and an optional delivery note",
+    says: "Pass a goal, the user's words verbatim, typed constraints and an optional delivery note;",
   },
   {
     rule: "the waits that queue a spawn",
@@ -305,9 +305,9 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     says: 'Sentence-case title saying what it does (max 64 chars), e.g. "Ship the bridge to alpha", not its place in a plan',
   },
   {
-    rule: "a planned task's goal is one sentence of what done looks like",
+    rule: "INF-1366: a goal names only the asked-for change; preservation is a constraint, not a current-behavior claim",
     home: { tool: "spawn_crewmate", parameter: "goal" },
-    says: "One sentence: what done looks like, in plain language",
+    says: "One plain sentence: only the asked-for change. Preserve via constraints: “leave ... as it is”, not how it works now.",
   },
   {
     rule: "a planned task carries the user's words verbatim",

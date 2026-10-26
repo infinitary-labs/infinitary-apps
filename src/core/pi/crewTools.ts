@@ -391,8 +391,8 @@ export function createCrewTools(delegate: CrewDelegate) {
     label: "Spawn crewmate",
     description: [
       "Commission a crewmate for project work or an evidence-gathering investigation.",
-      "Pass a structured intent - a one-sentence goal, the user's words verbatim, typed",
-      "constraints, and an optional delivery note - and the crewmate briefs itself from it",
+      "Pass a goal, the user's words verbatim, typed constraints and an optional delivery note;",
+      "the crewmate briefs itself from these",
       "on its first turn. Do not author a brief.",
       "Pass repo_id to bind a project, or omit it for the default workspace.",
       "Lessons and the user's own panels on the rails use personal_ui true: the",
@@ -407,7 +407,8 @@ export function createCrewTools(delegate: CrewDelegate) {
     parameters: Type.Object({
       title: Type.String({ description: "As create_task's title." }),
       goal: Type.String({
-        description: "One sentence: what done looks like, in plain language",
+        description:
+          "One plain sentence: only the asked-for change. Preserve via constraints: “leave ... as it is”, not how it works now.",
       }),
       user_words: Type.String({
         description: "The user's request verbatim; outranks every elaboration downstream",

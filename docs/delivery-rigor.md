@@ -27,6 +27,16 @@ A task whose typed delivery and care say a passage does not apply is not served 
 Unknown facts keep the full text.
 The resource readers supply the project-specific instructions and skills.
 
+## When a goal's premise is untrue
+
+The captain's words define the authorized change, not a mistaken premise in the goal (INF-1366, INF-1266's phone-check budget reversal).
+The shared crewmate prompt (`buildCrewmateSystemPrompt`) makes this an exception to its ordinary instruction to make a reasonable call without asking.
+A crewmate builds only what those words ask for and leaves everything else as it is.
+Before any extra work the goal would require, it asks on a card, naming the mismatch, the extra change and any earlier captain choice it would reverse.
+Independent work the words clearly authorize can continue while that choice waits; when no authorized edit is clear, the crewmate asks before editing.
+A completion report or merge offer cannot replace that earlier question.
+This is the agent's scope judgment and the captain's consent, not a host-side interpretation of natural language or a new hold.
+
 ## What delivery takes, confirmed first
 
 Every crewmate, at every tier and on every backend, confirms before its first edit that it can deliver and prove its work (FI3-356, from FI3-343's delivery audit).

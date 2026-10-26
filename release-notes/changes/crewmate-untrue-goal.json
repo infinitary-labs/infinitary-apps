@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-untrue-goal",
+      "kind": "fix",
+      "area": "firstmate",
+      "title": "Crewmates ask before following a mistaken goal beyond your request",
+      "body": "When a crewmate finds a mistaken assumption in its goal, it builds only what your words ask for. It asks before making any extra change, including reversing an earlier choice of yours.",
+      "noPicture": "This changes the crewmate's scope judgment and when it asks a question, not a dedicated view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

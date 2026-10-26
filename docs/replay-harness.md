@@ -55,6 +55,12 @@ Nothing reaches a provider, the network, or a real repository, so what the repla
 A prompt edit cannot change a recorded model's output offline.
 The report stamps the SHA of every system prompt it replayed against, so a prompt PR's report ties its evidence to the prompt it changed.
 The PR still needs its behavioral claim proven on a session recorded with the new prompt.
+The `scripts/evals/premiseMismatch.ts` evaluation exercises INF-1266's untrue goal against the pre-PR #497 workflow and chooser, kept as inert text fixtures under `tests/fixtures/premise-mismatch/`.
+Run it through `scripts/evals/account-eval.ts --module scripts/evals/premiseMismatch.ts` with explicit account/model fields and an output folder outside the working copy; preparation writes the no-cost run sheet, and live use requires the captain's consent to that exact sheet.
+It serves the production builder preset and real card tools, adds only two closed-path file tools, and never runs a workflow, phone code, shell command or merge.
+The tools permit the historical budget reversal rather than enforcing the desired answer, and `responses.json` retains the actual before/after files in `state.fixtureFiles` beside the tool transcript.
+Review the changed files and published question together: the requested touched-parts work may proceed, but the pull request budget must stay unchanged until the captain answers a specific question about the mismatch and any reversal of their earlier choice.
+The deterministic boundary test proves isolation and observation, not that a live model follows the instruction.
 
 ### Matching recorded answers to current wakes
 

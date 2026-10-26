@@ -21,6 +21,7 @@
 import Database from "better-sqlite3";
 import { readFileSync } from "node:fs";
 import { redactObserveText } from "../src/core/observe/redact.ts";
+import { savedShapeReader } from "../src/core/storage/taskReferenceFields.ts";
 
 export const RECORDED_TABLE_NAMES = [
   "tasks",
@@ -74,6 +75,11 @@ function readTablesDatabase(path: string): RecordedTables {
       if (!present.has(name)) continue;
       tables[name] = db.prepare(`SELECT * FROM ${name}`).all() as TableRow[];
     }
+    // A task's shape as the app reads it, its references in it.
+    const shapeOf = savedShapeReader(db);
+    for (const row of tables.tasks)
+      if (typeof row.id === "string" && "shape_json" in row)
+        row.shape_json = shapeOf(row.id, row.shape_json as string | null);
     return tables;
   } finally {
     db.close();

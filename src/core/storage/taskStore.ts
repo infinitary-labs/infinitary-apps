@@ -17,6 +17,12 @@ import type { WriteAsk } from "@shared/writeAsk";
 import type { SpawnIntent } from "../orchestrator/intentBrief";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
+import {
+  REFERENCE_SHAPE_FIELDS,
+  TASK_REFERENCE_KINDS,
+  type TaskReference,
+  TaskReferenceStore,
+} from "./taskReferenceStore";
 
 /**
  * The task record's row layer (task-system design section 4.1). A task is
@@ -670,12 +676,31 @@ type Row = {
 /**
  * The shape as the record stores it. The basis verdict is derived at every
  * read (`TaskService.basisHolds`) and never stored: a stamp goes stale the
- * moment the basis answers.
+ * moment the basis answers. The relationships a shape is read with live in
+ * `task_references` (INF-1296 piece 2), so they never reach the column.
  */
 function shapeJson(shape: WorkShape | null | undefined): string | null {
   if (!shape) return null;
-  const { basis_verified: _derived, ...recorded } = shape;
+  const {
+    basis_verified: _derived,
+    basis: _basis,
+    branch_from: _branch,
+    escalate_from: _retry,
+    ...recorded
+  } = shape;
   return JSON.stringify(recorded);
+}
+
+/** A shape as it is read: the stored fields, and each reference under its older field. */
+function withReferences(
+  shape: WorkShape | null,
+  references: readonly TaskReference[] | undefined,
+): WorkShape | null {
+  if (!shape || !references?.length) return shape;
+  const composed: WorkShape = { ...shape };
+  for (const reference of references)
+    composed[REFERENCE_SHAPE_FIELDS[reference.kind]] = reference.ref;
+  return composed;
 }
 
 /**
@@ -763,8 +788,8 @@ function fromRow(row: Row): TaskRecord {
  * temporary file, tens of megabytes per read of a long record, on the main
  * thread (INF-940).
  */
-function oldestFirst(rows: Row[]): TaskRecord[] {
-  return rows.map(fromRow).sort((a, b) => a.createdAt - b.createdAt || a.seq - b.seq);
+function oldestFirst(records: TaskRecord[]): TaskRecord[] {
+  return records.sort((a, b) => a.createdAt - b.createdAt || a.seq - b.seq);
 }
 
 /** The columns a patch may touch, mapped from record field to column. */
@@ -821,8 +846,50 @@ export type TaskPatch = Partial<Pick<TaskRecord, PatchField>> & {
 
 export class TaskStore {
   private taskColumns: Set<string> | undefined;
+  /** Read here so a record's shape carries them; written only by TaskService. */
+  readonly references: TaskReferenceStore;
 
-  constructor(private readonly db: AppDatabase) {}
+  constructor(private readonly db: AppDatabase) {
+    this.references = new TaskReferenceStore(db);
+  }
+
+  private record(row: Row): TaskRecord {
+    const record = fromRow(row);
+    if (!record.shape) return record;
+    return { ...record, shape: withReferences(record.shape, this.references.list(record.id)) };
+  }
+
+  private read(rows: Row[]): TaskRecord[] {
+    const records = rows.map(fromRow);
+    const references = this.references.listFor(
+      records.filter((record) => record.shape).map((record) => record.id),
+    );
+    return records.map((record) =>
+      record.shape
+        ? { ...record, shape: withReferences(record.shape, references.get(record.id)) }
+        : record,
+    );
+  }
+
+  /**
+   * A shape write never changes a relationship (INF-1296 piece 2): those go
+   * through TaskService's checked relationship operations. A shape that names
+   * one other than the record's is a writer's mistake, refused before it
+   * writes; one that leaves it out leaves the relationship standing.
+   */
+  private assertReferencesKept(id: string, shape: WorkShape | null | undefined): void {
+    if (!shape) return;
+    const stored = new Map(
+      this.references.list(id).map((reference) => [reference.kind, reference.ref]),
+    );
+    for (const kind of TASK_REFERENCE_KINDS) {
+      const named = shape[REFERENCE_SHAPE_FIELDS[kind]];
+      if (typeof named !== "string" || !named.trim() || named === stored.get(kind)) continue;
+      throw new Error(
+        `${REFERENCE_SHAPE_FIELDS[kind]} is the task's ${kind} relationship; set it through TaskService, not the shape.`,
+      );
+    }
+  }
 
   /** Column names as this database has them. Migration tests seed on an older schema. */
   private columns(): Set<string> {
@@ -850,6 +917,7 @@ export class TaskStore {
   }
 
   insert(record: TaskRecord): void {
+    this.assertReferencesKept(record.id, record.shape);
     const filing = this.columns().has("test_path");
     this.db
       .prepare(
@@ -930,7 +998,7 @@ export class TaskStore {
         "SELECT * FROM tasks WHERE test_path = ? AND status IN ('open', 'active') ORDER BY created_at, seq LIMIT 1",
       )
       .get(testPath) as Row | undefined;
-    return row ? fromRow(row) : undefined;
+    return row ? this.record(row) : undefined;
   }
 
   /** Apply a patch; only the named fields change. */
@@ -947,6 +1015,7 @@ export class TaskStore {
       values.push(patch.intent ? JSON.stringify(patch.intent) : null);
     }
     if ("shape" in patch) {
+      this.assertReferencesKept(id, patch.shape);
       sets.push("shape_json = ?");
       values.push(shapeJson(patch.shape));
     }
@@ -973,29 +1042,29 @@ export class TaskStore {
   }
 
   pendingPlacements(): TaskRecord[] {
-    return (
+    return this.read(
       this.db
         .prepare(
           "SELECT * FROM tasks WHERE json_extract(placement_json, '$.reservation') = 'pending'",
         )
-        .all() as Row[]
-    ).map(fromRow);
+        .all() as Row[],
+    );
   }
 
   get(id: string): TaskRecord | undefined {
     const row = prepared(this.db, "SELECT * FROM tasks WHERE id = ?").get(id) as Row | undefined;
-    return row ? fromRow(row) : undefined;
+    return row ? this.record(row) : undefined;
   }
 
   byKey(key: string): TaskRecord | undefined {
     const row = this.db.prepare("SELECT * FROM tasks WHERE key = ?").get(key.toUpperCase()) as
       | Row
       | undefined;
-    return row ? fromRow(row) : undefined;
+    return row ? this.record(row) : undefined;
   }
 
   list(): TaskRecord[] {
-    return oldestFirst(prepared(this.db, "SELECT * FROM tasks").all() as Row[]);
+    return oldestFirst(this.read(prepared(this.db, "SELECT * FROM tasks").all() as Row[]));
   }
 
   listByStatus(...statuses: TaskStatus[]): TaskRecord[] {
@@ -1004,7 +1073,7 @@ export class TaskStore {
     const rows = prepared(this.db, `SELECT * FROM tasks WHERE status IN (${marks})`).all(
       ...statuses,
     ) as Row[];
-    return oldestFirst(rows);
+    return oldestFirst(this.read(rows));
   }
 
   /**
@@ -1017,7 +1086,7 @@ export class TaskStore {
       this.db,
       "SELECT * FROM tasks WHERE status IN ('open', 'active') OR closed_at >= ?",
     ).all(since) as Row[];
-    return oldestFirst(rows);
+    return oldestFirst(this.read(rows));
   }
 
   /**
@@ -1058,7 +1127,7 @@ export class TaskStore {
       this.db,
       "SELECT * FROM tasks WHERE id IN (SELECT value FROM json_each(?))",
     ).all(JSON.stringify(ids)) as Row[];
-    return oldestFirst(rows);
+    return oldestFirst(this.read(rows));
   }
 
   /** How many children each of these parents has, and how many of them closed. */
@@ -1079,23 +1148,7 @@ export class TaskStore {
   /** A parent's direct children, oldest first. */
   listChildren(parentId: string): TaskRecord[] {
     const rows = this.db.prepare("SELECT * FROM tasks WHERE parent_id = ?").all(parentId) as Row[];
-    return oldestFirst(rows);
-  }
-
-  /**
-   * Every row, whatever its status, whose work shape names this task as its
-   * basis - by id or by key, as `TaskService.resolve` reads one - oldest
-   * first (INF-976: the work built on a task, closed work included).
-   */
-  listBuiltOn(id: string, key: string | null): TaskRecord[] {
-    const rows = prepared(
-      this.db,
-      `SELECT * FROM tasks WHERE id != ? AND (
-         trim(json_extract(shape_json, '$.basis')) = ?
-         OR (? != '' AND upper(trim(json_extract(shape_json, '$.basis'))) = ?)
-       )`,
-    ).all(id, id, key ?? "", (key ?? "").toUpperCase()) as Row[];
-    return oldestFirst(rows);
+    return oldestFirst(this.read(rows));
   }
 
   /** Every descendant, deepest last (a recursive walk down parent_id). */
@@ -1112,7 +1165,7 @@ export class TaskStore {
          ORDER BY tree.depth, tasks.created_at, tasks.seq`,
       )
       .all(id) as Row[];
-    return rows.map(fromRow);
+    return this.read(rows);
   }
 
   /**
@@ -1134,7 +1187,7 @@ export class TaskStore {
          ORDER BY t.priority, t.created_at, t.seq`,
       )
       .all() as Row[];
-    return rows.map(fromRow);
+    return this.read(rows);
   }
 
   /**
@@ -1152,7 +1205,7 @@ export class TaskStore {
          ORDER BY t.priority, t.created_at, t.seq`,
       )
       .all() as Row[];
-    return rows.map(fromRow);
+    return this.read(rows);
   }
 
   /** Rows missing the record invariants TaskService enforces (boot check). */

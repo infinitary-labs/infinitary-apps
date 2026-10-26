@@ -83,6 +83,18 @@ const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) => inde
 const REVERSE_MIGRATION_68 = "ALTER TABLE captain_asks DROP COLUMN reply;\n";
 /** INF-1288's conversation associations, removed before a pre-sessions schema comparison. */
 const REVERSE_TASK_SESSIONS = "DROP TABLE task_sessions;\n";
+/** INF-1296 piece 2's relationship rows, undone: each name back into its shape field. */
+const REVERSE_TASK_REFERENCES = [
+  ["basis", "basis"],
+  ["branch-source", "branch_from"],
+  ["retry-of", "escalate_from"],
+]
+  .map(
+    ([kind, field]) =>
+      `UPDATE tasks SET shape_json = json_set(shape_json, '$.${field}', (SELECT ref FROM task_references r WHERE r.task_id = tasks.id AND r.kind = '${kind}')) WHERE EXISTS (SELECT 1 FROM task_references r WHERE r.task_id = tasks.id AND r.kind = '${kind}');\n`,
+  )
+  .join("")
+  .concat("DROP TABLE task_references;\n");
 /** Migration 80's delivery columns, undone. */
 const REVERSE_MIGRATION_80 =
   "ALTER TABLE schedule_runs DROP COLUMN inbox_id; ALTER TABLE schedule_runs DROP COLUMN delivery; ALTER TABLE schedule_runs DROP COLUMN settled_at; ALTER TABLE schedule_runs DROP COLUMN cancel_reason; ALTER TABLE schedule_runs DROP COLUMN tasks; ALTER TABLE schedule_runs DROP COLUMN cards;\n";
@@ -98,6 +110,9 @@ const REVERSE_MIGRATION_71 =
 /** Migration 71's table, for a fixture that seeds an older database through the one writer. */
 const MIGRATION_71_TABLE =
   "CREATE TABLE task_event_concerns (event_id INTEGER NOT NULL, task_id TEXT NOT NULL, relation TEXT NOT NULL, via TEXT, PRIMARY KEY (event_id, task_id));";
+/** INF-1296 piece 2's relationship rows, lent to an older schema for today's writer. */
+const TASK_REFERENCES_TABLE =
+  "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
 /** INF-1226's declaration that a card's choice is not its task's answer, undone. */
 const REVERSE_MIGRATION_93 = "ALTER TABLE cards DROP COLUMN continues;\n";
 /** INF-476's saved visibility column, with the later card column undone, without deleting card rows. */
@@ -1148,7 +1163,7 @@ describe("migration 46 (the two graph gaps)", () => {
     const at45 = openDatabase(dir, 45);
     // The one writer writes today's schema: a part's filing names its
     // parent in migration 71's table, lent here and taken back below.
-    at45.exec(MIGRATION_71_TABLE);
+    at45.exec(MIGRATION_71_TABLE + TASK_REFERENCES_TABLE);
     const before = new TaskService({ db: at45, strict: true });
     seedTask(before, { id: "plan", title: "Plan", status: "completed", outcome: "Do B." });
     seedTask(before, { id: "wip", title: "Still going", status: "running" });
@@ -1172,6 +1187,7 @@ describe("migration 46 (the two graph gaps)", () => {
       shape: { kind: "review", kind_source: "host:review", basis: "build" },
     });
     before.recordDelivery("build", { reviewVerdict: "findings", reviewedAt: Date.now() });
+    at45.exec(REVERSE_TASK_REFERENCES);
     // The stamps as a database before this migration stored them: a verdict
     // gone stale (the guess still says verified) and the cached join.
     at45.exec(`
@@ -1379,7 +1395,8 @@ describe("migration 49 (a wake's durable once-identity, the primitives review P3
     // is the head: undoing it comes first.
     dropViews(reopened);
     reopened.exec(
-      REVERSE_TASK_SESSIONS +
+      REVERSE_TASK_REFERENCES +
+        REVERSE_TASK_SESSIONS +
         REVERSE_MIGRATION_80 +
         REVERSE_MIGRATION_79 +
         REVERSE_MIGRATION_78 +
@@ -1517,7 +1534,8 @@ describe("migration 50 (one decision ledger, the primitives review P6)", () => {
     // Reversible: the three tables back from their kinds, every row as it was.
     dropViews(upgraded);
     upgraded.exec(
-      REVERSE_TASK_SESSIONS +
+      REVERSE_TASK_REFERENCES +
+        REVERSE_TASK_SESSIONS +
         REVERSE_MIGRATION_80 +
         REVERSE_MIGRATION_79 +
         REVERSE_MIGRATION_78 +

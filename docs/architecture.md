@@ -824,7 +824,7 @@ A development or end-to-end run may shorten the interval's period with `INFINITA
 
 The per-phase documents are the authority on their parts: `docs/task-capture.md`, `docs/task-graph.md`, `docs/ui-plugins.md`, `docs/task-retention.md`, `docs/dev-observe.md`.
 
-- **The record** (P0): `tasks` gained key, project, parent, kind, a status (`open | active | done | dropped`) with `activity` and `closed_reason`, intent, outcome, delivery facts and timestamps (migrations 17-19, fixture-tested); `src/core/tasks/taskService.ts` is the ONE writer over `tasks`, `task_events`, `task_links`, `task_sessions` and `captain_asks`, every change committing with the timeline event that explains it.
+- **The record** (P0): `tasks` gained key, project, parent, kind, a status (`open | active | done | dropped`) with `activity` and `closed_reason`, intent, outcome, delivery facts and timestamps (migrations 17-19, fixture-tested); `src/core/tasks/taskService.ts` is the ONE writer over `tasks`, `task_events`, `task_links`, `task_references`, `task_sessions` and `captain_asks`, every change committing with the timeline event that explains it.
   Conversation associations live in their own `task_sessions` table, one row per conversation; by-key reads list them and retained older files, and name an earlier stronger-model attempt by its task key (INF-1288, captain-approved pieces 1 and 3; sessions storage and attempt choices).
   `tasks.session_file` remains the current resume pointer; the association preserves earlier conversations independently of compacted timeline history (`docs/task-record.md`, "Conversations on a task").
   Settling closes instead of deleting (D2).
@@ -833,6 +833,7 @@ The per-phase documents are the authority on their parts: `docs/task-capture.md`
 - **Capture** (P1): every `inf:converse` opens a `captain_asks` row before the turn; the first mate's tools attach it to the task they act on; the host files whatever is loose at turn end (the hinted task, else a standalone `question` task in Scratch).
   Never a second ask writer.
 - **The graph** (P2): one parent per task, three link types (`blocks`, `related`, `discovered-from`), the ready query as the R1 sweep, cycle refusal at insert, the dead-blocker card, the parent close rule, and the crewmates' `file_followup` / `note_progress`.
+  A task's basis, the task it branches from and the attempt it retries are `task_references` rows, one per kind, checked under one relationship contract with the parent edge and the links, each kind keeping its own rule; only `blocks` holds a start (INF-1296 piece 2, migration 95, `docs/task-record.md` "Relationships").
 - **The protocol** (P3): `src/shared/tasks.ts` is the wire surface; `inf:tasks:board` / `inf:tasks:detail` / `inf:projects:list` the reads; `inf:tasks` the push; `task_changed` / `task_event` the two FmEvents; the feed is a view over `task_events`.
   `PROTOCOL_VERSION` 1.2.0.
 - **The now panel and the record card** (P4): the right rail's one panel over `tasks.board`, minimal by default; the host-owned record over `tasks.detail`; only the shown record is the turn's task hint; a shown ordinary card instead supplies its card id.

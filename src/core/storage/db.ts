@@ -1091,10 +1091,23 @@ const MIGRATIONS: readonly Migration[] = [
     began TEXT NOT NULL,
     PRIMARY KEY (task_id, conversation)
   );`,
+  // The checked relationships a task names one of (INF-1296 piece 2,
+  // docs/task-record.md "Relationships"): its basis, the task it branches
+  // from and the attempt it retries leave the work shape for a row each.
+  // The name moves exactly as the shape kept it, with the task it resolves
+  // to now; who named it and when were never recorded, so they stay null.
+  // An empty name named nothing, so it moves nowhere. None of them is a
+  // dependency: the ready query never reads this table. TaskService is the
+  // one writer. Reversible: write each `ref` back into its shape field and
+  // drop the table.
+  migrateTaskReferences,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
 export const DATABASE_VERSION = MIGRATIONS.length;
+
+/** The migration that moved each task's references out of its work shape (INF-1296 piece 2). */
+export const TASK_REFERENCES_VERSION = MIGRATIONS.indexOf(migrateTaskReferences) + 1;
 
 /** The migration that published the views; every later one re-creates them. */
 const VIEWS_VERSION = MIGRATIONS.indexOf(migratePublishedViews) + 1;
@@ -1124,6 +1137,43 @@ function migrateRepoForge(db: AppDatabase): void {
     const where = forgeOf(row.origin);
     stamp.run(where.kind, where.host, row.id);
     log.run(row.id, row.origin, where.kind, where.host, now);
+  }
+}
+
+function migrateTaskReferences(db: AppDatabase): void {
+  db.exec(`
+    CREATE TABLE task_references (
+      task_id TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+      kind TEXT NOT NULL CHECK (kind IN ('basis', 'branch-source', 'retry-of')),
+      ref TEXT NOT NULL,
+      target_id TEXT,
+      actor TEXT,
+      recorded_at INTEGER,
+      PRIMARY KEY (task_id, kind)
+    );
+  `);
+  for (const [kind, field] of [
+    ["basis", "basis"],
+    ["branch-source", "branch_from"],
+    ["retry-of", "escalate_from"],
+  ] as const) {
+    const path = `$.${field}`;
+    db.prepare(
+      `INSERT INTO task_references (task_id, kind, ref, target_id, actor, recorded_at)
+       SELECT t.id, ?, json_extract(t.shape_json, ?),
+         COALESCE(
+           (SELECT n.id FROM tasks n WHERE n.id = trim(json_extract(t.shape_json, ?))),
+           (SELECT n.id FROM tasks n WHERE n.key = upper(trim(json_extract(t.shape_json, ?))))
+         ),
+         NULL, NULL
+       FROM tasks t
+       WHERE json_valid(t.shape_json) AND json_type(t.shape_json, ?) = 'text'
+         AND trim(json_extract(t.shape_json, ?)) != ''`,
+    ).run(kind, path, path, path, path, path);
+    db.prepare(
+      `UPDATE tasks SET shape_json = json_remove(shape_json, ?)
+       WHERE json_valid(shape_json) AND json_type(shape_json, ?) IS NOT NULL`,
+    ).run(path, path);
   }
 }
 

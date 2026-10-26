@@ -153,6 +153,7 @@ A change can keep what an older release saved readable while reading it differen
 For a profile whose only connection is a custom API, the first-launch gate names that connection right after the upgrade and asks for its one fresh check, never for a subscription.
 That check, from the gate, brings back Firstmate's answers, the offered models and the crew slots chosen before the upgrade, without a restart.
 A task's history an older release saved - its latest result also copied onto the task's delivery facts, and card choice events that name no card evidence (`docs/task-record.md`, "The unified timeline") - reads the same after the upgrade and a restart, in the record and through the first mate's by-key `tasks` read, and a report written later takes over the result while the older copy stays saved.
+Tasks an older release related by name in their work shape - a basis, the task a retry branches from and the attempt it retries - beside a parent and a dependency, read the same after the upgrade moves the names into relationship rows and after a restart, in the window and through the first mate's by-key `tasks` reads; a task waiting on open work stays unstarted, and a basis named after the upgrade reads back verified.
 A change that makes something an earlier release saved read differently adds the earlier form to `olderProfile.ts`, and a journey to `older-profile.spec.ts` when the change reaches a part of the app no journey there opens.
 
 ## Custom HTTP approval compatibility
@@ -262,3 +263,12 @@ A row an older build saved keeps them on disk, and `TaskStore` leaves them out w
 The row's next write of its shape or its delivery facts no longer carries them; a closed row that is never written again keeps them on disk, unread.
 An export an older build wrote imports without them, because the export's shapes drop a field they do not list.
 Both were optional, so an older build reads a row without them as before, and no database migration or format revision is needed.
+
+## Task references
+
+Migration 95 moves the names a task's work shape kept of other tasks - `basis`, `branch_from` and `escalate_from` - into rows of `task_references`, one per task and kind, in the migration's own transaction before any service starts (`docs/task-record.md`, "Relationships").
+Each name moves exactly as saved, a key or an id, with the task it resolves to then; an empty name named nothing and moves nowhere, and a basis naming no task moves as named.
+Who named it and when were never saved, so they stay empty on a moved row.
+The shape the app reads still carries the three names, composed from the rows, so no surface reads them differently; `v_tasks_v1` reads its `basis` column from the rows.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+An export this build writes keeps each name in the task's shape beside the task's `references`, so an older importer reads the names it knew and drops the rows, and an export an older build wrote imports here with each name made a row, its actor and time empty.

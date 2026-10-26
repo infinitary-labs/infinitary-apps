@@ -77,12 +77,26 @@ It needs a project other than the personal workspace, and refuses `runs_on_ask`,
 While the folder is missing it is refused at its start, as any task starting on this computer is, and the folder's repair is filed or named (INF-584).
 It closes as any task does: the host's folder-reading close never reads it.
 
+## Relationships
+
+A task stands to other tasks in three stores under one read and one check contract (`src/core/tasks/taskRelationships.ts`, INF-1296 piece 2), and `TaskService` is the one writer of all three.
+Its parent is the `tasks.parent_id` column; its typed links (`blocks`, `related`, `discovered-from`, `replaced-by`) are rows of `task_links`, with `holdsMerge` a mark on a `blocks` row; and the three references it names one of each are rows of `task_references`: its `basis`, the task it branches from (`branch-source`) and the earlier attempt it retries (`retry-of`).
+`TASK_RELATIONSHIP_RULES` keeps each kind's rule distinct: how many one task names, whether it holds a start, whether a cycle is refused, where the other task must be, and whether a name that resolves to no task is kept.
+Only `blocks` holds a start, so naming a basis or a branch source never adds a scheduling dependency; the ready query reads no reference.
+`TaskService.relationshipsOf` reads every relationship a task has, each way, with who recorded it and when, where the store kept that.
+A reference row keeps the name as given (`ref`, a key or an id), the task it resolved to when it was recorded (`target_id`, provenance only), the actor and the time; a reference migrated from an older profile has no actor or time, since none was saved.
+Each reference is read by the name it gives, resolved at every read as before, so `target_id` decides nothing.
+The rules a reference is checked against (`referenceRefusal`): an empty name names nothing; a basis may name no task yet, as a spawn names a plan step still being filed, while a branch source or an earlier attempt must name a task; none names the task itself; and a branch source is in the same project.
+A record's work shape still reads `basis`, `branch_from` and `escalate_from`, composed from the reference rows, so every reader of the shape reads the same words; the store refuses a shape write that names a different reference, which goes through `create`, `update_task` or `import` instead.
+The escalation stamp beside a retry (`escalated`) stays on the shape: it is a fact of how the retry ran, not a relationship.
+Migration 95 moved each name out of the shape into its row in one transaction before any service starts, keeping the name exactly as saved and recording the task it resolved to then.
+
 ## Derived, never stored: the basis and the review join
 
 The record keeps no stamp of a fact the graph already holds (migration 46 removed the two it had).
-A task's `basis` is stored on its shape as the first mate named it (a key or an id); whether it holds - the named task is done or has reported - is derived at every read (`TaskService.basisHolds`, `basisOf`), so a step planned behind a still-running task reads grounded the moment that task answers, with no write.
+A task's `basis` is recorded as the first mate named it (a key or an id, "Relationships"); whether it holds - the named task is done or has reported - is derived at every read (`TaskService.basisHolds`, `basisOf`), so a step planned behind a still-running task reads grounded the moment that task answers, with no write.
 The store strips `basis_verified` from any shape it is handed; the router still receives it, derived, beside the shape.
-The basis reads the same everywhere it is shown: `tasks.detail` carries `basis: { ref, verified }`, `v_tasks_v1` a `basis` column, and the export the shape verbatim.
+The basis reads the same everywhere it is shown: `tasks.detail` carries `basis: { ref, verified }`, `v_tasks_v1` a `basis` column, and the export the name in the task's shape beside its reference rows.
 A review's builder is its parent (the one stored join), and which review a builder's verdict came from is read off that edge (`TaskService.verdictReviewOf`: the newest review child opened at or before `reviewedAt`), never cached in the builder's delivery facts; the verdict's timeline event still names the review in its data, which is what the replay scorer reads.
 
 ## Live task policies
@@ -155,7 +169,7 @@ The host checks it when it is named and again when the task starts, and refuses 
 A step filed behind open work that has not started yet may name it; a start that then finds nothing to branch from fails in those words.
 At dispatch the working copy is created at that commit (`WorkspaceService.baseAt`) instead of the dispatch base, and the brief says so in one line (`renderBranchFromLine`).
 A task that branches from another starts only on this Mac.
-Both fields change only on open work that has not started, like `basis`, and both are the first mate's own, so no host stamp writes them (`CAPTAIN_OWNED_SHAPE_FIELDS`).
+Both fields change only on open work that has not started, like `basis`, and both are the first mate's own, so no host stamp writes them (`CAPTAIN_OWNED_SHAPE_FIELDS`); `branch_from` is recorded as a `branch-source` reference ("Relationships").
 `update_task` clears either one with an empty value, `{}` or an empty string.
 The tools serve both parameters bare, with no description, and the served sequences guide's preamble says their rule once, to keep the first mate's fixed context inside its boundary (`tests/firstmate-fixed-context.test.ts`).
 

@@ -42,6 +42,7 @@ import {
   userDataFoldersNewestFirst,
 } from "../src/shared/userDataFolders.ts";
 import { parseServedInput } from "../src/shared/servedFrame.ts";
+import { savedShapeReader } from "../src/core/storage/taskReferenceFields.ts";
 import { overrideHoldsFrom, type ReviewEvent, reviewEventFrom } from "./interaction-metrics.ts";
 
 // --------------------------------------------------------------------------
@@ -1029,12 +1030,14 @@ export function readFleetTables(dbPath: string): FleetTables {
         : "NULL AS delivery_json";
       const outcome = taskColumns.has("outcome") ? "outcome" : "NULL AS outcome";
       const parent = taskColumns.has("parent_id") ? "parent_id" : "NULL AS parent_id";
+      // A task's shape as the app reads it, its references in it.
+      const shapeOf = savedShapeReader(db);
       for (const row of db
         .prepare(
           `SELECT id, title, status, kind, repo_id, ${parent}, created_at, ${startedAt}${closedAt}, ${closedReason}, ${difficulty}, ${shape}, ${delivery}, ${outcome} FROM tasks`,
         )
         .all() as TaskRow[]) {
-        tasks.set(row.id, row);
+        tasks.set(row.id, { ...row, shape_json: shapeOf(row.id, row.shape_json) });
       }
     }
     // The rule that chose each task's tier and the tier actually served,

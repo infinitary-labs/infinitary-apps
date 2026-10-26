@@ -23,11 +23,11 @@ When a script should decide the steps (a loop, a fan-out, retries), use a progra
 ## Owner and entry points
 
 One writer each: `TaskService` over the task tables (`docs/task-record.md`).
-`TaskService` ([`../src/core/tasks/taskService.ts`](../src/core/tasks/taskService.ts)) is the one writer over `tasks`, `task_events`, `task_links`, `task_sessions` and `captain_asks`, and every change commits with the timeline event that explains it.
+`TaskService` ([`../src/core/tasks/taskService.ts`](../src/core/tasks/taskService.ts)) is the one writer over `tasks`, `task_events`, `task_links`, `task_references`, `task_sessions` and `captain_asks`, and every change commits with the timeline event that explains it.
 `TaskStore` ([`../src/core/storage/taskStore.ts`](../src/core/storage/taskStore.ts)) sits beneath it; `TaskStore.listReady` is the ready query.
 Conversation associations: `setSessionFile` writes the resume pointer and conversation row together; by-key `tasks` reads list recorded conversations and retained older files, and name an earlier stronger-model attempt without copying its sessions ([task record](../docs/task-record.md), "Conversations on a task").
 Graph writes: `create`, `setParent`, `moveToProject`, `link`, `unlink`, `fileFollowup`, `startAgain`, `updateFields`, `setGate`, `close`, `dropWithChildren`.
-Derived reads: `flagsOf` (`blocked`, `held`, `ready`, `deadBlocker`), `basisHolds` / `basisOf`, `builtOn`, `verdictReviewOf`, `closeRefusal`, `blockersHoldingClose`, `blockerRefusal`.
+Derived reads: `flagsOf` (`blocked`, `held`, `ready`, `deadBlocker`), `relationshipsOf`, `basisHolds` / `basisOf`, `builtOn`, `verdictReviewOf`, `closeRefusal`, `blockersHoldingClose`, `blockerRefusal`.
 Typed results: `resultSchemaRefusal` and `resultRefusal` in [`../src/core/tasks/taskResult.ts`](../src/core/tasks/taskResult.ts).
 Reports and results as entries: `reportEntryOf` and `latestResultOf` in [`../src/core/tasks/reportEntry.ts`](../src/core/tasks/reportEntry.ts); one task's entries from every owner, read only: `TaskTimeline` in [`../src/core/tasks/taskTimeline.ts`](../src/core/tasks/taskTimeline.ts), its shape in [`../src/shared/timeline.ts`](../src/shared/timeline.ts).
 Settling and its refusals: `SettleService` ([`../src/core/orchestrator/settleService.ts`](../src/core/orchestrator/settleService.ts)), returning a structured `SettleRefusal`.
@@ -45,11 +45,14 @@ On an active work row the `captain` gate has one writer, `IdleLadder.syncCaptain
 
 Relations:
 
+Every relation below is one kind of the checked relationship contract, with its own rule in `TASK_RELATIONSHIP_RULES` ([`../src/core/tasks/taskRelationships.ts`](../src/core/tasks/taskRelationships.ts)); only `blocks` holds a start ([task record](../docs/task-record.md), "Relationships").
+
 - Parent (`parent_id`, one per task) means containment; a child inherits its parent's project and repository, and the ancestor walk refuses a cycle.
 - `blocks`: the target is not ready until the source is `done`; a dropped blocker never clears readiness and becomes a dead wait the first mate resolves.
 - `related` is informational; `discovered-from` is provenance; `replaced-by` records that a dropped task's work moved to another; none of the three affects readiness or closing.
-- Basis: a task names the task whose answer it builds on; whether it holds is derived at every read, never stored.
-- Branch inheritance: a parent moves no code; `branch_from` names a sibling whose last commit the working copy starts at, and it is the one relation that moves code.
+- Basis: a task names one task whose answer it builds on, a `basis` row of `task_references`; whether it holds is derived at every read, never stored, and a name that names no task yet is kept.
+- Branch inheritance: a parent moves no code; `branch_from` names a task in the same project whose last commit the working copy starts at, a `branch-source` row, and it is the one relation that moves code.
+- Retry provenance: a stronger-model retry names the attempt it retries, a `retry-of` row; the escalation stamp beside it stays on the shape as a fact of how it ran.
 - Typed result: `result_schema` on the shape makes the report's `result` a checked JSON object, delivered to the first mate and to any task whose basis names it.
 
 Close rules: a parent closes only when every child is closed, except host delivery children (`isDeliveryChild`); a task does not close while a marked blocker is still live work (a soft hold the captain may override); a container no crewmate holds completes with its children.
@@ -99,7 +102,7 @@ Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.
 
 ## Where the detail lives
 
-- [The task record and its protocol](../docs/task-record.md): "Derived, never stored: the basis and the review join", "A typed result and where a working copy starts", "The unified timeline", "Starting dropped work again".
+- [The task record and its protocol](../docs/task-record.md): "Relationships", "Derived, never stored: the basis and the review join", "A typed result and where a working copy starts", "The unified timeline", "Starting dropped work again".
 - [Task graph](../docs/task-graph.md): "The graph", "The ready query", "Gates on active rows", "Follow-ups are not children", "The close rules", "Tools".
 - [Sequences](../docs/sequences.md): "The decision", "The host pieces it runs on (all generic)".
 - [Architecture](../docs/architecture.md) §19 "The task system"; [task retention](../docs/task-retention.md); [the whose-turn rule](../docs/report-sort.md).

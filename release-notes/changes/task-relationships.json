@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-relationships",
+      "reason": "Internal: the task a task builds on, branches from or retries is kept as its own checked record instead of inside the task's settings; every task's record, readiness and the first mate's reads show the same as before."
+    }
+  ]
+}

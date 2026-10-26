@@ -20,6 +20,7 @@ import {
   type TaskEvent,
 } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
+import { type TaskReference, taskReferenceSchema } from "../storage/taskReferenceStore";
 import { type TaskSession, taskSessionSchema } from "../storage/taskSessionStore";
 import type { TaskRecord } from "../storage/taskStore";
 
@@ -95,6 +96,12 @@ const taskLineSchema = z.object({
   branch: z.string(),
   sessionFile: nullableString,
   sessions: z.array(taskSessionSchema).optional(),
+  /**
+   * Its basis, branch source and earlier attempt as recorded (INF-1296 piece
+   * 2): who named each and when. The shape still carries each name under its
+   * older field, so an export reads the same to a build before them.
+   */
+  references: z.array(taskReferenceSchema).optional(),
   accountId: nullableString,
   difficulty: z.enum(["low", "medium", "high", "premium"]).nullable(),
   shape: workShapeSchema.nullable(),
@@ -196,6 +203,8 @@ export type TaskExportBundle = {
   projects: ProjectRecord[];
   tasks: TaskRecord[];
   sessions?: { taskId: string; session: TaskSession }[];
+  /** Recorded references; an older export has none, and its shapes name them. */
+  references?: { taskId: string; reference: TaskReference }[];
   /**
    * Timeline events, in export order (the timeline's), without storage ids,
    * each with the other tasks it concerns when it concerns any.
@@ -210,6 +219,7 @@ export type TaskExportSource = {
   projects: { list(): ProjectRecord[] };
   list(): TaskRecord[];
   recordedSessions?(id: string): TaskSession[];
+  recordedReferences?(id: string): TaskReference[];
   timeline(id: string): TaskEvent[];
   /** Whom each event concerns, by event id. */
   eventConcerns(): Map<number, TaskConcern[]>;
@@ -254,7 +264,14 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
     ...tasks.map((task): TaskExportLine => {
       const { kind, ...rest } = task;
       const sessions = source.recordedSessions?.(task.id) ?? [];
-      return { kind: "task", ...rest, taskKind: kind, ...(sessions.length ? { sessions } : {}) };
+      const references = source.recordedReferences?.(task.id) ?? [];
+      return {
+        kind: "task",
+        ...rest,
+        taskKind: kind,
+        ...(sessions.length ? { sessions } : {}),
+        ...(references.length ? { references } : {}),
+      };
     }),
     ...events.map((event): TaskExportLine => {
       const { id, kind, ...rest } = event;
@@ -295,6 +312,7 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
     links: [],
     asks: [],
     sessions: [],
+    references: [],
   };
   let number = 0;
   for (const raw of lines) {
@@ -326,8 +344,10 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
         break;
       }
       case "task": {
-        const { kind: _kind, taskKind, sessions, ...rest } = line;
+        const { kind: _kind, taskKind, sessions, references, ...rest } = line;
         for (const session of sessions ?? []) bundle.sessions?.push({ taskId: rest.id, session });
+        for (const reference of references ?? [])
+          bundle.references?.push({ taskId: rest.id, reference });
         bundle.tasks.push({ ...rest, kind: taskKind });
         break;
       }

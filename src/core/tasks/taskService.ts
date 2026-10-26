@@ -110,6 +110,13 @@ import {
   TaskEventStore,
 } from "../storage/taskEventStore";
 import { type TaskLink, TaskLinkStore, type TaskLinkType } from "../storage/taskLinkStore";
+import {
+  REFERENCE_SHAPE_FIELDS,
+  TASK_REFERENCE_KINDS,
+  type TaskReference,
+  type TaskReferenceKind,
+  type TaskReferenceStore,
+} from "../storage/taskReferenceStore";
 import { conversationOf, type TaskSession, TaskSessionStore } from "../storage/taskSessionStore";
 import {
   type CardRefusal,
@@ -131,6 +138,7 @@ import { holdingWaits, holdKindOf } from "./holdingWaits";
 import { decideValidation, recordValidation } from "./liveValidation";
 import { latestResultOf, type ReportEntry, reportEntryOf, type TaskResult } from "./reportEntry";
 import type { TaskExportBundle } from "./taskExport";
+import { referenceRefusal, type TaskRelationship } from "./taskRelationships";
 import { liveWaitCycle, waitCycleWords } from "./waitCycles";
 
 /**
@@ -779,11 +787,37 @@ function defaultCloseText(input: CloseInput): string {
   }
 }
 
+/**
+ * A shape as the record stores it, and the relationships it names under the
+ * fields they were saved in before (INF-1296 piece 2). An empty name names
+ * nothing.
+ */
+function splitReferences(shape: WorkShape | null): {
+  shape: WorkShape | null;
+  named: [TaskReferenceKind, string][];
+} {
+  if (!shape) return { shape, named: [] };
+  const stored: WorkShape = { ...shape };
+  const named: [TaskReferenceKind, string][] = [];
+  for (const kind of TASK_REFERENCE_KINDS) {
+    const field = REFERENCE_SHAPE_FIELDS[kind];
+    const ref = stored[field];
+    delete stored[field];
+    if (typeof ref === "string" && ref.trim()) named.push([kind, ref]);
+  }
+  return { shape: stored, named };
+}
+
+function sameLink(a: TaskLink, b: TaskLink): boolean {
+  return a.fromId === b.fromId && a.toId === b.toId && a.type === b.type;
+}
+
 export class TaskService {
   private readonly db: AppDatabase;
   private readonly store: TaskStore;
   private readonly events: TaskEventStore;
   private readonly links: TaskLinkStore;
+  private readonly references: TaskReferenceStore;
   private readonly asks: AskStore;
   private readonly conversations: TaskSessionStore;
   readonly projects: ProjectStore;
@@ -798,6 +832,7 @@ export class TaskService {
     this.store = new TaskStore(options.db);
     this.events = new TaskEventStore(options.db);
     this.links = new TaskLinkStore(options.db);
+    this.references = this.store.references;
     this.asks = new AskStore(options.db);
     this.conversations = new TaskSessionStore(options.db);
     this.projects = new ProjectStore(options.db);
@@ -1260,9 +1295,73 @@ export class TaskService {
 
   /** A task's basis as the record names it, with its verdict derived now. */
   basisOf(record: TaskRecord): { ref: string; verified: boolean } | null {
-    const ref = record.shape?.basis;
-    if (!ref) return null;
-    return { ref, verified: this.basisHolds(ref) };
+    const basis = this.reference(record.id, "basis");
+    if (!basis) return null;
+    return { ref: basis.ref, verified: this.basisHolds(basis.ref) };
+  }
+
+  /** A task's reference of one kind, as recorded (INF-1296 piece 2). */
+  reference(id: string, kind: TaskReferenceKind): TaskReference | undefined {
+    return this.references.list(id).find((reference) => reference.kind === kind);
+  }
+
+  /**
+   * The task a reference names now: what its name resolves to at this read,
+   * as every reader of the shape resolves it. `targetId` keeps what the name
+   * meant when it was recorded, as provenance; it decides nothing.
+   */
+  referenceTarget(reference: TaskReference): TaskRecord | undefined {
+    return this.resolve(reference.ref);
+  }
+
+  /**
+   * Every relationship from or to this task, through one contract
+   * (`taskRelationships.ts`): its parent edge and its children's, its links,
+   * its own references and the references that name it.
+   */
+  relationshipsOf(id: string): TaskRelationship[] {
+    const record = this.store.get(id);
+    if (!record) return [];
+    const parent: TaskRelationship[] = [
+      ...(record.parentId ? [record] : []),
+      ...this.store.listChildren(id),
+    ].map((child) => ({
+      kind: "parent",
+      from: child.id,
+      to: child.parentId,
+      actor: null,
+      at: null,
+    }));
+    const links = [...this.links.listTo(id), ...this.links.listFrom(id)]
+      .filter((link, index, all) => all.findIndex((other) => sameLink(other, link)) === index)
+      .map(
+        (link): TaskRelationship => ({
+          kind: link.type,
+          from: link.fromId,
+          to: link.toId,
+          actor: link.actor,
+          at: link.createdAt,
+          ...(link.holdsMerge ? { holdsMerge: true as const } : {}),
+        }),
+      );
+    const reference = (taskId: string, entry: TaskReference): TaskRelationship => ({
+      kind: entry.kind,
+      from: taskId,
+      to: this.referenceTarget(entry)?.id ?? null,
+      ref: entry.ref,
+      actor: entry.actor,
+      at: entry.recordedAt,
+    });
+    const own = this.references.list(id).map((entry) => reference(id, entry));
+    const naming = TASK_REFERENCE_KINDS.flatMap((kind) =>
+      this.references.taskIdsNaming(kind, id, record.key || null).flatMap((taskId) =>
+        this.references
+          .list(taskId)
+          .filter((entry) => entry.kind === kind)
+          .map((entry) => reference(taskId, entry)),
+      ),
+    );
+    return [...parent, ...links, ...own, ...naming];
   }
 
   /**
@@ -1276,7 +1375,7 @@ export class TaskService {
     const record = this.store.get(id);
     if (!record) return [];
     return this.store
-      .listBuiltOn(record.id, record.key)
+      .getMany(this.references.taskIdsNaming("basis", record.id, record.key || null))
       .filter((other) => !TaskService.isDeliveryChild(other));
   }
 
@@ -1693,7 +1792,12 @@ export class TaskService {
         startedAt: null,
         closedAt: null,
       };
-      this.store.insert(record);
+      // The shape's relationships are recorded through their checks, after the row.
+      const { shape: stored, named } = splitReferences(record.shape);
+      const targets = named.map(([kind, ref]) => [kind, ref, this.resolve(ref)] as const);
+      this.store.insert({ ...record, shape: stored });
+      for (const [kind, ref, target] of targets)
+        this.recordReference(record, kind, ref, target, actor, at);
       this.touch(record.id);
       // The insert writes the fixed columns; the computer rides the same
       // write as a patch, so one change carries the row and its placement.
@@ -1845,6 +1949,8 @@ export class TaskService {
       }
 
       const update: Parameters<TaskStore["update"]>[1] = {};
+      // Relationships change through their checks once the row is written.
+      const referenceEdits: [TaskReferenceKind, string | undefined, TaskRecord | undefined][] = [];
       if (patch.placementRequirements !== undefined) {
         if (
           record.status !== "open" ||
@@ -1878,17 +1984,7 @@ export class TaskService {
         if (basis?.id === id) throw new TaskGraphRefusal("A task cannot be its own basis.");
         const ref = basis ? basis.key || basis.id : undefined;
         if (ref !== record.shape?.basis) {
-          const {
-            basis: _oldBasis,
-            basis_verified: _oldVerified,
-            ...shape
-          } = update.shape ??
-            record.shape ?? {
-              kind: "unclear" as const,
-              basis: undefined,
-              basis_verified: undefined,
-            };
-          update.shape = { ...shape, ...(ref ? { basis: ref } : {}) };
+          referenceEdits.push(["basis", ref, basis]);
           changes.push(ref ? `basis ${ref}` : "basis cleared");
         }
       }
@@ -1903,10 +1999,12 @@ export class TaskService {
       }
       if (patch.branchFrom !== undefined) {
         const branchFrom = patch.branchFrom.trim() || undefined;
-        const current = update.shape ?? record.shape;
-        if (branchFrom !== current?.branch_from) {
-          const { branch_from: _oldBranch, ...shape } = current ?? { kind: "unclear" as const };
-          update.shape = { ...shape, ...(branchFrom ? { branch_from: branchFrom } : {}) };
+        if (branchFrom !== record.shape?.branch_from) {
+          referenceEdits.push([
+            "branch-source",
+            branchFrom,
+            branchFrom ? this.resolve(branchFrom) : undefined,
+          ]);
           changes.push(branchFrom ? `branches from ${branchFrom}` : "branch_from cleared");
         }
       }
@@ -2084,7 +2182,14 @@ export class TaskService {
         }
       }
       if (changes.length === 0) return changes;
+      // A reference is read with the shape, so a task gains one before its first.
+      if (referenceEdits.some(([, ref]) => ref) && !update.shape && !record.shape)
+        update.shape = { kind: "unclear" };
       this.patch(id, { ...update, updatedAt: at });
+      for (const [kind, ref, target] of referenceEdits) {
+        if (ref) this.recordReference(this.mustGet(id), kind, ref, target, actor, at);
+        else this.references.delete(id, kind);
+      }
       this.addEvent({
         taskId: id,
         at,
@@ -2899,6 +3004,11 @@ export class TaskService {
   /** Durable rows only, for record export without inferred folder metadata. */
   recordedSessions(id: string): TaskSession[] {
     return this.conversations.list(id);
+  }
+
+  /** A task's basis, branch source and earlier attempt as recorded, for record export. */
+  recordedReferences(id: string): TaskReference[] {
+    return this.references.list(id);
   }
 
   /** Recorded conversations plus unlabelled files retained before the association existed. */
@@ -4251,6 +4361,7 @@ export class TaskService {
       this.db.prepare("DELETE FROM task_events WHERE task_id = ?").run(id);
       this.db.prepare("DELETE FROM task_links WHERE from_id = ? OR to_id = ?").run(id, id);
       this.db.prepare("DELETE FROM task_sessions WHERE task_id = ?").run(id);
+      this.references.deleteFor(id);
       this.store.delete(id);
       this.pending.removed.add(id);
     });
@@ -4264,6 +4375,7 @@ export class TaskService {
       this.links.deleteAll();
       this.asks.deleteAll();
       this.db.prepare("DELETE FROM task_sessions").run();
+      this.references.deleteAll();
       this.pending.reset = true;
       return this.store.deleteAll();
     });
@@ -4344,11 +4456,35 @@ export class TaskService {
           projects += 1;
         }
       }
+      const recorded = new Map<string, TaskReference[]>();
+      for (const { taskId, reference } of bundle.references ?? []) {
+        if (!incoming.has(taskId))
+          throw new Error(`A relationship names an unknown task: ${taskId}`);
+        recorded.set(taskId, [...(recorded.get(taskId) ?? []), reference]);
+      }
+      const named: [TaskRecord, TaskReferenceKind, string][] = [];
       for (const record of bundle.tasks) {
-        this.store.insert(record);
+        const { shape, named: inShape } = splitReferences(record.shape);
+        this.store.insert({ ...record, shape });
+        for (const [kind, ref] of inShape)
+          if (!recorded.get(record.id)?.some((reference) => reference.kind === kind))
+            named.push([record, kind, ref]);
         this.projects.raiseNextSeq(record.projectId, record.seq + 1);
         this.touch(record.id);
       }
+      // As exported: a recorded relationship keeps who recorded it and the
+      // task it resolved to; a shape's name from an older export resolves
+      // now, against this record, with who and when unknown.
+      for (const [taskId, references] of recorded)
+        for (const reference of references) this.references.set(taskId, reference);
+      for (const [record, kind, ref] of named)
+        this.references.set(record.id, {
+          kind,
+          ref,
+          targetId: this.resolve(ref)?.id ?? null,
+          actor: null,
+          recordedAt: null,
+        });
       for (const { taskId, session } of bundle.sessions ?? []) {
         if (!incoming.has(taskId)) throw new Error(`Session names an unknown task: ${taskId}`);
         this.conversations.record(taskId, session);
@@ -5185,6 +5321,32 @@ export class TaskService {
       }
     }
     return undefined;
+  }
+
+  /**
+   * The one writer of a task's references (INF-1296 piece 2): each kind's
+   * rule is checked (`referenceRefusal`), and a refusal is a graph refusal
+   * that rolls the write back. The task must already have a shape, which
+   * reads it under its older field.
+   */
+  private recordReference(
+    task: TaskRecord,
+    kind: TaskReferenceKind,
+    ref: string,
+    target: TaskRecord | undefined,
+    actor: TaskEventActor,
+    at: number,
+  ): void {
+    const refused = referenceRefusal(kind, { task, ref, target });
+    if (refused) throw new TaskGraphRefusal(refused);
+    this.references.set(task.id, {
+      kind,
+      ref,
+      targetId: target?.id ?? null,
+      actor,
+      recordedAt: at,
+    });
+    this.touch(task.id);
   }
 
   private insertLink(

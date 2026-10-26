@@ -51,6 +51,16 @@ const SLOT_VALUES = "('premium', 'high', 'medium', 'low')";
 
 const LATEST_SNAPSHOT = "(SELECT MAX(id) FROM quota_snapshots)";
 
+/**
+ * `v_tasks_v1.basis`, written in place of this marker when the views are
+ * made: the basis's own row (INF-1296 piece 2), or, on a database migrating
+ * through the versions before that table, the shape field it was saved in.
+ */
+const BASIS_COLUMN = "/* basis */";
+const BASIS_FROM_REFERENCES =
+  "(SELECT b.ref FROM task_references b WHERE b.task_id = t.id AND b.kind = 'basis')";
+const BASIS_FROM_SHAPE = "json_extract(t.shape_json, '$.basis')";
+
 export const PUBLISHED_VIEWS: readonly PublishedView[] = [
   {
     name: "v_placements_v1",
@@ -134,7 +144,7 @@ export const PUBLISHED_VIEWS: readonly PublishedView[] = [
   t.updated_at AS updated_at,
   t.started_at AS started_at,
   t.closed_at AS closed_at,
-  json_extract(t.shape_json, '$.basis') AS basis
+  ${BASIS_COLUMN} AS basis
 FROM tasks t
 LEFT JOIN projects p ON p.id = t.project_id
 LEFT JOIN repos r ON r.id = t.repo_id
@@ -439,7 +449,25 @@ export function dropViews(db: SchemaReader): void {
 export function createViews(db: SchemaReader): void {
   dropViews(db);
   if (hasLedger(db)) for (const view of LEDGER_VIEWS) db.exec(viewSql(view));
-  for (const view of PUBLISHED_VIEWS) db.exec(viewSql(view));
+  for (const view of publishedViews(db)) db.exec(viewSql(view));
+}
+
+/** Whether the task references exist yet (INF-1296 piece 2). */
+function hasReferences(db: SchemaReader): boolean {
+  return (
+    db
+      .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'task_references'")
+      .all().length > 0
+  );
+}
+
+/** The published views as this database can read them. */
+function publishedViews(db: SchemaReader): PublishedView[] {
+  const basis = hasReferences(db) ? BASIS_FROM_REFERENCES : BASIS_FROM_SHAPE;
+  return PUBLISHED_VIEWS.map((view) => ({
+    ...view,
+    select: view.select.replace(BASIS_COLUMN, basis),
+  }));
 }
 
 /**
@@ -452,7 +480,9 @@ export function viewsCurrent(db: SchemaReader): boolean {
     [...existingViews(db), ...existingLedgerViews(db)].map((view) => [view.name, view.sql]),
   );
   if (existing.size !== PUBLISHED_VIEWS.length + ledger.length) return false;
-  return [...ledger, ...PUBLISHED_VIEWS].every((view) => existing.get(view.name) === viewSql(view));
+  return [...ledger, ...publishedViews(db)].every(
+    (view) => existing.get(view.name) === viewSql(view),
+  );
 }
 
 /**

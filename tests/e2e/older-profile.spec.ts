@@ -37,6 +37,7 @@ import {
   GITHUB_SERVER_NAME,
   githubNames,
 } from "./scenarios/githubNames";
+import { relationshipsAsk, upgradedRelationshipsRead } from "./scenarios/upgradedRelationshipsRead";
 import {
   UPGRADED_TASK_FIELDS,
   UPGRADED_TASK_PROMPT,
@@ -654,6 +655,276 @@ test("a task's history an older release saved reads the same after the upgrade",
       } finally {
         db.close();
       }
+    });
+  } finally {
+    await app?.close();
+  }
+});
+
+/** The tasks a profile's relationships are seeded on, by role. */
+const RELATED = {
+  plan: "upgraded-plan",
+  first: "upgraded-first-attempt",
+  parent: "upgraded-parent",
+  retry: "upgraded-retry",
+  wip: "upgraded-wip",
+  waiting: "upgraded-waiting",
+} as const;
+/** A basis an older release kept as named, naming no task. */
+const UNNAMED_BASIS = "the-spec-draft";
+
+/**
+ * Tasks related every way a person's record relates them, as this build
+ * writes them through its own writer: a plan a retry builds on, the earlier
+ * attempt it branches from and retries, the parent it is a part of, and an
+ * unstarted task waiting on another open one with a basis that names no
+ * task yet. Nothing open starts on its own, so the upgrade alone moves them.
+ */
+function seedRelationships(userDataDir: string): Record<keyof typeof RELATED, string> {
+  const { db, tasks } = taskWriters(userDataDir);
+  try {
+    seedTask(tasks, {
+      id: RELATED.plan,
+      title: "Plan the usage chart",
+      status: "completed",
+      outcome: "Draw B.",
+    });
+    seedTask(tasks, {
+      id: RELATED.first,
+      title: "Draw the usage chart",
+      status: "completed",
+      outcome: "Drew A.",
+    });
+    seedTask(tasks, { id: RELATED.parent, title: "Ship the usage chart", status: "idle" });
+    const key = (id: string) => tasks.get(id)?.key ?? "";
+    seedTask(tasks, {
+      id: RELATED.retry,
+      title: "Draw the usage chart again",
+      parentId: RELATED.parent,
+      shape: {
+        kind: "fix",
+        basis: key(RELATED.plan),
+        branch_from: key(RELATED.first),
+        escalate_from: key(RELATED.first),
+      },
+      status: "completed",
+      outcome: "Drew B.",
+    });
+    tasks.create({
+      id: RELATED.wip,
+      title: "Decide the chart's colors",
+      prompt: "",
+      repoId: null,
+      startPolicy: "on-request",
+      actor: "captain",
+    });
+    tasks.create({
+      id: RELATED.waiting,
+      title: "Color the usage chart",
+      prompt: "",
+      repoId: null,
+      shape: { kind: "implement", basis: UNNAMED_BASIS },
+      blockedBy: [RELATED.wip],
+      startPolicy: "on-request",
+      actor: "firstmate",
+    });
+    for (const id of [RELATED.plan, RELATED.first, RELATED.retry, RELATED.parent])
+      tasks.close(id, { status: "done", reason: "merged", actor: "host" });
+    return Object.fromEntries(
+      Object.entries(RELATED).map(([role, id]) => [role, key(id)]),
+    ) as Record<keyof typeof RELATED, string>;
+  } finally {
+    db.close();
+  }
+}
+
+/** Each seeded task's relationships as the saved rows hold them. */
+function savedRelationships(userDataDir: string) {
+  return readSavedData(userDataDir, (db) => ({
+    // An older release's profile has no table of references.
+    references: !db
+      .prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'task_references'")
+      .get()
+      ? undefined
+      : db
+          .prepare(
+            "SELECT task_id, kind, ref, target_id, actor, recorded_at FROM task_references ORDER BY task_id, kind",
+          )
+          .all(),
+    shapes: Object.fromEntries(
+      (
+        db
+          .prepare("SELECT id, shape_json FROM tasks WHERE id IN (SELECT value FROM json_each(?))")
+          .all(JSON.stringify(Object.values(RELATED))) as {
+          id: string;
+          shape_json: string | null;
+        }[]
+      ).map((row) => [row.id, row.shape_json ? JSON.parse(row.shape_json) : null]),
+    ),
+  }));
+}
+
+/** The relationship fields the first mate reads of each task, by role. */
+const RELATIONSHIP_FIELDS = {
+  retry: ["parent", "basis", "branch_from", "earlier_attempt"],
+  plan: ["built_on_by"],
+  first: ["status"],
+  waiting: ["status", "basis", "blocked_by"],
+} as const;
+
+/** The first mate's `tasks` reads of one task's fields, by key, as the tool returned them. */
+async function firstmateFields(
+  app: LaunchedApp,
+  key: string,
+  fields: readonly string[],
+): Promise<Record<string, unknown>> {
+  const prompt = relationshipsAsk(key, fields);
+  await askFirstmate(app.page, prompt);
+  const read = (app.mockProvider?.requestBodies() ?? [])
+    .map(sinceLastUser)
+    .filter((turn) => turn.user.includes(prompt))
+    .find((turn) => turn.results.length === fields.length);
+  if (!read) throw new Error(`The first mate did not read every field of ${key}.`);
+  return Object.fromEntries(
+    fields.map((field, index) => {
+      const page = read.results[index] ?? "";
+      const header = page.match(
+        /^field (\w+) as (text|json), offset 1, nextOffset none, length \d+\n/,
+      );
+      expect(header?.[1], `the ${field} page of ${key}`).toBe(field);
+      const text = page.slice(header?.[0].length ?? 0);
+      return [field, header?.[2] === "json" ? JSON.parse(text) : text];
+    }),
+  );
+}
+
+/** The keys the first mate read the plan is built on by. */
+function builtOnKeys(firstmate: Record<string, Record<string, unknown>>): string[] {
+  return ((firstmate.plan?.built_on_by ?? []) as { key: string }[]).map((row) => row.key);
+}
+
+/** What the window and the first mate read of every seeded task's relationships. */
+async function relationshipsAsRead(app: LaunchedApp, keys: Record<keyof typeof RELATED, string>) {
+  const details = await app.page.evaluate(
+    (ids) => Promise.all(ids.map((id) => window.infinitary.tasks.detail(id))),
+    Object.values(RELATED),
+  );
+  const shown = Object.fromEntries(
+    details.map((detail: TaskDetail) => [
+      detail.id,
+      {
+        status: detail.status,
+        parentId: detail.parentId,
+        blockedBy: detail.blockedBy,
+        basis: detail.basis,
+      },
+    ]),
+  );
+  const firstmate: Record<string, Record<string, unknown>> = {};
+  for (const [role, fields] of Object.entries(RELATIONSHIP_FIELDS))
+    firstmate[role] = await firstmateFields(app, keys[role as keyof typeof RELATED], fields);
+  return { window: shown, firstmate };
+}
+
+/**
+ * INF-1296 piece 2, the captain's "i want to make sure this gets good e2e
+ * test coverage to ensure exsiting users don't get regressed during this
+ * migration". Promised result: tasks an older release related through
+ * names in their work shape - a basis, the task a retry branches from and
+ * the attempt it retries - beside a parent and a dependency, read the same
+ * after the upgrade moves the names into relationships and after a
+ * restart, in the window and through the first mate's `tasks` reads; the
+ * waiting task stays unstarted; and a basis set after the upgrade reads
+ * back as verified. Data: tasks written through the app's own writer,
+ * rewritten into the older release's form (`asSavedByOlderRelease`).
+ * Completion: the first mate's answers after its reads, and the saved rows
+ * read back after the app quits. Prerequisites: the hermetic launcher.
+ * Shared resources: none.
+ */
+test("tasks an older release related by name read the same after the upgrade", async () => {
+  const userDataDir = scratchDir("infinitary-upgraded-relationships-");
+  const keys = seedRelationships(userDataDir);
+  const launch = () =>
+    launchApp({ withMockProvider: true, scenarios: [upgradedRelationshipsRead], userDataDir });
+
+  let app: LaunchedApp | undefined = await launch();
+  try {
+    const before = await relationshipsAsRead(app, keys);
+    // The reads name what was seeded, or a match below would compare nothing.
+    expect(before.firstmate.retry).toEqual({
+      parent: keys.parent,
+      basis: keys.plan,
+      branch_from: keys.first,
+      earlier_attempt: keys.first,
+    });
+    expect(builtOnKeys(before.firstmate)).toEqual([keys.retry]);
+    expect(before.firstmate.waiting).toEqual({
+      status: "open",
+      basis: UNNAMED_BASIS,
+      blocked_by: [keys.wip],
+    });
+    expect(before.window[RELATED.waiting]?.basis).toEqual({ ref: UNNAMED_BASIS, verified: false });
+    expect(before.window[RELATED.retry]?.basis).toEqual({ ref: keys.plan, verified: true });
+    await app.close();
+    app = undefined;
+    const recorded = savedRelationships(userDataDir).references;
+
+    const older = asSavedByOlderRelease(userDataDir);
+    // Something was rewritten, or the journey would open this build's own profile.
+    expect(older.references).toEqual(
+      expect.arrayContaining([
+        { taskId: RELATED.retry, field: "basis", ref: keys.plan },
+        { taskId: RELATED.retry, field: "branch_from", ref: keys.first },
+        { taskId: RELATED.retry, field: "escalate_from", ref: keys.first },
+        { taskId: RELATED.waiting, field: "basis", ref: UNNAMED_BASIS },
+      ]),
+    );
+    expect(older.references).toHaveLength(4);
+    const asOlder = savedRelationships(userDataDir);
+    expect(asOlder.references).toBeUndefined();
+    expect(asOlder.shapes[RELATED.retry]).toMatchObject({
+      basis: keys.plan,
+      branch_from: keys.first,
+      escalate_from: keys.first,
+    });
+
+    await test.step("upgrade: the window and the first mate read every relationship as before", async () => {
+      app = await launch();
+      expect(await relationshipsAsRead(app, keys)).toEqual(before);
+      await app.close();
+      app = undefined;
+      const saved = savedRelationships(userDataDir);
+      // Each name moved as saved, to the task it names; who named it and when were never saved.
+      expect(saved.references).toEqual(
+        recorded?.map((row) => ({ ...(row as object), actor: null, recorded_at: null })),
+      );
+      for (const shape of Object.values(saved.shapes))
+        for (const field of ["basis", "branch_from", "escalate_from"])
+          expect(shape ?? {}).not.toHaveProperty(field);
+    });
+
+    await test.step("restart: the same relationships read the same", async () => {
+      app = await launch();
+      expect(await relationshipsAsRead(app, keys)).toEqual(before);
+      await app.close();
+      app = undefined;
+    });
+
+    await test.step("a basis set after the upgrade reads back verified, and the plan lists it", async () => {
+      const { db, tasks } = taskWriters(userDataDir, Date.now());
+      try {
+        tasks.updateFields(RELATED.waiting, { basis: keys.plan }, "firstmate");
+      } finally {
+        db.close();
+      }
+      app = await launch();
+      const after = await relationshipsAsRead(app, keys);
+      expect(after.window[RELATED.waiting]).toEqual({
+        ...before.window[RELATED.waiting],
+        basis: { ref: keys.plan, verified: true },
+      });
+      expect(after.firstmate.waiting).toEqual({ ...before.firstmate.waiting, basis: keys.plan });
+      expect(builtOnKeys(after.firstmate).sort()).toEqual([keys.retry, keys.waiting].sort());
     });
   } finally {
     await app?.close();

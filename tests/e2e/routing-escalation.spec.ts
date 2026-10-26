@@ -56,6 +56,19 @@ function readTasks(userDataDir: string): TaskRow[] {
   );
 }
 
+/** The earlier attempt each task retries, as its relationship row records it. */
+function readRetries(userDataDir: string) {
+  return withDb(
+    userDataDir,
+    (db) =>
+      db
+        .prepare(
+          "SELECT task_id, ref, target_id FROM task_references WHERE kind = 'retry-of' ORDER BY task_id",
+        )
+        .all() as { task_id: string; ref: string; target_id: string | null }[],
+  );
+}
+
 function readEvents(userDataDir: string, taskId: string) {
   return withDb(
     userDataDir,
@@ -110,9 +123,12 @@ test("the captain's rejection escalates a task one tier up as a fresh crewmate",
   // One tier up, with the lineage stamped on the shape the row routed from.
   expect(fresh.difficulty).toBe("premium");
   expect(JSON.parse(fresh.shape_json ?? "{}")).toMatchObject({
-    escalate_from: rejected.key,
     escalation: { from: rejected.key, attempt: 1, floor: "premium" },
   });
+  // The attempt it retries is its relationship (INF-1296 piece 2), beside the stamp.
+  expect(readRetries(userDataDir)).toEqual([
+    { task_id: fresh.id, ref: rejected.key, target_id: rejected.id },
+  ]);
 
   // A FRESH crewmate (Q4 B), briefed with the failed attempt's report and
   // the captain's words - never a resume of the rejected session.
@@ -209,9 +225,7 @@ test("an escalate_from on an [fm-op] wake is refused and creates nothing", async
   expect(blocked.title).toContain(BLOCKED_REPORT_PROMPT_MARKER);
   expect(blocked.status).toBe("active");
   expect(blocked.closed_reason).toBeNull();
-  expect(
-    tasks.some((task) => JSON.parse(task.shape_json ?? "{}").escalate_from === blocked.key),
-  ).toBe(false);
+  expect(readRetries(userDataDir).some((retry) => retry.ref === blocked.key)).toBe(false);
   expect(readEvents(userDataDir, blocked.id).some((event) => event.kind === "escalated")).toBe(
     false,
   );

@@ -4,7 +4,9 @@ import type { Card } from "@shared/cards";
 import { CUSTOM_API_PROVIDER_PREFIX } from "@shared/customApi";
 import { hostEnv } from "../../src/core/hostEnv";
 import { mcpIntegration } from "../../src/core/integrations/providers/mcp/mcpIntegration";
-import { openDatabase } from "../../src/core/storage/db";
+import { openDatabase, TASK_REFERENCES_VERSION } from "../../src/core/storage/db";
+import { REFERENCE_SHAPE_FIELDS } from "../../src/core/storage/taskReferenceStore";
+import { dropViews } from "../../src/core/storage/views";
 import { atUtilityQos } from "../../src/core/utilityQos";
 import { INTEGRATION_KIND_NAMES } from "../../src/shared/integrations";
 import { deliveryForRecord, type RepoDelivery } from "../../src/shared/repos";
@@ -54,6 +56,8 @@ export type OlderProfile = {
   resultCopies: { taskId: string; at: number }[];
   /** Each card choice event whose card evidence alias was taken out. */
   decisions: number[];
+  /** Each task reference written back into the work shape field it was saved in. */
+  references: { taskId: string; field: string; ref: string }[];
 };
 
 /**
@@ -62,7 +66,45 @@ export type OlderProfile = {
  * returns says what it rewrote, so a journey can tell it was not a no-op.
  */
 export function asSavedByOlderRelease(userDataDir: string): OlderProfile {
-  return { customChecks: olderCustomChecks(userDataDir), ...olderTaskHistory(userDataDir) };
+  return {
+    customChecks: olderCustomChecks(userDataDir),
+    ...olderTaskHistory(userDataDir),
+    references: olderTaskReferences(userDataDir),
+  };
+}
+
+/**
+ * Each task's references as a release before INF-1296 piece 2 saved them:
+ * the name of its basis, the task it branches from and the attempt it
+ * retries in its work shape (`basis`, `branch_from`, `escalate_from`), with
+ * no table of their own. Its database had not run the migration that moved
+ * them, so the next launch runs it.
+ */
+function olderTaskReferences(userDataDir: string): OlderProfile["references"] {
+  if (!existsSync(join(userDataDir, "firstmate.db"))) return [];
+  const db = openDatabase(userDataDir);
+  try {
+    const rows = db
+      .prepare("SELECT task_id AS taskId, kind, ref FROM task_references ORDER BY task_id, kind")
+      .all() as { taskId: string; kind: keyof typeof REFERENCE_SHAPE_FIELDS; ref: string }[];
+    const write = db.prepare(
+      "UPDATE tasks SET shape_json = json_set(COALESCE(shape_json, '{}'), ?, ?) WHERE id = ?",
+    );
+    db.transaction(() => {
+      for (const row of rows)
+        write.run(`$.${REFERENCE_SHAPE_FIELDS[row.kind]}`, row.ref, row.taskId);
+      dropViews(db);
+      db.exec("DROP TABLE task_references");
+      db.prepare("DELETE FROM schema_migrations WHERE version = ?").run(TASK_REFERENCES_VERSION);
+    })();
+    return rows.map((row) => ({
+      taskId: row.taskId,
+      field: REFERENCE_SHAPE_FIELDS[row.kind],
+      ref: row.ref,
+    }));
+  } finally {
+    db.close();
+  }
 }
 
 /**

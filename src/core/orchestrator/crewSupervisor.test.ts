@@ -8603,6 +8603,13 @@ describe("the task graph (R1)", () => {
       ...intentOf("finish the chart"),
       constraints: [{ kind: "free" as const, text: "implement the approved chart" }],
     };
+    // The attempt the dropped one escalated from, so its lineage names real work.
+    const rejected = seedTask(tasks, {
+      id: "first-chart",
+      title: "Finish the chart",
+      status: "completed",
+      outcome: "Not right.",
+    });
     const old = seedTask(tasks, {
       id: "dropped-chart",
       title: "Finish the chart",
@@ -8618,8 +8625,8 @@ describe("the task graph (R1)", () => {
         autonomy_ask: false,
         rigor_ask: "reviewed",
         policies: { autonomy: true, rigor: "standard", revision: 3 },
-        escalation: { from: "SCR-100", attempt: 1, floor: "high" },
-        escalate_from: "SCR-100",
+        escalation: { from: rejected.key, attempt: 1, floor: "high" },
+        escalate_from: rejected.key,
         rigor: "quick",
         autonomy: false,
       },
@@ -9161,6 +9168,13 @@ describe("the task graph (R1)", () => {
     const { supervisor, tasks } = setup(crewmate, {
       routedModel: { provider: "openai-codex", id: "gpt-6-astra" },
     });
+    // The first attempt the lineage escalated from.
+    const first = seedTask(tasks, {
+      id: "attempt1",
+      title: "First go",
+      status: "completed",
+      outcome: "wrong",
+    });
     const spent = seedTask(tasks, {
       id: "attempt3",
       title: "Third go",
@@ -9169,8 +9183,8 @@ describe("the task graph (R1)", () => {
       worktreeDir: "/w/attempt3",
       shape: {
         kind: "fix",
-        escalate_from: "FM3K-1",
-        escalation: { from: "FM3K-1", attempt: 2, floor: "high" },
+        escalate_from: first.key,
+        escalation: { from: first.key, attempt: 2, floor: "high" },
       },
       outcome: "still wrong",
     });

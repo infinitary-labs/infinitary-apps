@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "saved-write-asks-reader",
+      "reason": "Add regression coverage for the shared journey reader's saved write permissions, using the real task writer and checking read-only behavior; no product behavior changes."
+    }
+  ]
+}

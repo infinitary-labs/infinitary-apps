@@ -112,12 +112,6 @@ export const integrationIdSchema = z
   .regex(/^[a-z][a-z0-9-]{0,47}$/, "an integration is named by its id");
 
 /**
- * The most actions one row holds: an MCP server that lists more is refused
- * in words when it is added, and keeps its first ones if its list grows.
- */
-export const INTEGRATION_ACTIONS_MAX = 256;
-
-/**
  * A secret slot's name, as its kind declares it: a word or an environment
  * variable's name ("api_key", "LINEAR_API_KEY").
  */
@@ -203,7 +197,7 @@ export const integrationViewSchema = z
      */
     runs: z.string().max(2048).optional(),
     /** An MCP server lists every tool it has, so a row may carry many. */
-    actions: z.array(integrationActionViewSchema).max(INTEGRATION_ACTIONS_MAX),
+    actions: z.array(integrationActionViewSchema),
     /** What it can tell a listening rule; absent where it tells of nothing. */
     events: z.array(integrationEventViewSchema).max(256).optional(),
     /** The keys its kind signs in with, kept or not; absent when it declares none. */

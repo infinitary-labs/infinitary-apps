@@ -139,6 +139,8 @@ Adding connects at once and keeps the server's own list (the captain's q7, "trus
 A tool the server marks read-only (`readOnlyHint`) reads; every other tool changes.
 A server with resources gains one more read, `read_resource`, which reads one by its address.
 Its reads and changes follow the same per-action rule ("The rules").
+Every page of the tool and resource lists is kept, without a total-action row cutoff, on addition and refresh.
+Existing tools keep their action names and approval rules when the list grows; new actions start by asking.
 The list is read again each time the program starts, and Check now starts it again.
 The servers, what each runs, its held network class and the lists it answered live in `userData/integrations/mcp.json`, 0600 in the same folder; what a server runs is never shown to the first mate or a crewmate.
 

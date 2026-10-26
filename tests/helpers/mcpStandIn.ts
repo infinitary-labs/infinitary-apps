@@ -57,7 +57,7 @@ function noteOf(book: NotesBook, id: number): string {
 }
 
 /** The server in the 2026-07-28 era, through the SDK's second version. */
-function modernNotes(book: NotesBook, added: () => void): McpServer {
+function modernNotes(book: NotesBook, added: () => void, notebooks: string[] = []): McpServer {
   const server = new McpServer(
     { name: "notes-stand-in", version: "1.0.0" },
     { capabilities: { resources: { subscribe: true } } },
@@ -85,6 +85,17 @@ function modernNotes(book: NotesBook, added: () => void): McpServer {
       return { content: [{ type: "text", text: `Added note ${book.notes.length}.` }] };
     },
   );
+  // INF-1408: a notes workspace can expose one reader per notebook.
+  for (const notebook of notebooks)
+    server.registerTool(
+      notebook,
+      {
+        description: `Reads the ${notebook} notebook.`,
+        inputSchema: z.object({}),
+        annotations: { readOnlyHint: true },
+      },
+      async () => ({ content: [{ type: "text", text: `${notebook}: ${listed(book)}` }] }),
+    );
   server.registerResource(
     "notes",
     NOTES_URI,
@@ -95,7 +106,11 @@ function modernNotes(book: NotesBook, added: () => void): McpServer {
 }
 
 /** The server in the 2025 era, through the SDK's first version. */
-function legacyNotes(book: NotesBook, added: () => void): LegacyMcpServer {
+function legacyNotes(
+  book: NotesBook,
+  added: () => void,
+  notebooks: string[] = [],
+): LegacyMcpServer {
   const server = new LegacyMcpServer(
     { name: "notes-stand-in", version: "1.0.0" },
     { capabilities: { resources: { subscribe: true } } },
@@ -121,6 +136,17 @@ function legacyNotes(book: NotesBook, added: () => void): LegacyMcpServer {
       return { content: [{ type: "text", text: `Added note ${book.notes.length}.` }] };
     },
   );
+  // INF-1408: a notes workspace can expose one reader per notebook.
+  for (const notebook of notebooks)
+    server.registerTool(
+      notebook,
+      {
+        description: `Reads the ${notebook} notebook.`,
+        inputSchema: {},
+        annotations: { readOnlyHint: true },
+      },
+      async () => ({ content: [{ type: "text", text: `${notebook}: ${listed(book)}` }] }),
+    );
   server.registerResource(
     "notes",
     NOTES_URI,
@@ -142,13 +168,18 @@ export type NotesHttpServer = {
 };
 
 /** Serve the notes over Streamable HTTP on 127.0.0.1, in one era. */
-export async function serveNotesHttp(era: StandInEra): Promise<NotesHttpServer> {
+export async function serveNotesHttp(
+  era: StandInEra,
+  notebooks: () => string[] = () => [],
+): Promise<NotesHttpServer> {
   const book: NotesBook = { notes: [...SAMPLE_NOTES] };
   let tell: () => void;
   let stop: () => Promise<void>;
   let respond: (request: IncomingMessage, reply: ServerResponse, body: unknown) => Promise<void>;
   if (era === "modern") {
-    const handler = createMcpHandler(() => modernNotes(book, () => tell()), { legacy: "reject" });
+    const handler = createMcpHandler(() => modernNotes(book, () => tell(), notebooks()), {
+      legacy: "reject",
+    });
     tell = () => handler.notify.resourceUpdated(NOTES_URI);
     stop = () => handler.close();
     respond = async (request, reply, body) => {
@@ -192,7 +223,7 @@ export async function serveNotesHttp(era: StandInEra): Promise<NotesHttpServer> 
           );
           return;
         }
-        const server = legacyNotes(book, () => tell());
+        const server = legacyNotes(book, () => tell(), notebooks());
         const transport: LegacyHttpTransport = new LegacyHttpTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (sessionId) => {

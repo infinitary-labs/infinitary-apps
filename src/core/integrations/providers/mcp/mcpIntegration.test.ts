@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join, resolve } from "node:path";
+import { integrationsViewSchema } from "@shared/integrations";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import {
@@ -634,4 +635,80 @@ describe("two additions that overlap (INF-948)", () => {
     );
     expect(answer.text).toContain("Not run: Studio-notes's add_note");
   });
+});
+
+// INF-1408 and the captain's q7 on INF-775: trust the complete server list,
+// on addition and on growth, without changing existing identities or consent.
+describe.each(["legacy", "modern"] as const)("a large %s notes workspace", (era) => {
+  it.each([false, true])(
+    "keeps every action reachable (large at addition: %s)",
+    async (largeAtAdd) => {
+      const root = scratchDir("mcp-complete-list-");
+      const { service, tasks, close } = serviceIn(root);
+      const notebooks = Array.from({ length: 300 }, (_, index) => `notebook_${index + 1}`);
+      let names = largeAtAdd ? notebooks : notebooks.slice(0, 2);
+      const http = await serveNotesHttp(era, () => names);
+      opened.push({ service, http, close });
+      const { id } = await service.add("mcp", { name: "Notebooks", runs: http.url });
+      service.configure(id, { actions: { get_note: false } });
+      service.setRule(id, "list_notes", true);
+      names = notebooks;
+      await service.check(id);
+
+      // Settings' published view and agent discovery must both carry the tail.
+      const row = integrationsViewSchema.parse(service.view()).integrations[0];
+      expect(row?.actions).toHaveLength(notebooks.length + 4);
+      expect(row?.actions.find((action) => action.name === "get_note")?.rule).toBe("never");
+      expect(row?.actions.find((action) => action.name === "list_notes")?.rule).toBe("allow");
+      expect(row?.actions.find((action) => action.name === "notebook_300")?.rule).toBe("ask");
+      expect(JSON.stringify(service.show("Notebooks"))).toContain("notebook_300");
+      expect(
+        JSON.parse(readFileSync(join(root, "mcp.json"), "utf8")).servers[0].tools,
+      ).toHaveLength(notebooks.length + 3);
+
+      const answer = await service.call(
+        task,
+        "Notebooks",
+        "notebook_300",
+        {},
+        "Read the last notebook.",
+      );
+      expect(answer.text).toContain("The app raised its approval card");
+      const ask = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
+      expect(ask).toMatchObject({ action: "notebook_300", integration: id });
+      const clicked = await service.sendAsk(task.taskId, ask?.id ?? "");
+      expect(clicked.outcome).toEqual({ kind: "ran" });
+      expect(clicked.answer).toContain(`notebook_300: 1. ${SAMPLE_NOTES[0]}`);
+      const resource = await service.call(
+        task,
+        "Notebooks",
+        "read_resource",
+        { uri: NOTES_URI },
+        "Read all notes.",
+      );
+      expect(resource.text).toContain("The app raised its approval card");
+      const resourceAsk = tasks
+        .get(task.taskId)
+        ?.delivery?.writeAsks?.find(
+          (kept) => kept.kind === "integration" && kept.action === "read_resource",
+        );
+      const read = await service.sendAsk(task.taskId, resourceAsk?.id ?? "");
+      expect(read.outcome).toEqual({ kind: "ran" });
+      expect(read.answer).toContain(SAMPLE_NOTES[0]);
+      console.info(
+        JSON.stringify({
+          era,
+          largeAtAdd,
+          actions: row?.actions.length,
+          lastAction: ask?.kind === "integration" ? ask.action : undefined,
+          outcome: clicked.outcome,
+          answer: clicked.answer,
+          existingRules: row?.actions.filter((action) =>
+            ["get_note", "list_notes"].includes(action.name),
+          ),
+          resourceOutcome: read.outcome,
+        }),
+      );
+    },
+  );
 });

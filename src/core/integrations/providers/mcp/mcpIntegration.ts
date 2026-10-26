@@ -13,11 +13,7 @@ import {
   UnauthorizedError,
 } from "@modelcontextprotocol/client";
 import { StdioClientTransport } from "@modelcontextprotocol/client/stdio";
-import {
-  INTEGRATION_ACTIONS_MAX,
-  INTEGRATION_KIND_NAMES,
-  integrationMcpAddSchema,
-} from "@shared/integrations";
+import { INTEGRATION_KIND_NAMES, integrationMcpAddSchema } from "@shared/integrations";
 import { z } from "zod";
 import { findOnPath, isExecutable } from "../../../userBin";
 import {
@@ -441,26 +437,20 @@ function savedLists(
   lists: { tools: Tool[]; resources: Resource[]; subscribe: boolean },
   before?: McpSavedServer,
 ): Pick<McpSavedServer, "tools" | "resources" | "subscribe"> {
-  const room = INTEGRATION_ACTIONS_MAX - (lists.resources.length > 0 ? 1 : 0);
-  if (!before && lists.tools.length > room)
-    throw new McpConnectError(
-      `The server lists ${lists.tools.length} tools; a row holds ${room}. Choose a server with fewer.`,
-    );
-  const kept = lists.tools.slice(0, room);
   const taken = new Set<string>(lists.resources.length > 0 ? [MCP_READ_RESOURCE] : []);
   const earlier = new Map((before?.tools ?? []).map((tool) => [tool.tool, tool.action]));
   const names = new Map<string, string>();
-  for (const tool of kept) {
+  for (const tool of lists.tools) {
     const name = earlier.get(tool.name);
     if (name && !taken.has(name)) {
       taken.add(name);
       names.set(tool.name, name);
     }
   }
-  for (const tool of kept)
+  for (const tool of lists.tools)
     if (!names.has(tool.name)) names.set(tool.name, actionName(tool.name, taken));
   return {
-    tools: kept.map(
+    tools: lists.tools.map(
       (tool): McpSavedTool => ({
         tool: tool.name,
         action: names.get(tool.name) as string,

@@ -1,0 +1,88 @@
+diff --git a/dist/cjs/file-utils.js b/dist/cjs/file-utils.js
+index 269a550b08f21e35e8b817e75c1310df296d9d88..753866693173f9bb71c0f24ae501e769723f8bc2 100644
+--- a/dist/cjs/file-utils.js
++++ b/dist/cjs/file-utils.js	
+@@ -47,7 +47,30 @@ const cross_spawn_promise_1 = require("@malept/cross-spawn-promise");
+ const fs = __importStar(require("fs-extra"));
+ const path = __importStar(require("path"));
+ const node_stream_1 = require("node:stream");
++const promises_1 = require("node:fs/promises");
+ const MACHO_PREFIX = 'Mach-O ';
++// Thin and fat Mach-O magic numbers in either byte order. A file that starts
++// with none of them cannot be one, so "file" is spawned only for the rest.
++const MACHO_MAGIC_HEADERS = new Set([
++    'feedface', 'cefaedfe', 'feedfacf', 'cffaedfe',
++    'cafebabe', 'bebafeca', 'cafebabf', 'bfbafeca',
++]);
++const mightBeMachO = async (p) => {
++    let handle;
++    try {
++        handle = await (0, promises_1.open)(p, 'r');
++        const header = Buffer.alloc(4);
++        const { bytesRead } = await handle.read(header, 0, 4, 0);
++        return bytesRead === 4 && MACHO_MAGIC_HEADERS.has(header.toString('hex'));
++    }
++    catch (_a) {
++        // An unreadable header keeps the existing "file" inspection.
++        return true;
++    }
++    finally {
++        await (handle === null || handle === void 0 ? void 0 : handle.close().catch(() => { }));
++    }
++};
+ var AppFileType;
+ (function (AppFileType) {
+     AppFileType[AppFileType["MACHO"] = 0] = "MACHO";
+@@ -74,7 +97,7 @@ const getAllAppFiles = async (appPath) => {
+         if (info.isFile()) {
+             let fileType = AppFileType.PLAIN;
+             var fileOutput = '';
+-            try {
++            if (await mightBeMachO(p)) try {
+                 fileOutput = await (0, cross_spawn_promise_1.spawn)('file', ['--brief', '--no-pad', p]);
+             }
+             catch (e) {
+diff --git a/dist/esm/file-utils.js b/dist/esm/file-utils.js
+index 9167870351984be6680f9a1e6c6dd6af7db170f3..44f5a50579caf478ac74968f0b863da47fc40d5b 100644
+--- a/dist/esm/file-utils.js
++++ b/dist/esm/file-utils.js	
+@@ -21,7 +21,30 @@ import { spawn, ExitCodeError } from '@malept/cross-spawn-promise';
+ import * as fs from 'fs-extra';
+ import * as path from 'path';
+ import { promises as stream } from 'node:stream';
++import { open } from 'node:fs/promises';
+ const MACHO_PREFIX = 'Mach-O ';
++// Thin and fat Mach-O magic numbers in either byte order. A file that starts
++// with none of them cannot be one, so "file" is spawned only for the rest.
++const MACHO_MAGIC_HEADERS = new Set([
++    'feedface', 'cefaedfe', 'feedfacf', 'cffaedfe',
++    'cafebabe', 'bebafeca', 'cafebabf', 'bfbafeca',
++]);
++const mightBeMachO = async (p) => {
++    let handle;
++    try {
++        handle = await open(p, 'r');
++        const header = Buffer.alloc(4);
++        const { bytesRead } = await handle.read(header, 0, 4, 0);
++        return bytesRead === 4 && MACHO_MAGIC_HEADERS.has(header.toString('hex'));
++    }
++    catch (_a) {
++        // An unreadable header keeps the existing "file" inspection.
++        return true;
++    }
++    finally {
++        await (handle === null || handle === void 0 ? void 0 : handle.close().catch(() => { }));
++    }
++};
+ export var AppFileType;
+ (function (AppFileType) {
+     AppFileType[AppFileType["MACHO"] = 0] = "MACHO";
+@@ -48,7 +71,7 @@ export const getAllAppFiles = async (appPath) => {
+         if (info.isFile()) {
+             let fileType = AppFileType.PLAIN;
+             var fileOutput = '';
+-            try {
++            if (await mightBeMachO(p)) try {
+                 fileOutput = await spawn('file', ['--brief', '--no-pad', p]);
+             }
+             catch (e) {

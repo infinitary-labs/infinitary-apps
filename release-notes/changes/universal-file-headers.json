@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "universal-file-headers",
+      "reason": "Build: the universal Mac merge checks each file's first four bytes before asking `file` about it, so packaging spawns far fewer processes; every packaged file keeps the same type and content."
+    }
+  ]
+}

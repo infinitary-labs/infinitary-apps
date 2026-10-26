@@ -119,6 +119,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/release-contract.test.ts` | node, brew | 10 s default, 180 s on brew style |
 | `tests/release-publication.test.ts` | the release workflow's tap and release-asset scripts: real git on a stand-in tap, the publication CLI, a stand-in `gh`, `brew` and `curl` | 50 s |
 | `tests/release-notes.test.ts` | the release-notes gate: real git on scratch repositories with commits and tags, the `scripts/release-notes.ts` CLI | 10 s |
+| `tests/universal-file-types.test.ts` | the system `file` behind a counting stand-in, over Electron's distribution and darwin prebuilds | 15 s (Mac whole file 2.4 s) |
 | `tests/cask-consumers.test.ts` | a scratch clone of the installed Homebrew (macOS only, skipped without it), git, ditto, the publication CLI | 340 s |
 | `src/core/hostEnv.test.ts` | stub login shells | 10 s on the hang test |
 | `tests/export-tasks.test.ts` | node, pnpm | 60 s |

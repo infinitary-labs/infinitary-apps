@@ -35,10 +35,15 @@ allowBuilds:
   # dugite's own pinned manifest instead (docs/forge.md "The app's own git").
   dugite: false
 minimumReleaseAge: 0
-# The @vitest/runner, vitest and playwright patches, and the load-clock hunks
-# of the playwright-core one, are ours and stay across upgrades; re-make them
-# on an upgrade. The other patches carry one fix their package's next release
+# The @electron/universal, @vitest/runner, vitest and playwright patches, and
+# the load-clock hunks of the playwright-core one, are ours and stay across
+# upgrades; re-make them on an upgrade. The other patches carry one fix their package's next release
 # already has; drop it when the package is upgraded to that release.
+# - @electron/universal: ours, kept across upgrades. The
+#   universal merge reads each file's first four bytes and asks `file` only
+#   when they could start a Mach-O or cannot be read, instead of spawning
+#   `file` for every file of both slices; every classification stays the same
+#   (INF-1418; docs/architecture.md section 10). Re-make it on an upgrade.
 # - @vitest/runner and vitest: ours, kept across upgrades. On an ordinary run a
 #   test's or hook's limit, and an expect.poll or vi.waitFor window, read the
 #   load clock tests/helpers/budgets.ts starts in each worker and end by their
@@ -58,6 +63,7 @@ minimumReleaseAge: 0
 #   instead of failing the test with "Target crashed" (docs/e2e-contracts.md,
 #   "A crashed page"); only that hunk drops on the upgrade.
 patchedDependencies:
+  '@electron/universal@2.0.3': patches/@electron__universal@2.0.3.patch
   '@vitest/runner@4.1.10': patches/@vitest__runner@4.1.10.patch
   electron-vite@5.0.0: patches/electron-vite@5.0.0.patch
   playwright-core@1.62.1: patches/playwright-core@1.62.1.patch

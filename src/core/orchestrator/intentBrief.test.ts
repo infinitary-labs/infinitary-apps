@@ -1,6 +1,7 @@
 import { reviewerOverrideWords } from "@shared/holds";
 import { describe, expect, it } from "vitest";
 import {
+  amendBriefGoal,
   basisSectionParts,
   briefText,
   deliverableFor,
@@ -58,7 +59,7 @@ describe("parseSpawnIntent", () => {
 });
 
 describe("renderIntentBrief", () => {
-  it("renders the fixed template: goal, verbatim user words, constraints, delivery", () => {
+  it("renders the fixed template: verbatim user words outrank the goal, constraints and delivery (INF-1366)", () => {
     const brief = renderIntentBrief(
       {
         goal: "The meter works",
@@ -74,7 +75,13 @@ describe("renderIntentBrief", () => {
       "direct-pr",
     );
     const lines = brief.split("\n");
-    expect(lines[0]).toBe("Goal: The meter works");
+    expect(lines.slice(0, 5)).toEqual([
+      "The user's words, verbatim - these outrank every elaboration below, including your own:",
+      "fix the meter",
+      "",
+      "Goal: The meter works",
+      "",
+    ]);
     expect(brief).toContain(
       "The user's words, verbatim - these outrank every elaboration below, including your own:\nfix the meter",
     );
@@ -87,6 +94,21 @@ describe("renderIntentBrief", () => {
     expect(brief).toContain("Delivery note: stack on top of PR 41");
     // The user's words come before every constraint elaboration.
     expect(brief.indexOf("fix the meter")).toBeLessThan(brief.indexOf("Constraints:"));
+  });
+
+  it("amends the host goal without touching a goal line in verbatim words (INF-1369)", () => {
+    const intent = {
+      goal: "Original scope",
+      userWords: "Goal: Original scope\nKeep my words as written.",
+      constraints: [{ kind: "free" as const, text: "leave phone checks as they are" }],
+    };
+    const before = renderIntentBrief(intent, "direct-pr");
+    expect(amendBriefGoal(before, intent.goal, "Corrected scope", intent.userWords)).toBe(
+      renderIntentBrief({ ...intent, goal: "Corrected scope" }, "direct-pr"),
+    );
+    expect(
+      amendBriefGoal("Not a host brief", intent.goal, "Corrected scope", intent.userWords),
+    ).toBe("Not a host brief");
   });
 
   it("carries the personal-ui kind and refuses an unknown one", () => {
@@ -295,11 +317,13 @@ describe("renderReviewBrief (delivery rigor phase 2, review-before-PR)", () => {
       "direct-pr",
       facts,
     );
-    expect(
-      brief.startsWith(
-        'Goal: review the change for "Fix the flaky meter test" and report findings.',
-      ),
-    ).toBe(true);
+    // INF-1366: the review goal is also an elaboration of the captain's words.
+    expect(brief.split("\n").slice(0, 4)).toEqual([
+      "The user's words, verbatim - these outrank every elaboration below, including your own:",
+      "make the meter test stop flaking",
+      "",
+      'Goal: review the change for "Fix the flaky meter test" and report findings.',
+    ]);
     expect(brief).toContain(
       "The user's words, verbatim - these outrank every elaboration below, including your own:\nmake the meter test stop flaking",
     );

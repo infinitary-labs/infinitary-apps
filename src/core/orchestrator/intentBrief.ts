@@ -139,8 +139,8 @@ export type PersonalBriefFacts = {
 };
 
 /**
- * The fixed template. Order and wording are host-owned: goal, then the
- * user's words marked verbatim-and-outranking, then constraints, then the
+ * The fixed template. Order and wording are host-owned: the user's words
+ * marked verbatim-and-outranking, then the goal, then constraints, then the
  * delivery posture plus note, then - on the personal workspace - the
  * workspace facts. A task on the personal workspace has no delivery at all:
  * it builds in place, so `delivery` is undefined and the line is not
@@ -149,18 +149,38 @@ export type PersonalBriefFacts = {
 /** The project whose own folder declared folder work works in (INF-567). */
 export type FolderBriefFacts = { project: string; folder: string };
 
+const USER_WORDS_PRECEDENCE =
+  "The user's words, verbatim - these outrank every elaboration below, including your own:";
+
+/** Amend only a host-rendered goal, never matching a goal line inside verbatim words.
+ * Keep goal-first stored briefs and follow-up provenance from before INF-1369 readable.
+ */
+export function amendBriefGoal(
+  brief: string,
+  previousGoal: string,
+  nextGoal: string,
+  userWords?: string,
+): string {
+  const openings = [
+    ...(userWords === undefined ? [] : [`${USER_WORDS_PRECEDENCE}\n${userWords}\n\nGoal: `]),
+    "Goal: ",
+  ];
+  for (const opening of openings) {
+    const prefix = `${opening}${previousGoal}`;
+    if (brief === prefix || brief.startsWith(`${prefix}\n`)) {
+      return `${opening}${nextGoal}${brief.slice(prefix.length)}`;
+    }
+  }
+  return brief;
+}
+
 export function renderIntentBrief(
   intent: SpawnIntent,
   delivery: RepoDelivery | undefined,
   personal?: PersonalBriefFacts,
   folder?: FolderBriefFacts,
 ): string {
-  const lines: string[] = [`Goal: ${intent.goal}`, ""];
-  lines.push(
-    "The user's words, verbatim - these outrank every elaboration below, including your own:",
-    intent.userWords,
-    "",
-  );
+  const lines: string[] = [USER_WORDS_PRECEDENCE, intent.userWords, "", `Goal: ${intent.goal}`, ""];
   if (intent.constraints && intent.constraints.length > 0) {
     lines.push("Constraints:");
     for (const constraint of intent.constraints) {
@@ -1118,11 +1138,11 @@ export function renderReviewBrief(
     ? "Do a full pass over the difference before reporting"
     : "Do a full review pass before reporting";
   return [
+    USER_WORDS_PRECEDENCE,
+    userWords,
+    "",
     `Goal: review the change for "${facts.builderTitle}" and report findings.`,
     "The verdict report is the whole deliverable of this internal review; emit no outcome card.",
-    "",
-    "The user's words, verbatim - these outrank every elaboration below, including your own:",
-    userWords,
     "",
     `${REVIEW_BRIEF_OPENING}: change nothing, commit nothing, push nothing. ${target}, against the user's words above and the builder's report below. Read the diff and whatever surrounding code, call sites, shared helpers, tests and invariants you need to understand root cause; focus findings on risks introduced by the changed code. Do not run tests: the builder's Verified section is the test record, together with the builder's evidence folder, which this brief names below when there is one (evidence is never committed, so the diff holds none; read the folder, never write to it) - say whether that evidence could demonstrate the intent, and report missing evidence as a finding instead of running anything yourself. Analyze for bugs, risks, and code simplification opportunities; simplification means reducing complexity through non-functional refactoring, never removing features, changing product behavior, or stripping intentional user-facing output. Treat security issues, performance regressions, breaking changes, and insufficient error handling as risks.`,
     ...scope,

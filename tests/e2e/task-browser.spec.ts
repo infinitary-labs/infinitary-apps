@@ -872,9 +872,7 @@ test("a crewmate asks the captain to sign in, and he takes its browser, signs in
       );
     /** The crewmate's own model calls: none may go out while the captain holds its browser. */
     const crewmateCalls = () =>
-      (launched.mockProvider?.requestBodies() ?? []).filter((body) =>
-        providerMessages(body)[0]?.text.startsWith(`Goal: Complete the task "${title}"`),
-      );
+      (launched.mockProvider?.requestBodies() ?? []).filter((body) => isTaskRequest(body, title));
     const strip = page.locator(`${SHOWN_ENTRY} [data-card-attachment="browser"]`);
     const cardRegion = shownCard(page, MOCK_HANDOFF_CARD_TITLE);
     const task =
@@ -1118,9 +1116,7 @@ test("the captain takes a task's browser while its crewmate's command runs, and 
       return (row ? await window.infinitary.tasks.detail(row.id) : null) as TaskDetail;
     }, title);
   const crewmateCalls = () =>
-    (launched.mockProvider?.requestBodies() ?? []).filter((body) =>
-      providerMessages(body)[0]?.text.startsWith(`Goal: Complete the task "${title}"`),
-    );
+    (launched.mockProvider?.requestBodies() ?? []).filter((body) => isTaskRequest(body, title));
   const openView = async (task: TaskDetail): Promise<void> => {
     await expandDock(page, "now");
     await pressRow(page, task.key);
@@ -1590,10 +1586,19 @@ function savedCardRegion(): Locator {
   return shownCard(launched.page, MOCK_SAVED_CARD_TITLE);
 }
 
+/** INF-1366: the captain's words precede the goal; identify the task by its goal line, not its position. */
+function isTaskRequest(body: string, title: string): boolean {
+  return (
+    providerMessages(body)[0]
+      ?.text.split("\n")
+      .some((line) => line.startsWith(`Goal: Complete the task "${title}"`)) ?? false
+  );
+}
+
 /** A crewmate's own model calls, by its task's title. */
 function crewmateCalls(title: string): string[] {
   return (launched.mockProvider?.requestBodies() ?? []).filter((body) =>
-    providerMessages(body)[0]?.text.startsWith(`Goal: Complete the task "${title}"`),
+    isTaskRequest(body, title),
   );
 }
 

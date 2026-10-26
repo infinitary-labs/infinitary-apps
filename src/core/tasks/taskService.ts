@@ -87,7 +87,7 @@ import {
   type DeliveryFacts,
   JUDGEABLE_DELIVERY,
 } from "../orchestrator/answerDelivery";
-import type { BriefPart, SpawnIntent } from "../orchestrator/intentBrief";
+import { amendBriefGoal, type BriefPart, type SpawnIntent } from "../orchestrator/intentBrief";
 import { KIND_SOURCE } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import {
@@ -2160,9 +2160,13 @@ export class TaskService {
         if (record.intent)
           update.intent = { ...record.intent, goal: patch.goal ?? patch.title ?? record.title };
         const previousGoal = record.intent?.goal ?? record.goal;
-        const prefix = previousGoal == null ? undefined : `Goal: ${previousGoal}`;
-        if (prefix && (record.prompt === prefix || record.prompt.startsWith(`${prefix}\n`))) {
-          update.prompt = `Goal: ${patch.goal ?? patch.title ?? record.title}${record.prompt.slice(prefix.length)}`;
+        if (previousGoal != null) {
+          update.prompt = amendBriefGoal(
+            record.prompt,
+            previousGoal,
+            patch.goal ?? patch.title ?? record.title,
+            record.intent?.userWords,
+          );
         }
         changes.push(patch.goal ? `goal "${patch.goal}"` : "goal cleared");
       }

@@ -34,9 +34,9 @@ struct PhoneCards: View {
                 PhoneCrewScene(session: session)
                     .frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, PhoneTheme.space5)
             }
-            // INF-589 item 11: with no card to page, the pager hides; Past cards stays reachable while there are any.
+            // INF-589 item 11: with no card to page, the pager hides; Minimized stays reachable while there are any.
             if let restoreProblem { Text(restoreProblem).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("restore-error") }
-            if !session.stack.isEmpty || !session.pastCards.isEmpty || !session.minimizedCards.isEmpty { pager }
+            if !session.stack.isEmpty || !session.minimizedCards.isEmpty { pager }
         }
         .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: card == nil ? .infinity : PhoneColumn.width).frame(maxWidth: .infinity)
         .background(PhoneTheme.background)
@@ -81,13 +81,8 @@ struct PhoneCards: View {
                         }
                     }
                 }
-                if !session.pastCards.isEmpty {
-                    Section("Past cards") {
-                        ForEach(session.pastCards) { item in Button(item.title) { past = item } }
-                    }
-                }
             } label: {
-                Text(past != nil ? "Past card" : session.stack.isEmpty ? "Past cards" : "\(index + 1) of \(session.stack.count)")
+                Text(past != nil ? "Past card" : session.stack.isEmpty ? "Minimized" : "\(index + 1) of \(session.stack.count)")
                     .font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
                     .frame(minWidth: 44, minHeight: 44)
             }.accessibilityIdentifier("card-pager")

@@ -60,8 +60,8 @@ A row has a semantic kind dot, the computer-authored words, an optional task key
 The exact local date and time remains available to VoiceOver; an empty Activity says “No activity yet”.
 
 Home shows one card at a time, with a peek of the next card at its right edge and a quiet pager below it: two chevrons around the count; an ordinary arrival never replaces the card being read.
-The count opens a menu of the current titles, then Past cards; the next chevron carries a dot while an unread card lies ahead.
-With no card to page the chevrons and count hide; a lone Past cards menu stays while there are past cards, and nothing shows when there are none.
+The count opens a menu of the current titles, then Minimized; the next chevron carries a dot while an unread card lies ahead.
+With no card to page the chevrons and count hide; a lone Minimized menu stays while there are minimized cards, and nothing shows when there are none.
 Home carries a dot in the strip while a card is not yet read, and VoiceOver hears the count.
 The peek stays within the shorter of the foreground card and its scrolling viewport, never filling the empty space beneath a short card or reaching the pager.
 Swiping the native card head changes cards without intercepting the body's own sliders, canvases or pinch gestures.

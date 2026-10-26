@@ -253,13 +253,11 @@ import XCTest
         // INF-1060: as on the Mac, the empty stage is the character alone, with no line under it.
         XCTAssertTrue(app.otherElements["phone-character"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == 'No cards to read yet.'")).count, 0)
-        // INF-589 item 11: with no card to page, the chevrons and count hide; the cards just closed stay under Past cards.
+        // INF-589 item 11: with no card to page, the chevrons and count hide; the pager hides entirely when nothing is minimized.
         for id in ["previous-card", "next-card"] {
             XCTAssertFalse(app.buttons[id].exists, "\(id) shows on an empty stage")
         }
-        let pastOnly = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
-        XCTAssertTrue(pastOnly.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertEqual(pastOnly.label, "Past cards")
+        XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch.exists, "The pager shows on an empty stage")
         _ = try await home("capture-character-start")
         try await appearances("empty-stage")
         _ = try await home("capture-stop")
@@ -816,10 +814,7 @@ import XCTest
         picture("past-card")
         app.buttons["close-card"].tap()
         _ = try await home("show-past")
-        XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
-        app.buttons["close-card"].tap()
-        // INF-589 item 7: the answered card is listed under Past cards in the pager's own menu.
-        showCard(choice)
+        // INF-589 item 7: an answered card opened from its notice shows as a past card.
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch.label, "Past card")
         app.buttons["close-card"].tap()
@@ -974,10 +969,10 @@ import XCTest
         XCTAssertTrue(cardHeading(heroTitle).waitForAbsence(timeout: 10), app.debugDescription)
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
         XCTAssertTrue(pager.waitForPresence(timeout: 10), app.debugDescription)
-        // INF-1060: the empty stage's lone menu keeps one name, with no Minimized label under the character.
-        XCTAssertEqual(pager.label, "Past cards")
+        // INF-1060: the empty stage's lone menu is named Minimized.
+        XCTAssertEqual(pager.label, "Minimized")
         pager.tap()
-        // The answered choice card shares the title under Past cards; the one to open is listed under Minimized.
+        // The one to open is listed under Minimized.
         let restore = app.buttons.matching(identifier: "minimized-card").matching(NSPredicate(format: "label == %@", heroTitle)).firstMatch
         XCTAssertTrue(restore.waitForPresence(timeout: 10), app.debugDescription)
         picture("cards-minimized-menu")

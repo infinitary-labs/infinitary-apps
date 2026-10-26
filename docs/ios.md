@@ -104,8 +104,8 @@ Neither reconnection nor discovery queues or retries a mutation.
 ## Cards on the phone
 
 `PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
-It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles, then a Minimized section and then a Past cards section.
-With no current card the stage shows the character alone, as the Mac does, and the chevrons and count hide, leaving a lone menu named Past cards only while minimized or past cards exist.
+It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles, then a Minimized section.
+With no current card the stage shows the character alone, as the Mac does, and the chevrons and count hide, leaving a lone menu named Minimized only while minimized cards exist.
 The stack follows the Mac's: a card minimized on any Mac leaves the phone's stack, count and badge, and opening it from the Minimized section sends `inf:cards:minimize` with `false`, which brings it back on every Mac too.
 A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments, thread and reply row scroll between them in one native scroller.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.

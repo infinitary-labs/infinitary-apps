@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-past-cards-button-removed",
+      "kind": "fix",
+      "area": "cards",
+      "title": "The phone no longer shows a Past cards button",
+      "body": "The iPhone and iPad home screen no longer has a Past cards button or list, since the Mac has none there. Cards waiting under Minimized are still one tap away, and a past card still opens from its notice.",
+      "noPicture": "The change removes a button from a view that otherwise looks the same; no new picture shows an absence.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

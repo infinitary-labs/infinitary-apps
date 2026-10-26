@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-journey-typing-focus",
+      "reason": "Test-only repair: address and card-reply journeys observe keyboard focus through the message box's existing helper, dismissing native keyboard interruptions without changing app behavior or weakening assertions."
+    }
+  ]
+}

@@ -103,6 +103,13 @@ enum phoneTestSession {
     XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in input.isEnabled && input.isHittable },
         object: input, timeout: 10), .completed, app.debugDescription)
     input.tap()
+    // INF-1377: the first letter keyboard can show iOS's typing guide. Dismiss that
+    // known interruption before observing focus; never retry a tap or send priming text.
+    let guide = app.staticTexts["Speed up your typing by sliding your finger across the letters to compose a word."]
+    if guide.exists {
+        app.buttons["Continue"].tap()
+        XCTAssertTrue(guide.waitForAbsence(timeout: 10), app.debugDescription)
+    }
     XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "hasKeyboardFocus == true"),
         object: input, timeout: 10), .completed, app.debugDescription)
 }

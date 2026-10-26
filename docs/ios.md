@@ -382,7 +382,9 @@ The phone launcher starts the Node load clock for its failure timers too, and th
 A graded run keeps each original wall-clock budget, and the launcher writes that reading into every test target's own test plan.
 XCTest timeouts are enabled in both modes: ordinary tests have 1200-second default and maximum allowances, while graded tests use Xcode's own allowances.
 `PhoneWaitsTests` observes a real delayed file across a stalled reader, fails a missing file, expires a stalled clock at its wall cap and checks direct short-window observation.
-Typing waits for the message box's actual keyboard focus, and a choice after paging waits for the restored native form reading as well as its enabled action.
+Message-box, card-reply and address-sheet typing share `focusForPhoneTyping`: one tap, dismissal of iOS's first-use typing guide if shown, then observation of the field's actual keyboard focus before typing.
+The address journey dismisses the iPad number-pad popover on the sheet's title and observes the keyboard leaving before focusing the address; it never retries the field tap or types a priming character.
+A choice after paging waits for the restored native form reading as well as its enabled action.
 The gate starts `simulator-live.log` before XCTest starts, so a failed test that tears down the simulator domain cannot erase the earlier app, WebKit and system log.
 In the talk part, the first actual UIKit keyboard-queue timeout triggers a one-second stack sample after the runner confirms that PID still belongs to its own simulator's app.
 It retains `keyboard-timeout-stack.log` and the capture outcome, joins the sampler before deleting the simulator, and never retries a capture or changes the photo-selection, tap or focus assertions.

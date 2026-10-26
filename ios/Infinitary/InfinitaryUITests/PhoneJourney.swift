@@ -414,12 +414,18 @@ import XCTest
             app.buttons["join-by-address"].tap()
             let field = app.textFields["ssh-address"]
             XCTAssertTrue(field.waitForPresence(timeout: 10), app.debugDescription)
-            app.textFields["ssh-port"].tap()
-            app.textFields["ssh-port"].typeText(String(port))
-            field.tap()
-            if app.staticTexts["Speed up your typing by sliding your finger across the letters to compose a word."].exists {
-                app.buttons["Continue"].tap()
+            // INF-1377 / INF-1265: the iPad number-pad popover intercepts the next field's tap.
+            let portField = app.textFields["ssh-port"]
+            focusForPhoneTyping(portField, in: app)
+            portField.typeText(String(port))
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                app.navigationBars["Join by its address"].tap()
+                // UIKit retains a zero-height, offscreen Keyboard after hiding the popover.
+                XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in
+                    self.app.keyboards.allElementsBoundByIndex.allSatisfy { $0.frame.intersection(self.app.frame).isEmpty }
+                }, object: app, timeout: 10), .completed, app.debugDescription)
             }
+            focusForPhoneTyping(field, in: app)
             field.typeText(address + "\n")
         }
         XCTAssertTrue(app.buttons["join-by-address"].waitForPresence(timeout: 10))
@@ -444,7 +450,7 @@ import XCTest
         let key = app.staticTexts["ssh-public-key"]
         XCTAssertTrue(key.exists)
         try await appearances("address-password")
-        password.tap()
+        focusForPhoneTyping(password, in: app)
         password.typeText("not the password")
         app.buttons["ssh-send-password"].tap()
         let problem = app.staticTexts["ssh-problem"]
@@ -859,7 +865,7 @@ import XCTest
         let reply = app.textFields["card-reply"]
         reveal(reply)
         _ = try await home("capture-reply-start")
-        reply.tap(); reply.typeText("Keep the northern entrance clear.")
+        focusForPhoneTyping(reply, in: app); reply.typeText("Keep the northern entrance clear.")
         let send = app.buttons["send-reply"]
         reveal(send); send.tap()
         XCTAssertTrue(app.staticTexts["Keep the northern entrance clear."].waitForPresence(timeout: 10), app.debugDescription)

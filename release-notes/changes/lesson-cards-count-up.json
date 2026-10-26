@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "lesson-cards-count-up",
+      "reason": "Internal: the lessons guide now gives every lesson card a new id, so a teacher's next round is not refused by the unreleased rule that an answered card never comes back with buttons; lessons look and play as in the last release."
+    }
+  ]
+}

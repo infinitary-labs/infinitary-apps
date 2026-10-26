@@ -20,7 +20,6 @@ export const LESSON_FRACTIONS_GOAL = "Teach the learner fractions, one lesson ca
 export const LESSON_REPLY_WORDS = "can the rook jump over a piece?";
 export const LESSON_REPLY_ANSWER = "No. The rook slides, and a piece in the way stops it.";
 
-export const LESSON_CHESS_CARD_ID = "lessons-chess";
 export const LESSON_GOAL_TITLE = "Chess: what do you want to be able to do?";
 export const LESSON_ROUND_ONE_TITLE = "Rook moves: sliding along a file";
 export const LESSON_ROUND_TWO_TITLE = "Rook moves: ranks and files together";

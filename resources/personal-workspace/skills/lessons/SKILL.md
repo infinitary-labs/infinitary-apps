@@ -51,7 +51,7 @@ Record what the learner showed, knew already or mixed up, with dates. Never a lo
 The card is a decision with these fields:
 
 - `holds_place: true` on every round and every revision. A reply under the card then keeps it shown, and the next round comes forward when you put it up. Set it only on lesson cards.
-- A stable id per subject, such as `lessons-chess`. Put the next round up under the same id.
+- A new id for every card of the subject: the subject and a number that counts up, such as `lessons-chess-1` for the goal card and `lessons-chess-2` for the first round. A card the learner answered never comes back with buttons, so each round and each welcome-back card is a new card under the next number.
 - A title naming the skill and today's topic, such as `Rook moves: sliding along a file`.
 - Actions: `Next round` (default) and `Stop for today`.
 - A body: one sentence of the day's aim, then the parts in this order: board, progress, finish, quiz (quiz last, with `CONFIG` filled in). Keep it short: the card shows a round without scrolling. The card checks every answer itself with the key you wrote. No model turn is spent while the learner answers.
@@ -60,14 +60,14 @@ Each item has one or two hints that are one step each, and a worked example. The
 
 When the learner presses a footer button, you receive a `round` answer: `n`, `done`, `firstTry`, and per item `[id, firstTry, misses, hints]`. Update `progress.md` from it, then act:
 
-- `Next round`: write the next round and put the card up again. Do not report to the first mate between rounds.
+- `Next round`: write the next round and put it up as a new card under the next id. Do not report to the first mate between rounds.
 - `Stop for today`: update `progress.md`, then put up the welcome-back card (below) and end your turn.
 
 A question typed under the card arrives as a reply: answer in the thread in a sentence or two, or revise the card (same id, `holds_place` true again) when the card should change.
 
 ## The welcome-back card
 
-Id `lessons-welcome-<subject>`, `holds_place: true`. Title: `Welcome back to <subject>`. First sentence: the learner's goal. Then a list of skill chips drawn from `progress.md`: `✓ learned`, `practising`, or `next`. Actions: `Start today's lesson` (default) and `Stop these lessons`.
+The next id in the subject's count, `holds_place: true`. Title: `Welcome back to <subject>`. First sentence: the learner's goal. Then a list of skill chips drawn from `progress.md`: `✓ learned`, `practising`, or `next`. Actions: `Start today's lesson` (default) and `Stop these lessons`.
 
 - `Start today's lesson`: open with the mixed review, then the next round.
 - `Stop these lessons`: leave `lessons/` as it is, then report with finished true. The task closes and the records stay for next time.

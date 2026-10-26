@@ -59,7 +59,8 @@ Keeping later record writes under `lessons/` avoids rebuilding or reattributing 
 
 ## The card
 
-Every lesson card declares `holds_place` (`docs/card-authoring.md`, "Declared continuity"): a reply under it keeps it shown, as under every card, a choice closes it at once, and the next round is the same stable id raised again, which comes forward over another card.
+Every lesson card declares `holds_place` (`docs/card-authoring.md`, "Declared continuity"): a reply under it keeps it shown, as under every card, a choice closes it at once, and the next round is a new card, which comes forward over another card.
+A card the learner answered never comes back with buttons (`docs/card-threads.md`), so the guide gives every card of a subject a new id, the subject and a number that counts up, such as `lessons-chess-2`; the welcome-back card takes the next number too.
 The round's own script checks each answer against a key the teacher wrote, so the learner answering starts no model turn.
 It shows progress dots and an item count, a drawn board or number line, a feedback line, a hint button with one-step hints, a worked example after two misses and a finish screen with the first-try result and one next practice goal.
 The quiz part moves the right answer through every position and never twice in a row; the teacher writes choices of about equal length.

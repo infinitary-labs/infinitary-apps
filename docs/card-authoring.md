@@ -916,7 +916,7 @@ Every new list releases at the author's close-out, and an older link navigates t
 
 The `emit_card` description tells both authors to leave `holds_place` unset unless the use case requires continuous attention on the card.
 An author may set `holds_place: true` for such an interactive card so it comes forward when it arrives; every card keeps its place across thread replies (INF-770), and every choice still closes it immediately, with no waiting drawing.
-Each newly arriving marked card comes forward, even over another card, including a closed stable id raised again by its author.
+Each newly arriving marked card comes forward, even over another card, including a closed stable id raised again by its author, which after the captain's choice comes back only as a note (`docs/card-threads.md`).
 A revision or a thread answer does not bring a card forward after the captain paged away.
 The declaration is optional and stored as `Card.holdsPlace`; a revision without it removes it, and unmarked cards are unchanged.
 This is generic card behavior, not a lesson type or a new action effect.

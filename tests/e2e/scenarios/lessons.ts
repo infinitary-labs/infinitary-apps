@@ -1,7 +1,6 @@
 import {
   chessItems,
   LESSON_CHESS_ASK,
-  LESSON_CHESS_CARD_ID,
   LESSON_CHESS_GOAL,
   LESSON_CHESS_TITLE,
   LESSON_FRACTIONS_ASK,
@@ -71,6 +70,13 @@ export const lessons: Scenario =
       name: "emit_card",
       args: { id, title, body: cardBody, holds_place: true, actions },
     });
+    // The guide's id for a subject's next card, one past the highest the
+    // conversation holds: a card the learner answered never comes back with
+    // buttons, so every card counts up (docs/lessons.md).
+    const nextCard = (subject: string) => {
+      const used = [...body.matchAll(new RegExp(`lessons-${subject}-(\\d+)`, "g"))];
+      return `lessons-${subject}-${Math.max(0, ...used.map((match) => Number(match[1]))) + 1}`;
+    };
     const roundActions = [
       { id: "next-round", label: "Next round", default: true },
       { id: "stop-today", label: "Stop for today" },
@@ -96,7 +102,7 @@ export const lessons: Scenario =
               },
             },
             lessonCard(
-              "lessons-fractions",
+              nextCard("fractions"),
               LESSON_FRACTIONS_GOAL_TITLE,
               LESSON_FRACTIONS_GOAL_BODY,
               [
@@ -122,7 +128,7 @@ export const lessons: Scenario =
       return {
         calls: [
           lessonCard(
-            LESSON_CHESS_CARD_ID,
+            nextCard("chess"),
             LESSON_ROUND_REVIEW_TITLE,
             lessonRoundBody(
               chessItems(1),
@@ -142,7 +148,7 @@ export const lessons: Scenario =
             name: "write",
             args: { path: "lessons/chess/progress.md", content: LESSON_PROGRESS_STOP },
           },
-          lessonCard(`lessons-welcome-chess`, LESSON_WELCOME_TITLE, LESSON_WELCOME_BODY, [
+          lessonCard(nextCard("chess"), LESSON_WELCOME_TITLE, LESSON_WELCOME_BODY, [
             { id: "start-lesson", label: "Start today's lesson", default: true },
             { id: "stop-lessons", label: "Stop these lessons" },
           ]),
@@ -154,7 +160,7 @@ export const lessons: Scenario =
       return {
         calls: [
           lessonCard(
-            LESSON_CHESS_CARD_ID,
+            nextCard("chess"),
             LESSON_ROUND_TWO_TITLE,
             lessonRoundBody(
               chessItems(2),
@@ -186,7 +192,7 @@ export const lessons: Scenario =
             },
           },
           lessonCard(
-            LESSON_CHESS_CARD_ID,
+            nextCard("chess"),
             LESSON_ROUND_ONE_TITLE,
             lessonRoundBody(
               chessItems(1),
@@ -200,14 +206,14 @@ export const lessons: Scenario =
       };
     }
     if (latestUserTail.includes(LESSON_REPLY_WORDS)) {
-      const shown =
-        latestUserTail.match(/Card \\+"[^"]*\\+" \(([^)]+)\)/)?.[1] ?? LESSON_CHESS_CARD_ID;
+      const shown = latestUserTail.match(/Card \\+"[^"]*\\+" \(([^)]+)\)/)?.[1];
+      if (!shown) throw new Error("The learner's reply named no card");
       return { calls: [{ name: "reply", args: { card_id: shown, text: LESSON_REPLY_ANSWER } }] };
     }
     // The first turn: the goal comes first.
     return {
       calls: [
-        lessonCard(LESSON_CHESS_CARD_ID, LESSON_GOAL_TITLE, LESSON_GOAL_BODY, [
+        lessonCard(nextCard("chess"), LESSON_GOAL_TITLE, LESSON_GOAL_BODY, [
           { id: "start", label: "Let's start", default: true },
           { id: "stop-today", label: "Stop for today" },
         ]),

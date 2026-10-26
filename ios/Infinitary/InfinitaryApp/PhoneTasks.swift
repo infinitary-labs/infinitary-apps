@@ -195,7 +195,9 @@ struct PhoneTaskRecord: View {
     var body: some View {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: PhoneTheme.space4) {
+                // INF-1351: the lazy stack is the scroll view's own content. Nested in a plain stack, its placement and
+                // prefetch never settled after a steer, and the main thread stayed busy until the app was stopped.
+                LazyVStack(alignment: .leading, spacing: PhoneTheme.space4) {
                     // The record's title is the task's own; its key stays in mono on the line below for whoever looks for it.
                     Text(task.title).font(PhoneFont.title).accessibilityAddTraits(.isHeader).accessibilityIdentifier("task-record-title")
                     Text("\(task.key) · \(task.state) · \(session.mac.name)").font(PhoneFont.mono)
@@ -278,24 +280,23 @@ struct PhoneTaskRecord: View {
             : at.formatted(.dateTime.month(.abbreviated).day().hour().minute())
     }
 
-    private var crewContent: some View {
-        LazyVStack(alignment: .leading, spacing: PhoneTheme.space4) {
-            if let crew {
-                if crew.earlier > 0 { Text("\(crew.earlier) earlier entries are not shown.").font(PhoneFont.caption) }
-                if crew.lines.isEmpty { Text("Nothing from the crewmate yet.").foregroundStyle(PhoneTheme.secondary) }
-                ForEach(crew.lines) { line in
-                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                        if line.kind == "sent" { Text(line.from == "captain" ? "You" : line.from == "firstmate" ? "Your first mate" : "Infinitary").font(PhoneFont.caption) }
-                        if let name = line.name { Text("\(name) · \(line.target ?? "")").font(PhoneFont.mono) }
-                        if line.kind == "brief" || line.kind == "report" {
-                            DisclosureGroup(line.summary ?? (line.kind == "brief" ? "The brief" : "Report")) { Text(line.words).textSelection(.enabled) }
-                        } else { Text(line.words).textSelection(.enabled) }
-                        if let result = line.result { CrewResult(session: session, taskID: task.id, result: result) }
-                    }.accessibilityIdentifier("crew-line-\(line.kind)")
-                }
+    /// The transcript's rows sit straight in the record's lazy stack, so only the lines on screen are laid out.
+    @ViewBuilder private var crewContent: some View {
+        if let crew {
+            if crew.earlier > 0 { Text("\(crew.earlier) earlier entries are not shown.").font(PhoneFont.caption) }
+            if crew.lines.isEmpty { Text("Nothing from the crewmate yet.").foregroundStyle(PhoneTheme.secondary) }
+            ForEach(crew.lines) { line in
+                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                    if line.kind == "sent" { Text(line.from == "captain" ? "You" : line.from == "firstmate" ? "Your first mate" : "Infinitary").font(PhoneFont.caption) }
+                    if let name = line.name { Text("\(name) · \(line.target ?? "")").font(PhoneFont.mono) }
+                    if line.kind == "brief" || line.kind == "report" {
+                        DisclosureGroup(line.summary ?? (line.kind == "brief" ? "The brief" : "Report")) { Text(line.words).textSelection(.enabled) }
+                    } else { Text(line.words).textSelection(.enabled) }
+                    if let result = line.result { CrewResult(session: session, taskID: task.id, result: result) }
+                }.accessibilityIdentifier("crew-line-\(line.kind)")
             }
-            if let text = live?.text, !text.isEmpty { Text(text).accessibilityIdentifier("crew-live") }
         }
+        if let text = live?.text, !text.isEmpty { Text(text).accessibilityIdentifier("crew-live") }
     }
 
     // INF-589 item 10: the record's foot reads as a card's footer, on the panel color under a hairline.

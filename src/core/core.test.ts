@@ -205,8 +205,13 @@ describe("the core, driven with no Electron in the process", () => {
     core = await startCore(shell.host);
   }, 60_000);
 
-  afterAll(() => {
-    core?.dispose();
+  afterAll(async () => {
+    // Keep userData until the core has shut down and its background writes
+    // have landed: removing it under a late write fails with ENOTEMPTY.
+    await core?.dispose();
+    await core?.services.workspace.poolSettled();
+    await core?.services.workspace.deletionsSettled();
+    await catalogRefreshesSettled();
     rmSync(userDataDir, { recursive: true, force: true });
     delete process.env.INFINITARY_QUOTA_FIXTURE_DIR;
   });

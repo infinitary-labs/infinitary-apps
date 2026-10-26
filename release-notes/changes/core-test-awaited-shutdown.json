@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "core-test-awaited-shutdown",
+      "reason": "Test-only repair: the core test's shared cleanup waits for the core to finish shutting down and its background writes to land before it deletes the test's temporary folder, without changing app behavior or weakening assertions."
+    }
+  ]
+}

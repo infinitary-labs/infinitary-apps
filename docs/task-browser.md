@@ -18,6 +18,7 @@ One command in its shell, `infinitary-browser-axi`, on Pi and the Claude client 
 - `open`, `back`, `forward` and `reload` open the task's browser at an address or move it, and `selectpage` switches to its other page ("A second page").
 - `snapshot` reads the page again: from its top, from a line with `--from`, around some words with `--find`, or every line with `--full`; with a ref it reads a cut passage in full, and `wait` waits up to ten seconds for some words to appear first ("Reading a long page").
 - `click`, `hover`, `drag`, `fill` (typing into a field, replacing what it holds, or choosing a list's option), `fillform`, `press` and `scroll` use the page with real input.
+- `upload` gives a page that asked for a file one from the task's working copy ("A page that asks for a file").
 - `screenshot` photographs the visible page, the whole page, or with `--uid` one element's visible part, into the task's evidence folder, where the crewmate opens it with its read tool; once the captain has handed the browser back it needs `--reason` ("A signed-in page").
 - `stop` stops the browser, and `closepage` closes only a second page; `pages`, `console` and `network` read the browser's pages and the page's lists.
 
@@ -179,7 +180,22 @@ An element photograph accepts its page-named ref (`--uid`), or a whole-page phot
 It scrolls that element into view and crops the photograph to its visible box; a hidden or removed element is refused.
 All photograph guards apply to the whole page even for a crop: a reason is needed after a handback, and hidden typed text anywhere on the page refuses the picture.
 All new actions use the existing serial queue and captain-control refusal, connection policy and ref books.
-The command exposes no script execution, upload, dialog acceptance, free tabs or emulation.
+The command exposes no script execution, dialog acceptance, free tabs or emulation, and attaches a file only as "A page that asks for a file" says.
+
+## A page that asks for a file
+
+A task's page never appears on the desktop, so no picker of the Mac's ever opens on it: macOS would put the hidden window on the desktop to hold one, with no title bar and no way to close it.
+The host takes every request a page makes for a file over the page's protocol (`Page.setInterceptFileChooserDialog`), so the page's own file button or field opens no picker, and the core is told which file field asked and whether it takes several files (`HostPageEvents.onFileChooser`).
+While the captain holds the page, the app's own picker opens as a sheet over the app's window (`HostTaskBrowser.chooseFiles`), and the page gets the files the captain picks there, as it would from its own picker; cancelling gives it nothing.
+While the crewmate drives, its answers say the page asks for a file until it attaches one or the page moves to a new document.
+`infinitary-browser-axi upload <path>...` then gives the page files from the task's working copy, by their paths there (`action: "upload"`), which is the captain's choice on INF-1454, a change to rev-10's design: each must be a regular file inside the working copy, never through a link out of it and never under `.git`, and a field that takes one file takes one.
+Without the page's request, `upload` is refused in words that say to click the page's file button first.
+A file the crewmate does not have is the captain's to give, on a card that hands the browser over.
+A browser on another computer has no picker of the app's: a request there while the captain holds it waits for the crewmate, and the task's record says so.
+
+Printing and the color picker would also put a window of the Mac's on the desktop, and printing holds the whole app until it is answered, so neither opens.
+Before a document's own script runs, the host's fixed script replaces the page's print with one that does nothing and stops a color field's own picker, and tells the host through a binding it removes at once; the crewmate's next answer says the page asked to print or opened a color picker, among its dialogs.
+A list's menu and a date field's calendar put nothing on the desktop, so they are left as they are.
 
 ## A second page
 
@@ -530,6 +546,7 @@ It also holds every line of a long page with its words and whether the window sh
 `taskBrowsers.test.ts` also holds hover, drag, multi-field fill without submitting, edge scrolls, a stale destination or later field refusing before input, stopping a fill on a page move, element captures and whole-page privacy and captain-control guards.
 `wheelScroll.test.ts` holds that a wheel does not return until that scroller's scroll has ended, and that a page already at that edge does not wait.
 `tests/e2e/task-browser-actions.spec.ts` exercises the real core delegate and Electron host in the hermetic launcher: hover reveals a menu, two fields hold their values, real pointer input drops an item, edge scrolls reach their content, and a crop photographs one element.
+`tests/e2e/task-browser-file-request.spec.ts` does the same for a page that asks for a file: the crewmate's press on a site's own file button opens no picker and leaves every page window hidden, `upload` refuses a file outside the working copy or through a link out of it and attaches one inside it, printing answers without opening anything, and while the captain holds the page their press on the same button takes the app's picker's file and their press on a color field opens no picker.
 `taskBrowsers.test.ts` also holds a same-page action answering only changed lines, a no-change action, and a fresh inspection recovering the full window.
 `window.test.ts` holds the windows: a page that fits whole with no map, a repeated passage folded at its depth, a cut within its bound with its map and next lines, reading on from a line and past the end, a search past the cut within the smaller bound and stepping to the next match, a search reading a whole cut passage, the lines on screen with the skipped lines named, the top when nothing could be placed, the part around a passage, and a small page shown whole around its words.
 It also holds a cut passage naming a ref, a wait reading past that cut, a time element's `datetime` and a title tooltip, and a full read that still hides what the captain typed.

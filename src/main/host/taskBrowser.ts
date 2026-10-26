@@ -222,6 +222,35 @@ const CHOOSE_OPTION = `function (wanted) {
   return { kind: "chosen" };
 }`;
 
+/**
+ * What a page may not open on the Mac (docs/task-browser.md, "A page that
+ * asks for a file"): printing and the color picker each put a window of
+ * the Mac's on the desktop, and printing holds the whole app until it is
+ * answered. This runs in every document before the page's own script, and
+ * tells the host through a binding whose name it removes at once.
+ */
+function pickerGuard(binding: string): string {
+  return `(() => {
+  const tell = globalThis[${JSON.stringify(binding)}];
+  delete globalThis[${JSON.stringify(binding)}];
+  const say = (kind) => { try { tell(kind); } catch {} };
+  Object.defineProperty(window, "print", {
+    value: function print() { say("print"); },
+    writable: true,
+    configurable: true,
+  });
+  const isColor = (el) => el instanceof HTMLInputElement && el.type === "color";
+  addEventListener("click", (event) => {
+    if (isColor(event.composedPath()[0])) { event.preventDefault(); say("color"); }
+  }, true);
+  const showPicker = HTMLInputElement.prototype.showPicker;
+  HTMLInputElement.prototype.showPicker = function () {
+    if (isColor(this)) { say("color"); return; }
+    return showPicker.call(this);
+  };
+})();`;
+}
+
 type RawAxValue = { value?: unknown };
 type RawAxNode = {
   nodeId: string;
@@ -454,7 +483,19 @@ async function drivePage(
     params?: Record<string, unknown>,
   ): Promise<T> => (await protocol.sendCommand(method, params)) as T;
   let watcher: ((frame: HostBrowserFrame) => void) | undefined;
+  const pickerBinding = `b${randomUUID().replaceAll("-", "")}`;
   protocol.on("message", (_event, method, params: Record<string, unknown>) => {
+    if (method === "Page.fileChooserOpened") {
+      events.onFileChooser({
+        target: Number(params.backendNodeId),
+        multiple: params.mode === "selectMultiple",
+      });
+      return;
+    }
+    if (method === "Runtime.bindingCalled" && params.name === pickerBinding) {
+      if (params.payload === "print" || params.payload === "color") events.onPicker(params.payload);
+      return;
+    }
     if (method === "Page.screencastFrame") {
       // Acknowledged at once, so the stream never stalls on a slow window:
       // the window keeps only the newest picture it has not drawn yet.
@@ -535,6 +576,16 @@ async function drivePage(
   await send("Log.enable");
   await send("Network.enable");
   await send("DOM.enable");
+  // A page's request for a file comes here rather than to a picker of the
+  // Mac's, which would attach to this hidden window and put it on the
+  // desktop with no way to close it (docs/task-browser.md, "A page that asks
+  // for a file"); printing and the color picker never open at all.
+  await send("Page.setInterceptFileChooserDialog", { enabled: true });
+  await send("Runtime.addBinding", { name: pickerBinding });
+  await send("Page.addScriptToEvaluateOnNewDocument", {
+    source: pickerGuard(pickerBinding),
+    runImmediately: true,
+  });
   // The page is laid out at its own size whatever shows it, at one pixel per point.
   const layOut = (): Promise<unknown> =>
     send("Emulation.setDeviceMetricsOverride", {
@@ -667,6 +718,9 @@ async function drivePage(
       }
     },
     box: boxOf,
+    setFiles: async (target, paths) => {
+      await send("DOM.setFileInputFiles", { backendNodeId: target, files: [...paths] });
+    },
     click: async ({ x, y }) => {
       await send("Input.dispatchMouseEvent", { type: "mouseMoved", x, y });
       for (const type of ["mousePressed", "mouseReleased"]) {
@@ -1010,8 +1064,14 @@ function pageStorage(ses: Session, send: ProtocolSend): HostPageStorage {
   };
 }
 
-/** The desktop's task browser: a fresh hidden page per open. */
-export function createTaskBrowserHost(): HostTaskBrowser {
+/**
+ * The desktop's task browser: a fresh hidden page per open. `chooseFiles`
+ * is the captain's own picker, over the app's window; a computer that runs
+ * work with no window of the app's has none.
+ */
+export function createTaskBrowserHost(
+  chooseFiles?: HostTaskBrowser["chooseFiles"],
+): HostTaskBrowser {
   // A page a website opens loads its first document with the identity its
   // renderer and session start from: Electron's per-page override does not
   // reach it (electron/electron#45897), and the page's protocol reaches a
@@ -1019,5 +1079,5 @@ export function createTaskBrowserHost(): HostTaskBrowser {
   // identity is Electron's fallback, set before any page opens. The app's
   // own windows show only its own files, which do not read it.
   app.userAgentFallback = ordinaryUserAgent(app.userAgentFallback);
-  return { open: openTaskPage };
+  return { open: openTaskPage, ...(chooseFiles ? { chooseFiles } : {}) };
 }

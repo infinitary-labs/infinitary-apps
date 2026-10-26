@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "task-browser-file-request",
+      "kind": "fix",
+      "area": "tasks",
+      "title": "A task's browser stays off your desktop when a page asks for a file",
+      "body": "When a website in a task's browser asks for a file, no window appears on your desktop any more. While you hold the browser, Infinitary opens its own file picker over its window. While the crewmate drives, it attaches a file from its own working copy. Printing and color pickers on a page no longer open a window either.",
+      "noPicture": "The fix keeps a window from appearing on the desktop; no view of the app changes, and the picker is the Mac's own standard one.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

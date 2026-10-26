@@ -16,8 +16,9 @@ import type { BrowserOp, BrowserOpInput, BrowserReply, ChannelAnswer } from "./p
  * go, what a crewmate reads, a stale ref, the captain's control, a final
  * submission - stays `TaskBrowsers`'s, reached through the task's channel.
  *
- * Nothing here runs script on a page, uploads a file, answers a dialog,
- * emulates a device, profiles, updates itself or installs a hook.
+ * Nothing here runs script on a page, answers a dialog, emulates a device,
+ * profiles, updates itself or installs a hook; a file goes to a page only
+ * when the page asked for one, and only from the task's working copy.
  */
 
 /** The task browser as one command reaches it: each operation, answered for this task alone. */
@@ -379,6 +380,18 @@ export const BROWSER_COMMANDS: Record<string, AxiCommand<BrowserConnection>> = {
         return { ref: refArg(pair.slice(0, at), "fillform", spec), text: pair.slice(at + 1) };
       });
       return ask(browser, "fillform", "act", { action: "fill", fields }, NO_RULES);
+    },
+  ),
+  upload: command(
+    "upload <path>...",
+    "Give the page the files it asked for, after a click on its file button or field: each a file in your working copy, by its path there. Nothing outside your working copy is ever attached.",
+    async (args, browser) => {
+      if (args.positional.length === 0)
+        invalid(
+          "upload needs the path of a file in your working copy",
+          usage("upload", "upload <path>..."),
+        );
+      return ask(browser, "upload", "act", { action: "upload", files: args.positional }, NO_RULES);
     },
   ),
   press: command(

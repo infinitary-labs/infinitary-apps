@@ -219,6 +219,7 @@ export const APPLICATION_SUITES = [
   "task-board-pages.spec.ts",
   "task-browser-actions.spec.ts",
   "task-browser-diagnostics.spec.ts",
+  "task-browser-file-request.spec.ts",
   "task-browser.spec.ts",
   "task-browser-booking.spec.ts",
   "task-card-links.spec.ts",

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { mkdir, realpath, stat, writeFile } from "node:fs/promises";
+import { basename, join, resolve, sep } from "node:path";
 import { HERE } from "@shared/deviceNames";
 import {
   FRESH_LOOK_WORDS,
@@ -24,6 +24,7 @@ import {
   type HostBrowserPage,
   type HostBrowserRefusal,
   type HostBrowserViewport,
+  type HostFileChooser,
   type HostLoadOutcome,
   type HostOriginStorage,
   type HostPageEvents,
@@ -303,7 +304,17 @@ export type BrowserActInput = {
    * `set` puts text in a field, replacing what it holds, or chooses the
    * option of that label when the element is a list.
    */
-  action: "click" | "type" | "select" | "set" | "press" | "scroll" | "hover" | "fill" | "drag";
+  action:
+    | "click"
+    | "type"
+    | "select"
+    | "set"
+    | "press"
+    | "scroll"
+    | "hover"
+    | "fill"
+    | "drag"
+    | "upload";
   ref?: string;
   text?: string;
   submit?: boolean;
@@ -312,6 +323,8 @@ export type BrowserActInput = {
   direction?: "up" | "down" | "top" | "bottom";
   to?: string;
   fields?: { ref: string; text: string }[];
+  /** `upload`: files from the task's working copy, by path in it, for the page's file request. */
+  files?: string[];
 };
 export type BrowserCaptureInput = {
   ref?: string;
@@ -341,6 +354,12 @@ export type TaskBrowsersOptions = {
   host: HostTaskBrowser;
   /** Where a task's pictures go: its evidence folder, outside the working copy. */
   evidenceDir: (taskId: string) => string;
+  /**
+   * The task's working copy: the only folder its crewmate may attach a file
+   * from when a page asks for one (docs/task-browser.md, "A page that asks
+   * for a file"). With none, it attaches nothing.
+   */
+  workingCopy?: (taskId: string) => string | undefined;
   /** One line on the task's own timeline. */
   note?: (taskId: string, text: string) => void;
   /** A task's browser changed for the captain: it opened, moved, acted or stopped. */
@@ -457,6 +476,8 @@ type PageEntry = {
   moved?: string;
   /** The last address it showed, kept for when its window has gone. */
   lastUrl?: string;
+  /** The page's request for a file that its crewmate has not answered yet. */
+  chooser?: HostFileChooser;
 };
 
 /** The captain handed a task's browser back: what its crewmate's one wake says. */
@@ -1669,6 +1690,21 @@ export class TaskBrowsers {
       destination = refs.resolve(input.to);
       if (!destination) return refused(this.refusedRef(taskId, browser, input.to));
     }
+    let upload: { chooser: HostFileChooser; paths: string[] } | undefined;
+    if (input.action === "upload") {
+      const chooser = actedPage.chooser;
+      if (!chooser)
+        return refused(
+          `The page has not asked for a file. Click its file button or field first, then run ${browserCommand("upload <path>")}.`,
+        );
+      if (!input.files?.length)
+        return invalid("upload needs the path of a file in your working copy.");
+      if (!chooser.multiple && input.files.length > 1)
+        return invalid("The page's file field takes one file.");
+      const found = await this.workingCopyFiles(taskId, input.files);
+      if ("refusal" in found) return refused(found.refusal);
+      upload = { chooser, paths: found.paths };
+    }
     const fields: { entry: RefEntry; text: string }[] = [];
     if (input.action === "fill") {
       if (!input.fields?.length || input.fields.length > 50)
@@ -1758,6 +1794,17 @@ export class TaskBrowsers {
             filled++;
           }
           lead = `Filled ${filled} fields without submitting a form.`;
+          break;
+        }
+        case "upload": {
+          const { chooser, paths } = upload as NonNullable<typeof upload>;
+          if (actedPage.chooser !== chooser)
+            return refused("The page's request for a file is gone; read the page again.");
+          await page.setFiles(chooser.target, paths);
+          actedPage.chooser = undefined;
+          const names = paths.map((path) => quoted(basename(path))).join(", ");
+          browser.did = `attached ${clip(names, DID_NAME_MAX)}`;
+          lead = `Attached ${names} to the page's file field from your working copy.`;
           break;
         }
         case "click": {
@@ -1853,7 +1900,7 @@ export class TaskBrowsers {
         }
         default:
           return invalid(
-            "action is one of click, type, select, set, press, scroll, hover, fill or drag.",
+            "action is one of click, type, select, set, press, scroll, hover, fill, drag or upload.",
           );
       }
       await this.awaitAction(page, before, input, entry);
@@ -2080,6 +2127,69 @@ export class TaskBrowsers {
     return browser;
   }
 
+  /**
+   * A page the captain holds asked for a file: the app's own picker opens
+   * over the app's window, and the page gets what the captain picks. On a
+   * computer with no window of the app's, the request waits for the
+   * crewmate, which may attach a file from its working copy.
+   */
+  private async captainFiles(
+    taskId: string,
+    browser: Browser,
+    entry: PageEntry,
+    chooser: HostFileChooser,
+  ): Promise<void> {
+    const choose = this.options.host.chooseFiles;
+    if (!choose) {
+      entry.chooser = chooser;
+      this.options.note?.(
+        taskId,
+        "its page asked for a file, which you cannot attach to a browser on another computer; return control and its crewmate can attach one from its working copy",
+      );
+      return;
+    }
+    const paths = await choose({ multiple: chooser.multiple }).catch(() => []);
+    if (paths.length === 0 || this.browsers.get(taskId) !== browser) return;
+    if (!browser.pages.includes(entry)) return;
+    await entry.page
+      .setFiles(chooser.target, chooser.multiple ? paths : paths.slice(0, 1))
+      .catch(() => undefined);
+  }
+
+  /**
+   * The crewmate's files for the page's request, each a regular file inside
+   * its task's working copy, by its own path there: a link out of the
+   * working copy, or a path outside it, is refused.
+   */
+  private async workingCopyFiles(
+    taskId: string,
+    files: readonly string[],
+  ): Promise<{ paths: string[] } | { refusal: string }> {
+    const root = this.options.workingCopy?.(taskId);
+    if (!root) return { refusal: "This task has no working copy to attach a file from." };
+    const top = await realpath(root).catch(() => undefined);
+    if (!top) return { refusal: "This task's working copy is not there to attach a file from." };
+    const paths: string[] = [];
+    for (const file of files) {
+      const outside = `${quoted(file)} is not in your working copy: this browser attaches only files from it.`;
+      const real = await realpath(resolve(root, file)).catch(() => undefined);
+      if (!real) return { refusal: `${quoted(file)} is not a file in your working copy.` };
+      if (!real.startsWith(`${top}${sep}`)) return { refusal: outside };
+      if (
+        real
+          .slice(top.length + 1)
+          .split(sep)
+          .includes(".git")
+      )
+        return { refusal: outside };
+      const kind = await stat(real).catch(() => undefined);
+      if (!kind?.isFile())
+        return { refusal: `${quoted(file)} is not a file in your working copy.` };
+      paths.push(real);
+    }
+    return { paths };
+  }
+
   /** One page's doings, kept for the crewmate's next answer unless the captain holds the page. */
   private pageEvents(taskId: string, browser: Browser, entry: PageEntry): HostPageEvents {
     const live = (): boolean => this.browsers.get(taskId) === browser;
@@ -2087,6 +2197,8 @@ export class TaskBrowsers {
       onNavigated: (url) => {
         entry.refs = this.newBook(taskId);
         entry.answered = undefined;
+        // A new document has none of the old one's file fields.
+        entry.chooser = undefined;
         entry.lastUrl = url;
         if (!entry.loading && browser.control !== "captain") entry.moved = url;
         if (live()) this.options.onChange?.(taskId);
@@ -2100,6 +2212,23 @@ export class TaskBrowsers {
       },
       onDialog: (kind, message) =>
         this.keep(browser, browser.dialogs, `${kind} ${quoted(clip(message))}`),
+      onFileChooser: (chooser) => {
+        if (!live()) return;
+        if (browser.control === "captain" || browser.control === "taking") {
+          void this.captainFiles(taskId, browser, entry, chooser);
+          return;
+        }
+        // The crewmate's next answer says so, until it attaches a file or the page moves.
+        entry.chooser = chooser;
+      },
+      onPicker: (kind) =>
+        this.keep(
+          browser,
+          browser.dialogs,
+          kind === "print"
+            ? `print: this browser never prints; photograph the page with ${browserCommand("screenshot")} instead`
+            : "color picker: this browser never shows one",
+        ),
       onPopup: (url) => this.popup(taskId, browser, url),
       onPageError: (text) => {
         // A refused request or connection logs its own error; the summary already says it.
@@ -2836,6 +2965,11 @@ export class TaskBrowsers {
     // A second page opening or closing changes which page this answer reads.
     rest.push(...browser.pageNotes);
     browser.pageNotes.length = 0;
+    if (entry.chooser) {
+      rest.push(
+        `The page asks for ${entry.chooser.multiple ? "files" : "a file"}: attach ${entry.chooser.multiple ? "them" : "one"} from your working copy with ${browserCommand(entry.chooser.multiple ? "upload <path>..." : "upload <path>")}, or ask the captain on a card for a file you do not have.`,
+      );
+    }
     // A new document the crewmate's own load did not ask for: a link, a form, a script.
     if (entry.moved) rest.push(`The page moved to ${this.shown(browser, entry.moved)}.`);
     entry.moved = undefined;

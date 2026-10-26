@@ -85,6 +85,7 @@ A ref is written as the outline shows it, with or without `@`: `@g1:e5`, `g1:e5`
 | `click @ref`, `hover @ref`, `drag @from @to` | Pointer input on a control. |
 | `fill @ref <text>` | Put text in a field, replacing what it holds, or choose a list's option of that label; never sends a form. |
 | `fillform @ref=<text>...` | Fill up to 50 text fields in order without sending. |
+| `upload <path>...` | Give a page that asked for a file one from the task's working copy (`docs/task-browser.md`, "A page that asks for a file"). |
 | `press <key> [@ref]` | Press a key on a control or on what has focus. |
 | `scroll <up\|down\|top\|bottom> [@ref]` | Scroll the page, or bring an element into view. |
 | `screenshot [name] [--uid @ref] [--full-page] [--reason <why>]` | Photograph into the evidence folder; the crewmate opens the file with its read tool. |
@@ -92,7 +93,7 @@ A ref is written as the outline shows it, with or without `@`: `@g1:e5`, `g1:e5`
 | `console`, `network` | The page's bounded diagnostic lists. |
 | `stop` | Stop the browser, or withdraw a request still waiting for the captain. |
 
-It offers nothing that runs script on a page (`eval`, `run`), uploads a file, answers a dialog, emulates a device, profiles (`lighthouse`, `perf`, `heap`), updates itself or installs a hook.
+It offers nothing that runs script on a page (`eval`, `run`), uploads a file the page did not ask for or one from outside the task's working copy, answers a dialog, emulates a device, profiles (`lighthouse`, `perf`, `heap`), updates itself or installs a hook.
 It shows content first, following the captain's ten AXI principles:
 
 1. Its answers are TOON.

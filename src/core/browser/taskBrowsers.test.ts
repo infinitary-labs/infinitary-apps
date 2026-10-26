@@ -1,4 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  symlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
@@ -234,6 +241,9 @@ class FakePage implements HostBrowserPage {
   click = async (point: { x: number; y: number }) => {
     this.effects.push(`click ${point.x},${point.y}`);
   };
+  setFiles = async (target: number, paths: readonly string[]) => {
+    this.effects.push(`files ${target} ${paths.join(" ")}`);
+  };
   hover = async (point: { x: number; y: number }) => {
     this.effects.push(`hover ${point.x},${point.y}`);
   };
@@ -311,6 +321,8 @@ function harness(
     signIns?: WebSignIns;
     now?: () => number;
     automaticSignIn?: TaskBrowsersOptions["automaticSignIn"];
+    workingCopy?: string;
+    chooseFiles?: HostTaskBrowser["chooseFiles"];
   } = {},
 ) {
   const pages: FakePage[] = [];
@@ -327,9 +339,11 @@ function harness(
       pages.push(page);
       return page;
     },
+    ...(options.chooseFiles ? { chooseFiles: options.chooseFiles } : {}),
   };
   const browsers = new TaskBrowsers({
     host,
+    ...(options.workingCopy ? { workingCopy: () => options.workingCopy } : {}),
     evidenceDir: (taskId) => join(evidence, taskId),
     note: (taskId, text) => notes.push(`${taskId}: ${text}`),
     onChange: (taskId) => changes.push(taskId),
@@ -2700,5 +2714,114 @@ describe("piece 4 browser actions", () => {
     expect(page.effects.filter((effect) => effect.startsWith("capture"))).toEqual([
       "capture target 30",
     ]);
+  });
+});
+
+// The captain's words (INF-1454): "shouldn't task browser be invisible on my
+// desktop?" A page's file request goes to no picker on the page's hidden
+// window: the captain's own pick when they hold it, and otherwise, by their
+// choice, a file the crewmate attaches from its own working copy.
+describe("a page that asks for a file", () => {
+  /** A working copy with a file to attach, and a file outside it a link leads to. */
+  function workingCopy(): { root: string; outside: string } {
+    const dir = scratchDir("infinitary-browser-files-");
+    const root = join(dir, "work");
+    mkdirSync(join(root, ".git"), { recursive: true });
+    mkdirSync(join(root, "docs"));
+    writeFileSync(join(root, "docs", "certificate.pdf"), "%PDF-1.4");
+    writeFileSync(join(root, ".git", "config"), "[core]");
+    const outside = join(dir, "private.txt");
+    writeFileSync(outside, "not the task's");
+    symlinkSync(outside, join(root, "link.txt"));
+    return { root, outside };
+  }
+
+  it("tells the crewmate, which attaches a file from its working copy and nothing outside it", async () => {
+    const { root, outside } = workingCopy();
+    const h = harness({ workingCopy: root });
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = h.pages[0] as FakePage;
+    expect(
+      (await browser.act({ action: "upload", files: ["docs/certificate.pdf"] })).text,
+    ).toContain("has not asked for a file");
+    page.opened.onFileChooser({ target: 40, multiple: false });
+    expect((await browser.inspect({})).text).toContain("The page asks for a file");
+    for (const file of [outside, "link.txt", "../private.txt", ".git/config"]) {
+      expect((await browser.act({ action: "upload", files: [file] })).text).toContain(
+        "not in your working copy",
+      );
+    }
+    expect((await browser.act({ action: "upload", files: ["docs"] })).text).toContain(
+      "is not a file in your working copy",
+    );
+    expect(
+      (
+        await browser.act({
+          action: "upload",
+          files: ["docs/certificate.pdf", "docs/certificate.pdf"],
+        })
+      ).text,
+    ).toContain("takes one file");
+    expect(page.effects.filter((effect) => effect.startsWith("files"))).toEqual([]);
+    const attached = await browser.act({ action: "upload", files: ["docs/certificate.pdf"] });
+    expect(attached.text).toContain('Attached "certificate.pdf"');
+    expect(attached.text).not.toContain("The page asks for a file");
+    expect(page.effects.filter((effect) => effect.startsWith("files"))).toEqual([
+      `files 40 ${realpathSync(join(root, "docs", "certificate.pdf"))}`,
+    ]);
+    // A request the page moved away from is gone with its document.
+    page.opened.onFileChooser({ target: 41, multiple: true });
+    page.opened.onNavigated("http://localhost:5173/next");
+    expect(
+      (await browser.act({ action: "upload", files: ["docs/certificate.pdf"] })).text,
+    ).toContain("has not asked for a file");
+  });
+
+  it("opens the app's own picker for the captain, and the crewmate is told nothing of it", async () => {
+    const picks: boolean[] = [];
+    const h = harness({
+      chooseFiles: async ({ multiple }) => {
+        picks.push(multiple);
+        return ["/Users/captain/receipt.pdf", "/Users/captain/other.pdf"];
+      },
+    });
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = h.pages[0] as FakePage;
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.takeControl("t1", handle);
+    page.opened.onFileChooser({ target: 40, multiple: false });
+    await expect
+      .poll(() => page.effects.filter((effect) => effect.startsWith("files")))
+      .toEqual(["files 40 /Users/captain/receipt.pdf"]);
+    expect(picks).toEqual([false]);
+    await h.browsers.returnControl("t1", handle);
+    expect((await browser.inspect({})).text).not.toContain("asks for a file");
+  });
+
+  it("leaves a request on another computer's browser to the crewmate, and says so on the record", async () => {
+    const h = harness();
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = h.pages[0] as FakePage;
+    const handle = { session: h.browsers.session, generation: 1 };
+    await h.browsers.takeControl("t1", handle);
+    page.opened.onFileChooser({ target: 40, multiple: false });
+    expect(h.notes.some((note) => note.includes("its page asked for a file"))).toBe(true);
+    await h.browsers.returnControl("t1", handle);
+    expect((await browser.inspect({})).text).toContain("The page asks for a file");
+  });
+
+  it("tells the crewmate a page asked to print or opened a color picker, which never open", async () => {
+    const h = harness();
+    const browser = h.browsers.forTask("t1");
+    await browser.navigate({ url: "http://localhost:5173/" });
+    const page = h.pages[0] as FakePage;
+    page.opened.onPicker("print");
+    page.opened.onPicker("color");
+    const text = (await browser.inspect({})).text;
+    expect(text).toContain("this browser never prints");
+    expect(text).toContain("color picker: this browser never shows one");
   });
 });

@@ -1,6 +1,6 @@
 import { absentKeychain, type HostCapabilities } from "@core/host";
 import { userDataFolderFor } from "@shared/userDataFolders";
-import { app, Notification, shell, utilityProcess } from "electron";
+import { app, dialog, Notification, shell, utilityProcess } from "electron";
 import { hostDesktop, hostPlatform, hostPlatformProfile } from "../../core/platform";
 import { createMediaProbe, createTypefaceProbe } from "../mediaProbe";
 import { packagedFlavor, readPackageJsonAt } from "../userDataDir";
@@ -183,7 +183,18 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
     mediaProbe: createMediaProbe(),
     typefaceProbe: createTypefaceProbe(),
     resourceMemory: readResourceMemory,
-    browser: createTaskBrowserHost(),
+    // A page the captain holds that asks for a file gets it from the app's own
+    // picker, a sheet over the app's window, never one on the page's hidden
+    // window (docs/task-browser.md, "A page that asks for a file").
+    browser: createTaskBrowserHost(async ({ multiple }) => {
+      const owner = appWindows().find((win) => win.isFocused()) ?? appWindows()[0];
+      if (!owner) return [];
+      const picked = await dialog.showOpenDialog(owner, {
+        properties: multiple ? ["openFile", "multiSelections"] : ["openFile"],
+        buttonLabel: "Attach",
+      });
+      return picked.canceled ? [] : picked.filePaths;
+    }),
     ...(sqlProcessPath ? { sqlProcess: createSqlProcessSpawner(sqlProcessPath) } : {}),
     ...(axiProcessPath ? { axiProcess: createAxiProcessSpawner(axiProcessPath) } : {}),
     ...(programProcessPath

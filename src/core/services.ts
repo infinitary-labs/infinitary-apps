@@ -2137,6 +2137,8 @@ export async function createServices(
         host: host.browser,
         ...browserLookup(host.app.packaged),
         evidenceDir: (taskId) => crewmateEvidenceDir(paths, taskId),
+        // A page's request for a file takes one from the task's working copy alone.
+        workingCopy: (taskId) => tasks.get(taskId)?.worktreeDir ?? undefined,
         // What happens to a task's browser is news on its record.
         note: (taskId, text) => tasks.note(taskId, text, { news: true }),
         // The record's Browser line and the view re-read the task's detail.

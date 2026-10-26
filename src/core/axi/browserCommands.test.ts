@@ -100,6 +100,11 @@ describe("infinitary-browser-axi's commands", () => {
         ],
       },
     ],
+    [
+      ["upload", "docs/certificate.pdf", "scan.png"],
+      "act",
+      { action: "upload", files: ["docs/certificate.pdf", "scan.png"] },
+    ],
     [["press", "enter", "@g3:e1"], "act", { action: "press", key: "Enter", ref: "g3:e1" }],
     [["press", "Tab"], "act", { action: "press", key: "Tab" }],
     [["scroll", "bottom"], "act", { action: "scroll", direction: "bottom" }],
@@ -129,6 +134,7 @@ describe("infinitary-browser-axi's commands", () => {
     ["drag", "@g3:e1"],
     ["fill", "@g3:e1"],
     ["fillform", "@g3:e1"],
+    ["upload"],
     ["press", "Explode"],
     ["scroll", "sideways"],
     ["scroll"],
@@ -147,7 +153,9 @@ describe("infinitary-browser-axi's commands", () => {
     expect(answer.calls).toEqual([]);
   });
 
-  it("offers exactly the approved commands, and nothing that runs script, uploads, answers a dialog, emulates, profiles or updates", async () => {
+  // The approved design (rev-10), with the captain's choice on INF-1454 that a
+  // crewmate attaches a file a page asked for from its own working copy.
+  it("offers exactly the approved commands, and nothing that runs script, answers a dialog, emulates, profiles or updates", async () => {
     expect(Object.keys(BROWSER_COMMANDS).sort()).toEqual(
       [
         "back",
@@ -169,6 +177,7 @@ describe("infinitary-browser-axi's commands", () => {
         "selectpage",
         "snapshot",
         "stop",
+        "upload",
         "wait",
       ].sort(),
     );
@@ -179,7 +188,6 @@ describe("infinitary-browser-axi's commands", () => {
       "lighthouse",
       "perf-start",
       "heap",
-      "upload",
       "dialog",
       "update",
       "setup",

@@ -69,6 +69,8 @@ export type ComputerBrowsersOptions = {
   answering?: (shell: string) => void;
   /** Where a task's pictures go: its evidence folder here. */
   evidenceDir: (task: string) => string;
+  /** The task's working copy here: the only folder its crewmate attaches a page's file from. */
+  workingCopy?: (task: string) => string | undefined;
   /** Asked once, while the home is in reach, and never again (`HomeLink.invoke`). */
   tell: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
   /** Asked until the home answers, under one call id (`HomeLink.ask`). */
@@ -179,6 +181,7 @@ export class ComputerBrowsers {
     this.browsers = new TaskBrowsers({
       host: options.host,
       evidenceDir: options.evidenceDir,
+      ...(options.workingCopy ? { workingCopy: options.workingCopy } : {}),
       ...(options.lookup ? { lookup: options.lookup } : {}),
       // What happens to a task's browser is news on its record at the home.
       note: (task, text) => this.event(task, { kind: "note", text }),

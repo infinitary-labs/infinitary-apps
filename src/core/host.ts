@@ -169,6 +169,15 @@ export type HostPageEvents = {
   /** The page raised a dialog; the host dismissed it. */
   onDialog: (kind: string, message: string) => void;
   /**
+   * The page asked for a file (docs/task-browser.md, "A page that asks for
+   * a file"): the host took the request, so no picker of the Mac's opens on
+   * the hidden page, and `target` is the file field to give files with
+   * `setFiles`.
+   */
+  onFileChooser: (chooser: HostFileChooser) => void;
+  /** The page asked to print or opened a color picker; the host showed neither. */
+  onPicker: (kind: HostPickerKind) => void;
+  /**
    * The page asked to open another window at `url`: the new page's events
    * to let it open as another page of this browser, in the same site data,
    * or nothing to refuse it.
@@ -183,6 +192,12 @@ export type HostPageEvents = {
   /** A page another page opened closed itself; the first page never closes on its own. */
   onClosed: () => void;
 };
+
+/** A page's request for a file: its file field, and whether it takes more than one. */
+export type HostFileChooser = { target: number; multiple: boolean };
+
+/** A picker of the Mac's a page asked for and the host never shows. */
+export type HostPickerKind = "print" | "color";
 
 /**
  * A page the core let another page open: its events, the size it lays out
@@ -258,6 +273,8 @@ export type HostBrowserPage = {
   nodes: () => Promise<BrowserNode[]>;
   /** Scroll an element into view and answer its box; null when it has none. */
   box: (target: number) => Promise<HostBrowserBox | null>;
+  /** Give a file field these files, as a person's pick in a picker would. */
+  setFiles: (target: number, paths: readonly string[]) => Promise<void>;
   /** A real left click at a point of the viewport. */
   click: (point: { x: number; y: number }) => Promise<void>;
   /** Move the pointer onto a visible point without clicking. */
@@ -373,6 +390,13 @@ export type HostBrowserFrame = { data: string; width: number; height: number };
 /** The host's task browser: absent on a host with no browser engine. */
 export type HostTaskBrowser = {
   open: (input: HostBrowserOpen) => Promise<HostBrowserPage>;
+  /**
+   * The captain's own pick of files for a page they hold, in the app's own
+   * picker over the app's window: the files' paths, or none when they
+   * cancelled. Absent on a computer with no window of the app's, which
+   * runs work for another Mac.
+   */
+  chooseFiles?: (options: { multiple: boolean }) => Promise<string[]>;
 };
 
 export type HostCapabilities = {

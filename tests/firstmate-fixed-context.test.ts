@@ -684,6 +684,12 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: "core",
     says: "removing a surface is one personalize call, a lasting instruction for the panels built for the captain is one app_change direction scoped to the personal workspace, and the feed line is the whole answer - no card.",
   },
+  // INF-1386 brings main back inside the budget: settle_task's description drops what the core says.
+  {
+    rule: "closing the captain's settle card keeps its idle task, which stays resumable",
+    home: "core",
+    says: "nothing parks or returns on its own, and closing a card is keep.",
+  },
 ];
 
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {

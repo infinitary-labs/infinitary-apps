@@ -633,8 +633,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "through a blocks link (the close clears that wait) or once it reported its answer, " +
       "or an answer task whose crewmate reported it finished. released closes a reported, idle work task only after you independently verify its " +
       "delivery through an external release process, with release_evidence; a missing change or " +
-      "dismissed note alone is never proof. Closing the " +
-      "captain's settle card keeps an idle task resumable. Its record and session stay. " +
+      "dismissed note alone is never proof. Its record and session stay. " +
       "Use crew_status to pick the task id; never guess among several matches.",
     parameters: Type.Object({
       task_id: Type.String({ description: "The task id from crew_status or spawn" }),

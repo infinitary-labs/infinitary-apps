@@ -22,9 +22,7 @@ import SwiftUI
     private var watchdog: Task<Void, Never>?
     private var collection: (id: UUID, continuation: CheckedContinuation<PhoneJSON, Error>)?
     private var collectionTimeout: Task<Void, Never>?
-    private var sent = 0
-    private var heard = 0
-    private var missed = 0
+    private var watch = CardWatchdog()
     private var theme = "light"
     private let fill: PhoneJSON
     var onReading: ((PhoneJSON) -> Void)?
@@ -65,21 +63,21 @@ import SwiftUI
         <style>html,body{margin:0;padding:0;background:transparent}iframe{width:100%;border:0}</style>
         <script src="app-frame://runtime/CardHost.generated.js"></script></head><body></body></html>
         """, baseURL: nil)
+        watch = CardWatchdog()
         watchdog = Task { [weak self] in
-            var answered = 0
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(2))
                 guard !Task.isCancelled, let self else { return }
                 // INF-804: only a shown card can stall. WebKit pauses a card behind another tab or in the background,
                 // and a page still loading is WebKit starting the card's own process, which a busy device can take a while to do.
-                guard UIApplication.shared.applicationState == .active, let page = self.view, page.window != nil, !page.isLoading
-                else { self.missed = 0; continue }
-                // A stall is a card that answered nothing since the last look; a slow answer is still an answer.
-                if (self.drawn && self.heard >= self.sent) || self.heard > answered { self.missed = 0 } else { self.missed += 1 }
-                answered = self.heard
-                if self.missed >= 3 { self.fail(); return }
-                self.sent += 1
-                page.evaluateJavaScript("window.phoneCard?.ping(\(self.sent))", completionHandler: nil)
+                let page = self.view
+                let shown = UIApplication.shared.applicationState == .active && page?.window != nil && page?.isLoading == false
+                switch self.watch.look(shown: shown) {
+                case .wait: continue
+                case .stalled: self.fail(); return
+                case .ping(let seq):
+                    page?.evaluateJavaScript("window.phoneCard?.ping(\(seq))") { [weak self] _, _ in self?.watch.pageAnswered(seq) }
+                }
             }
         }
         return view
@@ -169,7 +167,8 @@ import SwiftUI
             height = max(48, min(100_000, payload["height"].numeric ?? 48))
             if !drawn { drawn = true; onDrawn?() }
             replyHandler(true, nil)
-        case "pong": heard = Int(payload["seq"].numeric ?? 0); replyHandler(true, nil)
+        case "ready": watch.bodyReady(); replyHandler(true, nil)
+        case "pong": watch.bodyAnswered(Int(payload["seq"].numeric ?? 0)); replyHandler(true, nil)
         case "mac-only": notice = "Do this on \(session.mac.name)."; replyHandler(true, nil)
         case "image", "demo": presentation = payload; replyHandler(true, nil)
         case "action":
@@ -217,6 +216,36 @@ struct CardWebView: UIViewRepresentable {
     static func dismantleUIView(_ view: WKWebView, coordinator: ()) {
         (view.navigationDelegate as? CardWebHost)?.close()
     }
+}
+
+/// INF-804 / INF-1338: whether a shown card's body stopped answering. The host looks every two seconds and pings;
+/// three looks in a row that heard nothing since the one before are a stall.
+struct CardWatchdog {
+    enum Look: Equatable { case wait, ping(Int), stalled }
+    private var sent = 0
+    private var heard = 0
+    private var answered = 0
+    private var missed = 0
+    private var born = false
+
+    mutating func look(shown: Bool) -> Look {
+        guard shown else { missed = 0; return .wait }
+        // A stall is a card that answered nothing since the last look; a slow answer is still an answer.
+        if heard >= sent || heard > answered { missed = 0 } else { missed += 1 }
+        answered = heard
+        if missed >= 3 { return .stalled }
+        sent += 1
+        return .ping(sent)
+    }
+
+    /// Until the body's frame can answer, the card's page answers each ping for it. A body still loading on a busy device
+    /// is never counted, and one that wedges as it loads stops its page answering too, since the frame runs on its page's thread.
+    mutating func pageAnswered(_ seq: Int) { if !born { heard = max(heard, seq) } }
+
+    /// The body's bridge is listening. Its first word answers every ping before it; from here only its own pongs count.
+    mutating func bodyReady() { born = true; heard = sent }
+
+    mutating func bodyAnswered(_ seq: Int) { heard = max(heard, seq) }
 }
 
 /// A closed file-name namespace, served from the bundle or pinned connection, never a path or URL fetch.

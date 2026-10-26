@@ -145,6 +145,8 @@ The parent checks source identity, document identity, shared message schemas and
 The native footer is the only path to an effect-bearing action.
 A native watchdog removes a body that stops answering without removing its native controls, and offers Retry.
 The watchdog counts only while the body is on screen, loaded and in front, since WebKit pauses a card behind another tab or in the background, and any answer since its last look counts, however slow.
+Its pings go to the body, which can answer only once its frame's bridge says ready; until then the card's page answers each ping for it (`CardWatchdog`).
+So a body still loading on a busy device is never counted, while one whose script loops as it loads stops its page answering too, since the frame runs on its page's thread.
 A native collection timeout also releases a waiting footer or reply when the web process cannot run its own timer.
 `CardAssets` serves bundled fonts and minted picture, project-font and recording names through the pinned connection; it never opens an arbitrary URL or filesystem path.
 It asks through `ReadOnlySession.read`, which waits until the computer is in reach and asks again after a reconnect, so a card drawn from the first cards read, before the other first reads answer, still gets its pictures.

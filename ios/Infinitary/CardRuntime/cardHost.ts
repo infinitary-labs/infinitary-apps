@@ -31,6 +31,8 @@ window.addEventListener("message", (event: MessageEvent) => {
   if (message.type === "ready") {
     if (documentID || !message.document) return;
     documentID = message.document;
+    // INF-1338: the body can answer a ping from here on, so the native watchdog starts counting its own answers.
+    void native({ type: "ready" }).catch(() => {});
     send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly });
     send({ type: "keys", pictures: true, escape: false });
     send({ type: "width", width: input.width });

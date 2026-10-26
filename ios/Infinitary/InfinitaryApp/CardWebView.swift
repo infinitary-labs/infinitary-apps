@@ -24,6 +24,7 @@ import SwiftUI
     private var collectionTimeout: Task<Void, Never>?
     private var watch = CardWatchdog()
     private var theme = "light"
+    private var revealed = false
     private let fill: PhoneJSON
     var onReading: ((PhoneJSON) -> Void)?
     var onDrawn: (() -> Void)?
@@ -97,6 +98,14 @@ import SwiftUI
         guard theme != self.theme else { return }
         self.theme = theme
         view?.evaluateJavaScript("window.phoneCard?.theme('\(theme == "dark" ? "dark" : "light")')", completionHandler: nil)
+    }
+
+    /// INF-1263: the drawn body's height reaches the view in this update's layout; only after it, the page lets the body
+    /// take taps and reach accessibility, so nothing is offered where the 48-point placeholder clipped it.
+    func reveal() {
+        guard !revealed else { return }
+        revealed = true
+        DispatchQueue.main.async { [weak self] in self?.view?.evaluateJavaScript("window.phoneCard?.reveal()", completionHandler: nil) }
     }
 
     func beginChange() -> Bool {
@@ -212,7 +221,10 @@ struct CardWebView: UIViewRepresentable {
     let host: CardWebHost
     @Environment(\.colorScheme) private var scheme
     func makeUIView(context: Context) -> WKWebView { host.makeView(theme: scheme == .dark ? "dark" : "light") }
-    func updateUIView(_ view: WKWebView, context: Context) { host.updateTheme(scheme == .dark ? "dark" : "light") }
+    func updateUIView(_ view: WKWebView, context: Context) {
+        host.updateTheme(scheme == .dark ? "dark" : "light")
+        if host.drawn { host.reveal() }
+    }
     static func dismantleUIView(_ view: WKWebView, coordinator: ()) {
         (view.navigationDelegate as? CardWebHost)?.close()
     }

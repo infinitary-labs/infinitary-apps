@@ -695,6 +695,22 @@ import XCTest
         XCTAssertTrue(element.isHittable, app.debugDescription)
     }
 
+    /// The frames of a body and its first text with this label, from the first snapshot that holds the text.
+    private func firstShown(_ label: String, in body: XCUIElement) -> (body: CGRect, text: CGRect) {
+        var found: (body: CGRect, text: CGRect)?
+        let read = NSPredicate { _, _ in
+            guard let shot = try? body.snapshot() else { return false }
+            var stack: [XCUIElementSnapshot] = [shot]
+            while let next = stack.popLast() {
+                if next.elementType == .staticText && next.label == label { found = (shot.frame, next.frame); return true }
+                stack.append(contentsOf: next.children)
+            }
+            return false
+        }
+        XCTAssertEqual(waitForPhonePredicate(read, object: nil, timeout: 10), .completed, app.debugDescription)
+        return found ?? (.null, .zero)
+    }
+
     private func waitUntilEnabled(_ element: XCUIElement) {
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "enabled == true"), object: element, timeout: 10), .completed, app.debugDescription)
     }
@@ -760,6 +776,10 @@ import XCTest
         XCTAssertTrue(cardHeading(chart).waitForPresence(timeout: 10))
         app.staticTexts["card-title"].swipeRight()
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10))
+        // INF-1263: the paged-back body offers its text only where a tap reaches it. Read the body and the text in one
+        // snapshot the moment the text appears; before the fix it appeared below the body's 48-point placeholder.
+        let shown = firstShown("North Basin", in: app.webViews.matching(identifier: "card-body").firstMatch)
+        XCTAssertTrue(shown.body.contains(shown.text), "North Basin \(shown.text) lies outside the card body \(shown.body)")
         let north = app.webViews.staticTexts["North Basin"].firstMatch
         reveal(north); north.tap()
         let marker = app.webViews.buttons["Move the marker"]

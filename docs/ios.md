@@ -109,6 +109,7 @@ With no current card the stage shows the character alone, as the Mac does, and t
 The stack follows the Mac's: a card minimized on any Mac leaves the phone's stack, count and badge, and opening it from the Minimized section sends `inf:cards:minimize` with `false`, which brings it back on every Mac too.
 A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments, thread and reply row scroll between them in one native scroller.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
+Until the body reports drawn, its web view is a 48-point placeholder that clips the body, so the page keeps the body inert and hidden from accessibility until native code has laid the view out at the body's height and calls `reveal()`.
 On a short stage, such as an iPhone on its side, where the pinned head and choices would take more room than the body keeps, the whole card scrolls in that one scroller instead.
 The session keeps which offers the stage drew while the person could see it, so the next chevron's dot marks an unread card ahead.
 Swiping the native head pages cards without capturing the body's horizontal form and canvas gestures.

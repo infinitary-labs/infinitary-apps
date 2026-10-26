@@ -70,6 +70,7 @@
     "src/renderer/src/character/crew/crewmate.ts",
     "src/renderer/src/character/crew/constellation.ts",
     "src/renderer/src/character/crew/orbit.ts",
+    "src/renderer/src/character/crew/computers.ts",
     "src/renderer/src/character/crew/satellites.ts",
     "src/renderer/src/character/crew/stateWords.ts",
     "src/renderer/src/character/crew/programWords.ts",

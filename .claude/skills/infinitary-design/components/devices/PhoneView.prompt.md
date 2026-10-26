@@ -80,7 +80,9 @@ A Settings or browser door says to do it on the named computer and keeps the car
 Using a saved sign-in is a normal choice sent to that computer, not a request to open its browser here.
 While out of reach, the shown body remains readable, actions and the dimmed reply row are unavailable, and no change waits to be sent later.
 A stalled body leaves the native card controls usable and offers Retry in its place.
-An empty stage shows the native first mate and desktop-sized crew and computer formations, panned continuously rather than paged or shrunk to fit.
+An empty stage shows the native first mate and the desktop's crew formations, home at full size and other computers at half, panned continuously rather than paged or shrunk to fit.
+The orbits are drawn a little smaller than the desktop's, so eight crewmates fit the narrowest iPhone held upright; glyphs keep their size.
+Crew ride the desktop's growing two-orbit ring with no orbit outlines (`components/mate/Crewmate.prompt.md`).
 Crew retain their published tier, work posture and computer; programs show their live parts and dependency branches, and an unreachable computer shows frozen, unknown activity.
 A crewmate opens a native preview of its work, with Open task leading to the existing task record.
 Shift-Command-C, Browse crew, starts browsing, drawing an accent outline around its viewport; arrow keys pan it, Tab selects and reveals a crewmate, and Space opens that crewmate's preview.

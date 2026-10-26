@@ -213,7 +213,12 @@ The join stage uses idle; the empty stage follows the Mac's published busy snaps
 Homes that advertise `native-scene-observations` answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.
 A numbered push supersedes an older pending read; an older home retains event-only busy observation and unknown remote reach without sending unsupported requests.
 Joining shows only the first mate until real board facts arrive, and the accessibility value names unknown conversation activity until the home supplies a reading.
-`PhoneCrewScene` renders desktop-sized computer formations in a continuous native scroller, with touch panning and arrow keys rather than paging or shrinking the entire scene.
+`PhoneCrewScene` renders home's formation and every other computer's at the desktop's share of it in a continuous native scroller, with touch panning and arrow keys rather than paging or shrinking the entire scene.
+The phone draws the desktop's orbits at `PhoneSceneRoster.ringScale`, derived so that eight crewmates on the first orbit stay inside the narrowest portrait iPhone (375 points), the captain's ask; crew glyphs and the first mate keep the desktop's size.
+Crew sit on the desktop's growing two-orbit ring (`docs/crew-orbits.md`): the first orbit widens with each crewmate up to its seats, the next arrival opens the second orbit inside it, and no third orbit opens.
+`PhoneSceneRoster.SeatBook` remembers each crewmate's orbit and seat across board reads as the desktop's orbit does, a program's ring and each running part holding a seat, and each computer's area follows its first orbit's size.
+A re-spaced or resized orbit glides its crew around it, and neither orbits nor another computer's center are outlined.
+`PhoneOrbitSeatsTests` replays the desktop's own seat choices, recorded by `scripts/generate-phone-scene.ts`.
 Its native Browse crew command, Shift-Command-C, enters app-owned browsing with an accent viewport outline; arrow keys pan it, Tab selects a real crewmate and Space opens that crewmate's preview.
 While browsing, a scene-owned responder holds first-responder status and offers those unmodified keys as priority key commands, because SwiftUI shortcuts for them lose to the system's focus and text handling.
 Each crewmate and program answers touch across its 44-point square, not only the drawn circle.
@@ -228,7 +233,7 @@ Its preview counts finished, running and waiting work, shows their shares and na
 The panned extent stays stable while work departs, and cross-computer flights reach the first mate with the desktop's distance-based timing.
 `PhoneSceneViewport` alone owns placement: it centers home on entry or reconnection and preserves the viewed world point as the roster or viewport changes; the scroller's resize anchor does not add another adjustment.
 Initial rosters and reconnects settle in place; an unreachable computer freezes its unknown activity, and hidden scenes discard transient report, steer, failure and usage effects.
-Orbital paths and program topology are prepared with the roster, outside the display callback; only the drawing subtree reads the clock.
+Seats and program topology are prepared with the roster, outside the display callback; only the drawing subtree reads the clock.
 No joining time is invented.
 Joining still confirms the link's computer address, not a name obtained before authenticating that computer.
 The details sheet names the connected view's ability to answer cards, send messages and control tasks, or explains read-only access when the Mac requires an update.

@@ -2,7 +2,7 @@ import InfinitaryKit
 import SwiftUI
 import UIKit
 
-/// The empty card stage keeps desktop-sized formations. Touch pans the scene instead of paging computers.
+/// The empty card stage keeps the desktop's formations, its orbits scaled so eight crewmates fit an upright iPhone. Touch pans the scene instead of paging computers.
 struct PhoneCrewScene: View {
     let session: ReadOnlySession
     @Environment(PhoneMessageContext.self) private var messageContext

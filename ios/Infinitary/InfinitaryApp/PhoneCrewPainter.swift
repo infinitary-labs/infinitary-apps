@@ -7,17 +7,7 @@ enum PhoneCrewPainter {
     }
     static func draw(_ frame: PhoneSceneMotion.Frame, roster: PhoneSceneRoster, now: Double, still: Bool,
                      in context: inout GraphicsContext, palette: CharacterPainter.Palette) {
-        for computer in roster.computers where !computer.seats.isEmpty {
-            let center = CGPoint(x: computer.x, y: roster.height / 2)
-            var formation = context
-            formation.translateBy(x: center.x, y: center.y)
-            for ring in computer.rings {
-                formation.stroke(ring, with: .color(palette.dim.color(computer.reachable ? 0.2 : 0.1)), lineWidth: 0.7)
-            }
-            if computer.id != "home" {
-                context.stroke(circle(center, 6), with: .color(palette.acc.color(computer.reachable ? 0.6 : 0.25)), lineWidth: 1)
-            }
-        }
+        // As on the desktop, no orbit is outlined and another computer's group has no ring at its center.
         for (from, to, review) in frame.links {
             var path = Path(); path.move(to: from); path.addLine(to: to)
             let angle = atan2(to.y - from.y, to.x - from.x), at = CGPoint(x: to.x - cos(angle) * 20, y: to.y - sin(angle) * 20)

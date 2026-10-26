@@ -110,7 +110,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           add(`approach-${i}`, title, { parentId: program }),
         );
         const crew = [first, second, ...parallel];
-        // Cross all three existing desktop planes, retaining every glyph at its readable size.
+        // Cross both desktop orbits, retaining every glyph at its readable size.
         for (let i = 0; i < 21; i++) crew.push(add(`crew-${i}`, `Check harbour marker ${i + 1}`));
         const remote = add("remote", "Read the offshore chart", { deviceId: computer });
         const remotePart = add("remote-part", "Verify the offshore tide", {

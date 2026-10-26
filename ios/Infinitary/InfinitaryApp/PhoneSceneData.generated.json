@@ -1284,6 +1284,10 @@
       "phase": 0.53
     }
   ],
+  "ring": {
+    "startRadiusPx": 150,
+    "remoteShare": 0.5
+  },
   "constellations": {
     "orion": {
       "scale": 0.13,

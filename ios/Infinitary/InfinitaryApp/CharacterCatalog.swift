@@ -16,6 +16,8 @@ struct CharacterCatalog: Decodable, Sendable {
     let fidgets: [String: Double]
     let solids: [String: Solid]
     let planes: [Plane]
+    /// The growing ring's lone-crewmate radius and a remote computer's share of home's size.
+    let ring: [String: Double]
     let constellations: [String: Constellation]
     let galaxy: [String: Double]
     let algol: [String: Double]

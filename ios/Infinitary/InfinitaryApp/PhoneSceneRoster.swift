@@ -23,7 +23,9 @@ struct PhoneSceneRoster {
             for task in board?.tasks ?? [] where task.kind == "work" && task.status == "active" && task.program != true && task.reviewOf == nil {
                 if let parent = task.parentId, roots.contains(parent) { retained[parent, default: []].insert(PhoneSceneRoster.computerID(task)) }
             }
-            var roster = PhoneSceneRoster(board: board, presence: presence, homeName: homeName, inReach: inReach, generation: generation, retainedPrograms: retained)
+            // Seats are remembered from the last read of a real board, as the desktop remembers them; a new scene seats everyone afresh.
+            let books = key?.generation == generation && (value?.sequence ?? -1) >= 0 ? value?.books : nil
+            var roster = PhoneSceneRoster(board: board, presence: presence, homeName: homeName, inReach: inReach, generation: generation, retainedPrograms: retained, seats: books)
             if let previous = value, key?.generation == generation {
                 // Keep the panned extent while work departs; a removal must not clip its flight or move the viewport.
                 let left = max(roster.homeX, previous.homeX), right = max(roster.width - roster.homeX, previous.width - previous.homeX)
@@ -42,8 +44,10 @@ struct PhoneSceneRoster {
         let programs: [Program]
         let ordinary: [PhoneTask]
         let programParts: Set<String>
-        let seats: [String]
-        let rings: [Path]
+        /// Where each crewmate and program ring sits on this computer's orbits.
+        let book: SeatBook
+        /// The share of home's size this computer's group draws at, as on the desktop.
+        let share: Double
         let radius: Double
         var x: Double = 0
         var width: Double { radius * 2 + 80 }
@@ -104,7 +108,9 @@ struct PhoneSceneRoster {
     let sequence: Int
     let inReach: Bool
 
-    init(board: PhoneBoard?, presence: [PhoneComputerPresence], homeName: String, inReach: Bool, generation: Int, retainedPrograms: [String: Set<String>] = [:]) {
+    var books: [String: SeatBook] { Dictionary(uniqueKeysWithValues: computers.map { ($0.id, $0.book) }) }
+
+    init(board: PhoneBoard?, presence: [PhoneComputerPresence], homeName: String, inReach: Bool, generation: Int, retainedPrograms: [String: Set<String>] = [:], seats previous: [String: SeatBook]? = nil) {
         self.generation = generation; sequence = board?.seq ?? -1; self.inReach = inReach
         let all = board?.tasks ?? []
         allTasks = all; links = board?.links ?? []
@@ -119,20 +125,16 @@ struct PhoneSceneRoster {
             let roots = programs.filter { program in members.contains { $0.parentId == program.id && $0.reviewOf == nil } || retainedPrograms[program.id]?.contains(id) == true }
                 .map { root in Program(root, parts: members.filter { $0.parentId == root.id && $0.reviewOf == nil }, links: board?.links ?? []) }
             let ordinary = members.filter { task in task.reviewOf != nil || !roots.contains { $0.id == task.parentId } }
-            let seats = ordinary.map(\.id) + roots.map(\.id)
-            let count = seats.count
-            let occupied = Self.seat(max(0, count - 1))
+            // Every crewmate holds a seat, a program's parts included, and each program ring one on the first orbit.
+            var book = previous.map { $0[id] ?? SeatBook() } ?? SeatBook(crew: members.map(\.id), marks: roots.map(\.id))
+            if previous != nil { book.update(crew: members.map(\.id), marks: roots.map(\.id)) }
+            let share = id == "home" ? 1 : CharacterCatalog.shared.ring["remoteShare"]!
             // A program keeps room for its live branches; no unstarted, finished or remote placeholder dot is added.
             let programReach = roots.flatMap(\.branches).map(\.distance).max() ?? 0
-            var seen = Set<Double>()
-            let rings = seats.indices.compactMap { index -> Path? in
-                let seat = Self.seat(index)
-                guard seen.insert(seat.radius).inserted else { return nil }
-                return CharacterSky.path(96) { t in Self.projected(seat, angle: t * 2 * .pi).point }
-            }
-            let radius = count == 0 ? 140 : occupied.radius + programReach
+            // The area follows the first orbit's current size.
+            let radius = book.isEmpty ? 140 : Self.planeRadius(0, counts: book.counts) * share + programReach
             return Computer(id: id, name: id == "home" ? homeName : observed?.name ?? all.first(where: { Self.computerID($0) == id })?.place?.name ?? "Computer",
-                            reachable: inReach && (id == "home" || observed?.inReach == true), tasks: members, programs: roots, ordinary: ordinary, programParts: Set(roots.flatMap { $0.parts.map(\.id) }), seats: seats, rings: rings, radius: radius)
+                            reachable: inReach && (id == "home" || observed?.inReach == true), tasks: members, programs: roots, ordinary: ordinary, programParts: Set(roots.flatMap { $0.parts.map(\.id) }), book: book, share: share, radius: radius)
         }
         var left = -computers[0].width / 2, right = computers[0].width / 2
         for i in computers.indices where i > 0 {
@@ -150,23 +152,48 @@ struct PhoneSceneRoster {
         if let place = task.place { return "legacy:" + (place.name ?? place.where) }
         return "home"
     }
-    struct Seat { let plane: Int; let slot: Int; let capacity: Int; let radius: Double }
-    static func seat(_ index: Int) -> Seat {
-        let planes = CharacterCatalog.shared.planes
-        var remaining = index
-        for (i, plane) in planes.enumerated() {
-            if remaining < plane.capacity { return Seat(plane: i, slot: remaining, capacity: plane.capacity, radius: plane.radius) }
-            remaining -= plane.capacity
-        }
-        // Keep readable glyphs as a roster grows; extend the last plane instead of shrinking or hiding work.
-        let last = planes.last!, spacing = last.radius - planes[planes.count - 2].radius
-        return Seat(plane: planes.count - 1, slot: remaining % last.capacity, capacity: last.capacity,
-                    radius: last.radius + Double(remaining / last.capacity + 1) * spacing)
+    /// The phone's orbits: the desktop's growing ring drawn at `ringScale`.
+    static func planeRadius(_ plane: Int, counts: [Int]) -> Double { desktopRadius(plane, counts: counts) * ringScale }
+    /// The narrowest portrait iPhone the app runs on: iPhone SE (2nd and 3rd generation) and 13 mini, 375 points.
+    static let narrowestPortraitWidth = 375.0
+    /// The captain's ask: "by default 8 crewmates should all be visible on a portrait screen on ios". The phone draws the
+    /// desktop's ring at the share that keeps eight crewmates' first orbit, at its widest on screen, a glyph and a margin
+    /// inside the narrowest portrait iPhone; the ring still grows and splits as on the desktop.
+    static let ringScale: Double = {
+        let catalog = CharacterCatalog.shared, plane = catalog.planes[0], incline = plane.inclination * .pi / 180
+        // How far across the screen the tilted first orbit reaches, as a share of its radius.
+        let across = (pow(cos(plane.node), 2) + pow(cos(incline) * sin(plane.node), 2)).squareRoot()
+        let glyph = catalog.orbit["glyph"]! * (0.84 + 0.32) / 2
+        return (narrowestPortraitWidth / 2 - PhoneTheme.space3 - glyph) / (desktopRadius(0, counts: [8]) * across)
+    }()
+    /// The desktop's growing ring (orbitalPlanes.ts planeRadius): the innermost open orbit grows a notch with every
+    /// crewmate up to its cap, and every orbit outside it holds at its cap.
+    static func desktopRadius(_ plane: Int, counts: [Int]) -> Double {
+        let p = CharacterCatalog.shared.planes[plane], start = CharacterCatalog.shared.ring["startRadiusPx"]!
+        if plane < counts.lastIndex(where: { $0 > 0 }) ?? 0 { return p.radius }
+        let n = plane < counts.count ? counts[plane] : 0
+        if n <= 1 { return start }
+        return min(p.radius, start + (p.radius - start) * Double(n - 1) / Double(p.capacity - 1))
     }
-    static func projected(_ seat: Seat, angle: Double) -> (point: CGPoint, depth: Double) {
-        let p = CharacterCatalog.shared.planes[seat.plane], incline = p.inclination * .pi / 180
-        let u = seat.radius * cos(angle), v = seat.radius * sin(angle) * cos(incline)
-        return (CGPoint(x: u * cos(p.node) - v * sin(p.node), y: u * sin(p.node) + v * cos(p.node)), (sin(angle) * sin(incline) + 1) / 2)
+    /// A place on the orbits: a plane, fractional while gliding between two, an angle and a radius on screen.
+    struct Orbit {
+        var plane: Double
+        var angle: Double
+        var radius: Double
+        /// How far the target's plane turned this frame, radians.
+        var turn = 0.0
+    }
+    static func projected(_ orbit: Orbit) -> (point: CGPoint, depth: Double) {
+        let planes = CharacterCatalog.shared.planes
+        let lower = max(0, min(planes.count - 1, Int(orbit.plane.rounded(.down)))), upper = min(planes.count - 1, lower + 1)
+        let between = max(0, min(1, orbit.plane - Double(lower)))
+        func on(_ p: CharacterCatalog.Plane) -> (x: Double, y: Double, depth: Double) {
+            let incline = p.inclination * .pi / 180
+            let u = orbit.radius * cos(orbit.angle), v = orbit.radius * sin(orbit.angle) * cos(incline)
+            return (u * cos(p.node) - v * sin(p.node), u * sin(p.node) + v * cos(p.node), (sin(orbit.angle) * sin(incline) + 1) / 2)
+        }
+        let a = on(planes[lower]), b = between == 0 ? a : on(planes[upper])
+        return (CGPoint(x: a.x + (b.x - a.x) * between, y: a.y + (b.y - a.y) * between), a.depth + (b.depth - a.depth) * between)
     }
     static func working(_ task: PhoneTask) -> Bool {
         if let posture = task.workPosture { return posture.state == "active" }
@@ -188,6 +215,8 @@ struct PhoneSceneRoster {
         var task: PhoneTask
         var point: CGPoint
         var center: CGPoint
+        /// Its place on the orbits; a program part drawn on its branch has none.
+        var orbit: PhoneSceneRoster.Orbit?
         var depth = 0.5, spin = 0.0, alpha = 1.0, unfold = 1.0, work = 0.0, flicker = 0.0, nudge = 0.0
         var unknown = false, checks = false, programPart = false
         var size: Double { (programPart ? CharacterCatalog.shared.program["crewGapPx"]! : CharacterCatalog.shared.orbit["glyph"]!) * (0.84 + 0.32 * depth) }
@@ -214,6 +243,8 @@ struct PhoneSceneRoster {
     private var last: Double?
     private var computerTime: [String: Double] = [:]
     private var packets: [Packet] = []
+    /// Each program ring's place on its computer's first orbit, gliding as the crew's do.
+    private var markOrbits: [String: (orbit: PhoneSceneRoster.Orbit, center: CGPoint)] = [:]
     private var home: CGPoint?
     var current = Frame(glyphs: [], marks: [], packets: [], links: [])
 
@@ -257,35 +288,55 @@ struct PhoneSceneRoster {
         home = firstmate
         if roster.sequence >= 0 && roster.inReach { rosterReady = true }
         var target: [String: Glyph] = [:], marks: [Mark] = []
+        // Re-spacing and a resized orbit glide each crewmate around its orbit, never straight across it.
+        let eased = initial || settled ? 1 : min(1, dt * 6)
+        var markPlaces: [String: (orbit: PhoneSceneRoster.Orbit, center: CGPoint)] = [:]
         for computer in roster.computers {
-            if computer.reachable && !settled { computerTime[computer.id, default: 0] += dt }
+            let turning = computer.reachable && !settled
+            if turning { computerTime[computer.id, default: 0] += dt }
             let localTime = computerTime[computer.id, default: 0], center = CGPoint(x: computer.x, y: roster.height / 2)
-            let seats = computer.seats
-            var positions: [String: (CGPoint, Double)] = [:]
-            for (i, id) in seats.enumerated() {
-                let seat = PhoneSceneRoster.seat(i), plane = CharacterCatalog.shared.planes[seat.plane]
-                let used = max(1, min(seat.capacity, seats.count - (i - seat.slot)))
-                let angle = Double(seat.slot) / Double(used) * 2 * .pi + plane.phase - localTime * .pi / 180 * plane.speedDegPerSec
-                let projected = PhoneSceneRoster.projected(seat, angle: angle)
-                positions[id] = (CGPoint(x: center.x + projected.point.x, y: center.y + projected.point.y), projected.depth)
+            let counts = computer.book.counts
+            func orbit(plane: Int, slot: Double) -> PhoneSceneRoster.Orbit {
+                let rate = CharacterCatalog.shared.planes[plane].speedDegPerSec * .pi / 180
+                return .init(plane: Double(plane), angle: slot - localTime * rate,
+                             radius: PhoneSceneRoster.planeRadius(plane, counts: counts) * computer.share, turn: turning ? -dt * rate : 0)
+            }
+            func place(_ orbit: PhoneSceneRoster.Orbit, around center: CGPoint) -> (CGPoint, Double) {
+                let projected = PhoneSceneRoster.projected(orbit)
+                return (CGPoint(x: center.x + projected.point.x, y: center.y + projected.point.y), projected.depth)
+            }
+            var positions: [String: (CGPoint, Double, PhoneSceneRoster.Orbit?)] = [:]
+            for (id, seat) in computer.book.crew {
+                let at = orbit(plane: seat.plane, slot: seat.slot), (point, depth) = place(at, around: center)
+                positions[id] = (point, depth, at)
             }
             for program in computer.programs {
-                guard let root = positions[program.id]?.0 else { continue }
-                for branch in program.branches {
-                    let angle = atan2(root.y - center.y, root.x - center.x) + branch.angle
-                    positions[branch.id] = (CGPoint(x: root.x + cos(angle) * branch.distance, y: root.y + sin(angle) * branch.distance), 0.65)
+                guard let slot = computer.book.marks[program.id] else { continue }
+                let markID = computer.id + ":" + program.task.id
+                var root = (orbit: orbit(plane: 0, slot: slot), center: center)
+                if var had = markOrbits[markID], eased < 1 {
+                    Self.glide(&had.orbit, toward: root.orbit, eased)
+                    had.center = CGPoint(x: had.center.x + (center.x - had.center.x) * eased, y: had.center.y + (center.y - had.center.y) * eased)
+                    root = had
                 }
-                marks.append(Mark(task: program.task, computerID: computer.id, center: center, point: root,
+                markPlaces[markID] = root
+                let (rootPoint, _) = place(root.orbit, around: root.center)
+                for branch in program.branches {
+                    let angle = atan2(rootPoint.y - root.center.y, rootPoint.x - root.center.x) + branch.angle
+                    positions[branch.id] = (CGPoint(x: rootPoint.x + cos(angle) * branch.distance, y: rootPoint.y + sin(angle) * branch.distance), 0.65, nil)
+                }
+                marks.append(Mark(task: program.task, computerID: computer.id, center: root.center, point: rootPoint,
                                   parts: program.parts.map(\.id), parents: program.parents))
             }
             for task in computer.tasks {
-                guard let (point, depth) = positions[task.id] else { continue }
+                guard let (point, depth, place) = positions[task.id] else { continue }
                 let unknown = PhoneSceneRoster.unknown(task, computer: computer)
-                target[task.id] = Glyph(task: task, point: point, center: center, depth: depth,
+                target[task.id] = Glyph(task: task, point: point, center: center, orbit: place, depth: depth,
                     spin: localTime * (PhoneSceneRoster.working(task) ? 1.6 : 0.35), work: !unknown && PhoneSceneRoster.working(task) ? 1 : 0,
                     unknown: unknown, checks: !unknown && task.workPosture?.state == "active" && task.workPosture?.reason == "checks", programPart: computer.programParts.contains(task.id))
             }
         }
+        markOrbits = markPlaces
         let orbit = CharacterCatalog.shared.orbit
         for (id, glyph) in target {
             if members[id] == nil { members[id] = Member(glyph: glyph, arrived: initial || settled || glyph.unknown ? -.infinity : now, spawnDuration: Self.duration(orbit["spawnMs"]!, glyph: glyph, home: firstmate)) }
@@ -298,7 +349,6 @@ struct PhoneSceneRoster {
                                      y: member.glyph.point.y + (glyph.center.y - member.glyph.center.y))
                 next.spin = member.glyph.spin
             } else if !initial && !settled { next.spin = member.glyph.spin + dt * (glyph.work > 0 ? 1.6 : 0.35) }
-            let eased = initial || settled ? 1 : min(1, dt * 6)
             next.work = member.glyph.work + (glyph.work - member.glyph.work) * eased
             let arrive = settled || glyph.unknown ? 1 : clamp01((now - member.arrived) / member.spawnDuration)
             next.unfold = glyph.unknown ? member.glyph.unfold : arrive >= 1 ? 1 : clamp01((arrive - 0.55) / 0.45)
@@ -306,8 +356,19 @@ struct PhoneSceneRoster {
                 let arc = Self.travel(from: firstmate, to: glyph.point, at: easeInOut(arrive))
                 next.point = arc; next.alpha = min(1, arrive * 4)
             } else if !initial && !settled && !glyph.unknown {
-                next.point = CGPoint(x: member.glyph.point.x + (glyph.point.x - member.glyph.point.x) * eased,
-                                     y: member.glyph.point.y + (glyph.point.y - member.glyph.point.y) * eased)
+                if var place = member.glyph.orbit, let goal = glyph.orbit {
+                    Self.glide(&place, toward: goal, eased)
+                    let center = CGPoint(x: member.glyph.center.x + (glyph.center.x - member.glyph.center.x) * eased,
+                                         y: member.glyph.center.y + (glyph.center.y - member.glyph.center.y) * eased)
+                    let projected = PhoneSceneRoster.projected(place)
+                    next.orbit = place; next.center = center; next.depth = projected.depth
+                    next.point = CGPoint(x: center.x + projected.point.x, y: center.y + projected.point.y)
+                } else {
+                    next.point = CGPoint(x: member.glyph.point.x + (glyph.point.x - member.glyph.point.x) * eased,
+                                         y: member.glyph.point.y + (glyph.point.y - member.glyph.point.y) * eased)
+                }
+            } else if glyph.unknown && !initial {
+                next.orbit = member.glyph.orbit
             }
             next.flicker = settled || glyph.unknown ? 0 : member.boost * CharacterFlicker.envelope(now - member.flickerAt)
             next.nudge = settled || glyph.unknown ? 0 : max(0, 1 - (now - member.failedAt) / 0.6)
@@ -357,6 +418,16 @@ struct PhoneSceneRoster {
         }
         current = Frame(glyphs: glyphs, marks: marks, packets: flying, links: links)
         return current
+    }
+    /// Ride the plane's turn, then close on the target by the nearest way round, its radius and plane with it.
+    private static func glide(_ place: inout PhoneSceneRoster.Orbit, toward goal: PhoneSceneRoster.Orbit, _ eased: Double) {
+        place.angle += goal.turn
+        var gap = goal.angle - place.angle
+        gap -= (gap / (2 * .pi)).rounded() * 2 * .pi
+        place.angle += gap * eased
+        place.radius += (goal.radius - place.radius) * eased
+        place.plane += (goal.plane - place.plane) * eased
+        place.turn = goal.turn
     }
     private static func duration(_ base: Double, glyph: Glyph, home: CGPoint, from: CGPoint? = nil) -> Double {
         guard PhoneSceneRoster.computerID(glyph.task) != "home" else { return base / 1000 }

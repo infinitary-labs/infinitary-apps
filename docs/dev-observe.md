@@ -53,8 +53,8 @@ Observe adds no extra window.
 | Need | Source |
 |---|---|
 | Main (orchestrator) transcript | The attached seat's session file: Pi JSONL at `settings.firstmate-session-file` under `userData/firstmate/sessions/`, or, while the Claude seat serves, the app's copy of its transcript under `userData/firstmate/claude/` (W1 S11). The one session reader (`src/core/storage/sessionReader.ts`) tells the two apart by the file's first line; a Claude-served session is read by the same parser as a Claude crewmate's, and the row's backend chip says which seat wrote it |
-| Pi crewmate transcript | Pi JSONL at `tasks.session_file` (`userData/crewmates/<taskId>/sessions/`) |
-| Claude crewmate transcript | The app's copy of the client's transcript, `userData/crewmates/<taskId>/sessions/<tasks.session_file>.jsonl` (the session contract's step 6); before the first copy lands, and while it holds a turn's tail the copy has not caught up with, the JSONL Claude's own client writes: `<account store>/projects/<encoded cwd>/<tasks.session_file>.jsonl` (`src/core/observe/transcriptSource.ts` picks; `src/core/claude/claudeTranscript.ts` locates the client's; `src/core/observe/claudeTranscript.ts` reads either) |
+| Pi crewmate transcript | Pi JSONL at `task_execution.session_file` (`userData/crewmates/<taskId>/sessions/`) |
+| Claude crewmate transcript | The app's copy of the client's transcript, `userData/crewmates/<taskId>/sessions/<task_execution.session_file>.jsonl` (the session contract's step 6); before the first copy lands, and while it holds a turn's tail the copy has not caught up with, the JSONL Claude's own client writes: `<account store>/projects/<encoded cwd>/<task_execution.session_file>.jsonl` (`src/core/observe/transcriptSource.ts` picks; `src/core/claude/claudeTranscript.ts` locates the client's; `src/core/observe/claudeTranscript.ts` reads either) |
 | Task / repo / status / start | `tasks` row (already the crew registry) |
 | Token usage (input / output / cache / cost) | `usage_events` aggregated by `task_id` |
 | Live stream | Existing `inf:event` union, with first mate Pi events fanned out under `taskId: "firstmate"` |
@@ -65,7 +65,7 @@ Crewmate rows use the task id.
 The retired supervision session is not listed or selectable in Observe, even with a stored pointer or kept file.
 Its files, setting, usage history, deterministic outcome ledger and offline export paths are preserved; removing its presentation deletes no evidence.
 
-`tasks.session_file` is the backend's opaque resume token, not always a path: a Pi JSONL path for Pi crewmates, the minted session id for Claude.
+`task_execution.session_file` is the backend's opaque resume token, not always a path: a Pi JSONL path for Pi crewmates, the minted session id for Claude.
 `src/core/observe/transcriptSource.ts` resolves a local row to a readable file by the backend of the account it ran on; treating the column as a path rendered every non-Pi crewmate as a blank pane (captain report, 2026-09-05).
 For a task on another computer, it locates this Mac's copied record and reads its dialect with `sessionDialectAt`, the same first-line reader the task's Activity uses.
 That computer's account is not registered on this Mac, so a missing account id never decides which parser reads the copy.
@@ -288,4 +288,4 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   The retired supervision session is neither listed nor selectable; its historical files and deterministic outcome ledger are untouched.
   Transcript and session rows are windowed in the existing Tier-2 frame with persistent scrollers, measured heights and reading anchors; unchanged pushes leave DOM alone.
   `ObserveService.read` caches unchanged main and crew files, uses metadata-only list reads, and yields during parsing; see `tests/e2e/observe-windowing.spec.ts` and `observe-frame.spec.ts`.
-  `tasks.session_file` is the backend's resume token, not always a path: `src/core/observe/transcriptSource.ts` resolves it per backend (Claude's is the app's copy under the task's `sessions/`, else the client's own JSONL in `~/.claude`, `src/core/claude/claudeTranscript.ts`), and a selected session is never a blank pane - `transcriptNote` says why when nothing can be read.
+  `task_execution.session_file` is the backend's resume token, not always a path: `src/core/observe/transcriptSource.ts` resolves it per backend (Claude's is the app's copy under the task's `sessions/`, else the client's own JSONL in `~/.claude`, `src/core/claude/claudeTranscript.ts`), and a selected session is never a blank pane - `transcriptNote` says why when nothing can be read.

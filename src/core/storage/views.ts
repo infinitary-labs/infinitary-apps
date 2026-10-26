@@ -61,6 +61,15 @@ const BASIS_FROM_REFERENCES =
   "(SELECT b.ref FROM task_references b WHERE b.task_id = t.id AND b.kind = 'basis')";
 const BASIS_FROM_SHAPE = "json_extract(t.shape_json, '$.basis')";
 
+/**
+ * `v_placements_v1`'s source, written in place of these markers when the
+ * views are made: the task's execution row (INF-1296 piece 3), or, on a
+ * database migrating through the versions before that table, the task row
+ * that held the placement.
+ */
+const PLACEMENT_TABLE = "/* placement table */";
+const PLACEMENT_TASK = "/* placement task */";
+
 export const PUBLISHED_VIEWS: readonly PublishedView[] = [
   {
     name: "v_placements_v1",
@@ -72,13 +81,13 @@ export const PUBLISHED_VIEWS: readonly PublishedView[] = [
       "reservation",
       "snapshot_json",
     ],
-    select: `SELECT id AS task_id,
+    select: `SELECT ${PLACEMENT_TASK} AS task_id,
       json_extract(placement_json, '$.snapshot.at') AS committed_at,
       json_extract(placement_json, '$.snapshot.computerId') AS computer_id,
       json_extract(placement_json, '$.snapshot.computerName') AS computer_name,
       json_extract(placement_json, '$.reservation') AS reservation,
       json_remove(json_extract(placement_json, '$.snapshot'), '$.origin') AS snapshot_json
-      FROM tasks WHERE placement_json IS NOT NULL`,
+      FROM ${PLACEMENT_TABLE} WHERE placement_json IS NOT NULL`,
   },
   {
     name: "v_version_v1",
@@ -452,21 +461,24 @@ export function createViews(db: SchemaReader): void {
   for (const view of publishedViews(db)) db.exec(viewSql(view));
 }
 
-/** Whether the task references exist yet (INF-1296 piece 2). */
-function hasReferences(db: SchemaReader): boolean {
+/** Whether a table a view reads exists yet (INF-1296 pieces 2 and 3). */
+function hasTable(db: SchemaReader, name: string): boolean {
   return (
-    db
-      .prepare("SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = 'task_references'")
-      .all().length > 0
+    db.prepare(`SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = '${name}'`).all()
+      .length > 0
   );
 }
 
 /** The published views as this database can read them. */
 function publishedViews(db: SchemaReader): PublishedView[] {
-  const basis = hasReferences(db) ? BASIS_FROM_REFERENCES : BASIS_FROM_SHAPE;
+  const basis = hasTable(db, "task_references") ? BASIS_FROM_REFERENCES : BASIS_FROM_SHAPE;
+  const executing = hasTable(db, "task_execution");
   return PUBLISHED_VIEWS.map((view) => ({
     ...view,
-    select: view.select.replace(BASIS_COLUMN, basis),
+    select: view.select
+      .replace(BASIS_COLUMN, basis)
+      .replace(PLACEMENT_TABLE, executing ? "task_execution" : "tasks")
+      .replace(PLACEMENT_TASK, executing ? "task_id" : "id"),
   }));
 }
 

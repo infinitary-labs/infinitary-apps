@@ -102,6 +102,12 @@ const taskLineSchema = z.object({
    * older field, so an export reads the same to a build before them.
    */
   references: z.array(taskReferenceSchema).optional(),
+  /**
+   * The recorded conversation its resume binding names (INF-1296 piece 3),
+   * null when its token names none. An older export has none, and its
+   * import names the conversation the token belongs to, as the upgrade does.
+   */
+  conversation: nullableString.optional(),
   accountId: nullableString,
   difficulty: z.enum(["low", "medium", "high", "premium"]).nullable(),
   shape: workShapeSchema.nullable(),
@@ -205,6 +211,8 @@ export type TaskExportBundle = {
   sessions?: { taskId: string; session: TaskSession }[];
   /** Recorded references; an older export has none, and its shapes name them. */
   references?: { taskId: string; reference: TaskReference }[];
+  /** Each resume binding's recorded conversation; an older export has none. */
+  conversations?: { taskId: string; conversation: string | null }[];
   /**
    * Timeline events, in export order (the timeline's), without storage ids,
    * each with the other tasks it concerns when it concerns any.
@@ -220,6 +228,7 @@ export type TaskExportSource = {
   list(): TaskRecord[];
   recordedSessions?(id: string): TaskSession[];
   recordedReferences?(id: string): TaskReference[];
+  recordedConversation?(id: string): string | null;
   timeline(id: string): TaskEvent[];
   /** Whom each event concerns, by event id. */
   eventConcerns(): Map<number, TaskConcern[]>;
@@ -265,12 +274,14 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
       const { kind, ...rest } = task;
       const sessions = source.recordedSessions?.(task.id) ?? [];
       const references = source.recordedReferences?.(task.id) ?? [];
+      const conversation = task.sessionFile ? source.recordedConversation?.(task.id) : undefined;
       return {
         kind: "task",
         ...rest,
         taskKind: kind,
         ...(sessions.length ? { sessions } : {}),
         ...(references.length ? { references } : {}),
+        ...(conversation !== undefined ? { conversation } : {}),
       };
     }),
     ...events.map((event): TaskExportLine => {
@@ -313,6 +324,7 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
     asks: [],
     sessions: [],
     references: [],
+    conversations: [],
   };
   let number = 0;
   for (const raw of lines) {
@@ -344,7 +356,9 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
         break;
       }
       case "task": {
-        const { kind: _kind, taskKind, sessions, references, ...rest } = line;
+        const { kind: _kind, taskKind, sessions, references, conversation, ...rest } = line;
+        if (conversation !== undefined)
+          bundle.conversations?.push({ taskId: rest.id, conversation });
         for (const session of sessions ?? []) bundle.sessions?.push({ taskId: rest.id, session });
         for (const reference of references ?? [])
           bundle.references?.push({ taskId: rest.id, reference });

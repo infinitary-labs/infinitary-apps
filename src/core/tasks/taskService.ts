@@ -3006,6 +3006,14 @@ export class TaskService {
     return this.conversations.list(id);
   }
 
+  /**
+   * The recorded conversation a task's resume binding names, for record
+   * export (INF-1296 piece 3); null when its token names none.
+   */
+  recordedConversation(id: string): string | null {
+    return this.store.execution.get(id).conversation;
+  }
+
   /** A task's basis, branch source and earlier attempt as recorded, for record export. */
   recordedReferences(id: string): TaskReference[] {
     return this.references.list(id);
@@ -3014,6 +3022,11 @@ export class TaskService {
   /** Recorded conversations plus unlabelled files retained before the association existed. */
   sessions(id: string, folder?: { dir: string; computer: string }) {
     const task = this.mustGet(id);
+    // The resume binding names the conversation it resumes (INF-1296 piece
+    // 3); a token from before associations names the one its file is.
+    const binding = this.store.execution.get(id);
+    const resumes =
+      binding.conversation ?? (task.sessionFile ? conversationOf(task.sessionFile) : null);
     const rows: (Omit<TaskSession, "began" | "opened_at" | "last_at" | "resume_token"> & {
       began: string | null;
       opened_at: number | null;
@@ -3021,9 +3034,7 @@ export class TaskService {
       current: boolean;
     })[] = this.conversations.list(id).map(({ resume_token, ...session }) => ({
       ...session,
-      current:
-        task.sessionFile !== null &&
-        conversationOf(task.sessionFile) === conversationOf(resume_token),
+      current: resumes !== null && resumes === conversationOf(resume_token),
     }));
     const known = new Set(rows.map((row) => conversationOf(row.file)));
     for (const file of folder ? sessionFilesIn(folder.dir) : []) {
@@ -3040,7 +3051,7 @@ export class TaskService {
         opened_at: null,
         last_at: null,
         began: null,
-        current: task.sessionFile !== null && conversationOf(task.sessionFile) === conversation,
+        current: resumes === conversation,
       });
     }
     return rows;
@@ -4489,6 +4500,13 @@ export class TaskService {
         if (!incoming.has(taskId)) throw new Error(`Session names an unknown task: ${taskId}`);
         this.conversations.record(taskId, session);
       }
+      // A resume binding names its conversation once the conversations are in.
+      const exported = new Map(
+        (bundle.conversations ?? []).map(({ taskId, conversation }) => [taskId, conversation]),
+      );
+      for (const record of bundle.tasks)
+        if (record.sessionFile)
+          this.store.execution.pinConversation(record.id, exported.get(record.id));
       for (const { concerns, ...event } of bundle.events) {
         const id = this.events.insert(event);
         if (concerns?.length) this.events.insertConcerns(id, concerns);

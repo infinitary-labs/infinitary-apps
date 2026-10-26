@@ -4,7 +4,13 @@ import type { Card } from "@shared/cards";
 import { CUSTOM_API_PROVIDER_PREFIX } from "@shared/customApi";
 import { hostEnv } from "../../src/core/hostEnv";
 import { mcpIntegration } from "../../src/core/integrations/providers/mcp/mcpIntegration";
-import { openDatabase, TASK_REFERENCES_VERSION } from "../../src/core/storage/db";
+import {
+  openDatabase,
+  TASK_EXECUTION_VERSION,
+  TASK_POLICIES_VERSION,
+  TASK_REFERENCES_VERSION,
+} from "../../src/core/storage/db";
+import { policyShapeFields, type TaskPolicyRow } from "../../src/core/storage/taskPolicyFields";
 import { REFERENCE_SHAPE_FIELDS } from "../../src/core/storage/taskReferenceStore";
 import { dropViews } from "../../src/core/storage/views";
 import { atUtilityQos } from "../../src/core/utilityQos";
@@ -58,6 +64,10 @@ export type OlderProfile = {
   decisions: number[];
   /** Each task reference written back into the work shape field it was saved in. */
   references: { taskId: string; field: string; ref: string }[];
+  /** Each task whose policy inputs went back into its work shape. */
+  policies: string[];
+  /** Each task whose running work went back onto its task row, with the turn keys put back on its delivery. */
+  execution: { taskId: string; turn: string[] }[];
 };
 
 /**
@@ -66,11 +76,88 @@ export type OlderProfile = {
  * returns says what it rewrote, so a journey can tell it was not a no-op.
  */
 export function asSavedByOlderRelease(userDataDir: string): OlderProfile {
+  // Each format change is undone newest first, every one opening the
+  // database only as far as its own migration, so none runs again.
+  const history = olderTaskHistory(userDataDir);
+  const policies = olderTaskPolicies(userDataDir);
+  const execution = olderTaskExecution(userDataDir);
   return {
     customChecks: olderCustomChecks(userDataDir),
-    ...olderTaskHistory(userDataDir),
+    ...history,
     references: olderTaskReferences(userDataDir),
+    policies,
+    execution,
   };
+}
+
+/**
+ * Each task's policy inputs as a release before INF-1296 piece 3 saved
+ * them: the delivery, merging and care asked at filing and the live edits
+ * since in its work shape (`delivery_ask`, `autonomy_ask`, `rigor_ask`,
+ * `policies`), with no table of their own.
+ */
+function olderTaskPolicies(userDataDir: string): OlderProfile["policies"] {
+  if (!existsSync(join(userDataDir, "firstmate.db"))) return [];
+  const db = openDatabase(userDataDir, TASK_POLICIES_VERSION);
+  try {
+    const rows = db
+      .prepare("SELECT * FROM task_policies ORDER BY task_id")
+      .all() as TaskPolicyRow[];
+    const write = db.prepare("UPDATE tasks SET shape_json = ? WHERE id = ?");
+    const shapeOf = db.prepare("SELECT shape_json FROM tasks WHERE id = ?");
+    db.transaction(() => {
+      for (const row of rows) {
+        const saved = (shapeOf.get(row.task_id) as { shape_json: string | null }).shape_json;
+        const shape = { ...(saved ? JSON.parse(saved) : {}), ...policyShapeFields(row) };
+        write.run(JSON.stringify(shape), row.task_id);
+      }
+      dropViews(db);
+      db.exec("DROP TABLE task_policies");
+      db.prepare("DELETE FROM schema_migrations WHERE version = ?").run(TASK_POLICIES_VERSION);
+    })();
+    return rows.map((row) => row.task_id);
+  } finally {
+    db.close();
+  }
+}
+
+/**
+ * Each task's running work as a release before INF-1296 piece 3 saved it:
+ * the resume token, computer, account, placement, idle clock, recovery
+ * rung and start notice on the task row, and the current turn's
+ * declarations on its delivery facts. That release named no conversation
+ * for the token, so the next launch's migration names the one recorded.
+ */
+function olderTaskExecution(userDataDir: string): OlderProfile["execution"] {
+  if (!existsSync(join(userDataDir, "firstmate.db"))) return [];
+  const db = openDatabase(userDataDir, TASK_EXECUTION_VERSION);
+  try {
+    const rows = db
+      .prepare("SELECT task_id AS taskId, turn_json AS turn FROM task_execution ORDER BY task_id")
+      .all() as { taskId: string; turn: string | null }[];
+    db.transaction(() => {
+      dropViews(db);
+      db.exec(`
+        UPDATE tasks SET session_file = x.session_file, device_id = x.device_id,
+          account_id = x.account_id, placement_json = x.placement_json, idle_since = x.idle_since,
+          recovery_rung = x.recovery_rung, recovery_count = x.recovery_count,
+          recovery_at = x.recovery_at, start_notice = x.start_notice,
+          delivery_json = CASE WHEN x.turn_json IS NULL THEN tasks.delivery_json
+            ELSE json_patch(COALESCE(tasks.delivery_json, '{}'), x.turn_json) END
+          FROM task_execution x WHERE x.task_id = tasks.id;
+        DROP TABLE task_execution;
+        CREATE INDEX tasks_pending_placement ON tasks(id)
+          WHERE json_extract(placement_json, '$.reservation') = 'pending';
+      `);
+      db.prepare("DELETE FROM schema_migrations WHERE version = ?").run(TASK_EXECUTION_VERSION);
+    })();
+    return rows.map((row) => ({
+      taskId: row.taskId,
+      turn: row.turn ? Object.keys(JSON.parse(row.turn)) : [],
+    }));
+  } finally {
+    db.close();
+  }
 }
 
 /**
@@ -82,7 +169,7 @@ export function asSavedByOlderRelease(userDataDir: string): OlderProfile {
  */
 function olderTaskReferences(userDataDir: string): OlderProfile["references"] {
   if (!existsSync(join(userDataDir, "firstmate.db"))) return [];
-  const db = openDatabase(userDataDir);
+  const db = openDatabase(userDataDir, TASK_REFERENCES_VERSION);
   try {
     const rows = db
       .prepare("SELECT task_id AS taskId, kind, ref FROM task_references ORDER BY task_id, kind")

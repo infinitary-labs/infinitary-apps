@@ -272,3 +272,14 @@ Who named it and when were never saved, so they stay empty on a moved row.
 The shape the app reads still carries the three names, composed from the rows, so no surface reads them differently; `v_tasks_v1` reads its `basis` column from the rows.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 An export this build writes keeps each name in the task's shape beside the task's `references`, so an older importer reads the names it knew and drops the rows, and an export an older build wrote imports here with each name made a row, its actor and time empty.
+
+## Running work and policy inputs
+
+Migration 97 moves each task's running work off its task row into a `task_execution` row, and migration 98 moves the policy inputs out of its work shape into a `task_policies` row, each in its own transaction before any service starts (`docs/task-record.md`, "A task's execution record" and "Live task policies").
+Each value moves exactly as saved: the resume token, computer, account, placement, idle clock, recovery rung and start notice, and the current turn's declarations from the delivery facts; the asks made at filing and the live edits, an explicit `false` and a reset to the project included.
+A resume token names the conversation `task_sessions` records for it, and a token from before conversations were recorded names none.
+A shape value of another type than its field declares stays in the shape, and the closed policy snapshot stays on the delivery facts.
+A task with nothing running has no execution row and reads the defaults it read before.
+The task row's columns stay, emptied, so the published views read the same, and `v_placements_v1` reads the execution rows.
+An older build refuses the profile, because its migration history names migrations it does not know ("Before services start").
+An export this build writes carries the binding's conversation on the task's line, which an older importer drops, and an export an older build wrote imports here with the conversation named as the migration names it.

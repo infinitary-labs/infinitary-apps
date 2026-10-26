@@ -430,7 +430,7 @@ These readings are observations only, never a scheduling commitment, a physical-
 
 A home may open a crewmate's conversation here, while the crewmate's reports, cards and record stay at the home (`SessionHost`, `src/core/helper/sessionHost.ts`).
 No new kind of message carries it: both directions ride the connection's own `invoke` and `result` (`docs/connection.md`), with the shapes in `src/shared/work.ts`.
-A home opens one for a task whose record names this computer (`tasks.device_id`, below), which a project's Runs on sets (below, "Runs on").
+A home opens one for a task whose record names this computer (`task_execution.device_id`, below), which a project's Runs on sets (below, "Runs on").
 
 - **What runs here.**
   The real Pi or Claude conversation, with the crewmate's file tools and shell in the task's own working copy here (below, "Its working copies"), and this Mac's own sign-ins: Claude on this macOS user's own client and login, and Pi with an agent folder of its own (`startConversations`, `src/core/helper/conversations.ts`).
@@ -520,7 +520,7 @@ A home opens one for a task whose record names this computer (`tasks.device_id`,
 `PlacedSessions` (`src/core/placed/placedSessions.ts`) is the home's half, composed in `createServices` as `services.placed`; it reaches the computers only through `WorkDevices`, which the shell attaches to the connection (`docs/devices.md`).
 
 - **Where a task runs.**
-  `tasks.device_id` (migration 63, written by `TaskService.setDevice`) names the paired computer that runs work holding a task's conversation; null is this Mac.
+  `task_execution.device_id` (migration 63, moved by migration 97, written by `TaskService.setDevice`) names the paired computer that runs work holding a task's conversation; null is this Mac.
   The supervisor reads it where it used to name this Mac: that computer makes the task's working copy (below, "Its working copies"), and the session opens on that computer's factories, with that computer's folders in the crewmate's instructions and its working copy as the crewmate's own; this Mac makes no working copy for it.
 - **Factories.**
   `factories(deviceId)` is one `SessionFactory` per backend for that computer, presenting the backend it runs there, so no third backend exists; each refuses another machine, another backend's binding, and anything but a crewmate's rolling coding conversation.
@@ -678,7 +678,7 @@ An explicit computer stays the captain's choice; Automatic chooses separately fo
   Its next task starts here."
   (`repo_runs_on`).
 - **Where a task runs.**
-  A task takes its project's Runs on the first time the supervisor tries to start it, unless it has its own (below, "A task's own Runs on"), and `tasks.device_id` keeps it, so a task already started finishes where it started.
+  A task takes its project's Runs on the first time the supervisor tries to start it, unless it has its own (below, "A task's own Runs on"), and `task_execution.device_id` keeps it, so a task already started finishes where it started.
   A task that has not started follows its project when the project moves, unless it has its own.
   An independent review follows the computer its builder actually runs on, regardless of later changes to the project's Runs on (below, "Independent reviews").
 - **Waiting.**

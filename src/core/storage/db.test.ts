@@ -95,6 +95,32 @@ const REVERSE_TASK_REFERENCES = [
   )
   .join("")
   .concat("DROP TABLE task_references;\n");
+/** INF-1296 piece 3's policy rows, undone: each input back into its shape field. */
+const REVERSE_TASK_POLICIES = [
+  ["delivery_ask", "p.delivery_ask"],
+  ["autonomy_ask", "json(CASE p.autonomy_ask WHEN 1 THEN 'true' ELSE 'false' END)"],
+  ["rigor_ask", "p.rigor_ask"],
+  ["policies", "json(p.edits_json)"],
+]
+  .map(([field, value]) => {
+    const column = field === "policies" ? "edits_json" : field;
+    return `UPDATE tasks SET shape_json = json_set(shape_json, '$.${field}', (SELECT ${value} FROM task_policies p WHERE p.task_id = tasks.id)) WHERE EXISTS (SELECT 1 FROM task_policies p WHERE p.task_id = tasks.id AND p.${column} IS NOT NULL);\n`;
+  })
+  .join("")
+  .concat("DROP TABLE task_policies;\n");
+/** INF-1296 piece 3's execution rows, undone: each value back on the task row, the turn on its delivery. */
+const REVERSE_TASK_EXECUTION = `UPDATE tasks SET session_file = x.session_file, device_id = x.device_id,
+  account_id = x.account_id, placement_json = x.placement_json, idle_since = x.idle_since,
+  recovery_rung = x.recovery_rung, recovery_count = x.recovery_count, recovery_at = x.recovery_at,
+  start_notice = x.start_notice,
+  delivery_json = CASE WHEN x.turn_json IS NULL THEN tasks.delivery_json
+    ELSE json_patch(COALESCE(tasks.delivery_json, '{}'), x.turn_json) END
+  FROM task_execution x WHERE x.task_id = tasks.id;
+DROP TABLE task_execution;
+CREATE INDEX tasks_pending_placement ON tasks(id) WHERE json_extract(placement_json, '$.reservation') = 'pending';
+`;
+/** INF-1296 piece 3's two records, undone, newest first. */
+const REVERSE_RUNNING_WORK = REVERSE_TASK_POLICIES + REVERSE_TASK_EXECUTION;
 /** Migration 80's delivery columns, undone. */
 const REVERSE_MIGRATION_80 =
   "ALTER TABLE schedule_runs DROP COLUMN inbox_id; ALTER TABLE schedule_runs DROP COLUMN delivery; ALTER TABLE schedule_runs DROP COLUMN settled_at; ALTER TABLE schedule_runs DROP COLUMN cancel_reason; ALTER TABLE schedule_runs DROP COLUMN tasks; ALTER TABLE schedule_runs DROP COLUMN cards;\n";
@@ -1395,7 +1421,8 @@ describe("migration 49 (a wake's durable once-identity, the primitives review P3
     // is the head: undoing it comes first.
     dropViews(reopened);
     reopened.exec(
-      REVERSE_TASK_REFERENCES +
+      REVERSE_RUNNING_WORK +
+        REVERSE_TASK_REFERENCES +
         REVERSE_TASK_SESSIONS +
         REVERSE_MIGRATION_80 +
         REVERSE_MIGRATION_79 +
@@ -1534,7 +1561,8 @@ describe("migration 50 (one decision ledger, the primitives review P6)", () => {
     // Reversible: the three tables back from their kinds, every row as it was.
     dropViews(upgraded);
     upgraded.exec(
-      REVERSE_TASK_REFERENCES +
+      REVERSE_RUNNING_WORK +
+        REVERSE_TASK_REFERENCES +
         REVERSE_TASK_SESSIONS +
         REVERSE_MIGRATION_80 +
         REVERSE_MIGRATION_79 +
@@ -1598,7 +1626,8 @@ describe("migrations 34-35 (the work shape, its rule, and the served tier)", () 
     // table into the ledger: undoing the head undoes both first.
     dropViews(upgraded);
     upgraded.exec(
-      REVERSE_MIGRATION_76 +
+      REVERSE_RUNNING_WORK +
+        REVERSE_MIGRATION_76 +
         REVERSE_MIGRATION_71 +
         REVERSE_MIGRATION_70 +
         REVERSE_MIGRATION_69 +
@@ -2659,7 +2688,7 @@ describe("migration 63 (where a task's crewmate runs, multi-machine piece 8)", (
 
     // Reversible: dropping the column restores the v62 shape with every row.
     dropViews(reopened);
-    reopened.exec(`${REVERSE_MIGRATION_76} ${REVERSE_MIGRATION_63}`);
+    reopened.exec(`${REVERSE_RUNNING_WORK} ${REVERSE_MIGRATION_76} ${REVERSE_MIGRATION_63}`);
     expect(columnNames(reopened, "tasks")).toEqual(columnsAt62);
     expect(reopened.prepare("SELECT COUNT(*) AS n FROM tasks").get()).toEqual({ n: 2 });
     reopened.close();
@@ -3243,7 +3272,8 @@ it("migration 86 retains connecting in saved placement verdicts without the old 
     JSON.parse(
       (
         upgraded
-          .prepare("SELECT placement_json FROM tasks WHERE id = ?")
+          // Saved on the task's execution row since INF-1296 piece 3.
+          .prepare("SELECT placement_json FROM task_execution WHERE task_id = ?")
           .get("connecting-placement") as { placement_json: string }
       ).placement_json,
     );

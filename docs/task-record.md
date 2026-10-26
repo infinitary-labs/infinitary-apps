@@ -11,7 +11,7 @@ A conversation key comes from its resume token: a Pi file name without its suffi
 One row belongs to one conversation on one task; reopening it updates its last observed activity and serving metadata without replacing its first observation or opening reason.
 `opened_at` is when this association was first recorded, and `last_at` is the latest recorded lifecycle boundary, not a claim about a provider's message timestamp.
 A backend that mints its id during its first turn is recorded when the resume token becomes available; until then the runtime retains why it opened.
-The current resume pointer remains on `tasks` for the existing reopen protocol, and `current` is derived rather than stored on the conversation row.
+The current resume pointer is the task's resume binding on its execution record, and `current` is derived from that binding rather than stored on the conversation row.
 A by-key `tasks` read includes `sessions`; list reads stay compact.
 Each row names its transcript file and computer, model and provider, account, opening reason, timestamps and whether it is current.
 A stronger-model task names `earlier_attempt` by task key; reading that key lists that attempt's own sessions, never copies them onto its successor.
@@ -22,15 +22,26 @@ Files still held only on an unreachable computer are not enumerated by this fall
 Recorded associations remain available without a readable transcript and survive task closure, timeline compaction, restart and JSONL record export/import.
 Only erasing an unstarted task or the D-13 purge removes their rows, through `TaskService`.
 
+## A task's execution record
+
+A task's running work is its own record, one `task_execution` row per task beside the conversations in `task_sessions` (INF-1296 piece 3, migration 97).
+It holds the resume binding, the computer and account the crewmate runs on, the committed placement, the idle clock and recovery rung, a manual start that did not begin (`start_notice`), and what the current turn's report declared about whose turn follows it (`turn_json`: `captainWait`, `finishedAt`, `mergeCompletion`, `needsFirstmate`, `checkBack`).
+The resume binding is the opaque token the backend resumes from (`session_file`) and, where `task_sessions` records the conversation that token belongs to, that conversation's key (`conversation`); a token from before conversations were recorded keeps none, and nothing makes one up for it.
+`TaskService.sessions` marks current the conversation the binding names, or for a token with none the conversation its file is.
+`TaskStore` is the one writer, beneath `TaskService`, and a record still reads every one of these facts under the field it read before (`sessionFile`, `deviceId`, `accountId`, `placement`, `idleSince`, the `recovery*` fields, `startNotice`, and the turn's declarations on `delivery`), so no reader changed.
+A write of a task's whole delivery facts replaces the turn's declarations with the ones it carries, as the delivery column did before them.
+The task row's older columns stay empty until a later migration retires them; `activity`, `assignee`, `model` and `started_at` stay on the task row, because the published views and the feed read them there, as do the scheduling facts already typed on it (`priority`, `start_policy`, `gate`, `test_path`).
+A record export carries the binding's `conversation` on the task's line; an export an older build wrote imports with the conversation named as the migration names it.
+
 ## The idle clock
 
-Four columns on the record (migration 45; new databases receive them with the record) hold the idle ladder's durable state, written only through `TaskService` like every other column: `idle_since` (`markIdle` at every idle boundary, `endIdle` when a turn the ladder did not start begins), `recovery_rung`, `recovery_count` and `recovery_at` (`recordRecovery`).
+Four columns of the execution record (migration 45 added them to the task row, and migration 97 moved them) hold the idle ladder's durable state, written only through `TaskService` like every other column: `idle_since` (`markIdle` at every idle boundary, `endIdle` when a turn the ladder did not start begins), `recovery_rung`, `recovery_count` and `recovery_at` (`recordRecovery`).
 They are machinery, not a state change: no timeline event and no `updated_at`.
 What reads them is `CrewSupervisor.reconcileIdle` and the crew line's `stalled` fact (`docs/report-sort.md`, "The idle ladder").
 
 ## Where a task runs
 
-`device_id` (migration 63, written only by `TaskService.setDevice`) names the paired computer that runs work holding the task's conversation, and null is this Mac (`docs/helper.md`, "The home's side").
+`device_id` on the execution record (migration 63, moved by migration 97, written only by `TaskService.setDevice`) names the paired computer that runs work holding the task's conversation, and null is this Mac (`docs/helper.md`, "The home's side").
 Such a row has no working copy here, so the boot keeps it active once its conversation was recorded (`sessionFile`) rather than by its `worktreeDir`, never marks its turn interrupted, and reads it as resumable whatever its activity: a turn it was running went on there.
 
 ## A folder a merge left behind
@@ -107,6 +118,9 @@ Omission preserves a policy; `project` resets it to the current project setting,
 An explicit request is consent; ambiguity about the task, policy or consent gets one specific question rather than a routine confirmation.
 `TaskService.updateFields` commits the live policy revision, cancellation of old pending approval, and its actor-attributed Activity/feed event together; a rejected mixed edit rolls back its other fields too.
 `WorkShape.policies` holds edits separately from original asks, dispatch stamps, published delivery facts, pull request identity and evidence.
+The asks made at filing (`delivery_ask`, `autonomy_ask`, `rigor_ask`) and the live edits are the task's policy record, one `task_policies` row per task (INF-1296 piece 3, migration 98), and a record's work shape still reads each under the shape field it was saved in.
+A shape write replaces them with the ones it carries, as the shape column did before them, and a value of another type than its field declares stays in the shape column, where every reader met it before.
+The closed snapshot (`delivery.closedPolicies`) is history, not an input, and stays on the delivery facts.
 The shared `effectiveTaskPolicies` reader supplies the record, task query, crew context, briefs, review gates and final merge guards; the task detail's legacy `rigor` remains dispatch history, and its optional `policies` holds the current values and sources.
 Details shows three read-only rows and `This task` or `Project setting` beside each, followed by the helper inviting a request to the first mate.
 For Automatic work or once a computer that runs work is on the list, a fourth read-only row, Runs on, says where the task runs and whether that came from `This task`, its `Parent task` or the `Project setting` (`TaskDetail.runsOn`; `docs/helper.md`, "A task's own Runs on"); `update_task` `runs_on` changes it before the task starts.
@@ -500,7 +514,7 @@ The task query names it as `reasoning`; the crewmate summary shows the level the
 
 ## Placement commitments
 
-`tasks.placement_json` is one bounded historical commitment and its reservation state, written only through `TaskService`.
+`task_execution.placement_json` is one bounded historical commitment and its reservation state, written only through `TaskService`.
 It preserves the selected computer, stable preparation order, explicit acceptance of an existing model fallback, resolved demand and at most 64 candidate explanations.
 `TaskDetail.placement` exposes that snapshot, and the Runs on explanation renders its past-tense reasons and saved headroom.
 A live resource refresh never writes it; task retention owns its lifetime.

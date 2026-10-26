@@ -18,6 +18,15 @@ import type { SpawnIntent } from "../orchestrator/intentBrief";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
 import {
+  EXECUTION_COLUMNS,
+  NO_EXECUTION,
+  splitTurn,
+  type TaskExecution,
+  TaskExecutionStore,
+  withTurn,
+} from "./taskExecutionStore";
+import { splitPolicies, TaskPolicyStore, withPolicies } from "./taskPolicyStore";
+import {
   REFERENCE_SHAPE_FIELDS,
   TASK_REFERENCE_KINDS,
   type TaskReference,
@@ -704,6 +713,36 @@ function withReferences(
 }
 
 /**
+ * A record as it is read (INF-1296 pieces 2 and 3): its row, its shape with
+ * its references and policy inputs, and its running work as `task_execution`
+ * holds it. `execution` is undefined on a database from before that table,
+ * whose row still holds those columns itself.
+ */
+function composed(
+  record: TaskRecord,
+  references: readonly TaskReference[] | undefined,
+  policies: Parameters<typeof withPolicies>[1],
+  execution: TaskExecution | undefined,
+): TaskRecord {
+  const shape = withPolicies(withReferences(record.shape, references), policies);
+  if (!execution) return shape === record.shape ? record : { ...record, shape };
+  return {
+    ...record,
+    shape,
+    sessionFile: execution.sessionFile,
+    accountId: execution.accountId,
+    deviceId: execution.deviceId,
+    placement: execution.placement,
+    idleSince: execution.idleSince,
+    recoveryRung: execution.recoveryRung,
+    recoveryCount: execution.recoveryCount,
+    recoveryAt: execution.recoveryAt,
+    startNotice: execution.startNotice,
+    delivery: withTurn(record.delivery, execution.turn),
+  };
+}
+
+/**
  * A field an older build saved that nothing reads any more (INF-1288 piece 3):
  * a read leaves it out, so no surface shows it and the row's next write
  * no longer carries it. No migration rewrites the rows, so an older build
@@ -848,26 +887,41 @@ export class TaskStore {
   private taskColumns: Set<string> | undefined;
   /** Read here so a record's shape carries them; written only by TaskService. */
   readonly references: TaskReferenceStore;
+  /** A task's running work (INF-1296 piece 3); a record reads it in its own fields. */
+  readonly execution: TaskExecutionStore;
+  /** A task's policy inputs (INF-1296 piece 3); a record's shape reads them. */
+  readonly policies: TaskPolicyStore;
 
   constructor(private readonly db: AppDatabase) {
     this.references = new TaskReferenceStore(db);
+    this.execution = new TaskExecutionStore(db);
+    this.policies = new TaskPolicyStore(db);
   }
 
   private record(row: Row): TaskRecord {
     const record = fromRow(row);
-    if (!record.shape) return record;
-    return { ...record, shape: withReferences(record.shape, this.references.list(record.id)) };
+    return composed(
+      record,
+      record.shape ? this.references.list(record.id) : undefined,
+      record.shape ? this.policies.get(record.id) : undefined,
+      this.execution.exists() ? this.execution.get(record.id) : undefined,
+    );
   }
 
   private read(rows: Row[]): TaskRecord[] {
     const records = rows.map(fromRow);
-    const references = this.references.listFor(
-      records.filter((record) => record.shape).map((record) => record.id),
-    );
+    const shaped = records.filter((record) => record.shape).map((record) => record.id);
+    const references = this.references.listFor(shaped);
+    const policies = this.policies.listFor(shaped);
+    const executing = this.execution.exists();
+    const execution = this.execution.listFor(executing ? records.map((record) => record.id) : []);
     return records.map((record) =>
-      record.shape
-        ? { ...record, shape: withReferences(record.shape, references.get(record.id)) }
-        : record,
+      composed(
+        record,
+        references.get(record.id),
+        policies.get(record.id),
+        executing ? (execution.get(record.id) ?? NO_EXECUTION) : undefined,
+      ),
     );
   }
 
@@ -908,7 +962,11 @@ export class TaskStore {
    * is left as it was until that computer says where the turn is.
    */
   interruptLeftRunning(now: number): void {
-    const here = this.columns().has("device_id") ? " AND device_id IS NULL" : "";
+    const here = this.execution.exists()
+      ? " AND id NOT IN (SELECT task_id FROM task_execution WHERE device_id IS NOT NULL)"
+      : this.columns().has("device_id")
+        ? " AND device_id IS NULL"
+        : "";
     this.db
       .prepare(
         `UPDATE tasks SET activity = 'interrupted', updated_at = ? WHERE status = 'active' AND activity IN ('running', 'starting')${here}`,
@@ -919,6 +977,16 @@ export class TaskStore {
   insert(record: TaskRecord): void {
     this.assertReferencesKept(record.id, record.shape);
     const filing = this.columns().has("test_path");
+    // The running work and the policy inputs have rows of their own once
+    // their tables exist (INF-1296 piece 3); before, the row holds them.
+    const executing = this.execution.exists();
+    const { shape, row: policies } = this.policies.exists()
+      ? splitPolicies(record.shape)
+      : { shape: record.shape, row: null };
+    const { delivery, turn } = executing
+      ? splitTurn(record.delivery)
+      : { delivery: record.delivery, turn: null };
+    const kept = executing ? NO_EXECUTION : record;
     this.db
       .prepare(
         `INSERT INTO tasks (
@@ -952,10 +1020,10 @@ export class TaskStore {
         record.repoDir,
         record.worktreeDir,
         record.branch,
-        record.sessionFile,
-        record.accountId,
+        kept.sessionFile,
+        kept.accountId,
         record.difficulty,
-        shapeJson(record.shape),
+        shapeJson(shape),
         record.gate?.kind ?? null,
         record.gate?.ref ?? null,
         record.gate?.until ?? null,
@@ -968,7 +1036,7 @@ export class TaskStore {
         record.workspaceState,
         record.outcome,
         record.outcomeSummary,
-        record.delivery ? JSON.stringify(record.delivery) : null,
+        delivery ? JSON.stringify(delivery) : null,
         record.pendingSettle ? JSON.stringify(record.pendingSettle) : null,
         record.assignee,
         record.model,
@@ -976,15 +1044,30 @@ export class TaskStore {
         record.updatedAt,
         record.startedAt,
         record.closedAt,
-        record.idleSince ?? null,
-        record.recoveryRung ?? 0,
-        record.recoveryCount ?? 0,
-        record.recoveryAt ?? null,
+        kept.idleSince ?? null,
+        kept.recoveryRung ?? 0,
+        kept.recoveryCount ?? 0,
+        kept.recoveryAt ?? null,
         ...(filing
           ? [record.testPath ?? null, record.captainOpenedAt ?? null, record.verdict ?? null]
           : []),
       );
-    if (record.placement && this.columns().has("placement_json"))
+    if (policies) this.policies.set(record.id, policies);
+    if (executing) {
+      const running: Partial<TaskExecution> = {
+        ...(record.sessionFile ? { sessionFile: record.sessionFile } : {}),
+        ...(record.accountId ? { accountId: record.accountId } : {}),
+        ...(record.idleSince != null ? { idleSince: record.idleSince } : {}),
+        ...(record.recoveryRung ? { recoveryRung: record.recoveryRung } : {}),
+        ...(record.recoveryCount ? { recoveryCount: record.recoveryCount } : {}),
+        ...(record.recoveryAt != null ? { recoveryAt: record.recoveryAt } : {}),
+        ...(record.placement
+          ? { placement: record.placement, deviceId: record.placement.snapshot.computerId }
+          : {}),
+        ...(turn ? { turn } : {}),
+      };
+      this.execution.update(record.id, running);
+    } else if (record.placement && this.columns().has("placement_json"))
       this.update(record.id, {
         placement: record.placement,
         deviceId: record.placement.snapshot.computerId,
@@ -1005,8 +1088,15 @@ export class TaskStore {
   update(id: string, patch: TaskPatch): void {
     const sets: string[] = [];
     const values: unknown[] = [];
+    // The running work goes to its own row once the table exists (INF-1296 piece 3).
+    const executing = this.execution.exists();
+    const running: Partial<TaskExecution> = {};
     for (const [field, column] of Object.entries(PATCH_COLUMNS) as [PatchField, string][]) {
       if (!(field in patch)) continue;
+      if (executing && field in EXECUTION_COLUMNS) {
+        (running as Record<string, unknown>)[field] = patch[field] ?? null;
+        continue;
+      }
       sets.push(`${column} = ?`);
       values.push(patch[field] ?? null);
     }
@@ -1016,8 +1106,13 @@ export class TaskStore {
     }
     if ("shape" in patch) {
       this.assertReferencesKept(id, patch.shape);
+      // A shape names the policy inputs it is read with, so its write replaces them.
+      const split = this.policies.exists()
+        ? splitPolicies(patch.shape)
+        : { shape: patch.shape ?? null, row: undefined };
+      if (split.row !== undefined) this.policies.set(id, split.row);
       sets.push("shape_json = ?");
-      values.push(shapeJson(patch.shape));
+      values.push(shapeJson(split.shape));
     }
     if ("gate" in patch) {
       const gate = patch.gate ?? null;
@@ -1025,23 +1120,33 @@ export class TaskStore {
       values.push(gate?.kind ?? null, gate?.ref ?? null, gate?.until ?? null, gate?.reason ?? null);
     }
     if ("delivery" in patch) {
+      // A delivery names the current turn's declarations it is read with, so its write replaces them.
+      const split = executing
+        ? splitTurn(patch.delivery)
+        : { delivery: patch.delivery ?? null, turn: undefined };
+      if (split.turn !== undefined) running.turn = split.turn;
       sets.push("delivery_json = ?");
-      values.push(patch.delivery ? JSON.stringify(patch.delivery) : null);
+      values.push(split.delivery ? JSON.stringify(split.delivery) : null);
     }
     if ("placement" in patch) {
-      sets.push("placement_json = ?");
-      values.push(patch.placement ? JSON.stringify(patch.placement) : null);
+      if (executing) running.placement = patch.placement ?? null;
+      else {
+        sets.push("placement_json = ?");
+        values.push(patch.placement ? JSON.stringify(patch.placement) : null);
+      }
     }
     if ("pendingSettle" in patch) {
       sets.push("pending_settle_json = ?");
       values.push(patch.pendingSettle ? JSON.stringify(patch.pendingSettle) : null);
     }
+    if (Object.keys(running).length > 0) this.execution.update(id, running);
     if (sets.length === 0) return;
     values.push(id);
     this.db.prepare(`UPDATE tasks SET ${sets.join(", ")} WHERE id = ?`).run(...values);
   }
 
   pendingPlacements(): TaskRecord[] {
+    if (this.execution.exists()) return this.getMany(this.execution.pendingPlacementIds());
     return this.read(
       this.db
         .prepare(
@@ -1220,10 +1325,14 @@ export class TaskStore {
 
   /** Hard delete: a spawn that never ran, or the D-13 purge. */
   delete(id: string): void {
+    this.execution.deleteFor(id);
+    this.policies.deleteFor(id);
     this.db.prepare("DELETE FROM tasks WHERE id = ?").run(id);
   }
 
   deleteAll(): number {
+    this.execution.deleteAll();
+    this.policies.deleteAll();
     return this.db.prepare("DELETE FROM tasks").run().changes;
   }
 }

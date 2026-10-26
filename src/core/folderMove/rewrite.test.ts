@@ -25,7 +25,10 @@ function readTasks(dir: string): TaskPath[] {
   const db = openDatabase(dir);
   try {
     return db
-      .prepare("SELECT id, repo_dir, worktree_dir, session_file FROM tasks ORDER BY id")
+      .prepare(
+        `SELECT t.id, t.repo_dir, t.worktree_dir, x.session_file
+         FROM tasks t LEFT JOIN task_execution x ON x.task_id = t.id ORDER BY t.id`,
+      )
       .all() as TaskPath[];
   } finally {
     db.close();

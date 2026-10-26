@@ -1,8 +1,10 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import type { Card } from "@shared/cards";
 import { GATED_CHECK_PLACEHOLDER } from "@shared/firstRun";
 import type { Slot } from "@shared/modelSlots";
+import { PLACEMENT_DEMANDS, placementSnapshotSchema } from "@shared/placement";
 import { CardService } from "../../src/core/orchestrator/cardService";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
@@ -925,6 +927,345 @@ test("tasks an older release related by name read the same after the upgrade", a
       });
       expect(after.firstmate.waiting).toEqual({ ...before.firstmate.waiting, basis: keys.plan });
       expect(builtOnKeys(after.firstmate).sort()).toEqual([keys.retry, keys.waiting].sort());
+    });
+  } finally {
+    await app?.close();
+  }
+});
+
+/** The tasks a profile's running work and policy inputs are seeded on, by role. */
+const RUNNING = {
+  waiting: "upgraded-waiting-on-you",
+  legacy: "upgraded-older-token",
+  placed: "upgraded-on-the-mini",
+} as const;
+/** The computer that runs work the placed task chose. */
+const MINI = { id: "studio-mini", name: "Studio mini" };
+const WAITING_REASON = "Pick the chart's colors";
+
+/** A placement as Automatic commits it, choosing the Mac mini. */
+function miniPlacement() {
+  const candidate = {
+    physicalComputerId: null,
+    missingTools: [],
+    reading: { status: "unknown", reason: "out-of-reach" },
+    factsAgeMs: null,
+    capacity: null,
+    reserved: { cpu: 0, memoryBytes: 0 },
+    remaining: null,
+    model: null,
+    preferenceRank: null,
+  } as const;
+  return placementSnapshotSchema.parse({
+    version: 1,
+    at: Date.now() - 2 * 60 * 60_000,
+    computerId: MINI.id,
+    computerName: MINI.name,
+    physicalComputerId: "b".repeat(64),
+    orderId: `prepare:${RUNNING.placed}`,
+    demand: PLACEMENT_DEMANDS.standard,
+    model: { provider: "fm-mock", id: "mock-1" },
+    acceptedFallback: false,
+    requirements: { tools: ["git"], systems: ["macos"], profile: "standard" },
+    candidateCount: 1,
+    candidates: [{ ...candidate, computerId: MINI.id, name: MINI.name, rejections: [] }],
+  });
+}
+
+/**
+ * Running work and policy inputs as this build writes them, through its own
+ * writer: an idle task waiting on the captain with a timed check-back and
+ * its conversation recorded, with the delivery,
+ * merging and care asked at filing and two edits since (one a reset to the
+ * project); a finished task whose resume token no conversation records,
+ * its file still in its crewmate's folder; and a finished task Automatic
+ * placed on another computer. Nothing here starts on its own.
+ */
+function seedRunningWork(userDataDir: string): Record<keyof typeof RUNNING, string> {
+  const { db, tasks } = taskWriters(userDataDir);
+  const sessionFile = (id: string, name: string) => {
+    const folder = join(userDataDir, "crewmates", id, "sessions");
+    mkdirSync(folder, { recursive: true });
+    const file = join(folder, `${name}.jsonl`);
+    writeFileSync(file, "");
+    return file;
+  };
+  const facts = (file: string) => ({
+    file,
+    computer: "this-mac",
+    device_id: null,
+    provider: "fm-mock",
+    model: "mock-1",
+    account_id: null,
+    began: "start" as const,
+  });
+  try {
+    seedTask(tasks, {
+      id: RUNNING.waiting,
+      title: "Color the usage chart",
+      status: "idle",
+      shape: {
+        kind: "implement",
+        delivery_ask: "local-only",
+        autonomy_ask: false,
+        rigor_ask: "reviewed",
+      },
+    });
+    const waitingFile = sessionFile(RUNNING.waiting, "colors-1");
+    tasks.setSessionFile(RUNNING.waiting, waitingFile, facts(waitingFile));
+    tasks.updateFields(
+      RUNNING.waiting,
+      { policies: { delivery: null, autonomy: true } },
+      "firstmate",
+    );
+    tasks.recordReport(RUNNING.waiting, {
+      text: "Two palettes both pass contrast. Which one should the chart use?",
+      declared: {
+        wait: { reason: WAITING_REASON },
+        checkBack: { minutes: 24 * 60, waitingFor: "the captain's pick" },
+      },
+    });
+
+    seedTask(tasks, {
+      id: RUNNING.legacy,
+      title: "Fix the chart's axis",
+      status: "completed",
+      outcome: "The axis starts at zero.",
+    });
+    // A token from before conversations were recorded: no conversation names it.
+    tasks.setSessionFile(RUNNING.legacy, sessionFile(RUNNING.legacy, "axis-older"));
+    tasks.close(RUNNING.legacy, { status: "done", reason: "merged", actor: "host" });
+
+    tasks.create({
+      id: RUNNING.placed,
+      title: "Render the chart on the mini",
+      prompt: "",
+      repoId: null,
+      actor: "captain",
+    });
+    tasks.commitPlacement(RUNNING.placed, () => miniPlacement());
+    const placedFile = `/Users/mini/infinitary/crewmates/${RUNNING.placed}/sessions/render-1.jsonl`;
+    tasks.setSessionFile(RUNNING.placed, placedFile, {
+      ...facts(placedFile),
+      computer: MINI.name,
+      device_id: MINI.id,
+    });
+    tasks.close(RUNNING.placed, { status: "done", reason: "merged", actor: "host" });
+    const key = (id: string) => tasks.get(id)?.key ?? "";
+    return Object.fromEntries(
+      Object.entries(RUNNING).map(([role, id]) => [role, key(id)]),
+    ) as Record<keyof typeof RUNNING, string>;
+  } finally {
+    db.close();
+  }
+}
+
+/** Each seeded task's running work and policy inputs as the saved rows hold them. */
+function savedRunningWork(userDataDir: string) {
+  return readSavedData(userDataDir, (db) => {
+    const has = (table: string) =>
+      Boolean(
+        db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table),
+      );
+    const ids = JSON.stringify(Object.values(RUNNING));
+    return {
+      // An older release's profile has neither table.
+      execution: has("task_execution")
+        ? db
+            .prepare(
+              `SELECT task_id, session_file, conversation, device_id, account_id, placement_json,
+                 idle_since, recovery_rung, recovery_count, recovery_at, start_notice, turn_json
+               FROM task_execution WHERE task_id IN (SELECT value FROM json_each(?)) ORDER BY task_id`,
+            )
+            .all(ids)
+        : undefined,
+      policies: has("task_policies")
+        ? db
+            .prepare(
+              "SELECT * FROM task_policies WHERE task_id IN (SELECT value FROM json_each(?)) ORDER BY task_id",
+            )
+            .all(ids)
+        : undefined,
+      tasks: db
+        .prepare(
+          `SELECT id, session_file, device_id, idle_since, recovery_rung, placement_json,
+             delivery_json, shape_json
+           FROM tasks WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id`,
+        )
+        .all(ids) as Record<string, string | number | null>[],
+    };
+  });
+}
+
+/** The running-work fields the first mate reads of each task, by role. */
+const RUNNING_FIELDS = {
+  waiting: ["status", "policies", "sessions"],
+  legacy: ["status", "policies", "sessions"],
+  placed: ["status", "computer", "sessions"],
+} as const;
+
+/** What the window and the first mate read of every seeded task's running work. */
+async function runningWorkAsRead(app: LaunchedApp, keys: Record<keyof typeof RUNNING, string>) {
+  const details = await app.page.evaluate(
+    (ids) => Promise.all(ids.map((id) => window.infinitary.tasks.detail(id))),
+    Object.values(RUNNING),
+  );
+  const shown = Object.fromEntries(
+    details.map((detail: TaskDetail) => [
+      detail.id,
+      {
+        status: detail.status,
+        activity: detail.activity,
+        workPosture: detail.workPosture,
+        needsYou: detail.flags.needsYou,
+        captainWait: detail.captainWait,
+        delivery: detail.delivery,
+        executionDeviceId: detail.executionDeviceId,
+        policies: detail.policies,
+        placement: detail.placement,
+        events: detail.events.map((event) => event.id),
+      },
+    ]),
+  );
+  const firstmate: Record<string, Record<string, unknown>> = {};
+  for (const [role, fields] of Object.entries(RUNNING_FIELDS))
+    firstmate[role] = await firstmateFields(app, keys[role as keyof typeof RUNNING], fields);
+  return { window: shown, firstmate };
+}
+
+/** The conversation each session list marks current. */
+function currentConversation(read: Record<string, unknown> | undefined): unknown {
+  return ((read?.sessions ?? []) as { conversation: string; current: boolean }[]).find(
+    (session) => session.current,
+  )?.conversation;
+}
+
+/**
+ * INF-1296 piece 3, the captain's "i want to make sure this gets good e2e
+ * test coverage to ensure exsiting users don't get regressed during this
+ * migration". Promised result: running work and policy inputs an older
+ * release kept on the task row, its delivery facts and its work shape - a
+ * resume token its conversation records and one none records, the idle
+ * clock, a captain wait and a check-back, a placement on another
+ * computer, the asks made at filing and the edits since, and a finished
+ * task's closed policies - read the same after the upgrade moves them into
+ * their own records and after a restart, in the window and through the
+ * first mate's `tasks` reads; and a policy edit and a new turn after the
+ * upgrade read back. Data: tasks written through the app's own writer,
+ * rewritten into the older release's form (`asSavedByOlderRelease`).
+ * Completion: the first mate's answers after its reads, and the saved rows
+ * read back after the app quits. Prerequisites: the hermetic launcher.
+ * Shared resources: none.
+ */
+test("running work and policy inputs an older release saved read the same after the upgrade", async () => {
+  const userDataDir = scratchDir("infinitary-upgraded-running-work-");
+  const keys = seedRunningWork(userDataDir);
+  const launch = () =>
+    launchApp({ withMockProvider: true, scenarios: [upgradedRelationshipsRead], userDataDir });
+
+  let app: LaunchedApp | undefined = await launch();
+  try {
+    const before = await runningWorkAsRead(app, keys);
+    // The reads name what was seeded, or a match below would compare nothing.
+    expect(before.window[RUNNING.waiting]?.policies).toMatchObject({
+      delivery: { source: "project" },
+      autonomy: { value: true, source: "task" },
+      rigor: { requested: "reviewed", source: "task" },
+    });
+    expect(before.window[RUNNING.legacy]?.policies).toBeTruthy();
+    expect(before.window[RUNNING.placed]?.placement?.computerId).toBe(MINI.id);
+    expect(before.window[RUNNING.placed]?.executionDeviceId).toBe(MINI.id);
+    expect(before.window[RUNNING.waiting]).toMatchObject({ needsYou: true, captainWait: true });
+    expect(currentConversation(before.firstmate.waiting)).toBe("colors-1");
+    expect(currentConversation(before.firstmate.legacy)).toBe("axis-older");
+    expect(currentConversation(before.firstmate.placed)).toBe("render-1");
+    await app.close();
+    app = undefined;
+    const recorded = savedRunningWork(userDataDir);
+
+    const older = asSavedByOlderRelease(userDataDir);
+    // Something was rewritten, or the journey would open this build's own profile.
+    expect(older.policies).toEqual([RUNNING.waiting]);
+    expect(older.execution).toEqual(
+      expect.arrayContaining([
+        { taskId: RUNNING.waiting, turn: ["captainWait", "checkBack"] },
+        { taskId: RUNNING.legacy, turn: expect.any(Array) },
+        { taskId: RUNNING.placed, turn: expect.any(Array) },
+      ]),
+    );
+    const asOlder = savedRunningWork(userDataDir);
+    expect(asOlder.execution).toBeUndefined();
+    expect(asOlder.policies).toBeUndefined();
+    const olderWaiting = asOlder.tasks.find((row) => row.id === RUNNING.waiting);
+    expect(olderWaiting?.session_file).toContain("colors-1.jsonl");
+    // The idle clock this build's launch kept, now on the task row.
+    expect(olderWaiting?.idle_since).toEqual(expect.any(Number));
+    expect(JSON.parse(String(olderWaiting?.delivery_json))).toMatchObject({
+      captainWait: { reason: WAITING_REASON },
+    });
+    expect(JSON.parse(String(olderWaiting?.shape_json))).toMatchObject({
+      delivery_ask: "local-only",
+      autonomy_ask: false,
+      policies: { delivery: null, autonomy: true },
+    });
+
+    await test.step("upgrade: the window and the first mate read all running work as before", async () => {
+      app = await launch();
+      expect(await runningWorkAsRead(app, keys)).toEqual(before);
+      await app.close();
+      app = undefined;
+      const saved = savedRunningWork(userDataDir);
+      // Each value moved as saved; an older token's binding names no conversation.
+      expect(saved.execution).toEqual(recorded.execution);
+      expect(saved.policies).toEqual(recorded.policies);
+      for (const row of saved.tasks) {
+        expect([row.session_file, row.device_id, row.idle_since, row.placement_json]).toEqual([
+          null,
+          null,
+          null,
+          null,
+        ]);
+        expect(String(row.delivery_json ?? "")).not.toMatch(/captainWait|checkBack/);
+        expect(String(row.shape_json ?? "")).not.toMatch(/delivery_ask|autonomy_ask|rigor_ask/);
+      }
+    });
+
+    await test.step("restart: the same running work reads the same", async () => {
+      app = await launch();
+      expect(await runningWorkAsRead(app, keys)).toEqual(before);
+      await app.close();
+      app = undefined;
+    });
+
+    await test.step("a policy edit and a new turn after the upgrade read back", async () => {
+      const { db, tasks } = taskWriters(userDataDir, Date.now());
+      try {
+        tasks.updateFields(RUNNING.waiting, { policies: { rigor: "quick" } }, "firstmate");
+        tasks.recordReport(RUNNING.waiting, {
+          text: "I used the first palette.",
+          declared: { finished: true },
+        });
+      } finally {
+        db.close();
+      }
+      app = await launch();
+      const after = await runningWorkAsRead(app, keys);
+      const policies = before.window[RUNNING.waiting]?.policies;
+      expect(after.window[RUNNING.waiting]?.policies).toMatchObject({
+        delivery: policies?.delivery,
+        autonomy: policies?.autonomy,
+        rigor: { requested: "quick", source: "task" },
+        revision: (policies?.revision ?? 0) + 1,
+      });
+      expect(after.firstmate.legacy).toEqual(before.firstmate.legacy);
+      expect(after.firstmate.placed).toEqual(before.firstmate.placed);
+      await app.close();
+      app = undefined;
+      const saved = savedRunningWork(userDataDir);
+      const turn = (saved.execution as { task_id: string; turn_json: string | null }[]).find(
+        (row) => row.task_id === RUNNING.waiting,
+      )?.turn_json;
+      expect(JSON.parse(String(turn))).toEqual({ finishedAt: expect.any(Number) });
     });
   } finally {
     await app?.close();

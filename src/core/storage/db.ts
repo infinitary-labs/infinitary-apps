@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { type CardAction, migrateLegacyActions } from "@shared/cards";
 import { forgeOf } from "@shared/forge";
+import type { WorkShape } from "@shared/routingPolicy";
 import Database from "better-sqlite3";
 import { repairMovedTaskFolders } from "../folderMove/taskFolders";
 import { INBOX_GRACE_MS, inboxContentHash } from "./inboxStore";
@@ -14,6 +15,9 @@ import {
   recordPersistedFormat,
   UnsupportedSavedDataError,
 } from "./savedDataCompatibility";
+import { splitTurn } from "./taskExecutionStore";
+import { splitPolicies } from "./taskPolicyStore";
+import { conversationOf } from "./taskSessionStore";
 import { standingCap, type TaskDelivery } from "./taskStore";
 import {
   createViews,
@@ -1105,6 +1109,24 @@ const MIGRATIONS: readonly Migration[] = [
   // not scan historical card bodies and every task event. Derived indexes
   // only; dropping them reverses this migration without changing saved data.
   addHousekeepingIndexes,
+  // A task's running work leaves the task row for a row of its own
+  // (INF-1296 piece 3, docs/task-record.md "A task's execution record"):
+  // the resume token, the computer and account, the committed placement,
+  // the idle clock and recovery rung, a start that did not begin, and the
+  // current turn's declarations out of the delivery facts. Each value moves
+  // as saved, and the resume token names its conversation only where
+  // task_sessions records that conversation for the task, so a token from
+  // before associations stays resumable without one made up. The row keeps
+  // its columns, emptied. Reversible: write each value back to its column
+  // and field and drop the table.
+  migrateTaskExecution,
+  // A task's policy inputs leave the work shape for a row of their own
+  // (INF-1296 piece 3, docs/task-record.md "A task's policy record"): the
+  // delivery, merging and care asked for at filing and the live edits since,
+  // each as saved. A value of another type than its field declares stays in
+  // the shape. The closed snapshot stays on the delivery facts. Reversible:
+  // write each value back into its shape field and drop the table.
+  migrateTaskPolicies,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
@@ -1123,6 +1145,12 @@ function addHousekeepingIndexes(db: AppDatabase): void {
 
 /** The migration that moved each task's references out of its work shape (INF-1296 piece 2). */
 export const TASK_REFERENCES_VERSION = MIGRATIONS.indexOf(migrateTaskReferences) + 1;
+
+/** The migration that moved each task's running work to its own row (INF-1296 piece 3). */
+export const TASK_EXECUTION_VERSION = MIGRATIONS.indexOf(migrateTaskExecution) + 1;
+
+/** The migration that moved each task's policy inputs out of its work shape (INF-1296 piece 3). */
+export const TASK_POLICIES_VERSION = MIGRATIONS.indexOf(migrateTaskPolicies) + 1;
 
 /** The migration that published the views; every later one re-creates them. */
 const VIEWS_VERSION = MIGRATIONS.indexOf(migratePublishedViews) + 1;
@@ -1189,6 +1217,142 @@ function migrateTaskReferences(db: AppDatabase): void {
       `UPDATE tasks SET shape_json = json_remove(shape_json, ?)
        WHERE json_valid(shape_json) AND json_type(shape_json, ?) IS NOT NULL`,
     ).run(path, path);
+  }
+}
+
+function migrateTaskExecution(db: AppDatabase): void {
+  db.exec(`
+    CREATE TABLE task_execution (
+      task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+      session_file TEXT,
+      conversation TEXT,
+      device_id TEXT,
+      account_id TEXT,
+      placement_json TEXT,
+      idle_since INTEGER,
+      recovery_rung INTEGER NOT NULL DEFAULT 0,
+      recovery_count INTEGER NOT NULL DEFAULT 0,
+      recovery_at INTEGER,
+      start_notice TEXT,
+      turn_json TEXT
+    );
+    CREATE INDEX task_execution_pending_placement ON task_execution(task_id)
+      WHERE json_extract(placement_json, '$.reservation') = 'pending';
+    DROP INDEX IF EXISTS tasks_pending_placement;
+  `);
+  const rows = db
+    .prepare(
+      `SELECT id, session_file, device_id, account_id, placement_json, idle_since, recovery_rung,
+         recovery_count, recovery_at, start_notice, delivery_json FROM tasks`,
+    )
+    .all() as {
+    id: string;
+    session_file: string | null;
+    device_id: string | null;
+    account_id: string | null;
+    placement_json: string | null;
+    idle_since: number | null;
+    recovery_rung: number | null;
+    recovery_count: number | null;
+    recovery_at: number | null;
+    start_notice: string | null;
+    delivery_json: string | null;
+  }[];
+  const recorded = db.prepare("SELECT 1 FROM task_sessions WHERE task_id = ? AND conversation = ?");
+  const insert = db.prepare(
+    `INSERT INTO task_execution (task_id, session_file, conversation, device_id, account_id,
+       placement_json, idle_since, recovery_rung, recovery_count, recovery_at, start_notice, turn_json)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+  );
+  const empty = db.prepare(
+    `UPDATE tasks SET session_file = NULL, device_id = NULL, account_id = NULL, placement_json = NULL,
+       idle_since = NULL, recovery_rung = 0, recovery_count = 0, recovery_at = NULL,
+       start_notice = NULL, delivery_json = ? WHERE id = ?`,
+  );
+  for (const row of rows) {
+    let delivery: Record<string, unknown> | null = null;
+    try {
+      delivery = row.delivery_json ? JSON.parse(row.delivery_json) : null;
+    } catch {
+      // An unreadable delivery reads as none, and is left as saved.
+    }
+    const split =
+      delivery && typeof delivery === "object" && !Array.isArray(delivery)
+        ? splitTurn(delivery)
+        : { delivery: null, turn: null };
+    const conversation =
+      row.session_file && recorded.get(row.id, conversationOf(row.session_file))
+        ? conversationOf(row.session_file)
+        : null;
+    const running =
+      row.session_file !== null ||
+      row.device_id !== null ||
+      row.account_id !== null ||
+      row.placement_json !== null ||
+      row.idle_since !== null ||
+      Boolean(row.recovery_rung) ||
+      Boolean(row.recovery_count) ||
+      row.recovery_at !== null ||
+      row.start_notice !== null ||
+      split.turn !== null;
+    if (running)
+      insert.run(
+        row.id,
+        row.session_file,
+        conversation,
+        row.device_id,
+        row.account_id,
+        row.placement_json,
+        row.idle_since,
+        row.recovery_rung ?? 0,
+        row.recovery_count ?? 0,
+        row.recovery_at,
+        row.start_notice,
+        split.turn ? JSON.stringify(split.turn) : null,
+      );
+    empty.run(
+      split.turn && split.delivery ? JSON.stringify(split.delivery) : row.delivery_json,
+      row.id,
+    );
+  }
+}
+
+function migrateTaskPolicies(db: AppDatabase): void {
+  db.exec(`
+    CREATE TABLE task_policies (
+      task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+      delivery_ask TEXT,
+      autonomy_ask INTEGER,
+      rigor_ask TEXT,
+      edits_json TEXT
+    );
+  `);
+  const rows = db
+    .prepare("SELECT id, shape_json FROM tasks WHERE shape_json IS NOT NULL")
+    .all() as { id: string; shape_json: string }[];
+  const insert = db.prepare(
+    `INSERT INTO task_policies (task_id, delivery_ask, autonomy_ask, rigor_ask, edits_json)
+     VALUES (?, ?, ?, ?, ?)`,
+  );
+  const keep = db.prepare("UPDATE tasks SET shape_json = ? WHERE id = ?");
+  for (const row of rows) {
+    let shape: unknown;
+    try {
+      shape = JSON.parse(row.shape_json);
+    } catch {
+      continue;
+    }
+    if (!shape || typeof shape !== "object" || Array.isArray(shape)) continue;
+    const split = splitPolicies(shape as WorkShape);
+    if (!split.row) continue;
+    insert.run(
+      row.id,
+      split.row.delivery_ask,
+      split.row.autonomy_ask,
+      split.row.rigor_ask,
+      split.row.edits_json,
+    );
+    keep.run(JSON.stringify(split.shape), row.id);
   }
 }
 

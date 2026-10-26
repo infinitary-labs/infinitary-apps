@@ -234,7 +234,11 @@ describe("the one-time move of a data folder", () => {
     expect(phases).toEqual(["checking", "copying", "verifying", "finishing"]);
     // The work, and the paths into it.
     expect(
-      rows(to, "SELECT id, repo_dir, worktree_dir, session_file FROM tasks ORDER BY id"),
+      rows(
+        to,
+        `SELECT t.id, t.repo_dir, t.worktree_dir, x.session_file
+         FROM tasks t LEFT JOIN task_execution x ON x.task_id = t.id ORDER BY t.id`,
+      ),
     ).toEqual([
       {
         id: "one",

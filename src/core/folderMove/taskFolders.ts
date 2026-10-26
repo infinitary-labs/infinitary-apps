@@ -21,18 +21,21 @@ export function rewriteTaskFolders(
   froms: readonly string[],
   to: string,
 ): void {
-  const here = columns(db, "tasks").has("device_id") ? "device_id IS NULL" : "1";
-  const update = (column: string, where = "1") => {
-    if (!columns(db, "tasks").has(column)) return;
+  const update = (table: string, column: string, where = "1") => {
+    if (!columns(db, table).has(column)) return;
     const statement = db.prepare(
-      `UPDATE tasks SET ${column} = @to || substr(${column}, length(@from) + 1)
+      `UPDATE ${table} SET ${column} = @to || substr(${column}, length(@from) + 1)
        WHERE (${where}) AND (${column} = @from OR substr(${column}, 1, length(@prefix)) = @prefix)`,
     );
     for (const from of froms) statement.run({ from, to, prefix: `${from}${sep}` });
   };
-  update("repo_dir");
-  update("worktree_dir");
-  update("session_file", here);
+  update("tasks", "repo_dir");
+  update("tasks", "worktree_dir");
+  // The resume token is on the task's execution row (INF-1296 piece 3), or
+  // on the task row of a database from before it.
+  const running = columns(db, "task_execution").has("session_file") ? "task_execution" : "tasks";
+  const here = columns(db, running).has("device_id") ? "device_id IS NULL" : "1";
+  update(running, "session_file", here);
 }
 
 /**

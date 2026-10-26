@@ -131,10 +131,11 @@ export class PlacedWorkScores {
   /** Read the newest committed route, including an Automatic start not yet attached. */
   private work(): Work[] {
     return this.db
-      .prepare(`SELECT t.id, COALESCE(t.account_id, json_extract(d.facts_json, '$.accountId')) AS account, t.device_id AS device,
+      .prepare(`SELECT t.id, COALESCE(x.account_id, json_extract(d.facts_json, '$.accountId')) AS account, x.device_id AS device,
       d.provider, d.model, COALESCE(d.served, d.bucket) AS level, d.at,
       t.closed_at AS closed, t.status
       FROM tasks t JOIN decisions d ON d.task_id = t.id AND d.kind = 'routing'
+      LEFT JOIN task_execution x ON x.task_id = t.id
       WHERE d.id = (SELECT MAX(n.id) FROM decisions n WHERE n.task_id = t.id AND n.kind = 'routing')
       AND d.model IS NOT NULL`)
       .all() as Work[];

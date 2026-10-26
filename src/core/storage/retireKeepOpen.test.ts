@@ -65,7 +65,8 @@ describe("migration 73 retires saved keep-open choices", () => {
       DROP TABLE keep_open_backfill;
       DROP TABLE task_sessions;
       DROP TABLE task_references;
-      DROP INDEX tasks_pending_placement;
+      DROP TABLE task_policies;
+      DROP TABLE task_execution;
       DELETE FROM schema_migrations WHERE version >= 73;
     `);
     const legacyColumns = (before.prepare("PRAGMA table_info(cards)").all() as { name: string }[])

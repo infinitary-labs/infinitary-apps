@@ -42,12 +42,11 @@ struct PhoneView: View {
         NavigationStack {
             Group {
                 if model.removed {
-                    // INF-589 item 11: Removed takes the first screen's shape, with one prominent Join again.
+                    // INF-589 item 11: Removed takes the first screen's shape, with one Join again, fitted and centered (INF-1312).
                     firstScreen("Removed from your computer",
                         "This device no longer shows your computer. Make a new link in Devices on your computer to join again.") {
-                        Button { model.dismissRemoved() } label: {
-                            Text("Join again").foregroundStyle(PhoneTheme.onAccent).frame(maxWidth: .infinity, minHeight: 44)
-                        }.buttonStyle(.borderedProminent).controlSize(.large).accessibilityIdentifier("join-again")
+                        Button("Join again") { model.dismissRemoved() }
+                            .buttonStyle(PhoneChoiceStyle(.primary)).accessibilityIdentifier("join-again")
                     }
                 } else if let session = model.connection {
                     connected(session)
@@ -139,12 +138,15 @@ struct PhoneView: View {
                                 .textFieldStyle(.phone)
                                 .textInputAutocapitalization(.never).autocorrectionDisabled()
                                 .privacySensitive().accessibilityIdentifier("join-link")
-                            PasteButton(payloadType: String.self) { strings in linkText = strings.first ?? "" }
-                            Button {
-                                let text = linkText; linkText = ""; pasting = false; model.propose(text)
-                            } label: { Text("Continue").foregroundStyle(linkText.isEmpty ? PhoneTheme.muted : PhoneTheme.onAccent).frame(maxWidth: .infinity, minHeight: 44) }
-                                .buttonStyle(.borderedProminent).controlSize(.large)
-                                .disabled(linkText.isEmpty).accessibilityIdentifier("read-link")
+                            // INF-1312: one row, Paste at the leading edge and Continue fitted at the trailing edge.
+                            PhoneChoiceRow {
+                                PasteButton(payloadType: String.self) { strings in linkText = strings.first ?? "" }
+                                    .layoutValue(key: PhoneChoiceRow.Leading.self, value: true)
+                                Button("Continue") {
+                                    let text = linkText; linkText = ""; pasting = false; model.propose(text)
+                                }.buttonStyle(PhoneChoiceStyle(.primary))
+                                    .disabled(linkText.isEmpty).accessibilityIdentifier("read-link")
+                            }
                         }.padding(PhoneTheme.space5).frame(maxWidth: 468).frame(maxWidth: .infinity)
                     }
                     .phoneTitle("Paste its link")
@@ -190,6 +192,19 @@ struct PhoneView: View {
     private var joinScreen: some View {
         firstScreen("Welcome aboard Infinitary", "Your first mate lives on your Mac. Join it to read your cards and Activity here.") {
             if model.busy { ProgressView("Joining your computer…").accessibilityIdentifier("joining") }
+            // INF-1312: the three ways in are rows in one list, each with its symbol and one line of guidance.
+            PhoneList {
+                Button { scanning = true } label: {
+                    PhoneRow(symbol: .scan, title: "Scan the code", line: "Point your camera at the code under A phone in Devices.", chevron: true)
+                }.accessibilityIdentifier("scan-code")
+                Button { pasting = true } label: {
+                    PhoneRow(symbol: .link, title: "Paste its link", line: "Copy the link under A phone in Devices, then paste it here.", chevron: true)
+                }.accessibilityIdentifier("paste-link")
+                // INF-1183: a computer away from this network, reached by the address its person signs in with.
+                Button { addressing = true } label: {
+                    PhoneRow(symbol: .at, title: "Join by its address", line: "A computer with Remote Login on, as kun@studio.", chevron: true)
+                }.accessibilityIdentifier("join-by-address")
+            }.buttonStyle(PhoneRowStyle()).disabled(model.busy)
             // Nearby is one plain line: the way to find a computer, or each computer announcing Infinitary.
             VStack(spacing: 0) {
                 if model.nearby.macs.isEmpty {
@@ -206,16 +221,6 @@ struct PhoneView: View {
                     }.buttonStyle(.plain).accessibilityLabel("Scan the code on \(mac.name)")
                 }
             }.disabled(model.busy)
-            VStack(spacing: PhoneTheme.space3) {
-                Button { scanning = true } label: { Text("Scan the code").foregroundStyle(PhoneTheme.onAccent).frame(maxWidth: .infinity, minHeight: 44) }
-                    .buttonStyle(.borderedProminent).accessibilityIdentifier("scan-code")
-                // A plain secondary, with no fill under it.
-                Button { pasting = true } label: { Text("Paste its link").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
-                    .buttonStyle(.borderless).accessibilityIdentifier("paste-link")
-                // INF-1183: a computer away from this network, reached by the address its person signs in with.
-                Button { addressing = true } label: { Text("Join by its address").frame(maxWidth: .infinity, minHeight: 44).contentShape(Rectangle()) }
-                    .buttonStyle(.borderless).accessibilityIdentifier("join-by-address")
-            }.controlSize(.large).disabled(model.busy)
         }
     }
 

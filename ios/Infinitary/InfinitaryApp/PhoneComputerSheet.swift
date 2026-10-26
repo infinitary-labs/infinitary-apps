@@ -96,20 +96,23 @@ struct PhoneComputerSheet: View {
     }
 
     // Close the sheet on confirmation so any failure remains visible in the root's problem notice.
+    // INF-1312: the sentence first, then one fitted button in the Mac's red outline at the trailing edge.
     private var exitControls: some View {
-        VStack(spacing: PhoneTheme.space3) {
+        VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             if session.contact == "in-reach" {
-                Button(role: .destructive) { leaving = true } label: {
-                    Text("Leave \(session.mac.name)").foregroundStyle(PhoneTheme.danger).frame(maxWidth: .infinity, minHeight: 44)
-                }.accessibilityIdentifier("leave")
                 Text("This device stops showing it. To come back, scan a new code.")
+                PhoneChoiceRow {
+                    Button("Leave \(session.mac.name)") { leaving = true }
+                        .buttonStyle(PhoneChoiceStyle(.danger)).accessibilityIdentifier("leave")
+                }
             } else {
-                Button(role: .destructive) { forgetting = true } label: {
-                    Text("Forget this computer").foregroundStyle(PhoneTheme.danger).frame(maxWidth: .infinity, minHeight: 44)
-                }.accessibilityIdentifier("forget-mac")
                 Text("Clears this computer from this device. \(session.mac.name) may still list it.")
+                PhoneChoiceRow {
+                    Button("Forget this computer") { forgetting = true }
+                        .buttonStyle(PhoneChoiceStyle(.danger)).accessibilityIdentifier("forget-mac")
+                }
             }
-        }.buttonStyle(.bordered).tint(PhoneTheme.danger)
+        }.frame(maxWidth: .infinity, alignment: .leading)
             .font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
     }
 }

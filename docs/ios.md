@@ -17,7 +17,7 @@ MagicDNS discovery and broader VPN or IPv6-only private-address discovery are no
 The panel explains that the phone app comes from TestFlight for now, only to the people asked to test it, and is not in the App Store yet.
 A phone can scan that code, paste its link or open an `infinitary://join` link, then confirms the address of the Mac it is joining.
 On a computer with no screen at hand, `infinitary link --phone` prints the same code and link in its terminal, from the Infinitary running there (`docs/run.md`, "A link by command").
-Its first screen welcomes the person in the Mac's first-launch words, “Welcome aboard Infinitary”, with Nearby as one plain line, Scan the code prominent and Paste its link a plain secondary.
+Its first screen welcomes the person in the Mac's first-launch words, “Welcome aboard Infinitary”, with the three ways in, Scan the code, Paste its link and Join by its address, as rows in one list and Nearby as one plain line under it.
 Nearby browses `_infinitary._tcp` and opens the scanner; an announcement supplies a possible address, never a key or permission.
 The computer, a Mac or a Linux home with Avahi, announces while a usable direct computer invitation is open as well as while a phone is on its list, so first-phone discovery works (`docs/devices.md`, "Announcing to a phone").
 Camera and Local Network permissions have separate explanations; a camera refusal offers pasting rather than reading the clipboard automatically.
@@ -48,7 +48,13 @@ An undecodable record, invalid pin or invalid address discards only the saved Ma
 
 ### Joining by its address
 
-Under Paste its link, a plain **Join by its address** opens one field for the account and the computer, such as `kun@studio`, and an optional port, 22 when empty (INF-1183).
+**Join by its address** opens one field for the account and the computer, such as `kun@studio`, and an optional port, 22 when empty (INF-1183).
+Under them the sheet lists the computers on this network with Remote Login on (INF-1312): `NearbyComputers` browses `_ssh._tcp` while the sheet is typing and the app is in front, as the Mac's own By its address list does (`src/shared/nearbyMacs.ts`), and stops when the sheet closes, a join starts or the app leaves the front.
+A row names the computer and the host it resolved to; with a Your account field filled above the list, a tap fills the whole address and the port, and Continue signs in as a typed address does.
+An announcement says where to try, never who to trust: the first sign-in still asks for the fingerprint.
+When iOS has not let the app use the local network the list says to allow Local Network in Settings, and when it cannot look it says an address can still be typed.
+A plain line under the list offers to look at every address on this network; only after the yes in its alert does the phone try each other address of its own private IPv4 network on port 22, at most the 254 around it and a few at a time, and lists each one that answers with an SSH banner.
+The app's `NSBonjourServices` names `_ssh._tcp` beside `_infinitary._tcp`, and its local network sentence says it lists those computers.
 The phone signs in to that computer over SSH with SwiftNIO SSH (`SSHJoin`), runs one fixed command there and joins with the one-use phone link the open Infinitary answers, as with a scanned code; SSH carries only the joining, and every connection after it is the pinned connection above.
 The commands are the home's own text, generated into `PhoneSSHCommand` from `src/shared/phoneLink.ts`, and the home's side is `docs/devices.md`, "A phone that joins by its address".
 The first sign-in to an address shows the computer's SSH fingerprint, as `ssh-keygen -l` prints it, and asks once: **Not this one** sends nothing, and the yes is kept in `TrustedHomes.json` by address and port.
@@ -430,10 +436,11 @@ An encoded demo retains real speed and holds the final frame for five seconds, w
 The runner creates and deletes its own simulator, scratch HOME, real-core home, mock provider, data and keys, never borrows or erases a person's simulator, and saves logs and the result bundle outside the working copy.
 The test home uses the real stores, dispatcher, pairing and TLS connection, with sample cards, feed lines and a task; its control interface listens only on loopback behind a fresh per-run token.
 It attaches each connection it starts to the core, as the app does, so the core's phone door answers the address part's link only once that connection listens for it.
-The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
+The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing and the network sweep, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
+In that mode `INFINITARY_TEST_NEARBY_SSH` (`name|host|port`) names the one stand-in computer Join by its address lists, and `INFINITARY_TEST_SWEEP` (`host:port`, comma-separated) the only addresses its sweep tries.
 It first verifies the independent published-contract client can join and read the sample card.
 The join part covers a wrong Mac pin, joining, cards and feed, Activity scrolled to its last whole row, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
-The address part starts the Mac's own `sshd` beside its home (`tests/helpers/sshServer.ts`), run as the test's user with a scratch home folder and every session handed the home's data folder; it checks Not this one, the fingerprint asked again, the key refused, a wrong password's words, then adds the key the phone shows and joins.
+The address part starts the Mac's own `sshd` beside its home (`tests/helpers/sshServer.ts`), run as the test's user with a scratch home folder and every session handed the home's data folder; it checks the home's sshd listed as the stand-in computer, the sweep asked first and reading that sshd's real banner, a tap filling the address and port under the account, Not this one, the fingerprint asked again for a typed address, the key refused, a wrong password's words, then adds the key the phone shows and joins.
 That `sshd` can check no password, so the password that lets the key in is checked by the package tests against an SSH server of their own (`SSHJoinTests`).
 Every other part first joins its own home, and reaches the state the single journey had reached before it: the talk part puts the hero card on the stage and relaunches the app.
 The cards part drives forms, staged settings across paging, footer and body choices, the saved answer on the real home, close, threads and replies, pictures, a picture card drawn while the phone is still reaching after a reconnect, completed recording playback, seen, past cards, Mac-only doors and out-of-reach refusal without replay.

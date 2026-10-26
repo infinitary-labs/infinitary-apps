@@ -19,9 +19,9 @@
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
 <key>UISupportedInterfaceOrientations~ipad</key><array><string>UIInterfaceOrientationPortrait</string><string>UIInterfaceOrientationPortraitUpsideDown</string><string>UIInterfaceOrientationLandscapeLeft</string><string>UIInterfaceOrientationLandscapeRight</string></array>
-<key>NSLocalNetworkUsageDescription</key><string>Infinitary finds your computer and reads its cards and Activity on your network.</string>
+<key>NSLocalNetworkUsageDescription</key><string>Infinitary finds your computer and reads its cards and Activity on your network, and lists the computers here with Remote Login on when you join by an address.</string>
 <key>NSCameraUsageDescription</key><string>Infinitary scans the code you open in Devices on your computer so this phone can join it.</string>
-<key>NSBonjourServices</key><array><string>_infinitary._tcp</string></array>
+<key>NSBonjourServices</key><array><string>_infinitary._tcp</string><string>_ssh._tcp</string></array>
 <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
 <key>UIAppFonts</key><array><string>SpaceGrotesk.ttf</string><string>JetBrainsMono.ttf</string></array>
 </dict></plist>

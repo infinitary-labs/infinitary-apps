@@ -50,6 +50,8 @@ import XCTest
     /// and a line under the bar says it only while the computer is not in reach.
     private func reach(_ words: String, timeout: TimeInterval = 20) {
         let button = app.buttons["computer-details"]
+        // Reading an absent button's value fails at once, so a join still under way is waited for first.
+        XCTAssertTrue(button.waitForPresence(timeout: timeout), app.debugDescription)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == %@", words), object: button, timeout: timeout), .completed, app.debugDescription)
         if words == "In reach" { XCTAssertFalse(app.otherElements["reach-line"].exists, "In reach, no line under the bar repeats it") }
     }
@@ -71,6 +73,8 @@ import XCTest
             app.buttons["Continue"].tap()
         }
         field.typeText(link)
+        // INF-1312: Paste and Continue share one row; pictured once, on the first link.
+        if command == "wrong-link" { picture("paste-link") }
         app.buttons["read-link"].tap()
         // iOS 26 exposes a dialog's native button and its SwiftUI label as nested buttons.
         let confirm = app.buttons["confirm-join"].firstMatch
@@ -403,11 +407,19 @@ import XCTest
     /// address"): the Mac's own sshd beside the test home signs the phone in, asks its fingerprint once,
     /// refuses its key and a wrong password in plain words, lets in the key the phone shows, and the
     /// phone joins with the link the home's door answers, never shown.
+    /// INF-1312 (the captain's answers on its plan): the sheet lists the computers on this network with Remote Login on,
+    /// under a Your account field so a tap fills the whole address, and sweeps the other addresses only after a yes.
+    /// The isolated phone never looks on a real network: the home's own sshd stands in for one announced computer,
+    /// and the sweep tries only that sshd under the name localhost, which reads its real sign-in banner.
     func testJoinByAddress() async throws {
-        try await launchFresh()
         let ssh = try await home("ssh-start")
         let address = try XCTUnwrap(ssh["address"] as? String)
         let port = try XCTUnwrap(ssh["port"] as? Int)
+        let parts = address.split(separator: "@").map(String.init)
+        let (account, host) = (parts[0], parts[1])
+        app.launchEnvironment["INFINITARY_TEST_NEARBY_SSH"] = "Test computer|\(host)|\(port)"
+        app.launchEnvironment["INFINITARY_TEST_SWEEP"] = "localhost:\(port)"
+        try await launchFresh()
         // The port first, then the address, whose Return continues as Continue does.
         func typeAddress() {
             app.buttons["join-by-address"].tap()
@@ -429,7 +441,34 @@ import XCTest
         }
         XCTAssertTrue(app.buttons["join-by-address"].waitForPresence(timeout: 10))
         picture("join-with-address")
-        typeAddress()
+        app.buttons["join-by-address"].tap()
+        let announced = app.buttons["nearby-ssh-\(host):\(port)"]
+        XCTAssertTrue(announced.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(announced.label.hasPrefix("Test computer"), announced.label)
+        XCTAssertFalse(announced.isEnabled, "A tap waits for the account it fills in")
+        picture("address-nearby")
+        // The sweep asks first; only the yes tries the addresses.
+        app.buttons["ssh-sweep"].tap()
+        let look = app.buttons["ssh-sweep-confirm"].firstMatch
+        XCTAssertTrue(look.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.alerts.buttons["Cancel"].firstMatch.isHittable, app.debugDescription)
+        look.tap()
+        let swept = app.buttons["nearby-ssh-localhost:\(port)"]
+        XCTAssertTrue(swept.waitForPresence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(swept.label.hasPrefix("localhost"), swept.label)
+        picture("address-swept")
+        let accountField = app.textFields["ssh-account"]
+        accountField.tap()
+        if app.staticTexts["Speed up your typing by sliding your finger across the letters to compose a word."].exists {
+            app.buttons["Continue"].tap()
+        }
+        accountField.typeText(account)
+        waitUntilEnabled(announced)
+        announced.tap()
+        XCTAssertEqual(app.textFields["ssh-address"].value as? String, address)
+        XCTAssertEqual(app.textFields["ssh-port"].value as? String, String(port))
+        picture("address-filled")
+        app.buttons["ssh-continue"].tap()
         // The first sign-in asks about the computer's key, and Not this one sends nothing.
         let fingerprint = app.staticTexts["ssh-fingerprint"]
         XCTAssertTrue(fingerprint.waitForPresence(timeout: 30), app.debugDescription)

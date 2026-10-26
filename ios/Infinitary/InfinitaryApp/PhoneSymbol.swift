@@ -5,6 +5,8 @@ import UIKit
 /// System bars supply their own tint, size and accessibility treatment.
 enum PhoneSymbol: CaseIterable {
     case cards, activity, tasks, computer, scan, settings
+    /// INF-1312: the welcome screen's ways in, a row's chevron and the key box's copy mark.
+    case link, at, chevron, copy
 
     @MainActor var image: Image { Image(uiImage: Self.images[self]!) }
 
@@ -22,7 +24,7 @@ enum PhoneSymbol: CaseIterable {
             }
             func points(_ values: [(CGFloat, CGFloat)]) { line(values.map { CGPoint(x: $0.0, y: $0.1) }) }
             switch symbol {
-            case .cards:
+            case .cards, .copy:
                 context.addPath(UIBezierPath(roundedRect: CGRect(x: 8, y: 8, width: 14, height: 14), cornerRadius: 2).cgPath)
                 context.strokePath()
                 points([(4, 16), (4, 4), (18, 4)])
@@ -37,6 +39,25 @@ enum PhoneSymbol: CaseIterable {
                 points([(3, 7), (3, 3), (7, 3)]); points([(17, 3), (21, 3), (21, 7)])
                 points([(21, 17), (21, 21), (17, 21)]); points([(7, 21), (3, 21), (3, 17)])
                 points([(7, 12), (17, 12)])
+            case .link:
+                // Lucide's link-2: two open ends of a chain and the bar between them.
+                let left = UIBezierPath(); left.move(to: CGPoint(x: 9, y: 17)); left.addLine(to: CGPoint(x: 7, y: 17))
+                left.addArc(withCenter: CGPoint(x: 7, y: 12), radius: 5, startAngle: .pi / 2, endAngle: 3 * .pi / 2, clockwise: true)
+                left.addLine(to: CGPoint(x: 9, y: 7))
+                let right = UIBezierPath(); right.move(to: CGPoint(x: 15, y: 7)); right.addLine(to: CGPoint(x: 17, y: 7))
+                right.addArc(withCenter: CGPoint(x: 17, y: 12), radius: 5, startAngle: -.pi / 2, endAngle: .pi / 2, clockwise: true)
+                right.addLine(to: CGPoint(x: 15, y: 17))
+                context.addPath(left.cgPath); context.addPath(right.cgPath); context.strokePath()
+                points([(8, 12), (16, 12)])
+            case .at:
+                // Lucide's at-sign: a ring, and the stroke that leaves it to curl round it.
+                context.addEllipse(in: CGRect(x: 8, y: 8, width: 8, height: 8)); context.strokePath()
+                let tail = UIBezierPath(); tail.move(to: CGPoint(x: 16, y: 8)); tail.addLine(to: CGPoint(x: 16, y: 13))
+                tail.addArc(withCenter: CGPoint(x: 19, y: 13), radius: 3, startAngle: .pi, endAngle: 0, clockwise: false)
+                tail.addLine(to: CGPoint(x: 22, y: 12))
+                tail.addArc(withCenter: CGPoint(x: 12, y: 12), radius: 10, startAngle: 0, endAngle: atan2(8, 6), clockwise: false)
+                context.addPath(tail.cgPath); context.strokePath()
+            case .chevron: points([(9, 6), (15, 12), (9, 18)])
             case .settings:
                 // Lucide's settings: a six-toothed wheel whose every corner is rounded at radius 2, around a hub.
                 context.addEllipse(in: CGRect(x: 9, y: 9, width: 6, height: 6)); context.strokePath()

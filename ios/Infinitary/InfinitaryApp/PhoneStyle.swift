@@ -78,6 +78,7 @@ private struct PhoneSheetSurface: ViewModifier {
 }
 
 /// INF-944 item 5, the captain's pick on INF-945: a card's choices in the Mac's row.
+/// INF-1312: every button of the phone's own screens takes this shape too; none fills the width.
 /// Rounded rectangles at the Mac's size, the default filled with the accent, a danger choice in a red outline,
 /// the rest in a hairline outline. Each is drawn about 37 points tall inside a 44-point touch area.
 struct PhoneChoiceStyle: ButtonStyle {
@@ -154,5 +155,59 @@ struct PhoneChoiceRow: Layout {
         }
         if !line.items.isEmpty { lines.append(line) }
         return lines
+    }
+}
+
+/// INF-1312: a list of rows where a choice is a way in or a thing to pick rather than a decision.
+/// The rows sit on the panel fill inside a hairline, as the Mac draws a list, with a hairline between them.
+struct PhoneList<Content: View>: View {
+    @ViewBuilder let content: Content
+    private let shape = RoundedRectangle(cornerRadius: PhoneTheme.cardRadius, style: .continuous)
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Group(subviews: content) { rows in
+                ForEach(rows) { row in
+                    if row.id != rows.first?.id { Rectangle().fill(PhoneTheme.line).frame(height: 1) }
+                    row
+                }
+            }
+        }
+        .background(PhoneTheme.panel, in: shape).clipShape(shape)
+        .overlay { shape.strokeBorder(PhoneTheme.line) }
+    }
+}
+
+/// One row of a `PhoneList`: an optional symbol in the accent, the row's name, one line under it, and a chevron
+/// when the row opens something. It fills the row, so the whole row is its touch area.
+struct PhoneRow: View {
+    var symbol: PhoneSymbol?
+    let title: String
+    let line: String
+    var lineFont = PhoneFont.caption
+    var chevron = false
+
+    var body: some View {
+        HStack(spacing: PhoneTheme.space3) {
+            if let symbol { symbol.image.foregroundStyle(PhoneTheme.accent).accessibilityHidden(true) }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text)
+                Text(line).font(lineFont).foregroundStyle(PhoneTheme.secondary)
+            }.multilineTextAlignment(.leading)
+            Spacer(minLength: 0)
+            if chevron { PhoneSymbol.chevron.image.foregroundStyle(PhoneTheme.muted).accessibilityHidden(true) }
+        }
+        .padding(.horizontal, PhoneTheme.space4).padding(.vertical, PhoneTheme.space3)
+        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading).contentShape(Rectangle())
+    }
+}
+
+/// A pressed row lights the field's surface under it, and a disabled one dims.
+struct PhoneRowStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background { if configuration.isPressed { PhoneTheme.surface } }
+            .opacity(enabled ? 1 : 0.5)
     }
 }

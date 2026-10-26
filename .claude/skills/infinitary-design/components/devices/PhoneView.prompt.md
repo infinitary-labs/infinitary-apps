@@ -7,6 +7,8 @@ Native colors, spacing and radii are generated from the shared tokens; cards use
 The launch screen is the shared void in each appearance, so the first frame is already the app's own surface, never pure white or black.
 Every sheet title is inline in Space Grotesk at the headline size, never the system's large bold title.
 The paste, Settings and computer sheets sit on the panel color with a hairline at their edge.
+The phone's button is the Mac's row: rounded rectangles at the control radius, each its own width, drawn 37 points tall inside a 44-point touch area, at the trailing edge with the default last and filled with the accent, a danger choice in a red outline and the rest in a hairline outline; no button fills the width.
+Where a choice is a way in or a thing to pick rather than a decision, it is a row in a list instead.
 A plain field, such as the task search, a crewmate message or a computer's link, is the app's field: the panel fill, a hairline and the control radius.
 A card's reply row is shaped like the message capsule: one shape with the send arrow inside at its right edge, dimmed until there is text, on the field's fill and hairline.
 That shape is the Mac's input, a pill at one line and a rounded rectangle with the same 22-point radius when it grows.
@@ -19,15 +21,21 @@ Nothing else taps, not a page turn, an arrival or the ordinary reconnection when
 At first launch, the native first mate greets once above the centered headline “Welcome aboard Infinitary”, in the words of the Mac's own first launch.
 One line follows: “Your first mate lives on your Mac.
 Join it to read your cards and Activity here.”
-Nearby is one plain line under it, with no box: the way to find a computer, or each computer announcing Infinitary as a status dot, its name and Scan its code; a press opens the scanner, never trusts the announcement.
-Scan the code is the one prominent full-width control, and Paste its link a plain secondary below it with no fill.
-Join by its address is a second plain secondary under Paste its link, for a computer away from this network.
-It opens a sheet titled Join by its address: one callout line saying to type the account and computer as when signing in to it, with Remote Login or SSH on, a field with the placeholder `kun@studio`, an optional Port (22) field and a prominent Continue.
+The three ways in are rows in one list on the panel fill inside a hairline, a hairline between them: Scan the code, Paste its link and Join by its address, each with its Lucide symbol in the accent, one caption line of guidance under its name and a chevron at the trailing edge.
+Nearby is one plain line under the list, with no box: the way to find a computer, or each computer announcing Infinitary as a status dot, its name and Scan its code; a press opens the scanner, never trusts the announcement.
+Join by its address is for a computer away from this network, or one here that does not run the phone's link.
+It opens a sheet titled Join by its address: one callout line saying to type the account and computer as when signing in to it, with Remote Login or SSH on, a field with the placeholder `kun@studio` and an optional Port (22) field.
+Under them, a micro label On this network heads the computers here with Remote Login on, found while the sheet is open and the app in front, as the Mac's own By its address list finds them.
+While it finds any, a Your account field and one caption line come first, then the computers as rows in the same list shape: the Lucide computer, its name and its address in the data face; a row waits for the account, and a tap fills the whole address and its port.
+While it finds none, one caption line says it is looking, that iOS has not let it look (in the warning color, naming Local Network in Settings) or that it could not look, each ending that an address can still be typed.
+Under the list, a plain caption line in the accent offers to look at every address on this network (its words begin “Not listed”) and asks first in an alert that warns it can look like probing; only its Look tries each address on the phone's own private network for a sign-in, and each computer that answers joins the list as its address with Answers a sign-in, not announced.
+Continue ends the sheet's typing, fitted at the trailing edge.
 While the phone signs in, the sheet shows only “Signing in to <computer>…” with a native progress indicator.
-The first sign-in asks once in the same sheet: the heading “Is this <computer>?”, one line, the fingerprint in the data face on the field's surface, a caption that the phone asks once and stops if the fingerprint changes, a prominent Trust <computer> and a plain Not this one.
-When the computer has not let this phone's key in, the sheet says so in one callout line; where it takes a password, a secure field “Your password on <computer>” and a prominent Sign in once come first, then a caption offering the key instead.
-The phone's public key line follows in the micro face on the field's surface, with the plain secondaries Copy this phone's key (Copied once pressed) and Try again.
-A refusal is one callout line in the warning color at the sheet's foot, in plain words; the link the computer answers is never shown, and the sheet closes as the phone joins.
+The first sign-in asks once in the same sheet: the heading “Is this <computer>?”, one line, the fingerprint in the data face on the field's surface, a caption that the phone asks once and stops if the fingerprint changes, then one row: Not this one, then Trust <computer> as the default.
+When the computer has not let this phone's key in, the sheet says so in one callout line; where it takes a password, a secure field “Your password on <computer>” comes first, then a caption offering the key instead.
+The phone's public key line follows in the micro face on the field's surface, with the copy mark at its trailing edge (VoiceOver hears Copy this phone's key, then Copied).
+A refusal is one callout line in the warning color above the step's buttons, in plain words; the link the computer answers is never shown, and the sheet closes as the phone joins.
+The key step's row is Try again, then Sign in once as the default where the computer takes a password; a stopped join shows its reason, then Try again as the default.
 An alert names the computer address reached through the link, with Cancel beside Join, before the phone starts showing it; the authenticated computer name is not known before joining.
 The scanner's title is Scan the code, the words of the button that opens it.
 A permission refusal says how to allow the camera or local network, without replacing a refused camera with an automatic clipboard read.
@@ -42,9 +50,9 @@ The computer button opens a native sheet with the computer's name, its reach and
 The Settings button, the Lucide gear, opens this phone's own sheet: this device and its current capability, the fact that appearance follows the device, and the app's version.
 Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and Command-I the computer.
 The sheet shows a joining time only if the saved connection supplies one; it never invents one for an older record.
-Leave sits at the foot under a hairline, with an alert that keeps Keep it beside Leave and explains that a new link is needed to return.
-Out of reach, Forget this computer replaces Leave, asking in the same kind of alert before clearing only the local saved computer and explaining that the computer may still list this device.
-Removed clears the computer's data from this device and takes the first screen's shape: the first mate above “Removed from your computer”, a line saying a new link is needed, and one prominent Join again.
+Leave sits at the foot under a hairline: its sentence first, then Leave <computer> fitted at the trailing edge in the Mac's red outline, with an alert that keeps Keep it beside Leave and explains that a new link is needed to return.
+Out of reach, Forget this computer replaces Leave in the same shape, under its own sentence, asking in the same kind of alert before clearing only the local saved computer and explaining that the computer may still list this device.
+Removed clears the computer's data from this device and takes the first screen's shape: the first mate above “Removed from your computer”, a line saying a new link is needed, and one Join again filled with the accent, fitted and centered under the words.
 A protected-data read failure explains why joining cannot proceed and offers another attempt after unlocking.
 A damaged saved connection clears only the saved computer, keeps this device's identity and explains that a fresh link can join again; it never asks the person to unlock for a decoding error.
 
@@ -69,7 +77,7 @@ The card stage fits the shell's available column, up to 560 logical points, and 
 The kind chip, attribution, title, close control, footer buttons and reply field are native controls outside the body’s web view.
 The native controls inherit the shell's tint and retain platform focus and touch behavior.
 A review-finding card shows Review finding in the warning color above its title, and the builder’s task name in its attribution.
-The default choice uses a prominent native button with the dark void's ink on the accent in either appearance, as the approved card does.
+The default choice is filled with the accent, with the dark void's ink, in either appearance, as the approved card does.
 The body uses the Mac’s card stylesheet and fonts, fits the available width and permits pinch zoom; its pictures open a separate viewer and its recordings offer playback there.
 Named form answers and reply drafts stay in memory while paging; choosing a form value sends nothing, and a footer press collects the current answers.
 Required questions hold the default choice, and a failure keeps the draft with an explanation.
@@ -132,7 +140,7 @@ A task opens its record in the same column: goal, captain’s words, progress, o
 The timeline's events sit on a hairline rail in caption size, with each time right-aligned.
 The record's heading is the task's own title, with its key in mono at the start of the line below; the bar above it carries no key.
 Start and Continue follow the Mac’s own allowed moves; Steer sends to that crewmate, and Interrupt stops only its current turn.
-The actions sit at the record's foot like a card's footer: Start or Continue full width with the accent fill, Interrupt bordered beside it, and above them a capsule message box whose arrow is Steer.
+The actions sit at the record's foot like a card's footer: Start or Continue last with the accent fill, Interrupt outlined beside it, and above them a capsule message box whose arrow is Steer.
 A closed task remains readable without a message box or actions.
 New cards and answered replies announce themselves while the phone is open, following the Mac’s Notifications switch.
 The notice is a quiet pill at the top of every tab, under the top bar and over the stage beside the landscape sidebar: a mono New card or Reply label in the accent, then the card's title, on the raised surface with a hairline.

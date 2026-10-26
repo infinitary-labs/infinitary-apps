@@ -57,6 +57,7 @@ import {
   IntegrationsService,
 } from "../integrations";
 import { KnowledgeService } from "../knowledge/knowledgeService";
+import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
 import { appPathsFor } from "../paths";
 import {
   SEQUENCES_SEED,
@@ -6055,7 +6056,15 @@ describe("FirstmateAgent capture", () => {
     });
     const commission = vi.spyOn(supervisor, "commission");
     const steer = vi.spyOn(supervisor, "steerCrewmate").mockResolvedValue("mid-turn");
-    await agent.converse({ text: "fix this dialog, and tell pagination", images: [pngImage] });
+    // INF-1389 friction 3 also carries complete text files before ask capture attaches the spawn.
+    initOverflowDir(scratchDir("infinitary-firstmate-files-"));
+    const messageFiles: MessageFile[] = [];
+    const text = withPastedFiles(
+      "fix this dialog, and tell pagination",
+      [{ name: "notes.txt", text: "The dialog cannot open.\r\n" }],
+      messageFiles,
+    );
+    await agent.converse({ text, images: [pngImage], messageFiles });
     const [kept] = tasks.listAsks()[0]?.attachments ?? [];
     expect(kept).toMatchObject({ mimeType: "image/png", bytes: expect.any(Number) });
     const tools = toolsOf(specs);
@@ -6066,7 +6075,8 @@ describe("FirstmateAgent capture", () => {
     });
     const taskId = started?.content[0]?.text?.match(/task (\w{8})/)?.[1] ?? "";
     // The brief goes out with the message's pictures, before the message attaches.
-    expect(commission.mock.calls[0]?.[0]).toMatchObject({ attachments: [kept] });
+    expect(commission.mock.calls[0]?.[0]).toMatchObject({ attachments: [kept], messageFiles });
+    expect(tasks.messageFiles(taskId)).toEqual(messageFiles);
     expect(tasks.pictures(taskId)).toEqual([kept]);
     await tools.get("steer_crewmate")?.execute("s2", { task_id: "t1", message: "see the dialog" });
     expect(steer.mock.calls[0]?.[3]).toMatchObject({ images: [pngImage], attachments: [kept] });
@@ -7875,7 +7885,10 @@ describe("FirstmateAgent answer delivery", () => {
       silent: true,
       seedTasks: [{ id: "t58", title: "Check if PR 58 merged", status: "idle" }],
     });
-    await g.agent.converse({ text: "is PR 58 merged?", taskId: "t58" });
+    initOverflowDir(scratchDir("infinitary-retry-files-"));
+    const messageFiles: MessageFile[] = [];
+    withPastedFiles("", [{ name: "notes.txt", text: "Check the attached result." }], messageFiles);
+    await g.agent.converse({ text: "is PR 58 merged?", taskId: "t58", messageFiles });
     await finish(g);
     await drained(g.session, 2);
     await finish(g);
@@ -7888,6 +7901,7 @@ describe("FirstmateAgent answer delivery", () => {
     expect(again?.id).not.toBe(original?.id);
     expect(again).toMatchObject({
       text: "is PR 58 merged?",
+      messageFiles,
       hintTaskId: "t58",
       delivery: "pending",
       deliveryFacts: { retryOf: original?.id },

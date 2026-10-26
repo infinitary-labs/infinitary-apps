@@ -1095,6 +1095,8 @@ The first mate's `steer_crewmate` with `files_from` then delivers them into the 
 A handed file may hold secrets: no side reads its content into a string, logs it or names more than its kept name, size and sha256.
 A computer that runs work refuses to send when this computer does not list the `handover-files` change, and the first mate is refused in words when the waiting task's computer does not.
 Both folders go when their task closes (`docs/task-retention.md`).
+The captain’s message attachments use this same destination automatically when their task starts (`docs/task-capture.md`), without a file-finding task or `files_from` steer.
+An empty text attachment uses a zero-byte source-file order only when the receiving computer lists `empty-source-files`.
 
 ### Kept validation proof
 

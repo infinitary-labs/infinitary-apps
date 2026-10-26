@@ -240,7 +240,7 @@ import {
 import { renderDirections } from "../knowledge/directions";
 import { type KnowledgeService, PRIVATE_SCOPE } from "../knowledge/knowledgeService";
 import { knowledgeBinding } from "../knowledge/knowledgeTools";
-import { capWithOverflow, withPastedFiles } from "../overflow";
+import { capWithOverflow, type MessageFile, withPastedFiles } from "../overflow";
 import {
   type AppPaths,
   crewmateCardBodiesDir,
@@ -331,7 +331,9 @@ import type {
 import {
   deliverHandoverFile,
   HANDOVER_IN_DIR_NAME,
+  handoverFileName,
   keptHandoverFiles,
+  sha256OfFile,
   verifyHandoverFiles,
 } from "../tasks/handoverFiles";
 import {
@@ -541,7 +543,12 @@ export type FirstmateHooks = {
    * a captain turn about that card. Optional so supervisor tests without an
    * agent still record the thread message.
    */
-  converseAboutCard?: (cardId: string, text: string, images?: TurnImage[]) => void;
+  converseAboutCard?: (
+    cardId: string,
+    text: string,
+    images?: TurnImage[],
+    messageFiles?: MessageFile[],
+  ) => void;
   /** Apply the rung-2 ladder move: rebind Firstmate to another provider. */
   moveFlagship?: (providerId: string) => void;
   /** The refused card's "Try again": clear the account's refusal and drain once. */
@@ -3061,6 +3068,7 @@ export class CrewSupervisor {
      * this work. Its brief carries them before that message attaches to
      * the new task; a queued row reads them from the task once it has.
      */
+    messageFiles?: readonly MessageFile[];
     attachments?: readonly AttachmentRef[];
   }): Promise<{ taskId: string; crewmate: string; model?: NamedModel }> {
     // An independent review (delivery rigor phase 2) is its own commission:
@@ -3304,6 +3312,7 @@ export class CrewSupervisor {
         repoId: boundRepoId,
         routed,
         fresh: true,
+        messageFiles: input.messageFiles ?? [],
         ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       }),
       input.shape,
@@ -5452,6 +5461,7 @@ export class CrewSupervisor {
     /** A record born this instant (immediate commission) vs a dispatched queued row. */
     fresh: boolean;
     /** Pictures the brief carries beyond those the task's messages keep (`commission`). */
+    messageFiles?: readonly MessageFile[];
     attachments?: readonly AttachmentRef[];
   }): Promise<{ taskId: string; crewmate: string }> {
     const { taskId, title, brief } = spec;
@@ -5506,7 +5516,7 @@ export class CrewSupervisor {
     let cwd: string | undefined;
     let elsewhere: PlacedCopy | undefined;
     let minted: BriefPart[];
-    const pictures = this.briefPictures(taskId, spec.attachments ?? []);
+    let pictures: Awaited<ReturnType<CrewSupervisor["briefPictures"]>>;
     try {
       if (
         spec.routed &&
@@ -5686,6 +5696,7 @@ export class CrewSupervisor {
       task.unsubscribe = this.follow(task, session);
       // From here every save in the workspace carries the task (the
       // running dot), until the task closes.
+      pictures = await this.briefPictures(taskId, spec.attachments ?? [], spec.messageFiles ?? []);
       minted = await this.mintBrief(taskId, brief, spec.repoId, pictures.section);
       if (this.tasks.get(taskId) !== task)
         throw new Error("The task closed while its source work was being copied.");
@@ -6432,13 +6443,14 @@ export class CrewSupervisor {
    * its brief carries forward - its basis, the task it was discovered or
    * escalated from, the attempt it replaces - then `extra`, each picture
    * once. As many as one message may carry ride the first turn; every
-   * copy is named by its path where the crewmate runs on this Mac, and a
+   * copy is delivered to the task’s hand-over folder and named by its path there; a
    * copy that is gone is counted, never sent as words alone.
    */
-  private briefPictures(
+  private async briefPictures(
     taskId: string,
     extra: readonly AttachmentRef[],
-  ): { section: string; riding: AttachmentRef[]; images?: TurnImage[] } {
+    extraFiles: readonly MessageFile[],
+  ): Promise<{ section: string; riding: AttachmentRef[]; images?: TurnImage[] }> {
     const tasks = this.options.tasks;
     const record = tasks.get(taskId);
     const basis = record?.shape?.basis ? tasks.resolve(record.shape.basis) : undefined;
@@ -6454,8 +6466,29 @@ export class CrewSupervisor {
       seen.add(ref.sha256);
       return true;
     });
-    if (refs.length === 0) return { section: "", riding: [] };
+    const files = [...sources.flatMap((id) => tasks.messageFiles(id)), ...extraFiles];
     const here = this.machineOf(taskId) === LOCAL_MACHINE_ID;
+    const machines = this.options.machines;
+    if (
+      !here &&
+      (refs.length || files.length) &&
+      (!machines?.sourceFile || !machines.takesHandover?.(this.machineOf(taskId)))
+    )
+      throw new Error(
+        "Update Infinitary on the work computer before it can receive this message’s attachments.",
+      );
+    const deliver = async (path: string, name: string, sha256: string) => {
+      const file = handoverFileName(name, sha256);
+      if (here)
+        return deliverHandoverFile(
+          path,
+          join(crewmateTempDir(this.options.paths, taskId), HANDOVER_IN_DIR_NAME),
+          file,
+        );
+      if (!machines?.sourceFile)
+        throw new Error("The work computer cannot receive this message’s attachments.");
+      return machines.sourceFile(this.machineOf(taskId), taskId, file, path, "handover");
+    };
     const facts: BriefPictures = { riding: [], more: [], missing: 0 };
     const riding: AttachmentRef[] = [];
     const images: TurnImage[] = [];
@@ -6467,7 +6500,10 @@ export class CrewSupervisor {
         facts.missing += 1;
         continue;
       }
-      const named = { name: ref.name, ...(here ? { path: attachmentPath(ref) } : {}) };
+      const named = {
+        name: ref.name,
+        path: await deliver(attachmentPath(ref), ref.name, ref.sha256),
+      };
       if (image && riding.length < TURN_IMAGES_MAX) {
         riding.push(ref);
         images.push(image);
@@ -6477,7 +6513,18 @@ export class CrewSupervisor {
       }
     }
     return {
-      section: renderPicturesSection(facts),
+      section: [
+        renderPicturesSection(facts),
+        ...(await Promise.all(
+          [...new Map(files.map((file) => [file.sha256, file])).values()].map(async (file) => {
+            if ((await sha256OfFile(file.path)) !== file.sha256)
+              throw new Error(`The attached file ${file.name} changed.`);
+            return `Attached file ${file.name}: ${await deliver(file.path, file.name, file.sha256)} (the full copy in your hand-over folder).`;
+          }),
+        )),
+      ]
+        .filter(Boolean)
+        .join("\n"),
       riding,
       ...(images.length > 0 ? { images } : {}),
     };
@@ -10082,7 +10129,8 @@ export class CrewSupervisor {
         throw new Error(CARD_ANSWERS_TOO_LONG);
       }
     }
-    const text = withPastedFiles(typed, files);
+    const messageFiles: MessageFile[] = [];
+    const text = withPastedFiles(typed, files, messageFiles);
     const context = replyWithSettings(text, answers);
     // The thread names what rode along: a picture is a line, never markup.
     // The row keeps the text as the author read it; the thread reads the
@@ -10103,7 +10151,12 @@ export class CrewSupervisor {
       hasImages && !toFirstmate && card.taskId ? keepImages(randomUUID(), images ?? []) : undefined;
     this.cards.addMessage(id, "captain", shown || "sent a picture", submission, answers);
     if (toFirstmate) {
-      this.hooks.converseAboutCard?.(id, context, hasImages ? images : undefined);
+      this.hooks.converseAboutCard?.(
+        id,
+        context,
+        hasImages ? images : undefined,
+        ...(messageFiles.length ? [messageFiles] : []),
+      );
       return this.cards.thread(id);
     }
     const taskId = card.taskId;

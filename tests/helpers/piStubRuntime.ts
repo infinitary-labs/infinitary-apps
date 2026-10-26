@@ -15,7 +15,7 @@ import { scratchDir } from "./scratchDirs";
  */
 export async function piStubRuntime(
   baseUrl: string,
-  model: { provider: string; id: string },
+  model: { provider: string; id: string; input?: ("text" | "image")[] },
   others: readonly string[] = [],
 ): Promise<ModelRuntime> {
   const store = join(scratchDir("infinitary-pi-stub-store-"), "store");
@@ -33,7 +33,7 @@ export async function piStubRuntime(
           models: [model.id, ...others].map((id) => ({
             id,
             name: "Stub",
-            input: ["text"],
+            input: model.input ?? ["text"],
             maxTokens: 32_000,
           })),
         },

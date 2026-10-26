@@ -88,6 +88,7 @@ import {
   JUDGEABLE_DELIVERY,
 } from "../orchestrator/answerDelivery";
 import { amendBriefGoal, type BriefPart, type SpawnIntent } from "../orchestrator/intentBrief";
+import type { MessageFile } from "../overflow";
 import { KIND_SOURCE } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import {
@@ -604,6 +605,7 @@ export type OpenAskInput = {
   images?: AskImage[];
   /** The message's own copies of `images` (`src/core/attachments.ts`). */
   attachments?: AttachmentRef[];
+  messageFiles?: MessageFile[];
   hintTaskId?: string | null;
   at?: number;
   /** The message this one sends again (Ask again on the answer-delivery notice). */
@@ -1131,11 +1133,15 @@ export class TaskService {
     return this.asks.listFor(id);
   }
 
-  /**
-   * The captain's pictures that came with this task: the copies every
-   * message attached to it keeps (`src/core/attachments.ts`), in the order
-   * the messages attached, each picture once.
-   */
+  /** Complete text files the messages attached to this task kept at acceptance. */
+  messageFiles(id: string): MessageFile[] {
+    return this.events
+      .listFor(id)
+      .filter((event) => event.kind === "ask" && event.ref)
+      .flatMap((event) => this.asks.get(event.ref as string)?.messageFiles ?? []);
+  }
+
+  /** The captain's pictures, in message order, each copy once. */
   pictures(id: string): AttachmentRef[] {
     const seen = new Set<string>();
     return this.events
@@ -4539,6 +4545,7 @@ export class TaskService {
       text: input.text,
       images: input.images ?? [],
       attachments: input.attachments ?? [],
+      messageFiles: input.messageFiles ?? [],
       hintTaskId: input.hintTaskId ?? null,
       taskId: null,
       attachedVia: null,

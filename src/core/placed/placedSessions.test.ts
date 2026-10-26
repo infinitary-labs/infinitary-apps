@@ -54,6 +54,7 @@ import { bundleAxiProcess } from "../../../tests/helpers/axiProcessBundle";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { startGoogleStandIn } from "../../../tests/helpers/googleStandIn";
+import { pngImage } from "../../../tests/helpers/images";
 import { allowIntegrationReads } from "../../../tests/helpers/integrationApprovals";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { piStubRuntime } from "../../../tests/helpers/piStubRuntime";
@@ -65,6 +66,7 @@ import {
 } from "../../../tests/helpers/scriptedClaudeContract";
 import type { ContractWorld } from "../../../tests/helpers/sessionContract";
 import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
+import { attachmentPath, keepImages } from "../attachments";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { Computers } from "../devices/computers";
@@ -90,6 +92,7 @@ import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
 import { renderWake } from "../orchestrator/wakes";
+import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
@@ -101,6 +104,7 @@ import type { CrewmateTool } from "../session/tools";
 import { forkChildProcess } from "../sql/forkChildProcess";
 import { SettingsStore } from "../storage/settingsStore";
 import { CrewTranscripts } from "../tasks/crewTranscript";
+import { handoverFileName } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
@@ -1004,6 +1008,126 @@ describe("a task that runs on a computer that runs work", () => {
       sent.mockRestore();
     }
   });
+  it("carries captain-message pictures and text into the started task's hand-over folder without a helper task", async () => {
+    // INF-1389 friction 3: an attached screenshot must follow its task, not need a helper task.
+    const vision = await piStubRuntime(api.url, {
+      provider: PROVIDER,
+      id: MODEL,
+      input: ["text", "image"],
+    });
+    const at = await world(undefined, { runtime: vision });
+    const home = at.home();
+    const task = "t-message-files";
+    const attachments = keepImages("captain-message-files", [{ ...pngImage, name: "dialog.png" }]);
+    initOverflowDir(scratchDir("infinitary-message-files-"));
+    const messageFiles: MessageFile[] = [];
+    const content =
+      "Date,Observation\r\n2026-10-25,Dialog cannot open\r\n".repeat(100) +
+      "End of complete attachment.\r\n";
+    const text = withPastedFiles(
+      "Fix this dialog",
+      [
+        { name: "notes.csv", text: content },
+        { name: "empty.txt", text: "" },
+      ],
+      messageFiles,
+    );
+    seedTask(home.tasks, {
+      id: task,
+      title: "Fix the dialog",
+      prompt: text,
+      status: "queued",
+      deviceId: at.deviceId,
+    });
+    home.tasks.openAsk({ id: "message-files", text, attachments, messageFiles });
+    home.tasks.attachAsk("message-files", task, "tool:create_task");
+    // Read the durable references again at dispatch, not the initial input objects.
+    expect(home.tasks.getAsk("message-files")?.messageFiles).toEqual(messageFiles);
+    const dir = join(at.folders(task).temp, "handover");
+    const picture = attachments[0];
+    const file = messageFiles[0];
+    const empty = messageFiles[1];
+    if (!picture || !file || !empty) throw new Error("No attachment references");
+    const imagePath = join(dir, handoverFileName(picture.name, picture.sha256));
+    const textPath = join(dir, handoverFileName(file.name, file.sha256));
+    const emptyPath = join(dir, handoverFileName(empty.name, empty.sha256));
+    model([
+      {
+        tools: [
+          { name: "read", args: { path: imagePath } },
+          { name: "read", args: { path: textPath } },
+        ],
+      },
+      { text: "Opened the picture and the complete text file from my hand-over folder." },
+    ]);
+    const requests = api.requests.length;
+    await home.supervisor.dispatchQueuedTask(task);
+    expect(home.tasks.get(task)?.gate, JSON.stringify(home.tasks.timeline(task))).toBeNull();
+    expect(home.tasks.get(task)?.status).toBe("active");
+    await expect.poll(() => home.tasks.get(task)?.activity).toBe("idle");
+    expect(JSON.stringify(api.requests.at(-1))).toContain("End of complete attachment.");
+    expect(readFileSync(emptyPath).length).toBe(0);
+    expect(readFileSync(imagePath)).toEqual(readFileSync(attachmentPath(picture)));
+    expect(readFileSync(textPath).equals(Buffer.from(content))).toBe(true);
+    for (const path of [imagePath, textPath, emptyPath])
+      expect(statSync(path).mode & 0o777).toBe(0o600);
+    expect(statSync(dir).mode & 0o777).toBe(0o700);
+    const request = JSON.stringify(api.requests.slice(requests));
+    expect(request).toContain(imagePath);
+    expect(request).toContain(textPath);
+    expect(
+      home.tasks
+        .list()
+        .filter((entry) => entry.kind === "work")
+        .map((entry) => entry.id),
+    ).toEqual([task]);
+    console.log(
+      "INF-1389 attachment delivery proof",
+      JSON.stringify({
+        files: [imagePath, textPath, emptyPath].map((path) => ({
+          path,
+          bytes: statSync(path).size,
+          mode: statSync(path).mode & 0o777,
+        })),
+        directoryMode: statSync(dir).mode & 0o777,
+        completeBytesMatch: true,
+        destinationPathsInBrief: true,
+        workTasks: [task],
+      }),
+    );
+  });
+
+  it.each(["handover-files", "empty-source-files"])(
+    "keeps an attachment task queued when its computer lacks %s",
+    async (change) => {
+      // INF-1389 friction 3: no silent path-only fallback on an older computer.
+      const at = await world(undefined, {
+        changes: CONTRACT_CHANGES.names.filter((entry) => entry !== change),
+      });
+      const home = at.home();
+      initOverflowDir(scratchDir("infinitary-attachment-update-"));
+      const messageFiles: MessageFile[] = [];
+      const text = withPastedFiles("Read this", [{ name: "empty.txt", text: "" }], messageFiles);
+      seedTask(home.tasks, {
+        id: "t-old-attachments",
+        title: "Read attached file",
+        prompt: text,
+        status: "queued",
+        deviceId: at.deviceId,
+      });
+      home.tasks.openAsk({ id: "old-attachments", text, messageFiles });
+      home.tasks.attachAsk("old-attachments", "t-old-attachments", "tool:create_task");
+      const requests = api.requests.length;
+      await home.supervisor.dispatchQueuedTask("t-old-attachments");
+      expect(home.tasks.get("t-old-attachments")).toMatchObject({
+        status: "open",
+        gate: { kind: "captain", ref: "dispatch-failed" },
+      });
+      expect(home.tasks.get("t-old-attachments")?.gate?.reason).toContain("Update Infinitary");
+      expect(api.requests.length).toBe(requests);
+    },
+  );
+
   it("hands a file one task there reports to another task there, and never puts its content anywhere else", async () => {
     // INF-992, direction B: "a second task can hand files to the waiting
     // task"; the captain's words on it: "make sure file content never gets

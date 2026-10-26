@@ -621,6 +621,16 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     file: string,
     into?: "handover",
   ): Promise<string> {
+    if (
+      statSync(file).size === 0 &&
+      !listsChange(
+        this.options.devices.version(machine)?.changes,
+        contractChange("empty-source-files"),
+      )
+    )
+      throw new Error(
+        "Update Infinitary on the work computer before it can receive an empty attached file.",
+      );
     return sendSourceFile(this.options.devices, machine, taskId, name, file, into);
   }
 

@@ -58437,7 +58437,7 @@
                 },
                 "size": {
                   "type": "integer",
-                  "exclusiveMinimum": 0,
+                  "minimum": 0,
                   "maximum": 1073741824
                 },
                 "sha256": {

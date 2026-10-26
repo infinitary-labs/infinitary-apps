@@ -58,6 +58,7 @@ import {
   RECORD_KNOWLEDGE_TOOL,
 } from "../knowledge/knowledgeTools";
 import { classifyInboxBatch, type KnowledgeOrigin } from "../knowledge/origin";
+import type { MessageFile } from "../overflow";
 import type { AppPaths } from "../paths";
 import {
   type SequencesFallback,
@@ -430,6 +431,7 @@ export type TurnPayload =
   | string
   | {
       text?: string;
+      messageFiles?: MessageFile[];
       images?: Array<{ mimeType: string; data: string }>;
       visibleCardId?: string;
       /** The task the open record card points at (P4); a hint like the card. */
@@ -653,6 +655,7 @@ export class FirstmateAgent {
     if (!ask) return;
     void this.converse({
       text: ask.text,
+      ...(ask.messageFiles?.length ? { messageFiles: ask.messageFiles } : {}),
       ...(ask.hintTaskId ? { taskId: ask.hintTaskId } : {}),
       retryOf: askId,
     });
@@ -802,10 +805,11 @@ export class FirstmateAgent {
         this.options.inbox.endOutage(FIRSTMATE_RECIPIENT);
         void this.drainInbox();
       },
-      converseAboutCard: (cardId, text, images) => {
+      converseAboutCard: (cardId, text, images, messageFiles) => {
         void this.converse({
           text,
           images,
+          ...(messageFiles?.length ? { messageFiles } : {}),
           visibleCardId: cardId,
           aboutCardId: cardId,
         });
@@ -846,6 +850,7 @@ export class FirstmateAgent {
       text: trimmed,
       images: images?.map((image) => ({ mimeType: image.mimeType })),
       attachments: kept,
+      messageFiles: typeof turn === "string" ? [] : (turn.messageFiles ?? []),
       hintTaskId,
       ...(typeof turn !== "string" && turn.retryOf ? { retryOf: turn.retryOf } : {}),
     });
@@ -2288,6 +2293,7 @@ export class FirstmateAgent {
         const attachments = this.asks.currentPictures();
         const handle = await supervisor.commission({
           ...input,
+          messageFiles: this.asks.current()?.messageFiles ?? [],
           ...(attachments.length > 0 ? { attachments } : {}),
         });
         // Attach first (P1): the ask that caused the spawn is about the new task.

@@ -7,6 +7,7 @@ import {
   appendOverflow,
   capWithOverflow,
   initOverflowDir,
+  type MessageFile,
   overflowFilePath,
   withPastedFiles,
 } from "./overflow";
@@ -60,6 +61,24 @@ describe("capWithOverflow", () => {
       expect(readFileSync(path ?? "", "utf8")).toBe(files[i]?.text);
     });
     expect(sent).toContain("[truncated 0 more characters;");
+  });
+
+  it("records typed full-file references for task hand-over, without reading pointers from prose", () => {
+    // INF-1389 friction 3: the complete attached text follows its task.
+    const kept: MessageFile[] = [];
+    const text = "[full text: /not-a-file]\r\nKeep the line endings.\r\n";
+    withPastedFiles(
+      "Read this",
+      [
+        { name: "notes.txt", text },
+        { name: "empty.txt", text: "" },
+      ],
+      kept,
+    );
+    expect(kept.map((file) => file.name)).toEqual(["notes.txt", "empty.txt"]);
+    expect(readFileSync(kept[0]?.path ?? "").equals(Buffer.from(text))).toBe(true);
+    expect(readFileSync(kept[1]?.path ?? "").length).toBe(0);
+    expect(kept[0]?.bytes).toBe(Buffer.byteLength(text));
   });
 
   it("keeps the tail instead of the head when asked, still pointing at the full text", () => {

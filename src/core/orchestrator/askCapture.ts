@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { AttachmentRef } from "@shared/attachments";
+import type { MessageFile } from "../overflow";
 import type { AskAttachedVia, AskImage, AskRecord } from "../storage/askStore";
 import type { TaskRecord } from "../storage/taskStore";
 import type { TaskService } from "../tasks/taskService";
@@ -36,6 +37,7 @@ export type OpenTurnAsk = {
   images?: AskImage[];
   /** The message's own copies of its pictures, kept when it was accepted. */
   attachments?: AttachmentRef[] | undefined;
+  messageFiles?: MessageFile[] | undefined;
   hintTaskId?: string | undefined;
   /** The message this one sends again (Ask again on the answer-delivery notice). */
   retryOf?: string | undefined;
@@ -94,6 +96,7 @@ export class AskCapture {
     const record = this.tasks.openAsk({
       id: randomUUID().slice(0, 8),
       text: input.text,
+      messageFiles: input.messageFiles ?? [],
       images: input.images ?? [],
       ...(input.attachments?.length ? { attachments: input.attachments } : {}),
       hintTaskId: hint,

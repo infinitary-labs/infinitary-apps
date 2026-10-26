@@ -18,9 +18,9 @@ export async function sendSourceFile(
   try {
     const sha256 = await sha256Of(file);
     let offset = 0;
-    while (offset < size) {
+    do {
       const read = readSync(fd, bytes, 0, Math.min(bytes.length, size - offset), offset);
-      if (!read) throw new Error("The source file changed while being sent.");
+      if (!read && size > 0) throw new Error("The source file changed while being sent.");
       const answer = workOrders["inf:session:source-file"].response.parse(
         await devices.ask(machine, "inf:session:source-file", [
           {
@@ -36,7 +36,7 @@ export async function sendSourceFile(
       );
       offset += read;
       if (answer.complete) return answer.file;
-    }
+    } while (offset < size);
     throw new Error("The source file did not arrive whole.");
   } finally {
     closeSync(fd);

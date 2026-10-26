@@ -5,6 +5,7 @@ import {
   type DeliveryFacts,
   parseDeliveryFacts,
 } from "../orchestrator/answerDelivery";
+import type { MessageFile } from "../overflow";
 import type { AppDatabase } from "./db";
 
 /**
@@ -44,6 +45,7 @@ export type AskRecord = {
    * older build saved, which kept the shapes alone.
    */
   attachments: AttachmentRef[];
+  messageFiles?: MessageFile[];
   /** The task the open card or the panel pointed at when the turn began. */
   hintTaskId: string | null;
   /** The first task the ask attached to (further attachments are `ask` events). */
@@ -117,12 +119,29 @@ function picturesOf(json: string | null): { images: AskImage[]; attachments: Att
 
 function fromRow(row: Row): AskRecord {
   const { images, attachments } = picturesOf(row.images_json);
+  let entries: unknown = [];
+  try {
+    entries = row.images_json ? JSON.parse(row.images_json) : [];
+  } catch {
+    /* An unreadable row has no usable files. */
+  }
+  const messageFiles = Array.isArray(entries)
+    ? entries.filter(
+        (entry): entry is MessageFile =>
+          entry?.kind === "text" &&
+          typeof entry.name === "string" &&
+          typeof entry.path === "string" &&
+          Number.isSafeInteger(entry.bytes) &&
+          typeof entry.sha256 === "string",
+      )
+    : [];
   return {
     id: row.id,
     at: row.at,
     text: row.text,
     images,
     attachments,
+    messageFiles,
     hintTaskId: row.hint_task_id,
     taskId: row.task_id,
     attachedVia: row.attached_via as AskAttachedVia | null,
@@ -147,8 +166,8 @@ export class AskStore {
         ask.id,
         ask.at,
         ask.text,
-        ask.attachments.length > 0
-          ? JSON.stringify(ask.attachments)
+        ask.attachments.length > 0 || ask.messageFiles?.length
+          ? JSON.stringify([...ask.attachments, ...(ask.messageFiles ?? [])])
           : ask.images.length > 0
             ? JSON.stringify(ask.images)
             : null,

@@ -7,6 +7,7 @@ import {
   readFileSync,
   renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from "node:fs";
 import { createServer } from "node:http";
@@ -107,7 +108,7 @@ import {
 import { hostEnv } from "../hostEnv";
 import { renderReferenceImport } from "../knowledge/context";
 import { KnowledgeService } from "../knowledge/knowledgeService";
-import { initOverflowDir } from "../overflow";
+import { initOverflowDir, withPastedFiles, type MessageFile } from "../overflow";
 import { type AppPaths, appPathsFor, crewmateEvidenceDir } from "../paths";
 import { packagedPlanStepLines } from "../personal/sequencesSkill";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
@@ -22779,7 +22780,11 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     expect(brief).toContain(
       "Pictures: the captain attached 1 picture to the messages this task came from.",
     );
-    expect(brief).toContain(`- dialog.png: ${attachmentPath(attachments[0] as AttachmentRef)}`);
+    // INF-1389 friction 3: the task owns a readable hand-over copy, even locally.
+    const delivered = /^- dialog.png: (.+)$/m.exec(brief)?.[1] ?? "";
+    expect(delivered).toContain(`/crewmates/${taskId}/temp/handover/`);
+    expect(readFileSync(delivered)).toEqual(readFileSync(attachmentPath(attachments[0] as AttachmentRef)));
+    expect(statSync(delivered).mode & 0o777).toBe(0o600);
     // The section sits under the captain's words, before the host's own sections.
     expect(brief.indexOf("Pictures:")).toBeGreaterThan(
       brief.indexOf("fix the dialog in this picture"),
@@ -22791,6 +22796,41 @@ describe("CrewSupervisor: the captain's pictures ride the crewmate's brief", () 
     expect(
       tasks.servedBrief(tasks.timeline(taskId).filter((e) => e.kind === "briefed")[0] as TaskEvent),
     ).toContain("dialog.png");
+  });
+
+  it("hands a planned task the complete text file from its message, not just its preview", async () => {
+    // INF-1389 friction 3: a complete text attachment follows the started task.
+    vi.useRealTimers();
+    initOverflowDir(scratchDir("infinitary-task-text-"));
+    const crewmate = fakeCrewmate();
+    const { supervisor, tasks } = setup(crewmate);
+    const build = supervisor.plan({ title: "Read the notes", intent: intentOf("Read the notes") });
+    const messageFiles: MessageFile[] = [];
+    const content = "Date,Observation\r\n2026-10-25,Dialog cannot open\r\n".repeat(100);
+    const text = withPastedFiles("Read this", [{ name: "notes.csv", text: content }], messageFiles);
+    tasks.openAsk({ id: "text-message", text, messageFiles });
+    tasks.attachAsk("text-message", build.id, "tool:create_task");
+    await supervisor.startQueuedNow(build.key);
+    await tick();
+    const brief = crewmate.promptCalls[0] ?? "";
+    const delivered = /Attached file notes.csv: (.+) \(the full copy/.exec(brief)?.[1] ?? "";
+    expect(delivered).toContain(`/crewmates/${build.id}/temp/handover/`);
+    expect(readFileSync(delivered).equals(Buffer.from(content))).toBe(true);
+    expect(statSync(delivered).mode & 0o777).toBe(0o600);
+    expect(readFileSync(messageFiles[0]?.path ?? "", "utf8")).toBe(content);
+  });
+
+  it("refuses a changed text attachment before starting the model", async () => {
+    // INF-1389 friction 3: never pass off a truncated or changed file as the attachment.
+    vi.useRealTimers();
+    initOverflowDir(scratchDir("infinitary-task-text-"));
+    const crewmate = fakeCrewmate();
+    const { supervisor } = setup(crewmate);
+    const messageFiles: MessageFile[] = [];
+    withPastedFiles("Read this", [{ name: "notes.txt", text: "Dialog cannot open." }], messageFiles);
+    writeFileSync(messageFiles[0]?.path ?? "", "Changed after acceptance.");
+    await expect(supervisor.commission({ title: "Read the notes", intent: intentOf("Read the notes"), messageFiles })).rejects.toThrow("notes.txt changed");
+    expect(crewmate.promptCalls).toEqual([]);
   });
 
   it("briefs a planned builder with the pictures of its own messages and its plan's, counting a copy that is gone", async () => {

@@ -997,7 +997,7 @@ export const workOrders = {
         size: z
           .number()
           .int()
-          .positive()
+          .nonnegative()
           .max(1024 * 1024 * 1024),
         sha256: z.string().regex(/^[0-9a-f]{64}$/),
         offset: z.number().int().nonnegative(),

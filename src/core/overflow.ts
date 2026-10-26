@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { appendFileSync, mkdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -44,14 +44,20 @@ function dirFor(): string {
 export function capWithOverflow(
   text: string,
   tag: string,
-  opts: { limit?: number; keep?: "head" | "tail"; force?: boolean } = {},
+  opts: {
+    limit?: number;
+    keep?: "head" | "tail";
+    force?: boolean;
+    onFile?: (path: string) => void;
+  } = {},
 ): string {
   const { limit = MESSAGE_EXCERPT_LIMIT, keep = "head" } = opts;
   if (text.length <= limit && !opts.force) return text;
   const dir = dirFor();
   mkdirSync(dir, { recursive: true });
   const file = join(dir, `${tag}-${randomUUID().slice(0, 8)}.txt`);
-  writeFileSync(file, text, "utf8");
+  writeFileSync(file, text, { encoding: "utf8", mode: 0o600 });
+  opts.onFile?.(file);
   const omitted = Math.max(0, text.length - limit);
   return keep === "tail"
     ? `[truncated ${omitted} earlier characters; full text: ${file}]\n${text.slice(-limit).trimStart()}`
@@ -79,15 +85,35 @@ export function appendOverflow(file: string, chunk: string): void {
  * preview (the name is text, never markup); the preview is its first 2,000
  * characters and the pointer is the managed full copy.
  */
+export type MessageFile = {
+  kind: "text";
+  name: string;
+  path: string;
+  bytes: number;
+  sha256: string;
+};
+
 export function withPastedFiles(
   text: string,
   files: readonly { text: string; name?: string }[] = [],
+  kept?: MessageFile[],
 ): string {
   return [
     text,
     ...files.map((file) => {
-      const spilled = capWithOverflow(file.text, "pasted-text", { limit: 2000, force: true });
       const name = file.name ? safeDisplayName(file.name) : "";
+      const spilled = capWithOverflow(file.text, "pasted-text", {
+        limit: 2000,
+        force: true,
+        onFile: (path) =>
+          kept?.push({
+            kind: "text",
+            name: name || "pasted-text.txt",
+            path,
+            bytes: Buffer.byteLength(file.text),
+            sha256: createHash("sha256").update(file.text).digest("hex"),
+          }),
+      });
       return name ? `[attached file: ${name}]\n${spilled}` : spilled;
     }),
   ]

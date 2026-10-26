@@ -52,7 +52,7 @@ import { SignInRequiredError, signInRefusal } from "./forge";
 import type { HostCapabilities } from "./host";
 import { isAllowedOpenExternalUrl } from "./openExternal";
 import { CardChoiceUnavailableError } from "./orchestrator/crewSupervisor";
-import { withPastedFiles } from "./overflow";
+import { type MessageFile, withPastedFiles } from "./overflow";
 import { crewmateCardPicturesDir } from "./paths";
 import { actionValue } from "./pi/appTools";
 import { customCapabilityProfiles } from "./pi/customApiModels";
@@ -241,10 +241,15 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
 
     "inf:converse": async (turn) => {
       // Acceptance (including thread replies) stamps first-run state inside Firstmate.
+      const messageFiles: MessageFile[] = [];
       await services.firstmate.converse(
         typeof turn === "string"
           ? turn
-          : { ...turn, text: withPastedFiles(turn.text ?? "", turn.files) },
+          : {
+              ...turn,
+              text: withPastedFiles(turn.text ?? "", turn.files, messageFiles),
+              messageFiles,
+            },
       );
       return { ok: true as const };
     },

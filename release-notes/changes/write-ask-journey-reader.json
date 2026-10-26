@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "write-ask-journey-reader",
+      "reason": "Test-only repair: the GitHub and GitLab journeys' shared reader reads kept write requests from the task's permission record, where the app has saved them since the delivery-record split, without changing app behavior or weakening assertions."
+    }
+  ]
+}

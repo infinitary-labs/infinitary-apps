@@ -1,5 +1,6 @@
 import type { GithubWriteInput } from "../../src/core/forge/api";
 import { MERGE_CONTINUED_LEAD, WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/wakes";
+import { savedDeliveryReader } from "../../src/core/storage/taskDeliveryFields";
 import type { WriteAsk } from "../../src/shared/writeAsk";
 import { readSavedData } from "./savedData";
 
@@ -108,14 +109,17 @@ export function writeAskCall(title: string): GithubWriteInput {
   };
 }
 
-/** The writes a task keeps for the captain's click, as the app saved them. */
+/**
+ * The writes a task keeps for the captain's click, as the app saved them:
+ * its delivery composed by the delivery records' own reader, since the
+ * asks live on its permission record (docs/task-record.md).
+ */
 export function savedWriteAsks(userDataDir: string, taskId: string): WriteAsk[] {
-  const row = readSavedData(
-    userDataDir,
-    (db) =>
-      db.prepare("SELECT delivery_json AS delivery FROM tasks WHERE id = ?").get(taskId) as
-        | { delivery: string | null }
-        | undefined,
-  );
-  return (JSON.parse(row?.delivery ?? "{}") as { writeAsks?: WriteAsk[] }).writeAsks ?? [];
+  const delivery = readSavedData(userDataDir, (db) => {
+    const row = db
+      .prepare("SELECT delivery_json AS delivery FROM tasks WHERE id = ?")
+      .get(taskId) as { delivery: string | null } | undefined;
+    return savedDeliveryReader(db)(taskId, row?.delivery ?? null);
+  });
+  return (JSON.parse(delivery ?? "{}") as { writeAsks?: WriteAsk[] }).writeAsks ?? [];
 }

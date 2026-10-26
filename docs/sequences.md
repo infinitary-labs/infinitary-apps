@@ -15,8 +15,10 @@ A program (`docs/programs.md`) is the agent's reach, not a sequence runner: the 
 The seed's `programs` section says how, with the loop and the audit, deep research and migrate shapes written in the program's own names, so "use a workflow" or a loop toward a goal is one program task rather than a parent with steps (`docs/programs.md`, "The shapes the first mate is served").
 The task's shape gained facts the first mate declares and the host only stores and honours - `internal_step` and `skipped_plan_because` - and two it declares and the host checks - `result_schema` and `branch_from` (`src/shared/routingPolicy.ts`).
 
-A bounded read-only fact lookup stays a lookup, with its question and source scope stated faithfully and the captain's words preserved verbatim; it is not broadened into an investigation by default.
-The classifier, not the first mate, owns the kind, and any required diagnosis or reproduction excludes retrieval.
+A read-only answer from what the app can already read - a fact, or how or why something is so - is retrieval, with its question stated faithfully and the captain's words preserved verbatim; it is not broadened into an investigation by default.
+The goal names every source the answer needs, another computer included, because the classifier reads where the evidence lives from the words alone.
+The classifier, not the first mate, owns the kind, and an answer that needs past runs compared, a computer the app does not reach, a reproduction, a measurement or the web is research or reproduce.
+When the captain chooses Look deeper on a retrieval answer's card, the first mate starts a read-only research step built on that answer, its goal naming the source the answer said was missing.
 
 The personal section draws the line between lessons, projects and panels.
 Someone learning or practising a subject, including a math quiz, gets one `teach` task per subject on the personal workspace with `personal_ui` true and the packaged teach line attached; its brief names the lessons guide and cards (`docs/lessons.md`).

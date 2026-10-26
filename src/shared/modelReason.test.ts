@@ -22,7 +22,10 @@ describe("modelReasonLine", () => {
       "Fixing a bug already reproduced in FI3-402",
     );
     expect(modelReasonLine(reason("R7", "low"))).toBe("Simple upkeep");
-    expect(modelReasonLine(reason("R10", "low"))).toBe("Looking up existing facts");
+    // INF-1430 piece 1: R10 now covers an explanation read from what is here.
+    expect(modelReasonLine(reason("R10", "low"))).toBe(
+      "Looking up or explaining from what is here",
+    );
     expect(modelReasonLine(reason("R8", "high"))).toBe("The kind of work was unclear");
   });
 

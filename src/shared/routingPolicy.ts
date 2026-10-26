@@ -31,8 +31,9 @@ import { taskPolicyStateSchema } from "./taskPolicies";
  */
 
 /**
- * What a piece of work IS. Bounded fact retrieval is separate from
- * research and reproduction (FI3-1238). `review` is the host's alone (delivery rigor phase 2): an independent
+ * What a piece of work IS. Retrieval - a fact, or a how or why, read from
+ * what the app can already read - is separate from research and reproduction
+ * (FI3-1238, widened by INF-1430). `review` is the host's alone (delivery rigor phase 2): an independent
  * read of another task's pull request, stamped `kind_source: host:review`
  * and never a classifier's answer.
  */
@@ -77,6 +78,25 @@ export const CLASSIFIABLE_KINDS = [
   "fix",
   "chore",
 ] as const satisfies ReadonlyArray<WorkKind>;
+
+/**
+ * The classifiable kinds nested under what the work delivers (INF-1430
+ * piece 1). The host tells the classifier the deliverable it derived and
+ * offers only that branch, so an answer is never sorted into a change kind
+ * or a change into an answer kind. A crewmate's follow-up carries no
+ * declaration, so its kind decides the branch the other way round
+ * (`deliverableFor`). `teach` is a change: a lesson card's choice must
+ * never close the subject.
+ */
+export const KINDS_BY_DELIVERABLE = {
+  answer: ["retrieval", "research", "plan", "reproduce"],
+  change: ["implement", "fix", "chore", "teach"],
+} as const satisfies Record<Deliverable, ReadonlyArray<(typeof CLASSIFIABLE_KINDS)[number]>>;
+
+/** Whether a kind is one of the answer branch's. */
+export function isAnswerKind(kind: WorkKind | undefined): boolean {
+  return (KINDS_BY_DELIVERABLE.answer as ReadonlyArray<string>).includes(kind ?? "");
+}
 
 /**
  * The escalation stamp (S4 scaffolding, no behaviour here). The host
@@ -553,7 +573,7 @@ export type RoutingPolicy = z.infer<typeof routingPolicySchema>;
  * 6 medium = fixing bugs reproduced, understood, with a clear solution;
  * 7 low = simple config/docs/cosmetic work;
  * 8 unclear -> high.
- * R10 adds bounded fact retrieval -> low (FI3-1238), without changing R2/R7.
+ * R10 adds retrieval -> low (FI3-1238; a how or why read from what is here since INF-1430), without changing R2/R7.
  * `teach` (tutoring a learner through lessons) -> high, through R2.
  */
 const DEFAULT_ROUTING_POLICY_VALUE: RoutingPolicy = {

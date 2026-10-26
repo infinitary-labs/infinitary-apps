@@ -29,13 +29,24 @@ A model cleared while a queued row's start is skipping the classifier leaves not
 Since S7 the classifier is the first CONSUMER of the decision-model class (`docs/decision-models.md`): `DecisionKindClassifier` (`src/core/routing/decisionKindClassifier.ts`) owns the question, the facts and the mapping to a `KindVerdict`, and `DecisionModels` owns which model answers it.
 The adapter over one of the user's own subscription models and the native question share the retrieval criterion and whole-task boundary from `piResources.ts`.
 
+## Kinds nest under the deliverable
+
+The kinds sit under what the work delivers (`KINDS_BY_DELIVERABLE`, INF-1430 piece 1): `retrieval`, `research`, `plan` and `reproduce` under an answer, `implement`, `fix`, `chore` and `teach` under a change.
+`classifyShape` passes the deliverable the first mate's `read-only` declaration makes (`deliverableFor`), never the kind it is about to give, and the classifier is offered only that branch's kinds and `unclear`.
+The adapter's instruction stays one byte-stable text that teaches both branches; its user message names the deliverable and the kinds it may answer with, and the parse accepts only those, so a word from the other branch is `classifier-failed:unparsed`, which R8 routes high.
+A native model is asked the branch's own question (`KIND_QUESTIONS`), with only that branch's options.
+A crewmate's filed follow-up declares nothing: it is offered every kind, and its kind decides its deliverable.
+
 ## Bounded retrieval
 
-`retrieval` means the whole task asks for facts and citations from existing evidence, within a bounded question and source or search scope, using lookup, extraction, factual summary or mechanical comparison.
-Listing a disagreement without resolving it, or reporting a saved test outcome without running the test, can qualify.
-Any required causal explanation, uncertainty resolution, investigation, diagnosis, experiment, bug reproduction, recommendation, design or change excludes the whole task even when most effort is lookup.
+`retrieval` means the whole task asks for a fact, or how or why something is so, read from what this app can already read: the code and its history, the task record, the docs, and the current state of what it connects to - the fleet's computers, their CI runners and checks, and GitHub's runs, logs and pull requests.
+It may locate, quote, extract, list, summarize, compare records by a fixed rule, or trace how or why through them, within a bounded question and source or search scope.
+Listing a disagreement, explaining why records here disagree, or reporting a saved test outcome without running the test can qualify (INF-1430 revised FI3-1237's line that a causal explanation is never retrieval).
+An answer that needs a computer the app does not reach, a cause traced across past runs, a behavioral experiment or measurement, a bug reproduction, the web or an outside report, an audit, a recommendation, a design or a change excludes the whole task even when most effort is reading.
+Reading that state now - which job holds a slot or lease, whether a running job is stuck, what a setting or label says - can be retrieval; finding out why something got slow, failed or restarted across past runs is research.
 The dominant-effort rule applies only after retrieval is excluded.
 “Read-only,” “simple” and “quick” are not shortcuts to this verdict; uncertain boundaries answer `unclear` and request high.
+A retrieval crewmate's brief tells it to stop at that boundary: its card says what is and is not established, names the source still needed, and makes Look deeper the default (`renderAnswerShapeSection`).
 R10 requests low for retrieval; for work the first mate commissioned the kind never decides the deliverable, which only the typed `read-only` constraint makes an answer (`docs/delivery-rigor.md`, "The deliverable axis").
 An older task's saved classification is not rewritten.
 
@@ -60,7 +71,7 @@ It is versioned (`KIND_CLASSIFIER_INSTRUCTION_VERSION`) and fingerprinted (`kind
 **Changing the text means bumping the version.**
 The instruction deliberately says nothing about tiers, models, quota or cost: a classifier that knows what its answer buys starts judging the tier, which is exactly what the redesign took away from the first mate.
 
-The work itself rides one bounded user message (`buildClassifierPrompt`): title, goal, the captain's words verbatim, the typed constraints, the repository and its delivery posture, and - only when a basis was named *and verified* - that task's key, title and outcome head.
+The work itself rides one bounded user message (`buildClassifierPrompt`): title, goal, the captain's words verbatim, the typed constraints, the repository and its delivery posture, what the work delivers with the kinds it may be sorted into, and - only when a basis was named *and verified* - that task's key, title and outcome head.
 Nothing else: no transcript, no repo map, no fleet state.
 
 The binding walk is the retired supervision session's, reused: `orderCandidates` low-first over the routable pool, premium never a candidate, a candidate whose def cannot carry the turn skipped, a dead account store tried past, and the flagship account held back until nothing else can bind.
@@ -96,6 +107,7 @@ It sits behind Observe's development gate like the corpus export and the replay 
 ```
 pnpm score:kinds --dry                       # the historical corpus and labels, offline
 pnpm score:kinds --cases tests/fixtures/kind-classifier/retrieval-boundary.jsonl --dry
+pnpm score:kinds --cases tests/fixtures/kind-classifier/answer-lanes.jsonl --dry
 pnpm score:kinds --models <models.json> --provider <p> --model <m> \
   --api-key-env OPENAI_API_KEY --out report.json
 pnpm score:kinds --provider anthropic-claude --model <m> --out report.json
@@ -107,7 +119,11 @@ Shared crewmate tool definitions also stay independent of Pi's tool generator (`
 The boxed corpus integration exercises this same command against the hermetic client and local API, with Pi SDK imports refused, within its existing 15 s budget; `INFINITARY_CLASSIFIER_EVIDENCE_DIR` on that test optionally keeps the scored report, command output and served request for inspection.
 
 `--cases <file>` scores a separate labelled boundary corpus rather than treating synthetic contrasts as recorded first mate spawns.
-Each JSONL row carries its source provenance (`task-excerpt` or `synthetic`) and an expected kind beside the actual input words and constraints.
+Each JSONL row carries its source provenance (`task-excerpt` or `synthetic`) and an expected kind beside the actual input words and constraints, and may carry a hand `lane`, `quick` or `deep`.
+The scorer offers each row the branch its constraints declare, as the app does (`deliverableOf`), and reports each lane's tiers under `lanes`.
+`answer-lanes.jsonl` holds the 155 delegated answers INF-1383 labelled from October 16 to 26, 44 quick and 111 deep, with names and private paths scrubbed and the step lines the first mate relayed under the old guidance left out, so a run measures what the words alone say.
+The captain's line on where here ends (INF-1430) moved seven of those labels: the current state of what the app connects to is quick, and a cause traced across past runs, a run, a recommendation or a design is deep.
+The fast lane's bar on a live run is at most 5 deep cases routed low and at least 30 quick ones (INF-1430).
 The report keeps that provenance and the exact adapter/native instruction and version.
 The historical labels revise only two formerly-research factual asks: `42291b567612` (the “To land” definition in code) and `7fcb02d43484` (one task's recorded worktree chronology and current status).
 The underlying replay transcripts and all other labels stay unchanged.

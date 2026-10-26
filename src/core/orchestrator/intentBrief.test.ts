@@ -5,6 +5,7 @@ import {
   basisSectionParts,
   briefText,
   deliverableFor,
+  LOOK_DEEPER_LABEL,
   parseSpawnIntent,
   REVIEW_FIX_RULES,
   renderAnswerShapeSection,
@@ -579,6 +580,29 @@ describe("the answer-shape section (contract v3.6, captain lock 2; Task B)", () 
     // The report is the answer the task keeps: re-recorded in full when the
     // captain's replies change it, so work built on it starts from it.
     expect(section).toContain("report it again in full - the final agreed version");
+  });
+});
+
+// INF-1430 piece 1: a retrieval answer stops at what the app can already read and
+// offers Look deeper as the way on, never climbing on its own.
+describe("a retrieval answer's boundary", () => {
+  it("tells a retrieval crewmate to stop at the boundary with Look deeper the default", () => {
+    const section = renderAnswerShapeSection(false, "retrieval");
+    expect(section).toContain("this answer reads only what this app can already read");
+    expect(section).toContain("Stop at that boundary rather than reaching past it");
+    expect(section).toContain("says what is established and what is not");
+    expect(section).toContain("names the source still needed");
+    expect(section).toContain(`makes ${LOOK_DEEPER_LABEL} its default action`);
+  });
+
+  it("leaves research, and a retrieval step handed to the next step, without it", () => {
+    for (const section of [
+      renderAnswerShapeSection(false, "research"),
+      renderAnswerShapeSection(false),
+      renderAnswerShapeSection(true, "retrieval"),
+    ]) {
+      expect(section).not.toContain(LOOK_DEEPER_LABEL);
+    }
   });
 });
 

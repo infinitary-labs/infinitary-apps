@@ -276,7 +276,7 @@ export function provenance(model: UsageModel, unit: UsageUnit): string[] {
 export const KIND_WORDS: Record<UsageWorkKind, string> = {
   plan: "Plans",
   research: "Research",
-  retrieval: "Lookups",
+  retrieval: "Lookups and explanations",
   reproduce: "Issue reproduction",
   teach: "Lessons",
   implement: "Implementation",

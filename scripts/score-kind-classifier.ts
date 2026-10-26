@@ -75,6 +75,8 @@ type Spawn = {
   userWords: string;
   constraints?: string;
   provenance?: { kind: "task-excerpt" | "synthetic"; source: string };
+  /** A boundary case's hand lane: quick (read from what is here) or deep (INF-1430). */
+  lane?: "quick" | "deep";
 };
 
 type Label = { key: string; kind: string; note?: string };
@@ -92,6 +94,20 @@ type Scored = Spawn & {
 
 /** Weakest first: the order the two routing-cost directions are read in. */
 const LADDER = ["low", "medium", "high", "premium"];
+
+/**
+ * What a recorded spawn delivers, read the way the host reads it: a
+ * `read-only` constraint makes it an answer (`deliverableFor`), so the
+ * classifier is offered that branch's kinds as the app would offer them.
+ */
+export function deliverableOf(constraints: string | undefined): "answer" | "change" {
+  return (constraints ?? "")
+    .split(";")
+    .map((item) => item.trim())
+    .some((item) => item === "read-only" || item.startsWith("read-only:"))
+    ? "answer"
+    : "change";
+}
 
 /** The spawn's identity: its own words, so a label cannot drift onto another row. */
 function keyOf(title: string, goal: string, userWords: string): string {
@@ -152,6 +168,7 @@ export function readSpawnCorpus(fixturesDir: string): Spawn[] {
 const boundaryCaseSchema = z.object({
   title: z.string().min(1), goal: z.string().min(1), userWords: z.string().min(1),
   constraints: z.string().optional(), expectedKind: z.string().min(1),
+  lane: z.enum(["quick", "deep"]).optional(),
   provenance: z.object({ kind: z.enum(["task-excerpt", "synthetic"]), source: z.string().min(1) }),
 }).strict();
 
@@ -247,6 +264,18 @@ export function score(rows: Scored[]): Record<string, unknown> {
     under_routed: under.length,
     over_routed: over.length,
     label_tiers: tally(labelled.map((row) => row.labelTier ?? "?")),
+    // The fast lane's bar reads these: how many quick and deep cases went
+    // to each tier (INF-1430 piece 1).
+    ...(rows.some((row) => row.lane)
+      ? {
+          lanes: Object.fromEntries(
+            (["quick", "deep"] as const).map((lane) => [
+              lane,
+              tally(rows.filter((row) => row.lane === lane).map((row) => row.tier)),
+            ]),
+          ),
+        }
+      : {}),
     disagreements: labelled
       .filter((row) => row.kind !== row.label)
       .map((row) => ({ key: row.key, title: row.title, label: row.label, kind: row.kind })),
@@ -346,7 +375,9 @@ async function main(): Promise<number> {
   if (args.dry) {
     for (const spawn of corpus) {
       const label = labels.get(spawn.key)?.kind ?? "-";
-      process.stdout.write(`${spawn.key}  ${label.padEnd(10)}  ${spawn.title}\n`);
+      process.stdout.write(
+        `${spawn.key}  ${label.padEnd(10)}  ${deliverableOf(spawn.constraints).padEnd(6)}  ${(spawn.lane ?? "-").padEnd(5)}  ${spawn.title}\n`,
+      );
     }
     process.stdout.write(`\n${corpus.length} spawn(s), ${labels.size} label(s)\n`);
     return 0;
@@ -363,10 +394,10 @@ async function main(): Promise<number> {
   const rows: Scored[] = [];
   let instruction: unknown;
   try {
-    const { DecisionKindClassifier, CLASSIFY_TIMEOUT_MS, KIND_QUESTION } = await runner.import<
+    const { DecisionKindClassifier, CLASSIFY_TIMEOUT_MS, KIND_QUESTIONS } = await runner.import<
       typeof import("../src/core/routing/decisionKindClassifier.ts")
     >("/src/core/routing/decisionKindClassifier.ts");
-    instruction = KIND_QUESTION;
+    instruction = KIND_QUESTIONS;
     const { workKindSchema } = await runner.import<typeof import("../src/shared/routingPolicy.ts")>("/src/shared/routingPolicy.ts");
     for (const label of labels.values()) workKindSchema.parse(label.kind);
     const { AdaptedDecisionModel, DecisionModels } = await runner.import<
@@ -491,6 +522,7 @@ async function main(): Promise<number> {
           title: spawn.title,
           goal: spawn.goal,
           userWords: spawn.userWords,
+          deliverable: deliverableOf(spawn.constraints),
           ...(spawn.constraints ? { constraints: spawn.constraints } : {}),
         },
         AbortSignal.timeout(CLASSIFY_TIMEOUT_MS),

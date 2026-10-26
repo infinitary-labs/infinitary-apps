@@ -1,4 +1,4 @@
-import { CLASSIFIABLE_KINDS, type WorkKind } from "@shared/routingPolicy";
+import { CLASSIFIABLE_KINDS, type Deliverable, type WorkKind } from "@shared/routingPolicy";
 
 /**
  * The seam between "what is this work" and the deterministic tier table
@@ -18,6 +18,14 @@ export type KindInput = {
   title: string;
   goal: string;
   userWords: string;
+  /**
+   * What the work delivers, as the host derived it from the Firstmate's
+   * declaration (`deliverableFor`): the classifier is offered only that
+   * branch's kinds (INF-1430 piece 1). Absent on a crewmate's follow-up,
+   * which declares nothing and whose kind decides its deliverable, so every
+   * kind is offered.
+   */
+  deliverable?: Deliverable;
   constraints?: string;
   repoName?: string;
   delivery?: string;

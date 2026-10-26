@@ -217,7 +217,7 @@ describe("escalationFloor", () => {
 describe("the kind classifier seam", () => {
   it("the none implementation abstains", async () => {
     const verdict = await noneKindClassifier.classify(
-      { taskId: "task-1", title: "t", goal: "g", userWords: "w" },
+      { taskId: "task-1", title: "t", goal: "g", userWords: "w", deliverable: "change" },
       new AbortController().signal,
     );
     expect(verdict).toEqual({ kind: "unclear", source: "none", version: "none-1" });

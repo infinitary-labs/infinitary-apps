@@ -419,23 +419,33 @@ export function buildFirstmateSystemPrompt(): string {
  * was asked. The sha rides beside it, because the number is a promise and
  * the sha is the proof.
  */
-export const KIND_CLASSIFIER_INSTRUCTION_VERSION = "3";
+export const KIND_CLASSIFIER_INSTRUCTION_VERSION = "4";
 
-/** One retrieval boundary, served to both adapter and native decision models. */
+/**
+ * One retrieval boundary, served to both adapter and native decision
+ * models. Since INF-1430 it takes a how or why as well as a fact, so long
+ * as what answers it is something this app can already read; an answer that needs
+ * anything more stays research.
+ */
 export const RETRIEVAL_CRITERION =
-  "returning facts and citations from existing evidence: locating, quoting, extracting, listing, factual summarizing or mechanically comparing records by a fixed rule, within a bounded question and source/search scope. Exact filenames are unnecessary; several sources can qualify. No diagnosis, explanation of unexplained contradictions, behavioral experiment, bug reproduction, recommendation, design or change is required";
+  "returning a fact, or explaining how or why something is so, from what this app can already read: the code and its history, the task record, the docs, and the current state of what it connects to - the fleet's computers, their CI runners and checks, and GitHub's runs, logs and pull requests. Locating, quoting, extracting, listing, summarizing, comparing records by a fixed rule, or tracing how or why through them, within a bounded question and source/search scope. Exact filenames are unnecessary; several sources can qualify. No computer the app does not reach, cause traced across past runs, behavioral experiment, measurement, bug reproduction, web or outside report, audit, recommendation, design or change is required";
 export const RETRIEVAL_BOUNDARY =
-  "Retrieval qualifies only when the WHOLE ask meets its definition. Any required non-retrieval work excludes retrieval regardless of which part dominates. Read-only, simple, quick and look into are not classification rules. Reading an already-recorded test result can be retrieval; running a behavioral test to establish it cannot. Missing or contradictory records may be reported as not established; explaining their conflict is research. When the scope is ambiguous, do not choose retrieval.";
+  "Retrieval qualifies only when the WHOLE ask meets its definition. Any required non-retrieval work excludes retrieval regardless of which part dominates. Read-only, simple, quick and look into are not classification rules. Reading an already-recorded test result can be retrieval; running a behavioral test to establish it cannot. Explaining how or why from the code, its history and the records here can be retrieval, and so can explaining why records here disagree; what is here includes the current state of what the app connects to: another Mac such as a Mac mini, its CI runners and virtual Macs, and GitHub's checks, runs, logs and pull requests. Reading that state now - which job holds a slot or lease, whether a running job is stuck, what a setting or label says - can be retrieval. Finding out why something got slow, failed or restarted across past runs, which needs comparing them, a measurement or a reproduction, is research, and so is a computer the app does not reach or the web. When the scope is ambiguous, do not choose retrieval.";
 
 /** How the kind classifier's instruction opens; a scripted stand-in recognizes the classifier by it. */
 export const KIND_CLASSIFIER_OPENING = "You sort one piece of software work";
+
+/** The research criterion: an answer that needs more than reading what is here. */
+export const RESEARCH_CRITERION =
+  "investigating beyond retrieval: an answer that needs a computer the app does not reach, a cause traced across past runs, a reproduction or measurement, the web or an outside report, auditing or surveying, or reporting investigative findings";
 
 /**
  * What the classifier is asked (design section 3.4). Byte-stable and
  * interpolation-free, for the same two reasons the other personas' prompts
  * are: the provider's prefix cache holds across classifications, and a
  * recorded verdict is attributable to an exact question. Everything about
- * the work itself rides the single user message.
+ * the work itself rides the single user message, including what it
+ * delivers and so which branch's kinds it may be sorted into (INF-1430).
  *
  * It teaches the classifiable kinds in the captain's own vocabulary and nothing
  * else - no tiers, no models, no mention of cost. The classifier must not
@@ -445,21 +455,25 @@ export const KIND_CLASSIFIER_OPENING = "You sort one piece of software work";
 export function buildKindClassifierInstruction(): string {
   return `${KIND_CLASSIFIER_OPENING} into exactly one kind. Answer with one word and nothing else.
 
-The kinds:
-plan - deciding what to do or how to do it: designing, specifying, sequencing, comparing options, producing a plan or a design.
-research - investigating a question beyond bounded fact retrieval: explaining causes or conflicting evidence, auditing, surveying, reporting investigative findings.
+The work says what it delivers: an answer or a change. Answer only with a kind of the work's own deliverable, or unclear. When the work says its deliverable is not declared, any kind may answer.
+
+The kinds of work that delivers an answer:
 retrieval - ${RETRIEVAL_CRITERION}.
+research - ${RESEARCH_CRITERION}.
+plan - deciding what to do or how to do it: designing, specifying, sequencing, comparing options, producing a plan or a design.
 reproduce - establishing that a defect really happens and under what conditions, before anything is fixed.
-teach - tutoring a learner through a subject or skill with lessons and practice, such as teaching someone chess or fractions; the work is the learner's progress, not a change or an answer.
+
+The kinds of work that delivers a change:
 implement - building something that does not exist yet: a feature, a surface, a tool, a migration, a test suite.
 fix - correcting something that exists and is wrong: a bug, a failing or flaky test, a regression, a broken build.
 chore - small mechanical work with no design in it: configuration, dependency bumps, documentation wording, renames, formatting, cosmetic tweaks.
+teach - tutoring a learner through a subject or skill with lessons and practice, such as teaching someone chess or fractions; the work is the learner's progress.
 
 ${RETRIEVAL_BOUNDARY}
 
-Judge the work by what it asks for, not by how hard it sounds, and not by how it is to be carried out: a note that the work should be planned first, tested, or kept to a minimal diff says how to work, never what kind of work it is. For non-retrieval work spanning two kinds, answer with the one that dominates the effort: work that asks for a plan before any code is plan; work that asks for a fix once the cause is known is fix. When you cannot tell, or the work fits none of the kinds, answer unclear rather than guessing.
+Judge the work by what it asks for, not by how hard it sounds, and not by how it is to be carried out: a note that the work should be planned first, tested, or kept to a minimal diff says how to work, never what kind of work it is. For non-retrieval work spanning two kinds, answer with the one that dominates the effort: an answer that asks for a plan or a design is plan; a change that asks for a fix once the cause is known is fix. When you cannot tell, or the work fits none of its deliverable's kinds, answer unclear rather than guessing.
 
-Answer with exactly one of: plan, research, retrieval, reproduce, teach, implement, fix, chore, unclear.`;
+Answer with exactly one of the kinds offered for the work's deliverable, or unclear.`;
 }
 
 /** sha256 of the served classifier instruction: the verdict's provenance stamp. */

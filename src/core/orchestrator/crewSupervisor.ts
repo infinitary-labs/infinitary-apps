@@ -3210,7 +3210,7 @@ export class CrewSupervisor {
     // An escalation never reaches the classifier at all - its kind is
     // inherited from the attempt it replaces.
     const classified = this.withDeliverable(
-      await this.classifyShape(taskId, title, input.intent, boundRepoId, shape),
+      await this.classifyShape(taskId, title, input.intent, boundRepoId, shape, true),
       input.intent,
     );
     const brief = renderBrief(classified);
@@ -4675,6 +4675,11 @@ export class CrewSupervisor {
    * Everything else asks the classifier, which cannot throw: its failures
    * and its abstentions both come back `unclear`, carrying their reason as
    * `kind_source`, and R8 routes them high exactly as S2 did.
+   *
+   * `declared` says the intent is the Firstmate's own, whose `read-only`
+   * constraint decides the deliverable, so the classifier picks only within
+   * that branch (INF-1430 piece 1). A crewmate's filed follow-up declares
+   * nothing: its kind decides its deliverable, so every kind is offered.
    */
   private async classifyShape(
     taskId: string,
@@ -4682,6 +4687,7 @@ export class CrewSupervisor {
     intent: SpawnIntent,
     repoId: string | null,
     shape: WorkShape,
+    declared: boolean,
   ): Promise<WorkShape> {
     const skip = shape.override_model_id
       ? "override"
@@ -4708,7 +4714,7 @@ export class CrewSupervisor {
     const classifier = this.options.classifier;
     if (!classifier) return shape;
     const verdict = await classifier.classify(
-      this.classifierInput(taskId, title, intent, repoId, shape),
+      this.classifierInput(taskId, title, intent, repoId, shape, declared),
       AbortSignal.timeout(CLASSIFY_TIMEOUT_MS),
     );
     return {
@@ -4726,6 +4732,7 @@ export class CrewSupervisor {
     intent: SpawnIntent,
     repoId: string | null,
     shape: WorkShape,
+    declared: boolean,
   ): KindInput {
     const repo = repoId ? this.options.repos.get(repoId) : undefined;
     const constraints = (intent.constraints ?? [])
@@ -4745,6 +4752,9 @@ export class CrewSupervisor {
       title,
       goal: intent.goal,
       userWords: intent.userWords,
+      // The branch the classifier picks within: the read-only declaration,
+      // never the kind it is about to give (INF-1430 piece 1).
+      ...(declared ? { deliverable: deliverableFor(intent, undefined) } : {}),
       ...(constraints ? { constraints } : {}),
       ...(repo
         ? {
@@ -6578,7 +6588,9 @@ export class CrewSupervisor {
     // Whatever the brief was rendered from: a crewmate's follow-up has no
     // intent, and its tools follow the deliverable all the same (FI3-598).
     if (deliverable === "answer") {
-      sections.push([renderAnswerShapeSection(record?.shape?.internal_step === true)]);
+      sections.push([
+        renderAnswerShapeSection(record?.shape?.internal_step === true, record?.shape?.kind),
+      ]);
     }
     // A typed hand-off (INF-799): the result shape the report must fit, and
     // the task whose last commit the working copy began at.
@@ -12090,7 +12102,14 @@ export class CrewSupervisor {
     if (kindEstablished(shape.kind_source)) return;
     const intent = record.intent ?? { goal: record.title, userWords: record.prompt };
     const classified = this.withDeliverable(
-      await this.classifyShape(record.id, record.title, intent, record.repoId, shape),
+      await this.classifyShape(
+        record.id,
+        record.title,
+        intent,
+        record.repoId,
+        shape,
+        record.intent != null,
+      ),
       record.intent ?? undefined,
     );
     const current = this.options.tasks.get(record.id);

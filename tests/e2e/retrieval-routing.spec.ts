@@ -2,10 +2,12 @@ import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, test } from "@playwright/test";
+import { RETRIEVAL_BOUNDARY_WORDS } from "../../src/core/orchestrator/intentBrief";
 import { openDatabase } from "../../src/core/storage/db";
 import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { KINDS_BY_DELIVERABLE } from "../../src/shared/routingPolicy";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedRepo } from "./githubStub";
 import { launchApp } from "./launch";
@@ -30,7 +32,7 @@ import { usageSummary, usageTab } from "./usage";
 import { runFromSearch } from "./windowKeys";
 
 /** Scripted words exercise real dispatch, file reading, storage, answer and closure; not model judgment. */
-test("a bounded lookup requests low, reads its source and stays an answer after restart", async () => {
+test("a bounded explanation requests low, reads its source and stays an answer after restart", async () => {
   // The isolated account's real catalog entry is explicitly assigned low for this journey.
   const lookupModel = starterFor("xai", "medium");
   const userDataDir = scratchDir("infinitary-retrieval-");
@@ -143,7 +145,17 @@ test("a bounded lookup requests low, reads its source and stays an answer after 
     expect(git("rev-parse", "HEAD")).toBe(originalHead);
     expect(git("status", "--porcelain")).toBe("");
     const bodies = launched.mockProvider?.requestBodies() ?? [];
-    expect(bodies.some((body) => body.includes(CLASSIFIER_SYSTEM_MARKER))).toBe(true);
+    // The classifier is offered only the answer's kinds (INF-1430), and the brief draws its boundary.
+    const answerOffer = `(one of: ${[...KINDS_BY_DELIVERABLE.answer, "unclear"].join(", ")})`;
+    expect(
+      bodies.some((body) => body.includes(CLASSIFIER_SYSTEM_MARKER) && body.includes(answerOffer)),
+    ).toBe(true);
+    expect(
+      bodies.some(
+        (body) =>
+          !body.includes(CLASSIFIER_SYSTEM_MARKER) && body.includes(RETRIEVAL_BOUNDARY_WORDS),
+      ),
+    ).toBe(true);
     if (evidence) {
       mkdirSync(evidence, { recursive: true });
       writeFileSync(

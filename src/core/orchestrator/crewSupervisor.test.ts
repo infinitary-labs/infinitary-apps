@@ -8690,6 +8690,35 @@ describe("the task graph (R1)", () => {
     expect(tasks.get(filing.id)?.shape?.basis).toBeUndefined();
   });
 
+  // INF-1430 piece 1: a crewmate's follow-up declares no deliverable, so the
+  // classifier is offered every kind and the kind it gives decides it.
+  it("offers a filed follow-up every kind, and its kind decides its deliverable", async () => {
+    const crew = fakeCrewmate();
+    const asked: KindInput[] = [];
+    const { supervisor, tasks } = setup(crew, {
+      classifier: {
+        classify: async (input) => {
+          asked.push(input);
+          return { kind: "research", source: "classifier:test", version: "kc4" };
+        },
+      },
+    });
+    const origin = tasks.create({ id: "origin", title: "Meter", prompt: "p", repoId: null });
+    const filing = tasks.fileFollowup({
+      id: "filing",
+      originId: origin.id,
+      title: "Why the meter skips",
+      goal: "Explain why the meter skips a tick",
+      why: "Seen while fixing the meter",
+      prompt: "Goal: Explain why the meter skips a tick",
+    }).record;
+    await supervisor.startQueuedNow(filing.key);
+    await tick();
+    expect(asked).toHaveLength(1);
+    expect(asked[0]?.deliverable).toBeUndefined();
+    expect(tasks.get(filing.id)?.shape).toMatchObject({ kind: "research", deliverable: "answer" });
+  });
+
   it("update_task start_now starts a gated row now and refuses what is not queued work", async () => {
     const crewmate = fakeCrewmate();
     const { supervisor, tasks, sessions } = setup(crewmate);
@@ -9578,7 +9607,7 @@ describe("the task graph (R1)", () => {
     await tick();
     // The classifier saw the work's own facts, and the router saw its verdict.
     expect(asked).toHaveLength(1);
-    expect(asked[0]).toMatchObject({ taskId, title: "Bump the linter" });
+    expect(asked[0]).toMatchObject({ taskId, title: "Bump the linter", deliverable: "change" });
     expect(decideCalls.at(-1)?.shape).toMatchObject({
       kind: "chore",
       kind_source: "classifier:xai/grok-cheap",
@@ -9594,7 +9623,7 @@ describe("the task graph (R1)", () => {
     "retrieval with its read-only constraint is an answer, routed low (queued: %s)",
     async (queued) => {
       const crew = fakeCrewmate();
-      const classify = vi.fn(async () => ({
+      const classify = vi.fn(async (_input: KindInput) => ({
         kind: "retrieval" as const,
         source: "classifier:test/lookup",
         version: "kc2-test",
@@ -9619,6 +9648,8 @@ describe("the task graph (R1)", () => {
       }
       await tick();
       expect(classify).toHaveBeenCalledTimes(1);
+      // INF-1430 piece 1: the read-only declaration offers the answer branch.
+      expect(classify.mock.calls[0]?.[0]).toMatchObject({ deliverable: "answer" });
       expect(routes.at(-1)?.shape).toMatchObject({
         kind: "retrieval",
         kind_source: "classifier:test/lookup",
@@ -9631,6 +9662,9 @@ describe("the task graph (R1)", () => {
       expect(crew.promptCalls[0]).toContain(
         "commit nothing, push nothing, and open no pull request",
       );
+      // It stops at what is on this computer, with Look deeper the way on.
+      expect(crew.promptCalls[0]).toContain("Stop at that boundary rather than reaching past it");
+      expect(crew.promptCalls[0]).toContain("makes Look deeper its default action");
       await supervisor.dispatchQueuedTask(taskId);
       expect(classify).toHaveBeenCalledTimes(1);
     },

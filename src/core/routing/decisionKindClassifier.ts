@@ -1,10 +1,16 @@
 import type { DecisionQuestion, DecisionState } from "@shared/decisions";
-import { CLASSIFIABLE_KINDS, type WorkKind } from "@shared/routingPolicy";
+import {
+  CLASSIFIABLE_KINDS,
+  type Deliverable,
+  KINDS_BY_DELIVERABLE,
+  type WorkKind,
+} from "@shared/routingPolicy";
 import type { DecisionModels } from "../decisions/decisionModel";
 import {
   buildKindClassifierInstruction,
   KIND_CLASSIFIER_INSTRUCTION_VERSION,
   kindClassifierInstructionSha,
+  RESEARCH_CRITERION,
   RETRIEVAL_BOUNDARY,
   RETRIEVAL_CRITERION,
 } from "../pi/piResources";
@@ -60,8 +66,7 @@ const LIMITS = {
  */
 export const KIND_CRITERIA: Record<string, string> = {
   plan: "deciding what to do or how to do it: designing, specifying, sequencing, comparing options",
-  research:
-    "investigating beyond bounded fact retrieval: explaining causes or conflicting evidence, auditing, surveying, reporting investigative findings",
+  research: RESEARCH_CRITERION,
   retrieval: RETRIEVAL_CRITERION,
   reproduce:
     "establishing that a defect really happens and under what conditions, before anything is fixed",
@@ -72,11 +77,15 @@ export const KIND_CRITERIA: Record<string, string> = {
   chore: "small mechanical work with no design in it",
 };
 
+const KIND_INSTRUCTIONS = `${RETRIEVAL_BOUNDARY} Which kind of software work is this? Judge the work by what it asks for, not by how hard it sounds, and not by how it is to be carried out: a note that the work should be planned first, tested, or kept to a minimal diff says how to work, never what kind of work it is. For non-retrieval work spanning two kinds, answer with the one that dominates the effort: an answer that asks for a plan or a design is plan; a change that asks for a fix once the cause is known is fix. When you cannot tell, abstain rather than guessing.`;
+
 /**
- * The kind question. Its `instructions` and `criteria` are what a native
- * model is asked; `adapterInstruction` is the exact text S3 served and
- * still serves, so the two paths ask the same thing in each one's own
- * language and a verdict says which. The abstention is `unclear`, which R8
+ * The kind question, one per deliverable (INF-1430 piece 1): each offers
+ * only its branch's kinds, so a native model's distribution and the
+ * adapter's parse both stay inside the branch the host derived, and a word
+ * from the other branch is unparsed rather than a verdict. The adapter
+ * serves one byte-stable instruction that teaches both branches; the user
+ * message names which one applies. The abstention is `unclear`, which R8
  * routes high - a classifier that cannot tell costs nothing but the tier it
  * would have had anyway.
  *
@@ -85,14 +94,38 @@ export const KIND_CRITERIA: Record<string, string> = {
  * start judging the tier, which is exactly what the redesign took away from
  * the Firstmate.
  */
-export const KIND_QUESTION: DecisionQuestion = {
-  type: "choice",
-  instructions: `${RETRIEVAL_BOUNDARY} Which kind of software work is this? Judge the work by what it asks for, not by how hard it sounds, and not by how it is to be carried out: a note that the work should be planned first, tested, or kept to a minimal diff says how to work, never what kind of work it is. For non-retrieval work spanning two kinds, answer with the one that dominates the effort: work that asks for a plan before any code is plan; work that asks for a fix once the cause is known is fix. When you cannot tell, abstain rather than guessing.`,
-  criteria: KIND_CRITERIA,
-  abstain: "unclear",
-  version: `kc${KIND_CLASSIFIER_INSTRUCTION_VERSION}`,
-  adapterInstruction: buildKindClassifierInstruction(),
+export const KIND_QUESTIONS: Record<Deliverable | "undeclared", DecisionQuestion> = {
+  answer: branchQuestion("answer"),
+  change: branchQuestion("change"),
+  undeclared: branchQuestion(undefined),
 };
+
+/** The question for a deliverable, or every kind when none was declared. */
+export function kindQuestionFor(deliverable: Deliverable | undefined): DecisionQuestion {
+  return KIND_QUESTIONS[deliverable ?? "undeclared"];
+}
+
+function branchQuestion(deliverable: Deliverable | undefined): DecisionQuestion {
+  return {
+    type: "choice",
+    instructions: `This work delivers ${deliverableWords(deliverable)}. ${KIND_INSTRUCTIONS}`,
+    criteria: Object.fromEntries(
+      offeredKinds(deliverable).map((kind) => [kind, KIND_CRITERIA[kind] ?? ""]),
+    ),
+    abstain: "unclear",
+    version: `kc${KIND_CLASSIFIER_INSTRUCTION_VERSION}`,
+    adapterInstruction: buildKindClassifierInstruction(),
+  };
+}
+
+function offeredKinds(deliverable: Deliverable | undefined): ReadonlyArray<string> {
+  return deliverable ? KINDS_BY_DELIVERABLE[deliverable] : CLASSIFIABLE_KINDS;
+}
+
+function deliverableWords(deliverable: Deliverable | undefined): string {
+  if (!deliverable) return "what its kind makes it, as nothing was declared";
+  return deliverable === "answer" ? "an answer" : "a change";
+}
 
 /**
  * The work, as a decision model sees it: what it is called, what done looks
@@ -127,7 +160,7 @@ export function kindState(input: KindInput): DecisionState {
   };
 }
 
-/** The adapter's single user message, byte for byte as S3 built it. */
+/** The adapter's single user message: S3's, with the deliverable and its kinds (INF-1430). */
 export function buildClassifierPrompt(input: KindInput): string {
   const lines = [
     "[work]",
@@ -150,6 +183,12 @@ export function buildClassifierPrompt(input: KindInput): string {
       }`,
     );
   }
+  lines.push(
+    `delivers: ${input.deliverable ? deliverableWords(input.deliverable) : "not declared"} (one of: ${[
+      ...offeredKinds(input.deliverable),
+      "unclear",
+    ].join(", ")})`,
+  );
   lines.push("", "[the user's words, verbatim]", clip(input.userWords, LIMITS.userWords));
   if (input.basis) {
     lines.push(
@@ -182,7 +221,7 @@ export class DecisionKindClassifier implements KindClassifier {
     const answers = await this.decisions.decide(
       { purpose: "kind", taskId: input.taskId },
       kindState(input),
-      { kind: KIND_QUESTION },
+      { kind: kindQuestionFor(input.deliverable) },
       signal,
     );
     const answer = answers.kind;

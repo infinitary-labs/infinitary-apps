@@ -386,8 +386,10 @@ describe("token coverage disclosure", () => {
   });
 });
 
-it("calls the saved retrieval kind Lookups without renaming research", () => {
-  expect(kindWords("retrieval")).toBe("Lookups");
+// INF-1430 piece 1: retrieval takes explanations too, and every saved
+// retrieval task - past lookups included - reads under the new name.
+it("calls the saved retrieval kind Lookups and explanations without renaming research", () => {
+  expect(kindWords("retrieval")).toBe("Lookups and explanations");
   expect(kindWords("research")).toBe("Research");
   expect(kindWords(null)).toBe("Other task work");
 });

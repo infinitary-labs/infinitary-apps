@@ -14,12 +14,13 @@ Dynamic routing off still disables automatic computer comparison and previews fo
 
 ## Bounded fact retrieval
 
-R10 maps classifier-owned `retrieval` to low: the whole task must ask for bounded facts and citations from existing evidence (`docs/kind-classifier.md`).
-Any required investigation, diagnosis, causal explanation, experiment or reproduction excludes that route; ambiguous work still reaches R8 high.
+R10 maps classifier-owned `retrieval` to low: the whole task must ask for a fact, or how or why something is so, read from what this app can already read - the code and its history, the task record, the docs, and the current state of the computers, checks and GitHub runs it connects to (`docs/kind-classifier.md`).
+An answer that needs a cause traced across past runs, a computer the app does not reach, a reproduction, a measurement, the web or an outside report, an audit or a design excludes that route; ambiguous work still reaches R8 high.
+A retrieval crewmate stops at that boundary rather than climbing on its own: its card says what is and is not established, names the source still needed, and makes Look deeper the default, which the first mate answers with a read-only research step built on that answer (INF-1430).
 R0 named models, R1a premium asks and R1b escalation remain above it, and pins, capability and availability keep their existing precedence and fallback.
 Low is the requested slot, not a promise of the served model: both slots remain in the routing ledger.
-The task record and crew summary say “Looking up existing facts” when R10 serves as requested, or retain the existing named-model, pin or fallback reason when one applies.
-Settings → Usage calls the saved kind “Lookups”; older saved research and reproduction remain as they were.
+The task record and crew summary say “Looking up or explaining from what is here” when R10 serves as requested, or retain the existing named-model, pin or fallback reason when one applies.
+Settings → Usage calls the saved kind “Lookups and explanations”, past lookups included; older saved research and reproduction remain as they were.
 
 ## Teaching
 

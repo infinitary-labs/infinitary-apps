@@ -90,7 +90,7 @@ Each task carries its key, title and project, when it was created, its amount ov
 The captain's design (FI3-925, Overview): the header with the Tokens / Estimated $ switch, Period and Work, a coverage notice, three readouts, the daily bars with their Daily values table, tokens per model beside Where it went, a model's details, and the milestone strip.
 FI3-993 took the lines from between rows, grouped Where it went by project, and added Recent tasks under the milestone strip.
 
-- Where it went lists the first mate first whenever the work includes it, "No activity" when it has no record, then each project by its subtotal with its kinds of work beneath it under category names (Plans, Research, Lookups, Issue reproduction, Implementation, Fixes, Maintenance, Reviews, Other task work), then other work.
+- Where it went lists the first mate first whenever the work includes it, "No activity" when it has no record, then each project by its subtotal with its kinds of work beneath it under category names (Plans, Research, Lookups and explanations, Issue reproduction, Implementation, Fixes, Maintenance, Reviews, Other task work), then other work.
   Projects and kinds go largest first in the unit shown, those with no value in it after, and names break ties.
 - Recent tasks lists ten tasks, then ten more each time See more is chosen, each with Input, Output, Cache read, Cache write and Total in full in the unit shown.
   A category no record reported reads "Not available", and one some records reported says how many; in dollars only an estimate's recorded parts appear, never a total split after the fact.

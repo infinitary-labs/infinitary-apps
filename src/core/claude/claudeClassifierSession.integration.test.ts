@@ -193,6 +193,7 @@ const WORK = {
   title: "Bump the linter",
   goal: "Update the linter to the current minor.",
   userWords: "can you bump the linter please",
+  deliverable: "change" as const,
 };
 
 function classify(b: Box, model?: string) {

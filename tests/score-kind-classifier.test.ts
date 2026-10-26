@@ -1,7 +1,13 @@
 import { cpSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { readBoundaryCorpus, readSpawnCorpus, score } from "../scripts/score-kind-classifier.ts";
+import {
+  deliverableOf,
+  readBoundaryCorpus,
+  readSpawnCorpus,
+  score,
+} from "../scripts/score-kind-classifier.ts";
+import { KINDS_BY_DELIVERABLE } from "../src/shared/routingPolicy";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**
@@ -115,7 +121,8 @@ describe("the explicit retrieval boundary corpus", () => {
     expect(spawns.filter((row) => row.provenance?.kind === "task-excerpt")).toHaveLength(4);
     expect(spawns.filter((row) => row.provenance?.kind === "synthetic")).toHaveLength(23);
     expect(labels.size).toBe(spawns.length);
-    expect([...labels.values()].filter((row) => row.kind === "retrieval")).toHaveLength(13);
+    // INF-1430 moved two explanations read from what is here to retrieval.
+    expect([...labels.values()].filter((row) => row.kind === "retrieval")).toHaveLength(15);
   });
 
   it("scores an investigation sent low as under-routing, not successful retrieval", () => {
@@ -139,6 +146,47 @@ describe("the explicit retrieval boundary corpus", () => {
       tier_agreement: 0,
       under_routed: 1,
       over_routed: 0,
+    });
+  });
+});
+
+// INF-1430 piece 1: the 155 delegated answers INF-1383 labelled, scored for
+// the fast lane's bar (at most 5 deep routed low, at least 30 quick).
+describe("the quick and deep answers corpus", () => {
+  const { spawns, labels } = readBoundaryCorpus(
+    join(__dirname, "fixtures/kind-classifier/answer-lanes.jsonl"),
+  );
+
+  it("holds every labelled answer, each an answer offered only the answer branch", () => {
+    expect(spawns).toHaveLength(155);
+    expect(spawns.filter((row) => row.lane === "quick")).toHaveLength(44);
+    expect(spawns.filter((row) => row.lane === "deep")).toHaveLength(111);
+    for (const spawn of spawns) {
+      expect(deliverableOf(spawn.constraints)).toBe("answer");
+      expect(KINDS_BY_DELIVERABLE.answer).toContain(labels.get(spawn.key)?.kind);
+    }
+    // A deep answer is never retrieval; a quick one is unless it needed the web.
+    const retrieval = spawns.filter((row) => labels.get(row.key)?.kind === "retrieval");
+    expect(retrieval.every((row) => row.lane === "quick")).toBe(true);
+    expect(retrieval).toHaveLength(43);
+  });
+
+  it("tallies each lane's tiers, the numbers the bar reads", () => {
+    const row = (lane: "quick" | "deep", tier: string) => ({
+      key: `${lane}-${tier}`,
+      fixture: "f",
+      title: "t",
+      goal: "g",
+      userWords: "w",
+      lane,
+      kind: tier === "low" ? "retrieval" : "research",
+      source: "classifier:test",
+      tier,
+      rule: tier === "low" ? "R10" : "R2",
+    });
+    expect(score([row("quick", "low"), row("quick", "high"), row("deep", "low")]).lanes).toEqual({
+      quick: { low: 1, high: 1 },
+      deep: { low: 1 },
     });
   });
 });

@@ -510,9 +510,9 @@ export function lookingAgain(
 
 /** Scripted retrieval exercises plumbing, not live semantic accuracy. */
 export const RETRIEVAL_TASK_ASK =
-  "Look up the version and demo support in meterlab's release-info.json, with a citation.";
+  "Explain why meterlab's release-info.json says this release has video demos, with a citation.";
 export const RETRIEVAL_TASK_GOAL =
-  "Read release-info.json and report its version and demo support with a citation; do not test playback.";
+  "Explain from release-info.json why its release reports video demos, citing its fields; do not test playback.";
 
 /**
  * The captain's close reaches its crewmate (FI3-435): a crewmate steered

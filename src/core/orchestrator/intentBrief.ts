@@ -3,7 +3,13 @@ import { type HoldOverride, reviewerOverrideWords } from "@shared/holds";
 import type { LiveValidation } from "@shared/liveValidation";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
-import type { Deliverable, InPlaceFacts, InPlacePull, WorkKind } from "@shared/routingPolicy";
+import {
+  type Deliverable,
+  type InPlaceFacts,
+  type InPlacePull,
+  isAnswerKind,
+  type WorkKind,
+} from "@shared/routingPolicy";
 import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
 import { RESULT_WORDS, resultText } from "../tasks/taskResult";
 import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
@@ -436,7 +442,7 @@ export function renderRigorSection(rigor: Rigor): string {
  * friction 7: a build whose goal asked for a preview first was classified a
  * plan, so its brief said answer only and the preview's click closed it).
  * A crewmate's follow-up has no intent and so no declaration: its kind
- * decides, `plan`, `research`, `retrieval` and `reproduce` being answers.
+ * decides, the answer branch of `KINDS_BY_DELIVERABLE` being answers.
  * A `teach` task is never an answer: a choice on a lesson card must never
  * close the subject.
  */
@@ -446,9 +452,7 @@ export function deliverableFor(
 ): Deliverable {
   if (kind === "teach") return "change";
   if (!intent) {
-    return kind === "plan" || kind === "research" || kind === "retrieval" || kind === "reproduce"
-      ? "answer"
-      : "change";
+    return isAnswerKind(kind) ? "answer" : "change";
   }
   return (intent.constraints ?? []).some((constraint) => constraint.kind === "read-only")
     ? "answer"
@@ -524,7 +528,27 @@ const ANSWER_CONTINUES_CARD =
  * crewmate, and a choice on any other closes the task answered
  * (`SettleService.closeAnsweredTask`).
  */
-export function renderAnswerShapeSection(internalStep = false): string {
+export function renderAnswerShapeSection(internalStep = false, kind?: WorkKind): string {
+  const shape = answerShape(internalStep);
+  // An internal step's answer goes to the next step, not to a card.
+  return kind === "retrieval" && !internalStep ? `${shape} ${RETRIEVAL_BOUNDARY_WORDS}` : shape;
+}
+
+/**
+ * A retrieval answer's boundary (INF-1430 piece 1): it was routed low to
+ * read what this app can already read, so it stops where that ends rather than
+ * reaching past it, and the captain's Look deeper is the way on - the
+ * first mate starts a research step built on this answer. A crewmate never
+ * climbs on its own: a stronger model stays the captain's move.
+ */
+export const LOOK_DEEPER_LABEL = "Look deeper";
+export const RETRIEVAL_BOUNDARY_WORDS = [
+  "Retrieval: this answer reads only what this app can already read - the code and its history, the task record, the docs, and the current state of the computers, checks and GitHub runs it connects to.",
+  "Stop at that boundary rather than reaching past it: when the whole answer needs a cause traced across past runs, a reproduction, a measurement, a computer the app does not reach or the web, the card says what is established and what is not, names the source still needed, and makes " +
+    `${LOOK_DEEPER_LABEL} its default action, which the first mate answers with a research step built on this answer.`,
+].join(" ");
+
+function answerShape(internalStep: boolean): string {
   if (internalStep) {
     // A step the Firstmate declared its own (docs/sequences.md): its answer
     // goes to the next step, not to the captain, so the report carries it

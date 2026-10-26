@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "quick-explanations",
+      "kind": "improvement",
+      "title": "Quick explanations ask for low intelligence",
+      "body": "A question about how or why something works, answered from what Infinitary can already read - your Mac, and the current state of the computers and GitHub checks it connects to - now asks for a low-intelligence crewmate, like a fact lookup. When the answer needs more than that, such as comparing past runs, a reproduction or the web, its card says what is not yet established and offers Look deeper, which starts a research step built on it. Usage lists these answers as Lookups and explanations.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "quick-explanations-dark.webp",
+        "light": "quick-explanations-light.webp",
+        "alt": "An explanation's task record shows Low intelligence and Looking up or explaining from what is here beneath its model"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

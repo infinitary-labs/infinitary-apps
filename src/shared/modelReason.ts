@@ -57,7 +57,7 @@ function workOf(reason: ModelReason): string | null {
         ? `fixing a bug already reproduced in ${reason.basis}`
         : "fixing a bug already reproduced";
     case "R10":
-      return "looking up existing facts";
+      return "looking up or explaining from what is here";
     case "R7":
       return "simple upkeep";
     case "R8":

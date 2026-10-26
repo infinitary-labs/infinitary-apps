@@ -2,9 +2,9 @@ import type { CutOff } from "@shared/authFailure";
 import { DEFAULT_DECISIONS, type DecisionsSettings } from "@shared/decisions";
 import type { FmUsage } from "@shared/events";
 import type { ModelsCatalogView } from "@shared/quota";
-import { CLASSIFIABLE_KINDS, type WorkKind } from "@shared/routingPolicy";
+import { CLASSIFIABLE_KINDS, KINDS_BY_DELIVERABLE, type WorkKind } from "@shared/routingPolicy";
 import { describe, expect, it, vi } from "vitest";
-import { readBoundaryCorpus } from "../../../scripts/score-kind-classifier";
+import { deliverableOf, readBoundaryCorpus } from "../../../scripts/score-kind-classifier";
 import { FAKE_CONTROL_PROFILE, fakeSession } from "../../../tests/helpers/fakeSession";
 import {
   AdaptedDecisionModel,
@@ -25,7 +25,7 @@ import {
   CLASSIFY_TIMEOUT_MS,
   classifierVersion,
   DecisionKindClassifier,
-  KIND_QUESTION,
+  KIND_QUESTIONS,
   kindState,
 } from "./decisionKindClassifier";
 import { KIND_SOURCE } from "./kindClassifier";
@@ -178,15 +178,25 @@ const INPUT = {
   title: "Bump the linter",
   goal: "Update the linter to the current minor and fix the two new warnings.",
   userWords: "can you bump the linter please",
+  deliverable: "change" as const,
 };
 
 describe("the kind question", () => {
   it("serves the adapter the versioned instruction and the native path the same options", () => {
-    expect(KIND_QUESTION.adapterInstruction).toBe(buildKindClassifierInstruction());
-    expect(KIND_QUESTION.abstain).toBe("unclear");
-    // The eight kinds are the closed option set; `unclear` is the abstention
-    // and is deliberately not one of them.
-    expect(Object.keys(KIND_QUESTION.criteria)).toEqual([...CLASSIFIABLE_KINDS]);
+    for (const question of Object.values(KIND_QUESTIONS)) {
+      expect(question.adapterInstruction).toBe(buildKindClassifierInstruction());
+      expect(question.abstain).toBe("unclear");
+    }
+    // The eight kinds are the closed option set, split between the two
+    // branches with none in both; `unclear` is the abstention and is
+    // deliberately not one of them (INF-1430 piece 1).
+    const answer = Object.keys(KIND_QUESTIONS.answer.criteria);
+    const change = Object.keys(KIND_QUESTIONS.change.criteria);
+    expect(answer).toEqual([...KINDS_BY_DELIVERABLE.answer]);
+    expect(change).toEqual([...KINDS_BY_DELIVERABLE.change]);
+    expect([...answer, ...change].sort()).toEqual([...CLASSIFIABLE_KINDS].sort());
+    expect(KIND_QUESTIONS.answer.instructions).toContain("This work delivers an answer.");
+    expect(KIND_QUESTIONS.change.instructions).toContain("This work delivers a change.");
   });
 
   it("names the same bounded facts the adapter's message carries", () => {
@@ -273,6 +283,7 @@ describe("DecisionKindClassifier over the adapter", () => {
     const verdict = await classifierWith(stub.session).classify(
       {
         ...INPUT,
+        deliverable: "answer",
         title: "Read a setting",
         goal: "Quote the configured retry limit.",
         userWords: "What is the retry limit in this project's config?",
@@ -303,9 +314,37 @@ describe("DecisionKindClassifier over the adapter", () => {
     expect(decide).toHaveBeenCalledWith(
       { purpose: "kind", taskId: INPUT.taskId },
       kindState(INPUT),
-      { kind: KIND_QUESTION },
+      { kind: KIND_QUESTIONS.change },
       expect.any(AbortSignal),
     );
+  });
+
+  // INF-1430 piece 1: the classifier picks only within the branch the host
+  // derived, so an answer never routes as a change kind or the reverse.
+  it("offers only the answer branch's kinds for an answer, and never sorts it into a change kind", async () => {
+    const offered = stubSession("fix");
+    const verdict = await classifierWith(offered.session).classify(
+      { ...INPUT, deliverable: "answer" },
+      new AbortController().signal,
+    );
+    expect(offered.prompts[0]).toContain(
+      "delivers: an answer (one of: retrieval, research, plan, reproduce, unclear)",
+    );
+    expect(verdict).toMatchObject({ kind: "unclear", source: `${KIND_SOURCE.failed}unparsed` });
+  });
+
+  it("offers only the change branch's kinds for a change, and never sorts it into an answer kind", async () => {
+    for (const answerKind of KINDS_BY_DELIVERABLE.answer) {
+      const offered = stubSession(answerKind);
+      const verdict = await classifierWith(offered.session).classify(
+        INPUT,
+        new AbortController().signal,
+      );
+      expect(offered.prompts[0]).toContain(
+        "delivers: a change (one of: implement, fix, chore, teach, unclear)",
+      );
+      expect(verdict).toMatchObject({ kind: "unclear", source: `${KIND_SOURCE.failed}unparsed` });
+    }
   });
 
   it("records the model's own abstention as an abstention, not a failure", async () => {
@@ -538,7 +577,7 @@ describe("the adapter on Claude (W1 S10)", () => {
         },
       },
       { recordUsage },
-    ).classify(INPUT, new AbortController().signal);
+    ).classify({ ...INPUT, deliverable: "answer" }, new AbortController().signal);
     expect(verdict.kind).toBe("research");
     // The burn lands under the task and the Claude account, like any other.
     expect(recordUsage.mock.calls[0]?.[0]).toMatchObject({
@@ -691,23 +730,30 @@ describe("the adapter's wall clock covers the whole call", () => {
 });
 
 // Scripted verdicts prove the typed interface and table, never semantic adherence.
-describe("boundary verdicts survive the classifier interface", () => {
-  const { spawns, labels } = readBoundaryCorpus(
-    "tests/fixtures/kind-classifier/retrieval-boundary.jsonl",
-  );
+describe.each([
+  "tests/fixtures/kind-classifier/retrieval-boundary.jsonl",
+  "tests/fixtures/kind-classifier/answer-lanes.jsonl",
+])("boundary verdicts survive the classifier interface (%s)", (file) => {
+  const { spawns, labels } = readBoundaryCorpus(file);
   for (const sample of spawns) {
     it(sample.title, async () => {
       const label = labels.get(sample.key)?.kind as WorkKind;
       const stub = stubSession(label);
+      const input = {
+        ...sample,
+        taskId: sample.key,
+        deliverable: deliverableOf(sample.constraints),
+      };
       const verdict = await classifierWith(stub.session).classify(
-        { ...sample, taskId: sample.key },
+        input,
         new AbortController().signal,
       );
       expect(verdict.kind).toBe(label);
       const routed = tierFor({ kind: verdict.kind, kind_source: verdict.source });
       if (label === "retrieval") expect(routed).toMatchObject({ bucket: "low", rule: "R10" });
       else expect(routed.rule).not.toBe("R10");
-      expect(stub.prompts[0]).toContain(sample.userWords);
+      expect(stub.prompts[0]).toBe(buildClassifierPrompt(input));
+      expect(stub.prompts[0]).toContain(sample.userWords.slice(0, 1_000));
     });
   }
 });

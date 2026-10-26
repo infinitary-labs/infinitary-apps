@@ -92,7 +92,7 @@ describe("modelReasonOf", () => {
       reasons: [],
     });
     const reason = reasonOf("lookup", shape);
-    expect(reason && modelReasonLine(reason)).toBe("Looking up existing facts");
+    expect(reason && modelReasonLine(reason)).toBe("Looking up or explaining from what is here");
   });
 
   it("knows a named model that served from one that was not available", () => {

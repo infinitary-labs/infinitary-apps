@@ -896,6 +896,18 @@ export class CardService {
         `Task ${task.id} is closed, so a choice on a card about it cannot be taken; a card with actions needs an open task.`,
       );
     }
+    // INF-1364: only the crewmate emit path validates a saved story and
+    // records its completion offer. A first-mate settle button cannot pass
+    // that offer's click gate, so refuse it before writing or revising a card.
+    if (
+      context.author === "firstmate" &&
+      task?.delivery?.presentation &&
+      input.actions.some((action) => settleEffectOf(action)?.mode === "merge")
+    ) {
+      throw new Error(
+        `Task ${task.id} has a saved change story, so only its crewmate's completion card can offer settle merge. Steer the crewmate to emit or revise that card with the published presentation; a first-mate merge button cannot carry its completion offer. The card is unchanged.`,
+      );
+    }
     if (input.reviewTaskId) {
       const review = this.host.tasks.resolve(input.reviewTaskId);
       if (
@@ -2426,7 +2438,7 @@ export class CardService {
   }
 
   /**
-   * The open completion card's merge action on a task, when one is up: the
+   * The crewmate's open completion card's merge action on a task, when one is up: the
    * card, the action the host itself attached (`withCompletionActions`),
    * and the label the captain is reading. Found by the declared EFFECT, the
    * way every other host dispatch is, never by an action id.
@@ -2435,7 +2447,7 @@ export class CardService {
     taskId: string,
   ): { cardId: string; cardTitle: string; actionId: string; label: string } | undefined {
     for (const card of this.cards.values()) {
-      if (card.taskId !== taskId) continue;
+      if (card.taskId !== taskId || card.author !== "crewmate") continue;
       const merge = card.actions.find(
         (action) => settleEffectOf(action)?.mode === "merge" && !action.passes,
       );

@@ -5266,6 +5266,56 @@ describe("CrewSupervisor", () => {
       expect(harness.forge.merges).toEqual([]);
     });
 
+    // INF-1364: a first-mate merge button is not a new crewmate completion
+    // offer, whether present at preflight or added during the checks read.
+    it.each(["before-retry", "during-checks"] as const)(
+      "keeps the captain's approval when a first-mate merge card appears %s",
+      async (arrival) => {
+        const h = await kept();
+        const approvedId = h.authorization()?.id;
+        let firstmateCard: string | undefined;
+        const emit = () => {
+          firstmateCard = h.supervisor.addFirstmateCard({
+            taskId: h.taskId,
+            title: "Merge with the phone check red",
+            body: "<p>The captain can keep the original merge approval.</p>",
+            actions: [
+              { id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE },
+              { id: "wait", label: "Wait" },
+            ],
+          });
+        };
+        if (arrival === "before-retry") emit();
+        else {
+          h.forge.duringChecks = () => {
+            h.forge.duringChecks = () => {};
+            emit();
+          };
+        }
+        await repairTurn(h, async () => {});
+        await vi.waitFor(() => expect(h.forge.merges).toEqual([APPROVED]));
+        expect(firstmateCard).toBeDefined();
+        expect(h.authorization()).toMatchObject({ id: approvedId, status: "consumed" });
+        expect(h.tasks.get(h.taskId)).toMatchObject({ status: "done", closedReason: "merged" });
+        const evidence = process.env.INFINITARY_MERGE_OFFER_EVIDENCE;
+        if (evidence)
+          writeFileSync(
+            join(evidence, `${arrival}.json`),
+            JSON.stringify({
+              arrival,
+              approvedId,
+              firstmateCard,
+              authorization: h.authorization(),
+              merges: h.forge.merges,
+              task: {
+                status: h.tasks.get(h.taskId)?.status,
+                closedReason: h.tasks.get(h.taskId)?.closedReason,
+              },
+            }, null, 2),
+          );
+      },
+    );
+
     it("a new completion card supersedes it, and an interruption revokes it with a hold", async () => {
       const harness = await kept();
       await repairTurn(harness, async () => {
@@ -7396,6 +7446,51 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       published: publication,
     }));
     tasks.recordDelivery(taskId, { headSha: head, prNumber: 1, ci: "green" });
+    // INF-1364: saved-story merge offers belong to the crewmate. Refuse a
+    // first-mate offer before showing it, also when revising an existing note.
+    const firstmateNote = {
+      taskId,
+      title: "The change waits for its completion card",
+      body: "<p>The crewmate owns the merge offer.</p>",
+      actions: [],
+    };
+    const firstmateId = supervisor.addFirstmateCard(firstmateNote);
+    const unchangedCard = supervisor.cardsSnapshot().find((card) => card.id === firstmateId);
+    const unchangedDelivery = tasks.get(taskId)?.delivery;
+    const refusals: string[] = [];
+    for (const id of [undefined, firstmateId]) {
+      expect(() => {
+        try {
+          supervisor.addFirstmateCard({
+            ...firstmateNote,
+            id,
+            requiredActions: [],
+            actions: [
+              { id: "merge", label: "Merge", default: true, effect: SETTLE_MERGE },
+              { id: "wait", label: "Wait" },
+            ],
+          });
+        } catch (error) {
+          refusals.push(String(error));
+          throw error;
+        }
+      }).toThrow("saved change story");
+      expect(supervisor.cardsSnapshot()).toEqual([unchangedCard]);
+      expect(tasks.get(taskId)?.delivery).toEqual(unchangedDelivery);
+    }
+    const evidence = process.env.INFINITARY_MERGE_OFFER_EVIDENCE;
+    if (evidence)
+      writeFileSync(
+        join(evidence, "emit-refusals.json"),
+        JSON.stringify({
+          refusals,
+          cards: supervisor.cardsSnapshot(),
+          deliveryUnchanged:
+            JSON.stringify(tasks.get(taskId)?.delivery) === JSON.stringify(unchangedDelivery),
+          completionOffers: tasks.get(taskId)?.delivery?.completionOffers ?? [],
+        }, null, 2),
+      );
+    supervisor.closeCard(firstmateId, { kind: "firstmate" });
     // INF-968: reach the supervisor through the same tool Pi and Claude bind,
     // not onCard directly, which missed the tool's refusal of every story note.
     const emitCard = bindTool(EMIT_CARD_TOOL, specs[0] as CrewmateSpec);

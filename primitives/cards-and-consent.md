@@ -53,6 +53,8 @@ A question that needs a structured answer uses the questions in the body ([decis
 - The `host` effect kind belongs only to cards the app authors; every emit boundary refuses it from an agent.
 - An ordinary `request_merge` click keeps its exact reviewed target through a refused merge and an accepted unchanged repair, using the same merge-authorization owner as `settle merge`; rule-skipping clicks remain one-shot (`docs/forge.md`, "A requested merge").
 - On a completion offer the crewmate declares one `settle merge` and the host writes the merge-and-discard pair for the task's posture (`CrewSupervisor.withCompletionActions`, captain lock 3).
+  A first-mate `settle merge` card on a task with a saved story is refused before display, since only the crewmate's checked offer binds that story.
+  First-mate cards, including older restored merge cards, never count as replacement completion offers that end a kept approval.
 - What a choice authorizes (`HANDOFF`, contract v4.41): Approve and build authorizes implementation, not merging; Save and defer keeps the plan and authorizes no build; Abandon files nothing.
 - Explicit build words in a reply authorize implementation, not merging; settings, selection, praise, dismissal, script-triggered actions and a preview's controls authorize neither.
 - Merge, discard, a stronger model and unrelated work asked for under a crewmate's card are not the crewmate's to run: it closes its card and reports the captain's words verbatim with `needs_firstmate`.

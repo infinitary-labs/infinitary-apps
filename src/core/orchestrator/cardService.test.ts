@@ -97,6 +97,37 @@ describe("CardService", () => {
     expect(cards.get(standalone)?.meta).toBe("firstmate");
   });
 
+  // INF-1364: older first-mate merge cards survive an upgrade, but only a
+  // crewmate's completion offer may replace the captain's kept approval.
+  it("finds only a crewmate completion offer among restored merge cards", () => {
+    const { tasks, cardStore, make } = setup();
+    seedTask(tasks, { id: "build", title: "Ship the meter", status: "idle" });
+    const mergeCard: Card = {
+      id: "card-fm-old-merge",
+      taskId: "build",
+      author: "firstmate",
+      title: "Merge with the phone check red",
+      body: "<p>The change waits for its merge.</p>",
+      meta: "firstmate",
+      priority: 30,
+      status: "ready",
+      createdAt: 1,
+      actions: [{ id: "merge", label: "Merge", effect: { kind: "settle", mode: "merge" } }],
+    };
+    cardStore.upsert(mergeCard);
+    cardStore.upsert({ ...mergeCard, id: "card-host-merge", author: "host" });
+    const restored = make();
+    expect(restored.get(mergeCard.id)?.author).toBe("firstmate");
+    expect(restored.openMergeAction("build")).toBeUndefined();
+    cardStore.upsert({ ...mergeCard, id: "card-build-completion", author: "crewmate" });
+    expect(make().openMergeAction("build")).toEqual({
+      cardId: "card-build-completion",
+      cardTitle: mergeCard.title,
+      actionId: "merge",
+      label: "Merge",
+    });
+  });
+
   it("INF-476 minimizes only presentation, persists through restart, and author answers and revisions restore it at the author's turn end", () => {
     const { db, tasks, cardStore, gates, make } = setup();
     seedTask(tasks, { id: "launch", title: "Prepare the launch checklist", status: "idle" });

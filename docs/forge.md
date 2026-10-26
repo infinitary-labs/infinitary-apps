@@ -825,6 +825,9 @@ Missing or mismatched evidence holds the completion offer and the final own-task
 The completion call gives `emit_card presentation` and one merge action, or omits actions for a note when the task merges on its own, without a second body, risk declaration or required-action list.
 The shared Pi and Claude tool forwards either shape; the supervisor checks the task's autonomy before accepting a note (INF-968).
 CardService still owns cards, the risk chart, requirements and merge controls; checks, independent review, autonomy and the captain's merge click retain their existing owners.
+On a task with a saved story, CardService refuses a first-mate `settle merge` card before creating or revising it: only the crewmate's checked emit path records the story-bound completion offer the click requires.
+The refusal points the first mate to steer that crewmate to emit or revise its completion card.
+Only a crewmate-authored completion card counts as a replacement for a kept merge approval, including at the final merge boundary; a first-mate card restored from an older run does not end that approval.
 
 ### On gitlab.com
 

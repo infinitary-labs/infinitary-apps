@@ -1,0 +1,10 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ios-no-extra-feature-docs",
+      "reason": "Documentation only: states that the iOS app adds no feature the desktop app lacks. Nothing in the shipped app changed.",
+      "covers": ["56e73584485495fa0dae6406d6b29e854e865ae2"]
+    }
+  ]
+}

@@ -1,0 +1,624 @@
+{
+  "readAt": "2026-10-26T18:33:19Z",
+  "about": "GitHub REST answers for verify.yml runs (INF-1443), trimmed to the fields the journeys chooser reads. withPullRequests is how GitHub answered the plain list, per_page=100, with each run's pull requests: 502 Server Error after about ten seconds, twice in a pull request chooser and again when read by hand. runs is the same plain list read with exclude_pull_requests=true, newest first; it held the same runs in the same order, with the same status and conclusion, as the plain list read in pages of ten.",
+  "withPullRequests": {
+    "status": 502,
+    "data": {
+      "message": "Server Error"
+    }
+  },
+  "runs": [
+    {
+      "id": 40378578642,
+      "run_number": 68,
+      "status": "in_progress",
+      "conclusion": null,
+      "head_branch": "fm/task-633544d2",
+      "created_at": "2026-10-26T18:32:04Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40378578642"
+    },
+    {
+      "id": 40368480736,
+      "run_number": 67,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-633544d2",
+      "created_at": "2026-10-26T17:25:31Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40368480736"
+    },
+    {
+      "id": 40319912150,
+      "run_number": 66,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-75ee6611",
+      "created_at": "2026-10-26T12:05:45Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40319912150"
+    },
+    {
+      "id": 40312037237,
+      "run_number": 65,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "main",
+      "created_at": "2026-10-26T11:02:25Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40312037237"
+    },
+    {
+      "id": 40265326930,
+      "run_number": 64,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-ab92e066",
+      "created_at": "2026-10-26T03:41:42Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40265326930"
+    },
+    {
+      "id": 40254205626,
+      "run_number": 63,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-ab92e066",
+      "created_at": "2026-10-26T01:26:13Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40254205626"
+    },
+    {
+      "id": 40218422290,
+      "run_number": 62,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-2735f5fb",
+      "created_at": "2026-10-25T17:50:47Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40218422290"
+    },
+    {
+      "id": 40218358926,
+      "run_number": 61,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-bba21346",
+      "created_at": "2026-10-25T17:50:03Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40218358926"
+    },
+    {
+      "id": 40187206927,
+      "run_number": 60,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "main",
+      "created_at": "2026-10-25T11:02:23Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40187206927"
+    },
+    {
+      "id": 40168241408,
+      "run_number": 59,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-25T06:11:50Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40168241408"
+    },
+    {
+      "id": 40160328189,
+      "run_number": 58,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-89686a2c",
+      "created_at": "2026-10-25T04:00:58Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40160328189"
+    },
+    {
+      "id": 40158627211,
+      "run_number": 57,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-314b79c6",
+      "created_at": "2026-10-25T03:33:04Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40158627211"
+    },
+    {
+      "id": 40155993372,
+      "run_number": 56,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-89686a2c",
+      "created_at": "2026-10-25T02:50:44Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40155993372"
+    },
+    {
+      "id": 40155633586,
+      "run_number": 55,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-89686a2c",
+      "created_at": "2026-10-25T02:45:00Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40155633586"
+    },
+    {
+      "id": 40153070522,
+      "run_number": 54,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-f8e21cf2",
+      "created_at": "2026-10-25T02:04:42Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40153070522"
+    },
+    {
+      "id": 40149233703,
+      "run_number": 53,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-314b79c6",
+      "created_at": "2026-10-25T01:05:10Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40149233703"
+    },
+    {
+      "id": 40141491758,
+      "run_number": 52,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-24T23:08:26Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40141491758"
+    },
+    {
+      "id": 40118127936,
+      "run_number": 51,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-314b79c6",
+      "created_at": "2026-10-24T17:52:43Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40118127936"
+    },
+    {
+      "id": 40115658810,
+      "run_number": 50,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-314b79c6",
+      "created_at": "2026-10-24T17:20:18Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40115658810"
+    },
+    {
+      "id": 39907647383,
+      "run_number": 49,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-23T05:46:45Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39907647383"
+    },
+    {
+      "id": 39874845604,
+      "run_number": 48,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-22T23:54:52Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39874845604"
+    },
+    {
+      "id": 39836357861,
+      "run_number": 47,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-93d1b00a",
+      "created_at": "2026-10-22T19:00:49Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39836357861"
+    },
+    {
+      "id": 39828055588,
+      "run_number": 46,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-eca4981b",
+      "created_at": "2026-10-22T18:03:35Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39828055588"
+    },
+    {
+      "id": 39813658103,
+      "run_number": 45,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-22T16:23:36Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39813658103"
+    },
+    {
+      "id": 39805923357,
+      "run_number": 44,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "main",
+      "created_at": "2026-10-22T15:33:16Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39805923357"
+    },
+    {
+      "id": 39740056757,
+      "run_number": 43,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "main",
+      "created_at": "2026-10-22T07:22:36Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39740056757"
+    },
+    {
+      "id": 39740054522,
+      "run_number": 42,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "main",
+      "created_at": "2026-10-22T07:22:35Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39740054522"
+    },
+    {
+      "id": 39732331649,
+      "run_number": 41,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "main",
+      "created_at": "2026-10-22T06:10:40Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39732331649"
+    },
+    {
+      "id": 39732323947,
+      "run_number": 40,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "main",
+      "created_at": "2026-10-22T06:10:36Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39732323947"
+    },
+    {
+      "id": 39727672897,
+      "run_number": 39,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "main",
+      "created_at": "2026-10-22T05:22:41Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39727672897"
+    },
+    {
+      "id": 39727668806,
+      "run_number": 38,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "main",
+      "created_at": "2026-10-22T05:22:38Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39727668806"
+    },
+    {
+      "id": 39712112107,
+      "run_number": 37,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-22T02:34:18Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39712112107"
+    },
+    {
+      "id": 39710575133,
+      "run_number": 36,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-22T02:17:38Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39710575133"
+    },
+    {
+      "id": 39695373075,
+      "run_number": 35,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-06ff19d0",
+      "created_at": "2026-10-21T23:44:41Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39695373075"
+    },
+    {
+      "id": 39692280393,
+      "run_number": 34,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-21T23:15:59Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39692280393"
+    },
+    {
+      "id": 39679049857,
+      "run_number": 33,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-21T21:28:17Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39679049857"
+    },
+    {
+      "id": 39675588539,
+      "run_number": 32,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-06ff19d0",
+      "created_at": "2026-10-21T21:03:15Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39675588539"
+    },
+    {
+      "id": 39668167917,
+      "run_number": 31,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-40a643de",
+      "created_at": "2026-10-21T20:11:44Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39668167917"
+    },
+    {
+      "id": 39657773329,
+      "run_number": 30,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-06ff19d0",
+      "created_at": "2026-10-21T19:00:14Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39657773329"
+    },
+    {
+      "id": 39647185296,
+      "run_number": 29,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-06ff19d0",
+      "created_at": "2026-10-21T17:49:18Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39647185296"
+    },
+    {
+      "id": 39635280018,
+      "run_number": 28,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-21T16:29:52Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39635280018"
+    },
+    {
+      "id": 39632167989,
+      "run_number": 27,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-21T16:09:03Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39632167989"
+    },
+    {
+      "id": 39631373485,
+      "run_number": 26,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-21T16:04:00Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39631373485"
+    },
+    {
+      "id": 39631227000,
+      "run_number": 25,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "main",
+      "created_at": "2026-10-21T16:03:03Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39631227000"
+    },
+    {
+      "id": 39566030639,
+      "run_number": 24,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-21T08:00:26Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39566030639"
+    },
+    {
+      "id": 39558624831,
+      "run_number": 23,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-22bcf278",
+      "created_at": "2026-10-21T06:56:52Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39558624831"
+    },
+    {
+      "id": 39544415293,
+      "run_number": 22,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-21T04:30:31Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39544415293"
+    },
+    {
+      "id": 39510653486,
+      "run_number": 21,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-20T22:47:43Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39510653486"
+    },
+    {
+      "id": 39501070316,
+      "run_number": 20,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-20T21:31:35Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39501070316"
+    },
+    {
+      "id": 39498781216,
+      "run_number": 19,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-ac4df014",
+      "created_at": "2026-10-20T21:14:48Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39498781216"
+    },
+    {
+      "id": 39490841395,
+      "run_number": 18,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-20T20:18:26Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39490841395"
+    },
+    {
+      "id": 39489628920,
+      "run_number": 17,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-20T20:09:53Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39489628920"
+    },
+    {
+      "id": 39487714510,
+      "run_number": 16,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-e3702c58",
+      "created_at": "2026-10-20T19:56:26Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39487714510"
+    },
+    {
+      "id": 39485590404,
+      "run_number": 15,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-20T19:41:25Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39485590404"
+    },
+    {
+      "id": 39474081020,
+      "run_number": 14,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-20T18:21:55Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39474081020"
+    },
+    {
+      "id": 39469344685,
+      "run_number": 13,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-20T17:48:58Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39469344685"
+    },
+    {
+      "id": 39463703013,
+      "run_number": 12,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-438d43ea",
+      "created_at": "2026-10-20T17:10:11Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39463703013"
+    },
+    {
+      "id": 39451568436,
+      "run_number": 11,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-4cbfd1a2",
+      "created_at": "2026-10-20T15:46:53Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39451568436"
+    },
+    {
+      "id": 39373358060,
+      "run_number": 10,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-4cbfd1a2",
+      "created_at": "2026-10-20T05:09:13Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39373358060"
+    },
+    {
+      "id": 39362028291,
+      "run_number": 9,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-4cbfd1a2",
+      "created_at": "2026-10-20T03:00:57Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39362028291"
+    },
+    {
+      "id": 39354708503,
+      "run_number": 8,
+      "status": "completed",
+      "conclusion": "cancelled",
+      "head_branch": "fm/task-26bfbfdd",
+      "created_at": "2026-10-20T01:40:09Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39354708503"
+    },
+    {
+      "id": 39337852535,
+      "run_number": 7,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-4cbfd1a2",
+      "created_at": "2026-10-19T22:51:47Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39337852535"
+    },
+    {
+      "id": 39314046215,
+      "run_number": 6,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-4cbfd1a2",
+      "created_at": "2026-10-19T19:48:31Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39314046215"
+    },
+    {
+      "id": 38993385719,
+      "run_number": 5,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-d4faef7d",
+      "created_at": "2026-10-17T02:03:09Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/38993385719"
+    },
+    {
+      "id": 38976035601,
+      "run_number": 4,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-d4faef7d",
+      "created_at": "2026-10-16T22:29:17Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/38976035601"
+    },
+    {
+      "id": 38947760290,
+      "run_number": 3,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-d4faef7d",
+      "created_at": "2026-10-16T18:29:39Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/38947760290"
+    },
+    {
+      "id": 38932641043,
+      "run_number": 2,
+      "status": "completed",
+      "conclusion": "success",
+      "head_branch": "fm/task-3b3a12d2",
+      "created_at": "2026-10-16T16:31:36Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/38932641043"
+    },
+    {
+      "id": 38873187703,
+      "run_number": 1,
+      "status": "completed",
+      "conclusion": "failure",
+      "head_branch": "fm/task-be9ae788",
+      "created_at": "2026-10-16T08:21:53Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/38873187703"
+    }
+  ]
+}

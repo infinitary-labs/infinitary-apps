@@ -71,13 +71,16 @@ jobs:
       # INF-850: GitHub's search by result has answered no verify.yml run
       # while its plain list held passing ones, so the chooser reads the
       # plain list, newest first, and takes the first run that passed.
+      # INF-1443: that list with each run's pull requests has run past
+      # GitHub's time limit and answered 502; leaving them out drops no run,
+      # and the chooser never reads them.
       - id: timing-run
         name: Find the newest passing full verification
         uses: actions/github-script@v7
         with:
           script: |
             const pages = github.paginate.iterator(github.rest.actions.listWorkflowRuns, {
-              ...context.repo, workflow_id: 'verify.yml', per_page: 100
+              ...context.repo, workflow_id: 'verify.yml', exclude_pull_requests: true, per_page: 100
             });
             let run;
             for await (const { data } of pages) {

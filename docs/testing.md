@@ -246,6 +246,7 @@ Without that input, it takes the same line and runner as a pull request's phone 
 A pull request gets `journeys.yml`'s hosted Linux `choose-journeys` check, which installs the locked tools, selects the journey files and writes the reasons and placement in its summary.
 The chooser downloads `e2e-results` from the newest successful `verify.yml` run and sums each journey file's measured Mac durations.
 It finds that run in the workflow's plain run list, newest first, never through GitHub's search by result, which has answered no run while passing ones were listed.
+It asks for that list without each run's pull requests, which it never reads: working them out has run past GitHub's time limit and answered 502, and leaving them out drops no run.
 A missing or expired result fails the chooser rather than silently dropping journeys; run full verification to supply fresh timings.
 `scripts/journey-budget.ts` keeps the closest journeys on Mac up to six estimated minutes: edited specs first, then the shortest changed-helper import path, screen readers and callers of a changed window message, with filename ties.
 It adds serial desktop durations to the longest of ten packed parallel workers, matching the Mac configuration.

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-chooser-run-list-without-pull-requests",
+      "reason": "CI only: the pull request journey chooser asks GitHub for the plain list of full verification runs without each run's pull requests, which it never reads and which made GitHub answer 502; it still reads every run, newest first. Nothing in the app changes."
+    }
+  ]
+}

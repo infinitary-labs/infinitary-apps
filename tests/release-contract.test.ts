@@ -746,87 +746,101 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
   /**
    * INF-850: on 2026-10-22 GitHub answered no verify.yml run to a search by
    * result while its plain list held passing ones, and every pull request's
-   * chooser failed. The step's own script runs against those answers.
+   * chooser failed. INF-1443: on 2026-10-26 the plain list answered 502
+   * while GitHub worked out each run's pull requests, and answered every run
+   * without them. The step's own script runs against each day's answers.
    */
-  it("finds the newest passing verify run in the plain run list, and fails with none", async () => {
-    const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
-      jobs: Record<string, { steps: Step[] }>;
-    };
-    const script = journeys.jobs["choose-journeys"]?.steps.find((step) => step.id === "timing-run")
-      ?.with?.script;
-    expect(typeof script).toBe("string");
-    type Run = { id: number; conclusion: string | null; html_url: string };
-    const readings = JSON.parse(read("tests/fixtures/verify-runs/2026-10-22.json")) as {
-      filtered: Record<string, { total_count: number; workflow_runs: Run[] }>;
-      runs: Run[];
-    };
-    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
-    const execute = new AsyncFunction("core", "github", "context", script);
-    const choose = async (runs: Run[]) => {
-      const outputs: Record<string, string> = {};
-      const summaries: string[] = [];
-      const summary = {
-        addRaw: (text: string) => {
-          summaries.push(text);
-          return summary;
-        },
-        write: async () => {},
+  it.each(["2026-10-22", "2026-10-26"])(
+    "finds the newest passing verify run in the plain run list read on %s, and fails with none",
+    async (day) => {
+      const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
+        jobs: Record<string, { steps: Step[] }>;
       };
-      // GitHub as it answered: a filtered query its recorded answer, the plain list by page.
-      const listWorkflowRuns = async ({
-        owner,
-        repo,
-        workflow_id,
-        per_page = 30,
-        page = 1,
-        ...filters
-      }: Record<string, string | number>) => {
-        expect({ owner, repo, workflow_id }).toEqual({
-          owner: "example",
-          repo: "project",
-          workflow_id: "verify.yml",
-        });
-        const query = Object.entries(filters).map(([key, value]) => `${key}=${value}`);
-        if (query.length > 0) {
-          const answer = readings.filtered[query.join("&")];
-          if (!answer) throw new Error(`No recorded answer for ${query.join("&")}`);
-          return { data: answer };
-        }
-        const from = (Number(page) - 1) * Number(per_page);
-        const workflow_runs = runs.slice(from, from + Number(per_page));
-        return { data: { total_count: runs.length, workflow_runs } };
+      const script = journeys.jobs["choose-journeys"]?.steps.find(
+        (step) => step.id === "timing-run",
+      )?.with?.script;
+      expect(typeof script).toBe("string");
+      type Run = { id: number; conclusion: string | null; html_url: string };
+      const readings = JSON.parse(read(`tests/fixtures/verify-runs/${day}.json`)) as {
+        filtered?: Record<string, { total_count: number; workflow_runs: Run[] }>;
+        withPullRequests?: { status: number; data: { message: string } };
+        runs: Run[];
       };
-      // Octokit's pagination hands each page's runs over as the page's data.
-      const iterator = async function* (
-        method: typeof listWorkflowRuns,
-        parameters: Record<string, string | number>,
-      ) {
-        for (let page = 1; ; page++) {
-          const { data } = await method({ ...parameters, page });
-          if (data.workflow_runs.length === 0) return;
-          yield { data: data.workflow_runs };
-        }
+      const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+      const execute = new AsyncFunction("core", "github", "context", script);
+      const choose = async (runs: Run[]) => {
+        const outputs: Record<string, string> = {};
+        const summaries: string[] = [];
+        const summary = {
+          addRaw: (text: string) => {
+            summaries.push(text);
+            return summary;
+          },
+          write: async () => {},
+        };
+        // GitHub as it answered: a filtered query its recorded answer, the plain list by page,
+        // and its recorded failure when asked to work out each run's pull requests.
+        // Leaving the pull requests out filters no run.
+        const listWorkflowRuns = async ({
+          owner,
+          repo,
+          workflow_id,
+          per_page = 30,
+          page = 1,
+          exclude_pull_requests = false,
+          ...filters
+        }: Record<string, string | number | boolean>) => {
+          expect({ owner, repo, workflow_id }).toEqual({
+            owner: "example",
+            repo: "project",
+            workflow_id: "verify.yml",
+          });
+          const query = Object.entries(filters).map(([key, value]) => `${key}=${value}`);
+          if (query.length > 0) {
+            const answer = readings.filtered?.[query.join("&")];
+            if (!answer) throw new Error(`No recorded answer for ${query.join("&")}`);
+            return { data: answer };
+          }
+          const failure = readings.withPullRequests;
+          if (failure && exclude_pull_requests !== true) {
+            throw Object.assign(new Error(failure.data.message), failure);
+          }
+          const from = (Number(page) - 1) * Number(per_page);
+          const workflow_runs = runs.slice(from, from + Number(per_page));
+          return { data: { total_count: runs.length, workflow_runs } };
+        };
+        // Octokit's pagination hands each page's runs over as the page's data.
+        const iterator = async function* (
+          method: typeof listWorkflowRuns,
+          parameters: Record<string, string | number | boolean>,
+        ) {
+          for (let page = 1; ; page++) {
+            const { data } = await method({ ...parameters, page });
+            if (data.workflow_runs.length === 0) return;
+            yield { data: data.workflow_runs };
+          }
+        };
+        await execute(
+          { setOutput: (name: string, value: string) => (outputs[name] = value), summary },
+          { rest: { actions: { listWorkflowRuns } }, paginate: { iterator } },
+          { repo: { owner: "example", repo: "project" } },
+        );
+        return { outputs, summaries };
       };
-      await execute(
-        { setOutput: (name: string, value: string) => (outputs[name] = value), summary },
-        { rest: { actions: { listWorkflowRuns } }, paginate: { iterator } },
-        { repo: { owner: "example", repo: "project" } },
-      );
-      return { outputs, summaries };
-    };
 
-    // Newer than it: a run still going and two that failed.
-    const passing = readings.runs.find((run) => run.conclusion === "success");
-    expect(readings.runs.indexOf(passing as Run)).toBeGreaterThan(0);
-    const found = await choose(readings.runs);
-    expect(found.outputs.id).toBe(passing?.id);
-    expect(found.summaries.join("")).toContain(passing?.html_url);
+      // Newer than it: runs still going or that failed.
+      const passing = readings.runs.find((run) => run.conclusion === "success");
+      expect(readings.runs.indexOf(passing as Run)).toBeGreaterThan(0);
+      const found = await choose(readings.runs);
+      expect(found.outputs.id).toBe(passing?.id);
+      expect(found.summaries.join("")).toContain(passing?.html_url);
 
-    // Without a passing run there are no journey times: the chooser fails, never guesses.
-    await expect(
-      choose(readings.runs.filter((run) => run.conclusion !== "success")),
-    ).rejects.toThrow("No passing verify run supplies journey times");
-  });
+      // Without a passing run there are no journey times: the chooser fails, never guesses.
+      await expect(
+        choose(readings.runs.filter((run) => run.conclusion !== "success")),
+      ).rejects.toThrow("No passing verify run supplies journey times");
+    },
+  );
 
   /**
    * FI3-262: a successful verify run cannot replace a skipped PR check.

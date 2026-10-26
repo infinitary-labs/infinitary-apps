@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-scene-cadence-diagnostics",
+      "reason": "Native cadence tests accept captain-approved automatic idle fidgets and retain sampling-phase run-loop and display diagnostics; app behavior is unchanged."
+    }
+  ]
+}

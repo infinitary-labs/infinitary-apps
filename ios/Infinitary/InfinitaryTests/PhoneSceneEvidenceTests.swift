@@ -72,6 +72,67 @@ import XCTest
         XCTAssertEqual(entries.map(\.uptime), entries.map(\.uptime).sorted())
     }
 
+    /// INF-1378: a missing display callback must name the phase and actual progress, not an enum mismatch.
+    func testStoppedDisplaySampleNamesMissingCallbacks() async {
+        let trace = NativeSceneRunLoopTrace(phase: "sample")
+        let sample = DisplaySample(ticks: 2)
+        sample.stop() // The display link cannot deliver any callbacks, independent of host load.
+        let result = await XCTWaiter.fulfillment(of: [sample.finished], timeout: 0.01)
+        let entries = trace.finish()
+        let diagnostic = sample.diagnostic(phase: "sample", result: result, heartbeat: entries)
+        XCTAssertEqual(result, .timedOut)
+        XCTAssertTrue(sample.timestamps.isEmpty)
+        XCTAssertTrue(diagnostic.contains("phase=sample result=timed-out callbacks=0/2"), diagnostic)
+        XCTAssertTrue(diagnostic.contains("callback_gap_max_s="), diagnostic)
+        XCTAssertTrue(diagnostic.contains("run_loop_gap_max_s="), diagnostic)
+        XCTAssertEqual(entries.first?.event, "sample-start")
+        XCTAssertEqual(entries.last?.event, "sample-end")
+        print("NATIVE_SCENE_DIAGNOSTIC_CONTROL \(diagnostic)")
+    }
+
+    /// INF-1378: replay the elapsed time in run 942's idle sample through the real motion owner.
+    /// Its warmup ran from 3206.08689925 to 3212.570454041667; its sample reached 19.86 seconds.
+    /// A long idle sample can reach an automatic fidget without any other window contaminating it.
+    func testLongIdleSampleNamesTheActualUnexpectedMode() {
+        let greeting = CharacterCues.greetingPending
+        CharacterCues.greetingPending = false
+        defer { CharacterCues.greetingPending = greeting }
+        let motion = CharacterMotion(), metrics = CharacterFrameMetrics()
+        _ = motion.advance(to: 0, state: .idle)
+        let warmup = 3212.570454041667 - 3206.08689925
+        let before = motion.advance(to: warmup, state: .idle)
+        let after = motion.advance(to: warmup + 19.86, state: .idle)
+        XCTAssertEqual(before.mode, .idle)
+        XCTAssertEqual(after.mode, .fidget)
+        metrics.start(source: "idle")
+        for pose in [before, after] {
+            metrics.record(start: ProcessInfo.processInfo.systemUptime, source: "idle",
+                           mode: pose.mode.rawValue, heat: pose.heat, rotation: pose.a)
+        }
+        let frames = metrics.finish()
+        let diagnostic = nativeSceneFrameDiagnostic(frames, expectedModes: [PhoneCharacter.State.idle.rawValue])
+        XCTAssertFalse(frames.allSatisfy { $0.mode == PhoneCharacter.State.idle.rawValue },
+                       "The former idle-only expectation rejects this sample")
+        XCTAssertTrue(diagnostic.contains("modes=fidget:1,idle:1"), diagnostic)
+        XCTAssertTrue(diagnostic.contains("unexpected=fidget:1"), diagnostic)
+        XCTAssertTrue(diagnostic.contains("first_unexpected=fidget"), diagnostic)
+        print("NATIVE_SCENE_DIAGNOSTIC_CONTROL \(diagnostic)")
+
+        // INF-1378, captain-approved: accept automatic fidgets only in idle samples.
+        let idleModes = nativeSceneExpectedModes(state: .idle)
+        XCTAssertTrue(frames.allSatisfy { idleModes.contains($0.mode) })
+        XCTAssertEqual(idleModes, Set([CharacterMachine.Mode.idle.rawValue, CharacterMachine.Mode.fidget.rawValue]))
+        XCTAssertEqual(nativeSceneExpectedModes(state: .idle, reaction: .salute), idleModes.union([CharacterMachine.Mode.salute.rawValue]))
+        for state in [PhoneCharacter.State.working, .listening] {
+            let expected = nativeSceneExpectedModes(state: state)
+            XCTAssertEqual(expected, Set([state.rawValue]), "No automatic fidget exception outside idle")
+            XCTAssertFalse(frames.allSatisfy { expected.contains($0.mode) }, "Idle and fidget drawings cannot prove \(state.rawValue)")
+        }
+        let accepted = nativeSceneFrameDiagnostic(frames, expectedModes: idleModes)
+        XCTAssertTrue(accepted.contains("unexpected=none"), accepted)
+        print("NATIVE_SCENE_IDLE_FIDGET_CONTROL \(accepted)")
+    }
+
     func testNativeSceneCadenceEvidence() async throws {
         #if targetEnvironment(simulator)
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
@@ -104,24 +165,31 @@ import XCTest
         let runLoop = NativeSceneRunLoopTrace()
         let warmup = DisplaySample(ticks: 60)
         let warmupResult = await XCTWaiter.fulfillment(of: [warmup.finished], timeout: 20)
-        XCTAssertEqual(warmupResult, .completed, "The display completes the warmup callbacks")
         warmup.stop()
         let heartbeat = runLoop.finish()
+        let warmupDiagnostic = "source=\(source) " + warmup.diagnostic(phase: "warmup", result: warmupResult, heartbeat: heartbeat)
+        XCTAssertEqual(warmupResult, .completed, "The display completes the warmup callbacks; \(warmupDiagnostic)")
+        let sampleRunLoop = NativeSceneRunLoopTrace(phase: "sample")
         CharacterFrameMetrics.shared.start(source: source, drawing: drawing)
         if let (character, emote) = reaction { character.request(emote) }
         let sample = DisplaySample(ticks: 240)
         let sampleResult = await XCTWaiter.fulfillment(of: [sample.finished], timeout: 20)
-        XCTAssertEqual(sampleResult, .completed, "The display completes the sampled callbacks")
         sample.stop()
         let frames = CharacterFrameMetrics.shared.finish()
-        XCTAssertGreaterThan(frames.count, 1, "The visible native character actually draws")
-        let expectedModes = Set([state.rawValue] + (reaction.map { [$0.1.rawValue] } ?? []))
-        XCTAssertTrue(frames.allSatisfy { expectedModes.contains($0.mode) }, "Only the named target Canvas's expected states enter the sample")
+        let sampleHeartbeat = sampleRunLoop.finish()
+        let expectedModes = nativeSceneExpectedModes(state: state, reaction: reaction?.1)
+        let sampleDiagnostic = "source=\(source) " + sample.diagnostic(phase: "sample", result: sampleResult, heartbeat: sampleHeartbeat)
+            + " " + nativeSceneFrameDiagnostic(frames, expectedModes: expectedModes)
+        // Only the captain-approved idle-fidget expectation changes. Keep every other predicate and
+        // deadline, naming missing callbacks, a missing drawing or an unexpected animation mode.
+        XCTAssertEqual(sampleResult, .completed, "The display completes the sampled callbacks; \(sampleDiagnostic)")
+        XCTAssertGreaterThan(frames.count, 1, "The visible native character actually draws; \(sampleDiagnostic)")
+        XCTAssertTrue(frames.allSatisfy { expectedModes.contains($0.mode) }, "Only the named target Canvas's expected states enter the sample; \(sampleDiagnostic)")
         if let (_, emote) = reaction {
-            XCTAssertTrue(frames.contains { $0.mode == emote.rawValue }, "The native drawing must actually play the requested emote")
+            XCTAssertTrue(frames.contains { $0.mode == emote.rawValue }, "The native drawing must actually play the requested emote; \(sampleDiagnostic)")
         }
-        if state == .working { XCTAssertTrue(frames.allSatisfy { $0.heat > 0.8 }, "Working proof includes its warmed ember, not another window's idle drawing") }
-        XCTAssertNotEqual(frames.first?.rotation, frames.last?.rotation, "The sampled target actually advances its pose")
+        if state == .working { XCTAssertTrue(frames.allSatisfy { $0.heat > 0.8 }, "Working proof includes its warmed ember, not another window's idle drawing; \(sampleDiagnostic)") }
+        XCTAssertNotEqual(frames.first?.rotation, frames.last?.rotation, "The sampled target actually advances its pose; \(sampleDiagnostic)")
         let intervals = zip(frames.dropFirst(), frames).map { $0.timestamp - $1.timestamp }.sorted()
         let displayIntervals = zip(sample.timestamps.dropFirst(), sample.timestamps).map { $0 - $1 }.sorted()
         let work = frames.map(\.work).sorted()
@@ -136,6 +204,13 @@ import XCTest
         let heartbeatProof = XCTAttachment(string: "uptime,event,main_thread\n" + heartbeat.map { "\($0.uptime),\($0.event),\($0.mainThread)" }.joined(separator: "\n"))
         heartbeatProof.name = "native-scene-\(source)-main-run-loop"; heartbeatProof.lifetime = .keepAlways; add(heartbeatProof)
         print("NATIVE_SCENE_RUN_LOOP source=\(source) events=\(heartbeat.count) start=\(heartbeat.first?.uptime ?? 0) end=\(heartbeat.last?.uptime ?? 0)")
+        print("NATIVE_SCENE_DIAGNOSTIC \(warmupDiagnostic)")
+        print("NATIVE_SCENE_DIAGNOSTIC \(sampleDiagnostic)")
+        let sampleProof = XCTAttachment(string: sampleDiagnostic + "\nuptime,event,main_thread\n"
+            + sampleHeartbeat.map { "\($0.uptime),\($0.event),\($0.mainThread)" }.joined(separator: "\n"))
+        sampleProof.name = "native-scene-\(source)-sample-main-run-loop"; sampleProof.lifetime = .keepAlways; add(sampleProof)
+        let displayProof = XCTAttachment(string: sampleDiagnostic + "\ntimestamp\n" + sample.timestamps.map { String($0) }.joined(separator: "\n"))
+        displayProof.name = "native-scene-\(source)-display"; displayProof.lifetime = .keepAlways; add(displayProof)
         print("NATIVE_SCENE_TIMING \(summary)")
         let csv = summary + "\ntimestamp,draw_seconds,mode,heat,rotation\n" + frames.map { "\($0.timestamp),\($0.work),\($0.mode),\($0.heat),\($0.rotation)" }.joined(separator: "\n")
         let attachment = XCTAttachment(string: csv)
@@ -152,10 +227,14 @@ import XCTest
 
 @MainActor final class DisplaySample: NSObject {
     let finished = XCTestExpectation(description: "Display sample complete")
+    private let requested: Int
     private var remaining: Int
     private var link: CADisplayLink?
+    private let started = ProcessInfo.processInfo.systemUptime
+    private var received: [Double] = []
     private(set) var timestamps: [Double] = []
     init(ticks: Int) {
+        requested = ticks
         remaining = ticks
         super.init()
         let link = CADisplayLink(target: self, selector: #selector(tick))
@@ -163,8 +242,52 @@ import XCTest
         link.add(to: .main, forMode: .common)
     }
     @objc private func tick(_ link: CADisplayLink) {
+        received.append(ProcessInfo.processInfo.systemUptime)
         timestamps.append(link.timestamp); remaining -= 1
         if remaining == 0 { stop(); finished.fulfill() }
     }
     func stop() { link?.invalidate(); link = nil }
+
+    func diagnostic(phase: String, result: XCTWaiter.Result, heartbeat: [NativeSceneRunLoopTrace.Entry]) -> String {
+        let ended = ProcessInfo.processInfo.systemUptime
+        let outcome: String
+        switch result {
+        case .completed: outcome = "completed"
+        case .timedOut: outcome = "timed-out"
+        case .incorrectOrder: outcome = "incorrect-order"
+        case .invertedFulfillment: outcome = "inverted-fulfillment"
+        case .interrupted: outcome = "interrupted"
+        @unknown default: outcome = "unknown-\(result.rawValue)"
+        }
+        // Include the unsampled tails: no callback at all is a whole-wait gap, never a zero gap.
+        func largestGap(_ times: [Double]) -> Double {
+            zip(times.dropFirst(), times).map { $0 - $1 }.max() ?? 0
+        }
+        let callbackGap = largestGap([started] + received + [ended])
+        let runLoopGap = largestGap(heartbeat.map(\.uptime))
+        let serviced = heartbeat.filter { $0.event == "before-sources" }.count
+        return "phase=\(phase) result=\(outcome) callbacks=\(timestamps.count)/\(requested) elapsed_s=\(ended - started) callback_gap_max_s=\(callbackGap) run_loop_source_phases=\(serviced) run_loop_gap_max_s=\(runLoopGap)"
+    }
+}
+
+/// INF-1378, captain-approved: a slow idle sample may reach the character's automatic fidget.
+/// Requested reactions remain explicit; working and listening gain no automatic mode exception.
+private func nativeSceneExpectedModes(state: PhoneCharacter.State, reaction: CharacterMachine.Emote? = nil) -> Set<String> {
+    var modes: Set<String> = [state.rawValue]
+    if state == .idle { modes.insert(CharacterMachine.Mode.fidget.rawValue) }
+    if let reaction { modes.insert(reaction.rawValue) }
+    return modes
+}
+
+/// Facts only: a mode mismatch does not establish another window's draw, and a gap does not prove load.
+private func nativeSceneFrameDiagnostic(_ frames: [CharacterFrameMetrics.Frame], expectedModes: Set<String>) -> String {
+    func counts(_ frames: [CharacterFrameMetrics.Frame]) -> String {
+        let grouped = Dictionary(grouping: frames, by: \.mode)
+        return grouped.keys.sorted().map { "\($0):\(grouped[$0]!.count)" }.joined(separator: ",")
+    }
+    let unexpected = frames.filter { !expectedModes.contains($0.mode) }
+    let firstUnexpected = unexpected.first.map { "\($0.mode) at_offset_s=\($0.timestamp - (frames.first?.timestamp ?? $0.timestamp))" } ?? "none"
+    let heat = frames.map(\.heat).min().map { String($0) } ?? "unknown"
+    let rotation = "\(frames.first.map { String($0.rotation) } ?? "unknown")..\(frames.last.map { String($0.rotation) } ?? "unknown")"
+    return "frames=\(frames.count) expected=\(expectedModes.sorted().joined(separator: ",")) modes=\(counts(frames)) unexpected=\(unexpected.isEmpty ? "none" : counts(unexpected)) first_unexpected=\(firstUnexpected) minimum_heat=\(heat) rotation=\(rotation)"
 }

@@ -210,8 +210,13 @@ The clock advances by elapsed time, excludes hidden/background time and stops ca
 Simulator callback timings measure that run, not physical ProMotion delivery, battery use or thermal behavior.
 The DEBUG-only cadence observer identifies its target Canvas and records its mode, warmed heat and rotation so another window cannot contaminate a sample.
 The same display-tick sample measures the isolated first mate and the production crowded scene with its real task roster, retaining drawing work, interval tails and the delivered display intervals separately.
-A main-run-loop observer retains its actual before-sources, before-waiting and after-waiting timestamps beside the warmup's display timestamps, without adding a wait or moving the 60-callback warmup, 240-callback sample or their deadlines.
+A main-run-loop observer retains its actual before-sources, before-waiting and after-waiting timestamps for both warmup and sampling, without adding a wait or moving the 60-callback warmup, 240-callback sample or their deadlines.
+Cadence failures name their source, phase, waiter outcome, observed and requested callbacks, elapsed time, longest callback and run-loop gaps, drawn mode counts, first unexpected mode, minimum heat and rotation endpoints.
+The callback gap includes the wait's leading and trailing intervals, so a display link that never fires reports the whole wait rather than zero.
+Sampling keeps its raw display timestamps and main-run-loop trace as attachments, and prints the diagnostic facts in the ordinary command log too.
 A gap identifies missing main-thread progress but does not identify the blocking stack or establish a flake.
+Idle cadence samples accept the character's automatic fidget, including the idle sample that requests a salute; working and listening samples gain no automatic-mode exception.
+The named source and drawing scope, working heat, rotation advancement, requested-reaction presence, callback counts and deadlines remain enforced.
 Its accessibility value stays the state the conversation owner supplies; an emote never changes it.
 The join stage uses idle; the empty stage follows the Mac's published busy snapshot and numbered busy events, never typing or a crew count.
 Homes that advertise `native-scene-observations` answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.

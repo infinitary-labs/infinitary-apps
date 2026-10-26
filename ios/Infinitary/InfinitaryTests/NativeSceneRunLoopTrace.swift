@@ -1,7 +1,7 @@
 import CoreFoundation
 import Foundation
 
-/// INF-1066 / INF-1143: retain real main-run-loop progress beside display callbacks when warmup stalls.
+/// INF-1066 / INF-1143 / INF-1378: retain real main-run-loop progress during each display wait.
 /// This observes the existing wait; it adds no prerequisite, timer, retry or changed deadline.
 final class NativeSceneRunLoopTrace: @unchecked Sendable {
     struct Entry: Sendable {
@@ -12,9 +12,11 @@ final class NativeSceneRunLoopTrace: @unchecked Sendable {
     private let lock = NSLock()
     private var entries: [Entry] = []
     private var observer: CFRunLoopObserver?
+    private let phase: String
 
-    @MainActor init() {
-        record("warmup-start")
+    @MainActor init(phase: String = "warmup") {
+        self.phase = phase
+        record("\(phase)-start")
         let activities: CFRunLoopActivity = [.afterWaiting, .beforeSources, .beforeWaiting]
         observer = CFRunLoopObserverCreateWithHandler(nil, activities.rawValue, true, 0) { [weak self] _, activity in
             let event: String
@@ -32,7 +34,7 @@ final class NativeSceneRunLoopTrace: @unchecked Sendable {
     @MainActor func finish() -> [Entry] {
         if let observer { CFRunLoopRemoveObserver(CFRunLoopGetMain(), observer, .commonModes) }
         observer = nil
-        record("warmup-end")
+        record("\(phase)-end")
         return lock.withLock { entries }
     }
 

@@ -1,0 +1,10 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-repair-labels-removed",
+      "reason": "Revert the unreleased fixes-main GitHub labeling: it was the project's own development flow, so no released version ever added or removed the label.",
+      "covers": ["8fcaceab11c1deec1d92786c1fa063bb18b272e6"]
+    }
+  ]
+}

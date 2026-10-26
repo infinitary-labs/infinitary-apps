@@ -406,8 +406,6 @@ export type TaskDelivery = {
   mergeReviews?: MergeReview[];
   /** Explicitly selected referenced pull request for status and check watches, never branch ownership. */
   checkTarget?: MergeReview;
-  /** The main-repair label effect, retained so cleanup survives a replaced diagnosis or restart. */
-  mainRepairLabel?: { number: number; branch: string; origin: string; removed?: true };
   /**
    * Writes the crewmate asked to send where a project lives, kept until the
    * captain's click sends one (FI3-1571 piece 4). `TaskService` is their one

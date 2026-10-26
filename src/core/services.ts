@@ -153,7 +153,6 @@ import { firstmateCanServe } from "./orchestrator/firstmateAvailability";
 import { Flagship } from "./orchestrator/flagship";
 import { GithubGatewayService } from "./orchestrator/githubGateway";
 import { LocalOrchestratorService } from "./orchestrator/localOrchestrator";
-import { MainRepairLabels } from "./orchestrator/mainRepairLabels";
 import { PrCiService } from "./orchestrator/prCi";
 import { Scheduler } from "./orchestrator/scheduler";
 import { TICK_PERIOD_MS, Ticker, tickPeriodFor } from "./orchestrator/ticker";
@@ -1836,17 +1835,6 @@ export async function createServices(
     verifyValidationEvidence: (taskId): void => supervisor.verifyValidationEvidence(taskId),
     now: ticker.now,
   });
-  const mainRepairLabels = new MainRepairLabels({
-    tasks,
-    repos,
-    forgeFor,
-    problem: (taskId, message) => console.warn(`[main-repair-labels] ${taskId}: ${message}`),
-  });
-  tasks.onChange((change) => {
-    if (!change.republish) void mainRepairLabels.reconcile();
-  });
-  ticker.register("main-repair-labels", TICK_PERIOD_MS, () => void mainRepairLabels.reconcile());
-  void mainRepairLabels.reconcile();
   const githubGateway = new GithubGatewayService({
     tasks,
     repos,

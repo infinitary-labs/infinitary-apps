@@ -414,7 +414,7 @@ In the 2026-09 release cuts, side-rails' collapse and settings cases and forge-s
   `test.describe.configure({ mode: "serial" })` orders tests; it does not make an undeclared prerequisite correct.
 - **The run-alone pass** checks the rule, since no lint can see what a test borrows.
   `scripts/e2e-alone.ts` lists the tests with Playwright's own `--list`, and runs each test after the first of a spec file that shares one app (a `beforeAll`) by itself, by `file:line`, in a Playwright run of its own on the current build.
-  `verify.yml`'s `linux-e2e` runs it over every spec file in a job of its own, `journeys (run alone)` ("The Linux source desktop", below), keeps its result as the `e2e-alone` artifact and lists its counts and failures in that job's summary.
+  `verify.yml`'s `linux-e2e` runs it over every spec file across four isolated hosted jobs, `journeys (run alone N/4)` ("The Linux source desktop", below), keeps each share’s result as the `e2e-alone-N` artifact and lists its counts and failures in that job's summary.
   A test that runs only on a Mac carries `MAC_ONLY_TAG` (`tests/e2e/tags.ts`) beside its own `test.skip` and reason: on Linux it is recorded as skipped, and `verify.yml`'s mac lane runs those tests alone (`--tag @mac-only`) after its other stages, whether the suite passed or failed, keeps their result as the `e2e-alone-mac` artifact, and lists their failures apart from the suite's in the job summary ("A red verify's evidence", below).
   A test that skips without the tag, or skips on a Mac, fails the pass, since it never ran alone.
   `tests/release-contract.test.ts` holds both steps.
@@ -719,9 +719,12 @@ Set `INFINITARY_VOICE_HOLD_MS=60000` to check release after a minute of real cap
 
 `source-journeys.yml` builds the checkout and runs journeys on the app built from source on hosted Ubuntu 24.04 x64, under Xvfb on a 2560 by 1600 virtual screen with Chromium's sandbox enabled.
 `journeys.yml` calls it as `linux-source` on every pull request with the starter journeys, split onto two machines by the existing parallel and serial desktop lanes: `source-start`, `phase0-guardrails`, `answer-delivery` and `claude-crew-turn`, the keyboard journeys `keyboard-routing` and `keyboard-regions`, which press Ctrl where a Mac presses ⌘ (`docs/keyboard.md`, "Keys on each system"), the task browser's journeys (`task-browser`, `task-browser-actions`, `task-browser-diagnostics` and `task-browser-booking`), the device journeys (`devices`) unconditionally, without a second selector, and the voice journeys (`phase6-voice`, `voice-prompt-focus` and `repro-voice-press`), which hold right Ctrl, with a stand-in graphics card and a stand-in voice helper (`docs/e2e-contracts.md`); the real card check is the captain's on each Linux alpha (`docs/architecture.md` section 8, "Where speech runs").
-`verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, before every alpha and on demand, in eight jobs, and the run-alone pass in a ninth.
+`verify.yml` calls it as `linux-e2e` with `suite: full`: every journey in the suite, before every alpha and on demand, in eight jobs, and the run-alone pass in four more isolated hosted jobs.
 Four take a quarter each of the parallel lanes (`styles`, `renderer` and `application`) and four a quarter each of the serial `desktop` lane, each run with `--no-deps` so neither lane waits as the other's teardown and the desktop lane still runs alone on its machine; a job is named for its share, such as `journeys (desktop 2/4)`.
-The ninth, `journeys (run alone)`, runs the run-alone pass over every spec file ("Each test owns its prerequisites", above); the Mac-only tests skip there and run alone on the Mac lane.
+The four `journeys (run alone N/4)` jobs divide the run-alone pass’s ordered listing by round-robin position with `--shard N/4`; together they cover every later file:line/lane selection once, without splitting tests that share a line.
+Each share keeps the existing fresh Playwright process and home for each selection, runs the parallel lanes at the existing local width and then its desktop selections serially, and keeps a distinct `e2e-alone-N` artifact and summary.
+The Mac-only tests skip there and run alone on the Mac lane.
+Request `source-journeys.yml` on a branch with `suite: alone` to check just those four hosted jobs, without the ordinary suite, Mac checks or packaging.
 A stable promotion inherits them with the other lanes ("Full alpha checks, inherited stable checks" in `docs/alpha.md`).
 The replay gate and packaging stay on the Mac lane.
 The Linux packages have their own checks, an installed-package journey on a clean copy of each system (`docs/linux-packages.md`, "The checks").

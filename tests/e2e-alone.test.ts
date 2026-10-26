@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   type AloneTest,
   laterTests,
+  shardTests,
   sharesOneApp,
   skipped,
   skippedAll,
@@ -122,6 +123,43 @@ describe("the run-alone pass on Linux and the Mac", () => {
     expect(listed).toEqual([macOnly, plain]);
     expect(withTag(listed, MAC_ONLY_TAG)).toEqual([macOnly]);
     expect(withTag(listed, undefined)).toEqual(listed);
+  });
+
+  // INF-1417 / INF-1392: hosted fresh-state jobs preserve every file:line/lane
+  // once, including desktop and Mac-only selections; they never split a loop's line.
+  it("partitions the listing exhaustively, deterministically and without overlap", () => {
+    const listed = laterTests({
+      suites: [
+        {
+          title: plain.file,
+          specs: [
+            spec("Shift+Enter adds lines", plain.file, 87, "desktop"),
+            spec(macOnly.title, macOnly.file, macOnly.line, macOnly.lane, ["mac-only"]),
+            spec(plain.title, plain.file, plain.line, plain.lane),
+            spec("at the smallest window", plain.file, 296, "desktop"),
+            spec("at the smallest window again", plain.file, 296, "desktop"),
+          ],
+        },
+      ],
+    });
+    const shards = [1, 2, 3, 4].map((index) => shardTests(listed, `${index}/4`));
+    expect(shards).toEqual([[listed[0]], [listed[1]], [listed[2]], []]);
+    expect(shards.flat()).toEqual(listed);
+    expect(shardTests(listed, "1/2")).toEqual([listed[0], listed[2]]);
+    expect(shardTests(listed, "2/2")).toEqual([listed[1]]);
+    expect(
+      new Set(shards.flat().map((test) => `${test.file}:${test.line}:${test.lane}`)).size,
+    ).toBe(listed.length);
+    expect(shardTests(listed, "1/1")).toEqual(listed);
+    expect(shardTests(listed, undefined)).toEqual(listed);
+    expect(shardTests(withTag(listed, MAC_ONLY_TAG), "1/4")).toEqual([macOnly]);
+    expect(shardTests(listed, "1/4")).toEqual(shards[0]);
+  });
+
+  it("rejects invalid shard selections rather than silently omitting checks", () => {
+    for (const shard of ["", "0/4", "5/4", "1/0", "1", "1.5/4", "1/4extra", "1/9007199254740992"]) {
+      expect(() => shardTests([plain], shard)).toThrow("--shard must be index/total");
+    }
   });
 
   it("knows a run whose test skipped from one whose test ran", () => {

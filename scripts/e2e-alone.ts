@@ -17,8 +17,9 @@ import { MAC_ONLY_TAG } from "../tests/e2e/tags.ts";
  *
  * `node scripts/e2e-alone.ts tests/e2e/<file>.spec.ts ...` runs the pass over
  * the named files; with none it covers every spec file, which, like a full
- * e2e run, only CI does (source-journeys.yml's `journeys (run alone)` job on
- * Linux). `--tag <tag>` keeps only the tests that carry it: verify.yml's mac
+ * e2e run, only CI does (source-journeys.yml's `journeys (run alone N/4)` jobs on
+ * Linux), split by `--shard <index>/<total>` across hosted jobs.
+ * `--tag <tag>` keeps only the tests that carry it: verify.yml's mac
  * lane runs the MAC_ONLY_TAG tests, which skip on Linux. It runs against the
  * current build (`pnpm build` first), prints one line per test, writes
  * `ALONE_RESULTS` and each test's output, trace and picture to its
@@ -106,6 +107,22 @@ export function withTag(tests: AloneTest[], tag: string | undefined): AloneTest[
   return tag ? tests.filter((test) => test.tags.includes(tag)) : tests;
 }
 
+/**
+ * INF-1417: split the ordered listing across hosted machines without changing
+ * a file:line selection, its fresh process/home, or its lane's local concurrency.
+ * Round-robin selection spreads a file's later tests across the jobs too.
+ */
+export function shardTests(tests: AloneTest[], shard: string | undefined): AloneTest[] {
+  if (shard === undefined) return tests;
+  const match = /^(\d+)\/(\d+)$/.exec(shard);
+  const index = Number(match?.[1]);
+  const total = Number(match?.[2]);
+  if (!Number.isSafeInteger(index) || !Number.isSafeInteger(total) || index < 1 || index > total) {
+    throw new Error("--shard must be index/total with 1 <= index <= total");
+  }
+  return tests.filter((_, position) => position % total === index - 1);
+}
+
 /** Whether a run's JSON result says its tests skipped and none ran. */
 export function skippedAll(report: { stats?: { expected?: number; skipped?: number } }): boolean {
   return (report.stats?.skipped ?? 0) > 0 && (report.stats?.expected ?? 0) === 0;
@@ -136,7 +153,7 @@ export function summary(results: AloneResult[]): string {
       `${skips.length} skipped as ${MAC_ONLY_TAG}, each a later test of a file that shares one app, selected by itself.`,
   ];
   if (failed.length > 0) {
-    lines.push("", "Failed alone (each error is in the e2e-alone artifact):");
+    lines.push("", "Failed alone (each error is in this job's run-alone artifact):");
     for (const result of failed)
       lines.push(`- \`${result.file}:${result.line}\` ${result.title} (${result.lane})`);
   }
@@ -275,6 +292,7 @@ async function pool(
 async function main(args: string[]): Promise<number> {
   const named: string[] = [];
   let tag: string | undefined;
+  let shard: string | undefined;
   // A run directory named for this process reads as a live run while the pass
   // goes, so `pnpm build` waits for it and no Playwright run's tidying removes it.
   let out = join(REPO_ROOT, RUNS_DIR, runName(new Date(), process.pid));
@@ -291,7 +309,10 @@ async function main(args: string[]): Promise<number> {
     const arg = args[index] as string;
     if (arg === "--out") out = resolve(args[++index] ?? ".");
     else if (arg === "--tag") tag = args[++index];
-    else named.push(arg);
+    else if (arg === "--shard") {
+      shard = args[++index] ?? "";
+      shardTests([], shard);
+    } else named.push(arg);
   }
   const files = specFiles(named).filter((file) =>
     sharesOneApp(readFileSync(join(REPO_ROOT, file), "utf8")),
@@ -303,9 +324,9 @@ async function main(args: string[]): Promise<number> {
     );
   }
   mkdirSync(out, { recursive: true });
-  const tests = withTag(listLater(files), tag);
+  const tests = shardTests(withTag(listLater(files), tag), shard);
   console.log(
-    `The run-alone pass: ${tests.length} later tests${tag ? ` tagged ${tag}` : ""} of ${files.length} files that share one app; ` +
+    `The run-alone pass${shard ? ` (shard ${shard})` : ""}: ${tests.length} later tests${tag ? ` tagged ${tag}` : ""} of ${files.length} files that share one app; ` +
       `evidence in ${relative(process.cwd(), out)}/`,
   );
   const parallel = tests.filter((test) => PARALLEL_LANES.has(test.lane));

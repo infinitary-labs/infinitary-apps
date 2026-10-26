@@ -3712,8 +3712,8 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
     jobs: Record<string, Job>;
   };
   const job = source.jobs["source-desktop"];
-  // INF-873's approved plan: the full alpha's run-alone pass is a ninth machine.
-  it("splits starters into disjoint lane projects and gives the full alpha eight machines and a ninth that runs alone", () => {
+  // INF-1417: preserve the ordinary eight jobs and split fresh-state checks four ways.
+  it("splits starters into disjoint lanes and adds four isolated fresh-state jobs to the full alpha", () => {
     const lanes = (suite: string, lane = "parallel") =>
       workflowValue(job?.strategy.matrix.lane ?? "", { inputs: { suite, lane } });
     const shards = (suite: string) =>
@@ -3725,13 +3725,18 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
     expect(extra("starter")).toEqual([]);
     expect(lanes("full")).toEqual(["parallel", "desktop"]);
     expect(shards("full")).toEqual([1, 2, 3, 4]);
-    expect(extra("full")).toEqual([{ lane: "alone", shard: 1 }]);
+    expect(extra("full")).toEqual([1, 2, 3, 4].map((shard) => ({ lane: "alone", shard })));
+    expect(lanes("alone")).toEqual(["alone"]);
+    expect(shards("alone")).toEqual([1, 2, 3, 4]);
+    expect(extra("alone")).toEqual([]);
     expect(lanes("affected", "desktop")).toEqual(["desktop"]);
     expect(extra("affected")).toEqual([]);
     // A release's stable promotion reads every `verify / linux-e2e / …` job by name.
     const name = (lane: string, shard: number) =>
       workflowString(job?.name ?? "", { inputs: { suite: "full" }, matrix: { lane, shard } });
-    expect(name("alone", 1)).toBe("journeys (run alone)");
+    for (const shard of shards("full") as number[]) {
+      expect(name("alone", shard)).toBe(`journeys (run alone ${shard}/4)`);
+    }
     expect(name("desktop", 2)).toBe("journeys (desktop 2/4)");
   });
   it.each(["parallel", "desktop"])(
@@ -3791,58 +3796,67 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
       }
     },
   );
-  // INF-873's approved plan: the ninth machine runs the run-alone pass on the
-  // virtual screen, keeps its result and lists it on the run's page.
-  it("runs the run-alone pass on the full alpha's ninth machine and keeps its result", () => {
-    const dir = scratchDir("infinitary-journey-alone-");
-    const bin = join(dir, "bin");
-    mkdirSync(bin);
-    const commands: Record<string, string> = {
-      "xvfb-run": '#!/bin/sh\nshift 3\nexec "$@"\n',
-      xdotool:
-        '#!/bin/sh\nif [ "$1" = getmouselocation ]; then echo "x:2559 y:1599 screen:0 window:0"; fi\n',
-      node: '#!/bin/sh\nprintf "node %s\\n" "$*" >> "$COMMAND_LOG"\n',
-      pnpm: '#!/bin/sh\nprintf "pnpm %s\\n" "$*" >> "$COMMAND_LOG"\n',
-    };
-    for (const [name, body] of Object.entries(commands)) {
-      const path = join(bin, name);
-      writeFileSync(path, body);
-      chmodSync(path, 0o755);
-    }
-    const command = job?.steps.find((step) => step.name?.startsWith("Run the journeys with"))?.run;
-    const log = join(dir, "alone.log");
-    const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", command ?? ""], {
-      env: {
-        ...process.env,
-        PATH: `${bin}:${process.env.PATH}`,
-        COMMAND_LOG: log,
-        RUNNER_OS: "Linux",
-        SUITE: "full",
-        LANE: "alone",
-        SCREEN: "2560x1600x24",
-        SHARD: "1",
-      },
-      encoding: "utf8",
-    });
-    expect(result.status, result.stderr).toBe(0);
-    const out = /^node scripts\/e2e-alone\.ts --out (\S+)$/.exec(
-      readFileSync(log, "utf8").trim(),
-    )?.[1];
-    expect(out, "the job runs the pass alone, over every spec file").toBeTruthy();
-    const onAlone = (step: { if?: string } | undefined) =>
-      workflowValue(step?.if ?? "", { matrix: { lane: "alone" } }) === true &&
-      workflowValue(step?.if ?? "", { matrix: { lane: "desktop" } }) === false;
-    const kept = job?.steps.find(
-      (step) =>
-        step.uses === "actions/upload-artifact@v4" &&
-        step.with?.path === `Application Support/firstmate/${out}/`,
-    );
-    expect(kept?.with?.name).toBe("e2e-alone");
-    expect(onAlone(kept)).toBe(true);
-    const summarize = job?.steps.find((step) => step.run?.includes("--summarize"));
-    expect(summarize?.run).toBe(
-      `node scripts/e2e-alone.ts --summarize ${out} | tee -a "$GITHUB_STEP_SUMMARY"`,
-    );
-    expect(onAlone(summarize)).toBe(true);
-  });
+  // INF-1417: execute each fresh-state share's real shell entry point, both in
+  // full verification and the hosted-only proof request, preserving result retention.
+  it.each(["full", "alone"].flatMap((suite) => [1, 2, 3, 4].map((shard) => ({ suite, shard }))))(
+    "runs fresh-state share $shard in $suite and keeps its distinct result",
+    ({ suite, shard }) => {
+      const dir = scratchDir("infinitary-journey-alone-");
+      const bin = join(dir, "bin");
+      mkdirSync(bin);
+      const commands: Record<string, string> = {
+        "xvfb-run": '#!/bin/sh\nshift 3\nexec "$@"\n',
+        xdotool:
+          '#!/bin/sh\nif [ "$1" = getmouselocation ]; then echo "x:2559 y:1599 screen:0 window:0"; fi\n',
+        node: '#!/bin/sh\nprintf "node %s\\n" "$*" >> "$COMMAND_LOG"\n',
+        pnpm: '#!/bin/sh\nprintf "pnpm %s\\n" "$*" >> "$COMMAND_LOG"\n',
+      };
+      for (const [name, body] of Object.entries(commands)) {
+        const path = join(bin, name);
+        writeFileSync(path, body);
+        chmodSync(path, 0o755);
+      }
+      const command = job?.steps.find((step) =>
+        step.name?.startsWith("Run the journeys with"),
+      )?.run;
+      const log = join(dir, "alone.log");
+      const result = spawnSync("bash", ["--noprofile", "--norc", "-e", "-c", command ?? ""], {
+        env: {
+          ...process.env,
+          PATH: `${bin}:${process.env.PATH}`,
+          COMMAND_LOG: log,
+          RUNNER_OS: "Linux",
+          SUITE: suite,
+          LANE: "alone",
+          SCREEN: "2560x1600x24",
+          SHARD: String(shard),
+        },
+        encoding: "utf8",
+      });
+      expect(result.status, result.stderr).toBe(0);
+      const [, selected, out] =
+        /^node scripts\/e2e-alone\.ts --shard (\S+) --out (\S+)$/.exec(
+          readFileSync(log, "utf8").trim(),
+        ) ?? [];
+      expect(selected).toBe(`${shard}/4`);
+      expect(out, "the job runs the pass alone, over every spec file").toBeTruthy();
+      const onAlone = (step: { if?: string } | undefined) =>
+        workflowValue(step?.if ?? "", { matrix: { lane: "alone" } }) === true &&
+        workflowValue(step?.if ?? "", { matrix: { lane: "desktop" } }) === false;
+      const kept = job?.steps.find(
+        (step) =>
+          step.uses === "actions/upload-artifact@v4" &&
+          step.with?.path === `Application Support/firstmate/${out}/`,
+      );
+      expect(workflowString(kept?.with?.name ?? "", { matrix: { shard } })).toBe(
+        `e2e-alone-${shard}`,
+      );
+      expect(onAlone(kept)).toBe(true);
+      const summarize = job?.steps.find((step) => step.run?.includes("--summarize"));
+      expect(summarize?.run).toBe(
+        `node scripts/e2e-alone.ts --summarize ${out} | tee -a "$GITHUB_STEP_SUMMARY"`,
+      );
+      expect(onAlone(summarize)).toBe(true);
+    },
+  );
 });

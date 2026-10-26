@@ -5,6 +5,14 @@ name: Source desktop journeys
 # full every journey in the suite, split across hosted machines, before every
 # alpha and on demand (verify.yml). Packaging comes later.
 on:
+  # A hosted-only proof of the fresh-state jobs, without Mac or packaging work.
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Run the fresh-state checks on isolated hosted machines
+        type: choice
+        options: [alone]
+        default: alone
   workflow_call:
     inputs:
       ref:
@@ -26,7 +34,7 @@ on:
         type: string
         default: parallel
       suite:
-        description: starter (two lanes), affected (files in one lane), or full (eight shards and the run-alone pass)
+        description: starter (two lanes), affected (files in one lane), full (eight journey shards and four run-alone shards), or alone (four run-alone shards)
         required: false
         type: string
         default: starter
@@ -37,16 +45,16 @@ jobs:
     # lanes and the serial desktop lane, each split four ways, one job a
     # share, so a failure names its own part of the suite; the desktop lane
     # still runs alone on its machine (tests/e2e/lanes.ts). The full suite's
-    # ninth job is the run-alone pass (docs/testing.md "Each test owns its
-    # prerequisites"), on a machine of its own.
-    name: ${{ inputs.suite == 'full' && (matrix.lane == 'alone' && 'journeys (run alone)' || format('journeys ({0} {1}/4)', matrix.lane, matrix.shard)) || format('source-desktop ({0})', matrix.lane) }}
+    # run-alone pass also splits four ways (docs/testing.md "Each test owns
+    # its prerequisites"), each share on a machine of its own.
+    name: ${{ (inputs.suite == 'full' || inputs.suite == 'alone') && (matrix.lane == 'alone' && format('journeys (run alone {0}/4)', matrix.shard) || format('journeys ({0} {1}/4)', matrix.lane, matrix.shard)) || format('source-desktop ({0})', matrix.lane) }}
     strategy:
       fail-fast: false
       matrix:
-        lane: ${{ fromJSON(inputs.suite != 'affected' && '["parallel", "desktop"]' || format('["{0}"]', inputs.lane)) }}
-        shard: ${{ fromJSON(inputs.suite == 'full' && '[1, 2, 3, 4]' || '[1]') }}
-        include: ${{ fromJSON(inputs.suite == 'full' && '[{"lane":"alone","shard":1}]' || '[]') }}
-    runs-on: ${{ inputs.runner }}
+        lane: ${{ fromJSON(inputs.suite == 'alone' && '["alone"]' || (inputs.suite != 'affected' && '["parallel", "desktop"]' || format('["{0}"]', inputs.lane))) }}
+        shard: ${{ fromJSON((inputs.suite == 'full' || inputs.suite == 'alone') && '[1, 2, 3, 4]' || '[1]') }}
+        include: ${{ fromJSON(inputs.suite == 'full' && '[{"lane":"alone","shard":1},{"lane":"alone","shard":2},{"lane":"alone","shard":3},{"lane":"alone","shard":4}]' || '[]') }}
+    runs-on: ${{ inputs.runner || 'ubuntu-24.04' }}
     defaults:
       run:
         working-directory: Application Support/firstmate
@@ -148,8 +156,8 @@ jobs:
             else
               on_screen pnpm exec playwright test --no-deps --project=renderer --project=application $FILES
             fi
-          elif [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = full ] && [ "$LANE" = alone ]; then
-            on_screen node scripts/e2e-alone.ts --out playwright-report/alone
+          elif [ "$RUNNER_OS" = Linux ] && [ "$LANE" = alone ]; then
+            on_screen node scripts/e2e-alone.ts --shard "$SHARD/4" --out playwright-report/alone
           elif [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = full ] && [ "$LANE" = parallel ]; then
             on_screen pnpm exec playwright test --no-deps --project=styles --project=renderer --project=application --shard="$SHARD/4"
           elif [ "$RUNNER_OS" = Linux ] && [ "$SUITE" = full ] && [ "$LANE" = desktop ]; then
@@ -178,7 +186,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: source-desktop-${{ runner.os }}${{ inputs.suite == 'full' && format('-{0}-{1}', matrix.lane, matrix.shard) || format('-{0}-{1}', inputs.artifact-suffix, matrix.lane) }}
+          name: source-desktop-${{ runner.os }}${{ (inputs.suite == 'full' || inputs.suite == 'alone') && format('-{0}-{1}', matrix.lane, matrix.shard) || format('-{0}-{1}', inputs.artifact-suffix, matrix.lane) }}
           path: |
             ${{ runner.temp }}/source-desktop-evidence/
             Application Support/firstmate/playwright-report/source-results.json
@@ -189,7 +197,7 @@ jobs:
         if: always() && matrix.lane == 'alone'
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-alone
+          name: e2e-alone-${{ matrix.shard }}
           path: Application Support/firstmate/playwright-report/alone/
           if-no-files-found: ignore
           retention-days: 14

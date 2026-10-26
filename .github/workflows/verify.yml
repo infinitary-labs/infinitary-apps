@@ -329,8 +329,8 @@ jobs:
       # prerequisites"): each later test of a spec file that shares one app
       # (test.beforeAll) runs by itself, by file:line, on the build the suite
       # ran, so a test that leans on what an earlier one made fails here even
-      # when its whole file passes. linux-e2e's `journeys (run alone)` job
-      # runs the pass over every other test; here it runs the Mac-only ones
+      # when its whole file passes. linux-e2e's `journeys (run alone N/4)` jobs
+      # run the pass over every other test; here it runs the Mac-only ones
       # (MAC_ONLY_TAG, tests/e2e/tags.ts), which skip on Linux. It runs
       # whether the suite passed or failed, after every other stage so it
       # hides none of them, and the summary lists its failures apart from the

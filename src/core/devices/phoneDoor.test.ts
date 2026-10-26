@@ -62,14 +62,46 @@ function answer(stdout: string): string[] {
   return line.split(" ").slice(1);
 }
 
-async function openHome(data: string) {
+/** No connection here: the wait resolves at once, as `WorkDevices.settled` does with none attached. */
+const NO_CONNECTION = async () => {};
+
+async function openHome(data: string, listening: () => Promise<void> = NO_CONNECTION) {
   const pairing = new DevicePairing({ dir: join(data, "devices"), interfaces: () => ({}) });
   const door = await PhoneDoor.open({
     dir: join(data, PHONE_DOOR_FOLDER),
     invite: (phone) => pairing.invite({ kind: "mac", ...(phone ? { phone } : {}) }),
+    listening,
   });
   doors.push(door);
   return { pairing, door };
+}
+
+/**
+ * INF-1390: a connection that listens only once the test lets it, writing
+ * each step into `order`, so a test sees the door wait for it and answer after.
+ */
+function heldConnection(order: string[]) {
+  let waiting!: () => void;
+  const waited = new Promise<void>((resolve) => {
+    waiting = resolve;
+  });
+  let listen!: () => void;
+  const listens = new Promise<void>((resolve) => {
+    listen = () => {
+      order.push("the connection listens");
+      resolve();
+    };
+  });
+  return {
+    listening: () => {
+      order.push("the door waits");
+      waiting();
+      return listens;
+    },
+    /** Resolves once the door waits for the connection. */
+    waited,
+    listen: () => listen(),
+  };
 }
 
 function post(
@@ -131,6 +163,29 @@ describe("the phone's link command", () => {
       await run(shell, PHONE_LINK_COMMAND, { HOME: home, INFINITARY_USER_DATA_DIR: data }),
     );
     expect(parsePairingLink(again[2] ?? "").code).not.toBe(link.code);
+  });
+
+  // INF-1390: the phone tries its link the moment the command answers, once on each address, and
+  // says the computer is out of reach when refused; on a loaded home the connection listened after.
+  it("answers the phone's link only once the connection listens for it", async () => {
+    const home = scratchDir("infinitary-phone-door-home-");
+    const data = join(home, "data");
+    const order: string[] = [];
+    const connection = heldConnection(order);
+    const { pairing } = await openHome(data, connection.listening);
+    const command = run("/bin/sh", PHONE_LINK_COMMAND, {
+      HOME: home,
+      INFINITARY_USER_DATA_DIR: data,
+    }).then((stdout) => {
+      order.push("the phone has its link");
+      return stdout;
+    });
+    await Promise.race([connection.waited, command]);
+    connection.listen();
+    const said = answer(await command);
+    expect(order).toEqual(["the door waits", "the connection listens", "the phone has its link"]);
+    expect(said.slice(0, 2)).toEqual(["1", "link"]);
+    expect(parsePairingLink(said[2] ?? "").key).toBe(pairing.identity().pin);
   });
 
   it("finds the door in a Mac's and a Linux computer's own data folder", async () => {
@@ -222,6 +277,7 @@ describe("the phone's link command", () => {
         invite: () => {
           throw new Error("The saved device list cannot be read.");
         },
+        listening: NO_CONNECTION,
       }),
     );
     expect(
@@ -248,6 +304,7 @@ describe("the door's answer to infinitary link", () => {
         asked.push(phone);
         return pairing.invite({ kind: "mac", ...(phone ? { phone } : {}) });
       },
+      listening: NO_CONNECTION,
     });
     doors.push(door);
     const key = { [PHONE_DOOR_KEY_HEADER]: doorKey(data) };
@@ -267,6 +324,28 @@ describe("the door's answer to infinitary link", () => {
     // The phone's asks pairing for a phone's link; each is its own one-use link.
     expect(asked).toEqual([false, true]);
     expect(new Set(codes).size).toBe(2);
+  });
+
+  // INF-1390: the computer or phone the link is for may use it at once, as the phone's own does.
+  it("answers a link only once the connection listens for it", async () => {
+    const data = scratchDir("infinitary-link-door-data-");
+    const order: string[] = [];
+    const connection = heldConnection(order);
+    const { door } = await openHome(data, connection.listening);
+    const asked = ask(
+      door.address,
+      { [PHONE_DOOR_KEY_HEADER]: doorKey(data) },
+      `${LINK_COMMAND_PATH}?for=computer`,
+    ).then((said) => {
+      order.push("the command has its link");
+      return said;
+    });
+    await Promise.race([connection.waited, asked]);
+    connection.listen();
+    const said = await asked;
+    expect(order).toEqual(["the door waits", "the connection listens", "the command has its link"]);
+    expect(said.status).toBe(200);
+    expect("link" in linkCommandAnswerSchema.parse(JSON.parse(said.body))).toBe(true);
   });
 
   it("refuses the command's request without the key, from a web page, or for another kind", async () => {
@@ -296,6 +375,7 @@ describe("the door's answer to infinitary link", () => {
         invite: () => {
           throw new Error("The saved device list cannot be read.");
         },
+        listening: NO_CONNECTION,
       }),
     );
     const door = doors.at(-1) as PhoneDoor;

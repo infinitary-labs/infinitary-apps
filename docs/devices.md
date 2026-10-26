@@ -527,8 +527,10 @@ The door (`src/core/devices/phoneDoor.ts`, `AppPaths.phoneDoorDir`) is the task 
 Reading the key is the permission: only this account can, and it could already make a link at the keyboard.
 A request naming another host or carrying an `Origin` is refused before its key is read.
 The door answers one line, `infinitary-phone-link 1 link <link>`, from `DevicePairing.invite({ kind: "mac", phone: true })`, with the default ten minutes; no log or feed line carries the link.
+It answers a link only once the connection listens for it (`WorkDevices.settled`), as adding a computer by its address waits before it hands over its link: the phone tries the link the moment it has it, once on each address, and says the computer is out of reach when refused.
 With no door, Chromium's `SingletonLock` in a data folder tells a running Infinitary that is too old, with no door, from none open; a Linux home with no curl says so.
 The same door, with the same key, answers this account's own `infinitary link` at `/link?for=computer` or `?for=phone` (`LINK_COMMAND_PATH`): JSON with the link and when it expires, from `DevicePairing.invite({ kind: "mac" })`, or `phone: true` for a phone, or with 503 pairing's reason when it made none (`docs/run.md`, "A link by command").
+It too answers a link only once the connection listens for it.
 The key command, the one a password signs in for, adds the phone's public key line to that account's `~/.ssh/authorized_keys` once, making the folder and file only that account may change.
 
 ## Finding the home again
@@ -1095,7 +1097,7 @@ A link that expires with nothing paired stops the listener.
 
 ## Tests
 
-- `src/core/devices/phoneDoor.test.ts`: a phone's fixed commands, run as sshd runs them under each login shell this computer has, with the system's curl: the link the real pairing made, the Mac and Linux data folders, the door's modes and refusals, not open, too old, no link, and the key let in once; and the door's answer to `infinitary link`, a computer's link and a phone's, its refusals and pairing's reason.
+- `src/core/devices/phoneDoor.test.ts`: a phone's fixed commands, run as sshd runs them under each login shell this computer has, with the system's curl: the link the real pairing made, answered only once the connection listens for it, the Mac and Linux data folders, the door's modes and refusals, not open, too old, no link, and the key let in once; and the door's answer to `infinitary link`, a computer's link and a phone's, answered only once the connection listens, its refusals and pairing's reason.
 - `tests/e2e/link-command.spec.ts` and `src/main/linkCommand.test.ts`: `infinitary link` beside a run, its links joining, and its words with no answer (`docs/run.md`, "Tests").
 
 - `src/shared/devices.test.ts`: the link and the name, and every malformed link refused.

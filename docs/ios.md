@@ -413,6 +413,7 @@ The reconnect recording crops the top of the phone view around the connection st
 An encoded demo retains real speed and holds the final frame for five seconds, within a fifteen-second cap; a raw capture preserves the complete recorded interaction.
 The runner creates and deletes its own simulator, scratch HOME, real-core home, mock provider, data and keys, never borrows or erases a person's simulator, and saves logs and the result bundle outside the working copy.
 The test home uses the real stores, dispatcher, pairing and TLS connection, with sample cards, feed lines and a task; its control interface listens only on loopback behind a fresh per-run token.
+It attaches each connection it starts to the core, as the app does, so the core's phone door answers the address part's link only once that connection listens for it.
 The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
 It first verifies the independent published-contract client can join and read the sample card.
 The join part covers a wrong Mac pin, joining, cards and feed, Activity scrolled to its last whole row, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.

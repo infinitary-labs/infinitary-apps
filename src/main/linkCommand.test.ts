@@ -43,6 +43,8 @@ async function answering(invite?: () => never) {
     await PhoneDoor.open({
       dir: join(data, PHONE_DOOR_FOLDER),
       invite: invite ?? ((phone) => pairing.invite({ kind: "mac", ...(phone ? { phone } : {}) })),
+      // No connection here, so nothing to wait for (src/core/devices/phoneDoor.test.ts owns the wait).
+      listening: async () => {},
     }),
   );
   return { data, pairing };

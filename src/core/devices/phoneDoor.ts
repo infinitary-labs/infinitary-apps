@@ -34,7 +34,9 @@ import {
  *
  * The answer is one line: the header, the door's version, then `link` and
  * the link, or `none refused` when pairing makes none. No log line, feed
- * line or error carries the link.
+ * line or error carries the link. A link is answered only once the
+ * connection listens for it: the phone tries it the moment it has it, once
+ * on each address, and calls the computer out of reach when refused.
  *
  * The same door, with the same key, answers this account's own `infinitary
  * link` (docs/run.md, "A link by command") at `LINK_COMMAND_PATH`: a link for
@@ -51,6 +53,12 @@ export type PhoneDoorOptions = {
    * phone does, or with `phone` false a computer's, as its link for a Mac.
    */
   invite: (phone: boolean) => Pick<DeviceInvite, "link" | "expiresAt">;
+  /**
+   * Resolves once the connection listens for what pairing holds now, so the
+   * device a link is for finds it listening when it dials, as a computer
+   * added by its address does (`RemoteLoginOptions.listening`).
+   */
+  listening: () => Promise<void>;
 };
 
 function digestOf(key: string): Buffer {
@@ -75,7 +83,7 @@ export class PhoneDoor {
     mkdirSync(dir, { recursive: true, mode: 0o700 });
     chmodSync(dir, 0o700);
     let door: PhoneDoor | undefined;
-    const server = createServer((request, response) => door?.handle(request, response));
+    const server = createServer((request, response) => void door?.handle(request, response));
     try {
       await new Promise<void>((resolve, reject) => {
         server.once("error", reject);
@@ -112,7 +120,7 @@ export class PhoneDoor {
     rmSync(this.options.dir, { recursive: true, force: true });
   }
 
-  private handle(request: IncomingMessage, response: ServerResponse): void {
+  private async handle(request: IncomingMessage, response: ServerResponse): Promise<void> {
     const refuse = (status: number): void => {
       response.writeHead(status).end();
     };
@@ -141,12 +149,14 @@ export class PhoneDoor {
     }
     request.resume();
     if (path === LINK_COMMAND_PATH) {
-      this.answerCommand(new URLSearchParams(query).get("for"), response);
+      await this.answerCommand(new URLSearchParams(query).get("for"), response);
       return;
     }
     let words: string;
     try {
-      words = `link ${this.options.invite(true).link}`;
+      const { link } = this.options.invite(true);
+      await this.listened();
+      words = `link ${link}`;
     } catch {
       words = `none ${PHONE_LINK_NONE.refused}`;
     }
@@ -155,8 +165,21 @@ export class PhoneDoor {
       .end(`${PHONE_LINK_HEADER} ${PHONE_LINK_VERSION} ${words}\n`);
   }
 
+  /**
+   * Waits until the connection listens for the link pairing just made. A wait
+   * that fails still answers the link: the connection says itself why it
+   * does not listen.
+   */
+  private async listened(): Promise<void> {
+    try {
+      await this.options.listening();
+    } catch {
+      // The device's own dial then finds the home out of reach.
+    }
+  }
+
   /** `infinitary link`'s answer: the link and when it expires, or why pairing made none. */
-  private answerCommand(asked: string | null, response: ServerResponse): void {
+  private async answerCommand(asked: string | null, response: ServerResponse): Promise<void> {
     const kind = linkCommandForSchema.safeParse(asked);
     if (!kind.success) {
       response.writeHead(400).end();
@@ -166,6 +189,7 @@ export class PhoneDoor {
     let answer: LinkCommandAnswer;
     try {
       const { link, expiresAt } = this.options.invite(kind.data === "phone");
+      await this.listened();
       answer = { link, expiresAt };
     } catch (error) {
       // Pairing refuses before it makes a code, so its words carry no link.

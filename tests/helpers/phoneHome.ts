@@ -204,6 +204,9 @@ export async function startPhoneHome(
   // The core's own id for the hero card (a first mate card's id is the core's, not the one asked for).
   let heroId = "";
   let sceneObservationReads = 0;
+  // INF-1390: the core reaches each connection this home starts, as the app's shell attaches its
+  // own (src/main/shell.ts), so the core's door answers the phone's link once it listens.
+  let unreach = () => {};
   const connect = (protocolVersion = PROTOCOL_VERSION, sceneSupport = true) => {
     const connection = startConnection({
       dispatch: async (channel, args, actor) => {
@@ -281,6 +284,7 @@ export async function startPhoneHome(
         views.add(deviceId);
       } else views.delete(deviceId);
     });
+    unreach = core.services.workDevices.attach(connection);
     return connection;
   };
   let connection = connect();
@@ -1169,6 +1173,7 @@ export async function startPhoneHome(
       boardHold = undefined;
       await new Promise<void>((resolve) => control.close(() => resolve()));
       await ssh?.stop();
+      unreach();
       await connection.close();
       unsubscribe("net.server.socket", countAttempt);
       for (const socket of stalledSockets) socket.destroy();

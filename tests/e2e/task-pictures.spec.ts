@@ -1,6 +1,8 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
+import { appPathsFor, crewmateTempDir } from "../../src/core/paths";
+import { HANDOVER_IN_DIR_NAME } from "../../src/core/tasks/handoverFiles";
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
@@ -25,8 +27,8 @@ import { FILE_TASK_PROMPT_MARKER, fileTask } from "./scenarios/fileTask";
  * (`docs/task-capture.md`, "Pictures stay with the task"). A message whose
  * pictures were pasted or dropped into the main input becomes a task, and
  * the crewmate that takes the task is served those pictures with its brief,
- * which names the app's own copies - even when the task starts only after
- * the app was quit and opened again.
+ * which names copies in that task's hand-over folder - even when the task
+ * starts only after the app was quit and opened again (INF-1446).
  */
 
 let launched: LaunchedApp | undefined;
@@ -64,6 +66,20 @@ function namedCopies(words: string): string[] {
   return [...words.matchAll(/^- [^\n]+?: (\/[^\n]+\.png)$/gm)].map((match) => match[1] ?? "");
 }
 
+/** The receiving task's folder, independently of the paths its brief names. */
+async function taskHandoverDir(app: LaunchedApp, title: string): Promise<string> {
+  const taskId = await app.page.evaluate(
+    async (wanted) =>
+      (await window.infinitary.tasks.board()).tasks.find((task) => task.title === wanted)?.id,
+    title,
+  );
+  expect(taskId).toBeDefined();
+  return join(
+    crewmateTempDir(appPathsFor(app.userDataDir), taskId as string),
+    HANDOVER_IN_DIR_NAME,
+  );
+}
+
 /** Sends the turn and waits until the input took it. */
 async function send(page: Page, words: string): Promise<void> {
   const input = promptInput(page);
@@ -75,7 +91,7 @@ async function send(page: Page, words: string): Promise<void> {
 // biome-ignore lint/correctness/noEmptyPattern: Playwright requires a destructured fixture signature.
 test("pictures pasted and dropped into a message reach the crewmate the message starts", async ({}, testInfo) => {
   launched = await launchApp({ scenarios: [fileTask], withMockProvider: true });
-  const { page, userDataDir } = launched;
+  const { page } = launched;
   await expect(promptInput(page)).toBeEnabled({ timeout: 30_000 });
   const title = "fix the layout shown in these pictures";
 
@@ -91,10 +107,11 @@ test("pictures pasted and dropped into a message reach the crewmate the message 
   // Both pictures ride the crewmate's first request beside its brief.
   expect(body).toContain(PASTE_PICTURE_PNG_BASE64);
   expect(body).toContain(DROPPED_PNG.toString("base64"));
-  // The brief names the app's own copy of each, which holds the same bytes.
+  // The brief names each copy in this task's hand-over folder, with the same bytes.
   const copies = namedCopies(briefWords(body));
   expect(copies).toHaveLength(2);
-  for (const copy of copies) expect(copy.startsWith(join(userDataDir, "attachments"))).toBe(true);
+  const handoverDir = await taskHandoverDir(launched, title);
+  for (const copy of copies) expect(dirname(copy)).toBe(handoverDir);
   const bytes = copies.map((copy) => readFileSync(copy).toString("base64")).sort();
   expect(bytes).toEqual([PASTE_PICTURE_PNG_BASE64, DROPPED_PNG.toString("base64")].sort());
 });
@@ -130,7 +147,9 @@ test("a picture on a message that files a task reaches its crewmate after a rela
   const body = await servedBrief(launched, title);
   writeFileSync(testInfo.outputPath("relaunched-brief.json"), body);
   expect(body).toContain(PASTE_PICTURE_PNG_BASE64);
-  const [copy] = namedCopies(briefWords(body));
-  expect(copy?.startsWith(join(userDataDir, "attachments"))).toBe(true);
+  const copies = namedCopies(briefWords(body));
+  expect(copies).toHaveLength(1);
+  const [copy] = copies;
+  expect(dirname(copy ?? "")).toBe(await taskHandoverDir(launched, title));
   expect(readFileSync(copy ?? "").toString("base64")).toBe(PASTE_PICTURE_PNG_BASE64);
 });

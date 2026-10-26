@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-pictures-handover-journey",
+      "reason": "Repairs the picture-delivery journeys to check each task's hand-over folder after the attachment move; no product behavior changes."
+    }
+  ]
+}

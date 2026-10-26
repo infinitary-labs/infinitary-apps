@@ -504,9 +504,12 @@ test("a smooth scroll of a card's body survives the card's height check", async 
  * never appeared): Shift+Tab onto a task key scrolls the card's body to
  * bring the key into view, and the frame reports the key two frames later.
  * The window hears that scroll at its own next frame, which under load comes
- * after it has read the report. The window here holds the scrolls it hears
- * until the frame's report has been read, then lets them go, so the order the
- * failing run met by chance is the order of every run. The data: the card
+ * after it has read the report. The window here holds the scrolls it hears,
+ * before the report or after it, and lets them go in a task after the one
+ * that read the report, so the order the failing run met by chance is the
+ * order of every run. A hold that caught only the scrolls heard before the
+ * report held none in the runs whose window heard the scroll after it on its
+ * own (INF-1507: 2 of 20 local runs on main). The data: the card
  * the journey above reads, scrolled to its end. The completion signal: the
  * frame has reported the key and the held scrolls have reached the window.
  * Platform and shared resources: none beyond the hermetic launch.
@@ -543,11 +546,24 @@ test("a task key the keyboard brings into view opens its summary when the window
       const targets: EventTarget[] = [];
       const state: Held = { held: 0, rested: false, released: false };
       Object.assign(window, { heldScrolls: state });
+      // Once the report has been read and a scroll held, whichever came
+      // first, the held scrolls go in a later task than either.
+      let letting = false;
+      const release = () => {
+        if (letting || !state.rested || state.held === 0) return;
+        letting = true;
+        setTimeout(() => {
+          window.removeEventListener("scroll", hold, { capture: true });
+          for (const target of targets) target.dispatchEvent(new Event("scroll"));
+          state.released = true;
+        });
+      };
       const hold = (event: Event) => {
-        if (!event.isTrusted || state.rested) return;
+        if (!event.isTrusted) return;
         event.stopImmediatePropagation();
         if (event.target) targets.push(event.target);
         state.held += 1;
+        release();
       };
       window.addEventListener("scroll", hold, { capture: true });
       // Heard once the window's own code has read the report, in the same
@@ -556,11 +572,7 @@ test("a task key the keyboard brings into view opens its summary when the window
         const data = event.data as { type?: string; gesture?: string } | null;
         if (data?.type !== "task" || data.gesture !== "rest" || state.rested) return;
         state.rested = true;
-        setTimeout(() => {
-          window.removeEventListener("scroll", hold, { capture: true });
-          for (const target of targets) target.dispatchEvent(new Event("scroll"));
-          state.released = true;
-        });
+        release();
       });
     });
     const held = () =>

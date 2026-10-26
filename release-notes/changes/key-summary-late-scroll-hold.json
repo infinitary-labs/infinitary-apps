@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "key-summary-late-scroll-hold",
+      "reason": "Internal test repair: the late-scroll task key journey holds the key's scroll whether the window hears it before or after the frame's report, so a run whose scroll came after the report on its own no longer fails. No user-facing behavior changes."
+    }
+  ]
+}

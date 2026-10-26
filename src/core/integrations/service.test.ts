@@ -5,7 +5,7 @@ import type { IntegrationAsk } from "@shared/writeAsk";
 import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { INTEGRATION_ACTIONS_MAX, integrationNameSchema } from "../../shared/integrations";
+import { integrationNameSchema } from "../../shared/integrations";
 import {
   FileIntegrationSecrets,
   githubIntegration,
@@ -733,7 +733,7 @@ describe("per-action approval (INF-950)", () => {
   });
 });
 
-// INF-1407: a connection may list INTEGRATION_ACTIONS_MAX actions, but an
+// INF-1407: a connection may list any number of actions, but an
 // older build's strict settings reader took at most 64 off ones, and so
 // did this one, reading every saved name, pause and off action as the
 // defaults once a 65th was off. These are the GitHub MCP server's own tools.
@@ -882,7 +882,6 @@ describe("off actions past an older build's count (INF-1407)", () => {
 
   it("keeps every off action, name and pause past 64, and an older build still reads them", () => {
     expect(tools.length).toBeGreaterThan(OLDER_BUILD_OFF_MAX);
-    expect(tools.length).toBeLessThanOrEqual(INTEGRATION_ACTIONS_MAX);
     const { store, open, offIn } = fixture();
     const service = open();
     service.configure("mcp-github", { name: "Work GitHub", paused: true });

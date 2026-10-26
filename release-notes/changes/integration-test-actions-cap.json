@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "integration-test-actions-cap",
+      "reason": "Test-only repair: the integrations service test stops importing the action-count cap that an earlier change removed, so the typecheck passes again, without changing app behavior or any assertion about saved off actions."
+    }
+  ]
+}

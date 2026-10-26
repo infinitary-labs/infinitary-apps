@@ -185,6 +185,19 @@ A crewmate's job logs, artifacts archives and API calls on a GitLab project are 
 A server with a private certificate authority is not trusted by the app's API requests.
 No shared application is registered on gitlab.com; guided per-host registration works without a secret, and a personal access key remains available.
 
+## Main-repair labels
+
+A recorded `baseline-blocked` diagnosis names its main repair through the typed `dependencyTask` fact, never through the diagnosis's words or a task's title.
+`MainRepairLabels` composes that fact with the repair task's own GitHub pull request and adds `fixes-main`, which the placement service can read.
+A diagnosis can arrive before or after the pull request opens; a task commit requests reconciliation immediately, and boot and the shared tick recover missed work.
+The reconciler reads the pull request and its labels before writing, preserves other labels, and removes `fixes-main` once GitHub confirms the merge, including a merge outside the app.
+Its delivery receipt records the destination before a write, so a replaced diagnosis, lost answer or restart cannot lose merge cleanup.
+A closed but unmerged pull request keeps its label, and a referenced merge review is never mistaken for the repair's own pull request.
+A changed project origin or branch cannot redirect a receipt's writes.
+Failures leave the receipt outstanding, log the host's refusal and reconcile from a fresh read on the next pass.
+This publishes the app's fact only; placement ordering and requested-run matching belong to the placement service.
+`tests/mainRepairLabels.test.ts` drives the diagnosis writer, saved delivery facts and real GitHub forge against a disposable transport through both arrival orders, merge cleanup, restart and failure recovery.
+
 ## GitLab merge requests
 
 A GitLab project's direct-pr task delivers the way a GitHub one does: the crewmate pushes its branch and calls `open_change`, the checks gate and `check_change` read the pipelines, the check watch follows them, and the captain's merge, or a kept merge approval (FI3-304), squash-merges the checked version.

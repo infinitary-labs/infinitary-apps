@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "main-repair-labels",
+      "reason": "Internal development scheduling: publish the typed main-repair relationship as the fixes-main GitHub label and remove it after merge; no app view changes."
+    }
+  ]
+}

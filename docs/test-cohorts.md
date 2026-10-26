@@ -181,6 +181,7 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `src/core/claude/claudeLoginProbe.test.ts` | the installed Claude client | 5 s default |
 | `src/core/personal/panelInstructions.test.ts` | real git, at the run's own priority | 5 s default |
 | `src/core/pi/customApiCertificates.integration.test.ts` | a local HTTPS server and the custom-API certificate review | 5 s default |
+| `tests/e2e/scenarios/mergeShell.test.ts` | disposable git commits and rebases through both merge scripts, with inline output or a job receipt and exit | 5 s default |
 | `src/core/integrations/providers/mcp/mcpIntegration.test.ts` | a stand-in MCP server in both protocol eras, as a Node child over stdio and on a local HTTP server, through the integrations service | 10 s (Mac slowest per-case minimum 0.643 s, two child starts) |
 | `src/core/claude/claudeCli.test.ts` | stub client executables | 5 s default |
 | `src/core/hostEnv.gitSignIn.test.ts` | real git, openssl, a local HTTPS host | 5 s default |

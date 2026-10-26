@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "kept-merge-shell-results",
+      "reason": "Repairs the kept-merge test scripts to await background git output; product merge behavior is unchanged."
+    }
+  ]
+}

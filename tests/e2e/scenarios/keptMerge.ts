@@ -10,6 +10,7 @@ import {
   sinceLastUser,
 } from "../mockProvider";
 import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeStory";
+import { mergeShellCall, mergeShellTurn } from "./mergeShell";
 
 /**
  * Hermetic replay for FI3-304, not a claim that a live model obeys: one
@@ -26,7 +27,7 @@ export const KEPT_MERGE_ON_CLAUDE = "on Claude";
 export const KEPT_MERGE_TITLE = "feat: keep the merge click";
 export const KEPT_MERGE_CARD = KEPT_MERGE_TITLE;
 // e2e-typed-words: the mock's own steer to the kept-merge crewmate; it only shares a phrase with the product's
-const KEPT_MERGE_REPAIR = `${KEPT_MERGE_MARKER} bring it up to date`;
+export const KEPT_MERGE_REPAIR = `${KEPT_MERGE_MARKER} bring it up to date`;
 
 export const keptMerge: Scenario =
   () =>
@@ -34,8 +35,11 @@ export const keptMerge: Scenario =
     wantsStream ? keptMergeMove(body, isFirstmate) : undefined;
 
 function keptMergeMove(body: string, firstmate: boolean): ScenarioAnswer | undefined {
-  const { user, results } = sinceLastUser(body);
+  const { user, results, pending } = firstmate
+    ? { ...sinceLastUser(body), pending: false }
+    : mergeShellTurn(body, KEPT_MERGE_MARKER);
   if (!user.includes(KEPT_MERGE_MARKER)) return undefined;
+  if (pending) return { text: "" };
   const onClaude = user.includes(`${KEPT_MERGE_MARKER} ${KEPT_MERGE_ON_CLAUDE}`);
   const title = `meterlab ${KEPT_MERGE_MARKER}${onClaude ? ` ${KEPT_MERGE_ON_CLAUDE}` : ""}`;
   const taskId = indexTaskId(body, title) ?? findCrewTaskId(body, KEPT_MERGE_MARKER) ?? "missing";
@@ -77,13 +81,10 @@ function keptMergeMove(body: string, firstmate: boolean): ScenarioAnswer | undef
     if (!results.length)
       return {
         calls: [
-          {
-            name: "bash",
-            args: {
-              command:
-                "git rev-parse HEAD && git rebase main >/dev/null 2>&1 && git rev-parse main HEAD",
-            },
-          },
+          mergeShellCall(
+            body,
+            "git rev-parse HEAD && git rebase main >/dev/null 2>&1 && git rev-parse main HEAD",
+          ),
         ],
       };
     if (results.length === 1) {
@@ -125,12 +126,10 @@ function keptMergeMove(body: string, firstmate: boolean): ScenarioAnswer | undef
     return { text: "Brought up to date." };
   }
   const steps: ScriptedCall[] = [
-    {
-      name: "bash",
-      args: {
-        command: `printf 'kept\\n' > kept.txt && git add kept.txt && git commit -m "${KEPT_MERGE_TITLE}" && git rev-parse main HEAD`,
-      },
-    },
+    mergeShellCall(
+      body,
+      `printf 'kept\\n' > kept.txt && git add kept.txt && git commit -m "${KEPT_MERGE_TITLE}" && git rev-parse main HEAD`,
+    ),
     prepareMockStory(KEPT_MERGE_CARD, results[0], {
       ...MOCK_GITHUB_STORY,
       why: ["A merge click should survive a conflict refusal."],

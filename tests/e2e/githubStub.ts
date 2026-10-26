@@ -191,8 +191,9 @@ export type GitHubStub = {
   /**
    * Which heads GitHub refuses to merge for conflicting with newer work: it
    * answers the merge request 405, as GitHub does. Its mergeability read
-   * (`GET /pulls/N`) still says clean, the way GitHub's lazily computed one
-   * can lag a change on the default branch - only the merge request finds it.
+   * (`GET /pulls/N`) initially says clean, the way GitHub's lazily computed
+   * one can lag a change on the default branch. After the refused send,
+   * reads of that head report the known conflict until it is resolved.
    */
   conflicts: (conflicted: (head: string) => boolean) => void;
   close: () => Promise<void>;
@@ -265,6 +266,7 @@ export async function startGitHubStub(
   let onPutIn: (sha: string) => void = () => {};
   let priorPullRequestWorkflows = false;
   let conflicted: (head: string) => boolean = () => false;
+  const knownConflicts = new Set<string>();
   let openChanges: { number: number; title: string; draft?: boolean; checks?: string | null }[] =
     [];
   let base = "";
@@ -726,6 +728,8 @@ export async function startGitHubStub(
             send(404, { message: "Not Found" });
             return;
           }
+          const head = headOfPull(pull);
+          const conflict = head !== undefined && knownConflicts.has(head) && conflicted(head);
           const undecided = (pull.undecidedReads ?? 0) > 0;
           if (undecided) pull.undecidedReads = (pull.undecidedReads ?? 0) - 1;
           send(200, {
@@ -735,8 +739,12 @@ export async function startGitHubStub(
             merge_commit_sha: pull.merged ? `squash-${headOfPull(pull)}` : null,
             draft: false,
             base: { ref: "main" },
-            mergeable: undecided ? null : true,
-            mergeable_state: undecided ? "unknown" : (pull.mergeableState ?? "clean"),
+            mergeable: undecided ? null : !conflict,
+            mergeable_state: undecided
+              ? "unknown"
+              : conflict
+                ? "dirty"
+                : (pull.mergeableState ?? "clean"),
           });
           return;
         }
@@ -899,6 +907,7 @@ export async function startGitHubStub(
             return;
           }
           if (conflicted(body.sha)) {
+            knownConflicts.add(body.sha);
             send(405, { message: "Pull Request has merge conflicts" });
             return;
           }

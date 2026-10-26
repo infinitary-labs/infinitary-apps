@@ -446,7 +446,8 @@
         "!tests/replay-gate-catches-lock-refusal.test.ts",
         "!tests/run-temp-root.test.ts",
         "!tests/test-workload.test.ts",
-        "!tests/run-evidence-playwright.test.ts"
+        "!tests/run-evidence-playwright.test.ts",
+        "!tests/e2e/scenarios/mergeShell.test.ts"
       ],
       "plugins": ["./tests/lint/unit-cohort.grit"]
     }

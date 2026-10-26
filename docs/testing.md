@@ -352,6 +352,9 @@ The stand-in calls the start function once when it starts, so any state the scen
 The answerer reads one request (`ScenarioRequest`, which also carries whether it came on Anthropic's messages wire and the stand-in's port, for a card that loads a page the stand-in serves) and returns tool calls, text, a refusal the way the service sends one, or `held`, a turn the stand-in keeps open the way a crewmate goes on working; `undefined` passes the request on.
 An answer's `afterMs` holds it back that long, the way a model takes its time over a turn's last line.
 A journey names its scenarios where its stand-in starts: `launchApp({ withMockProvider: true, scenarios: [reviewedTier] })`, `launchClaudeCrew({ scenarios })`, or `startMockProvider({ scenarios })` for a stand-in the spec keeps across launches.
+The kept-merge and guided-merge scripts read git output through `scenarios/mergeShell.ts`: a background job receipt ends the turn, a supervision ask leaves the merge assignment intact, and the exit continues it with the completed output.
+Their Pi commands request background execution even on a quiet host, so `settle-effects.spec.ts` exercises that boundary without a sleep or a load-dependent command.
+`scenarios/mergeShell.test.ts` replays inline and background completion with disposable git commits and the bash tool's own receipt and exit words.
 A relaunch with `reuseMockProvider` keeps the scenarios that stand-in started with, and `launchApp` refuses `scenarios` when it does not start the stand-in itself.
 The stand-in asks the named scenarios in the order named, after the first mate's answer-missing retry and a spec's scripted turns (`scriptFirstmateTurn`) and before every shared answer; the first answer wins.
 Words a journey and its scenario share, such as a marker or a card title, live in the scenario file, and the journey imports them from there.

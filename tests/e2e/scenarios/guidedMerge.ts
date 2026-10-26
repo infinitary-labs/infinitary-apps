@@ -12,6 +12,7 @@ import {
 } from "../mockProvider";
 import { MOCK_GITHUB_STORY, preparedRevision, prepareMockStory } from "./changeStory";
 import { KEPT_MERGE_ON_CLAUDE } from "./keptMerge";
+import { mergeShellCall, mergeShellTurn } from "./mergeShell";
 
 /**
  * Hermetic replay for FI3-662, not a claim that a live model obeys: the
@@ -33,7 +34,7 @@ export const GUIDED_MERGE_ASK = `${GUIDED_MERGE_MARKER}: ask whether to rename t
 /** The captain's reply under the crewmate's question card. */
 export const GUIDED_MERGE_ANSWER = `${GUIDED_MERGE_MARKER}: keep its name`;
 // e2e-typed-words: the mock Firstmate's own steer, relaying the captain's ask
-const GUIDED_MERGE_STEER = `${GUIDED_MERGE_MARKER} - the captain asks whether the file should be renamed`;
+export const GUIDED_MERGE_STEER = `${GUIDED_MERGE_MARKER} - the captain asks whether the file should be renamed`;
 
 export const guidedMerge: Scenario =
   () =>
@@ -41,8 +42,11 @@ export const guidedMerge: Scenario =
     wantsStream ? guidedMergeMove(body, isFirstmate) : undefined;
 
 function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | undefined {
-  const { user, results } = sinceLastUser(body);
+  const { user, results, pending } = firstmate
+    ? { ...sinceLastUser(body), pending: false }
+    : mergeShellTurn(body, GUIDED_MERGE_MARKER);
   if (!user.includes(GUIDED_MERGE_MARKER)) return undefined;
+  if (pending) return { text: "" };
   const onClaude = user.includes(`${GUIDED_MERGE_MARKER} ${KEPT_MERGE_ON_CLAUDE}`);
   const title = `meterlab ${GUIDED_MERGE_MARKER}${onClaude ? ` ${KEPT_MERGE_ON_CLAUDE}` : ""}`;
   const taskId =
@@ -125,13 +129,10 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
     if (!results.length)
       return {
         calls: [
-          {
-            name: "bash",
-            args: {
-              command:
-                "git rev-parse HEAD && git rebase main >/dev/null 2>&1 && git rev-parse main HEAD",
-            },
-          },
+          mergeShellCall(
+            body,
+            "git rev-parse HEAD && git rebase main >/dev/null 2>&1 && git rev-parse main HEAD",
+          ),
         ],
       };
     if (results.length === 1) {
@@ -192,12 +193,10 @@ function guidedMergeMove(body: string, firstmate: boolean): ScenarioAnswer | und
     return { text: "Asked." };
   }
   const steps: ScriptedCall[] = [
-    {
-      name: "bash",
-      args: {
-        command: `printf 'guided\\n' > guided.txt && git add guided.txt && git commit -m "${GUIDED_MERGE_TITLE}" && git rev-parse main HEAD`,
-      },
-    },
+    mergeShellCall(
+      body,
+      `printf 'guided\\n' > guided.txt && git add guided.txt && git commit -m "${GUIDED_MERGE_TITLE}" && git rev-parse main HEAD`,
+    ),
     prepareMockStory(GUIDED_MERGE_CARD, results[0], {
       ...MOCK_GITHUB_STORY,
       why: ["A kept merge should wait for the captain's newest words."],

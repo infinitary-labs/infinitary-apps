@@ -281,7 +281,11 @@ describe("the GitHub stand-in, through the app's forge", () => {
         message: expect.stringContaining("405"),
       });
       expect(github.merges()).toEqual([]);
+      // INF-1342: after the refused send, a repair's background-job idle
+      // boundary must read the known conflict, not a forever-clean fiction.
+      expect(await forge.pull(change.number as number)).toMatchObject({ readiness: "conflict" });
       heads[branch] = sha("repaired");
+      expect(await forge.pull(change.number as number)).toMatchObject({ readiness: "clean" });
       const repaired = (await forge.changeFor(branch)) as NonNullable<
         Awaited<ReturnType<typeof forge.changeFor>>
       >;

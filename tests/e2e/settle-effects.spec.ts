@@ -21,6 +21,7 @@ import { SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { regionShot } from "./pictures";
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
+import { providerMessages } from "./providerRequest";
 import { dockRegion, expandDock, notesNaming, putInLine, taskKey } from "./rails";
 import {
   GUIDED_MERGE_ANSWER,
@@ -444,6 +445,23 @@ test("closing a settle card is the keep: nothing lands, nothing goes, the crewma
 /** The stand-in's scripted moves for both merge journeys below. */
 const MERGE_SCENARIOS = [keptMerge, guidedMerge];
 
+/** Keep the unfinished repair's facts too, not just the final polling timeout (INF-1342). */
+function keepMergeFailure(app: LaunchedApp, tasks: TaskService, github: GitHubStub): void {
+  writeFileSync(
+    test.info().outputPath("merge-failure.json"),
+    JSON.stringify(
+      {
+        tasks: tasks.listLive().map((task) => ({ ...task, timeline: tasks.timeline(task.id) })),
+        messages: app.mockProvider?.requestBodies().map((body) => providerMessages(body)),
+        requests: github.requests(),
+        merges: github.merges(),
+      },
+      null,
+      2,
+    ),
+  );
+}
+
 /**
  * FI3-304's journey: the captain clicks merge once, GitHub refuses it for a
  * conflict with newer work (a 405), and the change still merges exactly
@@ -596,6 +614,9 @@ for (const backend of CREW_BACKENDS) {
           2,
         ),
       );
+    } catch (error) {
+      keepMergeFailure(app, tasks, github);
+      throw error;
     } finally {
       await app.close();
       await github.close();
@@ -739,6 +760,9 @@ for (const backend of CREW_BACKENDS) {
           2,
         ),
       );
+    } catch (error) {
+      keepMergeFailure(app, tasks, github);
+      throw error;
     } finally {
       await app.close();
       await github.close();

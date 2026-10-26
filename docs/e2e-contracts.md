@@ -50,7 +50,8 @@ This guard catches accidental observer writes directly, rather than waiting for 
 The GitHub stand-in (`tests/e2e/githubStub.ts`) is a coherent external system, checked through the app's own forge by `tests/githubStub.test.ts`.
 A change carries the title and body it was opened with (`open_change`) or served with (`servePull` names both); the stand-in never makes one up.
 Its head is the task branch's own commit, read live through `headOf`, so a later push moves it.
-A merge is GitHub's squash at the head the app asks for, recorded with its title and message (`merges()`), and refused with 409 when the head moved on since (`onMergeRequest` lands such a push), or with 405 for a head `conflicts` names as in conflict with newer work - its mergeability read by number still says clean, as GitHub's can lag.
+A merge is GitHub's squash at the head the app asks for, recorded with its title and message (`merges()`), and refused with 409 when the head moved on since (`onMergeRequest` lands such a push), or with 405 for a head `conflicts` names as in conflict with newer work.
+The mergeability read by number initially says clean, as GitHub's can lag; after a 405, reads of that head report the known conflict until it is resolved, so an idle boundary during a background repair does not request the same refused merge again.
 `headSha` and `setHead` name heads only for a change whose checks are read and that is never put in.
 A wrong or missing title, a head this Mac lacks, a head that moved, or failing checks is a named refusal case (`settle-effects.spec.ts`), never an accidentally malformed happy path.
 Personal workspace reports remain unmodified in the task record, while untyped reports get a `chore:` subject in git history.

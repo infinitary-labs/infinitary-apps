@@ -57,6 +57,29 @@ describe("CardService", () => {
     vi.useRealTimers();
   });
 
+  // INF-1404: the stack must restore unread cards after a reload/restart.
+  it("derives seen snapshots from the lifecycle observation, not from arrival or revision", () => {
+    const { make } = setup();
+    const cards = make();
+    const id = cards.addFirstmateCard({ ...decision, id: "launch-review" });
+    const offer = cards.snapshot()[0]?.offerId as string;
+    expect(cards.snapshot()[0]?.seen).toBe(false);
+    cards.seen(id, "stale-offer");
+    expect(cards.snapshot()[0]?.seen).toBe(false);
+    cards.seen(id, offer);
+    expect(cards.snapshot()[0]?.seen).toBe(true);
+    // A revision does not erase a look in this lifecycle.
+    cards.addFirstmateCard({ ...decision, id, body: "<p>The revised launch review.</p>" });
+    expect(cards.snapshot()[0]?.seen).toBe(true);
+    const restored = make();
+    expect(restored.snapshot()[0]?.seen).toBe(true);
+    restored.close(id, { kind: "firstmate" });
+    restored.addFirstmateCard({ ...decision, id });
+    expect(restored.snapshot()[0]?.seen).toBe(false);
+    cards.dispose();
+    restored.dispose();
+  });
+
   // INF-63 accepted direction B: attribution comes from the linked review, not body wording.
   it("validates and persists review attribution, names the task, and refreshes its facts", () => {
     const { tasks, cardStore, make } = setup();

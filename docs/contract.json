@@ -7639,6 +7639,9 @@
                 "rewritten",
                 "marks"
               ]
+            },
+            "seen": {
+              "type": "boolean"
             }
           },
           "required": [
@@ -8685,6 +8688,9 @@
                   "rewritten",
                   "marks"
                 ]
+              },
+              "seen": {
+                "type": "boolean"
               }
             },
             "required": [
@@ -50989,6 +50995,9 @@
                 "rewritten",
                 "marks"
               ]
+            },
+            "seen": {
+              "type": "boolean"
             }
           },
           "required": [

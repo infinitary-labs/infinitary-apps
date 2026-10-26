@@ -95,7 +95,8 @@ What reads it: the renderer shows a card only when it is on the stage (`visibleC
 A newly visible marked card instead becomes the shown card, already read, at its author's close-out.
 The core's push moves the stack: `reconcileStack` sees the shown card leave - a close, withdrawal or task closure - and `departureIndex` picks what comes up: the first unread card in stack order, else the first card.
 A reply never moves the stack.
-Unread is the session's "new" badge, never a saved fact.
+The initial snapshot restores unread cards from the card owner's lifecycle `seen` observations, without an arrival pulse or a continuity jump.
+Paging clears the window's unread mark; the existing stage report records a look durably when the window is visible and focused.
 Hiding a record keeps its own rule: the first card comes up.
 Open records stay ahead of cards for paging; if only records remain, the first record shows.
 Unseen departures and arrivals never displace the entry being read.

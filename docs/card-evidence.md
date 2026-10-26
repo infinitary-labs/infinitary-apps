@@ -49,6 +49,7 @@ Nothing older is invented.
 
 ### What the captain saw
 
+`seen` also supplies the snapshot's optional `seen` fact for its current lifecycle, so the desktop stack can restore unread cards after startup or reload without another read store.
 `seen` is the one kind something on screen reads back: a card's revision is compared with the newest offer seen on its lifecycle, and the difference is the revised line and change bars (`docs/card-authoring.md` "What changed since you looked").
 `availability` says what the stage offered, never that anyone looked; `seen` is the window's word that the captain had it in front of them.
 The export reads past it: the episode schema does not carry it.

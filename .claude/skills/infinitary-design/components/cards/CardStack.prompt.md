@@ -60,7 +60,8 @@ Peeks use the same solid surface at full opacity: depth comes from their offset 
 
 Cards sort by priority, oldest first within each band.
 Whenever the shown card leaves (close, Put aside, closing action, merge, withdrawal or task closure), reveal the first unread card in that order, else the first card - the captain's FI3-711 rule; a reply moves nothing.
-Unread is this window's "new" badge, never a saved fact.
+The initial stack restores unread cards from the card owner's saved seen observations, without an arrival pulse or a continuity jump.
+Paging clears this window's unread mark; the stage reports a look durably when the window is visible and focused.
 Hiding a record reveals the first card.
 Open task records remain ahead of cards for paging; if only records remain, show the first record.
 An unseen departure moves nothing.

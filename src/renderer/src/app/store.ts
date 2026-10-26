@@ -521,8 +521,8 @@ function sameIds(prev: string[], next: string[]): string[] {
  * does a card whose author closed out after the captain's reply (the core's
  * `awaiting` cleared). When the shown card leaves, `departureIndex` picks
  * what comes up: the first unread card, else the first card. A reply never
- * moves a card. The first snapshot
- * seeds the stack: what was already there at boot is not news.
+ * moves a card. The first snapshot restores unread from the card owner's
+ * durable seen observations, without an arrival pulse or continuity jump.
  * `noticed` counts the cards that just became unread, for the character's
  * notice pulse.
  *
@@ -585,8 +585,11 @@ export function reconcileStack(
         return card !== undefined && isNew(card);
       })
     : [];
+  const initialUnread = prev.cardsSeeded
+    ? []
+    : cards.filter((card) => card.seen === false).map((card) => card.id);
   const unseen = [
-    ...prev.unreadCardIds.filter(
+    ...[...prev.unreadCardIds, ...initialUnread].filter(
       (id) => shown.some((card) => card.id === id) || heldBack.includes(id),
     ),
     ...[...arrived, ...arrivedBack].filter((id) => !prev.unreadCardIds.includes(id)),
@@ -594,7 +597,8 @@ export function reconcileStack(
   // The shown card left: the first unread card comes up, else the first
   // card (`departureIndex`). Records remain available through paging.
   const stays = shown.findIndex((card) => card.id === active?.id);
-  let cardIndex = stays >= 0 ? stays : departureIndex(shown, unseen);
+  let cardIndex =
+    stays >= 0 ? stays : prev.cardsSeeded ? departureIndex(shown, unseen) : firstCardIndex(shown);
   // A declared continuity card may take the stage only when it arrives,
   // never on an unrelated push or a revision while the reader paged away.
   const forward = shown.findIndex(
@@ -706,7 +710,7 @@ export type ShellState = {
   letThroughCardIds: string[];
   /** The focus `letThroughCardIds` were pointed under. */
   letThroughFocus: string | null;
-  /** False until the first cards snapshot: the boot stack is not news. */
+  /** False until the first cards snapshot restores its unread cards without a notice pulse. */
   cardsSeeded: boolean;
   /**
    * Cards as threads (phase 1): each card's messages, oldest first, read
@@ -2509,7 +2513,7 @@ export const useShellStore = create<ShellState>()((set, get) => ({
   },
   applyHold: () => {
     set((s) => {
-      // Before the first cards snapshot there is no stack to hold, and the boot stack is not news.
+      // Before the first cards snapshot there is no stack to hold.
       if (!s.cardsSeeded) return s;
       const letThrough = letThroughUnder(s);
       const held = { letThroughCardIds: letThrough, letThroughFocus: heldProjectFocus() };

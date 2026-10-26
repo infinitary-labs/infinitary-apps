@@ -148,6 +148,27 @@ describe("stack visibility (WI-18)", () => {
   beforeEach(reset);
   afterEach(reset);
 
+  // INF-1404: a later close must not return to the first already-read card.
+  it("restores initial unread cards without arrival effects, and closes to the first unread", () => {
+    const a = ready("a", { actions: DECIDE, seen: true });
+    const b = ready("b", { actions: DECIDE, seen: false, holdsPlace: true });
+    const c = ready("c", { actions: DECIDE, seen: false });
+    state().applyCards([a, b, c]);
+    expect(shownId()).toBe("a");
+    expect(state().unreadCardIds).toEqual(["b", "c"]);
+    expect(takeCharacterNotice()).toBe(false);
+    state().nextCard();
+    expect(shownId()).toBe("b");
+    state().applyCards([a, c]);
+    expect(shownId()).toBe("c");
+    expect(state().unreadCardIds).toEqual([]);
+    // The snapshot's historical fact must not re-mark a visited card unread.
+    state().applyCards([a, c]);
+    expect(state().unreadCardIds).toEqual([]);
+    state().applyCards([a]);
+    expect(shownId()).toBe("a");
+  });
+
   it("INF-476 removes minimized cards from paging and unread, and a revision returns unread without stealing the shown card", () => {
     const choice = ready("choice", { actions: DECIDE });
     const note = ready("note");

@@ -167,6 +167,10 @@ test("closing a middle card or hiding a record reveals the oldest card, not the 
   try {
     const { page } = app;
     await expect(shownCard(page, HARBOUR_NOTES[0])).toBeVisible();
+    // INF-1404: startup cards are unread until visited. This test owns the
+    // no-unread fallback, so read the seeded stack before closing its middle.
+    await showCard(page, HARBOUR_NOTES[3]);
+    await showCard(page, HARBOUR_NOTES[0]);
     await expandDock(page, "now");
     await nowFrame(page)
       .locator('[data-now-group-header="backlog"]')
@@ -220,6 +224,8 @@ test("closing a card brings up the first unread card, not the first card, and a 
         .filter((card) => card.title === MOCK_ANSWER_TITLE)
         .map((card) => card.id);
     const unreadBadge = page.getByRole("status").filter({ hasText: "new" });
+    // The later live arrival, not an unvisited startup card, owns unread here.
+    await showCard(page, REPLYING_NOTE);
     await showCard(page, CLOSING_NOTE);
     await receiveUnreadCard(page);
     await test.step("a close skips the first card for the unread one", async () => {

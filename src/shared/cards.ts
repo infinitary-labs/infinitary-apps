@@ -1056,6 +1056,8 @@ export const cardSchema = z.strictObject({
    * stored on the row and never an author's.
    */
   changes: cardChangesSchema.optional(),
+  /** Snapshot-only: the captain has seen an offer in this lifecycle, from card observations. */
+  seen: z.boolean().optional(),
 });
 export type Card = z.infer<typeof cardSchema>;
 

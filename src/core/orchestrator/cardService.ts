@@ -641,7 +641,13 @@ export class CardService {
     }
     return [...this.cards.values()]
       .map((card) => {
-        const shown = this.withChanges(this.onTheStage(card));
+        const staged = this.onTheStage(card);
+        const shown = {
+          ...this.withChanges(staged),
+          seen: staged.lifecycleId
+            ? this.host.cardStore.lastSeenOffer(staged.id, staged.lifecycleId) !== undefined
+            : false,
+        };
         const task = shown.taskId ? this.host.tasks.get(shown.taskId) : undefined;
         return shown.author === "firstmate" && task ? { ...shown, meta: task.title } : shown;
       })

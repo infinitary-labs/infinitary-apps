@@ -1,0 +1,11 @@
+{
+  "entries": [{
+    "id": "handed-result-completion",
+    "kind": "fix",
+    "area": "tasks",
+    "title": "Finished handoffs count as done",
+    "body": "A task that has handed its result to another task, or received your answer on its result card, can finish as done instead of being discarded. Unfinished changes still need their usual review and merge.",
+    "noPicture": "This corrects how completed work is recorded, without adding or changing a view or control.",
+    "provenance": { "origin": "change" }
+  }]
+}

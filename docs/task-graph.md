@@ -98,7 +98,12 @@ It closes a step the same way when a live task waits on it through a `blocks` li
 The feed says where it went ("KEY answered: its answer carries on in KEY \"title\""), never "discarded".
 A step whose crewmate reported its answer closes the same way when nothing builds on it or waits on it (INF-1137): the first mate passed the answer on itself, as by a steer to a task already under way, and the feed reads "Answered: its crewmate reported the answer", so a finished investigation is never announced as dropped.
 The same mode closes an answer the captain asked for once its crewmate's report declared it finished (`delivery.finishedAt`, FI3-435), with nothing built on it required.
-It is refused, as text, on anything neither declared a step nor declared finished, on a task that is not an answer, one still working or never run, a step that reported nothing and no live task builds on or waits on, one whose own answer card is still up, and one whose first mate card still asks the captain something, because the close would take that question down.
+A verified file delivery through `steer_crewmate files_from`, or a plain result choice on the crewmate's card, records a durable result-handoff receipt (INF-1426).
+`settle_task answered` also closes a reported, idle task with that receipt, without requiring `internal_step` or an answer deliverable.
+The first mate judges whether the result completes the task; the receipt proves only that it was handed on.
+Consent, browser handoffs, continuing cards, invalid actions and dismissals record no result receipt.
+A task with a proposed change, uncommitted edits, unmerged commits, an unreadable working copy, outstanding work or guidance, or open children or dependencies cannot use this path to bypass delivery.
+It is refused, as text, on anything neither declared a step nor declared finished nor holding a result receipt, on a change without that receipt, one still working or never run, a step that reported nothing and no live task builds on or waits on, one whose own answer card is still up, and one whose first mate card still asks the captain something, because the close would take that question down.
 A first mate note on the task stays on the stack through the close, the same as a crewmate's note, until the captain closes it.
 Discard, cancel and `update_task drop` keep their own closes.
 

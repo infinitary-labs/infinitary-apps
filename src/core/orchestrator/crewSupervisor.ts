@@ -7949,6 +7949,8 @@ export class CrewSupervisor {
             );
       lines.push(`${path} (${fileSizeWords(file.size)})`);
     }
+    // Only a complete, verified delivery is a receipt; failed copies leave none.
+    this.options.tasks.recordResultHandoff(from.id, { taskId: to.id });
     // Paths and sizes only: a handed file may hold secrets (the captain's words on INF-992).
     return `Files handed to you from ${handle(from)}, verified byte for byte, in your hand-over folder: ${lines.join(", ")}. They may hold secrets: never print, quote or paste their content anywhere, and read only what your work needs. They are removed when this task closes.`;
   }
@@ -10337,7 +10339,7 @@ export class CrewSupervisor {
     return this.settle.closeExternallyReleased(taskRef, releaseEvidence);
   }
 
-  /** settle_task mode `answered`: an internal step's answer carried on in a live task. */
+  /** settle_task mode `answered`: a completed answer or a verified result handoff. */
   closeAnswerUsedAsBasis(taskRef: string): Promise<{ ok: boolean; text: string }> {
     return this.settle.closeAnswerUsedAsBasis(taskRef);
   }

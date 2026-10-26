@@ -4911,6 +4911,25 @@ export class TaskService {
     run();
   }
 
+  /** Verified delivery, not a verdict about whether the task is finished (INF-1426). */
+  recordResultHandoff(
+    id: string,
+    handoff: { taskId: string } | { cardId: string; action: string },
+  ): void {
+    this.note(id, "Its result was handed on.", {
+      news: false,
+      feed: false,
+      data: { resultHandoff: handoff, journal: true },
+      ...("taskId" in handoff ? { about: [handoff.taskId] } : {}),
+    });
+  }
+
+  resultHandoffOf(id: string): boolean {
+    return this.events
+      .listFor(id)
+      .some((event) => event.kind === "note" && event.data?.resultHandoff !== undefined);
+  }
+
   /** A card about this task left the stack (an action, Later, or a dismiss). */
   recordCardResolved(
     id: string,

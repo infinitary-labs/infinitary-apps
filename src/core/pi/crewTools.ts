@@ -626,9 +626,9 @@ export function createCrewTools(delegate: CrewDelegate) {
     description:
       "merge-pr rechecks and merges the pull request (fast-forwards the default " +
       "branch on plain Git); land merges locally, never for direct-PR. Both close and remove the worktree. " +
-      "discard removes it unmerged and records discarded. answered closes an idle answer " +
-      "declared internal_step once a live task builds on it or waits on it, or it reported its answer; " +
-      "also an answer its crewmate reported finished. released closes a reported, idle work task only after you independently verify its " +
+      "discard removes unwanted work unmerged. answered closes reported idle work handed on by " +
+      "files_from or a card choice, with no unmerged work; also internal answers with a report or successor, or finished answers. Never discard results. " +
+      "released closes a reported, idle work task only after you independently verify its " +
       "delivery through an external release process, with release_evidence. finished closes verified, reported, idle " +
       "in_folder work as done with completion_evidence; files and git stay. " +
       "Missing changes or dismissed cards prove nothing. Never discard successful folder work or use finished to bypass merging. " +

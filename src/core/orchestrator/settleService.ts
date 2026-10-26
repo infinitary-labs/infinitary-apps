@@ -632,7 +632,6 @@ export class SettleService {
     if (by !== "captain" || !card.taskId || action === "dismissed") return false;
     const record = this.host.tasks.get(card.taskId);
     if (record?.status !== "active" || record.kind !== "work") return false;
-    if (this.host.deliverableOf(record) !== "answer") return false;
     // A card that asks to send a kept write is never the answer (FI3-1571
     // piece 4): its click sends or declines the write, and the task goes on.
     if (card.actions.some((action) => action.effect?.kind === "request_write")) return false;
@@ -650,6 +649,11 @@ export class SettleService {
     // the task (`cardEmitter` reads the emitter off the id).
     if (cardEmitter(card.id, card.taskId) !== "crewmate") return false;
     const choice = card.actions.find((entry) => entry.id === action);
+    // A plain result choice is a receipt, never consent or a merge effect.
+    // Change tasks still wait for an explicit answered settle and a clean-work check.
+    if (choice && !choice.effect)
+      this.host.tasks.recordResultHandoff(record.id, { cardId: card.id, action });
+    if (this.host.deliverableOf(record) !== "answer") return false;
     const text = action === "closed" ? "answer closed" : `chose "${choice?.label ?? action}"`;
     // An invalid action never produces a closure-choice wake.
     const handoff = choice ? this.answerTaskClosedPayload(record, card, choice) : undefined;
@@ -1295,8 +1299,11 @@ export class SettleService {
    * crewmate reported its answer when no task builds on it (INF-1137): the
    * first mate passed the answer on by a steer, and a finished answer is
    * never closed as a discard.
-   * Refused, as text, on a task that is not an answer, one neither declared
-   * a step nor declared finished, one still working or never started, a
+   * A verified result receipt also lets the first mate finish reported idle
+   * work not declared internal, including file-producing change tasks, after
+   * checking that no unmerged work or proposed change would be bypassed.
+   * Refused, as text, on a change without that receipt, one neither declared
+   * a step nor declared finished nor holding a receipt, one still working or never started, a
    * step that reported nothing and no live task builds on or waits on, one
    * whose own answer card is still waiting on the captain - his choice is
    * that card's close -
@@ -1314,13 +1321,15 @@ export class SettleService {
     if (TaskService.isClosed(record)) {
       return refuse(`it is already ${describeStatus(record)}.`);
     }
-    if (this.host.deliverableOf(record) !== "answer") {
+    const handedOn = this.host.tasks.resultHandoffOf(record.id);
+    const change = this.host.deliverableOf(record) !== "answer";
+    if (change && !handedOn) {
       return refuse(
         "it delivers a change, not an answer - merge it, land it, or discard it instead.",
       );
     }
     const finished = record.delivery?.finishedAt !== undefined;
-    if (!record.shape?.internal_step && !finished) {
+    if (!record.shape?.internal_step && !finished && !handedOn) {
       return refuse(
         "it was not opened as an internal step of yours - the captain asked for this answer, so it closes on their choice on its card, or once its crewmate reports it finished after they close that card.",
       );
@@ -1334,6 +1343,35 @@ export class SettleService {
     }
     if (record.activity && record.activity !== "idle") {
       return refuse("its crewmate is still working; wait for its report.");
+    }
+    if (handedOn) {
+      if (!record.outcome?.trim()) return refuse("its crewmate has not reported the result yet.");
+      if (record.delivery?.prUrl || record.delivery?.prNumber || record.delivery?.changeLabel)
+        return refuse("it has its own pull request; use its delivery path instead.");
+      const gate =
+        this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
+      if (gate) return refuse(gate.text);
+      if (record.worktreeDir || record.branch || record.deviceId) {
+        const work = await (record.deviceId
+          ? (this.host.placed?.workStatus(record.id) ?? Promise.resolve(null))
+          : this.host.workspace.taskWorkStatus(workspaceOf(record), { strict: true })
+        ).catch(() => null);
+        if (!work) return refuse("its working copy could not be checked; keep the task open.");
+        if (work.dirty || work.unlandedCommits > 0)
+          return refuse(
+            "its working copy has uncommitted edits or unmerged commits; use its delivery path instead.",
+          );
+        const current = this.host.tasks.get(record.id);
+        if (
+          current?.status !== "active" ||
+          current.activity !== "idle" ||
+          this.working(record.id) ||
+          current.updatedAt !== record.updatedAt
+        )
+          return refuse(
+            "its work changed during the check; read its latest report before closing it.",
+          );
+      }
     }
     const builtOn = this.host.tasks
       .listLive()
@@ -1362,6 +1400,27 @@ export class SettleService {
           ? `its answer card "${card.title}" is waiting on the captain, and their choice there is its close.`
           : `its card "${card.title}" still asks the captain something, and closing now would take it down before they have answered it.`,
       );
+    }
+    if (handedOn) {
+      const gate =
+        this.host.tasks.closeRefusal(record.id) ?? this.host.tasks.blockerRefusal(record.id);
+      if (gate) return refuse(gate.text);
+      if (
+        this.host.hasRunningJobs?.(record.id) ||
+        this.host.inbox.allFor(record.id).length ||
+        this.host.inbox.inFlight(record.id).length ||
+        record.delivery?.checkBack ||
+        record.pendingSettle
+      )
+        return refuse("work or guidance is still outstanding; let its crewmate finish first.");
+      await this.closeTask(record.id, {
+        status: "done",
+        reason: "answered",
+        actor: "firstmate",
+        text: "answered - its reported result was handed on",
+        data: { handedOn: true },
+      });
+      return { ok: true, text: `Closed ${handle} as answered: its reported result was handed on.` };
     }
     if (!carriedBy && finished) {
       await this.closeTask(record.id, {

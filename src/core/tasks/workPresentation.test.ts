@@ -57,7 +57,13 @@ function setup() {
     presentation.heard(event);
     if (event.type === "crew_counts") onCounts?.();
   };
-  const presentation = new WorkPresentation({ tasks, protocol, broadcastEvent: broadcast });
+  const durations: number[] = [];
+  const presentation = new WorkPresentation({
+    tasks,
+    protocol,
+    broadcastEvent: broadcast,
+    measured: (durationMs) => durations.push(durationMs),
+  });
   const settled = async () => {
     for (let i = 0; i < 10; i++) await Promise.resolve();
   };
@@ -67,6 +73,7 @@ function setup() {
     reads,
     events,
     presentation,
+    durations,
     passes: () => passes,
     settled,
     onCounts: (fn: () => void) => {
@@ -89,6 +96,39 @@ const live = 5;
 const changedEvents = (events: FmEvent[]) => events.filter((e) => e.type === "task_changed");
 
 describe("the presentation pass (INF-1073)", () => {
+  // INF-1348: yielding between housekeeping registrations must not multiply
+  // the expensive derived refresh; publish once after the whole sweep.
+  it("shares one measured refresh across a sweep's turns and releases queued work only once", async () => {
+    const f = setup();
+    const release = f.presentation.hold();
+    for (const id of ["crew-1", "crew-2", "crew-3"]) {
+      f.postures.set(id, { state: "active", reason: "turn" });
+      f.tasks.setActivity(id, "running");
+      await f.settled();
+      expect(f.passes()).toBe(0);
+    }
+    release();
+    release();
+    await f.settled();
+    expect(f.passes()).toBe(1);
+    expect(f.durations).toHaveLength(1);
+    expect(f.durations[0]).toBeGreaterThanOrEqual(0);
+    expect(f.events.filter((event) => event.type === "crew_counts")).toEqual([
+      { type: "crew_counts", working: 3, idle: 0, queued: 2 },
+    ]);
+    // Releasing before an already queued microtask drains also shares it.
+    f.presentation.schedule();
+    const quick = f.presentation.hold();
+    quick();
+    await f.settled();
+    expect(f.passes()).toBe(2);
+    const stopped = f.presentation.hold();
+    f.presentation.schedule();
+    f.close();
+    stopped();
+    await f.settled();
+    expect(f.passes()).toBe(2);
+  });
   it("reads each live row's posture once for one task write, and counts the crew from those readings", async () => {
     const f = setup();
     f.presentation.schedule();

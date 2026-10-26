@@ -19,6 +19,9 @@ import type { TaskService } from "./taskService";
  */
 export class WorkPresentation {
   private queued = false;
+  private scheduled = false;
+  private holds = 0;
+  private disposed = false;
   private announced: FmEvent | undefined;
   private readonly detach: () => void;
 
@@ -28,6 +31,7 @@ export class WorkPresentation {
       protocol: Pick<TaskProtocol, "refreshPresentation">;
       /** The event seam; the counts it announces come back through `heard`. */
       broadcastEvent: (event: FmEvent) => void;
+      measured?: (durationMs: number) => void;
     },
   ) {
     this.detach = options.tasks.onChange((change) => {
@@ -37,12 +41,34 @@ export class WorkPresentation {
 
   /** Ask for a pass on the next microtask; asks before it runs share it. */
   schedule(): void {
-    if (this.queued) return;
+    if (this.disposed) return;
     this.queued = true;
+    if (this.scheduled || this.holds > 0) return;
+    this.scheduled = true;
     queueMicrotask(() => {
+      this.scheduled = false;
+      if (this.holds > 0 || this.disposed) return;
       this.queued = false;
-      this.run();
+      const started = performance.now();
+      try {
+        this.run();
+      } finally {
+        this.options.measured?.(performance.now() - started);
+      }
     });
+  }
+
+  /** Share one presentation refresh across a housekeeping sweep's separate turns. */
+  hold(): () => void {
+    this.holds += 1;
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.holds -= 1;
+      if (this.holds > 0 || !this.queued) return;
+      this.schedule();
+    };
   }
 
   /** Every event the seam carries: another owner's crew counts ask for a pass. */
@@ -51,6 +77,7 @@ export class WorkPresentation {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.detach();
   }
 

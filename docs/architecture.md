@@ -809,7 +809,16 @@ Where the build carries the app's own git (`src/core/workspace/bundledGit.ts`), 
 **One clock** (the primitives review's P5): the orchestrator runs on one `Ticker` (`src/core/orchestrator/ticker.ts`) - one interval and one injectable `now` that `createServices` also hands to the task record, the inbox store (its grace, backoff and dedupe arithmetic), the supervisor with its idle ladder, the job manager (the `startedAt` the job bound reads), the first mate's drains, the CI service and the scheduler.
 Each pass registers by name and cadence (`register(name, cadence, fn)`) and runs in registration order on one reading of the clock: the quiet-turn watchdog, the ladder's reconcile with the job bound, the first mate's quiet check, the gate sweep, the inbox sweep, the first mate's drain poke, the sign-in health riders, then the schedules.
 The sessions add two more while they live: `session-bounds`, the one watcher that holds every session whose spec carries time bounds (the seat's, on either backend) to them (`src/core/session/bounds.ts`), and `claude-sessions`, Claude's rolling sessions' transcript copy and client hygiene (a client that did not exit or answer an interrupt within a tick is stopped).
-A throwing pass does not skip the rest, and every throw of a tick is raised after it; tests move that clock instead of faking `Date`.
+The application yields an event-loop turn before each due registration, preserving that order and the tick's one clock reading while servicing input and I/O between passes.
+A tick still running never overlaps or accumulates a backlog, stopping cancels its remaining turns, and unregistering a pass while it yields prevents it from running.
+Each registration reports its synchronous duration as `[ticker] <name>: <duration> ms synchronous`; this measures the registered call, not asynchronous work it starts.
+The derived presentation refresh stays held across the sweep's separate turns and runs once after it, with its own `presentation-refresh` duration measuring the actual deferred work, not merely its scheduling callback.
+The task protocol holds its board timer over the same sweep, then publishes one board including the final derived posture; the timer cannot send intermediate snapshots between registrations.
+A throwing pass does not skip the rest, and every throw of a tick is raised after it; tests move that clock instead of faking `Date` through the synchronous `tick()` driver.
+Separate turns shorten the combined task, not an individual SQLite call: they are not a frame-time guarantee.
+SQLite keeps an advisory 32 MiB page cache, and task-card and feed-event indexes avoid scanning unrelated historical rows.
+The desktop transport groups a pass's consecutive event announcements into one `inf:events` push after its synchronous work; the preload delivers every event in order in that renderer task, letting reads and renders coalesce.
+It flushes pending announcements before a different push channel to preserve ordering; the core and paired connections keep their existing individual-event contract.
 Cadences count the design's one-minute period (`TICK_PERIOD_MS`).
 A development or end-to-end run may shorten the interval's period with `INFINITARY_TICK_PERIOD_MS` (`tickPeriodFor`), and every pass then runs sooner in proportion, so a journey waiting on a sweep need not wait out the minute; a packaged build always ticks once a minute.
 

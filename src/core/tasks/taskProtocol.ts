@@ -207,6 +207,8 @@ export class TaskProtocol {
   private readonly coalesceMs: number;
   private readonly deltaTrigger: { rows: number; bytes: number };
   private pushTimer: ReturnType<typeof setTimeout> | undefined;
+  private pushHolds = 0;
+  private pushQueued = false;
   private readonly detach: () => void;
   /** The board as last pushed: the base a delta applies to. */
   private lastPushed: TaskBoard | undefined;
@@ -638,10 +640,29 @@ export class TaskProtocol {
     this.schedulePush();
   }
 
+  /** Keep one board update for changes spread over a housekeeping sweep's turns. */
+  holdPushes(): () => void {
+    this.pushHolds += 1;
+    if (this.pushTimer) {
+      clearTimeout(this.pushTimer);
+      this.pushTimer = undefined;
+    }
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      this.pushHolds -= 1;
+      if (this.pushHolds === 0 && this.pushQueued) this.schedulePush();
+    };
+  }
+
   private schedulePush(): void {
-    if (this.pushTimer) return;
+    if (this.disposed) return;
+    this.pushQueued = true;
+    if (this.pushHolds > 0 || this.pushTimer) return;
     this.pushTimer = setTimeout(() => {
       this.pushTimer = undefined;
+      this.pushQueued = false;
       this.push();
     }, this.coalesceMs);
   }

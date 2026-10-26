@@ -262,6 +262,8 @@ describe("ipc contract", () => {
     ]);
     const corePush = new Set<string>(CORE_PUSH_CHANNELS);
     expect(PUSH_CHANNELS.filter((channel) => !corePush.has(channel))).toEqual([
+      // INF-1348: desktop-only grouping leaves the paired core contract unchanged.
+      "inf:events",
       "inf:devices:this-mac",
       "inf:keyboard:command",
       "inf:keyboard:taken",

@@ -687,7 +687,15 @@ export async function createServices(
   // on it, and the stores they compare against read its clock. Dev/e2e may
   // shorten its period, so a journey waiting on a pass need not wait out
   // the minute; a packaged build always ticks at the design's.
-  const ticker = new Ticker({ periodMs: tickPeriodFor(host.app.packaged, process.env) });
+  let holdUpdates = (): (() => void) => () => {};
+  const measurePass = (name: string, durationMs: number) =>
+    console.info(`[ticker] ${name}: ${durationMs.toFixed(3)} ms synchronous`);
+  const ticker = new Ticker({
+    periodMs: tickPeriodFor(host.app.packaged, process.env),
+    betweenPasses: () => new Promise((resolve) => setImmediate(resolve)),
+    sweep: () => holdUpdates(),
+    measured: measurePass,
+  });
   // The one task writer (task-system P0): records, keys, timeline. The
   // dev boot assertion is strict off a packaged build.
   const tasks = new TaskService({ db, repos, strict: !host.app.packaged, now: ticker.now });
@@ -2343,7 +2351,18 @@ export async function createServices(
     tasks,
     protocol: taskProtocol,
     broadcastEvent: (event) => broadcastEvent(event),
+    measured: (durationMs) => measurePass("presentation-refresh", durationMs),
   });
+  holdUpdates = () => {
+    const presentation = workPresentation.hold();
+    const board = taskProtocol.holdPushes();
+    return () => {
+      // The refresh's microtask runs before the board's coalescing timer,
+      // so the board includes the sweep and its final derived posture.
+      presentation();
+      board();
+    };
+  };
   hearPresentation = (event) => workPresentation.heard(event);
   scheduleWorkPresentation = () => workPresentation.schedule();
   inbox.onChange(scheduleWorkPresentation);

@@ -229,6 +229,9 @@ When focus left a panel's frame straight for another frame, the window's page ma
 It is also what keeps the gesture rule honest (`whenFrameHoldsFocus`, "Bridge v2" above): a script cannot take focus first to make its own picture, task, link or Escape count.
 The policy counts a frame's own user activation, which lasts about five seconds after the captain's last click or key inside it, so the shell spends it as focus leaves the frame.
 Each time focus comes back to the window's own page, by a press, a window key, Tab or the shell's own move, the shell spends the page's user activation, and Chromium spends it in every frame of the page at once (`guardFrameActivation`, `src/renderer/src/plugins/frames/frameActivation.ts`).
+It calls Web Share with empty data: Blink consumes activation before rejecting the data with `TypeError`, without asking the browser or the OS to share anything.
+The app window enables `WebShare` on every desktop platform; task browsers and media probes do not enable it, and sandboxed frames have no web-share grant.
+The guard never calls `window.open` or waits synchronously for the main process, and it handles the expected rejected promise locally.
 The page hears its own focus before it tells Chromium where focus went, so a frame's script that tries the moment its frame loses focus already has nothing left to take focus with.
 Focus that moves from one frame straight to another passes the page by, and the frame left learns it lost focus before the page could hear of the move.
 So while a frame holds focus, the shell spends the activation as soon as the pointer moves over the page's own content, which it crosses on its way to a click in any other frame.

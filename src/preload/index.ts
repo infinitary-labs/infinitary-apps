@@ -270,7 +270,26 @@ const api: FirstmateApi = {
     onThread: (listener) => subscribe("inf:cards:thread", listener),
   },
   events: {
-    on: (listener) => subscribe("inf:event", listener),
+    on: (listener) => {
+      // Keep the single-event carrier for a core/connection that sends it;
+      // this desktop's transport sends a pass's events together.
+      const single = subscribe("inf:event", listener);
+      const batch = subscribe("inf:events", (events) => {
+        for (const event of events) {
+          try {
+            listener(event);
+          } catch (error) {
+            queueMicrotask(() => {
+              throw error;
+            });
+          }
+        }
+      });
+      return () => {
+        single();
+        batch();
+      };
+    },
   },
   feed: {
     recent: () => invoke("inf:feed:recent"),

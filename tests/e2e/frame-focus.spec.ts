@@ -1,4 +1,4 @@
-import { cpSync } from "node:fs";
+import { cpSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { expect, type Locator, type Page, test } from "@playwright/test";
 import { panelConsentTitle } from "../../src/core/plugins/consentWords";
@@ -453,6 +453,77 @@ test("the waiting default choice still takes the captain to the card's unanswere
       shownCardFrame(page).getByRole("radio", { name: "Friday", exact: true }),
     ).toBeFocused();
     await expect(shownCardFrame(page).getByRole("radio", { checked: true })).toHaveCount(0);
+  } finally {
+    await launched.close();
+  }
+});
+
+// INF-1348, accepted “All three”: spending activation must be renderer-local,
+// not a synchronous window-open request to a busy main process. The existing
+// journeys above own that hostile cards/panels cannot reclaim the caret.
+test("the focus guard spends activation locally without asking main to open anything", async () => {
+  const launched = await launchApp({ withMockProvider: true });
+  try {
+    const { page, app } = launched;
+    await expect(promptInput(page)).toBeVisible();
+    const before = await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length);
+    const observed = await page.evaluate(async () => {
+      const open = window.open;
+      const share = navigator.share.bind(navigator);
+      let opens = 0;
+      let refusal: Promise<string> | undefined;
+      let data: ShareData | undefined;
+      window.open = () => {
+        opens += 1;
+        return null;
+      };
+      navigator.share = (value) => {
+        data = value;
+        const request = share(value);
+        refusal = request.then(
+          () => "opened",
+          (error) => error.name,
+        );
+        return request;
+      };
+      try {
+        const activeBefore = navigator.userActivation.isActive;
+        window.dispatchEvent(new Event("focus"));
+        const activeAfter = navigator.userActivation.isActive;
+        return { activeBefore, activeAfter, opens, data, refusal: await refusal };
+      } finally {
+        window.open = open;
+        navigator.share = share;
+      }
+    });
+    const paintedAfterActivation = await page.evaluate(
+      () => new Promise<boolean>((resolve) => requestAnimationFrame(() => resolve(true))),
+    );
+    writeFileSync(
+      test.info().outputPath("activation-outcome.json"),
+      JSON.stringify(
+        {
+          ...observed,
+          paintedAfterActivation,
+        },
+        null,
+        2,
+      ),
+    );
+    expect(paintedAfterActivation).toBe(true);
+    expect(observed).toEqual({
+      activeBefore: true,
+      activeAfter: false,
+      opens: 0,
+      data: {},
+      refusal: "TypeError",
+    });
+    expect(await app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)).toBe(
+      before,
+    );
+    await promptInput(page).click();
+    await typeInto(promptInput(page), "The message still accepts keys.");
+    await expect(promptInput(page)).toHaveValue("The message still accepts keys.");
   } finally {
     await launched.close();
   }

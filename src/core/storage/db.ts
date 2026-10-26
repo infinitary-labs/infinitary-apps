@@ -1101,10 +1101,25 @@ const MIGRATIONS: readonly Migration[] = [
   // one writer. Reversible: write each `ref` back into its shape field and
   // drop the table.
   migrateTaskReferences,
+  // INF-1348: the minute pass and its feed refresh should seek their rows,
+  // not scan historical card bodies and every task event. Derived indexes
+  // only; dropping them reverses this migration without changing saved data.
+  addHousekeepingIndexes,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
 export const DATABASE_VERSION = MIGRATIONS.length;
+
+/** Named boundaries keep upgrade fixtures tied to their migration, not the newest release. */
+export const HOUSEKEEPING_INDEXES_MIGRATION_VERSION =
+  MIGRATIONS.indexOf(addHousekeepingIndexes) + 1;
+
+function addHousekeepingIndexes(db: AppDatabase): void {
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS cards_task_id ON cards(task_id);
+    CREATE INDEX IF NOT EXISTS task_events_feed ON task_events(at DESC, id DESC) WHERE feed = 1;
+  `);
+}
 
 /** The migration that moved each task's references out of its work shape (INF-1296 piece 2). */
 export const TASK_REFERENCES_VERSION = MIGRATIONS.indexOf(migrateTaskReferences) + 1;
@@ -1822,6 +1837,10 @@ export function openDatabase(userDataDir: string, throughVersion?: number): AppD
   const db = new Database(join(userDataDir, "firstmate.db"));
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
+  // Keep hot housekeeping pages in SQLite instead of repeatedly copying
+  // them through the small default cache. Negative units are KiB (32 MiB),
+  // an advisory cache target, not a preallocation or a bound on the database.
+  db.pragma("cache_size = -32768");
   registerViewFunctions(db);
   migrate(db, throughVersion);
   // A home that already moved still names the older folder on a task held

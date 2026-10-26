@@ -8,7 +8,8 @@
  * the same `now`, so a test moves one clock instead of faking `Date`.
  *
  * A tick reads the clock once and runs every due registration in the order
- * it registered, synchronously; a registration that starts async work
+ * it registered. The application yields an event-loop turn between passes;
+ * `tick()` is the synchronous driver for a test's manual clock. A registration that starts async work
  * returns without awaiting it, exactly as its own interval did. A throw in
  * one registration does not skip the rest - the passes were separate
  * intervals before they shared this one - and once the tick has run them
@@ -69,6 +70,12 @@ export type TickerOptions = {
    */
   periodMs?: number;
   timers?: TickerTimers;
+  /** Duration of each pass's synchronous work, including a pass that throws. */
+  measured?: (name: string, durationMs: number) => void;
+  /** Let the host service input and I/O before each due pass. */
+  betweenPasses?: () => Promise<void>;
+  /** Hold derived presentation across a sweep; release even on stop or failure. */
+  sweep?: () => () => void;
 };
 
 export class Ticker {
@@ -77,9 +84,17 @@ export class Ticker {
   private readonly periodMs: number;
   private readonly timers: TickerTimers;
   private readonly registrations: Registration[] = [];
+  private readonly measured: TickerOptions["measured"];
+  private readonly betweenPasses: TickerOptions["betweenPasses"];
+  private readonly sweep: TickerOptions["sweep"];
+  private running = false;
+  private generation = 0;
   private handle: unknown;
 
   constructor(options: TickerOptions = {}) {
+    this.measured = options.measured;
+    this.betweenPasses = options.betweenPasses;
+    this.sweep = options.sweep;
     const now = options.now;
     this.now = now ? () => now() : () => Date.now();
     this.periodMs = options.periodMs ?? TICK_PERIOD_MS;
@@ -115,37 +130,89 @@ export class Ticker {
   /** Start the one interval; idempotent. */
   start(): void {
     if (this.handle !== undefined) return;
-    this.handle = this.timers.repeat(() => this.tick(), this.periodMs);
+    this.handle = this.timers.repeat(() => {
+      if (!this.betweenPasses) this.tick();
+      else
+        void this.tickInTurns().catch((error: unknown) => {
+          queueMicrotask(() => {
+            throw error;
+          });
+        });
+    }, this.periodMs);
   }
 
   /** Stop the one interval; the registrations stay for a later start. */
   stop(): void {
+    this.generation += 1;
     if (this.handle === undefined) return;
     this.timers.cancel(this.handle);
     this.handle = undefined;
   }
 
-  /** One tick: read the clock once, run every due registration in order. */
+  /** One manual tick: same clock, cadence, timing and failure rules as the interval. */
   tick(): void {
     const now = this.now();
-    const failures: { name: string; error: unknown }[] = [];
-    for (const entry of [...this.registrations]) {
-      entry.due -= 1;
-      if (entry.due > 0) continue;
-      entry.due = entry.every;
+    const failures: PassFailure[] = [];
+    for (const entry of this.due()) this.run(entry, now, failures);
+    raiseFailures(failures);
+  }
+
+  /** The interval's pass: no overlapping sweep and no backlog of missed sweeps. */
+  async tickInTurns(): Promise<void> {
+    if (this.running) return;
+    this.running = true;
+    const generation = this.generation;
+    const now = this.now();
+    const failures: PassFailure[] = [];
+    let release: (() => void) | undefined;
+    try {
+      release = this.sweep?.();
+      for (const entry of this.due()) {
+        await this.betweenPasses?.();
+        if (generation !== this.generation) break;
+        // A pass removed while we yielded must not run after its owner stopped.
+        if (this.registrations.includes(entry)) this.run(entry, now, failures);
+      }
+      raiseFailures(failures);
+    } finally {
       try {
-        entry.run(now);
-      } catch (error) {
-        failures.push({ name: entry.name, error });
+        release?.();
+      } finally {
+        this.running = false;
       }
     }
-    const [only] = failures;
-    if (failures.length === 1 && only) throw only.error;
-    if (failures.length > 1) {
-      throw new AggregateError(
-        failures.map((failure) => failure.error),
-        `${failures.length} ticker passes failed: ${failures.map((failure) => failure.name).join(", ")}`,
-      );
+  }
+
+  private due(): Registration[] {
+    return this.registrations.filter((entry) => {
+      entry.due -= 1;
+      if (entry.due > 0) return false;
+      entry.due = entry.every;
+      return true;
+    });
+  }
+
+  private run(entry: Registration, now: number, failures: PassFailure[]): void {
+    const started = performance.now();
+    try {
+      entry.run(now);
+    } catch (error) {
+      failures.push({ name: entry.name, error });
+    } finally {
+      this.measured?.(entry.name, performance.now() - started);
     }
+  }
+}
+
+type PassFailure = { name: string; error: unknown };
+
+function raiseFailures(failures: PassFailure[]): void {
+  const [only] = failures;
+  if (failures.length === 1 && only) throw only.error;
+  if (failures.length > 1) {
+    throw new AggregateError(
+      failures.map((failure) => failure.error),
+      `${failures.length} ticker passes failed: ${failures.map((failure) => failure.name).join(", ")}`,
+    );
   }
 }

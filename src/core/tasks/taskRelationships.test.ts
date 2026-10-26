@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
-import { DATABASE_VERSION, openDatabase, openInMemoryDatabase } from "../storage/db";
+import { openDatabase, openInMemoryDatabase, TASK_REFERENCES_VERSION } from "../storage/db";
 import { seedTask } from "./seedTask";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
 import { TASK_RELATIONSHIP_RULES, type TaskRelationshipKind } from "./taskRelationships";
@@ -197,7 +197,7 @@ describe("the migration of an older release's relationships", () => {
    */
   function olderProfile() {
     const dir = scratchDir("relationships-");
-    const at = openDatabase(dir, DATABASE_VERSION - 1);
+    const at = openDatabase(dir, TASK_REFERENCES_VERSION - 1);
     const { tasks } = setup(at);
     const plan = seedTask(tasks, {
       id: "plan",
@@ -241,7 +241,7 @@ describe("the migration of an older release's relationships", () => {
 
   it("moves each name exactly as saved, and every reader reads the same as before", () => {
     const { dir, plan, first, wip, parent, shapes } = olderProfile();
-    const before = openDatabase(dir, DATABASE_VERSION - 1);
+    const before = openDatabase(dir, TASK_REFERENCES_VERSION - 1);
     const view = (db: typeof before) =>
       db.prepare("SELECT task_id, basis FROM v_tasks_v1 ORDER BY task_id").all();
     const readBefore = (() => {

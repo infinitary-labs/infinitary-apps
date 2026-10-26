@@ -129,6 +129,10 @@ function createMainWindow(
       : { frame: false }),
     webPreferences: {
       preload: join(mainDir, "../preload/index.cjs"),
+      // Empty share data spends activation locally, then fails validation
+      // before any browser/OS request (frameActivation.ts). Enable it only
+      // for the app window, never task browsers or the media probe.
+      enableBlinkFeatures: "WebShare",
       // The page learns the material and the desktop from its preload's
       // argv, before its first paint (src/shared/windowMaterial.ts,
       // src/shared/platform.ts).

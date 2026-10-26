@@ -48,15 +48,19 @@ function pageActive(): boolean {
 let spentAt: number | null = null;
 
 /**
- * Spends the page's user activation, and with it every frame's: a window
- * open that the main process always refuses (src/main/security/navigation.ts)
- * is the one way the page can spend it without opening anything. Does
- * nothing while the page holds none.
+ * Spends the page's activation, and with it every frame's, entirely in
+ * Blink. Web Share consumes activation before validating its data. Empty
+ * data always fails that validation with TypeError, before any browser or
+ * OS share request. The app enables WebShare before its renderers start.
+ * Unlike the refused window.open this replaces, it never waits for main.
+ * Does nothing while the page holds none.
  */
 function spend(): void {
   if (!pageActive()) return;
   spentAt = performance.now();
-  window.open("about:blank");
+  void navigator.share({}).catch(() => {
+    // Expected: empty data cannot open a share sheet.
+  });
 }
 
 /**

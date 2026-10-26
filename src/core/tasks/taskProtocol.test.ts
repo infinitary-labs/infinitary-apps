@@ -157,6 +157,42 @@ function setup(
 }
 
 describe("the task protocol (task-system P3)", () => {
+  // INF-1348: separating the minute pass into turns must still publish one
+  // final board, not let the board timer fire between registrations.
+  it("holds an already queued board across sweep turns and sends the final saved state once", async () => {
+    const f = setup();
+    f.tasks.create({
+      id: "review",
+      title: "Review release notes",
+      prompt: "Compare the notes with the changes",
+      repoId: "r1",
+    });
+    const release = f.protocol.holdPushes();
+    const nested = f.protocol.holdPushes();
+    for (const text of [
+      "Checked the summaries.",
+      "Compared the changes.",
+      "The review is ready.",
+    ]) {
+      f.tasks.note("review", text, { news: false });
+      await f.settle();
+      expect(f.boards()).toHaveLength(0);
+    }
+    release();
+    release();
+    await f.settle();
+    expect(f.boards()).toHaveLength(0);
+    nested();
+    await f.settle();
+    expect(f.boards()).toEqual([f.protocol.board()]);
+    const stopped = f.protocol.holdPushes();
+    f.tasks.note("review", "No further changes.", { news: false });
+    f.protocol.dispose();
+    stopped();
+    await f.settle();
+    expect(f.boards()).toHaveLength(1);
+    f.db.close();
+  });
   it("publishes presentation-only changes through events, detail and sequenced deltas without changing the idle clock", async () => {
     let posture: WorkPosture = { state: "idle", reason: "captain" };
     const f = setup({ workPosture: () => posture, deltaTrigger: { rows: 0, bytes: 0 } });

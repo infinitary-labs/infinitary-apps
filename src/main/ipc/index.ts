@@ -14,6 +14,7 @@ import type { Shell } from "../shell";
 import { MIC_SETTINGS_URL, micAccess } from "../voice/micAccess";
 import { controlWindow, windowState } from "../windowControls";
 import { appWindows } from "../windows";
+import { eventBatch } from "./eventBatch";
 import { forwardInvoke, handleInvoke } from "./registry";
 
 /**
@@ -24,7 +25,19 @@ import { forwardInvoke, handleInvoke } from "./registry";
  * folder picker, frames, microphone access, and what this app is.
  */
 
+const announcements = eventBatch((events) => send("inf:events", events));
+
 export function broadcast<C extends PushChannel>(channel: C, payload: PushPayload<C>): void {
+  if (channel === "inf:event") {
+    announcements.add(payload as PushPayload<"inf:event">);
+    return;
+  }
+  // Keep ordering with cards and board pushes too.
+  announcements.flush();
+  send(channel, payload);
+}
+
+function send<C extends PushChannel>(channel: C, payload: PushPayload<C>): void {
   for (const win of appWindows()) {
     if (!win.isDestroyed() && !win.webContents.isDestroyed()) {
       win.webContents.send(channel, payload);

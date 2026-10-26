@@ -3078,6 +3078,8 @@ export type OpenPage = z.infer<typeof openPageSchema>;
 /** Push channels (main to renderer). Payloads are validated in the preload. */
 export const pushContract = {
   "inf:event": { payload: fmEventSchema, surface: "core" },
+  // Desktop transport only: the core and paired computers keep individual events.
+  "inf:events": { payload: z.array(fmEventSchema), surface: "host" },
   "inf:cards": { payload: cardsSnapshotSchema, surface: "core" },
   // One card's thread, whole, after any message lands on it.
   "inf:cards:thread": { payload: cardThreadSchema, surface: "core" },

@@ -372,7 +372,9 @@ Each part on each device is its own gate with its own simulator and test home, a
 A part's results are in its own folder, inside the device's folder with `--both`, and `--part` runs only the named parts.
 A `--both` run of every part writes each part's minutes on each device to `part-times.json` in the evidence folder, which a pull request's phone check reads to keep within its budget.
 The build is `xcodebuild build-for-testing` for any simulator, and each part runs `test-without-building` from a copy of the built test plan that names its own test home and selects its tests.
-No part stops another, and any part failing fails the gate.
+Any part failing fails the gate, and by default no part stops another.
+With `--stop-early`, which a pull request's phone check sets through `INFINITARY_PHONE_STOP_EARLY`, the first failed part ends the parts still running, each deleting its own simulator as an interrupted part does, and starts no other; the gate names the failed, stopped and unstarted parts and writes no `part-times.json`.
+A run on request runs every part to its end.
 Every explicit native observation goes through `InfinitaryUITests/PhoneWaits.swift`: element presence and absence, predicate reads and the disposable home's control requests.
 On ordinary runs it samples the same load clock as journeys, with 25 ms ticks, at most two ticks counted across a stall, and a share reduced by one-minute load per active processor above 1.
 Each wait ends by 20 times its budget on the monotonic wall clock, at most ten minutes; direct predicate evaluation preserves INF-975's short-window fix.
@@ -399,7 +401,7 @@ When the scheduler has not taken up a call 30 seconds on the load clock after Ph
 Neither changes the ceiling after boot.
 The part adds its library photo only once Photos has opened the library, so a restart of Photos never cuts the photo's import short.
 The part keeps that wait's own log output, with Photos' calls and the scheduler's take-ups, in `photos-stream.log`, and when the wait fails it also keeps the simulator's app and Photos log since boot with its command logs, before deleting the simulator.
-The phone workflow's `evidence_run` request exports native-scene attachments from an existing run on the Xcode host, without building or starting a simulator.
+The phone workflow's `evidence_run` request exports native-scene attachments from an existing run that kept `phone-results`, a failed or recording one, on the Xcode host, without building or starting a simulator.
 It keeps the selected images, timing readings and scene recordings in a small artifact separately from the complete result bundles.
 Add `--demo`, with FFmpeg installed, to keep real-speed reconnect, card, character, scene-panning and task-start recordings with their posters beside the test results.
 A manual phone workflow request with `recording` enabled passes `--raw-demo` through `PHONE_RECORDING=1`, including the virtual-Mac route; ordinary checks do not record.
@@ -481,7 +483,7 @@ Every pull request still checks on Linux that the generated file is current, thr
 Its Linux chooser reads the full git comparison with `scripts/affected-phone.ts`; an unreadable comparison runs the gate, and an unrelated change explicitly skips the native job.
 A run on request (`workflow_dispatch`, such as the nightly check of `main`) skips the chooser and runs every part on both devices, then keeps each part's minutes as `part-times.json` in `phone-logs`; it has no pull request, so nothing replaces or cancels it, and it starts no release step (`docs/testing.md`, "The phone check on request").
 Inside a gate, a failed generator check or Swift package test is reported and the simulator tests still run (`scripts/phone-checks.ts`).
-The native job uses `VIRTUAL_MAC_RUNNER` when it is set, otherwise `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results`.
+The native job uses `VIRTUAL_MAC_RUNNER` when it is set, otherwise `MAC_RUNNER`, falling back to the `mini-mac` label rather than a paid hosted Mac, and retains result bundles, logs and connection readings as `phone-results` when the job fails or a run on request records; a passing check uploads none of its result bundles, about 530 MB.
 It also uploads command logs separately as `phone-logs`, so an Xcode failure can be read without downloading screenshot-heavy result bundles.
 A third artifact, `phone-pictures`, holds only the pictures the journeys took, exported from the result bundles under `<device>/<part>`, so a crewmate reads them within the app's artifact limit, which `phone-results` has outgrown.
 A failed part adds to its command logs what the app, its card pages and Photos logged on its simulator, and names its failing lines in the job log.
@@ -504,7 +506,7 @@ The supervisor stays alive through teardown and removes only its own file after 
 The paired reader is dotfiles-private's `hosts/PHONE_ACTIVITY.md` contract and idle-reboot watchdog; producer and reader must merge together before the lock removals are complete.
 The device gate has a 60-minute step limit on every route: the real Mac, the fixed virtual-Mac switch and a placed virtual Mac.
 The native job retains its 165-minute job limit for setup, checks, cleanup and evidence upload, without command-admission waits.
-Neither device's failure is ignored: their parts run side by side, none stops another, and any failing fails the gate.
+Neither device's failure is ignored: their parts run side by side and any failing fails the gate; on a pull request the first failed part stops the rest.
 This pull-request lane neither signs a physical-device build nor publishes one; `ios-release.yml` runs the same native gates before its separately dispatched TestFlight upload.
 Mac-side checks remain the project's normal gate and affected Devices journeys.
 
@@ -515,7 +517,7 @@ Unset or empty, `native-phone` runs exactly as described above.
 Set, the job runs on the phone check's own runner, labelled `mini-mac-vm`, which takes no Mac mini slot, and it installs no packages on the Mac itself.
 `scripts/virtual-mac/phone.sh start` deletes a clone an earlier check left, clones `infinitary-lane` as `infinitary-lane-phone`, starts it with the pull request's committed version and installs its packages inside it.
 The version rides in as a `git archive` of the checkout, because a pull request's checkout is shallow and a bundle of it cannot be fetched into an empty clone.
-The gate step then runs `phone.sh gate iphone ipad`, which runs `scripts/test-phone.ts --both --simulators 2` inside the clone, two simulators at a time for its 6 CPUs and 16 GB, and copies each device's results into `$RUNNER_TEMP/phone/<device>`, so `phone-results` keeps what the Mac mini's gate keeps, a failed device's included.
+The gate step then runs `phone.sh gate iphone ipad`, which runs `scripts/test-phone.ts --both --simulators 2` inside the clone, two simulators at a time for its 6 CPUs and 16 GB, and copies each device's results into `$RUNNER_TEMP/phone/<device>`, so a failed check's `phone-results` keeps what the Mac mini's gate keeps, a failed device's included.
 The last step, `phone.sh delete`, stops and deletes the clone however the job ends, a cancelled or replaced run's included.
 The phone workflow does not exclude journeys.
 The `mac-mini-phone` queue is what keeps one phone clone running at a time, so with this variable set every phone check takes that shared line whatever `VIRTUAL_MAC_RUNNER` says.

@@ -36,6 +36,9 @@ const { values } = parseArgs({ options: {
   both: { type: "boolean", default: false },
   // INF-662 piece 2: the journey's parts to run (all of them unless named), and how many simulators at once.
   part: { type: "string", multiple: true },
+  // INF-1343 (the captain's "Stop a failing pull request check at its first failed part"): the first
+  // failed part ends the parts still running and starts no other; a pull request's check sets it.
+  "stop-early": { type: "boolean", default: process.env.INFINITARY_PHONE_STOP_EARLY === "1" },
   simulators: { type: "string", default: "6" },
   // One part on one device: its test plan from the gate's build.
   xctestrun: { type: "string" },
@@ -189,7 +192,7 @@ const everyPart = async () => {
   // INF-827: each part's minutes on each device, which a pull request's chooser reads from the
   // newest passing check of main (scripts/affected-phone.ts).
   const times: Record<string, Record<string, number>> = {};
-  const gate = async ({ device, part }: { device: PhoneDevice; part: string }) => {
+  const gate = async ({ device, part }: { device: PhoneDevice; part: string }, stopping: AbortSignal) => {
     const name = `${device} ${part}`;
     const began = Date.now();
     console.log(`${name}: began at ${new Date(began).toISOString()}`);
@@ -198,20 +201,30 @@ const everyPart = async () => {
     if (values.starve) command.unshift("python3", "scripts/starve-check.py", "--timeout", "3600", "--stall-seconds", "12", "--");
     const child = spawn(command[0]!, command.slice(1), { cwd: REPO_ROOT, env, stdio: ["ignore", "pipe", "pipe"] });
     children.add(child);
+    // Another part failed: this one ends as an interrupted part does, deleting its own simulator.
+    let stopped = false;
+    const stop = () => { stopped = true; child.kill("SIGTERM"); };
+    stopping.addEventListener("abort", stop, { once: true });
     for (const stream of [child.stdout, child.stderr])
       createInterface({ input: stream }).on("line", (line) => console.log(`${name}: ${line}`));
     const status = await new Promise<number | null>((resolveExit, reject) => {
       child.once("error", reject); child.once("close", resolveExit);
-    }).finally(() => children.delete(child));
-    console.log(`${name}: ended with ${status} after ${((Date.now() - began) / 60_000).toFixed(1)} minutes`);
+    }).finally(() => { children.delete(child); stopping.removeEventListener("abort", stop); });
+    console.log(`${name}: ${stopped ? "stopped after another part failed" : `ended with ${status}`} after ${((Date.now() - began) / 60_000).toFixed(1)} minutes`);
     (times[part] ??= {})[device] = Date.now() - began;
-    return status === 0 ? [] : [name];
+    return { name, outcome: status === 0 ? "passed" : stopped ? "stopped" : "failed" };
   };
-  // No part stops another; any part failing fails the gate.
-  const failed = (await runSideBySide(jobs, simulators, gate)).flat();
-  // Only a full gate, every part on both devices, writes them.
-  if (values.both && !values.part && !values.waits) writeFileSync(join(evidence, "part-times.json"), `${JSON.stringify(times, null, 2)}\n`);
-  if (failed.length) throw new Error(`The phone gate failed: ${failed.join(", ")}; see its results in ${evidence}`);
+  // Any part failing fails the gate; with --stop-early the first failure stops the rest.
+  const outcomes = await runSideBySide(jobs, simulators, gate, values["stop-early"] ? (({ outcome }) => outcome === "failed") : undefined);
+  const named = (outcome: string) => outcomes.filter((each) => each?.outcome === outcome).map((each) => each!.name);
+  const [failed, stopped] = [named("failed"), named("stopped")];
+  const unstarted = jobs.filter((_, index) => !outcomes[index]).map(({ device, part }) => `${device} ${part}`);
+  // Only a full gate, every part on both devices run to its end, writes them.
+  if (values.both && !values.part && !values.waits && !stopped.length && !unstarted.length)
+    writeFileSync(join(evidence, "part-times.json"), `${JSON.stringify(times, null, 2)}\n`);
+  if (failed.length) throw new Error([`The phone gate failed: ${failed.join(", ")}`,
+    ...(stopped.length ? [`it stopped ${stopped.join(", ")}`] : []),
+    ...(unstarted.length ? [`it never started ${unstarted.join(", ")}`] : []), `see its results in ${evidence}`].join("; "));
 };
 // A test plan copy beside the built one, naming this device's own test home.
 const planFor = async (built: string, url: string) => {

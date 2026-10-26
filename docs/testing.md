@@ -173,10 +173,10 @@ Setup the device gates never run does not select it: the chooser itself, the rep
 Changes to general shared modules, connection/device code, packages or the lockfile alone do not select the native gate.
 Its hosted Linux chooser reads the complete git comparison; an unreadable comparison selects the gate rather than silently skipping it.
 The `native-phone` job runs the disposable `scripts/test-phone.ts --both` gate on `MAC_RUNNER`, with `mini-mac` as its fallback label, never a paid hosted Mac.
-It keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
+When the job fails, or a run on request records, it keeps native result bundles, logs, published-client results and connection readings in the `phone-results` artifact.
 The same command logs also live in the smaller `phone-logs` artifact, independently of the result bundles.
 The pictures the journeys took live in the small `phone-pictures` artifact, exported from the result bundles by device and part.
-Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job.
+Unrelated pull requests have an explicitly skipped native job; a failure on either device fails the job, and on a pull request the first failed part stops the other parts.
 A newer push cancels its pull request's older phone runs whose native job has not started its device gate (`scripts/replaced-phone-runs.ts`), so it never waits behind them.
 That gate checks and builds once, then runs the phone journey's five parts on the iPhone and the iPad, ten in all, each on its own simulator and test home, six at a time (`docs/ios.md`, "Disposable verification").
 

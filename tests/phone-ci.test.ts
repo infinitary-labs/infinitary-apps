@@ -144,12 +144,21 @@ function condition(step: Step): string {
 }
 
 // The native job's steps that run, in order, for a value of the switch, with every
-// step succeeding and each replacement check reading `replaced`.
-function stepsThatRun(virtualMac: string, replaced = "false"): Step[] {
+// step succeeding (or the job failed, when `failed`) and each replacement check reading `replaced`.
+function stepsThatRun(
+  virtualMac: string,
+  replaced = "false",
+  failed = false,
+  inputs: Plain = {},
+): Step[] {
   const seen: Plain = {};
   const ran: Step[] = [];
   for (const step of workflow.jobs[NATIVE_JOB].steps as Step[]) {
-    const runs = holds(condition(step), { steps: seen, vars: { PHONE_VIRTUAL_MAC: virtualMac } });
+    const runs = holds(
+      condition(step),
+      { steps: seen, vars: { PHONE_VIRTUAL_MAC: virtualMac }, inputs },
+      { failed },
+    );
     const reading = runs && step.run?.includes("stop-if-replaced") ? replaced : "";
     if (step.id)
       seen[step.id] = { outcome: runs ? "success" : "skipped", outputs: { replaced: reading } };
@@ -157,6 +166,7 @@ function stepsThatRun(virtualMac: string, replaced = "false"): Step[] {
   }
   return ran;
 }
+const RESULTS = "Keep native results and connection readings";
 const names = (steps: Step[]) => steps.map((step) => step.name ?? step.uses ?? "");
 const isGate = (step: Step) => DEVICE_GATES.includes(step.name ?? "");
 
@@ -438,7 +448,7 @@ describe("the native pull-request gate", () => {
   it("runs today's steps on the Mac mini while the virtual Mac switch is off", () => {
     const all = names(workflow.jobs[NATIVE_JOB].steps);
     expect(names(stepsThatRun(OFF))).toEqual(
-      all.filter((name) => !VIRTUAL_MAC_STEPS.includes(name)),
+      all.filter((name) => !VIRTUAL_MAC_STEPS.includes(name) && name !== RESULTS),
     );
     // INF-662 piece 1: one gate checks and builds once
     // and runs both devices side by side; the switch, when set, sends it to the virtual Mac.
@@ -564,6 +574,37 @@ describe("the native pull-request gate", () => {
       for (const gate of gates)
         expect(ran[ran.indexOf(gate) - 1]?.run).toBe(
           "node scripts/replaced-phone-runs.ts stop-if-replaced",
+        );
+    }
+  });
+});
+
+// INF-1343 (the captain's "Stop a failing pull request check at its first failed part" and
+// "Upload the 530 MB phone results only when a check fails").
+describe("a failing phone check", () => {
+  it("stops at its first failed part on a pull request, and runs every part on request", () => {
+    const gate = stepsThatRun(OFF).find(isGate) as Step;
+    const stopEarly = gate.env?.INFINITARY_PHONE_STOP_EARLY?.replace(/^\$\{\{\s*|\s*\}\}$/g, "");
+    for (const [event, value] of [
+      ["pull_request", "1"],
+      ["workflow_dispatch", "0"],
+    ] as const)
+      expect(holds(`(${stopEarly}) == '${value}'`, { github: { event_name: event } })).toBe(true);
+  });
+  it("keeps the whole results only when the job failed or recorded, and its logs and pictures always", () => {
+    for (const virtualMac of [OFF, TOGETHER]) {
+      const kept = (failed: boolean, recording = "") =>
+        names(stepsThatRun(virtualMac, "false", failed, { recording }));
+      expect(kept(false)).not.toContain(RESULTS);
+      expect(kept(true)).toContain(RESULTS);
+      // INF-1066: the evidence export reads a recording run's clips from its results.
+      expect(kept(false, "true")).toContain(RESULTS);
+      for (const failed of [false, true])
+        expect(kept(failed)).toEqual(
+          expect.arrayContaining([
+            "Keep the small native command logs",
+            "Keep the pictures as their own artifact",
+          ]),
         );
     }
   });

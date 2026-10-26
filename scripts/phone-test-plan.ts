@@ -63,19 +63,25 @@ export function phoneJobs(devices: PhoneDevice[], parts: readonly string[] = PHO
     .flatMap((part) => order.filter((device) => devices.includes(device)).map((device) => ({ device, part: part.name })));
 }
 
-/** Runs each job once, at most `slots` at a time, in order; one job's failure stops none of the others. */
-export async function runSideBySide<Job, Result>(jobs: Job[], slots: number, run: (job: Job) => Promise<Result>): Promise<Result[]> {
+/** Runs each job once, at most `slots` at a time, in order; one job's failure stops none of the others,
+ * unless `stopAfter` holds for a job's result or the job throws: then no further job starts and the
+ * signal each running job holds aborts. A job that never started leaves its result undefined. */
+export async function runSideBySide<Job, Result>(jobs: Job[], slots: number, run: (job: Job, signal: AbortSignal) => Promise<Result>,
+  stopAfter?: (result: Result) => boolean): Promise<(Result | undefined)[]> {
   if (!Number.isInteger(slots) || slots < 1) throw new Error("Run at least one simulator at a time");
-  const results: Result[] = [];
+  const results: (Result | undefined)[] = jobs.map(() => undefined);
   const errors: unknown[] = [];
+  const stopping = new AbortController();
   let next = 0;
   const worker = async () => {
-    while (next < jobs.length) {
+    while (next < jobs.length && !stopping.signal.aborted) {
       const index = next++;
       try {
-        results[index] = await run(jobs[index]!);
+        results[index] = await run(jobs[index]!, stopping.signal);
+        if (stopAfter?.(results[index]!)) stopping.abort();
       } catch (error) {
         errors.push(error);
+        if (stopAfter) stopping.abort();
       }
     }
   };

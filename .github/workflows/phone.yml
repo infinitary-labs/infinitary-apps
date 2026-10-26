@@ -262,6 +262,8 @@ jobs:
       # Real and virtual Mac checks may run concurrently without a command lease.
       # INF-827: on a pull request the Mac mini's and a placed virtual Mac's gate run only the
       # parts the chooser kept; a run on request, and the virtual Mac switch, run every part.
+      # INF-1343: on a pull request the first failed part stops the others, so a failing check frees
+      # its Mac at once; a run on request runs every part to its end for the chooser's part times.
       - id: both
         name: Read and recover on iPhone and iPad at once
         timeout-minutes: 60
@@ -277,6 +279,7 @@ jobs:
           INFINITARY_STARVE_CHECK: ${{ inputs.starve && '1' || '0' }}
           INFINITARY_PERF_BUDGETS: ${{ inputs.perf && '1' || '0' }}
           PHONE_RECORDING: ${{ inputs.recording && '1' || '' }}
+          INFINITARY_PHONE_STOP_EARLY: ${{ github.event_name == 'pull_request' && '1' || '0' }}
       - name: Delete the virtual Mac
         if: ${{ always() && steps.vm.outcome != 'skipped' }}
         run: scripts/virtual-mac/phone.sh delete
@@ -315,8 +318,11 @@ jobs:
           path: ${{ runner.temp }}/phone-pictures
           if-no-files-found: ignore
           retention-days: 14
+      # INF-1343 (the captain's "Upload the 530 MB phone results only when a check fails"): the whole
+      # result bundles are for diagnosing a failure; a recording run keeps them for its clips, which
+      # the evidence_run export reads. The logs and pictures above stay on every run.
       - name: Keep native results and connection readings
-        if: always()
+        if: failure() || inputs.recording
         uses: actions/upload-artifact@v4
         with:
           name: phone-results

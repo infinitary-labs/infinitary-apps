@@ -101,6 +101,30 @@ describe("running the parts side by side", () => {
     expect(most).toBe(3);
     expect(ran.sort()).toEqual(jobs.map(({ device, part }) => `${device} ${part}`).sort());
   });
+  // INF-1343 (the captain's "Stop a failing pull request check at its first failed part").
+  it("stops the running parts and starts no other once a part fails, when asked to", async () => {
+    const started: string[] = [];
+    const stopped: string[] = [];
+    const jobs = phoneJobs(["iphone", "ipad"]);
+    const outcomes = await runSideBySide(
+      jobs,
+      3,
+      async ({ device, part }, stopping) => {
+        const name = `${device} ${part}`;
+        started.push(name);
+        if (name === "iphone join") return { name, failed: true };
+        // A running part ends when the gate stops it, as an interrupted part does.
+        await new Promise((resolve) => stopping.addEventListener("abort", resolve, { once: true }));
+        stopped.push(name);
+        return { name, failed: false };
+      },
+      ({ failed }) => failed,
+    );
+    expect(started).toEqual(["ipad join", "iphone join", "ipad talk"]);
+    expect(stopped.sort()).toEqual(["ipad join", "ipad talk"]);
+    expect(outcomes.filter(Boolean).map((outcome) => outcome!.name)).toEqual(started);
+    expect(outcomes.slice(started.length)).toEqual(jobs.slice(started.length).map(() => undefined));
+  });
   it("refuses to run with no simulator", async () => {
     await expect(runSideBySide(phoneJobs(["iphone"]), 0, async () => 0)).rejects.toThrow(
       /at least one simulator/,

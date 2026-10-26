@@ -189,7 +189,7 @@ test("a bounded lookup requests low, reads its source and stays an answer after 
     await shownEntry(launched.page).getByRole("button", { name: "Close", exact: true }).click();
     await expect.poll(() => row()?.closedReason, { timeout: 30_000 }).toBe("answered");
     expect(row()?.delivery?.prUrl ?? null).toBeNull();
-    expect(row()?.delivery?.landedAt ?? null).toBeNull();
+    expect(row()?.delivery?.landedMode ?? null).toBeNull();
     await runFromSearch(launched.app, launched.page, "settings.usage");
     const usage = await usageSummary(launched.page, { period: "all", scope: "all" });
     expect(

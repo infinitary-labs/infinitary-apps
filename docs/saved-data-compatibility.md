@@ -253,3 +253,11 @@ The observation intervals themselves are not saved.
 The optional `tasks_status` index on `status` and `tasks_closed_at` index on `closed_at` are installed on opening the current schema, without a migration version or changed table shape.
 They let the crew's status reads and the Tasks board read the live set and the last week without scanning a long record's older closed rows.
 An older build reads the table as before and keeps the indexes up to date on its own writes.
+
+## Retired task fields
+
+A work shape's `knowledge_access` and the delivery facts' `landedAt` are retired (INF-1288 piece 3): the first has granted nothing since every crewmate's knowledge became equal, and nothing read the second.
+A row an older build saved keeps them on disk, and `TaskStore` leaves them out when it reads the row, so no surface shows them.
+The row's next write of its shape or its delivery facts no longer carries them; a closed row that is never written again keeps them on disk, unread.
+An export an older build wrote imports without them, because the export's shapes drop a field they do not list.
+Both were optional, so an older build reads a row without them as before, and no database migration or format revision is needed.

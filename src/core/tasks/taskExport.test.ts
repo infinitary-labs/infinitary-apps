@@ -177,6 +177,36 @@ describe("the task export (task-system P5)", () => {
     expect(next.key).toBe("NIA-4");
   });
 
+  // INF-1288 piece 3, the captain's "Remove the two fields nothing reads":
+  // an export an older build wrote still carries them.
+  it("imports an older build's export with its retired fields, and exports it again without them", () => {
+    const exported = exportTaskRecords(populated().tasks, 5_000);
+    const older = exported.map((line) => {
+      const row = JSON.parse(line) as {
+        kind: string;
+        id?: string;
+        closedAt?: number;
+        shape?: Record<string, unknown>;
+        delivery?: Record<string, unknown>;
+      };
+      if (row.kind !== "task" || row.id !== "a") return line;
+      // The landing time the close wrote, and the knowledge grant's one value.
+      return JSON.stringify({
+        ...row,
+        shape: { ...row.shape, knowledge_access: "references" },
+        delivery: { ...row.delivery, landedAt: row.closedAt },
+      });
+    });
+    expect(older).not.toEqual(exported);
+    const bundle = parseTaskExport(older);
+    const task = bundle.tasks.find((candidate) => candidate.id === "a");
+    expect(task?.shape).not.toHaveProperty("knowledge_access");
+    expect(task?.delivery).not.toHaveProperty("landedAt");
+    const target = new TaskService({ db: openInMemoryDatabase(), strict: true });
+    target.importRecords(bundle);
+    expect(exportTaskRecords(target, 5_000)).toEqual(exported);
+  });
+
   it("refuses to overwrite: an existing task id, a taken key, a foreign project key - before writing", () => {
     const source = populated();
     const lines = exportTaskRecords(source.tasks, 5_000);

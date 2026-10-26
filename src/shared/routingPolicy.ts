@@ -233,8 +233,6 @@ export const workShapeSchema = z.object({
       intelligence: intelligenceBucketSchema.optional(),
     })
     .optional(),
-  /** Legacy metadata kept readable for saved tasks; grants no different access. */
-  knowledge_access: z.literal("references").optional(),
   /** Firstmate's stated reason for skipping a plan; the host does not judge it. */
   skipped_plan_because: z.string().optional(),
   /**
@@ -374,7 +372,6 @@ export const CAPTAIN_OWNED_SHAPE_FIELDS = [
   "runs_on_ask",
   "placement_requirements",
   "internal_step",
-  "knowledge_access",
   "skipped_plan_because",
   "result_schema",
   "branch_from",
@@ -449,7 +446,6 @@ export const workShapeAskSchema = workShapeSchema
     runs_on_ask: true,
     placement_requirements: true,
     internal_step: true,
-    knowledge_access: true,
     skipped_plan_because: true,
     result_schema: true,
     branch_from: true,

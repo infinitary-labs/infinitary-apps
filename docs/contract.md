@@ -175,7 +175,7 @@ The home-only `inf:knowledge:direction:set` change adds, revises or retires one,
 A crewmate on a computer that runs work reads and writes the home's knowledge through the `inf:work:knowledge` and `inf:work:record-knowledge` work requests (`docs/knowledge.md`, "The tools").
 The placed write request carries the `direction` kind and an optional `lane`, which separates captain-stated personal context from saved references without granting different access; the home defaults a crewmate's omitted lane to reference.
 Carrying a direction write does not let a crewmate make one: the work request refuses it, and only the first mate, on its own judgment of what the captain wants, changes a direction (`docs/knowledge.md`, "Directions are the first mate's to keep").
-Every crewmate has equal factual access, including a task with no project, and saved task shapes read the legacy `knowledge_access` as inert metadata.
+Every crewmate has equal factual access, including a task with no project; a task shape an older build saved with `knowledge_access` reads without it (`docs/saved-data-compatibility.md`, "Retired task fields").
 Knowledge runs in every build, and a profile carried to Knowledge refuses an older notes-writing build (`docs/saved-data-compatibility.md`).
 
 ### Devices and the connection

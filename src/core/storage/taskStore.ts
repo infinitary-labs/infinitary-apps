@@ -295,7 +295,6 @@ export type TaskDelivery = {
   /** The newest watched run's state and host times, kept after its watch ends (INF-594). */
   runChecks?: RunChecks;
   landedMode?: "fast-forward" | "merge" | "pr";
-  landedAt?: number;
   /**
    * The independent review's latest verdict on a reviewed task (delivery
    * rigor phase 2), recorded on the BUILDER: the verdict, the head the
@@ -677,6 +676,18 @@ function shapeJson(shape: WorkShape | null | undefined): string | null {
   return JSON.stringify(recorded);
 }
 
+/**
+ * A field an older build saved that nothing reads any more (INF-1288 piece 3):
+ * a read leaves it out, so no surface shows it and the row's next write
+ * no longer carries it. No migration rewrites the rows, so an older build
+ * still opens the profile.
+ */
+function withoutRetired<T extends object>(value: T | null, field: string): T | null {
+  if (!value || !Object.hasOwn(value, field)) return value;
+  const { [field]: _retired, ...kept } = value as Record<string, unknown>;
+  return kept as T;
+}
+
 function parseJson<T>(text: string | null): T | null {
   if (!text) return null;
   try {
@@ -707,7 +718,7 @@ function fromRow(row: Row): TaskRecord {
     deviceId: row.device_id ?? null,
     placement: parseJson<CommittedPlacement>(row.placement_json ?? null),
     difficulty: row.difficulty,
-    shape: parseJson<WorkShape>(row.shape_json),
+    shape: withoutRetired(parseJson<WorkShape>(row.shape_json), "knowledge_access"),
     gate: row.gate_kind
       ? {
           kind: row.gate_kind,
@@ -724,7 +735,7 @@ function fromRow(row: Row): TaskRecord {
     workspaceState: row.workspace_state,
     outcome: row.outcome,
     outcomeSummary: row.outcome_summary,
-    delivery: parseJson<TaskDelivery>(row.delivery_json),
+    delivery: withoutRetired(parseJson<TaskDelivery>(row.delivery_json), "landedAt"),
     pendingSettle: parseJson<PendingSettleIntent>(row.pending_settle_json),
     idleSince: row.idle_since,
     recoveryRung: row.recovery_rung ?? 0,

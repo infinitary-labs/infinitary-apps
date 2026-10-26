@@ -75,7 +75,6 @@ const deliverySchema = z.object({
   ci: z.enum(["green", "red", "pending", "no-pr", "merged"]).optional(),
   ciAt: z.number().optional(),
   landedMode: z.enum(["fast-forward", "merge", "pr"]).optional(),
-  landedAt: z.number().optional(),
 });
 
 const taskLineSchema = z.object({

@@ -209,7 +209,7 @@ test("an answer task is briefed as shipping nothing, waits on its card, and clos
   // worktree is gone with the close.
   const closed = await detail();
   expect(closed.delivery?.prUrl ?? null).toBeNull();
-  expect(closed.delivery?.landedAt ?? null).toBeNull();
+  expect(closed.delivery?.landedMode ?? null).toBeNull();
 });
 
 /**

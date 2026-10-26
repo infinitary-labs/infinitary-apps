@@ -751,7 +751,7 @@ describe("the task protocol (task-system P3)", () => {
       status: "done",
       reason: "landed",
       actor: "host",
-      delivery: { landedMode: "merge", landedAt: Date.now() },
+      delivery: { landedMode: "merge" },
     });
     tasks.close("b", { status: "dropped", reason: "cancelled", actor: "captain" });
     tasks.close("c", { status: "dropped", reason: "failed", actor: "host", error: "boom" });

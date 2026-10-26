@@ -350,7 +350,7 @@ for (const refusal of REFUSALS) {
       await expect(notesNaming(page, "Ship the PR")).toHaveCount(2);
       await expect(putInLine(page, await taskKey(page, "Ship the PR"))).toHaveCount(0);
       expect(await detail()).toMatchObject({ status: "active", closedReason: null });
-      expect((await detail())?.delivery?.landedAt).toBeUndefined();
+      expect((await detail())?.delivery?.landedMode).toBeUndefined();
       expect(existsSync(join(repo.worktreeDir, "feature.txt"))).toBe(true);
     } finally {
       await launched.close();

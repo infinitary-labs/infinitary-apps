@@ -61,7 +61,7 @@ Every crewmate can read and write personal context and saved references, includi
 Use applicability as relevance, not an access restriction.
 A crewmate saves sources on request and personal context only from the captain's words, never guesses; access itself authorizes no unrelated saving.
 A crewmate cannot retire an entry or change a direction.
-Legacy `knowledge_access` metadata remains readable in saved task shapes but grants no different capability and is no longer offered by task tools.
+Task tools offer no saving grant, and a task shape an older build saved with its `knowledge_access` grant reads without it (`docs/saved-data-compatibility.md`, "Retired task fields").
 Every reference stays inside its collection, and an unreadable entry is indistinguishable from a missing one.
 Project directions follow exact identifiers, never a matching project name.
 Only that project's directions reach a crewmate, including fresh, resumed and placed turns; private global directions stay with the first mate.

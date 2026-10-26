@@ -209,11 +209,10 @@ export type TaskClose = {
     | "superseded";
   actor: "captain" | "firstmate" | "host";
   text?: string;
-  /** Delivery facts learned by the close; a live close carries its posture and time. */
+  /** Delivery facts learned by the close; a live close carries its posture. */
   delivery?: {
     mode?: TaskDeliveryMode;
     landedMode?: "fast-forward" | "merge" | "pr";
-    landedAt: number;
   };
   /** False when another row already carries this close's feed line. */
   feed?: boolean;
@@ -726,7 +725,7 @@ export class SettleService {
         status: "done",
         reason: "landed",
         actor,
-        delivery: { landedMode: mode, landedAt: this.host.now() },
+        delivery: { landedMode: mode },
       });
       // Landing releases any queued row waiting on this task (R1).
       void this.host.sweepGates(this.host.now());
@@ -929,7 +928,7 @@ export class SettleService {
         reason: "merged",
         actor,
         text: result.text,
-        delivery: { landedMode: "pr", landedAt: this.host.now() },
+        delivery: { landedMode: "pr" },
       },
       { recordBeforeStop: actor === "host" },
     );
@@ -1476,7 +1475,8 @@ export class SettleService {
         actor: "firstmate",
         text: `released outside this task: ${evidence}`,
         data: { releaseEvidence: evidence },
-        delivery: { landedAt: this.host.now() },
+        // No new fact, but the close still records the posture it ends under.
+        delivery: {},
       });
       return { text: `Closed ${handle} as released outside this task: ${evidence}.` };
     } finally {
@@ -2522,7 +2522,7 @@ export class SettleService {
         reason: "merged",
         actor: "captain",
         text,
-        delivery: { landedMode: "pr", landedAt: this.host.now() },
+        delivery: { landedMode: "pr" },
       });
       this.reportOutcome(taskId, title, "merge-pr", undefined, { ok: true, text }, undefined);
     } finally {

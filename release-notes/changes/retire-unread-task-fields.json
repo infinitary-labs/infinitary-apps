@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "retire-unread-task-fields",
+      "reason": "Removes two task record fields nothing read, an inert knowledge grant and a close's landing time, while older saved tasks and exports still read; nothing a person notices changes."
+    }
+  ]
+}

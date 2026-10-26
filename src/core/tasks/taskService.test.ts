@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { DECISION_RECORD_SCHEMA, type DecisionRecord } from "../../shared/provenance";
+import type { WorkShape } from "../../shared/routingPolicy";
 import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "./seedTask";
 import { TaskService, TIMELINE_CAP, TIMELINE_KEEP } from "./taskService";
@@ -383,7 +385,7 @@ describe("TaskService (task-system P0)", () => {
       status: "done",
       reason: "landed",
       actor: "captain",
-      delivery: { landedMode: "fast-forward", landedAt: 1_004 },
+      delivery: { landedMode: "fast-forward" },
     });
     tasks.markWorkspaceRemoved("t");
     const closed = tasks.get("t");
@@ -391,7 +393,7 @@ describe("TaskService (task-system P0)", () => {
       status: "done",
       closedReason: "landed",
       workspaceState: "removed",
-      delivery: { mode: "direct-pr", landedMode: "fast-forward", landedAt: 1_004 },
+      delivery: { mode: "direct-pr", landedMode: "fast-forward" },
       outcome: "Fixed the flake. Two files changed.",
     });
     expect(tasks.timeline("t").map((event) => [event.kind, event.actor])).toEqual([
@@ -496,10 +498,57 @@ describe("TaskService (task-system P0)", () => {
       status: "active",
       shape: { kind: "fix", kind_source: "none", delivery_ask: "local-only" },
     });
-    tasks.recordDelivery("local", { landedMode: "fast-forward", landedAt: 1 });
+    tasks.recordDelivery("local", { landedMode: "fast-forward" });
     expect(tasks.get("local")?.delivery).toMatchObject({
       mode: "local-only",
       landedMode: "fast-forward",
+    });
+  });
+
+  // INF-1288 piece 3, the captain's "Remove the two fields nothing reads":
+  // rows an older build saved keep them on disk, and read as before.
+  it("reads a row an older build saved without its retired fields, and drops them at its next write", () => {
+    const { db, tasks } = setup();
+    // A merged pull request's delivery facts, as an older build saved them.
+    const fixture = JSON.parse(
+      readFileSync(
+        new URL("../../../tests/fixtures/replay/sep14-real/tables.json", import.meta.url),
+        "utf8",
+      ),
+    ) as { tasks: { delivery_json: string | null }[] };
+    const savedDelivery = fixture.tasks.find((row) =>
+      row.delivery_json?.includes('"landedAt"'),
+    )?.delivery_json;
+    if (!savedDelivery) throw new Error("The fixture has no landed delivery.");
+    const { landedAt, ...facts } = JSON.parse(savedDelivery) as Record<string, unknown>;
+    // The older shape's knowledge grant, whose one value was "references".
+    const shape = { kind: "implement", kind_source: "none" } as const;
+    seedTask(tasks, {
+      id: "older",
+      title: "Merged before",
+      repoId: "r1",
+      status: "completed",
+      shape: { ...shape, knowledge_access: "references" } as WorkShape,
+    });
+    tasks.recordDelivery("older", JSON.parse(savedDelivery));
+    const saved = () => {
+      const row = db
+        .prepare("SELECT shape_json, delivery_json FROM tasks WHERE id = ?")
+        .get("older") as { shape_json: string; delivery_json: string };
+      return { shape: JSON.parse(row.shape_json), delivery: JSON.parse(row.delivery_json) };
+    };
+    expect(saved().shape).toHaveProperty("knowledge_access", "references");
+    expect(saved().delivery).toHaveProperty("landedAt", landedAt);
+
+    expect(tasks.get("older")).toMatchObject({ shape, delivery: facts });
+    expect(tasks.get("older")?.shape).not.toHaveProperty("knowledge_access");
+    expect(tasks.get("older")?.delivery).not.toHaveProperty("landedAt");
+
+    tasks.recordShape("older", { deliverable: "change" }, null);
+    tasks.recordDelivery("older", { ci: "merged" });
+    expect(saved()).toEqual({
+      shape: { ...shape, deliverable: "change" },
+      delivery: { ...facts, ci: "merged" },
     });
   });
 

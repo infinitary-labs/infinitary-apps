@@ -7718,7 +7718,7 @@ export class CrewSupervisor {
       status: "done",
       reason: "finished",
       actor: "host",
-      delivery: { mode: "in-place", landedAt: this.now() },
+      delivery: { mode: "in-place" },
     });
   }
 

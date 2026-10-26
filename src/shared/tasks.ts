@@ -152,7 +152,6 @@ export const taskDeliveryViewSchema = z.object({
   /** A hand-started run's checks; the checks cell shows them while the task has no change. */
   runChecks: runChecksSchema.optional(),
   landedMode: z.enum(["fast-forward", "merge", "pr"]).optional(),
-  landedAt: z.number().optional(),
   /** The independent review's latest verdict on a reviewed task (delivery rigor phase 2). */
   reviewVerdict: reviewVerdictSchema.optional(),
   /** The head the reviewer read. */

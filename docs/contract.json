@@ -25794,9 +25794,6 @@
                             "pr"
                           ]
                         },
-                        "landedAt": {
-                          "type": "number"
-                        },
                         "reviewVerdict": {
                           "type": "string",
                           "enum": [
@@ -27112,9 +27109,6 @@
                       "merge",
                       "pr"
                     ]
-                  },
-                  "landedAt": {
-                    "type": "number"
                   },
                   "reviewVerdict": {
                     "type": "string",
@@ -30761,9 +30755,6 @@
                         "merge",
                         "pr"
                       ]
-                    },
-                    "landedAt": {
-                      "type": "number"
                     },
                     "reviewVerdict": {
                       "type": "string",
@@ -52173,9 +52164,6 @@
                             "pr"
                           ]
                         },
-                        "landedAt": {
-                          "type": "number"
-                        },
                         "reviewVerdict": {
                           "type": "string",
                           "enum": [
@@ -53491,9 +53479,6 @@
                             "merge",
                             "pr"
                           ]
-                        },
-                        "landedAt": {
-                          "type": "number"
                         },
                         "reviewVerdict": {
                           "type": "string",

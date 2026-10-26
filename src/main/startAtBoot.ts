@@ -1,7 +1,13 @@
 import { existsSync, mkdirSync, rmSync, symlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { writePrivate } from "@core/devices/identity";
-import { bootUnit, type Launchctl, type Launcher, wantedBy } from "@core/helper/background";
+import {
+  bootPlist,
+  bootUnit,
+  type Launchctl,
+  type Launcher,
+  wantedBy,
+} from "@core/helper/background";
 import { lingerStays } from "@core/helper/words";
 import { HERE } from "@shared/deviceNames";
 import {
@@ -21,8 +27,10 @@ import { commandWords } from "./workCommand";
  * Linux it sets up `<app> run` as this user's own systemd service and has
  * the user linger where systemd lets them, so it starts at boot with nobody
  * logged in; where it does not, it prints the one line an administrator
- * runs, as the Linux join does (`afterLogout`). A Mac's boot entry waits for
- * its check on a disposable Mac, so there it changes nothing and says so.
+ * runs, as the Linux join does (`afterLogout`). On a Mac, which has no
+ * linger, it prepares the account's boot entry and prints the one line an
+ * administrator runs to put it in place (INF-1362, after INF-1416's check on
+ * a disposable Mac showed the run works there with nobody logged in).
  * `infinitary help run` prints the other ways to start the command.
  */
 
@@ -47,15 +55,24 @@ export const BOOT_WORDS = {
     "To start it sooner, quit Infinitary, then run this again.",
   ],
   log: (label: string) => `What it says: journalctl --user -u ${label}`,
+  macLog: (file: string) => `What it says: ${file}`,
   off: (user: string) => [`Infinitary no longer starts at boot as ${user}.`],
   wasOff: (user: string) => [`Infinitary was not set to start at boot as ${user}.`],
   noSystemd: [
     `${HERE.This} has no systemd for this user, so Infinitary cannot start at boot here.`,
     "infinitary help run lists other ways to start it.",
   ],
-  mac: [
-    "Infinitary cannot start at boot on a Mac yet.",
-    "infinitary help run lists other ways to start it, such as when you log in.",
+  /** A Mac's entry, prepared, and the one line that puts it in place. */
+  macSet: (user: string, line: string) => [
+    `Infinitary is ready to start whenever ${HERE.this} starts, as ${user}, before anyone logs in.`,
+    "To turn it on, an administrator runs this once:",
+    line,
+    `It starts the next time ${HERE.this} starts.`,
+  ],
+  /** A Mac's entry in place, and the one line that takes it away. */
+  macOff: (user: string, line: string) => [
+    `To stop Infinitary starting at boot as ${user}, an administrator runs this once:`,
+    line,
   ],
   couldNot: (reason: string) => [`Infinitary could not set up its start at boot: ${reason}`],
 } as const;
@@ -81,8 +98,12 @@ export type BootContext = {
   platform: string;
   /** This user's name, which linger and the administrator's line name. */
   user: string;
+  /** This user's home folder, which a Mac's entry and its log are in. */
+  homeDir: string;
   /** Where this user's own systemd reads their services (`~/.config/systemd/user`). */
   unitsDir: string;
+  /** Where a Mac's launchd reads the system's jobs at boot (`/Library/LaunchDaemons`). */
+  daemonsDir: string;
   /** The service's label: `runLabelOf`, `@shared/codeNames`. */
   label: string;
   /** How this app starts itself (`appLauncher`). */
@@ -108,7 +129,7 @@ export async function runStartAtBoot(asked: BootAsked, context: BootContext): Pr
     out: "",
     error: said(lines),
   });
-  if (context.platform === "darwin") return fail(1, BOOT_WORDS.mac);
+  if (context.platform === "darwin") return macStartAtBoot(asked, context);
   if (context.platform !== "linux" || !context.systemctl) return fail(1, BOOT_WORDS.noSystemd);
   const systemctl = context.systemctl;
   const user = (args: readonly string[]) => systemctl(["--user", ...args]);
@@ -130,14 +151,8 @@ export async function runStartAtBoot(asked: BootAsked, context: BootContext): Pr
     };
   }
 
-  let settings: string | undefined;
-  if (asked.settings) {
-    // Read now, so a file to fix is said here rather than in the journal at boot.
-    const reading = readRunSettings(asked.settings, context.cwd);
-    if (!reading.ok)
-      return fail(RUN_SETTINGS_EXIT, RUN_WORDS.settings(reading.file, reading.reason));
-    settings = reading.file;
-  }
+  const settings = settingsOf(asked, context);
+  if (typeof settings === "object") return settings;
   try {
     mkdirSync(dirname(wants), { recursive: true });
     writePrivate(file, bootUnit({ launcher: context.launcher, settings, env: context.env }));
@@ -168,6 +183,80 @@ export async function runStartAtBoot(asked: BootAsked, context: BootContext): Pr
   }
   lines.push(BOOT_WORDS.log(`${context.label}.service`));
   return { code: 0, out: said(lines), error: "" };
+}
+
+/**
+ * The settings file's full path, read now so a file to fix is said here
+ * rather than at boot; or the run's own refusal, with nothing written.
+ */
+function settingsOf(asked: BootAsked, context: BootContext): string | undefined | BootResult {
+  if (asked.off || !asked.settings) return undefined;
+  const reading = readRunSettings(asked.settings, context.cwd);
+  if (reading.ok) return reading.file;
+  return {
+    code: RUN_SETTINGS_EXIT,
+    out: "",
+    error: said(RUN_WORDS.settings(reading.file, reading.reason)),
+  };
+}
+
+/**
+ * A Mac's start at boot. macOS starts a job before anyone logs in only from
+ * the system's own folder, which an administrator writes, so the account
+ * writes what it may - its entry in `~/Library/LaunchDaemons`, which launchd
+ * never reads itself - and prints the one line that copies it into place,
+ * owned by root, where launchd starts it at the next boot as this user.
+ */
+function macStartAtBoot(asked: BootAsked, context: BootContext): BootResult {
+  const name = `${context.label}.plist`;
+  const prepared = join(context.homeDir, "Library", "LaunchDaemons", name);
+  const placed = join(context.daemonsDir, name);
+  if (asked.off) {
+    const was = existsSync(prepared);
+    rmSync(prepared, { force: true });
+    if (existsSync(placed)) {
+      const line = `sudo launchctl bootout system/${shellWord(context.label)} 2>/dev/null; sudo rm -f ${shellWord(placed)}`;
+      return { code: 0, out: said(BOOT_WORDS.macOff(context.user, line)), error: "" };
+    }
+    const lines = was ? BOOT_WORDS.off(context.user) : BOOT_WORDS.wasOff(context.user);
+    return { code: 0, out: said(lines), error: "" };
+  }
+  const settings = settingsOf(asked, context);
+  if (typeof settings === "object") return settings;
+  const log = join(context.homeDir, "Library", "Logs", `${context.label}.log`);
+  try {
+    mkdirSync(dirname(prepared), { recursive: true });
+    mkdirSync(dirname(log), { recursive: true });
+    writePrivate(
+      prepared,
+      bootPlist({
+        label: context.label,
+        user: context.user,
+        homeDir: context.homeDir,
+        launcher: context.launcher,
+        settings,
+        log,
+        env: context.env,
+      }),
+    );
+  } catch (error) {
+    return {
+      code: 1,
+      out: "",
+      error: said(BOOT_WORDS.couldNot(error instanceof Error ? error.message : String(error))),
+    };
+  }
+  const line = `sudo install -o root -g wheel -m 644 ${shellWord(prepared)} ${shellWord(placed)}`;
+  return {
+    code: 0,
+    out: said([...BOOT_WORDS.macSet(context.user, line), BOOT_WORDS.macLog(log)]),
+    error: "",
+  };
+}
+
+/** One word as a shell reads it: quoted where it has a space or a character the shell reads. */
+function shellWord(word: string): string {
+  return /^[\w@%+=:,./-]+$/.test(word) ? word : `'${word.replace(/'/g, "'\\''")}'`;
 }
 
 /** Whether systemd keeps this user's services running with nobody logged in (linger). */
@@ -202,9 +291,7 @@ export function helpWords(
 ): { code: number; lines: string[] } {
   const own = [launcher.executable, ...launcher.args];
   // A word a shell would split or read is quoted, as a path with a space.
-  const app = own
-    .map((word) => (/^[\w@%+=:,./-]+$/.test(word) ? word : `'${word.replace(/'/g, "'\\''")}'`))
-    .join(" ");
+  const app = own.map(shellWord).join(" ");
   const xml = (text: string) =>
     text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   const strings = [...own, "run"].map((word) => `<string>${xml(word)}</string>`).join("");
@@ -219,7 +306,7 @@ export function helpWords(
         "  By hand, in a terminal here or over SSH:",
         `    ${app} run`,
         "",
-        "  At boot on Linux, as this user, with nobody logged in:",
+        "  At boot, as this user, with nobody logged in:",
         `    ${app} start-at-boot`,
         "",
         "  When you log in on a Mac: save this as ~/Library/LaunchAgents/infinitary.run.plist,",

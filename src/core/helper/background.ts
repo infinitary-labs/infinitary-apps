@@ -284,6 +284,70 @@ export function bootUnit(options: {
   ].join("\n");
 }
 
+/**
+ * A Mac's boot entry for `infinitary start-at-boot` (docs/run.md, "Starting
+ * at boot"): a system job an administrator copies into `/Library/LaunchDaemons`,
+ * which launchd starts at boot as `user` (`UserName`), with nobody logged in,
+ * since macOS has no linger. A failure starts it again, an update's exit 75
+ * among them, so the new version runs; a clean stop (exit 0) does not. It
+ * runs at the priority of an app the person started, as the home's own work
+ * does (INF-247). What it says goes to `log`, which launchd opens as `user`.
+ */
+export function bootPlist(options: {
+  label: string;
+  user: string;
+  homeDir: string;
+  launcher: Launcher;
+  settings?: string;
+  log: string;
+  env: Readonly<Record<string, string>>;
+}): string {
+  const words = [
+    options.launcher.executable,
+    ...options.launcher.args,
+    "run",
+    ...(options.settings ? ["--settings", options.settings] : []),
+  ];
+  // Named, so the run finds its data folder in this account's home whatever a system job is given.
+  const env = Object.entries({ HOME: options.homeDir, ...options.env });
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">',
+    '<plist version="1.0">',
+    "<dict>",
+    "\t<key>Label</key>",
+    `\t<string>${xml(options.label)}</string>`,
+    "\t<key>UserName</key>",
+    `\t<string>${xml(options.user)}</string>`,
+    "\t<key>ProgramArguments</key>",
+    "\t<array>",
+    ...words.map((word) => `\t\t<string>${xml(word)}</string>`),
+    "\t</array>",
+    "\t<key>RunAtLoad</key>",
+    "\t<true/>",
+    "\t<key>KeepAlive</key>",
+    "\t<dict>",
+    "\t\t<key>SuccessfulExit</key>",
+    "\t\t<false/>",
+    "\t</dict>",
+    ...STARTS_AS_APP,
+    "\t<key>StandardOutPath</key>",
+    `\t<string>${xml(options.log)}</string>`,
+    "\t<key>StandardErrorPath</key>",
+    `\t<string>${xml(options.log)}</string>`,
+    "\t<key>EnvironmentVariables</key>",
+    "\t<dict>",
+    ...env.flatMap(([key, value]) => [
+      `\t\t<key>${xml(key)}</key>`,
+      `\t\t<string>${xml(value)}</string>`,
+    ]),
+    "\t</dict>",
+    "</dict>",
+    "</plist>",
+    "",
+  ].join("\n");
+}
+
 /** A value a unit file holds as it is: one line, with systemd's specifiers kept literal. */
 function unitValue(text: string): string {
   if (/[\n\r\0]/.test(text)) throw new Error("A unit file cannot hold a line break.");

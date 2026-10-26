@@ -91,8 +91,9 @@ An orderly quit retains exit 0; a signal delivered to Node also retains its name
 The environment is explicitly a snapshot **when the command started**, not a live probe of the running session:
 
 - `display`: `own` when Linux starts Xvfb, `session` when the session names a display, `none` when Linux has neither, or `unknown` on macOS.
-  A named display alone proves no drawing, and macOS drawing with nobody logged in still waits for piece 7's disposable-Mac check.
-- `keychain`: on a Mac, the default Keychain's `locked`, `unlocked`, `absent` or `unknown` state, read silently through Security.framework's metadata-only `SecKeychainGetStatus`, never an item or a password.
+  A named display alone proves no drawing; INF-1416's check on a disposable Mac saw the hidden pages draw at boot with nobody logged in.
+- `keychain`: on a Mac, the `locked`, `unlocked`, `absent` or `unknown` state of the account's own login Keychain, opened by its path under the home its user record names (`~/Library/Keychains/login.keychain-db`, `accountKeychainPath`), read silently through Security.framework's metadata-only `SecKeychainGetStatus`, never an item or a password.
+  It never asks for the default Keychain: started at boot by a system job, that is the Mac's own unlocked System Keychain while the account's stays locked (INF-1416's check on a disposable Mac).
   An unlocked Keychain promises no sign-in, and a lock changed after start does not change this dated reading.
   Isolated launches never touch the person's Keychain and record unknown; other systems record `not-applicable`, which makes no claim about Linux's separate keyring.
 - `voice`: `unavailable`, since a run does not prepare voice.
@@ -164,8 +165,8 @@ A note a crashed run left names a process that is gone or holds no lock, so the 
 
 ## Starting at boot
 
-`<app> start-at-boot` sets the usual start at boot up for this account, on Linux: it writes what the account may and prints the one line an administrator runs (INF-1228's approved plan, piece 7, the captain's answer boot=both; piece 5 of INF-1352's plan).
-It writes this user's own systemd service, `<bundle id>.run.service` (`.dev.run` for a development run, `runLabelOf`, `src/shared/codeNames.ts`) in `~/.config/systemd/user` (or `$XDG_CONFIG_HOME`), and the link in `default.target.wants` that `systemctl --user enable` makes, so the user's systemd starts `<app> run` at their login (`bootUnit`, `src/core/helper/background.ts`).
+`<app> start-at-boot` sets the usual start at boot up for this account: it writes what the account may and prints the one line an administrator runs (INF-1228's approved plan, piece 7, the captain's answer boot=both; piece 5 of INF-1352's plan).
+On Linux it writes this user's own systemd service, `<bundle id>.run.service` (`.dev.run` for a development run, `runLabelOf`, `src/shared/codeNames.ts`) in `~/.config/systemd/user` (or `$XDG_CONFIG_HOME`), and the link in `default.target.wants` that `systemctl --user enable` makes, so the user's systemd starts `<app> run` at their login (`bootUnit`, `src/core/helper/background.ts`).
 To start it at boot with nobody logged in, the user must linger: it asks `loginctl enable-linger --no-ask-password <user>`, which systemd allows some accounts, and otherwise prints "To start it whenever this computer starts, before anyone logs in, an administrator runs this once:" and `sudo loginctl enable-linger <user>`, the line the Linux join prints (`afterLogout`, `docs/devices.md`).
 The service starts the run again ten seconds after a failure, so an update's exit 75 runs the new version, but not after a clean stop (0) or a settings file to fix (78, `RestartPreventExitStatus`); what the run says goes to the user's journal (`journalctl --user -u <label>.service`), which the command names.
 It starts the service now, unless another Infinitary holds the data folder (the window, or a run started by hand): then it says the service starts the next time instead, so it never fails beside it; a run of the service itself restarts with the new file.
@@ -174,14 +175,21 @@ It starts the service now, unless another Infinitary holds the data folder (the 
 With no systemd for this user it says so and exits 1; any other word prints the usage and exits 2.
 `src/main/startAtBoot.ts` owns the command and its words.
 
-On a Mac it changes nothing yet: it says "Infinitary cannot start at boot on a Mac yet." and points to `help run`, and exits 1.
-A Mac's boot entry is an administrator's (macOS has no linger), and it waits for a check on a disposable Mac that the app runs there with nobody logged in, asked on its own card and run on a Mac kept for checks, never an everyday one.
+On a Mac, which has no linger, a job starts before anyone logs in only from the system's own `/Library/LaunchDaemons`, which an administrator writes (INF-1362, built after INF-1416's check on a disposable Mac showed the run starts, draws its hidden pages and stops cleanly there with nobody logged in).
+So it writes the account's own entry, `~/Library/LaunchDaemons/<label>.plist` (a folder launchd never reads itself), and prints "To turn it on, an administrator runs this once:" and the line that copies it into place, owned by root: `sudo install -o root -g wheel -m 644 <entry> /Library/LaunchDaemons/<label>.plist` (`bootPlist`, `src/core/helper/background.ts`).
+At the next boot launchd starts `<app> run` as this user (`UserName`), with `HOME` set to their home so the run opens their own data folder, and at the priority of an app the person started, as the home's own work runs (INF-247).
+It starts the run again after a failure, so an update's exit 75 runs the new version, but not after a clean stop (0); launchd cannot spare one exit code, so a settings file to fix (78) is started again every ten seconds, launchd's own wait, and is said in the log each time.
+What the run says goes to `~/Library/Logs/<label>.log`, which launchd opens as this user and the command names.
+It starts nothing now: the copy an administrator puts in place starts at the next boot, and an entry already in place keeps the copy launchd read at boot until the next one.
+`--settings <file>` and its refusal are as on Linux.
+`--off` takes the account's entry away; once an administrator has put one in place, it prints the line that stops the run and takes it away, `sudo launchctl bootout system/<label> 2>/dev/null; sudo rm -f /Library/LaunchDaemons/<label>.plist`.
+With FileVault on, a Mac starts nothing until someone unlocks its disk at boot.
 
-`<app> help` lists the commands, and `<app> help run` prints the run's usage and the ways to start it the app does not set up itself, each with this app's own path: by hand in a terminal, `start-at-boot` on Linux, and a Mac login agent's file for `~/Library/LaunchAgents` (INF-1228's plan: "infinitary help run prints examples for other setups").
+`<app> help` lists the commands, and `<app> help run` prints the run's usage and the ways to start it the app does not set up itself, each with this app's own path: by hand in a terminal, `start-at-boot`, and a Mac login agent's file for `~/Library/LaunchAgents` (INF-1228's plan: "infinitary help run prints examples for other setups").
 
 ## Not yet
 
-The rest of INF-1228's plan follows in order, each on its own: from another computer, its computers and phones, through the same pairing (piece 6), and a task's browser shown and taken over there (piece 6, the captain's answer browser=build); and a Mac's boot entry for `start-at-boot`, after its check on a disposable Mac ("Starting at boot").
+The rest of INF-1228's plan follows in order, each on its own: from another computer, its computers and phones, through the same pairing (piece 6), and a task's browser shown and taken over there (piece 6, the captain's answer browser=build).
 Google's sign-in from another computer waits too: its page sends the browser back to the first mate's own loopback address.
 Claude signs in only where someone is logged in: a Mac nobody is logged in to keeps Claude's login locked in its Keychain, and the crew there uses other subscriptions (captain's pick on question 3).
 Moving an existing record to another account is planned separately (question 7).
@@ -197,5 +205,6 @@ With a settings file and the system folders as its path, a run never asks a stan
 `tests/e2e/link-command.spec.ts` starts the built commands in the same isolated environment: with nothing running `link` says so and makes no data, a word it does not take exits 2, and beside a run a computer's link joins once, a phone's printed code holds its printed link and joins, and `--json` answers a new link; once the run stops it says so again.
 `src/main/linkCommand.test.ts` holds the words after `link`, the readings with no answering door, the printed code read back module by module, and the output; `src/core/devices/phoneDoor.test.ts` holds the door's answer and refusals.
 `tests/e2e/run-control.spec.ts` starts the built app as `<app> run` with the mock provider and Google's stand-in, joins a second app at its first launch with the link `link --json` prints, and from it opens Intelligence with a card's Open settings button, Usage and Integrations by command, saves a projects folder typed as its path there after a missing one is refused, and signs in to Google, whose page that app's browser opens; once the run stops its own data holds both.
-`src/main/startAtBoot.test.ts` holds `start-at-boot` against a stand-in systemd and logind: the service it writes, linger allowed, refused or already on, an Infinitary already open, a settings file, `--off`, no systemd, a Mac, and `help run`.
+`src/main/startAtBoot.test.ts` holds `start-at-boot` against a stand-in systemd and logind: the service it writes, linger allowed, refused or already on, an Infinitary already open, a settings file, `--off`, no systemd, and `help run`; and on a Mac the entry it writes, read back as launchd reads it, the administrator's line, quoted where a home has a space, a settings file and `--off` before and after an administrator put the entry in place.
+`src/main/runStatus.test.ts` also holds the Keychain a run reads: the account's own login Keychain by its path, and a missing one as absent.
 `src/core/connection/connection.test.ts`, `src/shared/ipc.test.ts`, `src/core/devices/homeLink.test.ts`, `src/main/shell.test.ts` and `src/core/core.test.ts` hold what such a view may ask and is refused, the welcome's field, a replayed page left unopened, and the page the real core sends instead of opening it; `src/renderer/src/devices/viewWords.test.tsx`, `src/renderer/src/settings/SettingsScreen.test.tsx` and `src/renderer/src/app/commandRefusals.test.ts` hold the sections, words and commands.

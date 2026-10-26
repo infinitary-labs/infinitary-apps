@@ -56,7 +56,9 @@ export async function answerBootCommand(
   return runStartAtBoot(words, {
     platform: hostPlatform(),
     user: userInfo().username,
+    homeDir: homedir(),
     unitsDir: join(xdg && isAbsolute(xdg) ? xdg : join(homedir(), ".config"), "systemd", "user"),
+    daemonsDir: "/Library/LaunchDaemons",
     label: runLabelOf(flavor),
     launcher,
     dataDir,

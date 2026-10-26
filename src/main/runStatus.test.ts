@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../tests/helpers/scratchDirs";
 import { markRunning, RUN_LAST_STOP, RUN_MARKER, RUN_UPDATED_EXIT, RUN_WORDS } from "./runCommand";
-import { keychainLockFromFlags, runEnvironment } from "./runEnvironment";
+import {
+  accountKeychainPath,
+  keychainLockFromFlags,
+  readKeychainLock,
+  runEnvironment,
+} from "./runEnvironment";
 import {
   readRunStatus,
   runStatusCommand,
@@ -159,5 +164,17 @@ describe("the status command", () => {
     // Security.framework's actual bit field: read/write permission bits do not mean unlocked.
     expect(keychainLockFromFlags(2 | 4)).toBe("locked");
     expect(keychainLockFromFlags(1 | 2 | 4)).toBe("unlocked");
+  });
+});
+
+describe("the Keychain a run reads", () => {
+  // INF-1416: started at boot by a system job, the default Keychain was the
+  // Mac's System Keychain, unlocked, while the account's own stayed locked.
+  it("reads the account's own login Keychain by its path, and a missing one as absent", async () => {
+    expect(accountKeychainPath("/Users/fm")).toBe("/Users/fm/Library/Keychains/login.keychain-db");
+    const missing = accountKeychainPath(scratchDir("run-keychain-"));
+    expect(await readKeychainLock(missing)).toBe(
+      process.platform === "darwin" ? "absent" : "not-applicable",
+    );
   });
 });

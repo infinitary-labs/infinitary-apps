@@ -26121,6 +26121,68 @@ describe("an Automatic wait in Activity", () => {
     expect(heard()).toEqual([]);
     expect(tasks.get(task.id)?.status).toBe("open");
   });
+
+  // INF-1456: a person added an Intel Mac mini and expected Automatic to use
+  // it, and every task of their project that declared no chip started on the
+  // MacBook with nothing said. The first mate hears it once per project and
+  // computer, though this computer took the task and the next task of the
+  // same project leaves the mini out again.
+  it("tells the first mate once that Automatic left the Intel Mac mini out of a project, with the change that lets it in", async () => {
+    const dir = scratchDir("infinitary-automatic-left-out-");
+    execFileSync("git", ["-C", dir, "init", "--initial-branch=main"]);
+    execFileSync("git", ["-C", dir, "remote", "add", "origin", "https://github.com/o/scheduler.git"]);
+    const leftOut = [
+      {
+        computerId: "mac-mini",
+        name: "Mac mini",
+        took: "This computer",
+        system: "macos" as const,
+        chip: "x64" as const,
+        reasons: [
+          { kind: "chip" as const, runs: "x64" as const, heldTo: ["arm64" as const], heldOn: "macos" as const },
+        ],
+        widened: { chips: ["arm64" as const, "x64" as const] },
+      },
+    ];
+    const { supervisor, repos, tasks, inbox } = setup(fakeCrewmate(), {
+      automatic: { choose: async () => ({ computerId: null, leftOut }) },
+    });
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake, origin, ref) => inbox.enqueueWake(FIRSTMATE_RECIPIENT, wake, origin, ref),
+      retryConverse: vi.fn(),
+    });
+    const { repo } = await repos.setup({ kind: "adopt", path: dir, name: "Scheduler" });
+    repos.setRunsOn(repo.id, AUTOMATIC_COMPUTER);
+    const queued = (id: string, title: string) =>
+      seedTask(tasks, { id, title, repoId: repo.id, status: "queued", startPolicy: "when-ready" });
+    const rotate = queued("rotate", "Remove and rotate scheduler mail credentials");
+    const heard = () =>
+      inbox.allFor(FIRSTMATE_RECIPIENT).filter((row) => row.facts?.kind === "computer-left-out");
+
+    await supervisor.dispatchQueuedTask(rotate.id);
+    expect(heard().map((row) => row.facts)).toEqual([
+      {
+        kind: "computer-left-out",
+        task: { id: rotate.id, key: rotate.key || rotate.id, title: rotate.title },
+        project: { id: repo.id, name: "Scheduler" },
+        computer: { name: "Mac mini", system: "macos", chip: "x64" },
+        took: "This computer",
+        reasons: leftOut[0]?.reasons,
+        widened: { chips: ["arm64", "x64"] },
+      },
+    ]);
+    const words = heard().map(renderWake)[0];
+    expect(words).toContain("Mac mini runs on Intel (x64)");
+    expect(words).toContain("held to this computer's Apple silicon (arm64)");
+    expect(words).toContain(
+      `app_change project-settings for ${repo.id} with changes {"placementRequirements":{"chips":["arm64","x64"]}}`,
+    );
+
+    inbox.ack(heard().map((row) => row.id));
+    const digest = queued("digest", "Send the weekly scheduler digest");
+    await supervisor.dispatchQueuedTask(digest.id);
+    expect(heard()).toEqual([]);
+  });
 });
 
 /**

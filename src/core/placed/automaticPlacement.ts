@@ -23,6 +23,8 @@ import { actualComputerPool } from "../routing/computerPool";
 import {
   evaluatePlacement,
   floorHold,
+  type LeftOut,
+  leftOutComputers,
   type PlacementCandidate,
   resolvePlacementRequirements,
   type SystemUnserved,
@@ -49,7 +51,12 @@ export type AutomaticChoice = {
   computerId: string | null;
   routed?: RouteResult;
   accountId?: string;
+  /** Added computers this comparison left out for a reason only a change ends (`leftOutComputers`). */
+  leftOut?: NamedLeftOut[];
 };
+
+/** A left-out computer by the name Task Details gives it, and the computer that took the task. */
+export type NamedLeftOut = LeftOut & { name: string; took?: string };
 
 /**
  * Why a new Automatic task waits, once every computer was compared. `held` is
@@ -58,7 +65,12 @@ export type AutomaticChoice = {
  * `unserved` says no computer runs a system the task requires
  * (`unservedSystems`), which no room or reading ends.
  */
-export type AutomaticWait = { wait: PlacementWait; held?: RouteResult; unserved?: SystemUnserved };
+export type AutomaticWait = {
+  wait: PlacementWait;
+  held?: RouteResult;
+  unserved?: SystemUnserved;
+  leftOut?: NamedLeftOut[];
+};
 
 /** The one start-time admission owner. Resource demand uses the screen/panel feed,
  * not a second sampler. Fresh compatibility is transient; only commitments persist.
@@ -89,6 +101,8 @@ export class AutomaticPlacement {
       /** Evidence that the conversation is running, including one reconciled after restart. */
       running: (task: TaskRecord) => boolean;
       localFacts?: typeof readPlacementFacts;
+      /** This computer's system and chip; absent, the running process's. */
+      home?: () => ReturnType<typeof thisDeviceSystem>;
       /** Re-read inherited choices after asynchronous compatibility reads. */
       eligible?: (record: TaskRecord) => boolean;
     },
@@ -171,10 +185,11 @@ export class AutomaticPlacement {
           : {}),
       };
     }
+    const home = this.options.home?.() ?? thisDeviceSystem();
     const requirements = resolvePlacementRequirements({
       project: repo.placementRequirements,
       task: shape.placement_requirements,
-      home: thisDeviceSystem(),
+      home,
       workingCopy: true,
     });
     const resourceRound = this.options.resources.readCurrent(); // The same round that views use.
@@ -183,7 +198,7 @@ export class AutomaticPlacement {
         computerId: null as string | null,
         name: HERE.This,
         inReach: true,
-        system: thisDeviceSystem().system,
+        system: home.system,
       },
       ...this.options
         .devices()
@@ -257,6 +272,7 @@ export class AutomaticPlacement {
     let routed: RouteResult | undefined;
     let wait: AutomaticWait | undefined;
     let onDefault: { computerId: string | null; name: string } | undefined;
+    let leftOut: NamedLeftOut[] = [];
     const committed = this.options.tasks.commitPlacement(record.id, (pending) => {
       now = this.now();
       const atCommit = this.options.resources.snapshot();
@@ -290,6 +306,16 @@ export class AutomaticPlacement {
       const chosen = decision.chosen;
       const nameOf = (id: string | null) =>
         computers.find((row) => row.computerId === id)?.name ?? "The other computer";
+      leftOut = leftOutComputers({
+        project: repo.placementRequirements,
+        requirements,
+        candidates,
+        evaluations: decision.candidates,
+      }).map((left) => ({
+        ...left,
+        name: nameOf(left.computerId),
+        ...(chosen ? { took: nameOf(chosen.computerId) } : {}),
+      }));
       if (!chosen) {
         const held = floorHold(decision.candidates);
         // A fresh reading's system, else the one the computer last said.
@@ -312,6 +338,7 @@ export class AutomaticPlacement {
           ),
           ...(held ? { held } : {}),
           ...(unserved ? { unserved } : {}),
+          ...(leftOut.length ? { leftOut } : {}),
         };
         return undefined;
       }
@@ -347,11 +374,13 @@ export class AutomaticPlacement {
           chips: requirements.chips,
           tools: requirements.tools,
           profile: requirements.profile,
+          ...(requirements.inherited.length ? { inherited: requirements.inherited } : {}),
         },
         candidateCount: decision.candidates.length,
         candidates: rows.map((row) => {
           const read =
             facts[computers.findIndex((computer) => computer.computerId === row.computerId)];
+          const said = candidates.find((each) => each.computerId === row.computerId);
           return {
             computerId: row.computerId,
             name: nameOf(row.computerId),
@@ -359,6 +388,8 @@ export class AutomaticPlacement {
             rejections: row.rejections,
             ...(row.reach ? { reach: row.reach } : {}),
             missingTools: row.missingTools,
+            ...(said?.system ? { system: said.system } : {}),
+            ...(said?.chip ? { chip: said.chip } : {}),
             reading: row.resources,
             factsAgeMs: read ? Math.max(0, now - read.started) : null,
             capacity: row.capacity,
@@ -378,7 +409,11 @@ export class AutomaticPlacement {
         news: true,
         feed: true,
       });
-      return { computerId: onDefault.computerId, routed };
+      return {
+        computerId: onDefault.computerId,
+        routed,
+        ...(leftOut.length ? { leftOut } : {}),
+      };
     }
     if (!committed || !routed) return wait;
     const pool =
@@ -386,6 +421,7 @@ export class AutomaticPlacement {
     return {
       computerId: committed.snapshot.computerId,
       ...(routed ? { routed } : {}),
+      ...(leftOut.length ? { leftOut } : {}),
       accountId: pool?.modelAccounts.get(
         `${committed.snapshot.model.provider}/${committed.snapshot.model.id}`,
       ),

@@ -2,6 +2,7 @@ import { HERE } from "@shared/deviceNames";
 import {
   PLACEMENT_HELD_WAIT,
   PLACEMENT_MODEL_WAIT,
+  type PlacementRequirements,
   type PlacementWait,
   placementWait,
 } from "@shared/placement";
@@ -9,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import { memoryUsedBytes } from "../placed/memoryUsed";
 import {
   evaluatePlacement,
+  leftOutComputers,
   type PlacementCandidate,
   type PlacementReservation,
   resolvePlacementRequirements,
@@ -96,6 +98,83 @@ describe("evaluatePlacement on a Mac in ordinary use", () => {
     expect(decision.candidates[0]?.rejections).toEqual([]);
     expect(decision.status).toBe("chosen");
     expect(decision.chosen?.computerId).toBeNull();
+  });
+});
+
+/**
+ * INF-1456: a person added an Intel Mac mini beside their Apple-silicon
+ * MacBook and expected Automatic to use it. Their project declared no
+ * computer requirements, so the chip was filled from the MacBook's own and
+ * the mini was refused at every start, with nothing said but one line in
+ * Task Details. The comparison now says which added computer it left out and
+ * why, and the project change that lets it in.
+ */
+describe("leftOutComputers on a project that declares no computer requirements", () => {
+  const intelMini: PlacementCandidate = {
+    ...thisMac,
+    computerId: "mac-mini",
+    chip: "x64",
+    physicalComputerId: "b".repeat(64),
+  };
+  const compare = (project?: PlacementRequirements, mini = intelMini) => {
+    const requirements = resolvePlacementRequirements({
+      ...(project ? { project } : {}),
+      home: { system: "macos", chip: "arm64" },
+      workingCopy: true,
+    });
+    const candidates = [thisMac, mini];
+    const decision = evaluatePlacement({ requirements, candidates, reservations: [] });
+    return {
+      decision,
+      leftOut: leftOutComputers({
+        project,
+        requirements,
+        candidates,
+        evaluations: decision.candidates,
+      }),
+    };
+  };
+
+  it("leaves the Intel Mac mini out for this Mac's inherited chip, with both chips as the way in", () => {
+    const { decision, leftOut } = compare();
+    expect(decision.chosen?.computerId).toBeNull();
+    expect(leftOut).toEqual([
+      {
+        computerId: "mac-mini",
+        system: "macos",
+        chip: "x64",
+        reasons: [{ kind: "chip", runs: "x64", heldTo: ["arm64"], heldOn: "macos" }],
+        widened: { chips: ["arm64", "x64"] },
+      },
+    ]);
+  });
+
+  it("compares the mini equally once the project takes that change", () => {
+    const widened = compare().leftOut[0]?.widened;
+    const { decision, leftOut } = compare(widened);
+    expect(
+      decision.candidates.find((row) => row.computerId === "mac-mini")?.rejections,
+    ).not.toContain("chip-incompatible");
+    expect(leftOut).toEqual([]);
+  });
+
+  it("says nothing about a chip the project declared", () => {
+    expect(compare({ chips: ["arm64"] }).leftOut).toEqual([]);
+  });
+
+  it("names a missing program, with no project change to offer", () => {
+    const { leftOut } = compare(
+      { chips: ["arm64", "x64"] },
+      { ...intelMini, tools: { git: "unavailable" } },
+    );
+    expect(leftOut).toEqual([
+      {
+        computerId: "mac-mini",
+        system: "macos",
+        chip: "x64",
+        reasons: [{ kind: "programs", missing: ["git"] }],
+      },
+    ]);
   });
 });
 

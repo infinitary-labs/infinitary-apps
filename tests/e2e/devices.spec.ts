@@ -36,7 +36,7 @@ import {
   removeLines,
   SEEN_WORDS,
 } from "../../src/renderer/src/settings/devicesWords";
-import { aDevice, COMPUTER } from "../../src/shared/deviceNames";
+import { aDevice, COMPUTER, chipWords } from "../../src/shared/deviceNames";
 import { claimedPort } from "../helpers/claimedPort";
 import { connectClient } from "../helpers/connectionClient";
 import { standInDnsSd } from "../helpers/dnsSdStandIn";
@@ -225,7 +225,7 @@ const BUILDER = { name: "builder", uid: (process.getuid?.() ?? userInfo().uid) +
  * Devices names it by them - a phone a phone, every computer a computer,
  * and one that never said a computer too.
  */
-test("a device says what it is when it connects, and Devices names a phone a phone and a Linux computer a computer", async () => {
+test("a device says what it is when it connects, and Devices names a phone a phone and a Linux computer a computer with its chip", async () => {
   const app = await launchApp({});
   const connections: Awaited<ReturnType<typeof connectClient>>[] = [];
   try {
@@ -258,6 +258,11 @@ test("a device says what it is when it connects, and Devices names a phone a pho
     await expect(row(studio.deviceId)).toContainText(aDevice({ system: "linux" }));
     await expect(row(quiet.deviceId)).toContainText(aDevice({}));
     await expect(row(studio.deviceId)).not.toContainText(aDevice({ system: "ios" }));
+    // INF-1456: a computer's row names its chip, as it said it at pairing.
+    await expect(row(studio.deviceId)).toContainText(
+      `${aDevice({ system: "linux" })} · ${chipWords("x64", "linux")} · `,
+    );
+    await expect(row(quiet.deviceId)).toContainText(`${aDevice({})} · joined `);
   } finally {
     for (const connection of connections) await connection.close();
     await app.close();

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "computer-left-out",
+      "kind": "improvement",
+      "title": "Your first mate tells you when Automatic leaves a computer out",
+      "body": "A project that names no computer requirements runs only on computers like this one. When you add a computer with a different chip or system, such as an Intel Mac mini beside an Apple-silicon Mac, your first mate now says so once for each project and offers the one change that lets it run there. It also says when a computer is missing a program a project needs, or cannot reach the project. Settings → Devices shows each computer's chip, and a task's Details say why a computer was left out.",
+      "area": "devices",
+      "picture": {
+        "dark": "computer-left-out-dark.webp",
+        "light": "computer-left-out-light.webp",
+        "alt": "Settings, Devices, listing this computer, then a Mac mini whose row reads a computer, Intel"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

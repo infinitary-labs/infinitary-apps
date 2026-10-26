@@ -460,6 +460,7 @@ import type { Ticker } from "./ticker";
 import {
   checkBackAsk,
   checkBackAskOnce,
+  computerLeftOutWake,
   conversationRestartWake,
   laneText,
   laneTurnText,
@@ -12229,6 +12230,19 @@ export class CrewSupervisor {
             )
           : undefined;
       const selected = choice && "computerId" in choice ? choice : undefined;
+      // An added computer left out for a reason only a change ends: the
+      // first mate hears it once per project, computer and reason, whichever
+      // computer took the task (INF-1456).
+      if (repo)
+        for (const left of choice?.leftOut ?? [])
+          this.hooks.notifyOp(
+            computerLeftOutWake(
+              { id: record.id, key: record.key || record.id, title: record.title },
+              { id: repo.id, name: repo.name },
+              left,
+            ),
+            "agent",
+          );
       if (automatic && !selected) {
         // Automatic declines a task that changed while computers were
         // compared, which is no wait for room.

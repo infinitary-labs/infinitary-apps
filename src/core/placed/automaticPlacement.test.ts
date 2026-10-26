@@ -2,6 +2,7 @@ import { HERE } from "@shared/deviceNames";
 import type { ComputerReach, DeviceView } from "@shared/devices";
 import {
   AUTOMATIC_COMPUTER,
+  PLACEMENT_FACTS_SINCE,
   PLACEMENT_HELD_WAIT,
   type PlacementFacts,
   placementCandidateLines,
@@ -146,6 +147,7 @@ function world(
     now,
     running: (task) => running.has(task.id),
     localFacts: async () => facts,
+    home: () => ({ system: facts.system, chip: facts.chip }),
     ...more,
   });
   const task = (id: string, title: string) =>
@@ -379,4 +381,72 @@ describe("AutomaticPlacement's wait for a system no computer runs", () => {
       }
     },
   );
+});
+
+/**
+ * INF-1456: a person added an Intel Mac mini beside their Apple-silicon
+ * MacBook, and Automatic never used it for a project that declared no
+ * computer requirements: the chip was filled from the MacBook's own, and
+ * only Task Details said "different required architecture". The start now
+ * names the computer it left out, why, and the project change that lets it
+ * in, whichever computer took the task.
+ */
+describe("AutomaticPlacement's word on an added computer it leaves out", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ now: new Date("2026-10-14T08:00:00Z") });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  /** The project in the report: Automatic, with no computer requirements. */
+  const scheduler: RepoView = { ...ledger, placementRequirements: undefined };
+  /** What the Intel Mac mini answers about itself for that project. */
+  const intelMini = {
+    system: "macos",
+    chip: "x64",
+    physicalComputerId: "b".repeat(64),
+    tools: { git: "available" },
+    projectAccess: "available",
+    signIns: null,
+  } as const;
+
+  it("starts here and names the Intel Mac mini, held to this computer's Apple silicon", async () => {
+    const w = world(undefined, {
+      devices: () => [{ ...macMini, kind: "work", system: "macos", chip: "x64" }],
+      repo: () => scheduler,
+      work: {
+        onWorkDevice: () => () => {},
+        inReach: () => true,
+        version: () => ({ contract: PLACEMENT_FACTS_SINCE }),
+        ask: async () => intelMini,
+      } as unknown as WorkDevices,
+    });
+    try {
+      const rotate = w.task("rotate", "Remove and rotate scheduler mail credentials");
+      expect(await w.start(rotate, { kind: "fix" }, scheduler)).toMatchObject({
+        computerId: null,
+        leftOut: [
+          {
+            computerId: macMini.id,
+            name: "Mac mini",
+            took: HERE.This,
+            reasons: [{ kind: "chip", runs: "x64", heldTo: ["arm64"] }],
+            widened: { chips: ["arm64", "x64"] },
+          },
+        ],
+      });
+      const snapshot = w.tasks.get(rotate.id)?.placement?.snapshot;
+      if (!snapshot) throw new Error("The start saved no explanation.");
+      expect(
+        placementCandidateLines(snapshot).find((line) => line.startsWith("Mac mini: ")),
+      ).toMatch(
+        new RegExp(
+          `^Mac mini: Intel, while this task was held to Apple silicon, inherited from ${HERE.this}[;.]`,
+        ),
+      );
+    } finally {
+      w.dispose();
+    }
+  });
 });

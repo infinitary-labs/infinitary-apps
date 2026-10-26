@@ -28100,6 +28100,17 @@
                       "standard",
                       "heavy"
                     ]
+                  },
+                  "inherited": {
+                    "maxItems": 2,
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "systems",
+                        "chips"
+                      ]
+                    }
                   }
                 },
                 "required": [
@@ -28191,6 +28202,22 @@
                         "type": "string",
                         "maxLength": 80
                       }
+                    },
+                    "system": {
+                      "type": "string",
+                      "enum": [
+                        "macos",
+                        "linux",
+                        "windows",
+                        "ios"
+                      ]
+                    },
+                    "chip": {
+                      "type": "string",
+                      "enum": [
+                        "arm64",
+                        "x64"
+                      ]
                     },
                     "reading": {
                       "oneOf": [

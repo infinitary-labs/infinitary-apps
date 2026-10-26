@@ -153,13 +153,18 @@ describe("Settings -> Devices", () => {
     expect(offered).toContain("A phone");
   });
 
-  it("names each device by what it said it is: a Mac or a Linux computer is a computer, a phone a phone", () => {
+  // INF-1456, the captain's answer: each computer's row names its chip, "one
+  // word on the computer's row, from what it already said at pairing".
+  it("names each device by what it said it is: a Mac or a Linux computer is a computer with its chip, a phone a phone", () => {
     const joined = `joined today ${time(AIR.pairedAt)} · seen just now`;
     expect(deviceDetail({ ...AIR, system: "macos", chip: "arm64" }, NOW)).toBe(
-      `a computer · ${joined}`,
+      `a computer · Apple silicon · ${joined}`,
+    );
+    expect(deviceDetail({ ...AIR, system: "macos", chip: "x64" }, NOW)).toBe(
+      `a computer · Intel · ${joined}`,
     );
     expect(deviceDetail({ ...AIR, system: "linux", chip: "x64" }, NOW)).toBe(
-      `a computer · ${joined}`,
+      `a computer · Intel or AMD · ${joined}`,
     );
     expect(deviceDetail({ ...AIR, system: "ios" }, NOW)).toBe(`a phone · ${joined}`);
     expect(deviceDetail(AIR, NOW)).toBe(`a computer · ${joined}`);

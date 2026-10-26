@@ -132,6 +132,7 @@ It performs no sampling, preparation, account access, database writes or task st
 Only the existing Mac and Linux work platforms qualify; the architecture is what the process executes, not inferred hardware capability or emulation support.
 Task platform declarations intersect project declarations, required tools are united, and a task cannot lower a declared project resource profile.
 Without a platform declaration, the home platform is the conservative default: a Mac task is not presumed portable to Linux, nor an Arm task to Intel.
+The resolver says which platform fields it filled from the home's own (`inherited`), so an added computer that default leaves out is told rather than silent (`docs/helper.md`, "Automatic starts").
 An unknown home platform or an empty intersection admits nothing.
 A working copy requires git; every other tool must be declared by identity, never discovered by parsing task text.
 The caller supplies typed access to the particular project and the tools on each computer; missing or unknown facts exclude that computer.

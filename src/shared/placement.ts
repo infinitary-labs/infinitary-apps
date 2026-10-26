@@ -1,5 +1,11 @@
 import { z } from "zod";
-import { type ComputerReach, computerReachSchema, deviceChipSchema } from "./devices";
+import { chipWords, HERE, SYSTEM_WORDS } from "./deviceNames";
+import {
+  type ComputerReach,
+  computerReachSchema,
+  deviceChipSchema,
+  deviceSystemSchema,
+} from "./devices";
 import { computerResourceReadingSchema } from "./resources";
 import { computerSignInsSchema } from "./signIns";
 
@@ -24,6 +30,9 @@ export const placementRequirementsSchema = z.strictObject({
   profile: placementProfileSchema.optional(),
 });
 export type PlacementRequirements = z.infer<typeof placementRequirementsSchema>;
+/** A platform field filled from this computer's own because nobody declared it (INF-1456). */
+export const placementInheritedSchema = z.enum(["systems", "chips"]);
+export type PlacementInherited = z.infer<typeof placementInheritedSchema>;
 
 /** Advisory admission budget, not an enforced process limit or measured prediction. */
 export type PlacementDemand = { cpu: number; memoryBytes: number };
@@ -119,6 +128,8 @@ export const placementSnapshotSchema = z.object({
     tools: z
       .array(placementRequirementsSchema.shape.tools.unwrap().element)
       .max(RESOLVED_TOOL_LIMIT),
+    /** The platform fields filled from the home's own; absent on a historical snapshot. */
+    inherited: z.array(placementInheritedSchema).max(2).optional(),
   }),
   candidateCount: z.number().int().positive(),
   candidates: z
@@ -134,6 +145,9 @@ export const placementSnapshotSchema = z.object({
         /** The core's one reach reading when it was compared; absent for this Mac and on a historical row. Out of reach reads connecting while it was connecting. */
         reach: computerReachSchema.optional(),
         missingTools: z.array(z.string().max(80)).max(RESOLVED_TOOL_LIMIT),
+        /** What its fresh reading said it runs; absent when unread and on a historical row. */
+        system: deviceSystemSchema.optional(),
+        chip: deviceChipSchema.optional(),
         reading: computerResourceReadingSchema,
         factsAgeMs: z.number().nonnegative().nullable(),
         capacity: demandSchema.nullable(),
@@ -323,12 +337,50 @@ const REJECTION_WORDS: Record<PlacementRejection, string> = {
 };
 
 /** A computer's rejections in words; out of reach reads connecting while its connection was being made. */
-function rejectionWords(rejections: readonly PlacementRejection[], connecting: boolean): string {
+function rejectionWords(
+  rejections: readonly PlacementRejection[],
+  connecting: boolean,
+  said: Partial<Record<PlacementRejection, string>> = {},
+): string {
   return rejections
-    .map((reason) =>
-      reason === "out-of-reach" && connecting ? "connecting" : REJECTION_WORDS[reason],
+    .map(
+      (reason) =>
+        said[reason] ??
+        (reason === "out-of-reach" && connecting ? "connecting" : REJECTION_WORDS[reason]),
     )
     .join("; ");
+}
+
+/**
+ * A refusal for a system or chip nobody declared, in the words that say so
+ * (INF-1456): "Intel, while this task was held to Apple silicon, inherited
+ * from this computer". Only for a reason the snapshot says was inherited and
+ * a row that said what it runs.
+ */
+function inheritedWords(
+  snapshot: PlacementSnapshot,
+  candidate: PlacementSnapshot["candidates"][number],
+): Partial<Record<PlacementRejection, string>> {
+  if (!candidate.system && !candidate.chip) return {};
+  const inherited = snapshot.requirements.inherited ?? [];
+  const held = (what: string) =>
+    `, while this task was held to ${what}, inherited from ${HERE.this}`;
+  const systems = snapshot.requirements.systems ?? [];
+  const home = systems.length === 1 ? systems[0] : undefined;
+  return {
+    ...(inherited.includes("systems") && candidate.system
+      ? {
+          "system-incompatible": `${SYSTEM_WORDS[candidate.system]}${held(systems.map((system) => SYSTEM_WORDS[system]).join(" or "))}`,
+        }
+      : {}),
+    ...(inherited.includes("chips") && candidate.chip
+      ? {
+          "chip-incompatible": `${chipWords(candidate.chip, candidate.system)}${held(
+            (snapshot.requirements.chips ?? []).map((chip) => chipWords(chip, home)).join(" or "),
+          )}`,
+        }
+      : {}),
+  };
 }
 
 /** Past-tense explanations: these readings describe the commitment, never now. */
@@ -339,8 +391,11 @@ export function placementCandidateLines(snapshot: PlacementSnapshot): string[] {
       const verdict =
         candidate.computerId === snapshot.computerId
           ? "chosen"
-          : rejectionWords(candidate.rejections, candidate.reach === "connecting") ||
-            "compatible, with less room to start";
+          : rejectionWords(
+              candidate.rejections,
+              candidate.reach === "connecting",
+              inheritedWords(snapshot, candidate),
+            ) || "compatible, with less room to start";
       const capacity = candidate.remaining
         ? ` After pending work: ${candidate.remaining.cpu.toFixed(1)} CPUs and ${gib(candidate.remaining.memoryBytes)} GiB memory available.`
         : "";

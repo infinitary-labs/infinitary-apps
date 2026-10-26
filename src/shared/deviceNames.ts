@@ -1,4 +1,4 @@
-import type { DeviceSystem } from "./devices";
+import type { DeviceChip, DeviceSystem } from "./devices";
 
 /**
  * What a device is called (design skill `copy/Vocabulary.prompt.md`, "a
@@ -83,4 +83,22 @@ export function anotherUserHere(platform: string): {
 /** A device as a row names what it is: "a computer" or "a phone". */
 export function aDevice(device: { system?: DeviceSystem | undefined }): string {
   return `a ${deviceNoun(device)}`;
+}
+
+/** A system by the name its maker gives it. */
+export const SYSTEM_WORDS: Record<DeviceSystem, string> = {
+  macos: "macOS",
+  linux: "Linux",
+  windows: "Windows",
+  ios: "iOS",
+};
+
+/**
+ * A chip in a person's words: Apple silicon or Intel on a Mac, and Arm or
+ * Intel or AMD on another system. With no system said, a Mac's words.
+ */
+export function chipWords(chip: DeviceChip, system?: DeviceSystem): string {
+  const mac = system === undefined || system === "macos";
+  if (chip === "arm64") return mac ? "Apple silicon" : "Arm";
+  return mac ? "Intel" : "Intel or AMD";
 }

@@ -3,6 +3,7 @@ import {
   PLACEMENT_DEMANDS,
   type PlacementDemand,
   type PlacementFact,
+  type PlacementInherited,
   type PlacementProfile,
   type PlacementRejection,
   type PlacementRequirements,
@@ -25,6 +26,11 @@ export type ResolvedPlacementRequirements = {
   tools: string[];
   profile: PlacementProfile;
   demand: PlacementDemand;
+  /**
+   * The platform fields neither the project nor the task declared, so they
+   * were filled from this computer's own (INF-1456).
+   */
+  inherited: PlacementInherited[];
 };
 
 /** Resolve declarations only. Task platform refinements intersect the project's. */
@@ -53,9 +59,14 @@ export function resolvePlacementRequirements(input: {
     PLACEMENT_DEMANDS[projectProfile].cpu > PLACEMENT_DEMANDS[requestedProfile].cpu
       ? projectProfile
       : requestedProfile;
+  const inherited: PlacementInherited[] = [
+    ...(project?.systems || task?.systems ? [] : (["systems"] as const)),
+    ...(project?.chips || task?.chips ? [] : (["chips"] as const)),
+  ];
   return {
     systems,
     chips,
+    inherited,
     tools: [
       ...new Set([
         ...(input.workingCopy ? ["git"] : []),
@@ -266,6 +277,104 @@ export function evaluatePlacement(input: {
     requirements,
     candidates: evaluations,
   };
+}
+
+/**
+ * Why Automatic leaves an added computer out of a project's tasks until
+ * someone changes something (INF-1456): a system or chip this computer's own
+ * filled in because nobody declared one, a required program it lacks, or no
+ * access to the project from there. No room or reading changes any of them.
+ */
+export type LeftOutReason =
+  | { kind: "system"; runs: PlacementSystem; heldTo: PlacementSystem[] }
+  | {
+      kind: "chip";
+      runs: DeviceChip;
+      heldTo: DeviceChip[];
+      /** The one system the task was held to, which names its chips' words. */
+      heldOn?: PlacementSystem;
+    }
+  | { kind: "programs"; missing: string[] }
+  | { kind: "project" };
+
+/** An added computer an Automatic comparison left out, and why. */
+export type LeftOut = {
+  computerId: string;
+  system?: DeviceSystem;
+  chip?: DeviceChip;
+  reasons: LeftOutReason[];
+  /**
+   * The project's requirements with the inherited platform it was refused
+   * for declared to include it, everything else as the project has it.
+   * Present only when an inherited system or chip refused it.
+   */
+  widened?: PlacementRequirements;
+};
+
+/**
+ * The added computers a comparison refused for a reason only a change ends
+ * (`LeftOutReason`), whichever computer took the task. A computer refused
+ * for a system or chip the project or task declared is left alone: that is
+ * the declaration working.
+ */
+export function leftOutComputers(input: {
+  project?: PlacementRequirements | undefined;
+  requirements: ResolvedPlacementRequirements;
+  candidates: readonly PlacementCandidate[];
+  evaluations: readonly PlacementEvaluation[];
+}): LeftOut[] {
+  const { requirements } = input;
+  const inherits = (field: PlacementInherited) => requirements.inherited.includes(field);
+  return input.evaluations.flatMap((row): LeftOut[] => {
+    if (row.computerId === null) return [];
+    const candidate = input.candidates.find((each) => each.computerId === row.computerId);
+    if (!candidate) return [];
+    const refused = (reason: PlacementRejection) => row.rejections.includes(reason);
+    if (
+      (refused("system-incompatible") && !inherits("systems")) ||
+      (refused("chip-incompatible") && !inherits("chips"))
+    )
+      return [];
+    const reasons: LeftOutReason[] = [];
+    const system = candidate.system;
+    const runs = system === "macos" || system === "linux" ? system : undefined;
+    if (refused("system-incompatible") && runs)
+      reasons.push({ kind: "system", runs, heldTo: [...requirements.systems] });
+    if (refused("chip-incompatible") && candidate.chip)
+      reasons.push({
+        kind: "chip",
+        runs: candidate.chip,
+        heldTo: [...requirements.chips],
+        ...(requirements.systems.length === 1 ? { heldOn: requirements.systems[0] } : {}),
+      });
+    const missing = requirements.tools.filter((tool) => candidate.tools[tool] === "unavailable");
+    if (refused("tool-unavailable") && missing.length > 0)
+      reasons.push({ kind: "programs", missing });
+    if (refused("project-unavailable")) reasons.push({ kind: "project" });
+    if (reasons.length === 0) return [];
+    const platform = reasons.filter((reason) => reason.kind === "system" || reason.kind === "chip");
+    const widened: PlacementRequirements | undefined = platform.length
+      ? {
+          ...input.project,
+          ...Object.fromEntries(
+            platform.map((reason) =>
+              reason.kind === "system"
+                ? ["systems", [...requirements.systems, reason.runs]]
+                : ["chips", [...requirements.chips, reason.runs]],
+            ),
+          ),
+        }
+      : undefined;
+    return [
+      {
+        computerId: row.computerId,
+        ...(candidate.system ? { system: candidate.system } : {}),
+        ...(candidate.chip ? { chip: candidate.chip } : {}),
+        reasons,
+        ...(widened ? { widened } : {}),
+      },
+    ];
+  });
 }
 
 /** A required system no computer runs, beside the system each computer runs. */

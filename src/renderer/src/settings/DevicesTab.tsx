@@ -1,5 +1,5 @@
 import type { DeviceMake } from "@shared/cards";
-import { aDevice, anotherUserHere, COMPUTER, HERE } from "@shared/deviceNames";
+import { aDevice, anotherUserHere, COMPUTER, chipWords, HERE } from "@shared/deviceNames";
 import {
   type DeviceAddresses,
   type DeviceFirewall,
@@ -372,11 +372,23 @@ function seenWords(device: DeviceView, now: number): string {
     : `${SEEN_WORDS.since} ${sinceWhen(device.seenAt, now)}`;
 }
 
+/**
+ * What a device is, with a computer's chip as it said at pairing (INF-1456):
+ * "a computer · Intel", so a person can see why Automatic leaves it out of a
+ * project held to this computer's chip.
+ */
+function whatDevice(device: DeviceView): string {
+  return device.chip && device.system !== "ios"
+    ? `${aDevice(device)} · ${chipWords(device.chip, device.system)}`
+    : aDevice(device);
+}
+
 /** The mono line under a device's name: what it is, when it joined, and when it was last seen. */
 export function deviceDetail(device: DeviceView, now: number): string {
   // Reached over this Mac's own SSH, it is named by its address and that connection.
   if (device.remoteLogin && device.ssh) {
-    const what = device.onThisMac && device.user ? `another user on ${HERE.this}` : aDevice(device);
+    const what =
+      device.onThisMac && device.user ? `another user on ${HERE.this}` : whatDevice(device);
     const where =
       device.removal === "when-back" || device.ssh.state === "stopped"
         ? seenWords(device, now)
@@ -389,14 +401,14 @@ export function deviceDetail(device: DeviceView, now: number): string {
   }
   // A Mac added by its address is named by it (components/devices/DevicesTab).
   if (device.remoteLogin)
-    return `${aDevice(device)} · ${device.remoteLogin} · ${seenWords(device, now)}`;
+    return `${whatDevice(device)} · ${device.remoteLogin} · ${seenWords(device, now)}`;
   const reached =
     device.reachedOn === "local"
       ? WAYS_WORDS.reachedLocal
       : device.reachedOn === "private"
         ? WAYS_WORDS.reachedPrivate
         : null;
-  return `${aDevice(device)} · joined ${joinedWhen(device.pairedAt, now)}${reached ? ` · ${reached}` : ""} · ${seenWords(device, now)}`;
+  return `${whatDevice(device)} · joined ${joinedWhen(device.pairedAt, now)}${reached ? ` · ${reached}` : ""} · ${seenWords(device, now)}`;
 }
 
 /** The names of what a computer is signed in to: its subscriptions, then where projects live. */

@@ -1,12 +1,12 @@
-import { HERE } from "@shared/deviceNames";
-import type { DeviceSystem } from "@shared/devices";
+import { chipWords, HERE, SYSTEM_WORDS } from "@shared/deviceNames";
+import type { DeviceChip, DeviceSystem } from "@shared/devices";
 import {
   type HoldOverride,
   overrideTakenBackWords,
   softHoldWords,
   standingOverrideWords,
 } from "@shared/holds";
-import type { PlacementSystem } from "@shared/placement";
+import type { PlacementRequirements, PlacementSystem } from "@shared/placement";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
 import {
   ABANDON,
@@ -51,6 +51,7 @@ import type { ServedOrigin } from "@shared/servedFrame";
 import { UNKNOWN_OUTCOME_WORDS } from "@shared/taskBrowser";
 import { browserCommand } from "../browser/commandWords";
 import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
+import type { LeftOut, LeftOutReason } from "../routing/placementEngine";
 import type { InboxRow, WAKE_ENVELOPE_VERSION } from "../storage/inboxStore";
 import type { CardRefusal } from "../storage/taskStore";
 import type { TaskQueryBuiltOn } from "../tasks/taskQuery";
@@ -712,6 +713,24 @@ export type WakeFacts =
       computers: { name: string; system: DeviceSystem }[];
     }
   | {
+      /**
+       * An Automatic comparison left an added computer out of a project's
+       * tasks for a reason only a change ends (INF-1456): a system or chip
+       * inherited from this computer, a missing program, or no access to the
+       * project there. Once per project, computer and reasons, whichever
+       * computer took the task.
+       */
+      kind: "computer-left-out";
+      task: WakeKeyedTask;
+      project: { id: string; name: string };
+      computer: { name: string; system?: DeviceSystem; chip?: DeviceChip };
+      /** The computer that took the task; absent while it waits. */
+      took?: string;
+      reasons: LeftOutReason[];
+      /** The project's requirements that let it in (`LeftOut.widened`). */
+      widened?: PlacementRequirements;
+    }
+  | {
       /** The captain chose on a card with no effect: the choice returns to its author. */
       kind: "card-choice";
       to: WakeLane;
@@ -1211,6 +1230,31 @@ export const BROWSER_GONE_OPENING = "The captain chose to open your browser from
 /** What the Firstmate hears when the captain's Add project could not add the project. */
 export const SETUP_CARD_FAILED_WORDS = "it could not be added";
 
+/** An added computer Automatic left out, as the Firstmate hears it once (INF-1456). */
+function renderComputerLeftOut(facts: Extract<WakeFacts, { kind: "computer-left-out" }>): string {
+  const { computer, project, task } = facts;
+  const why = facts.reasons.map((reason) =>
+    leftOutReasonWords(reason, computer.name, computer.system),
+  );
+  const where = facts.took ? `${facts.took} took the task.` : "The task waits.";
+  const ways: string[] = [];
+  if (facts.widened)
+    ways.push(
+      `Ask the captain once whether ${computer.name} may run this project's tasks: propose app_change project-settings for ${project.id} with changes {"placementRequirements":${JSON.stringify(facts.widened)}}, without on_words and with this wake as evidence, so the app's exact-change card asks them with Apply change as its default. Never apply it on your own judgment. Runs on stays Automatic, a started task stays where it is, and the project's next tasks compare ${computer.name} equally.`,
+    );
+  for (const reason of facts.reasons) {
+    if (reason.kind === "programs")
+      ways.push(
+        `${computer.name} takes them once ${reason.missing.join(", ")} is installed there.`,
+      );
+    if (reason.kind === "project")
+      ways.push(
+        `${computer.name} takes them once it can reach the project, such as by signing in there to where the project lives.`,
+      );
+  }
+  return `[fm-op] Automatic left ${computer.name} out of project "${project.name}" when it compared computers for task ${task.id} ${task.key} "${task.title}": ${why.join("; ")}. ${where} No room or reading changes this. ${ways.join(" ")} You hear this once for this project, computer and reason.`;
+}
+
 /** The setup card's answer, as the Firstmate hears it once. */
 function renderProjectSetup(facts: Extract<WakeFacts, { kind: "project-setup" }>): string {
   const work = facts.work ? ` The card said you start this once it is added: ${facts.work}` : "";
@@ -1590,14 +1634,6 @@ export function jobBoundWake(
   };
 }
 
-/** A system by the name its maker gives it. */
-const SYSTEM_WORDS: Record<DeviceSystem, string> = {
-  macos: "macOS",
-  linux: "Linux",
-  windows: "Windows",
-  ios: "iOS",
-};
-
 /**
  * The one wake about a task no computer can run (INF-720), once per system
  * it requires: every later sweep compares the same computers again.
@@ -1615,6 +1651,58 @@ export function systemWaitWake(
     },
     once: `system-wait:${[...unserved.required].sort().join("+")}`,
   };
+}
+
+/** The once-name of a left-out computer's wake: its project, the computer and why. */
+export function computerLeftOutOnce(
+  project: { id: string },
+  left: Pick<LeftOut, "computerId" | "reasons">,
+): string {
+  const kinds = [...new Set(left.reasons.map((reason) => reason.kind))].sort().join("+");
+  return `computer-left-out:${project.id}:${left.computerId}:${kinds}`;
+}
+
+/**
+ * The one wake about an added computer Automatic leaves out of a project's
+ * tasks (INF-1456). It goes out on the first comparison that leaves it out,
+ * and never again for the same project, computer and reasons.
+ */
+export function computerLeftOutWake(
+  task: WakeKeyedTask,
+  project: { id: string; name: string },
+  left: LeftOut & { name: string; took?: string },
+): TypedWake {
+  const { took } = left;
+  return {
+    facts: {
+      kind: "computer-left-out",
+      task: { id: task.id, key: task.key, title: task.title },
+      project: { id: project.id, name: project.name },
+      computer: {
+        name: left.name,
+        ...(left.system ? { system: left.system } : {}),
+        ...(left.chip ? { chip: left.chip } : {}),
+      },
+      ...(took ? { took } : {}),
+      reasons: left.reasons,
+      ...(left.widened ? { widened: left.widened } : {}),
+    },
+    once: computerLeftOutOnce(project, left),
+  };
+}
+
+/** One reason a computer was left out, as the first mate reads it. */
+function leftOutReasonWords(reason: LeftOutReason, name: string, system?: DeviceSystem): string {
+  switch (reason.kind) {
+    case "chip":
+      return `${name} runs on ${chipWords(reason.runs, system)} (${reason.runs}), and neither the project nor the task declares a chip, so the task was held to ${HERE.this}'s ${reason.heldTo.map((chip) => `${chipWords(chip, reason.heldOn)} (${chip})`).join(" or ")}`;
+    case "system":
+      return `${name} runs ${SYSTEM_WORDS[reason.runs]}, and neither the project nor the task declares a system, so the task was held to ${HERE.this}'s ${reason.heldTo.map((each) => SYSTEM_WORDS[each]).join(" or ")}`;
+    case "programs":
+      return `${name} does not have ${reason.missing.join(", ")}, which this project's tasks require`;
+    case "project":
+      return `${name} cannot reach where the project lives`;
+  }
 }
 
 /** The name a closed dependency's steer goes out once for: the work that closed. */
@@ -1883,6 +1971,8 @@ function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">
       const wanted = facts.required.map((system) => SYSTEM_WORDS[system]).join(" or ");
       return `[fm-op] queued task ${facts.task.id} ${facts.task.key} "${facts.task.title}" requires ${wanted}, and no computer runs it: ${runs.join(", ")}. No room or reading ends this wait: it starts once a computer that runs ${wanted} is paired and in reach, or once what it requires changes (update_task placement_requirements).`;
     }
+    case "computer-left-out":
+      return renderComputerLeftOut(facts);
     case "card-choice":
       if (facts.to === "firstmate") {
         const about = `card "${facts.card.title}"${facts.card.id ? ` (${facts.card.id})` : ""}${facts.card.taskId ? ` on task ${facts.card.taskId}` : ""}`;

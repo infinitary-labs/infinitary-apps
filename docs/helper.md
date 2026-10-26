@@ -762,6 +762,7 @@ A computer that runs work still needs a model its own sign-ins serve.
 `placementRequirements` on project configuration and `placement_requirements` on a task declare systems, execution architectures, exact executable names and an admission profile.
 The resolver intersects project and task platforms, combines tools and adds Git for a working copy, and never lets a task reduce project demand.
 Undeclared platforms conservatively inherit the home system and architecture; nobody infers portability or programs from the brief's words.
+The resolver marks each platform field it filled that way (`inherited`), and the start's snapshot keeps the mark and what each computer said it runs.
 
 `inf:computer:placement` collects fresh compatibility separately from resource sampling: execution system/architecture, executable identities, read-only access to the exact credential-stripped project origin, and that computer's actual served model list.
 Its facts expire after ten seconds, include request travel, and invalidate on every connection transition; a timeout or missing fact is unknown, never spare capacity.
@@ -813,7 +814,15 @@ When every computer's system is known and none runs a system the task requires, 
 The supervisor then wakes the first mate with `system-wait`, naming each computer's system, once per task and required system, though every sweep compares the computers again.
 No room or reading ends such a wait; a computer that runs the system, paired and in reach, or a change to what the task requires (`update_task placement_requirements`), does.
 A paired computer that runs it, in reach or not, or one that never said its system, keeps the wait an ordinary one, and the task's own wait words are the same either way.
+An added computer left out for a reason only a change ends is told to the first mate once (INF-1456), whichever computer took the task.
+`leftOutComputers` reads each comparison for a paired computer refused for a system or chip filled from this computer's own, a required program it does not have, or no access to the project there; one refused for a system or chip the project or task declared is the declaration working, and says nothing.
+For an inherited system or chip it carries the project's requirements with that field declared to include the computer, everything else as the project has it (`widened`), such as both chips for an Intel Mac mini beside an Apple-silicon home.
+The supervisor wakes the first mate with `computer-left-out`, once per project, computer and set of reasons, with no task as its once-name's owner, so the project's next task neither repeats it nor loses it when its first task closes.
+The wake asks the first mate to ask the captain once through the app's exact-change card for `app_change project-settings` with that change, never to apply it on its own judgment; a missing program or project access names what lets the computer in.
+After Apply change, Runs on stays Automatic, a started task stays where it is, and the project's next tasks compare that computer equally.
 Task Details show the chosen computer and a brief reason, or a waiting task's wait words; the native “Compared computers at start” disclosure opens the past-tense candidate explanations by keyboard or pointer.
+A computer refused for an inherited system or chip reads what it runs and what the task was held to, such as "Mac mini: Intel, while this task was held to Apple silicon, inherited from this computer."
+Settings, Devices names each computer's chip on its row, from what it said at pairing (`chipWords`, `src/shared/deviceNames.ts`).
 `TaskDetail.placement` carries the bounded snapshot.
 `v_placements_v1` exposes the historical snapshot, omitting the private preparation origin, through the existing declared, granted, read-only SQL surface and follows the task row's retention.
 Live resource refreshes still write no task, database or panel-store history.

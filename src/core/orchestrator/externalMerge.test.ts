@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import type { Forge, ForgePull } from "../forge";
+import { appPathsFor } from "../paths";
+import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
 import { REPORT_TOOL } from "../pi/crewmateTaskTools";
+import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
 import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
@@ -8,6 +12,7 @@ import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { CardService } from "./cardService";
 import { armWatch, CHECK_REFRESH_MS, CheckWatcher } from "./checkWatch";
+import { CrewSupervisor } from "./crewSupervisor";
 import { PrCiService } from "./prCi";
 import { SettleService, type SettleServiceHost } from "./settleService";
 
@@ -107,6 +112,33 @@ function fixture() {
     steer,
     settle,
     watcher,
+    sweep: async () => {
+      const supervisor = new CrewSupervisor({
+        now: () => now,
+        paths: appPathsFor(scratchDir("infinitary-merge-inbox-")),
+        tasks,
+        inbox,
+        repos,
+        cardStore: new CardStore(db),
+        workspace: host.workspace,
+        sessions: {
+          pi: {
+            backend: "pi",
+            controlProfile: PI_CONTROL_PROFILE,
+            open: async () => {
+              throw new Error("No saved conversation is available to open.");
+            },
+          },
+        },
+        bind: async () => {
+          throw new Error("No saved conversation is available to bind.");
+        },
+        broadcastEvent: () => {},
+        broadcastCards: () => {},
+      });
+      await supervisor.sweepInbox(now);
+      await supervisor.disposeAll();
+    },
     now: () => now,
     advance: () => {
       now += CHECK_REFRESH_MS;
@@ -191,6 +223,51 @@ describe("external merge reconciliation", () => {
     expect(h.tasks.get("meter")?.closedReason).toBe("merged");
     expect(h.retire).toHaveBeenCalledOnce();
   });
+
+  // INF-1391: the external-merge journey found a tick deleting escalated
+  // guidance when the new merge wake reached a task without a saved session.
+  it.each(["before", "after"] as const)(
+    "keeps unfinished guidance when the inbox sweeps %s a prerequisite merge",
+    async (order) => {
+      const h = fixture();
+      h.tasks.recordReport("meter", { text: "Deployment verification remains." });
+      seedTask(h.tasks, {
+        id: "verify",
+        title: "Verify deployment",
+        status: "queued",
+        startPolicy: "on-request",
+        parentId: "meter",
+      });
+      const guidance = h.inbox.enqueue("meter", "Verify deployment before finishing this task.");
+      h.inbox.markEscalated(guidance);
+      const kept = h.inbox.get(guidance);
+      expect(h.tasks.get("meter")?.sessionFile).toBeNull();
+      if (order === "before") await h.sweep();
+      h.merged();
+      await h.watcher().poll(h.now());
+      // Force the order that the journey's asynchronous tick only sometimes reached.
+      await h.sweep();
+      expect(h.inbox.get(guidance)).toEqual(kept);
+      expect(h.inbox.pending("meter")).toEqual([
+        expect.objectContaining({
+          facts: expect.objectContaining({ kind: "external-merge", head: h.pull().headSha }),
+        }),
+      ]);
+      expect(h.tasks.get("meter")).toMatchObject({
+        status: "active",
+        closedReason: null,
+        workspaceState: "present",
+        delivery: { ci: "merged" },
+      });
+      expect(h.tasks.get("verify")?.status).toBe("open");
+      expect(h.retire).not.toHaveBeenCalled();
+      h.advance();
+      await h.watcher().poll(h.now());
+      await h.sweep();
+      expect(h.inbox.get(guidance)).toEqual(kept);
+      expect(h.inbox.allFor("meter")).toHaveLength(2);
+    },
+  );
 
   it.each([
     "turn",

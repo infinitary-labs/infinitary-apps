@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "prerequisite-merge-guidance",
+      "kind": "fix",
+      "title": "Unfinished tasks keep their pending instructions after a merge",
+      "body": "When a pull request merges before its task finishes, Infinitary keeps pending instructions even if the crewmate’s conversation is unavailable.",
+      "area": "tasks",
+      "noPicture": "This corrects saved instruction retention during background delivery; no screen or control changes.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

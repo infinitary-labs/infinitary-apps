@@ -36,6 +36,8 @@ A task lane has nowhere else to go, exactly as the first mate's lane has none.
   Any other failed seat turn puts the captain's live and steered words on the lane through the same backoff, so the row is their one copy: the failure card's Retry makes the lane due now instead of re-sending them.
 
 While a lane's guidance is deliverable, the idle ladder reads the task as moving (`docs/report-sort.md`, "The idle ladder").
+The inbox sweep keeps an unfinished task's lane when its saved conversation is absent or its recorded activity is not yet resumable; neither fact makes the task gone.
+A newly due wake, including an observed prerequisite merge, cannot send that task's older escalated guidance to orphan cleanup.
 
 ## A steer no turn took in
 

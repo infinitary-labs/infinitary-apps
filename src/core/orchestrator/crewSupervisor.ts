@@ -11001,10 +11001,14 @@ export class CrewSupervisor {
     }
     const record = this.options.tasks.get(taskId);
     if (record?.status === "open") return; // waits for dispatch
-    if (record?.kind !== "work" || !TaskService.isResumable(record) || !record.sessionFile) {
+    if (!record || TaskService.isClosed(record)) {
       this.orphanTaskGuidance(taskId, record);
       return;
     }
+    // A missing local conversation is not a closed task. A new wake can make
+    // this lane due beside older, escalated guidance; keep both until the
+    // unfinished task can resume, rather than orphaning its entire lane.
+    if (record.kind !== "work" || !TaskService.isResumable(record) || !record.sessionFile) return;
     if (this.retiredProviderOf(taskId)) {
       // Its session belongs to a subscription this build no longer offers:
       // no backend can reopen it, so the guidance is kept, not retried.

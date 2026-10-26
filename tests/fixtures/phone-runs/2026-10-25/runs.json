@@ -1,0 +1,83 @@
+{
+  "_comment": "GET /repos/infinitary-labs/infinitary/actions/workflows/phone.yml/runs?branch=main&event=workflow_dispatch&status=success and each run's /artifacts, read 2026-10-25. The first run checked the cards part alone; each zip is that run's phone-logs archive cut down to its three node logs and, where it had one, its part-times.json.",
+  "runs": [
+    {
+      "id": 40189984989,
+      "display_title": "phone",
+      "event": "workflow_dispatch",
+      "head_branch": "main",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-25T11:42:24Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40189984989"
+    },
+    {
+      "id": 39805936655,
+      "display_title": "phone",
+      "event": "workflow_dispatch",
+      "head_branch": "main",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-22T15:33:21Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39805936655"
+    },
+    {
+      "id": 39703739736,
+      "display_title": "phone",
+      "event": "workflow_dispatch",
+      "head_branch": "main",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-22T01:06:27Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39703739736"
+    },
+    {
+      "id": 39631236568,
+      "display_title": "phone",
+      "event": "workflow_dispatch",
+      "head_branch": "main",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-10-21T16:03:07Z",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/39631236568"
+    }
+  ],
+  "artifacts": {
+    "40189984989": [
+      {
+        "id": 12598386330,
+        "name": "phone-results",
+        "size_in_bytes": 158330516,
+        "expired": false
+      },
+      {
+        "id": 12598016971,
+        "name": "phone-logs",
+        "size_in_bytes": 8162260,
+        "expired": false,
+        "zip": "cards-phone-logs.zip"
+      },
+      {
+        "id": 12597722631,
+        "name": "phone-pictures",
+        "size_in_bytes": 6469667,
+        "expired": false
+      }
+    ],
+    "39805936655": [
+      {
+        "id": 12446540704,
+        "name": "phone-results",
+        "size_in_bytes": 48980610,
+        "expired": false
+      },
+      {
+        "id": 12445568006,
+        "name": "phone-logs",
+        "size_in_bytes": 314922,
+        "expired": false,
+        "zip": "full-phone-logs.zip"
+      }
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-chooser-full-part-times",
+      "reason": "CI: a pull request's phone check reads part times from the newest passing check of main that has them, passing over a check of some parts; nothing a person sees in the app changes."
+    }
+  ]
+}

@@ -188,7 +188,8 @@ It reads a UI test change by its functions: each changed line counts for the tes
 The rest part also starts from every test no other part names, and a change to the app-hosted tests puts it at 0.
 A blank or comment-only line counts for nothing; a line outside any function, or a test file it cannot read or parse, counts for every part.
 It keeps the closest part, every part at 0 even past the budget, and any other while the kept minutes stay within `PHONE_BUDGET_MS`; ties go to the shorter part, so a change only to setup the gates use runs rest.
-A part's minutes are its longer device's time in the newest passing on-request check of `main`, whose full gate writes `part-times.json` into its `phone-logs` artifact; with none readable, or with `PHONE_VIRTUAL_MAC` set, every part the change reaches runs.
+A part's minutes are its longer device's time in the newest passing on-request check of `main` whose `phone-logs` artifact holds `part-times.json`, which only a full gate writes; a passing check of some parts is passed over for an older full one.
+With none readable, or with `PHONE_VIRTUAL_MAC` set, every part the change reaches runs.
 The job summary names each kept and left part with its distance, minutes and reason, and the `phone-placement` artifact keeps the same as JSON.
 A part the pull request leaves is checked after it merges, by the nightly check of `main`; an author who wants every part first runs the phone check on request on their branch.
 `tests/phone-chooser.test.ts` replays real changes merged to `main` through the chooser.

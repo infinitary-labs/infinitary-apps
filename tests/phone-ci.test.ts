@@ -596,3 +596,123 @@ it("exports existing native evidence without starting simulators", () => {
   expect(eligible("", "workflow_dispatch", "40023566877")).toBe("false");
   expect(eligible("", "workflow_dispatch")).toBe("true");
 });
+
+// INF-1346: on 2026-10-25 a passing check of main's cards part alone became the newest passing
+// check, and every pull request's chooser read no part times from it and ran every part. The
+// step's own script runs against GitHub's answers and the runs' real phone-logs archives.
+describe("the chooser's part times", () => {
+  type Run = { id: number; conclusion: string | null; html_url: string };
+  type Artifact = { id: number; name: string; expired: boolean; zip?: string };
+  const FIXTURES = "tests/fixtures/phone-runs/2026-10-25";
+  const readings = JSON.parse(readFileSync(`${FIXTURES}/runs.json`, "utf8")) as {
+    runs: Run[];
+    artifacts: Record<string, Artifact[]>;
+  };
+  const script = workflow.jobs["choose-phone"].steps.find(
+    (step: Step & { with?: { script?: string } }) => step.id === "timing-run",
+  )?.with?.script as string;
+
+  async function choose(runs: Run[], artifacts = readings.artifacts) {
+    const outputs: Record<string, string> = {};
+    const summaries: string[] = [];
+    const downloaded: number[] = [];
+    const summary = {
+      addRaw: (text: string) => {
+        summaries.push(text);
+        return summary;
+      },
+      write: async () => {},
+    };
+    const repo = { owner: "infinitary-labs", repo: "infinitary" };
+    // GitHub as it answered: main's runs on request, by page, those that passed if asked.
+    const listWorkflowRuns = async ({
+      per_page = 30,
+      page = 1,
+      status,
+      ...query
+    }: Record<string, unknown>) => {
+      expect(query).toEqual({
+        ...repo,
+        workflow_id: "phone.yml",
+        branch: "main",
+        event: "workflow_dispatch",
+      });
+      const listed = runs.filter((run) => !status || run.conclusion === status);
+      const from = (Number(page) - 1) * Number(per_page);
+      return {
+        data: {
+          total_count: listed.length,
+          workflow_runs: listed.slice(from, from + Number(per_page)),
+        },
+      };
+    };
+    const listWorkflowRunArtifacts = async ({
+      run_id,
+      name,
+    }: {
+      run_id: number;
+      name: string;
+    }) => ({
+      data: {
+        artifacts: (artifacts[String(run_id)] ?? []).filter((artifact) => artifact.name === name),
+      },
+    });
+    const downloadArtifact = async ({ artifact_id }: { artifact_id: number }) => {
+      downloaded.push(artifact_id);
+      const artifact = Object.values(artifacts)
+        .flat()
+        .find((candidate) => candidate.id === artifact_id);
+      const zip = readFileSync(`${FIXTURES}/${artifact?.zip}`);
+      // Octokit hands an archive over as an ArrayBuffer.
+      return { data: zip.buffer.slice(zip.byteOffset, zip.byteOffset + zip.byteLength) };
+    };
+    const iterator = async function* (
+      method: typeof listWorkflowRuns,
+      parameters: Record<string, unknown>,
+    ) {
+      for (let page = 1; ; page++) {
+        const { data } = await method({ ...parameters, page });
+        if (data.workflow_runs.length === 0) return;
+        yield { data: data.workflow_runs };
+      }
+    };
+    const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
+    await new AsyncFunction("core", "github", "context", script)(
+      { setOutput: (name: string, value: string) => (outputs[name] = String(value)), summary },
+      {
+        rest: { actions: { listWorkflowRuns, listWorkflowRunArtifacts, downloadArtifact } },
+        paginate: { iterator },
+      },
+      { repo },
+    );
+    return { outputs, summaries, downloaded };
+  }
+
+  it("passes over a check of some parts for the newest passing check with part times", async () => {
+    const [cards, full] = readings.runs;
+    const found = await choose(readings.runs);
+    expect(found.outputs.id).toBe(String(full?.id));
+    expect(found.summaries.join("")).toContain(full?.html_url);
+    // It read the cards check's logs, found no part times there, and read no older run's.
+    expect(found.downloaded).toEqual([
+      readings.artifacts[String(cards?.id)]?.find((artifact) => artifact.name === "phone-logs")?.id,
+      readings.artifacts[String(full?.id)]?.find((artifact) => artifact.name === "phone-logs")?.id,
+    ]);
+  });
+
+  it("skips a failed run and expired logs, and names no run when none has part times", async () => {
+    const [cards, full] = readings.runs as [Run, Run];
+    const failed = { ...full, conclusion: "failure" };
+    expect((await choose([cards, failed])).outputs.id).toBeUndefined();
+    const expired = {
+      ...readings.artifacts,
+      [String(full.id)]: (readings.artifacts[String(full.id)] ?? []).map((artifact) => ({
+        ...artifact,
+        expired: true,
+      })),
+    };
+    const reading = await choose([cards, full], expired);
+    expect(reading.outputs.id).toBeUndefined();
+    expect(reading.summaries).toEqual([]);
+  });
+});

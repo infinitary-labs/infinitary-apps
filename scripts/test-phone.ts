@@ -146,7 +146,7 @@ const recording = {
   },
   start: async (name = "reconnect") => {
     if (!demo.enabled || recorder || !simulator) return;
-    if (!["reconnect", "talk", "composer", "character", "conversation", "native-scene-pan", "native-scene-keyboard", "card-form", "card-paging", "card-reply", "card-picture", "card-recording", "review-recovery"].includes(name)) throw new Error("Unknown phone recording");
+    if (!["reconnect", "talk", "composer", "character", "conversation", "native-scene-pan", "native-scene-keyboard", "native-orbit-gap", "card-form", "card-paging", "card-reply", "card-picture", "card-recording", "review-recovery"].includes(name)) throw new Error("Unknown phone recording");
     const raw = join(root, `${name}.mp4`);
     recordings.push({ name, raw });
     recordingLog = "";

@@ -982,6 +982,10 @@ export async function startPhoneHome(
           scene.cleanup();
           result = { ok: true };
           break;
+        case "POST capture-orbit-gap-start":
+          await controls?.start("native-orbit-gap");
+          result = { ok: true };
+          break;
         case "POST capture-scene-start":
           await controls?.start("native-scene-pan");
           result = { ok: true };

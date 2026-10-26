@@ -303,7 +303,15 @@ describe("computer constellations", () => {
       both.setReview("r1", null);
       const after = xs(both);
       expect(after.get("r2")).not.toBe(plain.get("r2"));
-      expect(after.get("r1")).toBe(plain.get("r1"));
+      // INF-1375 A: the returning r1 and the builder now occupy two opposite visible seats,
+      // not the three-seat layout that reserved r2's invisible place.
+      const frame = both.update(0, true),
+        cluster = required(both.clusters().find((c) => c.id === "a"));
+      const returned = required(frame.crew.find((c) => c.id === "r1"));
+      const builder = required(frame.crew.find((c) => c.id === "builder"));
+      expect((returned.x + builder.x) / 2).toBeCloseTo(cluster.x, 8);
+      expect((returned.y + builder.y) / 2).toBeCloseTo(cluster.y, 8);
+      expect(frame.links).toEqual([{ fromId: "r2", toId: "builder", kind: "review" }]);
     });
 
     it("shares seats with a waiting crewmate, each with its arrow to the builder", () => {
@@ -333,11 +341,14 @@ describe("computer constellations", () => {
     // "should be present at all times".
     it("keeps circling past unrelated crewmates, its arrow drawn in every frame", () => {
       const ids = ["builder", "waiter", "other0", "other1", "author", "review"];
-      for (let i = 2; i < 12; i++) ids.push(`other${i}`);
+      // INF-1375 closes visible gaps: eight crew with two crossing relationship
+      // circles exercise collision without accidentally reaching the bounds fallback.
+      for (let i = 2; i < 4; i++) ids.push(`other${i}`);
       const model = new ComputerOrbits(0);
       model.configure([device("a"), device("b")]);
       for (const id of ids) seed(model, id, null);
       model.setReview("review", "author");
+      model.setReview("other0", "author");
       model.setDependencies(
         centerCues(
           ids.map((id) => ({
@@ -364,9 +375,10 @@ describe("computer constellations", () => {
           expect(frame.links).toContainEqual({ fromId: from, toId: to, kind });
           const mine = at(from);
           // On its circle about the one it waits on or reviews, never back on its slot.
-          expect(Math.hypot(mine.x - at(to).x, mine.y - at(to).y)).toBeLessThan(
-            DEPENDENCY_VISUAL.radiusPx * 1.25,
-          );
+          expect(
+            Math.hypot(mine.x - at(to).x, mine.y - at(to).y),
+            JSON.stringify({ now, from, to, mine, blocker: at(to) }),
+          ).toBeLessThan(DEPENDENCY_VISUAL.radiusPx * 1.25);
           for (const other of frame.crew) {
             if (other.id.startsWith("other"))
               closest = Math.min(

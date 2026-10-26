@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "crew-orbit-no-empty-seats",
+      "kind": "fix",
+      "title": "Crew no longer leave unexplained gaps",
+      "body": "When a crewmate circles another, the remaining crew spread evenly around their main orbit instead of reserving an empty place. They make room again when it returns. Parts drawn on branches leave no empty places either. iPhone and iPad now show the same small circles for waiting crewmates and reviewers.",
+      "area": "crewmates",
+      "picture": {
+        "dark": "crew-orbit-no-empty-seats-dark.webp",
+        "light": "crew-orbit-no-empty-seats-light.webp",
+        "alt": "Seven crewmates spaced around the first mate, with another beside the crewmate it is waiting for."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

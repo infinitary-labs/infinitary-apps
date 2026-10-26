@@ -1,3 +1,4 @@
+import { DEPENDENCY_VISUAL } from "@shared/dependencyVisual";
 import type { FmEvent, FmUsage } from "@shared/events";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import type { TaskView } from "@shared/tasks";
@@ -5,8 +6,53 @@ import { afterEach, describe, expect, it } from "vitest";
 import { FLICKER_TUNING, takeFirstmateFlicker, tokenIntensity } from "../flicker";
 import { simulateReducedMotion } from "../reducedMotion";
 import { ComputerOrbits } from "./computers";
-import { applyCrewEvent, crewStatusOf, seedCrew } from "./crewSignal";
+import { applyCrewDependencies, applyCrewEvent, crewStatusOf, seedCrew } from "./crewSignal";
 import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
+import { CROWDED_PLANES, planeRadius } from "./orbitalPlanes";
+
+/** INF-1375, approved A: read actual rendered centers back on their main orbit. */
+function visibleSeats(frame: OrbitFrame, offMain: string[] = []) {
+  const order: string[][] = [];
+  for (const [plane, p] of CROWDED_PLANES.entries()) {
+    const crew = frame.crew.filter((c) => c.plane === plane && c.phase !== "leaving");
+    const radius = planeRadius(
+      plane,
+      CROWDED_PLANES.map(
+        (_, i) => frame.crew.filter((c) => c.plane === i && c.phase !== "leaving").length,
+      ),
+    );
+    const points = [
+      ...crew.filter((c) => !offMain.includes(c.id)),
+      ...(plane === 0 ? frame.programs.filter((p) => p.alpha === 1) : []),
+    ];
+    const places = points
+      .map((point) => {
+        const u = point.x * Math.cos(p.node) + point.y * Math.sin(p.node);
+        const v =
+          (-point.x * Math.sin(p.node) + point.y * Math.cos(p.node)) /
+          Math.cos((p.inclination * Math.PI) / 180);
+        expect(Math.hypot(u, v)).toBeCloseTo(radius, 6);
+        return { id: point.id, angle: (Math.atan2(v, u) + Math.PI * 2) % (Math.PI * 2) };
+      })
+      .sort((a, b) => a.angle - b.angle);
+    order.push(places.map((p) => p.id));
+    const angles = places.map((p) => p.angle);
+    angles.forEach((angle, i) => {
+      const following = angles[(i + 1) % angles.length];
+      if (following === undefined) throw new Error("Missing visible seat");
+      const next = following + (i === angles.length - 1 ? Math.PI * 2 : 0);
+      expect(next - angle).toBeCloseTo((Math.PI * 2) / angles.length, 6);
+    });
+  }
+  return order;
+}
+
+function sameCircularOrder(before: string[], after: string[]): void {
+  const first = before[0];
+  if (!first) throw new Error("Missing survivor");
+  const at = after.indexOf(first);
+  expect([...after.slice(at), ...after.slice(0, at)]).toEqual(before);
+}
 
 type Changed = Extract<FmEvent, { type: "task_changed" }>;
 
@@ -298,6 +344,129 @@ describe("crew orbit wiring", () => {
     expect(m.takeCues()).toEqual([]);
   });
 
+  // INF-1375's accepted A: no angular reservation for a glyph drawn elsewhere.
+  describe("visible main-orbit occupants", () => {
+    const fixture = (count = 8) => {
+      const model = new CrewOrbit(0, undefined, () => 0.5, "adaptive");
+      const rows = Array.from({ length: count }, (_, i) =>
+        view({
+          id: `crew-${i}`,
+          key: `SCR-${i + 1}`,
+          title: `Check harbour marker ${i + 1}`,
+          activity: "idle",
+        }),
+      );
+      seedCrew(model, rows, 0);
+      return { model, rows };
+    };
+    it("closes eight seats to seven for a published wait, returns to eight, departs and restarts without a reservation", () => {
+      const { model, rows } = fixture();
+      const blocker = rows[0];
+      if (!blocker) throw new Error("Missing blocker");
+      const wait = rows.map((row, i) =>
+        i === 1
+          ? {
+              ...row,
+              blockedBy: [blocker.key],
+              workPosture: { state: "idle" as const, reason: "dependency" as const },
+            }
+          : row,
+      );
+      const before = visibleSeats(model.update(0, true))[0]?.filter((id) => id !== "crew-1") ?? [];
+      applyCrewDependencies(model, wait, [], 0);
+      const waiting = model.update(0, true);
+      expect(waiting.links).toEqual([{ fromId: "crew-1", toId: "crew-0", kind: "wait" }]);
+      sameCircularOrder(before, visibleSeats(waiting, ["crew-1"])[0] ?? []);
+      const restarted = fixture().model;
+      applyCrewDependencies(restarted, wait, [], 0);
+      visibleSeats(restarted.update(0, true), ["crew-1"]);
+      applyCrewDependencies(model, rows, [], 100);
+      sameCircularOrder(
+        before,
+        visibleSeats(model.update(100, true))[0]?.filter((id) => id !== "crew-1") ?? [],
+      );
+      applyCrewDependencies(model, wait, [], 200);
+      model.update(200, true);
+      model.leave("crew-1", "home", 200);
+      visibleSeats(model.update(201, true));
+      expect(model.update(201, true).count).toBe(7);
+    });
+    it("keeps fallback occupants in the spacing, including both main orbits", () => {
+      const { model } = fixture(CROWDED_PLANES.reduce((n, p) => n + p.capacity, 0));
+      // Four reviewers exceed the existing three-companion eligibility, not a new placement rule.
+      for (let i = 1; i <= DEPENDENCY_VISUAL.maxCompanions + 1; i++)
+        model.setReview(`crew-${i}`, "crew-0");
+      let frame = model.update(0, true);
+      visibleSeats(frame);
+      expect(frame.links).toHaveLength(DEPENDENCY_VISUAL.maxCompanions + 1);
+      for (let i = 1; i <= DEPENDENCY_VISUAL.maxCompanions + 1; i++)
+        model.setReview(`crew-${i}`, null);
+      const inner = CROWDED_PLANES[0].capacity,
+        reviewer = `crew-${inner + 1}`;
+      model.setReview(reviewer, `crew-${inner}`);
+      frame = model.update(0, true);
+      visibleSeats(frame, [reviewer]);
+      model.setReview(reviewer, null);
+      visibleSeats(model.update(0, true));
+    });
+    it("spaces actual scene-boundary fallbacks on their main orbit rather than leaving another gap", () => {
+      let circles = 0,
+        fallbacks = 0;
+      for (let builder = 0; builder < CROWDED_PLANES[0].capacity; builder++) {
+        const { model } = fixture(CROWDED_PLANES.reduce((n, p) => n + p.capacity, 0));
+        const reviewerId = `crew-${CROWDED_PLANES.reduce((n, p) => n + p.capacity, 0) - 1}`;
+        model.setReview(reviewerId, `crew-${builder}`);
+        const frame = model.update(0, true),
+          reviewer = frame.crew.find((c) => c.id === reviewerId);
+        if (!reviewer) throw new Error("Missing reviewer");
+        const p = CROWDED_PLANES[reviewer.plane ?? 0];
+        if (!p) throw new Error("Missing plane");
+        const u = reviewer.x * Math.cos(p.node) + reviewer.y * Math.sin(p.node);
+        const v =
+          (-reviewer.x * Math.sin(p.node) + reviewer.y * Math.cos(p.node)) /
+          Math.cos((p.inclination * Math.PI) / 180);
+        const onMain =
+          Math.abs(
+            Math.hypot(u, v) -
+              planeRadius(
+                reviewer.plane ?? 0,
+                CROWDED_PLANES.map((p) => p.capacity),
+              ),
+          ) < 1e-6;
+        visibleSeats(frame, onMain ? [] : [reviewerId]);
+        expect(model.update(0, true)).toEqual(frame);
+        if (onMain) fallbacks++;
+        else circles++;
+        expect(frame.links).toEqual([
+          { fromId: reviewerId, toId: `crew-${builder}`, kind: "review" },
+        ]);
+      }
+      expect(circles).toBeGreaterThan(0);
+      expect(fallbacks).toBeGreaterThan(0);
+    });
+
+    it("counts a visible program ring but not its branch parts, and seats a released part again", () => {
+      const { model } = fixture();
+      const program = {
+        id: "survey",
+        state: "live" as const,
+        parts: [
+          { id: "crew-1", parents: [], state: "live" as const },
+          { id: "crew-2", parents: ["crew-1"], state: "live" as const },
+        ],
+      };
+      model.setPrograms([program], 0);
+      let frame = model.update(0, true);
+      expect(frame.programs).toHaveLength(1);
+      visibleSeats(frame, ["crew-1", "crew-2"]);
+      model.setPrograms([{ ...program, parts: program.parts.slice(1) }], 100);
+      frame = model.update(100, true);
+      visibleSeats(frame, ["crew-2"]);
+      model.setPrograms([], 200);
+      visibleSeats(model.update(200, true));
+    });
+  });
+
   // Captain's INF-51 choice: the reviewer circles its builder in place of electrons.
   describe("a live review", () => {
     const adaptive = () => new CrewOrbit(0, undefined, () => 0.5, "adaptive");
@@ -329,21 +498,24 @@ describe("crew orbit wiring", () => {
       return m;
     };
 
-    it("moves only the reviewer onto a circle about its builder, and back when the review closes", () => {
+    it("moves the reviewer onto its builder’s circle, closes the visible gap, and opens a seat on return", () => {
       const plain = base(undefined);
       const m = base("builder");
-      const a = plain.update(0, true).crew;
-      const b = m.update(0, true).crew;
-      for (const id of ["builder", "ordinary-child", "other"]) {
-        expect(b.find((c) => c.id === id)).toEqual(a.find((c) => c.id === id));
-      }
+      const frame = m.update(0, true);
+      expect(frame.crew.map((c) => c.id).sort()).toEqual(
+        plain
+          .update(0, true)
+          .crew.map((c) => c.id)
+          .sort(),
+      );
+      visibleSeats(frame, ["reviewer"]);
       // Within the circle's reach (64 scene px, projected) and off its own slot.
       expect(gap(m, 0, "reviewer", "builder")).toBeLessThan(80);
       expect(gap(m, 0, "reviewer", "builder")).toBeGreaterThan(8);
       m.setReview("reviewer", null);
-      expect(m.update(200, true).crew.find((c) => c.id === "reviewer")).toEqual(
-        plain.update(200, true).crew.find((c) => c.id === "reviewer"),
-      );
+      const returned = m.update(200, true);
+      visibleSeats(returned);
+      expect(returned.links).toEqual([]);
     });
 
     it("has no electrons and follows an idle re-review through the task record", () => {

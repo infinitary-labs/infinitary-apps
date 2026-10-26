@@ -150,7 +150,7 @@ import XCTest
     }
 }
 
-@MainActor private final class DisplaySample: NSObject {
+@MainActor final class DisplaySample: NSObject {
     let finished = XCTestExpectation(description: "Display sample complete")
     private var remaining: Int
     private var link: CADisplayLink?

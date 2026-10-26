@@ -131,13 +131,26 @@ All clusters and their controls hide with the character frame under cards.
 `tests/e2e/computer-clusters.spec.ts` drives actual saved placement through boot, keyboard inspection and record opening, minimum-width fitting and overflow paging, with every remote crewmate clear of the home crew and, at the minimum width, inside the window.
 `src/renderer/src/character/crew/computers.test.ts` holds the single-computer boundary: one computer draws the stage it drew before, with no names or paging.
 
+## Visible seats
+
+On desktop, iPhone and iPad, each main orbit spaces only the occupants drawn on it (INF-1375, approved A: keep small circles and close the gaps).
+A crewmate on a relationship circle or program branch keeps its logical orbit membership for allocation, capacity and radius, but takes no angular seat there.
+A visible program ring remains a first-orbit occupant.
+A fallback crewmate drawn on its main orbit participates in that orbit's spacing.
+Each orbit preserves its survivors' circular order and turns their spacing as little as possible; a return enters the widest visible gap instead of restoring a reservation.
+Existing easing carries the changed seats, and Reduce Motion resolves placement and any bounds fallback in one settled frame.
+Bounds resolution keeps a rejected companion group on its main orbit for the remainder of that frame, so closing a gap cannot cause repeated circle/fallback attempts in one frame.
+The desktop's `offMain` set and the phone's drawing seat books carry resolved drawing occupancy, separately from logical crew counts.
+Tilt, speed, orbit growth, computer grouping, branch geometry, inspection and arrows remain unchanged; equal angles still project to unequal screen distances.
+No guide, ghost marker, label or setting is added.
+
 ## Active adversarial review cue
 
 A host-commissioned review task identifies the builder through its fixed parent edge and its `shape.kind = review`.
 The task board and `task_changed` stream carry that typed `reviewOf` id; an ordinary child cannot trigger the cue.
 While the review task remains active (including an idle reviewer awaiting a re-review), the reviewer crewmate itself circles the builder it reviews, on the same circle a waiting crewmate uses ("Waiting on another crewmate" below): 64 scene pixels, 24 degrees per second, spanned by the builder's radial spoke and its main plane's normal.
 Besides the reviewer's own arrow (below), nothing else is drawn around the builder; the review has no electrons.
-The reviewer keeps its own solid, label and working/idle color, and its original slot stays reserved.
+The reviewer keeps its own solid, label, working/idle color and logical orbit membership, but reserves no angular space on the main orbit while circling.
 The circle ends as soon as the review closes or the builder departs.
 Closing the review closes the reviewer's task, so the reviewer takes its existing departure.
 Its offset eases out on the springs over the fall, so it leaves from the seat it was drawn at and glides to its normal path; reduced motion settles at once.
@@ -180,7 +193,7 @@ Running crewmates keep their full size and stay a glyph's width (25 px on screen
 A remote computer's group draws at half the scene's size with its glyphs at nearly full size, so its layout asks for the same room on screen.
 When a node would leave the stage the whole graph scales about its root.
 The layers, distances and turns depend only on the parts and the gap, so they are kept per parts list, and each frame places only the moving coordinates (INF-1073).
-A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its node on the springs a waiting crewmate's circle uses, with its slot reserved, and any wait arrow between two parts gives way to their branch.
+A live part's crewmate keeps its spark, solid, heat, label, summary and departure; once it has arrived it glides to its node on the springs a waiting crewmate's circle uses, without reserving angular space on the main orbit, and any wait arrow between two parts gives way to their branch.
 A running part whose crewmate has not arrived yet draws no branch.
 A seated part never circles a blocker, but its wait arrow to a task outside its parent stays, so the arrows into a busy blocker count every live waiter.
 A branch has the wait arrow's weight, `--fg-3` at 0.28 and 1 px, and lights in the accent at 0.7 and 1.4 px while a result rides it.
@@ -232,8 +245,8 @@ A missing blocker, or one with no crewmate yet (a queued task), is named in the 
 No crewmate is invented, and no one is moved onto another computer.
 Continuing, paused and unknown work keep their slots.
 The stage draws no words for a wait beneath a crewmate (captain, INF-38: "the center animation should be kept as clean as possible"): its task tile and its summary name the wait, and its Tasks row says `waiting` (the design skill's NowPanel, "Naming a wait").
-The original slot, solid, label and computer stay reserved.
-Clearing the wait removes the cue, and the offset returns on the existing springs.
+The solid, label, computer and logical orbit membership stay unchanged; angular spacing counts only occupants drawn on the main orbit.
+Clearing the wait removes the cue and inserts a visible seat in the widest gap on its original orbit; the existing springs glide the offset home.
 Reduced motion paints one settled frame.
 Inspecting a Tasks row does not pause the stage.
 `dependencyVisual.ts` is the one projection both surfaces read.

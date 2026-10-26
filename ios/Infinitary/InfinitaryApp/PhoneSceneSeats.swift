@@ -9,6 +9,7 @@ extension PhoneSceneRoster {
         private enum Occupant { case crew(String), mark(String) }
         private(set) var crew: [String: Seat] = [:]
         private(set) var marks: [String: Double] = [:]
+        private var hidden = Set<String>()
         private var next = 0
         private static let tau = 2 * Double.pi
         private var planes: [CharacterCatalog.Plane] { CharacterCatalog.shared.planes }
@@ -53,6 +54,32 @@ extension PhoneSceneRoster {
             }
         }
 
+        /// Drawing seats remember visible order independently of the logical book's allocation and growth.
+        mutating func synchronize(_ logical: Self) {
+            var changed = false
+            for id in Array(crew.keys) where logical.crew[id] == nil { crew[id] = nil; hidden.remove(id); changed = true }
+            for item in logical.roster() {
+                if crew[item.id]?.plane != item.seat.plane {
+                    crew[item.id] = Seat(plane: item.seat.plane, slot: openSlot(item.seat.plane), order: item.seat.order)
+                    changed = true
+                }
+            }
+            for id in Array(marks.keys) where logical.marks[id] == nil { marks[id] = nil; changed = true }
+            for id in logical.marks.keys.sorted() where marks[id] == nil { marks[id] = openSlot(0); changed = true }
+            if changed { respace() }
+        }
+        /// Only occupants actually drawn here take angular space. Returning crew enter the widest visible gap.
+        mutating func show(excluding next: Set<String>) {
+            guard hidden != next else { return }
+            for item in roster() where hidden.contains(item.id) && !next.contains(item.id) {
+                let slot = openSlot(item.seat.plane)
+                crew[item.id]?.slot = slot
+                hidden.remove(item.id)
+            }
+            hidden = next
+            respace()
+        }
+
         private func roster() -> [(id: String, seat: Seat)] {
             crew.map { (id: $0.key, seat: $0.value) }.sorted { $0.seat.order < $1.seat.order }
         }
@@ -63,7 +90,7 @@ extension PhoneSceneRoster {
         }
         /// Every occupant of a plane: its crew in arrival order, and on the first orbit the program rings too.
         private func occupants(_ plane: Int) -> [(who: Occupant, slot: Double)] {
-            let crew = roster().filter { $0.seat.plane == plane }.map { (who: Occupant.crew($0.id), slot: $0.seat.slot) }
+            let crew = roster().filter { $0.seat.plane == plane && !hidden.contains($0.id) }.map { (who: Occupant.crew($0.id), slot: $0.seat.slot) }
             return plane == 0 ? crew + marks.keys.sorted().map { (who: Occupant.mark($0), slot: marks[$0]!) } : crew
         }
         private mutating func set(_ who: Occupant, _ slot: Double) {

@@ -438,6 +438,12 @@ type Crewmate = {
   companionX: Spring;
   companionY: Spring;
   companionZ: Spring;
+  /** Carries the circle with its builder while visible main seats re-space. */
+  companionBase?: {
+    blocker: string;
+    origin: { x: number; y: number; z: number };
+    slot: { x: number; y: number; z: number };
+  };
   /** Where it was last drawn, companion offset included; a send-off aims here. */
   drawn?: Point;
 };
@@ -464,10 +470,15 @@ export class CrewOrbit {
   private crew = new Map<string, Crewmate>();
   /** Reviewer task -> builder task; the reviewer circles its builder while the review is live. */
   private reviews = new Map<string, string>();
-  /** Recorded waits. The slot stays reserved; only the painted offset moves. */
+  /** Recorded waits; logical orbit membership survives a relationship circle. */
   private dependencies = new Map<string, CenterCue>();
-  /** Tasks with parts, by the parent's id; a part's slot stays reserved like a wait's. */
+  /** Tasks with parts, by the parent's id. Branch occupants keep logical membership only. */
   private programs = new Map<string, ProgramState>();
+  /** Resolved drawing placement, separate from logical membership and radius/allocation counts. */
+  private offMain = new Set<string>();
+  private seatsChanged = false;
+  /** A circle that failed its bounds check cannot be retried by a re-spacing pass in this frame. */
+  private frameFallback = new Set<string>();
   private nextOrder = 0;
   private lastSpawnAt = Number.NEGATIVE_INFINITY;
   private cues: Cue[] = [];
@@ -538,7 +549,7 @@ export class CrewOrbit {
 
   /**
    * The sequenced board's waits for crew on this orbit. An empty list
-   * clears every cue. The original slot is never given away.
+   * clears every cue. A returning crewmate opens a new visible seat on its original orbit.
    */
   setDependencies(cues: readonly CenterCue[]): void {
     const next = new Map(cues.map((cue) => [cue.waiterId, cue]));
@@ -911,7 +922,7 @@ export class CrewOrbit {
 
   /** Every occupant of a plane as a seat: its crew, and on the first orbit the marks too. */
   private planeSeats(plane: number, roster: Crewmate[]): PlaneSeat[] {
-    const crew = roster.filter((c) => c.plane === plane).map(crewSeat);
+    const crew = roster.filter((c) => c.plane === plane && !this.offMain.has(c.id)).map(crewSeat);
     return plane === 0 ? [...crew, ...this.seatedRoots().map(markSeat)] : crew;
   }
 
@@ -958,6 +969,17 @@ export class CrewOrbit {
         seat.slot = target + Math.round((seat.slot - target) / TAU) * TAU;
       });
     }
+  }
+
+  private seatVisible(next: Set<string>): void {
+    // Insert returns among visible occupants, never restore a reserved gap.
+    for (const c of this.roster()) {
+      if (this.offMain.has(c.id) && !next.has(c.id)) {
+        c.planeSlot = this.openPlaneSlot(c.plane);
+        this.offMain.delete(c.id);
+      }
+    }
+    this.offMain = next;
   }
 
   /** Where a newcomer would enter: the middle of the widest gap, marks counted. */
@@ -1064,7 +1086,7 @@ export class CrewOrbit {
 
   private spacePlaneSlots(roster: Crewmate[]): void {
     for (let plane = 0; plane < CROWDED_PLANES.length; plane++) {
-      const crew = roster.filter((c) => c.plane === plane).map(crewSeat);
+      const crew = roster.filter((c) => c.plane === plane && !this.offMain.has(c.id)).map(crewSeat);
       // The marks spread evenly among the crew, never bunched together.
       const marks = plane === 0 ? this.seatedRoots().map(markSeat) : [];
       const members = interleave(crew, marks);
@@ -1091,6 +1113,32 @@ export class CrewOrbit {
    * frame has none.
    */
   update(now: number, settled = false, rush = 0): OrbitFrame {
+    this.frameFallback.clear();
+    const originalSeats = new Map(this.roster().map((c) => [c.id, c.planeSlot]));
+    const originalMarks = new Map([...this.programs].map(([id, p]) => [id, p.rootSlot]));
+    const originalOffMain = new Set(this.offMain);
+    let frame: OrbitFrame;
+    do {
+      this.seatsChanged = false;
+      frame = this.updateFrame(now, settled, rush);
+      if (this.seatsChanged) {
+        const resolved = this.offMain;
+        // Resolve each candidate from the same starting seats. A rejected circle
+        // must not rotate or reorder the visible crew on every still-frame read.
+        for (const c of this.roster()) c.planeSlot = originalSeats.get(c.id) ?? c.planeSlot;
+        for (const [id, p] of this.programs) p.rootSlot = originalMarks.get(id) ?? p.rootSlot;
+        this.offMain = new Set(originalOffMain);
+        this.seatVisible(resolved);
+        this.respacePlanes();
+      }
+      // Extra passes have dt=0: springs advance once, while Reduce Motion resolves
+      // spacing and any bounds fallback in this very frame. Each failed group
+      // stays on the main orbit for the rest of this resolution.
+    } while (this.seatsChanged);
+    return frame;
+  }
+
+  private updateFrame(now: number, settled: boolean, rush: number): OrbitFrame {
     const dt = Math.min(Math.max(0, now - this.last) / 1000, 0.05);
     this.last = now;
     // A crewmate whose close waited on its spark leaves once the spark has
@@ -1671,12 +1719,18 @@ export class CrewOrbit {
     if (
       cues.size === 0 &&
       seats.size === 0 &&
+      this.offMain.size === 0 &&
       ![...this.crew.values()].some((c) => c.companionX.x || c.companionY.x || c.companionZ.x)
     )
       return links;
     const byId = new Map(frames.map((frame) => [frame.id, frame]));
     const wanted = new Map<string, { x: number; y: number; z: number; arrows: string[] }>();
     const groups = new Map<string, string[]>();
+    const offMain = new Set<string>(seats.keys());
+    const circleBases = new Map<
+      string,
+      { blocker: string; origin: { x: number; y: number; z: number } }
+    >();
     for (const [id, cue] of cues) {
       if (cue.mode !== "satellite" || this.planeBlend.x < 0.999) {
         wanted.set(id, { x: 0, y: 0, z: 0, arrows: cue.arrows });
@@ -1704,7 +1758,19 @@ export class CrewOrbit {
         );
         return [{ id, x: origin.x + offset[0], y: origin.y + offset[1], z: offset[2] }];
       });
-      const fits = placed.length === ids.length && placed.every((point) => satelliteFits(point));
+      const fits =
+        !ids.some((id) => this.frameFallback.has(id)) &&
+        placed.length === ids.length &&
+        placed.every((point) => satelliteFits(point));
+      if (!fits) for (const id of ids) this.frameFallback.add(id);
+      else
+        for (const id of ids) {
+          offMain.add(id);
+          circleBases.set(id, {
+            blocker: blockerId,
+            origin: { x: origin.x, y: origin.y, z: origin.z },
+          });
+        }
       for (const id of ids) {
         const point = placed.find((item) => item.id === id);
         const slot = scenes.get(id);
@@ -1732,6 +1798,10 @@ export class CrewOrbit {
         arrows: cues.get(id)?.arrows ?? [],
       });
     }
+    if (offMain.size !== this.offMain.size || [...offMain].some((id) => !this.offMain.has(id))) {
+      this.seatVisible(offMain);
+      this.seatsChanged = true;
+    }
     for (const frame of frames) {
       const mate = this.crew.get(frame.id);
       const scene = scenes.get(frame.id);
@@ -1742,6 +1812,18 @@ export class CrewOrbit {
         mate.phase === "leaving"
           ? { x: 0, y: 0, z: 0, arrows: [] }
           : (wanted.get(frame.id) ?? { x: 0, y: 0, z: 0, arrows: [] });
+      const base = circleBases.get(frame.id);
+      const previous = mate.companionBase;
+      if (!settled && base && previous?.blocker === base.blocker && mate.phase === "orbiting") {
+        // Follow the builder's displacement and cancel the hidden slot's displacement.
+        // Only the little circle's own motion eases; re-spacing cannot drag it away.
+        mate.companionX.x += base.origin.x - previous.origin.x - (scene.x - previous.slot.x);
+        mate.companionY.x += base.origin.y - previous.origin.y - (scene.y - previous.slot.y);
+        mate.companionZ.x += base.origin.z - previous.origin.z - (scene.z - previous.slot.z);
+      }
+      mate.companionBase = base
+        ? { ...base, slot: { x: scene.x, y: scene.y, z: scene.z } }
+        : undefined;
       if (mate.phase === "spawning") {
         // A spark still aims at its slot.
       } else if (settled) {

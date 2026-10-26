@@ -107,7 +107,10 @@ As two related glyphs close in on screen the arrow's clearance gives way, so a s
 Crew cross and pass close to one another freely; nothing moves a crewmate aside to keep it clear of another.
 A missing blocker, or one with no crewmate yet, is a named link in the summary, never an invented crewmate and never a move.
 Continuing, paused and unknown work keep their slots, colors, solids, labels and review cues.
-Clearing the wait removes the cue and the offset glides home on the existing springs.
+Only visible main-orbit occupants take angular seats (INF-1375, approved A), including visible program rings but excluding crew on relationship circles and program branches.
+Logical orbit membership still controls allocation and growth; a fallback crew member counts wherever it is drawn.
+Clearing the wait opens a seat in the widest visible gap on the same orbit and the offset glides home on the existing springs.
+Survivors keep their circular order, and Reduce Motion snaps to the resolved layout.
 Reduced motion paints one settled frame.
 Row inspection does not pause the stage; pointing at the glyph still does.
 
@@ -117,7 +120,7 @@ Layers grow outward from the ring, 60 px for the first and each later one 0.82 o
 Crewmates keep their full size and a glyph's width (25 px) apart: a crowded layer widens its fan up to 180 degrees, then moves outward; the whole graph scales about the ring when a node would leave the stage.
 With parts running on several computers, each computer's group draws its own copy of the ring with the crewmates running there.
 A branch has the wait arrow's weight (`--fg-3` at 0.28, 1 px, no arrowhead) and lights in the accent at 0.7 and 1.4 px while a result rides it.
-A working or idle part keeps its own solid, heat, label and spark, seated at its node with its slot reserved.
+A working or idle part keeps its own solid, heat, label and spark, seated at its node without reserving an invisible main-orbit seat.
 A part's report climbs its branches to the ring, which lights as it lands.
 Pointing at the ring opens its summary with the program's parts under its head: a PARTS row with the counts ("20 finished, 5 running, 0 waiting"), under it a 3 px bar of each state's share (finished `--fg-3`, running `--accent`, waiting a `--line-2` outline, 2 px apart), and a RUNNING row with each running part's key (mono, `--text-xs`, opens its record) and, in `--fg-3`, the computer it runs on.
 When the parent closes done the tree folds into its ring, which falls home into the first mate as the one result home; a dropped parent fades where it stands.

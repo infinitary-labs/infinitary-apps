@@ -117,8 +117,9 @@ test("a continued pull request shows its checks and merges an unchanged conflict
       .toEqual([
         { number: CONTINUED_PULL, sha: repaired, method: "squash", title: pull.title, message: "" },
       ]);
-    const task = await saved();
-    expect(task).toMatchObject({
+    // INF-1478: the stand-in records the merge before replying; the app saves
+    // the receipt and consumes the approval only after it receives that reply.
+    await expect.poll(saved).toMatchObject({
       status: "active",
       delivery: {
         prNumber: CONTINUED_PULL,
@@ -130,6 +131,7 @@ test("a continued pull request shows its checks and merges an unchanged conflict
         },
       },
     });
+    const task = await saved();
     expect(task?.worktreeDir && existsSync(task.worktreeDir)).toBe(true);
     const proof = {
       checks: task?.delivery?.ci,

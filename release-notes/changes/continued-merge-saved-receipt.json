@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "continued-merge-saved-receipt",
+      "reason": "Test-only repair: the continued-merge journey waits for the saved consumed approval and repaired-version receipt, preserving every expected value. No product behavior changes."
+    }
+  ]
+}

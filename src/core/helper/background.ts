@@ -238,6 +238,52 @@ export function serviceUnit(options: {
   ].join("\n");
 }
 
+/**
+ * The service `infinitary start-at-boot` sets up (docs/run.md, "Starting at
+ * boot"): `<app> run` started by this user's own systemd at their login, and
+ * at boot once the user lingers. A failure starts it again ten seconds later,
+ * an update's exit 75 among them, so the new version runs; a clean stop
+ * (exit 0) and a settings file to fix (exit 78) do not. What it says goes to
+ * this user's journal.
+ */
+export function bootUnit(options: {
+  launcher: Launcher;
+  settings?: string;
+  env: Readonly<Record<string, string>>;
+}): string {
+  const words = [
+    options.launcher.executable,
+    ...options.launcher.args,
+    "run",
+    ...(options.settings ? ["--settings", options.settings] : []),
+  ];
+  return [
+    '# Infinitary started at boot for this user (docs/run.md, "Starting at boot").',
+    "[Unit]",
+    "Description=Infinitary",
+    "StartLimitIntervalSec=0",
+    "",
+    "[Service]",
+    "Type=simple",
+    // Its run draws on a display of its own rather than a Wayland session's,
+    // which goes when that session does (src/main/ownDisplay.ts).
+    "UnsetEnvironment=WAYLAND_DISPLAY",
+    `ExecStart=${words.map(unitWord).join(" ")}`,
+    "Restart=on-failure",
+    "RestartSec=10",
+    "RestartPreventExitStatus=78",
+    "TimeoutStopSec=20",
+    "KillMode=mixed",
+    ...Object.entries(options.env).map(
+      ([key, value]) => `Environment=${unitQuoted(`${key}=${value}`)}`,
+    ),
+    "",
+    "[Install]",
+    "WantedBy=default.target",
+    "",
+  ].join("\n");
+}
+
 /** A value a unit file holds as it is: one line, with systemd's specifiers kept literal. */
 function unitValue(text: string): string {
   if (/[\n\r\0]/.test(text)) throw new Error("A unit file cannot hold a line break.");
@@ -414,7 +460,7 @@ function systemdUnits(context: BackgroundContext): string {
 }
 
 /** The link that has a user's login start a service: beside its file, in `default.target.wants`. */
-function wantedBy(file: string): string {
+export function wantedBy(file: string): string {
   return join(dirname(file), "default.target.wants", basename(file));
 }
 

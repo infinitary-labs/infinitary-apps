@@ -6,6 +6,7 @@ import { hasNoScreen, NO_SCREEN_WORDS } from "./noScreen";
 import { installMainProcessErrorHandlers } from "./processErrors";
 import { runCommand } from "./runCommand";
 import { statusCommand } from "./runStatus";
+import { helpCommand, startAtBootCommand } from "./startAtBoot";
 import { workCommand } from "./workCommand";
 
 /**
@@ -14,7 +15,9 @@ import { workCommand } from "./workCommand";
  * Firstmate with no window (./work.ts, docs/helper.md); started as
  * `<app> run`, it is the app itself with no window (./runCommand.ts,
  * docs/run.md); `<app> status` and `<app> link` read that app's status or ask
- * it for a link, and start nothing (./runStatus.ts, ./linkCommand.ts); any
+ * it for a link, and start nothing (./runStatus.ts, ./linkCommand.ts);
+ * `<app> start-at-boot` sets that run up to start at boot, and `<app> help`
+ * says how to start it (./startAtBoot.ts); any
  * other start is the app itself, its window and its core (./app.ts). Each is
  * a chunk of its own, so the work mode never evaluates the app's modules.
  */
@@ -31,6 +34,14 @@ const work = workCommand(process.argv, Boolean(process.defaultApp));
 const run = work ? null : runCommand(process.argv, Boolean(process.defaultApp));
 const status = work || run ? null : statusCommand(process.argv, Boolean(process.defaultApp));
 const link = work || run || status ? null : linkCommand(process.argv, Boolean(process.defaultApp));
+const boot =
+  work || run || status || link
+    ? null
+    : startAtBootCommand(process.argv, Boolean(process.defaultApp));
+const help =
+  work || run || status || link || boot
+    ? null
+    : helpCommand(process.argv, Boolean(process.defaultApp));
 
 /**
  * The data folder `run` opens in this account, chosen as it chooses it but
@@ -66,6 +77,14 @@ if (work) {
   // screen, Dock icon, lock or core. The running app's door makes the link.
   if (hostPlatform() === "darwin") (await import("electron")).app.setActivationPolicy("prohibited");
   const result = await runLinkCommand(link, await commandDataDir());
+  if (result.out) await new Promise((done) => process.stdout.write(result.out, done));
+  if (result.error) await new Promise((done) => process.stderr.write(result.error, done));
+  process.exit(result.code);
+} else if (boot || help) {
+  // Answered before readiness, as link is: no screen, Dock icon, lock or core.
+  if (hostPlatform() === "darwin") (await import("electron")).app.setActivationPolicy("prohibited");
+  const { answerBootCommand } = await import("./startAtBootContext");
+  const result = await answerBootCommand({ boot, help }, await commandDataDir());
   if (result.out) await new Promise((done) => process.stdout.write(result.out, done));
   if (result.error) await new Promise((done) => process.stderr.write(result.error, done));
   process.exit(result.code);

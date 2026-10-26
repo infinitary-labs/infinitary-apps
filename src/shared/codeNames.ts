@@ -180,6 +180,15 @@ export function workLabelOf(spelling: Spelling, flavor: BuildFlavor): string {
   return `${bundleId}${flavor === "dev" ? ".dev" : ""}.work`;
 }
 
+/**
+ * The label of the service `infinitary start-at-boot` sets up (docs/run.md,
+ * "Starting at boot"): this app's bundle id, `.dev` for the development
+ * flavor, then `.run`, beside the work's `.work`.
+ */
+export function runLabelOf(flavor: BuildFlavor): string {
+  return `${APP_IDENTITIES[OWN_IDENTITY].bundleId}${flavor === "dev" ? ".dev" : ""}.run`;
+}
+
 /** Every label a background of this flavor may be kept under, this build's first. */
 export function workLabels(flavor: BuildFlavor): string[] {
   return [OWN_IDENTITY, ...SPELLINGS.filter((spelling) => spelling !== OWN_IDENTITY)].map(

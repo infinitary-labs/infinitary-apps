@@ -162,9 +162,26 @@ Opening Infinitary's window in the same account while the command runs shows the
 The window asks before it asks for the single-instance lock, since a process the lock refused never becomes ready to show a page: `run.json` names a live process that holds Chromium's lock, which on a Mac and on Linux is a link naming its holder (`SingletonLock`, `<host>-<pid>`) (`runningByCommand`).
 A note a crashed run left names a process that is gone or holds no lock, so the window opens as usual.
 
+## Starting at boot
+
+`<app> start-at-boot` sets the usual start at boot up for this account, on Linux: it writes what the account may and prints the one line an administrator runs (INF-1228's approved plan, piece 7, the captain's answer boot=both; piece 5 of INF-1352's plan).
+It writes this user's own systemd service, `<bundle id>.run.service` (`.dev.run` for a development run, `runLabelOf`, `src/shared/codeNames.ts`) in `~/.config/systemd/user` (or `$XDG_CONFIG_HOME`), and the link in `default.target.wants` that `systemctl --user enable` makes, so the user's systemd starts `<app> run` at their login (`bootUnit`, `src/core/helper/background.ts`).
+To start it at boot with nobody logged in, the user must linger: it asks `loginctl enable-linger --no-ask-password <user>`, which systemd allows some accounts, and otherwise prints "To start it whenever this computer starts, before anyone logs in, an administrator runs this once:" and `sudo loginctl enable-linger <user>`, the line the Linux join prints (`afterLogout`, `docs/devices.md`).
+The service starts the run again ten seconds after a failure, so an update's exit 75 runs the new version, but not after a clean stop (0) or a settings file to fix (78, `RestartPreventExitStatus`); what the run says goes to the user's journal (`journalctl --user -u <label>.service`), which the command names.
+It starts the service now, unless another Infinitary holds the data folder (the window, or a run started by hand): then it says the service starts the next time instead, so it never fails beside it; a run of the service itself restarts with the new file.
+`--settings <file>` names a settings file ("A settings file" above) for the service's run, by its full path; a file it cannot use is said now with the run's own words and exit 78, and nothing is written.
+`--off` takes the service and its link away and stops it; when the user lingers it also prints how an administrator turns that off (`lingerStays`), since the app never turns linger off itself.
+With no systemd for this user it says so and exits 1; any other word prints the usage and exits 2.
+`src/main/startAtBoot.ts` owns the command and its words.
+
+On a Mac it changes nothing yet: it says "Infinitary cannot start at boot on a Mac yet." and points to `help run`, and exits 1.
+A Mac's boot entry is an administrator's (macOS has no linger), and it waits for a check on a disposable Mac that the app runs there with nobody logged in, asked on its own card and run on a Mac kept for checks, never an everyday one.
+
+`<app> help` lists the commands, and `<app> help run` prints the run's usage and the ways to start it the app does not set up itself, each with this app's own path: by hand in a terminal, `start-at-boot` on Linux, and a Mac login agent's file for `~/Library/LaunchAgents` (INF-1228's plan: "infinitary help run prints examples for other setups").
+
 ## Not yet
 
-The rest of INF-1228's plan follows in order, each on its own: from another computer, its computers and phones, through the same pairing (piece 6), and a task's browser shown and taken over there (piece 6, the captain's answer browser=build); then `infinitary start-at-boot` with the one administrator line on both systems (piece 7).
+The rest of INF-1228's plan follows in order, each on its own: from another computer, its computers and phones, through the same pairing (piece 6), and a task's browser shown and taken over there (piece 6, the captain's answer browser=build); and a Mac's boot entry for `start-at-boot`, after its check on a disposable Mac ("Starting at boot").
 Google's sign-in from another computer waits too: its page sends the browser back to the first mate's own loopback address.
 Claude signs in only where someone is logged in: a Mac nobody is logged in to keeps Claude's login locked in its Keychain, and the crew there uses other subscriptions (captain's pick on question 3).
 Moving an existing record to another account is planned separately (question 7).
@@ -180,4 +197,5 @@ With a settings file and the system folders as its path, a run never asks a stan
 `tests/e2e/link-command.spec.ts` starts the built commands in the same isolated environment: with nothing running `link` says so and makes no data, a word it does not take exits 2, and beside a run a computer's link joins once, a phone's printed code holds its printed link and joins, and `--json` answers a new link; once the run stops it says so again.
 `src/main/linkCommand.test.ts` holds the words after `link`, the readings with no answering door, the printed code read back module by module, and the output; `src/core/devices/phoneDoor.test.ts` holds the door's answer and refusals.
 `tests/e2e/run-control.spec.ts` starts the built app as `<app> run` with the mock provider and Google's stand-in, joins a second app at its first launch with the link `link --json` prints, and from it opens Intelligence with a card's Open settings button, Usage and Integrations by command, saves a projects folder typed as its path there after a missing one is refused, and signs in to Google, whose page that app's browser opens; once the run stops its own data holds both.
+`src/main/startAtBoot.test.ts` holds `start-at-boot` against a stand-in systemd and logind: the service it writes, linger allowed, refused or already on, an Infinitary already open, a settings file, `--off`, no systemd, a Mac, and `help run`.
 `src/core/connection/connection.test.ts`, `src/shared/ipc.test.ts`, `src/core/devices/homeLink.test.ts`, `src/main/shell.test.ts` and `src/core/core.test.ts` hold what such a view may ask and is refused, the welcome's field, a replayed page left unopened, and the page the real core sends instead of opening it; `src/renderer/src/devices/viewWords.test.tsx`, `src/renderer/src/settings/SettingsScreen.test.tsx` and `src/renderer/src/app/commandRefusals.test.ts` hold the sections, words and commands.

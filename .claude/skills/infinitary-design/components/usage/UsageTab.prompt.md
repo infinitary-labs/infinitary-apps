@@ -11,25 +11,6 @@ The app remembers it; the tab opens in Tokens until the captain picks dollars.
 Under the header, a row of two labeled selects in `--text-sm` on `--bg-2` with a `--line-1` hairline and `--radius-m`: Period (Last 7 days, Last 30 days, All recorded time) and Work (All work, Task work, First mate, Other work), then the dates in `--fg-3`: "Sep 6–Oct 5 · Local dates", or "Since Sep 6 · Local dates" for all time.
 They open at Last 30 days and All work every time.
 
-**The notice.**
-One `--text-sm` panel with a `--line-1` hairline and `--radius-s` says what the numbers count:
-- tokens with missing categories: "The total counts recorded tokens only; some categories were not reported.
-  Reported tokens: input 2 of 3 records; output 2 of 3 records; cache read 1 of 3 records; cache write 0 of 3 records."
-  If no record reported any tokens, say "No record in this view reported tokens." instead of claiming a total is available.
-  If an older home omits category coverage, say "Token category coverage is not available."
-- tokens with complete category coverage: "Includes input, output and cached tokens.
-  Reused text can count more than once.", or when some records have no price "Token totals are available.
-  Some records have no price, so the dollar view shows only the priced part."
-- dollars: "Estimates, not your bill.
-  33 of 45 records priced.
-  The total leaves out unpriced activity."
-- older records that name a model loosely lead with "Recorded model: usage from before models were kept apart names the model recorded then, and older Claude totals can include other models."
-- nothing recorded: "Only work Infinitary records appears here."
-
-All nonempty token selections give reporting counts for all four categories, including fully reported selections.
-
-The panel turns `--warn` text on a `--warn-dim` hairline for older records, for tokens with missing or unavailable category coverage, and for dollars that leave something out.
-
 **Readouts.**
 Three columns split by `--line-1` hairlines, each a `--text-sm --fg-2` label, a 26 px mono `--fg-1` number and a `--fg-3` line:
 - "Recorded tokens" · "17.26M" · "Input, output and cache"; in dollars "Estimated value · USD" (or "Known estimate · USD" when some records have no price) · "$17.18" · "33 of 45 records priced".
@@ -83,6 +64,6 @@ When the tab is narrower than 850 px the figures go under the task, each with it
 Nothing to list reads "No task usage in this selection."; a read that fails says so beside a small secondary "Try again", keeping the tasks shown.
 
 **Nothing recorded.**
-Under the notice, centered: "No recorded activity" in `--fg-1`, then "Usage appears after the first mate or a crewmate finishes a model response." and "Nothing here means no records, not a measured zero." in `--fg-3`; the milestones and the recent tasks stay.
+Under the filters, centered: "No recorded activity" in `--fg-1`, then "Usage appears after the first mate or a crewmate finishes a model response." and "Nothing here means no records, not a measured zero." in `--fg-3`; the milestones and the recent tasks stay.
 
 Words never shown: bill, billing, savings, budget, quota, allowance, request, turn, leaderboard, streak.

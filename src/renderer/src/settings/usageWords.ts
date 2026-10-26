@@ -121,57 +121,9 @@ export function tokenCategoryCoverage(amount: UsageAmount, category: UsageCatego
   return count === undefined ? "Coverage not available" : `${count} of ${amount.records} records`;
 }
 
-/** Category-level disclosure for a known token subtotal. */
-export function tokenCoverageLine(amount: UsageAmount): string {
-  if (!amount.tokenReported) return "Token category coverage is not available.";
-  return `Reported tokens: input ${tokenCategoryCoverage(amount, "input")}; output ${tokenCategoryCoverage(amount, "output")}; cache read ${tokenCategoryCoverage(amount, "cacheRead")}; cache write ${tokenCategoryCoverage(amount, "cacheWrite")}.`;
-}
-
 /** Whether some model in the summary was recorded before models were kept apart. */
 export function hasRecordedModels(summary: UsageSummary): boolean {
   return summary.models.some((model) => model.attribution === "recorded");
-}
-
-/**
- * The notice under the filters: what the numbers count, what an estimate
- * is and covers, and when older records name a model loosely.
- */
-export function coverageNotice(
-  summary: UsageSummary,
-  unit: UsageUnit,
-): { tone: "quiet" | "warn"; text: string } {
-  const { total } = summary;
-  if (total.records === 0) {
-    return { tone: "quiet", text: "Only work Infinitary records appears here." };
-  }
-  const recorded = hasRecordedModels(summary)
-    ? "Recorded model: usage from before models were kept apart names the model recorded then, and older Claude totals can include other models. "
-    : "";
-  const partial = total.priced < total.records;
-  let line: string;
-  if (unit === "usd") {
-    line =
-      total.priced === 0
-        ? "Estimates, not your bill. No record in this view has a price."
-        : `Estimates, not your bill. ${pricedLine(total)}.${partial ? " The total leaves out unpriced activity." : ""}`;
-  } else if (!completeTokens(total)) {
-    line = !total.tokenReported
-      ? "The total counts recorded tokens only. "
-      : total.counted === 0
-        ? "No record in this view reported tokens. "
-        : "The total counts recorded tokens only; some categories were not reported. ";
-    line += tokenCoverageLine(total);
-  } else if (partial) {
-    line =
-      "Token totals are available. Some records have no price, so the dollar view shows only the priced part.";
-  } else {
-    line = "Includes input, output and cached tokens. Reused text can count more than once.";
-  }
-  if (unit === "tokens" && completeTokens(total)) line += ` ${tokenCoverageLine(total)}`;
-  return {
-    tone: recorded || (unit === "usd" ? partial : !completeTokens(total)) ? "warn" : "quiet",
-    text: recorded + line,
-  };
 }
 
 export type UsageReadout = { label: string; value: string; note: string };

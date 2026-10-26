@@ -23,7 +23,6 @@ import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { SectionLabel, SettingError } from "./settingRows";
 import "./usage.css";
 import {
-  coverageNotice,
   createdWords,
   formatDay,
   formatRecorded,
@@ -211,12 +210,8 @@ function UsageBody({
   onClose: () => void;
   closeRef: RefObject<HTMLButtonElement | null>;
 }) {
-  const notice = coverageNotice(summary, unit);
   return (
     <>
-      <div className="fm-usage-notice" data-usage-notice="" data-tone={notice.tone}>
-        {notice.text}
-      </div>
       {summary.total.records === 0 ? (
         <div className="fm-usage-empty" data-usage-empty="">
           <h3>No recorded activity</h3>

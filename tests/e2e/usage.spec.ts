@@ -213,7 +213,6 @@ test("Usage preserves category coverage through the ledger, filters and model de
     const usage = usageTab(page);
     await expect(promptInput(page)).toBeVisible();
     await runFromSearch(app, page, "settings.usage");
-    await expect(usage.notice).toHaveAttribute("data-tone", "warn");
     const summary = await usageSummary(page, { period: "30d", scope: "all" });
     expect(summary.total.tokenReported).toEqual({
       input: 3,

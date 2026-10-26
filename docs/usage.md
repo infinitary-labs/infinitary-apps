@@ -87,7 +87,7 @@ Each task carries its key, title and project, when it was created, its amount ov
 
 ## The tab
 
-The captain's design (FI3-925, Overview): the header with the Tokens / Estimated $ switch, Period and Work, a coverage notice, three readouts, the daily bars with their Daily values table, tokens per model beside Where it went, a model's details, and the milestone strip.
+The captain's design (FI3-925, Overview): the header with the Tokens / Estimated $ switch, Period and Work, three readouts, the daily bars with their Daily values table, tokens per model beside Where it went, a model's details, and the milestone strip.
 FI3-993 took the lines from between rows, grouped Where it went by project, and added Recent tasks under the milestone strip.
 
 - Where it went lists the first mate first whenever the work includes it, "No activity" when it has no record, then each project by its subtotal with its kinds of work beneath it under category names (Plans, Research, Lookups and explanations, Issue reproduction, Implementation, Fixes, Maintenance, Reviews, Other task work), then other work.
@@ -99,9 +99,8 @@ FI3-993 took the lines from between rows, grouped Where it went by project, and 
 - The unit switch changes every amount together, within Usage only; counts stay counts.
   The core keeps it (`appearance.usageUnit`); Usage opens in tokens until the captain picks dollars.
   Period and Work start over at the last 30 days and all work on every opening.
-- Token totals count known categories only; incomplete coverage turns the notice into a warning with reporting counts for input, output, cache read and cache write.
+- Token totals count known categories only; with incomplete coverage the total's readout says it holds reported categories only.
   Model details show each category’s reporting count beside its value, including zero reporting records.
-  Complete token selections also disclose the four category reporting counts in the notice.
 - Estimated dollars are approximate pay-as-you-go value, never a bill, a share of a subscription, an allowance or savings; a partial total says how many records it covers.
 - Milestones count finished tasks at 1, 10, 25 and 50 over all retained history, and keep the last reached after 50.
   There are no streaks, scores, notifications, token targets or anything that rewards spending more.

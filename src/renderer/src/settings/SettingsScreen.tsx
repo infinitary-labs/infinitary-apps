@@ -119,6 +119,9 @@ export function SettingsScreen() {
         paddingTop: 12,
         display: "flex",
         justifyContent: "center",
+        // The column grows with its section rather than stretching to the
+        // window, so a long section still ends on the column's bottom padding.
+        alignItems: "flex-start",
         overflowY: "auto",
       }}
     >

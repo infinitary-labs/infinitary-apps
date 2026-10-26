@@ -9,7 +9,6 @@ import {
 import { describe, expect, it } from "vitest";
 import {
   compactTokens,
-  coverageNotice,
   createdWords,
   dollars,
   exactTokens,
@@ -113,7 +112,7 @@ describe("Usage's numbers", () => {
   });
 });
 
-describe("Usage's readouts and notice", () => {
+describe("Usage's readouts", () => {
   it("switches the total between tokens and a known estimate with its coverage, and keeps counts as counts", () => {
     expect(readouts(summary(), "tokens").map((readout) => readout.value)).toEqual([
       "17.26M",
@@ -129,18 +128,10 @@ describe("Usage's readouts and notice", () => {
     expect(readouts(summary({ total: amount(400, null, 3) }), "usd")[0]?.value).toBe(NOT_AVAILABLE);
   });
 
-  it("says an estimate is not a bill, how much it covers, and when older records name a model loosely", () => {
-    const partial = summary({ total: amount(100, 15.41, 45, 33) });
-    expect(coverageNotice(partial, "usd")).toEqual({
-      tone: "warn",
-      text: "Estimates, not your bill. 33 of 45 records priced. The total leaves out unpriced activity.",
-    });
-    expect(coverageNotice(partial, "tokens").tone).toBe("quiet");
+  it("says when older records name a model loosely", () => {
     const older = summary({
       models: [model("opus", amount(10, 1), { attribution: "recorded" })],
     });
-    expect(coverageNotice(older, "tokens")).toMatchObject({ tone: "warn" });
-    expect(coverageNotice(older, "tokens").text).toMatch(/^Recorded model:/);
     expect(readouts(older, "tokens")[2]?.label).toBe("Recorded models");
     expect(modelLine(older.models[0] as UsageModel)).toBe("Codex · Recorded model");
   });
@@ -360,28 +351,17 @@ describe("Usage's milestones", () => {
 });
 
 describe("token coverage disclosure", () => {
-  it("warns about missing categories even when every record has some tokens and a price", () => {
+  it("says the total covers reported categories only when some categories were not reported", () => {
     const partial = amount(42, 1);
     partial.tokenReported = { input: 1, output: 1, cacheRead: 0, cacheWrite: 0 };
     const view = summary({ total: partial });
-    expect(coverageNotice(view, "tokens")).toEqual({
-      tone: "warn",
-      text: "The total counts recorded tokens only; some categories were not reported. Reported tokens: input 1 of 1 records; output 1 of 1 records; cache read 0 of 1 records; cache write 0 of 1 records.",
-    });
     expect(readouts(view, "tokens")[0]?.note).toBe("Reported categories only");
     expect(tokenCategoryCoverage(partial, "cacheRead")).toBe("0 of 1 records");
-    expect(coverageNotice(view, "usd").tone).toBe("quiet");
   });
   it("discloses absent coverage and no reported tokens without claiming totals are available", () => {
     const missing = { ...amount(0, 1), tokenReported: undefined };
     expect(tokenCategoryCoverage(missing, "input")).toBe("Coverage not available");
-    expect(coverageNotice(summary({ total: missing }), "tokens").text).toContain(
-      "Token category coverage is not available.",
-    );
     const none = { ...EMPTY_USAGE_AMOUNT, records: 1, cost: 1, priced: 1 };
-    expect(coverageNotice(summary({ total: none }), "tokens").text).toContain(
-      "No record in this view reported tokens.",
-    );
     expect(readouts(summary({ total: none }), "tokens")[0]?.value).toBe(NOT_AVAILABLE);
   });
 });

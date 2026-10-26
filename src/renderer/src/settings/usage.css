@@ -57,19 +57,6 @@
   padding: var(--space-1) var(--space-2);
 }
 
-.fm-usage-notice {
-  margin-top: var(--space-3);
-  padding: 10px var(--space-3);
-  border: 1px solid var(--line-1);
-  border-radius: var(--radius-s);
-  font-size: var(--text-sm);
-}
-
-.fm-usage-notice[data-tone="warn"] {
-  color: var(--warn);
-  border-color: var(--warn-dim);
-}
-
 .fm-usage-readouts {
   display: grid;
   grid-template-columns: 1.3fr 1fr 1fr;

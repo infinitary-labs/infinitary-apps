@@ -24,7 +24,6 @@ import { starterFor } from "./starters";
  */
 export function usageTab(page: Page): {
   section: Locator;
-  notice: Locator;
   unit: (unit: UsageUnit) => Locator;
   period: Locator;
   scope: Locator;
@@ -43,7 +42,6 @@ export function usageTab(page: Page): {
   const section = page.locator('[data-settings-section="usage"]');
   return {
     section,
-    notice: section.locator("[data-usage-notice]"),
     unit: (unit) => section.locator(`[data-usage-unit] [value="${unit}"]`),
     period: section.locator("[data-usage-period]"),
     scope: section.locator("[data-usage-scope]"),

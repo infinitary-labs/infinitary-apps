@@ -171,6 +171,10 @@ describe("the crewmate tool spec", () => {
     expect(tool?.description).toContain(
       "whole list with every later note, unchanged if nothing moved",
     );
+    // INF-1464: the captain watched the plan stand still while a crewmate worked.
+    expect(tool?.description).toContain(
+      "as soon as a plan item finishes or the work moves to the next item, in the middle of your turn",
+    );
   });
 
   it("keeps the GitHub tools within Claude's description limit (INF-205)", () => {

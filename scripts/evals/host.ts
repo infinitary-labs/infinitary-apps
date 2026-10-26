@@ -580,6 +580,8 @@ export async function approvalHost(
         })),
       };
     },
+    /** The disposable task record, for a module that reads what the host saved. */
+    tasks,
     close,
   };
 }

@@ -103,6 +103,8 @@ export type EvaluationModule = {
   toolResultBytes?: number;
   /** Longer filing turns retain the same global call/input ceilings. */
   firstmateCalls?: number;
+  /** Longer working turns retain the same global call/input ceilings. */
+  builderCalls?: number;
 };
 export const approvalEvaluation: EvaluationModule = {
   name: "approval-handoff",
@@ -340,6 +342,7 @@ export async function runEvaluation(
     ...LIMITS,
     toolResultBytes: evaluation.toolResultBytes ?? LIMITS.toolResultBytes,
     firstmateCalls: evaluation.firstmateCalls ?? LIMITS.firstmateCalls,
+    builderCalls: evaluation.builderCalls ?? LIMITS.builderCalls,
   };
   if (
     !Number.isSafeInteger(limits.toolResultBytes) ||
@@ -353,6 +356,12 @@ export async function runEvaluation(
     limits.firstmateCalls > 12
   )
     throw new Error("Invalid first mate call allowance");
+  if (
+    !Number.isSafeInteger(limits.builderCalls) ||
+    limits.builderCalls < 1 ||
+    limits.builderCalls > 12
+  )
+    throw new Error("Invalid builder call allowance");
   const ids = evaluation.cases.map((test) => test.id);
   if (
     !ids.length ||

@@ -95,7 +95,8 @@ export const FILE_FOLLOWUP_TOOL_DESCRIPTION = [
 export const NOTE_PROGRESS_TOOL_DESCRIPTION = [
   "Put one line on your task's own timeline - a milestone reached, a decision you made, what you are doing next.",
   "It is never shown as a card or a feed line; the captain can read it on the task's record.",
-  "Use it at real checkpoints, not every step, and never instead of your final report.",
+  "Call it as soon as a plan item finishes or the work moves to the next item, in the middle of your turn: the captain watches the plan move while you work, and a note held for the end of your turn leaves it standing still.",
+  "Otherwise use it at real milestones, not every command, and never instead of your final report.",
   "Pass plan with it to show where the work stands: the whole list of what the task takes, each item with a label, a short label of a word or two for its dot, and its state - done, current, next or skipped.",
   "The captain sees it as dots on a line beside the task and as a list on its record, so keep it short and high level: under eight items in all, one current at a time.",
   "Send the first list with your brief, send the whole list with every later note, unchanged if nothing moved, and fold finished items into one item to make room; the final report leaves every item done or skipped.",

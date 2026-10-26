@@ -204,6 +204,19 @@ A run passes only when both cases end normally and the executed effects, the tra
 The runner still requires an explicit builder selection for its shared sheet format, but this module opens no builder session.
 Use the same approval, account, isolation and foreground-Claude boundaries as above.
 
+## Progress cadence
+
+INF-1464's `scripts/evals/progressCadence.ts` module asks whether a live crewmate moves its task's saved plan while it works, or only with its brief and its report (INF-1463).
+Select it with `--module scripts/evals/progressCadence.ts`.
+Its three builder cases are the same task, shaped like INF-1461 in the captain's picture: bring a branch up to date, regenerate, run the gate and build the bundle.
+Each case serves the production builder preset with one added fixture tool, `run_step`, which answers with that step's kind of output and runs nothing.
+The brief says nothing about when to note progress, so only the served crew prompt and tool description decide it.
+At each step's start the host reads the task's saved plan, as the crew summary does, and keeps it in `stepStarts`.
+A case passes when the steps ran in order, a plan was saved before the first, and the saved plan held more items done at each later step's start than at the one before.
+The module raises a builder case's request allowance to 8 (`builderCalls`), within the run's same ceilings.
+Score with `node scripts/evals/progress-cadence.ts --out /tmp/progress-score --responses /tmp/progress-eval/responses.json`.
+Use the same approval, account, isolation and foreground-Claude boundaries as above.
+
 ## Accepted plan pieces
 
 INF-87's `scripts/evals/acceptedPlan.ts` module uses INF-86's original six-piece report, offer and non-default answer, with only the parent/successor identifiers mapped to disposable records (`tests/fixtures/accepted-plan/README.md`).

@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "progress-moves-while-working",
+      "kind": "fix",
+      "title": "A task's progress moves while its crewmate works",
+      "body": "Crewmates often marked their plan only when they started and when they finished, so a task's Progress row could sit on its first step for most of the work. Crewmates now mark each step as it finishes.",
+      "area": "crewmates",
+      "noPicture": "The Progress row looks the same; the change is that its dots move during the work instead of at the end.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import type { ChangePresentation } from "@shared/changePresentation";
-import { fixedHoldWords } from "@shared/holds";
+import { fixedHoldWords, softHoldWords } from "@shared/holds";
 import type { MergeReview } from "@shared/mergeReview";
 import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it, vi } from "vitest";
@@ -3263,11 +3263,14 @@ describe("a passed review covers the same change", () => {
 describe("shared story delivery boundaries", () => {
   const original = "5ca2d466ee21f9733827383f23df81f3874e0d10";
   const repaired = "c40687d8d4f738056e62db6ab98b90f7f7d17497";
-  async function saved() {
+  async function saved(kind: "github" | "gitlab" = "github") {
     const bringBranchHome = vi.fn(async (): Promise<string> => {
       throw new Error("Work computer is asleep");
     });
-    const at = setup({ bringBranchHome });
+    const at = setup({
+      bringBranchHome,
+      ...(kind === "gitlab" ? { forge: new FakeForge({ kind, place: "GitLab" }) } : {}),
+    });
     await insertDirectPrTask(at.tasks, at.repos, { deviceId: "sleeping-work-computer" });
     const story: ChangePresentation = {
       version: 1,
@@ -3346,6 +3349,209 @@ describe("shared story delivery boundaries", () => {
     recordPr(at.tasks, 23);
     return { ...at, bringBranchHome, update, story };
   }
+
+  // INF-1365 (INF-1363's merge stopped on its story after the captain's words passed it): the
+  // override on the saved story passes its publication at the merge, and only there.
+  describe("the captain's override on the saved story at the merge (INF-1365)", () => {
+    const words = "Merge without waiting for the saved story";
+    function override(
+      at: Awaited<ReturnType<typeof saved>>,
+      scope: "task" | "version" | "older-version" | "other-hold",
+    ): void {
+      at.tasks.recordDelivery("ab12cd34", {
+        override: {
+          words,
+          holds: [scope === "other-hold" ? "checks" : "story"],
+          until: scope === "task" || scope === "other-hold" ? "task" : "version",
+          ...(scope === "version" ? { head: repaired } : {}),
+          ...(scope === "older-version" ? { head: original } : {}),
+          at: 1,
+        },
+      });
+    }
+    /** INF-1363's shape: the story was published, then a push moved the pull request past it. */
+    async function stale(kind: "github" | "gitlab" = "github") {
+      const at = await saved(kind);
+      at.forge.change = {
+        ...(at.forge.change as ForgeChange),
+        headSha: repaired,
+        body: `Keeps the merge moving.\n\nBREAKING CHANGE: The story hold reads the override.\n\n${at.forge.change?.body ?? ""}`,
+      };
+      at.readHead.mockResolvedValue(repaired);
+      return { ...at, putIn: vi.spyOn(at.forge, "putIn") };
+    }
+
+    it.each(["github", "gitlab"] as const)(
+      "merges a story made stale by a push under a task-wide or this version's override on %s",
+      async (kind) => {
+        for (const scope of ["task", "version"] as const) {
+          const at = await stale(kind);
+          const before = at.tasks.changePresentation("ab12cd34");
+          override(at, scope);
+          const outcome = await at.service.merge("ab12cd34");
+          expect(outcome.ok).toBe(true);
+          // The squash carries the description's own words and footer, never the older story.
+          expect(at.putIn).toHaveBeenCalledWith(
+            {
+              ...at.forge.change,
+              squashMessage:
+                "Keeps the merge moving.\n\nBREAKING CHANGE: The story hold reads the override.",
+            },
+            repaired,
+          );
+          // Nothing is published, uploaded, refreshed or rewritten on the override's account.
+          expect(at.tasks.changePresentation("ab12cd34")).toEqual(before);
+          expect(at.update).not.toHaveBeenCalled();
+        }
+      },
+    );
+
+    it.each(["none", "older-version", "other-hold"] as const)(
+      "still refuses the stale story with %s override, naming the soft hold",
+      async (scope) => {
+        const at = await stale();
+        if (scope !== "none") override(at, scope);
+        const outcome = await at.service.merge("ab12cd34");
+        expect(outcome.ok).toBe(false);
+        expect(outcome.text).toContain(
+          "The current story and all evidence must be published and read back before the completion card or merge.",
+        );
+        expect(outcome.text).toContain(softHoldWords("story", "firstmate"));
+        expect(at.putIn).not.toHaveBeenCalled();
+      },
+    );
+
+    it("merges with no publication at all under a task-wide override, marking none", async () => {
+      const at = await saved();
+      at.tasks.updateChangePresentation("ab12cd34", () => ({ revisions: [], receipts: [] }));
+      at.forge.change = { ...(at.forge.change as ForgeChange), body: "The plain description." };
+      const putIn = vi.spyOn(at.forge, "putIn");
+      expect((await at.service.merge("ab12cd34")).text).toContain(
+        "The current story has not been published.",
+      );
+      override(at, "task");
+      expect((await at.service.merge("ab12cd34")).ok).toBe(true);
+      expect(putIn).toHaveBeenCalledWith(
+        { ...at.forge.change, squashMessage: "The plain description." },
+        original,
+      );
+      expect(at.tasks.changePresentation("ab12cd34")).toEqual({ revisions: [], receipts: [] });
+    });
+
+    it("merges a description replaced on the override, leaving the old story record as it was", async () => {
+      const at = await stale();
+      at.bringBranchHome.mockResolvedValue("");
+      override(at, "task");
+      const published = at.tasks.changePresentation("ab12cd34")?.published;
+      await at.service.open("ab12cd34", {
+        title: "fix: keep the saved story",
+        body: "The repaired change is ready.",
+      });
+      expect(at.forge.change?.body).toBe("The repaired change is ready.");
+      expect((await at.service.merge("ab12cd34")).ok).toBe(true);
+      expect(at.putIn).toHaveBeenCalledWith(
+        { ...at.forge.change, squashMessage: "The repaired change is ready." },
+        repaired,
+      );
+      expect(at.tasks.changePresentation("ab12cd34")?.published).toEqual(published);
+    });
+
+    // The owned merge past the branch rules reads the same override (FI3-1571 piece 2).
+    it.each(["task", "none", "taken back"] as const)(
+      "reads the override on a merge past the branch rules: %s",
+      async (scope) => {
+        const at = await stale();
+        if (scope !== "none") override(at, "task");
+        const skipping = vi.fn(async (_change: ForgeChange, _head: string) => ({
+          status: "merged" as const,
+          sha: "5e1f0c9a",
+        }));
+        const changeFor = at.forge.changeFor.bind(at.forge);
+        Object.assign(at.forge, {
+          putInSkippingRules: skipping,
+          pull: async () => ({
+            number: 23,
+            state: "open",
+            merged: false,
+            headSha: repaired,
+            base: "main",
+            branch: "fm/task-ab12cd34",
+            headRepo: "x/y",
+            title: "fix: ship it",
+            readiness: "clean",
+          }),
+          // The last read before the send.
+          changeFor: async (branch: string) => {
+            if (scope === "taken back")
+              at.tasks.recordDelivery("ab12cd34", { override: undefined });
+            return changeFor(branch);
+          },
+        });
+        const review: MergeReview = {
+          id: "mrskipstory1",
+          relationship: "owned",
+          kind: "github",
+          host: "github.com",
+          owner: "x",
+          name: "y",
+          number: 23,
+          headSha: repaired,
+          base: "main",
+          branch: "fm/task-ab12cd34",
+          method: "squash",
+          title: "fix: ship it",
+          skips: { rules: [], failedChecks: ["linux-checks"] },
+          at: 1,
+        };
+        at.forge.states = ["failure"];
+        at.tasks.recordDelivery("ab12cd34", { mergeReviews: [review] });
+        const outcome = await at.service.mergeReview("ab12cd34", review.id);
+        if (scope === "task") {
+          expect(outcome.ok).toBe(true);
+          expect(skipping).toHaveBeenCalledWith(
+            expect.objectContaining({
+              headSha: repaired,
+              squashMessage:
+                "Keeps the merge moving.\n\nBREAKING CHANGE: The story hold reads the override.",
+            }),
+            repaired,
+          );
+          return;
+        }
+        expect(outcome.ok).toBe(false);
+        expect(outcome.text).toContain("must be published and read back");
+        expect(outcome.text).toContain(softHoldWords("story", "firstmate"));
+        expect(skipping).not.toHaveBeenCalled();
+      },
+    );
+
+    it("holds a kept merge when the override is taken back during the last read before the send", async () => {
+      const at = await stale();
+      override(at, "task");
+      Object.assign(at.forge, {
+        pull: async () => {
+          at.tasks.recordDelivery("ab12cd34", { override: undefined });
+          return {
+            number: 23,
+            state: "open",
+            merged: false,
+            headSha: repaired,
+            base: "main",
+            readiness: "clean",
+          };
+        },
+      });
+      const outcome = await at.service.merge("ab12cd34", {
+        head: repaired,
+        prNumber: 23,
+        unattended: true,
+        beforeDispatch: () => undefined,
+      });
+      expect(outcome.ok).toBe(false);
+      expect(outcome.text).toContain("must be published and read back");
+      expect(at.putIn).not.toHaveBeenCalled();
+    });
+  });
 
   // INF-497 (the captain on INF-100's PR #138): correct only the words around the story.
   it("corrects only the words around the published story through open_change (INF-497)", async () => {

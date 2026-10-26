@@ -330,6 +330,17 @@ export function presentationAround(
   return bounds && { above: body.slice(0, bounds.first), below: body.slice(bounds.end) };
 }
 
+/**
+ * INF-1365: the squash summary when the captain's words pass the saved story - the description's
+ * own words around this task's story, never the story itself, whose evidence may be older than
+ * the version merging. A description without whole markers is kept as it is.
+ */
+export function messageWithoutPresentation(body: string, taskId: string): string {
+  const around = presentationAround(body, taskId);
+  if (!around) return presentationLines(body).trim();
+  return [around.above.trim(), around.below.trim()].filter(Boolean).join("\n\n");
+}
+
 /** Whether a description read back keeps the words around the story it was sent with. */
 export function sameAroundPresentation(read: string, sent: string, taskId: string): boolean {
   const held = presentationAround(read, taskId);

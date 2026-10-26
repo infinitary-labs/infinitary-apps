@@ -527,7 +527,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `waits` | soft | record | a close or completion card while a wait on other work stands | the override |
 | `parts` | soft | record | a close while the task's planned parts are open | `proceed_with_open`, or the override |
 | `checks` | soft | record | a completion card or merge while the checks failed or are running | Merge anyway on the completion card, or the override |
-| `story` | soft | consent | a GitHub or GitLab pull request opened without its saved story | the override |
+| `story` | soft | consent | a GitHub or GitLab pull request opened, or merged, without its current published story | the override |
 | `rerun` | soft | made-up number | a second flake rerun | the override |
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
 | `program-bound` | soft | consent | a program's task() call past the bound the first mate proposed | the first mate raises the bound with `update_task program_bound` on the captain's words |

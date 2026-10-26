@@ -75,6 +75,7 @@ export {
   overallOfChecks,
 } from "./forge";
 export {
+  messageWithoutPresentation,
   PresentationAroundError,
   presentationAround,
   presentationBodyLimit,

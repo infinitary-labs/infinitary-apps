@@ -37,6 +37,7 @@ import {
   isRedCheckState,
   isSignInForgeFailure,
   isTransientForgeFailure,
+  messageWithoutPresentation,
   PresentationAroundError,
   presentationLines,
 } from "../forge";
@@ -229,6 +230,12 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
 
 /** The checked change, and the forge that answered, for the put-in that follows. */
 type CheckedChange = { change: ForgeChange; forge: Forge };
+
+/** A merge's refusal on the saved story names the soft hold the captain's words pass (INF-1365). */
+function storyHeld(caught: unknown): never {
+  const message = caught instanceof Error ? caught.message : String(caught);
+  throw new Error(`${message} ${softHoldWords("story", "firstmate")}`);
+}
 
 /** A pull request's number in the host's own words: `#N` on GitHub, `!N` on GitLab. */
 function numberLabel(forge: Forge, number: number): string {
@@ -1004,7 +1011,13 @@ export class PrCiService {
           !this.options.presentations
         )
           throw new Error("The current story cannot be checked for complete evidence.");
-        change = await this.options.presentations.assertPublished(taskId, current, forge);
+        // INF-1365: the captain's override on the saved story passes its publication at this
+        // version, read after the last wait before the send.
+        change = overridePasses(this.options.tasks.get(taskId)?.delivery, "story", change.headSha)
+          ? { ...current, squashMessage: messageWithoutPresentation(current.body ?? "", taskId) }
+          : await this.options.presentations
+              .assertPublished(taskId, current, forge)
+              .catch(storyHeld);
       }
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
@@ -2373,7 +2386,19 @@ export class PrCiService {
         if (held) return held;
       }
       let publishedChange = change;
-      if (record?.delivery?.presentation) {
+      // INF-1365: the captain's override on the saved story passes its publication at this
+      // version: nothing is marked published, uploaded or refreshed, and the squash carries the
+      // description's own words, not an older story's. It is read after the last wait before the
+      // send, so a withdrawn override holds this merge. Every other check above still applies.
+      const storyPassed =
+        record?.delivery?.presentation !== undefined &&
+        overridePasses(this.options.tasks.get(taskId)?.delivery, "story", change.headSha);
+      if (storyPassed) {
+        publishedChange = {
+          ...change,
+          squashMessage: messageWithoutPresentation(change.body ?? "", taskId),
+        };
+      } else if (record?.delivery?.presentation) {
         if (!this.options.presentations)
           throw new Error("The current story cannot be checked for complete evidence.");
         const authorization = standingAuthorization(record.delivery);
@@ -2422,11 +2447,9 @@ export class PrCiService {
             throw new Error("The pull request changed during the story refresh.");
           publishedChange = refreshed;
         }
-        publishedChange = await this.options.presentations.assertPublished(
-          taskId,
-          publishedChange,
-          forge,
-        );
+        publishedChange = await this.options.presentations
+          .assertPublished(taskId, publishedChange, forge)
+          .catch(storyHeld);
       }
       const held = guard?.held?.();
       if (held) return { ok: false, text: `Cannot merge yet: ${held}.`, stop: "guidance" };

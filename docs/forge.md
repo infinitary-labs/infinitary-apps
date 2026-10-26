@@ -714,6 +714,9 @@ The app cannot intercept a raw push from a terminal; this is not a hosted requir
 A future github.com pull request or gitlab.com merge request and its completion card read one immutable `ChangePresentation` revision (`src/shared/changePresentation.ts`).
 `prepare_change` validates the crewmate's publishable prose and selected inspected files without displaying a card, uploading bytes or opening a PR.
 The saved story is a soft hold (`story`): when the captain's recorded override passes it, a new pull request takes `body` instead.
+The same override passes the story at the merge, ordinary or past the branch rules, at the version it covers (INF-1365): the merge goes without a current published story, while its checks, review, approval, version and the host's rules still hold.
+It marks no story published, uploads, refreshes and rewrites nothing, and is read after the merge's last wait, so an override taken back before the send holds the merge.
+A completion card that names a story revision still needs that story published and read back.
 New stories use version 2: the same conventional title on the card and pull request, up to two short Why sentences, five change bullets, one Before and After sentence, and six typed `checked` facts (`check`, `result`).
 Aim for 150 open words on the card and 250 on the pull request.
 The schema carries the captain’s selected item counts; the author owns sentence length and word targets, with no invented per-sentence character refusal.
@@ -737,6 +740,7 @@ Public project-template text and issue references are supplied as `projectText` 
 A saved story's squash commit message is its plain `whatChanged` summary, followed by any conventional `BREAKING CHANGE:` (or `BREAKING-CHANGE:`) footer and continuation lines in the current surrounding project text.
 That text begins as `projectText`; the merge preserves a footer the person later adds outside the verified story region too.
 Both ordinary and rules-skipping merges use that summary, never the rendered story's markers, escapes, tables, evidence URLs or risk chart; legacy descriptions keep their existing delivery.
+A merge the override passes squashes under the description's own words around this task's story region instead, any footer included, since the story may describe an older version.
 
 `stageChangePresentation` reuses the card media reader and retains exact validated files in the task's card-media folder, outside its working copy and temporary folder.
 A recording keeps its inspected local poster and must be a playable silent H.264 MP4 below 10,000,000 bytes; it is never silently replaced by a still or GIF.

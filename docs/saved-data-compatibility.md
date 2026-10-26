@@ -283,3 +283,13 @@ A task with nothing running has no execution row and reads the defaults it read 
 The task row's columns stay, emptied, so the published views read the same, and `v_placements_v1` reads the execution rows.
 An older build refuses the profile, because its migration history names migrations it does not know ("Before services start").
 An export this build writes carries the binding's conversation on the task's line, which an older importer drops, and an export an older build wrote imports here with the conversation named as the migration names it.
+
+## Change evidence and permissions
+
+Migration 99 moves each task's delivery facts out of the delivery column into a `task_delivery_evidence` row and a `task_permissions` row, and its settle that has not run off the task row into the permissions row, in one transaction before any service starts (`docs/task-record.md`, "A task's change evidence and permissions").
+Each value moves exactly as saved, a `null` and a field this build does not know included, and the delivery column keeps the closed policy snapshot and an older result copy.
+A kept merge approval keeps its approved version, its repairs and an attempt whose answer never came, so the boot reads that pull request back and never sends the merge again.
+The migration makes no consent: a permission is only one the profile already held, and nothing is sent, granted or resumed by the move.
+An unreadable delivery or settle stays where it was saved, read as before.
+An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
+A record export carries the same delivery facts as before, with no permission, so an import either way grants nothing.

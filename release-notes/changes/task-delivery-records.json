@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "task-delivery-records",
+      "reason": "Internal: what a task's change showed and what the captain allowed for it are each kept as their own record instead of together in the task's delivery facts; every task's record, a kept merge approval and the first mate's reads show and act the same as before."
+    }
+  ]
+}

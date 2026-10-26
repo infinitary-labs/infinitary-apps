@@ -21,6 +21,7 @@ import type { AppDatabase } from "./db";
 import { DATABASE_VERSION, openDatabase, openInMemoryDatabase } from "./db";
 import { INBOX_GRACE_MS, InboxStore, inboxContentHash } from "./inboxStore";
 import { SettingsStore } from "./settingsStore";
+import { PERMISSION_COLUMNS } from "./taskDeliveryFields";
 import { UsageStore } from "./usageStore";
 import { dropViews } from "./views";
 
@@ -119,8 +120,29 @@ const REVERSE_TASK_EXECUTION = `UPDATE tasks SET session_file = x.session_file, 
 DROP TABLE task_execution;
 CREATE INDEX tasks_pending_placement ON tasks(id) WHERE json_extract(placement_json, '$.reservation') = 'pending';
 `;
-/** INF-1296 piece 3's two records, undone, newest first. */
-const REVERSE_RUNNING_WORK = REVERSE_TASK_POLICIES + REVERSE_TASK_EXECUTION;
+/** INF-1296 piece 4's change evidence and permission rows, undone: each field back on its delivery. */
+const REVERSE_TASK_DELIVERY = `UPDATE tasks SET delivery_json = json_set(delivery_json, '$.mode', x.mode)
+  FROM task_delivery_evidence x WHERE x.task_id = tasks.id AND x.mode IS NOT NULL;
+UPDATE tasks SET delivery_json = json_set(delivery_json, '$.headSha', x.head_sha)
+  FROM task_delivery_evidence x WHERE x.task_id = tasks.id AND x.head_sha IS NOT NULL;
+UPDATE tasks SET delivery_json = json_patch(delivery_json, x.evidence_json)
+  FROM task_delivery_evidence x WHERE x.task_id = tasks.id AND x.evidence_json IS NOT NULL;
+${Object.entries(PERMISSION_COLUMNS)
+  .map(
+    ([field, column]) =>
+      `UPDATE tasks SET delivery_json = json_set(delivery_json, '$.${field}', json(p.${column})) FROM task_permissions p WHERE p.task_id = tasks.id AND p.${column} IS NOT NULL;\n`,
+  )
+  .join(
+    "",
+  )}UPDATE tasks SET delivery_json = json_set(delivery_json, '$.liveValidation.permissions', json(p.validation_permissions_json))
+  FROM task_permissions p WHERE p.task_id = tasks.id AND p.validation_permissions_json IS NOT NULL;
+UPDATE tasks SET pending_settle_json = p.pending_settle_json
+  FROM task_permissions p WHERE p.task_id = tasks.id AND p.pending_settle_json IS NOT NULL;
+DROP TABLE task_permissions;
+DROP TABLE task_delivery_evidence;
+`;
+/** INF-1296 pieces 3 and 4's records, undone, newest first. */
+const REVERSE_RUNNING_WORK = REVERSE_TASK_DELIVERY + REVERSE_TASK_POLICIES + REVERSE_TASK_EXECUTION;
 /** Migration 80's delivery columns, undone. */
 const REVERSE_MIGRATION_80 =
   "ALTER TABLE schedule_runs DROP COLUMN inbox_id; ALTER TABLE schedule_runs DROP COLUMN delivery; ALTER TABLE schedule_runs DROP COLUMN settled_at; ALTER TABLE schedule_runs DROP COLUMN cancel_reason; ALTER TABLE schedule_runs DROP COLUMN tasks; ALTER TABLE schedule_runs DROP COLUMN cards;\n";

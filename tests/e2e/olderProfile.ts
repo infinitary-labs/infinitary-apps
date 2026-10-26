@@ -6,10 +6,12 @@ import { hostEnv } from "../../src/core/hostEnv";
 import { mcpIntegration } from "../../src/core/integrations/providers/mcp/mcpIntegration";
 import {
   openDatabase,
+  TASK_DELIVERY_RECORDS_VERSION,
   TASK_EXECUTION_VERSION,
   TASK_POLICIES_VERSION,
   TASK_REFERENCES_VERSION,
 } from "../../src/core/storage/db";
+import { savedDeliveryReader } from "../../src/core/storage/taskDeliveryFields";
 import { policyShapeFields, type TaskPolicyRow } from "../../src/core/storage/taskPolicyFields";
 import { REFERENCE_SHAPE_FIELDS } from "../../src/core/storage/taskReferenceStore";
 import { dropViews } from "../../src/core/storage/views";
@@ -68,6 +70,8 @@ export type OlderProfile = {
   policies: string[];
   /** Each task whose running work went back onto its task row, with the turn keys put back on its delivery. */
   execution: { taskId: string; turn: string[] }[];
+  /** Each task whose change evidence and permissions went back into its delivery column, by record. */
+  delivery: { taskId: string; evidence: boolean; permissions: boolean }[];
 };
 
 /**
@@ -79,6 +83,7 @@ export function asSavedByOlderRelease(userDataDir: string): OlderProfile {
   // Each format change is undone newest first, every one opening the
   // database only as far as its own migration, so none runs again.
   const history = olderTaskHistory(userDataDir);
+  const delivery = olderTaskDelivery(userDataDir);
   const policies = olderTaskPolicies(userDataDir);
   const execution = olderTaskExecution(userDataDir);
   return {
@@ -87,7 +92,57 @@ export function asSavedByOlderRelease(userDataDir: string): OlderProfile {
     references: olderTaskReferences(userDataDir),
     policies,
     execution,
+    delivery,
   };
+}
+
+/**
+ * Each task's delivery facts as a release before INF-1296 piece 4 saved
+ * them: its change evidence and its permissions and effects in the
+ * delivery column beside the history, and a settle that has not run in its
+ * own column on the task row, with no tables of their own.
+ */
+function olderTaskDelivery(userDataDir: string): OlderProfile["delivery"] {
+  if (!existsSync(join(userDataDir, "firstmate.db"))) return [];
+  const db = openDatabase(userDataDir, TASK_DELIVERY_RECORDS_VERSION);
+  try {
+    const rows = db
+      .prepare(
+        `SELECT t.id AS taskId, t.delivery_json AS delivery,
+           EXISTS (SELECT 1 FROM task_delivery_evidence x WHERE x.task_id = t.id) AS evidence,
+           EXISTS (SELECT 1 FROM task_permissions p WHERE p.task_id = t.id) AS permissions,
+           (SELECT p.pending_settle_json FROM task_permissions p WHERE p.task_id = t.id) AS pending
+         FROM tasks t ORDER BY t.id`,
+      )
+      .all() as {
+      taskId: string;
+      delivery: string | null;
+      evidence: number;
+      permissions: number;
+      pending: string | null;
+    }[];
+    const composed = savedDeliveryReader(db);
+    const write = db.prepare(
+      "UPDATE tasks SET delivery_json = ?, pending_settle_json = COALESCE(?, pending_settle_json) WHERE id = ?",
+    );
+    const moved = rows.filter((row) => row.evidence || row.permissions);
+    db.transaction(() => {
+      for (const row of moved)
+        write.run(composed(row.taskId, row.delivery), row.pending, row.taskId);
+      dropViews(db);
+      db.exec("DROP TABLE task_permissions; DROP TABLE task_delivery_evidence;");
+      db.prepare("DELETE FROM schema_migrations WHERE version = ?").run(
+        TASK_DELIVERY_RECORDS_VERSION,
+      );
+    })();
+    return moved.map((row) => ({
+      taskId: row.taskId,
+      evidence: Boolean(row.evidence),
+      permissions: Boolean(row.permissions),
+    }));
+  } finally {
+    db.close();
+  }
 }
 
 /**

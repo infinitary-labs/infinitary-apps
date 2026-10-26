@@ -130,6 +130,21 @@ A restart recovers a notice from the committed event if the app quit before enqu
 Newly closed work snapshots its effective policies beside the closed outcome (`delivery.closedPolicies`), without creating or rewriting a routing shape; policy edits refuse closed tasks, reviews, answers and the personal workspace.
 The merge and care semantics, including the final asynchronous boundary, are in `docs/delivery-rigor.md`, “Changing policy on open work”.
 
+## A task's change evidence and permissions
+
+A task's delivery facts are two records of their own beside the task row (INF-1296 piece 4, migration 99), so what a change showed and what the captain allowed are never one blob.
+Its change evidence is one `task_delivery_evidence` row: how it delivers (`mode`), the version its readings were taken at (`head_sha`), and in `evidence_json` the change's identity, checks and their watches, reviews, repair and round ledgers, version readings, live validation without its permissions, the published story and its risk.
+Its permissions and effects are one `task_permissions` row with a column each: the captain's merge approval with its lineage and any attempt in flight, an unversioned merge click an older build kept, the completion offers a click approves, other reviewed pull requests and the selected one, write asks, the required action offer and the captain's action, the override, a refused completion card, the live validation's permissions with their effect states, and a settle that has not run.
+The row carries `format` 1, and a later format names its own number.
+The delivery column keeps only history: the closed policy snapshot and an older release's copy of the latest result.
+`TaskStore` is the one writer, beneath `TaskService`, and a record still reads every one of these facts under the field it read before (`delivery`, and the settle under `pendingSettle`), so no reader changed; `splitDelivery` in `src/core/storage/taskDeliveryFields.ts` names which field goes where, and a field it does not name is evidence.
+A write of a task's whole delivery facts replaces its evidence and its delivery permissions with the ones it carries, as the column did before them, and a settle that has not run is its own field.
+A row left with nothing in it is removed, so a task with no delivery facts has no records.
+`v_tasks_v1` and `v_feed_v1` read the delivery mode from the evidence row.
+A record export carries the delivery facts it carried before, which hold no permission, so an import grants nothing.
+Restart recovery reads the same facts it read before: a kept approval's attempt token is read back from where the project lives before anything is sent (`docs/delivery-rigor.md`), and a settle that has not run resumes once.
+The offline tools under `scripts/` read a saved database's delivery facts through `savedDeliveryReader`.
+
 ## Specification delivery and history
 
 `update_task` applies combined edits before `start_now`; a typed graph refusal prevents that start.

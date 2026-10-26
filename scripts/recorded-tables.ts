@@ -21,6 +21,7 @@
 import Database from "better-sqlite3";
 import { readFileSync } from "node:fs";
 import { redactObserveText } from "../src/core/observe/redact.ts";
+import { savedDeliveryReader } from "../src/core/storage/taskDeliveryFields.ts";
 import { savedShapeReader } from "../src/core/storage/taskReferenceFields.ts";
 
 export const RECORDED_TABLE_NAMES = [
@@ -80,6 +81,11 @@ function readTablesDatabase(path: string): RecordedTables {
     for (const row of tables.tasks)
       if (typeof row.id === "string" && "shape_json" in row)
         row.shape_json = shapeOf(row.id, row.shape_json as string | null);
+    // Its delivery facts as the app reads them, its evidence and permissions in them.
+    const deliveryOf = savedDeliveryReader(db);
+    for (const row of tables.tasks)
+      if (typeof row.id === "string" && "delivery_json" in row)
+        row.delivery_json = deliveryOf(row.id, row.delivery_json as string | null);
     return tables;
   } finally {
     db.close();

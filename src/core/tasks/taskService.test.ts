@@ -5,6 +5,7 @@ import { freshDatabase } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { DECISION_RECORD_SCHEMA, type DecisionRecord } from "../../shared/provenance";
 import type { WorkShape } from "../../shared/routingPolicy";
+import { savedDeliveryReader } from "../storage/taskDeliveryFields";
 import type { TaskRecord } from "../storage/taskStore";
 import { seedTask } from "./seedTask";
 import { TaskService, TIMELINE_CAP, TIMELINE_KEEP } from "./taskService";
@@ -535,7 +536,9 @@ describe("TaskService (task-system P0)", () => {
       const row = db
         .prepare("SELECT shape_json, delivery_json FROM tasks WHERE id = ?")
         .get("older") as { shape_json: string; delivery_json: string };
-      return { shape: JSON.parse(row.shape_json), delivery: JSON.parse(row.delivery_json) };
+      // The delivery as saved across its column and its evidence and permission rows.
+      const delivery = savedDeliveryReader(db)("older", row.delivery_json);
+      return { shape: JSON.parse(row.shape_json), delivery: JSON.parse(String(delivery)) };
     };
     expect(saved().shape).toHaveProperty("knowledge_access", "references");
     expect(saved().delivery).toHaveProperty("landedAt", landedAt);

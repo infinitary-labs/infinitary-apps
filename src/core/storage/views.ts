@@ -68,6 +68,16 @@ const BASIS_FROM_SHAPE = "json_extract(t.shape_json, '$.basis')";
  * that held the placement.
  */
 const PLACEMENT_TABLE = "/* placement table */";
+
+/**
+ * How a task delivers, written in place of this marker when the views are
+ * made: its change evidence row (INF-1296 piece 4), or, on a database
+ * migrating through the versions before that table, its delivery column.
+ */
+const DELIVERY_MODE = "/* delivery mode */";
+const MODE_FROM_EVIDENCE =
+  "(SELECT COALESCE(x.mode, json_extract(x.evidence_json, '$.mode')) FROM task_delivery_evidence x WHERE x.task_id = t.id)";
+const MODE_FROM_COLUMN = "json_extract(t.delivery_json, '$.mode')";
 const PLACEMENT_TASK = "/* placement task */";
 
 export const PUBLISHED_VIEWS: readonly PublishedView[] = [
@@ -148,7 +158,7 @@ export const PUBLISHED_VIEWS: readonly PublishedView[] = [
   CASE WHEN COALESCE(d.served, d.bucket) IN ${SLOT_VALUES} THEN COALESCE(d.served, d.bucket) END AS tier,
   json_extract(t.shape_json, '$.deliverable') AS deliverable,
   json_extract(t.shape_json, '$.rigor') AS rigor,
-  json_extract(t.delivery_json, '$.mode') AS delivery,
+  ${DELIVERY_MODE} AS delivery,
   t.created_at AS created_at,
   t.updated_at AS updated_at,
   t.started_at AS started_at,
@@ -241,7 +251,8 @@ LEFT JOIN labels l ON l.account_id = u.account_id`,
     select: `SELECT
   e.at AS at,
   fm_feed_kind(e.kind, e.data_json) AS kind,
-  fm_feed_text(e.kind, e.text, e.data_json, t.assignee, t.delivery_json) AS text,
+  fm_feed_text(e.kind, e.text, e.data_json, t.assignee,
+    CASE WHEN t.delivery_json IS NOT NULL THEN json_object('mode', ${DELIVERY_MODE}) END) AS text,
   t.key AS task_key
 FROM task_events e
 JOIN tasks t ON t.id = e.task_id
@@ -461,7 +472,7 @@ export function createViews(db: SchemaReader): void {
   for (const view of publishedViews(db)) db.exec(viewSql(view));
 }
 
-/** Whether a table a view reads exists yet (INF-1296 pieces 2 and 3). */
+/** Whether a table a view reads exists yet (INF-1296 pieces 2 to 4). */
 function hasTable(db: SchemaReader, name: string): boolean {
   return (
     db.prepare(`SELECT 1 FROM sqlite_schema WHERE type = 'table' AND name = '${name}'`).all()
@@ -473,12 +484,14 @@ function hasTable(db: SchemaReader, name: string): boolean {
 function publishedViews(db: SchemaReader): PublishedView[] {
   const basis = hasTable(db, "task_references") ? BASIS_FROM_REFERENCES : BASIS_FROM_SHAPE;
   const executing = hasTable(db, "task_execution");
+  const mode = hasTable(db, "task_delivery_evidence") ? MODE_FROM_EVIDENCE : MODE_FROM_COLUMN;
   return PUBLISHED_VIEWS.map((view) => ({
     ...view,
     select: view.select
       .replace(BASIS_COLUMN, basis)
       .replace(PLACEMENT_TABLE, executing ? "task_execution" : "tasks")
-      .replace(PLACEMENT_TASK, executing ? "task_id" : "id"),
+      .replace(PLACEMENT_TASK, executing ? "task_id" : "id")
+      .replaceAll(DELIVERY_MODE, mode),
   }));
 }
 

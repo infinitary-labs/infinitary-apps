@@ -18,6 +18,13 @@ import type { SpawnIntent } from "../orchestrator/intentBrief";
 import type { AppDatabase } from "./db";
 import { prepared } from "./statements";
 import {
+  composeDelivery,
+  type EvidenceRow,
+  type PermissionRow,
+  splitDelivery,
+  TaskDeliveryStore,
+} from "./taskDeliveryStore";
+import {
   EXECUTION_COLUMNS,
   NO_EXECUTION,
   splitTurn,
@@ -712,19 +719,44 @@ function withReferences(
   return composed;
 }
 
+/** A task's change evidence and permission rows, as `TaskDeliveryStore` holds them. */
+type DeliveryRecords = { evidence?: EvidenceRow; permissions?: PermissionRow };
+
 /**
- * A record as it is read (INF-1296 pieces 2 and 3): its row, its shape with
- * its references and policy inputs, and its running work as `task_execution`
- * holds it. `execution` is undefined on a database from before that table,
- * whose row still holds those columns itself.
+ * A record's delivery facts and its settle that has not run, as its
+ * evidence and permission rows hold them beside the history its column
+ * keeps (INF-1296 piece 4). An older field nothing reads stays out, as it
+ * did when the column held it.
+ */
+function withDeliveryRecords(record: TaskRecord, rows: DeliveryRecords): TaskRecord {
+  const delivery = composeDelivery(
+    record.delivery as Record<string, unknown> | null,
+    rows.evidence,
+    rows.permissions,
+  );
+  return {
+    ...record,
+    delivery: withoutRetired(delivery as TaskDelivery | null, "landedAt"),
+    pendingSettle: parseJson<PendingSettleIntent>(rows.permissions?.pending_settle_json ?? null),
+  };
+}
+
+/**
+ * A record as it is read (INF-1296 pieces 2 to 4): its row, its shape with
+ * its references and policy inputs, its running work as `task_execution`
+ * holds it, and its delivery facts with their evidence and permission
+ * rows. `execution` and `delivery` are undefined on a database from before
+ * those tables, whose row still holds those columns itself.
  */
 function composed(
   record: TaskRecord,
   references: readonly TaskReference[] | undefined,
   policies: Parameters<typeof withPolicies>[1],
   execution: TaskExecution | undefined,
+  delivery?: DeliveryRecords,
 ): TaskRecord {
   const shape = withPolicies(withReferences(record.shape, references), policies);
+  if (delivery) record = withDeliveryRecords(record, delivery);
   if (!execution) return shape === record.shape ? record : { ...record, shape };
   return {
     ...record,
@@ -891,11 +923,14 @@ export class TaskStore {
   readonly execution: TaskExecutionStore;
   /** A task's policy inputs (INF-1296 piece 3); a record's shape reads them. */
   readonly policies: TaskPolicyStore;
+  /** A task's change evidence and permissions (INF-1296 piece 4); a record's delivery reads them. */
+  readonly delivery: TaskDeliveryStore;
 
   constructor(private readonly db: AppDatabase) {
     this.references = new TaskReferenceStore(db);
     this.execution = new TaskExecutionStore(db);
     this.policies = new TaskPolicyStore(db);
+    this.delivery = new TaskDeliveryStore(db);
   }
 
   private record(row: Row): TaskRecord {
@@ -905,6 +940,12 @@ export class TaskStore {
       record.shape ? this.references.list(record.id) : undefined,
       record.shape ? this.policies.get(record.id) : undefined,
       this.execution.exists() ? this.execution.get(record.id) : undefined,
+      this.delivery.exists()
+        ? {
+            evidence: this.delivery.evidence(record.id),
+            permissions: this.delivery.permissions(record.id),
+          }
+        : undefined,
     );
   }
 
@@ -915,12 +956,20 @@ export class TaskStore {
     const policies = this.policies.listFor(shaped);
     const executing = this.execution.exists();
     const execution = this.execution.listFor(executing ? records.map((record) => record.id) : []);
+    const delivering = this.delivery.exists();
+    const delivery = this.delivery.listFor(delivering ? records.map((record) => record.id) : []);
     return records.map((record) =>
       composed(
         record,
         references.get(record.id),
         policies.get(record.id),
         executing ? (execution.get(record.id) ?? NO_EXECUTION) : undefined,
+        delivering
+          ? {
+              evidence: delivery.evidence.get(record.id),
+              permissions: delivery.permissions.get(record.id),
+            }
+          : undefined,
       ),
     );
   }
@@ -975,6 +1024,10 @@ export class TaskStore {
   }
 
   insert(record: TaskRecord): void {
+    this.db.transaction(() => this.insertRows(record))();
+  }
+
+  private insertRows(record: TaskRecord): void {
     this.assertReferencesKept(record.id, record.shape);
     const filing = this.columns().has("test_path");
     // The running work and the policy inputs have rows of their own once
@@ -987,6 +1040,10 @@ export class TaskStore {
       ? splitTurn(record.delivery)
       : { delivery: record.delivery, turn: null };
     const kept = executing ? NO_EXECUTION : record;
+    // The change evidence and permissions have rows of their own once their
+    // tables exist (INF-1296 piece 4); the column keeps the history.
+    const delivering = this.delivery.exists();
+    const history = delivering && delivery ? splitDelivery(delivery).history : delivery;
     this.db
       .prepare(
         `INSERT INTO tasks (
@@ -1036,8 +1093,8 @@ export class TaskStore {
         record.workspaceState,
         record.outcome,
         record.outcomeSummary,
-        delivery ? JSON.stringify(delivery) : null,
-        record.pendingSettle ? JSON.stringify(record.pendingSettle) : null,
+        history ? JSON.stringify(history) : null,
+        !delivering && record.pendingSettle ? JSON.stringify(record.pendingSettle) : null,
         record.assignee,
         record.model,
         record.createdAt,
@@ -1053,6 +1110,10 @@ export class TaskStore {
           : []),
       );
     if (policies) this.policies.set(record.id, policies);
+    if (delivering) {
+      this.delivery.setDelivery(record.id, delivery);
+      if (record.pendingSettle) this.delivery.setPendingSettle(record.id, record.pendingSettle);
+    }
     if (executing) {
       const running: Partial<TaskExecution> = {
         ...(record.sessionFile ? { sessionFile: record.sessionFile } : {}),
@@ -1084,8 +1145,12 @@ export class TaskStore {
     return row ? this.record(row) : undefined;
   }
 
-  /** Apply a patch; only the named fields change. */
+  /** Apply a patch; only the named fields change, the task's own records with its row. */
   update(id: string, patch: TaskPatch): void {
+    this.db.transaction(() => this.updateRows(id, patch))();
+  }
+
+  private updateRows(id: string, patch: TaskPatch): void {
     const sets: string[] = [];
     const values: unknown[] = [];
     // The running work goes to its own row once the table exists (INF-1296 piece 3).
@@ -1125,8 +1190,12 @@ export class TaskStore {
         ? splitTurn(patch.delivery)
         : { delivery: patch.delivery ?? null, turn: undefined };
       if (split.turn !== undefined) running.turn = split.turn;
+      // Its change evidence and permissions go to their own rows (INF-1296 piece 4).
+      const history = this.delivery.exists()
+        ? this.delivery.setDelivery(id, split.delivery)
+        : split.delivery;
       sets.push("delivery_json = ?");
-      values.push(split.delivery ? JSON.stringify(split.delivery) : null);
+      values.push(history ? JSON.stringify(history) : null);
     }
     if ("placement" in patch) {
       if (executing) running.placement = patch.placement ?? null;
@@ -1135,7 +1204,9 @@ export class TaskStore {
         values.push(patch.placement ? JSON.stringify(patch.placement) : null);
       }
     }
-    if ("pendingSettle" in patch) {
+    if ("pendingSettle" in patch && this.delivery.exists()) {
+      this.delivery.setPendingSettle(id, patch.pendingSettle ?? null);
+    } else if ("pendingSettle" in patch) {
       sets.push("pending_settle_json = ?");
       values.push(patch.pendingSettle ? JSON.stringify(patch.pendingSettle) : null);
     }
@@ -1325,12 +1396,14 @@ export class TaskStore {
 
   /** Hard delete: a spawn that never ran, or the D-13 purge. */
   delete(id: string): void {
+    this.delivery.deleteFor(id);
     this.execution.deleteFor(id);
     this.policies.deleteFor(id);
     this.db.prepare("DELETE FROM tasks WHERE id = ?").run(id);
   }
 
   deleteAll(): number {
+    this.delivery.deleteAll();
     this.execution.deleteAll();
     this.policies.deleteAll();
     return this.db.prepare("DELETE FROM tasks").run().changes;

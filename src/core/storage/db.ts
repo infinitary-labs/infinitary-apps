@@ -15,6 +15,7 @@ import {
   recordPersistedFormat,
   UnsupportedSavedDataError,
 } from "./savedDataCompatibility";
+import { TaskDeliveryStore } from "./taskDeliveryStore";
 import { splitTurn } from "./taskExecutionStore";
 import { splitPolicies } from "./taskPolicyStore";
 import { conversationOf } from "./taskSessionStore";
@@ -1127,6 +1128,20 @@ const MIGRATIONS: readonly Migration[] = [
   // the shape. The closed snapshot stays on the delivery facts. Reversible:
   // write each value back into its shape field and drop the table.
   migrateTaskPolicies,
+  // A task's delivery facts leave the delivery column for two records of
+  // their own (INF-1296 piece 4, docs/task-record.md "A task's change
+  // evidence and permissions"): its change evidence - how it delivers, the
+  // change, the version its readings were taken at, checks, reviews,
+  // ledgers, validation, the story, risk and watches - and its permissions
+  // and effects - the merge approval with its lineage and any attempt in
+  // flight, completion offers, other reviewed pull requests, write asks,
+  // required actions, the override, a refused card, the validation
+  // permissions and a settle that has not run. Each value moves as saved;
+  // the column keeps the closed policy snapshot and an older result copy,
+  // and an unreadable delivery is left as saved. Nothing is sent, granted
+  // or resumed here. Reversible: merge each row's fields back into the
+  // column (the settle into its own) and drop the tables.
+  migrateTaskDeliveryRecords,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
@@ -1151,6 +1166,9 @@ export const TASK_EXECUTION_VERSION = MIGRATIONS.indexOf(migrateTaskExecution) +
 
 /** The migration that moved each task's policy inputs out of its work shape (INF-1296 piece 3). */
 export const TASK_POLICIES_VERSION = MIGRATIONS.indexOf(migrateTaskPolicies) + 1;
+
+/** The migration that moved each task's change evidence and permissions to their own rows (INF-1296 piece 4). */
+export const TASK_DELIVERY_RECORDS_VERSION = MIGRATIONS.indexOf(migrateTaskDeliveryRecords) + 1;
 
 /** The migration that published the views; every later one re-creates them. */
 const VIEWS_VERSION = MIGRATIONS.indexOf(migratePublishedViews) + 1;
@@ -1353,6 +1371,62 @@ function migrateTaskPolicies(db: AppDatabase): void {
       split.row.edits_json,
     );
     keep.run(JSON.stringify(split.shape), row.id);
+  }
+}
+
+function migrateTaskDeliveryRecords(db: AppDatabase): void {
+  db.exec(`
+    CREATE TABLE task_delivery_evidence (
+      task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+      format INTEGER NOT NULL,
+      mode TEXT,
+      head_sha TEXT,
+      evidence_json TEXT
+    );
+    CREATE TABLE task_permissions (
+      task_id TEXT PRIMARY KEY REFERENCES tasks(id) ON DELETE CASCADE,
+      merge_authorization_json TEXT,
+      merge_order_json TEXT,
+      completion_offers_json TEXT,
+      merge_reviews_json TEXT,
+      check_target_json TEXT,
+      write_asks_json TEXT,
+      required_action_offer_json TEXT,
+      captain_action_json TEXT,
+      card_refusal_json TEXT,
+      override_json TEXT,
+      validation_permissions_json TEXT,
+      pending_settle_json TEXT
+    );
+  `);
+  const rows = db
+    .prepare(
+      "SELECT id, delivery_json, pending_settle_json FROM tasks WHERE delivery_json IS NOT NULL OR pending_settle_json IS NOT NULL",
+    )
+    .all() as { id: string; delivery_json: string | null; pending_settle_json: string | null }[];
+  const store = new TaskDeliveryStore(db);
+  const keep = db.prepare(
+    "UPDATE tasks SET delivery_json = ?, pending_settle_json = ? WHERE id = ?",
+  );
+  for (const row of rows) {
+    let delivery: unknown = null;
+    try {
+      delivery = row.delivery_json ? JSON.parse(row.delivery_json) : null;
+    } catch {
+      // An unreadable delivery reads as none, and is left as saved.
+    }
+    const history =
+      delivery && typeof delivery === "object" && !Array.isArray(delivery)
+        ? JSON.stringify(store.setDelivery(row.id, delivery))
+        : row.delivery_json;
+    let pending: unknown = null;
+    try {
+      pending = row.pending_settle_json ? JSON.parse(row.pending_settle_json) : null;
+    } catch {
+      // An unreadable settle reads as none, and is left as saved.
+    }
+    if (pending !== null) store.setPendingSettle(row.id, pending);
+    keep.run(history, pending !== null ? null : row.pending_settle_json, row.id);
   }
 }
 

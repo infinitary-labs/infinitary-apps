@@ -40,6 +40,12 @@ Directions are instructions to weigh with the work, not data to search: they nev
   - every crewmate turn (fresh, resumed, or placed on another computer) carries the complete current directions of its own project, superseding earlier copies;
   - a brief holds no copy of its own, so a brief served again carries no stale direction;
   - rendering never truncates directions.
+- The first mate reviews directions against facts arriving on its turns, including reports and updates.
+  Evidence that a condition has ended or a built-in rule fully covers the direction prompts a retirement offer naming the direction and evidence, with Retire and Keep; apparent age alone is not evidence.
+  An unresolved offer stays on its existing card, and a kept direction is not offered again without new evidence.
+- An unmet or unknown condition stays in the direction's text, not a task dispatched to wait for or check it.
+  The first mate reconsiders it when relevant facts arrive; unknown is not expired, and a fulfilled condition applies only to authorized work, never authorizes new work itself.
+  The agent judges the condition; the host parses no natural-language trigger and adds no polling schedule.
 - Retired directions have no active influence from the next turn on.
 - `KnowledgeService.carryDirections` carried the active notes-era preferences into Knowledge once, before any agent starts; no older-notes reader, writer or fallback remains.
 - `carryPanelInstructions` (`../src/core/personal/panelInstructions.ts`) carries the panel instructions an older build kept in the personal workspace's `.claude/skills/captain/SKILL.md` once at startup, before any agent runs: each listed line becomes one direction word for word, any other words one more, and the file leaves in one workspace commit.

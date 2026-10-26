@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, mkdirSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
+import { createCoreDispatcher } from "../../src/core/dispatcher.ts";
+import type { HostCapabilities } from "../../src/core/host.ts";
+import { renderDirections } from "../../src/core/knowledge/directions.ts";
+import { KnowledgeService } from "../../src/core/knowledge/knowledgeService.ts";
+import type { CoreServices } from "../../src/core/services.ts";
+import { ACTIONS } from "../../src/shared/actions.ts";
+import { effectiveTaskPolicies } from "../../src/shared/taskPolicies.ts";
 import { appPathsFor } from "../../src/core/paths.ts";
 import { crewmateSessionSpec } from "../../src/core/orchestrator/crewSession.ts";
 import { firstmateContractStamp, seatSessionSpec } from "../../src/core/orchestrator/seat.ts";
@@ -84,6 +91,14 @@ export async function approvalHost(
   const settings = new SettingsStore(db);
   const inbox = new InboxStore(db);
   const repos = new RepoRegistry(db, paths.fleetDir);
+  const knowledge = test.directions
+    ? new KnowledgeService({
+        projects: { get: () => undefined, list: () => [] },
+        gitFacts: async () => ({ commit: null, dirty: false }),
+      })
+    : undefined;
+  for (const direction of test.directions ?? [])
+    knowledge!.changeDirection({ ...direction, op: "add", reason: "Fictional audit fixture" });
   const ids = Object.fromEntries(Object.keys(test.tasks).map((alias) => [alias, randomUUID()]));
   const aliases = Object.fromEntries(Object.entries(ids).map(([alias, id]) => [id, alias]));
   const pendingChoices: {
@@ -274,11 +289,29 @@ export async function approvalHost(
       broadcastEvent: () => {},
       locateProject: () => "Project discovery disconnected in evaluations",
       selfSourceDir: join(dir, "self-source"),
+      ...(knowledge ? { knowledge } : {}),
       seats: { pi: seatFactory },
       coalesceMs: 0,
     },
   );
+  if (knowledge) {
+    // Only the direction channels reach this real dispatcher. Every other app effect
+    // is disconnected before dispatch; missing services can never be used as stand-ins.
+    const dispatch = createCoreDispatcher({
+      services: {
+        knowledge, tasks, settings, firstmate: host.firstmate, broadcastEvent: () => {},
+      } as unknown as CoreServices,
+      host: {} as HostCapabilities,
+      emit: () => {},
+    });
+    host.firstmate.bindAppDispatch((channel, args, actor) => {
+      if (!["inf:knowledge:directions", "inf:knowledge:direction", "inf:knowledge:direction:set"].includes(channel))
+        throw new Error("Only disposable direction actions are connected in this evaluation");
+      return dispatch(channel, args, actor);
+    });
+  }
   const close = async () => {
+    knowledge?.close();
     host.firstmate.dispose();
     await host.supervisor.disposeAll();
     db.close();
@@ -340,7 +373,10 @@ export async function approvalHost(
   if (Object.values(test.tasks).some((task) => task.availableOwner)) starts.length = 0;
   steered.length = 0;
   // Fictional aliases in the prompt map to fresh task ids; the host never resolves real records.
-  const prompt = `${test.context}${threadContext}\n\nIsolated records (use task_id in tool calls):\n${JSON.stringify(
+  const directionContext = knowledge
+    ? `\n${renderDirections(knowledge.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false }))}\nDisposable app catalog line: ${JSON.stringify({ action: "direction", line: ACTIONS.direction.line, valueSchema: ACTIONS.direction.value.toJSONSchema() })}\nOnly direction app changes are connected; other settings and sign-ins are disconnected.`
+    : "";
+  const prompt = `${test.context}${threadContext}${directionContext}\n\nIsolated records (use task_id in tool calls):\n${JSON.stringify(
     Object.fromEntries(
       Object.entries(test.tasks).map(([alias, task]) => [
         alias,
@@ -384,6 +420,7 @@ export async function approvalHost(
           "settle_task",
           "emit_card",
           "close_card",
+          ...(knowledge ? ["knowledge", "app_change"] : []),
         ]
       : ["tasks", "report", "note_progress", "emit_card", "close_card"];
   const refs = new Set(["task", "task_id", "key", "basis", "parent", "from", "to", "blocked_by"]);
@@ -418,6 +455,18 @@ export async function approvalHost(
     effect: (name: string, raw: unknown, output: ToolOutput): "success" | "refused" => {
       const args = actualArgs(raw);
       if (output.details?.refusal) return "refused";
+      if (name === "app_change") {
+        if (args.action !== "direction" || !knowledge) return "refused";
+        const value = args.value as { op?: string; id?: string; text?: string };
+        const read = knowledge.direction({ id: (value.id ?? "").replace(/^d:/, "") });
+        if (read.state !== "ready") return "refused";
+        const latest = read.direction.history[0];
+        return latest?.evidence === args.evidence &&
+          latest?.op === (value.op === "add" ? "publish" : value.op) &&
+          (value.op !== "retire" || read.direction.retired) &&
+          (value.op === "retire" || read.direction.text === value.text)
+          ? "success" : "refused";
+      }
       if (name === "update_task") {
         const task = tasks.resolve(String(args.task));
         if (!task) return "refused";
@@ -481,7 +530,13 @@ export async function approvalHost(
     state: (): EvalRun["state"] => {
       const build = ids.BUILD ? tasks.get(ids.BUILD) : undefined;
       return {
-        ...(test.taskIndexOnly
+        ...(knowledge ? {
+          directions: knowledge.standingDirections({ kind: "firstmate", origin: "agent", canCreate: false })
+            .map(({ id, text, revision }) => ({ id: `d:${id}`, text, revision })),
+          shownCards: cards.listOpen().map(({ title, body, actions }) => ({ title, body, actions })),
+          directionHistory: test.directions!.map(({ id }) => knowledge.direction({ id })),
+        } : {}),
+        ...(test.taskIndexOnly || knowledge
           ? {
               started: [...starts],
               graph: tasks.list().map((task) => ({
@@ -492,6 +547,7 @@ export async function approvalHost(
                 prompt: task.prompt,
                 kind: task.shape?.kind,
                 status: task.status,
+                autonomy: effectiveTaskPolicies(task, task.repoId ? repos.get(task.repoId) : undefined)?.autonomy.value ?? null,
                 startPolicy: task.startPolicy,
                 parent: task.parentId ? String(normalize(task.parentId)) : undefined,
                 basis: task.shape?.basis ? String(normalize(taskRef(task.shape.basis))) : undefined,

@@ -61,6 +61,8 @@ export type ApprovalCase = {
   /** Start with the compact index, requiring native task reads for the saved plan. */
   taskIndexOnly?: boolean;
   firstmateThread?: { title: string; body: string; reply: string };
+  /** Disposable standing directions; never imported from the captain's collection. */
+  directions?: { id: string; text: string }[];
 };
 
 const countSpec = readFileSync(
@@ -378,6 +380,10 @@ export type EvalRun = {
   endedNormally: boolean;
   calls: EvalCall[];
   state: {
+    /** Actual disposable direction state and shown cards, for lifecycle evaluation. */
+    directions?: { id: string; text: string; revision: number }[];
+    shownCards?: { title: string; body: string; actions: unknown[] }[];
+    directionHistory?: unknown[];
     /** Actual dispatched owners, including automatic queue starts. */
     started?: string[];
     graph?: {
@@ -389,6 +395,7 @@ export type EvalRun = {
       prompt: string;
       kind?: string;
       status: string;
+      autonomy?: boolean | null;
       startPolicy: string;
       parent?: string;
       basis?: string;

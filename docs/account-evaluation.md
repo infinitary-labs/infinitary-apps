@@ -38,6 +38,21 @@ Approval permits this one run, never a merge.
 A consumed output folder refuses another run, including another dry run; use a fresh folder and obtain fresh approval instead.
 Output folders within either real app profile are refused, so use a scratch location even if your working copy happens to live under the release profile.
 
+## Standing-direction lifecycle evaluation
+
+Use `--module scripts/evals/directionLifecycle.ts` for INF-1256's direction lifecycle cases.
+The five cases are fictional counterparts of the audit's local-time, release-freeze and installed-Scope directions: covered, ended, unmet, fulfilled and still valid.
+They receive the current served first mate prompt and production tools over disposable task, card and Knowledge owners.
+Only the direction catalog channels are connected to the production dispatcher; other settings and all real collections remain disconnected.
+Crew dispatch opens inert sessions, never another live model.
+The fulfilled case starts an already authorized test repair and applies its direction-attributed autonomy policy, never creates new work from a direction alone.
+Read each case's transcript and actual final `directions`, `shownCards`, `graph` and `started` state independently.
+Covered and ended cases must show evidence-backed retirement offers while retaining the direction; unmet and valid cases must retain it without task creation, starts or retirement offers.
+The fulfilled case must apply the applicable policy to the authorized task and start only that task.
+A refused tool, missing transcript or bounded turn is not a pass.
+The no-cost fixture tests prove native direction reads and writes stay disposable, not that a live model follows the guidance.
+The same run-sheet approval and Claude-client requirements apply; a first-mate-only module still supplies the runner's unused builder selection explicitly, using the same account and model.
+
 ## The Claude crewmate's client
 
 The running app holds the machine's Claude store for a Claude crewmate's client from its start to its exit (the session lease in `docs/claude-client.md`), so the app's own renewal never runs beside the evaluation's Claude clients over a single-use refresh token.

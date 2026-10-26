@@ -146,6 +146,11 @@ The line's channel, `inf:knowledge:direction:set`, runs `KnowledgeService.change
 Every direction it writes is stamped `captain-turn`, the captain's instruction, and its history keeps the reason the first mate gave.
 `record_knowledge` refuses a direction, pointing the first mate at `app_change`.
 A crewmate never writes a direction; it reports the captain's words or choice with `needs_firstmate`.
+The first mate reviews directions against facts each turn carries, including reports and updates: evidence that a condition ended or a built-in rule fully covers a direction prompts a retirement offer, not silent removal.
+The offer names the direction and evidence and offers Retire and Keep; unresolved offers stay on their existing cards, and Keep stands unless new evidence changes the question.
+Unmet or unknown conditions remain in direction text and are reconsidered when relevant facts arrive, never dispatched as tasks to wait for or check the trigger.
+Unknown is not expired, and a fulfilled condition applies to authorized work rather than authorizing new work.
+No host parser, trigger store or polling schedule decides these judgments.
 
 ## Knowledge as needed
 

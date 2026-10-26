@@ -2002,16 +2002,15 @@ export class CrewSupervisor {
     const router = this.options.router;
     if (!router) return undefined;
     const preference = avoidProvider ? { avoidProvider } : {};
-    if (!machine)
-      return avoidProvider
-        ? router.decide(taskId, prompt, shape, preference)
-        : router.decide(taskId, prompt, shape);
-    const machines = this.options.machines;
-    if (!machines) return undefined;
-    return router.decide(taskId, prompt, shape, {
-      ...preference,
-      pool: await machines.served(machine),
-    });
+    const pool = machine ? await this.options.machines?.served(machine) : undefined;
+    if (machine && !pool) return undefined;
+    const options = { ...preference, ...(pool ? { pool } : {}) };
+    // Routing off must not delegate the initial model/account to Pi's
+    // account-less base runtime. The router still owns eligibility.
+    return (
+      router.decide(taskId, prompt, shape, options) ??
+      router.initialChoice(taskId, prompt, shape, options)
+    );
   }
 
   /**
@@ -5509,6 +5508,16 @@ export class CrewSupervisor {
     let minted: BriefPart[];
     const pictures = this.briefPictures(taskId, spec.attachments ?? []);
     try {
+      if (
+        spec.routed &&
+        !spec.routed.choice &&
+        !placed &&
+        this.options.router?.dynamicEnabled?.() === false
+      ) {
+        throw new Error(
+          "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence.",
+        );
+      }
       // A task on a computer that runs work takes a model only that
       // computer's own subscriptions serve; with none, it does not start,
       // and nothing is made there for it.
@@ -5594,6 +5603,17 @@ export class CrewSupervisor {
           : placed
             ? spec.placementAccount
             : undefined;
+      if (
+        routedModel &&
+        !placed &&
+        this.options.accounts &&
+        !accountId &&
+        this.options.router?.dynamicEnabled?.() === false
+      ) {
+        throw new Error(
+          "No eligible account can serve the selected model now. Check your accounts and their allowance in Settings → Intelligence.",
+        );
+      }
       if (accountId) task.accountId = accountId;
       // Care must be stamped before opening the session: its first request
       // already carries the model's chosen effort.

@@ -126,6 +126,10 @@ import {
   START_THE_NEXT_STEP,
 } from "../prompts/cardContract";
 import { CAREFUL_LIVE_VALIDATION } from "../prompts/liveValidation";
+import { Router } from "../routing/router";
+import type { QuotaService } from "../quota/quotaService";
+import { DecisionStore } from "../storage/decisionStore";
+import { SettingsStore } from "../storage/settingsStore";
 import type { KindInput } from "../routing/kindClassifier";
 import { tierFor } from "../routing/policy";
 import type { ModelSession, SessionEvent, SessionSpec } from "../session/session";
@@ -320,6 +324,7 @@ type RecordUsageInput = {
 };
 
 type SetupExtras = {
+  realRouter?: (db: ReturnType<typeof openInMemoryDatabase>) => import("../routing/router").Router;
   /**
    * Automatic placement's answers for a project set to Automatic, with the
    * routing switch on and computers that run work on the list (docs/helper.md,
@@ -404,6 +409,31 @@ type SetupExtras = {
   programProcess?: CrewSupervisorOptions["programProcess"];
 };
 
+function routingOffRouter(
+  db: ReturnType<typeof openInMemoryDatabase>,
+  models: { provider: string; id: string }[],
+) {
+  const settings = new SettingsStore(db);
+  settings.setRoutingSettings({ dynamicRouting: false, pins: [] });
+  return new Router({
+    settings,
+    decisions: new DecisionStore(db),
+    quota: {
+      latestModels: () => ({
+        generatedAt: "now",
+        models: models.map((model) => ({
+          provider: model.provider,
+          id: model.id,
+          label: model.id,
+          effectivePercentRemaining: 80,
+        })),
+      }),
+      latest: () => undefined,
+    } as unknown as QuotaService,
+    availableModels: () => models,
+  });
+}
+
 function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
   const paths = appPathsFor(scratchDir("infinitary-crew-"));
   const events: FmEvent[] = [];
@@ -476,7 +506,8 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
     return result;
   };
   const router =
-    extras.routedModel || extras.routeResult
+    extras.realRouter?.(db) ??
+    (extras.routedModel || extras.routeResult
       ? {
           reasoningChoice: extras.reasoningChoice ?? (() => undefined),
           decide: (
@@ -500,14 +531,19 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
           preview: (_prompt: string, shape: WorkShape, options: { withoutProvider?: string }) => {
             const choice = extras.movePick?.(shape, options);
             return {
-              result: { bucket: "high" as const, rule: "R8" as const, ...(choice ? { choice } : {}) },
+              result: {
+                bucket: "high" as const,
+                rule: "R8" as const,
+                ...(choice ? { choice } : {}),
+              },
               reasons: [],
               preferenceRank: 0,
               requiresReasoningWait: false,
             };
           },
-          commit: vi.fn((taskId: string, preview: { result: import("../routing/router").RouteResult }) =>
-            routed(taskId, preview.result),
+          commit: vi.fn(
+            (taskId: string, preview: { result: import("../routing/router").RouteResult }) =>
+              routed(taskId, preview.result),
           ),
           // The builder's served provider (R9): the routed model's, as the
           // real router reads it off routing_decisions.
@@ -516,7 +552,7 @@ function setup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
           // to the raw id when the catalog holds no label.
           modelLabel: (ref: { provider: string; id: string }) => ref.id,
         }
-      : undefined;
+      : undefined);
   const supervisor = new CrewSupervisor({
     ...clock,
     ...crewSessions(paths, open, specs),
@@ -6362,6 +6398,64 @@ describe("CrewSupervisor", () => {
     expect(tasks.list().filter((record) => record.kind === "decision")).toEqual([]);
     expect(taskId).toBeTruthy();
   });
+
+  // INF-1381: Dynamic routing off must still bind a signed-in model/account,
+  // or explain why none serves, before a coding session can ask Pi for a key.
+  it.each(["openai-codex", "anthropic-claude"])(
+    "starts routing-off work on an explicit %s model and isolated account",
+    async (provider) => {
+      const model = { provider, id: provider === "openai-codex" ? "gpt-5.5" : "claude-sonnet-5-5" };
+      const crewmate = fakeCrewmate({ model });
+      const selectForSpawn = vi.fn(() => "acct_signed_in");
+      const { supervisor, tasks, sessionSpecs } = setup(crewmate, {
+        realRouter: (db) => routingOffRouter(db, [model]),
+        accounts: {
+          selectForSpawn,
+          reselectForResume: () => ({ changed: false }),
+          labelOf: () => "Personal",
+        },
+      });
+      const { taskId } = await supervisor.commission({
+        title: "Read the project",
+        intent: intentOf("read the project without changing it"),
+        shape: { override_model_id: `${provider}/${model.id}` },
+      });
+      await tick();
+      expect(selectForSpawn).toHaveBeenCalledWith(taskId, provider);
+      expect(sessionSpecs).toHaveLength(1);
+      expect(sessionSpecs[0]?.model).toEqual(model);
+      expect(sessionSpecs[0]?.binding).toMatchObject({ accountId: "acct_signed_in" });
+      expect(tasks.get(taskId)?.accountId).toBe("acct_signed_in");
+      expect(tasks.get(taskId)?.model).toBe(`${provider}/${model.id}`);
+      expect(crewmate.promptCalls).toHaveLength(1);
+    },
+  );
+
+  it.each(["empty-pool", "account-disappeared"])(
+    "explains routing-off startup with %s without opening an account-less session",
+    async (scenario) => {
+      const model = { provider: "openai-codex", id: "gpt-5.5" };
+      const { supervisor, sessionSpecs } = setup(fakeCrewmate(), {
+        realRouter: (db) => routingOffRouter(db, scenario === "empty-pool" ? [] : [model]),
+        accounts: {
+          selectForSpawn: () => undefined,
+          reselectForResume: () => ({ changed: false }),
+          labelOf: () => undefined,
+        },
+      });
+      await expect(
+        supervisor.commission({
+          title: "Read the project",
+          intent: intentOf("read the project"),
+        }),
+      ).rejects.toThrow(
+        scenario === "empty-pool"
+          ? "No signed-in model can take this task now. Check your accounts and their allowance in Settings → Intelligence."
+          : "No eligible account can serve the selected model now. Check your accounts and their allowance in Settings → Intelligence.",
+      );
+      expect(sessionSpecs).toHaveLength(0);
+    },
+  );
 
   it("binds the selected account at spawn and records usage under it (broker phase 4)", async () => {
     const crewmate = fakeCrewmate();

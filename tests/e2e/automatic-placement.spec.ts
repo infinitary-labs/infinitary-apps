@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { captainTurn, renderWake } from "../../src/core/orchestrator/wakes";
 import { openDatabase } from "../../src/core/storage/db";
+import { SettingsStore } from "../../src/core/storage/settingsStore";
+import { TaskStore } from "../../src/core/storage/taskStore";
 import { HERE } from "../../src/shared/deviceNames";
 import {
   AUTOMATIC_COMPUTER,
@@ -22,6 +24,7 @@ import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { providerMessages, served } from "./providerRequest";
 import { reportLine, taskKey } from "./rails";
+import { readSavedData } from "./savedData";
 import { GIT_STATUS_PROMPT_MARKER, gitStatus, MOCK_GIT_REPORT_PREFIX } from "./scenarios/gitStatus";
 import { starterFor } from "./starters";
 import { pressWindowKey, typeInto } from "./windowKeys";
@@ -476,6 +479,63 @@ test("a task in an Automatic project that requires a system no computer runs wai
         body: JSON.stringify(await detail(), null, 2),
         contentType: "application/json",
       });
+    await app.close();
+  }
+});
+
+// INF-1381: the captain confirmed the user's Dynamic routing switch is off.
+// Real services, account vault, routing and Pi must still reach a coding turn.
+// Only the provider endpoint and git-status response are disposable stand-ins.
+test("Dynamic routing off starts crew on its signed-in account and explicit model", async () => {
+  const userDataDir = scratchDir("infinitary-routing-off-");
+  seedAutomaticProject(userDataDir);
+  const crew = seedGrokCrew(userDataDir);
+  const modelsJson = crew.modelsJson;
+  if (typeof modelsJson !== "function")
+    throw new Error("The isolated crew needs its model catalog");
+  const db = openDatabase(userDataDir);
+  new SettingsStore(db).setRoutingSettings({ dynamicRouting: false, pins: [] });
+  db.close();
+  const app = await launchApp({
+    scenarios: [gitStatus],
+    userDataDir,
+    withMockProvider: true,
+    ...crew,
+    // No configured key on the model definition: only acct_crew can serve it.
+    modelsJson: (port) => {
+      const config = JSON.parse(modelsJson(port));
+      delete config.providers.xai.apiKey;
+      return JSON.stringify(config);
+    },
+    env: { ...crew.env, ...SHORT_TICK },
+  });
+  try {
+    const { key, id } = await askForTask(app);
+    const report = ranOnItsBranch(app, key);
+    await expect(report).toBeVisible({ timeout: 45_000 });
+    const detail = await app.page.evaluate(
+      (taskId) => window.infinitary.tasks.detail(taskId),
+      id ?? "",
+    );
+    expect(detail.model).toBe(`xai/${starterFor("xai", "medium")}`);
+    const accountId = readSavedData(
+      userDataDir,
+      (saved) => new TaskStore(saved).get(id ?? "")?.accountId,
+    );
+    expect(accountId).toBe("acct_crew");
+    await test.info().attach("routing-off-startup.json", {
+      body: JSON.stringify(
+        { model: detail.model, accountId, report: await report.innerText(), detail },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+    console.info(
+      "Routing-off execution:",
+      JSON.stringify({ model: detail.model, accountId, report: await report.innerText() }),
+    );
+  } finally {
     await app.close();
   }
 });

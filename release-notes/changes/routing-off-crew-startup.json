@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "routing-off-crew-startup",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Crewmates start with Dynamic routing off",
+      "body": "Turning off Dynamic routing no longer prevents crewmates from using your signed-in accounts. Each new task still gets an eligible model and account, or an explanation when none can serve it.",
+      "noPicture": "This repairs model and account binding at startup without changing a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

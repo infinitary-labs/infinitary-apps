@@ -185,13 +185,33 @@ export class Router {
   }
 
   /**
+   * An initial session still needs a model when automatic routing is off.
+   * Reuse the same eligibility, capability and premium boundaries, without
+   * enabling previews for automatic placement or moves of running work.
+   */
+  initialChoice(
+    taskId: string,
+    prompt: string,
+    shape: WorkShape,
+    options: RouteOptions = {},
+  ): RouteResult {
+    return this.commit(taskId, this.evaluate(prompt, shape, options));
+  }
+
+  /**
    * Evaluate this computer's pool without recording a speculative routing row.
    * The ordinary decide path uses this same evaluation and remains the writer.
    * Call again at commitment: this preview is evidence, not a model reservation.
    */
   preview(prompt: string, shape: WorkShape, options: RouteOptions = {}): RoutePreview | undefined {
+    if (!this.dynamicEnabled()) return undefined;
+    return this.evaluate(prompt, shape, options);
+  }
+
+  private evaluate(prompt: string, shape: WorkShape, options: RouteOptions): RoutePreview {
     const settings = this.options.settings.getRoutingSettings();
-    if (!settings.dynamicRouting) return undefined;
+    // Saved Always use choices apply only while Dynamic routing is on.
+    const pins = settings.dynamicRouting ? settings.pins : [];
     // What the router may pick: the catalog only describes, so leaving a
     // provider out of what serves leaves it out of the pick.
     const without = options.withoutProvider;
@@ -227,7 +247,7 @@ export class Router {
       available,
       ...(routable ? { slotted: routable.models, slotNote: routable.note } : {}),
       ...(options.pool?.unowned ? { unowned: kept(options.pool.unowned) } : {}),
-      pins: kept(askPin ? [askPin, ...settings.pins] : settings.pins),
+      pins: kept(askPin ? [askPin, ...pins] : pins),
       ...(bucket ? { bucket } : {}),
       ...(this.options.capabilityFor ? { capabilityFor: this.options.capabilityFor } : {}),
       ...(options.avoidProvider ? { avoidProvider: options.avoidProvider } : {}),
@@ -275,7 +295,7 @@ export class Router {
     // slot ladder. Do not infer quality by parsing the reasons or model name.
     const matches = (pin: { provider: string; id: string }) =>
       decision.choice !== undefined && servedModelKey(decision.choice) === servedModelKey(pin);
-    const pinned = settings.pins.findIndex(matches);
+    const pinned = pins.findIndex(matches);
     const offset = modelId ? 1 : 0;
     const preferenceRank =
       askPin && matches(askPin)
@@ -283,7 +303,7 @@ export class Router {
         : pinned >= 0
           ? offset + pinned
           : offset +
-            settings.pins.length +
+            pins.length +
             fallbackRank(decision.bucket, decision.servedBucket ?? decision.bucket);
     return {
       result,

@@ -19,7 +19,8 @@ Do not use buckets to choose a computer: Automatic placement compares computers'
 
 ## Owner and entry points
 
-- Owner: `Router` ([`../src/core/routing/router.ts`](../src/core/routing/router.ts)) with `decide`, `preview` and `commit`; it records every decision.
+- Owner: `Router` ([`../src/core/routing/router.ts`](../src/core/routing/router.ts)) with `decide`, `preview`, `initialChoice` and `commit`; it records every decision.
+- An initial crew binding still uses `initialChoice` when Dynamic routing is off; it retains the same eligibility boundaries without enabling automatic computer previews or moves.
 - The ladder: `route` ([`../src/core/routing/routingEngine.ts`](../src/core/routing/routingEngine.ts)), with the cheap-first candidate walk ([`../src/core/routing/candidates.ts`](../src/core/routing/candidates.ts)) and capability checks ([`../src/core/routing/capability.ts`](../src/core/routing/capability.ts)).
 - The slots: `ModelSlots` ([`../src/core/routing/modelSlots.ts`](../src/core/routing/modelSlots.ts)) over the per-offering record, and `SLOTS`, `PREMIUM_SLOT`, `AUTO_ROUTABLE_SLOTS`, `isAutoRoutableSlot` and `STARTER_SLOTS` ([`../src/shared/modelSlots.ts`](../src/shared/modelSlots.ts)).
 - The shape and the policy as data: `workShapeSchema`, `routingPolicySchema`, `DEFAULT_ROUTING_POLICY` and `levelDefaultReasoning` ([`../src/shared/routingPolicy.ts`](../src/shared/routingPolicy.ts)).

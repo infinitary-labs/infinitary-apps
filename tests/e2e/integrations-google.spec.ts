@@ -9,6 +9,7 @@ import {
   INTEGRATION_NOTICES,
   INTEGRATION_RULE_WORDS,
   INTEGRATIONS_BROWSER_SIGN_IN_WORDS,
+  INTEGRATIONS_WORDS,
 } from "@shared/integrations";
 import { fenced, fencedSpans } from "@shared/outsideData";
 import { outsideDataDeletedNote, SAVED_OUTSIDE_DATA_WORDS } from "@shared/savedOutsideData";
@@ -47,11 +48,13 @@ import { focusOn, pressKey, runFromSearch, typeInto } from "./windowKeys";
  *   comes back the Google row shows who it is signed in as, with its Gmail
  *   all actions asking; a rule listening for "A message
  *   arrives" then reaches the first mate with the message that arrived;
- *   Settings → General's delete, by keys, then puts a note where its sender
- *   and subject were in the first mate's saved conversation and the rule's
- *   run, and the conversation stays (INF-952: "A person can delete the
- *   Gmail and Calendar content Infinitary saved without purging every
- *   task").
+ *   the delete in Settings → Integrations' Data section, by keys (the
+ *   captain: "maybe all data deletion stuff gets put into another "Data"
+ *   section at the bottom of the integrations tab"), then puts a note where
+ *   its sender and subject were in the first mate's saved conversation and
+ *   the rule's run, and the conversation stays (INF-952: "A person can
+ *   delete the Gmail and Calendar content Infinitary saved without purging
+ *   every task").
  * - Data: the stand-in Google (`tests/helpers/googleStandIn.ts`), answering
  *   in Google's documented shapes, as the run's Google and its client; one
  *   message delivered to its inbox after the rule found its place.
@@ -296,7 +299,7 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     expect(seen.turns[0]).toContain(`on 1 new event - ${GMAIL_MESSAGE_EVENT.label} in Google`);
   });
 
-  await test.step("Settings → General deletes what the first mate read, by keys, and keeps its conversation", async () => {
+  await test.step("Integrations' Data section deletes what the first mate read, by keys, and keeps its conversation", async () => {
     const subject = "Invoice 2214 for the October shoot";
     const sessions = join(userDataDir, "firstmate", "sessions");
     const saved = () =>
@@ -321,11 +324,12 @@ test("one Google sign-in from Settings by keys, and a message arriving fires a r
     expect(saved()).toContain(subject);
     expect((await runs()).join("\n")).toContain(subject);
 
-    await runFromSearch(app, page, "settings.open");
-    await pressKey(page.getByRole("tab", { selected: true }), "Home");
-    const general = settingsSection(page, "general");
-    await expect(general).toBeVisible();
+    // The delete is the Integrations tab's Data section, under its own label.
+    await runFromSearch(app, page, "settings.integrations");
+    const data = settingsSection(page, "integrations").locator("[data-integrations-data]");
+    await expect(data).toContainText(INTEGRATIONS_WORDS.data);
     const row = settingRow(page, "delete-outside-data");
+    await expect(data.locator(row)).toHaveCount(1);
     await expect(row).toContainText(SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT]));
     await expect(row).toContainText(SAVED_OUTSIDE_DATA_WORDS.description([GOOGLE_DATA_KEPT]));
     // Armed on the first press, as Purge is; the second deletes.

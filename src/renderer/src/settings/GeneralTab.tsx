@@ -10,7 +10,6 @@ import {
 } from "@shared/dictation";
 import { catalogEntry, providerServesRole } from "@shared/providers";
 import type { PiModelRefView } from "@shared/quota";
-import type { KeptOutsideData } from "@shared/savedOutsideData";
 import type { PresenceSettings } from "@shared/update";
 import { type ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { useShellStore } from "../app/store";
@@ -19,7 +18,6 @@ import { thisDesktop } from "../design/core/desktop";
 import { isView } from "../devices/viewWords";
 import { purgedTasksText, YOUR_PANELS_WORDS } from "./generalWords";
 import { LocalSeatSection } from "./LocalSeatSection";
-import { OutsideDataRow } from "./OutsideDataRow";
 import { SharingSection } from "./SharingSection";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
 import { useSettingSave } from "./useSettingSave";
@@ -473,8 +471,6 @@ export function GeneralTab() {
   // Knowledge, where this build keeps it, goes with a purge: the row says so
   // before the first click (docs/knowledge.md).
   const [purgesKnowledge, setPurgesKnowledge] = useState(false);
-  // The words from outside this build keeps for a while, deleted on their own below.
-  const [kept, setKept] = useState<readonly KeptOutsideData[]>([]);
 
   useEffect(() => {
     if (!remote) void presenceSave.refresh();
@@ -485,10 +481,9 @@ export function GeneralTab() {
     let live = true;
     void window.infinitary.retention
       .scope()
-      .then(({ knowledge, kept }) => {
+      .then(({ knowledge }) => {
         if (!live) return;
         setPurgesKnowledge(knowledge);
-        setKept(kept ?? []);
       })
       .catch(() => {});
     return () => {
@@ -605,7 +600,6 @@ export function GeneralTab() {
             </Button>
           }
         />
-        <OutsideDataRow kept={kept} />
       </div>
       <SharingSection />
       <WebsiteSignInsSection />

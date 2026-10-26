@@ -6,7 +6,7 @@ import { z } from "zod";
  * outside"). A kind whose words are fenced (`@shared/outsideData`) declares
  * how many days they stay in saved conversations and what to call them; a
  * pass then puts a short note where they were, and the captain can do the
- * same for everything at once from Settings → General.
+ * same for everything at once in Settings → Integrations' Data section.
  */
 
 /** One kind of fenced words the app keeps for a while: its fence label, its days and its name. */
@@ -58,7 +58,7 @@ function conversationCount(count: number): string {
   return count === 1 ? "1 conversation" : `${count} conversations`;
 }
 
-/** Settings → General's row (`delete-outside-data`). */
+/** Settings → Integrations' Data row (`delete-outside-data`). */
 export const SAVED_OUTSIDE_DATA_WORDS = {
   title: (kept: readonly KeptWords[]) => `Delete ${whatOf(kept)}`,
   description: (kept: readonly KeptWords[]) => {

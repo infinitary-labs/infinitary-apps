@@ -20,13 +20,15 @@ import {
   integrationRenameWords,
   NOTICE_ACCEPTED,
 } from "@shared/integrations";
+import type { KeptOutsideData } from "@shared/savedOutsideData";
 import { type FormEvent, useCallback, useEffect, useId, useRef, useState } from "react";
 import { useCopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
 import "./integrations.css";
 import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
-import { LABEL_GAP, ROW_GAP, SettingError } from "./settingRows";
+import { OutsideDataRow } from "./OutsideDataRow";
+import { LABEL_GAP, ROW_GAP, SECTION_GAP, SectionLabel, SettingError } from "./settingRows";
 import "../accounts/connectChips.css";
 import "./forges.css";
 
@@ -57,8 +59,12 @@ import "./forges.css";
  * (docs/integrations.md, "The inbox"); on, it shows the line a program
  * runs to send a note and, behind More, a link for the short name and the
  * rule that tells the first mate, which turning the inbox on adds and
- * turns on (the captain's word on INF-1214). Every change here goes
- * through the same channels the first mate's `app_change` lines reach.
+ * turns on (the captain's word on INF-1214). The Data section at the foot
+ * holds the deletes of what the first mate and crew read, Delete Gmail and
+ * Calendar content today, whether or not Google is connected (the captain:
+ * "maybe all data deletion stuff gets put into another "Data" section at
+ * the bottom of the integrations tab"). Every change here goes through the
+ * same channels the first mate's `app_change` lines reach.
  */
 
 const EMPTY: IntegrationsView = { integrations: [], addable: [] };
@@ -81,6 +87,8 @@ export function IntegrationsTab() {
   const noticeFrom = useRef<HTMLElement | null>(null);
   const hostSignIn = useForgeHostSignIn();
   const pending = useShellStore((s) => s.pendingForgeSignIn);
+  // The words from outside this build keeps for a while, deleted in the Data section below.
+  const [kept, setKept] = useState<readonly KeptOutsideData[]>([]);
 
   useEffect(() => {
     let live = true;
@@ -98,6 +106,19 @@ export function IntegrationsTab() {
       live = false;
       offIntegrations();
       offForges();
+    };
+  }, []);
+
+  useEffect(() => {
+    let live = true;
+    void window.infinitary.retention
+      .scope()
+      .then(({ kept }) => {
+        if (live) setKept(kept ?? []);
+      })
+      .catch(() => {});
+    return () => {
+      live = false;
     };
   }, []);
 
@@ -390,6 +411,13 @@ export function IntegrationsTab() {
         }
         onLink={() => change(() => window.infinitary.integrations.linkInbox())}
       />
+      {kept.length > 0 && (
+        // A section is 32 above, and the tab's column already spaces each child by 12.
+        <div data-integrations-data="" style={{ marginTop: `calc(${SECTION_GAP} - ${ROW_GAP})` }}>
+          <SectionLabel>{INTEGRATIONS_WORDS.data}</SectionLabel>
+          <OutsideDataRow kept={kept} />
+        </div>
+      )}
     </section>
   );
 }

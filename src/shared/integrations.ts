@@ -251,6 +251,8 @@ export const INTEGRATIONS_WORDS = {
   quiet: "Nothing connected yet.",
   pointer: "Your GitHub, GitLab and GitHub Enterprise sign-ins are in Integrations.",
   open: "Open Integrations",
+  /** The section at the tab's foot that deletes what the crew read (the captain: a "Data" section at the bottom). */
+  data: "Data",
 } as const;
 
 /** The words an open row's keys show (design skill `components/integrations/IntegrationRow`). */
@@ -459,7 +461,7 @@ const GOOGLE_NOTICE: IntegrationNotice = {
         },
         {
           name: "Saved task records",
-          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner, here and on the computers that run your work, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → General. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google does not delete any of it. Purge task data deletes every saved task on this computer.`,
+          text: `What your first mate and crew read stays in their saved conversations for ${GOOGLE_DATA_KEPT.days} days, then a note takes its place. To delete it sooner, here and on the computers that run your work, use ${SAVED_OUTSIDE_DATA_WORDS.title([GOOGLE_DATA_KEPT])} in Settings → Integrations, under Data. What they wrote themselves, in cards, notes and files, stays until you delete the task. Removing Google does not delete any of it. Purge task data deletes every saved task on this computer.`,
         },
       ],
     },

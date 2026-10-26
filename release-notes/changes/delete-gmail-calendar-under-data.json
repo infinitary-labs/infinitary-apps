@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "delete-gmail-calendar-under-data",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "Delete Gmail and Calendar content now sits under Data in Integrations",
+      "body": "Delete Gmail and Calendar content moved from Settings, General to a new Data section at the bottom of Settings, Integrations, with the same words and the same two presses. It is there whether or not Google is connected, because removing Google does not delete what your first mate and crew read.",
+      "picture": {
+        "dark": "delete-gmail-calendar-under-data-dark.webp",
+        "light": "delete-gmail-calendar-under-data-light.webp",
+        "alt": "Settings, Integrations with Google connected, the Infinitary Inbox box, and under them the Data section holding Delete Gmail and Calendar content with its description and a Delete button."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

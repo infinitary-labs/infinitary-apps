@@ -40,6 +40,8 @@ On, the switch turns its rule on with it, and the box shows the example line in 
 Under it one `--text-xs --fg-3` note, "Run it from any script or terminal, with your own words in the quotes.
 Your first mate is told at once.", then, with no heading and nothing to open (the captain's reply on INF-1475: no More and Less), one `--text-sm --fg-2` line saying where the short name's link stands, with a small secondary "Link it" beside it, shown only where the link can be made or already was, and never a line saying why it cannot be; last, one `--text-sm --fg-2` line, "To stop, pause the rule Infinitary Inbox events in Automation.", with no button beside it.
 The words are `INBOX_WORDS` in `src/shared/integrations.ts`.
+The tab closes with its Data section, under the inbox box: the Settings `SectionLabel` "Data", 32 above as any section, then one `SettingRow`, Delete Gmail and Calendar content, as General's Purge task data row is drawn, with its `--text-sm --fg-3` description and a small ghost "Delete" that turns into a danger "Confirm delete" on the first press, and whose answer takes the description's place.
+It shows whether or not Google is connected, since removing Google deletes none of what the agents read, and is absent where the build keeps no such content; the words are `SAVED_OUTSIDE_DATA_WORDS` in `src/shared/savedOutsideData.ts`.
 Settings -> Projects' "Where your projects live" ends with one pointer line, "Your GitHub, GitLab and GitHub Enterprise sign-ins are in Integrations.", in `--text-sm --fg-3`, with a small secondary "Open Integrations".
 
 GitLab and GitHub Enterprise each draw one row per signed-in host, named GitLab for gitlab.com and by address for a server.

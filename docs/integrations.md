@@ -98,7 +98,7 @@ A rule's list of events ends with one such line for each label its lines hold (`
 The words are otherwise unchanged, so a reply can still quote them and a summary reads as it did.
 A refusal and an error are the app's own words and stay as they are.
 The opening mark keeps the moment the words were read, and `fencedSpans` finds each span, one cut short included, so a later pass can find what an agent read in saved records.
-That pass is how fenced words leave saved conversations: a kind declares how many days they stay (`IntegrationBinding.kept`, 30 for Google), then a note takes their place, and Settings → General deletes them at once ([Task retention](task-retention.md#words-from-outside)).
+That pass is how fenced words leave saved conversations: a kind declares how many days they stay (`IntegrationBinding.kept`, 30 for Google), then a note takes their place, and Settings → Integrations' Data section deletes them at once ([Task retention](task-retention.md#words-from-outside)).
 The fence carries what the host knows, where the words came from, and never a verdict on them: no rule reads the words to judge whether they try to steer anyone (`docs/principles.md`).
 What the fence does not close, and how each way out stands, is in [Google verification material](google-verification.md#prompt-injection).
 
@@ -197,7 +197,7 @@ It distinguishes registration from submission readiness, including downstream AI
 Before Google's sign-in starts, the app shows Google's notice and waits for the person's accept (INF-949).
 Google's [Workspace user data and developer policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy) asks for an in-app disclosure of the data used and where it goes, never only in a privacy policy, that immediately precedes the consent request, and for no collection before an affirmative consent.
 The notice's words are `INTEGRATION_NOTICES` in `src/shared/integrations.ts`: what Infinitary uses from Gmail and Calendar, and where it goes, which is the person's AI provider, another computer that runs the work, and the saved task records.
-For the saved task records it says how long what the agents read stays, 30 days, how to delete it sooner, here and on the computers that run the work, from Settings → General, and what stays until the task is deleted: what the agents wrote themselves.
+For the saved task records it says how long what the agents read stays, 30 days, how to delete it sooner, here and on the computers that run the work, in Settings → Integrations under Data, and what stays until the task is deleted: what the agents wrote themselves.
 Only the person's agreement and settings with their provider decide whether that provider trains on what it receives, while Google does not allow its data to train AI models, so the notice says both and asks the person to check their provider before connecting.
 The core holds the accept as a fact of the sign-in: `IntegrationsService.signIn` refuses a kind with a notice unless the request carries `{ noticeAccepted: true }`, before any browser opens, before a waiting sign-in ends and before anything is asked of Google.
 The accept covers one sign-in and is never saved, so every way into Google's sign-in shows the notice again: the chip, a row's Sign in again, and a card that opens Google's sign-in.
@@ -252,6 +252,8 @@ Each row shows its health dot, its name, who it is signed in as or what it runs,
 The chips at the foot connect a kind not yet connected; for GitHub that starts the device flow and shows the code in the tab.
 For Google it shows Google's notice in the same place ("Google's notice"), and its accept opens Google's page in the browser (`inf:integrations:sign-in`); an aside then says to finish there, with Open the page again and Cancel (`inf:integrations:sign-in-cancel`); the new row opens once the browser is back, and a sign-in that did not finish says why in the tab.
 The Infinitary Inbox has its own box under the list and its chips, with no row and no chip: its switch turns it and its rule on, and turning it off shuts the door and deletes its key, address and log ("The inbox").
+The Data section closes the tab, under the inbox: Delete Gmail and Calendar content, armed on the first press and run on the second, as Purge task data is ([Task retention](task-retention.md#words-from-outside)).
+It shows whether or not Google is connected, since removing Google deletes none of what the agents read.
 The "MCP server" chip is always there: its form takes a name and what the server runs, and Connect opens the new row on the server's tools, or says in the form why it could not.
 GitHub, GitLab and GitHub Enterprise sign-ins live here; Projects keeps a pointer line and other computers' own GitHub sign-ins.
 A card's `open` effect that names `projects` with a forge host in `signIn` lands on this tab (`openedSection`), so older cards and the host's "Sign in to GitHub again" card still arrive where the sign-in lives; one with `signIn: "google"` lands here and opens Google's notice, whose accept opens Google's page.

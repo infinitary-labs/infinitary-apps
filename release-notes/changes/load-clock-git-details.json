@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "load-clock-git-details",
+      "reason": "Test-only repair: the load clock test's own Playwright runs no longer collect git details, so on CI no line about a slow or failed git call reaches the JSON report the test reads; app behavior and the test's assertions are unchanged."
+    }
+  ]
+}

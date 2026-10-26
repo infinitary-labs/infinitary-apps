@@ -524,8 +524,7 @@ import XCTest
         _ = try await home("scene-current-home")
         app.activate()
         reach("In reach", timeout: 20)
-        let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 'idle'"), object: character)
-        await fulfillment(of: [restored], timeout: 20)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'idle'"), object: character, timeout: 20), .completed)
     }
 
     /// INF-1066: an already-running real turn survives a relaunch via its initial snapshot;
@@ -535,8 +534,7 @@ import XCTest
         try await launchPhoneApp(app)
         reach("In reach", timeout: 20)
         let character = app.otherElements["phone-character"]
-        let initialBusy = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 'working'"), object: character)
-        await fulfillment(of: [initialBusy], timeout: 20)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'working'"), object: character, timeout: 20), .completed)
         picture("native-scene-initial-busy")
 
         try await background()
@@ -556,22 +554,22 @@ import XCTest
     private func verifyNativeCrewScene() async throws {
         let fixture = try await home("scene-fixture")
         let scene = app.scrollViews["crew-scene"]
-        XCTAssertTrue(scene.waitForExistence(timeout: 10))
+        XCTAssertTrue(scene.waitForPresence(timeout: 10))
         let firstID = try XCTUnwrap((fixture["ordinary"] as? [String])?.first)
         let remoteID = try XCTUnwrap(fixture["remote"] as? String)
         let local = app.buttons["crew-task-" + firstID], remote = app.buttons["crew-task-" + remoteID]
-        XCTAssertTrue(local.waitForExistence(timeout: 10))
+        XCTAssertTrue(local.waitForPresence(timeout: 10))
         let character = app.otherElements["phone-character"]
-        let centered = XCTNSPredicateExpectation(predicate: NSPredicate { _, _ in
+        let centered = NSPredicate { _, _ in
             abs(character.frame.midX - scene.frame.midX) < 1 && abs(character.frame.midY - scene.frame.midY) < 1
-        }, object: nil)
-        await fulfillment(of: [centered], timeout: 10)
+        }
+        XCTAssertEqual(waitForPhonePredicate(centered, object: nil, timeout: 10), .completed)
         picture("native-scene-crew-home")
         try await verifyCrewKeyboard(scene, character: character)
         _ = try await home("capture-scene-start")
         revealCrew(local, in: scene)
         local.tap()
-        XCTAssertTrue(app.otherElements["crew-preview"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.otherElements["crew-preview"].waitForPresence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Check harbour marker 1"].exists)
         picture("native-scene-task-preview")
         app.buttons["close-crew-preview"].tap()
@@ -581,11 +579,11 @@ import XCTest
         picture("native-scene-remote-formation")
         _ = try await home("capture-stop")
         remote.tap()
-        XCTAssertTrue(app.staticTexts["Read the offshore chart"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["Read the offshore chart"].waitForPresence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Scene Mac"].exists)
         picture("native-scene-remote-preview")
         app.buttons["open-crew-task"].tap()
-        XCTAssertTrue(app.staticTexts["task-record-title"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["task-record-title"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts["task-record-title"].label, "Read the offshore chart")
         picture("native-scene-existing-task-record")
         app.buttons["close-record"].tap()
@@ -595,16 +593,15 @@ import XCTest
         // INF-1066: the whole 44-point square answers touch, so a tap near its corner, outside the drawn circle, opens it.
         XCTAssertGreaterThanOrEqual(mark.frame.width + 0.001, 44); XCTAssertGreaterThanOrEqual(mark.frame.height + 0.001, 44)
         mark.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
-        XCTAssertTrue(app.staticTexts["crew-program-counts"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["crew-program-counts"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts["crew-program-counts"].label, try XCTUnwrap(fixture["programWords"] as? String))
         picture("native-scene-program-preview")
         app.buttons["close-crew-preview"].tap()
         _ = try await home("scene-stage-finished")
-        let noParts = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == 'Program, 0 running parts'"), object: mark)
-        await fulfillment(of: [noParts], timeout: 10)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'Program, 0 running parts'"), object: mark, timeout: 10), .completed, app.debugDescription)
         picture("native-scene-between-program-stages")
         _ = try await home("scene-cleanup")
-        XCTAssertTrue(remote.waitForNonExistence(timeout: 10), "A departed task must leave the scene and its touch targets")
+        XCTAssertTrue(remote.waitForAbsence(timeout: 10), "A departed task must leave the scene and its touch targets")
     }
 
     /// INF-1066 and the project's keyboard rule: browse the same live scene without touching it.

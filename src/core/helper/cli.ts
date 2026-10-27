@@ -162,7 +162,8 @@ function backgroundOf(
  * folder to run work for (`expectedHomeSchema`), both public;
  * `--on-home-mac true|false`, whether this computer runs on the home's own
  * Mac, as the home's list found it; `--agreed`, the command for another
- * computer asked before it installed this program; `--background <file>`,
+ * computer asked before it installed this program, or the home's captain
+ * did before the home installed it over Remote Login; `--background <file>`,
  * where a joined command learns how its work runs in the background
  * (`InBackground`); and the rest. Null when a flag names nothing, or something it does not take.
  */

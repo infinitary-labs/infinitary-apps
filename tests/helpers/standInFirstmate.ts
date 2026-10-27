@@ -127,6 +127,12 @@ export function standInFirstmate(
       "  done",
       "  exit 0",
       "fi",
+      // A join the home started with no copy it sent asks there unless told the
+      // captain agreed (`--agreed`); its input holds only the link, so the work
+      // mode declines, as `joinWithLink` does.
+      'case " $* " in *" --fetched "* | *" --agreed "*) ;; *)',
+      `  printf '%s\\n' ${shellWord(workOutcomeLine({ firstmate: "refused", reason: "declined" }))}; exit 1;;`,
+      "esac",
       // The join's message: the link, and the socket the home forwards for it.
       "IFS= read -r M",
       String.raw`L="$(printf '%s' "$M" | sed -n 's/.*"link":"\([^"]*\)".*/\1/p')"`,

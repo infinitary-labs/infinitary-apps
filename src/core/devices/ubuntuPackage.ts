@@ -6,8 +6,8 @@ import type { Writable } from "node:stream";
  * may install software, and the installed package's version. A missing or
  * different package is installed from the tap's deb, with that account's
  * password on `sudo -S`'s input, never as an argument, and linger is turned
- * on in the same step. The work then runs from the package at
- * `/opt/infinitary`, which already loads its AppArmor profile, so
+ * on in the same step where systemd runs. The work then runs from the
+ * package at `/opt/infinitary`, which already loads its AppArmor profile, so
  * Ubuntu's limit stays on. Other Linux systems keep the AppImage.
  */
 
@@ -134,10 +134,16 @@ export const RECEIVE_DEB = [
   "printf 'infinitary:deb=%s\\n' \"$F\"",
 ].join("\n");
 
+/** What the install says when it could not turn on linger, on a line of its own. */
+export const LINGER_OFF_LINE = "infinitary:linger=off";
+
 /**
  * What root runs, with `$1` the deb and `$2` its SHA-256: check again,
  * install, turn on linger for the account that asked, and delete the deb.
- * The password is not in this script.
+ * Where systemd does not run, as in a container or WSL without it, linger
+ * fails and the install still stands: the step says `LINGER_OFF_LINE`, so
+ * the home names the sudo line once the work joined. The password is not in
+ * this script.
  */
 export const INSTALL_AS_ROOT = [
   "set -eu",
@@ -147,9 +153,14 @@ export const INSTALL_AS_ROOT = [
   "export DEBIAN_FRONTEND=noninteractive",
   'apt-get install -y --allow-downgrades "$src"',
   'user="${SUDO_USER:-$USER}"',
-  'loginctl enable-linger "$user"',
+  `loginctl enable-linger "$user" 2>/dev/null || printf '%s\\n' ${LINGER_OFF_LINE}`,
   'rm -f "$src"',
 ].join("\n");
+
+/** Whether the install said it could not turn on linger (`LINGER_OFF_LINE`). */
+export function lingerOff(stdout: string): boolean {
+  return stdout.split("\n").some((line) => line.trim() === LINGER_OFF_LINE);
+}
 
 /**
  * The command root runs. A password, when one is needed, is `sudo -S`'s
@@ -167,6 +178,9 @@ export function sudoInstallCommand(
 /**
  * Starts the installed package's join. The home writes one line, the link,
  * and this pipes it to the package. No copy is kept in the work folder.
+ * The captain agreed on the home (`--agreed`), so nobody there is asked:
+ * with no copy the home sent, the join would ask its input, which holds
+ * only the link, and decline.
  */
 export const PACKAGE_SETUP = [
   'R="$(mktemp -d /tmp/infinitary-r-XXXXXX)" || exit 3',
@@ -175,7 +189,7 @@ export const PACKAGE_SETUP = [
   "printf 'infinitary:socket=%s\\n' \"$R/s\"",
   "IFS= read -r L || exit 5",
   `[ -x ${UBUNTU_PACKAGE_BIN} ] || exit 4`,
-  `printf '%s\\n' "$L" | ${UBUNTU_PACKAGE_BIN} work join --from-home`,
+  `printf '%s\\n' "$L" | ${UBUNTU_PACKAGE_BIN} work join --from-home --agreed`,
 ].join("\n");
 
 /** sudo's own note that the password did not work. Nothing else is read as that. */

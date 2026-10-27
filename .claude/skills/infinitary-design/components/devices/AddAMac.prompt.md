@@ -68,6 +68,8 @@ A refusal of an update, a removal or a changed address still stands at the top o
 When nobody is logged in at that computer's screen as that user, the joined line is followed by "Mac mini starts running work the next time sam logs in there."
 When that user's session there refused to start it in the background, no login mends it: the joined line is followed by two warning lines instead, "Mac mini could not set itself to start in the background, so it runs no work for now." and "Ask again to add it."
 (captain's pick on FI3-673: work runs while that user is logged in).
+On an Ubuntu 24.04 or 26.04 computer where systemd does not run, as in a container, the install still stands and the add goes on.
+Once it joined, two warning lines name the one line an administrator runs there so the work keeps running after logout: "To keep Mac mini running work after sam logs out, an administrator runs this there once:" and `sudo loginctl enable-linger sam`; an update there ends the same way.
 Once added, this computer keeps its own SSH connection to that computer while Infinitary runs here, and that computer's work reaches this computer only through it (captain's approval of FI3-970): no answer is needed at that computer's screen, and no address of this computer's is ever dialed there.
 Devices says where that connection stands (`DevicesTab.prompt.md`, "Reached over your SSH").
 

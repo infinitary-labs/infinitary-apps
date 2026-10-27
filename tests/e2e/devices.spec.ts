@@ -1655,12 +1655,17 @@ test("a Mac a command added that macOS holds on the local network: Devices says 
     );
     expect(parsePairingLink(link)).toMatchObject({ kind: "mac" });
     expect(parsePairingLink(link)).not.toHaveProperty("via");
-    // Its copy there joins with that link, dialing this Mac's address itself.
-    const joined = execFileSync(standInProgram(bundle), ["work", "join", "--from-home"], {
-      input: `${JSON.stringify({ link })}\n`,
-      env: { ...process.env, HOME: them, INFINITARY_HELPER_DATA_DIR: work },
-      encoding: "utf8",
-    });
+    // Its copy there, which the command got once the person there agreed
+    // (`--fetched`), joins with that link, dialing this Mac's address itself.
+    const joined = execFileSync(
+      standInProgram(bundle),
+      ["work", "join", "--fetched", bundle, "--from-home"],
+      {
+        input: `${JSON.stringify({ link })}\n`,
+        env: { ...process.env, HOME: them, INFINITARY_HELPER_DATA_DIR: work },
+        encoding: "utf8",
+      },
+    );
     expect(joined).toContain('"firstmate":"joined"');
     const [device] = await app.page.evaluate(() => window.infinitary.devices.list());
     if (!device) throw new Error("Nothing joined.");

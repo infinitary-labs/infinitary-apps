@@ -88,7 +88,8 @@ export type JoinOptions = {
   /**
    * The command for another computer asked the person before it installed
    * the Ubuntu package this runs from (docs/devices.md, "Joining by a
-   * command"), so it is not asked again.
+   * command"), or the home's captain did before the home installed it over
+   * Remote Login ("The Ubuntu package"), so it is not asked again.
    */
   agreed?: boolean;
   /** What it has here: git and Claude Code (`findTools`), unless a test stands in its own. */

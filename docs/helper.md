@@ -67,7 +67,7 @@ Chromium's own switches may stand before `work` (`workCommand`): an AppImage's r
 
 | Command | What it does |
 | --- | --- |
-| `join <link>` | Joins the home a link names (below), then sets itself to run in the background; with a link from the home it already joined, finds that home where the link says it is now (below, "Finding the home again"). Exits 0 joined or found, 1 refused. `join --fetched <app> <link>` is what the command for another Mac starts: the person agreed already, and `<app>` is the copy it got. `join --agreed <link>` is what the command starts on Ubuntu with the package it just installed: the person agreed already, and nothing is kept in `app/`. `join --fetched <app> --from-home` is what the home starts over Remote Login, with the link on its input (below, "Started by the home"). |
+| `join <link>` | Joins the home a link names (below), then sets itself to run in the background; with a link from the home it already joined, finds that home where the link says it is now (below, "Finding the home again"). Exits 0 joined or found, 1 refused. `join --fetched <app> <link>` is what the command for another Mac starts: the person agreed already, and `<app>` is the copy it got. `join --agreed <link>` is what the command starts on Ubuntu with the package it just installed: the person agreed already, and nothing is kept in `app/`. `join --fetched <app> --from-home` is what the home starts over Remote Login, with the link on its input (below, "Started by the home"), and `join --from-home --agreed` what it starts on Ubuntu with the package it installed there. |
 | `run` | Dials the home with the grant and keeps dialing while it is out of reach, until it is stopped or the home removes it. When a removal an earlier run could not finish waits here, it finishes that instead (below, "Removed"). |
 | `status` | Says what this user joined, where, since when, and whether it is running, without dialing. |
 | `version` | `Infinitary <app version> · contract <PROTOCOL_VERSION>`. |
@@ -188,6 +188,7 @@ A home that adds a Mac or a Linux computer by its address reaches it over SSH wi
 Its captain's click was the yes, so nothing is asked here and Terminal shows nothing: with `--from-home`, a command prints one outcome line on stdout for the home to read (`workOutcomeSchema`, `src/shared/remoteLogin.ts`) - `joined`, `updated` or `removed` with whether it runs in the background, or `refused` with the reason - and exits 0, or 1 refused.
 
 - **Join** (`join --fetched <app> --from-home`) reads its input's first line, one typed message with the link and the private socket the home's setup forwards here (`sshJoinSchema`), never its arguments, where this Mac's other users could read them, then joins as the command for another Mac's copy does, dialing the home through that socket alone: it keeps the copy and sets itself to run in the background.
+  On Ubuntu 24.04 and 26.04 the home installs the package instead and starts its program as `join --from-home --agreed`, which keeps no copy; without `--agreed` a join with no copy the home sent asks here, and its input holds only the link, so it declines.
   When this user runs that home's work already, the same join finds the home again (above, "Finding the home again"), and the outcome is `joined`; the home tells the two apart by which computer used the link.
   Over Remote Login, with nobody logged in at this Mac's screen as this user, the background starts at that user's next login (below), and the outcome says so for the home to say it; a background that failed is `failed`, never the next login.
 - **Update** (`update --fetched <app> --from-home`, `updateFromHome`, `src/core/helper/fromHome.ts`) stops the background's run so the folder is free, keeps the copy the home sent in place of the one kept here, and starts the background from it again.
@@ -1064,7 +1065,7 @@ A new join clears the note, and nothing tries again on its own; a join that find
 
 ## Not yet
 
-- A Linux computer's work while nobody is logged in as its user where systemd does not let that user keep it: an Ubuntu 24.04 or 26.04 computer added by its address or by its command turns linger on for the account, and the command elsewhere turns it on where systemd allows it without a password, or prints the one `sudo loginctl enable-linger` line (`docs/devices.md`, "Joining by a command", "The Ubuntu package").
+- A Linux computer's work while nobody is logged in as its user where systemd does not let that user keep it: an Ubuntu 24.04 or 26.04 computer added by its address or by its command turns linger on for the account, and the command elsewhere turns it on where systemd allows it without a password; where neither could, the add or the command names the one `sudo loginctl enable-linger` line (`docs/devices.md`, "Joining by a command", "The Ubuntu package").
   Anywhere else the service runs only while they are logged in.
 - The real check of a Linux computer joined by a link to the captain's own Mac, and of a Mac to a Linux home, on two computers of the captain's: the journeys run both ends on one computer, and GitHub's machines cannot reach each other.
 

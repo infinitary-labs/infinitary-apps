@@ -4,6 +4,7 @@ import { COMPUTER } from "@shared/deviceNames";
 import { type DeviceChip, type DeviceView, deviceLabel, KEY_TEXT_PATTERN } from "@shared/devices";
 import type { FmEvent } from "@shared/events";
 import {
+  type BackgroundState,
   LINUX_INSTALLERS,
   type LinuxInstaller,
   type LinuxInstalls,
@@ -50,6 +51,7 @@ import { runSsh, SSH_FAILED, SSH_OPTIONS, SshMaster, type SshProgram, type SshRe
 import { type PasswordMethod, passwordMethods, placeOwnKey } from "./sshPassword";
 import { sshRefusal } from "./sshRefusal";
 import {
+  lingerOff,
   PACKAGE_SETUP,
   RECEIVE_DEB,
   type SudoRight,
@@ -213,6 +215,13 @@ type Look = {
   /** What it read at the path this Mac left its token at, when it could read one. */
   here?: string;
 };
+
+/**
+ * An Ubuntu package that matches this computer's version there: `ready`, or
+ * `linger-off` when the install just made it so but could not let that
+ * user's work keep running after they log out, where systemd does not run.
+ */
+type UbuntuReady = "ready" | "linger-off";
 
 const LOOK_TIMEOUT_MS = 90_000;
 const SEND_TIMEOUT_MS = REMOTE_LOGIN_TIME_LIMIT_MS;
@@ -686,6 +695,8 @@ export class RemoteLogin {
     const { address, name, step } = at;
     const secret = at.password ? Buffer.from(at.password, "utf8") : null;
     try {
+      // The install put the package there but could not keep the work on after logout.
+      let lingersNot = false;
       if (at.package) {
         const installed = await this.installUbuntu(at.package, {
           address,
@@ -695,7 +706,8 @@ export class RemoteLogin {
           stage: at.stage,
           ...(at.deviceId ? { deviceId: at.deviceId } : {}),
         });
-        if (installed !== "ready") return installed;
+        if (installed !== "ready" && installed !== "linger-off") return installed;
+        lingersNot = installed === "linger-off";
       }
       const said = (copy: RemoteLoginCopy, run?: { id: string }) => ({
         name,
@@ -905,6 +917,11 @@ export class RemoteLogin {
                 name,
                 deviceId: device.id,
               });
+            if (lingersNot && outcome?.firstmate === "joined")
+              step.caution(
+                afterLogoutLines(device, device.user ?? at.package?.user, outcome.background),
+                { name, deviceId: device.id },
+              );
             return device;
           }
           if (outcome?.firstmate === "refused") {
@@ -974,7 +991,9 @@ export class RemoteLogin {
 
   /**
    * Installs the Ubuntu package when it is missing or another version, with
-   * the password on `sudo -S`'s input. `ready` once the package matches.
+   * the password on `sudo -S`'s input. `ready` once the package matches, or
+   * `linger-off` once this install put it there but could not let that
+   * user's work keep running after they log out (`LINGER_OFF_LINE`).
    * A password that did not work is asked again; it is not logged.
    */
   private async installUbuntu(
@@ -987,7 +1006,7 @@ export class RemoteLogin {
       stage: "setting-up" | "finding" | "updating";
       deviceId?: string;
     },
-  ): Promise<RemoteLoginAddAnswer | "ready"> {
+  ): Promise<RemoteLoginAddAnswer | UbuntuReady> {
     const need = ubuntuInstallNeed(look, this.options.version ?? "");
     if (need === "ready") return "ready";
     if (need === "refused") return at.step.refuse("cannot-install", { name: at.name });
@@ -1042,6 +1061,7 @@ export class RemoteLogin {
     }
     if (outcome === "mismatch") return at.step.refuse("build-unverified", { name: at.name });
     if (outcome === "stopped") return at.step.stopped(at.name, "timeout");
+    if (outcome === "linger-off") return "linger-off";
     if (outcome !== "ok") return at.step.refuse("failed", { name: at.name });
     return "ready";
   }
@@ -1088,14 +1108,15 @@ export class RemoteLogin {
   /**
    * Installs the deb already checked there. The password, when one is
    * needed, is written to `sudo -S` and then zeroed by the caller. stderr
-   * is read only for sudo's own refusal, and is not logged.
+   * is read only for sudo's own refusal, and is not logged; stdout only for
+   * the line that says linger could not be turned on (`linger-off`).
    */
   private async runInstall(
     address: string,
     debPath: string,
     sha256: string,
     secret: Buffer | null,
-  ): Promise<"ok" | "wrong" | "mismatch" | "stopped" | "failed"> {
+  ): Promise<"ok" | "linger-off" | "wrong" | "mismatch" | "stopped" | "failed"> {
     const ran = await runSsh({
       ...this.sshFor(address),
       command: sudoInstallCommand(debPath, sha256, secret !== null),
@@ -1103,7 +1124,7 @@ export class RemoteLogin {
       timeoutMs: this.options.sendTimeoutMs ?? SEND_TIMEOUT_MS,
     });
     if (ran.stopped) return "stopped";
-    if (ran.code === 0) return "ok";
+    if (ran.code === 0) return lingerOff(ran.stdout) ? "linger-off" : "ok";
     if (ran.code === 65) return "mismatch";
     if (secret && sudoRejected(ran.stderr)) return "wrong";
     if (ran.code === SSH_FAILED) return "failed";
@@ -1129,7 +1150,7 @@ export class RemoteLogin {
         stage: "updating",
         deviceId: device.id,
       });
-      if (installed !== "ready") {
+      if (installed !== "ready" && installed !== "linger-off") {
         if ("asks" in installed && installed.asks === "password") return installed;
         return step.refuse("failed");
       }
@@ -1157,6 +1178,10 @@ export class RemoteLogin {
         });
         if (outcome.background === "failed")
           step.caution(remoteLoginWords.notInBackground(device, "update"), { deviceId: device.id });
+        if (installed === "linger-off")
+          step.caution(afterLogoutLines(device, device.user ?? look.user, outcome.background), {
+            deviceId: device.id,
+          });
         return this.device(device.id);
       }
       // Stopped by the time limit while `work update` ran there: it may already have updated.
@@ -1440,6 +1465,21 @@ export class RemoteLogin {
       },
     };
   }
+}
+
+/**
+ * After an Ubuntu install that could not turn on linger there, once the work
+ * runs in the background or starts at the next login: the one line an
+ * administrator runs there so it keeps running after `user` logs out. None
+ * when it could not set itself up there, whose own lines say so.
+ */
+function afterLogoutLines(
+  device: DeviceView,
+  user: string | undefined,
+  background: BackgroundState,
+): readonly string[] {
+  if (!user || (background !== "running" && background !== "at-login")) return [];
+  return remoteLoginWords.afterLogout(device, user);
 }
 
 function tokenField(

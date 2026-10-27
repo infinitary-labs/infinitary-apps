@@ -582,6 +582,18 @@ export const remoteLoginWords = {
   ],
 
   /**
+   * Said after the joined or updated line when the Ubuntu package's install
+   * there could not keep `user`'s work running after they log out (systemd's
+   * linger, where systemd does not run, as in a container): the one line an
+   * administrator runs there, as the command for another computer says it
+   * (`afterLogout`, `src/core/helper/words.ts`).
+   */
+  afterLogout: (device: Named, user: string): [string, string] => [
+    `To keep ${deviceLabel(device)} running work after ${user} logs out, an administrator runs this there once:`,
+    `sudo loginctl enable-linger ${user}`,
+  ],
+
+  /**
    * Add it's question for a Mac whose user runs work for another Firstmate:
    * what it found, what leaving does, and what stays.
    */

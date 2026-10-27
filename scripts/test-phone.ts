@@ -18,6 +18,7 @@ import { startPhoneActivity } from "./phone-activity.ts";
 import { runEveryCheck } from "./phone-checks.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
+import { phoneSimulator } from "./phone-simulator.ts";
 import { PHONE_PARTS, type PhoneDevice, partSelection, phoneExecutionArguments, phoneJobs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
@@ -198,11 +199,7 @@ const ownedSimulators = new Set<string>();
 type Lane = { device: PhoneDevice; owned: string; booted: Date; photos?: Promise<void> };
 const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
   const catalog = JSON.parse(await run("xcrun", ["simctl", "list", "--json"]));
-  const runtime = catalog.runtimes.filter((item: { identifier: string; isAvailable: boolean; version: string }) =>
-    item.isAvailable && item.identifier.includes(".iOS-") && Number(item.version.split(".")[0]) >= 18)
-    .sort((a: { version: string }, b: { version: string }) => b.version.localeCompare(a.version, undefined, { numeric: true }))[0];
-  const kind = catalog.devicetypes.find((item: { name: string }) => item.name === (device === "ipad" ? "iPad Pro 11-inch (M4)" : "iPhone 16"));
-  if (!runtime || !kind) throw new Error("Install an iOS 18 or newer simulator runtime and the requested device type in Xcode");
+  const { kind, runtime } = phoneSimulator(catalog, device);
   const owned = (await run("xcrun", ["simctl", "create", GATE_SIMULATOR, kind.identifier, runtime.identifier])).trim();
   ownedSimulators.add(owned);
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.

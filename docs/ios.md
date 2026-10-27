@@ -407,6 +407,8 @@ Apple's internal-testing state means testers can install the build, not that a p
 `pnpm test:phone --evidence <absolute-folder-outside-the-project>` runs the foundation's native gate directly on a Mac with Xcode, Swift 6.1 or newer, and an iOS 18 or newer simulator runtime.
 On a computer in CI mode (`infinitary.checks = ci`, `docs/testing.md` "Where the heavy checks run") it refuses before starting the gate and names `phone.yml` on request instead.
 Add `--ipad` for the iPad Pro 11-inch (M4); the default uses an iPhone 16.
+For each device, `scripts/phone-simulator.ts` chooses the newest available installed iOS 18 or newer runtime whose `supportedDeviceTypes` includes that device's identifier.
+A newer runtime that supports only another device is ignored; if none supports the requested device, the gate asks for a compatible runtime before creating that device.
 Add `--both` to run the checks and build once, then the iPhone and the iPad side by side; the evidence folder then holds the shared logs and an `iphone` and an `ipad` folder.
 The native journey is five tests in `PhoneJourney`, its parts: `join` (join and recover), `talk` (talk and tasks), `cards`, `address` (join by its address), and `rest`, which runs the character and past choices with the app-hosted tests and any test no other part names (`scripts/phone-test-plan.ts`).
 The gate starts one simulator per device, once, and runs that device's parts on it one after the other, in the order `scripts/phone-test-plan.ts` lists them; each part is its own gate with its own test home and a clean app, and `--simulators` (default 6) sets how many devices run side by side (INF-1438, the captain's "Start each simulated device once per phone check, not once per part").

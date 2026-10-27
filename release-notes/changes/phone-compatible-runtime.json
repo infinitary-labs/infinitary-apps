@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-compatible-runtime",
+      "reason": "Internal phone-check setup chooses the newest installed iOS runtime compatible with each requested simulator device; no shipped app behavior changes."
+    }
+  ]
+}

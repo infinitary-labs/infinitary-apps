@@ -197,6 +197,8 @@ describe("the native pull-request gate", () => {
     // INF-1596: the gate's start removes what killed runs left.
     "scripts/phone-leftovers.ts",
     "scripts/phone-test-plan.ts",
+    // INF-1552: the extracted selector still reaches the device gate.
+    "scripts/phone-simulator.ts",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");
   });

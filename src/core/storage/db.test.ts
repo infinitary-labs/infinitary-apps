@@ -167,8 +167,10 @@ const MIGRATION_71_TABLE =
 /** INF-1296 piece 2's relationship rows, lent to an older schema for today's writer. */
 const TASK_REFERENCES_TABLE =
   "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
-/** INF-1226's declaration that a card's choice is not its task's answer, undone. */
-const REVERSE_MIGRATION_93 = "ALTER TABLE cards DROP COLUMN continues;\n";
+/** INF-1610's declaration that a card answers the captain's message, undone. */
+const REVERSE_MIGRATION_101 = "ALTER TABLE cards DROP COLUMN answering;\n";
+/** INF-1226's declaration that a card's choice is not its task's answer, with the later card column undone. */
+const REVERSE_MIGRATION_93 = `${REVERSE_MIGRATION_101}ALTER TABLE cards DROP COLUMN continues;\n`;
 /** INF-476's saved visibility column, with the later card column undone, without deleting card rows. */
 const REVERSE_MIGRATION_88 = `${REVERSE_MIGRATION_93}ALTER TABLE cards DROP COLUMN minimized;\n`;
 /** Migration 77's optional continuity declaration, with its later columns undone. */
@@ -1796,7 +1798,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
     // migration 69 (a merge card's risk) `risk_json`, and migration 70 (a
     // card that takes no reply) `replies`, migration 77 `holds_place`,
     // migration 82 `required_actions_json`, migration 87 `review_task_id`,
-    // INF-476 `minimized` and INF-1226 `continues`.
+    // INF-476 `minimized`, INF-1226 `continues` and INF-1610 `answering`.
     expect(columnNames(upgraded, "cards")).toEqual([
       ...before,
       "duplicate_of",
@@ -1820,6 +1822,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
       "review_task_id",
       "minimized",
       "continues",
+      "answering",
     ]);
     expect(columnNames(upgraded, "card_revisions")).toEqual([
       "id",
@@ -3380,6 +3383,43 @@ it("INF-476 upgrades existing cards with no minimized state, persists a minimize
   expect(columnNames(reopened, "cards")).toEqual(columns);
   expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
     { id: review.id, status: "ready" },
+  ]);
+  reopened.close();
+});
+
+// INF-1610: a card its author marked as answering the captain's message keeps
+// the mark across a restart, so the card stays the answer to that message.
+it("INF-1610 upgrades existing cards with no answering mark, keeps a marked card's across reopen and reverses without losing it", () => {
+  const dir = tmpUserData();
+  const old = openDatabase(dir, 100);
+  const columns = columnNames(old, "cards");
+  old
+    .prepare(
+      "INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES ('card-firstmate-stack-order', NULL, 'card', 'firstmate', 30, 'Yes: a card you replied under keeps its place', '', '<p>The stack now keeps a card you replied under in its place while its author answers.</p>', '[]', 'ready', 1)",
+    )
+    .run();
+  old.close();
+  const upgraded = openDatabase(dir);
+  expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+  const store = new CardStore(upgraded);
+  const answer = store.get("card-firstmate-stack-order");
+  if (!answer) throw new Error("The upgraded answer card is missing");
+  expect(answer).not.toHaveProperty("answering");
+  store.upsert({ ...answer, answering: true });
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  expect(new CardStore(reopened).get(answer.id)).toMatchObject({
+    answering: true,
+    status: "ready",
+    title: answer.title,
+  });
+  // A revision without the mark removes it.
+  new CardStore(reopened).upsert(answer);
+  expect(new CardStore(reopened).get(answer.id)).not.toHaveProperty("answering");
+  reopened.exec(REVERSE_MIGRATION_101);
+  expect(columnNames(reopened, "cards")).toEqual(columns);
+  expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
+    { id: answer.id, status: "ready" },
   ]);
   reopened.close();
 });

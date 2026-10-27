@@ -42,6 +42,9 @@ const REVISED = "Only the queue flush passes the Windows check.";
 function olderProfile() {
   const userDataDir = scratchDir("timeline-upgrade-");
   const db = openDatabase(userDataDir, TASK_RECORD_RETIREMENT_VERSION - 1);
+  // Today's card writer names INF-1610's later `answering` column, lent to
+  // the older schema here; its own migration leaves a column already there.
+  db.exec("ALTER TABLE cards ADD COLUMN answering INTEGER");
   const at = Date.now() - 3600000;
   const now = () => at;
   const tasks = new TaskService({ db, strict: true, now });

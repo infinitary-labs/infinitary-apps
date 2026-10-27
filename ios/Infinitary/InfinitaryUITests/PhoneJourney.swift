@@ -804,6 +804,28 @@ import XCTest
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "enabled == true"), object: element, timeout: 10), .completed, app.debugDescription)
     }
 
+    /// INF-1610: a card about the captain's message names it under its title, as on the Mac. A long message shows only
+    /// its start, and Show all opens the rest; the card then leaves so the parts after it find the stack as before.
+    private func verifyAskedLine() async throws {
+        let asked = try await home("asked-card")
+        let title = try XCTUnwrap(asked["title"] as? String)
+        showCard(title)
+        let line = app.staticTexts["card-asked"]
+        XCTAssertTrue(line.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(line.label.hasPrefix("You asked · "), line.label)
+        let toggle = app.buttons["card-asked-toggle"]
+        XCTAssertTrue(toggle.waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertEqual(toggle.label, "Show all")
+        let folded = line.frame.height
+        picture("card-asked-folded")
+        toggle.tap()
+        XCTAssertTrue(app.buttons["Show less"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertGreaterThan(line.frame.height, folded * 2, "Show all opens the whole message")
+        picture("card-asked-open")
+        app.buttons["close-card"].tap()
+        XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
+    }
+
     /// INF-1558 / INF-1557: only cards on the desktop stage reach the phone's stage and pager.
     /// The real home sends the reproduced held/released fields; a ready sibling witnesses the new snapshot.
     private func verifyCardReadiness() async throws {
@@ -845,6 +867,7 @@ import XCTest
     }
 
     private func verifyCards() async throws {
+        try await verifyAskedLine()
         try await verifyCardReadiness()
         let fixture = try await home("cards-fixture")
         let choice = try XCTUnwrap(fixture["choice"] as? String)

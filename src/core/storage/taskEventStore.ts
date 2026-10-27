@@ -247,6 +247,16 @@ export class TaskEventStore {
     return row?.task_id;
   }
 
+  /** The ref of a task's oldest event of `kind` that names one, if it has one. */
+  oldestRef(taskId: string, kind: TaskEventKind): string | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT ref FROM task_events WHERE task_id = ? AND kind = ? AND ref IS NOT NULL ORDER BY at, id LIMIT 1",
+      )
+      .get(taskId, kind) as { ref: string } | undefined;
+    return row?.ref;
+  }
+
   /** When a task's newest event of `kind` happened, if it has one. */
   latestAt(taskId: string, kind: TaskEventKind): number | undefined {
     const row = this.db

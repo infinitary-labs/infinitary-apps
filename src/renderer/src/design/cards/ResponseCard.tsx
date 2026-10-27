@@ -116,6 +116,13 @@ export type ResponseCardProps = {
    */
   revised?: React.ReactNode;
   /**
+   * The "You asked" line under the title and the revised line: when the
+   * captain sent the message the card is about and their words, the start
+   * of a long message with a control that opens the rest (design skill
+   * `components/cards/ResponseCard.prompt.md`, "The You asked line").
+   */
+  asked?: React.ReactNode;
+  /**
    * Host chrome below the action row - a task record's own bar, or the
    * words a past card's field sent with its choice. It is never a card
    * action and never wraps into that row.
@@ -219,6 +226,7 @@ export function ResponseCard({
   surface = true,
   headExtra,
   revised,
+  asked,
   footer,
   bare = false,
   style,
@@ -389,7 +397,7 @@ export function ResponseCard({
           <div
             data-card-title=""
             style={{
-              order: 2,
+              order: 3,
               position: aside ? "relative" : undefined,
               padding: `10px ${asideRoom} 0 20px`,
               flexShrink: 0,
@@ -417,7 +425,7 @@ export function ResponseCard({
           <div
             data-card-revised=""
             style={{
-              order: 1,
+              order: 2,
               padding: `var(--space-1) ${asideRoom} 0 20px`,
               flexShrink: 0,
               fontFamily: "var(--font-mono)",
@@ -429,6 +437,14 @@ export function ResponseCard({
             }}
           >
             {revised}
+          </div>
+        )}
+        {!bare && !chrome && asked && (
+          <div
+            data-card-asked-row=""
+            style={{ order: 1, padding: `var(--space-2) ${asideRoom} 0 20px`, flexShrink: 0 }}
+          >
+            {asked}
           </div>
         )}
         <div

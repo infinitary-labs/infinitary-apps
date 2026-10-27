@@ -19,6 +19,16 @@ A playable preview (a body with its own style sheet, canvas, or a script outside
 Seen means shown on the stage while the window is visible and focused, so revisions that land while the captain is elsewhere accumulate - two unseen revisions are marked as one change from the version last seen - and a card never seen before it was revised is simply new, with no line.
 The line and the bars stay until the next revision or until the card leaves; removed parts are only counted, there is no switch to read the previous version, and there is no setting.
 The comparison ignores the host's own picture-copy names and the host's fact strip and follow-up rows, which the host rewrites on every call.
+
+### The You asked line
+
+A card about one of the captain's messages carries the "You asked" line under its title and the revised line, `--space-2` below them, so every card about that message, from a plan to a merge, names what the captain asked (INF-1610).
+It reads "You asked · 9:10 AM" in the meta line's voice (`--font-mono` `--text-xs` `--fg-3`), then the captain's words inside quotation marks in `--text-sm` `--fg-2`, the voice of their message above the input; a message that was only pictures reads "A picture" with no marks.
+The time is the captain's local time of day, with the date in front when it was not today, as the revised line writes it.
+The app draws the line from the saved message the card's task leads to, never from the card's words, and work handed over to another task keeps the first message.
+A long message never fills the card: folded, its lines run together and are cut after two lines with an ellipsis.
+Only when the words are cut, a Show all control in `--font-mono` `--text-xs` `--accent` sits under them, a Tab stop with the focus ring; it opens the whole message with its paragraphs as written, and Show less folds it again.
+The line keeps clear of the risk chart as the title does, and a card about no message of the captain's draws none.
 Every card has a top-right close control (IconButton, aria-label Close), with the size control, Maximize card, right before it ("Maximize", below).
 Close dismisses the card; it is not a footer action.
 Notes with no declared actions have no Done button.

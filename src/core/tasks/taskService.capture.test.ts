@@ -48,6 +48,62 @@ describe("TaskService capture", () => {
     expect(() => tasks.attachAsk("ask1", "missing", "host:fallback")).toThrow(/Unknown task/);
   });
 
+  // INF-1610: every card about one of the captain's messages shows that
+  // message, read through the task graph; after a handover it is the first.
+  it("finds the captain's message a task's cards are about through the task graph", () => {
+    const { tasks, tick } = setup();
+    const said = (id: string, text: string, taskId: string) => {
+      tasks.openAsk({ id, text });
+      tick();
+      tasks.attachAsk(id, taskId, "tool:spawn_crewmate");
+      tick();
+    };
+    const fix = seedTask(tasks, { id: "fix", title: "Fix the footer", status: "running" });
+    said("ask-fix", "the footer overlaps the composer on small windows", fix.id);
+    said("ask-later", "how is the footer going?", fix.id);
+    expect(tasks.askAbout(fix.id)?.text).toBe("the footer overlaps the composer on small windows");
+    // A part and a build on a plan have no message of their own.
+    const part = seedTask(tasks, {
+      id: "part",
+      title: "Measure the footer",
+      status: "queued",
+      parentId: fix.id,
+    });
+    expect(tasks.askAbout(part.id)?.id).toBe("ask-fix");
+    const plan = seedTask(tasks, {
+      id: "plan",
+      title: "Plan the stack",
+      status: "completed",
+      outcome: "B.",
+    });
+    said("ask-plan", "plan how the stack orders cards", plan.id);
+    const build = seedTask(tasks, {
+      id: "build",
+      title: "Build the stack order",
+      status: "queued",
+      shape: { kind: "implement", basis: plan.key },
+    });
+    expect(tasks.askAbout(build.id)?.id).toBe("ask-plan");
+    // A retry at a stronger model and a replacement keep the first message,
+    // not the one that asked for the move.
+    const retry = seedTask(tasks, {
+      id: "retry",
+      title: "Fix the footer again",
+      status: "queued",
+      shape: { kind: "fix", escalate_from: fix.key },
+    });
+    said("ask-retry", "try that again with a stronger model", retry.id);
+    expect(tasks.askAbout(retry.id)?.id).toBe("ask-fix");
+    const fresh = seedTask(tasks, { id: "fresh", title: "Fix the footer anew", status: "queued" });
+    said("ask-move", "start over on a new branch", fresh.id);
+    tasks.link(fix.id, fresh.id, "replaced-by", "firstmate");
+    expect(tasks.askAbout(fresh.id)?.id).toBe("ask-fix");
+    // Work no message reached has none.
+    const chore = seedTask(tasks, { id: "chore", title: "Rotate the logs", status: "queued" });
+    expect(tasks.askAbout(chore.id)).toBeUndefined();
+    expect(tasks.askAbout("missing")).toBeUndefined();
+  });
+
   it("keeps a message's picture copies on its ask, and a task's pictures are those of every message attached to it", () => {
     const { db, tasks } = setup();
     seedTask(tasks, { id: "t1", title: "Fix the dialog", status: "queued" });

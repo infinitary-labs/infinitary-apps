@@ -936,6 +936,17 @@ export function cardMetaWords(meta: string): string {
  * Strict on purpose: the wire refuses a `kind` (or any other field the
  * model does not have), so a card can only ever be dressed by what it is.
  */
+/**
+ * The captain's message a card is about (`Card.asked`): when they sent it
+ * and their words, whole. The chrome shows the start and opens the rest on
+ * request, so a long message never fills the card.
+ */
+export const cardAskedSchema = z.strictObject({
+  at: z.number(),
+  text: z.string(),
+});
+export type CardAsked = z.infer<typeof cardAskedSchema>;
+
 export const cardSchema = z.strictObject({
   id: z.string(),
   taskId: z.string().optional(),
@@ -1019,6 +1030,13 @@ export const cardSchema = z.strictObject({
    */
   continues: z.literal(true).optional(),
   /**
+   * Its author declared that the card answers the captain's message it is
+   * about (INF-1610): the outcome of the work they asked for, or the first
+   * mate's own note answering it. Absent means it did not; the host never
+   * infers it from the card's words. Kept in `cards.answering`.
+   */
+  answering: z.literal(true).optional(),
+  /**
    * Off the stage until its author closes out (docs/card-threads.md "When
    * a card reaches the stage"; the captain's Q1, Q4 and Q5 A of
    * 2026-09-27): `answer` while the captain's reply is the newest line on
@@ -1054,6 +1072,14 @@ export const cardSchema = z.strictObject({
    * stored on the row and never an author's.
    */
   changes: cardChangesSchema.optional(),
+  /**
+   * The captain's message the card is about, as they sent it, which the
+   * chrome draws as the "You asked" line (INF-1610): read from the saved
+   * message through the card's task, never from the card's words. Host-
+   * computed on the stage's snapshot, never stored on the row and never an
+   * author's. Absent on a card about no message of theirs.
+   */
+  asked: cardAskedSchema.optional(),
   /** Snapshot-only: the captain has seen an offer in this lifecycle, from card observations. */
   seen: z.boolean().optional(),
 });
@@ -1544,6 +1570,7 @@ export const cardOfferPayloadSchema = z.strictObject({
   asking: z.literal(true).optional(),
   designOnly: z.literal(true).optional(),
   continues: z.literal(true).optional(),
+  answering: z.literal(true).optional(),
   holdsPlace: z.literal(true).optional(),
 });
 

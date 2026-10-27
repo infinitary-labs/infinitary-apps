@@ -123,6 +123,8 @@ export type EmittedCardInput = {
   designOnly?: boolean;
   /** Declared: the captain's choice on it is not the task's answer (INF-1226). */
   continues?: boolean;
+  /** Declared: it answers the captain's message it is about (INF-1610). */
+  answering?: boolean;
 };
 
 /**

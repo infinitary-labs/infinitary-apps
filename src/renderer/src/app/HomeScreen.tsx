@@ -45,6 +45,7 @@ import {
 } from "react";
 import { mainDestination } from "../attachments/destinations";
 import { useFileIntake } from "../attachments/useFileIntake";
+import { AskedLine } from "../cards/AskedLine";
 import { answersLine } from "../cards/answersLine";
 import { bridgeActionIds } from "../cards/bridgeActions";
 import { CardAttachment } from "../cards/CardAttachment";
@@ -2163,6 +2164,7 @@ function StackedCard({
       place={card.place}
       model={card.model}
       revised={card.changes ? revisedLine(card.changes) : undefined}
+      asked={card.asked ? <AskedLine asked={card.asked} /> : undefined}
       width={width}
       surface={surface}
       bare={bare}

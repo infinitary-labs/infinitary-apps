@@ -21,6 +21,9 @@ it("upgrades existing saved data with card/feed seeks and keeps their results", 
   });
   tasks.note(task.id, "The release notes are ready for review.", { news: true, feed: true });
   tasks.note(task.id, "Compared the notes with the changes.", { news: false });
+  // Today's card writer names INF-1610's later `answering` column, lent to
+  // the older schema here; its own migration leaves a column already there.
+  before.exec("ALTER TABLE cards ADD COLUMN answering INTEGER");
   new CardStore(before).upsert({
     id: "review-card",
     taskId: task.id,

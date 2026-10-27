@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "card-asked-line",
+      "kind": "feature",
+      "title": "Cards show the message they answer",
+      "body": "A card about something you asked now shows your message under its title, with when you sent it, on your Mac and your iPhone or iPad. A long message shows its first two lines, and Show all opens the rest. When work moves to a new task, its cards still show your first message.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-asked-line-dark.webp",
+        "light": "card-asked-line-light.webp",
+        "alt": "A first mate card titled Yes: a card you replied under keeps its place, with You asked and the captain's question under its title"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

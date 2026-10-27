@@ -208,6 +208,8 @@ export type EmittedCard = {
   designOnly?: boolean;
   /** Declared: the captain's choice on it is not the task's answer (INF-1226). */
   continues?: boolean;
+  /** Declared: it answers the captain's message it is about (INF-1610). */
+  answering?: boolean;
 };
 
 export type OnCardEmitted = (card: EmittedCard) => string | undefined | Promise<string | undefined>;
@@ -335,6 +337,7 @@ const sharedCardParams = {
   width: Type.Optional(stringEnum(["wide", "full"], { description: CARD_PARAMS.width })),
   holds_place: Type.Optional(Type.Boolean({ description: CARD_PARAMS.holds_place })),
   reply: Type.Optional(Type.String({ description: CARD_PARAMS.reply })),
+  answering: Type.Optional(Type.Boolean({ description: CARD_PARAMS.answering })),
   actions: Type.Optional(
     Type.Array(
       actionParam(Type.Union([settleEffectParam, requestMergeEffectParam, openEffectParam])),
@@ -617,6 +620,7 @@ async function emitCard(
       ...(id ? { id } : {}),
       ...(params.reply?.trim() ? { reply: params.reply.trim() } : {}),
       ...(params.holds_place ? { holdsPlace: true } : {}),
+      ...(params.answering ? { answering: true } : {}),
       ...(params.width ? { width: params.width } : {}),
     });
     return `Card shown from presentation ${params.presentation}${cardId ? ` (${cardId})` : ""}`;
@@ -707,6 +711,7 @@ async function emitCard(
     ...(params.asking ? { asking: true } : {}),
     ...(params.design_only ? { designOnly: true } : {}),
     ...(params.continues ? { continues: true } : {}),
+    ...(params.answering ? { answering: true } : {}),
     // The attribution and attach-first fields exist only in the Firstmate's schema; a
     // crewmate's runtime never passes them.
     ...(firstmate && params.task_id?.trim() ? { taskId: params.task_id.trim() } : {}),

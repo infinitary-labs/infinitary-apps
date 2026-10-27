@@ -1171,6 +1171,45 @@ export class TaskService {
     return this.asks.listFor(id);
   }
 
+  /**
+   * The captain's message a task's cards are about (INF-1610, the "You
+   * asked" line): read from the saved messages through the task graph,
+   * never from any card's words. Work handed over to this task - the task
+   * it replaced, retried at a stronger model, or branched from - keeps the
+   * first message, so its own message about the move never takes its
+   * place. Otherwise it is the oldest message attached to the task, and a
+   * task with none - a part, or work built on a plan - reads its parent's,
+   * then its basis's.
+   */
+  askAbout(id: string, seen: Set<string> = new Set()): AskRecord | undefined {
+    if (seen.has(id)) return undefined;
+    seen.add(id);
+    const record = this.store.get(id);
+    if (!record) return undefined;
+    const references = this.references.list(id);
+    const handedOver = [
+      ...this.links.listTo(id, "replaced-by").map((link) => link.fromId),
+      ...references
+        .filter((entry) => entry.kind === "retry-of" || entry.kind === "branch-source")
+        .flatMap((entry) => this.referenceTarget(entry)?.id ?? []),
+    ];
+    for (const from of handedOver) {
+      const ask = this.askAbout(from, seen);
+      if (ask) return ask;
+    }
+    const own = this.events.oldestRef(id, "ask");
+    const ask = own ? this.asks.get(own) : undefined;
+    if (ask) return ask;
+    const basis = references.find((entry) => entry.kind === "basis");
+    const above = [record.parentId, basis && this.referenceTarget(basis)?.id];
+    for (const next of above) {
+      if (!next) continue;
+      const found = this.askAbout(next, seen);
+      if (found) return found;
+    }
+    return undefined;
+  }
+
   /** Complete text files the messages attached to this task kept at acceptance. */
   messageFiles(id: string): MessageFile[] {
     return this.events

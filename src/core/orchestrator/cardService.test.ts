@@ -81,6 +81,57 @@ describe("CardService", () => {
     restored.dispose();
   });
 
+  // INF-1610: every card about one of the captain's messages carries that
+  // message, read from the saved message and never from the card's words.
+  it("puts the captain's message on each card about it, from the saved message", () => {
+    const { tasks, make } = setup();
+    const cards = make();
+    seedTask(tasks, { id: "footer", title: "Fix the footer", status: "running" });
+    tasks.openAsk({
+      id: "ask-footer",
+      text: "the footer overlaps the composer\n\non small windows",
+    });
+    tasks.attachAsk("ask-footer", "footer", "tool:spawn_crewmate");
+    const crewCard = cards.emitCrewmateCard(
+      "footer",
+      { ...decision, id: "footer-choice", body: "<p>Why: you asked about something else.</p>" },
+      "m",
+    );
+    // The first mate's answer is filed as a question the message attaches to.
+    tasks.openAsk({ id: "ask-port", text: "what does the port flag do?" });
+    const answer = cards.addFirstmateCard({
+      title: "It picks the port",
+      body: "<p>It picks the port.</p>",
+      actions: [],
+      answering: true,
+    });
+    tasks.fileQuestion({
+      id: "q-port",
+      title: "The port flag",
+      outcome: "It picks the port.",
+      cardId: answer,
+    });
+    tasks.attachAsk("ask-port", "q-port", "tool:emit_card");
+    const unasked = cards.addFirstmateCard({
+      title: "The nightly check failed",
+      body: "<p>It failed.</p>",
+      actions: [],
+    });
+    const shown = new Map(cards.snapshot().map((card) => [card.id, card]));
+    expect(shown.get(crewCard)?.asked).toEqual({
+      at: tasks.getAsk("ask-footer")?.at,
+      text: "the footer overlaps the composer\n\non small windows",
+    });
+    expect(shown.get(answer)).toMatchObject({
+      answering: true,
+      asked: { text: "what does the port flag do?" },
+    });
+    expect(shown.get(unasked)).not.toHaveProperty("asked");
+    // The line is the host's reading, never saved on the card.
+    expect(cards.stored(crewCard)).not.toHaveProperty("asked");
+    cards.dispose();
+  });
+
   // INF-63 accepted direction B: attribution comes from the linked review, not body wording.
   it("validates and persists review attribution, names the task, and refreshes its facts", () => {
     const { tasks, cardStore, make } = setup();

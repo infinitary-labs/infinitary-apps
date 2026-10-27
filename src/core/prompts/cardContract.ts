@@ -335,6 +335,7 @@ export const CARD_PARAMS = {
   asking: "True on a question card, not a ready plan.",
   design_only: "True only as the declared design-only fact.",
   continues: "True when its choice is not your answer.",
+  answering: "True when it answers the captain's message; repeat it on each revision.",
   task_id: "The task this card is about",
   review_task_id: "Review task relayed here; must review task_id. The app labels its findings.",
   standalone:

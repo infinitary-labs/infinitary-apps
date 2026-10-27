@@ -1145,6 +1145,11 @@ const MIGRATIONS: readonly Migration[] = [
   migrateTaskDeliveryRecords,
   // INF-1296 piece 5: immutable specifications and owned shape records replace mixed columns.
   migrateTaskRecordRetirement,
+  // INF-1610: an author's declaration that its card answers the captain's
+  // message (`Card.answering`). Null keeps existing cards as they were;
+  // CardStore is the only writer and no published view reads it. Dropping
+  // the column reverses it.
+  (db) => addColumn(db, "cards", "answering", "INTEGER"),
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

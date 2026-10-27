@@ -911,6 +911,29 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
 
 Tests: `src/core/orchestrator/cardChanges.test.ts` (parts, matching, the rewrite threshold, pictures, facts, previews, a moving figure), `cardService.test.ts` "what changed since the captain looked" (accumulation, stale looks, a crewmate's close-out, restart and a card leaving), `src/renderer/src/cards/revisedLine.test.ts`, `prototypeSrcdoc.test.ts`, and the journeys `tests/e2e/card-changes.spec.ts` (a first mate card through a small revision, a reload, two revisions while the window is away, a rewrite, a preview and a figure that moves on a press, with the bars measured beside their parts and the text unmoved) and `tests/e2e/card-body-file.spec.ts` (a crewmate's file-backed revision marks its one new paragraph).
 
+## The You asked line
+
+Piece 1 of INF-1610 (the captain's Approve and build on the plan for robust answer delivery): every card about one of the captain's messages shows that message under its title, on the desktop and the phone.
+The visual rules are the design skill's (`components/cards/ResponseCard.prompt.md`, "The You asked line").
+
+- **From the saved message, never the card's words.**
+  The snapshot carries `Card.asked`, when the message was sent and its words, which `CardService.snapshot` reads through the card's task (the task it names, or the one it was raised on) with `TaskService.askAbout`.
+  It is never saved on the card, and a crewmate's Why, however it is written, changes nothing about the line.
+- **Which message.**
+  The oldest message attached to the task.
+  Work handed over to the task - the task it replaced, retried at a stronger model or branched from - keeps the first message, so a later message asking for the move never takes its place.
+  A task no message reached reads its parent's, then its basis's; a card about work no message reached has no line.
+- **A long message.**
+  The line shows the start of the message, cut after two lines with an ellipsis, and Show all opens the whole of it with its paragraphs; Show less folds it again.
+  The control appears only when the words are cut.
+  A message with only pictures reads "A picture".
+- **The answering mark.**
+  An author declares `answering` on the card that answers the captain's message it is about: the outcome of the work they asked for, or the first mate's own answer.
+  The mark is optional and stored as `Card.answering` in `cards.answering`; a revision without it removes it.
+  Nothing reads it yet: piece 2 ends a message's wait on it.
+
+Tests: `taskService.capture.test.ts` "finds the captain's message a task's cards are about through the task graph", `cardService.test.ts` "puts the captain's message on each card about it", `cardTool.test.ts` "carries the answering mark", `src/renderer/src/cards/askedWords.test.ts`, the journey `tests/e2e/card-asked-line.spec.ts` (a short message whole, a long one in two lines that opens from the keyboard with its paragraphs and folds again), the phone's `CardValuesTests` and `PhoneJourney`'s asked line.
+
 ## Revision links in the thread
 
 Each revised thread line keeps links for that revision alone, comparing its saved offer with its immediate predecessor, separately from the since-last-seen line and bars above.

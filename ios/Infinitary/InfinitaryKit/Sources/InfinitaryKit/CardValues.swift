@@ -38,6 +38,24 @@ public enum PhoneJSON: Codable, Sendable, Equatable {
     }
 }
 
+/// The "You asked" line's message: when the captain sent it and their words, whole (INF-1610).
+public struct PhoneAsked: Equatable, Sendable {
+    public let at: Date
+    public let text: String
+    /// Folded, the lines of a long message run together; opened, its paragraphs stay as written.
+    public func words(open: Bool) -> String {
+        let words = open ? text.trimmingCharacters(in: .whitespacesAndNewlines)
+            : text.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        return words.isEmpty ? "A picture" : "\u{201C}\(words)\u{201D}"
+    }
+    /// "You asked · 9:10 AM", with the date in front when it was not today, as the Mac writes it.
+    public func label(now: Date = Date(), calendar: Calendar = .current) -> String {
+        let time = at.formatted(date: .omitted, time: .shortened)
+        if calendar.isDate(at, inSameDayAs: now) { return "You asked · \(time)" }
+        return "You asked · \(at.formatted(.dateTime.month(.abbreviated).day())), \(time)"
+    }
+}
+
 public struct PhoneCard: Decodable, Identifiable, Sendable {
     public let value: PhoneJSON
     public var id: String { value["id"].text! }
@@ -51,6 +69,11 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
     public var body: String { value["body"].text! }
     public var offerID: String? { value["offerId"].text }
     public var actions: [PhoneJSON] { value["actions"].list }
+    /// INF-1610: the captain's message the card is about, which the Mac read from the saved message, never the body.
+    public var asked: PhoneAsked? {
+        guard let at = value["asked"]["at"].numeric, let text = value["asked"]["text"].text else { return nil }
+        return PhoneAsked(at: Date(timeIntervalSince1970: at / 1000), text: text)
+    }
     public var takesReplies: Bool {
         value["replies"] != .bool(false) && (author == "firstmate" || (author == "crewmate" && value["taskId"].text != nil))
     }

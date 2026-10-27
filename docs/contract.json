@@ -7709,6 +7709,10 @@
               "type": "boolean",
               "const": true
             },
+            "answering": {
+              "type": "boolean",
+              "const": true
+            },
             "awaiting": {
               "type": "string",
               "enum": [
@@ -7768,6 +7772,21 @@
                 "removed",
                 "rewritten",
                 "marks"
+              ]
+            },
+            "asked": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "number"
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "at",
+                "text"
               ]
             },
             "seen": {
@@ -8758,6 +8777,10 @@
                 "type": "boolean",
                 "const": true
               },
+              "answering": {
+                "type": "boolean",
+                "const": true
+              },
               "awaiting": {
                 "type": "string",
                 "enum": [
@@ -8817,6 +8840,21 @@
                   "removed",
                   "rewritten",
                   "marks"
+                ]
+              },
+              "asked": {
+                "type": "object",
+                "properties": {
+                  "at": {
+                    "type": "number"
+                  },
+                  "text": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "at",
+                  "text"
                 ]
               },
               "seen": {
@@ -42077,6 +42115,9 @@
                   "continues": {
                     "type": "boolean"
                   },
+                  "answering": {
+                    "type": "boolean"
+                  },
                   "browserButton": {
                     "type": "string"
                   },
@@ -51611,6 +51652,10 @@
               "type": "boolean",
               "const": true
             },
+            "answering": {
+              "type": "boolean",
+              "const": true
+            },
             "awaiting": {
               "type": "string",
               "enum": [
@@ -51670,6 +51715,21 @@
                 "removed",
                 "rewritten",
                 "marks"
+              ]
+            },
+            "asked": {
+              "type": "object",
+              "properties": {
+                "at": {
+                  "type": "number"
+                },
+                "text": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "at",
+                "text"
               ]
             },
             "seen": {

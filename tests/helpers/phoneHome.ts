@@ -36,6 +36,17 @@ import { phoneSceneFixture } from "./phoneScene";
 import { startScriptedClient } from "./scriptedClient";
 import { type SshServer, startSshServer } from "./sshServer";
 
+/**
+ * The captain's message the asked card is about (INF-1610): long and in
+ * paragraphs, as a real message can be, so the phone shows its start and
+ * opens the rest on request.
+ */
+const PHONE_ASKED_MESSAGE = [
+  "did something change about how we order the cards in the stack? this morning a card I had replied under jumped behind two newer notes, and then the merge card for the footer fix showed up first.",
+  "could you check what changed in the last few days, and whether the order is still the one we agreed on?",
+  "if it is a regression, please fix it, but keep minimize as it is.",
+].join("\n\n");
+
 /** INF-64 piece 2: a disposable real home, never a replacement for the wire or stores. */
 export async function startPhoneHome(
   root: string,
@@ -609,6 +620,28 @@ export async function startPhoneHome(
             conversation: "Read the harbour chart",
             note: "The tide note",
           };
+          break;
+        }
+        // INF-1610: a card about a long message of the captain's, which the phone draws as its "You asked" line.
+        case "POST asked-card": {
+          const ask = core.services.tasks.openAsk({ id: "phone-ask", text: PHONE_ASKED_MESSAGE });
+          const asked = seedTask(core.services.tasks, {
+            id: "phone-asked",
+            title: "Check how the stack orders cards",
+            status: "completed",
+            outcome: "The stack keeps a card you replied under in its place.",
+          });
+          core.services.tasks.attachAsk(ask.id, asked.id, "tool:spawn_crewmate");
+          core.services.tasks.closeAsk(ask.id, "closed");
+          const title = "The stack keeps a card you replied under in its place";
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-asked-card",
+            taskId: asked.id,
+            title,
+            body: "<p>Nothing else about the order changed.</p>",
+            actions: [],
+          });
+          result = { title, words: PHONE_ASKED_MESSAGE };
           break;
         }
         case "POST hero-card": {

@@ -13,6 +13,30 @@ struct CardValuesTests {
         #expect(!PhoneCard.canSendReply(" \n "))
     }
 
+    /// INF-1610: the "You asked" line reads the message the Mac sent, folds a long one onto one run of words,
+    /// keeps its paragraphs when opened, and names a message of pictures alone.
+    @Test func askedLineReadsTheSavedMessage() throws {
+        let message = "did something change about how we order the cards in the stack?\n\nkeep minimize as it is."
+        let at = Date(timeIntervalSince1970: 1_793_200_200)
+        let card = try PhoneCard(.object([
+            "id": .string("card-1404-merge"), "title": .string("Keep a replied card in its place"),
+            "author": .string("crewmate"), "body": .string("<p>Merged.</p>"), "actions": .array([]),
+            "asked": .object(["at": .number(at.timeIntervalSince1970 * 1000), "text": .string(message)])
+        ]))
+        let asked = try #require(card.asked)
+        #expect(asked.at == at)
+        #expect(asked.words(open: false) == "\u{201C}did something change about how we order the cards in the stack? keep minimize as it is.\u{201D}")
+        #expect(asked.words(open: true) == "\u{201C}\(message)\u{201D}")
+        #expect(asked.label(now: at).hasPrefix("You asked · "))
+        #expect(asked.label(now: at.addingTimeInterval(3 * 86_400)).contains(","))
+        #expect(PhoneAsked(at: at, text: " ").words(open: false) == "A picture")
+        let plain = try PhoneCard(.object([
+            "id": .string("card-fm-1"), "title": .string("A note"), "author": .string("firstmate"),
+            "body": .string("<p>Nothing asked.</p>"), "actions": .array([])
+        ]))
+        #expect(plain.asked == nil)
+    }
+
     /// INF-499 #2: the actual body-choice receipt has a frame evidence actor, not a captain.
     @Test func frameChoiceNamesItsAuthorWithoutRewritingTheReceipt() throws {
         let card = try PhoneCard(.object([

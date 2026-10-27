@@ -8,6 +8,7 @@ import {
   type CardAction,
   type CardActionSource,
   type CardAnswer,
+  type CardAsked,
   type CardAwaiting,
   type CardChanges,
   type CardDecisionContext,
@@ -646,6 +647,7 @@ export class CardService {
     for (const [id, lifecycleId] of this.asideUntilTurnEnd) {
       if (this.cards.get(id)?.lifecycleId !== lifecycleId) this.asideUntilTurnEnd.delete(id);
     }
+    const asked = new Map<string, CardAsked | undefined>();
     return [...this.cards.values()]
       .map((card) => {
         const staged = this.onTheStage(card);
@@ -656,9 +658,30 @@ export class CardService {
             : false,
         };
         const task = shown.taskId ? this.host.tasks.get(shown.taskId) : undefined;
-        return shown.author === "firstmate" && task ? { ...shown, meta: task.title } : shown;
+        const about = this.askedAbout(shown, asked);
+        return {
+          ...shown,
+          ...(shown.author === "firstmate" && task ? { meta: task.title } : {}),
+          ...(about ? { asked: about } : {}),
+        };
       })
       .sort(compareStack);
+  }
+
+  /**
+   * The captain's message a card is about, for its "You asked" line
+   * (INF-1610): the one its task's graph leads to (`TaskService.askAbout`),
+   * through the task it names or the task it was raised on. `known` holds
+   * each task's answer for one snapshot.
+   */
+  private askedAbout(card: Card, known: Map<string, CardAsked | undefined>): CardAsked | undefined {
+    const taskId = card.taskId ?? this.host.tasks.taskForCard(card.id)?.id;
+    if (!taskId) return undefined;
+    if (!known.has(taskId)) {
+      const ask = this.host.tasks.askAbout(taskId);
+      known.set(taskId, ask ? { at: ask.at, text: ask.text } : undefined);
+    }
+    return known.get(taskId);
   }
 
   /**
@@ -1223,6 +1246,7 @@ export class CardService {
         ...(card.asking ? { asking: true as const } : {}),
         ...(card.designOnly ? { designOnly: true as const } : {}),
         ...(card.continues ? { continues: true as const } : {}),
+        ...(card.answering ? { answering: true as const } : {}),
         ...(card.holdsPlace ? { holdsPlace: true as const } : {}),
       },
     });
@@ -2784,6 +2808,7 @@ function offerFingerprint(card: Card): string {
         ...(card.asking ? [{ asking: true }] : []),
         ...(card.designOnly ? [{ designOnly: true }] : []),
         ...(card.continues ? [{ continues: true }] : []),
+        ...(card.answering ? [{ answering: true }] : []),
         ...(card.holdsPlace ? [{ holdsPlace: true }] : []),
         ...(card.reviewTaskId ? [{ reviewTaskId: card.reviewTaskId }] : []),
       ]),
@@ -2928,6 +2953,7 @@ function buildEmittedCard(
     ...(input.asking ? { asking: true as const } : {}),
     ...(input.designOnly ? { designOnly: true as const } : {}),
     ...(input.continues ? { continues: true as const } : {}),
+    ...(input.answering ? { answering: true as const } : {}),
     ...(input.holdsPlace ? { holdsPlace: true as const } : {}),
   };
 }

@@ -204,6 +204,7 @@ describe("createEmitCardTool", () => {
       "width",
       "holds_place",
       "reply",
+      "answering",
       "actions",
       "task_id",
       "review_task_id",
@@ -237,6 +238,38 @@ describe("createEmitCardTool", () => {
       actions,
       validationDecision: request,
     });
+  });
+
+  // INF-1610: an author marks the card that answers the captain's message,
+  // the outcome of their work included, on either role.
+  it("carries the answering mark on either role and on a saved-story completion", async () => {
+    for (const role of ["crewmate", "firstmate"] as const) {
+      const onCard = vi.fn((_card: EmittedCard) => "card-example");
+      const tool = piToolOf(createEmitCardTool(onCard, undefined, { role })) as unknown as AnyTool;
+      await tool.execute("marked", {
+        title: "It picks the port",
+        body: "<p>It picks the port.</p>",
+        answering: true,
+      });
+      expect(onCard.mock.calls[0]?.[0].answering).toBe(true);
+      await tool.execute("ordinary", {
+        title: "It picks the port",
+        body: "<p>It picks the port.</p>",
+        answering: false,
+      });
+      expect(onCard.mock.calls[1]?.[0]).not.toHaveProperty("answering");
+    }
+    const onCard = vi.fn(() => "card-task-story");
+    const tool = piToolOf(bindTool(EMIT_CARD_TOOL, { onCard })) as unknown as AnyTool;
+    await tool.execute("story", {
+      title: "fix(cards): keep a replied card in place",
+      presentation: 2,
+      answering: true,
+      actions: [{ id: "merge", default: true, effect: { kind: "settle", mode: "merge" } }],
+    });
+    expect(onCard).toHaveBeenCalledWith(
+      expect.objectContaining({ presentationRevision: 2, answering: true }),
+    );
   });
 
   // INF-92: a saved story is resolved at the home, never reconstructed by a second tool call.

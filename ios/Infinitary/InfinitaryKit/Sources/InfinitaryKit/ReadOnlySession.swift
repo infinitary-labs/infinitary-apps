@@ -41,8 +41,9 @@ public struct PhoneNotice: Equatable, Sendable {
     public var notice: PhoneNotice?
     /// Offers the stage has drawn while the person could see it, kept for this computer's session only.
     public private(set) var seenCards = Set<String>()
-    /// INF-944 item 3: the stack follows the Mac's. A card minimized there leaves the phone's stack, count and badge too.
-    public var stack: [PhoneCard] { cards.filter { !$0.minimized } }
+    /// The Mac's stage rule: a new card waits for its author's close-out, but a replied-under card stays.
+    /// A minimized card leaves the phone's stack and count too (INF-944 item 3).
+    public var stack: [PhoneCard] { cards.filter { ($0.awaiting == nil || $0.sentBackAt != nil) && !$0.minimized } }
     public var unreadCards: Int { stack.filter { !seenCards.contains($0.offerID ?? $0.id) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     public var changeRefusal: String? {

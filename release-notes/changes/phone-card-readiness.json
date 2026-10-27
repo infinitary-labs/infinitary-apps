@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "phone-card-readiness",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Phone cards wait until their choices are ready",
+      "body": "On iPhone and iPad, new cards no longer appear while they are still waiting on their author, matching your Mac. Waiting cards no longer appear in the pager. A card you replied under keeps its place while its author answers.",
+      "noPicture": "This fixes when a card appears, not how it looks.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

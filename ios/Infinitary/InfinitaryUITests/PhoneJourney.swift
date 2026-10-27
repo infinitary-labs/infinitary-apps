@@ -804,7 +804,48 @@ import XCTest
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "enabled == true"), object: element, timeout: 10), .completed, app.debugDescription)
     }
 
+    /// INF-1558 / INF-1557: only cards on the desktop stage reach the phone's stage and pager.
+    /// The real home sends the reproduced held/released fields; a ready sibling witnesses the new snapshot.
+    private func verifyCardReadiness() async throws {
+        let fixture = try await home("held-card-fixture")
+        let held = try XCTUnwrap(fixture["held"] as? String)
+        let ready = try XCTUnwrap(fixture["ready"] as? String)
+        showCard(ready)
+        let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
+        picture("card-readiness-waiting-with-ready-sibling")
+        XCTAssertEqual(pager.label, "1 of 1", "A held card is neither a page nor an unread offer")
+        pager.tap()
+        XCTAssertFalse(app.buttons[held].exists, "The held card cannot be chosen from the pager")
+        app.buttons[ready].firstMatch.tap()
+        app.buttons["close-card"].tap()
+        XCTAssertTrue(app.otherElements["phone-character"].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(pager.exists, "Only the waiting card remains, so the stage and pager are empty")
+        picture("card-readiness-waiting")
+
+        _ = try await home("release-held-card")
+        XCTAssertTrue(cardHeading(held).waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.webViews.staticTexts["The harbour survey is ready for your choice."].waitForPresence(timeout: 10))
+        XCTAssertEqual(pager.label, "1 of 1")
+        picture("card-readiness-released")
+        // A reply leaves its card on the stage while the author answers; awaiting alone is not enough to hide it.
+        _ = try await home("replied-under-card")
+        XCTAssertTrue(app.webViews.staticTexts["The surveyor is answering your harbour question."].waitForPresence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(cardHeading(held).exists)
+        XCTAssertEqual(pager.label, "1 of 1")
+        picture("card-readiness-replied-under")
+        _ = try await home("release-held-card")
+        XCTAssertTrue(app.webViews.staticTexts["The harbour survey is ready for your choice."].waitForPresence(timeout: 10), app.debugDescription)
+        app.buttons["card-action-keep"].tap()
+        XCTAssertTrue(cardHeading(held).waitForAbsence(timeout: 10), app.debugDescription)
+        XCTAssertFalse(app.staticTexts["card-error"].exists)
+        let state = try await home("readiness-state", method: "GET")
+        let card = try XCTUnwrap(state["card"] as? [String: Any])
+        let ending = try XCTUnwrap(card["ending"] as? [String: Any])
+        XCTAssertEqual(ending["actionId"] as? String, "keep", "The home accepted the released card's choice")
+    }
+
     private func verifyCards() async throws {
+        try await verifyCardReadiness()
         let fixture = try await home("cards-fixture")
         let choice = try XCTUnwrap(fixture["choice"] as? String)
         let chart = try XCTUnwrap(fixture["conversation"] as? String)

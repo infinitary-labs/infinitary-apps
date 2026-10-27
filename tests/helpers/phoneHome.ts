@@ -457,6 +457,65 @@ export async function startPhoneHome(
             readings: { ...readings },
           };
           break;
+        // INF-1558: the held/released wire states observed in INF-1557, through the real
+        // card store, dispatcher and pinned connection. No crewmate timing or account is needed.
+        case "POST held-card-fixture": {
+          for (const card of await core.dispatch("inf:cards:list", []))
+            await core.dispatch("inf:cards:close", [card.id]);
+          core.services.supervisor.raiseHostCard({
+            id: "card-phone-readiness",
+            title: "Keep the harbour entrance clear",
+            meta: "Harbour survey",
+            body: "<p>The harbour survey is ready for your choice.</p>",
+            actions: [
+              { id: "keep", label: "Keep the entrance clear", default: true },
+              { id: "wait", label: "Not now" },
+            ],
+            awaiting: "close-out",
+          });
+          core.services.supervisor.addFirstmateCard({
+            id: "phone-readiness-witness",
+            title: "The tide reading is ready",
+            body: "<p>This reading can already be used.</p>",
+            actions: [],
+          });
+          core.services.supervisor.flushCards();
+          result = { held: "Keep the harbour entrance clear", ready: "The tide reading is ready" };
+          break;
+        }
+        case "POST release-held-card": {
+          const card = core.services.supervisor
+            .cardsSnapshot()
+            .find((card) => card.id === "card-phone-readiness");
+          if (!card) throw new Error("The readiness fixture has no held card");
+          const { awaiting: _awaiting, sentBackAt: _sentBackAt, ...released } = card;
+          core.services.supervisor.raiseHostCard({
+            ...released,
+            body: "<p>The harbour survey is ready for your choice.</p>",
+          });
+          core.services.supervisor.flushCards();
+          result = { ok: true };
+          break;
+        }
+        case "POST replied-under-card": {
+          const card = core.services.supervisor
+            .cardsSnapshot()
+            .find((card) => card.id === "card-phone-readiness");
+          if (!card) throw new Error("The readiness fixture has no released card");
+          core.services.supervisor.raiseHostCard({
+            ...card,
+            awaiting: "answer",
+            sentBackAt: Date.now(),
+            body: "<p>The surveyor is answering your harbour question.</p>",
+          });
+          core.services.supervisor.flushCards();
+          result = { ok: true };
+          break;
+        }
+        case "GET readiness-state": {
+          result = { card: await core.dispatch("inf:cards:past", ["card-phone-readiness"]) };
+          break;
+        }
         case "POST cards-fixture": {
           // INF-64 piece 4: actual stored cards, published requests and the existing view journey's promises.
           for (const card of await core.dispatch("inf:cards:list", []))

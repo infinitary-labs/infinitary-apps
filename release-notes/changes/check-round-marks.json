@@ -3,6 +3,7 @@
     {
       "id": "check-round-marks",
       "kind": "improvement",
+      "highlight": 1,
       "area": "cards",
       "title": "A merge card shows its check rounds inside the Checks fact",
       "body": "When a crewmate has spent a try at getting the checks to pass, the Checks fact on its merge card now ends in three small marks, one filled for each round spent. Rest the pointer on it to read round 1 of 3, the same words the feed uses. Once all three are spent the marks turn red and say held. The separate Check rounds fact is gone, and a careful task's review rounds ride its Review fact the same way.",

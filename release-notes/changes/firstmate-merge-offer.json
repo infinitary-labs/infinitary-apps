@@ -4,8 +4,8 @@
       "id": "firstmate-merge-offer",
       "kind": "fix",
       "area": "cards",
-      "title": "The first mate's cards keep your merge approval",
-      "body": "The first mate no longer offers a merge button that cannot work on a change with a saved story. Its cards no longer cancel a merge you already approved.",
+      "title": "Your first mate's cards keep your merge approval",
+      "body": "Your first mate no longer offers a merge button that cannot work for a task with a change story. Its cards no longer cancel a merge you already approved.",
       "noPicture": "This fixes card admission and retained merge approval, without changing a drawn view.",
       "provenance": { "origin": "change" }
     }

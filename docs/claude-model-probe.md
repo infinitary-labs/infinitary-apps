@@ -86,5 +86,6 @@ The runtime treats that incomplete answer as an unavailable read and uses the ex
 That temporarily limits by-name choices to the shipped models until a current catalog is available; saved placements are never erased.
 The global SDK-derived client floor is unchanged: it is a session compatibility floor, not a guarantee of current catalog metadata.
 Haiku 5.5 accepts explicit medium and Quick-low coding effort on the SDK floor client and on 2.1.290/2.1.293; legacy Haiku still omits effort.
-The bounded question keeps low effort and its 64-token cap; these clients omit the thinking field for Haiku 5.5 when asked to disable it.
+The bounded question keeps low effort and its 15-second deadline, leaving Claude's output allowance to the client so hidden thinking has room before the answer (INF-1451; `docs/kind-classifier.md`).
+An explicit session cap still reaches these clients, which omit the thinking field for Haiku 5.5 when asked to disable it.
 The hermetic session and classifier integration tests exercise the real client against a local reply server; they do not claim subscription entitlement or model quality.

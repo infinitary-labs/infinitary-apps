@@ -8,9 +8,10 @@ import { LOCAL_MACHINE_ID, type SessionBinding, type SessionSpec } from "../sess
  * answered once, by a session that can reach nothing - no built-ins, no
  * tools, no record - on the question's own instruction, served byte for
  * byte, so a verdict recorded months ago still says which question was
- * asked. Its bounds are the same whichever backend answers: a word of
- * output (or a JSON answer's own length), one model turn, one retry at most. The adapter's wall clock stays
- * outside the session, with the adapter.
+ * asked. One model turn, one retry at most; the adapter's wall clock stays
+ * outside the session. Pi caps a choice's output at a word's allowance.
+ * Claude's output includes hidden thinking that cannot always be disabled,
+ * so its client chooses the allowance, as it does for a JSON answer.
  */
 export function questionSessionSpec(input: {
   /** A neutral cwd (the firstmate home); the session reads nothing. */
@@ -40,7 +41,11 @@ export function questionSessionSpec(input: {
     shape: { turns: "one" },
     bounds: {
       request: {
-        ...(input.json ? {} : { maxOutputTokens: CLASSIFIER_MAX_OUTPUT_TOKENS }),
+        // INF-1451: Sonnet can spend the entire word-only cap on hidden
+        // thinking even when asked to disable it, leaving no answer text.
+        ...(input.json || input.binding.backend === "claude"
+          ? {}
+          : { maxOutputTokens: CLASSIFIER_MAX_OUTPUT_TOKENS }),
         maxModelTurns: 1,
         retries: 1,
       },

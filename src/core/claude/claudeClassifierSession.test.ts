@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { scriptedClaudeQuery as scriptedQuery } from "../../../tests/helpers/scriptedClaudeQuery";
 import { questionSessionSpec } from "../decisions/questionSession";
+import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../orchestrator/seat";
 import type { ModelSession, SessionEvent } from "../session/session";
 import type { ClaudeClientCheck } from "./claudeCli";
 import type { ClaudeRateLimit } from "./claudeEvents";
@@ -60,7 +61,12 @@ function factoryWith(
 ) {
   return createClaudeSessionFactory({
     configDir: CONFIG_DIR,
-    env: () => ({ PATH: "/usr/bin", HOME: "/home/person", ANTHROPIC_API_KEY: "ambient" }),
+    env: () => ({
+      PATH: "/usr/bin",
+      HOME: "/home/person",
+      ANTHROPIC_API_KEY: "ambient",
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(CLASSIFIER_MAX_OUTPUT_TOKENS),
+    }),
     checkClient: async () => extras.check ?? READY,
     query,
     ...(extras.readings
@@ -98,14 +104,17 @@ describe("the Claude classifier session", () => {
       settingSources: [],
       maxTurns: 1,
       effort: "low",
-      // At most a word, whatever the model's default: no thinking, 64 tokens out.
-      thinking: { type: "disabled" },
+      // INF-1451: low effort, but no claim that every model can disable thinking.
       // The typed stop of a request rides its streamed `message_delta`.
       includePartialMessages: true,
       persistSession: false,
       model: MODEL,
     });
-    expect(options.env?.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe("64");
+    // INF-1451: hidden thinking must not consume an answer-only cap, even
+    // when the shell that started the session had that cap set.
+    expect(options.env?.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBeUndefined();
+    expect(options.env).toHaveProperty("CLAUDE_CODE_MAX_OUTPUT_TOKENS", undefined);
+    expect(options.thinking).toBeUndefined();
     // Not the person's servers, notes or ambient credentials: the machine's default login only.
     expect(options.mcpServers).toBeUndefined();
     expect(options.env?.CLAUDE_CODE_DISABLE_AUTO_MEMORY).toBe("1");
@@ -203,7 +212,7 @@ describe("the Claude classifier session", () => {
     await expect.poll(() => hasActiveSession(CONFIG_DIR)).toBe(false);
   });
 
-  it("reads an answer the output cap cut short, and stops the client asking again", async () => {
+  it("still honors an explicit output cap and stops the client asking again", async () => {
     // The client hands over the message before the request's typed stop,
     // which rides the streamed `message_delta`; its own recovery would then
     // ask for the rest.
@@ -232,9 +241,18 @@ describe("the Claude classifier session", () => {
         emit(result("unclear", { is_error: true }));
       },
     });
-    const session = await factoryWith(factory).open(spec);
+    const session = await factoryWith(factory).open({
+      ...spec,
+      bounds: {
+        request: { ...spec.bounds?.request, maxOutputTokens: CLASSIFIER_MAX_OUTPUT_TOKENS },
+      },
+    });
     const events = recorder(session);
     await session.prompt("Which way?");
+    expect(harness().options.env?.CLAUDE_CODE_MAX_OUTPUT_TOKENS).toBe(
+      String(CLASSIFIER_MAX_OUTPUT_TOKENS),
+    );
+    expect(harness().options.thinking).toEqual({ type: "disabled" });
     expect(events.filter((event) => event.type !== "assistant_delta")).toEqual([
       { type: "turn_end", taskId: "firstmate", usage: { input: 300, output: 64 } },
       { type: "turn_closed", text: "chore - a dependency bump, so" },

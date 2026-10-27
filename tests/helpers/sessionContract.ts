@@ -493,21 +493,31 @@ export function describeSessionContract(harness: SessionContractHarness): void {
     });
 
     describeQuestion("the question: one bounded answer from a session that reaches nothing", () => {
-      it("asks once, on the instruction alone, with no tools, a word of output and no thinking", async () => {
+      it("asks once, on the instruction alone, with no tools and the backend's answer allowance", async () => {
         world.answer({ text: "left" });
         const session = await open(questionOn(world));
         const events = recorder(session);
         await session.prompt(QUESTION);
         expect(world.served()).toEqual([
-          {
+          expect.objectContaining({
             system: expect.stringContaining(CONTRACT_INSTRUCTION),
             tools: 0,
-            maxOutputTokens: CLASSIFIER_MAX_OUTPUT_TOKENS,
-            thinking: false,
             coding: false,
             said: expect.stringContaining(QUESTION),
-          },
+          }),
         ]);
+        const request = world.served()[0];
+        if (harness.backend === "pi") {
+          expect(request).toMatchObject({
+            maxOutputTokens: CLASSIFIER_MAX_OUTPUT_TOKENS,
+            thinking: false,
+          });
+        } else if (request?.maxOutputTokens !== undefined) {
+          // INF-1451: the real Claude client chooses a model-specific
+          // allowance including hidden thinking; a scripted client leaves
+          // the unspecified bound absent. Neither uses Pi's word-only cap.
+          expect(request.maxOutputTokens).toBeGreaterThan(CLASSIFIER_MAX_OUTPUT_TOKENS);
+        }
         // One answer, closing the one turn, with the turn's burn.
         expect(events.filter((event) => event.type === "turn_closed")).toEqual([
           { type: "turn_closed", text: "left" },

@@ -104,16 +104,13 @@ import { locateClaudeTranscript } from "./claudeTranscript";
  *   (`persistSession: false`), and the account's shared store lease held for
  *   the session's whole life, so a renewal never races the client over its
  *   single-use refresh token. The spec's request bounds apply in the
- *   client's own terms: the output cap as `CLAUDE_CODE_MAX_OUTPUT_TOKENS`,
- *   the model-turn cap as `maxTurns`. And one backend rule, a closed fact
- *   rather than a role: extended thinking needs a budget below the output
- *   cap, so a cap at or under the thinking floor turns thinking off.
- *   Measured on the pinned client, `effort` alone does not bound it: the
- *   client drops effort for Haiku (the low slot the walk binds first) and
- *   serves it a 31,999-token thinking budget with `max_tokens` 32,000; with
- *   thinking disabled and the client's own output cap set to the question's
- *   64 it serves `max_tokens` 64 with no thinking on Haiku, Sonnet and Opus
- *   alike.
+ *   client's own terms: an explicit output cap as
+ *   `CLAUDE_CODE_MAX_OUTPUT_TOKENS`, the model-turn cap as `maxTurns`. An
+ *   explicit cap at or under the legacy thinking floor requests thinking
+ *   disabled, but newer models need not honor it. The question preset
+ *   therefore leaves Claude's output allowance to its client: Sonnet 5.5
+ *   can consume a small cap entirely in hidden thinking (INF-1451). The
+ *   adapter still bounds the whole question with its own wall clock.
  * - A rolling session keeps one conversation across prompts, steers and
  *   client attachments. With no built-ins its prompt is the spec's base,
  *   the dynamic boundary and the captain's served text; with the coding set
@@ -240,8 +237,9 @@ export type ClaudeSessionDeps = {
 };
 
 /**
- * Anthropic's smallest extended-thinking budget. Thinking needs a budget
- * below `max_tokens`, so an output cap at or under this leaves it no room.
+ * Anthropic's legacy extended-thinking floor. A fixed thinking budget
+ * must fit below `max_tokens`; newer adaptive models may still think
+ * when asked to disable it.
  */
 const CLAUDE_THINKING_FLOOR_TOKENS = 1024;
 
@@ -375,8 +373,8 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
   const opened = claudeCodingReasoning(spec).level;
   const codingEffort = opened === "default" ? undefined : opened;
   // The spec's output cap, in the client's own terms, and the one backend
-  // rule it brings: extended thinking needs a budget below the cap, so a cap
-  // at or under the thinking floor turns thinking off.
+  // rule it brings: a legacy thinking budget must fit below the cap, so a
+  // cap at or under that floor requests thinking off.
   const maxOutput = request?.maxOutputTokens;
   const outputCap =
     maxOutput !== undefined ? { CLAUDE_CODE_MAX_OUTPUT_TOKENS: String(maxOutput) } : {};
@@ -493,7 +491,14 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     cwd: spec.cwd,
     // The machine's default login and nothing ambient, none of the person's
     // Claude notes, plus the output bound.
-    env: { ...claudeSessionEnv(input.env), ...CLAUDE_SESSION_ENV, ...outputCap },
+    env: {
+      ...claudeSessionEnv(input.env),
+      ...CLAUDE_SESSION_ENV,
+      // A one-shot without an explicit bound uses the client's allowance,
+      // never an answer-only cap inherited from the shell (INF-1451).
+      CLAUDE_CODE_MAX_OUTPUT_TOKENS: undefined,
+      ...outputCap,
+    },
     settings: CLAUDE_COMPACTION_SETTINGS,
     // The person's own Claude configuration is not the app's.
     settingSources: [],
@@ -513,8 +518,8 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     strictMcpConfig: true,
     ...(request?.maxModelTurns !== undefined ? { maxTurns: request.maxModelTurns } : {}),
     ...(level !== "off" ? { effort: level } : {}),
-    // Whatever the model's default: no extended thinking when the output
-    // cap leaves it no room.
+    // Request no extended thinking when an explicit cap leaves it no room.
+    // Newer models may still think; the question preset supplies no cap.
     ...(thinks ? {} : { thinking: { type: "disabled" as const } }),
     // One bounded call leaves no transcript behind.
     persistSession: false,

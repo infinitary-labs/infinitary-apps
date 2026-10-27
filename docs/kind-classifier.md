@@ -60,11 +60,14 @@ A teach task on the personal workspace has no gate to ship through, so its own t
 
 ## The call
 
-The session comes from the binding's backend (`docs/decision-models.md`): a Pi-served model gets the Pi factory below, a Claude-served one the Claude factory (W1 S10, `src/core/claude/session.ts`: one query to the machine's own client, no tools, one turn, no thinking and the same 64-token output bound, no transcript), so a machine with only Claude signed in classifies too.
+The session comes from the binding's backend (`docs/decision-models.md`): a Pi-served model gets the Pi factory below, a Claude-served one the Claude factory (W1 S10, `src/core/claude/session.ts`: one query to the machine's own client, no tools, one turn, low effort, no transcript), so a machine with only Claude signed in classifies too.
+Claude classification keeps the client's model-specific output allowance rather than the Pi path's 64-token cap: Claude's output includes hidden thinking, which Sonnet 5.5 can use even when the session requests thinking disabled (INF-1451).
+The question still asks for exactly one kind, and the adapter's 15-second deadline still covers the whole call.
+No classification is re-asked to repair an empty reply; the original request has room to finish its thinking and return the word.
 
 The question's session is a one-shot on the one session contract (`questionSessionSpec`, `src/core/decisions/questionSession.ts`).
 On Pi, `createPiSessionFactory` (`src/core/pi/session.ts`) opens it in the removed consult factory's shape: `SessionManager.inMemory` so there is no session file and nothing to resume, compaction off, one retry, built-ins off, **no custom tools at all**, and the model's output clamped to 64 tokens.
-The classifier cannot read, cannot call anything, and cannot say more than a word.
+The classifier cannot read or call anything, and its instruction asks for one word.
 `classifierSession.realSession.test.ts` pins that call shape the way the other three personas' contract tests pin theirs.
 
 The instruction is `buildKindClassifierInstruction` in `piResources.ts`, pinned by the kind question as its `adapterInstruction` (S7a) so the served bytes cannot drift when the class moves around it: byte-stable and interpolation-free, so the provider's prefix cache holds and a recorded verdict is attributable to an exact question.

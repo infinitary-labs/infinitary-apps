@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "layout-rejection-waits",
+      "reason": "Test-only: check fixed layout rejections immediately while preserving settling waits for product layouts."
+    }
+  ]
+}

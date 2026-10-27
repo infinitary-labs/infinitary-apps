@@ -54,25 +54,30 @@ export async function expectClearOf(
   ...controls: Locator[]
 ): Promise<void> {
   await expect(surface).toBeVisible();
-  await expect
-    .poll(async () => {
-      const box = (await surface.count()) === 0 ? null : await surface.boundingBox();
-      if (!box) return ["surface missing"];
-      const window = await page.evaluate(() => ({
-        x: 0,
-        y: 0,
-        width: innerWidth,
-        height: innerHeight,
-      }));
-      const losses = within(box, window);
-      for (const [index, control] of controls.entries()) {
-        const other = (await control.count()) === 0 ? null : await control.boundingBox();
-        if (!other) losses.push(`control ${index} missing`);
-        else if (intersects(box, other)) losses.push(`covers control ${index}`);
-      }
-      return losses;
-    })
-    .toEqual([]);
+  await expect.poll(() => clearOfLosses(page, surface, ...controls)).toEqual([]);
+}
+
+/** The current geometry's losses, without waiting for the layout to settle. */
+export async function clearOfLosses(
+  page: Page,
+  surface: Locator,
+  ...controls: Locator[]
+): Promise<string[]> {
+  const box = (await surface.count()) === 0 ? null : await surface.boundingBox();
+  if (!box) return ["surface missing"];
+  const window = await page.evaluate(() => ({
+    x: 0,
+    y: 0,
+    width: innerWidth,
+    height: innerHeight,
+  }));
+  const losses = within(box, window);
+  for (const [index, control] of controls.entries()) {
+    const other = (await control.count()) === 0 ? null : await control.boundingBox();
+    if (!other) losses.push(`control ${index} missing`);
+    else if (intersects(box, other)) losses.push(`covers control ${index}`);
+  }
+  return losses;
 }
 
 /**

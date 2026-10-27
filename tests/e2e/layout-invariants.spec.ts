@@ -1,8 +1,8 @@
 import { expect, test } from "@playwright/test";
 import { launchApp } from "./launch";
-import { expectClearOf } from "./layout";
+import { clearOfLosses, expectClearOf } from "./layout";
 
-// Synthetic boxes exercise the helper's promise, not a product layout.
+// INF-1599: fixed boxes check immediate rejection, not a product layout's settling.
 test("the layout invariant accepts any clear side and refuses overlap, escape and a missing control", async () => {
   const launched = await launchApp();
   try {
@@ -38,14 +38,14 @@ test("the layout invariant accepts any clear side and refuses overlap, escape an
       console.log("Layout invariant accepts clear placement:", { left, top });
     }
     await move(200, 200);
-    await expect(expectClearOf(page, surface, control)).rejects.toThrow(/covers control 0/);
+    expect(await clearOfLosses(page, surface, control)).toEqual(["covers control 0"]);
     console.log("Layout invariant refuses a surface covering its control");
     await move(-20, 200);
-    await expect(expectClearOf(page, surface, control)).rejects.toThrow(/left by/);
+    expect(await clearOfLosses(page, surface, control)).toEqual([expect.stringMatching(/left by/)]);
     console.log("Layout invariant refuses a surface outside the window");
     await move(100, 200);
     await control.evaluate((element) => element.remove());
-    await expect(expectClearOf(page, surface, control)).rejects.toThrow(/control 0 missing/);
+    expect(await clearOfLosses(page, surface, control)).toEqual(["control 0 missing"]);
     console.log("Layout invariant refuses a missing control");
   } finally {
     await launched.close();

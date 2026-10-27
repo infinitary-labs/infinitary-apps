@@ -292,6 +292,7 @@ import {
 } from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
 import {
+  type BackgroundJobName,
   type ClientBackgroundTask,
   type ControlProfile,
   LOCAL_MACHINE_ID,
@@ -474,6 +475,7 @@ import {
   rowAttachments,
   systemWaitWake,
   type TypedWake,
+  unnamedBackgroundWork,
   type WakeBody,
   type WakeChoice,
   type WakeFacts,
@@ -1012,6 +1014,8 @@ type TaskRuntime = {
   clientJobs?: number;
   /** When the client's background work last went from none to some: the job bound's clock. */
   clientJobsSince?: number;
+  /** The longest-running job of that work, when its runner names it (a computer's Pi shell). */
+  clientJob?: BackgroundJobName;
   /**
    * The background tasks this Mac's Claude client runs for the crewmate, by
    * id, each with what the model said it is and when it was first seen: the
@@ -6207,12 +6211,14 @@ export class CrewSupervisor {
   private follow(task: TaskRuntime, session: ModelSession): () => void {
     task.clientJobs = undefined;
     task.clientJobsSince = undefined;
+    task.clientJob = undefined;
     task.clientTasks.clear();
     return session.subscribe((event) => {
       if (event.type === "background_work_changed") {
         task.clientJobs = event.count;
         task.clientJobsSince =
           (event.count ?? 0) > 0 ? (task.clientJobsSince ?? this.now()) : undefined;
+        task.clientJob = (event.count ?? 0) > 0 ? event.job : undefined;
         if (event.count === undefined) this.clientEnded(task);
         else if (event.tasks) this.keepClientTasks(task, event.tasks);
         this.broadcastCrewCounts();
@@ -12749,9 +12755,10 @@ export class CrewSupervisor {
   }
 
   /**
-   * When a client-run backend (Claude) last reported background work, if it
-   * has any now: the host cannot see those commands, so the client's own
-   * count stands in for its job list, bounded the same way.
+   * When a client-run backend (Claude, or any conversation a computer that
+   * runs work holds) last reported background work, if it has any now: the
+   * host cannot see those commands, so the reported count stands in for its
+   * job list, bounded the same way.
    */
   private clientJobStart(taskId: string): number | undefined {
     const runtime = this.tasks.get(taskId);
@@ -12759,14 +12766,25 @@ export class CrewSupervisor {
     return runtime.clientJobsSince ?? this.now();
   }
 
-  /** The host's longest-running job, or the client's work when it has no job list. */
+  /**
+   * The host's longest-running job, or the client's work when it has no job
+   * list: by the job its runner named (INF-1536), else by where it runs - a
+   * Claude client here, or the computer that runs the task's work.
+   */
   private oldestJob(taskId: string): RunningJob | undefined {
     const host = this.options.oldestRunningJob?.(taskId);
     const since = this.clientJobStart(taskId);
     if (since === undefined || (host && host.startedAt <= since)) return host;
+    const named = this.tasks.get(taskId)?.clientJob;
+    if (named) return { jobId: named.id, command: named.command, startedAt: since };
+    const machine = this.machineOf(taskId);
     return {
       jobId: `client-${taskId}`,
-      command: "background work in the Claude client",
+      command: unnamedBackgroundWork(
+        machine === LOCAL_MACHINE_ID
+          ? undefined
+          : (this.options.machines?.nameOf(machine) ?? `another ${COMPUTER.one}`),
+      ),
       startedAt: since,
     };
   }

@@ -294,7 +294,11 @@ export class PlacedSession implements ModelSession {
         await this.ended(event);
         return;
       case "background_work_changed":
-        this.emit({ type: "background_work_changed", count: event.count });
+        this.emit({
+          type: "background_work_changed",
+          count: event.count,
+          ...(event.job ? { job: event.job } : {}),
+        });
         return;
       case "continuation_ended": {
         const { interrupted, ...ended } = event;

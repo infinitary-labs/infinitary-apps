@@ -282,6 +282,7 @@ export async function startConversations(options: {
     // Bound to an account of its own, a conversation's sign-ins are loaded.
     accounts: ownAccounts(async () => options.signedIn?.(), log),
     runningJobCount: (task) => jobs.runningJobCount(task),
+    oldestRunningJob: (task) => jobs.oldestRunningJob(task),
     killJobs: (task) => jobs.killForOwner(task),
     ...(options.probeMedia ? { probeMedia: options.probeMedia } : {}),
     ...(options.probeTypeface ? { probeTypeface: options.probeTypeface } : {}),

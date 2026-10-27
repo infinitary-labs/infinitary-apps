@@ -223,6 +223,9 @@ export type SessionSpec = {
 /** A background task a backend's own client runs (`background_work_changed`). */
 export type ClientBackgroundTask = { id: string; description: string };
 
+/** A running background job out of the host's sight, as its runner names it (`background_work_changed`). */
+export type BackgroundJobName = { id: string; command: string };
+
 /**
  * What a session tells its owner. Only the `FmEvent`s are ever broadcast;
  * the rest stay with the owner.
@@ -241,6 +244,12 @@ export type SessionEvent =
        * end or a stop cuts off (`CrewSupervisor`, `SessionHost`).
        */
       tasks?: readonly ClientBackgroundTask[];
+      /**
+       * The longest-running job of that work, when whoever runs it names
+       * it (a computer that runs work, for its Pi shell's jobs): by its id
+       * and the command it runs, so the host's words about the job name it.
+       */
+      job?: BackgroundJobName;
     }
   | FmEvent
   /** One model turn closed, with its closing words when it said any. */

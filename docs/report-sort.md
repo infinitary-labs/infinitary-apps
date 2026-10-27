@@ -241,6 +241,7 @@ A job that ends first, or any other turn, clears it with the rest of the report'
 A turn that ends with a job running, no `check_back` and no wait on the captain or finished work gets one steer asking for a time, once per job (`check-back-ask`, `CrewSupervisor.askForCheckBack`).
 A check-back later than the bound never silences it: the job bound stays the backstop.
 `crew_status` and the first mate's crew line carry the oldest job's age and command (`job`), how long ago the crewmate last reported (`reported`) and the check-back (`check_back`), so the first mate reads durations rather than guessing them.
+A job this Mac cannot see is named as its runner names it: a computer that runs work names its Pi shell's oldest job with the count (`docs/helper.md`), and work no one named is a Claude client's here or that computer's by name (`unnamedBackgroundWork`).
 
 **A provider outage is not idleness.**
 A turn the provider failed releases its guidance for the honest retry (`docs/inbox.md`), so the row stays deliverable and the task reads as moving; the retry's own wakes (the first failure, fifteen minutes still down, recovered) are the first mate's news of it.

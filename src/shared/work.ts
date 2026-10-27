@@ -222,6 +222,11 @@ export const placedEventSchema = z.union([
     z.object({
       type: z.literal("background_work_changed"),
       count: z.number().int().nonnegative().optional(),
+      /**
+       * A Pi conversation's longest-running shell job there, by its id and
+       * command, while the count is above zero (`background-job-named.md`).
+       */
+      job: z.object({ id: z.string().min(1), command: z.string() }).optional(),
     }),
     z.object({ type: z.literal("turn_closed"), text: z.string().optional() }),
     z.object({ type: z.literal("request_started") }),

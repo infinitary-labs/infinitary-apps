@@ -1594,6 +1594,15 @@ export function jobBoundOnce(job: { jobId: string; startedAt: number }): string 
   return `job-bound:${job.jobId}:${job.startedAt}`;
 }
 
+/**
+ * Background work no one named, as the words about a job call it: by where
+ * it runs - a Claude client here, or the computer that runs the task's work,
+ * whatever its backend there (INF-1536).
+ */
+export function unnamedBackgroundWork(computer?: string): string {
+  return computer ? `background work on ${computer}` : "background work in the Claude client";
+}
+
 /** A running job in a steer's words: its age and its command. */
 function jobWords(job: { command: string; runMs: number }): string {
   return `background job is still running after ${formatDurationShort(job.runMs)}: "${job.command}".`;

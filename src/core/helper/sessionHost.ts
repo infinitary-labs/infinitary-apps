@@ -133,6 +133,8 @@ export type SessionHostOptions = {
   accounts?: OwnAccounts;
   /** This computer's own Pi shell jobs; Claude reports its own background work. */
   runningJobCount?: (task: string) => number;
+  /** The task's longest-running Pi shell job, which the count names to the home. */
+  oldestRunningJob?: (task: string) => { jobId: string; command: string } | undefined;
   /** Ends what a task's shell left running, when its conversation closes. */
   killJobs?: (task: string) => void;
   /**
@@ -239,6 +241,8 @@ type Held = {
   backend: SessionBackend | null;
   /** The last Pi shell count sent, so another task's job does not repeat it. */
   jobs: number | undefined;
+  /** The job that count last named, so a change of its longest-running job is sent too. */
+  jobId: string | undefined;
   /**
    * The background tasks the open conversation's own client runs now (a
    * Claude conversation's), each by its row in the task's job rows, so an
@@ -339,9 +343,18 @@ export class SessionHost {
   private recordJobs(held: Held, snapshot = false): void {
     if (!held.session || held.state.closed || held.backend !== "pi") return;
     const count = this.options.runningJobCount?.(held.task);
-    if (count === undefined || (!snapshot && count === held.jobs)) return;
+    if (count === undefined) return;
+    // The home cannot see these jobs, so the count names the oldest one
+    // for its words about it (`background-job-named.md`).
+    const oldest = count > 0 ? this.options.oldestRunningJob?.(held.task) : undefined;
+    if (!snapshot && count === held.jobs && oldest?.jobId === held.jobId) return;
     held.jobs = count;
-    this.record(held, { type: "background_work_changed", count });
+    held.jobId = oldest?.jobId;
+    this.record(held, {
+      type: "background_work_changed",
+      count,
+      ...(oldest ? { job: { id: oldest.jobId, command: oldest.command } } : {}),
+    });
   }
 
   /**
@@ -1512,6 +1525,7 @@ export class SessionHost {
       speed: false,
       backend: null,
       jobs: undefined,
+      jobId: undefined,
       clientTasks: new Map(),
       account: undefined,
       renewal: undefined,

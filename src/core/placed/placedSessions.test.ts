@@ -93,7 +93,8 @@ import { READ_HOUR_MS } from "../integrations/outsideReads";
 import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
 import { crewmateRenewedNote, crewmateRestartText } from "../orchestrator/crewSession";
-import { renderWake } from "../orchestrator/wakes";
+import { JOB_BOUND_MS } from "../orchestrator/idleLadder";
+import { renderWake, unnamedBackgroundWork } from "../orchestrator/wakes";
 import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
@@ -367,8 +368,10 @@ async function world(
     /**
      * Its crewmates' long commands are background jobs there, kept as the
      * work mode keeps them (`startConversations`); otherwise Pi's own bash.
+     * `counted`: it tells the home how many run but names none, as a
+     * computer built before `background-job-named` does.
      */
-    jobs?: boolean;
+    jobs?: boolean | "counted";
     /** The contract the computer's hello names; this build's own unless a test stands in an older one. */
     protocolVersion?: string;
     /** The contract changes the computer's hello lists; this build's own unless a test stands in an older one. */
@@ -504,6 +507,9 @@ async function world(
           ...(jobs
             ? {
                 runningJobCount: (task: string) => jobs.runningJobCount(task),
+                ...(options.jobs === "counted"
+                  ? {}
+                  : { oldestRunningJob: (task: string) => jobs.oldestRunningJob(task) }),
                 killJobs: (task: string) => jobs.killForOwner(task),
               }
             : {}),
@@ -1735,6 +1741,64 @@ describe("a task that runs on a computer that runs work", () => {
       claude.endClient();
       heldCall.open();
     }
+  });
+
+  // INF-1536: INF-1534's Pi crewmate there, whose Gmail read became a
+  // background job, was asked when it would look again at "background work
+  // in the Claude client".
+  describe("words about a Pi crewmate's background job there (INF-1536)", () => {
+    /** Its crewmate ends a turn with `sleep 600` running as a job there; the check-back ask it got. */
+    async function endTurnWithJob(at: Awaited<ReturnType<typeof world>>, taskId: string) {
+      const answered = "I pick up its result when it ends.";
+      model([
+        {
+          tools: [
+            {
+              name: "bash",
+              args: { command: "sleep 600", background: true, description: "Run the long suite" },
+            },
+          ],
+        },
+        { text: "The suite runs as a background job; I will pick up its result." },
+        { text: answered },
+      ]);
+      const requests = api.requests.length;
+      await at.start(taskId);
+      await expect.poll(() => at.home().tasks.get(taskId)?.outcome).toBe(answered);
+      // The check-back ask is the newest thing its turn after the job's receipt was told.
+      const ask = JSON.stringify(api.requests[requests + 2]?.body.messages?.at(-1) ?? null);
+      expect(ask).toContain("Report again with check_back");
+      return ask;
+    }
+
+    /** The words of a job's command in a steer, as its JSON request carries them. */
+    const quoted = (command: string) => JSON.stringify(`: "${command}".`).slice(1, -1);
+
+    it("names the job's command in the check-back ask, the crew line and the job bound's wake", async () => {
+      const at = await world(undefined, { jobs: true });
+      const ask = await endTurnWithJob(at, "t-job-named");
+      const home = at.home();
+      expect(ask).toContain(quoted("sleep 600"));
+      expect(home.supervisor.crewStatus("t-job-named")[0]?.job).toMatch(/: sleep 600$/);
+      // Past the bound, the first mate hears of the same job.
+      const wakes = home.wakes.length;
+      home.supervisor.reconcileIdle(now() + JOB_BOUND_MS);
+      expect(
+        home.wakes.slice(wakes).find((wake) => wake.facts?.kind === "job-bound")?.facts,
+      ).toMatchObject({ kind: "job-bound", command: "sleep 600" });
+    });
+
+    it("names the computer, never the Claude client, when that computer counts its jobs but names none", async () => {
+      const at = await world(undefined, { jobs: "counted" });
+      const computer = at
+        .pairing()
+        .list()
+        .find((device) => device.id === at.deviceId)?.name;
+      expect(computer).toBeDefined();
+      const ask = await endTurnWithJob(at, "t-job-counted");
+      expect(ask).toContain(quoted(unnamedBackgroundWork(computer)));
+      expect(ask).not.toContain(unnamedBackgroundWork());
+    });
   });
 
   // INF-367: a computer's restart reports each background job it cut off

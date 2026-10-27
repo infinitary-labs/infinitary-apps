@@ -16,6 +16,7 @@ import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
 import { takeCrewPlace } from "./crew-place.ts";
 import { startPhoneActivity } from "./phone-activity.ts";
 import { runEveryCheck } from "./phone-checks.ts";
+import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
 import { PHONE_PARTS, type PhoneDevice, partSelection, phoneExecutionArguments, phoneJobs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
@@ -63,7 +64,7 @@ const crewPlace = values.xctestrun ? { place: undefined, close() {} }
   : await takeCrewPlace("phone", `test:phone ${devices.join(" and ")}: ${jobs.length} part(s)`);
 // Capture the account home before the disposable app/test HOME replaces it.
 const invokingHome = userInfo().homedir;
-const root = scratchDir("infinitary-native-");
+const root = scratchDir(SCRATCH_PREFIX);
 const home = join(root, "home");
 mkdirSync(home);
 process.env.HOME = home;
@@ -202,7 +203,7 @@ const startSimulator = async (device: PhoneDevice): Promise<Lane> => {
     .sort((a: { version: string }, b: { version: string }) => b.version.localeCompare(a.version, undefined, { numeric: true }))[0];
   const kind = catalog.devicetypes.find((item: { name: string }) => item.name === (device === "ipad" ? "iPad Pro 11-inch (M4)" : "iPhone 16"));
   if (!runtime || !kind) throw new Error("Install an iOS 18 or newer simulator runtime and the requested device type in Xcode");
-  const owned = (await run("xcrun", ["simctl", "create", "Infinitary isolated test", kind.identifier, runtime.identifier])).trim();
+  const owned = (await run("xcrun", ["simctl", "create", GATE_SIMULATOR, kind.identifier, runtime.identifier])).trim();
   ownedSimulators.add(owned);
   // CoreSimulator is a host service, not a signing operation. This new device owns its own Keychain.
   const booted = new Date();
@@ -397,6 +398,9 @@ let failures: string[] = [];
 try {
   // A part skips these: its gate checked them once for every part.
   if (!values.xctestrun) {
+    // INF-1596: a killed run never deleted its simulator or scratch folder; neither stops this gate.
+    await removePhoneLeftovers(run, env).catch((error: Error) =>
+      console.log(`Leftovers of earlier phone checks were not removed: ${error.message}`));
     // A failed check here is reported, and the simulator tests still run (INF-663).
     failures = await runEveryCheck([
       () => run("node", ["scripts/generate-phone-contract.ts", "--check"]),

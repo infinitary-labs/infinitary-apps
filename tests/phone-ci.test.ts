@@ -194,6 +194,8 @@ describe("the native pull-request gate", () => {
     // INF-663: the gate's checks before its simulator tests.
     "scripts/phone-checks.ts",
     "scripts/phone-activity.ts",
+    // INF-1596: the gate's start removes what killed runs left.
+    "scripts/phone-leftovers.ts",
     "scripts/phone-test-plan.ts",
   ])("runs the actual workflow condition when %s changes", (path) => {
     expect(eligible(phoneDecision([path]).run)).toBe("true");

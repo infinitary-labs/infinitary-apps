@@ -11,6 +11,8 @@ const INPUTS = [
   "ios/", "scripts/generate-phone-cards.ts", "scripts/generate-phone-contract.ts", "scripts/phone-contract-shapes.ts",
   ".github/workflows/phone.yml", "scripts/test-phone.ts", "tests/helpers/phoneHome.ts", "tests/helpers/phoneKeyboard.ts",
   "scripts/phone-checks.ts", "scripts/phone-activity.ts",
+  // INF-1596: the sweep of earlier runs' simulators and scratch folders at the gate's start.
+  "scripts/phone-leftovers.ts",
   // INF-1066: native geometry generation and the scene journey's real home fixture.
   "scripts/generate-phone-scene.ts", "tests/helpers/phoneScene.ts", "scripts/phone-recording.ts",
   "tests/helpers/phoneLogs.ts", "tests/helpers/phoneStacks.ts",

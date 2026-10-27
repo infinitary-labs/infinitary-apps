@@ -426,6 +426,7 @@
         "!tests/install-clones.test.ts",
         "!tests/local-codesign.test.ts",
         "!tests/mac-check-lock.test.ts",
+        "!tests/crew-place.test.ts",
         "!tests/phone-activity.test.ts",
         "!tests/wait-window.test.ts",
         "!tests/load-clock.test.ts",

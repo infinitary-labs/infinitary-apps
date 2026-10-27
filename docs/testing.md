@@ -170,6 +170,17 @@ Inside CI (`CI` is set) the heavy checks always run, because the Mac mini's runn
 A value other than `ci` or `local` refuses rather than guess.
 `tests/checks-mode.test.ts` runs each command with a scratch home's git settings.
 
+## A local heavy run's crew place
+
+The Mac mini is always busy with the fleet's checks, so a local heavy run waits in the placement service's one line for a crew place rather than for a quieter Mac (INF-1541, the captain's "the mac will always be busy given how many other things our fleet needs to run").
+A local `pnpm test:phone` gate and every local `playwright test` run, repeats included, ask `scripts/crew-place.ts` for one before their heavy work: the gate before it builds, a journey run in the e2e global setup before any test starts.
+The client connects to the account's real `Library/Caches/infinitary-ci/crew-places.sock` (`INFINITARY_CREW_PLACE_SOCKET` overrides it), names only what runs (`phone` or `journeys`), prints each place in line it is told, and holds the place while its connection lives, so a run that ends or dies gives it back.
+The service decides what each kind costs and where it ranks beside the checks; the paired contract is dotfiles-private's fm-placer crew socket (DOP-112).
+With no service listening, as on any computer but the Mac mini, the run starts at once; inside CI the job already holds its runner's place and asks for none.
+A refused request fails the run with the service's reason; a service restart is asked again, and a run it had granted is counted again at once.
+A phone part the gate starts rides the gate's place.
+`tests/crew-place.test.ts` drives the client, a journey run and the phone gate against a stand-in service.
+
 ## A main repair's priority label
 
 Our own runners queue a main repair's checks ahead of other work when its pull request carries the `fixes-main` label.

@@ -85,6 +85,12 @@ A pull request's journeys and journeys on request end their run at 75 minutes (P
 The full Mac suite in `verify.yml` ends its run at 150 minutes and its command at 180.
 The Mac command's 90 minutes include the build and run; it does not wait for a command lease.
 
+## Load never gates a run
+
+The Mac mini is always busy with the fleet's other work, so no crewmate waits for its load to drop and no crewmate skips or defers a run because of load (INF-1541, the captain: "the mac will always be busy given how many other things our fleet needs to run").
+A check runs now, at whatever the load is, and a number the crewmate picked from one loaded reading, such as "start below a one-minute load of 28", is not a project rule.
+A run that fails or stalls under load is diagnosed from its own logs and fixed in the code that does not count the end of the work it waits for; it is not repeated until the load happens to be low.
+
 ## Notes
 
 Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line pointer to each.

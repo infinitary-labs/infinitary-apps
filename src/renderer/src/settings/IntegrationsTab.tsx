@@ -1,3 +1,4 @@
+import type { AutomationList, AutomationRule } from "@shared/automation";
 import { FORGE_SECTION_WORDS, type ForgesView } from "@shared/forges";
 import {
   INBOX_WORDS,
@@ -26,9 +27,17 @@ import { useCopyCode } from "../accounts/CopyCode";
 import { useShellStore } from "../app/store";
 import { Badge, Button, Input, RowMenu, StatusDot, type StatusDotTone, Switch } from "../design";
 import "./integrations.css";
+import { appReadExecutor } from "../plugins/reads/appExecutor";
 import { forgeRowView, HostChip, plusIcon, SignInAside, useForgeHostSignIn } from "./ForgeSection";
 import { OutsideDataRow } from "./OutsideDataRow";
-import { LABEL_GAP, ROW_GAP, SECTION_GAP, SectionLabel, SettingError } from "./settingRows";
+import {
+  LABEL_GAP,
+  ROW_GAP,
+  SECTION_GAP,
+  SectionLabel,
+  SettingError,
+  SettingRow,
+} from "./settingRows";
 import "../accounts/connectChips.css";
 import "./forges.css";
 
@@ -57,11 +66,13 @@ import "./forges.css";
  * connections (the captain's reply on INF-1214, moved by INF-1474): what
  * it is and a switch, off until the person turns it on
  * (docs/integrations.md, "The inbox"); on, it shows the line a program
- * runs to send a note and, behind More, a link for the short name and the
- * rule that tells the first mate, which turning the inbox on adds and
- * turns on (the captain's word on INF-1214). The Data section at the foot
- * holds the deletes of what the first mate and crew read, Delete Gmail and
- * Calendar content today, whether or not Google is connected (the captain:
+ * runs to send a note, a link for the short name, and whether a rule tells
+ * the first mate, which turning the inbox on first adds and turns on (the
+ * captain's word on INF-1214). The switch is the inbox's pause, and its
+ * delete is in the Data section (INF-1567, the captain's direction C). The
+ * Data section at the foot holds the deletes of what the first mate and
+ * crew read, Delete Gmail and Calendar content whether or not Google is
+ * connected, and the inbox's notes while it is kept (the captain:
  * "maybe all data deletion stuff gets put into another "Data" section at
  * the bottom of the integrations tab"). Every change here goes through the
  * same channels the first mate's `app_change` lines reach.
@@ -89,6 +100,8 @@ export function IntegrationsTab() {
   const pending = useShellStore((s) => s.pendingForgeSignIn);
   // The words from outside this build keeps for a while, deleted in the Data section below.
   const [kept, setKept] = useState<readonly KeptOutsideData[]>([]);
+  // The rules on the inbox, so its box says whether one tells the first mate; null until read.
+  const [inboxRules, setInboxRules] = useState<AutomationRule[] | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -108,6 +121,28 @@ export function IntegrationsTab() {
       offForges();
     };
   }, []);
+
+  useEffect(
+    () =>
+      appReadExecutor().subscribe(
+        "automation.list",
+        {},
+        {
+          onValue: (value) => {
+            const list = value as AutomationList;
+            // Unreadable is not empty: the box says nothing it cannot tell.
+            if (list.state !== "ready") return;
+            setInboxRules(
+              list.rules.filter(
+                (rule) => rule.spec.kind === "event" && rule.spec.integration === "inbox",
+              ),
+            );
+          },
+          onError: () => {},
+        },
+      ),
+    [],
+  );
 
   useEffect(() => {
     let live = true;
@@ -403,19 +438,27 @@ export function IntegrationsTab() {
       </div>
       <InboxSection
         inbox={inbox}
+        rules={inboxRules}
         loaded={loaded}
-        onTurn={(on) =>
-          on
-            ? turnOnInbox()
-            : change(() => window.infinitary.integrations.remove(inbox?.id ?? "inbox"))
-        }
+        onTurn={(on) => {
+          // The switch is the inbox's pause once it is kept (INF-1567).
+          if (inbox) configure(inbox.id, { paused: !on });
+          else if (on) turnOnInbox();
+        }}
         onLink={() => change(() => window.infinitary.integrations.linkInbox())}
       />
-      {kept.length > 0 && (
+      {(kept.length > 0 || inbox) && (
         // A section is 32 above, and the tab's column already spaces each child by 12.
         <div data-integrations-data="" style={{ marginTop: `calc(${SECTION_GAP} - ${ROW_GAP})` }}>
           <SectionLabel>{INTEGRATIONS_WORDS.data}</SectionLabel>
           <OutsideDataRow kept={kept} />
+          {inbox && (
+            <InboxDeleteRow
+              onDelete={() =>
+                window.infinitary.integrations.remove(inbox.id).then((next) => setView(next))
+              }
+            />
+          )}
         </div>
       )}
     </section>
@@ -717,41 +760,58 @@ function IntegrationActions({
  * captain's reply on INF-1214: "it should be its own section, and default
  * it's off, and we tell the user what it is, and that they can turn it
  * on"): its name, what it is and a switch, then, while it is on, the line
- * to copy, one note, and More.
+ * to copy, one note, and whether a rule tells the first mate. The switch is
+ * the connection's pause (INF-1567, direction C): off, the notes and the key
+ * stay and scripts get an error.
  */
 function InboxSection({
   inbox,
+  rules,
   loaded,
   onTurn,
   onLink,
 }: {
   inbox: IntegrationView | undefined;
+  rules: readonly AutomationRule[] | null;
   loaded: boolean;
   onTurn: (on: boolean) => void;
   onLink: () => void;
 }) {
+  const on = inbox !== undefined && !inbox.paused;
   return (
-    <div className="fm-forges-box fm-integrations-inbox" data-inbox-section={inbox ? "on" : "off"}>
+    <div className="fm-forges-box fm-integrations-inbox" data-inbox-section={on ? "on" : "off"}>
       <div className="fm-integrations-inbox-head">
         <div>
           <div className="fm-integrations-inbox-title">{INBOX_WORDS.title}</div>
           <p className="fm-integrations-door-lead">{INBOX_WORDS.intro}</p>
         </div>
-        <Switch
-          checked={inbox !== undefined}
-          disabled={!loaded}
-          aria-label={INBOX_WORDS.toggle}
-          onChange={onTurn}
-        />
+        <Switch checked={on} disabled={!loaded} aria-label={INBOX_WORDS.toggle} onChange={onTurn} />
       </div>
-      {loaded && !inbox && (
-        <p className="fm-integrations-door-note" data-inbox-off="">
-          {INBOX_WORDS.off}
+      {loaded && !on && (
+        <p className="fm-integrations-door-note" data-inbox-off={inbox ? "kept" : "new"}>
+          {inbox ? `${INBOX_WORDS.offKept} ${INBOX_WORDS.off}` : INBOX_WORDS.off}
         </p>
       )}
-      {inbox?.door && <InboxDoorPanel door={inbox.door} onLink={onLink} />}
+      {on && inbox.door && <InboxDoorPanel door={inbox.door} rules={rules} onLink={onLink} />}
     </div>
   );
+}
+
+/**
+ * Whether a rule tells the first mate of a note (INF-1567, the captain's
+ * q4: "the box then never says told at once when it is false"): a
+ * turned-on rule listens; else one paused in Automation, named; else none.
+ */
+function inboxRuleLine(rules: readonly AutomationRule[]): {
+  state: "told" | "paused" | "none";
+  words: string;
+} {
+  if (rules.some((rule) => rule.state === "enabled" && rule.stopped === undefined))
+    return { state: "told", words: INBOX_WORDS.told };
+  const paused = rules.find((rule) => rule.state === "paused");
+  if (paused)
+    return { state: "paused", words: INBOX_WORDS.rulePaused(paused.name ?? INBOX_WORDS.ruleName) };
+  return { state: "none", words: INBOX_WORDS.noRule };
 }
 
 /**
@@ -759,11 +819,21 @@ function InboxSection({
  * captain's wording B, shown whole on their reply to INF-1475): the line a
  * program runs, in full and copied with one press, and one note; then the
  * short name's link where the folder takes one or already holds it (the
- * captain's q4: nothing where it cannot be made), and which rule to pause.
+ * captain's q4: nothing where it cannot be made); then whether a rule
+ * tells the first mate, and what off does (INF-1567).
  */
-function InboxDoorPanel({ door, onLink }: { door: IntegrationDoorView; onLink: () => void }) {
+function InboxDoorPanel({
+  door,
+  rules,
+  onLink,
+}: {
+  door: IntegrationDoorView;
+  rules: readonly AutomationRule[] | null;
+  onLink: () => void;
+}) {
   const { state, copy, status } = useCopyCode(door.line, true);
   const { link } = door;
+  const rule = rules && inboxRuleLine(rules);
   return (
     <div className="fm-integrations-door" data-inbox-door={link.state}>
       <div className="fm-integrations-door-line">
@@ -798,8 +868,59 @@ function InboxDoorPanel({ door, onLink }: { door: IntegrationDoorView; onLink: (
           )}
         </div>
       )}
-      <p className="fm-integrations-door-lead">{INBOX_WORDS.ruleLead(INBOX_WORDS.ruleName)}</p>
+      <p className="fm-integrations-door-lead" data-inbox-rule={rule?.state ?? "unread"}>
+        {rule ? `${rule.words} ` : ""}
+        {INBOX_WORDS.offKeeps}
+      </p>
     </div>
+  );
+}
+
+/**
+ * The inbox's delete, in the Data section (INF-1567, direction C): every
+ * note the person's scripts sent and the inbox's key go, and the inbox is
+ * off. Armed on the first press and run on the second, as the Gmail and
+ * Calendar content's delete is.
+ */
+function InboxDeleteRow({ onDelete }: { onDelete: () => Promise<void> }) {
+  const [armed, setArmed] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const remove = () => {
+    if (deleting) return;
+    if (!armed) {
+      setArmed(true);
+      return;
+    }
+    setDeleting(true);
+    setError(null);
+    onDelete()
+      .catch((caught: unknown) =>
+        setError(caught instanceof Error ? caught.message : String(caught)),
+      )
+      .finally(() => {
+        setDeleting(false);
+        setArmed(false);
+      });
+  };
+  return (
+    <SettingRow
+      id="delete-inbox-notes"
+      title={INBOX_WORDS.deleteTitle}
+      description={INBOX_WORDS.deleteLead}
+      error={error}
+      control={
+        <Button
+          variant={armed ? "danger" : "ghost"}
+          size="sm"
+          onClick={remove}
+          pending={deleting}
+          pendingLabel={INBOX_WORDS.pending}
+        >
+          {armed ? INBOX_WORDS.confirm : INBOX_WORDS.delete}
+        </Button>
+      }
+    />
   );
 }
 

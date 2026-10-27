@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "inbox-switch-pauses",
+      "kind": "improvement",
+      "area": "settings",
+      "title": "The Infinitary Inbox switch pauses it, and Delete is in Data",
+      "body": "In Settings, Integrations, turning the Infinitary Inbox off now keeps its saved notes and stops your scripts until you turn it back on, with the same line. Deleting the notes is a confirmed Delete in the Data section. The box also says when its rule is paused or deleted in Automation, so it never says your first mate is told when it is not.",
+      "picture": {
+        "dark": "inbox-switch-pauses-dark.webp",
+        "light": "inbox-switch-pauses-light.webp",
+        "alt": "Settings, Integrations with the Infinitary Inbox box switched off, saying its saved notes stay and scripts get an error until it is turned on, and the Data section under it with Delete Infinitary Inbox notes beside Delete Gmail and Calendar content."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

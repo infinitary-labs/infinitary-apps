@@ -8,7 +8,7 @@ import { INBOX_COMMAND, INBOX_EVENT, INBOX_FENCE } from "../../src/core/integrat
 import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import { type AutomationEventsSeen, automationEvents } from "./scenarios/automationEvents";
-import { settingsSection } from "./settings";
+import { settingRow, settingsSection } from "./settings";
 import { focusOn, pressKey, runFromSearch } from "./windowKeys";
 
 /**
@@ -23,6 +23,11 @@ import { focusOn, pressKey, runFromSearch } from "./windowKeys";
  *   rule"); the line Settings shows, run by
  *   `sh` as a script would, answers a receipt at once; the first mate's
  *   turn carries the event fenced; the receipts then read it handled.
+ *   INF-1567, the captain's direction C ("the switch is the pause, and
+ *   Delete moves to Data"): off, scripts get an error and the key and
+ *   notes stay; the box says when the rule is paused or gone in
+ *   Automation, never "told at once" when it is false (their q4); Delete
+ *   in the Data section removes the notes and the key.
  * - Data: one deploy notice with a request id and a source, the way a CI
  *   script would send it.
  * - Completion signal: the link on disk, the rule's saved state, the first
@@ -90,8 +95,10 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
   const command = readlinkSync(linked);
   expect(line).toContain(command);
 
-  // Turning the inbox on turned its rule on too (the captain's word on INF-1214), named in the box.
-  await expect(door).toContainText(INBOX_WORDS.ruleLead(INBOX_WORDS.ruleName));
+  // Turning the inbox on turned its rule on too (the captain's word on INF-1214), so the box says it tells.
+  const ruleLine = door.locator("[data-inbox-rule]");
+  await expect(ruleLine).toHaveAttribute("data-inbox-rule", "told");
+  await expect(ruleLine).toContainText(`${INBOX_WORDS.told} ${INBOX_WORDS.offKeeps}`);
   await expect
     .poll(async () =>
       (await page.evaluate(async () => (await window.infinitary.automation.list()).rules)).map(
@@ -144,20 +151,56 @@ test("a program's drop wakes the first mate through the inbox turned on by keys"
     ]);
   expect(seen.turns).toHaveLength(1);
 
-  // Turned off and on again, the one rule listens again rather than a second one.
+  const rules = () => page.evaluate(async () => (await window.infinitary.automation.list()).rules);
+
+  // The rule paused in Automation: the box says the first mate is not told.
+  const [rule] = await rules();
+  if (!rule) throw new Error("turning the inbox on added no rule");
+  await page.evaluate((id) => window.infinitary.automation.setState(id, "pause"), rule.id);
+  await expect(ruleLine).toHaveAttribute("data-inbox-rule", "paused");
+  await expect(ruleLine).toContainText(INBOX_WORDS.rulePaused(INBOX_WORDS.ruleName));
+  await expect(ruleLine).not.toContainText(INBOX_WORDS.told);
+  await page.evaluate((id) => window.infinitary.automation.setState(id, "resume"), rule.id);
+  await expect(ruleLine).toHaveAttribute("data-inbox-rule", "told");
+
+  // Switched off, scripts get an error, and the key and the notes stay.
   await focusOn(toggle);
   await pressKey(toggle, "Space");
   await expect(section).toHaveAttribute("data-inbox-section", "off");
+  await expect(section.locator('[data-inbox-off="kept"]')).toContainText(INBOX_WORDS.offKept);
+  const refused = await sh(line, process.env.PATH ?? "");
+  expect(refused.exitCode).not.toBe(0);
+  expect(refused.stdout).toContain("The inbox is off");
+
+  // On again, the same line works, the one rule listens, and the first note is still there.
   await pressKey(toggle, "Space");
   await expect(door).toBeVisible();
-  await expect
-    .poll(async () =>
-      (await page.evaluate(async () => (await window.infinitary.automation.list()).rules)).map(
-        (rule) => [rule.name, rule.state, rule.stopped ?? null],
-      ),
-    )
-    .toEqual([[INBOX_WORDS.ruleName, "enabled", null]]);
+  expect(await door.locator("[data-inbox-line]").textContent()).toBe(line);
+  expect((await rules()).map((entry) => [entry.name, entry.state, entry.stopped ?? null])).toEqual([
+    [INBOX_WORDS.ruleName, "enabled", null],
+  ]);
   const again = await sh(line, process.env.PATH ?? "");
   expect(again.exitCode).toBe(0);
   await expect.poll(() => seen.turns.length, { timeout: 30_000 }).toBe(2);
+  const kept = await sh(receiptsLine, `${linkDir}:${process.env.PATH ?? ""}`);
+  expect(kept.stdout).toContain(receipt.event);
+
+  // The rule deleted in Automation: the box says no rule listens.
+  await page.evaluate((id) => window.infinitary.automation.delete(id), rule.id);
+  await expect(ruleLine).toHaveAttribute("data-inbox-rule", "none");
+  await expect(ruleLine).toContainText(INBOX_WORDS.noRule);
+
+  // Delete in the Data section, confirmed by keys: the notes and the key go, and the inbox is off.
+  const remove = settingRow(page, "delete-inbox-notes");
+  await expect(remove).toContainText(INBOX_WORDS.deleteTitle);
+  const deleteButton = remove.getByRole("button", { name: INBOX_WORDS.delete });
+  await focusOn(deleteButton);
+  await pressKey(deleteButton, "Enter");
+  const confirm = remove.getByRole("button", { name: INBOX_WORDS.confirm });
+  await focusOn(confirm);
+  await pressKey(confirm, "Enter");
+  await expect(section.locator('[data-inbox-off="new"]')).toContainText(INBOX_WORDS.off);
+  await expect(remove).toHaveCount(0);
+  const gone = await sh(line, process.env.PATH ?? "");
+  expect(gone.exitCode).not.toBe(0);
 });

@@ -1894,6 +1894,9 @@ export async function createServices(
     ...(host.app.packaged && host.app.platform === "linux" ? { installedDir: "/usr/bin" } : {}),
     now: ticker.now,
   });
+  const integrationSettings = new IntegrationSettingsStore(paths.integrationsDir);
+  // The inbox's switch is its connection's pause (INF-1567): off, its door refuses.
+  integrationInbox.pausedThrough(() => integrationSettings.read()[INBOX_ID]?.paused === true);
   const integrations = new IntegrationsService({
     bindings: [
       githubIntegration({
@@ -1943,7 +1946,7 @@ export async function createServices(
       integrationInbox.binding(),
       ...(standInIntegrationDir ? [standInIntegration({ dir: standInIntegrationDir })] : []),
     ],
-    store: new IntegrationSettingsStore(paths.integrationsDir),
+    store: integrationSettings,
     // The bridge until the secret manager takes the keys over (INF-775, q3).
     secrets: integrationSecrets,
     asks: {

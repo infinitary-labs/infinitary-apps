@@ -127,6 +127,7 @@ There, a call waits on this Mac at most until 750 milliseconds before the comman
 `infinitary-inbox-axi` (`src/core/axi/inboxCommands.ts`) is the one command a person runs rather than a crewmate: their own program drops an event into the inbox (`docs/integrations.md`, "The inbox").
 It uses the same launcher and command process, but its shell carries no task: the launcher reads the inbox's folder, `INFINITARY_INBOX` or else the release's own (`~/Library/Application Support/infinitary/integrations/inbox` on a Mac, `$XDG_CONFIG_HOME/infinitary/integrations/inbox` or `~/.config/...` on Linux), and sends its `key` file to the address in its `address` file.
 Neither file there means the app is closed or the inbox is off: it prints `NO_CHANNEL`, says nothing was recorded, and exits 1.
+Switched off in Settings, the files stay and `note` and `receipts` are refused with "The inbox is off" and fail, while the bare command answers that it is off.
 It sends no shell limit, start or id, so no answer is kept for a later command.
 The channel admits the inbox's key as a grant of its own (`AxiChannel.admit`) that holds only the inbox's door, and `shut` revokes it.
 `note "<words>"` records one event and answers its id, whether this drop recorded it, and how many rules listen; `--request-id` makes a repeat record once, and `--source` names where it came from.

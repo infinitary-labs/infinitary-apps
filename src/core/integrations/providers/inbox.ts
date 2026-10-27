@@ -35,6 +35,11 @@ import { INBOX_COMMAND } from "../commandWords";
  * reads events after a cursor of it, and a receipts read lists lines after
  * one. The key lets a program drop an event and read receipts, nothing
  * more; the channel admits it for `infinitary-inbox-axi` alone.
+ *
+ * The switch in Settings is the connection's pause (INF-1567, the
+ * captain's direction C): off, the door refuses and the rule is told
+ * nothing, while the key and the log stay. Deleting, in Settings'
+ * Data section, removes the folder.
  */
 
 /** The one event the inbox tells. */
@@ -158,13 +163,26 @@ export class Inbox {
     listening: () => 0,
     added: () => {},
   };
+  /** Late-bound: whether the connection is paused, which the integrations' settings hold. */
+  private paused: () => boolean = () => false;
 
   constructor(private readonly options: InboxOptions) {
     this.now = options.now ?? Date.now;
   }
 
-  get on(): boolean {
+  /** Turned on once and not deleted since: the key and the log are kept. */
+  get kept(): boolean {
     return this.key() !== undefined;
+  }
+
+  /** Kept and not switched off: the door takes notes. */
+  get on(): boolean {
+    return this.kept && !this.paused();
+  }
+
+  /** Whether the person switched the inbox off, as the integrations' settings say. */
+  pausedThrough(paused: () => boolean): void {
+    this.paused = paused;
   }
 
   /** The Scheduler's look at once after a drop, how many rules listen, and the rule turning on adds. */
@@ -177,7 +195,7 @@ export class Inbox {
    * turned on with it, unless a rule on the inbox is already there.
    */
   added(say?: (text: string) => void): void {
-    if (this.on) this.wake.added(say);
+    if (this.kept) this.wake.added(say);
   }
 
   /** The channel is open: admit the key, and tell the launcher where the app is. */
@@ -186,9 +204,9 @@ export class Inbox {
     this.open();
   }
 
-  /** Turn the inbox on: a new key once, kept until it is turned off. */
+  /** Turn the inbox on: a new key once, kept until it is deleted. */
   turnOn(): string {
-    if (!this.on) {
+    if (!this.kept) {
       this.folder();
       const key = randomBytes(32).toString("hex");
       writeFileSync(this.path("key"), `${AXI_KEY_HEADER}: ${key}\n`, { mode: 0o600 });
@@ -198,8 +216,8 @@ export class Inbox {
     return INBOX_ID;
   }
 
-  /** Turn it off: the door shuts, and the key, the address and the log go. */
-  turnOff(): void {
+  /** Delete it: the door shuts, and the key, the address and the log go. */
+  delete(): void {
     this.channel?.shut();
     rmSync(this.options.dir, { recursive: true, force: true });
   }
@@ -213,7 +231,7 @@ export class Inbox {
 
   /** A first mate turn handled the delivery that carried these events. */
   handled(ids: readonly string[], at: number): void {
-    if (!this.on) return;
+    if (!this.kept) return;
     const lines = this.lines();
     const recorded = new Set(lines.flatMap((line) => (line.type === "event" ? [line.id] : [])));
     const done = new Set(lines.flatMap((line) => (line.type === "handled" ? [line.id] : [])));
@@ -231,7 +249,7 @@ export class Inbox {
     note: (input) => this.note(input),
     receipts: (after) => this.receipts(after),
     status: () => {
-      const lines = this.on ? this.lines() : [];
+      const lines = this.kept ? this.lines() : [];
       return {
         on: this.on,
         events: lines.filter((line) => line.type === "event").length,
@@ -280,8 +298,9 @@ export class Inbox {
     return {
       kind: "inbox",
       fence: INBOX_FENCE,
+      // Switched off, the connection stays, paused, so the switch can turn it back on.
       connections: () =>
-        this.on
+        this.kept
           ? [
               {
                 id: INBOX_ID,
@@ -296,7 +315,7 @@ export class Inbox {
       // Turning it on has nothing to wait for: no browser, no place to ask.
       signIn: async () => this.turnOn(),
       check: async () => {},
-      remove: () => this.turnOff(),
+      remove: () => this.delete(),
       call: async () => ({
         text: "The inbox has no actions: an event arrives through infinitary-inbox-axi, and a rule listens to it.",
         refused: "invalid",
@@ -311,7 +330,7 @@ export class Inbox {
     items: IntegrationEventItem[];
     resynced?: boolean;
   } {
-    const lines = this.on ? this.lines() : [];
+    const lines = this.kept ? this.lines() : [];
     const last = String(lines.at(-1)?.seq ?? 0);
     if (cursor === null) return { cursor: last, items: [] };
     const from = Number(cursor);

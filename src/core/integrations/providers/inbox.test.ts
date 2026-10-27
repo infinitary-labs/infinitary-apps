@@ -53,9 +53,12 @@ async function setup() {
     defaultDir: join(root, "elsewhere"),
     linkDir,
   });
+  const settings = new IntegrationSettingsStore(join(root, "integrations-settings"));
+  // As the app wires it: the switch is the connection's pause (INF-1567).
+  inbox.pausedThrough(() => settings.read()[INBOX_ID]?.paused === true);
   const integrations = new IntegrationsService({
     bindings: [inbox.binding()],
-    store: new IntegrationSettingsStore(join(root, "integrations-settings")),
+    store: settings,
     secrets: new FileIntegrationSecrets(join(root, "secrets")),
   });
   const db = openInMemoryDatabase();
@@ -264,7 +267,7 @@ describe("the inbox", () => {
     });
   });
 
-  it("opens to its own key for its own command alone, and shuts when turned off", async () => {
+  it("opens to its own key for its own command alone, and shuts when deleted", async () => {
     const { dir, integrations, channel, run } = await setup();
     await integrations.signIn("inbox");
 
@@ -284,11 +287,61 @@ describe("the inbox", () => {
       "recorded: true",
     );
 
-    // Turned off, the key, the address and the log go, and the door is shut.
+    // Deleted, the key, the address and the log go, and the door is shut.
     await integrations.remove("inbox");
     expect(existsSync(dir)).toBe(false);
     const closed = await run(["note", "After"]);
     expect(closed.exitCode).toBe(1);
     expect(closed.stdout).toContain("code: NO_CHANNEL");
+  });
+
+  // INF-1567, the captain's direction C: "the switch is the pause, and Delete moves to Data".
+  it("switched off, refuses scripts and tells no rule but keeps the key and the notes", async () => {
+    const { dir, integrations, scheduler, run, served, wakes } = await setup();
+    await integrations.signIn("inbox");
+    scheduler.create(
+      { kind: "event", integration: "inbox", event: "event_arrived" },
+      "Read these: {{events}}",
+      true,
+      "Inbox events",
+    );
+    await scheduler.settled();
+    const first = await run(["note", "Before off"]);
+    expect(first.exitCode).toBe(0);
+    await scheduler.settled();
+    expect(served()).toHaveLength(1);
+    // A turn handles that delivery, so the next one is its own run.
+    const [row] = wakes.allFor(FIRSTMATE_RECIPIENT);
+    if (!row) throw new Error("the drop woke nobody");
+    scheduler.noteDecision(handledTurn(row.id, Date.UTC(2026, 9, 24, 17, 0)));
+    const key = readFileSync(join(dir, "key"), "utf8");
+
+    integrations.configure(INBOX_ID, { paused: true });
+    const refused = await run(["note", "While off"]);
+    expect(refused.exitCode).not.toBe(0);
+    expect(refused.stdout).toContain("The inbox is off");
+    expect((await run(["receipts"])).exitCode).not.toBe(0);
+    const status = await run([]);
+    expect(decode(status.stdout.split("\nhelp")[0] ?? "")).toMatchObject({ on: false, events: 1 });
+    // The connection stays, paused, so Settings can switch it back on.
+    expect(integrations.view().integrations).toMatchObject([{ id: INBOX_ID, paused: true }]);
+    expect(readFileSync(join(dir, "key"), "utf8")).toBe(key);
+    await scheduler.settled();
+    const told = served().length;
+    // Nothing reached the first mate while it was off.
+    expect(told).toBe(1);
+
+    integrations.configure(INBOX_ID, { paused: false });
+    const back = await run(["note", "After on"]);
+    expect(back.exitCode).toBe(0);
+    await scheduler.settled();
+    expect(served()).toHaveLength(told + 1);
+    expect(served().at(-1)).toContain("After on");
+    expect(served().join("\n")).not.toContain("While off");
+    // The note from before off is still in the receipts.
+    const receipts = decode((await run(["receipts"])).stdout.split("\nhelp")[0] ?? "") as {
+      receipts: { state: string }[];
+    };
+    expect(receipts.receipts.filter((line) => line.state === "recorded")).toHaveLength(2);
   });
 });

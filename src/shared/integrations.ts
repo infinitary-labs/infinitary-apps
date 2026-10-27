@@ -290,25 +290,41 @@ export const INTEGRATIONS_MCP_WORDS = {
  * The words of the inbox's box (docs/integrations.md, "The inbox"; design
  * skill `components/integrations/IntegrationRow`; INF-1474, the captain's
  * wording B, shown whole on their reply): the line to copy and one note,
- * then the short name's link where one can be made or already was, and
- * the rule its notes reach the first mate by.
+ * then the short name's link where one can be made or already was. The
+ * switch is the inbox's pause, and the box says whether a rule tells the
+ * first mate, never "told at once" when none does (INF-1567, the
+ * captain's direction C and their q4). The delete in the Data section
+ * removes the notes and the key.
  */
 export const INBOX_WORDS = {
   title: "Infinitary Inbox",
   intro:
     "Scripts on this computer can send your first mate a short note, such as a finished deploy. Each note is information, never an instruction.",
   off: "Turn it on to see the line your scripts run.",
+  /** Switched off after it was on: the notes and the key are kept. */
+  offKept: "Off. The saved notes stay, and scripts get an error until you turn it on.",
   toggle: "Infinitary Inbox on",
-  exampleNote:
-    "Run it from any script or terminal, with your own words in the quotes. Your first mate is told at once.",
+  exampleNote: "Run it from any script or terminal, with your own words in the quotes.",
   copy: "Copy",
   linked: (path: string) => `Linked as ${path}, so the short name works too.`,
   offered: (folder: string) => `Link it into ${folder} to use the short name infinitary-inbox-axi.`,
   link: "Link it",
-  ruleLead: (name: string) => `To stop, pause the rule ${name} in Automation.`,
+  /** A turned-on rule listens. */
+  told: "Your first mate is told at once.",
+  /** Every rule on the inbox is paused in Automation. */
+  rulePaused: (name: string) =>
+    `The rule ${name} is paused in Automation, so your first mate is not told. Notes are still saved.`,
+  /** No rule on the inbox is left. */
+  noRule: "No rule listens to the inbox, so your first mate is not told.",
+  offKeeps: "Off keeps the notes and stops your scripts until you turn it on.",
   ruleName: "Infinitary Inbox events",
   rulePrompt:
     "New events arrived in your Infinitary Inbox from programs on this computer. Read each one, decide what it needs, and act with your usual judgment: answer on a card, start a task, or do nothing.\n\n{{events}}",
+  deleteTitle: "Delete Infinitary Inbox notes",
+  deleteLead: "Removes every note your scripts sent and the inbox's key, and turns the inbox off.",
+  delete: "Delete",
+  confirm: "Confirm delete",
+  pending: "Deleting...",
 } as const;
 
 /** The words for what an action does, as its row shows them. */

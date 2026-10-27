@@ -102,7 +102,8 @@ export const USAGE_WORK_KINDS = [
   "fix",
   "chore",
   "review",
-] as const satisfies ReadonlyArray<WorkKind>;
+  "operation",
+] as const satisfies ReadonlyArray<WorkKind | "operation">;
 export const usageWorkKindSchema = z.enum(USAGE_WORK_KINDS);
 export type UsageWorkKind = z.infer<typeof usageWorkKindSchema>;
 

@@ -235,6 +235,7 @@ export const KIND_WORDS: Record<UsageWorkKind, string> = {
   fix: "Fixes",
   chore: "Maintenance",
   review: "Reviews",
+  operation: "Operations",
 };
 
 /** A task with no saved kind, or an unclear one, is other task work in its project. */

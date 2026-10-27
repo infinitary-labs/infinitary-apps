@@ -220,6 +220,13 @@ The first mate's own calls are not placed-task charges.
 The router recomputes spend priority and the runway over charged windows, so placed work can make a window run out before its reset, but retains the raw headroom for all eligibility checks, so a negative projection never invents an exhaustion hold.
 Automatic placement commits its chosen route in the existing transaction, so the next start sees that choice without an additional allowance reservation.
 
+## Operations
+
+An operation is a deliverable, not a kind, declared by an `operation` constraint or `in_folder` work (INF-1430 piece 2).
+The classifier is not asked and the record keeps `kind: unclear`, `kind_source: skipped:operation`.
+R12 requests medium after R0, R1a, R1b and R11, before every kind rule.
+The record’s result reads “Operation” and Usage groups its recorded work as “Operations” from the saved deliverable, without rewriting any saved kind.
+
 ## Program-selected intelligence
 
 A program's `task()` call may choose `intelligence` for that part (INF-974, `docs/programs.md`).

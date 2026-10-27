@@ -231,18 +231,22 @@ function groupDescription(lead: string, rules: Record<string, string>): string {
  * each field means rides the array's own description (contract v4.13): a
  * Claude seat's client drops every description below a top-level parameter.
  */
-export const CONSTRAINTS_DESCRIPTION = groupDescription(
-  "Typed constraint flags plus free strings.",
-  {
-    kind: "read-only: the task only answers - no commit, push or pull request; without it, it ships a change; free: anything else, relayed verbatim",
-    text: "Required when kind is free; optional qualifier otherwise",
-  },
-);
+export const CONSTRAINTS_DESCRIPTION = groupDescription("Constraints.", {
+  kind: "read-only: answer; operation: named effect, no code; otherwise change; free: relayed verbatim",
+  text: "Required when kind is free; optional qualifier otherwise",
+});
 
 export const CONSTRAINTS_PARAM = Type.Optional(
   Type.Array(
     Type.Object({
-      kind: stringEnum(["read-only", "tests-required", "no-new-deps", "minimal-diff", "free"]),
+      kind: stringEnum([
+        "read-only",
+        "operation",
+        "tests-required",
+        "no-new-deps",
+        "minimal-diff",
+        "free",
+      ]),
       text: Type.Optional(Type.String()),
     }),
     { description: CONSTRAINTS_DESCRIPTION },
@@ -279,7 +283,7 @@ const SHAPE_FIELD_RULES = {
     "Only when the user said in words whether this task merges its green work itself (true) or asks first (false). The repository's default is unchanged.",
   runs_on_ask: "As update_task's runs_on.",
   internal_step: INTERNAL_STEP_DESCRIPTION,
-  in_folder: "Work on the project's folder itself: runs there, in it; ships nothing.",
+  in_folder: "Operate in the project's folder; ships nothing.",
   skipped_plan_because:
     "On a direct build with no chosen basis, which parts of the sequences test passed: one nameable place, no changed rule, state or meaning, and a result checkable by looking. The host shows it unjudged.",
   review_of:
@@ -630,7 +634,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "files_from or a card choice, with no unmerged work; also internal answers with a report or successor, or finished answers. Never discard results. " +
       "released closes a reported, idle work task only after you independently verify its " +
       "delivery through an external release process, with release_evidence. finished closes verified, reported, idle " +
-      "in_folder work as done with completion_evidence; files and git stay. " +
+      "operations or in_folder work as done with completion_evidence; folder files and git stay. " +
       "Missing changes or dismissed cards prove nothing. Never discard successful folder work or use finished to bypass merging. " +
       "Records and sessions stay. " +
       "Use crew_status to pick the task id; never guess among several matches.",

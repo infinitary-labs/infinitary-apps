@@ -38,6 +38,7 @@ The first mate receives the scopes only when changed or after context loss (comp
 A dispatch starts the task's worktree from `origin`'s default branch fetched at dispatch, from the last fetched commit when the fetch fails, and from the repository's own commit when it has no `origin`.
 A personal-workspace task has no worktree (its directory is the workspace), takes no rigor tier, refuses every settle mode, and closes as "built in place" when its report is committed.
 
+Verified operations close `done/finished` from reported evidence through the existing settle owner, retiring an isolated working copy when one exists.
 Verified folder work can close `done/finished` through the existing settle owner with completion evidence; it has no task working copy to retire and its project folder stays untouched.
 A done/dropped close always retires the task's worktree and branch (captain: "cleaned up period. no exceptions"), saving unlanded work to `refs/infinitary/kept/<task-id>` first.
 Git ancestry decides only whether a save is needed, never whether the tree goes, because a squash-merged change reads as unlanded forever.

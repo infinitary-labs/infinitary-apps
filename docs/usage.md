@@ -145,3 +145,8 @@ No historical import is implemented or authorized by the live recording fix.
 Pi's optional reasoning count crosses the shared turn event and is stored in `usage_events.reasoning`.
 It is already part of output tokens, so existing category totals and price calculations never add it again.
 Missing remains null in saved records; there is no separate Usage column or historical repricing.
+
+### Operations
+
+Where it went groups a task whose saved deliverable is operation as “Operations”, ahead of its saved kind.
+Other tasks retain their saved kinds and labels, including past lookups; no kind or usage ledger row is rewritten.

@@ -523,6 +523,7 @@ export const taskIntentViewSchema = z.object({
           // intent may still name it.
           "plan-first",
           "read-only",
+          "operation",
           "tests-required",
           "no-new-deps",
           "minimal-diff",

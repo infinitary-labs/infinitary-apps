@@ -403,6 +403,7 @@ import {
 } from "./idleLadder";
 import { integrationApprovalCard } from "./integrationApprovalCard";
 import {
+  assertDeliverableConstraints,
   type BasisBriefFacts,
   type BriefPart,
   type BriefPictures,
@@ -425,6 +426,7 @@ import {
   renderFolderRepairBrief,
   renderFollowupBrief,
   renderIntentBrief,
+  renderOperationShapeSection,
   renderPicturesSection,
   renderProgramPartSection,
   renderPullRepairBrief,
@@ -3079,6 +3081,7 @@ export class CrewSupervisor {
     messageFiles?: readonly MessageFile[];
     attachments?: readonly AttachmentRef[];
   }): Promise<{ taskId: string; crewmate: string; model?: NamedModel }> {
+    assertDeliverableConstraints(input.intent, input.shape?.in_folder === true);
     // An independent review (delivery rigor phase 2) is its own commission:
     // the host briefs it from the record and holds the builder's merge.
     if (input.shape?.review_of?.trim()) {
@@ -3146,7 +3149,7 @@ export class CrewSupervisor {
         placement.folder ??
         (inheritedRepo ? { project: inheritedRepo.name, folder: inheritedRepo.path } : undefined);
       const delivery =
-        placement.personal || folder || shaped.deliverable === "answer"
+        placement.personal || folder || shaped.deliverable !== "change"
           ? undefined
           : placement.delivery;
       return escalation
@@ -4619,6 +4622,7 @@ export class CrewSupervisor {
       // So does working in the project's folder (INF-567).
       const inFolder = ask?.in_folder || isFolderWork(inherited?.in_place);
       return {
+        ...(inherited?.deliverable === "operation" ? { deliverable: "operation" as const } : {}),
         kind: inherited?.kind ?? "unclear",
         kind_source: "none",
         ...(ask?.premium_ask ? { premium_ask: true as const } : {}),
@@ -4689,6 +4693,8 @@ export class CrewSupervisor {
     shape: WorkShape,
     declared: boolean,
   ): Promise<WorkShape> {
+    if (shape.deliverable === "operation" || deliverableFor(intent, undefined) === "operation")
+      return { ...shape, kind: "unclear", kind_source: `${KIND_SOURCE.skipped}operation` };
     const skip = shape.override_model_id
       ? "override"
       : shape.premium_ask
@@ -4754,7 +4760,9 @@ export class CrewSupervisor {
       userWords: intent.userWords,
       // The branch the classifier picks within: the read-only declaration,
       // never the kind it is about to give (INF-1430 piece 1).
-      ...(declared ? { deliverable: deliverableFor(intent, undefined) } : {}),
+      ...(declared
+        ? { deliverable: deliverableFor(intent, undefined) as "answer" | "change" }
+        : {}),
       ...(constraints ? { constraints } : {}),
       ...(repo
         ? {
@@ -4787,7 +4795,17 @@ export class CrewSupervisor {
    * kind either way.
    */
   private withDeliverable(shape: WorkShape, intent: SpawnIntent | undefined): WorkShape {
-    return { ...shape, deliverable: deliverableFor(intent, shape.kind) };
+    assertDeliverableConstraints(
+      intent,
+      isFolderWork(shape.in_place) || shape.deliverable === "operation",
+    );
+    return {
+      ...shape,
+      deliverable:
+        isFolderWork(shape.in_place) || shape.deliverable === "operation"
+          ? "operation"
+          : deliverableFor(intent, shape.kind),
+    };
   }
 
   /** What a record's shape says it delivers; a pre-axis row shipped a change. */
@@ -6306,7 +6324,10 @@ export class CrewSupervisor {
     // A task that works in place ships nothing; the one that closes a pull
     // request an abandoned task left open reads and writes where the project
     // lives, and nothing else (INF-549's sibling).
-    if (this.worksInPlace(task.id)) {
+    if (
+      this.worksInPlace(task.id) &&
+      this.deliverableOf(this.options.tasks.get(task.id)) !== "operation"
+    ) {
       if (!isPullRepair(this.options.tasks.get(task.id)?.shape?.in_place)) return {};
       const { githubRead, githubWrite } = this.options;
       return {
@@ -6331,7 +6352,9 @@ export class CrewSupervisor {
     const canPrepare =
       machine === LOCAL_MACHINE_ID || this.options.machines?.takesChangePresentations?.(machine);
     return {
-      ...(openChange && checkChange && !this.isAnswerTask(task.id)
+      ...(openChange &&
+      checkChange &&
+      this.deliverableOf(this.options.tasks.get(task.id)) === "change"
         ? {
             ...(prepareChange && canPrepare
               ? {
@@ -6592,6 +6615,7 @@ export class CrewSupervisor {
         renderAnswerShapeSection(record?.shape?.internal_step === true, record?.shape?.kind),
       ]);
     }
+    if (deliverable === "operation") sections.push([renderOperationShapeSection()]);
     // A typed hand-off (INF-799): the result shape the report must fit, and
     // the task whose last commit the working copy began at.
     if (record?.shape?.result_schema)
@@ -6719,7 +6743,7 @@ export class CrewSupervisor {
       shape?.kind === "review" ||
       repo?.kind === "personal" ||
       shape?.in_place !== undefined ||
-      this.deliverableOf(record) === "answer"
+      this.deliverableOf(record) !== "change"
     ) {
       return;
     }
@@ -9015,7 +9039,7 @@ export class CrewSupervisor {
           // there is no merge: the personal workspace, and an answer task,
           // which the deliverable hold refuses to merge whoever asks. The
           // rigor above is absent on the same rows for the same reason.
-          ...(repo?.kind === "personal" || this.deliverableOf(record) === "answer"
+          ...(repo?.kind === "personal" || this.deliverableOf(record) !== "change"
             ? {}
             : { autonomy: autonomyForRecord(record, repo?.autonomy) }),
         };
@@ -9298,6 +9322,13 @@ export class CrewSupervisor {
         "Card refused: this task works in place in the project's folder - there is no merge, land, or discard, and a completion card is never emitted. Report what you did with report; Infinitary closes the task once what it was for is done. A card is only for a question the captain must answer.",
       );
     }
+    if (
+      this.deliverableOf(this.options.tasks.get(task.id)) === "operation" &&
+      (input.actions ?? []).some((action) => settleEffectOf(action) || requestMergeEffectOf(action))
+    )
+      throw new Error(
+        "Card refused: an operation has no change to merge or discard. Show the verified effect on a note, then report its evidence for a finished close.",
+      );
     // An answer task ships nothing (Task B), so it has no completion card
     // either: the card carrying the answer IS the deliverable, and the task
     // closes when the captain resolves it.
@@ -9985,7 +10016,7 @@ export class CrewSupervisor {
     if (record.shape?.in_place) return false;
     // An answer task emits no completion card at all (Task B): it ships
     // nothing, so nobody owes one.
-    if (this.deliverableOf(record) === "answer") return false;
+    if (this.deliverableOf(record) !== "change") return false;
     return !this.cards.hasCompletionCard(taskId);
   }
 
@@ -10087,7 +10118,7 @@ export class CrewSupervisor {
   private recordCardRefusal(task: TaskRuntime, refusal: Omit<CardRefusal, "at">): void {
     const record = this.options.tasks.get(task.id);
     if (!record || TaskService.isClosed(record)) return;
-    if (this.isPersonalTask(task.id) || this.deliverableOf(record) === "answer") return;
+    if (this.isPersonalTask(task.id) || this.deliverableOf(record) !== "change") return;
     if (record.shape?.in_place) return;
     this.options.tasks.recordCardRefusal(task.id, refusal);
   }
@@ -12180,7 +12211,7 @@ export class CrewSupervisor {
     }
     const personal = this.isPersonalTask(record.id);
     const delivery =
-      shape.deliverable === "answer" || personal
+      shape.deliverable !== "change" || personal
         ? undefined
         : (this.taskDelivery(record.id) ?? "local-only");
     if (!record.intent) return withDeliveryLine(record.prompt, delivery);

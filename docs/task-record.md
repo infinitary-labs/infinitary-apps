@@ -81,7 +81,7 @@ Its brief says close the pull request or report why not (`renderPullRepairBrief`
 The same minute's read closes it as finished once the host reads that pull request closed or merged.
 
 Work on a project's folder itself is the first mate's to declare, by its own judgment (INF-567, direction A).
-`spawn_crewmate`'s `shape.in_folder` stamps `in_place: { folder: true }` (`CrewSupervisor.workShape`), and a stronger-model retry keeps it.
+`spawn_crewmate`'s `shape.in_folder` stamps `in_place: { folder: true }` and `deliverable: operation` (`CrewSupervisor.workShape`), and a stronger-model retry keeps it.
 Such a task runs on this Mac, which keeps the folder, whatever the project's Runs on says, and works in the folder with no working copy, branch, delivery, rigor or completion decision, as the folder repair does.
 Its brief is the first mate's intent with no Delivery line, closed by a paragraph naming the folder and that the captain's edits there are the captain's (`renderIntentBrief`'s folder facts).
 It needs a project other than the personal workspace, and refuses `runs_on_ask`, `delivery_ask` and `review_of` beside it; nothing spawns.
@@ -89,7 +89,8 @@ While the folder is missing it is refused at its start, as any task starting on 
 After its crewmate reports a successful result, the first mate can close it `done/finished` with `settle_task finished` and `completion_evidence` naming what verifies that result (INF-1279).
 The existing settle owner records that evidence on the close event; it never reads the report's prose to infer success, and the host's folder-reading close never reads this task.
 The close touches no project files or git state: existing edits, staged work, stashes and unpushed commits stay exactly where they were.
-It refuses an answer, a task with its own working copy, branch or proposed change, unfinished work, running jobs, queued guidance, a pending settle, a captain wait or question, and the existing child and dependency holds.
+It refuses an answer, a proposed change, unfinished work, running jobs, queued guidance, a pending settle, a captain wait or question, and the existing child and dependency holds.
+The same finished close accepts operations with a scratch working copy, while legacy folder tasks with a change deliverable keep the folder-only safeguard.
 A missing proposal or dismissed note is not evidence, and successful folder work is not discarded.
 
 ## Relationships
@@ -195,7 +196,7 @@ A release before INF-1296 also copied the latest result onto the task's delivery
 The by-key `tasks` read, the program runner and a brief's basis all read the latest result through `latestResult`.
 The report wake carries it as a typed fact after "Its result, as declared:", a by-key `tasks` read carries `result` and `result_schema`, and a brief whose basis carries one prints it after that task's report under the same words.
 A crewmate's report text that ends a turn without the tool carries no result.
-A task running on another computer carries its result home on the report order (`report-result.md`); the home starts a task with a schema there only when that computer lists the change.
+A task running on another computer carries its result home on the report order; every computer taking work on the current contract major supports it.
 
 `branch_from` names, by key, the task whose last commit a task's working copy starts at: that task's branch head while its working copy is present on this Mac, else the kept ref its work was saved on.
 The host checks it when it is named and again when the task starts, and refuses as tool text an unknown task, the task itself, a task in another project, a working copy on another computer, or a task with neither a branch nor saved work (`CrewSupervisor.handOffShape`).

@@ -420,7 +420,7 @@ import { workRequests, workRequestWire } from "./work";
  * client can refuse or degrade on a mismatch instead of failing one call at
  * a time.
  */
-export const PROTOCOL_VERSION = "11.0.0";
+export const PROTOCOL_VERSION = "12.0.0";
 
 /**
  * The version rule's window (docs/contract.md): a home answers every request
@@ -563,6 +563,14 @@ export const FETCH_APP_SYSTEM_SINCE = "5.1.0";
 export function readsFetchAppSystem(homeVersion: string): boolean {
   return speaksSince(homeVersion, FETCH_APP_SYSTEM_SINCE);
 }
+
+/**
+ * The first contract whose home answers the native scene's reads,
+ * `inf:conversation:state` and `inf:computers:presence`, without naming
+ * `native-scene-observations`: major 12 folded that name in. A phone asks an
+ * older home for them only when its welcome names the change (docs/ios.md).
+ */
+export const SCENE_OBSERVATIONS_SINCE = "12.0.0";
 
 /** Whether a computer takes a task with no project (`PLACED_SEED_SINCE`). */
 export function speaksSeed(deviceVersion: string): boolean {

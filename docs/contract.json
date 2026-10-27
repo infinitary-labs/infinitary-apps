@@ -2,7 +2,7 @@
   "title": "Infinitary client contract",
   "generated": "Generated from src/shared/ipc.ts, src/shared/work.ts and src/shared/connection.ts by scripts/generate-contract.ts. Do not edit; run pnpm generate:contract.",
   "jsonSchemaDialect": "https://json-schema.org/draft/2020-12/schema",
-  "protocolVersion": "11.0.0",
+  "protocolVersion": "12.0.0",
   "versionRule": {
     "majorsBehind": 0,
     "minor": "Additive: a new request, a new push, a new optional field or a new capability. Nothing a client already sends or reads changes meaning.",
@@ -28543,6 +28543,7 @@
                           "enum": [
                             "plan-first",
                             "read-only",
+                            "operation",
                             "tests-required",
                             "no-new-deps",
                             "minimal-diff",
@@ -28593,7 +28594,8 @@
                 "type": "string",
                 "enum": [
                   "answer",
-                  "change"
+                  "change",
+                  "operation"
                 ]
               },
               {
@@ -28673,7 +28675,8 @@
                   "R7",
                   "R8",
                   "R9",
-                  "R10"
+                  "R10",
+                  "R12"
                 ]
               },
               "asked": {
@@ -37798,7 +37801,8 @@
                                         "implement",
                                         "fix",
                                         "chore",
-                                        "review"
+                                        "review",
+                                        "operation"
                                       ]
                                     },
                                     {
@@ -38610,7 +38614,8 @@
                                   "implement",
                                   "fix",
                                   "chore",
-                                  "review"
+                                  "review",
+                                  "operation"
                                 ]
                               },
                               {

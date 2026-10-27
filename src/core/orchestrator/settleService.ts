@@ -517,7 +517,7 @@ export class SettleService {
       if (signature !== JSON.stringify(this.policiesOf(record)))
         return "its policies changed; recheck the current requirements before trying again";
       if (this.working(taskId)) return "its crewmate is still working";
-      if (this.host.deliverableOf(record) === "answer" || record.shape?.kind === "review")
+      if (this.host.deliverableOf(record) !== "change" || record.shape?.kind === "review")
         return `this work has no merge. ${fixedHoldWords("nothing-to-merge")}`;
       const destination = this.host.taskDelivery(taskId);
       if ((mode === "merge-pr") !== (destination === "direct-pr"))
@@ -1327,6 +1327,10 @@ export class SettleService {
     if (TaskService.isClosed(record)) {
       return refuse(`it is already ${describeStatus(record)}.`);
     }
+    if (this.host.deliverableOf(record) === "operation")
+      return refuse(
+        "it delivers an effect, not an answer - verify it and close it finished with completion_evidence.",
+      );
     const handedOn = this.host.tasks.resultHandoffOf(record.id);
     const change = this.host.deliverableOf(record) !== "answer";
     if (change && !handedOn) {
@@ -1462,10 +1466,10 @@ export class SettleService {
   }
 
   /**
-   * INF-1279: the first mate declares verified success for ordinary folder
-   * work. Evidence is its judgment, not a host interpretation of report
-   * prose. The folder is not a task working copy: never inspect, commit,
-   * merge, push, clean or retire it as part of recording completion.
+   * INF-1279 and INF-1430: the first mate declares verified operational
+   * success, including legacy folder work. Evidence is its judgment, not
+   * a host interpretation of prose. Never inspect, commit or merge as proof;
+   * the ordinary close owner retires a scratch copy and leaves a folder alone.
    */
   async closeFinishedFolderWork(
     taskRef: string,
@@ -1478,14 +1482,19 @@ export class SettleService {
       return refuse("another settle is already in progress.");
     if (
       record.kind !== "work" ||
-      this.host.deliverableOf(record) !== "change" ||
-      !isFolderWork(record.shape?.in_place) ||
+      !(
+        this.host.deliverableOf(record) === "operation" ||
+        (this.host.deliverableOf(record) === "change" && isFolderWork(record.shape?.in_place))
+      ) ||
       this.host.isPersonalTask(record.id)
     )
       return refuse(
-        "this mode is for work run in a project's folder, not an answer or a change to merge.",
+        "this mode is for an operation or work run in a project's folder, not an answer or a change to merge.",
       );
-    if (record.worktreeDir || record.branch || record.deviceId)
+    if (
+      this.host.deliverableOf(record) !== "operation" &&
+      (record.worktreeDir || record.branch || record.deviceId)
+    )
       return refuse(
         "this task has a working copy or branch of its own; use its delivery path instead.",
       );
@@ -1754,6 +1763,11 @@ export class SettleService {
     if (mode === "merge-pr" || mode === "land") {
       const record = this.host.tasks.get(taskId);
       if (!record) throw new Error(`Unknown task "${taskId}".`);
+      if (this.host.deliverableOf(record) === "operation")
+        return {
+          ok: false,
+          text: `Nothing to merge: this task delivers an operation, not code. Verify the effect and close it finished with completion_evidence. ${fixedHoldWords("nothing-to-merge")}`,
+        };
       if (this.host.deliverableOf(record) === "answer") {
         return {
           ok: false,

@@ -58,6 +58,7 @@ export function effectiveTaskPolicies(
     (record.kind !== undefined && record.kind !== "work") ||
     shape?.kind === "review" ||
     shape?.deliverable === "answer" ||
+    shape?.deliverable === "operation" ||
     shape?.in_place !== undefined ||
     repo?.kind === "personal"
   )

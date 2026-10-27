@@ -28,6 +28,7 @@ import {
   speaksRecordRefresh,
   speaksSeed,
   speaksTempCleanup,
+  takesWork,
   type WorkInvokeChannel,
 } from "@shared/ipc";
 import { catalogEntry } from "@shared/providers";
@@ -47,7 +48,6 @@ import {
 } from "@shared/work";
 import { z } from "zod";
 import { DeviceOutOfReachError, type WorkDeviceContact } from "../connection/connection";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import {
   dueIn,
   dueRule,
@@ -124,20 +124,6 @@ import type { WorkDevices } from "./workDevices";
  * (`WorkDevices`).
  */
 
-/**
- * The change a computer lists when it gives its crewmates the home's
- * integrations (`integrations-there.md`; docs/integrations.md, "On a
- * computer that runs work").
- */
-const INTEGRATIONS_THERE = contractChange("integrations-there");
-
-/**
- * The change a computer lists when it replaces the words from outside its
- * conversations hold (`outside-data-there.md`; docs/task-retention.md,
- * "Words from outside").
- */
-const OUTSIDE_DATA_THERE = contractChange("outside-data-there");
-
 /** How long a computer with work is out of reach before the feed says so. */
 export const OUT_OF_REACH_LINE_MS = 60_000;
 /** Live copies share at most one start per second; a turn's end always flushes. */
@@ -175,12 +161,6 @@ export type PlacedHost = {
    */
   toolsNow?(taskId: string): readonly string[] | undefined;
 };
-
-/** A typed result on a report (`report-result.md`). */
-const REPORT_RESULT = contractChange("report-result");
-
-/** Files one task hands another (`handover-files.md`). */
-const HANDOVER_FILES = contractChange("handover-files");
 
 /** What the crew reads of the computers that run work (`CrewSupervisorOptions.machines`). */
 export type CrewMachines = {
@@ -584,8 +564,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     return version ? speaksChangePresentations(version.contract) : false;
   }
 
+  private takesCurrentWork(machine: string): boolean {
+    const version = this.options.devices.version(machine);
+    return !!version && takesWork(version.contract);
+  }
+
   takesResults(machine: string): boolean {
-    return listsChange(this.options.devices.version(machine)?.changes, REPORT_RESULT);
+    return this.takesCurrentWork(machine);
   }
 
   takesKnowledge(machine: string): boolean {
@@ -596,13 +581,10 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   /**
    * The integrations command rides the computer's task channel, which it has
    * where its roster says it keeps task browsers, and its calls ride the
-   * work requests of `INTEGRATIONS_THERE`.
+   * work requests included on this contract major.
    */
   takesIntegrations(machine: string): boolean {
-    return (
-      this.keepsBrowsers(machine) &&
-      listsChange(this.options.devices.version(machine)?.changes, INTEGRATIONS_THERE)
-    );
+    return this.keepsBrowsers(machine) && this.takesCurrentWork(machine);
   }
 
   prepare(
@@ -621,13 +603,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     file: string,
     into?: "handover",
   ): Promise<string> {
-    if (
-      statSync(file).size === 0 &&
-      !listsChange(
-        this.options.devices.version(machine)?.changes,
-        contractChange("empty-source-files"),
-      )
-    )
+    if (statSync(file).size === 0 && !this.takesCurrentWork(machine))
       throw new Error(
         "Update Infinitary on the work computer before it can receive an empty attached file.",
       );
@@ -635,7 +611,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
   }
 
   takesHandover(machine: string): boolean {
-    return listsChange(this.options.devices.version(machine)?.changes, HANDOVER_FILES);
+    return this.takesCurrentWork(machine);
   }
 
   sourceRef(
@@ -1718,8 +1694,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
     if (answers > 0) placed.ledger = undefined;
     const computer = this.nameOf(deviceId);
     if (!this.options.devices.inReach(deviceId)) return { computer, until: "reach" };
-    if (!listsChange(this.options.devices.version(deviceId)?.changes, OUTSIDE_DATA_THERE))
-      return { computer, until: "update" };
+    if (!this.takesCurrentWork(deviceId)) return { computer, until: "update" };
     let answer: WorkOrderResponse<"inf:session:delete-outside">;
     try {
       answer = workOrders["inf:session:delete-outside"].response.parse(

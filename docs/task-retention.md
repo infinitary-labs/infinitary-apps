@@ -177,7 +177,7 @@ That computer reads its record under `tasks/<taskId>/sessions/` and its own Clau
 A conversation open there is let go of before its files are written and opened again from them, so none of the words stays in its memory either.
 This Mac then copies each file that computer changed whole into its own copy of the record, written beside it and renamed into place once whole, and with them any file of its copy that still holds due words, so a pass a drop cut short is finished on the next.
 The answers this Mac kept for that conversation's callbacks (`crewmates/<taskId>/placed/calls.jsonl`) are replaced here first, whatever that computer can do.
-A computer out of reach, or one whose Infinitary lacks the change (`outside-data-there.md`), is asked again on a later sweep.
+A computer out of reach or on another contract major is asked again on a later sweep.
 A computer no longer on the list has nothing more to copy, so this Mac's copy is replaced here, as a task of its own is.
 
 It does not reach what an agent wrote in its own words, such as a report, a card, a note or a file it made; those stay until the task is deleted.

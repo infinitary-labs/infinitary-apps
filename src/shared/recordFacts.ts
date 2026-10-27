@@ -3,6 +3,7 @@
  * Labels are presentation vocabulary, never the identity a reader selects.
  */
 export type RecordFact =
+  | "deliverable"
   | "crewmate"
   | "project"
   | "branch"

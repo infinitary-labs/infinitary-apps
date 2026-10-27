@@ -150,6 +150,10 @@ A home before `STORY_AROUND_SINCE` would strip `around` and answer as if nothing
 
 ### Tasks, projects and routing
 
+Tasks may deliver `operation`, constraints may declare it, model reasons carry R12, and Usage’s closed grouping set includes operation (`major-12.md`).
+A computer on another major takes no work, so the new deliverable is never sent to a computer that cannot read it.
+The preceding named waits for integrations, report results, handed files, empty source files and outside-data deletion retire; every computer taking work on this major has them.
+
 Task delivery facts carry an optional `reviewCapOwner`: `firstmate` delegates a qualifying review cap, while `captain` or absence keeps the captain hold (`docs/delivery-rigor.md`).
 The home alone sets it and enforces the gate it chooses.
 
@@ -213,7 +217,7 @@ A task's browser on a computer that runs work (`docs/task-browser.md`, "On anoth
 The home gives a task there a browser only when that computer's roster says `browsers`.
 
 A crewmate there runs the integrations command (`docs/integrations.md`, "On a computer that runs work") over the `inf:work:integrations` read, its list and show, and the `inf:work:use-integration` change, its call, and the placed spec's `integrations`.
-The home sends `integrations` only to a computer whose roster says `browsers`, since the command rides the same task channel, and that lists the `integrations-there` change.
+The home sends `integrations` only to a computer whose roster says `browsers`, since the command rides the same task channel, and runs the current contract major.
 
 A placed card carries the optional `riskDeclaration`, `asking`, `designOnly`, `continues` and `request_write` effects, and a placed `check_change` the optional `pull`, `absentChecks` and `skipRules` declarations of a merge review.
 `PlacedToolFieldCoverage` (`src/core/session/tools.ts`) fails the build when a crewmate-declared top-level field of a card, `check_change`, knowledge read or knowledge record has no place in its work request; host-resolved card fields (`attachment`, `risk`) and the first mate's `taskId` and `reviewTaskId` are left out.

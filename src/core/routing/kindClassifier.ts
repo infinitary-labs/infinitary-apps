@@ -25,7 +25,7 @@ export type KindInput = {
    * which declares nothing and whose kind decides its deliverable, so every
    * kind is offered.
    */
-  deliverable?: Deliverable;
+  deliverable?: Exclude<Deliverable, "operation">;
   constraints?: string;
   repoName?: string;
   delivery?: string;

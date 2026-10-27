@@ -164,12 +164,22 @@ Nothing else moves the rigor: not the intelligence tier - the tier routes models
 ### The deliverable axis (Task B)
 
 Rule 0's first case is its own fact on the record.
-`WorkShape.deliverable` is `answer` or `change`, derived by the host at the mint from the one typed fact the first mate declares (`deliverableFor` in `src/core/orchestrator/intentBrief.ts`): the `read-only` constraint, which says the work ships nothing.
-The sequences document marks every plan, retrieval, research and reproduce step read-only, and the constraint's description says a task without it ships a change.
-Everything else is a change, and a `teach` kind is always a change even with the constraint: its card is never the end of the work.
+`WorkShape.deliverable` is `answer`, `change` or `operation`, derived by the host at the mint from the first mate’s typed constraints (`deliverableFor` in `src/core/orchestrator/intentBrief.ts`): `read-only` declares an answer and `operation` declares an effect.
+The sequences document marks every plan, retrieval, research and reproduce step read-only, and the constraint’s description says a task without read-only or operation ships a change.
+Folder work is an operation; read-only beside operation or folder work is refused before starting.
+Everything else is a change, and a `teach` kind without operation is always a change even with read-only: its card is never the end of the work.
 For work the first mate commissioned, the classifier's kind only routes, never decides the deliverable (INF-990 friction 7: a build whose goal asked for a preview first was classified a plan, so its brief said answer only and the captain's choice on the preview closed it).
 A plan is its own answer step since contract v4.6 (`docs/sequences.md`), so the retired `plan-first` constraint - which a stored intent may still name - changes nothing here.
 No agent judges it, the same way none judges the tier or the rigor.
+
+An operation is not classified: R12 requests medium after a named model, premium, escalation and a program’s declared intelligence.
+Its brief says the effect is the deliverable: make it, check it took, commit and push nothing, open no pull request, and stop and report if code must change.
+The captain’s words authorize only the goal’s named effects; keychain, signing, outside writes, payments and browser handoffs retain their existing consent requirements.
+Its own project’s forge writes go at once, while outside-project writes still ask, and it has no prepare/open/check change tools.
+An operation has no delivery, autonomy or care policy, and no completion decision; its factual outcome note stays until the captain closes it.
+Once its crewmate is idle and has reported, the first mate declares verification with `settle_task finished` and `completion_evidence`.
+The existing settle owner records `done/finished` and the evidence, checks outstanding work and decisions, and retires any scratch working copy through its existing owner; the project folder stays untouched.
+Merge and land are refused; dismissal of a note is never proof of the effect.
 
 An answer task is told so, in the one place the visual-density audit measured as the channel every model family obeys - the brief.
 It gets no `Delivery:` line, no rigor section, and `renderAnswerShapeSection` says the rest as facts about the task: its card is the deliverable, its worktree is a laboratory that is discarded when the task closes, and it commits nothing, pushes nothing, and opens no pull request.

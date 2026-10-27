@@ -13,7 +13,7 @@ import { appPathsFor } from "@core/paths";
 import { seedTask } from "@core/tasks/seedTask";
 
 import type { FmEvent } from "@shared/events";
-import { PROTOCOL_VERSION } from "@shared/ipc";
+import { PROTOCOL_VERSION, SCENE_OBSERVATIONS_SINCE } from "@shared/ipc";
 import { pastEndingWords } from "@shared/pastCard";
 import {
   ANSWER_PROMPT_MARKER,
@@ -919,12 +919,16 @@ export async function startPhoneHome(
           observations.push({ check: "character-fixture", result });
           break;
         }
-        // INF-1066: an older home advertises no named additions and refuses unsupported scene reads.
+        // INF-1066: an older home, on the last major before the scene reads came without a name,
+        // advertises no named additions and refuses unsupported scene reads.
         case "POST scene-older-home":
         case "POST scene-current-home":
           await connection.close();
           sceneObservationReads = 0;
-          connection = connect(PROTOCOL_VERSION, command === "scene-current-home");
+          connection =
+            command === "scene-current-home"
+              ? connect()
+              : connect(`${Number(SCENE_OBSERVATIONS_SINCE.split(".")[0]) - 1}.0.0`, false);
           await connection.settled();
           result = { ok: true };
           break;

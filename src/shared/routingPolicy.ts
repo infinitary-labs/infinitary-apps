@@ -60,11 +60,12 @@ export type WorkKind = z.infer<typeof workKindSchema>;
  * resolves that card. A `change` task ships something through a gate and
  * is everything the fleet did before this axis existed.
  *
- * The HOST derives it at the mint from the one typed fact the Firstmate
- * declares - a `read-only` constraint (`deliverableFor`) - the same way it
- * derives the tier and the rigor. No agent judges it.
+ * An `operation` makes and verifies a named effect and closes finished on
+ * reported evidence, without code delivery. Folder work is an operation.
+ * The host derives this from the first mate's typed `read-only` or
+ * `operation` constraint (`deliverableFor`), refusing contradictory declarations.
  */
-export const deliverableSchema = z.enum(["answer", "change"]);
+export const deliverableSchema = z.enum(["answer", "change", "operation"]);
 export type Deliverable = z.infer<typeof deliverableSchema>;
 
 /** The kinds a classifier may actually assert; `unclear` is its abstention. */
@@ -91,6 +92,7 @@ export const CLASSIFIABLE_KINDS = [
 export const KINDS_BY_DELIVERABLE = {
   answer: ["retrieval", "research", "plan", "reproduce"],
   change: ["implement", "fix", "chore", "teach"],
+  operation: [],
 } as const satisfies Record<Deliverable, ReadonlyArray<(typeof CLASSIFIABLE_KINDS)[number]>>;
 
 /** Whether a kind is one of the answer branch's. */
@@ -507,6 +509,7 @@ export const ruleIdSchema = z.enum([
   "R8",
   "R9",
   "R10",
+  "R12",
 ]);
 /** R11 is ledger-only; older views do not have a program-choice reason line. */
 export type RuleId = z.infer<typeof ruleIdSchema> | "R11";

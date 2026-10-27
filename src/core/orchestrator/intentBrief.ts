@@ -26,6 +26,7 @@ import { type ReviewHistoryEntry, renderReviewHistory } from "./reviewHistory";
 /** The constraint kinds a spawn may name today. */
 export type SpawnConstraintKind =
   | "read-only"
+  | "operation"
   | "tests-required"
   | "no-new-deps"
   | "minimal-diff"
@@ -73,6 +74,7 @@ const RETIRED_CONSTRAINT_TEXT: Record<RetiredConstraintKind, string> = {
 const CONSTRAINT_TEXT: Record<Exclude<SpawnConstraintKind, "free">, string> = {
   "read-only":
     "read-only: find the answer without changing anything - commit nothing, push nothing, open no pull request",
+  operation: "operation: make and verify the named effect; commit nothing and open no pull request",
   "tests-required": "tests required: the work must add or extend tests for its stated intent",
   "no-new-deps": "no new dependencies",
   "minimal-diff": "minimal diff: the smallest change that meets the goal",
@@ -101,7 +103,7 @@ export function parseSpawnIntent(input: {
     const kind = constraint.kind as SpawnConstraintKind;
     if (!(kind in CONSTRAINT_TEXT) && kind !== "free") {
       throw new Error(
-        `Unknown constraint kind "${constraint.kind}". Use read-only, tests-required, no-new-deps, minimal-diff, or free.`,
+        `Unknown constraint kind "${constraint.kind}". Use read-only, operation, tests-required, no-new-deps, minimal-diff, or free.`,
       );
     }
     const text = constraint.text?.trim();
@@ -110,6 +112,7 @@ export function parseSpawnIntent(input: {
     }
     return { kind, ...(text ? { text } : {}) };
   });
+  assertDeliverableConstraints({ goal, userWords, constraints });
   const deliveryNote = input.delivery_note?.trim();
   if (input.kind !== undefined && input.kind !== "personal-ui") {
     throw new Error(`Unknown intent kind "${input.kind}". Use personal-ui, or omit it.`);
@@ -436,9 +439,8 @@ export function renderRigorSection(rigor: Rigor): string {
 /**
  * What this task DELIVERS, derived by the host (crew-posture
  * rationalization Task B, captain F1 A of 2026-09-20). For work the
- * Firstmate commissioned, one typed fact decides it: the `read-only`
- * constraint, its declaration that the work ships nothing. Without it the
- * task is a `change`, and the classifier's kind only routes (INF-990
+ * Firstmate commissioned, its typed `operation` or `read-only` constraint
+ * declares an effect or an answer. Without either the task is a `change`, and the classifier's kind only routes (INF-990
  * friction 7: a build whose goal asked for a preview first was classified a
  * plan, so its brief said answer only and the preview's click closed it).
  * A crewmate's follow-up has no intent and so no declaration: its kind
@@ -450,6 +452,9 @@ export function deliverableFor(
   intent: SpawnIntent | undefined,
   kind: WorkKind | undefined,
 ): Deliverable {
+  assertDeliverableConstraints(intent);
+  if (intent?.constraints?.some((constraint) => constraint.kind === "operation"))
+    return "operation";
   if (kind === "teach") return "change";
   if (!intent) {
     return isAnswerKind(kind) ? "answer" : "change";
@@ -457,6 +462,31 @@ export function deliverableFor(
   return (intent.constraints ?? []).some((constraint) => constraint.kind === "read-only")
     ? "answer"
     : "change";
+}
+
+/** Contradictory typed declarations are refused before any task starts (INF-1430). */
+export function assertDeliverableConstraints(
+  intent: SpawnIntent | undefined,
+  folder = false,
+): void {
+  const constraints = intent?.constraints ?? [];
+  if (
+    constraints.some((c) => c.kind === "read-only") &&
+    (folder || constraints.some((c) => c.kind === "operation"))
+  )
+    throw new Error(
+      "An operation makes an effect and cannot be read-only. Omit read-only, or use an answer task without operation or in_folder.",
+    );
+}
+
+/** The effect, not a source change or an answer card, is the approved deliverable. */
+export function renderOperationShapeSection(): string {
+  return [
+    "Operation shape: the effect is the deliverable. Make the effect named in the goal and check that it took. Commit nothing, push nothing, open no pull request, and stop and report if code must change.",
+    "The captain's words authorize only the effects the goal names. Keychain and signing access, writes outside this task's own project, payments and browser handoffs still ask under their existing consent rules; anything beyond the named effects asks too.",
+    "Your own project's writes go at once. You have no pull request tools and no completion decision. Show what took effect on a factual note with no settle action, then report the result and its evidence; the first mate closes it done and finished from that evidence. A note stays until the captain closes it, but its dismissal is not proof of success.",
+    "Rigor: none - this task delivers an effect, not code through a gate.",
+  ].join("\n");
 }
 
 /**

@@ -36,7 +36,6 @@ import {
   workRequests,
 } from "@shared/work";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
-import { contractChange, listsChange } from "../connection/contractChanges";
 import { WorkRequestAbortedError } from "../devices/homeLink";
 import { PLACED_RELEASE_FILE_REFUSAL } from "../forge";
 import {
@@ -223,9 +222,6 @@ const FORWARDED_TOOLS = new Set([
 
 /** The provider's retries a crewmate's turn gets when the home names none. */
 const RETRIES = 2;
-
-/** Files one task hands another (`handover-files.md`). */
-const HANDOVER_FILES = contractChange("handover-files");
 
 const toolTextSchema = workRequests["inf:work:close-card"].response;
 const integrationAnswerSchema = workRequests["inf:work:use-integration"].response;
@@ -1272,10 +1268,6 @@ export class SessionHost {
             // Each handed file goes home whole, a piece at a time, before the
             // report that names it; its content is never logged here.
             if (declared?.files && declared.files.length > 0) {
-              if (!listsChange(this.options.homeChanges?.(), HANDOVER_FILES))
-                throw new Error(
-                  `Handing files refused: ${HOME.the} runs an older Infinitary that cannot keep them; report without files and name where they are until it is updated.`,
-                );
               const piece = Buffer.alloc(PLACED_COPY_CHUNK_BYTES);
               for (const handed of declared.files) {
                 const fd = openSync(join(folders.temp, HANDOVER_OUT_DIR_NAME, handed.file), "r");

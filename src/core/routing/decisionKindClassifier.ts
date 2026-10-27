@@ -94,18 +94,25 @@ const KIND_INSTRUCTIONS = `${RETRIEVAL_BOUNDARY} Which kind of software work is 
  * start judging the tier, which is exactly what the redesign took away from
  * the Firstmate.
  */
-export const KIND_QUESTIONS: Record<Deliverable | "undeclared", DecisionQuestion> = {
+export const KIND_QUESTIONS: Record<
+  Exclude<Deliverable, "operation"> | "undeclared",
+  DecisionQuestion
+> = {
   answer: branchQuestion("answer"),
   change: branchQuestion("change"),
   undeclared: branchQuestion(undefined),
 };
 
 /** The question for a deliverable, or every kind when none was declared. */
-export function kindQuestionFor(deliverable: Deliverable | undefined): DecisionQuestion {
+export function kindQuestionFor(
+  deliverable: Exclude<Deliverable, "operation"> | undefined,
+): DecisionQuestion {
   return KIND_QUESTIONS[deliverable ?? "undeclared"];
 }
 
-function branchQuestion(deliverable: Deliverable | undefined): DecisionQuestion {
+function branchQuestion(
+  deliverable: Exclude<Deliverable, "operation"> | undefined,
+): DecisionQuestion {
   return {
     type: "choice",
     instructions: `This work delivers ${deliverableWords(deliverable)}. ${KIND_INSTRUCTIONS}`,
@@ -118,11 +125,13 @@ function branchQuestion(deliverable: Deliverable | undefined): DecisionQuestion 
   };
 }
 
-function offeredKinds(deliverable: Deliverable | undefined): ReadonlyArray<string> {
+function offeredKinds(
+  deliverable: Exclude<Deliverable, "operation"> | undefined,
+): ReadonlyArray<string> {
   return deliverable ? KINDS_BY_DELIVERABLE[deliverable] : CLASSIFIABLE_KINDS;
 }
 
-function deliverableWords(deliverable: Deliverable | undefined): string {
+function deliverableWords(deliverable: Exclude<Deliverable, "operation"> | undefined): string {
   if (!deliverable) return "what its kind makes it, as nothing was declared";
   return deliverable === "answer" ? "an answer" : "a change";
 }

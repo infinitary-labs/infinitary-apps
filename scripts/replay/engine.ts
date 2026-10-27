@@ -274,6 +274,8 @@ export type SessionReport = {
      * runs here (`unplayedProgram`), so it has no parts.
      */
     programs: { title: string; parent: boolean; bound: number; started: boolean }[];
+    /** The host-stamped task shape, for replaying deliverable declarations. */
+    task_shapes: { title: string; deliverable: string | null; kind: string | null }[];
   };
 };
 
@@ -2528,6 +2530,11 @@ class Replay {
           builds: approval.builds,
           plan: approval.plan,
           grounded_starts: approval.groundedStarts,
+        })),
+        task_shapes: records.filter((record) => record.kind === "work").map((record) => ({
+          title: record.title,
+          deliverable: record.shape?.deliverable ?? null,
+          kind: record.shape?.kind ?? null,
         })),
         programs: records.flatMap((record) =>
           record.shape?.program

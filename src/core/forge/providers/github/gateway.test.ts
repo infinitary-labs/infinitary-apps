@@ -492,6 +492,15 @@ async function fixture(
     status: "idle",
     shape: { kind: "research", deliverable: "answer" },
   });
+  seedTask(tasks, {
+    id: "task-operation",
+    title: "Cancel the superseded check",
+    status: "idle",
+    repoId: "repo-1",
+    worktreeDir: dir,
+    branch: "fm/task-operation",
+    shape: { kind: "unclear", deliverable: "operation" },
+  });
   // The check reading arms the watch only once the rerun reads as running.
   let readings = 0;
   const readChecks = vi.fn(async () => {
@@ -1555,4 +1564,30 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     ).toContain("leave body out");
     expect(seen).toHaveLength(0);
   });
+});
+
+// INF-1430 piece 2: named operational writes in its own project do not ask;
+// writes elsewhere keep the same captain-only boundary as code changes.
+it("sends an operation's own-project write but holds an outside write", async () => {
+  const { writeAs, seen } = await fixture();
+  const operation = writeAs("task-operation");
+  const sent = await operation.run({
+    method: "POST",
+    path: "/repos/octo/meter/actions/runs/9/cancel",
+  });
+  expect(sent.text).not.toContain("Not sent");
+  expect(seen.map(({ method, path }) => `${method} ${path}`)).toContain(
+    "POST /repos/octo/meter/actions/runs/9/cancel",
+  );
+  const before = seen.length;
+  expect(
+    (
+      await operation.run({
+        method: "POST",
+        path: "/repos/acme/site/issues/1/comments",
+        body: '{"body":"Ready"}',
+      })
+    ).text,
+  ).toContain("Not sent");
+  expect(seen).toHaveLength(before);
 });

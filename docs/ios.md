@@ -225,7 +225,7 @@ Idle cadence samples accept the character's automatic fidget, including the idle
 The named source and drawing scope, working heat, rotation advancement, requested-reaction presence, callback counts and deadlines remain enforced.
 Its accessibility value stays the state the conversation owner supplies; an emote never changes it.
 The join stage uses idle; the empty stage follows the Mac's published busy snapshot and numbered busy events, never typing or a crew count.
-Homes that advertise `native-scene-observations` answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.
+Homes on `SCENE_OBSERVATIONS_SINCE` (`src/shared/ipc.ts`, major 12) or later, and older homes that advertise `native-scene-observations`, answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.
 A numbered push supersedes an older pending read; an older home retains event-only busy observation and unknown remote reach without sending unsupported requests.
 Joining shows only the first mate until real board facts arrive, and the accessibility value names unknown conversation activity until the home supplies a reading.
 `PhoneCrewScene` renders home's formation and every other computer's at the desktop's share of it in a continuous native scroller, with touch panning and arrow keys rather than paging or shrinking the entire scene, and no scroll bars.
@@ -474,7 +474,7 @@ It also checks that the card and Tasks start and end where the message box does,
 The fixture's display controls only change the launcher-owned simulator, never a developer's device or this Mac's appearance.
 App-hosted shell tests render each native character's still pose, play the greeting, every held reply and every fidget through the character's machine, and read Activity from the real test home; the native journey also verifies the computer-authored task key.
 The empty-stage character consumes the Mac's `firstmate_state.busy` event, the same conversation-state owner as the desktop, and the journey holds and completes a real first-mate turn through the mock provider to verify working and idle.
-A stopped or lost connection clears the busy reading; a home advertising `native-scene-observations` supplies an initial busy snapshot, while an older home stays unobserved until a busy event arrives.
+A stopped or lost connection clears the busy reading; a home on major 12 or later, or one advertising `native-scene-observations`, supplies an initial busy snapshot, while an older home stays unobserved until a busy event arrives.
 Native keyboard dictation exposes no listening signal: the phone never infers listening from focus or typing, and the listening drawing is not a live conversation state.
 Native hero pictures use the same crop in both themes from the simulator's full-resolution attachments; the desktop-only `heroShot` cannot capture a SwiftUI view.
 

@@ -11,7 +11,8 @@ It runs in the spawn path before routing - at `commission` for an immediate spaw
 A queued row's verdict is written as the host's stamp fields onto the row as it stands when the call returns (`TaskService.recordShape`, `HOST_STAMP_FIELDS`).
 A model, a basis or any other field a person owns (`CAPTAIN_OWNED_SHAPE_FIELDS`), named or cleared while the classifier ran, stays, and the tier is computed from that row (`CrewSupervisor.classifyQueued`, INF-83, INF-416 piece F).
 
-Three shapes are never classified, because the captain's table decides them *above* the kind and a call could only cost quota:
+Operations are never classified: their deliverable routes through R12 after the higher-priority choices, and their source is `skipped:operation`.
+Three other shapes are never classified, because the captain's table decides them *above* the kind and a call could only cost quota:
 
 | shape | rule that decides it | recorded `kind_source` |
 |---|---|---|

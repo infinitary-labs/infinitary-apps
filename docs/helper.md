@@ -496,7 +496,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
   A computer older than protocol 7.1 is not reported as cleaned.
   The conversation, card bodies and copies, and protocol state stay; an open conversation refuses cleanup.
 - **Words from outside.**
-  The home asks `inf:session:delete-outside` when the Gmail and Calendar content a conversation here read is past its days, or the captain deletes it (`docs/task-retention.md`, "Words from outside"); a home asks only a computer that lists `outside-data-there`.
+  The home asks `inf:session:delete-outside` when the Gmail and Calendar content a conversation here read is past its days, or the captain deletes it (`docs/task-retention.md`, "Words from outside"); a home asks only a computer on the current contract major.
   The order names each kind's label, the moment its words read by then are due, and the note that takes their place, so this computer holds none of the home's rules.
   It reads the conversation's record and this Mac's own Claude client's files for it (`claudeConfigDir`), and answers `waiting` while a turn runs, the conversation opens or carries on by itself, or its client runs work of its own.
   A conversation open here is let go of first, so its files have no writer and nothing of them stays in memory, its due files are written again through a temporary file and one rename, and it opens again with what the home opened it with, from its record (`state`).
@@ -1102,10 +1102,10 @@ Its crewmate's report names files by absolute path (`files`); the computer it ru
 The home verifies each declared name, size and sha256 before recording the report, and the report's outcome names the kept files.
 The first mate's `steer_crewmate` with `files_from` then delivers them into the waiting task's `temp/handover/` folder at 0600, here by a verified copy or there through `inf:session:source-file` with `into: handover`.
 A handed file may hold secrets: no side reads its content into a string, logs it or names more than its kept name, size and sha256.
-A computer that runs work refuses to send when this computer does not list the `handover-files` change, and the first mate is refused in words when the waiting task's computer does not.
+Every computer taking work on the current contract major supports handing files; a waiting task on another major cannot start until updated.
 Both folders go when their task closes (`docs/task-retention.md`).
 The captain’s message attachments use this same destination automatically when their task starts (`docs/task-capture.md`), without a file-finding task or `files_from` steer.
-An empty text attachment uses a zero-byte source-file order only when the receiving computer lists `empty-source-files`.
+An empty text attachment uses a zero-byte source-file order, supported by every computer taking work on the current contract major.
 
 ### Kept validation proof
 

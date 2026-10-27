@@ -2,6 +2,7 @@ import { reviewerOverrideWords } from "@shared/holds";
 import { describe, expect, it } from "vitest";
 import {
   amendBriefGoal,
+  assertDeliverableConstraints,
   basisSectionParts,
   briefText,
   deliverableFor,
@@ -13,6 +14,7 @@ import {
   renderEscalationBrief,
   renderFollowupBrief,
   renderIntentBrief,
+  renderOperationShapeSection,
   renderPicturesSection,
   renderReviewBrief,
   renderRigorSection,
@@ -904,5 +906,36 @@ describe("renderPicturesSection", () => {
         "2 pictures could not be found among the app's copies.",
       ].join("\n"),
     );
+  });
+});
+
+// INF-1430, approved piece 2: effects, not commits or answer cards.
+describe("operations deliverable", () => {
+  const intent = parseSpawnIntent({
+    goal: "Start the chosen service and verify its health",
+    user_words: "start it",
+    constraints: [{ kind: "operation" }],
+  });
+  it("derives an operation independently of a classifier kind", () => {
+    for (const kind of ["unclear", "fix", "chore", "research", "teach"] as const)
+      expect(deliverableFor(intent, kind)).toBe("operation");
+    expect(renderOperationShapeSection()).toContain("effect is the deliverable");
+    expect(renderOperationShapeSection()).toContain("stop and report if code must change");
+    expect(renderOperationShapeSection()).toContain("Keychain and signing access");
+  });
+  it("refuses conflicting declarations, including read-only folder work", () => {
+    expect(() =>
+      parseSpawnIntent({
+        goal: "Start it",
+        user_words: "start it",
+        constraints: [{ kind: "operation" }, { kind: "read-only" }],
+      }),
+    ).toThrow("cannot be read-only");
+    const answer = parseSpawnIntent({
+      goal: "Read it",
+      user_words: "read it",
+      constraints: [{ kind: "read-only" }],
+    });
+    expect(() => assertDeliverableConstraints(answer, true)).toThrow("cannot be read-only");
   });
 });

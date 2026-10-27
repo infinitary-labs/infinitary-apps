@@ -17,6 +17,7 @@ import {
  *   R1a a premium ask
  *   R1b an escalation floor (the only automatic path into premium)
  *   R11 a program part's declared intelligence (premium still needs R1a)
+ *   R12 an operation requests medium without a kind
  *   R2-R7 the kind rules, two of them turning on a verified basis
  *   R8  unclear -> high
  */
@@ -49,6 +50,9 @@ export function tierFor(
       bucket: intelligence,
       reason: `rule R11: the program chose ${intelligence} for this part`,
     };
+  }
+  if (shape.deliverable === "operation") {
+    return { rule: "R12", bucket: "medium", reason: "rule R12: operation -> medium" };
   }
   switch (shape.kind) {
     case "retrieval": {

@@ -845,6 +845,8 @@
   function paintFacts(current) {
     /** @type {Node[]} */
     const facts = [];
+    if (current.deliverable === "operation")
+      facts.push(...fact("deliverable", "Result", "Operation"));
     if (current.assignee) {
       const model = current.modelLabel ? ` on ${current.modelLabel}` : "";
       facts.push(...fact("crewmate", "Crewmate", `${current.assignee}${model}`));

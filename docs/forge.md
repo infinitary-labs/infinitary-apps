@@ -386,6 +386,9 @@ On a GitLab project the same two tools reach GitLab's API (below); they keep the
   The crewmate still follows its CI diagnosis and evidenced-flake rerun instructions; those govern its work, not which GitHub endpoints exist.
 - **Not built yet:** automatic retry of safe reads.
 
+Operations send their own project’s writes at once, like code changes, but receive no pull request delivery tools.
+Outside-project and account writes retain the same consent boundary.
+
 ### A write that asks
 
 FI3-1571 piece 4, the captain's answers: the crewmate asks, and the app adds the exact call and the button; a task that only answers asks for every write it makes but a run start or rerun on its own project (INF-729 way D); GitLab follows the same rule.

@@ -394,7 +394,10 @@ public struct PhoneNotice: Equatable, Sendable {
                     mac.addresses = refreshed; onMacChanged?(mac)
                 }
             }
-            sceneObservations = (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
+            // A major folds every earlier change name in, so a home from sceneObservationsSince on has them without naming them.
+            let homeMajor = ((frame["protocolVersion"] as? String)?.split(separator: ".").first).flatMap { Int($0) } ?? 0
+            sceneObservations = homeMajor >= PhoneContract.sceneObservationsSince
+                || (frame["changes"] as? [String] ?? []).contains(PhoneContract.sceneObservations)
             if !sceneObservations { computers = [] }
             sceneGeneration += 1
             contact = "reaching"

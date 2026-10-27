@@ -285,3 +285,55 @@ describe("verified folder-work completion", () => {
     expect(h.host.stopRuntime).toHaveBeenCalledTimes(1);
   });
 });
+
+// INF-1430 piece 2 composes the same close owner for an operational effect.
+describe("verified operation completion", () => {
+  it("closes an operation done/finished from reported evidence without a merge", async () => {
+    const h = setup({ shape: { kind: "unclear", deliverable: "operation" } });
+    expect((await h.settle.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+      "as finished",
+    );
+    expect(h.tasks.get(h.task.id)).toMatchObject({ status: "done", closedReason: "finished" });
+    expect(h.host.mergePullRequest).not.toHaveBeenCalled();
+  });
+  it("refuses merging and landing an operation before touching workspace or forge", async () => {
+    const h = setup({ shape: { kind: "unclear", deliverable: "operation" } });
+    for (const mode of ["merge-pr", "land"] as const) {
+      expect(
+        (await h.settle.settleTaskDetailed(h.task.id, mode, false, false, "captain")).text,
+      ).toContain("operation");
+    }
+    expect(h.tasks.get(h.task.id)?.status).toBe("active");
+  });
+  it("requires both a report and an explicit verification statement", async () => {
+    const h = setup({ outcome: "", shape: { kind: "unclear", deliverable: "operation" } });
+    expect((await h.settle.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+      "has not reported",
+    );
+    const reported = setup({ shape: { kind: "unclear", deliverable: "operation" } });
+    expect((await reported.settle.closeFinishedFolderWork(reported.task.id, "")).text).toContain(
+      "evidence",
+    );
+  });
+});
+
+// INF-1430: ordinary operations retain an isolated copy until their verified close.
+it("retires an operation’s scratch working copy without merging it", async () => {
+  const h = setup({
+    worktreeDir: "/scratch-operation",
+    branch: "fm/task-operation",
+    shape: { kind: "unclear", deliverable: "operation" },
+  });
+  const retire = vi.fn(async () => ({ outcome: "removed", kept: null }));
+  h.host.workspace = { retireTaskWorktree: retire };
+  expect((await h.settle.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
+    "as finished",
+  );
+  expect(retire).toHaveBeenCalledWith(expect.objectContaining({ cwd: "/scratch-operation" }), {});
+  expect(h.tasks.get(h.task.id)).toMatchObject({
+    status: "done",
+    closedReason: "finished",
+    workspaceState: "removed",
+  });
+  expect(h.host.mergePullRequest).not.toHaveBeenCalled();
+});

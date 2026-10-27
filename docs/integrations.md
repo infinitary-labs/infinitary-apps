@@ -282,9 +282,9 @@ This Mac answers it through `IntegrationsService.forTask` under the same rules a
 A call is a change in the conversation's ledger (`docs/helper.md`, "Holding a conversation"): one asked again after a drop is answered from what this Mac kept, and one this Mac began without a kept answer is never run again.
 A command waiting on this Mac answers before its command process is stopped, and a call not yet sent when it stops is never sent later.
 
-The home grants the command, and its one line in the crewmate's instructions, only to a computer that has a task channel (its roster's `browsers`) and lists the `integrations-there` contract change (`PlacedSessions.takesIntegrations`; `docs/contract.md`, "Changes by name").
-A computer without the change, or without a task channel, gives its crewmates neither the command nor the line.
-What a crewmate there read stays in its conversation on that computer for the same 30 days, and the delete in Settings reaches it there too, through that computer (`inf:session:delete-outside`, which a computer that lists the `outside-data-there` change answers; [Task retention](task-retention.md#words-from-outside)).
+The home grants the command, and its one line in the crewmate's instructions, only to a computer that has a task channel (its roster's `browsers`) and runs the current contract major (`PlacedSessions.takesIntegrations`; `docs/contract.md`, "The version rule").
+A computer on another major takes no work, and a computer without a task channel gives its crewmates neither the command nor the line.
+What a crewmate there read stays in its conversation on that computer for the same 30 days, and the delete in Settings reaches it there too, through that computer (`inf:session:delete-outside`, which a computer on the current contract major answers; [Task retention](task-retention.md#words-from-outside)).
 
 ## Tests
 

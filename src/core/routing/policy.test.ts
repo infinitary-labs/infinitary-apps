@@ -282,3 +282,32 @@ describe("legacyShapeFromDifficulty", () => {
     expect(tierFor(legacyShapeFromDifficulty("high", "gpt-6-astra")).pin).toBe("gpt-6-astra");
   });
 });
+
+// INF-1430's approved R12: skip the kind, retain every higher-priority choice.
+describe("operation routing", () => {
+  it("routes every operation medium below the four overrides", () => {
+    const operation = shape({ kind: "chore", deliverable: "operation" });
+    expect(tierFor(operation)).toMatchObject({ rule: "R12", bucket: "medium" });
+    expect(tierFor({ ...operation, kind: "research" })).toMatchObject({
+      rule: "R12",
+      bucket: "medium",
+    });
+    expect(tierFor({ ...operation, override_model_id: "chosen" })).toMatchObject({
+      rule: "R0",
+      pin: "chosen",
+    });
+    expect(tierFor({ ...operation, premium_ask: true })).toMatchObject({
+      rule: "R1a",
+      bucket: "premium",
+    });
+    expect(
+      tierFor({ ...operation, escalation: { from: "old", attempt: 1, floor: "high" } }),
+    ).toMatchObject({ rule: "R1b", bucket: "high" });
+    expect(
+      tierFor({
+        ...operation,
+        program_part: { call: 0, hash: "call", label: "run", intelligence: "low" },
+      }),
+    ).toMatchObject({ rule: "R11", bucket: "low" });
+  });
+});

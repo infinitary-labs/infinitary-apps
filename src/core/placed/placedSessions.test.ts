@@ -68,7 +68,6 @@ import type { ContractWorld } from "../../../tests/helpers/sessionContract";
 import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
 import { attachmentPath, keepImages } from "../attachments";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
-import { CONTRACT_CHANGES } from "../connection/contractChanges";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
 import { pathsOf } from "../folderMove/due";
@@ -535,7 +534,9 @@ async function world(
   const inReach = async (taskId = "none") => {
     await expect.poll(() => home.placed.ready(deviceId, taskId)).toBe(true);
   };
-  await inReach();
+  if (options.protocolVersion && options.protocolVersion !== PROTOCOL_VERSION)
+    await expect.poll(() => home.devices.version(deviceId)?.contract).toBe(options.protocolVersion);
+  else await inReach();
   return {
     deviceId,
     /** The computer's work folder now: Infinitary's once `moveComputer` moved it. */
@@ -1097,12 +1098,12 @@ describe("a task that runs on a computer that runs work", () => {
     );
   });
 
-  it.each(["handover-files", "empty-source-files"])(
-    "keeps an attachment task queued when its computer lacks %s",
-    async (change) => {
+  it.each(["10.1.0", "11.0.0"])(
+    "keeps an attachment task queued on an older contract %s",
+    async (protocolVersion) => {
       // INF-1389 friction 3: no silent path-only fallback on an older computer.
       const at = await world(undefined, {
-        changes: CONTRACT_CHANGES.names.filter((entry) => entry !== change),
+        protocolVersion,
       });
       const home = at.home();
       initOverflowDir(scratchDir("infinitary-attachment-update-"));
@@ -1119,12 +1120,25 @@ describe("a task that runs on a computer that runs work", () => {
       home.tasks.attachAsk("old-attachments", "t-old-attachments", "tool:create_task");
       const requests = api.requests.length;
       await home.supervisor.dispatchQueuedTask("t-old-attachments");
-      expect(home.tasks.get("t-old-attachments")).toMatchObject({
-        status: "open",
-        gate: { kind: "captain", ref: "dispatch-failed" },
-      });
-      expect(home.tasks.get("t-old-attachments")?.gate?.reason).toContain("Update Infinitary");
+      expect(home.tasks.get("t-old-attachments")).toMatchObject({ status: "open", activity: null });
+      expect(home.devices.version(at.deviceId)?.contract).toBe(protocolVersion);
+      expect(home.placed.ready(at.deviceId, "t-old-attachments")).toBe(false);
+      expect(home.placed.takesHandover(at.deviceId)).toBe(false);
       expect(api.requests.length).toBe(requests);
+      await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
+      await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
+      await at.inReach("t-old-attachments");
+      model([{ text: "Read the attached file." }]);
+      await home.supervisor.dispatchQueuedTask("t-old-attachments");
+      await expect
+        .poll(() => home.tasks.get("t-old-attachments")?.outcome)
+        .toBe("Read the attached file.");
+      const files = readdirSync(join(at.folders("t-old-attachments").temp, "handover"));
+      expect(files).toHaveLength(1);
+      expect(
+        statSync(join(at.folders("t-old-attachments").temp, "handover", files[0] ?? "missing"))
+          .size,
+      ).toBe(0);
     },
   );
 
@@ -3358,7 +3372,7 @@ describe("the integrations command on a computer that runs work", () => {
     );
   });
 
-  it("gives a crewmate on a computer without the change neither the command nor its line", async () => {
+  it("starts no integrations work on an older major and supplies the command after updating", async () => {
     // An installed command must not supply a missing command on the older
     // computer, even on CI runners that have no task commands of their own.
     const installed = scratchDir("infinitary-installed-task-command-");
@@ -3373,19 +3387,34 @@ describe("the integrations command on a computer that runs work", () => {
       jobs: true,
       taskChannel: entry,
       github: { apiBaseUrl: github.base, token: GITHUB_TOKEN, login: "octo" },
-      changes: CONTRACT_CHANGES.names.filter((name) => name !== "integrations-there"),
+      protocolVersion: "11.0.0",
     });
     model([
       { tools: [shellCommand("infinitary-integrations-axi")] },
       { text: "No integrations here." },
     ]);
-    const requests = api.requests.length;
-    await at.start("t-older");
     const home = at.home();
-    await expect.poll(() => home.tasks.get("t-older")?.outcome).toBe("No integrations here.");
-    expect(systemOf(api.requests[requests])).not.toContain(CREWMATE_INTEGRATIONS_LINE);
-    expect(shellAnswer(api.requests[requests + 1]).exit).toBe(127);
+    const requests = api.requests.length;
+    seedTask(home.tasks, {
+      id: "t-older",
+      title: "Use integrations",
+      prompt: "List integrations",
+      status: "queued",
+      deviceId: at.deviceId,
+    });
+    await home.supervisor.dispatchQueuedTask("t-older");
+    expect(home.tasks.get("t-older")?.status).toBe("open");
+    expect(home.placed.takesIntegrations(at.deviceId)).toBe(false);
+    expect(api.requests.length).toBe(requests);
     expect(github.seen).toEqual([]);
+    await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
+    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
+    await at.inReach("t-older");
+    await home.supervisor.dispatchQueuedTask("t-older");
+    await expect.poll(() => home.tasks.get("t-older")?.outcome).toBe("No integrations here.");
+    expect(systemOf(api.requests[requests])).toContain(CREWMATE_INTEGRATIONS_LINE);
+    expect(shellAnswer(api.requests[requests + 1]).exit).toBe(0);
+    expect(JSON.stringify(api.requests)).not.toContain("runner-installed command reached");
   });
 });
 
@@ -3496,24 +3525,23 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     expect(filesHolding(dirname(here), LENA.subject)).toEqual([]);
   });
 
-  it("counts a computer not yet updated as following once it is, and replaces it there then", async () => {
-    const older = CONTRACT_CHANGES.names.filter((name) => name !== "outside-data-there");
-    const { at, home, outsideData, there, calls } = await readThere(older);
+  it("counts a computer on an older major as unreachable until updated, then replaces its content", async () => {
+    const { at, home, outsideData, there, calls } = await readThere();
+    await at.restartComputer({ protocolVersion: "11.0.0" });
+    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe("11.0.0");
 
     expect(await outsideData.deleteNow()).toEqual({
       conversations: 0,
       waiting: 0,
-      elsewhere: [{ computer: "Mac mini", conversations: 1, until: "update" }],
+      elsewhere: [{ computer: "Mac mini", conversations: 1, until: "reach" }],
     });
     // Nothing was asked of that computer; the calls this Mac answered are its own to replace.
     expect(filesHolding(there, LENA.subject)).not.toEqual([]);
     expect(readFileSync(calls, "utf8")).not.toContain(LENA.subject);
 
     // Updated, it is replaced there at the next sweep.
-    await at.restartComputer({ changes: CONTRACT_CHANGES.names });
-    await expect
-      .poll(() => home.devices.version(at.deviceId)?.changes)
-      .toContain("outside-data-there");
+    await at.restartComputer({ protocolVersion: PROTOCOL_VERSION });
+    await expect.poll(() => home.devices.version(at.deviceId)?.contract).toBe(PROTOCOL_VERSION);
     await at.inReach("t-lena");
     await outsideData.sweep();
     expect(filesHolding(there, LENA.subject)).toEqual([]);

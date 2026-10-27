@@ -397,7 +397,8 @@ export class UsageStore {
     const rows = this.db
       .prepare(
         `SELECT t.id, t.key, t.title, p.id AS project_id, p.name AS project,
-                json_extract(t.shape_json, '$.kind') AS kind
+                CASE WHEN json_extract(t.shape_json, '$.deliverable') = 'operation' THEN 'operation'
+                     ELSE json_extract(t.shape_json, '$.kind') END AS kind
          FROM tasks t LEFT JOIN projects p ON p.id = t.project_id
          WHERE t.id IN (SELECT value FROM json_each(?))`,
       )

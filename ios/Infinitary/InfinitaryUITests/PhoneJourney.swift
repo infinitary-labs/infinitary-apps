@@ -7,8 +7,8 @@ import XCTest
     private let app = XCUIApplication()
     private var control: String { ProcessInfo.processInfo.environment["PHONE_TEST_HOME"]! }
 
-    private func home(_ command: String, method: String = "POST", body: String? = nil) async throws -> [String: Any] {
-        var request = URLRequest(url: URL(string: control + "/" + command)!)
+    private func home(_ command: String, method: String = "POST", body: String? = nil, budget: TimeInterval = 60) async throws -> [String: Any] {
+        var request = URLRequest(url: URL(string: control + "/" + command)!, timeoutInterval: budget)
         request.httpMethod = method
         request.httpBody = body.map { Data($0.utf8) }
         let (data, response) = try await phoneTestSession.data(for: request)
@@ -56,9 +56,11 @@ import XCTest
         if words == "In reach" { XCTAssertFalse(app.otherElements["reach-line"].exists, "In reach, no line under the bar repeats it") }
     }
 
+    /// Away past the app's background time (`INFINITARY_TEST_BACKGROUND_TIME`): the app closes its connection when it ends.
     private func background() async throws {
         XCUIDevice.shared.press(.home)
-        _ = try await home("disconnected")
+        // The home waits up to a minute for the phone to go; its answer must not be cut first.
+        _ = try await home("disconnected", budget: 90)
     }
 
     private func submitLink(_ command: String = "link") async throws {
@@ -96,6 +98,8 @@ import XCTest
     private func launchFresh() async throws {
         continueAfterFailure = false
         app.launchEnvironment["INFINITARY_ISOLATED_PHONE_TEST"] = "1"
+        // INF-1528: the simulator never ends the app's background time, so the app ends it after this long.
+        app.launchEnvironment["INFINITARY_TEST_BACKGROUND_TIME"] = "15"
         XCUIDevice.shared.orientation = .portrait
         try await launchPhoneApp(app)
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 10), app.debugDescription)
@@ -320,7 +324,26 @@ import XCTest
         picture("activity-end")
         tab("Home")
 
-        // A background/foreground return keeps the home's epoch and exercises replay, not a reload.
+        // INF-1528, the captain: "the moment i minimize the ios app, it seems it immediately disconnects.
+        // reopening the app even only after a short while needs to wait for reconnection."
+        // A short trip away keeps the same connection: the app comes back in reach, with what changed meanwhile.
+        let stateBeforeTrip = try await home("state", method: "GET")
+        let beforeTrip = try XCTUnwrap(stateBeforeTrip["readings"] as? [String: Int])
+        XCUIDevice.shared.press(.home)
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in self.app.state != .runningForeground }, object: nil, timeout: 10), .completed, "Home leaves the app")
+        let whileShortlyAway = try await home("change")
+        app.activate()
+        XCTAssertEqual(app.buttons["computer-details"].value as? String, "In reach", "The app reopens in reach, not reconnecting")
+        XCTAssertFalse(app.otherElements["reach-line"].exists, "No out-of-reach line shows on the return")
+        let stateAfterTrip = try await home("state", method: "GET")
+        let afterTrip = try XCTUnwrap(stateAfterTrip["readings"] as? [String: Int])
+        XCTAssertEqual(afterTrip["connections"], beforeTrip["connections"], "The short trip made no new connection")
+        let shortTripChange = try XCTUnwrap(whileShortlyAway["title"] as? String)
+        showCard(shortTripChange)
+        XCTAssertTrue(app.staticTexts[shortTripChange].waitForPresence(timeout: 10))
+
+        // A longer absence, past the time iOS gives the app in the background, closes the connection;
+        // the return keeps the home's epoch and exercises replay, not a reload.
         try await background()
         let whileAway = try await home("change")
         app.activate()

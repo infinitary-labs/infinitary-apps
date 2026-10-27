@@ -33,6 +33,7 @@ struct AddressJoin: Equatable {
     private var signingIn: Task<Void, Never>?
     private var joining: Task<Void, Never>?
     private var foreground = false
+    private var backgroundTime = UIBackgroundTaskIdentifier.invalid
     private let savedURL: URL
     private let trustedURL: URL
     private let loadIdentity: () throws -> PhoneIdentity
@@ -240,8 +241,37 @@ struct AddressJoin: Equatable {
 
     func active(_ active: Bool) {
         foreground = active
-        if active { _ = restore(); nearby.start(); connection?.start() }
-        else { nearby.stop(); connection?.stop() }
+        if active { endBackgroundTime(); _ = restore(); nearby.start(); connection?.start() }
+        else { nearby.stop(); keepThroughBackgroundTime() }
+    }
+
+    /// INF-1528: a short trip away keeps the connection, so the app comes back in reach. It stays open for the
+    /// background time iOS gives the app and closes when iOS ends that time, before the app is suspended.
+    private func keepThroughBackgroundTime() {
+        guard connection != nil, backgroundTime == .invalid else { return }
+        backgroundTime = UIApplication.shared.beginBackgroundTask(withName: "Stay in reach") { [weak self] in
+            MainActor.assumeIsolated { self?.backgroundTimeEnded() }
+        }
+        if backgroundTime == .invalid { connection?.stop(); return }
+        // The simulator never ends a background task, so the journey stands in for iOS with its own end.
+        if let seconds = ProcessInfo.processInfo.environment["INFINITARY_TEST_BACKGROUND_TIME"].flatMap(Double.init) {
+            let task = backgroundTime
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(seconds))
+                if self?.backgroundTime == task { self?.backgroundTimeEnded() }
+            }
+        }
+    }
+
+    private func backgroundTimeEnded() {
+        if !foreground { connection?.stop() }
+        endBackgroundTime()
+    }
+
+    private func endBackgroundTime() {
+        guard backgroundTime != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(backgroundTime)
+        backgroundTime = .invalid
     }
 
     private func connect(_ mac: JoinedMac) {

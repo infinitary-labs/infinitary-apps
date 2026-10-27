@@ -775,6 +775,9 @@ export async function startPhoneHome(
         case "POST disconnected": {
           // Home's animation first makes the scene inactive. Wait for the real socket to go,
           // rather than removing a still-connected phone and accidentally testing close 4401.
+          // INF-1528: the phone keeps its connection for its background time (iOS gives about
+          // 30 seconds; the journey sets its own end, INFINITARY_TEST_BACKGROUND_TIME) and closes it then.
+          const started = performance.now();
           if (views.size > 0)
             await new Promise<void>((resolve, reject) => {
               const off = connection.onViewDevice(() => {
@@ -786,10 +789,12 @@ export async function startPhoneHome(
               });
               const timer = budgetTimer(() => {
                 off();
-                reject(new Error("The background phone kept its connection"));
-              }, 10_000);
+                reject(
+                  new Error("The background phone kept its connection past its background time"),
+                );
+              }, 60_000);
             });
-          result = { views: views.size };
+          result = { views: views.size, awayMs: Math.round(performance.now() - started) };
           observations.push({ check: "background-disconnected", result });
           break;
         }

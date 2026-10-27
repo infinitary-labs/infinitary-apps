@@ -91,7 +91,8 @@ The watchdog starts before sending hello and cancels the transport too, so a sta
 The app keeps only its in-memory view while out of reach and shows its last-heard time.
 Out of reach is said once, by the reach line under the top bar with the time the computer was last heard; the message capsule and a card's reply row dim, and `changesOffLine` puts the Mac's own words (`changesOffWords`, `src/renderer/src/devices/viewWords.ts`) under the message box.
 `ReadOnlySession.returns` counts the times the computer came back in reach after a failed attempt, so the app can mark a return without mistaking the ordinary reconnection when it opens for one.
-Background cancels the old connection generation, and activation starts it again; an inactive scene such as Control Center does not disconnect.
+A trip to the background keeps the connection for the background time iOS gives the app (INF-1528), so a short trip away comes back in reach on the same connection, with what changed meanwhile already read.
+When iOS ends that time, the app cancels the connection generation before it is suspended, and activation starts it again; an inactive scene such as Control Center does not disconnect.
 A late callback from an old connection cannot clear or overwrite a newer connection.
 Nearby addresses may be tried with the original pin.
 Each reconnect orders the saved and nearby alternatives with private IPv4 candidates first, without letting a successful local fallback permanently reverse that preference.
@@ -313,7 +314,7 @@ The notice is a pill at the top of every tab, interactive glass on iOS 26, a New
 It sits under the top bar, over the stage beside the landscape sidebar, and waits while an iPhone is on its side.
 A reply notice leaves after five seconds unless VoiceOver is running; a new-card notice stays until its card is read or the pill is swiped, and no pill points at the card already on the stage.
 The first snapshot and a reload seed the notice history without announcing old cards; a body-only revision is not new news.
-Background stops the connection and clears the notice; there is no background notification service or push relay.
+The end of the app's background time stops the connection and clears the notice; there is no background notification service or push relay.
 
 ## Installing on a phone
 
@@ -456,11 +457,12 @@ An encoded demo retains real speed and holds the final frame for five seconds, w
 The runner creates and deletes its own simulator, scratch HOME, real-core home, mock provider, data and keys, never borrows or erases a person's simulator, and saves logs and the result bundle outside the working copy.
 The test home uses the real stores, dispatcher, pairing and TLS connection, with sample cards, feed lines and a task; its control interface listens only on loopback behind a fresh per-run token.
 It attaches each connection it starts to the core, as the app does, so the core's phone door answers the address part's link only once that connection listens for it.
+The simulator never ends an app's background time, so the journey sets `INFINITARY_TEST_BACKGROUND_TIME` to the seconds after which the app ends it itself, standing in for iOS; a phone always waits for iOS.
 The simulator-only `INFINITARY_ISOLATED_PHONE_TEST` environment value disables real Bonjour browsing and the network sweep, so an offline fixture never causes attempts against a person's discovered Macs; physical discovery remains a captain check.
 In that mode `INFINITARY_TEST_NEARBY_SSH` (`name|host|port`) names the one stand-in computer Join by its address lists, and `INFINITARY_TEST_SWEEP` (`host:port`, comma-separated) the only addresses its sweep tries.
 `INFINITARY_TEST_RETRIED_CARD_LAG` (seconds) holds a retried card body's drawn height that long before its web view takes it, standing in for a loaded computer; the cards part sets it so its stalled-answer check taps a body that has drawn but not yet grown.
 It first verifies the independent published-contract client can join and read the sample card.
-The join part covers a wrong Mac pin, joining, cards and feed, Activity scrolled to its last whole row, identity across relaunch, out-of-reach state, catch-up after a home restart, background/foreground replay, Leave, local Forget and Removed.
+The join part covers a wrong Mac pin, joining, cards and feed, Activity scrolled to its last whole row, identity across relaunch, out-of-reach state, catch-up after a home restart, a short trip to the background that keeps its connection, background/foreground replay after the background time ends, Leave, local Forget and Removed.
 The address part starts the Mac's own `sshd` beside its home (`tests/helpers/sshServer.ts`), run as the test's user with a scratch home folder and every session handed the home's data folder; it checks the home's sshd listed as the stand-in computer, the sweep asked first and reading that sshd's real banner, a tap filling the address and port under the account, Not this one, the fingerprint asked again for a typed address, the key refused, a wrong password's words, then adds the key the phone shows and joins.
 That `sshd` can check no password, so the password that lets the key in is checked by the package tests against an SSH server of their own (`SSHJoinTests`).
 Every other part first joins its own home, and reaches the state the single journey had reached before it: the talk part puts the hero card on the stage and relaunches the app.

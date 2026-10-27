@@ -131,7 +131,8 @@ Every current check must still pass before completion.
 
 Validation on every tier may use whatever it truly needs, preferring disposable data/accounts, isolated app homes, local instances or workspace-local tools when they prove the same boundary.
 Before sensitive or costly access, the crewmate asks on a card naming the resource, check and possible cost or changes: sign-ins/accounts, allowance or money, real data/production, keychain/signing or credential access, and anything others see.
-One approval covers the named sign-in for the rest of the task through its owning app or program; another sign-in or unrelated sensitive or costly resource needs consent of its own.
+The crewmate asks each consent for the rest of the task and says so in the ask: one approval covers what it named, as the ask described it, for every later check, run or version of the task (INF-1540); a sign-in is used through its owning app or program.
+Another sign-in or unrelated sensitive or costly resource needs consent of its own.
 Secrets stay off command lines and out of printed output.
 Asking for resource consent needs no reviewer clearance, and does not replace separate persistent-effect approval, browser handoff or merge consent.
 When a check needs something the builder cannot run itself, it reports `needs_firstmate` for coordination.

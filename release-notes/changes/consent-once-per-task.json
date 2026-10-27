@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "consent-once-per-task",
+      "kind": "improvement",
+      "area": "crewmates",
+      "title": "A crewmate asks your consent once for the rest of its task",
+      "body": "When a crewmate needs your yes for something sensitive or costly, such as an account, your plan's allowance or signing, it now asks once for the rest of its task and does not ask again for later checks or runs of the same thing. Something different still gets its own question.",
+      "noPicture": "This changes how often a crewmate asks for consent, not a view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

@@ -1643,8 +1643,12 @@ describe("validation resource consent on every tier", () => {
             { delivery, rigor },
           );
           expect(prompt.split(RIGOR_SAFETY)).toHaveLength(2);
-          expect(prompt).toContain("one approval covers that sign-in for the rest of this task");
           expect(prompt).toContain("keychain or signing access, credential access");
+          // INF-1540 direction 3: every consent ask stands for the rest of the task.
+          expect(prompt).toContain(
+            "Ask each consent for the rest of this task and say so in the ask",
+          );
+          expect(prompt).toContain("for every later check, run or version of this task");
           expect(prompt).toContain("report needs_firstmate asking the first mate to coordinate");
         }
       }

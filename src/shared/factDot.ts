@@ -37,3 +37,28 @@ export function factDotSvg(state: FactDotState): string {
       : `<circle cx="5" cy="5" r="4.5" fill="${shape.disc}"/><path d="${shape.mark}" stroke="var(--bg-2)" stroke-width="1.4"${shape.open ? ' fill="none"' : ""} stroke-linecap="round"/>`;
   return `<svg class="inf-fact-dot" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">${drawn}</svg>`;
 }
+
+/** A round count in the feed's own words (`checksSentence`): "round 2 of 3". */
+export function roundWords(spent: number, cap: number): string {
+  return `round ${spent} of ${cap}`;
+}
+
+/**
+ * The rounds a cap counts, drawn after a fact cell's words (INF-1501, the
+ * captain's option C): one mark per round the cap allows, filled for each
+ * round spent, hollow for the rest; once the cap holds the task every mark
+ * is `--danger` and the word held follows, since the cell's own dot can be
+ * a tick by then. The count in words rides the cell's `title` and the
+ * drawing's label.
+ */
+export function factRoundsSvg(spent: number, cap: number, held: boolean): string {
+  const marks = Array.from({ length: cap }, (_, i) => {
+    const cx = 4 + i * 10;
+    return i < spent
+      ? `<circle cx="${cx}" cy="5" r="3.2" fill="${held ? "var(--danger)" : "var(--fg-2)"}"/>`
+      : `<circle cx="${cx}" cy="5" r="2.7" fill="none" stroke="var(--fg-3)" stroke-width="1.1"/>`;
+  }).join("");
+  const width = cap * 10 - 2;
+  const drawn = `<svg class="inf-fact-rounds" width="${width}" height="10" viewBox="0 0 ${width} 10" role="img" aria-label="${roundWords(spent, cap)}">${marks}</svg>`;
+  return held ? `${drawn}<span class="inf-fact-held">held</span>` : drawn;
+}

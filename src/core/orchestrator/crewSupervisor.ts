@@ -80,7 +80,7 @@ import {
   noNewWorkWaitLine,
 } from "@shared/deviceUpdateNudge";
 import type { CrewCounts, FmEvent } from "@shared/events";
-import { factDotSvg } from "@shared/factDot";
+import { factDotSvg, factRoundsSvg, roundWords } from "@shared/factDot";
 import { reportSummary } from "@shared/feed";
 import {
   type FolderNoticed,
@@ -10615,6 +10615,20 @@ export class CrewSupervisor {
       );
     }
     this.readChangeLines(record);
+    // What the host is holding on this task, drawn from its own records
+    // (contract v3.6, captain lock 3): the rounds each cap counts, as marks
+    // after the cell they belong to (INF-1501), and the head CI last went
+    // red on. The prompts used to ask an agent to type a count it cannot
+    // see; here the captain reads it off the card.
+    const rounds = record.delivery;
+    const ciMarks = rounds?.ciRounds
+      ? factRoundsSvg(rounds.ciRounds, CI_ROUND_CAP, rounds.ciCapAt !== undefined)
+      : "";
+    const ciRoundTitle = rounds?.ciRounds
+      ? `${rounds.ciCapAt !== undefined ? "held at " : ""}${roundWords(rounds.ciRounds, CI_ROUND_CAP)}${rounds.ciRedHead ? `, the checks last failed at ${rounds.ciRedHead.slice(0, 7)}` : ""}`
+      : undefined;
+    const joinTitle = (...parts: (string | undefined)[]) =>
+      parts.filter((part) => part).join(" · ") || undefined;
     const ci = record.delivery?.ci;
     const ciAt = record.delivery?.ciAt;
     if (ci && ciAt !== undefined) {
@@ -10635,36 +10649,15 @@ export class CrewSupervisor {
       cell(
         "checks",
         "Checks",
-        `${statusDot(dot)}${span ? checksSpanWords(words, span, this.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.now())}` : ""}`,
-        checksRestWords(span, ciAt),
+        `${statusDot(dot)}${span ? checksSpanWords(words, span, this.now()) : words}${span?.finishedAt != null ? ` · ${checksFinishedAgo(span.finishedAt, this.now())}` : ""}${ciMarks}`,
+        joinTitle(checksRestWords(span, ciAt), ciRoundTitle),
       );
-    } else if (delivery === "direct-pr") {
-      cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
-    }
-    // What the host is holding on this task, drawn from its own records
-    // (contract v3.6, captain lock 3): the rounds each cap counts and the
-    // head CI last went red on. The prompts used to ask an agent to type a
-    // count it cannot see; here the captain reads it off the card.
-    const rounds = record.delivery;
-    if (rounds?.ciRounds) {
-      const red = rounds.ciRedHead ? ` at ${rounds.ciRedHead.slice(0, 7)}` : "";
+    } else if (delivery === "direct-pr" || ciMarks) {
       cell(
-        "check-rounds",
-        "Check rounds",
-        `${rounds.ciCapAt !== undefined ? statusDot("failed") : ""}${rounds.ciRounds}/${CI_ROUND_CAP}`,
-        rounds.ciCapAt !== undefined
-          ? `held at the cap; the checks last failed${red}`
-          : `unsuccessful tries at getting the checks to pass${red}`,
-      );
-    }
-    if (rounds?.reviewRounds) {
-      cell(
-        "look-rounds",
-        "Look rounds",
-        `${rounds.reviewCapAt !== undefined ? statusDot("failed") : ""}${rounds.reviewRounds}/${REVIEW_ROUND_CAP}`,
-        rounds.reviewCapAt !== undefined
-          ? "held at the cap"
-          : "rounds of findings this change has spent",
+        "checks",
+        "Checks",
+        `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}${ciMarks}`,
+        ciRoundTitle,
       );
     }
     // The independent review's word on a reviewed task (delivery rigor
@@ -10672,6 +10665,15 @@ export class CrewSupervisor {
     // never a hold (Q4), or where the review stands while it is live.
     if (this.policiesOf(record)?.rigor.value === "reviewed") {
       const review = record.delivery;
+      // The findings rounds the review cap counts, the same way as the
+      // checks' rounds (INF-1501).
+      const lookHeld = review?.reviewCapAt !== undefined;
+      const lookMarks = review?.reviewRounds
+        ? factRoundsSvg(review.reviewRounds, REVIEW_ROUND_CAP, lookHeld)
+        : "";
+      const lookRoundTitle = review?.reviewRounds
+        ? `${lookHeld ? "held at " : ""}findings ${roundWords(review.reviewRounds, REVIEW_ROUND_CAP)}`
+        : undefined;
       if (review?.reviewVerdict) {
         const at = review.reviewSha
           ? ` <span class="inf-mono">${escapeCardText(review.reviewSha.slice(0, 7))}</span>`
@@ -10680,13 +10682,13 @@ export class CrewSupervisor {
         cell(
           "review",
           "Review",
-          `${statusDot(review.reviewVerdict === "pass" ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}${at}${risk}`,
-          review.reviewRiskNote,
+          `${statusDot(review.reviewVerdict === "pass" ? "ok" : review.reviewVerdict === "blocked" ? "failed" : "warn")}${REVIEW_WORDS[review.reviewVerdict]}${at}${risk}${lookMarks}`,
+          joinTitle(review.reviewRiskNote, lookRoundTitle),
         );
       } else if (this.openReviewOf(record.id)) {
-        cell("review", "Review", `${statusDot("running")}open`);
+        cell("review", "Review", `${statusDot("running")}open${lookMarks}`, lookRoundTitle);
       } else {
-        cell("review", "Review", `${statusDot("idle")}awaiting`);
+        cell("review", "Review", `${statusDot("idle")}awaiting${lookMarks}`, lookRoundTitle);
       }
     }
     // The captain's standing override (docs/delivery-rigor.md, "The

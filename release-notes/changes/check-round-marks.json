@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "check-round-marks",
+      "kind": "improvement",
+      "area": "cards",
+      "title": "A merge card shows its check rounds inside the Checks fact",
+      "body": "When a crewmate has spent a try at getting the checks to pass, the Checks fact on its merge card now ends in three small marks, one filled for each round spent. Rest the pointer on it to read round 1 of 3, the same words the feed uses. Once all three are spent the marks turn red and say held. The separate Check rounds fact is gone, and a careful task's review rounds ride its Review fact the same way.",
+      "picture": {
+        "dark": "check-round-marks-dark.webp",
+        "light": "check-round-marks-light.webp",
+        "alt": "A merge card about a gauge fix: its facts show the Checks fact reading passed in 3h 03m, 4m ago, followed by three red marks and the word held, beside Discard and Merge the pull request."
+      },
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ],
+  "exclusions": []
+}

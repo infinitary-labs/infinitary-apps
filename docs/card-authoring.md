@@ -113,7 +113,10 @@ On any card carrying a `settle` effect, and on the story note of a task that mer
   For work on another computer, its host measures the same git diff and returns optional counts with its revision read; an older computer returns no counts.
   It shows only while that reading is of the version on offer and is read again when that version or its base moves; an unread change shows no cell, never a zero.
   A reading that finishes after the offered version or placement changes is discarded.
-  Since v3.6 it also carries the HOLDS the host placed on the task: the CI rounds and the review rounds it counted, each against its cap, with the head CI last went red on in the cell's title and a failed dot once the cap is standing.
+  Since v3.6 it also carries the HOLDS the host placed on the task: the CI rounds and the review rounds it counted, each against its cap.
+  The rounds ride the cell they belong to, never a cell of their own (INF-1501): marks after the Checks cell's words, and after the Review cell's on a reviewed task, one per round the cap allows, filled for each round spent (`factRoundsSvg`, `src/shared/factDot.ts`).
+  The count in the feed's own words (`round 2 of 3`) rides the cell's title and the drawing's label, after the checks' times, with the head CI last went red on.
+  Once the cap is standing every mark turns `--danger` and the word held follows, since the cell's own dot can be a tick by then; a direct-pr task with a round counted and no reading yet still shows `not read yet` with its marks.
   The prompts used to ask an agent to type out a round count it cannot see; here the captain reads it off the card.
   An Override cell (`override`) names the holds the captain's recorded words pass, with the captain's words and how long in its title, and says the merge goes without live proof when they pass it (`docs/delivery-rigor.md`, "The holds").
   When the checks started and when they were last read (`Started 9:01 PM · read 9:13 PM`) and a review's risk note ride the cells' `title` attributes, never lines of their own; the branch is deliberately not shown.

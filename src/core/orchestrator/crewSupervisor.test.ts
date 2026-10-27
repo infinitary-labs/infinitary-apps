@@ -36,6 +36,7 @@ import type { CheckChangeInput } from "@shared/checkRepair";
 import { NEEDS_REAUTH_CONSEQUENCE } from "@shared/credentialHealth";
 import { HOME } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
+import { factRoundsSvg } from "@shared/factDot";
 import {
   fixedHoldWords,
   overrideTakenBackWords,
@@ -54,6 +55,7 @@ import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { CREWMATE_TAB_VIA } from "@shared/provenance";
 import { DROP_REVIEW_STALE, dropReviewKeys, NO_LONGER_WANTED } from "@shared/recordDrop";
 import { RUNS_ON_THIS_MAC } from "@shared/repos";
+import { CI_ROUND_CAP, REVIEW_ROUND_CAP } from "@shared/rigor";
 import type { RiskDeclaration } from "@shared/risk";
 import {
   isFolderRepair,
@@ -16321,28 +16323,37 @@ describe("the task graph (task-system P2)", () => {
       expect(body()).not.toContain("not read yet");
       expect(cards().filter((card) => card.title === "The smoke test is fixed")).toHaveLength(1);
       // The holds the host placed ride the same strip (contract v3.6,
-      // captain lock 3): the round counts against their caps, with the head
-      // CI last went red on in the cell's title. The prompts used to ask an
-      // agent to type out a count it cannot see.
+      // captain lock 3): the rounds a cap counts are marks after the Checks
+      // cell's words, in the feed's words on rest, with the head CI last
+      // went red on - one cell, not a Check rounds cell beside it (INF-1501,
+      // the captain: "let's consolidate these two metadata pieces into
+      // one"). The prompts used to ask an agent to type out a count it
+      // cannot see.
       tasks.recordDelivery(taskId, {
         ciRounds: 2,
         ciRedHead: "9f3c1ab0000000000000000000000000000000ee",
-        reviewRounds: 1,
       });
       emit();
       await tick();
-      expect(body()).toContain(
-        '<span class="inf-fact" data-fact="check-rounds" title="unsuccessful tries at getting the checks to pass at 9f3c1ab"><span class="inf-fact-k">Check rounds</span><span class="inf-fact-v">2/3</span></span>',
+      const checksCell = (html: string) =>
+        html.match(/<span class="inf-fact" data-fact="checks"[^>]*>.*?<\/span><\/span>/)?.[0] ??
+        "";
+      const checks = checksCell(body() ?? "");
+      expect(checks).toMatch(
+        /title="Started [^"]+ · read [^"]+ · round 2 of 3, the checks last failed at 9f3c1ab"/,
       );
-      expect(body()).toContain(
-        '<span class="inf-fact" data-fact="look-rounds" title="rounds of findings this change has spent"><span class="inf-fact-k">Look rounds</span><span class="inf-fact-v">1/2</span></span>',
+      expect(checks).toContain(
+        `passed in 14m · 6m ago${factRoundsSvg(2, CI_ROUND_CAP, false)}</span>`,
       );
-      // A standing cap says so with a failed dot rather than a second line.
+      expect(factRoundsSvg(2, CI_ROUND_CAP, false)).toContain('aria-label="round 2 of 3"');
+      expect(body()).not.toContain("Check rounds");
+      // A standing cap marks every round and says held rather than adding a
+      // line, since the checks' own dot can be a tick by then.
       // It cannot ride the CREWMATE's card - `pendingCiGate` holds that one
       // while the cap stands - so the surface that carries it is a Firstmate
       // settle card on the same task, which is exactly what the captain is
       // answering when the cap asks for a decision.
-      tasks.recordDelivery(taskId, { ciCapAt: Date.now() });
+      tasks.recordDelivery(taskId, { ciRounds: 3, ciCapAt: Date.now() });
       const held = supervisor.addFirstmateCard({
         title: "The smoke test hit its CI cap",
         body: "<p>CI went red on three heads.</p><p>Choose how to proceed.</p>",
@@ -16351,10 +16362,32 @@ describe("the task graph (task-system P2)", () => {
       });
       await tick();
       const heldBody = cards().find((card) => card.id === held)?.body ?? "";
-      expect(heldBody).toContain('title="held at the cap; the checks last failed at 9f3c1ab"');
-      expect(heldBody).toMatch(
-        /<span class="inf-fact-k">Check rounds<\/span><span class="inf-fact-v"><svg/,
+      const heldChecks = checksCell(heldBody);
+      expect(heldChecks).toContain('· held at round 3 of 3, the checks last failed at 9f3c1ab"');
+      expect(heldChecks).toContain(`${factRoundsSvg(3, CI_ROUND_CAP, true)}</span>`);
+      expect(factRoundsSvg(3, CI_ROUND_CAP, true)).toContain(
+        '<span class="inf-fact-held">held</span>',
       );
+      // The review's findings rounds fold into the Review cell the same way.
+      tasks.updateFields(taskId, { policies: { rigor: "reviewed" } }, "firstmate");
+      tasks.recordDelivery(taskId, {
+        reviewVerdict: "findings",
+        reviewSha: "9f3c1ab0000000000000000000000000000000ee",
+        reviewRounds: 1,
+      });
+      const reviewed = supervisor.addFirstmateCard({
+        title: "The smoke test has review findings",
+        body: "<p>The review found one gap.</p><p>Choose how to proceed.</p>",
+        taskId,
+        actions: [{ id: "discard", label: "Discard", danger: true, effect: SETTLE_DISCARD }],
+      });
+      await tick();
+      const reviewedBody = cards().find((card) => card.id === reviewed)?.body ?? "";
+      expect(reviewedBody).toMatch(
+        /<span class="inf-fact" data-fact="review" title="findings round 1 of 2"><span class="inf-fact-k">Review<\/span>/,
+      );
+      expect(reviewedBody).toContain(`${factRoundsSvg(1, REVIEW_ROUND_CAP, false)}</span></span>`);
+      expect(reviewedBody).not.toContain("Look rounds");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -19991,7 +20024,9 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       const card = cards().find((entry) => entry.id === cardId);
       expect(card?.body).toContain('passed <span class="inf-mono">0123456</span> · risk low');
-      expect(card?.body).toContain('title="one test file changed."');
+      // The risk note rides the title, then the findings round the review
+      // already spent (INF-1501).
+      expect(card?.body).toContain('title="one test file changed. · findings round 1 of 2"');
       expect(await supervisor.settleTask(builderId, "merge-pr", undefined, "captain")).toContain(
         "Change #55",
       );

@@ -511,8 +511,6 @@ export const SETTLE_FACTS = [
   "change",
   "lines",
   "checks",
-  "check-rounds",
-  "look-rounds",
   "review",
   "override",
 ] as const;

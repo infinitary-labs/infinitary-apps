@@ -2066,6 +2066,9 @@ a:hover {
   .inf-followup-word { color: var(--fg-3); white-space: nowrap; }
   .inf-followup[data-followup="hold"] .inf-followup-word { color: var(--warn); }
   .inf-fact-dot { vertical-align: -1px; margin-right: var(--space-1); }
+  /* The rounds a cap counts, after a cell's words (factRoundsSvg), and the word held once the cap stands. */
+  .inf-fact-rounds { vertical-align: -1px; margin-left: var(--space-2); }
+  .inf-fact-held { color: var(--danger); margin-left: var(--space-1); }
   /* What a card's button sends where the project lives, drawn by the host (FI3-1571). */
   .inf-call { margin: var(--space-3) 0 0; padding: var(--space-2) var(--space-3); border: 1px solid var(--line-1); border-radius: var(--radius-m); }
   .inf-call-k { font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; margin-bottom: 2px; }

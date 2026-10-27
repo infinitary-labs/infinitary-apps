@@ -1,0 +1,9 @@
+{
+  "readAt": "2026-10-27T09:53:00Z",
+  "about": "GitHub's artifact metadata for the passing verify runs reached by the chooser fixtures. Trimmed to e2e-results (the API name filter), except the installer-only run's sole artifact, kept to exercise exact-name matching. These are test inputs, not a claim about future artifact availability.",
+  "runs": {
+    "40471444367": [{ "id": 12723537203, "name": "installer-evidence-arm64", "expired": false }],
+    "40319912150": [{ "id": 12651160712, "name": "e2e-results", "expired": false }],
+    "39732331649": [{ "id": 12407108927, "name": "e2e-results", "expired": false }]
+  }
+}

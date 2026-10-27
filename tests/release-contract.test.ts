@@ -748,10 +748,12 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
    * result while its plain list held passing ones, and every pull request's
    * chooser failed. INF-1443: on 2026-10-26 the plain list answered 502
    * while GitHub worked out each run's pull requests, and answered every run
-   * without them. The step's own script runs against each day's answers.
+   * without them. INF-1578: on 2026-10-27 a passing installer-only run
+   * supplied no e2e-results. The step's own script runs against each day's
+   * answers and the artifact metadata, including across run-list pages.
    */
-  it.each(["2026-10-22", "2026-10-26"])(
-    "finds the newest passing verify run in the plain run list read on %s, and fails with none",
+  it.each(["2026-10-22", "2026-10-26", "2026-10-27"])(
+    "finds the newest passing verify run with journey times in the plain list read on %s",
     async (day) => {
       const journeys = loadYamlFile(".github/workflows/journeys.yml") as {
         jobs: Record<string, { steps: Step[] }>;
@@ -766,9 +768,16 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
         withPullRequests?: { status: number; data: { message: string } };
         runs: Run[];
       };
+      type Artifact = { id: number; name: string; expired: boolean };
+      const artifacts = JSON.parse(read("tests/fixtures/verify-runs/timing-artifacts.json")) as {
+        runs: Record<string, Artifact[]>;
+      };
       const AsyncFunction = Object.getPrototypeOf(async () => {}).constructor;
       const execute = new AsyncFunction("core", "github", "context", script);
-      const choose = async (runs: Run[]) => {
+      const choose = async (
+        runs: Run[],
+        options: { pageSize?: number; expired?: boolean; artifactError?: Error } = {},
+      ) => {
         const outputs: Record<string, string> = {};
         const summaries: string[] = [];
         const summary = {
@@ -809,36 +818,80 @@ describe("local packaging identity (electron-builder.dev.yml)", () => {
           const workflow_runs = runs.slice(from, from + Number(per_page));
           return { data: { total_count: runs.length, workflow_runs } };
         };
+        const listWorkflowRunArtifacts = vi.fn(async (parameters: Record<string, unknown>) => {
+          expect(parameters).toMatchObject({ owner: "example", repo: "project" });
+          const runId = Number(parameters.run_id);
+          expect(runs.find((run) => run.id === runId)?.conclusion).toBe("success");
+          if (options.artifactError) throw options.artifactError;
+          const recorded = artifacts.runs[String(runId)];
+          if (!recorded) throw new Error(`No recorded artifacts for ${runId}`);
+          return recorded
+            .filter((artifact) => !parameters.name || artifact.name === parameters.name)
+            .map((artifact) => ({
+              ...artifact,
+              expired: options.expired ?? artifact.expired,
+            }));
+        });
         // Octokit's pagination hands each page's runs over as the page's data.
+        // A smaller page replays the same readings across a page boundary.
         const iterator = async function* (
           method: typeof listWorkflowRuns,
           parameters: Record<string, string | number | boolean>,
         ) {
           for (let page = 1; ; page++) {
-            const { data } = await method({ ...parameters, page });
+            const { data } = await method({
+              ...parameters,
+              per_page: options.pageSize ?? parameters.per_page ?? 30,
+              page,
+            });
             if (data.workflow_runs.length === 0) return;
             yield { data: data.workflow_runs };
           }
         };
+        const paginate = Object.assign(
+          async (method: typeof listWorkflowRunArtifacts, parameters: Record<string, unknown>) =>
+            method(parameters),
+          { iterator },
+        );
         await execute(
           { setOutput: (name: string, value: string) => (outputs[name] = value), summary },
-          { rest: { actions: { listWorkflowRuns } }, paginate: { iterator } },
+          { rest: { actions: { listWorkflowRuns, listWorkflowRunArtifacts } }, paginate },
           { repo: { owner: "example", repo: "project" } },
         );
         return { outputs, summaries };
       };
 
-      // Newer than it: runs still going or that failed.
-      const passing = readings.runs.find((run) => run.conclusion === "success");
+      // Newer runs failed, are still going, or passed without journey times.
+      const passing = readings.runs.find(
+        (run) =>
+          run.conclusion === "success" &&
+          artifacts.runs[String(run.id)]?.some((artifact) => artifact.name === "e2e-results"),
+      );
       expect(readings.runs.indexOf(passing as Run)).toBeGreaterThan(0);
-      const found = await choose(readings.runs);
-      expect(found.outputs.id).toBe(passing?.id);
-      expect(found.summaries.join("")).toContain(passing?.html_url);
+      for (const pageSize of [undefined, 1]) {
+        const found = await choose(readings.runs, { pageSize });
+        expect(found.outputs.id).toBe(passing?.id);
+        expect(found.summaries.join("")).toContain(passing?.html_url);
+      }
 
       // Without a passing run there are no journey times: the chooser fails, never guesses.
       await expect(
         choose(readings.runs.filter((run) => run.conclusion !== "success")),
       ).rejects.toThrow("No passing verify run supplies journey times");
+      // The same metadata with its retention elapsed cannot supply downloadable times.
+      const throughPassing = readings.runs.slice(0, readings.runs.indexOf(passing as Run) + 1);
+      await expect(choose(throughPassing, { expired: true })).rejects.toThrow(
+        "No passing verify run supplies journey times",
+      );
+      // An unreadable artifact list is not evidence that the run has no artifact.
+      await expect(
+        choose(readings.runs, { artifactError: new Error("Artifact API unavailable") }),
+      ).rejects.toThrow("Artifact API unavailable");
+      if (day === "2026-10-27") {
+        await expect(choose(readings.runs.slice(0, -1))).rejects.toThrow(
+          "No passing verify run supplies journey times",
+        );
+      }
     },
   );
 

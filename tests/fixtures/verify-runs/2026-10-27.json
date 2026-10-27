@@ -1,0 +1,46 @@
+{
+  "readAt": "2026-10-27T09:52:00Z",
+  "about": "INF-1578: verify.yml's plain run list, trimmed to the chooser's fields and through the newest passing run with e2e-results. The newest success ran only the signed installer lane. Artifact readings are in timing-artifacts.json.",
+  "runs": [
+    {
+      "id": 40471444367,
+      "conclusion": "success",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40471444367"
+    },
+    {
+      "id": 40471278029,
+      "conclusion": "cancelled",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40471278029"
+    },
+    {
+      "id": 40463274324,
+      "conclusion": "failure",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40463274324"
+    },
+    {
+      "id": 40444437680,
+      "conclusion": "failure",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40444437680"
+    },
+    {
+      "id": 40388859325,
+      "conclusion": "failure",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40388859325"
+    },
+    {
+      "id": 40378578642,
+      "conclusion": "cancelled",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40378578642"
+    },
+    {
+      "id": 40368480736,
+      "conclusion": "failure",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40368480736"
+    },
+    {
+      "id": 40319912150,
+      "conclusion": "success",
+      "html_url": "https://github.com/infinitary-labs/infinitary/actions/runs/40319912150"
+    }
+  ]
+}

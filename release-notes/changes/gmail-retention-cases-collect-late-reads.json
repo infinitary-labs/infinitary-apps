@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "gmail-retention-cases-collect-late-reads",
+      "reason": "Test-only: the Gmail and Calendar retention cases on a computer that runs work collect a Google read that outlasts the shell's limit, as a crewmate would, instead of requiring it in the first shell answer."
+    }
+  ]
+}

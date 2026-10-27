@@ -67,6 +67,8 @@ import {
 import type { ContractWorld } from "../../../tests/helpers/sessionContract";
 import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
 import { attachmentPath, keepImages } from "../attachments";
+import { renderIntegrationReply } from "../axi/integrationCommands";
+import type { IntegrationReply } from "../axi/protocol";
 import { CLAUDE_MODELS } from "../claude/claudeModels";
 import { Computers } from "../devices/computers";
 import { DevicePairing } from "../devices/pairing";
@@ -85,7 +87,7 @@ import { SessionHost } from "../helper/sessionHost";
 import { startSignIns } from "../helper/signIns";
 import { WorkingCopies } from "../helper/workingCopies";
 import * as hostEnvironment from "../hostEnv";
-import { CREWMATE_INTEGRATIONS_LINE } from "../integrations";
+import { CREWMATE_INTEGRATIONS_LINE, INTEGRATIONS_COMMAND } from "../integrations";
 import { READ_HOUR_MS } from "../integrations/outsideReads";
 import { JobManager } from "../jobs/jobManager";
 import { createCrewmateTranscriptResolver } from "../observe/transcriptSource";
@@ -94,6 +96,7 @@ import { renderWake } from "../orchestrator/wakes";
 import { initOverflowDir, type MessageFile, withPastedFiles } from "../overflow";
 import { crewmateCardPicturesDir, crewmatePlacedDir, crewmateSessionsDir } from "../paths";
 import type { AccountVault } from "../pi/accountVault";
+import { backgroundJobReceipt } from "../pi/bashWords";
 import { CREWMATE_TOOLS } from "../pi/crewmateTaskTools";
 import { crewmateComputersNote } from "../pi/piResources";
 import { createPiSessionFactory } from "../pi/sessionFactory";
@@ -165,11 +168,17 @@ type Step = ({ tools: { name: string; args: Record<string, unknown> }[] } | { te
   held?: Promise<void>;
 };
 
-/** The model, one step per request from now on; past the last step it answers "Done." */
-function model(steps: Step[]): void {
+/**
+ * The model, one step per request from now on; past the last step it
+ * answers "Done.". A model that reads what it was told picks each step from
+ * the request instead.
+ */
+function model(steps: Step[] | ((request: StubRequest, index: number) => Step)): void {
   const first = api.requests.length;
   api.answer((request: StubRequest, res: ServerResponse) => {
-    const step = steps[request.n - first - 1] ?? { text: "Done." };
+    const index = request.n - first - 1;
+    const step =
+      typeof steps === "function" ? steps(request, index) : (steps[index] ?? { text: "Done." });
     beginAnthropicStream(res, 100, request.n);
     const answer = () => {
       if ("text" in step) {
@@ -3458,23 +3467,45 @@ describe("Gmail and Calendar content on a computer that runs work", () => {
     // INF-950: content retention starts after the captain has allowed these reads.
     allowIntegrationReads(integrations);
     const id = google.deliver(LENA);
-    model([
-      {
-        tools: [
-          shellCommand(
-            `infinitary-integrations-axi call Google read_message '${JSON.stringify({ id })}'`,
-          ),
-        ],
-      },
-      { text: "Lena sent the October invoice." },
-    ]);
-    const requests = api.requests.length;
+    // INF-1534: on a loaded Mac the read can outlast the shell's limit. The
+    // crewmate then collects its answer as the product tells it to, as the
+    // journeys' stand-ins do (INF-1141): after `running` or `BUSY` it runs
+    // the bare command, which gets the kept answer, and after a background
+    // job's receipt it ends each turn until the job's end, which names the
+    // job and carries the command's output. Whatever else it hears is the
+    // answer it reports on, checked below.
+    let read: string | undefined;
+    let job: string | undefined;
+    const waiting = { text: "Waiting for Lena's message." };
+    model((request, index) => {
+      if (index === 0)
+        return {
+          tools: [
+            shellCommand(
+              `${INTEGRATIONS_COMMAND} call Google read_message '${JSON.stringify({ id })}'`,
+            ),
+          ],
+        };
+      if (read !== undefined) return { text: "Done." };
+      const heard = lastHeard(request);
+      if (job !== undefined) {
+        if (!heard.includes(job)) return waiting;
+        job = undefined;
+      } else {
+        job = jobOf(heard);
+        if (job !== undefined) return waiting;
+      }
+      if (heard.includes(READ_RUNNING) || heard.includes(READ_BUSY))
+        return { tools: [shellCommand(INTEGRATIONS_COMMAND)] };
+      read = heard;
+      return { text: "Lena sent the October invoice." };
+    });
     await at.start("t-lena", "Answer Lena.");
     await expect
       .poll(() => home.tasks.get("t-lena")?.outcome)
       .toBe("Lena sent the October invoice.");
     // It read the message there, and its record there and this Mac's copy hold it.
-    expect(shellAnswer(api.requests[requests + 1]).output).toContain(LENA.subject);
+    expect(read).toContain(LENA.subject);
     const there = at.folders("t-lena").sessions;
     const here = crewmateSessionsDir(home.paths, "t-lena");
     const calls = join(crewmatePlacedDir(home.paths, "t-lena"), "calls.jsonl");
@@ -3628,14 +3659,51 @@ function shellAnswer(request: StubRequest | undefined): { exit: number; output: 
         (block) => block.type === "tool_result",
       )?.content
     : undefined;
-  const text =
-    typeof result === "string"
-      ? result
-      : Array.isArray(result)
-        ? (result as { text?: string }[]).map((block) => block.text ?? "").join("")
-        : "";
-  const [first = "", ...rest] = text.split("\n");
+  const [first = "", ...rest] = textOf(result).split("\n");
   return { exit: Number(/^exit (\d+)$/.exec(first)?.[1] ?? Number.NaN), output: rest.join("\n") };
+}
+
+/** What the model's request told it last: the shell's answer to its command, or a wake's words. */
+function lastHeard(request: StubRequest): string {
+  const content = request.body.messages?.at(-1)?.content;
+  if (!Array.isArray(content)) return textOf(content);
+  return (content as { type?: string; text?: string; content?: unknown }[])
+    .map((block) => (block.type === "tool_result" ? textOf(block.content) : (block.text ?? "")))
+    .join("\n");
+}
+
+/** A message's or tool result's content as its text. */
+function textOf(content: unknown): string {
+  if (typeof content === "string") return content;
+  if (!Array.isArray(content)) return "";
+  return (content as { text?: string }[]).map((block) => block.text ?? "").join("");
+}
+
+/** The job a shell's answer is the receipt for, read in the bash tool's own words; none when it finished. */
+function jobOf(heard: string): string | undefined {
+  const [before = "", after = ""] = backgroundJobReceipt("\0").split("\0");
+  const end = heard.startsWith(before) ? heard.indexOf(after, before.length) : -1;
+  return end < 0 ? undefined : heard.slice(before.length, end);
+}
+
+/** What an integration's `call` prints when its answer is kept past the shell's limit. */
+const READ_RUNNING = renderIntegrationReply(
+  "call",
+  { kind: "running", command: "call" },
+  [],
+).trimEnd();
+
+/** Why the next command was not run while that kept answer is still coming. */
+const READ_BUSY = refusalOf({ kind: "busy", command: "call" });
+
+/** The words the integrations command refuses a reply with. */
+function refusalOf(reply: IntegrationReply): string {
+  try {
+    renderIntegrationReply(INTEGRATIONS_COMMAND, reply, []);
+  } catch (error) {
+    return (error as Error).message;
+  }
+  throw new Error(`The integrations command prints a ${reply.kind} reply rather than refusing it.`);
 }
 
 /** Every file under `root` whose bytes hold `text`. */

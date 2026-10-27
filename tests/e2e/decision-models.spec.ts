@@ -4,6 +4,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { expect, type Page, test } from "@playwright/test";
 import Database from "better-sqlite3";
+import { CLASSIFIER_MAX_OUTPUT_TOKENS } from "../../src/core/orchestrator/seat";
 import { USE_OPENROUTER_DECISION_MODEL } from "../../src/renderer/src/settings/modelsWords";
 import {
   DECISION_MODEL_CATALOG,
@@ -44,8 +45,9 @@ import { feedLine, startedLine, taskKey } from "./rails";
  *   the reason on the routing decision - never a stall and never a card.
  *
  * - **A machine with only Claude signed in classifies on Claude**: the
- *   question goes to the machine's own client, bounded to a word, and the
- *   kind it answers reaches the record under Claude's model.
+ *   question goes to the machine's own client once, with room for hidden
+ *   thinking before its one word (INF-1451), and the kind it answers
+ *   reaches the record under Claude's model.
  *
  * The consent reaches the form from its shared owner; the focused consent
  * test owns the wording, while this journey holds the opt-in boundary.
@@ -579,7 +581,9 @@ for (const world of [
         "classifier:anthropic-claude/claude-haiku-5-5",
       );
 
-      // The machine's own client asked it, once, bounded to a word.
+      // The machine's own client asked it, once. Claude counts hidden thinking
+      // as output, so the app sends no word-sized cap that thinking could use
+      // up before the answer (INF-1451); the allowance is the client's own.
       const headers = mockProvider.requestHeaders();
       const asked = mockProvider
         .requestBodies()
@@ -592,12 +596,8 @@ for (const world of [
         .map(
           (body) => JSON.parse(body) as { model?: string; max_tokens?: number; thinking?: unknown },
         );
-      expect(asked).toEqual([
-        expect.objectContaining({
-          model: "claude-haiku-5-5",
-          max_tokens: 64,
-        }),
-      ]);
+      expect(asked).toEqual([expect.objectContaining({ model: "claude-haiku-5-5" })]);
+      expect(asked[0]?.max_tokens).toBeGreaterThan(CLASSIFIER_MAX_OUTPUT_TOKENS);
 
       // And its burn is billed where the work is, on Claude.
       expect(readUsage(userDataDir)).toContainEqual({

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "claude-classifier-journey-allowance",
+      "reason": "Test-only repair: the Claude-only classifier journey now expects the client's own output allowance that main already sends; the app's behavior is unchanged."
+    }
+  ]
+}

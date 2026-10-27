@@ -635,8 +635,9 @@ export class SessionHost {
   /**
    * An order about a task's working copy (docs/helper.md, "Its working
    * copies"). Those that act carry an id and are answered as they were when
-   * asked again; they run beside the conversation's own orders, so a long
-   * clone or install never holds a steer or an abort.
+   * asked again, but for a keep, which reads the working copy again; they
+   * run beside the conversation's own orders, so a long clone or install
+   * never holds a steer or an abort.
    */
   private async workingCopy(channel: WorkOrderChannel, request: unknown): Promise<unknown> {
     const copies = this.options.copies;
@@ -678,7 +679,11 @@ export class SessionHost {
     const held = this.hold(fields.task);
     const saved = held.orders.get(fields.orderId);
     const retryingPreparation = channel === "inf:working-copy:prepare" && preparationUnknown(saved);
-    if (held.orders.has(fields.orderId) && !retryingPreparation) return saved;
+    // A keep answers what the working copy holds now, which an earlier
+    // version may have read short of its branch; keeping again what is
+    // already kept answers the same commit.
+    const keeping = channel === "inf:working-copy:keep";
+    if (held.orders.has(fields.orderId) && !retryingPreparation && !keeping) return saved;
     const running = held.copying.get(fields.orderId);
     if (running) return running;
     const run = (async () => {
@@ -744,7 +749,7 @@ export class SessionHost {
         default:
           throw new Error(`${channel} is not a request this computer answers.`);
       }
-      if (channel === "inf:working-copy:prepare" && !preparationUnknown(answer))
+      if ((channel === "inf:working-copy:prepare" && !preparationUnknown(answer)) || keeping)
         held.orders.delete(fields.orderId);
       this.remember(held, fields.orderId, answer);
       return answer;

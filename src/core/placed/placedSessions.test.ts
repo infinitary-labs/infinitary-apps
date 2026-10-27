@@ -114,7 +114,7 @@ import { TaskTimeline } from "../tasks/taskTimeline";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
 import { ProjectChanges } from "../workspace/projectChanges";
-import { keptRefFor } from "../workspace/workspaceService";
+import { keptRefFor, WorkspaceService } from "../workspace/workspaceService";
 import { NO_PLACED_TASK } from "./placedWork";
 
 /**
@@ -2884,6 +2884,60 @@ describe("a task that runs on a computer that runs work", () => {
     expect(existsSync(work)).toBe(false);
     const kept = await git(project.home, ["rev-parse", keptRefFor("t-away")]);
     expect(await git(project.home, ["show", `${kept}:footer.html`])).toBe("<footer></footer>");
+  });
+
+  // DOP-121: on Kun's Mac mini 34 closed tasks' working copies stayed for
+  // good. Each checkout had left its task's branch, as a reviewer's does,
+  // and a version that read no branch for such a checkout had kept it.
+  it("retires a closed task's working copy there that an earlier version kept without its branch's commits, keeping them here first", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([{ text: "Started." }]);
+    await at.start("t-review", "Review the footer.", repo.id);
+    await expect.poll(() => home.tasks.get("t-review")?.activity).toBe("idle");
+    const work = at.folders("t-review").work;
+    // A commit on its branch, then the version it reviews checked out, with a note of its own.
+    writeFileSync(join(work, "footer.html"), "<footer></footer>\n");
+    const onBranch = await commit(work, "feat: add the footer");
+    await git(work, ["checkout", "--quiet", "--detach", project.main]);
+    writeFileSync(join(work, "notes.txt"), "what the review found\n");
+    const checkedOut = await commit(work, "docs: note what the review found");
+
+    // It closes while that computer is out of reach, which then stops.
+    await home.drop();
+    await expect.poll(() => home.devices.inReach(at.deviceId)).toBe(false);
+    await home.supervisor.interruptCrewmate("t-review", "cancel");
+    await at.stopComputer();
+    // The keep that version answered: the checkout alone, saved there and remembered.
+    const clone = await git(work, ["rev-parse", "--path-format=absolute", "--git-common-dir"]);
+    const older = await new WorkspaceService(
+      {
+        worktreesDir: join(at.dataDir, "worktrees"),
+        worktreeTrashDir: join(at.dataDir, "worktree-trash"),
+        worktreePoolDir: join(at.dataDir, "worktree-pool"),
+        defaultWorkspaceDir: join(at.dataDir, "default-workspace"),
+      },
+      { pool: false },
+    ).keepUnlandedWork({ taskId: "t-review", cwd: work, branch: "", repoDir: clone });
+    if (!older) throw new Error("expected the older kept work");
+    new PlacedTasks(at.dataDir, join(at.dataDir, "worktrees")).applied(
+      "t-review",
+      "keep:t-review",
+      { kept: older },
+    );
+
+    await at.restartComputer();
+    await home.listen();
+    await expect.poll(() => home.tasks.get("t-review")?.workspaceState).toBe("removed");
+    expect(existsSync(work)).toBe(false);
+    const kept = await git(project.home, ["rev-parse", keptRefFor("t-review")]);
+    for (const commit of [onBranch, checkedOut, older.sha])
+      await git(project.home, ["merge-base", "--is-ancestor", commit, kept]);
+    await expect(
+      git(clone, ["rev-parse", "--verify", "--quiet", "refs/heads/fm/task-t-review"]),
+    ).rejects.toThrow();
   });
 
   it("asks that computer what a task's working copy holds before discarding it, and holds the discard while nobody can tell", async () => {

@@ -1,0 +1,15 @@
+{
+  "entries": [
+    {
+      "id": "placed-working-copies-retire",
+      "kind": "fix",
+      "area": "devices",
+      "title": "Closed tasks no longer fill your other computers' disks",
+      "body": "When a task that ran on another computer closes, Infinitary brings its unmerged work to this Mac and then removes the task's working copy there. A task whose crewmate had checked out another version, as a reviewer does, kept its working copy there for good. Those copies are now removed once their work is saved here, including the ones already left behind.",
+      "noPicture": "This changes what Infinitary removes from a computer that runs work, not the layout or words of a screen.",
+      "provenance": {
+        "origin": "change"
+      }
+    }
+  ]
+}

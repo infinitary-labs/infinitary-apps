@@ -460,7 +460,7 @@ A home opens one for a task whose record names this computer (`task_execution.de
   A task browser's fact, and its pictures while the captain watches, are said once while the home is in reach, since the next one says it whole (`inf:work:browser`, `inf:work:browser-frame`).
   Each callback asks after every event written before it, so the home hears them in the order they happened.
 - **Nothing is done twice.**
-  An order that acts carries an `orderId` from what the home saved; one already applied is answered as it was, from `tasks/<task>/orders.jsonl`, without acting again.
+  An order that acts carries an `orderId` from what the home saved; one already applied is answered as it was, from `tasks/<task>/orders.jsonl`, without acting again, but for a keep, which reads the working copy again (below, "Its working copies").
   A prompt's answer is kept before its turn starts.
   A callback asks under one `callId` and asks again under it after every drop until the home answers or the callback's deadline expires (`HomeLink.ask`); the home keeps each answer and answers a repeat from it.
   Before a change, once its conversation or receiving service is ready, the home appends that id to `crewmates/<task>/placed/begun.jsonl` and syncs the file to disk.
@@ -613,8 +613,10 @@ A task runs in a working copy of its own on the computer that runs it, made from
 - **Its work, as a bundle.**
   `inf:working-copy:bundle` writes the task's branch or its kept commit as a git bundle in `bundles/`, leaving out the commits the home says it has, or answers that the home has that commit already; `inf:working-copy:read` reads it to the home in pieces of `PLACED_COPY_CHUNK_BYTES`.
 - **Keeping and deleting.**
-  Once the task's conversation is closed for good, `inf:working-copy:keep` saves what the working copy holds that never merged - uncommitted edits and branch commits - as one commit on the task's kept ref, as the home saves its own, once.
-  `inf:working-copy:retire` deletes the working copy only when the commit it names is the one kept here, or, with none, when nothing is unmerged; the copy goes to the pool or the trash, and its branch, kept ref and bundles go with it.
+  Once the task's conversation is closed for good, `inf:working-copy:keep` saves what the working copy holds that never merged - uncommitted edits, its checkout's commits and its branch's - as one commit on the task's kept ref, as the home saves its own.
+  The task's branch is `fm/task-<task>` wherever the checkout points, as a reviewer's checks out the version it reads.
+  A keep reads the working copy each time it is asked, never from `orders.jsonl`, and a kept commit that already holds all of it is the answer again; once nothing is unmerged, a commit an earlier keep saved here is the answer, so the home takes it first.
+  `inf:working-copy:retire` deletes the working copy only when the commit it names is the one kept here and holds every commit of the checkout and the branch that never merged, or, with none, when nothing is unmerged; the copy goes to the pool or the trash, and its branch, kept ref and bundles go with it.
 - **An artifact.**
   `inf:working-copy:artifact` takes an artifact the home downloaded in pieces, outside the working copy, and once every byte is there and its digest matches writes it where the home writes one, with the same rules (`writeArtifact`, `src/core/workspace/artifacts.ts`): `.infinitary-artifacts/run-<run>/artifact-<id>.zip`, each folder refused when it is a link, never over a file already there.
   A computer on a contract before 8.4 writes it under `.firstmate-artifacts/`, and the home names that path to its crewmate.

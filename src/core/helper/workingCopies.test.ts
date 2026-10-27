@@ -14,7 +14,7 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { takeBundle } from "../workspace/bundles";
 import * as gitModule from "../workspace/git";
 import { git } from "../workspace/git";
-import { keptRefFor, keptRefsFor } from "../workspace/workspaceService";
+import { keptRefFor, keptRefsFor, WorkspaceService } from "../workspace/workspaceService";
 import { WorkingCopies } from "./workingCopies";
 
 /**
@@ -247,6 +247,91 @@ describe("the working copies a computer that runs work keeps", () => {
       git(clone, ["rev-parse", "--verify", "--quiet", "refs/heads/fm/task-t-keep"]),
     ).rejects.toThrow();
     expect(readdirSync(join(dataDir, "bundles"))).toEqual([]);
+  });
+
+  // DOP-121: a reviewer checks out the version it reads, so its checkout
+  // leaves its task's branch. On Kun's Mac mini 34 closed tasks' working
+  // copies stayed for good, every one with its checkout off its branch.
+  it("keeps both a checkout that left its task's branch and that branch, and retires the copy once the home holds them", async () => {
+    const { origin, home, main } = await project();
+    const { dataDir, copies } = computer();
+    const task = "t-review";
+    const { dir } = await copies.prepare(task, { origin });
+    writeFileSync(join(dir, "footer.html"), "<footer></footer>\n");
+    const onBranch = await commitAll(dir, "feat: add the footer");
+    await git(dir, ["checkout", "--quiet", "--detach", main]);
+    writeFileSync(join(dir, "notes.txt"), "what the review found\n");
+    const checkedOut = await commitAll(dir, "docs: note what the review found");
+    expect(await copies.status(task)).toEqual({
+      present: true,
+      dirty: false,
+      unlandedCommits: 1,
+      origin,
+    });
+
+    const { kept } = await copies.keep(task);
+    if (!kept) throw new Error("expected kept work");
+    // Asked again, the copy holds nothing more, so the same commit answers.
+    expect((await copies.keep(task)).kept?.sha).toBe(kept.sha);
+    const made = await copies.bundle(task, "kept", [main]);
+    if (!made.bundle) throw new Error("expected a bundle");
+    const file = readBundle(copies, task, "kept", join(dataDir, "kept.bundle"));
+    await takeBundle(home, file, made.bundle, keptRefFor(task), keptRefFor(task), kept.sha);
+    for (const commit of [onBranch, checkedOut])
+      await git(home, ["merge-base", "--is-ancestor", commit, kept.sha]);
+
+    await copies.retire(task, kept.sha);
+    expect(copies.has(task)).toBe(false);
+    const clone = join(dataDir, "repos", readdirSync(join(dataDir, "repos"))[0] ?? "");
+    await expect(
+      git(clone, ["rev-parse", "--verify", "--quiet", `refs/heads/fm/task-${task}`]),
+    ).rejects.toThrow();
+  });
+
+  // DOP-121: the copies stuck on Kun's Mac mini were kept by a version that
+  // read no branch for a checkout off it, and two of those kept commits miss
+  // 18 and 48 of their branch's commits.
+  it("never deletes a copy whose kept commit misses its branch's commits, and keeps them when asked again", async () => {
+    const { origin, home, main } = await project();
+    const { dataDir, copies } = computer();
+    const task = "t-older-keep";
+    const { dir } = await copies.prepare(task, { origin });
+    writeFileSync(join(dir, "footer.html"), "<footer></footer>\n");
+    const onBranch = await commitAll(dir, "feat: add the footer");
+    await git(dir, ["checkout", "--quiet", "--detach", main]);
+    writeFileSync(join(dir, "notes.txt"), "what the review found\n");
+    await commitAll(dir, "docs: note what the review found");
+    const clone = join(dataDir, "repos", readdirSync(join(dataDir, "repos"))[0] ?? "");
+    // What that version kept: the checkout alone.
+    const older = await new WorkspaceService(
+      {
+        worktreesDir: join(dataDir, "worktrees"),
+        worktreeTrashDir: join(dataDir, "worktree-trash"),
+        worktreePoolDir: join(dataDir, "worktree-pool"),
+        defaultWorkspaceDir: join(dataDir, "default-workspace"),
+      },
+      { pool: false },
+    ).keepUnlandedWork({ taskId: task, cwd: dir, branch: "", repoDir: clone });
+    if (!older) throw new Error("expected the older kept work");
+    const take = async (sha: string) => {
+      const made = await copies.bundle(task, "kept", [main]);
+      if (!made.bundle) throw new Error("expected a bundle");
+      const file = readBundle(copies, task, "kept", join(dataDir, `${sha}.bundle`));
+      await takeBundle(home, file, made.bundle, keptRefFor(task), keptRefFor(task), sha);
+    };
+    await take(older.sha);
+    await expect(copies.retire(task, older.sha)).rejects.toThrow(
+      "holds unmerged work the home has not kept",
+    );
+    expect(copies.has(task)).toBe(true);
+
+    const { kept } = await copies.keep(task);
+    if (!kept) throw new Error("expected kept work");
+    await take(kept.sha);
+    for (const commit of [onBranch, older.sha])
+      await git(home, ["merge-base", "--is-ancestor", commit, kept.sha]);
+    await copies.retire(task, kept.sha);
+    expect(copies.has(task)).toBe(false);
   });
 
   // The Infinitary rename (step 8 of FI3-1780's plan): work this computer

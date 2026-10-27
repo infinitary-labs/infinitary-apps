@@ -110,7 +110,7 @@ const FETCH_ATTEMPTS = 3;
 const INSTALL_TIMEOUT_MS = 10 * 60 * 1000;
 
 /** A branch the app named for a task: `fm/task-<id>`. */
-const TASK_BRANCH_PREFIX = "fm/task-";
+export const TASK_BRANCH_PREFIX = "fm/task-";
 
 /**
  * Where a computer that runs work keeps the home's default workspace in its
@@ -868,7 +868,9 @@ export class WorkspaceService {
    * worktree's full state (a temporary index, so the crewmate's own index
    * is untouched) whose parents are the checked-out tip, the branch head
    * when it differs, and any earlier save for the same task - and points
-   * the task's kept ref at it. Null when nothing is unlanded, unless
+   * the task's kept ref at it. An earlier save that already holds that
+   * state and every unlanded commit is the save, so keeping again answers
+   * the same commit. Null when nothing is unlanded, unless
    * `keepAlways` asks for the save anyway (an escalation's brief names the
    * ref, so it must exist whatever ancestry says). Throws when
    * a tree still on disk cannot be read as a checkout: then nothing proves
@@ -879,26 +881,13 @@ export class WorkspaceService {
     options: { keepAlways?: boolean } = {},
   ): Promise<KeptWork | null> {
     const { cwd, repoDir, branch, taskId } = workspace;
-    const branchTip = branch ? await this.branchHead(repoDir, branch) : null;
-    let tip = branchTip;
-    let dirty = false;
-    if (cwd && existsSync(cwd)) {
-      await assertCheckoutRoot(cwd);
-      tip = await git(cwd, ["rev-parse", "--verify", "HEAD^{commit}"]);
-      dirty = (await git(cwd, ["status", "--porcelain"])) !== "";
-    }
+    const tips = await this.workTips(workspace);
+    const tip = tips[0];
+    const dirty =
+      cwd && existsSync(cwd) ? (await git(cwd, ["status", "--porcelain"])) !== "" : false;
     if (!tip) return null;
-    const tips = [...new Set([tip, branchTip].filter((sha): sha is string => Boolean(sha)))];
     const integrationRefs = await trackedIntegrationRefs(workspace);
-    const count = await git(repoDir, [
-      "rev-list",
-      "--count",
-      ...tips,
-      "--not",
-      "HEAD",
-      ...integrationRefs,
-    ]);
-    const unlandedCommits = Number.parseInt(count, 10) || 0;
+    const unlandedCommits = await countCommits(repoDir, tips, ["HEAD", ...integrationRefs]);
     if (!dirty && unlandedCommits === 0 && !options.keepAlways) return null;
 
     let tree = await git(repoDir, ["rev-parse", `${tip}^{tree}`]);
@@ -927,6 +916,15 @@ export class WorkspaceService {
         // The first save for this task, under this name.
       }
     }
+    if (
+      earlier &&
+      (await git(repoDir, ["rev-parse", `${earlier}^{tree}`])) === tree &&
+      (await countCommits(repoDir, tips, [earlier, "HEAD", ...integrationRefs])) === 0
+    ) {
+      if ((await this.branchHead(repoDir, ref)) !== earlier)
+        await git(repoDir, ["update-ref", "-m", `keep task ${taskId}`, ref, earlier]);
+      return { ref, sha: earlier, dirty, unlandedCommits };
+    }
     const parents = [...new Set([...tips, earlier].filter(Boolean))].flatMap((sha) => ["-p", sha]);
     const held =
       [
@@ -947,6 +945,37 @@ export class WorkspaceService {
     ]);
     await git(repoDir, ["update-ref", "-m", `keep task ${taskId}`, ref, sha]);
     return { ref, sha, dirty, unlandedCommits };
+  }
+
+  /**
+   * The commits a worktree's checkout and branch hold that neither landed
+   * nor are in `kept`: what removing it would lose once `kept` holds its
+   * work. Throws when a tree still on disk cannot be read as a checkout.
+   */
+  async unkeptCommits(workspace: TaskWorkspace, kept: string | null): Promise<number> {
+    const tips = await this.workTips(workspace);
+    if (tips.length === 0) return 0;
+    const integrationRefs = await trackedIntegrationRefs(workspace);
+    return countCommits(workspace.repoDir, tips, [
+      ...(kept ? [kept] : []),
+      "HEAD",
+      ...integrationRefs,
+    ]);
+  }
+
+  /**
+   * The commits a worktree's work stands on: its checkout's while the tree
+   * is on disk, first, and its branch's head when that differs.
+   */
+  private async workTips(workspace: TaskWorkspace): Promise<string[]> {
+    const { cwd, repoDir, branch } = workspace;
+    const branchTip = branch ? await this.branchHead(repoDir, branch) : null;
+    let tip = branchTip;
+    if (cwd && existsSync(cwd)) {
+      await assertCheckoutRoot(cwd);
+      tip = await git(cwd, ["rev-parse", "--verify", "HEAD^{commit}"]);
+    }
+    return [...new Set([tip, branchTip].filter((sha): sha is string => Boolean(sha)))];
   }
 
   /**
@@ -1302,6 +1331,12 @@ async function branchExists(repo: string, branch: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** How many commits reach from `from` that none of `not` reaches. */
+async function countCommits(repoDir: string, from: string[], not: string[]): Promise<number> {
+  const count = await git(repoDir, ["rev-list", "--count", ...from, "--not", ...not]);
+  return Number.parseInt(count, 10) || 0;
 }
 
 /**

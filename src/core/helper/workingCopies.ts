@@ -32,6 +32,7 @@ import {
   OLDER_SEEDED_REF,
   SEEDED_REF,
   sourceRefPatterns,
+  TASK_BRANCH_PREFIX,
   type TaskWorkspace,
   WorkspaceService,
   type WorkspaceServiceOptions,
@@ -430,14 +431,21 @@ export class WorkingCopies {
     return this.serial(task, async () => {
       const workspace = await this.workspaceOf(task);
       if (!workspace) return { kept: null };
-      return { kept: await this.workspace.keepUnlandedWork(workspace) };
+      const kept = await this.workspace.keepUnlandedWork(workspace);
+      if (kept) return { kept };
+      // Nothing is unmerged now, say once the default branch took the
+      // task's commits, but work an earlier keep saved here comes home first.
+      const name = await keptRefHere(workspace.repoDir, task);
+      const sha = name ? await commitOf(workspace.repoDir, name) : null;
+      return { kept: name && sha ? { ref: name, sha, dirty: false, unlandedCommits: 0 } : null };
     });
   }
 
   /**
    * Deletes the task's working copy once the home holds its kept work
    * (`inf:working-copy:retire`): `kept` must be the commit the kept ref
-   * points at here, and with none, nothing may be unmerged. The copy goes
+   * points at here and hold every commit of the checkout and the branch
+   * that never merged, and with none, nothing may be unmerged. The copy goes
    * to the pool or the trash as the home's does, its branch and kept ref
    * go, and so do its bundles.
    */
@@ -451,12 +459,15 @@ export class WorkingCopies {
         const here = keptName ? await commitOf(workspace.repoDir, keptName) : null;
         if (kept !== null && here !== kept)
           throw new Error("The home does not hold this task's kept work yet, so it stays here.");
-        if (kept === null) {
-          if (here !== null)
-            throw new Error("This task's work was kept here; the home must take it first.");
-          if (status.dirty || status.unlandedCommits > 0)
-            throw new Error("This task's working copy holds unmerged work the home has not kept.");
-        }
+        if (kept === null && here !== null)
+          throw new Error("This task's work was kept here; the home must take it first.");
+        // A keep from before this computer read the branch of a checkout
+        // that left it holds the checkout's commits alone.
+        if (
+          (kept === null && status.dirty) ||
+          (await this.workspace.unkeptCommits(workspace, here)) > 0
+        )
+          throw new Error("This task's working copy holds unmerged work the home has not kept.");
         const sources = await git(workspace.repoDir, [
           "for-each-ref",
           "--format=%(refname)",
@@ -548,6 +559,12 @@ export class WorkingCopies {
       throw new Error(
         `Infinitary cannot read the work history in ${this.dir(task)}. The working copy stays here until its history can be read.`,
       );
+    // Every working copy here was made on its task's branch, which stays the
+    // task's wherever its checkout points now, as a reviewer's checks out the
+    // version it reads: its work is kept with the copy's, and it goes with it.
+    const branch = `${TASK_BRANCH_PREFIX}${task}`;
+    if (!workspace.branch && (await commitOf(workspace.repoDir, `refs/heads/${branch}`)))
+      return { ...workspace, branch };
     return workspace;
   }
 

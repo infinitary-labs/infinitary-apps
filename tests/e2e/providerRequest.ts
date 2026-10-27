@@ -79,6 +79,52 @@ export function providerMessages(body: string): ProviderMessage[] {
   return items.flatMap(messagesOf);
 }
 
+/** One tool call the model made earlier in a request's conversation, its arguments parsed. */
+export type ProviderToolCall = { name: string; args: Record<string, unknown> };
+
+type CallItem = Item & {
+  name?: string;
+  arguments?: string;
+  input?: unknown;
+  tool_calls?: { function?: { name?: string; arguments?: string } }[];
+};
+
+/** A call's arguments; an unreadable one throws, so a reader never misses a call. */
+function parsedArgs(text: string | undefined): Record<string, unknown> {
+  return (JSON.parse(text || "{}") ?? {}) as Record<string, unknown>;
+}
+
+/**
+ * The tool calls a request's conversation carries, oldest first, whichever
+ * dialect carried them: chat completions put them on an assistant message's
+ * `tool_calls`, Anthropic's messages as `tool_use` parts, the Responses API
+ * as `function_call` items. Read from the calls themselves, never from the
+ * request's text, where an answer may repeat a command's words.
+ */
+export function providerToolCalls(body: string): ProviderToolCall[] {
+  if (!body.trimStart().startsWith("{")) return [];
+  const request = JSON.parse(body) as { messages?: CallItem[]; input?: CallItem[] | string };
+  const items = request.messages ?? (Array.isArray(request.input) ? request.input : []);
+  return items.flatMap((item): ProviderToolCall[] => {
+    if (item.type === "function_call") {
+      return [{ name: item.name ?? "", args: parsedArgs(item.arguments) }];
+    }
+    if (item.role !== "assistant") return [];
+    const chat = (item.tool_calls ?? []).map((call) => ({
+      name: call.function?.name ?? "",
+      args: parsedArgs(call.function?.arguments),
+    }));
+    const parts = Array.isArray(item.content) ? (item.content as CallItem[]) : [];
+    const uses = parts
+      .filter((part) => part.type === "tool_use")
+      .map((part) => ({
+        name: part.name ?? "",
+        args: (part.input ?? {}) as Record<string, unknown>,
+      }));
+    return [...chat, ...uses];
+  });
+}
+
 /**
  * The tools a request offers the model, by name, whichever dialect carried
  * them: chat completions nest the name under `function`, Anthropic's

@@ -33,10 +33,10 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { crewmateView } from "./crewmateTab";
 import { type LaunchedApp, launchApp } from "./launch";
 import { resizeWindow } from "./layout";
-import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { browserShellMessages, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { heroShot } from "./pictures";
 import { promptInput } from "./prompt";
-import { providerMessages } from "./providerRequest";
+import { providerMessages, providerToolCalls } from "./providerRequest";
 import { expandDock, expectRecordBody, hideRecord, pressRow, recordCard, taskFact } from "./rails";
 import {
   MOCK_BROWSER_PICTURE,
@@ -1164,13 +1164,23 @@ test("the captain takes a task's browser while its crewmate's command runs, and 
       // The wait ran past its Pi shell's 3-second limit: the command said it
       // was still running, the crewmate's next looks read its answer, and no
       // look ran it again - its only waits are that one and the one refused.
+      // What the crewmate heard is read the way it reads it: on a loaded Mac
+      // a look may itself pass the shell's limit, and its answer then arrives
+      // as a background job's message rather than a tool result (INF-1597).
       const last = crewmateCalls().at(-1) ?? "{}";
-      const heard = providerMessages(last)
-        .filter((message) => message.role === "tool")
+      const heard = browserShellMessages(providerMessages(last))
+        .readings.filter((message) => message.role === "tool")
         .map((message) => message.text);
-      expect(heard.some((text) => /^running: wait$/m.test(text))).toBe(true);
-      expect(heard.some((text) => /^earlier: Your earlier wait finished$/m.test(text))).toBe(true);
-      expect(last.split(`${BROWSER_COMMAND} wait `)).toHaveLength(3);
+      const running = heard.findIndex((text) => /^running: wait$/m.test(text));
+      const earlier = heard.findIndex((text) =>
+        /^earlier: Your earlier wait finished$/m.test(text),
+      );
+      expect(running).toBeGreaterThanOrEqual(0);
+      expect(earlier).toBeGreaterThan(running);
+      const waits = providerToolCalls(last).filter((call) =>
+        String(call.args.command ?? "").startsWith(`${BROWSER_COMMAND} wait `),
+      );
+      expect(waits).toHaveLength(2);
       expect((await detail()).events.map((event) => event.text)).toContain(
         "you took control of its browser",
       );

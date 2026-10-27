@@ -27,6 +27,7 @@ import {
 import { type LaunchedApp, type LaunchOptions, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
 import {
+  browserShellMessages,
   CLAUDE_CREWMATE_MARKER,
   type MockProviderServer,
   SPAWN_PROMPT_MARKER,
@@ -685,8 +686,10 @@ for (const runtime of RUNTIMES) {
           await expect
             .poll(async () => openBrowser(await detail())?.did, { timeout: 90_000 })
             .toBe('waited for "Booking confirmed"');
+          // Read as the crewmate hears them: an answer past its shell's limit
+          // arrives as a background job's message (INF-1597).
           const answers = crewmateCalls(app, title)
-            .flatMap((body) => providerMessages(body))
+            .flatMap((body) => browserShellMessages(providerMessages(body)).readings)
             .filter((message) => message.role === "tool")
             .map((message) => message.text);
           expect(

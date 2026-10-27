@@ -463,6 +463,20 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       capped.add(figure);
     }
   }
+  // Resolves at a frame on which no font face is still loading: a face
+  // still loading is awaited, and the next frame looks again.
+  function fontsIn() {
+    return new Promise(function (resolve) {
+      requestAnimationFrame(function look() {
+        var loading = [];
+        document.fonts.forEach(function (face) {
+          if (face.status === "loading") loading.push(face.loaded.then(null, function () {}));
+        });
+        if (!loading.length) { resolve(); return; }
+        Promise.all(loading).then(function () { requestAnimationFrame(look); });
+      });
+    });
+  }
   function post(message) {
     message.fm = VERSION;
     message.document = documentId;
@@ -563,10 +577,16 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
       var born = document.readyState === "loading"
         ? new Promise(function (resolve) { document.addEventListener("DOMContentLoaded", resolve, { once: true }); })
         : Promise.resolve();
+      // A host whose pictures can arrive long after the body (a phone's
+      // come over its connection) has the drawing wait only for the fonts
+      // its layout asked for: WebKit resolves document.fonts.ready only
+      // after the page's load event, which waits for every picture
+      // (INF-1562).
+      var latePictures = data.latePictures === true;
       born.then(function () {
         capFigures();
         if (document.body) document.body.getBoundingClientRect();
-        return document.fonts.ready;
+        return latePictures ? fontsIn() : document.fonts.ready;
       }).then(function () {
         requestAnimationFrame(function () { requestAnimationFrame(function () {
           initialized = true;
@@ -1691,7 +1711,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-Vl4bwle532/4bhsb43205qEDzVCqPtZ8SN3734s5aiY=";
+export const FRAME_BRIDGE_SHA256 = "sha256-I3xDCX9WXI0pK/AYEZly2u7ii61hlUbRhyoL8I7elc8=";
 
 // --- the envelope, frame -> host -------------------------------------------
 
@@ -1956,7 +1976,11 @@ export type HostMessage =
       start: number;
       keyboard: boolean;
     }
-  | { fm: typeof FRAME_BRIDGE_VERSION; type: "initialize"; document: string }
+  /**
+   * The document may report its drawing. `latePictures`: the host's pictures can arrive long after the body,
+   * so the drawing waits only for the fonts its layout asked for, never for the page's load (INF-1562).
+   */
+  | { fm: typeof FRAME_BRIDGE_VERSION; type: "initialize"; document: string; latePictures?: true }
   | (FrameResponse & { ok: true; result?: unknown })
   | (FrameResponse & { ok: false; error: FrameError })
   | { fm: typeof FRAME_BRIDGE_VERSION; type: "data"; sub: number; value: unknown }

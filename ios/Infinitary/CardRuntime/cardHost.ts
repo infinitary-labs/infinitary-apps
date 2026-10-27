@@ -36,7 +36,9 @@ window.addEventListener("message", (event: MessageEvent) => {
     send({ type: "form", fill: cardAnswersSchema.parse(input.fill ?? []), readOnly: input.readOnly });
     send({ type: "keys", pictures: true, escape: false });
     send({ type: "width", width: input.width });
-    send({ type: "initialize", document: documentID });
+    // INF-1562: a picture comes over the connection and waits while the computer is out of reach, so the body draws
+    // and takes its height without it; WebKit's fonts.ready alone would wait for every picture.
+    send({ type: "initialize", document: documentID, latePictures: true });
     return;
   }
   if (!documentID || ("document" in message && message.document && message.document !== documentID)) return;

@@ -22,6 +22,8 @@ struct CharacterCatalog: Decodable, Sendable {
     let galaxy: [String: Double]
     let algol: [String: Double]
     let flicker: [String: Double]
+    /// The waiting-on-you beacon (INF-1543): ring share, breath light, swell, halo, wire strength and breath period.
+    let captain: [String: Double]
     struct Saturn: Decodable, Sendable {
         let q: Double; let tilt: Double; let globe: Double; let ringA: Double; let ringB: Double
         let spinA: Double; let spinB: Double; let spinBelt: Double; let streamlines: [[Double]]

@@ -256,6 +256,17 @@ export type CrewmateFrame = {
    * settled (reduced-motion) frame, which draws the ring whole and still.
    */
   checksArc?: number;
+  /**
+   * 0..1 eased blend of waiting on the captain (INF-1543, the captain's
+   * direction A): the Tasks row's Waiting on you ring, round the solid,
+   * breathing. Absent when it is not waiting.
+   */
+  captain?: number;
+  /**
+   * Where the beacon's breath is, 0 faintest .. 1 brightest; absent on a
+   * settled (reduced-motion) frame, which draws the ring whole and still.
+   */
+  captainBreath?: number;
   /** Own rotation, radians. */
   spin: number;
   /** 0..1 jitter strength of a nudge. */
@@ -422,6 +433,9 @@ type Crewmate = {
   /** Its working is the host's checks watch (posture active, reason checks). */
   checks: boolean;
   checksBlend: number;
+  /** 0..1 eased blend of waiting on the captain, and when that wait began (its breath's phase). */
+  captainBlend: number;
+  captainSince: number;
   seed: number;
   spin: number;
   spinVel: number;
@@ -457,6 +471,9 @@ type Crewmate = {
 /** The checks ring's travelling arc, radians a second: the fact strip's running mark, carried round. */
 const CHECKS_ARC_RATE = 1.6;
 
+/** One breath of the waiting-on-you beacon, ms (INF-1543, the captain's settings). */
+export const CAPTAIN_BREATH_MS = 3200;
+
 const easeIn = (t: number): number => t * t;
 const easeOutCubic = (t: number): number => 1 - (1 - t) ** 3;
 
@@ -482,6 +499,8 @@ export class CrewOrbit {
   private programs = new Map<string, ProgramState>();
   /** Resolved drawing placement, separate from logical membership and radius/allocation counts. */
   private offMain = new Set<string>();
+  /** The crew the Tasks panel lists under Waiting on you. */
+  private captainWaits = new Set<string>();
   private seatsChanged = false;
   /** A circle that failed its bounds check cannot be retried by a re-spacing pass in this frame. */
   private frameFallback = new Set<string>();
@@ -724,6 +743,8 @@ export class CrewOrbit {
       work: hot ? 1 : 0,
       checks: waits,
       checksBlend: waits ? 1 : 0,
+      captainBlend: this.captainWaits.has(id) ? 1 : 0,
+      captainSince: now,
       seed: this.random() * 1000,
       spin: this.random() * TAU,
       spinVel: hot ? 1.5 : 0.35,
@@ -766,6 +787,19 @@ export class CrewOrbit {
     const c = this.crew.get(id);
     if (!c || c.checks === checks) return;
     c.checks = checks;
+    this.bump();
+  }
+
+  /**
+   * The crew that wait on the captain: the Tasks panel's Waiting on you
+   * group (`nowGroupOf`), a put-aside card included. Only the look follows;
+   * it stays working or idle as its posture says.
+   */
+  setCaptainWaits(ids: Iterable<string>): void {
+    const next = new Set(ids);
+    if (next.size === this.captainWaits.size && [...next].every((id) => this.captainWaits.has(id)))
+      return;
+    this.captainWaits = next;
     this.bump();
   }
 
@@ -1211,6 +1245,11 @@ export class CrewOrbit {
       const ease = settled ? 1 : Math.min(dt * 4, 1);
       c.work += (workTarget - c.work) * ease;
       c.checksBlend += (checksTarget - c.checksBlend) * ease;
+      // Waiting on the captain eases in on the same heat ramp; its breath
+      // starts from the faintest light when the wait begins.
+      const captainTarget = this.captainWaits.has(c.id) ? 1 : 0;
+      if (captainTarget && c.captainBlend < 0.001) c.captainSince = now;
+      c.captainBlend += (captainTarget - c.captainBlend) * ease;
       const spinTarget = 0.35 + 1.15 * c.work;
       c.spinVel += (spinTarget - c.spinVel) * Math.min(dt * 3, 1);
       c.spin += c.spinVel * dt * (1 + (travel - 1) * CREW_RUSH.spinShare);
@@ -1384,6 +1423,17 @@ export class CrewOrbit {
           ? {
               checks: c.checksBlend,
               ...(settled ? {} : { checksArc: (now / 1000) * CHECKS_ARC_RATE + c.seed }),
+            }
+          : {}),
+        ...(c.captainBlend > 0.001
+          ? {
+              captain: c.captainBlend,
+              ...(settled
+                ? {}
+                : {
+                    captainBreath:
+                      0.5 - 0.5 * Math.cos((TAU * (now - c.captainSince)) / CAPTAIN_BREATH_MS),
+                  }),
             }
           : {}),
         spin: c.spin,

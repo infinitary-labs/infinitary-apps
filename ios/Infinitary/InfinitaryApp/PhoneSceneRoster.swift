@@ -220,6 +220,8 @@ struct PhoneSceneRoster {
         var orbit: PhoneSceneRoster.Orbit?
         var depth = 0.5, spin = 0.0, alpha = 1.0, unfold = 1.0, work = 0.0, flicker = 0.0, nudge = 0.0
         var unknown = false, checks = false, programPart = false
+        /// Waiting on the captain (INF-1543): its eased blend and when the wait began, the breath's phase.
+        var captain = 0.0, captainSince = 0.0
         var size: Double { (programPart ? CharacterCatalog.shared.program["crewGapPx"]! : CharacterCatalog.shared.orbit["glyph"]!) * (0.84 + 0.32 * depth) }
     }
     struct Packet { let id: UUID; let taskID: String; let report: Bool; let started: Double }
@@ -375,7 +377,8 @@ struct PhoneSceneRoster {
                 let unknown = PhoneSceneRoster.unknown(task, computer: computer)
                 target[task.id] = Glyph(task: task, point: point, center: center, orbit: place, depth: depth,
                     spin: localTime * (PhoneSceneRoster.working(task) ? 1.6 : 0.35), work: !unknown && PhoneSceneRoster.working(task) ? 1 : 0,
-                    unknown: unknown, checks: !unknown && task.workPosture?.state == "active" && task.workPosture?.reason == "checks", programPart: computer.programParts.contains(task.id))
+                    unknown: unknown, checks: !unknown && task.workPosture?.state == "active" && task.workPosture?.reason == "checks", programPart: computer.programParts.contains(task.id),
+                    captain: task.group == .waiting ? 1 : 0, captainSince: now)
             }
         }
         markOrbits = markPlaces
@@ -396,6 +399,9 @@ struct PhoneSceneRoster {
                 next.spin = member.glyph.spin
             } else if !initial && !settled { next.spin = member.glyph.spin + dt * (glyph.work > 0 ? 1.6 : 0.35) }
             next.work = member.glyph.work + (glyph.work - member.glyph.work) * eased
+            // The beacon eases in with the heat; its breath starts from the faintest light when the wait begins.
+            next.captain = member.glyph.captain + (glyph.captain - member.glyph.captain) * eased
+            next.captainSince = glyph.captain > 0 && member.glyph.captain < 0.001 ? now : member.glyph.captainSince
             let arrive = settled || glyph.unknown ? 1 : clamp01((now - member.arrived) / member.spawnDuration)
             next.unfold = glyph.unknown ? member.glyph.unfold : arrive >= 1 ? 1 : clamp01((arrive - 0.55) / 0.45)
             if arrive < 1 {

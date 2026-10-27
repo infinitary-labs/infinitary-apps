@@ -14,7 +14,11 @@
 // still working, banked (INF-676, the captain's direction A): its ember at
 // idle strength and pace, no tick and no halo, inside a thin cyan ring whose
 // arc travels as the fact strip's running checks do; reduced motion holds
-// the ring whole and still.
+// the ring whole and still. A crewmate waiting on the captain (INF-1543,
+// the captain's direction A, the beacon) wears the Tasks row's Waiting on
+// you ring: a thin accent circle round its solid, under a soft halo, that
+// breathes slowly - brightening, fading and swelling a touch - with no
+// onset and no new hue; reduced motion holds it whole at mid light.
 //
 // The solid says how strong a model the crewmate runs on (captain's board
 // verdict, 2026-09-23): a richer 3D solid for a stronger slot, every one
@@ -186,19 +190,77 @@ export function crewmateLight(
   colors: CrewColors,
   work: number,
   checks = 0,
+  captain = 0,
 ): { color: Rgb; strength: number } {
   const w = Math.max(0, Math.min(1, work));
   const c = Math.max(0, Math.min(1, checks));
+  const k = Math.max(0, Math.min(1, captain));
   // Waiting on its checks keeps the ember but banks it to idle strength.
-  const strength = 0.55 + 0.45 * w;
+  const working = 0.55 + 0.45 * w;
+  const banked = working + (CHECKS_LIGHT.strength - working) * c;
   return {
     color: mix(colors.accent, colors.hot, Math.max(w, c)),
-    strength: strength + (CHECKS_LIGHT.strength - strength) * c,
+    strength: banked + (CAPTAIN_LIGHT.wire - banked) * k,
   };
 }
 
 /** The banked wire strength, and the checks ring around the solid as a share of the glyph. */
 const CHECKS_LIGHT = { strength: 0.6, ring: 0.8, arc: 1.1 } as const;
+
+/**
+ * The beacon, as the captain set it in INF-1543's preview: the ring as a
+ * share of the glyph, its light breathing between `lo` and `hi` of the
+ * accent, its swell, the halo's strength and reach, and the waiting
+ * crewmate's wire strength.
+ */
+export const CAPTAIN_LIGHT = {
+  ring: 0.9,
+  lo: 0.25,
+  hi: 0.85,
+  swell: 0.06,
+  halo: 0.12,
+  haloReach: 1.3,
+  wire: 0.55,
+  line: 1.2,
+} as const;
+
+/**
+ * The beacon (INF-1543): the Tasks row's Waiting on you ring round the
+ * solid, under a soft halo, breathing; a settled frame holds it at mid light.
+ */
+function drawCaptainRing(
+  ctx: CanvasRenderingContext2D,
+  f: CrewmateFrame,
+  px: number,
+  py: number,
+  colors: CrewColors,
+): void {
+  const k = (f.captain ?? 0) * f.alpha * f.unfold;
+  if (k <= 0.01) return;
+  const b = f.captainBreath ?? 0.5;
+  const haloR = f.size * CAPTAIN_LIGHT.haloReach;
+  const haloA = CAPTAIN_LIGHT.halo * (0.4 + 0.6 * b) * k;
+  if (haloA > 0.005) {
+    const g = ctx.createRadialGradient(px, py, 0, px, py, haloR);
+    g.addColorStop(0, rgba(colors.accent, haloA));
+    g.addColorStop(1, rgba(colors.accent, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(px, py, haloR, 0, TAU);
+    ctx.fill();
+  }
+  const r = f.size * CAPTAIN_LIGHT.ring * (1 + CAPTAIN_LIGHT.swell * (b - 0.5));
+  ctx.globalAlpha = 1;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = rgba(
+    colors.accent,
+    (CAPTAIN_LIGHT.lo + (CAPTAIN_LIGHT.hi - CAPTAIN_LIGHT.lo) * b) * k * colors.boost,
+  );
+  ctx.lineWidth = CAPTAIN_LIGHT.line;
+  ctx.beginPath();
+  ctx.arc(px, py, r, 0, TAU);
+  ctx.stroke();
+}
 
 /**
  * The checks ring (INF-676): the fact strip's running-checks mark carried onto
@@ -255,7 +317,7 @@ function drawStreak(
   cy: number,
   colors: CrewColors,
 ): void {
-  const color = mix(crewmateLight(colors, f.work, f.checks).color, WHITE_HOT, 0.25);
+  const color = mix(crewmateLight(colors, f.work, f.checks, f.captain).color, WHITE_HOT, 0.25);
   const segments = streak.length - 1;
   ctx.lineCap = "round";
   for (let i = 0; i < segments; i++) {
@@ -318,10 +380,11 @@ export function drawCrewmate(
   }
   if (f.unfold <= 0.01) return;
 
+  drawCaptainRing(ctx, f, px, py, colors);
   drawChecksRing(ctx, f, px, py, colors);
   const work = f.work;
   const flick = f.flicker;
-  const light = crewmateLight(colors, work, f.checks);
+  const light = crewmateLight(colors, work, f.checks, f.captain);
   // A working crewmate carries a little light of its own, in its own heat;
   // a completed request's flicker is a filament on the wires, so only a
   // whisper of it spills here (../flicker `glowSpill`).

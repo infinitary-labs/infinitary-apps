@@ -299,6 +299,13 @@ The shared mark draws it as an ember dot inside an accent ring, still reading `W
 `crewSignal.test.ts` and `crewmate.test.ts` check the stage look, and `tests/e2e/task-wait-reason.spec.ts` reads the ring off the painted stage and the mark off the row and the record.
 Interrupted turns retain the danger dot unless continuing work is known.
 
+Waiting on the captain has a look of its own too, the beacon (captain's INF-1543 direction A, with the settings chosen in its preview).
+The one fact is the Tasks panel's: a crewmate whose task sits under Waiting on you (`nowGroupOf`), a ready decision, a required action or a put-aside card, wears it, whatever its posture says; on iPhone and iPad it is the phone's own Waiting on you group.
+The stage keeps it working or idle as its posture says and adds the row's ring: a thin accent circle at 0.9 of the glyph, 1.2 px, under a soft accent halo at 0.12 reaching 1.3 times the glyph, breathing once every 3.2 seconds between 0.25 and 0.85 of the accent with a 6% swell, its wires held at idle strength (0.55).
+The breath starts at its faintest when the wait begins, so nothing flashes on; the blend eases in and out on the working blend's ease, and reduced motion draws the ring whole and still at mid light.
+`CAPTAIN_LIGHT` in `crewmate.ts` and `CAPTAIN_BREATH_MS` in `orbit.ts` own the numbers, and `scripts/generate-phone-scene.ts` carries them to the phone's painter (`PhoneCrewPainter.swift`) as `captain`.
+`crewSignal.test.ts` and `crewmate.test.ts` check the stage look, `tests/e2e/task-wait-reason.spec.ts` reads the ring's spread off the painted stage, and `PhoneSceneRosterTests` checks the phone's waiting crewmate and photographs its beacon in both themes.
+
 The host refreshes sequenced presentation changes after job membership, inbox, card/thread, account cut-off and task events, with reconciliation on the existing ticker.
 Only active work has a live posture, so its facts are gathered for active rows alone, and the refresh walks only live rows: a closed row's posture changes only with the write that closed it (`deriveWorkPosture`, `TaskProtocol.refreshPresentation`).
 One pass reads each live row's posture once, and the crew counts it announces reuse those readings (`WorkPresentation`, INF-1073).

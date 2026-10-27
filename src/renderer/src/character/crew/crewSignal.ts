@@ -1,5 +1,6 @@
 import { type CenterNode, centerCues, crewedWaits } from "@shared/dependencyVisual";
 import type { FmEvent } from "@shared/events";
+import { nowGroupOf } from "@shared/nowPanel";
 import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import type { TaskLinkView, TaskView } from "@shared/tasks";
 import { requestFirstmateFlicker, tokenIntensity, usageTotal } from "../flicker";
@@ -51,7 +52,21 @@ function centerNode(task: TaskView): CenterNode {
 }
 
 /**
- * The sequenced board's waits, for whichever orbit holds each crewmate, and
+ * The crew the Tasks panel lists under Waiting on you, a put-aside card
+ * included: the one fact that lights the beacon (INF-1543).
+ */
+function applyCaptainWaits(model: CrewOrbit, tasks: readonly TaskView[]): void {
+  model.setCaptainWaits(
+    tasks
+      .filter((task) => task.kind === "work" && task.status === "active")
+      .filter((task) => nowGroupOf(task) === "waiting")
+      .map((task) => task.id),
+  );
+}
+
+/**
+ * The sequenced board's waits, for whichever orbit holds each crewmate, the
+ * crew waiting on the captain, and
  * its tasks with parts, drawn from the board's own links as constellations.
  */
 export function applyCrewDependencies(
@@ -62,6 +77,7 @@ export function applyCrewDependencies(
 ): void {
   const nodes = tasks.map(centerNode);
   model.setDependencies(centerCues(nodes));
+  applyCaptainWaits(model, tasks);
   if (model instanceof ComputerOrbits) model.setWaits(crewedWaits(nodes));
   model.setPrograms(programsOf(tasks, links), now);
 }
@@ -145,6 +161,8 @@ export function seedCrew(
   now: number,
   links: readonly TaskLinkView[] = [],
 ): void {
+  // Known before the spawns, so a crewmate already waiting boots lit.
+  applyCaptainWaits(model, tasks);
   for (const task of tasks) {
     if (task.kind !== "work" || task.status !== "active") continue;
     if (model instanceof ComputerOrbits && task.executionDeviceId !== undefined)

@@ -351,6 +351,7 @@ export class ComputerOrbits extends CrewOrbit {
     local.model.subscribe(() => this.bump());
     this.locals.set(id, local);
     for (const [reviewer, builder] of this.reviewEdges) local.model.setReview(reviewer, builder);
+    local.model.setCaptainWaits(this.captainIds);
     this.routeDependencies();
     return local;
   }
@@ -463,6 +464,13 @@ export class ComputerOrbits extends CrewOrbit {
   override setStatus(id: string, status: CrewStatus): void {
     if (this.isHome(id)) super.setStatus(id, status);
     else this.local(this.computerOf(id)).model.setStatus(id, status);
+  }
+  private captainIds: string[] = [];
+  /** Every orbit hears the whole set; each paints only the crew it holds. */
+  override setCaptainWaits(ids: Iterable<string>): void {
+    this.captainIds = [...ids];
+    super.setCaptainWaits(this.captainIds);
+    for (const local of this.locals.values()) local.model.setCaptainWaits(this.captainIds);
   }
   override setChecks(id: string, checks: boolean): void {
     if (this.isHome(id)) super.setChecks(id, checks);

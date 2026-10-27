@@ -188,6 +188,37 @@ describe("crew orbit wiring", () => {
     expect(turn.crew[0]?.checks).toBeUndefined();
   });
 
+  // INF-1543, the captain's direction A: a crewmate the Tasks panel lists
+  // under Waiting on you wears the beacon on the stage, from the board the
+  // panel reads - a put-aside card included - and loses it once answered.
+  it("lights the beacon on a crewmate waiting on the captain, and breathes it", () => {
+    const idle = { state: "idle", reason: "captain" } as const;
+    const m = new CrewOrbit(0);
+    seedCrew(m, [view({ activity: "idle", workPosture: idle, waitingCardId: "card-1" })], 0);
+    const boot = m.update(0);
+    expect(boot.crew[0]).toMatchObject({ status: "idle", captain: 1 });
+    // The breath starts at the faintest light and peaks half a breath on.
+    expect(boot.crew[0]?.captainBreath).toBeCloseTo(0, 5);
+    expect(m.update(1600).crew[0]?.captainBreath).toBeCloseTo(1, 5);
+    // Reduced motion paints the ring whole and still.
+    expect(m.update(1616, true).crew[0]?.captainBreath).toBeUndefined();
+
+    applyCrewDependencies(m, [view({ activity: "idle", workPosture: idle, waitingCardId: null })]);
+    expect(run(m, 1632, 4000).crew[0]?.captain).toBeUndefined();
+
+    applyCrewDependencies(m, [
+      view({ activity: "idle", workPosture: idle, minimizedCardId: "card-1" }),
+    ]);
+    expect(run(m, 4016, 6000).crew[0]?.captain).toBeGreaterThan(0.99);
+  });
+
+  it("lights the beacon on a crewmate on another computer too", () => {
+    const m = new ComputerOrbits(0);
+    const task = view({ activity: "idle", waitingCardId: "card-1", executionDeviceId: "mini" });
+    seedCrew(m, [task], 0);
+    expect(m.update(0).crew[0]?.captain).toBe(1);
+  });
+
   it("reads working vs idle the way the core counts it", () => {
     expect(crewStatusOf("starting")).toBe("working");
     expect(crewStatusOf("running")).toBe("working");

@@ -89,6 +89,11 @@ import XCTest
             XCTAssertEqual(Set(first.marks.map(\.id)).count, first.marks.count, "One program may have real parts on more than one computer")
             XCTAssertEqual(Set(first.marks.flatMap(\.parts)), Set(expected.filter { $0.parentId == programID }.map(\.id)))
             XCTAssertTrue(first.marks.allSatisfy { $0.task.id == programID })
+            // INF-1543, the captain's direction A: the crewmate under Waiting on you wears the beacon, and only it.
+            let waitingID = try XCTUnwrap(fixture["waiting"] as? String)
+            XCTAssertEqual(first.glyphs.filter { $0.captain > 0 }.map(\.task.id), [waitingID])
+            XCTAssertEqual(first.glyphs.first { $0.task.id == waitingID }?.task.group, .waiting)
+            XCTAssertEqual(first.glyphs.first { $0.task.id == waitingID }?.captain, 1)
             let remote = try XCTUnwrap(first.glyphs.first { $0.task.id == remoteID })
             XCTAssertTrue(remote.unknown); XCTAssertEqual(remote.work, 0)
             let advanced = motion.frame(roster: roster, now: 2, settled: false)
@@ -126,6 +131,23 @@ import XCTest
                 let picture = XCTAttachment(image: try XCTUnwrap(renderer.uiImage))
                 picture.name = "native-scene-complete-formations-\(theme == .dark ? "dark" : "light")"
                 picture.lifetime = .keepAlways; add(picture)
+            }
+            // INF-1543: the beacon up close, at its brightest and on the still frame, in both themes.
+            let beacon = try XCTUnwrap(still.glyphs.first { $0.task.id == waitingID })
+            for (name, at, settled) in [("bright", 1.6, false), ("still", 0.0, true)] {
+                var lit = beacon; lit.captainSince = 0
+                let frame = PhoneSceneMotion.Frame(glyphs: [lit], marks: [], packets: [], links: [])
+                for theme in [ColorScheme.dark, .light] {
+                    let cache = CharacterPainter.Cache()
+                    let renderer = ImageRenderer(content: Canvas { context, _ in
+                        context.translateBy(x: 60 - beacon.point.x, y: 60 - beacon.point.y)
+                        PhoneCrewPainter.draw(frame, roster: roster, now: at, still: settled, in: &context, palette: cache.palette(context.environment))
+                    }.frame(width: 120, height: 120).background(PhoneTheme.background).environment(\.colorScheme, theme))
+                    renderer.scale = 3
+                    let picture = XCTAttachment(image: try XCTUnwrap(renderer.uiImage))
+                    picture.name = "native-scene-waiting-on-you-\(name)-\(theme == .dark ? "dark" : "light")"
+                    picture.lifetime = .keepAlways; add(picture)
+                }
             }
             // Include the production scene's glyph targets, shared drawing and full real task roster in its cadence evidence.
             try await captureCrowdedScene(roster, state: .working)

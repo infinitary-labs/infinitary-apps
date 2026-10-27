@@ -1693,5 +1693,16 @@
     "pulses": 4,
     "depth": 1,
     "glowSpill": 0.12
+  },
+  "captain": {
+    "ring": 0.9,
+    "lo": 0.25,
+    "hi": 0.85,
+    "swell": 0.06,
+    "halo": 0.12,
+    "haloReach": 1.3,
+    "wire": 0.55,
+    "line": 1.2,
+    "breathMs": 3200
   }
 }

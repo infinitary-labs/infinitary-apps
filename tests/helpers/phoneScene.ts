@@ -25,7 +25,11 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
   let ids: string[] = [];
   let computer: string | undefined;
   let liveParts: string[] = [];
+  let waitingCard: string | undefined;
   const cleanup = () => {
+    if (waitingCard)
+      core.services.supervisor.closeCard(waitingCard, { kind: "firstmate" }, "Scene fixture");
+    waitingCard = undefined;
     for (const id of [...ids].reverse()) {
       const task = tasks.get(id);
       if (task && task.status !== "done" && task.status !== "dropped")
@@ -112,6 +116,19 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
         const crew = [first, second, ...parallel];
         // Cross both desktop orbits, retaining every glyph at its readable size.
         for (let i = 0; i < 21; i++) crew.push(add(`crew-${i}`, `Check harbour marker ${i + 1}`));
+        // INF-1543: one crewmate waits on the captain's decision, so the scene draws its beacon.
+        // The card is put aside: a card on the stack takes the phone's stage in place of the scene.
+        const waiting = crew[crew.length - 1] as string;
+        waitingCard = core.services.supervisor.addFirstmateCard({
+          taskId: waiting,
+          title: "Which harbour marker comes first?",
+          body: "<p>The marker check is ready for your choice.</p>",
+          actions: [
+            { id: "north", label: "North marker", default: true },
+            { id: "south", label: "South marker" },
+          ],
+        });
+        core.services.supervisor.setCardMinimized(waitingCard, true);
         const remote = add("remote", "Read the offshore chart", { deviceId: computer });
         const remotePart = add("remote-part", "Verify the offshore tide", {
           deviceId: computer,
@@ -169,6 +186,7 @@ export function phoneSceneFixture(core: Core, userData: string, ready: () => Pro
           remote,
           remotePart,
           review,
+          waiting,
           crew,
           ordinary: crew.filter((id) => !liveParts.includes(id)),
           computer,

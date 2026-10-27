@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Native solids share desktop vertices, edges, depth projection, heat and banked checks appearance.
+/// Native solids share desktop vertices, edges, depth projection, heat, banked checks and the waiting-on-you beacon.
 enum PhoneCrewPainter {
     static func circle(_ at: CGPoint, _ r: Double) -> Path {
         Path(ellipseIn: CGRect(x: at.x - r, y: at.y - r, width: r * 2, height: r * 2))
@@ -28,7 +28,9 @@ enum PhoneCrewPainter {
         let solid = CharacterCatalog.shared.solids[glyph.task.tier ?? "low"] ?? CharacterCatalog.shared.solids["low"]!
         let work = glyph.unknown ? 0 : glyph.work
         let color = palette.acc.mix(palette.hot, max(work, glyph.checks ? 1 : 0))
-        let strength = (glyph.checks ? 0.6 : 0.55 + 0.45 * work) * glyph.alpha * (glyph.unknown ? 0.45 : 1) * palette.boost
+        let beacon = CharacterCatalog.shared.captain
+        let banked = glyph.checks ? 0.6 : 0.55 + 0.45 * work
+        let strength = (banked + (beacon["wire"]! - banked) * glyph.captain) * glyph.alpha * (glyph.unknown ? 0.45 : 1) * palette.boost
         let jitter = glyph.nudge * 3
         let at = CGPoint(x: glyph.point.x + CharacterSky.twinkle(now * 14) * jitter, y: glyph.point.y + CharacterSky.twinkle(now * 13) * jitter)
         let radius = glyph.size * 0.4, angle = glyph.spin
@@ -37,6 +39,16 @@ enum PhoneCrewPainter {
             let y = v[1] * cos(angle * 0.6) - z * sin(angle * 0.6), z2 = v[1] * sin(angle * 0.6) + z * cos(angle * 0.6)
             let depth = 3 / (3 - z2)
             return (CGPoint(x: at.x + x * depth * radius * glyph.unfold, y: at.y + y * depth * radius * glyph.unfold), depth)
+        }
+        // The beacon (INF-1543): the Waiting on you ring under a soft halo, breathing; a still frame holds mid light.
+        let waiting = glyph.captain * glyph.alpha * glyph.unfold
+        if waiting > 0.01 {
+            let breath = still ? 0.5 : 0.5 - 0.5 * cos(2 * .pi * (now - glyph.captainSince) / (beacon["breathMs"]! / 1000))
+            let haloR = glyph.size * beacon["haloReach"]!, haloA = beacon["halo"]! * (0.4 + 0.6 * breath) * waiting
+            context.fill(circle(at, haloR), with: .radialGradient(Gradient(colors: [palette.acc.color(haloA), palette.acc.color(0)]), center: at, startRadius: 0, endRadius: haloR))
+            let ringR = glyph.size * beacon["ring"]! * (1 + beacon["swell"]! * (breath - 0.5))
+            let light = (beacon["lo"]! + (beacon["hi"]! - beacon["lo"]!) * breath) * waiting * palette.boost
+            context.stroke(circle(at, ringR), with: .color(palette.acc.color(min(1, light))), lineWidth: beacon["line"]!)
         }
         let spill = glyph.flicker * CharacterCatalog.shared.flicker["glowSpill"]!
         if work > 0 || spill > 0 {

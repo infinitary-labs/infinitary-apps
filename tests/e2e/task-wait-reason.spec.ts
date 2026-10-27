@@ -73,6 +73,55 @@ async function emberRing(page: Page): Promise<{ ember: number; ring: number }> {
   });
 }
 
+/**
+ * The stage's cyan crewmates as painted, each as how far its accent ink
+ * spreads from its centre in css px (the 90th percentile distance), the
+ * ember crewmate left out. A plain solid's wires stay close; the beacon's
+ * ring (INF-1543) carries the ink out to most of the glyph's size.
+ */
+async function cyanSpreads(page: Page): Promise<number[]> {
+  return page.evaluate(() => {
+    const groups: {
+      seed: { x: number; y: number };
+      points: { x: number; y: number }[];
+      ember: boolean;
+    }[] = [];
+    for (const layer of ["far", "near"]) {
+      const canvas = document.querySelector<HTMLCanvasElement>(
+        `canvas[data-crew-layer="${layer}"]`,
+      );
+      const ctx = canvas?.getContext("2d");
+      if (!canvas || !ctx) throw new Error(`crew ${layer} layer missing`);
+      const scale = canvas.width / Math.max(1, canvas.clientWidth);
+      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      for (let i = 0; i < data.length; i += 4) {
+        const [r = 0, g = 0, b = 0, a = 0] = [data[i], data[i + 1], data[i + 2], data[i + 3]];
+        if (a < 40) continue;
+        const ember = r - b > 90 && r > g;
+        if (!ember && b - r <= 60) continue;
+        const p = i / 4;
+        const point = { x: (p % canvas.width) / scale, y: Math.floor(p / canvas.width) / scale };
+        // Crewmates sit far further apart than one glyph and its ring are wide.
+        let group = groups.find((g) => Math.hypot(g.seed.x - point.x, g.seed.y - point.y) < 70);
+        if (!group) {
+          group = { seed: point, points: [], ember: false };
+          groups.push(group);
+        }
+        group.ember ||= ember;
+        if (!ember) group.points.push(point);
+      }
+    }
+    return groups
+      .filter((g) => !g.ember && g.points.length > 0)
+      .map(({ points }) => {
+        const cx = points.reduce((sum, p) => sum + p.x, 0) / points.length;
+        const cy = points.reduce((sum, p) => sum + p.y, 0) / points.length;
+        const d = points.map((p) => Math.hypot(p.x - cx, p.y - cy)).sort((m, n) => m - n);
+        return d[Math.floor(d.length * 0.9)] ?? 0;
+      });
+  });
+}
+
 function fixture(): string {
   const userDataDir = scratchDir("infinitary-wait-reason-");
   const db = openDatabase(userDataDir);
@@ -179,6 +228,19 @@ test("a cardless wait opens its record with the reported reason, while a real ch
       "data-task-wait",
       /.*/,
     );
+    // INF-1543, the captain's direction A: the crewmate under Waiting on you
+    // wears the beacon, the row's ring round its solid; the idle crewmate
+    // whose wait is only reported keeps its plain solid.
+    await expect(nowRow(page, key("choice")).locator("[data-task-mark]")).toHaveAttribute(
+      "data-task-mark",
+      "waiting",
+    );
+    await expect
+      .poll(async () => {
+        const spreads = await cyanSpreads(page);
+        return spreads.length === 2 ? Math.max(...spreads) / Math.min(...spreads) : 0;
+      })
+      .toBeGreaterThan(1.5);
     const dir = process.env.FM_WAIT_PICTURES;
     if (dir) {
       mkdirSync(dir, { recursive: true });

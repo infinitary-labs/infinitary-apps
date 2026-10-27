@@ -57,6 +57,45 @@ describe("a crewmate waiting on its checks", () => {
   });
 });
 
+// INF-1543, the captain's direction A, the beacon: the Tasks row's Waiting on
+// you ring round the solid, in the accent, breathing at the captain's settings.
+describe("a crewmate waiting on the captain", () => {
+  const ringAt = (log: string[], r: number) =>
+    log.filter((line) => line.startsWith("A120,0,") && Number(line.split(",")[2]) === r);
+  const alphaOf = (style: string) => Number(style.split(",")[3]?.replace(")", ""));
+
+  it("draws an accent ring at 0.9 of the glyph breathing between 0.25 and 0.85", () => {
+    const faint = recordingContext();
+    drawCrewmate(faint.ctx, { ...settled, captain: 1, captainBreath: 0 }, 0, 0, colors, 5_000);
+    const bright = recordingContext();
+    drawCrewmate(bright.ctx, { ...settled, captain: 1, captainBreath: 1 }, 0, 0, colors, 5_000);
+    // 30 px glyph: 27 px ring, swelling 6% across the breath.
+    expect(ringAt(faint.log, 27 * 0.97)).toHaveLength(1);
+    expect(ringAt(bright.log, 27 * 1.03)).toHaveLength(1);
+    const [lo, hi] = [faint.strokes[0], bright.strokes[0]];
+    expect(channels(lo?.style ?? "")).toEqual(colors.accent);
+    expect(channels(hi?.style ?? "")).toEqual(colors.accent);
+    expect(alphaOf(lo?.style ?? "")).toBeCloseTo(0.25, 5);
+    expect(alphaOf(hi?.style ?? "")).toBeCloseTo(0.85, 5);
+  });
+
+  it("holds the ring whole at mid light on a settled frame, and draws none when not waiting", () => {
+    const still = recordingContext();
+    drawCrewmate(still.ctx, { ...settled, captain: 1 }, 0, 0, colors, 5_000);
+    expect(ringAt(still.log, 27)).toHaveLength(1);
+    expect(alphaOf(still.strokes[0]?.style ?? "")).toBeCloseTo(0.55, 5);
+    const plain = recordingContext();
+    drawCrewmate(plain.ctx, settled, 0, 0, colors, 5_000);
+    expect(ringAt(plain.log, 27)).toHaveLength(0);
+  });
+
+  it("keeps the solid's own hue and holds its wires at idle strength", () => {
+    expect(crewmateLight(colors, 0, 0, 1)).toEqual(crewmateLight(colors, 0));
+    expect(crewmateLight(colors, 1, 0, 1).color).toEqual(colors.hot);
+    expect(crewmateLight(colors, 1, 0, 1).strength).toBeCloseTo(0.55, 5);
+  });
+});
+
 /** A 2D context that records what each stroke and fill would paint, and nothing else. */
 function recordingContext() {
   const strokes: { style: string; alpha: number }[] = [];

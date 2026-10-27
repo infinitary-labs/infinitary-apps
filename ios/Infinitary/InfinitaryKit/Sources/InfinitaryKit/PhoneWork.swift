@@ -6,6 +6,10 @@ public struct PhoneLastTurn: Decodable, Sendable {
     public struct Reply: Decodable, Sendable {
         public let text: String
         public let problem: Bool?
+        /// INF-1517: `completed` lets the line fade after its reading time; anything else stays (docs/composer.md).
+        public let eligibility: String?
+        /// The closing words as written, line breaks kept, when they differ from `text`.
+        public let words: String?
     }
 }
 
@@ -49,12 +53,15 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let plan: Plan?
     public let place: Place?
     public let blockedBy: [String]
+    /// INF-1517: a card of this task put aside on the Mac, set only by `PhoneBoard.presenting`, as the Mac's own
+    /// `presentTask` (src/shared/taskWaiting.ts) sets it for presentation alone.
+    public internal(set) var minimizedCardId: String?
     public var canSteer: Bool { status == "active" && startedAt != nil }
     public var group: PhoneTaskGroup? {
         .reading(status: status, work: kind == "work", required: requiredAction != nil,
                  waiting: waitingCardId != nil,
                  starting: startAttempt?.phase == "preparing" || startAttempt?.phase == "checking" || (status == "active" && activity == "starting"),
-                 onRequest: startPolicy == "on-request")
+                 onRequest: startPolicy == "on-request", minimized: minimizedCardId != nil)
     }
     public struct StartAttempt: Decodable, Sendable { public let phase: String }
     public struct RequiredAction: Decodable, Sendable {}
@@ -90,11 +97,41 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
 
 public struct PhoneBoard: Decodable, Sendable {
     public let seq: Int
-    public let tasks: [PhoneTask]
+    public private(set) var tasks: [PhoneTask]
     public let projects: [Project]
     public let links: [Link]?
     public struct Link: Decodable, Sendable { public let fromId: String; public let toId: String; public let type: String }
     public struct Project: Decodable, Sendable { public let id: String; public let name: String }
+
+    /// INF-1517: the Mac's `presentTask` rule (src/shared/taskWaiting.ts, docs/task-record.md "Minimized cards in
+    /// Tasks") for a card put aside: its task lists under Waiting on you, unless the task is active and its author still
+    /// works or owes the card an answer. Presentation only; the card stays minimized until a row brings it back.
+    public func presenting(_ cards: [PhoneCard]) -> PhoneBoard {
+        var board = self
+        board.tasks = tasks.map { task in
+            let associated = { (card: PhoneCard) in card.taskID == task.id || card.id == task.waitingCardId }
+            let authorWorking = task.status == "active" && (task.workPosture?.state == "active"
+                || (task.workPosture == nil && task.activity == "running")
+                || cards.contains { associated($0) && $0.awaiting == "answer" })
+            var shown = task
+            shown.minimizedCardId = authorWorking ? nil : cards.first { $0.minimized && associated($0) }?.id
+            return shown
+        }
+        return board
+    }
+
+    /// The cards put aside that belong to no task here, each listed as its own row titled by the card, as the Mac's
+    /// `presentBoard` does; a card whose task the board does not hold gets none.
+    public func tasklessMinimized(_ cards: [PhoneCard]) -> [PhoneCard] {
+        cards.filter { card in
+            card.minimized && card.taskID == nil && !tasks.contains { $0.minimizedCardId == card.id }
+        }
+    }
+
+    /// The minimized cards a task's row brings back: every card of the task put aside, as the Mac's row does.
+    public static func minimized(of task: PhoneTask, in cards: [PhoneCard]) -> [PhoneCard] {
+        cards.filter { $0.minimized && ($0.taskID == task.id || $0.id == task.waitingCardId || $0.id == task.minimizedCardId) }
+    }
 
     /// Keep an active parent and its parts together, as the Mac's Tasks panel does.
     public var groups: [String: PhoneTaskGroup] {

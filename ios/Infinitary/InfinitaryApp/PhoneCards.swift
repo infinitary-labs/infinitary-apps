@@ -10,9 +10,6 @@ struct PhoneCards: View {
     @State private var replies: [String: String] = [:]
     @State private var previousIDs: [String] = []
     @State private var sent = 0
-    /// A minimized card asked back from the Mac, shown once its return reaches the stack.
-    @State private var restoring: String?
-    @State private var restoreProblem: String?
     private var card: PhoneCard? { past ?? session.stack.first(where: { $0.id == selected }) ?? session.stack.first }
 
     var body: some View {
@@ -34,9 +31,8 @@ struct PhoneCards: View {
                 PhoneCrewScene(session: session)
                     .frame(maxWidth: .infinity, maxHeight: .infinity).padding(.vertical, PhoneTheme.space5)
             }
-            // INF-589 item 11: with no card to page, the pager hides; Minimized stays reachable while there are any.
-            if let restoreProblem { Text(restoreProblem).font(PhoneFont.caption).foregroundStyle(PhoneTheme.warning).accessibilityIdentifier("restore-error") }
-            if !session.stack.isEmpty || !session.minimizedCards.isEmpty { pager }
+            // INF-589 item 11: with no card to page, the pager hides. INF-1517: cards put aside wait in Tasks, as on the Mac.
+            if !session.stack.isEmpty { pager }
         }
         .padding(.horizontal, PhoneTheme.space4).frame(maxWidth: card == nil ? .infinity : PhoneColumn.width).frame(maxWidth: .infinity)
         .background(PhoneTheme.background)
@@ -51,10 +47,11 @@ struct PhoneCards: View {
             } else if selected == nil || !ids.contains(selected!) {
                 selected = session.stack.first(where: { !session.seenCards.contains($0.offerID ?? $0.id) })?.id ?? ids.first
             }
-            if let restoring, ids.contains(restoring) { selected = restoring; past = nil; self.restoring = nil }
+            showRestored(ids)
             previousIDs = ids
             if let past, ids.contains(past.id) { self.past = nil }
         }
+        .onChange(of: messageContext.restoring) { _, _ in showRestored(session.stack.map(\.id)) }
         .onChange(of: session.showCardID, initial: true) { _, id in
             guard let id else { return }
             if session.stack.contains(where: { $0.id == id }) { selected = id; past = nil }
@@ -64,51 +61,35 @@ struct PhoneCards: View {
     }
     private var pager: some View {
         HStack(spacing: PhoneTheme.space2) {
-            if !session.stack.isEmpty {
-                Button { page(-1) } label: { Label("Previous card", systemImage: "chevron.left").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44) }
-                    .disabled(past != nil || index <= 0).accessibilityIdentifier("previous-card")
-                    .keyboardShortcut("[", modifiers: [.command, .shift])
-            }
+            Button { page(-1) } label: { Label("Previous card", systemImage: "chevron.left").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44) }
+                .disabled(past != nil || index <= 0).accessibilityIdentifier("previous-card")
+                .keyboardShortcut("[", modifiers: [.command, .shift])
             Menu {
                 ForEach(session.stack) { item in
                     Button(item.title) { selected = item.id; past = nil }
                 }
-                // INF-944 item 3: cards minimized on the Mac wait here; opening one brings it back on the Mac too.
-                if !session.minimizedCards.isEmpty {
-                    Section("Minimized") {
-                        ForEach(session.minimizedCards) { item in
-                            Button(item.title) { restore(item) }.disabled(!session.canChange).accessibilityIdentifier("minimized-card")
-                        }
-                    }
-                }
             } label: {
-                Text(past != nil ? "Past card" : session.stack.isEmpty ? "Minimized" : "\(index + 1) of \(session.stack.count)")
+                Text(past != nil ? "Past card" : "\(index + 1) of \(session.stack.count)")
                     .font(.custom("JetBrainsMono-Regular", size: 12, relativeTo: .caption))
                     .frame(minWidth: 44, minHeight: 44)
             }.accessibilityIdentifier("card-pager")
-            if !session.stack.isEmpty {
-                Button { page(1) } label: {
-                    Label("Next card", systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
-                        .overlay(alignment: .topTrailing) {
-                            if session.stack.dropFirst(index + 1).contains(where: { !session.seenCards.contains($0.offerID ?? $0.id) }) {
-                                Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
-                            }
+            Button { page(1) } label: {
+                Label("Next card", systemImage: "chevron.right").labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
+                    .overlay(alignment: .topTrailing) {
+                        if session.stack.dropFirst(index + 1).contains(where: { !session.seenCards.contains($0.offerID ?? $0.id) }) {
+                            Circle().fill(PhoneTheme.accent).frame(width: 6, height: 6).accessibilityHidden(true)
                         }
-                }
-                    .disabled(past != nil || index >= session.stack.count - 1).accessibilityIdentifier("next-card")
-                    .keyboardShortcut("]", modifiers: [.command, .shift])
+                    }
             }
+                .disabled(past != nil || index >= session.stack.count - 1).accessibilityIdentifier("next-card")
+                .keyboardShortcut("]", modifiers: [.command, .shift])
         }
     }
     private var index: Int { session.stack.firstIndex { $0.id == (selected ?? session.stack.first?.id) } ?? 0 }
-    private func restore(_ item: PhoneCard) {
-        restoreProblem = nil; restoring = item.id
-        Task {
-            do { _ = try await session.ask(.minimize, [.string(item.id), .bool(false)]) }
-            catch { restoring = nil; restoreProblem = error.localizedDescription; return }
-            // The Mac's card push may already have arrived with the card back on its stack.
-            if session.stack.contains(where: { $0.id == item.id }) { selected = item.id; past = nil; restoring = nil }
-        }
+    /// A card a Tasks row brought back shows once its return reaches the stack, whichever arrives first.
+    private func showRestored(_ ids: [String]) {
+        guard let id = messageContext.restoring, ids.contains(id) else { return }
+        selected = id; past = nil; messageContext.restoring = nil
     }
     private func page(_ delta: Int) {
         let next = index + delta

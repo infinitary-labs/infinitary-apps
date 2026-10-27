@@ -43,8 +43,6 @@ public struct PhoneNotice: Equatable, Sendable {
     public private(set) var seenCards = Set<String>()
     /// INF-944 item 3: the stack follows the Mac's. A card minimized there leaves the phone's stack, count and badge too.
     public var stack: [PhoneCard] { cards.filter { !$0.minimized } }
-    /// Open cards minimized on the Mac, listed apart so one can be brought back.
-    public var minimizedCards: [PhoneCard] { cards.filter(\.minimized) }
     public var unreadCards: Int { stack.filter { !seenCards.contains($0.offerID ?? $0.id) }.count }
     public var canChange: Bool { contact == "in-reach" && access == "full" }
     public var changeRefusal: String? {

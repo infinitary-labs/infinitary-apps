@@ -50,7 +50,8 @@ extension ReadOnlySession {
     }
 }
 
-/// INF-1062: the computer's own sheet, with its name, reach and address, and Leave or Forget at its foot.
+/// INF-1062: the computer's own sheet, with its name, reach and address, then Leave or Forget under its own heading.
+/// INF-1517, the captain's pick: it opens at half height on the system's glass with Settings' headings and spacing.
 /// This device's own facts live in `PhoneSettingsSheet`.
 struct PhoneComputerSheet: View {
     let session: ReadOnlySession
@@ -63,25 +64,24 @@ struct PhoneComputerSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    Text(session.mac.name).font(PhoneFont.title).accessibilityIdentifier("home-name")
-                    Text("Your first mate lives here.").foregroundStyle(PhoneTheme.secondary)
-                    PhoneReach(session: session)
-                    if let address = session.reachedAddress {
-                        Text(address).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
-                            .accessibilityIdentifier("reached-address")
+                VStack(alignment: .leading, spacing: PhoneTheme.space5) {
+                    VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                        Text(session.mac.name).font(PhoneFont.headline).accessibilityIdentifier("home-name")
+                        Text("Your first mate lives here.").font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary)
+                        PhoneReach(session: session)
+                        if let address = session.reachedAddress {
+                            Text(address).font(PhoneFont.data).foregroundStyle(PhoneTheme.muted)
+                                .accessibilityIdentifier("reached-address")
+                        }
                     }
+                    exitControls
                 }.padding(PhoneTheme.space5).frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .safeAreaInset(edge: .bottom) {
-                exitControls.padding(PhoneTheme.space4).background(PhoneTheme.panel)
-                    .overlay(alignment: .top) { Rectangle().fill(PhoneTheme.line).frame(height: 1) }
             }
             .phoneTitle("Your computer")
             .toolbar { ToolbarItem(placement: .confirmationAction) {
                 Button("Done") { dismiss() }.accessibilityIdentifier("close-computer-details")
             } }
-            // Alerts keep the cancel choice in view; a popover from the foot would hide it.
+            // Alerts keep the cancel choice in view; a popover from the button would hide it.
             .alert("Leave \(session.mac.name)?", isPresented: $leaving) {
                 Button("Leave this computer", role: .destructive) { dismiss(); leave() }.accessibilityIdentifier("confirm-leave")
                 Button("Keep it", role: .cancel) {}
@@ -92,20 +92,23 @@ struct PhoneComputerSheet: View {
             } message: { Text("You’ll need a new link to join again. Your computer may still list this device.") }
         }
         .font(PhoneFont.body).foregroundStyle(PhoneTheme.text).tint(PhoneTheme.accent)
-        .presentationDetents([.large]).presentationDragIndicator(.visible).phoneSheetSurface()
+        .presentationDetents([.medium, .large]).presentationDragIndicator(.visible).phoneSheetSurface()
     }
 
     // Close the sheet on confirmation so any failure remains visible in the root's problem notice.
     // INF-1312: the sentence first, then one fitted button in the Mac's red outline at the trailing edge.
+    // INF-1517: a section of its own, headed Leave, or Forget while the computer is out of reach.
     private var exitControls: some View {
         VStack(alignment: .leading, spacing: PhoneTheme.space2) {
             if session.contact == "in-reach" {
+                Text("Leave").font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
                 Text("This device stops showing it. To come back, scan a new code.")
                 PhoneChoiceRow {
                     Button("Leave \(session.mac.name)") { leaving = true }
                         .buttonStyle(PhoneChoiceStyle(.danger)).accessibilityIdentifier("leave")
                 }
             } else {
+                Text("Forget").font(PhoneFont.headline).foregroundStyle(PhoneTheme.text)
                 Text("Clears this computer from this device. \(session.mac.name) may still list it.")
                 PhoneChoiceRow {
                     Button("Forget this computer") { forgetting = true }

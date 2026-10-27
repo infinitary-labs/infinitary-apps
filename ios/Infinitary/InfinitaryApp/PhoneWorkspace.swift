@@ -8,6 +8,8 @@ import Observation
     var card: Card?
     var cardsVisible = true
     var taskID: String?
+    /// INF-1517: a card a Tasks row brought back, shown on Home once the computer's stack holds it again.
+    var restoring: String?
     var fields: [String: String] {
         if let taskID { return ["taskId": taskID] }
         guard cardsVisible else { return [:] }
@@ -106,6 +108,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         .onChange(of: shown == .home, initial: true) { _, visible in messageContext.cardsVisible = visible }
         // The message box is Home's alone, so a keyboard typing into it closes with the tab it leaves.
         .onChange(of: shown) { _, tab in if tab != .home { dismissPhoneKeyboard() } }
+        .onChange(of: messageContext.restoring) { _, id in if id != nil { selection = .home } }
         .background {
             // Measure window space without treating the keyboard as an orientation change.
             GeometryReader { geometry in
@@ -208,13 +211,23 @@ struct PhoneTabStrip: View {
     let tabs: [PhoneTab]
     @Binding var selection: PhoneTab
 
-    var body: some View {
+    /// INF-1517, the captain's Round: the system's control lights a tab (W - 8) / n - 5.3 points wide and 40 tall in a
+    /// strip W wide, measured on an iOS 27 simulator, so this width makes the lit tab a 40-point circle.
+    private var roundWidth: CGFloat { CGFloat(tabs.count) * (40 + 16.0 / 3) + 8 }
+
+    private var picker: some View {
         Picker("Tabs", selection: $selection) {
             ForEach(tabs, id: \.self) { tab in
                 Image(systemName: tab.symbol).accessibilityLabel(tab.title).tag(tab).accessibilityIdentifier(tab.identifier)
             }
         }
-        .pickerStyle(.segmented).labelsHidden().fixedSize()
+        .pickerStyle(.segmented).labelsHidden()
+    }
+
+    var body: some View {
+        // One segmented control: a second one bound to the same selection can write a stale tab back after a press.
+        // The icons keep their size at every type setting, so the round width always fits between the side buttons.
+        picker.frame(width: roundWidth)
         .dynamicTypeSize(...DynamicTypeSize.large)
         // A segmented control takes no key equivalents of its own, so Command-1, -2 and -3 ride unseen buttons beside it.
         .background {

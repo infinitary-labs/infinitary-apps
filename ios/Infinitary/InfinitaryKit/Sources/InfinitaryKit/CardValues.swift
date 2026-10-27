@@ -45,6 +45,7 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
     public var author: String { value["author"].text! }
     public var meta: String? { value["meta"].text }
     public var reviewTaskId: String? { value["reviewTaskId"].text }
+    public var taskID: String? { value["taskId"].text }
     public var awaiting: String? { value["awaiting"].text }
     public var sentBackAt: Double? { value["sentBackAt"].numeric }
     public var body: String { value["body"].text! }

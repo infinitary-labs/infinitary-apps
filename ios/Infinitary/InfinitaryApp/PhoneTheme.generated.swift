@@ -52,6 +52,9 @@ enum PhoneTheme {
     static let wireHot = Color(uiColor: UIColor { traits in
         traits.userInterfaceStyle == .light ? UIColor(red: 0.9098039215686274, green: 0.4627450980392157, blue: 0.0392156862745098, alpha: 1) : UIColor(red: 1, green: 0.6352941176470588, blue: 0.3411764705882353, alpha: 1)
     })
+    static let hot = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .light ? UIColor(red: 0.8509803921568627, green: 0.47843137254901963, blue: 0.12156862745098039, alpha: 1) : UIColor(red: 1, green: 0.6352941176470588, blue: 0.3411764705882353, alpha: 1)
+    })
     static func wireBoost(_ scheme: ColorScheme) -> Double { scheme == .light ? 1.4 : 1 }
     static func haloBoost(_ scheme: ColorScheme) -> Double { scheme == .light ? 1.2 : 1.2 }
 }

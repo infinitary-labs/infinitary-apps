@@ -60,6 +60,7 @@ struct PhoneView: View {
             .toolbar {
                 // INF-1062, the captain's one-row bar: Settings at the left, the strip in the middle (PhoneWorkspace),
                 // the computer at the right. While the keyboard is open, Done takes Settings' place.
+                // INF-1517: the one-icon buttons take the system's own 44-point circle, with no wider frame of ours.
                 if keyboardVisible {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("Done", action: dismissPhoneKeyboard)
@@ -69,7 +70,7 @@ struct PhoneView: View {
                     }
                 } else if model.connection != nil, !model.removed {
                     ToolbarItem(placement: .topBarLeading) {
-                        Button { settings = true } label: { PhoneSymbol.settings.image.frame(minWidth: 44, minHeight: 44) }
+                        Button { settings = true } label: { PhoneSymbol.settings.image }
                             .accessibilityLabel("Settings").accessibilityIdentifier("phone-settings")
                             .keyboardShortcut(",", modifiers: .command)
                     }
@@ -88,7 +89,6 @@ struct PhoneView: View {
                                         Circle().fill(PhoneTheme.warning).frame(width: 7, height: 7).offset(x: 3, y: -3)
                                     }
                                 }
-                                .frame(minWidth: 44, minHeight: 44)
                         }
                             .accessibilityLabel("Your computer").accessibilityValue(session.reachLine)
                             .accessibilityIdentifier("computer-details")

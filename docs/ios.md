@@ -110,9 +110,10 @@ Neither reconnection nor discovery queues or retries a mutation.
 ## Cards on the phone
 
 `PhoneCards(session:)` is the card-stage integration point: it fills its available column without adding navigation, a toolbar or the app's message box.
-It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles, then a Minimized section.
-With no current card the stage shows the character alone, as the Mac does, and the chevrons and count hide, leaving a lone menu named Minimized only while minimized cards exist.
-The stack follows the Mac's: a card minimized on any Mac leaves the phone's stack, count and badge, and opening it from the Minimized section sends `inf:cards:minimize` with `false`, which brings it back on every Mac too.
+It keeps one shown card with a next-card peek and a lower pager of two chevrons around the count, whose menu lists the current titles.
+With no current card the stage shows the character alone, as the Mac does, and the pager hides.
+The stack follows the Mac's: a card minimized on any Mac leaves the phone's stack, count and badge, and waits in Tasks, as on the Mac (INF-1517).
+A tap on its row there sends `inf:cards:minimize` with `false`, which brings it back on every Mac too, and shows it on Home.
 A card is one framed surface that fits the stage: its head stays at the top, its choices stay at its foot, and the body, attachments, thread and reply row scroll between them in one native scroller.
 The body's web view never scrolls, zooms or adds insets of its own; it takes its content's height inside that scroller, so there is only one scroll and nothing runs past the card's rounded frame.
 Until the body reports drawn, its web view is a 48-point placeholder that clips the body, so the page keeps the body inert and hidden from accessibility until native code has laid the view out at the body's height and calls `reveal()`.
@@ -181,12 +182,16 @@ The top bar is the one-row bar the captain chose (INF-1062): a Settings button a
 The strip, `PhoneTabStrip`, is Apple's segmented control, which iOS 26 draws on glass (INF-1328): a house for Home, a checklist for Tasks and a pulse line for Activity (INF-1334), read by VoiceOver as a tab bar of the tabs' names.
 It carries no unread dot; the notice under the bar and the next chevron's dot mark an unread card.
 The strip keeps the bar's own size at every type setting, as the system's bars do, so the bar's buttons never move around it.
+Where the bar has room, the strip is as wide as makes the lit tab a 40-point circle, 144 points for three tabs (INF-1517, the captain's Round); where it has not, a `ViewThatFits` gives it the control's own fitted width.
+Settings and the computer are the system's 44-point circles for a one-icon button, with no wider frame of the app's.
 Command-1, Command-2 and Command-3 switch tabs, Command-Comma opens Settings and Command-I the computer.
 `PhoneWorkspace` holds the tabs in the system tab controller with its own bar hidden, so each tab keeps its draft, scroll position and search while another is shown, and a tab that is away leaves the view hierarchy: nothing in it is drawn, pressable or read, and a keyboard typing into the message box closes with the tab it leaves.
 Home is one column: the stage, then the last turn and the message box under it, in the layout rather than floating over it; Tasks and Activity run to the foot with nothing over them, so the last row is whole and pressable after scrolling to the end.
 No bar height is measured or guessed, and nothing recedes on scroll.
 No panel sits behind the message box: the last turn is two bare lines over the capsule, which is native glass on iOS 26 and the field's fill and hairline on iOS 18.
+The capsule is 48 points tall, with the photo glyph 16 points in, the words 52 points in and send a 32-point filled circle 8 points from its end, each control in a 44-point touch area (INF-1517, following ChatGPT's input).
 Settings is this phone's own sheet, `PhoneSettingsSheet`: this device and what it can do, that appearance follows the device, and the app's version; the computer's sheet keeps the computer's name, reach, address and Leave or Forget.
+Both open at half height on the system's glass and can be pulled up, with the same headings and spacing; Leave, or Forget while out of reach, is the computer sheet's second section under its own heading.
 While the keyboard is open, Done takes Settings' place in the leading slot and the Hide keyboard command (Shift-Command-K) dismisses it without sending or clearing the draft.
 The dismissal command does not belong to the keyboard’s transient accessory view.
 The tabs read Home, Tasks and Activity, in that order.
@@ -260,7 +265,10 @@ The details sheet names the connected view's ability to answer cards, send messa
 
 ## Talk and tasks
 
-The message box keeps the captain’s last message and the first mate’s reply above its native multiline field.
+The message box keeps the captain’s last message and the first mate’s reply above its native multiline field, by the Mac's rules (`docs/composer.md`, "The last turn"; INF-1517).
+While the first mate is busy its line shows three ember dots brightening in turn and Working…; a message that was only photos reads "A picture".
+A completed reply fades after 15 seconds on screen over 0.7 seconds, an instant under reduced motion, keeping its room so the input never moves; the count runs only while Home is shown, the app is in front, the phone is upright and the first mate is idle.
+A tap on the reply line opens the whole reply in a half-height sheet, titled by the captain's message, as the Mac's reply note.
 Its component owns messages and photos; the shared shell places it at the foot of Home.
 A send carries the visible entry’s `visibleCardId`, `pastCardId` or `taskId` through the published conversation request as a hint, never as the message’s topic.
 The native multiline field uses the keyboard’s own dictation; Infinitary adds no speech model or microphone permission.
@@ -274,6 +282,8 @@ The phone keeps active parent trees together, hides dropped rows and closed ordi
 Each group's header is a micro uppercase label with its count, as on the Mac.
 Waiting on you, Working and Queued start expanded; Backlog and Done start collapsed, with counts and keyboard-reachable disclosure buttons.
 Each row is one line: status mark, key, title and then the project, with the newest task first inside each group and dividers inset past the mark.
+A card put aside on the Mac lists its task under Waiting on you by the Mac's `presentTask` rule, which `PhoneBoard.presenting` follows, and the generated lookup takes the minimized fact as its sixth input; a card with no task gets its own row titled by the card.
+A tap on such a row brings its cards back on every Mac and shows them on Home; any other row opens the task's record.
 The search waits above the list until the list is pulled down from its top, as the Mac's waits behind its icon.
 Find a task (Shift-Command-F, the Mac's key) opens it with the caret in the field; Close search, or Escape on an empty field, puts it away.
 VoiceOver cannot pull past the top of a list, so the search is always shown while it runs.

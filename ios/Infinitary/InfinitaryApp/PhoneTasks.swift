@@ -14,8 +14,11 @@ struct PhoneTasks: View {
     @State private var selected: PhoneTask?
     @State private var expanded: Set<PhoneTaskGroup> = [.waiting, .working, .queued]
 
+    /// INF-1517: the board as the Mac's Tasks presents it, with each card put aside under Waiting on you.
+    private var board: PhoneBoard? { session.board?.presenting(session.cards) }
+
     private var rows: [PhoneTask] {
-        let current = (session.board?.tasks ?? []).filter {
+        let current = (board?.tasks ?? []).filter {
             query.isEmpty || "\($0.key) \($0.title) \($0.goal ?? "")".localizedCaseInsensitiveContains(query)
         }
         let ids = Set(current.map(\.id))
@@ -37,15 +40,18 @@ struct PhoneTasks: View {
                 if searchShown { search }
                 if let problem { Text(problem).foregroundStyle(PhoneTheme.warning) }
                 LazyVStack(alignment: .leading, spacing: PhoneTheme.space2) {
-                    if rows.isEmpty { Text(query.isEmpty ? "No tasks yet." : "No matching tasks.").foregroundStyle(PhoneTheme.secondary) }
+                    if rows.isEmpty && (board?.tasklessMinimized(session.cards).isEmpty ?? true) { Text(query.isEmpty ? "No tasks yet." : "No matching tasks.").foregroundStyle(PhoneTheme.secondary) }
                     if query.isEmpty {
-                        let groups = session.board?.groups ?? [:]
+                        let groups = board?.groups ?? [:]
                         ForEach(PhoneTaskGroup.allCases, id: \.rawValue) { group in
                             let members = rows.filter { groups[$0.id] == group }
+                            // A card put aside with no task is a row of its own under Waiting on you.
+                            let aside = group == .waiting ? board?.tasklessMinimized(session.cards) ?? [] : []
                             VStack(spacing: 0) {
-                                groupHeader(group, count: members.count)
+                                groupHeader(group, count: members.count + aside.count)
                                 if expanded.contains(group) {
-                                    ForEach(members) { task in taskRow(task, last: task.id == members.last?.id) }
+                                    ForEach(members) { task in taskRow(task, last: aside.isEmpty && task.id == members.last?.id) }
+                                    ForEach(aside) { card in asideRow(card, last: card.id == aside.last?.id) }
                                 }
                             }
                         }
@@ -142,11 +148,11 @@ struct PhoneTasks: View {
 
     // One line, as the Mac's row: status mark, key in dim mono, the title, and the project in dim mono at the end.
     private func taskRow(_ task: PhoneTask, last: Bool) -> some View {
-        let project = session.board?.projects.first(where: { $0.id == task.projectId })?.name
-        return Button { messageContext.taskID = task.id; selected = task } label: {
+        let project = board?.projects.first(where: { $0.id == task.projectId })?.name
+        return Button { open(task) } label: {
             HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
-                Image(systemName: task.status == "open" && task.waitingCardId == nil ? "circle" : "circle.fill")
-                    .font(.system(size: PhoneTheme.space2)).foregroundStyle(task.waitingCardId != nil ? PhoneTheme.accent : task.activity == "running" ? PhoneTheme.warning : PhoneTheme.secondary)
+                Image(systemName: task.status == "open" && task.waitingCardId == nil && task.minimizedCardId == nil ? "circle" : "circle.fill")
+                    .font(.system(size: PhoneTheme.space2)).foregroundStyle(task.waitingCardId != nil || task.minimizedCardId != nil ? PhoneTheme.accent : task.activity == "running" ? PhoneTheme.warning : PhoneTheme.secondary)
                     .frame(width: Self.markWidth).accessibilityHidden(true)
                 HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
                     Text(task.key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).fixedSize()
@@ -160,6 +166,40 @@ struct PhoneTasks: View {
             .accessibilityLabel([task.key, task.title, project, task.state].compactMap(\.self).joined(separator: ", "))
         .overlay(alignment: .bottom) {
             // Inset to the words, never under the mark, and none after a group's last row.
+            if !last { Rectangle().fill(PhoneTheme.line).frame(height: 1).padding(.leading, Self.markWidth + PhoneTheme.space3) }
+        }
+    }
+
+    /// INF-1517, the captain's pick: a row whose task has cards put aside brings them back and shows them on Home,
+    /// on the phone and every Mac, as a Mac Tasks row does (`openTask`); any other row opens the task's record.
+    private func open(_ task: PhoneTask) {
+        let aside = PhoneBoard.minimized(of: task, in: session.cards)
+        if aside.isEmpty { messageContext.taskID = task.id; selected = task } else { restore(aside) }
+    }
+
+    private func restore(_ cards: [PhoneCard]) {
+        guard let first = cards.first, session.canChange else { return }
+        problem = nil
+        Task {
+            do { for card in cards { _ = try await session.ask(.minimize, [.string(card.id), .bool(false)]) } }
+            catch { problem = error.localizedDescription; return }
+            messageContext.restoring = first.id
+        }
+    }
+
+    // A card put aside with no task: the Mac's presentation-only row, titled by the card, with no key or project.
+    private func asideRow(_ card: PhoneCard, last: Bool) -> some View {
+        Button { restore([card]) } label: {
+            HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space3) {
+                Image(systemName: "circle.fill").font(.system(size: PhoneTheme.space2)).foregroundStyle(PhoneTheme.accent)
+                    .frame(width: Self.markWidth).accessibilityHidden(true)
+                Text(card.title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text).lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }.padding(.vertical, PhoneTheme.space3).frame(minHeight: 44)
+                .contentShape(Rectangle())
+        }.buttonStyle(.plain).disabled(!session.canChange).accessibilityIdentifier("minimized-card")
+            .accessibilityLabel(card.title).accessibilityHint("Brings the card back")
+        .overlay(alignment: .bottom) {
             if !last { Rectangle().fill(PhoneTheme.line).frame(height: 1).padding(.leading, Self.markWidth + PhoneTheme.space3) }
         }
     }

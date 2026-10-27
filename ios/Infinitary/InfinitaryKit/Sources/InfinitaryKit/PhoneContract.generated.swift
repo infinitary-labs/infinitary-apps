@@ -85,28 +85,44 @@ public enum PhoneTaskGroup: String, CaseIterable, Sendable {
         case .landed: "Done · 7d"
         }
     }
-    public static func reading(status: String, work: Bool, required: Bool, waiting: Bool, starting: Bool, onRequest: Bool) -> Self? {
+    public static func reading(status: String, work: Bool, required: Bool, waiting: Bool, starting: Bool, onRequest: Bool, minimized: Bool = false) -> Self? {
         guard let state = ["open","active","done","dropped"].firstIndex(of: status) else { return nil }
-        let bits = (work ? 16 : 0) + (required ? 8 : 0) + (waiting ? 4 : 0) + (starting ? 2 : 0) + (onRequest ? 1 : 0)
-        return readings[state * 32 + bits]
+        let bits = (minimized ? 32 : 0) + (work ? 16 : 0) + (required ? 8 : 0) + (waiting ? 4 : 0) + (starting ? 2 : 0) + (onRequest ? 1 : 0)
+        return readings[state * 64 + bits]
     }
     private static let readings: [Self?] = [
         .queued, .backlog, .queued, .queued, .waiting, .waiting, .waiting, .waiting,
         .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
         .queued, .backlog, .queued, .queued, .waiting, .waiting, .waiting, .waiting,
         .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
-        .working, .working, .queued, .queued, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
         .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
         .working, .working, .queued, .queued, .waiting, .waiting, .waiting, .waiting,
         .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .working, .working, .queued, .queued, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
         nil, nil, nil, nil, nil, nil, nil, nil,
         .landed, .landed, .landed, .landed, .landed, .landed, .landed, .landed,
         .landed, .landed, .landed, .landed, .landed, .landed, .landed, .landed,
         .landed, .landed, .landed, .landed, .landed, .landed, .landed, .landed,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
         nil, nil, nil, nil, nil, nil, nil, nil,
         nil, nil, nil, nil, nil, nil, nil, nil,
         nil, nil, nil, nil, nil, nil, nil, nil,
-        nil, nil, nil, nil, nil, nil, nil, nil
+        nil, nil, nil, nil, nil, nil, nil, nil,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting,
+        .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting, .waiting
     ]
 }
 

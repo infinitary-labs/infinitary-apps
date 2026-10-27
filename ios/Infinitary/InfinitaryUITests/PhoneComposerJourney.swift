@@ -170,7 +170,8 @@ import XCTest
     let footer = app.otherElements["phone-composer"].firstMatch
     XCTAssertTrue(footer.waitForPresence(timeout: 10))
     let controls = [app.textFields["message-box"], app.buttons["add-photos"], app.buttons["send-message"],
-                    app.buttons["photo-chip"], app.staticTexts["last-turn-you"], app.staticTexts["last-turn-reply"],
+                    app.buttons["photo-chip"], app.staticTexts["last-turn-you"],
+                    app.descendants(matching: .any).matching(identifier: "last-turn-reply").firstMatch,
                     app.staticTexts["connection-refusal"], app.staticTexts["message-problem"]]
     for control in controls where control.exists {
         XCTAssertTrue(phoneAccessibilityBounds(footer.frame).contains(phoneAccessibilityBounds(control.frame)),

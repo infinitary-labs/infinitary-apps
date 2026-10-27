@@ -1047,21 +1047,22 @@ import XCTest
         // XCUI reports the 44-point area in fractions of a pixel, such as 43.99999999999994.
         XCTAssertGreaterThanOrEqual(keepChoice.frame.height.rounded(), 44)
         XCTAssertLessThan(keepChoice.frame.width, app.scrollViews["card-scroll"].frame.width / 2, "A choice keeps its own width")
-        // INF-944 item 3: a card minimized on the computer leaves the phone's stack and waits under Minimized.
+        // INF-944 item 3: a card minimized on the computer leaves the phone's stack.
+        // INF-1517, the captain's picks: Home keeps no Minimized menu; the card waits in Tasks under Waiting on you,
+        // in its own row since it has no task, and a tap brings it back on Home and on the computer.
         let heroTitle = try XCTUnwrap(hero["title"] as? String)
         _ = try await home("minimize-hero")
         XCTAssertTrue(cardHeading(heroTitle).waitForAbsence(timeout: 10), app.debugDescription)
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
-        XCTAssertTrue(pager.waitForPresence(timeout: 10), app.debugDescription)
-        // INF-1060: the empty stage's lone menu is named Minimized.
-        XCTAssertEqual(pager.label, "Minimized")
-        pager.tap()
-        // The one to open is listed under Minimized.
+        XCTAssertTrue(pager.waitForAbsence(timeout: 10), "Home shows no Minimized menu")
+        tab("Tasks")
         let restore = app.buttons.matching(identifier: "minimized-card").matching(NSPredicate(format: "label == %@", heroTitle)).firstMatch
         XCTAssertTrue(restore.waitForPresence(timeout: 10), app.debugDescription)
-        picture("cards-minimized-menu")
+        XCTAssertLessThan(app.buttons["group-waiting"].frame.minY, restore.frame.minY, "It is listed under Waiting on you")
+        picture("tasks-minimized")
         restore.tap()
-        XCTAssertTrue(cardHeading(heroTitle).waitForPresence(timeout: 10), "Opening a minimized card brings it back")
+        XCTAssertTrue(cardHeading(heroTitle).waitForPresence(timeout: 10), "Its row brings the card back on Home")
+        XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: app.buttons["tab-home"], timeout: 10), .completed)
         let restored = try await home("hero-state", method: "GET")
         let restoredCard = try XCTUnwrap(restored["card"] as? [String: Any])
         XCTAssertNil(restoredCard["minimized"], "The phone brings it back on the computer too")

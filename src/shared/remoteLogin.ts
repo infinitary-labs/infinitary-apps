@@ -186,7 +186,14 @@ export function remoteLoginRefusalLines(message: string): readonly string[] {
  * in at that Mac's screen as them), `failed` when it could not be set up or
  * that user's session there refused it.
  */
-export const backgroundStateSchema = z.enum(["running", "at-login", "failed", "none"]);
+export const backgroundStateSchema = z.enum([
+  "running",
+  "at-login",
+  "failed",
+  "none",
+  "unavailable",
+  "unknown",
+]);
 export type BackgroundState = z.infer<typeof backgroundStateSchema>;
 
 /**
@@ -548,13 +555,18 @@ export const remoteLoginWords = {
   findingRow: (device: Named) => `Telling ${deviceLabel(device)} where ${HERE.this} is now…`,
   updatingRow: (device: Named) => `Updating Infinitary on ${deviceLabel(device)}…`,
 
+  startup: (device: Named, state: "unavailable" | "unknown") =>
+    state === "unavailable"
+      ? `Infinitary could not set up automatic startup on ${deviceLabel(device)}.`
+      : `Infinitary could not check automatic startup on ${deviceLabel(device)}.`,
+
   /** Said after the joined line when nobody is logged in there as that user. */
   atLogin: (device: Named) => `${deviceLabel(device)} starts running work ${nextLogin(device)}.`,
 
   updated: (device: Named, background: BackgroundState) =>
     background === "at-login"
       ? `${deviceLabel(device)} has ${HERE.this}'s version of Infinitary now, and starts it ${nextLogin(device)}.`
-      : background === "failed"
+      : background === "failed" || background === "unavailable" || background === "unknown"
         ? `${deviceLabel(device)} has ${HERE.this}'s version of Infinitary now.`
         : `${deviceLabel(device)} runs ${HERE.this}'s version of Infinitary now.`,
 

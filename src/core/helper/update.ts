@@ -26,6 +26,7 @@ import { hostPlatform, thisDeviceSystem } from "../platform";
 import { atUtilityQos } from "../utilityQos";
 import {
   type BackgroundContext,
+  backgroundState,
   moveInBackground,
   readInstalled,
   rewriteInBackground,
@@ -90,6 +91,18 @@ export type UpdatedHere = WorkUpdateAnswer & { afterRun?: () => Promise<void> };
 
 const QUIET_MS = 60_000;
 
+/** A saved unit is not evidence that anything can restart this run. Mac behavior is unchanged. */
+async function canRestart(
+  options: UpdateHereOptions,
+  service: ReturnType<typeof readInstalled>["service"],
+): Promise<boolean> {
+  if (!service) return false;
+  const context = options.background?.context;
+  if (context && "systemctl" in context)
+    return (await backgroundState(context, service)) === "running";
+  return !service.file.endsWith(".service");
+}
+
 /**
  * Keeps the home's Firstmate here when a copy is kept, and answers whether
  * a background is set up to start the run again. Rejects, with nothing here
@@ -125,7 +138,10 @@ export async function updateHere(options: UpdateHereOptions): Promise<UpdatedHer
       rmSync(into, { recursive: true, force: true });
     }
   }
-  return { restarts: installed.service !== null, ...(afterRun ? { afterRun } : {}) };
+  return {
+    restarts: await canRestart(options, installed.service),
+    ...(afterRun ? { afterRun } : {}),
+  };
 }
 
 /**
@@ -209,7 +225,11 @@ export async function downloadHere(options: DownloadHereOptions): Promise<Downlo
     if (!bundle) return { fallback: "failed", ...last };
     options.onProgress({ ...last, state: "updating" });
     const afterRun = await keepHere(options, installed, join(into, bundle));
-    return { restarts: installed.service !== null, ...last, ...(afterRun ? { afterRun } : {}) };
+    return {
+      restarts: await canRestart(options, installed.service),
+      ...last,
+      ...(afterRun ? { afterRun } : {}),
+    };
   } finally {
     rmSync(into, { recursive: true, force: true });
   }
@@ -307,7 +327,8 @@ async function keepRenamed(
       env,
       app: kept,
     });
-    if (moved.state === "failed") throw new Error("The background refused it.");
+    if (moved.state !== "running" && moved.state !== "at-login")
+      throw new Error("The background refused it.");
   } catch (error) {
     rmSync(kept, { recursive: true, force: true });
     throw new Error(

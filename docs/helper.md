@@ -51,6 +51,7 @@ Until it is made, Infinitary's work is read where it is, in Firstmate 3000's fol
 | `pi-base/` | Pi's catalog, which says how each provider signs in; it holds no sign-in |
 | `app/` | On another Mac, the copy of Infinitary its command got from the home, which the background starts |
 | `installed.json` | What Infinitary set up outside this folder: the background agent's label and file, and the copy in `app/` (below, "In the background") |
+| `automatic-startup.json` | The last Linux automatic-startup outcome, which an explicit worker reports on reconnect; kept separately so an older app can still read and remove its installed service |
 | `work.log` | Notes about the conversations held here, and every console note, which Terminal never shows |
 | `service.log` | What the run the background started says |
 | `display.auth` | On Linux, the key to the work mode's own display (below, "No screen needed") |
@@ -101,7 +102,7 @@ That holds once it loaded its own sign-ins too: the work mode listens for SIGINT
 Started with `--fetched` by the command for another Mac, it asks nothing - the command asked before it got Infinitary - and keeps the copy it got in `app/` (cloned where the disk can) before it uses the link; a refused link keeps nothing.
 Started with `--agreed` by the command on Ubuntu, with the package it just installed, it asks nothing either and keeps no copy, since the package's program is the one that runs.
 Since the package stays, its words then never say nothing changed, and a refusal ends with the words that Infinitary stays installed on this computer (`afterInstall`, `INSTALLED_STAYS`).
-Started with `--background <file>`, as the command starts it, a join writes how its work runs in the background there (`running`, `at-login`, `failed` or `none`), which the command reads to say what keeps the work on after logout (`docs/devices.md`, "Joining by a command").
+Started with `--background <file>`, as the command starts it, a join writes how its work runs in the background there (`running`, `at-login`, `failed`, `unavailable`, `unknown` or `none`), which the command reads to say what keeps the work on after logout (`docs/devices.md`, "Joining by a command").
 A link that was used, expired, or closed, and a link from another home while the one kept still answers, each say what happened and that nothing changed ("That command was used already.
 Make a new one on the computer at 192.168.1.20.").
 A link from another home while the one kept does not answer asks to leave that one first (below, "Leaving a home that is gone").
@@ -174,7 +175,7 @@ Its grant then says `via: "ssh"`, and the run never dials the grant's address: i
 
 1. It checks the folder runs work for that home as that computer, and through the home's SSH; anything else is refused (`other-home`, `not-joined`, `not-ssh`) before anything is touched.
 2. It takes a new generation, makes a fresh folder only this user may enter under `/tmp` and says its socket's path to the home, one typed line on stdout (`controllerSaysSchema`, `src/shared/sshConnection.ts`).
-3. Told on stdin that the forward is in place, it checks the home answers through the socket with its own key, sending nothing, then publishes the route and says whether the background runs (`backgroundState`: `running`, `at-login`, `failed`), asking again on each beat until it runs; a loaded agent that leaves the folder with no live run on two beats in a row is `failed` (`agentProbe`), so Devices says the work could not start rather than "connecting"; while a move of the folder holds its move lock the probe answers `unknown`, since the run moves the folder before it takes the folder, until the lock is older than `MOVE_LOCK_TRUST_MS` (30 minutes, far past the few minutes a large folder takes), after which the probe reads `failed` again, as a stuck move should.
+3. Told on stdin that the forward is in place, it checks the home answers through the socket with its own key, sending nothing, then publishes the route and says whether the background runs (`backgroundState`: `running`, `at-login`, `failed`, `unavailable`, `unknown`), asking again on each beat until it runs; a loaded agent that leaves the folder with no live run on two beats in a row is `failed` (`agentProbe`), so Devices says the work could not start rather than "connecting"; while a move of the folder holds its move lock the probe answers `unknown`, since the run moves the folder before it takes the folder, until the lock is older than `MOVE_LOCK_TRUST_MS` (30 minutes, far past the few minutes a large folder takes), after which the probe reads `failed` again, as a stuck move should.
 4. Each beat renews the route; a route a later connection took ends it (`superseded`), and so does its folder moving into a newer app's (`moved`), which the home tries again as any dropped connection.
 5. The end of its input, or 75 seconds with no beat, withdraws its generation's route, removes its own folder and nothing else, and ends it.
 
@@ -230,9 +231,21 @@ A Terminal that has no session to give it to (one reached over SSH while that us
 A session that is there and refused it is `failed`, as is an agent that could not be written, since no login mends either: the join says it could not set itself to start in the background, and so does the home.
 
 **On Linux** it is a user service in that user's own `~/.config/systemd/user` (`$XDG_CONFIG_HOME` when the person moved it), `com.getinfinitary.infinitary.work.service` (`.dev.work.service` for the development flavor; Firstmate 3000's was `com.kunchenguid.firstmate3000.work.service`), wanted by the user's login (`default.target`), so it starts whenever that user's systemd does: at each login, again after the computer restarts and they log in, and never while nobody is logged in as them, as on a Mac.
-The join writes the unit and its link in `default.target.wants` itself, so the service starts at the next login even when that user's systemd cannot be asked now, then has systemd read it (`daemon-reload`) and start it (`restart`, so a run an earlier join started stops first). systemd starts the run again ten seconds after it ends, and never gives up, as launchd keeps an agent alive (`Restart=always`, `StartLimitIntervalSec=0`); before each start it checks the folder still holds the grant, or a removal it has yet to finish (`left.json`), so a finished removal is its last stop (`ExecCondition`, which systemd checks again before every restart, where a unit's `ConditionPathExists` is not).
+When startup is available or waits for a verified inactive user manager, the join writes the unit and its link in `default.target.wants` itself, so the service starts at the next login even when that user's systemd cannot be asked now, then has systemd read it (`daemon-reload`) and start it (`restart`, so a run an earlier join started stops first). systemd starts the run again ten seconds after it ends, and never gives up, as launchd keeps an agent alive (`Restart=always`, `StartLimitIntervalSec=0`); before each start it checks the folder still holds the grant, or a removal it has yet to finish (`left.json`), so a finished removal is its last stop (`ExecCondition`, which systemd checks again before every restart, where a unit's `ConditionPathExists` is not).
 A stop reaches the run first and its display after it (`KillMode=mixed`), within launchd's own twenty seconds (`TimeoutStopSec`).
-When systemd cannot be asked (`daemon-reload` refused, or `show-environment` refused after a refused start), there is no session to start it in, so it starts at the next login; a session that is there and refused it is `failed`.
+A reachable user manager is usable even when system startup is unusual.
+Otherwise the adapter checks systemd's runtime directory, `/run/systemd/system`: its absence means automatic startup is `unavailable`, not waiting for a login.
+On a running systemd system, the system manager must positively report `user@<uid>.service` as inactive before setup is `at-login`.
+Unreadable runtime or user-manager facts are `unknown`, never a promise that login will start work.
+A reachable user manager that refuses the service is `failed`.
+An unavailable or unknown setup keeps the join without writing a new startup service.
+The joining command reports its startup outcome to the home with a name-only hello, which does not make its work reachable.
+The home keeps that explicit outcome separate from the controller's ordinary `unknown` work progress, which proves nothing about automatic startup.
+Devices says “automatic startup not set up” and “This setup does not start work at login” for unavailable startup, independently of reachability.
+The Ubuntu package can run explicitly as the joined user with `/opt/infinitary/infinitary work run`; a retained AppImage uses its own launcher with `work run`.
+Keep that process running, either explicitly or through an externally configured supervisor; stopping it or restarting the environment requires another start, while the join remains.
+For a computer added by address the home's SSH connection still supplies the route, never starts the worker, and normal connection, version and sign-in prerequisites still apply.
+This adds no startup adapter or container configuration, and neither linger, removing and re-adding, nor updating supplies a missing supported startup system.
 Whether it runs is `ActiveState`, the property systemd answers, never its words.
 Taking it away removes the link first, so it never starts at another login, then the unit; then systemd reads the folder again, forgets a failed state, and stops it without waiting, since the run asking may be the service itself.
 The run draws on a display of its own (below, "No screen needed"), so the unit leaves out a Wayland session's display it might inherit (`UnsetEnvironment=WAYLAND_DISPLAY`).

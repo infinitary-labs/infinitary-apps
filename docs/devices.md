@@ -1163,3 +1163,15 @@ A link that expires with nothing paired stops the listener.
 - `tests/e2e/devices.spec.ts`, "a computer on another version": Devices says so and Update brings it to this Mac's version, and one too old gets the command; `tests/e2e/run-work.spec.ts`, "updated over the connection": the built app gets the home's Infinitary with its own key, keeps it and ends for its background.
 - `tests/e2e/devices.spec.ts`, "a Mac a command added downloads its update": Devices' command names the published download, and Update from the keyboard counts the download in its row and one rewritten feed line, or falls back to a counted send when it does not match.
   `tests/e2e/run-work.spec.ts`, "the command for another Mac downloads the published version" and "updated over the connection, the copy a command kept downloads": the built app joins with the copy the command downloaded, and keeps the one its work mode downloaded, after a mismatch changed nothing.
+
+## Unsupported Linux automatic startup
+
+A joined Linux computer keeps its join when Infinitary cannot set up automatic startup.
+Its optional `automaticStartup` fact is kept beside the system and chip, and is independent of whether work is reachable.
+Devices says “automatic startup not set up” and “This setup does not start work at login”, rather than promising work at a later login.
+An unreadable check is unknown, not an absent session.
+A Linux command join reports running, waiting for login, refusal, unavailable startup or unknown startup with its final name-only hello.
+Both that hello and address-based setup carry the outcome; the SSH controller refreshes it when reconnecting.
+A manually started worker can be reachable while automatic startup remains unavailable.
+Updates do not claim that a saved service file alone can restart a Linux worker.
+The existing explicit work process and its lifetime are described in [the helper manual](helper.md#in-the-background).

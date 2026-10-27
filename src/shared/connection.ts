@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  automaticStartupSchema,
   deviceChipSchema,
   deviceKindSchema,
   deviceNameSchema,
@@ -315,6 +316,7 @@ export const clientFrameSchema = z.union([
        * computer whose work never reached the home since it joined.
        */
       nameOnly: z.literal(true).optional(),
+      automaticStartup: automaticStartupSchema.optional(),
       /**
        * What this connection of the device does (docs/connection.md,
        * "Hello"): `view`, Firstmate open there controlling this one, or

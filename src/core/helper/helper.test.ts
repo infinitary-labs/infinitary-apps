@@ -368,6 +368,52 @@ describe("joining a home as a computer that runs work", () => {
     expect(nowhere.said).toEqual([...helperWords.unreachable(thisMac), INSTALLED_STAYS]);
   });
 
+  // INF-1617: a command must report unsupported/unknown startup before exiting without a worker.
+  for (const startup of ["unavailable", "unknown"] as const) {
+    it(`keeps the command join and tells the home startup is ${startup}, without claiming work is reachable`, async () => {
+      const at = await home();
+      const dataDir = scratchDir("infinitary-helper-startup-");
+      const { io, said } = person();
+      const outcome = await joinHome({
+        text: await at.link(),
+        dataDir,
+        io,
+        timeoutMs: 2_000,
+        device: { name: "ubuntu-box", user: BUILDER },
+        background: async () => startup,
+      });
+      expect(outcome).toMatchObject({ ok: true, background: startup });
+      expect(new JoinedHome(dataDir, () => {}).read()?.grant.deviceId).toBe(
+        at.pairing.list()[0]?.id,
+      );
+      expect(at.pairing.list()[0]).toMatchObject({ automaticStartup: startup });
+      expect(said.join(" ")).not.toContain("runs work for Infinitary on this computer now");
+      expect(said.join(" ")).not.toContain("the next time");
+      expect(said.join(" ")).toContain("The join remains.");
+    });
+  }
+
+  // The Linux command reports supported outcomes too, so the home never has to infer a login or a refusal.
+  it.each(["running", "at-login", "failed"] as const)(
+    "reports the Linux command startup outcome %s",
+    async (startup) => {
+      const at = await home();
+      const outcome = await joinHome({
+        text: await at.link(),
+        platform: "linux",
+        dataDir: scratchDir("infinitary-linux-join-outcome-"),
+        io: person().io,
+        device: { name: "ubuntu-box", user: BUILDER },
+        timeoutMs: 2_000,
+        background: async () => startup,
+      });
+      expect(outcome).toMatchObject({ ok: true, background: startup });
+      expect(at.pairing.list()[0]).toMatchObject({
+        automaticStartup: startup === "running" ? "available" : startup,
+      });
+    },
+  );
+
   it("sets itself up in the background once joined, out of the folder's lock, and tells the home what it found", async () => {
     const found: unknown[] = [];
     const at = await home({ onJoined: (_device, tools) => found.push(tools) });

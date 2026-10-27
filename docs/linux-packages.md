@@ -128,3 +128,10 @@ Firstmate 3000's own first launch makes its folder and database, and the check t
 Then it installs the Infinitary package with the command Firstmate 3000's update runs (`apt-get install -y --allow-downgrades` or `dnf install -y`), and Firstmate 3000's package must be gone and both old paths must lead to Infinitary.
 Infinitary's first launch, as the person, must finish the one-time move (`docs/saved-data-compatibility.md`) and start again on its own folder.
 The row, the file and every database migration Firstmate 3000 applied must be there, and Firstmate 3000's folder retired, before the journey runs.
+
+## Automatic startup for joined work
+
+Infinitary sets up automatic startup through systemd on Linux, not through every Linux startup system.
+A container or another unsupported startup arrangement can keep a successful join without automatic startup.
+Devices reports that distinction without promising work at the next login; explicit startup and the kept join are described in [the helper manual](helper.md#in-the-background).
+This does not configure container startup or add an adapter for another startup system.

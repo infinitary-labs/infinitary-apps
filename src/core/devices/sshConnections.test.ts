@@ -2,7 +2,11 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { type DeviceSsh, deviceLabel } from "@shared/devices";
-import { type RemoteLoginAddOptions, remoteLoginWords } from "@shared/remoteLogin";
+import {
+  type BackgroundState,
+  type RemoteLoginAddOptions,
+  remoteLoginWords,
+} from "@shared/remoteLogin";
 import { sshConnectionWords } from "@shared/sshConnection";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { claimedPort } from "../../../tests/helpers/claimedPort";
@@ -95,6 +99,7 @@ async function home(
   options: {
     now?: () => number;
     agent?: string;
+    joined?: BackgroundState;
     quietRetryMs?: number;
     connectingMs?: number;
     retryMs?: readonly number[];
@@ -155,7 +160,7 @@ async function home(
     flavor: "dev",
     appBundle: () =>
       standInFirstmate(record, THEIR_UID, {
-        joined: "running",
+        joined: options.joined ?? "running",
         updated: "running",
         ...(options.agent ? { agent: options.agent } : {}),
       }),
@@ -232,6 +237,76 @@ const state = (connections: SshConnections, deviceId: string): DeviceSsh | undef
 describe.runIf(SSH_SERVER_AVAILABLE)(
   "this Mac's own SSH connection to a computer it added by its address",
   () => {
+    // INF-1617: controller startup capability survives work start/stop and a new route.
+    it.each(["unavailable", "unknown"] as const)(
+      "keeps %s automatic startup separate from a reachable explicit worker",
+      async (startup) => {
+        const sshd = await server();
+        const them = otherUser();
+        const at = await home(sshd.ssh({ remote: them.env }), { agent: startup, joined: startup });
+        let stop = at.start();
+        const device = await addChecked(at.remote, sshd.address);
+        const unavailable = {
+          state: startup === "unavailable" ? "not-started" : "connecting",
+          automaticStartup: startup,
+        };
+        // Unknown already reads connecting before the route exists: dial only once it is up.
+        await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+        await vi.waitFor(() => expect(at.up()).toBe(true), { timeout: 10_000 });
+        await vi.waitFor(() => expect(state(at.connections, device.id)).toEqual(unavailable), {
+          timeout: 10_000,
+        });
+        const grant = new JoinedHome(them.work).read()?.grant;
+        if (!grant) throw new Error("Nothing joined there.");
+        const client = await connectClient(grant, {
+          dial: { target: { socket: forwarded(at.record()) } },
+        });
+        await vi.waitFor(() =>
+          expect(state(at.connections, device.id)).toEqual({
+            state: "connected",
+            automaticStartup: startup,
+          }),
+        );
+        await client.close();
+        await vi.waitFor(() => expect(state(at.connections, device.id)).toEqual(unavailable));
+        await stop();
+        stop = at.start();
+        // The new route reached this Mac, so the state below is read after it.
+        await vi.waitFor(() => expect(at.forwards()).toBe(2), { timeout: 10_000 });
+        await vi.waitFor(() => expect(at.up()).toBe(true), { timeout: 10_000 });
+        await vi.waitFor(() => expect(state(at.connections, device.id)).toEqual(unavailable), {
+          timeout: 10_000,
+        });
+        expect(at.pairing.list()).toEqual([
+          expect.objectContaining({ id: device.id, automaticStartup: startup }),
+        ]);
+        await stop();
+      },
+    );
+
+    // INF-1617 preserves Mac behavior: generic agent unknown is work progress, not startup proof.
+    it("keeps ordinary work progress separate from a verified startup outcome", async () => {
+      const sshd = await server();
+      const them = otherUser();
+      const at = await home(sshd.ssh({ remote: them.env }), { agent: "unknown" });
+      const device = await addChecked(at.remote, sshd.address);
+      at.pairing.noteSystem(device.id, { automaticStartup: "available" });
+      const stop = at.start();
+      await vi.waitFor(() => expect(at.forwards()).toBe(1), { timeout: 10_000 });
+      expect(state(at.connections, device.id)).toEqual({ state: "connecting" });
+      const grant = new JoinedHome(them.work).read()?.grant;
+      if (!grant) throw new Error("Nothing joined there.");
+      const client = await connectClient(grant, {
+        dial: { target: { socket: forwarded(at.record()) } },
+      });
+      await vi.waitFor(() =>
+        expect(state(at.connections, device.id)).toEqual({ state: "connected" }),
+      );
+      expect(at.pairing.list()[0]?.automaticStartup).toBe("available");
+      await client.close();
+      await stop();
+    });
+
     it("keeps one connection: forwards the socket there to this Mac's own listener, carries the computer's pinned connection, beats, and ends whole", async () => {
       const sshd = await server();
       const them = otherUser();

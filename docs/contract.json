@@ -68,6 +68,16 @@
                   "type": "boolean",
                   "const": true
                 },
+                "automaticStartup": {
+                  "type": "string",
+                  "enum": [
+                    "available",
+                    "at-login",
+                    "failed",
+                    "unavailable",
+                    "unknown"
+                  ]
+                },
                 "as": {
                   "type": "string",
                   "enum": [
@@ -2365,6 +2375,16 @@
               "maxLength": 64,
               "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
             },
+            "automaticStartup": {
+              "type": "string",
+              "enum": [
+                "available",
+                "at-login",
+                "failed",
+                "unavailable",
+                "unknown"
+              ]
+            },
             "onThisMac": {
               "type": "boolean"
             },
@@ -2494,6 +2514,16 @@
                     "forwarding-refused",
                     "not-set-up",
                     "other-home"
+                  ]
+                },
+                "automaticStartup": {
+                  "type": "string",
+                  "enum": [
+                    "available",
+                    "at-login",
+                    "failed",
+                    "unavailable",
+                    "unknown"
                   ]
                 }
               },
@@ -2686,6 +2716,16 @@
                 "maxLength": 64,
                 "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
               },
+              "automaticStartup": {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "at-login",
+                  "failed",
+                  "unavailable",
+                  "unknown"
+                ]
+              },
               "onThisMac": {
                 "type": "boolean"
               },
@@ -2815,6 +2855,16 @@
                       "forwarding-refused",
                       "not-set-up",
                       "other-home"
+                    ]
+                  },
+                  "automaticStartup": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "at-login",
+                      "failed",
+                      "unavailable",
+                      "unknown"
                     ]
                   }
                 },
@@ -3055,6 +3105,16 @@
                 "maxLength": 64,
                 "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
               },
+              "automaticStartup": {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "at-login",
+                  "failed",
+                  "unavailable",
+                  "unknown"
+                ]
+              },
               "onThisMac": {
                 "type": "boolean"
               },
@@ -3184,6 +3244,16 @@
                       "forwarding-refused",
                       "not-set-up",
                       "other-home"
+                    ]
+                  },
+                  "automaticStartup": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "at-login",
+                      "failed",
+                      "unavailable",
+                      "unknown"
                     ]
                   }
                 },
@@ -3356,6 +3426,16 @@
             "maxLength": 64,
             "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
           },
+          "automaticStartup": {
+            "type": "string",
+            "enum": [
+              "available",
+              "at-login",
+              "failed",
+              "unavailable",
+              "unknown"
+            ]
+          },
           "onThisMac": {
             "type": "boolean"
           },
@@ -3485,6 +3565,16 @@
                   "forwarding-refused",
                   "not-set-up",
                   "other-home"
+                ]
+              },
+              "automaticStartup": {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "at-login",
+                  "failed",
+                  "unavailable",
+                  "unknown"
                 ]
               }
             },
@@ -3557,6 +3647,16 @@
             "maxLength": 64,
             "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
           },
+          "automaticStartup": {
+            "type": "string",
+            "enum": [
+              "available",
+              "at-login",
+              "failed",
+              "unavailable",
+              "unknown"
+            ]
+          },
           "onThisMac": {
             "type": "boolean"
           },
@@ -3686,6 +3786,16 @@
                   "forwarding-refused",
                   "not-set-up",
                   "other-home"
+                ]
+              },
+              "automaticStartup": {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "at-login",
+                  "failed",
+                  "unavailable",
+                  "unknown"
                 ]
               }
             },
@@ -3793,6 +3903,16 @@
                 "minLength": 1,
                 "maxLength": 64,
                 "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
+              },
+              "automaticStartup": {
+                "type": "string",
+                "enum": [
+                  "available",
+                  "at-login",
+                  "failed",
+                  "unavailable",
+                  "unknown"
+                ]
               },
               "onThisMac": {
                 "type": "boolean"
@@ -3923,6 +4043,16 @@
                       "forwarding-refused",
                       "not-set-up",
                       "other-home"
+                    ]
+                  },
+                  "automaticStartup": {
+                    "type": "string",
+                    "enum": [
+                      "available",
+                      "at-login",
+                      "failed",
+                      "unavailable",
+                      "unknown"
                     ]
                   }
                 },
@@ -56792,6 +56922,16 @@
               "maxLength": 64,
               "pattern": "^[A-Za-z0-9_][A-Za-z0-9_.@-]*$"
             },
+            "automaticStartup": {
+              "type": "string",
+              "enum": [
+                "available",
+                "at-login",
+                "failed",
+                "unavailable",
+                "unknown"
+              ]
+            },
             "onThisMac": {
               "type": "boolean"
             },
@@ -56921,6 +57061,16 @@
                     "forwarding-refused",
                     "not-set-up",
                     "other-home"
+                  ]
+                },
+                "automaticStartup": {
+                  "type": "string",
+                  "enum": [
+                    "available",
+                    "at-login",
+                    "failed",
+                    "unavailable",
+                    "unknown"
                   ]
                 }
               },

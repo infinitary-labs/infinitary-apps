@@ -241,6 +241,31 @@ async function server(): Promise<SshServer> {
 }
 
 describe.runIf(SSH_SERVER_AVAILABLE)("adding a Mac by its address over Remote Login", () => {
+  // INF-1617: address-based add/update retain the join without promising a login start.
+  for (const startup of ["unavailable", "unknown"] as const) {
+    it(`keeps an address-added computer whose automatic startup is ${startup}, including after update`, async () => {
+      const sshd = await server();
+      const them = otherUser();
+      const record = join(scratchDir("infinitary-remote-startup-"), "started");
+      const at = await home({
+        ssh: sshd.ssh({ remote: them.env }),
+        bundle: standInFirstmate(record, THEIR_UID, { joined: startup, updated: startup }),
+      });
+      const device = await addChecked(at.remote, sshd.address);
+      expect(at.pairing.list()).toEqual([
+        expect.objectContaining({ id: device.id, automaticStartup: startup }),
+      ]);
+      expect(at.lines()).toContain(remoteLoginWords.startup(device, startup));
+      expect(at.lines()).not.toContain(remoteLoginWords.atLogin(device));
+      expect(at.lines().join(" ")).not.toContain("enable-linger");
+      await at.remote.update(device.id);
+      expect(at.pairing.list()).toEqual([
+        expect.objectContaining({ id: device.id, automaticStartup: startup }),
+      ]);
+      expect(at.lines()).toContain(remoteLoginWords.updated(device, startup));
+    });
+  }
+
   // INF-333 N1: a join that never claimed its invite is a definite Add failure.
   it.each([1, 4, 255])(
     "an unclaimed Add ending with %s uses its definite refusal, never Update uncertainty",

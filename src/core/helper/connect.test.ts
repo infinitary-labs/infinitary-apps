@@ -137,6 +137,27 @@ function controller(options: Omit<ConnectOptions, "input" | "output">) {
 }
 
 describe("the controller of the home's SSH connection", () => {
+  // INF-1617: the new unavailable outcome must not prevent an older home accepting the route.
+  it("publishes a legacy-readable route before reporting unavailable automatic startup", async () => {
+    const { port, grant, dataDir, expected } = await joined();
+    const run = controller({ dataDir, expected, agent: async () => "unavailable" });
+    const socket = await run.socket();
+    await forwardAt(socket, port);
+    run.home("forwarded");
+    await vi.waitFor(() =>
+      expect(run.said.slice(1)).toEqual([
+        { firstmate: "route", v: SSH_MESSAGE_VERSION, agent: "unknown" },
+        { firstmate: "agent", v: SSH_MESSAGE_VERSION, agent: "unavailable" },
+      ]),
+    );
+    console.info("Startup controller responses:", JSON.stringify(run.said.slice(1)));
+    expect(new HomeRoute(dataDir).current(grant)).toBe(socket);
+    run.home("beat");
+    await vi.waitFor(() => expect(new HomeRoute(dataDir).current(grant)).toBe(socket));
+    run.hangUp();
+    expect(await run.ended).toBe("ended");
+  });
+
   it("makes a private socket, publishes its route once the home answers through it, renews it on each beat, and withdraws it when the home lets go", async () => {
     const { port, grant, dataDir, expected } = await joined();
     let now = 5_000_000;

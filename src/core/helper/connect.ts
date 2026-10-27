@@ -123,7 +123,14 @@ export async function connectFromHome(options: ConnectOptions): Promise<ConnectE
     const entry = { socket, homeKey: grant.homeKey, deviceId: grant.deviceId };
     if (!route.publish(generation, entry)) return superseded();
     let agent = (await options.agent?.()) ?? "unknown";
-    say({ firstmate: "route", v: SSH_MESSAGE_VERSION, agent });
+    // Older homes must still accept the route; they may ignore the newer
+    // capability report without losing the forward used by explicit work.
+    say({
+      firstmate: "route",
+      v: SSH_MESSAGE_VERSION,
+      agent: agent === "unavailable" ? "unknown" : agent,
+    });
+    if (agent === "unavailable") say({ firstmate: "agent", v: SSH_MESSAGE_VERSION, agent });
 
     for (;;) {
       const heard = await lines.next(options.silenceMs ?? ROUTE_LEASE_MS);

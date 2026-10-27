@@ -128,7 +128,14 @@ export type PairedDevices = {
    * What a device said it is in its hello (docs/devices.md, "What a device
    * is"): kept beside its kind. Said only when its hello named either.
    */
-  noteSystem?(deviceId: string, said: { system?: DeviceSystem; chip?: DeviceChip }): void;
+  noteSystem?(
+    deviceId: string,
+    said: {
+      system?: DeviceSystem;
+      chip?: DeviceChip;
+      automaticStartup?: import("@shared/devices").AutomaticStartup;
+    },
+  ): void;
 };
 
 /**
@@ -637,10 +644,11 @@ export function startConnection(options: ConnectionOptions): HomeConnection {
       );
       for (const entry of missed ?? []) send(client, pushFrameIn(entry, client.spelling));
       client.welcomed = true;
-      if (hello.system || hello.chip)
+      if (hello.system || hello.chip || hello.automaticStartup)
         devices.noteSystem?.(client.device.id, {
           ...(hello.system ? { system: hello.system } : {}),
           ...(hello.chip ? { chip: hello.chip } : {}),
+          ...(hello.automaticStartup ? { automaticStartup: hello.automaticStartup } : {}),
         });
       if (role === "work" && !client.nameOnly)
         tellVersion(client.device.id, {

@@ -116,14 +116,20 @@ export function workContext(isolatedUserData?: string): WorkContext {
 /**
  * This computer's own service manager for background work: launchd on a
  * Mac, and on Linux this user's systemd where the search path finds its
- * systemctl. None on a system with neither, which sets nothing up in the
- * background.
+ * systemctl. Without it Linux reports unavailable startup rather than
+ * confusing an unsupported setup with a test that deliberately sets up nothing.
  */
 function systemServiceManager(platform: string, env: NodeJS.ProcessEnv): ServiceManager | null {
   if (platform === "darwin") return { launchctl: systemLaunchctl };
   if (platform !== "linux") return null;
   const systemctl = findOnPath("systemctl", hostEnv());
-  return systemctl ? serviceManagerAt(platform, systemSystemctl(systemctl), env) : null;
+  return systemctl
+    ? serviceManagerAt(platform, systemSystemctl(systemctl), env)
+    : {
+        systemctl: async () => ({ ok: false, output: "" }),
+        configHome: join(homedir(), ".config"),
+        runtime: () => "unavailable",
+      };
 }
 
 function serviceManagerAt(

@@ -1,6 +1,8 @@
 import type { DeviceMake } from "@shared/cards";
 import { aDevice, anotherUserHere, COMPUTER, chipWords, HERE } from "@shared/deviceNames";
 import {
+  automaticStartupOf,
+  automaticStartupWords,
   type DeviceAddresses,
   type DeviceFirewall,
   type DeviceInvite,
@@ -385,6 +387,9 @@ function whatDevice(device: DeviceView): string {
 
 /** The mono line under a device's name: what it is, when it joined, and when it was last seen. */
 export function deviceDetail(device: DeviceView, now: number): string {
+  const startup = automaticStartupOf(device);
+  if (startup === "unavailable" || startup === "unknown")
+    return `${whatDevice(device)} · ${device.remoteLogin ?? (device.user ? `running as ${device.user}` : seenWords(device, now))} · ${automaticStartupWords[startup]}`;
   // Reached over this Mac's own SSH, it is named by its address and that connection.
   if (device.remoteLogin && device.ssh) {
     const what =
@@ -1718,8 +1723,10 @@ function DeviceRow({
     updatingHere ||
     finding !== undefined ||
     moved !== undefined;
+  const startup = automaticStartupOf(device);
+  const startupProblem = startup === "unavailable" || startup === "unknown";
   const stranded = settling ? null : strandedLine(device);
-  const held = settling ? null : heldLine(device);
+  const held = settling || startupProblem ? null : heldLine(device);
   const back = settling ? null : wayBack(device);
   const stopped = settling ? null : sshStoppedLine(device);
   // A Mac that left for another Firstmate is not coming back: Remove only.
@@ -1761,6 +1768,13 @@ function DeviceRow({
                       : remoteLoginWords.updatingRow(device)
                 : deviceSummary(device, own)}
         </span>
+        {startupProblem && !settling && (
+          <span className="fm-devices-summary" data-device-startup="">
+            {startup === "unavailable"
+              ? automaticStartupWords.guidance
+              : automaticStartupWords.unchecked}
+          </span>
+        )}
         {stranded && (
           <span className="fm-devices-summary" data-device-stranded="">
             {stranded}

@@ -16,6 +16,7 @@ import { browserLookup } from "../browser/connectionGuard";
 import { ClaudeAuthBackend } from "../claude/claudeAuth";
 import { defaultClaudeConfigDir } from "../claude/claudeQuota";
 import { ownComputerName } from "../devices/computerName";
+import { shellWord } from "../devices/shellWord";
 import type { HostChildSpawner, HostKeychain, HostTaskBrowser } from "../host";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { hostPlatform } from "../platform";
@@ -24,6 +25,7 @@ import {
   agentProbe,
   type BackgroundContext,
   type Launcher,
+  linuxReadiness,
   pauseInBackground,
   readInstalled,
   resumeInBackground,
@@ -34,7 +36,7 @@ import { cleanUp } from "./cleanUp";
 import { connectFromHome } from "./connect";
 import { findTools } from "./found";
 import { removeFromHome, restartInstalled, updateFromHome } from "./fromHome";
-import { type HelperIO, joinHome } from "./join";
+import { fetchedLauncher, type HelperIO, joinHome } from "./join";
 import { moveWork } from "./moveWork";
 import type { HelperPlace } from "./place";
 import { finishRemoval, helperStatus, startHelper, workLog } from "./run";
@@ -359,6 +361,16 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
           writeFileSync(flags.background, outcome.background);
         } catch {}
       }
+      if (
+        outcome.ok &&
+        (outcome.background === "unavailable" || outcome.background === "unknown")
+      ) {
+        const launcher = fetchedLauncher(readInstalled(place.dataDir).app) ?? context.launcher;
+        const command = [launcher.executable, ...launcher.args, "work", "run"]
+          .map(shellWord)
+          .join(" ");
+        io.say([`To run work here, start ${command} as ${user.username} and keep it running.`]);
+      }
       return outcome.ok ? 0 : 1;
     }
     // The home's own, over Remote Login (docs/helper.md, "Started by the home").
@@ -397,7 +409,14 @@ export async function runCli(args: readonly string[], context: CliContext): Prom
         agent: (() => {
           const { service } = readInstalled(place.dataDir);
           const probe = background && service ? agentProbe(background, service) : null;
-          return async () => (probe ? probe() : "unknown");
+          return async () =>
+            probe
+              ? probe()
+              : background && "systemctl" in background
+                ? (await linuxReadiness(background)) === "unavailable"
+                  ? "unavailable"
+                  : "unknown"
+                : "unknown";
         })(),
       });
       return typeof ended === "object" ? 1 : 0;

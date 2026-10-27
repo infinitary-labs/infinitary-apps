@@ -76,6 +76,7 @@ export type SshConnectionsOptions = {
     | "list"
     | "rememberedHost"
     | "sshOptions"
+    | "noteSystem"
   >;
   ssh: SshProgram;
   /** This app's flavor, which names the data folder its copy keeps there. */
@@ -258,6 +259,20 @@ export class SshConnections {
    * running.
    */
   state(deviceId: string): DeviceSsh | undefined {
+    const state = this.connectionState(deviceId);
+    const line = this.lines.get(deviceId);
+    const reported = this.options.pairing
+      .list()
+      .find((device) => device.id === deviceId)?.automaticStartup;
+    const startup = line?.phase === "up" && line.agent === "unavailable" ? "unavailable" : reported;
+    // Ordinary work progress (including agent unknown) is not a startup failure.
+    // Supported outcomes already have the existing connection state and row words.
+    return state && (startup === "unavailable" || startup === "unknown")
+      ? { ...state, automaticStartup: startup }
+      : state;
+  }
+
+  private connectionState(deviceId: string): DeviceSsh | undefined {
     const line = this.lines.get(deviceId);
     if (!line || !this.running) return undefined;
     if (this.options.welcomed(deviceId)) return { state: "connected" };
@@ -268,7 +283,8 @@ export class SshConnections {
         return { state: "stopped", ...(line.reason ? { reason: line.reason } : {}) };
       case "up":
         if (line.agent === "at-login") return { state: "at-login" };
-        if (line.agent === "failed") return { state: "not-started" };
+        if (line.agent === "failed" || line.agent === "unavailable")
+          return { state: "not-started" };
         return { state: this.timedOut(line) ? "reconnecting" : "connecting" };
       case "waiting":
       case "connecting":
@@ -712,6 +728,16 @@ export class SshConnections {
   /** What the controller said of the work there; that it cannot start is said once a connection. */
   private agent(line: DeviceLine, agent: SshAgentState): void {
     line.agent = agent;
+    const reported = this.device(line.deviceId)?.automaticStartup;
+    const startup =
+      agent === "unavailable"
+        ? agent
+        : agent !== "unknown" && reported !== undefined
+          ? agent === "running"
+            ? "available"
+            : agent
+          : undefined;
+    if (startup) this.options.pairing.noteSystem(line.deviceId, { automaticStartup: startup });
     if (agent !== "failed" || line.toldNotStarted) return;
     line.toldNotStarted = true;
     const device = this.device(line.deviceId);

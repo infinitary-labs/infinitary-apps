@@ -1168,3 +1168,36 @@ describe("a refusal after a network drop", () => {
     expect(reachRefusalAfter(kept, [moved]).clears).toBe(true);
   });
 });
+
+// INF-1617, approved INF-1575: unsupported startup never becomes a login promise,
+// and explicit work reachability remains a separate fact.
+describe("unsupported Linux automatic startup", () => {
+  it("keeps the device and its reachability while correcting both join-route rows", () => {
+    for (const remoteLogin of [undefined, "sam@ubuntu-box"] as const) {
+      const device: DeviceView = {
+        ...MINI,
+        name: "ubuntu-box",
+        system: "linux",
+        automaticStartup: "unavailable",
+        ...(remoteLogin
+          ? { remoteLogin, ssh: { state: "at-login" } }
+          : { heldOnLocalNetwork: true }),
+      };
+      for (const inReach of [false, true]) {
+        const markup = render({ devices: [{ ...device, inReach }] });
+        expect(markup).toContain("automatic startup not set up");
+        expect(markup).toContain("This setup does not start work at login.");
+        expect(markup).not.toContain("starts the next time");
+        expect(markup).not.toContain("data-device-held");
+        expect(markup).toContain(`data-device-row="${device.id}"`);
+        expect(deviceDetail({ ...device, inReach }, NOW)).toContain("automatic startup not set up");
+      }
+    }
+  });
+  it("says an unreadable startup check is unknown, not a future login", () => {
+    const markup = render({ devices: [{ ...MINI, automaticStartup: "unknown" }] });
+    expect(markup).toContain("automatic startup not checked");
+    expect(markup).toContain("Infinitary could not check automatic startup here.");
+    expect(markup).not.toContain("starts the next time");
+  });
+});

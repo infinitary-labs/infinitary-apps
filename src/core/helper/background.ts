@@ -3,6 +3,7 @@ import { mkdirSync, readdirSync, readFileSync, rmSync, symlinkSync } from "node:
 import type { NetworkInterfaceInfo } from "node:os";
 import { basename, dirname, join } from "node:path";
 import { OWN_IDENTITY, type Spelling, workLabelOf, workLabels } from "@shared/codeNames";
+import { automaticStartupSchema } from "@shared/devices";
 import type { BuildFlavor } from "@shared/userDataFolders";
 import { z } from "zod";
 import { writePrivate } from "../devices/identity";
@@ -12,6 +13,7 @@ import { readMoveRecord } from "../folderMove/record";
 import { hostEnv } from "../hostEnv";
 import { moveLockPathFor, moveLockRunning } from "../storage/moveLock";
 import { onHomeMac } from "./homePlace";
+import { linuxStartup, type SystemdRuntime } from "./linuxStartup";
 import { folderHolder } from "./lock";
 
 /**
@@ -51,7 +53,7 @@ export type Systemctl = Launchctl;
  */
 export type ServiceManager =
   | { launchctl: Launchctl }
-  | { systemctl: Systemctl; configHome: string };
+  | { systemctl: Systemctl; configHome: string; runtime?: () => SystemdRuntime };
 
 export type BackgroundContext = {
   flavor: BuildFlavor;
@@ -82,6 +84,31 @@ const installedSchema = z.strictObject({
   app: z.string().min(1).nullable(),
 });
 export type Installed = Omit<z.infer<typeof installedSchema>, "version">;
+
+/** Kept separately so an older app can still read and remove its installed service. */
+const AUTOMATIC_STARTUP_FILE = "automatic-startup.json";
+const automaticStartupFileSchema = z.strictObject({
+  version: z.literal(1),
+  state: automaticStartupSchema,
+});
+
+export function readAutomaticStartup(dataDir: string) {
+  try {
+    return automaticStartupFileSchema.parse(
+      JSON.parse(readFileSync(join(dataDir, AUTOMATIC_STARTUP_FILE), "utf8")),
+    ).state;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeAutomaticStartup(
+  dataDir: string,
+  state: z.infer<typeof automaticStartupSchema>,
+): void {
+  mkdirSync(dataDir, { recursive: true, mode: 0o700 });
+  writePrivate(join(dataDir, AUTOMATIC_STARTUP_FILE), `${JSON.stringify({ version: 1, state })}\n`);
+}
 
 /**
  * This app's agent label: one per flavor, so a development copy never
@@ -114,6 +141,7 @@ export function writeInstalled(dataDir: string, installed: Installed): void {
 
 export function forgetInstalled(dataDir: string): void {
   rmSync(join(dataDir, INSTALLED_FILE), { force: true });
+  rmSync(join(dataDir, AUTOMATIC_STARTUP_FILE), { force: true });
 }
 
 /** The lines that start an agent's run as an app: a separate Mac's. */
@@ -384,8 +412,8 @@ type Adapter = {
 
 type AgentText = { launcher: Launcher; env: Readonly<Record<string, string>> };
 
-/** How the background answers: running now, starting at the next login, or failed for good. */
-export type InBackgroundNow = "running" | "at-login" | "failed";
+/** Startup outcome: running, verified next login, refusal, unsupported setup, or unreadable facts. */
+export type InBackgroundNow = "running" | "at-login" | "failed" | "unavailable" | "unknown";
 
 const launchd: Adapter = {
   service: (context, named) => {
@@ -468,14 +496,17 @@ const systemd: Adapter = {
     symlinkSync(service.file, wants);
   },
   load: async (context, service) => {
+    const readiness = await linuxReadiness(context);
+    if (readiness !== "available") return readiness;
     const systemctl = systemctlOf(context);
     // Its user's systemd reads the file again; one an earlier join started
     // stops first, so the new one runs.
     const read = (await systemctl(["daemon-reload"])).ok;
     if (read && (await systemctl(["restart", service.label])).ok) return "running";
-    // Asking for its environment tells an absent session from a refusal,
-    // without reading systemctl's words.
-    return (await systemctl(["show-environment"])).ok ? "failed" : "at-login";
+    // Re-read the runtime/session facts if the user manager stopped during startup.
+    // A failed manager read alone never promises a later login.
+    const after = await linuxReadiness(context);
+    return after === "available" ? "failed" : after;
   },
   unload: async (context, service) => {
     const systemctl = systemctlOf(context);
@@ -492,11 +523,24 @@ const systemd: Adapter = {
   },
   state: async (context, service) => {
     const systemctl = systemctlOf(context);
-    if (!(await systemctl(["show-environment"])).ok) return "at-login";
+    const readiness = await linuxReadiness(context);
+    if (readiness !== "available") return readiness;
     const active = await systemctl(["show", "--property=ActiveState", "--value", service.label]);
-    return active.ok && SYSTEMD_RUNNING.has(active.output.trim()) ? "running" : "failed";
+    if (!active.ok) return "unknown";
+    const state = active.output.trim();
+    return SYSTEMD_RUNNING.has(state)
+      ? "running"
+      : state === "inactive" || state === "failed"
+        ? "failed"
+        : "unknown";
   },
 };
+
+/** The Linux adapter's runtime/session facts, shared by start, status and reconnect. */
+export function linuxReadiness(context: BackgroundContext) {
+  if (!("systemctl" in context)) throw new Error("Not a Linux background context.");
+  return linuxStartup(context.systemctl, context.uid, context.runtime);
+}
 
 function adapterOf(context: BackgroundContext): Adapter {
   return "systemctl" in context ? systemd : launchd;
@@ -594,6 +638,15 @@ export async function moveInBackground(
     app: string | null;
   },
 ): Promise<MovedInBackground> {
+  if ("systemctl" in context) {
+    const readiness = await linuxReadiness(context);
+    if (readiness === "unavailable" || readiness === "unknown") {
+      const installed = readInstalled(context.dataDir);
+      if (!installed.service) writeInstalled(context.dataDir, { ...installed, app: options.app });
+      writeAutomaticStartup(context.dataDir, readiness);
+      return { state: readiness, retire: async () => {} };
+    }
+  }
   const adapter = adapterOf(context);
   const service = adapter.service(context, options.label);
   const text = { launcher: options.launcher, env: options.env };
@@ -605,7 +658,10 @@ export async function moveInBackground(
       service,
       app: options.app,
     });
-    return { state: await adapter.load(context, service), retire: nothing };
+    const state = await adapter.load(context, service);
+    if ("systemctl" in context)
+      writeAutomaticStartup(context.dataDir, state === "running" ? "available" : state);
+    return { state, retire: nothing };
   }
   const takeAway = async () => {
     for (const file of serviceFiles(service)) rmSync(file, { force: true });
@@ -615,11 +671,13 @@ export async function moveInBackground(
   try {
     adapter.write(context, service, text);
     state = await adapter.load(context, service);
+    if ("systemctl" in context)
+      writeAutomaticStartup(context.dataDir, state === "running" ? "available" : state);
   } catch (error) {
     await takeAway().catch(() => undefined);
     throw error;
   }
-  if (state === "failed") {
+  if (state === "failed" || state === "unavailable" || state === "unknown") {
     await takeAway();
     await adapter.resume(context, before);
     return { state, retire: nothing };
@@ -795,7 +853,7 @@ export function agentProbe(
   context: BackgroundContext,
   service: Service,
   now: () => number = Date.now,
-): () => Promise<"running" | "at-login" | "failed" | "unknown"> {
+): () => Promise<InBackgroundNow> {
   let idle = 0;
   return async () => {
     const state = await backgroundState(context, service);

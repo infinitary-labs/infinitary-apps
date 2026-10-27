@@ -29,7 +29,12 @@ import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { readPlacementFacts } from "../placed/placementFacts";
 import { ResourceSampler } from "../placed/resourceSampler";
 import type { ComputerAccounts } from "./accounts";
-import { type BackgroundContext, retireStrays, separateMac } from "./background";
+import {
+  type BackgroundContext,
+  readAutomaticStartup,
+  retireStrays,
+  separateMac,
+} from "./background";
 import { type CleanUpResult, LEFT_CLAUDE_LOGIN } from "./cleanUp";
 import type { ComputerBrowserParts, Conversations } from "./conversations";
 import { configureComputerGit, holdsForgeSignIn } from "./forges";
@@ -474,10 +479,12 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     return answer;
   };
 
+  const automaticStartup = readAutomaticStartup(dataDir);
   const link: HomeLink = new HomeLink({
     grant,
     // A Mac that also controls its home says this connection is its work.
     as: "work",
+    ...(automaticStartup ? { automaticStartup } : {}),
     ...(options.protocolVersion ? { protocolVersion: options.protocolVersion } : {}),
     ...(options.changes ? { changes: options.changes } : {}),
     ...(options.appVersion ? { appVersion: options.appVersion } : {}),

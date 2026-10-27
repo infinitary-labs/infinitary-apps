@@ -536,6 +536,10 @@ export class RemoteLogin {
         }
         const outcome = readWorkOutcome(ran.stdout);
         if (outcome?.firstmate === "updated") {
+          if (outcome.background === "unavailable" || outcome.background === "unknown") {
+            this.options.pairing.noteSystem(deviceId, { automaticStartup: outcome.background });
+            step.caution([remoteLoginWords.startup(device, outcome.background)], { deviceId });
+          }
           step.say("done", remoteLoginWords.updated(device, outcome.background), { deviceId });
           if (outcome.background === "failed")
             step.caution(remoteLoginWords.notInBackground(device, "update"), { deviceId });
@@ -910,6 +914,16 @@ export class RemoteLogin {
               if (left) step.say("done", left, { name, deviceId: device.id });
               step.caution(unremoved, { name, deviceId: device.id });
             }
+            if (
+              outcome?.firstmate === "joined" &&
+              (outcome.background === "unavailable" || outcome.background === "unknown")
+            ) {
+              pairing.noteSystem(device.id, { automaticStartup: outcome.background });
+              step.caution([remoteLoginWords.startup(device, outcome.background)], {
+                name,
+                deviceId: device.id,
+              });
+            }
             if (outcome?.firstmate === "joined" && outcome.background === "at-login")
               step.say("done", remoteLoginWords.atLogin(device), { name, deviceId: device.id });
             if (outcome?.firstmate === "joined" && outcome.background === "failed")
@@ -1173,6 +1187,12 @@ export class RemoteLogin {
       });
       const outcome = readWorkOutcome(ran.stdout);
       if (outcome?.firstmate === "updated") {
+        if (outcome.background === "unavailable" || outcome.background === "unknown") {
+          this.options.pairing.noteSystem(device.id, { automaticStartup: outcome.background });
+          step.caution([remoteLoginWords.startup(device, outcome.background)], {
+            deviceId: device.id,
+          });
+        }
         step.say("done", remoteLoginWords.updated(device, outcome.background), {
           deviceId: device.id,
         });

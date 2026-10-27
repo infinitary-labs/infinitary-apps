@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "linux-automatic-startup",
+      "kind": "fix",
+      "title": "Linux computers say when automatic startup is not set up",
+      "body": "A Linux computer stays joined when Infinitary cannot set up automatic startup there. Devices now says automatic startup is not set up, instead of promising work at the next login. Work started explicitly can still connect, and stopping it does not remove the join.",
+      "area": "devices",
+      "picture": {
+        "dark": "linux-automatic-startup-dark.webp",
+        "light": "linux-automatic-startup-light.webp",
+        "alt": "The ubuntu-box device remains joined and out of reach, with automatic startup not set up and a note that this setup does not start work at login"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

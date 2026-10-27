@@ -13,6 +13,7 @@ import {
 } from "@shared/connection";
 import { COMPUTER, HERE } from "@shared/deviceNames";
 import {
+  automaticStartupSchema,
   buildPairingLink,
   type DeviceAddresses,
   type DeviceChip,
@@ -157,6 +158,7 @@ const reachedFileSchema = z.strictObject({
  */
 const SYSTEMS_FILE = "systems.json";
 const systemRecordSchema = z.strictObject({
+  automaticStartup: automaticStartupSchema.optional(),
   system: deviceSystemSchema.optional(),
   chip: deviceChipSchema.optional(),
 });
@@ -682,20 +684,36 @@ export class DevicePairing implements PairedDevices {
    * What a device on the list said it is in its hello: kept when it says
    * something new, and Devices hears of it.
    */
-  noteSystem(deviceId: string, said: { system?: DeviceSystem; chip?: DeviceChip }): void {
+  noteSystem(
+    deviceId: string,
+    said: {
+      system?: DeviceSystem;
+      chip?: DeviceChip;
+      automaticStartup?: import("@shared/devices").AutomaticStartup;
+    },
+  ): void {
     if (this.keepSystem(deviceId, said)) this.changed();
   }
 
   /** Keeps what a device said it is; true when that changed what is kept. */
   private keepSystem(
     deviceId: string,
-    said: { system?: DeviceSystem; chip?: DeviceChip },
+    said: {
+      system?: DeviceSystem;
+      chip?: DeviceChip;
+      automaticStartup?: import("@shared/devices").AutomaticStartup;
+    },
   ): boolean {
     if (this.unreadable || this.systemsUnreadable) return false;
     if (!this.entries.some((entry) => entry.id === deviceId)) return false;
     const kept = this.systems.get(deviceId);
     const next: SystemRecord = { ...kept, ...said };
-    if (kept?.system === next.system && kept?.chip === next.chip) return false;
+    if (
+      kept?.system === next.system &&
+      kept?.chip === next.chip &&
+      kept?.automaticStartup === next.automaticStartup
+    )
+      return false;
     this.systems.set(deviceId, next);
     try {
       this.saveSystems();
@@ -1309,6 +1327,7 @@ export class DevicePairing implements PairedDevices {
       ...(remoteLogin ? { remoteLogin } : {}),
       ...(said?.system ? { system: said.system } : {}),
       ...(said?.chip ? { chip: said.chip } : {}),
+      ...(said?.automaticStartup ? { automaticStartup: said.automaticStartup } : {}),
       ...(reachedOn ? { reachedOn } : {}),
     };
   }

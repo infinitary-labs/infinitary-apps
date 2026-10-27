@@ -120,7 +120,7 @@ export function standInFirstmate(
       '  printf \'{"firstmate":"socket","v":1,"socket":"%s"}\\n\' "$S/s"',
       "  while IFS= read -r M; do",
       '    case "$M" in',
-      `      *'"forwarded"'*) echo "forwarded $S/s" >> "$R"; printf '{"firstmate":"route","v":1,"agent":"%s"}\\n' ${shellWord(background.agent ?? "running")};;`,
+      `      *'"forwarded"'*) echo "forwarded $S/s" >> "$R"; printf '{"firstmate":"route","v":1,"agent":"%s"}\\n' ${shellWord(background.agent === "unavailable" ? "unknown" : (background.agent ?? "running"))}${background.agent === "unavailable" ? `; printf '{"firstmate":"agent","v":1,"agent":"unavailable"}\\n'` : ""};;`,
       // Its folder retired - moved into a newer app's - it says so and ends, as the real controller does.
       `      *'"beat"'*) echo "beat $S/s" >> "$R"; if [ -f "$(dirname "$INFINITARY_HELPER_DATA_DIR")/${RETIRED_PROFILE_MARKER}" ]; then printf '{"firstmate":"refused","reason":"moved"}\\n'; exit 0; fi;;`,
       "    esac",

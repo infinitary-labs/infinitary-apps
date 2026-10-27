@@ -47,9 +47,16 @@ export type HomeSays = z.infer<typeof homeSaysSchema>;
  * launchd holds its agent, `at-login` when nobody is logged in there as its
  * user, so it starts the next time they log in, and `failed` when their
  * session is there and holds no agent, which no login mends. `unknown` when
- * the controller cannot ask.
+ * the controller cannot ask. `unavailable` means Infinitary cannot set up
+ * automatic startup here; it does not say whether an explicit worker is reachable.
  */
-export const sshAgentStateSchema = z.enum(["running", "at-login", "failed", "unknown"]);
+export const sshAgentStateSchema = z.enum([
+  "running",
+  "at-login",
+  "failed",
+  "unknown",
+  "unavailable",
+]);
 export type SshAgentState = z.infer<typeof sshAgentStateSchema>;
 
 /**

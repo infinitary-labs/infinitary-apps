@@ -238,7 +238,13 @@ function backgroundOf(homeDir: string) {
       file: join(homeDir, ".config", "systemd", "user", unit),
       /** The agent's file names a word of its command line. */
       holds: (word: string) => `"${word}"`,
-      started: ["--user daemon-reload", `--user restart ${unit}`],
+      // Runtime/session checks precede setup and the actual manager load (INF-1617).
+      started: [
+        "--user show-environment",
+        "--user show-environment",
+        "--user daemon-reload",
+        `--user restart ${unit}`,
+      ],
       paused: [`--user stop ${unit}`],
       removed: [
         "--user daemon-reload",

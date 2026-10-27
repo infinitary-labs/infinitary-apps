@@ -157,6 +157,7 @@ export type HomeLinkOptions = {
    * the home counts nothing of it as this computer in reach.
    */
   nameOnly?: boolean;
+  automaticStartup?: import("@shared/devices").AutomaticStartup;
   /**
    * What this connection does for a Mac that both controls its home and
    * runs its work (docs/connection.md, "Hello"): the app's window is the
@@ -418,6 +419,9 @@ export class HomeLink {
             ...(this.options.appVersion ? { appVersion: this.options.appVersion } : {}),
             ...(this.cursor ? { cursor: this.cursor } : {}),
             ...(this.options.nameOnly ? { nameOnly: true } : {}),
+            ...(this.options.automaticStartup
+              ? { automaticStartup: this.options.automaticStartup }
+              : {}),
             ...(this.options.as && this.grant.kind === "mac" ? { as: this.options.as } : {}),
             ...(this.options.system ?? thisDeviceSystem()),
             spellings: SPELLINGS,

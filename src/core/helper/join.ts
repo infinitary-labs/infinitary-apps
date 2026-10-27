@@ -592,9 +592,23 @@ function keepFetchedAgain(options: JoinOptions, dataDir: string): string | null 
 /** Sets it up in the background from the copy kept here, or from this program; `none` with nothing to do it. */
 async function inBackground(options: JoinOptions, kept: string | null): Promise<InBackground> {
   if (!options.background) return "none";
-  return options
+  const result = await options
     .background({ launcher: fetchedLauncher(kept), app: kept })
     .catch((): InBackground => "failed");
+  // The initial name-only welcome precedes setup. Report its outcome before a
+  // command exits without a worker, without making the computer reachable.
+  const joined = new JoinedHome(options.dataDir, () => {});
+  const grant = joined.read()?.grant;
+  if (
+    grant &&
+    result !== "none" &&
+    (options.platform === "linux" || result === "unavailable" || result === "unknown")
+  )
+    await hearHome(grant, {
+      ...joinHearing(options),
+      automaticStartup: result === "running" ? "available" : result,
+    });
+  return result;
 }
 
 /** Says why the home refused a link, or that it could not be reached, and answers the refusal. */
@@ -688,6 +702,7 @@ export type Hearing = {
   dial: (grant: DeviceGrant) => Promise<WebSocket>;
   protocolVersion?: string;
   timeoutMs?: number;
+  automaticStartup?: import("@shared/devices").AutomaticStartup;
 };
 
 /** The join's one dial goes where the join was told to dial, within the join's time. */
@@ -715,6 +730,7 @@ export async function hearHome(grant: DeviceGrant, hearing: Hearing): Promise<Ho
       onPush: () => {},
       ...(hearing.timeoutMs === undefined ? {} : { welcomeTimeoutMs: hearing.timeoutMs }),
       nameOnly: true,
+      ...(hearing.automaticStartup ? { automaticStartup: hearing.automaticStartup } : {}),
       onState: (state) => {
         if (settled || state.contact === "reaching") return;
         settled = true;

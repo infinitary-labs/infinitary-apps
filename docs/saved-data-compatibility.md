@@ -302,3 +302,12 @@ Typed family records replace the mixed shape column, while unknown older shape f
 Superseded execution copies and mixed task columns are removed only after their consumers use the owned records or the read-only compatibility projection.
 Older-format imports remain supported; specification histories in newer exports preserve their revision order through local identity remapping.
 This is a forward migration, not permission to open the profile with an older app or to reverse it over subsequent work.
+
+## Linux automatic startup capability
+
+The work folder's optional `automatic-startup.json` records the last Linux setup outcome with its own versioned schema.
+It is separate from `installed.json`, so an older app still reads the same service and app paths and can remove what it installed.
+A missing or unreadable startup record supplies no capability claim, and the current cleanup owner removes it with the installed record.
+The home's `systems.json` records optional automatic-startup capability beside system and chip.
+An older strict reader treats that metadata file as unreadable and preserves it without rewriting; the device list and joins remain in their existing files.
+No database migration or saved-data format boundary changes.

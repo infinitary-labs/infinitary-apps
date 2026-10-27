@@ -794,3 +794,11 @@ The Mac affected-journey selector covers the same callers through their imports.
 Window sizes in `resizeWindow`, its returned restore value and `minimumWindowSize` describe content pixels before page zoom, not outer bounds that include a native menu or frame.
 This is the source app, not a packaged Linux release check.
 The launcher gives each app a throwaway HOME, userData, TMPDIR and XDG configuration, cache and data directories, and pins the Mac home with `CFFIXED_USER_HOME`.
+
+## Linux automatic startup fixtures
+
+`linux-startup.yml` runs the production runtime/session classifier on GitHub-hosted Ubuntu for pull requests and main.
+It checks a disposable logged-out user under running systemd, then starts that user's manager for the available case.
+It also checks a plain Ubuntu container with installed systemctl but no running systemd, then an unavailable systemctl.
+The job logs the runtime, commands, statuses and classification, never the user manager's environment values.
+The fixture removes its disposable user and manager; it changes no person's startup configuration.

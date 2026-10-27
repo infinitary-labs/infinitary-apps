@@ -90,6 +90,16 @@ A key whose app is not open is tried quietly the same way, and comes back by its
 Command search's "Try again to reach your computers" does Try again for every computer this computer stopped trying, and opens this tab.
 There is no setting for SSH, no port and no dashboard of connections: the row is the whole surface.
 
+**Automatic startup on Linux.**
+A computer stays joined when Infinitary cannot set up automatic startup there.
+Its mono line ends “automatic startup not set up”, with “This setup does not start work at login.” under its summary.
+An unreadable check reads “automatic startup not checked”, with “Infinitary could not check automatic startup here.”
+These facts are independent of reachability: an explicitly started worker can answer while automatic startup is not set up.
+A supported startup waiting for a verified inactive user manager keeps the existing next-login wording.
+Do not offer enabling work after logout, removing and re-adding, or updating as a remedy for unsupported startup.
+The row does not show the macOS local-network permission explanation for known unavailable or unknown startup.
+A genuinely changed home address still keeps its existing route guidance; it does not supply automatic startup.
+
 **+ A computer** opens an aside under the foot: "How do you want to add it?" over "Each way adds the same kind of computer.
 Pick the one that suits it.", with three small secondary Buttons and a ghost "Cancel":
 - "Paste a link into Infinitary there": the link panel below, for a computer the person sits at (`JoinAnotherMac.prompt.md`).

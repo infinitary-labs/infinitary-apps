@@ -350,9 +350,20 @@ export type SshStopReason = z.infer<typeof sshStopReasonSchema>;
  *   holds no background work, which no login mends.
  * - `stopped`: this Mac stopped trying until Try again, with why.
  */
+/** Automatic startup capability is independent of whether the worker is reachable. */
+export const automaticStartupSchema = z.enum([
+  "available",
+  "at-login",
+  "failed",
+  "unavailable",
+  "unknown",
+]);
+export type AutomaticStartup = z.infer<typeof automaticStartupSchema>;
+
 export const deviceSshSchema = z.strictObject({
   state: z.enum(["connected", "connecting", "reconnecting", "at-login", "not-started", "stopped"]),
   reason: sshStopReasonSchema.optional(),
+  automaticStartup: automaticStartupSchema.optional(),
 });
 export type DeviceSsh = z.infer<typeof deviceSshSchema>;
 
@@ -422,6 +433,7 @@ export const deviceViewSchema = z.strictObject({
    * joined; absent for a view.
    */
   user: deviceUserNameSchema.optional(),
+  automaticStartup: automaticStartupSchema.optional(),
   /**
    * Whether it joined from this Mac itself - another macOS user here, or a
    * second app on this Mac - as the home saw where it dialed from. Absent on
@@ -895,3 +907,17 @@ export function phoneRouteWords(link: string): string {
     ? "This link prefers your private network, with local addresses as fallbacks. Both devices need access to that network."
     : "Only local addresses are available. Your phone needs to share this computer’s network.";
 }
+
+/** Latest controller fact wins; otherwise retain the joining computer's reported startup capability. */
+export function automaticStartupOf(
+  device: Pick<DeviceView, "ssh" | "automaticStartup">,
+): AutomaticStartup | undefined {
+  return device.ssh?.automaticStartup ?? device.automaticStartup;
+}
+
+export const automaticStartupWords = {
+  unavailable: "automatic startup not set up",
+  unknown: "automatic startup not checked",
+  guidance: "This setup does not start work at login.",
+  unchecked: "Infinitary could not check automatic startup here.",
+};

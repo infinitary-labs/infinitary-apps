@@ -47,7 +47,7 @@ const OPEN_HERE = `Open Infinitary here any time to control it from ${HERE.this}
  * (`./background.ts`): `running` now, `at-login` from the user's next login,
  * `failed` when it could not be set up, and `none` when nothing set it up.
  */
-export type InBackground = "running" | "at-login" | "failed" | "none";
+export type InBackground = "running" | "at-login" | "failed" | "none" | "unavailable" | "unknown";
 
 export const helperWords = {
   usage: [
@@ -142,6 +142,8 @@ export const helperWords = {
     background: InBackground,
     controls = false,
   ) => {
+    if (background === "unavailable" || background === "unknown")
+      return ["Joined.", ...startupGuidance(background)];
     if (place.thisMac)
       return [
         `Joined. ${userDisplayName(user)} runs work for Infinitary on ${HERE.this} now.`,
@@ -177,6 +179,11 @@ export const helperWords = {
    * computer on its list, with everything kept here.
    */
   foundAgain: (place: HomePlace, home: string | null, user: string, background: InBackground) => {
+    if (background === "unavailable" || background === "unknown")
+      return [
+        "Found Infinitary again. This computer stays joined.",
+        ...startupGuidance(background),
+      ];
     if (place.thisMac)
       return [
         `Found Infinitary on ${HERE.this} again. ${userDisplayName(user)} runs its work as before.`,
@@ -567,6 +574,9 @@ function userInBackground(user: string, background: InBackground): string[] {
       return [
         `It starts the next time ${who} logs in, and then runs whenever ${who} is logged in.`,
       ];
+    case "unavailable":
+    case "unknown":
+      return startupGuidance(background);
     case "failed":
       return notInBackground(`in Infinitary on ${HERE.this}`);
     case "none":
@@ -594,4 +604,14 @@ export function homeLabel(place: HomePlace, name: string | null): string {
 /** Who keeps trying: this Mac, or this user on the Mac where Firstmate lives. */
 function self(place: HomePlace): string {
   return place.thisMac ? "This user" : HERE.This;
+}
+
+/** No claim that work runs now or will start at a later login. */
+export function startupGuidance(state: "unavailable" | "unknown"): string[] {
+  return [
+    state === "unavailable"
+      ? "Infinitary could not set up automatic startup here. This setup does not start work at login."
+      : "Infinitary could not check automatic startup here.",
+    "The join remains. Start this app with work run as the joined user and keep it running; stopping it or restarting this environment needs another start.",
+  ];
 }

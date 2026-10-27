@@ -117,7 +117,11 @@ pnpm score:kinds --provider anthropic-claude --model <m> --out report.json
 The Claude form runs the machine's own Claude client on its default login, exactly as the app does, and spends that login's allowance.
 It loads no Pi runtime or session factory: the Claude binding needs neither a Pi catalog nor its auth/models stores.
 Shared crewmate tool definitions also stay independent of Pi's tool generator (`pi/crewmateTools.ts`), so opening a Claude session does not initialize the Pi SDK through those definitions.
-The boxed corpus integration exercises this same command against the hermetic client and local API, with Pi SDK imports refused, within its existing 15 s budget; `INFINITARY_CLASSIFIER_EVIDENCE_DIR` on that test optionally keeps the scored report, command output and served request for inspection.
+The boxed corpus integration exercises this same command against the hermetic client and local API, with Pi SDK imports refused.
+Its test-only clock (`tests/helpers/classifierClock.ts`, preloaded in the scorer child) counts the existing load clock for both deadline forms during ordinary runs; performance runs keep their native 15 s wall deadline.
+The runner's capped limit still ends a stuck integration, and `decisionKindClassifier.test.ts` independently checks the production deadline during session creation, a hung turn and a turn that ignores cancellation.
+The app and a normal scorer invocation never load that test clock.
+`INFINITARY_CLASSIFIER_EVIDENCE_DIR` on the integration optionally keeps the scored report, command output and served request for inspection, including a failed verdict.
 
 `--cases <file>` scores a separate labelled boundary corpus rather than treating synthetic contrasts as recorded first mate spawns.
 Each JSONL row carries its source provenance (`task-excerpt` or `synthetic`) and an expected kind beside the actual input words and constraints, and may carry a hand `lane`, `quick` or `deep`.

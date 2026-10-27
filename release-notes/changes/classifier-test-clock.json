@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "classifier-test-clock",
+      "reason": "Test-only load-clock repair for the isolated Claude classifier and scorer; the app's deadline and classification behavior are unchanged."
+    }
+  ]
+}

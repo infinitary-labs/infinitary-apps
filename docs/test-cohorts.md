@@ -97,6 +97,9 @@ A file sets no default window for its polls.
 `tests/wait-window.test.ts` runs vitest over `tests/fixtures/frozen-work` and freezes its whole process group: a writer frozen 7 s past its 5 s budget still passes, a missing file fails at its window on a quiet run and by the cap under a frozen run, and a graded run fails the frozen writer.
 A journey's waits read the same variable but are never without a clock: they run on the load clock, capped at 20 times their budget (`docs/e2e-contracts.md`, "Waits run on the load clock").
 The native phone launcher explicitly starts that same Node load clock for its failure timers, and native observations mirror it in `PhoneLoadClock/PhoneWaitDeadline.swift` (`docs/ios.md`).
+The boxed Claude classifier integration opts its own process and scorer child into `tests/helpers/classifierClock.ts` (INF-1614, the captain's test-clock choice).
+It drives Node's test-only timeout clock from the existing load clock, including the scorer's `AbortSignal.timeout`, without changing the app's deadlines or the runner's capped outer limit.
+Performance runs leave those timers native, and the classifier's controlled-clock unit tests own the production timeout behavior.
 A budget an author already set above the rule stays as it was, and a test whose time is a fixed product timeout rather than load-scaled work (hostEnv's hanging-shell test waits out a 3 s timeout) keeps the budget sized to that timeout.
 A file whose slowest test fits the 5 s default under the rule carries none.
 

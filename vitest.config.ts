@@ -34,6 +34,7 @@ for (const file of PROBE_FILES) {
 
 // Module mocks, process-state writers and cold-cache fixture guards retain isolation.
 const isolatedUnit = [
+  "tests/classifier-clock.test.ts",
   "src/core/axi/cli.test.ts",
   "src/core/axi/browserCommands.test.ts",
   "src/core/accounts/claudeAccounts.test.ts",

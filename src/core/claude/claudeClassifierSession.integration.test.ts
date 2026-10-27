@@ -12,6 +12,7 @@ import {
   finishAnthropicStream,
   writeAnthropicText,
 } from "../../../tests/helpers/anthropicDialect";
+import { startClassifierTestClock } from "../../../tests/helpers/classifierClock";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { AdaptedDecisionModel, DecisionModels } from "../decisions/decisionModel";
 import { buildKindClassifierInstruction } from "../pi/piResources";
@@ -29,9 +30,7 @@ import { createClaudeSessionFactory } from "./session";
  * billed, and nothing reaches the network.
  *
  * What it settles that no scripted test can: a cold client spawn plus one
- * turn answers inside the adapter's own wall clock (`DECIDE_TIMEOUT_MS`) -
- * a call that did not would come back `classifier-failed:timeout`, not a
- * kind - that the served request carries the question's instruction and no
+ * turn returns the scripted kind, the served request carries the question's instruction and no
  * tools, that every model is served at most a word (no thinking, 64 tokens),
  * that an answer the cap cut short is read and the client's own re-asking
  * stopped, and that the call leaves no transcript. A cancel and a 401 or
@@ -44,9 +43,9 @@ import { createClaudeSessionFactory } from "./session";
 // slowest tests (a cut-short answer and a cancel, each ending with the
 // SDK's roughly 2 s close of a stopped client) took 2.6 s in their fastest
 // run and 2.7 s at worst; five times, rounded up to a whole 5 s. A cold classifier call - the client's spawn plus one turn - took 0.6
-// to 1.4 s, far inside `DECIDE_TIMEOUT_MS` (15 s). The corpus CLI also
-// owns its cold startup: its unchanged budget is exercised with Pi SDK
-// imports refused.
+// to 1.4 s. INF-1614: ordinary runs now count the existing load clock in
+// both the adapter and scorer deadlines; only performance runs grade those
+// 15 seconds on the wall clock. Pi SDK imports stay refused in the scorer.
 vi.setConfig({ testTimeout: 15_000 });
 
 const MODEL = "claude-haiku-4-5";
@@ -132,13 +131,19 @@ function answerText(request: { n: number }, res: ServerResponse, text: string): 
 }
 
 let api: StubApi;
+let stopClock: () => void;
 
 beforeAll(async () => {
+  stopClock = startClassifierTestClock();
   api = await startStubApi();
 });
 
 afterAll(async () => {
-  await api.close();
+  try {
+    await api.close();
+  } finally {
+    stopClock();
+  }
 });
 
 afterEach(() => {
@@ -161,7 +166,14 @@ function box(): Box {
     // The boxed client keeps its config (and would keep its transcripts) in HOME/.claude.
     configDir: join(home, ".claude"),
     stub,
-    env: { PATH: process.env.PATH ?? "", HOME: home, INFINITARY_CLAUDE_CLI: stub, PI_OFFLINE: "1" },
+    env: {
+      PATH: process.env.PATH ?? "",
+      HOME: home,
+      INFINITARY_CLAUDE_CLI: stub,
+      PI_OFFLINE: "1",
+      // The child keeps the same clock mode as this run.
+      INFINITARY_PERF_BUDGETS: process.env.INFINITARY_PERF_BUDGETS,
+    },
   };
 }
 
@@ -212,7 +224,7 @@ function transcripts(b: Box): string[] {
 }
 
 describe("the kind classifier on the real Claude client", () => {
-  it("answers one kind question inside the wall clock, from a cold client, leaving no transcript", async () => {
+  it("answers one kind question from a cold client, leaving no transcript", async () => {
     const b = box();
     api.answer((request, res) => answerText(request, res, "chore"));
     const first = api.requests.length;
@@ -359,6 +371,8 @@ registerHooks({
       process.execPath,
       [
         "--import",
+        join(REPO_ROOT, "tests", "helpers", "classifierClock.preload.ts"),
+        "--import",
         noPi,
         join(REPO_ROOT, "scripts", "score-kind-classifier.ts"),
         "--provider",
@@ -382,6 +396,15 @@ registerHooks({
     const report = JSON.parse(readFileSync(out, "utf8")) as {
       rows: { kind: string; source: string }[];
     };
+    const served = api.requests.slice(first);
+    // Keep the real response and request even when an assertion diagnoses a failure.
+    const evidence = process.env.INFINITARY_CLASSIFIER_EVIDENCE_DIR;
+    if (evidence) {
+      mkdirSync(evidence, { recursive: true });
+      writeFileSync(join(evidence, "report.json"), readFileSync(out));
+      writeFileSync(join(evidence, "scorer.log"), `${stderr}\n${stdout}`);
+      writeFileSync(join(evidence, "requests.json"), `${JSON.stringify(served, null, 2)}\n`);
+    }
     expect(report.rows).toEqual([
       expect.objectContaining({
         kind: "fix",
@@ -390,19 +413,9 @@ registerHooks({
     ]);
     expect(JSON.parse(stdout)).toMatchObject({ spawns: 1, kinds: { fix: 1 }, failure_rate: 0 });
     expect(stderr).toContain("Fix the meter");
-    const served = api.requests.slice(first);
     expect(served).toHaveLength(1);
     expect(served[0]?.body).toMatchObject({ model: MODEL, max_tokens: 64 });
     expect(served[0]?.body.tools ?? []).toEqual([]);
     expect(transcripts(b)).toEqual([]);
-    // Opt-in evidence from the real scorer and the API that served it,
-    // rather than a generic pass/fail log; no production credential exists.
-    const evidence = process.env.INFINITARY_CLASSIFIER_EVIDENCE_DIR;
-    if (evidence) {
-      mkdirSync(evidence, { recursive: true });
-      writeFileSync(join(evidence, "report.json"), readFileSync(out));
-      writeFileSync(join(evidence, "scorer.log"), `${stderr}\n${stdout}`);
-      writeFileSync(join(evidence, "requests.json"), `${JSON.stringify(served, null, 2)}\n`);
-    }
   });
 });

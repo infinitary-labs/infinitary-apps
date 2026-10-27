@@ -49,7 +49,8 @@ export type LoadClock = {
   timer(fire: () => void, deadline: number): DeadlineTimer;
 };
 
-const TICK_MS = 25;
+/** The sampling cadence, also used by the isolated classifier's test-only timer driver. */
+export const LOAD_CLOCK_TICK_MS = 25;
 
 export function startLoadClock(
   wall: () => number = performance.now.bind(performance),
@@ -61,13 +62,13 @@ export function startLoadClock(
   let counted = 0;
   let last = wall();
   let share = 1;
-  const pending = () => Math.min(wall() - last, 2 * TICK_MS) * share;
+  const pending = () => Math.min(wall() - last, 2 * LOAD_CLOCK_TICK_MS) * share;
   const tick = () => {
     counted += pending();
     last = wall();
     share = Math.min(1, processors / Math.max(processors, load()));
   };
-  const ticker = setInterval(tick, TICK_MS);
+  const ticker = setInterval(tick, LOAD_CLOCK_TICK_MS);
   ticker.unref();
   const now = () => counted + pending();
   return {

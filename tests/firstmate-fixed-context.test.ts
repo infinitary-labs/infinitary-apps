@@ -11,7 +11,11 @@ import { OLLAMA_MIN_CONTEXT } from "../src/core/pi/ollamaProfile";
 import { LOCAL_CONTEXT_RESERVE, localInputFits } from "../src/core/pi/ollamaStream";
 import { buildFirstmateSystemPrompt, FIRSTMATE_PROMPT_CORE } from "../src/core/pi/piResources";
 import { piToolsOf } from "../src/core/pi/toolSpec";
-import { FIRSTMATE_CARD_AUTHORING, FIRSTMATE_HANDOFF } from "../src/core/prompts/cardContract";
+import {
+  CARD_REPLY,
+  FIRSTMATE_CARD_AUTHORING,
+  FIRSTMATE_HANDOFF,
+} from "../src/core/prompts/cardContract";
 import { firstmateTools } from "./helpers/firstmateTools";
 
 /**
@@ -111,6 +115,7 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
 type Home =
   | "core"
   | "authoring"
+  | "replies"
   | "handoff"
   | "sequences"
   | "reviewed brief"
@@ -690,6 +695,18 @@ const LEDGER: { rule: string; home: Home; says: string }[] = [
     home: "core",
     says: "nothing parks or returns on its own, and closing a card is keep.",
   },
+  // INF-1656 brings main back inside the budget: INF-1623 said its revision answer in two texts,
+  // and each now keeps only the part its contract revision named it the home of.
+  {
+    rule: "every revision while answering carries its own answer as reply",
+    home: "replies",
+    says: "emit_card with SAME id and answer as reply on every revision while answering",
+  },
+  {
+    rule: "a revision's answer says what changed where",
+    home: { tool: "emit_card", parameter: "reply" },
+    says: "saying what changed where",
+  },
 ];
 
 describe("every rule the trim took out of one text is still served (contract v4.59)", () => {
@@ -700,6 +717,7 @@ describe("every rule the trim took out of one text is still served (contract v4.
     const textOf = (home: Home): string => {
       if (home === "core") return FIRSTMATE_PROMPT_CORE;
       if (home === "authoring") return FIRSTMATE_CARD_AUTHORING;
+      if (home === "replies") return CARD_REPLY;
       if (home === "handoff") return FIRSTMATE_HANDOFF;
       if (home === "sequences") return SEQUENCES_SEED;
       if (home === "reviewed brief") return renderRigorSection("reviewed");
@@ -722,10 +740,11 @@ describe("every rule the trim took out of one text is still served (contract v4.
 
   it("serves each home's text whole to the seat", async () => {
     // The ledger's homes are what the model reads: the served prompt carries
-    // the core and the authoring text, and every tool arrives with its words.
+    // the core, the authoring and card-reply texts, and every tool arrives with its words.
     const { systemPrompt, served } = await fixedContext();
     expect(systemPrompt).toContain(FIRSTMATE_PROMPT_CORE);
     expect(systemPrompt).toContain(FIRSTMATE_CARD_AUTHORING);
+    expect(systemPrompt).toContain(CARD_REPLY);
     expect(systemPrompt).toContain(FIRSTMATE_HANDOFF);
     expect(systemPrompt).toContain(SEQUENCES_SEED.trim());
     const tools = new Set(served.map((tool) => tool.name));

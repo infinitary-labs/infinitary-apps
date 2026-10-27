@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "revision-answer-homes",
+      "reason": "Drops words the first mate and crewmates were told twice about answering with a card revision, to keep the first mate's fixed context inside the budget; nothing a person notices changes."
+    }
+  ]
+}

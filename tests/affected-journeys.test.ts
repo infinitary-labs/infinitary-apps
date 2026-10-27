@@ -49,6 +49,41 @@ const picked = (change: { changed?: string[]; sourceDiff?: string }) =>
   run(change).map(([file]) => file);
 
 describe("which journeys a change affects", () => {
+  it("keeps the Mac update journey on controller and state-store changes without a changed hook", () => {
+    // INF-640: the project gate must retain the consent, channel and recovery journey it owns.
+    const specs = [
+      "tests/e2e/mac-updates.spec.ts",
+      "tests/e2e/installed-update-work.spec.ts",
+      "tests/e2e/app-close.spec.ts",
+    ];
+    const read = (file: string) => {
+      try {
+        return readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
+      } catch {
+        return undefined;
+      }
+    };
+    for (const path of [
+      "src/core/update/macUpdates.ts",
+      "src/core/update/macInstallation.ts",
+      "src/core/update/updateChecker.ts",
+      "src/renderer/src/app/updateState.ts",
+    ]) {
+      expect([...select({ changed: [path], sourceDiff: "", specs, read }).keys()]).toEqual([
+        "tests/e2e/mac-updates.spec.ts",
+      ]);
+    }
+    // INF-643: the native proof's active-work fixture has its own real-app journey.
+    expect([
+      ...select({
+        changed: ["tests/fixtures/installed-updates/runningWork.ts"],
+        sourceDiff: "",
+        specs,
+        read,
+      }).keys(),
+    ]).toEqual(["tests/e2e/installed-update-work.spec.ts"]);
+  });
+
   it("runs the spec a change edits, and nothing for a change no journey reaches", () => {
     expect(picked({ changed: ["tests/e2e/b.spec.ts"] })).toEqual(["tests/e2e/b.spec.ts"]);
     expect(picked({ changed: ["src/core/tasks/taskService.ts", "docs/testing.md"] })).toEqual([]);

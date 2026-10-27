@@ -348,8 +348,10 @@ import {
 import {
   type PresenceSettings,
   presenceSettingsSchema,
+  type UpdateChannel,
   type UpdateInstallResult,
   type UpdateStatus,
+  updateChannelSchema,
   updateInstallResultSchema,
   updateStatusSchema,
 } from "./update";
@@ -1946,6 +1948,13 @@ export const invokeContract = {
     request: z.tuple([]),
     response: updateStatusSchema,
   },
+  "inf:update:channel": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([updateChannelSchema]),
+    response: updateStatusSchema,
+  },
   "inf:update:open-release": {
     effect: "change",
     surface: "core",
@@ -3011,6 +3020,7 @@ export const RUN_HOME_ONLY_CHANNELS: ReadonlySet<CoreInvokeChannel> = new Set<Co
   "inf:presence:get",
   "inf:presence:set",
   "inf:update:status",
+  "inf:update:channel",
   "inf:update:open-release",
   "inf:update:install",
 ]);
@@ -3614,6 +3624,7 @@ export type FirstmateApi = {
   };
   update: {
     status: () => Promise<UpdateStatus>;
+    setChannel: (channel: UpdateChannel) => Promise<UpdateStatus>;
     openReleasePage: () => Promise<{ ok: true }>;
     install: () => Promise<UpdateInstallResult>;
   };

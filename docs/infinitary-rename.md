@@ -34,7 +34,7 @@ The app's identity as a system knows it - its bundle id, data folders, backgroun
 | The background work's label | `com.getinfinitary.infinitary.work` (`.dev.work`) | `com.kunchenguid.firstmate3000.work`, which the move hands over (`docs/helper.md`) |
 | The Linux package and command | `infinitary`, `/opt/infinitary/infinitary` | `firstmate-3000`, which the package replaces, conflicts with and provides, and its program paths, left as links (`docs/linux-packages.md`) |
 | The development signer | `~/.infinitary/local-codesign`, "Infinitary Local Dev" | `~/.firstmate-3000/local-codesign`, left as it was for a rollback (`docs/local-code-signing.md`) |
-| The release | the tap `infinitary-labs/homebrew-tap`, casks `infinitary` and `infinitary@alpha`, tags `infinitary-v` and `infinitary-alpha-v`, `Infinitary-<v>-universal.zip`, `infinitary-updates.json` and `infinitary-builds.json` | Firstmate 3000's tap, casks, tags and update files, which the old-cask switch writes and an installation that came through the old cask reads (`docs/alpha.md`, "The old-cask switch") |
+| The release | the configured public destination (`packaging/release-source.json`), `v<version>` tags, universal ZIPs and disk images, and independent Stable/Alpha metadata | Both Homebrew taps, casks, app-prefixed tags and update files remain supported alongside direct installers; activated old-cask channels keep their usual upgrade path (`docs/alpha.md`, "The old-cask switch") |
 | The design skill | `.claude/skills/infinitary-design/` | `firstmate-3000-design`, which a personal workspace seed takes away |
 
 Names nothing outside one run reads - scratch and socket folder prefixes and log prefixes - are renamed outright.

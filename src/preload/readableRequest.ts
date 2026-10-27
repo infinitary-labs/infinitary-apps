@@ -4,6 +4,10 @@ import { ZodError } from "zod";
 // Only requests whose caught rejection is shown directly to the captain.
 // Other channels retain their existing error contract.
 export const REQUEST_COPY = {
+  "inf:update:channel": {
+    fallback: "Could not save the update channel. Please try again.",
+    prefix: "",
+  },
   "inf:models:speed:set": { fallback: "Could not save crew speed. Please try again.", prefix: "" },
   "inf:models:reasoning:set": {
     fallback: "Could not save reasoning. Please try again.",

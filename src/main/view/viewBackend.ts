@@ -81,6 +81,7 @@ const OWN_LOOK = new Set<CoreInvokeChannel>([
 /** Channels about the app installed on this Mac: its update notice and release page. */
 const OWN_APP = new Set<CoreInvokeChannel>([
   "inf:update:status",
+  "inf:update:channel",
   "inf:update:open-release",
   "inf:update:install",
 ]);
@@ -199,7 +200,7 @@ export class ViewBackend {
     rawArgs: unknown[],
   ): Promise<InvokeResponse<C>> {
     if (OWN_LOOK.has(channel)) return (await this.ownLook(channel, rawArgs)) as InvokeResponse<C>;
-    if (OWN_APP.has(channel)) return (await this.ownApp(channel)) as InvokeResponse<C>;
+    if (OWN_APP.has(channel)) return (await this.ownApp(channel, rawArgs)) as InvokeResponse<C>;
     const asks = this.link.state().startedByCommand
       ? isRunViewInvokeChannel(channel)
       : isViewInvokeChannel(channel);
@@ -339,8 +340,14 @@ export class ViewBackend {
    * This Mac's own update notice, never the other Mac's: a newer Firstmate
    * there asks this Mac to update, and this is where it finds how.
    */
-  private async ownApp(channel: CoreInvokeChannel): Promise<unknown> {
+  private async ownApp(channel: CoreInvokeChannel, rawArgs: unknown[]): Promise<unknown> {
     switch (channel) {
+      case "inf:update:channel": {
+        const [next] = parseInvokeRequest("inf:update:channel", rawArgs);
+        if (!this.options.updates.setChannel)
+          throw new Error("This installation does not support changing its update channel here.");
+        return this.options.updates.setChannel(next);
+      }
       case "inf:update:status":
         return this.options.updates.getStatus();
       case "inf:update:open-release":

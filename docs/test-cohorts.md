@@ -121,6 +121,9 @@ A file whose slowest test fits the 5 s default under the rule carries none.
 | `tests/release-notes.test.ts` | the release-notes gate: real git on scratch repositories with commits and tags, the `scripts/release-notes.ts` CLI | 10 s |
 | `tests/universal-file-types.test.ts` | the system `file` behind a counting stand-in, over Electron's distribution and darwin prebuilds | 15 s (Mac whole file 2.4 s) |
 | `tests/cask-consumers.test.ts` | a scratch clone of the installed Homebrew (macOS only, skipped without it), git, ditto, the publication CLI | 340 s |
+| `tests/installed-update-fixtures.test.ts` | real ASAR archives, SQLite, scratch saved-work moves, child-command failures and ZIP ticket-byte comparisons; no signing | 5 s default |
+| `tests/installer-packaging.test.ts` | actual packaging commands with a stopping packager stand-in and the executable environment guard; no signing | 5 s default |
+| `tests/installer-reuse.test.ts` | scratch git histories and ZIP extraction, recorded forge metadata and streamed artifact-integrity checks; no network or signing | 5 s default |
 | `src/core/hostEnv.test.ts` | stub login shells | 10 s on the hang test |
 | `tests/export-tasks.test.ts` | node, pnpm | 60 s |
 | `tests/account-eval.test.ts` | twenty independently owned one-case production sessions (all ten cases on each backend), two 503/no-retry proofs, one ten-case Pi run proving every case opens with its sheet allowance, one Pi case refused on a scripted local endpoint, one Claude case cut mid-answer on one, the complete ten-case no-call sheet, plus the Claude crewmate's client read from the real process table and a mock Claude run stopped when that client ends; local mock provider and boxed Claude client | 30 s kept per case |

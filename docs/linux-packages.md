@@ -2,7 +2,7 @@
 
 Infinitary is packaged for Linux on x64 as one package for each supported system and an AppImage for every other Linux (captain's install answer on FI3-1432: "per-system packages plus AppImage").
 This page is how the packages are made and checked.
-Every alpha and stable publishes them on the tap's release beside the Mac zip, with their checksums, and installed Linux apps update from them (`docs/alpha.md` "Builds by system and chip" and "Updates on Linux").
+Every alpha and stable publishes them at the configured public destination beside the Mac ZIP and disk image, with their checksums, and installed Linux apps update from them (`docs/alpha.md` "Builds by system and chip" and "Updates on Linux").
 
 ## What is built
 
@@ -47,7 +47,7 @@ Settings reads the `/usr/bin` link as linked; the Nix link is on the person's pa
 
 The Arch recipe and the Nix package install the release's Ubuntu package, so the two systems run the same bytes as Ubuntu.
 `node scripts/linux-recipes.ts render --version <version> --deb <file> --out <dir>` fills their templates with the version, the Ubuntu package's name, its download address and its checksum.
-The address defaults to the tap's release for that version, the way the casks name theirs (`docs/alpha.md`).
+The address comes from `packaging/release-source.json` and the version's `v<version>` release, independently of Homebrew (`docs/alpha.md`).
 An alpha's Arch version swaps its hyphen for an underscore, as Arch versions take none, and the stable and alpha packages conflict, so only one is installed.
 Each recipe takes its channel's package names, the version's own by default, and a release renders alpha's for a stable version too, for when stable is handed to alpha.
 Each writes `resources/update-channel.json` with its channel and version beside the app, so its update notice follows its own channel.

@@ -121,8 +121,8 @@ describe("the channel casks", () => {
       expect(readCask(cask).quit).toBe(BUNDLE_ID);
       expect(cask).toContain('"~/Library/Application Support/infinitary",');
       expect(cask).not.toContain("infinitary-dev");
-      // The notarized app needs no quarantine step.
-      expect(cask).not.toContain("xattr");
+      // INF-643 captain-approved replacement: the real Homebrew consumer test executes
+      // both hooks and verifies that the ownership receipt leaves quarantine and app bytes intact.
     }
   });
 

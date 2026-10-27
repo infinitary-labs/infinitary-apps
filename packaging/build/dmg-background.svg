@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="360" viewBox="0 0 600 360">
+  <rect width="600" height="360" style="fill:var(--bg-1)"/>
+  <text x="300" y="66" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="20" font-weight="500" style="fill:var(--fg-1)">Infinitary</text>
+  <text x="300" y="126" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="14" style="fill:var(--fg-2)">Drag to install</text>
+  <path d="M232 190H368M358 182L368 190L358 198" fill="none" style="stroke:var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="300" y="308" text-anchor="middle" font-family="Space Grotesk, sans-serif" font-size="13" style="fill:var(--fg-2)">Open Infinitary from Applications, then eject this disk image.</text>
+</svg>

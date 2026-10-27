@@ -61,7 +61,9 @@ export const ACTION_EXCEPTIONS: Partial<Record<CoreInvokeChannel, string>> = {
   "inf:browser:take": "The captain's click in a task's browser view; nothing is set",
   "inf:browser:return": "The captain's click in a task's browser view; nothing is set",
   "inf:update:install":
-    "The captain's own Install in the update panel; the system asks for the person's password and the app starts again",
+    "The captain's own update-and-restart consent in the update panel; a model cannot grant it",
+  "inf:update:channel":
+    "The captain's installed-app subscription on the controlling computer, chosen in Settings; never an agent change to the home computer",
   "inf:browser:sign-ins:automatic":
     "The captain's separate grant or revocation of saved website account access; the first mate never changes it",
   "inf:browser:sign-ins:remove":

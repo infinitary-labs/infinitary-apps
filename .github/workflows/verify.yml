@@ -60,6 +60,25 @@ on:
           - stable
           - alpha
         default: stable
+      installer_only:
+        description: Run only the signed Mac installer and updater proof on disposable hosted Macs; publish nothing
+        required: false
+        type: boolean
+        default: false
+      installer_reuse:
+        description: Select installer-only verification using a reviewed JSON declaration for existing signed copies; never silently rebuilds
+        required: false
+        type: string
+        default: ''
+      installer_chip:
+        description: With installer_only or installer_reuse, which installed checks run - both, arm64 or x64
+        required: false
+        type: choice
+        options:
+          - both
+          - arm64
+          - x64
+        default: both
       perf:
         description: Also grade the e2e paint and latency budgets and the unit tests' time limits (run this on a quiet host)
         required: false
@@ -79,6 +98,7 @@ jobs:
   # hosted Ubuntu, in shards (docs/testing.md, "The Linux source desktop").
   # Journeys that are the Mac's alone skip there and say why.
   linux-e2e:
+    if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
     uses: ./.github/workflows/source-journeys.yml
     with:
       ref: ${{ inputs.ref || github.ref }}
@@ -87,7 +107,21 @@ jobs:
   # run, never a skipped job that reads as green. linux-checks is the PR
   # checks' commands in one job; mac is the full macOS verification. Each step names
   # the lane it belongs to.
+  installer:
+    name: Verify signed installer and updater
+    if: ${{ inputs.installer_only == true || inputs.installer_reuse != '' }}
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/mac-installer.yml
+    with:
+      ref: ${{ inputs.ref || github.ref }}
+      reuse: ${{ inputs.installer_reuse || '' }}
+      chip: ${{ inputs.installer_chip || 'both' }}
+    secrets: inherit
+
   lane:
+    if: ${{ !inputs.installer_only && !inputs.installer_reuse }}
     name: ${{ matrix.lane }}
     strategy:
       fail-fast: false

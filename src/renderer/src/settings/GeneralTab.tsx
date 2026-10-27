@@ -20,6 +20,7 @@ import { purgedTasksText, YOUR_PANELS_WORDS } from "./generalWords";
 import { LocalSeatSection } from "./LocalSeatSection";
 import { SharingSection } from "./SharingSection";
 import { ROW_GAP, SECTION_GAP, SectionLabel, SettingRow } from "./settingRows";
+import { UpdateChannelRow } from "./UpdateChannelRow";
 import { useSettingSave } from "./useSettingSave";
 import { VersionRow } from "./VersionRow";
 import { WebsiteSignInsSection } from "./WebsiteSignInsSection";
@@ -604,8 +605,9 @@ export function GeneralTab() {
       <SharingSection />
       <WebsiteSignInsSection />
       <LocalSeatSection />
-      <div style={{ marginTop: SECTION_GAP }}>
+      <div style={{ marginTop: SECTION_GAP, display: "grid", gap: ROW_GAP }}>
         <VersionRow />
+        <UpdateChannelRow />
       </div>
     </div>
   );

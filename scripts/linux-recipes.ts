@@ -53,10 +53,12 @@ export type RecipeInput = {
   url: string;
 };
 
-/** The tap's release address for a version's Ubuntu package (docs/alpha.md). */
+/** The configured public release address, shared with the Mac and paired-device downloads. */
 export function tapUrl(version: string, debName: string): string {
-  const tag = version.includes("-alpha.") ? `infinitary-alpha-v${version}` : `infinitary-v${version}`;
-  return `https://github.com/infinitary-labs/homebrew-tap/releases/download/${tag}/${debName}`;
+  const { repository } = JSON.parse(readFileSync(join(root, "packaging/release-source.json"), "utf8"));
+  if (typeof repository !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository))
+    throw new Error("Invalid public release destination");
+  return `https://github.com/${repository}/releases/download/v${version}/${debName}`;
 }
 
 function fill(template: string, fields: Record<string, string>): string {

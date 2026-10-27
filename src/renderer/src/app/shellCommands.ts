@@ -25,6 +25,7 @@ import { available, modalOpen } from "./focusRecovery";
 import { projectFocus } from "./projectFocus";
 import { enterCard, moveToRegion } from "./regions";
 import { isHeldEntry, type ShellState, useShellStore } from "./store";
+import { setUpdateNoticeOpen, useUpdateState } from "./updateState";
 import { markWindowKeys } from "./windowKeysMark";
 
 /**
@@ -247,6 +248,7 @@ const SHELL_COMMANDS: Readonly<Record<ShellCommandId, () => void>> = {
   // Settings → Keyboard, with the caret in its search.
   "settings.keyboard": () =>
     openSettingsAt("keyboard", KEYBOARD_SEARCH, (search) => search.focus({ preventScroll: true })),
+  "updates.show": () => setUpdateNoticeOpen(true),
   "whats-new.show": () => showReleaseNote(null),
   "firstmate.reply": () => {
     const s = useShellStore.getState();
@@ -331,6 +333,7 @@ function windowFacts(): WindowFacts {
       const id = shownEntry(useShellStore.getState())?.id;
       return !!id && browserControlButton(id) !== null;
     })(),
+    updateAvailable: useUpdateState.getState().status?.updateAvailable ?? false,
     computers: { page: crewOrbit().page, pages: crewOrbit().pages },
     projectFocus: { shown: projectFocus.state().shown, focus: projectFocus.state().focus },
     panelCommand: (id, recording) => panelCommandRefusal(pluginHost, id, recording),

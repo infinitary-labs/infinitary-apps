@@ -7,24 +7,41 @@ import {
   readdirSync,
   readFileSync,
   realpathSync,
+  renameSync,
   writeFileSync,
 } from "node:fs";
-import { join, relative } from "node:path";
+import { dirname, join, relative } from "node:path";
+import { pathToFileURL } from "node:url";
 import { hostEnv } from "@core/hostEnv";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { runInstallerCommand } from "../scripts/installer-command";
+import {
+  installerHomebrewEnvironment,
+  prepareInstallerHomebrew,
+} from "../scripts/installer-homebrew";
+import {
+  homebrewInstallationReceipt,
+  MAC_INSTALLATION_ATTRIBUTE,
+  MAC_INSTALLATION_RESOURCE,
+} from "../src/core/update/macInstallation";
 import { compareSemver } from "../src/core/update/semver";
 import { BUNDLE_ID, renderCask } from "../src/core/update/tapPublication";
 import {
   buildUpdateTarget,
   CASK_TOKENS,
   FIRSTMATE_TAP,
+  INFINITARY_TAP,
   resolveUpdateChannel,
   resolveUpdateTap,
   targetsUrlOf,
   UPDATE_CHANNEL_MARKER,
   UPDATE_TARGETS_FILE,
 } from "../src/core/update/updateChannels";
-import { createUpdateChecker } from "../src/core/update/updateChecker";
+import {
+  createInstalledUpdateChecker,
+  createUpdateChecker,
+} from "../src/core/update/updateChecker";
+import { readMacInstallation } from "../src/main/host/macInstallation";
 import { declaredStepOnly } from "./helpers/olderCask";
 import { scratchDir } from "./helpers/scratchDirs";
 
@@ -190,6 +207,18 @@ function scratchWorld(installed: string, version: string) {
       mode: 0o755,
     });
     writeFileSync(join(app, "Contents", "Resources", "logical-version"), version);
+    // Exercise the real packaging hook and ZIP, not a separately handwritten ownership stamp.
+    const hook = pathToFileURL(join(root, "scripts/mark-mac-installation.mjs")).href;
+    const context = {
+      electronPlatformName: "darwin",
+      appOutDir: dirname(app),
+      packager: { appInfo: { productFilename: name } },
+    };
+    ok(process.execPath, [
+      "--input-type=module",
+      "-e",
+      `import mark from ${JSON.stringify(hook)}; mark(${JSON.stringify(context)});`,
+    ]);
     const zip = join(artifacts, `${name.replaceAll(" ", "-")}-${version}-universal.zip`);
     ok("ditto", ["-c", "-k", "--sequesterRsrc", "--keepParent", app, zip]);
     const sha256 = createHash("sha256").update(readFileSync(zip)).digest("hex");
@@ -308,16 +337,30 @@ function scratchWorld(installed: string, version: string) {
   const offered = async () => {
     const version = installedVersion();
     const tapped = brewOk("--repository", TAP).trim();
-    const checker = createUpdateChecker({
-      currentVersion: version,
-      channel: () => resolveUpdateChannel(dataRoot, version),
+    // INF-643's revised requirement: actual cask installation chooses the Homebrew reader,
+    // not merely a matching marker in shared saved data. Native effects must remain untouched.
+    const installation = readMacInstallation(join(applications, "Infinitary.app"));
+    expect(installation.kind).toBe("homebrew");
+    const native = { installation, check: vi.fn(), download: vi.fn(), install: vi.fn() };
+    const checker = createInstalledUpdateChecker({
+      app: { packaged: true, platform: "darwin", version, userDataDir: dataRoot },
+      macDriver: native,
+      openExternal: () => {},
       fetchImpl: async () => new Response(readFileSync(join(tapped, UPDATE_TARGETS_FILE), "utf8")),
     });
-    return checker.getStatus();
+    const status = await checker.getStatus();
+    expect(status.install).toBeUndefined();
+    expect(status.channelChoice).toBeUndefined();
+    expect((await checker.install()).ok).toBe(false);
+    expect(native.check).not.toHaveBeenCalled();
+    expect(native.download).not.toHaveBeenCalled();
+    expect(native.install).not.toHaveBeenCalled();
+    return status;
   };
 
   return {
     dir,
+    env,
     git,
     run,
     prefix,
@@ -344,6 +387,130 @@ function scratchWorld(installed: string, version: string) {
 
 describe.skipIf(!homebrew)("the casks under a real Homebrew, in scratch state", () => {
   const versions = (process.env.INFINITARY_CASK_HOMEBREW_VERSIONS ?? "current").split(",");
+
+  // INF-643 run 40168241408: a cask upgrade with the API disabled needs core
+  // metadata. Exercise the real CoreTap reader and preflight using a local Git
+  // source; this proves prerequisite handling, not signed app installation.
+  it("prepares the missing Homebrew core prerequisite before network isolation", () => {
+    const world = scratchWorld(homebrew as string, "current");
+    const core = join(world.prefix, "Library/Taps/homebrew/homebrew-core");
+    const source = join(world.dir, "core-source");
+    renameSync(core, source);
+    const brew = join(world.prefix, "bin/brew");
+    const env = installerHomebrewEnvironment(world.env, world.dir);
+    env.HOMEBREW_CORE_GIT_REMOTE = join(world.dir, "unavailable-core");
+    const metadata = ["ruby", "-e", 'require "tap"; puts CoreTap.instance.tap_migrations.to_json'];
+    expect(() => runInstallerCommand(brew, metadata, env)).toThrow("failed");
+    expect(existsSync(core)).toBe(false);
+    env.HOMEBREW_CORE_GIT_REMOTE = source;
+    const run = vi.fn(
+      (command: string, args: string[], options: { env: NodeJS.ProcessEnv; timeout: number }) =>
+        runInstallerCommand(command, args, env, options),
+    );
+    const expected = world.git(source, "rev-parse", "HEAD").trim();
+    expect(prepareInstallerHomebrew(brew, env, run)).toEqual({
+      repository: core,
+      commit: expected,
+    });
+    expect(JSON.parse(runInstallerCommand(brew, metadata, env))).toEqual({});
+    run.mockClear();
+    expect(prepareInstallerHomebrew(brew, env, run).commit).toBe(expected);
+    expect(run.mock.calls.some(([, args]) => args.includes("--force"))).toBe(false);
+    console.info(
+      "Homebrew prerequisite: cold metadata read refused; the prepared local source is readable and an existing tap is preserved.",
+    );
+  });
+
+  // INF-643 captain approval: replace the source-text ban on xattr with the safety fact
+  // it intended. Execute the generated hooks through real Homebrew on quarantined fixture
+  // apps; ownership may change, but quarantine, unrelated metadata and app bytes may not.
+  it.each(versions)(
+    "Homebrew %s records ownership without changing quarantine or app contents",
+    (version) => {
+      const world = scratchWorld(homebrew as string, version);
+      const checked = (command: string, args: string[]) => {
+        const result = world.run(command, args);
+        expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+        return result.stdout;
+      };
+      const attributes = (path: string) =>
+        Object.fromEntries(
+          checked("/usr/bin/xattr", [path])
+            .trim()
+            .split("\n")
+            .filter(Boolean)
+            .map((name) => [
+              name,
+              checked("/usr/bin/xattr", ["-px", name, path]).replace(/\s/g, "").toLowerCase(),
+            ]),
+        );
+      const notice = readFileSync(join(root, "packaging/alpha-notice.txt"), "utf8");
+      const artifactVersion = "0.1.25";
+      const artifact = world.standIn(artifactVersion);
+      for (const tap of [INFINITARY_TAP, FIRSTMATE_TAP]) {
+        const target = buildUpdateTarget(
+          {
+            version: artifactVersion,
+            assetName: `Infinitary-${artifactVersion}-universal.zip`,
+            sha256: artifact.sha256,
+            sourceCommit: COMMIT,
+          },
+          tap,
+        );
+        for (const channel of ["stable", "alpha"] as const) {
+          const token = tap.caskTokens[channel];
+          const cask = join(world.dir, `${token}.rb`);
+          writeFileSync(cask, renderCask(channel, target, notice, tap));
+          const staged = join(world.prefix, "Caskroom", token, artifactVersion);
+          mkdirSync(staged, { recursive: true });
+          checked("/usr/bin/ditto", ["-x", "-k", artifact.zip, staged]);
+          const app = join(staged, "Infinitary.app");
+          const resource = join(app, MAC_INSTALLATION_RESOURCE);
+          // Safari-format download quarantine on both the bundle and the file whose receipt changes.
+          // Read it back before the hooks so the assertion compares actual filesystem values.
+          for (const path of [app, resource]) {
+            checked("/usr/bin/xattr", [
+              "-w",
+              "com.apple.quarantine",
+              "0083;68f6a000;Safari;83A1A181-41E4-4D37-8388-8584D849A851",
+              path,
+            ]);
+          }
+          const beforeBundle = attributes(app);
+          const beforeFile = attributes(resource);
+          expect(beforeBundle["com.apple.quarantine"]).toBeTruthy();
+          expect(beforeFile["com.apple.quarantine"]).toBeTruthy();
+          const beforeBytes = world.savedWork(app);
+          const script = join(world.dir, "run-cask-hooks.rb");
+          writeFileSync(
+            script,
+            `
+require "cask/cask_loader"
+cask = Cask::CaskLoader.load(Pathname(${JSON.stringify(cask)}))
+phases = [:preflight_steps, :preflight, :postflight_steps, :postflight]
+hooks = cask.artifacts.select { |artifact| phases.include?(artifact.class.dsl_key) }
+raise "Expected ownership and channel hooks" unless hooks.length == 2
+hooks.sort_by { |artifact| phases.index(artifact.class.dsl_key) }.each(&:install_phase)
+`,
+          );
+          world.brewOk("ruby", script);
+          expect(attributes(app)).toEqual(beforeBundle);
+          expect(attributes(resource)).toEqual({
+            ...beforeFile,
+            [MAC_INSTALLATION_ATTRIBUTE]: Buffer.from(
+              homebrewInstallationReceipt(channel, tap),
+            ).toString("hex"),
+          });
+          expect(world.savedWork(app)).toEqual(beforeBytes);
+          console.info(
+            `Homebrew ${version}: ${tap.tap}/${token} changed only its ownership receipt; quarantine and app bytes survived`,
+          );
+        }
+      }
+    },
+    180_000,
+  );
+
   it.each(versions)(
     "Homebrew %s installs, refuses, upgrades and switches channels, keeping saved work",
     async (version) => {
@@ -523,6 +690,21 @@ describe.skipIf(!homebrew)("the casks under a real Homebrew, in scratch state", 
       expect(world.installedVersion()).toBe("0.1.28");
       expect(world.marker()).toEqual({ schemaVersion: 1, channel: "stable" });
       expect(world.savedWork()).toEqual(seeded);
+      // INF-643: copying the direct artifact over a Homebrew copy must not inherit its ownership.
+      expect(readMacInstallation(join(world.applications, "Infinitary.app")).kind).toBe("homebrew");
+      const direct = join(world.dir, "direct-installer");
+      const extract = world.run("ditto", ["-x", "-k", world.standIn("0.1.28").zip, direct]);
+      expect(extract.status, extract.stderr).toBe(0);
+      // The copy operation used by the signed disk-image verifier, including a pre-existing bundle.
+      const copy = world.run("ditto", [
+        join(direct, "Infinitary.app"),
+        join(world.applications, "Infinitary.app"),
+      ]);
+      expect(copy.status, copy.stderr).toBe(0);
+      expect(readMacInstallation(join(world.applications, "Infinitary.app"))).toEqual({
+        kind: "direct",
+      });
+      expect(world.savedWork()).toEqual(seeded);
       brewOk("uninstall", "--cask", CASK_TOKENS.stable);
       expect(world.savedWork()).toEqual(seeded);
     },
@@ -644,7 +826,7 @@ describe.skipIf(!homebrew)("the casks under a real Homebrew, in scratch state", 
         "Firstmate 3000 is in private alpha.",
         FIRSTMATE_TAP,
       )
-        .replace('app "Infinitary.app"', 'app "Firstmate 3000.app"')
+        .replaceAll("Infinitary.app", "Firstmate 3000.app")
         .replaceAll("Application Support/infinitary/", "Application Support/firstmate-3000/")
         .replaceAll(',\\"cameThroughOldCask\\":true', "")
         .replaceAll(',"cameThroughOldCask":true', "")

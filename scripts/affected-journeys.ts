@@ -74,6 +74,20 @@ const FALLBACKS = [
   },
   { paths: ["src/core/devices/"], specs: ["devices.spec.ts"] },
   {
+    // The Mac journey drives this controller and shared store, even when no drawn hook changes.
+    paths: [
+      "src/core/update/macUpdates.ts",
+      "src/core/update/macInstallation.ts",
+      "src/core/update/updateChecker.ts",
+      "src/renderer/src/app/updateState.ts",
+    ],
+    specs: ["mac-updates.spec.ts"],
+  },
+  {
+    paths: ["tests/fixtures/installed-updates/runningWork.ts"],
+    specs: ["installed-update-work.spec.ts"],
+  },
+  {
     // Automatic placement on the Mac's own readings: no hook or words change with its rules.
     paths: [
       "src/core/routing/placementEngine.ts",

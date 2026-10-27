@@ -30,8 +30,16 @@ export const updateStatusSchema = z.object({
     .object({
       /** The system asks for the person's password before it installs. */
       asksPassword: z.boolean(),
+      /** A Mac update downloads, verifies and restarts only after consent. */
+      restarts: z.boolean().optional(),
     })
     .optional(),
+  /** The local app owns a persistent choice, independently of the installed version. */
+  channelChoice: z.boolean().optional(),
+  phase: z.enum(["idle", "checking", "downloading", "installing", "ready", "error"]).optional(),
+  percent: z.number().min(0).max(100).optional(),
+  problem: z.string().optional(),
+  notice: z.string().optional(),
 });
 export type UpdateStatus = z.infer<typeof updateStatusSchema>;
 

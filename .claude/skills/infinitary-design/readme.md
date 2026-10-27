@@ -263,6 +263,13 @@ What differs is decided by the system, never by the person's choice of desktop: 
   The microphone line ends "Turn it on in your desktop's privacy settings."
   There is no Open System Settings button, because no desktop gives the app one page to open.
 
+## Disk-image installation
+
+The Mac installer uses a fixed light-theme background so Finder’s native icon labels remain legible.
+Use the light color tokens and Space Grotesk, with the app at the left, an Applications shortcut at the right, and one accent arrow under “Drag to install”.
+The window has no wizard or license dialog; the foot line says to open the installed copy and eject the image.
+The artwork source is `packaging/build/dmg-background.svg`, rendered by `scripts/render-dmg-background.mjs` with the skill’s tokens and font.
+
 ## ICONOGRAPHY
 - **Icon set:** [Lucide](https://lucide.dev) via CDN (`lucide` UMD), stroke 1.5, sized 14–18px, colored `currentColor`.
   Chosen for its thin, even stroke that matches the wireframe character.

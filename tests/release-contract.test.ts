@@ -27,6 +27,7 @@ import { ALONE_RESULTS } from "../scripts/e2e-alone.ts";
 import { ARCHES, manifestEntry } from "../scripts/ensure-bundled-git.ts";
 import { MAC_UNIT_FILES } from "../scripts/mac-unit-tests.ts";
 import { presentationCommitMessage } from "../src/core/forge";
+import { PUBLIC_RELEASE_NAMES, releaseSource } from "../src/core/update/releaseSource";
 import { compareSemver, isAlphaVersion } from "../src/core/update/semver";
 import { BUNDLE_ID, HOMEPAGE, renderCask } from "../src/core/update/tapPublication";
 import {
@@ -1805,21 +1806,50 @@ describe("signed release workflow", () => {
     expect(workflow).toContain("TEAM_ID: 9T2J7MNUP9");
   });
 
-  it("references exactly the documented secret names", () => {
-    for (const secret of [
+  it("resolves the documented signing and publication credentials through the workflow's expressions", () => {
+    // Revised INF-643: independent credentials preserve both publication destinations.
+    const names = [
       "MAC_DEVELOPER_ID_CERT_P12",
       "MAC_DEVELOPER_ID_CERT_PASSWORD",
       "APP_STORE_CONNECT_KEY_ID",
       "APP_STORE_CONNECT_ISSUER_ID",
       "APP_STORE_CONNECT_API_KEY",
+      "PUBLIC_RELEASE_TOKEN",
+      "GITHUB_TOKEN",
       "HOMEBREW_TAP_TOKEN",
-    ]) {
-      expect(workflow).toContain(`secrets.${secret}`);
+      "OLD_TAP_TOKEN",
+    ];
+    const secrets = Object.fromEntries(names.map((name) => [name, `fixture-${name}`]));
+    const parsed = loadYamlFile(".github/workflows/release.yml") as {
+      jobs: Record<string, { steps?: { id?: string; env?: Record<string, string> }[] }>;
+    };
+    const expressions = Object.values(parsed.jobs)
+      .flatMap((job) => (job.steps ?? []).flatMap((step) => Object.values(step.env ?? {})))
+      .filter((value) => value.startsWith("${{ secrets."));
+    expect(
+      new Set(expressions.map((expression) => workflowValue(expression, { secrets }))),
+    ).toEqual(new Set(Object.values(secrets)));
+    for (const id of ["visibility", "feeds", "feed-rehearsal"]) {
+      const binding = parsed.jobs.release?.steps?.find((step) => step.id === id)?.env?.GH_TOKEN;
+      if (!binding) throw new Error(`${id} has no publication credential binding`);
+      for (const own of [true, false]) {
+        expect(
+          workflowValue(binding, {
+            secrets,
+            github: { repository: "infinitary-labs/infinitary" },
+            needs: {
+              resolve: {
+                outputs: {
+                  release_repository: own
+                    ? "infinitary-labs/infinitary"
+                    : "infinitary-labs/downloads",
+                },
+              },
+            },
+          }),
+        ).toBe(secrets[own ? "GITHUB_TOKEN" : "PUBLIC_RELEASE_TOKEN"]);
+      }
     }
-    // The separate public releases repository and its token are gone: the
-    // tap's own token publishes the alpha artifact (docs/alpha.md).
-    expect(workflow).not.toContain("RELEASES_REPO");
-    expect(workflow).not.toContain("firstmate-3000-releases");
   });
 
   it("runs every gate: verify, launch, notarize, staple, re-download", () => {
@@ -1968,6 +1998,36 @@ describe("resolving a release", () => {
     git(clone, "update-ref", "refs/remotes/origin/main", head);
     return { clone, commit, alpha13, head };
   }
+
+  it("keeps a promoted source's download destination when main selects a different host", () => {
+    // INF-640: an updater and the publication it reads must use the same selected destination.
+    const f = fixture();
+    const configuration = read("packaging/release-source.json");
+    const source = f.commit("feat: select the download host", {
+      "packaging/release-source.json": configuration,
+    });
+    f.commit("chore: select a different future host", {
+      "packaging/release-source.json": JSON.stringify({
+        ...JSON.parse(configuration),
+        repository: "infinitary-labs/downloads",
+      }),
+    });
+    const workflow = loadYamlFile(".github/workflows/release.yml") as {
+      jobs: { resolve: { steps: { id?: string; run?: string }[] } };
+    };
+    const body = workflow.jobs.resolve.steps.find((step) => step.id === "destination")?.run;
+    if (!body) throw new Error("The source destination reader is missing");
+    const output = join(scratchDir("inf-release-source-output-"), "output");
+    const result = spawnSync("bash", ["-c", body], {
+      cwd: f.clone,
+      encoding: "utf8",
+      env: { ...gitEnv, SOURCE_COMMIT: source, GITHUB_OUTPUT: output },
+    });
+    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(output, "utf8")).toBe(
+      `repository=${JSON.parse(configuration).repository}\n`,
+    );
+  });
 
   /** Runs the resolver in a clone, returning its outputs. */
   function resolve(clone: string, env: Record<string, string>) {
@@ -2326,7 +2386,7 @@ describe("resolving a release", () => {
     ]) {
       expect(existsSync(join(root, retired)), retired).toBe(false);
     }
-    for (const name of ["ci.yml", "release.yml", "republish-casks.yml", "verify.yml"]) {
+    for (const name of ["ci.yml", "release.yml", "mac-installer.yml", "verify.yml"]) {
       const workflow = loadYamlFile(`.github/workflows/${name}`) as {
         on: Record<string, unknown>;
         permissions?: Record<string, string>;
@@ -2414,7 +2474,7 @@ describe("the signed channel workflow", () => {
   });
 
   it("runs each profile's lanes as one matrix, so an omitted lane is absent from the run, never skipped", () => {
-    expect(Object.keys(verify.jobs)).toEqual(["linux-e2e", "lane"]);
+    expect(Object.keys(verify.jobs)).toEqual(["linux-e2e", "installer", "lane"]);
     expect(verify.jobs["linux-e2e"]).toMatchObject({
       uses: "./.github/workflows/source-journeys.yml",
       with: { ref: "${{ inputs.ref || github.ref }}", suite: "full" },
@@ -2425,12 +2485,18 @@ describe("the signed channel workflow", () => {
     // Only the reusable verification call and its downstream signing job are
     // conditional. The lane jobs themselves never turn a skip into a pass.
     expect(jobOf(release, "resolve").if).toBeUndefined();
-    expect(lane.if).toBeUndefined();
+    expect(workflowValue(lane.if ?? "", { inputs: {} })).toBe(true);
+    expect(workflowValue(lane.if ?? "", { inputs: { installer_only: true } })).toBe(false);
+    expect(workflowValue(jobOf(verify, "installer").if ?? "", { inputs: {} })).toBe(false);
+    expect(
+      workflowValue(jobOf(verify, "installer").if ?? "", { inputs: { installer_only: true } }),
+    ).toBe(true);
     expect(Object.keys(release.jobs)).toEqual([
       "resolve",
       "notes",
       "verify",
       "linux",
+      "installer",
       "release",
       "old-cask-upgrade",
     ]);
@@ -2537,6 +2603,7 @@ describe("the signed channel workflow", () => {
           notes: { result: "success" },
           verify: { result },
           linux: { result: "success" },
+          installer: { result: required === "true" ? "success" : "skipped" },
         };
         expect(workflowValue(jobOf(release, "verify").if ?? "", { needs })).toBe(
           required === "true",
@@ -2545,6 +2612,13 @@ describe("the signed channel workflow", () => {
           (required === "true" && result === "success") ||
             (required === "false" && result === "skipped"),
         );
+        for (const installer of ["failure", "cancelled", ""]) {
+          expect(
+            workflowValue(jobOf(release, "release").if ?? "", {
+              needs: { ...needs, installer: { result: installer } },
+            }),
+          ).toBe(false);
+        }
         // A release whose notes were not checked never signs, whatever else passed.
         for (const notes of ["failure", "cancelled", "skipped"]) {
           expect(
@@ -2573,6 +2647,9 @@ describe("the signed channel workflow", () => {
       "skipped mac",
       "pending mac",
       "legacy alpha without mac",
+      "alpha without installed-update proof",
+      "failed Intel proof",
+      "pending Apple silicon proof",
       "failed alpha run",
       "missing alpha run",
     ]) {
@@ -2592,17 +2669,30 @@ describe("the signed channel workflow", () => {
         "verify / linux-e2e / journeys (1/2)",
         "verify / linux-e2e / journeys (2/2)",
         "verify / mac",
+        "Verify signed installer and updater / Apple silicon",
+        "Verify signed installer and updater / Intel",
       ]
+        .filter(
+          (name) =>
+            scenario !== "alpha without installed-update proof" ||
+            !name.startsWith("Verify signed installer"),
+        )
         .filter((name) => scenario !== "legacy alpha without mac" || name !== "verify / mac")
         .map((name) => ({
           name,
-          status: scenario === "pending mac" && name.endsWith("mac") ? "in_progress" : "completed",
+          status:
+            (scenario === "pending mac" && name.endsWith("mac")) ||
+            (scenario === "pending Apple silicon proof" && name.endsWith("Apple silicon"))
+              ? "in_progress"
+              : "completed",
           conclusion:
-            name.endsWith("mac") && scenario === "failed mac"
+            scenario === "failed Intel proof" && name.endsWith("Intel")
               ? "failure"
-              : name.endsWith("mac") && scenario === "skipped mac"
-                ? "skipped"
-                : "success",
+              : name.endsWith("mac") && scenario === "failed mac"
+                ? "failure"
+                : name.endsWith("mac") && scenario === "skipped mac"
+                  ? "skipped"
+                  : "success",
         }));
       const listRuns = Symbol("runs");
       const listJobs = Symbol("jobs");
@@ -2714,7 +2804,7 @@ describe("the signed channel workflow", () => {
     });
     // Nothing verify runs holds a secret.
     expect(call.secrets).toBeUndefined();
-    expect(signing.needs).toEqual(["resolve", "notes", "verify", "linux"]);
+    expect(signing.needs).toEqual(["resolve", "notes", "verify", "linux", "installer"]);
     expect(steps[0]).toMatchObject({
       uses: "actions/checkout@v4",
       // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
@@ -2733,11 +2823,11 @@ describe("the signed channel workflow", () => {
       .slice(
         commands.findIndex((candidate) => candidate.run === "pnpm install --frozen-lockfile") + 1,
       )
-      .filter((candidate) => candidate.id !== "activation");
+      .filter((candidate) => !["visibility", "capability"].includes(candidate.id ?? ""));
     expect(afterInstall[0]?.id).toBe("build");
     expect(afterInstall[0]?.run).toBe("pnpm build");
     const firstSecret = steps.findIndex((candidate) =>
-      /secrets\.(?!GITHUB_TOKEN)/.test(JSON.stringify(candidate)),
+      /secrets\.(MAC_DEVELOPER_ID|APP_STORE_CONNECT)/.test(JSON.stringify(candidate)),
     );
     expect(steps[firstSecret]?.name).toBe("Restore App Store Connect API key");
     expect(steps.indexOf(step("build"))).toBeLessThan(firstSecret);
@@ -2905,19 +2995,26 @@ describe("the signed channel workflow", () => {
   });
 
   const PUBLISHES =
-    /gh release (create|upload)|publish-release-asset\.sh|publish-tap\.sh live|git push/;
-  const PUBLICATION_TOKEN = /secrets\.(GITHUB_TOKEN|HOMEBREW_TAP_TOKEN|OLD_TAP_TOKEN)/;
+    /gh release (create|upload)|publish-release-asset\.sh|publish-(?:tap|feeds)\.sh live|git push/;
+  const PUBLICATION_TOKEN =
+    /secrets\.(GITHUB_TOKEN|PUBLIC_RELEASE_TOKEN|HOMEBREW_TAP_TOKEN|OLD_TAP_TOKEN)/;
   /** The steps of a passing run of a channel, live or rehearsed, in order. */
-  const ranSteps = (channel: string, dryRun: boolean, oldCask = false) =>
+  const ranSteps = (channel: string, dryRun: boolean, oldCask = false, mirror = false) =>
     steps.filter(
       (candidate) =>
         candidate.if === undefined ||
         workflowValue(candidate.if, {
           needs: {
             resolve: {
-              outputs: { channel, dry_run: String(dryRun), old_cask: String(oldCask) },
+              outputs: {
+                channel,
+                dry_run: String(dryRun),
+                old_cask: String(oldCask),
+                release_repository: mirror ? "example/public-downloads" : releaseSource.repository,
+              },
             },
           },
+          github: { repository: releaseSource.repository },
           steps: Object.fromEntries(
             steps.flatMap((each) => (each.id ? [[each.id, { outcome: "success" }]] : [])),
           ),
@@ -2928,7 +3025,8 @@ describe("the signed channel workflow", () => {
     const ran = ranSteps(channel, true);
     for (const candidate of ran) {
       expect(candidate.run ?? "", candidate.name).not.toMatch(PUBLISHES);
-      expect(JSON.stringify(candidate.env ?? {}), candidate.name).not.toMatch(PUBLICATION_TOKEN);
+      if (candidate.id !== "feed-rehearsal")
+        expect(JSON.stringify(candidate.env ?? {}), candidate.name).not.toMatch(PUBLICATION_TOKEN);
     }
     expect(ran.map((candidate) => candidate.id ?? candidate.name)).toEqual(
       expect.arrayContaining([
@@ -2940,37 +3038,62 @@ describe("the signed channel workflow", () => {
         "notarize",
         "zip",
         "checksum",
-        "tap-rehearsal",
-        "old-tap-rehearsal",
-        "Keep the rehearsed tap files",
+        "dmg",
+        "feed-rehearsal",
+        "Keep the rehearsed release metadata",
         "Summarize",
       ]),
     );
-    // The rehearsal of the tap commit reads the live tap without a credential.
-    expect(step("tap-rehearsal").run).toContain("scripts/publish-tap.sh rehearsal");
-    expect(JSON.stringify(step("tap-rehearsal").env)).not.toContain("secrets.");
+    // The feed rehearsal may read a not-yet-public repository, but cannot publish.
+    expect(step("feed-rehearsal").run).toContain("scripts/publish-feeds.sh rehearsal");
     // electron-builder never publishes on its own either.
     expect(step("package").run).toContain("--publish never");
   });
 
   it.each(["stable", "alpha"])(
-    "publishes a real %s only after the public download was fetched back, then writes the tap",
+    "publishes %s through both Homebrew and direct feeds only after their downloads verify",
     (channel) => {
-      const ran = ranSteps(channel, false).map((candidate) => candidate.id ?? candidate.name);
-      const publication = ["private", "private-fetch-back", "public", "public-fetch-back", "tap"];
-      expect(ran.filter((id) => publication.includes(id as string))).toEqual(publication);
-      expect(ran).not.toContain("tap-rehearsal");
-      // Firstmate 3000's cask moves only for a channel the switch file lists.
-      const switchSteps = ["old-public", "old-public-fetch-back", "old-tap"];
-      expect(ran.filter((id) => switchSteps.includes(id as string))).toEqual([]);
-      // A live alpha checks the channel is activated before it signs anything.
-      if (channel === "alpha") {
-        expect(ran.indexOf("activation")).toBeGreaterThan(-1);
-        expect(ran.indexOf("activation")).toBeLessThan(ran.indexOf("developer_id_cert"));
-      } else {
-        expect(ran).not.toContain("activation");
+      // INF-640: exercise the actual workflow conditions, including a separately configured mirror.
+      for (const mirror of [false, true]) {
+        const ran = ranSteps(channel, false, false, mirror).map(
+          (candidate) => candidate.id ?? candidate.name,
+        );
+        const publication = [
+          "private",
+          "recorded-dmg",
+          "private-fetch-back",
+          ...(mirror ? ["public"] : []),
+          "public-fetch-back",
+          "feeds",
+        ];
+        expect(
+          ran.filter((id) =>
+            [
+              "private",
+              "recorded-dmg",
+              "private-fetch-back",
+              "public",
+              "public-fetch-back",
+              "feeds",
+            ].includes(id ?? ""),
+          ),
+        ).toEqual(publication);
+        expect(ran.indexOf("visibility")).toBeLessThan(ran.indexOf("developer_id_cert"));
+        expect(ran.indexOf("dmg")).toBeGreaterThan(ran.indexOf("private"));
+        expect(ran.indexOf("dmg")).toBeLessThan(ran.indexOf("recorded-dmg"));
+        expect(ran).not.toContain("feed-rehearsal");
+        expect(ran).toEqual(
+          expect.arrayContaining(["homebrew-public", "homebrew-fetch-back", "tap"]),
+        );
+        expect(ran.indexOf("homebrew-fetch-back")).toBeGreaterThan(ran.indexOf("homebrew-public"));
+        expect(ran.indexOf("tap")).toBeGreaterThan(ran.indexOf("homebrew-fetch-back"));
+        expect(ran).not.toContain("tap-rehearsal");
       }
-      // Only the publication steps hold a publication token or publish.
+      expect(JSON.stringify(step("public-fetch-back").env)).not.toContain("secrets.");
+      expect(step("public").env?.ARTIFACT).toBe("${{ steps.private.outputs.zip }}");
+      expect(step("public").env?.DISK_IMAGE).toBe("${{ steps.recorded-dmg.outputs.zip }}");
+      for (const id of ["private-fetch-back", "public-fetch-back"])
+        expect(step(id).env?.ARTIFACT_SHA256).toBe("${{ steps.private.outputs.sha256 }}");
       expect(
         steps
           .filter(
@@ -2979,45 +3102,40 @@ describe("the signed channel workflow", () => {
               PUBLICATION_TOKEN.test(JSON.stringify(candidate.env ?? {})),
           )
           .map((candidate) => candidate.id),
-      ).toEqual(["private", "private-fetch-back", "public", "tap", "old-public", "old-tap"]);
-      // The fetch-back Homebrew's GET stands for holds no token.
-      expect(JSON.stringify(step("public-fetch-back").env)).not.toContain("secrets.");
-      // Every copy after the record is the record's artifact.
-      expect(step("public").env?.ARTIFACT).toBe(
-        // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-        "${{ steps.private.outputs.zip }}",
-      );
-      for (const id of ["private-fetch-back", "public", "public-fetch-back"]) {
-        expect(step(id).env?.ARTIFACT_SHA256).toBe(
-          // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-          "${{ steps.private.outputs.sha256 }}",
-        );
-      }
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-      expect(step("tap").env?.SHA256).toBe("${{ steps.private.outputs.sha256 }}");
+      ).toEqual([
+        "visibility",
+        "private",
+        "recorded-dmg",
+        "private-fetch-back",
+        "public",
+        "homebrew-public",
+        "tap",
+        "old-public",
+        "old-tap",
+        "feeds",
+        "feed-rehearsal",
+      ]);
     },
   );
 
-  // The old-cask switch (FI3-1780 step 10, for steps 13 and 14): once
-  // Infinitary's own tap carries the release, the same bytes go to Firstmate
-  // 3000's tap under the tag an installed Firstmate 3000 accepts, are fetched
-  // back without a credential, and only then does that tap's cask move.
   it.each(["stable", "alpha"])(
-    "switches Firstmate 3000's %s cask only after its own copy was fetched back",
+    "keeps %s old-cask publication gated by explicit channel activation",
     (channel) => {
-      const ran = ranSteps(channel, false, true).map((candidate) => candidate.id ?? candidate.name);
-      const order = ["tap", "old-public", "old-public-fetch-back", "old-tap"];
-      expect(ran.filter((id) => order.includes(id as string))).toEqual(order);
-      expect(JSON.stringify(step("old-public-fetch-back").env)).not.toContain("secrets.");
-      expect(step("old-public").env?.ARTIFACT).toBe(
-        // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-        "${{ steps.private.outputs.zip }}",
+      // Revised INF-643: retain both paths, including the already-activated old-cask bridge.
+      const inactive = ranSteps(channel, false, false).map((step) => step.id);
+      const active = ranSteps(channel, false, true).map((step) => step.id);
+      for (const id of ["old-public", "old-public-fetch-back", "old-tap"]) {
+        expect(inactive).not.toContain(id);
+        expect(active).toContain(id);
+      }
+      expect(active.indexOf("old-public-fetch-back")).toBeGreaterThan(active.indexOf("old-public"));
+      expect(active.indexOf("old-tap")).toBeGreaterThan(active.indexOf("old-public-fetch-back"));
+      for (const id of ["homebrew-fetch-back", "old-public-fetch-back"])
+        expect(JSON.stringify(step(id).env)).not.toContain("secrets.");
+      expect(step("tap").env?.DOWNLOAD_URL).toBe("${{ needs.resolve.outputs.download_url }}");
+      expect(step("old-tap").env?.DOWNLOAD_URL).toBe(
+        "${{ needs.resolve.outputs.old_download_url }}",
       );
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-      expect(step("old-tap").env?.HOMEBREW_TAP_TOKEN).toBe("${{ secrets.OLD_TAP_TOKEN }}");
-      expect(step("old-tap").env?.NAMES).toBe("firstmate");
-      expect(step("old-tap").run).toContain("$OLD_TAP_REPO");
-      expect(release.env.OLD_TAP_REPO).toBe(FIRSTMATE_TAP.repo);
     },
   );
 
@@ -3033,7 +3151,15 @@ describe("the signed channel workflow", () => {
         (match) => match[1],
       ),
     );
-    expect(launches).toEqual(["$VERSION", "$VERSION", "$VERSION", "$VERSION"]);
+    const launchStages = [
+      "launch",
+      "zip",
+      "private-fetch-back",
+      "public-fetch-back",
+      "homebrew-fetch-back",
+    ];
+    expect(launches).toEqual(launchStages.map(() => "$VERSION"));
+    for (const id of launchStages) expect(step(id).run).toContain("scripts/check-app-launch.sh");
   });
 
   it.skipIf(process.platform !== "darwin")(
@@ -3092,16 +3218,11 @@ function generatorEnv(fields: Record<string, string>): NodeJS.ProcessEnv {
 }
 
 /**
- * Republishing the casks (docs/alpha.md "Republishing the casks"): main's
- * generator writes both casks again at the targets the tap already names,
- * when a change to what they are written from reaches main or on demand;
- * a dry run pushes nothing. Read through GitHub's own expression evaluator.
- */
-/**
- * The captain's INF-603 answer to question 7: every job that signs with his
- * Apple certificates (the TestFlight upload and the release) runs on the real
- * Mac, never in a virtual one, through one label the switch sets; every other
- * Mac job may use any place. Until REAL_MAC_RUNNER is set, nothing moves.
+ * The captain's INF-603 answer to question 7: production signing (the TestFlight
+ * upload and release) runs on the real Mac through one configured label.
+ * INF-643 separately authorizes disposable signing for installer verification,
+ * and INF-816 moves its build/arm64 jobs into placement-service virtual Macs.
+ * Neither publishes. Until REAL_MAC_RUNNER is set, production signing does not move.
  */
 describe("the jobs that ask for the real Mac", () => {
   type Job = { "runs-on"?: string };
@@ -3322,6 +3443,118 @@ describe("the cask republication workflow", () => {
   });
 });
 
+// Captain's "Prepare reuse": selecting old copies must skip the signing job,
+// not skip either installed-check job or silently select a fresh build.
+it("selects only the complete installed checks for reuse, without a signing job", () => {
+  type Job = {
+    if?: string;
+    with?: Record<string, string>;
+    steps?: { id?: string; if?: string; run?: string; uses?: string }[];
+  };
+  const installer = loadYamlFile(".github/workflows/mac-installer.yml") as {
+    jobs: Record<string, Job>;
+  };
+  const verify = loadYamlFile(".github/workflows/verify.yml") as { jobs: Record<string, Job> };
+  const selected = (job: Job | undefined, contexts: Record<string, unknown>) => {
+    if (!job) throw new Error("The verification job is missing");
+    return Boolean(workflowValue(job.if ?? "${{ true }}", contexts));
+  };
+  for (const reuse of ["", "reviewed declaration"]) {
+    const inputs = { reuse };
+    expect(selected(installer.jobs.build, { inputs })).toBe(!reuse);
+    expect(
+      selected(installer.jobs.installed, {
+        inputs,
+        needs: { build: { result: reuse ? "skipped" : "success" } },
+      }),
+    ).toBe(true);
+    expect(
+      selected(installer.jobs.installed, { inputs, needs: { build: { result: "failure" } } }),
+    ).toBe(false);
+    const steps = installer.jobs.installed?.steps ?? [];
+    expect(selected(steps.find((step) => step.id === "reuse") as Job, { inputs })).toBe(
+      Boolean(reuse),
+    );
+    expect(
+      selected(steps.find((step) => step.uses === "actions/download-artifact@v4") as Job, {
+        inputs,
+      }),
+    ).toBe(!reuse);
+  }
+  for (const installer_only of [false, true]) {
+    const reused = {
+      inputs: { installer_only, installer_reuse: "reviewed declaration", ref: "reviewed source" },
+    };
+    for (const name of ["lane", "linux-e2e"])
+      expect(selected(verify.jobs[name], reused)).toBe(false);
+    expect(selected(verify.jobs.installer, reused)).toBe(true);
+    expect(workflowValue(verify.jobs.installer?.with?.reuse ?? "", reused)).toBe(
+      reused.inputs.installer_reuse,
+    );
+  }
+});
+
+// DOP-42 supplies the virtual-only label for INF-643's approved signed rerun.
+// INF-818 owns any later move of Intel. A real-Mac setting cannot redirect these.
+it("keeps installer verification on the selected disposable runners", () => {
+  const { jobs } = loadYamlFile(".github/workflows/mac-installer.yml") as {
+    jobs: {
+      build: { "runs-on": string };
+      installed: {
+        name: string;
+        "runs-on": string;
+        strategy: { matrix: { chip: string } };
+      };
+    };
+  };
+  const vars = { MAC_RUNNER: "mini-mac-real", REAL_MAC_RUNNER: "mini-mac-real" };
+  expect(workflowString(jobs.build["runs-on"], { vars })).toBe("mini-mac-virtual");
+  const chips = workflowValue(jobs.installed.strategy.matrix.chip, {
+    inputs: { chip: "both" },
+  }) as string[];
+  const assigned = chips.map((chip) => ({
+    chip,
+    runner: workflowString(jobs.installed["runs-on"], { vars, matrix: { chip } }),
+  }));
+  // The check names PR readings and diagnoses are keyed to.
+  expect(chips.map((chip) => workflowString(jobs.installed.name, { matrix: { chip } }))).toEqual([
+    "Apple silicon",
+    "Intel",
+  ]);
+  expect(assigned).toEqual([
+    { chip: "arm64", runner: "mini-mac-virtual" },
+    { chip: "x64", runner: "macos-15-intel" },
+  ]);
+});
+
+// INF-1539: the captain approved "Add logging and recheck once" for Apple silicon
+// alone. A one-chip recheck must drop the other Mac from the run, and a release
+// (which passes no chip) must still check both.
+it("runs only the requested Mac type's installed checks", () => {
+  type Matrix = { chip: string };
+  const installer = loadYamlFile(".github/workflows/mac-installer.yml") as {
+    on: { workflow_call: { inputs: { chip: { default: string } } } };
+    jobs: { installed: { strategy: { matrix: Matrix } } };
+  };
+  const verify = loadYamlFile(".github/workflows/verify.yml") as {
+    jobs: { installer: { with: Record<string, string> } };
+  };
+  const matrix = installer.jobs.installed.strategy.matrix;
+  const chipsFor = (dispatched: string | undefined) => {
+    const chip = workflowString(verify.jobs.installer.with.chip ?? "", {
+      inputs: { installer_chip: dispatched },
+    });
+    // A matrix include entry would add an excluded chip back, so the chip list itself is chosen.
+    expect(matrix).not.toHaveProperty("include");
+    return workflowValue(matrix.chip, { inputs: { chip } }) as string[];
+  };
+  expect(installer.on.workflow_call.inputs.chip.default).toBe("both");
+  expect(chipsFor(undefined)).toEqual(["arm64", "x64"]);
+  expect(chipsFor("both")).toEqual(["arm64", "x64"]);
+  expect(chipsFor("arm64")).toEqual(["arm64"]);
+  expect(chipsFor("x64")).toEqual(["x64"]);
+});
+
 describe("homebrew cask", () => {
   // The workflow's own interface: no CHANNEL, so the default stable cask.
   const cask = execFileSync(join(root, "scripts", "generate-cask.sh"), {
@@ -3483,33 +3716,31 @@ describe("the private alpha (roadmap 1.2)", () => {
     );
   });
 
-  it("publishes the artifact as an app-prefixed release on the public tap and fetches it back without a token", () => {
-    type Step = { id?: string; run?: string; env?: Record<string, string> };
+  it("publishes the selected source's finalized downloads and verifies them without a sign-in", () => {
     const workflow = loadYamlFile(".github/workflows/release.yml") as {
-      env: Record<string, string>;
-      jobs: { release: { steps: Step[] } };
+      jobs: {
+        release: {
+          env: Record<string, string>;
+          steps: { id?: string; env?: Record<string, string> }[];
+        };
+      };
     };
-    expect(workflow.env.TAP_REPO).toBe("infinitary-labs/homebrew-tap");
-    const step = (id: string) => workflow.jobs.release.steps.find((each) => each.id === id);
-    // The product repository keeps its bare v tag; only the tap's release
-    // carries the prefix (the resolve job's names, tested above).
-    const publish = step("public");
-    expect(publish?.run).toContain(
-      'scripts/publish-release-asset.sh match "$TAP_REPO" "$PUBLIC_TAG" "$ARTIFACT"',
-    );
-    expect(publish?.run).toContain("cat packaging/alpha-notice.txt");
-    expect(publish?.env).toMatchObject({
-      // biome-ignore lint/suspicious/noTemplateCurlyInString: the workflow's own expression, matched literally.
-      GH_TOKEN: "${{ secrets.HOMEBREW_TAP_TOKEN }}",
-      LATEST: "false",
-      TARGET: "main",
-    });
-    // The unauthenticated GET Homebrew performs, against the exact URL the
-    // cask will carry.
-    expect(step("public-fetch-back")?.run).toContain('-o "$PUBLIC_DIR/$ZIP_NAME" "$DOWNLOAD_URL"');
-    expect(step("private")?.run).toContain(
-      'scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$dist_zip"',
-    );
+    const job = workflow.jobs.release;
+    const context = {
+      needs: {
+        resolve: {
+          outputs: {
+            release_repository: releaseSource.repository,
+            tag_name: "v1.2.3",
+            zip_name: "Infinitary-1.2.3-universal.zip",
+          },
+        },
+      },
+    };
+    expect(workflowValue(job.env.PUBLIC_TAG ?? "", context)).toBe("v1.2.3");
+    expect(workflowValue(job.env.RELEASE_REPOSITORY ?? "", context)).toBe(releaseSource.repository);
+    const publicRead = job.steps.find((step) => step.id === "public-fetch-back");
+    expect(Object.keys(publicRead?.env ?? {})).toEqual(["ARTIFACT_SHA256"]);
   });
 
   const brew = (() => {
@@ -3685,7 +3916,11 @@ describe("the Linux packages", () => {
     );
     expect(alpha.pkgbuild).toMatch(/^replaces=\('firstmate-3000' 'firstmate-3000-alpha-bin'\)$/m);
     expect(alpha.pkgbuild).toContain(
-      "https://github.com/infinitary-labs/homebrew-tap/releases/download/infinitary-alpha-v0.4.0-alpha.3/infinitary-0.4.0-alpha.3-linux-amd64.deb",
+      buildDownloadUrl(
+        "0.4.0-alpha.3",
+        "infinitary-0.4.0-alpha.3-linux-amd64.deb",
+        PUBLIC_RELEASE_NAMES,
+      ),
     );
     expect(alpha.pkgbuild).toContain(`sha256sums=('${sha256}')`);
     expect(alpha.nix).toContain('pname = "infinitary-alpha";');

@@ -71,6 +71,7 @@ describe("the command catalog", () => {
       "cards.next-tab",
       "cards.previous-tab",
       "settings.keyboard",
+      "updates.show", // INF-640: the update notice is also chosen by name.
       "whats-new.show",
       "firstmate.reply",
       "settings.usage",
@@ -128,6 +129,7 @@ describe("the command catalog", () => {
       "cards.previous-tab",
       "settings.open",
       "settings.keyboard",
+      "updates.show",
       "whats-new.show",
       "firstmate.reply",
       "settings.usage",

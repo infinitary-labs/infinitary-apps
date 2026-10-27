@@ -10,7 +10,9 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PUBLIC_RELEASE_NAMES, releaseSource } from "../src/core/update/releaseSource";
 import { renderCask } from "../src/core/update/tapPublication";
 import {
   buildDownloadUrl,
@@ -1002,5 +1004,125 @@ describe("a release's published assets", () => {
     });
     expect(sidecar.status).toBe(1);
     expect(sidecar.stderr).toMatch(/\.sha256 names 0{64}/);
+  });
+});
+
+// INF-640: replacement feeds publish without Homebrew; exact artifacts precede one atomic commit.
+describe("the Homebrew-free feed publication", () => {
+  function fixture() {
+    const dir = scratchDir("infinitary-feed-publication-");
+    mkdirSync(join(dir, "home"));
+    const bare = join(dir, "downloads.git");
+    const bin = join(dir, "bin");
+    mkdirSync(bin);
+    const brewCalled = join(dir, "brew-called");
+    writeFileSync(join(bin, "brew"), `#!/bin/sh\ntouch ${JSON.stringify(brewCalled)}\nexit 90\n`, {
+      mode: 0o755,
+    });
+    const env: NodeJS.ProcessEnv = {
+      ...baseEnv(dir),
+      PATH: `${bin}:${process.env.PATH}`,
+      GIT_CONFIG_COUNT: "1",
+      GIT_CONFIG_KEY_0: `url.${pathToFileURL(bare).href}.insteadOf`,
+      GIT_CONFIG_VALUE_0: `https://github.com/${releaseSource.repository}.git`,
+    };
+    const git = (...args: string[]) =>
+      execFileSync("git", args, {
+        env,
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+      }).trim();
+    git("init", "--quiet", "--bare", "--initial-branch=main", bare);
+    const seed = join(dir, "source");
+    git("clone", "--quiet", bare, seed);
+    writeFileSync(
+      join(seed, "unchanged-source.txt"),
+      "The feed writer never changes the project's default branch.\n",
+    );
+    git("-C", seed, "add", ".");
+    git("-C", seed, "commit", "-qm", "chore: seed the download source");
+    git("-C", seed, "push", "-q", "origin", "HEAD:main");
+    const before = git("--git-dir", bare, "rev-parse", "main");
+    // The publisher consumes already-verified opaque bytes; the signed workflow owns their format.
+    const bytes = readFileSync(join(root, "packaging/build/icon.png"));
+    let attempt = 0;
+    const publish = (version: string, mode: "live" | "rehearsal" = "live", changedDmg = false) => {
+      const folder = join(dir, `artifacts-${++attempt}`);
+      mkdirSync(folder);
+      const zip = join(folder, `Infinitary-${version}-universal.zip`);
+      const dmg = join(folder, `Infinitary-${version}-mac-universal.dmg`);
+      writeFileSync(zip, bytes);
+      writeFileSync(dmg, changedDmg ? Buffer.concat([bytes, Buffer.from("changed")]) : bytes);
+      const file = { asset: `infinitary-${version}-linux-amd64.deb`, sha256: sha256Of(bytes) };
+      const linux = join(folder, "linux.json");
+      writeFileSync(
+        linux,
+        JSON.stringify({ alpha: { x64: { deb: file } }, stable: { x64: { deb: file } } }),
+      );
+      const work = join(dir, `publication-${attempt}`);
+      const result = spawnSync("bash", [join(root, "scripts/publish-feeds.sh"), mode], {
+        cwd: root,
+        encoding: "utf8",
+        env: {
+          ...env,
+          WORK: work,
+          VERSION: version,
+          CHANNEL: version.includes("-alpha.") ? "alpha" : "stable",
+          SOURCE_COMMIT: before,
+          DIST_ZIP: zip,
+          DIST_DMG: dmg,
+          LINUX_MANIFEST: linux,
+        },
+      });
+      expect(existsSync(brewCalled)).toBe(false);
+      return { ...result, work };
+    };
+    const head = () => git("--git-dir", bare, "rev-parse", releaseSource.feedBranch);
+    const read = (name: string) =>
+      JSON.parse(git("--git-dir", bare, "show", `${releaseSource.feedBranch}:${name}`));
+    return { dir, bare, git, before, publish, head, read };
+  }
+
+  it("rehearses without a push, then publishes alpha, promoted stable and next alpha while leaving main alone", () => {
+    const f = fixture();
+    const rehearsal = f.publish("0.5.0-alpha.9", "rehearsal");
+    expect(rehearsal.status, rehearsal.stderr).toBe(0);
+    expect(f.git("--git-dir", f.bare, "for-each-ref", "--format=%(refname)")).toBe(
+      "refs/heads/main",
+    );
+    expect(existsSync(join(rehearsal.work, "feeds", "alpha-mac.yml"))).toBe(true);
+    for (const version of ["0.5.0-alpha.9", "0.5.0", "0.5.1-alpha.11"]) {
+      const result = f.publish(version);
+      expect(result.status, result.stderr).toBe(0);
+    }
+    expect(f.read("latest-mac.yml").version).toBe("0.5.0");
+    expect(f.read("alpha-mac.yml").version).toBe("0.5.1-alpha.11");
+    expect(
+      f.read(PUBLIC_RELEASE_NAMES.buildsFile).channels.alpha.systems.macos.arm64.dmg.url,
+    ).toContain("/releases/download/v0.5.1-alpha.11/");
+    expect(f.git("--git-dir", f.bare, "rev-parse", "main")).toBe(f.before);
+    expect(
+      f
+        .git("--git-dir", f.bare, "ls-tree", "-r", "--name-only", releaseSource.feedBranch)
+        .split("\n"),
+    ).not.toContain("Casks/infinitary.rb");
+  });
+
+  it("adopts an identical retry and refuses changed bytes or an older target without changing the remote", () => {
+    const f = fixture();
+    const first = f.publish("0.5.0-alpha.9");
+    expect(first.status, first.stderr).toBe(0);
+    const head = f.head();
+    const retry = f.publish("0.5.0-alpha.9");
+    expect(retry.status, retry.stderr).toBe(0);
+    expect(f.head()).toBe(head);
+    const changed = f.publish("0.5.0-alpha.9", "live", true);
+    expect(changed.status).not.toBe(0);
+    expect(changed.stderr).toContain("cannot change");
+    expect(f.head()).toBe(head);
+    const older = f.publish("0.5.0-alpha.8");
+    expect(older.status).not.toBe(0);
+    expect(older.stderr).toContain("never moves backwards");
+    expect(f.head()).toBe(head);
   });
 });

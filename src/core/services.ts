@@ -3252,6 +3252,7 @@ export async function createServices(
   quota.start();
   const updateChecker = createInstalledUpdateChecker({
     app: host.app,
+    ...(host.macUpdates ? { macDriver: host.macUpdates } : {}),
     openExternal: (url) => host.openExternal(url),
     ...(host.relaunch ? { relaunch: host.relaunch } : {}),
   });

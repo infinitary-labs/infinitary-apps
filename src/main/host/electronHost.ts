@@ -9,6 +9,7 @@ import { type AutostartEntry, readAutostart, writeAutostart } from "./autostartE
 import { createAxiProcessSpawner } from "./axiProcess";
 import { createDarwinKeychain } from "./darwinKeychain";
 import { createKeychainUnlocker } from "./keychainUnlock";
+import { createMacUpdateDriver } from "./macUpdates";
 import { captureDockedPanel } from "./panelCapture";
 import { createProgramProcessSpawner } from "./programProcess";
 import { readResourceMemory } from "./resourceMemory";
@@ -22,6 +23,8 @@ import { createTaskBrowserHost } from "./taskBrowser";
  */
 
 export type ElectronHostOptions = {
+  /** Settle running work before Squirrel replaces and restarts this app. */
+  prepareUpdateRestart?: () => Promise<void>;
   /**
    * Set for dev/e2e runs against an isolated userData dir. Those windows
    * stay hidden and unfocused, so notifications are suppressed entirely
@@ -132,6 +135,13 @@ export function createElectronHost(options: ElectronHostOptions = {}): HostCapab
       flavor: app.isPackaged ? packagedFlavor(readPackageJsonAt(app.getAppPath())) : "dev",
     },
     openExternal: (url) => shell.openExternal(url),
+    ...(hostPlatform() === "darwin" &&
+    app.isPackaged &&
+    !isolatedUserDataDir &&
+    packagedFlavor(readPackageJsonAt(app.getAppPath())) === "release" &&
+    options.prepareUpdateRestart
+      ? { macUpdates: createMacUpdateDriver(options.prepareUpdateRestart) }
+      : {}),
     // An isolated run is started from outside, which starts it again; only a
     // person's app starts itself again.
     relaunch: (execPath) => {

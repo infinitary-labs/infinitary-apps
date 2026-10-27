@@ -1,0 +1,3 @@
+# The public endpoint comes from packaging/release-source.json, compiled into the app.
+# This file supplies electron-updater's cache identity, outside the signed app archive.
+updaterCacheDirName: infinitary-updater

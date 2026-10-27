@@ -403,6 +403,16 @@ export const KEYBOARD_COMMANDS = {
     risk: "navigate",
     keys: [],
   },
+  // The update notice is also reached by name; opening it grants no installation consent.
+  "updates.show": {
+    label: "Show available update",
+    scope: "window",
+    runs: "shell",
+    repeat: false,
+    risk: "navigate",
+    keys: [],
+    searchWords: ["update", "restart", "stable", "alpha"],
+  },
   // The newest release note again (docs/release-notes.md "Reading a note
   // again"): chosen by name, and from the Help menu's What's New, like
   // Keyboard settings; a person may give it a key.

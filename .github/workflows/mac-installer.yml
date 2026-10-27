@@ -1,0 +1,144 @@
+name: Verify signed installer and updater
+
+on:
+  workflow_call:
+    inputs:
+      ref:
+        required: true
+        type: string
+      reuse:
+        description: Reviewed JSON declaration for reusing an existing signed artifact; empty builds fresh copies
+        required: false
+        type: string
+        default: ''
+      chip:
+        description: Which installed checks run - both, or only arm64 or x64 for a recheck the captain approved for one Mac type
+        required: false
+        type: string
+        default: both
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    if: ${{ inputs.reuse == '' }}
+    name: Build signed verification copies
+    # DOP-42: request a disposable guest, with the kernel guard still required below.
+    runs-on: mini-mac-virtual
+    timeout-minutes: 180
+    env:
+      SIGN_IDENTITY: "Developer ID Application: Kun Chen (9T2J7MNUP9)"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Refuse the physical Mac before installing or restoring credentials
+        id: isolation
+        run: node scripts/installer-environment.ts
+      - run: pnpm install --frozen-lockfile
+      - name: Isolate the signing home
+        run: |
+          mkdir -p "$RUNNER_TEMP/installer-home"
+          echo "HOME=$RUNNER_TEMP/installer-home" >> "$GITHUB_ENV"
+          echo "CFFIXED_USER_HOME=$RUNNER_TEMP/installer-home" >> "$GITHUB_ENV"
+          echo "INFINITARY_LOCAL_CODESIGN_DIR=$RUNNER_TEMP/installer-home/local-codesign" >> "$GITHUB_ENV"
+      - name: Restore the existing release identity into the disposable Mac
+        env:
+          MAC_DEVELOPER_ID_CERT_P12: ${{ secrets.MAC_DEVELOPER_ID_CERT_P12 }}
+          MAC_DEVELOPER_ID_CERT_PASSWORD: ${{ secrets.MAC_DEVELOPER_ID_CERT_PASSWORD }}
+          APP_STORE_CONNECT_API_KEY: ${{ secrets.APP_STORE_CONNECT_API_KEY }}
+        run: node scripts/installer-signing.mjs restore
+      - run: pnpm build
+      - name: Build and notarize the verification copies without publishing
+        env:
+          APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          INSTALLER_FIXTURES: ${{ runner.temp }}/installer-fixtures
+          INSTALLER_EVIDENCE: ${{ runner.temp }}/installer-build-evidence
+        run: scripts/build-installer-fixtures.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: signed-installer-fixtures
+          path: ${{ runner.temp }}/installer-fixtures
+          retention-days: 1
+          compression-level: 0
+      - name: Remove the disposable signing material
+        if: always() && steps.isolation.outcome == 'success'
+        run: node scripts/installer-signing.mjs clean
+      - name: Keep submission IDs and failed-request network readings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-build-evidence
+          path: ${{ runner.temp }}/installer-build-evidence
+          if-no-files-found: ignore
+
+  installed:
+    name: ${{ matrix.chip == 'arm64' && 'Apple silicon' || 'Intel' }}
+    needs: build
+    if: ${{ !cancelled() && (needs.build.result == 'success' || (inputs.reuse != '' && needs.build.result == 'skipped')) }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # A one-chip recheck leaves the other Mac type out of the run rather than skipping it green.
+        # Runner and name follow the chip: an include entry for an absent chip would add it back.
+        chip: ${{ fromJSON(inputs.chip == 'arm64' && '["arm64"]' || inputs.chip == 'x64' && '["x64"]' || '["arm64","x64"]') }}
+    runs-on: ${{ matrix.chip == 'arm64' && 'mini-mac-virtual' || 'macos-15-intel' }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Refuse the physical Mac before installing or changing the guest
+        run: node scripts/installer-environment.ts
+      - run: pnpm install --frozen-lockfile
+      - name: Confirm the native architecture
+        env:
+          EXPECTED_CHIP: ${{ matrix.chip }}
+        run: node -e 'if(process.arch !== process.env.EXPECTED_CHIP) throw new Error("This runner does not provide the requested native architecture");'
+      - uses: actions/download-artifact@v4
+        if: ${{ inputs.reuse == '' }}
+        with:
+          name: signed-installer-fixtures
+          path: ${{ runner.temp }}/installer-fixtures
+      - name: Verify and reuse the original signed copies without signing
+        id: reuse
+        if: ${{ inputs.reuse != '' }}
+        env:
+          INSTALLER_REUSE: ${{ inputs.reuse }}
+          INSTALLER_FIXTURES: ${{ runner.temp }}/installer-fixtures
+          INSTALLER_EVIDENCE: ${{ runner.temp }}/installer-evidence
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/installer-reuse.ts
+      - name: Verify native updates without Homebrew, then signed cask updates
+        env:
+          INSTALLER_FIXTURES: ${{ runner.temp }}/installer-fixtures
+          INSTALLER_EVIDENCE: ${{ runner.temp }}/installer-evidence
+          INSTALLER_SOURCE_COMMIT: ${{ steps.reuse.outputs.source }}
+        run: node scripts/check-installed-updates.mjs
+      - name: Keep the observed results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-evidence-${{ matrix.chip }}
+          path: ${{ runner.temp }}/installer-evidence
+          if-no-files-found: error

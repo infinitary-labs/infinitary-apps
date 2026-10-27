@@ -1,5 +1,6 @@
 import { settingFrom } from "@shared/envSettings";
 import type { UpdateChannel, UpdateInstallResult, UpdateStatus } from "@shared/update";
+import { UPDATE_PROBLEMS } from "@shared/updateWords";
 import type { HostAppInfo } from "../host";
 import { hostEnv } from "../hostEnv";
 import { thisDeviceSystem } from "../platform";
@@ -12,6 +13,8 @@ import {
   readLinuxInstallation,
   UpdateInstallProblem,
 } from "./linuxInstall";
+import { createMacUpdateChecker, type MacUpdateDriver } from "./macUpdates";
+import { PUBLIC_RELEASE_NAMES, publicBuildsUrl, releaseSource } from "./releaseSource";
 import { isAlphaVersion, isNewerVersion, isStableVersion, parseSemver } from "./semver";
 import {
   BUILDS_URL,
@@ -28,14 +31,9 @@ import {
   upgradeCommandFor,
 } from "./updateChannels";
 
-// The app ships through GitHub Releases and the Homebrew casks built from
-// them (docs/architecture.md section 10), so "is there a newer version" is
-// answered from the PUBLIC tap (roadmap 1.2, docs/alpha.md): the product
-// repository is private through the beta gate. There is no in-app
-// auto-updater (baby-menu's pattern): the quiet indicator points at the
-// release page and the installed channel's cask upgrade command.
-//
-// Each channel's installable version is the tap's published targets file
+// Direct Mac copies use the consented native updater; Homebrew copies keep reading
+// their cask's target and offer only its Homebrew command. Linux reads public builds.
+// Each Homebrew channel's installable version is the tap's published targets file
 // (docs/alpha.md "Update channels"), written with the casks only after the
 // download was verified. Until that file exists, a stable installation
 // keeps the legacy reader of the tap's release list; an alpha one is
@@ -59,6 +57,8 @@ const REQUEST_HEADERS = { "User-Agent": "infinitary" };
 export type UpdateChecker = {
   /** Returns the cached status for the installed channel, refreshing once it goes stale. */
   getStatus: () => Promise<UpdateStatus>;
+  /** Saves this app's subscription and invalidates the previous channel's pending work. */
+  setChannel?: (channel: UpdateChannel) => Promise<UpdateStatus>;
   /** Opens the offered version's release page (or the channel's release list). */
   openReleasePage: () => Promise<void>;
   /**
@@ -165,7 +165,7 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
   const keyOf = (channel: UpdateChannel, tap: TapNames) => `${tap.repo} ${channel}`;
 
   const linux = options.linux;
-  const buildsUrl = options.buildsUrl ?? BUILDS_URL;
+  const buildsUrl = options.buildsUrl ?? publicBuildsUrl;
   // The offer each channel's last good status was read from, for install().
   const lastOffer = new Map<string, Offer | null>();
   let installing = false;
@@ -205,14 +205,18 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     channel: UpdateChannel,
     where: LinuxInstallation,
   ): Promise<Offer | null> {
-    const response = await fetchImpl(buildsUrl, {
+    let response = await fetchImpl(buildsUrl, {
       headers: { Accept: "application/json", ...REQUEST_HEADERS },
     });
-    // Before the first release that carries Linux there is no file: a Linux
-    // installation is offered nothing, never a Mac's version.
+    // Keep historical downloads reachable before the new host's first publication.
+    if (response.status === 404 && !options.buildsUrl)
+      response = await fetchImpl(BUILDS_URL, {
+        headers: { Accept: "application/json", ...REQUEST_HEADERS },
+      });
     if (response.status === 404) return null;
     if (!response.ok) throw new Error(`Update builds request failed: ${response.status}`);
-    const builds = parseBuilds(await response.json());
+    const data: unknown = await response.json();
+    const builds = parseBuilds(data, PUBLIC_RELEASE_NAMES) ?? parseBuilds(data);
     if (!builds) throw new Error("Update builds are invalid");
     const offer = buildOfferFor(builds, channel, {
       system: "linux",
@@ -315,6 +319,7 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
 }
 
 export type InstalledUpdateCheckerOptions = {
+  macDriver?: MacUpdateDriver;
   app: Pick<HostAppInfo, "version" | "packaged" | "userDataDir"> &
     Partial<Pick<HostAppInfo, "platform" | "resourcesDir">>;
   openExternal: (url: string) => void | Promise<void>;
@@ -352,6 +357,34 @@ export function createInstalledUpdateChecker(
         linuxPackage: settingFrom(env, "UPDATE_LINUX_PACKAGE")?.trim() || undefined,
       };
   const currentVersion = overrides.currentVersion ?? app.version;
+  const installation = options.macDriver?.installation;
+  if (installation?.kind === "unknown") {
+    const status: UpdateStatus = {
+      currentVersion,
+      channel: resolveUpdateChannel(app.userDataDir, currentVersion),
+      latestVersion: null,
+      updateAvailable: false,
+      releaseUrl: releaseSource.releasesUrl,
+      upgradeCommand: "",
+      problem: UPDATE_PROBLEMS.unknownInstallation,
+    };
+    return {
+      getStatus: async () => status,
+      openReleasePage: async () => {
+        await options.openExternal(releaseSource.releasesUrl);
+      },
+      install: async () => ({ ok: false, problem: UPDATE_PROBLEMS.unknownInstallation }),
+    };
+  }
+  if (options.macDriver && installation?.kind === "direct") {
+    return createMacUpdateChecker({
+      currentVersion,
+      dataRoot: app.userDataDir,
+      driver: options.macDriver,
+      releasesUrl: releaseSource.releasesUrl,
+      openExternal: options.openExternal,
+    });
+  }
   // An installed Linux app knows which package it came from; a run from
   // source is no installation, so it reads what a Mac reads unless a stand-in
   // names a package.
@@ -375,9 +408,14 @@ export function createInstalledUpdateChecker(
     // isolated run never reads the installed app's subscription. An Arch or
     // NixOS package carries its own beside the app.
     channel: () =>
-      resolveUpdateChannel(app.userDataDir, currentVersion, linux ? resourcesDir : undefined),
-    // A Mac that came through Firstmate 3000's cask keeps reading that tap.
-    tap: () => resolveUpdateTap(app.userDataDir, currentVersion),
+      installation?.kind === "homebrew"
+        ? installation.channel
+        : resolveUpdateChannel(app.userDataDir, currentVersion, linux ? resourcesDir : undefined),
+    // The running copy's receipt takes priority over another copy's saved subscription.
+    tap: () =>
+      installation?.kind === "homebrew"
+        ? installation.tap
+        : resolveUpdateTap(app.userDataDir, currentVersion),
     ...(overrides.targetsUrl ? { targetsUrl: overrides.targetsUrl } : {}),
     ...(overrides.releasesUrl ? { releasesUrl: overrides.releasesUrl } : {}),
     ...(linux ? { linux } : {}),

@@ -139,6 +139,7 @@ jobs:
       highlights: ${{ steps.resolve.outputs.highlights }}
       verify_required: ${{ steps.verification.outputs.required }}
       alpha_run: ${{ steps.verification.outputs.alpha_run }}
+      release_repository: ${{ steps.destination.outputs.repository }}
     steps:
       - name: Checkout every branch and tag
         uses: actions/checkout@v4
@@ -157,6 +158,19 @@ jobs:
           REF: ${{ github.ref }}
           RUN_NUMBER: ${{ github.run_number }}
         run: scripts/resolve-release.sh
+
+      - name: Read the source's configured release destination
+        id: destination
+        env:
+          SOURCE_COMMIT: ${{ steps.resolve.outputs.source_commit }}
+        run: |
+          node --input-type=module <<'JS'
+          import { execFileSync } from 'node:child_process';
+          import { appendFileSync } from 'node:fs';
+          const c = JSON.parse(execFileSync('git', ['show', `${process.env.SOURCE_COMMIT}:packaging/release-source.json`], { encoding: 'utf8' }));
+          if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(c.repository)) throw new Error('Invalid release destination');
+          appendFileSync(process.env.GITHUB_OUTPUT, `repository=${c.repository}\n`);
+          JS
 
       # A stable inherits its alpha's checks, or is refused. Do not infer
       # assurance from today's workflow or a tag alone: read the published
@@ -196,6 +210,10 @@ jobs:
             const linux = shards.length > 0 && shards.every(green);
             if (!passed('verify / linux-checks') || !linux || !passed('verify / mac')) {
               core.setFailed(`Alpha ${alpha} cannot be promoted: its release run ${run.html_url} did not pass every check lane in its latest attempt.`);
+              return;
+            }
+            if (!passed('Verify signed installer and updater / Apple silicon') || !passed('Verify signed installer and updater / Intel')) {
+              core.setFailed(`Alpha ${alpha} cannot be promoted: it has no passing signed installer and updater verification for both architectures.`);
               return;
             }
             core.setOutput('required', 'false');
@@ -312,13 +330,22 @@ jobs:
       ref: ${{ needs.resolve.outputs.source_commit }}
       version: ${{ needs.resolve.outputs.version }}
 
+  installer:
+    name: Verify signed installer and updater
+    if: ${{ needs.resolve.outputs.verify_required == 'true' }}
+    needs: [resolve, notes]
+    uses: ./.github/workflows/mac-installer.yml
+    with:
+      ref: ${{ needs.resolve.outputs.source_commit }}
+    secrets: inherit
+
   release:
     # A plain name: a job skipped behind a red verify shows its name
     # unevaluated. The run's summary says the channel, the version and
     # whether it was a dry run.
     name: Build, sign, notarize, and publish (a dry run publishes nothing)
-    needs: [resolve, notes, verify, linux]
-    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped')) }}
+    needs: [resolve, notes, verify, linux, installer]
+    if: ${{ always() && !cancelled() && needs.resolve.result == 'success' && needs.notes.result == 'success' && needs.linux.result == 'success' && ((needs.resolve.outputs.verify_required == 'true' && needs.verify.result == 'success' && needs.installer.result == 'success') || (needs.resolve.outputs.verify_required == 'false' && needs.verify.result == 'skipped' && needs.installer.result == 'skipped')) }}
     # INF-603: it signs with the captain's Developer ID certificate, so it
     # asks for the real Mac, never a virtual one, once the switch sets
     # REAL_MAC_RUNNER (docs/testing.md, "The real Mac's place").
@@ -331,9 +358,11 @@ jobs:
       VERSION: ${{ needs.resolve.outputs.version }}
       BUNDLE_VERSION: ${{ needs.resolve.outputs.bundle_version }}
       TAG_NAME: ${{ needs.resolve.outputs.tag_name }}
-      PUBLIC_TAG: ${{ needs.resolve.outputs.public_tag }}
+      PUBLIC_TAG: ${{ needs.resolve.outputs.tag_name }}
+      RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
+      DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
-      DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
+      DOWNLOAD_URL: https://github.com/${{ needs.resolve.outputs.release_repository }}/releases/download/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
       PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
@@ -365,21 +394,25 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # No live alpha before a protected stable is stable's target
-      # (alphaActivationProblem, docs/alpha.md "Activating the channels"):
-      # checked here, before twenty minutes of signing, and again by the tap
-      # writer at the push. An unauthenticated read of the public tap.
-      - name: Check the alpha channel is activated
-        id: activation
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.channel == 'alpha' }}
+      - name: Require public downloads before publication
+        id: visibility
+        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        env:
+          GH_TOKEN: ${{ needs.resolve.outputs.release_repository == github.repository && secrets.GITHUB_TOKEN || secrets.PUBLIC_RELEASE_TOKEN }}
+          RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
         run: |
           set -euo pipefail
-          rm -rf "$RUNNER_TEMP/tap-now"
-          git clone --quiet --depth 1 "https://github.com/$TAP_REPO.git" "$RUNNER_TEMP/tap-now"
-          node scripts/tap-publication.ts activation --tap "$RUNNER_TEMP/tap-now"
+          [[ "$(gh api "repos/$RELEASE_REPOSITORY" --jq .private)" == false ]] || {
+            echo 'The configured download repository is private. Its owner must make downloads public before any release is published.' >&2
+            exit 1
+          }
 
       # The checks already ran in verify's lanes (or the promoted alpha's), which
       # this job waits for: it starts at the build.
+      - name: Require an updater-capable source
+        id: capability
+        run: node -e 'const p=require("./package.json"); if(!p.dependencies?.["electron-updater"] || !require("node:fs").existsSync("packaging/app-update.yml")) throw new Error("This source predates the in-app Mac updater; verify and publish a new alpha first.");'
+
       - name: Build
         id: build
         env:
@@ -591,7 +624,7 @@ jobs:
       # tag must name the source commit, and its zip, if already there,
       # becomes the artifact every later step publishes and verifies. The
       # public copy must match it byte for byte (scripts/publish-release-asset.sh).
-      - name: Publish the private release
+      - name: Record immutable release artifacts
         id: private
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         env:
@@ -604,10 +637,16 @@ jobs:
           WORK="$RUNNER_TEMP/private-release"
           rm -rf "$WORK" && mkdir -p "$WORK"
           export WORK NOTES_FILE="$WORK/notes.md"
-          printf 'Signed, notarized Infinitary %s (universal, %s channel), built from %s. Install with: brew install --cask infinitary-labs/tap/%s\n' \
-            "$VERSION" "$CHANNEL" "$SOURCE_COMMIT" "$CASK_TOKEN" > "$NOTES_FILE"
+          {
+            cat packaging/alpha-notice.txt
+            printf '\nOn Mac, open the disk image and drag Infinitary into Applications. Open that copy, then choose Stable or Alpha in Settings → General. Use Update and restart for later versions; Homebrew is not needed.\n'
+            printf '\nHomebrew installation remains supported. Homebrew copies keep updating through Homebrew; disk-image copies use in-app updates. See docs/mac-installation.md to switch installation methods while keeping saved work.\n'
+            printf '\nLinux downloads and the universal ZIP for paired computers are included below. Check downloads against their checksum files.\n'
+          } > "$NOTES_FILE"
           # The stable's record keeps these (docs/release-notes.md "Who writes what").
           [[ -z "$HIGHLIGHTS" ]] || printf '\nHighlights picked, lead first: %s\n' "$HIGHLIGHTS" >> "$NOTES_FILE"
+          [[ -z "$PROMOTED_FROM" ]] || printf '\nPromoted from alpha %s: the same code, rebuilt as stable.\n' "$PROMOTED_FROM" >> "$NOTES_FILE"
+          printf '\nBuilt from source commit %s.\n' "$SOURCE_COMMIT" >> "$NOTES_FILE"
           scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$dist_zip"
           # The Linux files beside the zip. Each package already published - a
           # retry - is adopted, as the zip is; the recipes and SHA256SUMS are
@@ -630,6 +669,38 @@ jobs:
             GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
               scripts/publish-release-asset.sh match "$GITHUB_REPOSITORY" "$TAG_NAME" "$LINUX/$NAME"
           done < "$LINUX/assets.txt"
+
+      - name: Build, sign, notarize and check the disk image
+        id: dmg
+        env:
+          ADOPTED_ZIP: ${{ steps.private.outputs.zip }}
+          CSC_KEYCHAIN: ${{ steps.developer_id_cert.outputs.keychain_path }}
+          APPLE_API_KEY: ${{ steps.asc-key.outputs.key_path }}
+          APPLE_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          FINAL_ZIP="${ADOPTED_ZIP:-$dist_zip}"
+          FINAL="$RUNNER_TEMP/dmg-source"
+          mkdir -p "$FINAL"
+          ditto -x -k "$FINAL_ZIP" "$FINAL"
+          scripts/build-mac-dmg.sh "$FINAL/$APP_NAME" "$VERSION" "$RUNNER_TEMP/dmg"
+          DIST_DMG="$RUNNER_TEMP/dmg/$DMG_NAME"
+          codesign --force --sign "$SIGN_IDENTITY" --keychain "$CSC_KEYCHAIN" --timestamp "$DIST_DMG"
+          xcrun notarytool submit "$DIST_DMG" --key "$APPLE_API_KEY" --key-id "$APPLE_API_KEY_ID" --issuer "$APPLE_API_ISSUER" --wait
+          xcrun stapler staple "$DIST_DMG"
+          scripts/verify-mac-dmg.sh "$DIST_DMG" "$FINAL_ZIP" "$VERSION"
+          (cd "$(dirname "$DIST_DMG")" && shasum -a 256 "$DMG_NAME" > "$DMG_NAME.sha256")
+          echo "path=$DIST_DMG" >> "$GITHUB_OUTPUT"
+
+      - name: Record the immutable disk image
+        id: recorded-dmg
+        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT: ${{ steps.dmg.outputs.path }}
+        run: |
+          WORK="$RUNNER_TEMP/recorded-dmg" scripts/publish-release-asset.sh adopt "$GITHUB_REPOSITORY" "$TAG_NAME" "$ARTIFACT"
 
       - name: Verify the published artifact
         id: private-fetch-back
@@ -662,8 +733,69 @@ jobs:
             (cd "$DOWNLOAD_DIR/linux" && shasum -a 256 -c "$NAME.sha256")
           done < "$LINUX/assets.txt"
 
-      - name: Publish the public release
+      - name: Mirror to the configured public download repository
         id: public
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.release_repository != github.repository }}
+        env:
+          GH_TOKEN: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
+          ARTIFACT: ${{ steps.private.outputs.zip }}
+          DISK_IMAGE: ${{ steps.recorded-dmg.outputs.zip }}
+          TITLE: Infinitary ${{ needs.resolve.outputs.version }}
+          TARGET: main
+          LATEST: "false"
+        run: |
+          set -euo pipefail
+          : "${GH_TOKEN:?The selected public repository needs PUBLIC_RELEASE_TOKEN}"
+          export WORK="$RUNNER_TEMP/public-release" NOTES_FILE="$RUNNER_TEMP/private-release/notes.md"
+          scripts/publish-release-asset.sh match "$RELEASE_REPOSITORY" "$PUBLIC_TAG" "$ARTIFACT"
+          WORK="$RUNNER_TEMP/public-dmg" scripts/publish-release-asset.sh match "$RELEASE_REPOSITORY" "$PUBLIC_TAG" "$DISK_IMAGE"
+          LINUX="$RUNNER_TEMP/linux-release"
+          while IFS= read -r NAME; do
+            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
+              scripts/publish-release-asset.sh match "$RELEASE_REPOSITORY" "$PUBLIC_TAG" "$LINUX/$NAME"
+          done < "$LINUX/assets.txt"
+
+      - name: Verify every public download without a sign-in
+        id: public-fetch-back
+        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        # No credential: neither the installer nor the updater requires a GitHub sign-in.
+        # No channel advances until the fetched-back ZIP and DMG both pass their gates.
+        env:
+          ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+        run: |
+          set -euo pipefail
+          PUBLIC_DIR="$RUNNER_TEMP/public-verify"
+          rm -rf "$PUBLIC_DIR" && mkdir -p "$PUBLIC_DIR"
+          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$ZIP_NAME" "$DOWNLOAD_URL"
+          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$ZIP_NAME.sha256" "$DOWNLOAD_URL.sha256"
+          (cd "$PUBLIC_DIR" && shasum -a 256 -c "$ZIP_NAME.sha256")
+          PUBLIC_SHA="$(shasum -a 256 "$PUBLIC_DIR/$ZIP_NAME" | awk '{print $1}')"
+          [[ "$ARTIFACT_SHA256" == "$PUBLIC_SHA" ]] || { echo "public sha mismatch" >&2; exit 1; }
+          EXTRACT_DIR="$RUNNER_TEMP/public-extract"
+          rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
+          ditto -x -k "$PUBLIC_DIR/$ZIP_NAME" "$EXTRACT_DIR"
+          scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
+          scripts/check-app-launch.sh "$EXTRACT_DIR/$APP_NAME" "$VERSION"
+          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$DMG_NAME" "${DOWNLOAD_URL%/*}/$DMG_NAME"
+          curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$DMG_NAME.sha256" "${DOWNLOAD_URL%/*}/$DMG_NAME.sha256"
+          (cd "$PUBLIC_DIR" && shasum -a 256 -c "$DMG_NAME.sha256")
+          cmp "$PUBLIC_DIR/$DMG_NAME" "${{ steps.recorded-dmg.outputs.zip }}"
+          scripts/verify-mac-dmg.sh "$PUBLIC_DIR/$DMG_NAME" "$PUBLIC_DIR/$ZIP_NAME" "$VERSION"
+          # Every Linux file as a person downloads it and as the app's update
+          # notice does: the bytes the linux job checked, and their sidecars.
+          LINUX="$RUNNER_TEMP/linux-release"
+          BASE="${DOWNLOAD_URL%/*}"
+          mkdir -p "$PUBLIC_DIR/linux"
+          while IFS= read -r NAME; do
+            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/linux/$NAME" "$BASE/$NAME"
+            curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/linux/$NAME.sha256" "$BASE/$NAME.sha256"
+            cmp "$PUBLIC_DIR/linux/$NAME" "$LINUX/$NAME"
+            (cd "$PUBLIC_DIR/linux" && shasum -a 256 -c "$NAME.sha256")
+          done < "$LINUX/assets.txt"
+          echo "fetched back every Linux file without a credential: $(wc -l < "$LINUX/assets.txt" | tr -d ' ') files"
+
+      - name: Publish the Homebrew release
+        id: homebrew-public
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         # The product repository is private through the beta gate (roadmap
         # 1.2), so the artifact the casks fetch is published here, as a
@@ -675,15 +807,17 @@ jobs:
         # (HOMEBREW_TAP_TOKEN), never GITHUB_TOKEN.
         env:
           GH_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          PUBLIC_TAG: ${{ needs.resolve.outputs.public_tag }}
           ARTIFACT: ${{ steps.private.outputs.zip }}
           ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           TITLE: Infinitary ${{ needs.resolve.outputs.version }} (private alpha${{ needs.resolve.outputs.channel == 'alpha' && ', alpha channel' || '' }})
           TARGET: main
           LATEST: "false"
         run: |
           set -euo pipefail
           : "${GH_TOKEN:?Missing HOMEBREW_TAP_TOKEN}"
-          WORK="$RUNNER_TEMP/public-release"
+          WORK="$RUNNER_TEMP/homebrew-release"
           rm -rf "$WORK" && mkdir -p "$WORK"
           export WORK NOTES_FILE="$WORK/notes.md"
           {
@@ -702,23 +836,24 @@ jobs:
           done < "$LINUX/assets.txt"
 
       - name: Verify the public artifact as Homebrew fetches it
-        id: public-fetch-back
+        id: homebrew-fetch-back
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         # No token here, on purpose: this is the unauthenticated GET the cask
         # performs, so a private, missing or altered asset fails the release
         # before the tap learns of it.
         env:
           ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
         run: |
           set -euo pipefail
-          PUBLIC_DIR="$RUNNER_TEMP/public-verify"
+          PUBLIC_DIR="$RUNNER_TEMP/homebrew-verify"
           rm -rf "$PUBLIC_DIR" && mkdir -p "$PUBLIC_DIR"
           curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$ZIP_NAME" "$DOWNLOAD_URL"
           curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o "$PUBLIC_DIR/$ZIP_NAME.sha256" "$DOWNLOAD_URL.sha256"
           (cd "$PUBLIC_DIR" && shasum -a 256 -c "$ZIP_NAME.sha256")
           PUBLIC_SHA="$(shasum -a 256 "$PUBLIC_DIR/$ZIP_NAME" | awk '{print $1}')"
           [[ "$ARTIFACT_SHA256" == "$PUBLIC_SHA" ]] || { echo "public sha mismatch" >&2; exit 1; }
-          EXTRACT_DIR="$RUNNER_TEMP/public-extract"
+          EXTRACT_DIR="$RUNNER_TEMP/homebrew-extract"
           rm -rf "$EXTRACT_DIR" && mkdir -p "$EXTRACT_DIR"
           ditto -x -k "$PUBLIC_DIR/$ZIP_NAME" "$EXTRACT_DIR"
           scripts/verify-app.sh "$EXTRACT_DIR/$APP_NAME" --signed --gatekeeper
@@ -747,6 +882,7 @@ jobs:
         env:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           SHA256: ${{ steps.private.outputs.sha256 }}
+          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           LINUX_MANIFEST: ${{ runner.temp }}/linux-release/manifest.json
         run: |
           set -euo pipefail
@@ -766,6 +902,7 @@ jobs:
           GH_TOKEN: ${{ secrets.OLD_TAP_TOKEN }}
           ARTIFACT: ${{ steps.private.outputs.zip }}
           ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           OLD_PUBLIC_TAG: ${{ needs.resolve.outputs.old_public_tag }}
           TITLE: Infinitary ${{ needs.resolve.outputs.version }} for Firstmate 3000's ${{ needs.resolve.outputs.channel }} cask
           TARGET: main
@@ -794,6 +931,7 @@ jobs:
         if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.old_cask == 'true' }}
         env:
           ARTIFACT_SHA256: ${{ steps.private.outputs.sha256 }}
+          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           OLD_DOWNLOAD_URL: ${{ needs.resolve.outputs.old_download_url }}
         run: |
           set -euo pipefail
@@ -836,6 +974,7 @@ jobs:
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
         env:
           SHA256: ${{ steps.checksum.outputs.sha256 }}
+          DOWNLOAD_URL: ${{ needs.resolve.outputs.download_url }}
           LINUX_MANIFEST: ${{ runner.temp }}/linux-release/manifest.json
         run: |
           set -euo pipefail
@@ -867,88 +1006,77 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
-      # What the run proved, in the run's own words: the profile's lanes and
-      # the ones it omits, every gate's outcome, the version identities the
-      # signed app carries, and - for a rehearsal - the live-only stages it
-      # never ran. Reads typed outcomes and files, never a log. A report,
-      # never a gate.
+      - name: Advance the verified public feeds atomically
+        id: feeds
+        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        env:
+          GH_TOKEN: ${{ needs.resolve.outputs.release_repository == github.repository && secrets.GITHUB_TOKEN || secrets.PUBLIC_RELEASE_TOKEN }}
+        run: |
+          DIST_ZIP="$RUNNER_TEMP/public-verify/$ZIP_NAME" DIST_DMG="$RUNNER_TEMP/public-verify/$DMG_NAME" \
+          LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
+            scripts/publish-feeds.sh live
+
+      - name: Rehearse the public feeds without publishing
+        id: feed-rehearsal
+        if: ${{ needs.resolve.outputs.dry_run == 'true' }}
+        env:
+          GH_TOKEN: ${{ needs.resolve.outputs.release_repository == github.repository && secrets.GITHUB_TOKEN || secrets.PUBLIC_RELEASE_TOKEN }}
+        run: |
+          DIST_ZIP="$dist_zip" DIST_DMG="${{ steps.dmg.outputs.path }}" \
+          LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
+            scripts/publish-feeds.sh rehearsal
+
+      - name: Keep the rehearsed release metadata
+        if: ${{ needs.resolve.outputs.dry_run == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-feed-rehearsal
+          path: |
+            ${{ runner.temp }}/release-feeds/summary.json
+            ${{ runner.temp }}/release-feeds/feeds/*.json
+            ${{ runner.temp }}/release-feeds/feeds/*.yml
+            ${{ runner.temp }}/release-feeds/feeds/versions/*.json
+
+      # A report of typed outcomes and artifact identities, never a gate of its own.
       - name: Summarize
         if: always()
         continue-on-error: true
         env:
           LANES: ${{ needs.resolve.outputs.verify_required == 'true' && 'linux-checks, linux-e2e, mac' || 'none' }}
           OMITTED: ${{ needs.resolve.outputs.verify_required == 'true' && 'none' || 'linux-checks, linux-e2e and mac; inherited from the published alpha, not passed in this run' }}
-          GATES: >-
-            activation=${{ steps.activation.outcome }}
-            build=${{ steps.build.outcome }}
-            package=${{ steps.package.outcome }}
-            packaged-notes=${{ steps.packaged-notes.outcome }}
-            signed-app=${{ steps.signed-app.outcome }}
-            launch=${{ steps.launch.outcome }}
-            data-folder=${{ steps.data-folder.outcome }}
-            work-mode=${{ steps.work-mode.outcome }}
-            notarize=${{ steps.notarize.outcome }}
-            zip=${{ steps.zip.outcome }}
-            checksum=${{ steps.checksum.outcome }}
-            linux-files=${{ steps.linux-files.outcome }}
-            tap-rehearsal=${{ steps.tap-rehearsal.outcome }}
-            old-tap-rehearsal=${{ steps.old-tap-rehearsal.outcome }}
-          LIVE: >-
-            private=${{ steps.private.outcome }}
-            private-fetch-back=${{ steps.private-fetch-back.outcome }}
-            public=${{ steps.public.outcome }}
-            public-fetch-back=${{ steps.public-fetch-back.outcome }}
-            tap=${{ steps.tap.outcome }}
-            old-public=${{ steps.old-public.outcome }}
-            old-public-fetch-back=${{ steps.old-public-fetch-back.outcome }}
-            old-tap=${{ steps.old-tap.outcome }}
-          OLD_CASK: ${{ needs.resolve.outputs.old_cask }}
           SHA256: ${{ steps.private.outputs.sha256 || steps.checksum.outputs.sha256 }}
+          GATES: >-
+            visibility=${{ steps.visibility.outcome }} capability=${{ steps.capability.outcome }}
+            installer=${{ needs.installer.result }}
+            build=${{ steps.build.outcome }} package=${{ steps.package.outcome }}
+            packaged-notes=${{ steps.packaged-notes.outcome }} signed-app=${{ steps.signed-app.outcome }}
+            launch=${{ steps.launch.outcome }} data-folder=${{ steps.data-folder.outcome }}
+            work-mode=${{ steps.work-mode.outcome }} notarize=${{ steps.notarize.outcome }}
+            zip=${{ steps.zip.outcome }} checksum=${{ steps.checksum.outcome }}
+            linux-files=${{ steps.linux-files.outcome }} dmg=${{ steps.dmg.outcome }}
+            recorded=${{ steps.private.outcome }} recorded-dmg=${{ steps.recorded-dmg.outcome }}
+            recorded-fetch-back=${{ steps.private-fetch-back.outcome }}
+            public=${{ steps.public.outcome }} public-fetch-back=${{ steps.public-fetch-back.outcome }}
+            homebrew-public=${{ steps.homebrew-public.outcome }} homebrew-fetch-back=${{ steps.homebrew-fetch-back.outcome }}
+            tap=${{ steps.tap.outcome }} tap-rehearsal=${{ steps.tap-rehearsal.outcome }}
+            old-public=${{ steps.old-public.outcome }} old-public-fetch-back=${{ steps.old-public-fetch-back.outcome }}
+            old-tap=${{ steps.old-tap.outcome }} old-tap-rehearsal=${{ steps.old-tap-rehearsal.outcome }}
+            feeds=${{ steps.feeds.outcome }} rehearsal=${{ steps.feed-rehearsal.outcome }}
         run: |
           APP="dist/mac-universal/$APP_NAME"
           field() { /usr/libexec/PlistBuddy -c "Print :$1" "$APP/Contents/Info.plist" 2>/dev/null || echo unread; }
           {
-            if [[ "$DRY_RUN" == true ]]; then
-              echo "### Release dry run: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
-              echo
-              echo "Published nothing: no tag, no release on either repository, no tap commit."
-            else
-              echo "### Release: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
-            fi
-            echo
-            echo "**Verify lanes ($CHANNEL profile):** $LANES. **Omitted by this profile:** $OMITTED."
-            echo
-            [[ -z "$ALPHA_RUN" ]] || echo "**Alpha verification:** $PROMOTED_FROM - $ALPHA_RUN"
-            [[ -z "$HIGHLIGHTS" ]] || echo "**Highlights picked, lead first:** $HIGHLIGHTS"
-            echo "**Version identities:** CFBundleShortVersionString $(field CFBundleShortVersionString), CFBundleVersion $(field CFBundleVersion); $(cat "$RUNNER_TEMP/launch-gate.txt" 2>/dev/null || echo "the launch gate did not run")."
-            echo
-            echo "**Gates exercised** (skipped means the stage does not apply to this run):"
+            echo "### Release: $CHANNEL $VERSION from \`$SOURCE_COMMIT\`"
+            [[ "$DRY_RUN" != true ]] || echo 'Dry run: no tag, release, cask or public feed was published.'
+            echo "Verify lanes: $LANES. Omitted: $OMITTED."
+            [[ -z "$ALPHA_RUN" ]] || echo "Inherited alpha verification: $PROMOTED_FROM — $ALPHA_RUN"
+            [[ -z "$HIGHLIGHTS" ]] || echo "Highlights picked, lead first: $HIGHLIGHTS"
+            echo "Version identities: CFBundleShortVersionString $(field CFBundleShortVersionString), CFBundleVersion $(field CFBundleVersion); $(cat "$RUNNER_TEMP/launch-gate.txt" 2>/dev/null || echo 'the launch gate did not run')."
             for stage in $GATES; do echo "- ${stage%%=*}: ${stage#*=}"; done
-            echo
-            if [[ "$DRY_RUN" == true ]]; then
-              echo "**Not exercised by a dry run** (live publication only): the private release and its fetch-back, the public tap release, the unauthenticated public fetch-back Homebrew and the Linux update notice perform and its gates, and the tap commit."
-              for stage in $LIVE; do echo "- ${stage%%=*}: ${stage#*=}"; done
-            else
-              echo "**Publication:**"
-              for stage in $LIVE; do echo "- ${stage%%=*}: ${stage#*=}"; done
-            fi
-            echo
-            if [[ -f "$RUNNER_TEMP/tap-result.txt" ]]; then
-              echo "**The tap:**"
-              echo '```'
-              cat "$RUNNER_TEMP/tap-result.txt"
-              echo '```'
-            fi
-            echo "**The old-cask switch** for this channel: ${OLD_CASK:-false} (packaging/old-cask-switch.json)."
-            if [[ -f "$RUNNER_TEMP/old-tap-result.txt" ]]; then
-              echo '```'
-              cat "$RUNNER_TEMP/old-tap-result.txt"
-              echo '```'
-            fi
+            echo 'A skipped stage did not pass in this run. Homebrew casks and direct-install feeds each advance only after their downloads verify.'
             echo "sha256 of the zip: \`${SHA256:-none}\`"
             if [[ -f "$RUNNER_TEMP/linux-release/SHA256SUMS" ]]; then
-              echo
-              echo "**The Linux files** (checked on a clean copy of each system by the linux job):"
+              echo 'Linux files checked on clean copies of their systems:'
               echo '```'
               cat "$RUNNER_TEMP/linux-release/SHA256SUMS"
               echo '```'

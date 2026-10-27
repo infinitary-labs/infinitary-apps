@@ -32,6 +32,8 @@ on:
       - scripts/publish-tap.sh
       - scripts/tap-publication.ts
       - src/core/update/tapPublication.ts
+      - src/core/update/macInstallation.ts
+      - packaging/mac-installation.json
       - src/core/update/updateChannels.ts
       - src/shared/userDataFolders.ts
   workflow_dispatch:

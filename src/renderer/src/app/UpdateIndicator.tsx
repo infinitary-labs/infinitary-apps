@@ -1,8 +1,17 @@
 import type { UpdateStatus } from "@shared/update";
+import { UPDATE_WORDS } from "@shared/updateWords";
 import type React from "react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Button, IconButton, MicroLabel } from "../design";
+import { focusWithRing } from "../design/focus";
 import { usePopoverPresence } from "../design/motion";
+import { useCommandKeys } from "./keyHints";
+import {
+  installOfferedUpdate,
+  refreshUpdateStatus,
+  setUpdateNoticeOpen as setOpen,
+  useUpdateState,
+} from "./updateState";
 
 const CHANNEL_LABEL: Record<UpdateStatus["channel"], string> = {
   stable: "Stable updates",
@@ -20,10 +29,8 @@ const CHANNEL_LABEL: Record<UpdateStatus["channel"], string> = {
  * installs on its own, ever.
  */
 export function UpdateIndicator() {
-  const [status, setStatus] = useState<UpdateStatus | null>(null);
-  const [open, setOpen] = useState(false);
-  const [installing, setInstalling] = useState(false);
-  const [problem, setProblem] = useState<string | null>(null);
+  const { status, busy: installing, problem, noticeOpen: open } = useUpdateState();
+  const updateKeys = useCommandKeys("updates.show");
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -31,23 +38,26 @@ export function UpdateIndicator() {
   const drawn = usePopoverPresence(open, panelRef, buttonRef);
 
   useEffect(() => {
-    let cancelled = false;
-    const load = () => {
-      // Unanswered: nothing shows. An app controlling another Mac answers its own (docs/view.md).
-      void window.infinitary.update
-        .status()
-        .then((next) => {
-          if (!cancelled) setStatus(next);
-        })
-        .catch(() => {});
-    };
-    load();
-    const interval = setInterval(load, 60 * 60 * 1000);
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
+    void refreshUpdateStatus();
+    const interval = setInterval(
+      () => {
+        void refreshUpdateStatus();
+      },
+      60 * 60 * 1000,
+    );
+    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (open && drawn) {
+      const first = panelRef.current?.querySelector<HTMLButtonElement>("button:not([disabled])");
+      if (first) focusWithRing(first);
+    }
+  }, [open, drawn]);
+
+  useEffect(() => {
+    if (!status?.updateAvailable && open) setOpen(false);
+  }, [status?.updateAvailable, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -56,8 +66,18 @@ export function UpdateIndicator() {
         setOpen(false);
       }
     };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
+    };
     window.addEventListener("pointerdown", onPointerDown);
-    return () => window.removeEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   if (!status?.updateAvailable) return null;
@@ -70,6 +90,7 @@ export function UpdateIndicator() {
         ref={buttonRef}
         label={`Update available: ${status.latestVersion ?? ""}`}
         tone="accent"
+        {...updateKeys}
         onClick={() => setOpen((value) => !value)}
       >
         <svg
@@ -95,16 +116,7 @@ export function UpdateIndicator() {
           installing={installing}
           problem={problem}
           onInstall={() => {
-            setInstalling(true);
-            setProblem(null);
-            // Success quits and starts the new version; only a refusal answers.
-            void window.infinitary.update
-              .install()
-              .then((result) => {
-                if (!result.ok) setProblem(result.problem);
-              })
-              .catch(() => setProblem("The update could not be installed, so nothing changed."))
-              .finally(() => setInstalling(false));
+            void installOfferedUpdate();
           }}
         />
       )}
@@ -194,17 +206,42 @@ export function UpdatePanel({
             data-update-install-note
             style={{ fontSize: "var(--text-sm)", color: "var(--fg-3)" }}
           >
-            {install.asksPassword
-              ? "Install downloads it, checks it and asks for your password. Infinitary then starts again."
-              : "Install downloads it, checks it and replaces this copy. Infinitary then starts again."}
+            {status.phase === "ready"
+              ? "The checked update is ready. Restart to finish installing it."
+              : install.restarts
+                ? "Update and restart downloads and checks the new copy, then safely stops running work and restarts Infinitary."
+                : install.asksPassword
+                  ? "Install downloads it, checks it and asks for your password. Infinitary then starts again."
+                  : "Install downloads it, checks it and replaces this copy. Infinitary then starts again."}
           </div>
-          {problem && (
+          {status.phase === "downloading" && (
+            <div
+              role="status"
+              data-update-progress
+              style={{ color: "var(--fg-2)", fontSize: "var(--text-sm)" }}
+            >
+              Downloading{" "}
+              <span style={{ fontFamily: "var(--font-mono)" }}>
+                {Math.round(status.percent ?? 0)}%
+              </span>
+              <progress
+                aria-label={UPDATE_WORDS.progress}
+                value={status.percent ?? 0}
+                max={100}
+                style={{ width: "100%", accentColor: "var(--accent)" }}
+              />
+            </div>
+          )}
+          {status.phase === "installing" && (
+            <div role="status">Checking the app and preparing to restart…</div>
+          )}
+          {(problem || status.problem) && (
             <div
               role="alert"
               data-update-problem
               style={{ fontSize: "var(--text-sm)", color: "var(--warn)" }}
             >
-              {problem}
+              {problem ?? status.problem}
             </div>
           )}
           {problem && status.upgradeCommand && (
@@ -228,17 +265,23 @@ export function UpdatePanel({
       )}
       <div style={{ display: "flex", justifyContent: "flex-end", gap: "var(--space-2)" }}>
         <Button variant="ghost" size="sm" onClick={onViewRelease}>
-          View release
+          {UPDATE_WORDS.release}
         </Button>
         {install && (
           <Button
             size="sm"
             onClick={onInstall}
             pending={installing}
-            pendingLabel="Installing..."
+            pendingLabel={
+              status.phase === "downloading" ? UPDATE_WORDS.downloading : UPDATE_WORDS.installing
+            }
             data-update-install
           >
-            Install
+            {status.phase === "ready"
+              ? UPDATE_WORDS.ready
+              : install.restarts
+                ? UPDATE_WORDS.restart
+                : "Install"}
           </Button>
         )}
       </div>

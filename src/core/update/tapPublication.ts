@@ -1,6 +1,11 @@
 import { APP_IDENTITIES, OWN_IDENTITY } from "@shared/codeNames";
 import type { UpdateChannel } from "@shared/update";
 import { RELEASE_USER_DATA_FOLDER } from "@shared/userDataFolders";
+import {
+  homebrewInstallationReceipt,
+  MAC_INSTALLATION_ATTRIBUTE,
+  MAC_INSTALLATION_RESOURCE,
+} from "./macInstallation";
 import { compareSemver, isAlphaVersion, isStableVersion } from "./semver";
 import {
   BUILDS_FILE,
@@ -249,11 +254,29 @@ export function renderCask(
     `                 ${rubyString(marker)},`,
     "                 base: :home",
     "    end",
+    "    preflight_steps do",
+    // Stamp ownership before moving the app into Applications, so a failed stamp cannot leave
+    // a Homebrew installation that looks direct. Only a custom attribute changes, not file bytes.
+    `      ownership = { args: ["-w", ${rubyString(MAC_INSTALLATION_ATTRIBUTE)},`,
+    `                           ${rubyString(homebrewInstallationReceipt(channel, tap))},`,
+    `                           ${rubyString(`{{staged_path}}/${APP_BUNDLE}/${MAC_INSTALLATION_RESOURCE}`)}] }`,
+    "      if Homebrew::InstallSteps::DSL.instance_method(:run).parameters.include?([:key, :writable_paths])",
+    `        ownership[:writable_paths] = [${rubyString(`${APP_BUNDLE}/${MAC_INSTALLATION_RESOURCE}`)}]`,
+    "        ownership[:writable_base] = :staged_path",
+    "      end",
+    '      run "/usr/bin/xattr", **ownership',
+    "    end",
     "  else",
     "    postflight do",
     `      marker = File.expand_path(${rubyString(`~/${MARKER_HOME_PATH}`)})`,
     "      FileUtils.mkdir_p File.dirname(marker)",
     `      File.write marker, ${rubyString(marker)}`,
+    "    end",
+    "    preflight do",
+    `      system_command "/usr/bin/xattr", args:         ["-w", ${rubyString(MAC_INSTALLATION_ATTRIBUTE)},`,
+    `                                                      ${rubyString(homebrewInstallationReceipt(channel, tap))},`,
+    `                                                      staged_path.join(${rubyString(`${APP_BUNDLE}/${MAC_INSTALLATION_RESOURCE}`)})],`,
+    "                                       must_succeed: true",
     "    end",
     "  end",
     "",

@@ -5,6 +5,7 @@ import type { VoiceDownloadProgress } from "@shared/voice";
 import type { BrowserKey } from "./browser/keys";
 import type { BrowserNode } from "./browser/outline";
 import type { MediaProbe, TypefaceProbe } from "./pi/cardImages";
+import type { MacUpdateDriver } from "./update/macUpdates";
 /**
  * The host seam (daemon study D0, data/fm3000-daemon-process-study-s1
  * sections 1.6 and 4.5).
@@ -409,6 +410,8 @@ export type HostCapabilities = {
    * itself was replaced, as an AppImage is. Absent on a host that cannot.
    */
   relaunch?: (execPath?: string) => void;
+  /** Signed Mac update effects; absent outside an installed release. */
+  macUpdates?: MacUpdateDriver;
   readonly notifications: HostNotifications;
   readonly presence: HostPresence;
   /** Desktop-served voice model; absent on hosts without voice capture. */

@@ -385,6 +385,7 @@ export function isLinuxPackage(value: string): value is LinuxPackage {
 /** The file each kind of build a release publishes is, by its asset name's ending. */
 const BUILD_ASSET: Record<string, RegExp> = {
   zip: /\.zip$/,
+  dmg: /\.dmg$/,
   deb: /\.deb$/,
   rpm: /\.rpm$/,
   appimage: /\.AppImage$/,
@@ -397,7 +398,7 @@ const BUILD_ASSET: Record<string, RegExp> = {
  * recipe or a Nix package names its channel's package, so a stable version
  * handed to alpha carries alpha's own recipe.
  */
-const CHANNEL_NEUTRAL = new Set(["zip", "deb", "rpm", "appimage"]);
+const CHANNEL_NEUTRAL = new Set(["zip", "dmg", "deb", "rpm", "appimage"]);
 
 const ASSET_NAME = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 const BUILD_KEY = z.string().regex(/^[a-z0-9]+$/);

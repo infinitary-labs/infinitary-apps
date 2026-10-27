@@ -67,6 +67,7 @@ export type WindowFacts = {
   computers?: { page: number; pages: number };
   /** The top bar's project pill: whether it shows, and the focus that holds (docs/project-focus.md). */
   projectFocus?: { shown: boolean; focus: string | null };
+  updateAvailable?: boolean;
   /**
    * Why a panel's command cannot run now beyond what holds every key
    * (docs/keyboard.md, "A panel's commands"), from its panel as it stands.
@@ -275,6 +276,7 @@ const REFUSALS: Readonly<
   // From anywhere, Settings included: it goes to the Keyboard tab.
   "settings.keyboard": () => null,
   // From anywhere, Settings included: it goes home to the note.
+  "updates.show": (_s, facts) => (facts.updateAvailable ? null : "No update is available"),
   "whats-new.show": (s) =>
     s.releaseNotes && s.releaseNotes.notes.length > 0 ? null : "No release notes yet",
   // From anywhere, Settings included: it goes home to the note.

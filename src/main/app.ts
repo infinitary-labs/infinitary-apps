@@ -492,6 +492,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
       if (desktop.windowControls === "app") Menu.setApplicationMenu(null);
       installCsp(session.defaultSession, rendererSource);
       const host = createElectronHost({
+        prepareUpdateRestart: () => shell.dispose(),
         isolatedUserDataDir,
         ...(userDataChoice.kind === "flavor"
           ? { autostartName: basename(userDataChoice.dir) }
@@ -627,6 +628,7 @@ export async function startApp(mainDir: string, run: RunStart | null = null): Pr
         // A view runs no core, and still tells this Mac when its own app has an update.
         updates: createInstalledUpdateChecker({
           app: host.app,
+          ...(host.macUpdates ? { macDriver: host.macUpdates } : {}),
           openExternal: (url) => host.openExternal(url),
           ...(host.relaunch ? { relaunch: host.relaunch } : {}),
         }),

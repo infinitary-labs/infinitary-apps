@@ -15,10 +15,12 @@ import { join } from "node:path";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { DeviceChip } from "@shared/devices";
+import { PUBLIC_RELEASE_NAMES, publicBuildsUrl } from "../update/releaseSource";
 import {
   BUILDS_FILE,
   BUILDS_URL,
   buildDownloadUrl,
+  INFINITARY_TAP,
   parseBuilds,
   publicTagFor,
   TAP_REPO,
@@ -167,23 +169,31 @@ export class PublishedBuilds {
     signal?: AbortSignal,
   ): Promise<{ url: string; sha256: string } | null> {
     const { version } = this.options;
-    const builds = await this.readJson(this.options.buildsUrl ?? BUILDS_URL, signal);
-    const parsed = builds === null ? null : parseBuilds(builds);
-    for (const entry of [parsed?.channels.stable, parsed?.channels.alpha]) {
-      if (entry?.version !== version) continue;
-      const download = entry.systems[want.system]?.[want.chip]?.[want.kind];
-      if (download) return download;
+    // Old release links remain valid; an exact historical version may still live on the tap.
+    const sources = [
+      { url: this.options.buildsUrl ?? publicBuildsUrl, names: PUBLIC_RELEASE_NAMES },
+      { url: this.options.buildsUrl ?? BUILDS_URL, names: INFINITARY_TAP },
+    ];
+    for (const source of sources) {
+      const builds = await this.readJson(source.url, signal);
+      const parsed = builds === null ? null : parseBuilds(builds, source.names);
+      for (const entry of [parsed?.channels.stable, parsed?.channels.alpha]) {
+        if (entry?.version !== version) continue;
+        const download = entry.systems[want.system]?.[want.chip]?.[want.kind];
+        if (download) return download;
+      }
+      const url = buildDownloadUrl(version, asset, source.names);
+      const sidecar = await this.readText(`${url}.sha256`, signal);
+      if (sidecar === null) continue;
+      const sha256 = /^([0-9a-f]{64})\b/.exec(sidecar.trim())?.[1];
+      if (!sha256 || !SHA256.test(sha256))
+        throw new PublishedBuildError(
+          "unreachable",
+          `The checksum published for ${asset} is unreadable.`,
+        );
+      return { url, sha256 };
     }
-    const url = buildDownloadUrl(version, asset);
-    const sidecar = await this.readText(`${url}.sha256`, signal);
-    if (sidecar === null) return null;
-    const sha256 = /^([0-9a-f]{64})\b/.exec(sidecar.trim())?.[1];
-    if (!sha256 || !SHA256.test(sha256))
-      throw new PublishedBuildError(
-        "unreachable",
-        `The checksum published for ${asset} is unreadable.`,
-      );
-    return { url, sha256 };
+    return null;
   }
 
   /** The tap's JSON at `url`; null when it has none there. */
@@ -207,11 +217,14 @@ export class PublishedBuilds {
         ...(signal ? { signal } : {}),
       });
     } catch {
-      throw new PublishedBuildError("unreachable", "The public tap could not be reached.");
+      throw new PublishedBuildError("unreachable", "The release downloads could not be reached.");
     }
     if (response.status === 404) return null;
     if (!response.ok)
-      throw new PublishedBuildError("unreachable", `The public tap answered ${response.status}.`);
+      throw new PublishedBuildError(
+        "unreachable",
+        `The release downloads answered ${response.status}.`,
+      );
     return response.text();
   }
 

@@ -198,6 +198,10 @@ The dismissal command does not belong to the keyboard’s transient accessory vi
 The tabs read Home, Tasks and Activity, in that order.
 The iPad's wide landscape workspace places a sidebar beside the stage, with Tasks and Activity as a segmented pair at its top, opening on Tasks, each scrolling alone, keeps the composer at the stage's foot and shows no strip in the bar.
 Portrait or narrow multitasking returns to the strip; layout measurement excludes the keyboard.
+A rotation moves the sidebar and the stage with its animation, and nothing else enters or leaves the window inside it (INF-1590): views that did at times left one of its animations started and never stopped, and XCTest's wait for the app to settle then never ended.
+So a turn into landscape brings Home in just before its animation starts, laid out at once and unanimated, because Home put back after that animation came back short by a keyboard inset it took while out of the window.
+Home brought in that way is already laid out at the new size while the window is still upright, so the workspace's fill reaches past its foot and the system's white never shows.
+The bar's strip, and on the way back upright the tab Home gives way to, follow the new layout once the animation has ended, or on the main queue's next turn when no rotation runs.
 `PhoneActivity` reads the computer's wording and optional task key, shows its kind dot and relative mono age, and orders newest first on both devices.
 The task key sits inline before the words at micro size, as on the Mac's feed line.
 It exposes the full local timestamp to accessibility.

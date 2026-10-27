@@ -66,6 +66,11 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var viewport = CGSize.zero
     @State private var selection = PhoneTab.home
+    /// INF-1590: whether the bar and the tab controller show the wide layout, which a rotation reaches once its
+    /// animation has ended, and whether one into the wide layout already shows Home (see `PhoneResizeWatch`).
+    @State private var wideBar = false
+    @State private var homeAhead = false
+    @State private var resizing = PhoneResizing()
     @State private var messageContext = PhoneMessageContext()
     @State private var rail = Rail.tasks
 
@@ -79,12 +84,12 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
     private var sidebarWidth: CGFloat { min(320, viewport.width * 0.32) }
     private enum Rail: Hashable { case tasks, activity }
     /// A landscape iPad always shows the stage with its sidebar, without losing the compact tab selection.
-    private var shown: PhoneTab { wide ? .home : selection }
+    private var shown: PhoneTab { wideBar || homeAhead ? .home : selection }
     private var tabs: [PhoneTab] { tasks == nil ? [.home, .activity] : PhoneTab.allCases }
 
     var body: some View {
         // INF-1062: the system tab controller holds the tabs with its own bar hidden; the strip in the top bar is the one control.
-        TabView(selection: Binding(get: { shown }, set: { if !wide { selection = $0 } })) {
+        TabView(selection: Binding(get: { shown }, set: { if !(wideBar || homeAhead) { selection = $0 } })) {
             tab(.home) { home }
             // INF-944 item 6: Activity is the last tab.
             if let tasks { tab(.tasks) { noticed(tasks.background(PhoneTheme.background)) } }
@@ -92,7 +97,7 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         }
         .toolbar {
             // INF-1062: the strip sits in the bar's middle; a landscape iPad shows the stage beside its sidebar and needs none.
-            if !wide {
+            if !wideBar {
                 ToolbarItem(placement: .principal) {
                     PhoneTabStrip(tabs: tabs, selection: $selection)
                 }
@@ -105,15 +110,43 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
             if session.notice == notice { session.notice = nil }
         }
         .environment(messageContext)
+        // The first reading is the layout the workspace opens in, so the bar starts there.
+        .onChange(of: wide, initial: true) { old, wide in if old == wide { wideBar = wide } else { settle(wide) } }
         .onChange(of: shown == .home, initial: true) { _, visible in messageContext.cardsVisible = visible }
         // The message box is Home's alone, so a keyboard typing into it closes with the tab it leaves.
         .onChange(of: shown) { _, tab in if tab != .home { dismissPhoneKeyboard() } }
         .onChange(of: messageContext.restoring) { _, id in if id != nil { selection = .home } }
+        .background(alignment: .top) {
+            // INF-1590: Home brought in for a turn into landscape is laid out at the new size while the window is still
+            // upright, so this fill reaches past the workspace's foot and the root's system white never shows.
+            PhoneTheme.background.frame(height: max(viewport.width, viewport.height)).ignoresSafeArea().allowsHitTesting(false)
+        }
         .background {
             // Measure window space without treating the keyboard as an orientation change.
             GeometryReader { geometry in
                 Color.clear.onChange(of: geometry.size, initial: true) { _, size in viewport = size }
             }.ignoresSafeArea(.keyboard)
+        }
+        .background {
+            PhoneResizeWatch(resizing: resizing) { size in
+                // A rotation into the wide layout brings Home in before it starts, so Home turns with the window.
+                guard UIDevice.current.userInterfaceIdiom == .pad, horizontalSize == .regular, size.width > size.height,
+                      !wideBar, !homeAhead, selection != .home else { return false }
+                homeAhead = true
+                let ended = resizing.ended
+                resizing.ended = { ended(); homeAhead = false }
+                return true
+            }.frame(width: 0, height: 0)
+        }
+    }
+
+    /// INF-1590: the strip, and a tab other than Home, follow the layout once a rotation has ended, and on the main
+    /// queue's next turn when no rotation runs.
+    private func settle(_ wide: Bool) {
+        if resizing.running > 0 {
+            resizing.ended = { wideBar = wide; homeAhead = false }
+        } else {
+            DispatchQueue.main.async { wideBar = wide; homeAhead = false }
         }
     }
 
@@ -200,6 +233,50 @@ struct PhoneWorkspace<Stage: View, Tasks: View, Composer: View>: View {
         }
         .frame(width: sidebarWidth).background(PhoneTheme.panel)
         .accessibilityElement(children: .contain).accessibilityIdentifier("phone-sidebar")
+    }
+}
+
+/// INF-1590: how many of the window's size changes, such as rotations, are still animating, and what runs once the
+/// last has ended. A plain class, so a change draws nothing.
+@MainActor final class PhoneResizing {
+    var running = 0
+    var ended: () -> Void = {}
+}
+
+/// INF-1590: a rotation lays the window out inside UIKit's animation. Views that left or entered the window while it
+/// ran, such as the strip and the tab the tab controller left, at times left one of its animations started and never
+/// stopped, so XCTest's wait for the app to settle never ended. Home, put back once a rotation into landscape had ended,
+/// came back short by a keyboard inset it took while out of the window. So this view controller, with no view of its
+/// own, hears each size change before UIKit animates it, when `before` may bring Home in at once, unanimated, and runs
+/// what waits for the change once it ends.
+private struct PhoneResizeWatch: UIViewControllerRepresentable {
+    let resizing: PhoneResizing
+    let before: (CGSize) -> Bool
+    func makeUIViewController(context: Context) -> Watcher { Watcher(resizing: resizing, before: before) }
+    func updateUIViewController(_ watcher: Watcher, context: Context) { watcher.before = before }
+
+    final class Watcher: UIViewController {
+        let resizing: PhoneResizing
+        var before: (CGSize) -> Bool
+        init(resizing: PhoneResizing, before: @escaping (CGSize) -> Bool) {
+            self.resizing = resizing; self.before = before
+            super.init(nibName: nil, bundle: nil)
+        }
+        required init?(coder: NSCoder) { nil }
+        override func viewWillTransition(to size: CGSize, with coordinator: any UIViewControllerTransitionCoordinator) {
+            resizing.running += 1
+            UIView.performWithoutAnimation {
+                if before(size) { view.window?.rootViewController?.view.layoutIfNeeded() }
+            }
+            super.viewWillTransition(to: size, with: coordinator)
+            coordinator.animate(alongsideTransition: nil) { [resizing] _ in
+                resizing.running -= 1
+                guard resizing.running == 0 else { return }
+                let ended = resizing.ended
+                resizing.ended = {}
+                ended()
+            }
+        }
     }
 }
 

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "journey-library-install-timeout",
+      "reason": "Internal CI change: stop the source journey desktop-library install after ten minutes without changing the app."
+    }
+  ]
+}

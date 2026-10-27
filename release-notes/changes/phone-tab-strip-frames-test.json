@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "phone-tab-strip-frames-test",
+      "reason": "Test-only: an app-hosted phone test checks that the top bar's tab strip has the same frames from launch, after dark appearance and at the largest standard text size; the Round tabs change already keeps the strip that size, so nothing a person sees changes."
+    }
+  ]
+}

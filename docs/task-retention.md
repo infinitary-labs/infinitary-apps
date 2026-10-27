@@ -96,6 +96,7 @@ A link is not followed.
 If the task folder cannot be verified, the temporary folder is itself a link, a volume is still mounted, or the rename fails, the folder stays, the timeline says why, and a later pass tries again.
 The app never force-detaches a volume.
 The week-long leftover pass also leaves a provisioned folder that still holds a volume, so it does not fall through to a recursive delete.
+Both passes walk and delete through `src/core/plainFs.ts`, so an app's `.asar` file, such as one under `node_modules/electron`, is the file it is: Electron's own file reads show it as a folder on a device of its own, which reads as a mounted volume and stops an in-process delete.
 A successful removal notes the byte count; a pending removal does not claim the space is free.
 
 On another computer the home asks `inf:session:clean-temp` only after that computer's conversation is closed, and only when it speaks protocol 7.1 or later.

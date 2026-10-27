@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "closed-task-temp-with-app-bundle",
+      "kind": "fix",
+      "title": "A closed task's temporary files go even when they hold a desktop app's files",
+      "body": "A temporary folder holding an installed desktop app, or a project's copy of one, stayed on your disk after its task closed, and the task's record said a volume was still mounted. Those folders now go when the task closes, and the week-later cleanup of a task's other leftover files no longer stops at them, on this computer and on a computer that runs your work.",
+      "area": "tasks",
+      "noPicture": "The fix frees disk space in the background; the task's record shows the same line it shows for any removed temporary folder.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

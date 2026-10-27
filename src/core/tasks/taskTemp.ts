@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { lstatSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
-import { lstat, mkdir, readdir, readFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
 import type { AppPaths } from "../paths";
+import { lstat, mkdir, readdir, readFile, rename, rm } from "../plainFs";
 import type { TaskRecord } from "../storage/taskStore";
 import { HANDOVER_OUT_DIR_NAME, removeHandoverFiles } from "./handoverFiles";
 import { TaskService } from "./taskService";
@@ -15,7 +15,8 @@ import { TaskService } from "./taskService";
  * the folder does not drop the contract. A folder named temp that the app
  * did not provision — including one a crewmate already filled — keeps the
  * week-long leftover policy. Cleanup removes only a provisioned folder, and
- * only after the task is done or dropped.
+ * only after the task is done or dropped. Its walks read through `plainFs`,
+ * so an app's `.asar` file inside is a file, never a mounted volume.
  */
 
 export const TEMP_DIR_NAME = "temp";

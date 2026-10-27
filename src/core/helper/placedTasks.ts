@@ -14,7 +14,6 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
-import { rm } from "node:fs/promises";
 import { join, relative, sep } from "node:path";
 import {
   type CardMediaExtension,
@@ -33,6 +32,7 @@ import {
 } from "@shared/work";
 import { z } from "zod";
 import type { JobRows } from "../jobs/jobManager";
+import { rm } from "../plainFs";
 import { HANDOVER_IN_DIR_NAME } from "../tasks/handoverFiles";
 import { APP_KEPT_PARTS, removeTaskLeftovers } from "../tasks/taskLeftovers";
 import { provisionTaskTemp, removeOwnedTempFolder, type TempRemoval } from "../tasks/taskTemp";

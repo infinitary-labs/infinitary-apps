@@ -1,4 +1,4 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import {
   chmodSync,
   copyFileSync,
@@ -16,10 +16,10 @@ import {
   writeFileSync,
 } from "node:fs";
 import { hostname, uptime } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join } from "node:path";
 import Database from "better-sqlite3";
-import { build } from "vite";
 import { describe, expect, it, vi } from "vitest";
+import { bundleForElectron } from "../../../tests/helpers/electronBundle";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
 import { processAlive } from "../helper/lock";
@@ -687,36 +687,7 @@ function asarWithLink(): Buffer {
 
 describe("the copy and its check inside Electron", () => {
   it("copy a folder holding an installed app's app.asar, and the check passes on the copy", async () => {
-    const root = resolve(__dirname, "../../..");
-    // The binary the app runs on; its package names it, and core imports no electron.
-    const electronPath = join(
-      root,
-      "node_modules/electron/dist",
-      readFileSync(join(root, "node_modules/electron/path.txt"), "utf8"),
-    );
-    const bundleDir = scratchDir("infinitary-move-bundle-");
-    await build({
-      configFile: false,
-      logLevel: "silent",
-      root,
-      resolve: {
-        alias: { "@core": resolve(root, "src/core"), "@shared": resolve(root, "src/shared") },
-      },
-      ssr: { noExternal: true, target: "node" },
-      build: {
-        ssr: resolve(root, "tests/helpers/folderMoveProcess.ts"),
-        outDir: bundleDir,
-        emptyOutDir: false,
-        minify: false,
-        target: "node24",
-        rollupOptions: { output: { format: "es", entryFileNames: "move.mjs" } },
-      },
-    });
-    const inElectron = (...args: string[]) =>
-      spawnSync(electronPath, [join(bundleDir, "move.mjs"), ...args], {
-        encoding: "utf8",
-        env: { ...process.env, ELECTRON_RUN_AS_NODE: "1" },
-      });
+    const inElectron = await bundleForElectron("tests/helpers/folderMoveProcess.ts");
     const folder = scratchDir("infinitary-asar-from-");
     const staged = scratchDir("infinitary-asar-to-");
     const app = join(folder, "work/app/Infinitary.app/Contents/Resources");

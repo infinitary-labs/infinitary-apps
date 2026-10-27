@@ -3,8 +3,8 @@ import { constants, lstatSync, type Stats, statfsSync } from "node:fs";
 import { join } from "node:path";
 import koffi from "koffi";
 import { hostEnv } from "../hostEnv";
+import { chmod, cp, lstat, mkdir, readdir, rm, utimes } from "../plainFs";
 import { atUtilityQos } from "../utilityQos";
-import { chmod, cp, lstat, mkdir, readdir, rm, utimes } from "./plainFs";
 import { COPIED_ONE_BY_ONE, COPIED_TWO_DEEP, leftBehind } from "./tree";
 
 /**

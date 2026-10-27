@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { lstat, mkdir, readdir, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { fileSizeWords } from "@shared/attachments";
+import { lstat, mkdir, readdir, rename, rm } from "../plainFs";
 import {
   OLDER_TEMP_MARKER_NAME,
   ownedTempUnsafe,

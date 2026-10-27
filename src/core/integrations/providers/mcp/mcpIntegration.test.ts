@@ -211,6 +211,43 @@ describe.each([
   });
 });
 
+// INF-1573: the journey's strict JSON reader must see a complete book even
+// while add_note is publishing it, not depend on winning the scheduling race.
+// The preload samples real file contents at truncation and partial-write
+// boundaries; the service still calls the real stand-in over stdio.
+describe.each(["legacy", "modern"] as const)("atomic %s stand-in notes", (era) => {
+  it("keeps the published book readable throughout add_note", async () => {
+    const root = scratchDir("mcp-atomic-notes-");
+    const file = join(root, "notes.json");
+    const before = { notes: [...SAMPLE_NOTES] };
+    writeFileSync(file, JSON.stringify(before));
+    const preload = resolve(__dirname, "../../../../../tests/fixtures/mcp-notes-write.mjs");
+    const { service, tasks, close } = serviceIn(root);
+    opened.push({ service, close });
+    await service.add("mcp", {
+      name: "Notes",
+      runs: `'${process.execPath}' --import '${preload}' '${STAND_IN}' stdio ${era} '${file}'`,
+    });
+    const reminder = "Return the library books by Friday";
+    await service.call(task, "Notes", "add_note", { text: reminder }, "Keep the week's reminder.");
+    const ask = tasks.get(task.taskId)?.delivery?.writeAsks?.[0];
+    expect(ask).toMatchObject({ kind: "integration", action: "add_note" });
+    const click = await service.sendAsk(task.taskId, ask?.id ?? "");
+    expect(click.outcome).toEqual({ kind: "ran" });
+    expect(click.answer).toBe(`Added note ${before.notes.length + 1}.`);
+    const snapshots: string[] = JSON.parse(readFileSync(`${file}.observations.json`, "utf8"));
+    const published = JSON.parse(readFileSync(file, "utf8"));
+    console.info(
+      `[mcp atomic ${era}]`,
+      JSON.stringify({ answer: click.answer, snapshots, published }),
+    );
+    // A direct rewrite exposes an empty string, then half a JSON document.
+    // Every in-progress read must instead see the previous complete book.
+    expect(snapshots.map((snapshot) => JSON.parse(snapshot))).toEqual([before, before, before]);
+    expect(published).toEqual({ notes: [...SAMPLE_NOTES, reminder] });
+  });
+});
+
 // INF-882: upgrading an existing connection must change only its name,
 // not a pending request's destination, its keys, settings or event identity.
 it("keeps an old MCP ask and its event on the server after the GitHub name repair", async () => {

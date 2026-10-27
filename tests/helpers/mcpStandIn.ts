@@ -14,7 +14,7 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { readFileSync, unwatchFile, watchFile, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, unwatchFile, watchFile, writeFileSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
@@ -293,7 +293,13 @@ async function serveNotesStdio(era: StandInEra, file: string): Promise<void> {
     tell();
   });
   process.stdin.on("end", () => unwatchFile(file));
-  const added = () => writeFileSync(file, JSON.stringify({ notes: book.notes }));
+  const added = () => {
+    // INF-1573: a journey may read while this child writes. Publish a complete
+    // sibling in one rename instead of truncating the file it is polling.
+    const pending = `${file}.${process.pid}.tmp`;
+    writeFileSync(pending, JSON.stringify({ notes: book.notes }));
+    renameSync(pending, file);
+  };
   if (era === "modern") {
     serveStdio(() => {
       const server = modernNotes(book, added);

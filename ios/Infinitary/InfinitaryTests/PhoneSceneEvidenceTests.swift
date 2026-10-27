@@ -5,7 +5,8 @@ import XCTest
 
 /// INF-1066: the captain asked for smooth native motion and CI before/after frame timing.
 /// Observe the actual PhoneCharacter in a visible host window on each disposable simulator.
-/// Timing is evidence, not a wall-clock pass/fail budget on a shared CI computer.
+/// Timing is evidence, not a wall-clock pass/fail budget on a shared CI computer: each sample's
+/// callbacks are due on the load clock, which counts the app's own progress (INF-1506).
 @MainActor final class PhoneSceneEvidenceTests: XCTestCase {
     /// INF-1066: photographs of every approved native form, using the same painter as the running scene.
     func testEveryNativeFormHasAVisibleDrawing() throws {
@@ -77,16 +78,39 @@ import XCTest
         let trace = NativeSceneRunLoopTrace(phase: "sample")
         let sample = DisplaySample(ticks: 2)
         sample.stop() // The display link cannot deliver any callbacks, independent of host load.
-        let result = await XCTWaiter.fulfillment(of: [sample.finished], timeout: 0.01)
+        // INF-1506: the load clock still ends a wait whose callbacks never come, by its wall cap at most.
+        let budget: TimeInterval = 0.05, started = ProcessInfo.processInfo.systemUptime
+        let result = await sample.complete(within: budget, graded: false)
+        let elapsed = ProcessInfo.processInfo.systemUptime - started
         let entries = trace.finish()
         let diagnostic = sample.diagnostic(phase: "sample", result: result, heartbeat: entries)
         XCTAssertEqual(result, .timedOut)
+        // One polling turn of scheduling tolerance, as PhoneWaitsTests allows its missing file.
+        XCTAssertLessThanOrEqual(elapsed, phoneRequestBudget(budget) + 0.3, diagnostic)
         XCTAssertTrue(sample.timestamps.isEmpty)
         XCTAssertTrue(diagnostic.contains("phase=sample result=timed-out callbacks=0/2"), diagnostic)
         XCTAssertTrue(diagnostic.contains("callback_gap_max_s="), diagnostic)
         XCTAssertTrue(diagnostic.contains("run_loop_gap_max_s="), diagnostic)
         XCTAssertEqual(entries.first?.event, "sample-start")
         XCTAssertEqual(entries.last?.event, "sample-end")
+        print("NATIVE_SCENE_DIAGNOSTIC_CONTROL \(diagnostic)")
+    }
+
+    /// INF-1506: run 40423926011's iPhone idle sample timed out with a 2.37-second gap between
+    /// callbacks and a 2.36-second main-run-loop gap on a busy Mac mini, while the same code passed
+    /// on main 20 minutes later. A stall of the app's own main thread is the host's load, not a
+    /// missing screen update, so it must not spend the callbacks' budget.
+    func testMainThreadStallDoesNotSpendTheDisplayBudget() async {
+        let stall: TimeInterval = 2.37, budget: TimeInterval = 2
+        let sample = DisplaySample(ticks: 6)
+        // Queued behind this turn, so it stops the main thread after the wait has started.
+        DispatchQueue.main.async { Thread.sleep(forTimeInterval: stall) }
+        let started = ProcessInfo.processInfo.systemUptime
+        let result = await sample.complete(within: budget, graded: false)
+        let elapsed = ProcessInfo.processInfo.systemUptime - started
+        let diagnostic = sample.diagnostic(phase: "stalled", result: result, heartbeat: [])
+        XCTAssertGreaterThanOrEqual(elapsed, stall, "The stall happened during the wait, so a wall-clock budget would have expired; \(diagnostic)")
+        XCTAssertEqual(result, .completed, "The display delivers its callbacks after the stall; \(diagnostic)")
         print("NATIVE_SCENE_DIAGNOSTIC_CONTROL \(diagnostic)")
     }
 
@@ -164,7 +188,7 @@ import XCTest
         // A static waiter does not send this shared XCTestCase extension's non-Sendable self.
         let runLoop = NativeSceneRunLoopTrace()
         let warmup = DisplaySample(ticks: 60)
-        let warmupResult = await XCTWaiter.fulfillment(of: [warmup.finished], timeout: 20)
+        let warmupResult = await warmup.complete(within: 20)
         warmup.stop()
         let heartbeat = runLoop.finish()
         let warmupDiagnostic = "source=\(source) " + warmup.diagnostic(phase: "warmup", result: warmupResult, heartbeat: heartbeat)
@@ -173,15 +197,16 @@ import XCTest
         CharacterFrameMetrics.shared.start(source: source, drawing: drawing)
         if let (character, emote) = reaction { character.request(emote) }
         let sample = DisplaySample(ticks: 240)
-        let sampleResult = await XCTWaiter.fulfillment(of: [sample.finished], timeout: 20)
+        let sampleResult = await sample.complete(within: 20)
         sample.stop()
         let frames = CharacterFrameMetrics.shared.finish()
         let sampleHeartbeat = sampleRunLoop.finish()
         let expectedModes = nativeSceneExpectedModes(state: state, reaction: reaction?.1)
         let sampleDiagnostic = "source=\(source) " + sample.diagnostic(phase: "sample", result: sampleResult, heartbeat: sampleHeartbeat)
             + " " + nativeSceneFrameDiagnostic(frames, expectedModes: expectedModes)
-        // Only the captain-approved idle-fidget expectation changes. Keep every other predicate and
-        // deadline, naming missing callbacks, a missing drawing or an unexpected animation mode.
+        // INF-1378 changed only the captain-approved idle-fidget expectation, and INF-1506 only the
+        // clock the 20-second budgets run on. Every other predicate stays, naming missing callbacks,
+        // a missing drawing or an unexpected animation mode.
         XCTAssertEqual(sampleResult, .completed, "The display completes the sampled callbacks; \(sampleDiagnostic)")
         XCTAssertGreaterThan(frames.count, 1, "The visible native character actually draws; \(sampleDiagnostic)")
         XCTAssertTrue(frames.allSatisfy { expectedModes.contains($0.mode) }, "Only the named target Canvas's expected states enter the sample; \(sampleDiagnostic)")
@@ -226,7 +251,6 @@ import XCTest
 }
 
 @MainActor final class DisplaySample: NSObject {
-    let finished = XCTestExpectation(description: "Display sample complete")
     private let requested: Int
     private var remaining: Int
     private var link: CADisplayLink?
@@ -244,9 +268,22 @@ import XCTest
     @objc private func tick(_ link: CADisplayLink) {
         received.append(ProcessInfo.processInfo.systemUptime)
         timestamps.append(link.timestamp); remaining -= 1
-        if remaining == 0 { stop(); finished.fulfill() }
+        if remaining == 0 { stop() }
     }
     func stop() { link?.invalidate(); link = nil }
+
+    /// INF-1506: the requested callbacks are due within `budget` on the load clock, read on the
+    /// main thread that receives them. A stalled or starved app counts at most two ticks per
+    /// stall, so a busy host does not spend the budget; a display link that stops delivering
+    /// while the app runs still fails within it, and every wait still ends by its wall cap.
+    func complete(within budget: TimeInterval, graded: Bool = gradesBudgets) async -> XCTWaiter.Result {
+        var deadline = PhoneWaitDeadline(budget, graded: graded)
+        while remaining > 0 {
+            if deadline.expired() { return .timedOut }
+            do { try await Task.sleep(for: .seconds(PhoneWaitDeadline.tick)) } catch { return .interrupted }
+        }
+        return .completed
+    }
 
     func diagnostic(phase: String, result: XCTWaiter.Result, heartbeat: [NativeSceneRunLoopTrace.Entry]) -> String {
         let ended = ProcessInfo.processInfo.systemUptime

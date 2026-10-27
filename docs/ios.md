@@ -217,12 +217,14 @@ Simulator callback timings measure that run, not physical ProMotion delivery, ba
 The DEBUG-only cadence observer identifies its target Canvas and records its mode, warmed heat and rotation so another window cannot contaminate a sample.
 The same display-tick sample measures the isolated first mate and the production crowded scene with its real task roster, retaining drawing work, interval tails and the delivered display intervals separately.
 A main-run-loop observer retains its actual before-sources, before-waiting and after-waiting timestamps for both warmup and sampling, without adding a wait or moving the 60-callback warmup, 240-callback sample or their deadlines.
+The warmup and the sample each have 20 seconds on the load clock, read on the main thread that receives the callbacks, never a wall-clock XCTest wait (INF-1506).
+A stall of the app itself, such as a busy Mac mini starving the simulator, counts at most two ticks, while a display link that stops delivering as the app runs still fails within the budget, and every wait ends by its wall cap.
 Cadence failures name their source, phase, waiter outcome, observed and requested callbacks, elapsed time, longest callback and run-loop gaps, drawn mode counts, first unexpected mode, minimum heat and rotation endpoints.
 The callback gap includes the wait's leading and trailing intervals, so a display link that never fires reports the whole wait rather than zero.
 Sampling keeps its raw display timestamps and main-run-loop trace as attachments, and prints the diagnostic facts in the ordinary command log too.
 A gap identifies missing main-thread progress but does not identify the blocking stack or establish a flake.
 Idle cadence samples accept the character's automatic fidget, including the idle sample that requests a salute; working and listening samples gain no automatic-mode exception.
-The named source and drawing scope, working heat, rotation advancement, requested-reaction presence, callback counts and deadlines remain enforced.
+The named source and drawing scope, working heat, rotation advancement, requested-reaction presence, callback counts and budgets remain enforced.
 Its accessibility value stays the state the conversation owner supplies; an emote never changes it.
 The join stage uses idle; the empty stage follows the Mac's published busy snapshot and numbered busy events, never typing or a crew count.
 Homes on `SCENE_OBSERVATIONS_SINCE` (`src/shared/ipc.ts`, major 12) or later, and older homes that advertise `native-scene-observations`, answer `inf:conversation:state` and the public `inf:computers:presence` read/push; the latter contains only each work computer's id, name and reach, never addresses or management facts.
@@ -396,6 +398,7 @@ Any part failing fails the gate, and by default no part stops another.
 With `--stop-early`, which a pull request's phone check sets through `INFINITARY_PHONE_STOP_EARLY`, the first failed part ends the part still running on the other device, as an interrupted part does, and starts no other; every started simulator is still deleted, and the gate names the failed, stopped and unstarted parts and writes no `part-times.json`.
 A run on request runs every part to its end.
 Every explicit native observation goes through `InfinitaryUITests/PhoneWaits.swift`: element presence and absence, predicate reads and the disposable home's control requests.
+Its load clock, `PhoneWaitDeadline`, lives in `PhoneLoadClock/`, which both test targets compile, so the app-hosted display samples read the same clock.
 On ordinary runs it samples the same load clock as journeys, with 25 ms ticks, at most two ticks counted across a stall, and a share reduced by one-minute load per active processor above 1.
 Each wait ends by 20 times its budget on the monotonic wall clock, at most ten minutes; direct predicate evaluation preserves INF-975's short-window fix.
 The phone launcher starts the Node load clock for its failure timers too, and the disposable control server keeps idle connections for a finite capped interval so a queued POST survives a frozen home.

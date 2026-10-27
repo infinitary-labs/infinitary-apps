@@ -191,7 +191,7 @@ The runner's timeout slots accumulate wall elapsed time separately from their lo
 `tests/load-clock.test.ts` runs the real runner over a fixture and freezes its whole process group: a writer frozen 7 s past its 5 s budget still passes, a frozen after-hook writer also passes, both durations include the freeze, a missing file fails at its budget on a quiet run and by the cap under a frozen runner, and a graded run fails the frozen writer at its budget.
 
 Unit tests run their limits and waits on the same clock and cap, through a clock of their own in each vitest worker (`docs/test-cohorts.md`, "Budgets").
-The native phone gate mirrors the clock and cap in `InfinitaryUITests/PhoneWaits.swift`, and explicitly starts the Node clock for its own failure timers (`docs/ios.md`, "Disposable verification").
+The native phone gate mirrors the clock and cap in `PhoneLoadClock/PhoneWaitDeadline.swift`, read by `InfinitaryUITests/PhoneWaits.swift` and the app-hosted display samples, and explicitly starts the Node clock for its own failure timers (`docs/ios.md`, "Disposable verification").
 Native predicate reads happen directly, so a short polling interval cannot time out before evaluating the predicate.
 
 ## A crashed page

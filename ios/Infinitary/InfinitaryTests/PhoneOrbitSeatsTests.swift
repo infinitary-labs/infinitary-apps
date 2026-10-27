@@ -181,7 +181,7 @@ import XCTest
         window.makeKeyAndVisible(); stage.clock.setRunning(true)
         func ticks(_ count: Int) async {
             let sample = DisplaySample(ticks: count)
-            let result = await XCTWaiter.fulfillment(of: [sample.finished], timeout: 20)
+            let result = await sample.complete(within: 20)
             sample.stop(); XCTAssertEqual(result, .completed)
             XCTAssertEqual(stage.crew.current.glyphs.count, ids.count)
         }

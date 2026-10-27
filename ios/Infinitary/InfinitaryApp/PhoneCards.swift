@@ -264,7 +264,7 @@ private struct PhoneCardPane: View {
                 }
                 Button("Retry") {
                     let fill = host.reading["answers"]; host.close(); problem = nil
-                    host = CardWebHost(card: card, session: session, fill: fill)
+                    host = CardWebHost(card: card, session: session, fill: fill, heightLag: CardWebHost.retriedHeightLag)
                     connectHost(); retry += 1
                 }.buttonStyle(PhoneChoiceStyle(.secondary)).disabled(host.changing).accessibilityIdentifier("retry-card")
             } else {
@@ -373,7 +373,7 @@ private struct PhoneCardPane: View {
                             }
                         }
                         .buttonStyle(PhoneChoiceStyle(footerKind(action)))
-                        .disabled(card.isPast || host.changing || !session.canChange || !host.drawn)
+                        .disabled(card.isPast || host.changing || !session.canChange || !host.revealed)
                         .accessibilityIdentifier("card-action-\(action["id"].text ?? "")")
                     }
                 }

@@ -24,13 +24,28 @@ import SwiftUI
     private var collectionTimeout: Task<Void, Never>?
     private var watch = CardWatchdog()
     private var theme = "light"
-    private var revealed = false
+    private(set) var revealed = false
+    /// The height the page last reported its body drew at; `height` is the frame native code asks the view for.
+    private var bodyHeight: CGFloat = 48
     private let fill: PhoneJSON
+    private let heightLag: TimeInterval
     var onReading: ((PhoneJSON) -> Void)?
     var onDrawn: (() -> Void)?
 
-    init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON) {
-        self.card = card; self.session = session; self.fill = fill
+    init(card: PhoneCard, session: ReadOnlySession, fill: PhoneJSON, heightLag: TimeInterval = 0) {
+        self.card = card; self.session = session; self.fill = fill; self.heightLag = heightLag
+    }
+
+    /// INF-1574: the isolated phone gate's stand-in for a loaded computer, where a retried body's drawn height reaches
+    /// its native frame this many seconds after the page reports it.
+    static var retriedHeightLag: TimeInterval {
+        #if targetEnvironment(simulator)
+        let environment = ProcessInfo.processInfo.environment
+        guard environment["INFINITARY_ISOLATED_PHONE_TEST"] == "1" else { return 0 }
+        return TimeInterval(environment["INFINITARY_TEST_RETRIED_CARD_LAG"] ?? "") ?? 0
+        #else
+        0
+        #endif
     }
 
     func makeView(theme: String) -> WKWebView {
@@ -43,7 +58,8 @@ import SwiftUI
         self.assets = assets
         configuration.setURLSchemeHandler(assets, forURLScheme: "app-frame")
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: "cardHost")
-        let view = WKWebView(frame: .zero, configuration: configuration)
+        let view = CardBodyView(frame: .zero, configuration: configuration)
+        view.onLayout = { [weak self] in self?.revealIfShown() }
         view.allowsLinkPreview = false
         view.navigationDelegate = self; view.uiDelegate = self
         view.isOpaque = false; view.backgroundColor = .clear; view.scrollView.backgroundColor = .clear
@@ -100,12 +116,21 @@ import SwiftUI
         view?.evaluateJavaScript("window.phoneCard?.theme('\(theme == "dark" ? "dark" : "light")')", completionHandler: nil)
     }
 
-    /// INF-1263: the drawn body's height reaches the view in this update's layout; only after it, the page lets the body
-    /// take taps and reach accessibility, so nothing is offered where the 48-point placeholder clipped it.
-    func reveal() {
-        guard !revealed else { return }
-        revealed = true
-        DispatchQueue.main.async { [weak self] in self?.view?.evaluateJavaScript("window.phoneCard?.reveal()", completionHandler: nil) }
+    /// INF-1263 / INF-1574: the page lets the body take taps and reach accessibility, and the footer enables, only once
+    /// the view's own layout holds the drawn height, so nothing is offered where the 48-point placeholder clipped it.
+    /// A SwiftUI update that reads `drawn` runs before that layout, so it cannot be the signal. The reveal waits one
+    /// main-queue turn, so no view update or layout pass changes what the footer reads.
+    func revealIfShown() {
+        guard isShown else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.isShown else { return }
+            self.revealed = true
+            self.view?.evaluateJavaScript("window.phoneCard?.reveal()", completionHandler: nil)
+        }
+    }
+    private var isShown: Bool {
+        guard drawn, !revealed, let view else { return false }
+        return abs(view.bounds.height - bodyHeight) < 0.5
     }
 
     func beginChange() -> Bool {
@@ -173,8 +198,13 @@ import SwiftUI
         case "answers":
             reading = payload["reading"]; onReading?(reading); replyHandler(true, nil)
         case "drawn":
-            height = max(48, min(100_000, payload["height"].numeric ?? 48))
+            let drawnHeight = max(48, min(100_000, payload["height"].numeric ?? 48))
+            bodyHeight = drawnHeight
+            if heightLag > 0 {
+                DispatchQueue.main.asyncAfter(deadline: .now() + heightLag) { [weak self] in self?.height = drawnHeight }
+            } else { height = drawnHeight }
             if !drawn { drawn = true; onDrawn?() }
+            revealIfShown()
             replyHandler(true, nil)
         case "ready": watch.bodyReady(); replyHandler(true, nil)
         case "pong": watch.bodyAnswered(Int(payload["seq"].numeric ?? 0)); replyHandler(true, nil)
@@ -217,13 +247,19 @@ import SwiftUI
                  decisionHandler: @escaping @MainActor @Sendable (WKPermissionDecision) -> Void) { decisionHandler(.deny) }
 }
 
+/// The card body's own layout is when its drawn height becomes the geometry taps and accessibility use.
+final class CardBodyView: WKWebView {
+    var onLayout: (() -> Void)?
+    override func layoutSubviews() { super.layoutSubviews(); onLayout?() }
+}
+
 struct CardWebView: UIViewRepresentable {
     let host: CardWebHost
     @Environment(\.colorScheme) private var scheme
     func makeUIView(context: Context) -> WKWebView { host.makeView(theme: scheme == .dark ? "dark" : "light") }
     func updateUIView(_ view: WKWebView, context: Context) {
         host.updateTheme(scheme == .dark ? "dark" : "light")
-        if host.drawn { host.reveal() }
+        host.revealIfShown()
     }
     static func dismantleUIView(_ view: WKWebView, coordinator: ()) {
         (view.navigationDelegate as? CardWebHost)?.close()

@@ -510,6 +510,9 @@ import XCTest
     }
 
     func testCards() async throws {
+        // INF-1574: a retried body's drawn height reaches its native frame three seconds late, as on a loaded computer,
+        // so the stalled-answer check below sees a body that is drawn but still clipped by its placeholder.
+        app.launchEnvironment["INFINITARY_TEST_RETRIED_CARD_LAG"] = "3"
         try await launchJoined()
         try await verifyCards()
     }
@@ -818,7 +821,8 @@ import XCTest
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForPresence(timeout: 20), app.debugDescription)
 
         let choose = app.buttons["card-action-choose"]
-        // INF-1070: the retried card takes taps only once it reports drawn, which enables its footer; its text exists sooner.
+        // INF-1070 / INF-1574: the retried card takes taps only once its body is revealed at its drawn height, which
+        // enables its footer; its text exists sooner.
         waitUntilEnabled(choose)
         let stalledAnswer = app.webViews.buttons["Stall the next answer"]
         reveal(stalledAnswer); stalledAnswer.tap()
@@ -861,7 +865,7 @@ import XCTest
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10))
         _ = try await home("capture-stop")
         // Paging remounts the document; the named answers and staged value still leave together.
-        // INF-1086: the remounted card's footer stays disabled until its document reports drawn.
+        // INF-1086 / INF-1574: the remounted card's footer stays disabled until its body is revealed at its drawn height.
         let settings = app.buttons["card-action-settings"]
         waitUntilEnabled(settings)
         reveal(settings); settings.tap()

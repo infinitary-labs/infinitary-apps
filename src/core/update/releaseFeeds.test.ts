@@ -55,7 +55,7 @@ describe("public release feeds without cask publication", () => {
     expect(info.version).toBe(manifest.version);
     expect(files).toHaveLength(1);
     expect(files[0]?.url.href).toBe(
-      `https://github.com/${releaseSource.repository}/releases/download/v${manifest.version}/${manifest.zip.asset}`,
+      `${releaseSource.downloadBase}releases/v${manifest.version}/${manifest.zip.asset}`,
     );
     expect(files[0]?.info).toMatchObject({ size: bytes.length, sha512 });
   });

@@ -23,6 +23,9 @@ import { isAlphaVersion, isStableVersion } from "./semver";
 export type TapNames = {
   /** The tap's repository on GitHub, `owner/homebrew-name`. */
   repo: string;
+  /** Build-owned object-storage destination; absent for the unchanged Homebrew taps. */
+  downloadBase?: string;
+  releasePage?: string;
   /** What `brew install --cask` names the tap by, `owner/name`. */
   tap: string;
   /** Public release tag prefixes, before the version. */
@@ -86,16 +89,19 @@ export function upgradeCommandFor(channel: UpdateChannel, tap: TapNames = TAP): 
 
 /** The public tap's release page of a tag. */
 function releasePageOf(tag: string, tap: TapNames): string {
-  return `https://github.com/${tap.repo}/releases/tag/${tag}`;
+  return tap.releasePage ?? `https://github.com/${tap.repo}/releases/tag/${tag}`;
 }
 
 /** Where every asset of a tag's public tap release downloads from. */
 function downloadPrefixOf(tag: string, tap: TapNames): string {
-  return `https://github.com/${tap.repo}/releases/download/${tag}/`;
+  return tap.downloadBase
+    ? `${tap.downloadBase}releases/${tag}/`
+    : `https://github.com/${tap.repo}/releases/download/${tag}/`;
 }
 
 /** This app's release list on the shared tap for a channel with no known target. */
 export function releasesPageFor(channel: UpdateChannel, tap: TapNames = TAP): string {
+  if (tap.releasePage) return tap.releasePage;
   const prefix = channel === "alpha" ? tap.alphaTagPrefix : tap.stableTagPrefix;
   return `https://github.com/${tap.repo}/releases?q=${encodeURIComponent(prefix)}`;
 }

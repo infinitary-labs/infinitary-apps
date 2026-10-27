@@ -226,7 +226,7 @@ try {
   }
   // A private local CA, trusted only on this disposable Mac. No production provider override
   // or weakened signature/checksum check enters the application build.
-  writeFileSync(join(work, "openssl.cnf"), "[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=Infinitary isolated installer verification\n[ext]\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,keyCertSign,digitalSignature\nsubjectAltName=DNS:github.com,DNS:raw.githubusercontent.com,IP:127.0.0.1\n");
+  writeFileSync(join(work, "openssl.cnf"), "[req]\ndistinguished_name=dn\nx509_extensions=ext\nprompt=no\n[dn]\nCN=Infinitary isolated installer verification\n[ext]\nbasicConstraints=critical,CA:TRUE\nkeyUsage=critical,keyCertSign,digitalSignature\nsubjectAltName=DNS:downloads.getinfinitary.com,DNS:github.com,DNS:raw.githubusercontent.com,IP:127.0.0.1\n");
   run("/usr/bin/openssl", ["req", "-x509", "-nodes", "-newkey", "rsa:2048", "-days", "1", "-config", join(work, "openssl.cnf"), "-keyout", key, "-out", certificate]);
   chmodSync(key, 0o600);
   // Empty password: disposable public trust material, no signing secret in this keychain.
@@ -240,7 +240,7 @@ try {
   // security's successful dump, including certificate labels, is written to stdout.
   assert(run("/usr/bin/security", ["dump-trust-settings", "-d"]).includes("Infinitary isolated installer verification"), "Chromium's admin trust listing must include the fixture root");
   copyFileSync("/etc/hosts", join(work, "original-hosts"));
-  writeFileSync(join(work, "hosts"), `${readFileSync("/etc/hosts", "utf8")}\n127.0.0.1 github.com raw.githubusercontent.com\n`);
+  writeFileSync(join(work, "hosts"), `${readFileSync("/etc/hosts", "utf8")}\n127.0.0.1 downloads.getinfinitary.com github.com raw.githubusercontent.com\n`);
   run("/usr/bin/sudo", ["/bin/cp", join(work, "hosts"), "/etc/hosts"]); hostsChanged = true;
   run("/usr/bin/sudo", ["/usr/bin/dscacheutil", "-flushcache"]);
   for (const [name, value] of Object.entries(launchValues)) {
@@ -254,7 +254,7 @@ try {
   await expect.poll(() => existsSync(`${control}.ready`), { timeout: 20_000 }).toBe(true);
 
   checkpoint("Verifying HTTPS trust before launching the app");
-  const feedUrl = `https://raw.githubusercontent.com/${source.repository}/${source.feedBranch}/alpha-mac.yml`;
+  const feedUrl = `${source.downloadBase}feeds/alpha-mac.yml`;
   const preflight = JSON.parse(run("/usr/bin/curl", ["--fail", "--silent", "--show-error", "--max-time", "30", feedUrl]));
   assert.equal(preflight.version, versions.alphaAfter);
   record("Disposable HTTPS trust", "The system HTTPS reader verified the fixture certificate and read the expected Alpha feed without bypassing trust.");
@@ -337,7 +337,7 @@ try {
   await checkInstalledHomebrew({ runner, root: REPO_ROOT, work, home, data, installed, fixtures,
     versions, env: appEnv, brewPath, run, launch, stopApp, status, install, feed, record, checkpoint,
     saved, installedVersion });
-  record("Download origin", `${source.repository}, with its unchanged production HTTPS reader served locally for this proof only.`);
+  record("Download origin", `${new URL(source.downloadBase).hostname}, with its unchanged production HTTPS reader served locally for this proof only.`);
 } catch (error) {
   verificationFailed = true;
   try { record("Verification failure", error.stack ?? String(error)); }

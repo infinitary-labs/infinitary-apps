@@ -1,4 +1,5 @@
 {
   "repository": "infinitary-labs/infinitary",
-  "feedBranch": "release-feeds"
+  "downloadBase": "https://downloads.getinfinitary.com/",
+  "releasePage": "https://getinfinitary.com/alpha-downloads/"
 }

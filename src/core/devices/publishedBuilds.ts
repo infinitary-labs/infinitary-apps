@@ -175,7 +175,8 @@ export class PublishedBuilds {
       { url: this.options.buildsUrl ?? BUILDS_URL, names: INFINITARY_TAP },
     ];
     for (const source of sources) {
-      const builds = await this.readJson(source.url, signal);
+      const allowUnreachable = !this.options.buildsUrl && source.url === publicBuildsUrl;
+      const builds = await this.readJson(source.url, signal, allowUnreachable);
       const parsed = builds === null ? null : parseBuilds(builds, source.names);
       for (const entry of [parsed?.channels.stable, parsed?.channels.alpha]) {
         if (entry?.version !== version) continue;
@@ -183,7 +184,7 @@ export class PublishedBuilds {
         if (download) return download;
       }
       const url = buildDownloadUrl(version, asset, source.names);
-      const sidecar = await this.readText(`${url}.sha256`, signal);
+      const sidecar = await this.readText(`${url}.sha256`, signal, allowUnreachable);
       if (sidecar === null) continue;
       const sha256 = /^([0-9a-f]{64})\b/.exec(sidecar.trim())?.[1];
       if (!sha256 || !SHA256.test(sha256))
@@ -197,8 +198,12 @@ export class PublishedBuilds {
   }
 
   /** The tap's JSON at `url`; null when it has none there. */
-  private async readJson(url: string, signal?: AbortSignal): Promise<unknown | null> {
-    const text = await this.readText(url, signal);
+  private async readJson(
+    url: string,
+    signal?: AbortSignal,
+    allowUnreachable = false,
+  ): Promise<unknown | null> {
+    const text = await this.readText(url, signal, allowUnreachable);
     if (text === null) return null;
     try {
       return JSON.parse(text) as unknown;
@@ -208,7 +213,11 @@ export class PublishedBuilds {
   }
 
   /** The text at `url`; null on a 404, a rejection when the tap could not be read. */
-  private async readText(url: string, signal?: AbortSignal): Promise<string | null> {
+  private async readText(
+    url: string,
+    signal?: AbortSignal,
+    allowUnreachable = false,
+  ): Promise<string | null> {
     let response: Response;
     try {
       response = await this.fetchImpl(url, {
@@ -217,6 +226,7 @@ export class PublishedBuilds {
         ...(signal ? { signal } : {}),
       });
     } catch {
+      if (allowUnreachable && !signal?.aborted) return null;
       throw new PublishedBuildError("unreachable", "The release downloads could not be reached.");
     }
     if (response.status === 404) return null;

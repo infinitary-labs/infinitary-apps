@@ -1814,7 +1814,9 @@ describe("signed release workflow", () => {
       "APP_STORE_CONNECT_KEY_ID",
       "APP_STORE_CONNECT_ISSUER_ID",
       "APP_STORE_CONNECT_API_KEY",
-      "PUBLIC_RELEASE_TOKEN",
+      "R2_ENDPOINT",
+      "R2_ACCESS_KEY_ID",
+      "R2_SECRET_ACCESS_KEY",
       "GITHUB_TOKEN",
       "HOMEBREW_TAP_TOKEN",
       "OLD_TAP_TOKEN",
@@ -1825,30 +1827,22 @@ describe("signed release workflow", () => {
     };
     const expressions = Object.values(parsed.jobs)
       .flatMap((job) => (job.steps ?? []).flatMap((step) => Object.values(step.env ?? {})))
-      .filter((value) => value.startsWith("${{ secrets."));
+      .filter((value) => /^\$\{\{ secrets\.[A-Z0-9_]+ \}\}$/.test(value));
     expect(
       new Set(expressions.map((expression) => workflowValue(expression, { secrets }))),
     ).toEqual(new Set(Object.values(secrets)));
-    for (const id of ["visibility", "feeds", "feed-rehearsal"]) {
-      const binding = parsed.jobs.release?.steps?.find((step) => step.id === id)?.env?.GH_TOKEN;
-      if (!binding) throw new Error(`${id} has no publication credential binding`);
-      for (const own of [true, false]) {
-        expect(
-          workflowValue(binding, {
-            secrets,
-            github: { repository: "infinitary-labs/infinitary" },
-            needs: {
-              resolve: {
-                outputs: {
-                  release_repository: own
-                    ? "infinitary-labs/infinitary"
-                    : "infinitary-labs/downloads",
-                },
-              },
-            },
-          }),
-        ).toBe(secrets[own ? "GITHUB_TOKEN" : "PUBLIC_RELEASE_TOKEN"]);
+    // Storage credentials belong only to the upload/switch recipients, never rehearsal or public fetch-back.
+    for (const id of ["public", "feeds"]) {
+      const environment = parsed.jobs.release?.steps?.find((step) => step.id === id)?.env;
+      for (const name of ["R2_ENDPOINT", "R2_ACCESS_KEY_ID", "R2_SECRET_ACCESS_KEY"]) {
+        expect(workflowValue(environment?.[name] ?? "", { secrets })).toBe(secrets[name]);
       }
+    }
+    for (const id of ["feed-rehearsal", "public-fetch-back"]) {
+      const environment = parsed.jobs.release?.steps?.find((step) => step.id === id)?.env ?? {};
+      expect(Object.keys(environment)).not.toContain("R2_ENDPOINT");
+      expect(Object.keys(environment)).not.toContain("R2_ACCESS_KEY_ID");
+      expect(Object.keys(environment)).not.toContain("R2_SECRET_ACCESS_KEY");
     }
   });
 
@@ -2009,7 +2003,7 @@ describe("resolving a release", () => {
     f.commit("chore: select a different future host", {
       "packaging/release-source.json": JSON.stringify({
         ...JSON.parse(configuration),
-        repository: "infinitary-labs/downloads",
+        downloadBase: "https://future-downloads.example/",
       }),
     });
     const workflow = loadYamlFile(".github/workflows/release.yml") as {
@@ -2025,7 +2019,7 @@ describe("resolving a release", () => {
     });
     expect(result.status, result.stderr).toBe(0);
     expect(readFileSync(output, "utf8")).toBe(
-      `repository=${JSON.parse(configuration).repository}\n`,
+      `repository=${JSON.parse(configuration).repository}\ndownload_base=${JSON.parse(configuration).downloadBase}\n`,
     );
   });
 
@@ -2995,11 +2989,11 @@ describe("the signed channel workflow", () => {
   });
 
   const PUBLISHES =
-    /gh release (create|upload)|publish-release-asset\.sh|publish-(?:tap|feeds)\.sh live|git push/;
+    /gh release (create|upload)|publish-release-asset\.sh|publish-(?:tap|feeds)\.sh live|publish-downloads\.ts|git push/;
   const PUBLICATION_TOKEN =
-    /secrets\.(GITHUB_TOKEN|PUBLIC_RELEASE_TOKEN|HOMEBREW_TAP_TOKEN|OLD_TAP_TOKEN)/;
+    /secrets\.(GITHUB_TOKEN|R2_ACCESS_KEY_ID|R2_SECRET_ACCESS_KEY|HOMEBREW_TAP_TOKEN|OLD_TAP_TOKEN)/;
   /** The steps of a passing run of a channel, live or rehearsed, in order. */
-  const ranSteps = (channel: string, dryRun: boolean, oldCask = false, mirror = false) =>
+  const ranSteps = (channel: string, dryRun: boolean, oldCask = false, direct = true) =>
     steps.filter(
       (candidate) =>
         candidate.if === undefined ||
@@ -3010,13 +3004,17 @@ describe("the signed channel workflow", () => {
                 channel,
                 dry_run: String(dryRun),
                 old_cask: String(oldCask),
-                release_repository: mirror ? "example/public-downloads" : releaseSource.repository,
+                release_repository: releaseSource.repository,
               },
             },
           },
           github: { repository: releaseSource.repository },
           steps: Object.fromEntries(
-            steps.flatMap((each) => (each.id ? [[each.id, { outcome: "success" }]] : [])),
+            steps.flatMap((each) =>
+              each.id
+                ? [[each.id, { outcome: "success", outputs: { direct: String(direct) } }]]
+                : [],
+            ),
           ),
         }) === true,
     );
@@ -3053,18 +3051,16 @@ describe("the signed channel workflow", () => {
   it.each(["stable", "alpha"])(
     "publishes %s through both Homebrew and direct feeds only after their downloads verify",
     (channel) => {
-      // INF-640: exercise the actual workflow conditions, including a separately configured mirror.
-      for (const mirror of [false, true]) {
-        const ran = ranSteps(channel, false, false, mirror).map(
+      // INF-1613: exercise both configured storage and the approved Homebrew/Linux-only fallback.
+      for (const direct of [false, true]) {
+        const ran = ranSteps(channel, false, false, direct).map(
           (candidate) => candidate.id ?? candidate.name,
         );
         const publication = [
           "private",
-          "recorded-dmg",
+          ...(direct ? ["recorded-dmg"] : []),
           "private-fetch-back",
-          ...(mirror ? ["public"] : []),
-          "public-fetch-back",
-          "feeds",
+          ...(direct ? ["public", "public-fetch-back", "feeds"] : []),
         ];
         expect(
           ran.filter((id) =>
@@ -3079,8 +3075,12 @@ describe("the signed channel workflow", () => {
           ),
         ).toEqual(publication);
         expect(ran.indexOf("visibility")).toBeLessThan(ran.indexOf("developer_id_cert"));
-        expect(ran.indexOf("dmg")).toBeGreaterThan(ran.indexOf("private"));
-        expect(ran.indexOf("dmg")).toBeLessThan(ran.indexOf("recorded-dmg"));
+        if (direct) {
+          expect(ran.indexOf("dmg")).toBeGreaterThan(ran.indexOf("private"));
+          expect(ran.indexOf("dmg")).toBeLessThan(ran.indexOf("recorded-dmg"));
+        } else {
+          expect(ran).not.toContain("dmg");
+        }
         expect(ran).not.toContain("feed-rehearsal");
         expect(ran).toEqual(
           expect.arrayContaining(["homebrew-public", "homebrew-fetch-back", "tap"]),
@@ -3090,8 +3090,8 @@ describe("the signed channel workflow", () => {
         expect(ran).not.toContain("tap-rehearsal");
       }
       expect(JSON.stringify(step("public-fetch-back").env)).not.toContain("secrets.");
-      expect(step("public").env?.ARTIFACT).toBe("${{ steps.private.outputs.zip }}");
-      expect(step("public").env?.DISK_IMAGE).toBe("${{ steps.recorded-dmg.outputs.zip }}");
+      expect(step("public").env?.DIST_ZIP).toBe("${{ steps.private.outputs.zip }}");
+      expect(step("public").env?.DIST_DMG).toBe("${{ steps.recorded-dmg.outputs.zip }}");
       for (const id of ["private-fetch-back", "public-fetch-back"])
         expect(step(id).env?.ARTIFACT_SHA256).toBe("${{ steps.private.outputs.sha256 }}");
       expect(
@@ -3113,7 +3113,6 @@ describe("the signed channel workflow", () => {
         "old-public",
         "old-tap",
         "feeds",
-        "feed-rehearsal",
       ]);
     },
   );
@@ -4161,4 +4160,37 @@ describe("budgeted pull-request journey workflow (INF-658)", () => {
       expect(onAlone(summarize)).toBe(true);
     },
   );
+});
+
+// INF-1613's submitted unblock answer: absent storage never stops tap releases;
+// partial configuration is an error, not an accidental silent installer opt-out.
+it("selects Homebrew/Linux-only before storage setup and refuses partial R2 configuration", () => {
+  const workflow = loadYamlFile(".github/workflows/release.yml") as {
+    jobs: { release: { steps: { id?: string; run?: string }[] } };
+  };
+  const command = workflow.jobs.release.steps.find((step) => step.id === "visibility")?.run;
+  if (!command) throw new Error("Missing download activation command");
+  for (const configuration of ["absent", "complete", "partial"]) {
+    const folder = scratchDir("infinitary-r2-activation-");
+    const output = join(folder, "output");
+    const result = spawnSync("bash", ["-e", "-c", command], {
+      encoding: "utf8",
+      env: {
+        PATH: process.env.PATH,
+        R2_ENDPOINT: configuration === "absent" ? "" : "https://account.r2.cloudflarestorage.com",
+        R2_BUCKET: configuration === "absent" ? "" : "installers",
+        HAS_ACCESS_KEY: configuration === "absent" ? "false" : "true",
+        HAS_SECRET_KEY: configuration === "complete" ? "true" : "false",
+        GITHUB_OUTPUT: output,
+        GITHUB_STEP_SUMMARY: join(folder, "summary"),
+      },
+    });
+    if (configuration === "partial") {
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("Incomplete download storage configuration");
+    } else {
+      expect(result.status, result.stderr).toBe(0);
+      expect(readFileSync(output, "utf8")).toBe(`direct=${configuration === "complete"}\n`);
+    }
+  }
 });

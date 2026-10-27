@@ -140,6 +140,7 @@ jobs:
       verify_required: ${{ steps.verification.outputs.required }}
       alpha_run: ${{ steps.verification.outputs.alpha_run }}
       release_repository: ${{ steps.destination.outputs.repository }}
+      download_base: ${{ steps.destination.outputs.download_base }}
     steps:
       - name: Checkout every branch and tag
         uses: actions/checkout@v4
@@ -169,7 +170,9 @@ jobs:
           import { appendFileSync } from 'node:fs';
           const c = JSON.parse(execFileSync('git', ['show', `${process.env.SOURCE_COMMIT}:packaging/release-source.json`], { encoding: 'utf8' }));
           if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(c.repository)) throw new Error('Invalid release destination');
-          appendFileSync(process.env.GITHUB_OUTPUT, `repository=${c.repository}\n`);
+          const base = new URL(c.downloadBase);
+          if (base.protocol !== 'https:' || base.username || base.password || base.pathname !== '/' || base.search || base.hash) throw new Error('Invalid download origin');
+          appendFileSync(process.env.GITHUB_OUTPUT, `repository=${c.repository}\ndownload_base=${base.href}\n`);
           JS
 
       # A stable inherits its alpha's checks, or is refused. Do not infer
@@ -362,7 +365,7 @@ jobs:
       RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
       DMG_NAME: Infinitary-${{ needs.resolve.outputs.version }}-mac-universal.dmg
       ZIP_NAME: ${{ needs.resolve.outputs.zip_name }}
-      DOWNLOAD_URL: https://github.com/${{ needs.resolve.outputs.release_repository }}/releases/download/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
+      DOWNLOAD_URL: ${{ needs.resolve.outputs.download_base }}releases/${{ needs.resolve.outputs.tag_name }}/${{ needs.resolve.outputs.zip_name }}
       CASK_TOKEN: ${{ needs.resolve.outputs.cask_token }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
       PROMOTED_FROM: ${{ needs.resolve.outputs.promoted_from }}
@@ -394,18 +397,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Require public downloads before publication
+      # INF-1613: private source never blocks the public Homebrew/Linux path.
+      # Direct installers activate only after the storage setup supplies every setting.
+      - name: Select configured direct downloads
         id: visibility
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         env:
-          GH_TOKEN: ${{ needs.resolve.outputs.release_repository == github.repository && secrets.GITHUB_TOKEN || secrets.PUBLIC_RELEASE_TOKEN }}
-          RELEASE_REPOSITORY: ${{ needs.resolve.outputs.release_repository }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          HAS_ACCESS_KEY: ${{ secrets.R2_ACCESS_KEY_ID != '' }}
+          HAS_SECRET_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY != '' }}
         run: |
           set -euo pipefail
-          [[ "$(gh api "repos/$RELEASE_REPOSITORY" --jq .private)" == false ]] || {
-            echo 'The configured download repository is private. Its owner must make downloads public before any release is published.' >&2
+          if [[ -n "$R2_ENDPOINT" && -n "$R2_BUCKET" && "$HAS_ACCESS_KEY" == true && "$HAS_SECRET_KEY" == true ]]; then
+            echo 'direct=true' >> "$GITHUB_OUTPUT"
+          elif [[ -z "$R2_ENDPOINT" && -z "$R2_BUCKET" && "$HAS_ACCESS_KEY" == false && "$HAS_SECRET_KEY" == false ]]; then
+            echo 'direct=false' >> "$GITHUB_OUTPUT"
+            echo 'Direct installers are not configured; publishing Homebrew and Linux only.' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo 'Incomplete download storage configuration; refusing a partially configured release.' >&2
             exit 1
-          }
+          fi
 
       # The checks already ran in verify's lanes (or the promoted alpha's), which
       # this job waits for: it starts at the build.
@@ -611,6 +623,8 @@ jobs:
       # recipes are the ones the linux job checked.
       - name: Prepare the Linux files
         id: linux-files
+        env:
+          RECIPE_HOST: ${{ (needs.resolve.outputs.dry_run == 'true' || steps.visibility.outputs.direct == 'true') && 'downloads' || 'tap' }}
         run: |
           set -euo pipefail
           rm -rf "$RUNNER_TEMP/linux-release"
@@ -629,6 +643,7 @@ jobs:
         if: ${{ needs.resolve.outputs.dry_run == 'false' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RECIPE_HOST: ${{ steps.visibility.outputs.direct == 'true' && 'downloads' || 'tap' }}
           TITLE: infinitary ${{ needs.resolve.outputs.version }}
           TARGET: ${{ needs.resolve.outputs.source_commit }}
           LATEST: ${{ needs.resolve.outputs.prerelease == 'true' && 'false' || '' }}
@@ -672,6 +687,7 @@ jobs:
 
       - name: Build, sign, notarize and check the disk image
         id: dmg
+        if: ${{ needs.resolve.outputs.dry_run == 'true' || steps.visibility.outputs.direct == 'true' }}
         env:
           ADOPTED_ZIP: ${{ steps.private.outputs.zip }}
           CSC_KEYCHAIN: ${{ steps.developer_id_cert.outputs.keychain_path }}
@@ -695,7 +711,7 @@ jobs:
 
       - name: Record the immutable disk image
         id: recorded-dmg
-        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && steps.visibility.outputs.direct == 'true' }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT: ${{ steps.dmg.outputs.path }}
@@ -733,31 +749,22 @@ jobs:
             (cd "$DOWNLOAD_DIR/linux" && shasum -a 256 -c "$NAME.sha256")
           done < "$LINUX/assets.txt"
 
-      - name: Mirror to the configured public download repository
+      - name: Publish immutable Cloudflare downloads
         id: public
-        if: ${{ needs.resolve.outputs.dry_run == 'false' && needs.resolve.outputs.release_repository != github.repository }}
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && steps.visibility.outputs.direct == 'true' }}
         env:
-          GH_TOKEN: ${{ secrets.PUBLIC_RELEASE_TOKEN }}
-          ARTIFACT: ${{ steps.private.outputs.zip }}
-          DISK_IMAGE: ${{ steps.recorded-dmg.outputs.zip }}
-          TITLE: Infinitary ${{ needs.resolve.outputs.version }}
-          TARGET: main
-          LATEST: "false"
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          DIST_ZIP: ${{ steps.private.outputs.zip }}
+          DIST_DMG: ${{ steps.recorded-dmg.outputs.zip }}
         run: |
-          set -euo pipefail
-          : "${GH_TOKEN:?The selected public repository needs PUBLIC_RELEASE_TOKEN}"
-          export WORK="$RUNNER_TEMP/public-release" NOTES_FILE="$RUNNER_TEMP/private-release/notes.md"
-          scripts/publish-release-asset.sh match "$RELEASE_REPOSITORY" "$PUBLIC_TAG" "$ARTIFACT"
-          WORK="$RUNNER_TEMP/public-dmg" scripts/publish-release-asset.sh match "$RELEASE_REPOSITORY" "$PUBLIC_TAG" "$DISK_IMAGE"
-          LINUX="$RUNNER_TEMP/linux-release"
-          while IFS= read -r NAME; do
-            GITHUB_OUTPUT="$WORK/$NAME.out" WORK="$WORK/$NAME" \
-              scripts/publish-release-asset.sh match "$RELEASE_REPOSITORY" "$PUBLIC_TAG" "$LINUX/$NAME"
-          done < "$LINUX/assets.txt"
+          LINUX_DIRECTORY="$RUNNER_TEMP/linux-release" node scripts/publish-downloads.ts
 
       - name: Verify every public download without a sign-in
         id: public-fetch-back
-        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && steps.visibility.outputs.direct == 'true' }}
         # No credential: neither the installer nor the updater requires a GitHub sign-in.
         # No channel advances until the fetched-back ZIP and DMG both pass their gates.
         env:
@@ -1008,9 +1015,12 @@ jobs:
 
       - name: Advance the verified public feeds atomically
         id: feeds
-        if: ${{ needs.resolve.outputs.dry_run == 'false' }}
+        if: ${{ needs.resolve.outputs.dry_run == 'false' && steps.visibility.outputs.direct == 'true' }}
         env:
-          GH_TOKEN: ${{ needs.resolve.outputs.release_repository == github.repository && secrets.GITHUB_TOKEN || secrets.PUBLIC_RELEASE_TOKEN }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ vars.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
         run: |
           DIST_ZIP="$RUNNER_TEMP/public-verify/$ZIP_NAME" DIST_DMG="$RUNNER_TEMP/public-verify/$DMG_NAME" \
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \
@@ -1019,8 +1029,6 @@ jobs:
       - name: Rehearse the public feeds without publishing
         id: feed-rehearsal
         if: ${{ needs.resolve.outputs.dry_run == 'true' }}
-        env:
-          GH_TOKEN: ${{ needs.resolve.outputs.release_repository == github.repository && secrets.GITHUB_TOKEN || secrets.PUBLIC_RELEASE_TOKEN }}
         run: |
           DIST_ZIP="$dist_zip" DIST_DMG="${{ steps.dmg.outputs.path }}" \
           LINUX_MANIFEST="$RUNNER_TEMP/linux-release/manifest.json" WORK="$RUNNER_TEMP/release-feeds" \

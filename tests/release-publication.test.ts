@@ -1054,17 +1054,26 @@ describe("the Homebrew-free feed publication", () => {
       writeFileSync(zip, bytes);
       writeFileSync(dmg, changedDmg ? Buffer.concat([bytes, Buffer.from("changed")]) : bytes);
       const file = { asset: `infinitary-${version}-linux-amd64.deb`, sha256: sha256Of(bytes) };
+      writeFileSync(join(folder, file.asset), bytes);
+      writeFileSync(join(folder, "assets.txt"), `${file.asset}\n`);
       const linux = join(folder, "linux.json");
       writeFileSync(
         linux,
         JSON.stringify({ alpha: { x64: { deb: file } }, stable: { x64: { deb: file } } }),
       );
       const work = join(dir, `publication-${attempt}`);
-      const result = spawnSync("bash", [join(root, "scripts/publish-feeds.sh"), mode], {
+      const options = {
         cwd: root,
-        encoding: "utf8",
+        encoding: "utf8" as const,
         env: {
           ...env,
+          NODE_OPTIONS: `--import=${pathToFileURL(join(root, "tests/helpers/releaseStoragePreload.mjs")).href}`,
+          RELEASE_STORAGE_FIXTURE: join(dir, "storage.json"),
+          R2_ENDPOINT: "https://r2.example.test",
+          R2_BUCKET: "installers",
+          R2_ACCESS_KEY_ID: "disposable",
+          R2_SECRET_ACCESS_KEY: "disposable-not-a-secret",
+          LINUX_DIRECTORY: folder,
           WORK: work,
           VERSION: version,
           CHANNEL: version.includes("-alpha.") ? "alpha" : "stable",
@@ -1073,17 +1082,35 @@ describe("the Homebrew-free feed publication", () => {
           DIST_DMG: dmg,
           LINUX_MANIFEST: linux,
         },
-      });
+      };
+      if (mode === "live") {
+        const upload = spawnSync(
+          process.execPath,
+          [join(root, "scripts/publish-downloads.ts")],
+          options,
+        );
+        if (upload.status !== 0) return { ...upload, work };
+      }
+      const result = spawnSync("bash", [join(root, "scripts/publish-feeds.sh"), mode], options);
       expect(existsSync(brewCalled)).toBe(false);
       return { ...result, work };
     };
-    const head = () => git("--git-dir", bare, "rev-parse", releaseSource.feedBranch);
-    const read = (name: string) =>
-      JSON.parse(git("--git-dir", bare, "show", `${releaseSource.feedBranch}:${name}`));
+    const stored = () =>
+      existsSync(join(dir, "storage.json"))
+        ? JSON.parse(readFileSync(join(dir, "storage.json"), "utf8"))
+        : {};
+    const head = () => stored()["feeds/current.json"]?.etag;
+    const read = (name: string) => {
+      const store = stored();
+      const pointer = JSON.parse(
+        Buffer.from(store["feeds/current.json"].bytes, "base64").toString(),
+      );
+      return JSON.parse(Buffer.from(store[`${pointer.prefix}${name}`].bytes, "base64").toString());
+    };
     return { dir, bare, git, before, publish, head, read };
   }
 
-  it("rehearses without a push, then publishes alpha, promoted stable and next alpha while leaving main alone", () => {
+  it("rehearses without a storage write, then publishes alpha, promoted stable and next alpha while leaving main alone", () => {
     const f = fixture();
     const rehearsal = f.publish("0.5.0-alpha.9", "rehearsal");
     expect(rehearsal.status, rehearsal.stderr).toBe(0);
@@ -1091,6 +1118,7 @@ describe("the Homebrew-free feed publication", () => {
       "refs/heads/main",
     );
     expect(existsSync(join(rehearsal.work, "feeds", "alpha-mac.yml"))).toBe(true);
+    expect(existsSync(join(f.dir, "storage.json"))).toBe(false);
     for (const version of ["0.5.0-alpha.9", "0.5.0", "0.5.1-alpha.11"]) {
       const result = f.publish(version);
       expect(result.status, result.stderr).toBe(0);
@@ -1099,12 +1127,10 @@ describe("the Homebrew-free feed publication", () => {
     expect(f.read("alpha-mac.yml").version).toBe("0.5.1-alpha.11");
     expect(
       f.read(PUBLIC_RELEASE_NAMES.buildsFile).channels.alpha.systems.macos.arm64.dmg.url,
-    ).toContain("/releases/download/v0.5.1-alpha.11/");
+    ).toContain("/releases/v0.5.1-alpha.11/");
     expect(f.git("--git-dir", f.bare, "rev-parse", "main")).toBe(f.before);
     expect(
-      f
-        .git("--git-dir", f.bare, "ls-tree", "-r", "--name-only", releaseSource.feedBranch)
-        .split("\n"),
+      Object.keys(JSON.parse(readFileSync(join(f.dir, "storage.json"), "utf8"))),
     ).not.toContain("Casks/infinitary.rb");
   });
 
@@ -1118,7 +1144,7 @@ describe("the Homebrew-free feed publication", () => {
     expect(f.head()).toBe(head);
     const changed = f.publish("0.5.0-alpha.9", "live", true);
     expect(changed.status).not.toBe(0);
-    expect(changed.stderr).toContain("cannot change");
+    expect(changed.stderr).toContain("never change");
     expect(f.head()).toBe(head);
     const older = f.publish("0.5.0-alpha.8");
     expect(older.status).not.toBe(0);

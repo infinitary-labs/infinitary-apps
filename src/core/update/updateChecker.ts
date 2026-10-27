@@ -205,11 +205,22 @@ export function createUpdateChecker(options: CreateUpdateCheckerOptions): Update
     channel: UpdateChannel,
     where: LinuxInstallation,
   ): Promise<Offer | null> {
-    let response = await fetchImpl(buildsUrl, {
-      headers: { Accept: "application/json", ...REQUEST_HEADERS },
-    });
+    let response: Response;
+    let fromTap = false;
+    try {
+      response = await fetchImpl(buildsUrl, {
+        headers: { Accept: "application/json", ...REQUEST_HEADERS },
+      });
+    } catch (error) {
+      // INF-1613: before the bucket/domain exists, newly released Linux copies still read the tap.
+      if (options.buildsUrl) throw error;
+      fromTap = true;
+      response = await fetchImpl(BUILDS_URL, {
+        headers: { Accept: "application/json", ...REQUEST_HEADERS },
+      });
+    }
     // Keep historical downloads reachable before the new host's first publication.
-    if (response.status === 404 && !options.buildsUrl)
+    if (response.status === 404 && !options.buildsUrl && !fromTap)
       response = await fetchImpl(BUILDS_URL, {
         headers: { Accept: "application/json", ...REQUEST_HEADERS },
       });

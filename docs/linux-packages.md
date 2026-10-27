@@ -47,7 +47,8 @@ Settings reads the `/usr/bin` link as linked; the Nix link is on the person's pa
 
 The Arch recipe and the Nix package install the release's Ubuntu package, so the two systems run the same bytes as Ubuntu.
 `node scripts/linux-recipes.ts render --version <version> --deb <file> --out <dir>` fills their templates with the version, the Ubuntu package's name, its download address and its checksum.
-The address comes from `packaging/release-source.json` and the version's `v<version>` release, independently of Homebrew (`docs/alpha.md`).
+The address comes from `packaging/release-source.json` and the version's `releases/v<version>/` directory on `downloads.getinfinitary.com`, independently of Homebrew (`docs/alpha.md`).
+Before storage is configured, release publication selects `RECIPE_HOST=tap` so the recipes and newly installed copies still use the public tap's downloads.
 An alpha's Arch version swaps its hyphen for an underscore, as Arch versions take none, and the stable and alpha packages conflict, so only one is installed.
 Each recipe takes its channel's package names, the version's own by default, and a release renders alpha's for a stable version too, for when stable is handed to alpha.
 Each writes `resources/update-channel.json` with its channel and version beside the app, so its update notice follows its own channel.

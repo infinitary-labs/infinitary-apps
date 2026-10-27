@@ -70,8 +70,10 @@ Do not manually replace a newer Alpha with an older Stable: choose Stable inside
 
 ## Release destinations and historical downloads
 
-`packaging/release-source.json` selects the download repository and feed branch at build time.
-The selected repository must expose downloads without a sign-in before publication can activate; the workflow refuses a private destination and never changes visibility.
+`packaging/release-source.json` selects `downloads.getinfinitary.com` and the unlinked `getinfinitary.com/alpha-downloads/` page at build time.
+The source repository stays private; public installers and update metadata live in Cloudflare R2, served through the download Worker.
+Until storage is configured, releases keep publishing Homebrew and Linux through the public taps and skip direct disk-image publication.
+Partial storage configuration fails rather than silently skipping a configured download path.
 No release, hosting setup, visibility change, or remote cask removal follows merely from merging the implementation.
 Historical releases on both Homebrew repositories stay available, including downloads used by older paired computers.
 New releases continue publishing the Infinitary casks and, for activated channels, the Firstmate 3000 casks alongside direct installers.

@@ -22,7 +22,8 @@ House references this architecture deliberately stays consistent with:
   GitLab browser sign-in reaches `https://<host>/oauth/authorize_device` and `/oauth/token` for a public application the person registers there; it uses the existing browser-and-code flow with no listener or application secret (`docs/forge.md`, "Browser sign-in and renewal").
   Native evidence uploads for future github.com changes additionally reach `https://uploads.github.com/user-attachments/assets` through the task-scoped forge capability and the app's own sign-in, with redirects refused (`docs/forge.md`, "Saved change stories").
   Future gitlab.com merge requests upload theirs to the same `https://gitlab.com/api/v4` with that host's sign-in, as multipart `POST /projects/<id>/uploads`, with redirects refused; a self-hosted server's own host sends none.
-  When the person presses Add or Update for a Mac reached by its address, that Mac may download this computer's published version from the public tap's GitHub release, following HTTPS redirects to its release-asset storage and checking the published SHA-256 and the release publisher's signature before starting the app.
+  Direct-install updates, Linux updates and paired-computer downloads read the build-owned `downloads.getinfinitary.com` HTTPS feed and immutable release files (`docs/alpha.md`, “Download storage”), with the public tap retained for historical versions and before the download host exists.
+  When the person presses Add or Update for a Mac reached by its address, that Mac may download this computer's published version from that download service or the public tap's GitHub release, following HTTPS redirects to its release-asset storage and checking the published SHA-256 and the release publisher's signature before starting the app.
   The same download, with the same checks, is made by a Mac a command added when the person presses Update and it takes the download order, and by the command for another Mac after the person there types yes (`docs/devices.md`, "Downloading over the connection" and "Joining by a command").
   No other program's GitHub sign-in is ever read.
   A project kept on this Mac reaches no host.
@@ -472,8 +473,10 @@ Two house references compose here (captain-directed): **baby-menu's release mach
   Stable promotion omits those inherited lanes only after naming its alpha's successful checks, while its own artifact and publication gates still run.
   Crewmates request verification for the task's exact source through `github_write` (`docs/forge.md`, "Verification workflow requests").
 - **Distribution (captain-approved INF-640; `docs/mac-installation.md`)**: signed, notarized universal Mac disk images install one app, "Infinitary", bundle id `com.getinfinitary.infinitary`, by dragging it into Applications.
-  Universal updater ZIPs and Linux x64 packages share the configured destination (`packaging/release-source.json`), selected as `infinitary-labs/infinitary`; a separate public destination remains configurable.
-  A live release refuses a private destination rather than publishing unreadable downloads; the captain controls visibility and activation.
+  Universal updater ZIPs and Linux x64 packages share the build-owned download origin `downloads.getinfinitary.com` (`packaging/release-source.json`), independent of the private source repository.
+  Immutable Cloudflare R2 objects and one conditional feed-snapshot pointer replace public source releases and the feed branch; both Homebrew taps remain supported.
+  With storage not yet configured, releases publish Homebrew and Linux only, and new Linux and paired-computer readers retain their tap fallback.
+  A live release advances the direct feed only after unsigned download verification; incomplete storage configuration fails without changing repository visibility.
   Homebrew remains supported: releases mirror verified artifacts and advance its casks and manifests separately, preserving historical downloads.
   The alpha notice (`packaging/alpha-notice.txt`) remains in release notes.
 - **Updates**: a packaged direct-install Mac uses `electron-updater` behind the existing notice, with explicit consent before download, native signature staging before shutdown, and no automatic installation on quit (`docs/mac-installation.md`).

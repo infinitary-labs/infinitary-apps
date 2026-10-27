@@ -7,11 +7,11 @@ User instructions and migration precautions are in `docs/mac-installation.md`.
 
 ## How it holds together
 
-`packaging/release-source.json` selects the public release repository and feed branch at build time.
-The selected destination is `infinitary-labs/infinitary`; choosing another repository requires a reviewed configuration change and its own publication access.
-The workflow refuses live publication while that destination is private and never changes its visibility.
-The source repository's `v<version>` release is the immutable record; when it is also the download destination, there is no mirror.
-A separate destination uses `PUBLIC_RELEASE_TOKEN`, while the source repository uses the workflow's own token.
+`packaging/release-source.json` selects the public download origin and hidden download page at build time.
+The selected download destination is `downloads.getinfinitary.com`; its Cloudflare storage configuration is separate from the source repository's visibility.
+The workflow keeps the source repository private and retains its `v<version>` release as the immutable signed record, using the workflow's own token.
+Bucket-scoped R2 credentials publish the public copy only after storage is configured.
+Without those settings, the approved fallback keeps Homebrew and Linux publishing through the taps and skips disk images and direct feeds.
 
 Each release carries the finalized universal ZIP, a signed and notarized disk image, and the Linux files, with checksum sidecars.
 The ZIP remains the native updater's payload and the download paired computers use.
@@ -57,8 +57,8 @@ The host enables native replacement only for an installed release Mac, not a dev
 
 ## Builds by system and chip
 
-The configured feed branch carries `latest-mac.yml` for Stable and `alpha-mac.yml` for Alpha, using standard updater metadata with the finalized ZIP's URL, size and SHA-512.
-The same commit carries schema-1 `infinitary-updates.json`, `infinitary-builds.json`, and `versions/<version>.json` with immutable ZIP and disk-image identities.
+The selected Cloudflare snapshot serves `feeds/latest-mac.yml` for Stable and `feeds/alpha-mac.yml` for Alpha, using standard updater metadata with the finalized ZIP's URL, size and SHA-512.
+The same snapshot carries schema-1 `infinitary-updates.json`, `infinitary-builds.json`, and `versions/<version>.json` with immutable ZIP and disk-image identities.
 `releaseFeedFiles` reuses the existing forward-only target and builds producers and validates URLs against the configured destination.
 
 The builds file carries `macos` → `arm64` and `x64` → `zip` and `dmg`, and `linux` → `x64` → `deb`, `rpm`, `appimage`, `arch` and `nix`.
@@ -149,10 +149,9 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   A fresh history with no stable tag of its own numbers from the record of past releases, `release-notes/archive.json`, which the resolver reads from the workflow's own commit: the next patch or minor above the newest numeric core either channel published in the archived history; and every version must be newer than that history's newest stable and newest alpha (`docs/release-notes.md` "A fresh history").
   Rehearsals use run numbers too, so gaps are normal.
   Nothing is committed: `package.json` and `CHANGELOG.md` stopped changing at stable 0.1.30.
-  Both the source record and any separate public mirror use `v<version>` tags.
+  The private source record uses `v<version>` tags; Cloudflare downloads use `releases/v<version>/` object keys.
   An alpha is a prerelease, never latest.
-  When the configured destination is the product repository, there is one release rather than a second copy.
-  A separate mirror keeps that repository's current latest badge unchanged.
+  The source repository never needs to become public, and both Homebrew taps retain their releases and update files.
 - **Two version identities.**
   The packaged `package.json` carries the logical version (`-c.extraMetadata.version`), which the running app reports (`app.getVersion()`); `CFBundleShortVersionString` and `CFBundleVersion` both carry its numeric core, so nothing relies on macOS accepting a prerelease suffix.
   The packaged `self-map.json`, in `Resources/` and inside `Resources/self-source/`, names the logical version too: the build step passes it as `INFINITARY_RELEASE_VERSION` to `scripts/generate-self-source.mjs`, so a crewmate reading only the self-source can tell which build it holds; the `package.json` inside that tree is the repository's own and keeps 0.1.30.
@@ -199,24 +198,60 @@ The switch lists `alpha` and `stable`; releases of either channel also update th
   The source release is the record: its tag must name the source commit.
   A retry adopts an already-published ZIP, then builds its disk image from that ZIP's finalized, stapled app rather than the retry's rebuilt app.
   An already-published disk image is adopted too, and its contained app must match the ZIP exactly.
-  A separate public mirror must match the source record byte for byte.
+  The Cloudflare copy must match the private source record byte for byte.
   Nothing uploads with `--clobber`; a missing sidecar is added, a present one must agree.
 - **Disk images and ZIPs have separate gates.**
   `scripts/build-mac-dmg.sh` packages the prebuilt app without re-signing or rebuilding it.
   The workflow signs the container with the existing Developer ID identity, notarizes it, and staples it before computing its checksum.
   `scripts/verify-mac-dmg.sh` checks notarization and Gatekeeper, mounts read-only, checks the Applications shortcut and saved Finder layout, compares the app with the ZIP, and launches a copied installation.
   The unauthenticated fetch-back repeats the ZIP and disk-image gates against the actual public downloads before a channel advances.
-- **One atomic feed commit** (`scripts/publish-feeds.sh`).
-  After every public download passes fetch-back, `scripts/release-feeds.ts` writes the moved channels' standard updater metadata, targets, builds, and immutable per-version manifest in one commit on the configured feed branch.
+- **One atomic feed snapshot** (`scripts/publish-feeds.sh`).
+  After every public download passes fetch-back, `scripts/release-feeds.ts` writes the moved channels' standard updater metadata, targets, builds, and immutable per-version manifest into one immutable R2 snapshot.
+  `scripts/publish-storage-feeds.ts` retains previous files, verifies the new snapshot publicly, and conditionally switches `feeds/current.json` last.
+  See “Download storage” below for the object and credential contract.
   An alpha moves only alpha; a stable moves stable and also alpha when newer than alpha's current target.
   A late older publication, inconsistent manifest, invalid existing file, or changed bytes at a published version is refused.
-  A concurrent push is refused rather than overwriting the other publication; rerun from the new remote state.
+  A concurrent pointer write is refused rather than overwriting the other publication; read the new snapshot before publishing again.
   A release is never cancelled to start another; only a newer rehearsal of the same channel and ref replaces an older rehearsal.
 - **Rehearsals publish nothing.**
   `-f dry_run=true` runs the channel's full checks, signed installer proof, Linux packaging, signing, notarization, and disk-image gates.
-  It computes the feed commit from the configured host's current state and keeps the metadata as `release-feed-rehearsal`, without committing or pushing it.
+  It computes a local initial feed plan and keeps the metadata as `release-feed-rehearsal`, without instantiating a storage client or reading upload credentials.
+  The rehearsal proves the release's metadata construction, not compatibility with a live channel's current target; live publication validates that state before switching.
   No tag, release, cask or feed is published, and no repository visibility changes.
   Its summary names each gate's outcome; a skipped live publication or fetch-back did not pass in that run.
+
+## Download storage
+
+`packaging/release-source.json` owns the production download origin and hidden download-page address.
+The site keeps its private-alpha landing page and never links to `/alpha-downloads/`; the page is unindexed, not authenticated, and anyone with its address can download.
+The storage and serving Worker belong to `infinitary-infra`; creating or deploying them is separate from merging this release code.
+Repository variable `R2_BUCKET` and secrets `R2_ENDPOINT` (`https://<account-id>.r2.cloudflarestorage.com`), `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` activate direct publication.
+The endpoint stays secret because it contains the Cloudflare account identifier; the two upload keys are bucket-scoped.
+With all four absent, a live release skips the disk image and direct feeds but still publishes Homebrew and Linux to both activated taps.
+Its Linux recipes use the tap's download URLs in that mode (`RECIPE_HOST=tap`), never the not-yet-configured storage address.
+A partial configuration fails before publication.
+Upload credentials are passed only through the recipient's environment and signed HTTPS request headers; they are never placed on a command line or printed.
+
+`scripts/publish-downloads.ts` uploads the finalized private-record bytes to `releases/v<version>/<asset>` and adds a SHA-256 sidecar for every asset.
+The S3-compatible uploader signs each payload's SHA-256 and uses `If-None-Match: *`; an existing object is accepted only after its digest agrees, never overwritten.
+The release verifies every asset and sidecar through unsigned HTTPS before the signed ZIP and disk-image gates and before advancing any direct channel.
+Every historical version remains downloadable.
+Release objects and snapshot objects carry `Cache-Control: public, max-age=31536000, immutable`; the download service caches Linux file types as well as ZIPs and disk images.
+
+A snapshot lives under `feed-snapshots/<id>/`.
+The ID is SHA-256 of the JSON encoding of sorted `[filename, SHA256(content)]` pairs.
+The snapshot retains all prior feed files and version manifests and applies all changed channels together.
+`feeds/current.json` contains `{ "schemaVersion": 1, "prefix": "feed-snapshots/<id>/", "files": ["alpha-mac.yml", "infinitary-builds.json", "infinitary-updates.json", "latest-mac.yml", "versions/<version>.json"] }`, with the actual sorted list of files; a channel not yet published may be absent.
+The uploader requests identity encoding when reading R2 objects, verifies every snapshot object publicly, then replaces this pointer with `If-Match: <previous strong ETag>`, or `If-None-Match: *` for its first creation.
+If R2 still supplies a weak or missing validator, the uploader refuses the pointer write; it never strips `W/` or guesses a strong validator.
+A conditional-write refusal stops the publication without moving the selected snapshot.
+A transport failure can leave an unknown write outcome; read the object or pointer before any deliberate retry, never replay it automatically.
+The download Worker resolves `/feeds/<filename>` against one read of this pointer and serves only a listed file.
+Pointer and feed responses, including missing objects, carry `Cache-Control: no-store` so a previous missing object cannot hide a completed upload.
+Installer serving supports GET, HEAD and byte ranges.
+
+The first live publication waits for the storage owner to confirm the bucket, domain, cache behavior, credentials and real R2 conditional-write semantics.
+After that setup, a separately authorized alpha proves public fetch-back, both taps, and signed installed updates on both Mac architectures; unit fixtures do not prove those live effects.
 
 ## Cutting an alpha
 
@@ -292,10 +327,10 @@ The workflow's own default remains Stable, so an operator always supplies the in
 A routine release changes only its notes in the project and follows the candidate and promotion rules above.
 When a release review rechecks old crew filings, its report names every checked key, the evidence for its fate, and the keys it left unchecked (`docs/task-graph.md`).
 
-Before activation, the captain makes the selected download repository publicly readable and confirms its publication access.
-This is a separate decision about the repository and its source, not something the build changes.
+Before activation, the storage owner provisions the bucket, download Worker and domain, verifies conditional writes and unsigned downloads, and supplies the R2 settings through the approved credential recipient.
+The source repository remains private; neither this build nor storage activation changes its visibility.
 An updater-capable alpha must pass signed installed-update verification on both architectures before Stable may promote it.
-The first new publication creates the configured feed branch only after public artifacts pass fetch-back.
+The first new publication creates the selected feed snapshot only after public artifacts pass fetch-back.
 Keep the Homebrew casks publishing alongside direct installers; neither a shared tap nor its historical downloads is retired.
 
 ## Isolated signed verification

@@ -20,8 +20,8 @@ const server = createServer({ cert: readFileSync(certificate), key: readFileSync
       response.end(JSON.stringify(state.metadata[path]));
       return;
     }
-    const channel = path === `/${source.repository}/${source.feedBranch}/alpha-mac.yml` ? "alpha"
-      : path === `/${source.repository}/${source.feedBranch}/latest-mac.yml` ? "stable" : null;
+    const channel = path === "/feeds/alpha-mac.yml" ? "alpha"
+      : path === "/feeds/latest-mac.yml" ? "stable" : null;
     if (channel) {
       const version = state[channel];
       if (!version) { response.writeHead(404).end(); return; }
@@ -29,14 +29,14 @@ const server = createServer({ cert: readFileSync(certificate), key: readFileSync
       const file = state.mode === "signature" ? "invalid-signature.zip" : name;
       const digest = digests[file];
       if (!digest) throw new Error("A feed names no real fixture");
-      const url = `https://github.com/${source.repository}/releases/download/v${version}/${name}`;
+      const url = `${source.downloadBase}releases/v${version}/${name}`;
       response.writeHead(200, { "Content-Type": "application/json", "Cache-Control": "no-store" });
       response.end(JSON.stringify({ version, files: [{ url, sha512: digest.sha512, size: digest.size }], path: url, sha512: digest.sha512 }));
       return;
     }
     const name = path.split("/").at(-1);
     const version = /^Infinitary-(.+)-universal\.zip$/.exec(name ?? "")?.[1];
-    if (!version || path !== `/${source.repository}/releases/download/v${version}/${name}` || !digests[name]) {
+    if (!version || path !== `/releases/v${version}/${name}` || !digests[name]) {
       response.writeHead(404).end(); return;
     }
     writeFileSync(`${control}.download`, JSON.stringify({ name, mode: state.mode }));

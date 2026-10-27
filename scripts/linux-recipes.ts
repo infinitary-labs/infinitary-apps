@@ -55,10 +55,16 @@ export type RecipeInput = {
 
 /** The configured public release address, shared with the Mac and paired-device downloads. */
 export function tapUrl(version: string, debName: string): string {
-  const { repository } = JSON.parse(readFileSync(join(root, "packaging/release-source.json"), "utf8"));
-  if (typeof repository !== "string" || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository))
+  // The approved pre-storage unblock must not emit recipes pointing at absent downloads.
+  if (process.env.RECIPE_HOST === "tap") {
+    const prefix = version.includes("-alpha.") ? "infinitary-alpha-v" : "infinitary-v";
+    return `https://github.com/infinitary-labs/homebrew-tap/releases/download/${prefix}${version}/${debName}`;
+  }
+  const { downloadBase } = JSON.parse(readFileSync(join(root, "packaging/release-source.json"), "utf8"));
+  const base = new URL(downloadBase);
+  if (base.protocol !== "https:" || base.username || base.password || base.pathname !== "/" || base.search || base.hash)
     throw new Error("Invalid public release destination");
-  return `https://github.com/${repository}/releases/download/v${version}/${debName}`;
+  return new URL(`releases/v${version}/${debName}`, base).href;
 }
 
 function fill(template: string, fields: Record<string, string>): string {

@@ -10,7 +10,7 @@ import {
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { CLAUDE_CLIENT_MISSING_TEXT, claudeClientOutdatedText } from "@shared/claudeClient";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { configureSettingsPath, resetLoginPathForTests } from "../hostEnv";
 import { writeLoginShellStub } from "../loginShellStub";
@@ -23,8 +23,10 @@ import {
   parseClaudeVersion,
   pasteCodeLink,
   primeClaudeExecutable,
+  readClaudeClientVersion,
   resetClaudeClientCache,
   resolveClaudeExecutable,
+  runClaude,
 } from "./claudeCli";
 
 beforeEach(() => resetClaudeClientCache());
@@ -276,6 +278,31 @@ describe("checkClaudeClient", () => {
 });
 
 describe("claudeEnvFor", () => {
+  // INF-1627's accepted workaround for anthropics/claude-code#97074:
+  // an inherited SDK or first-party identity must never win over our own.
+  it.each([undefined, "", "sdk-ts", "sdk-cli", "cli", "claude-vscode", "other-app", "infinitary"])(
+    "identifies Infinitary over inherited entrypoint %j without changing the source environment",
+    (entrypoint) => {
+      const base = Object.freeze({
+        PATH: "/usr/bin",
+        HOME: "/home/person",
+        UNRELATED: "keep",
+        ...(entrypoint === undefined ? {} : { CLAUDE_CODE_ENTRYPOINT: entrypoint }),
+        ANTHROPIC_API_KEY: "ambient",
+        CLAUDE_CONFIG_DIR: "/some/other/account",
+      });
+      const original = { ...base };
+      const processBefore = { ...process.env };
+      const env = claudeEnvFor(base);
+      expect(env.CLAUDE_CODE_ENTRYPOINT).toBe("infinitary");
+      expect(env).toMatchObject({ PATH: base.PATH, HOME: base.HOME, UNRELATED: base.UNRELATED });
+      expect(env.ANTHROPIC_API_KEY).toBeUndefined();
+      expect(env.CLAUDE_CONFIG_DIR).toBeUndefined();
+      expect(base).toEqual(original);
+      expect(process.env).toEqual(processBefore);
+    },
+  );
+
   it("leaves CLAUDE_CONFIG_DIR unset so the client uses the machine login, and strips ambient credentials", () => {
     const env = claudeEnvFor({
       PATH: "/usr/bin",
@@ -322,5 +349,34 @@ describe("pasteCodeLink", () => {
     expect(pasteCodeLink(`visit: ${CODE_PAGE.slice(0, 60)}`)).toBeUndefined();
     expect(pasteCodeLink(`visit: ${CODE_PAGE}`)).toBeUndefined();
     expect(pasteCodeLink(`visit: ${CODE_PAGE}\n`)).toBe(CODE_PAGE);
+  });
+});
+
+// INF-1627: direct auth/status and version processes share the same identity.
+describe("Claude direct launch identity", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("supplies infinitary to direct runs and version reads", async () => {
+    const executable = join(tree(), "claude");
+    const seenVersion = join(tree(), "version-entrypoint");
+    writeFileSync(
+      executable,
+      `#!/bin/sh
+if [ "$1" = "--version" ]; then
+  printf '%s' "$CLAUDE_CODE_ENTRYPOINT" > '${seenVersion}'
+  echo '2.1.311 (Claude Code)'
+else
+  printf '%s' "$CLAUDE_CODE_ENTRYPOINT"
+fi
+`,
+      { mode: 0o755 },
+    );
+    vi.stubEnv("INFINITARY_CLAUDE_CLI", executable);
+    vi.stubEnv("CLAUDE_CODE_ENTRYPOINT", "sdk-cli");
+    expect(await readClaudeClientVersion(executable)).toBe("2.1.311");
+    expect(readFileSync(seenVersion, "utf8")).toBe("infinitary");
+    const result = await runClaude(["auth", "status", "--json"], "unused");
+    expect(result).toMatchObject({ code: 0, stdout: "infinitary" });
+    expect(process.env.CLAUDE_CODE_ENTRYPOINT).toBe("sdk-cli");
   });
 });

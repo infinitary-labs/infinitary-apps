@@ -217,6 +217,7 @@ describe("reading the catalog from the client", () => {
     // CD-1=B: the machine's default login, and nothing ambient. A set config
     // dir would read a different Keychain item than production does.
     expect(env.CLAUDE_CONFIG_DIR).toBeUndefined();
+    expect(env.CLAUDE_CODE_ENTRYPOINT).toBe("infinitary");
     expect(env.ANTHROPIC_API_KEY).toBeUndefined();
     expect(env.ANTHROPIC_AUTH_TOKEN).toBeUndefined();
     expect(env.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();

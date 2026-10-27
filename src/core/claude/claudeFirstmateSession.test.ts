@@ -266,6 +266,7 @@ describe("the Claude seat's options (the contract test)", () => {
     const options = s.harness().options;
     // The machine's default login, nothing ambient, plus the idle signal.
     expect(options.env?.CLAUDE_CONFIG_DIR).toBeUndefined();
+    expect(options.env?.CLAUDE_CODE_ENTRYPOINT).toBe("infinitary");
     expect(options.env?.ANTHROPIC_API_KEY).toBeUndefined();
     expect(options.env?.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
     expect(options.env?.ANTHROPIC_BASE_URL).toBeUndefined();

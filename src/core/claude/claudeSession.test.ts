@@ -208,6 +208,7 @@ describe("the Claude crewmate's coding session", () => {
     const options = harness().options;
 
     expect(options.env?.CLAUDE_CONFIG_DIR).toBeUndefined();
+    expect(options.env?.CLAUDE_CODE_ENTRYPOINT).toBe("infinitary");
     expect(options.env?.ANTHROPIC_API_KEY).toBeUndefined();
     expect(options.env?.CLAUDE_CODE_OAUTH_TOKEN).toBeUndefined();
     // No proxy anywhere in the path: nothing redirects the client's traffic.

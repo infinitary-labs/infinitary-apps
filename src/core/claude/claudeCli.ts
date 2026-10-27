@@ -387,6 +387,9 @@ function spawnableExecutable(candidate: string): string | undefined {
  */
 export function claudeEnvFor(base: NodeJS.ProcessEnv = hostEnv()): NodeJS.ProcessEnv {
   const env: NodeJS.ProcessEnv = { ...base };
+  // Identify our own app, never an inherited SDK or first-party client.
+  // Claude Code issue 97074's workaround requires an explicit overwrite.
+  env.CLAUDE_CODE_ENTRYPOINT = "infinitary";
   // CD-1=B: the vendor's own default login, never a per-account store.
   delete env.CLAUDE_CONFIG_DIR;
   // Ambient credentials would silently serve a key the user never connected

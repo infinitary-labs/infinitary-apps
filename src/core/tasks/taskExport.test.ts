@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { openInMemoryDatabase } from "../storage/db";
 import { exportTaskRecords, parseTaskExport, TASK_EXPORT_FORMAT } from "./taskExport";
 import { TaskService } from "./taskService";
@@ -80,7 +81,8 @@ function populated() {
   tick();
   tasks.link("c", "a", "related", "firstmate");
   tick();
-  tasks.recordDelivery(
+  seedDelivery(
+    tasks,
     "a",
     { prUrl: "https://x/pr/1", prNumber: 1 },
     { kind: "pr_opened", text: "PR #1", feed: true },

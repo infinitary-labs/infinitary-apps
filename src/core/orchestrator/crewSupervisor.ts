@@ -659,6 +659,7 @@ export type CrewSupervisorOptions = {
   repos: RepoRegistry;
   /** The one task writer (task-system P0): every record change goes through it. */
   tasks: TaskService;
+  taskTimeline?: import("../tasks/taskTimeline").TaskTimeline;
   cardStore: CardStore;
   /**
    * Knowledge (docs/knowledge.md): present in every build. Applicable
@@ -3477,7 +3478,7 @@ export class CrewSupervisor {
       ...(input.priority !== undefined ? { priority: input.priority } : {}),
     });
     this.options.tasks.setDevice(taskId, builder.deviceId ?? null);
-    this.options.tasks.recordDelivery(taskId, {
+    this.options.tasks.recordChangeEvidence(taskId, {
       headSha,
       ...(facts.changeReading ? { reviewChange: facts.changeReading } : {}),
       ...(passedHead ? { passedHead } : {}),
@@ -3488,7 +3489,7 @@ export class CrewSupervisor {
     // close gate holds nothing, and the blocks rule has no
     // `proceed_with_open` override.
     this.options.tasks.link(taskId, builder.id, "blocks", "host", true);
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordChangeEvidence(
       builder.id,
       {},
       {
@@ -3572,7 +3573,7 @@ export class CrewSupervisor {
     // Keep it through retries; only a later review turn takes a new head.
     if (review.delivery?.headSha && !review.outcome) return undefined;
     const facts = await this.reviewFacts(builder);
-    this.options.tasks.recordDelivery(review.id, {
+    this.options.tasks.recordChangeEvidence(review.id, {
       validationAssignment: validationAssignment(builder.delivery?.liveValidation, facts.headSha),
     });
     const previousHead = review.delivery?.headSha;
@@ -3592,7 +3593,7 @@ export class CrewSupervisor {
           base,
         );
       }
-      this.options.tasks.recordDelivery(
+      this.options.tasks.recordChangeEvidence(
         review.id,
         {
           headSha: facts.headSha,
@@ -3649,7 +3650,7 @@ export class CrewSupervisor {
     const assessorId = randomUUID().slice(0, 8);
     // Recorded before it exists, so a second read finds it and starts none,
     // and one that cannot be made ends the approval like one that cannot finish.
-    this.options.tasks.recordDelivery(builder.id, {
+    this.options.tasks.recordPermissionRecords(builder.id, {
       mergeAuthorization: {
         ...authorization,
         undecided: { ...undecided, assessment: { taskId: assessorId, at: this.now() } },
@@ -6807,7 +6808,7 @@ export class CrewSupervisor {
         record.delivery?.captainWait?.cardId &&
         released.includes(record.delivery.captainWait.cardId)
       ) {
-        this.options.tasks.recordDelivery(taskId, { captainWait: undefined });
+        this.options.tasks.clearCaptainWait(taskId);
       }
       this.ladder.syncCaptainGate(taskId, this.now());
       // The existing Firstmate/settle path rechecks ready work; no new runner.
@@ -6831,7 +6832,7 @@ export class CrewSupervisor {
           `The captain made this task ${CARE_WORDS[policies.rigor.value]}.`,
         );
         if (record.delivery?.captainWait?.cardId === card.id)
-          this.options.tasks.recordDelivery(taskId, { captainWait: undefined });
+          this.options.tasks.clearCaptainWait(taskId);
       }
       this.ladder.syncCaptainGate(taskId, this.now());
     }
@@ -7663,7 +7664,7 @@ export class CrewSupervisor {
       reviewedAt: at,
     };
     if (parsed.verdict === "pass") {
-      this.options.tasks.recordDelivery(builder.id, facts, {
+      this.options.tasks.recordChangeEvidence(builder.id, facts, {
         kind: "review",
         text: `review passed at ${shortSha}, ${riskText}${derived}`,
         feed: true,
@@ -7723,7 +7724,7 @@ export class CrewSupervisor {
       parsed.verdict === "findings" && newHead
         ? (builder.delivery?.reviewRounds ?? 0) + 1
         : undefined;
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordChangeEvidence(
       builder.id,
       {
         ...facts,
@@ -8749,7 +8750,7 @@ export class CrewSupervisor {
       ...(input.until === "version" && head ? { head } : {}),
       at: this.now(),
     };
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordPermissionRecords(
       taskId,
       { override },
       {
@@ -8780,7 +8781,7 @@ export class CrewSupervisor {
     const handle = `${record.key || record.id} "${record.title}"`;
     const override = record.delivery?.override;
     if (!override) return { ok: false, text: `${handle} has no override to take back.` };
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordPermissionRecords(
       taskId,
       { override: undefined },
       {
@@ -9300,7 +9301,7 @@ export class CrewSupervisor {
               task.id,
             );
         }
-        this.options.tasks.recordDelivery(task.id, { validationHead: head });
+        this.options.tasks.recordChangeEvidence(task.id, { validationHead: head });
         return this.addCrewmateCard(task, input, head, presentationChecked);
       });
     }
@@ -9584,10 +9585,11 @@ export class CrewSupervisor {
           });
         // The task keeps the risk of its newest completion card; one
         // without any leaves none standing.
-        if (risk || current.delivery?.risk) this.options.tasks.recordDelivery(task.id, { risk });
+        if (risk || current.delivery?.risk)
+          this.options.tasks.recordChangeEvidence(task.id, { risk });
       } else if (selfMergeNote && risk) {
         // So does the story note of a task that merges on its own.
-        this.options.tasks.recordDelivery(task.id, { risk });
+        this.options.tasks.recordChangeEvidence(task.id, { risk });
       }
       return `${id}${revisionNotice(this.cards.revisionChanges(id))}`;
     };
@@ -9848,7 +9850,7 @@ export class CrewSupervisor {
       offer.cardId === cardId && offer.offerId === offerId;
     const rest = offers.filter((offer) => !same(offer));
     const ambiguous = offers.some((offer) => same(offer) && offer.headSha !== head);
-    this.options.tasks.recordDelivery(taskId, {
+    this.options.tasks.recordPermissionRecords(taskId, {
       completionOffers: ambiguous
         ? rest
         : [
@@ -10784,7 +10786,7 @@ export class CrewSupervisor {
         kept.deleted === reading.deleted
       )
         return;
-      this.options.tasks.recordDelivery(record.id, {
+      this.options.tasks.recordChangeEvidence(record.id, {
         changeLines: { ...reading, head, at: this.now() },
       });
     })()
@@ -11854,7 +11856,7 @@ export class CrewSupervisor {
       head,
       ...(builder ? { reviewer: task.id, assignment: record.delivery?.validationAssignment } : {}),
     });
-    this.options.tasks.recordDelivery(owner.id, { validationHead: currentHead });
+    this.options.tasks.recordChangeEvidence(owner.id, { validationHead: currentHead });
     const { validation: _validation, ...declaration } = declared;
     const revision = validationRevision(this.options.tasks.get(owner.id)?.delivery?.liveValidation);
     const counts =
@@ -12057,6 +12059,7 @@ export class CrewSupervisor {
    */
   taskQueryReach(): TaskQueryReach {
     return {
+      timeline: this.options.taskTimeline,
       projectFolder: (repoId) => this.options.repos.get(repoId)?.path,
       sessionFolderOf: (record) => ({
         dir: crewmateSessionsDir(this.options.paths, record.id),
@@ -13169,7 +13172,7 @@ export class CrewSupervisor {
                     : associated?.delivery?.headSha,
               });
             else if (associated?.delivery?.requiredActionOffer)
-              this.options.tasks.recordDelivery(card.taskId as string, {
+              this.options.tasks.recordPermissionRecords(card.taskId as string, {
                 requiredActionOffer: undefined,
               });
             approve?.();
@@ -13439,7 +13442,7 @@ export class CrewSupervisor {
       head,
       at: this.now(),
     };
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordPermissionRecords(
       taskId,
       { override },
       {

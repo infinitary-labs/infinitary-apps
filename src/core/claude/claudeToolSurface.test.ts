@@ -696,9 +696,14 @@ describe("the accepted plan through the real Claude client", () => {
           key === "182c1d82"
             ? JSON.parse(readFileSync("tests/fixtures/accepted-plan/inf91.json", "utf8"))
             : undefined;
+        // INF-1306: a paged field request reaches the native query owner too.
+        // Derive that field from the request issued below; keep the exact shape assertion.
+        let requestedField: string | undefined;
         const capturedRead = captured
           ? createTasksQueryTool((input) => {
-              expect(input).toEqual({ key });
+              expect(input).toEqual(
+                requestedField === undefined ? { key } : { key, field: requestedField },
+              );
               return { rows: captured, total: captured.length };
             })
           : undefined;
@@ -739,6 +744,7 @@ describe("the accepted plan through the real Claude client", () => {
         api.answer((request, res) => {
           if (!answersTool(request)) return answerTool(request, res, "tasks", { key });
           const page = nextPage();
+          requestedField = page?.field;
           return page
             ? answerTool(request, res, "tasks", { key, ...page })
             : answerText(request, res, "Read the accepted plan.");

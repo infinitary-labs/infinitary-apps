@@ -597,6 +597,7 @@ export const workRequests = {
         project: z.string().optional(),
         status: z.enum(["open", "active", "done", "dropped", "live", "closed"]).optional(),
         key: z.string().optional(),
+        field: z.string().optional(),
         text: z.string().optional(),
         parent: z.string().optional(),
         limit: z.number().int().min(1).max(100).optional(),

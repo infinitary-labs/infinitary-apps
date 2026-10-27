@@ -10,6 +10,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import { formatDurationShort } from "../../src/shared/quotaSignals";
 import { DROP_TASK_LABEL } from "../../src/shared/recordDrop";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { taskKey, taskKeyLinks } from "./rails";
@@ -132,7 +133,7 @@ test("a capped task stuck past every wake is still put to the captain on the app
   });
   const head = "abc1234def5678";
   const now = Date.now();
-  tasks.recordDelivery("capped-task", {
+  seedDelivery(tasks, "capped-task", {
     headSha: head,
     ci: "red",
     ciRounds: 3,

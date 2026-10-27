@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   CAPTAIN_OWNED_SHAPE_FIELDS,
   DERIVED_SHAPE_FIELDS,
@@ -48,7 +49,7 @@ describe("live task policies", () => {
         rigor: "reviewed",
       },
     });
-    tasks.recordDelivery(task.id, {
+    seedDelivery(tasks, task.id, {
       mode: "direct-pr",
       prNumber: 42,
       prUrl: "https://github.com/example/chart/pull/42",
@@ -174,7 +175,7 @@ describe("live task policies", () => {
     });
     tasks.link(review.id, task.id, "blocks", "host");
     tasks.link(dependency.id, task.id, "blocks", "firstmate");
-    tasks.recordDelivery(task.id, {
+    seedDelivery(tasks, task.id, {
       reviewVerdict: "findings",
       reviewRounds: 3,
       reviewCapAt: 123,

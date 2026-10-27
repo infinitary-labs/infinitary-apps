@@ -12,6 +12,7 @@ import { CREWMATE_TAB_VIA } from "../../src/shared/provenance";
 import { INFO_TAB_LABEL } from "../../src/shared/taskBrowser";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { launchClaudeCrew } from "./claudeCrew";
 import { claudeQueued } from "./claudeSeat";
 import {
@@ -112,7 +113,8 @@ function seededReplay(): string {
       ...(words ? { words } : {}),
     });
     at = base + 9 * 60_000;
-    tasks.recordDelivery(
+    seedDelivery(
+      tasks,
       id,
       { prNumber: 42, prUrl: "https://github.com/example/settings/pull/42", ci: "green" },
       { kind: "pr_opened", text: "Opened pull request #42" },

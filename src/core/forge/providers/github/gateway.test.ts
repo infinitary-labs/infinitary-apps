@@ -8,6 +8,7 @@ import type { ForgeWriteAsk, IntegrationAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
 import {
   FileIntegrationSecrets,
   forgeHostIntegration,
@@ -506,7 +507,7 @@ async function fixture(
   const readChecks = vi.fn(async () => {
     readings += 1;
     if (readings >= armOn)
-      tasks.recordDelivery("task-1", { ciWatch: { head: HEAD, since: 1 } as never });
+      seedDelivery(tasks, "task-1", { ciWatch: { head: HEAD, since: 1 } as never });
     return `reading ${readings}`;
   });
   let armOn = 1;
@@ -555,7 +556,7 @@ async function fixture(
       armOn = n;
     },
     reserve: () =>
-      tasks.recordDelivery("task-1", {
+      seedDelivery(tasks, "task-1", {
         headSha: HEAD,
         ci: "red",
         ciRepair: {
@@ -582,7 +583,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     ["PATCH", "issues/036"],
   ] as const)("refuses a raw description write through %s %s", async (method, rest) => {
     const f = await fixture();
-    f.tasks.recordDelivery("task-1", { prNumber: 36 });
+    seedDelivery(f.tasks, "task-1", { prNumber: 36 });
     f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
     const result = await f.write.run({
       method,
@@ -620,7 +621,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
       body: JSON.stringify({ body: "Legacy description" }),
     });
     expect(f.seen).toHaveLength(1);
-    f.tasks.recordDelivery("task-1", { prNumber: 1 });
+    seedDelivery(f.tasks, "task-1", { prNumber: 1 });
     f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
     const changed = await f.write.run({
       method: "PATCH",
@@ -1336,7 +1337,7 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     const ledger = structuredClone(tasks.get("task-1")?.delivery?.ciRepair);
     if (!ledger?.rerun) throw new Error("fixture has no reservation");
     ledger.rerun.headSha = "b".repeat(40);
-    tasks.recordDelivery("task-1", { ciRepair: ledger });
+    seedDelivery(tasks, "task-1", { ciRepair: ledger });
     expect(
       (
         await write.run({

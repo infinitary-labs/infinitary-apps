@@ -208,12 +208,15 @@ describe("the migration of an older release's running work and policy inputs", (
     ]);
     // The task row no longer holds them; a value of another type stays in the shape.
     const rows = upgraded
-      .prepare(
-        "SELECT id, session_file, idle_since, placement_json, delivery_json, shape_json FROM tasks ORDER BY id",
-      )
+      .prepare("SELECT id, delivery_json, shape_json FROM task_records ORDER BY id")
       .all() as Record<string, string | null>[];
     for (const row of rows) {
-      expect([row.session_file, row.idle_since, row.placement_json]).toEqual([null, null, null]);
+      for (const field of ["session_file", "idle_since", "placement_json"])
+        expect(
+          (upgraded.prepare("PRAGMA table_info(tasks)").all() as { name: string }[]).map(
+            (column) => column.name,
+          ),
+        ).not.toContain(field);
       expect(row.delivery_json ?? "").not.toMatch(/captainWait|checkBack|needsFirstmate/);
     }
     expect(JSON.parse(rows.find((row) => row.id === "asked")!.delivery_json!)).toHaveProperty(

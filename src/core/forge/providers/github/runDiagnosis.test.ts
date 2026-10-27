@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
 import { GithubGatewayService } from "../../../orchestrator/githubGateway";
 import { PrCiService } from "../../../orchestrator/prCi";
 import { RunWatcher } from "../../../orchestrator/runWatch";
@@ -345,7 +346,7 @@ describe("a workflow run read without a pull request (INF-688)", () => {
   it("ends what the run showed once the change has a newer pull request version", async () => {
     // The crewmate brought the branch up to date with main and opened its pull request there.
     const moveOn = (f: Awaited<ReturnType<typeof setup>>) =>
-      f.tasks.recordDelivery("proof", {
+      seedDelivery(f.tasks, "proof", {
         prNumber: 774,
         headSha: "9b74a0b056330f847f21a1af531132e6eb1a0441",
         ci: "pending",

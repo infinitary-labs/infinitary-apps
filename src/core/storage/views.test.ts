@@ -5,7 +5,12 @@ import { seedTask } from "../tasks/seedTask";
 import { recentFeed } from "../tasks/taskFeed";
 import { TaskService } from "../tasks/taskService";
 import { ActivityStore } from "./activityStore";
-import { type AppDatabase, openDatabase, openInMemoryDatabase } from "./db";
+import {
+  type AppDatabase,
+  openDatabase,
+  openInMemoryDatabase,
+  TASK_RECORD_RETIREMENT_VERSION,
+} from "./db";
 import { LEDGER_VIEWS } from "./views";
 
 /**
@@ -243,9 +248,11 @@ describe("the published views", () => {
       db,
       "SELECT name FROM sqlite_schema WHERE type = 'view' ORDER BY name",
     ).map((row) => row.name);
-    // Beside them, only the decision ledger's three old names (migration 50),
-    // which no plugin's query can reach.
-    expect(views).toEqual([...SQL_VIEWS, ...LEDGER_VIEWS.map((view) => view.name)].sort());
+    // Beside them, the decision ledger's old names and the internal task
+    // record projection; no plugin query can reach those private views.
+    expect(views).toEqual(
+      [...SQL_VIEWS, ...LEDGER_VIEWS.map((view) => view.name), "task_records"].sort(),
+    );
     for (const view of SQL_VIEWS) expect(columnsOf(db, view), view).toEqual(PINNED[view]);
   });
 
@@ -391,3 +398,63 @@ describe("the published views", () => {
     reopened.close();
   });
 });
+
+// INF-1484 W3: single-field consumers use their owner, not the composed shape.
+it.each([undefined, TASK_RECORD_RETIREMENT_VERSION - 1])(
+  "preserves program feed grouping and published owner fields at schema %s",
+  (version) => {
+    const db = openDatabase(scratchDir("task-narrow-owner-reads-"), version);
+    let now = Date.parse("2026-10-20T16:00:00Z");
+    const tasks = new TaskService({ db, now: () => ++now });
+    const program = seedTask(tasks, {
+      id: "program",
+      title: "Research the next release",
+      status: "queued",
+      startPolicy: "on-request",
+      shape: {
+        kind: "research",
+        deliverable: "change",
+        rigor: "reviewed",
+        program: { script: "return null;", bound: 2 },
+      },
+    });
+    for (const id of ["mac-question", "linux-question"])
+      seedTask(tasks, {
+        id,
+        parentId: program.id,
+        title: `Research ${id}`,
+        status: "queued",
+        startPolicy: "on-request",
+      });
+    seedTask(tasks, {
+      id: "ordinary",
+      title: "Review the home page",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    for (const task of tasks.list())
+      tasks.recordReport(task.id, { text: "Research queued for review." });
+    expect(tasks.listFeedEvents(10).map((event) => event.taskId)).toEqual([
+      "ordinary",
+      "linux-question",
+    ]);
+    const table = version === undefined ? "task_records" : "tasks";
+    const previous = `SELECT id AS task_id, json_extract(shape_json, '$.deliverable') AS deliverable,
+      json_extract(shape_json, '$.rigor') AS rigor FROM ${table} ORDER BY id`;
+    const current = "SELECT task_id, deliverable, rigor FROM v_tasks_v1 ORDER BY task_id";
+    expect(db.prepare(current).all()).toEqual(db.prepare(previous).all());
+    const plan = (sql: string) =>
+      db.prepare(`EXPLAIN QUERY PLAN ${sql}`).all() as { detail: string }[];
+    if (version === undefined) {
+      expect(plan(previous).some((row) => row.detail.includes("json_each"))).toBe(true);
+      expect(plan(current).filter((row) => row.detail.includes("json_each"))).toEqual([]);
+    }
+    console.info("Single-field SQLite reads", {
+      version: version ?? "current",
+      rows: db.prepare(current).all(),
+      previous: plan(previous),
+      current: plan(current),
+    });
+    db.close();
+  },
+);

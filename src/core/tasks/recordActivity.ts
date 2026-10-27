@@ -14,7 +14,8 @@ import type { TaskConcernRelation } from "../storage/taskEventStore";
 /**
  * Where an event reads in a record's Activity (docs/task-record.md, "What
  * Activity holds"): a `row` of its own, `folded` under the row it led to,
- * or `evidence` the timeline keeps for whoever digs, never in Activity.
+ * or `evidence` omitted only from the compatible condensed projection;
+ * the unified timeline exposes it in Activity.
  */
 export type ActivityPlace = "row" | "folded" | "evidence";
 

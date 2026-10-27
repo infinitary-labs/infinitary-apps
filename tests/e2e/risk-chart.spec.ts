@@ -7,6 +7,7 @@ import { type Card, SETTLE_FACTS_OPEN } from "../../src/shared/cards";
 import { RISK_DIMENSIONS, RISK_WORDS, type RiskAssessment } from "../../src/shared/risk";
 import { completionCardBody } from "../helpers/completionCard";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody, cardBodyElement } from "./frames";
 import { launchApp } from "./launch";
 import { atRest, intersects, type Rect, resizeWindow, settled } from "./layout";
@@ -113,7 +114,7 @@ test("a merge card's risk chart sits at its top right, and each dot opens its ow
       status: "completed",
       model: { provider: MOCK_PROVIDER_ID, id: MOCK_MODEL_ID },
     });
-    tasks.recordDelivery(TASK, { mode: "local-only", ci: "green", ciAt: Date.now(), risk: RISK });
+    seedDelivery(tasks, TASK, { mode: "local-only", ci: "green", ciAt: Date.now(), risk: RISK });
     new CardStore(db).upsert(mergeCard());
   } finally {
     db.close();

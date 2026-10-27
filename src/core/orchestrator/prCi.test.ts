@@ -11,6 +11,7 @@ import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   AttachmentUploadError,
   type Forge,
@@ -252,7 +253,7 @@ async function insertDirectPrTask(
 
 /** The host learned of the task's PR: what `pr_opened` records. */
 function recordPr(tasks: TaskService, number: number, id = "ab12cd34"): void {
-  tasks.recordDelivery(id, { prNumber: number, prUrl: `https://github.com/x/y/pull/${number}` });
+  seedDelivery(tasks, id, { prNumber: number, prUrl: `https://github.com/x/y/pull/${number}` });
 }
 
 describe("PrCiService", () => {
@@ -299,7 +300,7 @@ describe("PrCiService", () => {
       const head = await git(task.repoDir, ["rev-parse", task.branch!]);
       forge.opened =
         kind === "git" ? { headSha: head, url: null } : { ...forge.opened, headSha: head };
-      tasks.recordDelivery(task.id, { reviewVerdict: "pass", reviewSha: head });
+      seedDelivery(tasks, task.id, { reviewVerdict: "pass", reviewSha: head });
       const input = {
         title: "fix: validate the isolated fixture",
         body: "The branch has no running product.",
@@ -391,7 +392,7 @@ describe("PrCiService", () => {
       expect(uncertain[0]?.state).toBe("unknown");
       // Even complete final proof cannot convert that unknown attempt into permission to repeat it.
       const proof = noSurfaceProof(head);
-      tasks.recordDelivery(task.id, {
+      seedDelivery(tasks, task.id, {
         reviewVerdict: "blocked",
         liveValidation: { ...proof, permissions: uncertain },
       });
@@ -423,13 +424,13 @@ describe("PrCiService", () => {
       const currentHead = await git(task.repoDir, ["rev-parse", task.branch!]);
       expect(currentHead).not.toBe(head);
       forge.change = { ...forge.change!, headSha: currentHead };
-      tasks.recordDelivery(task.id, { reviewVerdict: "pass", reviewSha: head });
+      seedDelivery(tasks, task.id, { reviewVerdict: "pass", reviewSha: head });
       expect(await service.readWatched(task.id)).toMatchObject({
         kind: "settled",
         head: currentHead,
       });
       expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(0);
-      tasks.recordDelivery(task.id, { reviewSha: currentHead });
+      seedDelivery(tasks, task.id, { reviewSha: currentHead });
       expect(await service.readWatched(task.id)).toMatchObject({
         kind: "settled",
         head: currentHead,
@@ -438,7 +439,7 @@ describe("PrCiService", () => {
       const published = tasks.get(task.id)!.delivery!.liveValidation!.permissions;
       expect(published).toHaveLength(1);
       expect(published[0]).toMatchObject({ state: "succeeded", request: { head } });
-      tasks.recordDelivery(task.id, {
+      seedDelivery(tasks, task.id, {
         liveValidation: { ...noSurfaceProof(currentHead), permissions: published },
       });
       if (carried) {
@@ -448,7 +449,7 @@ describe("PrCiService", () => {
         const currentReading = await readChangeReading(task.repoDir, currentHead);
         if (!reading || currentReading !== reading)
           throw new Error("The fixture's unchanged patch must have the same real change reading.");
-        tasks.recordDelivery(task.id, {
+        seedDelivery(tasks, task.id, {
           reviewSha: head,
           reviewChange: reading,
           versionReadings: { [currentHead]: currentReading },
@@ -457,14 +458,14 @@ describe("PrCiService", () => {
       if (kind !== "git") {
         const markReady = forge.markReady.bind(forge);
         forge.markReady = async (change, beforeSend) => {
-          tasks.recordDelivery(task.id, { reviewVerdict: "blocked" });
+          seedDelivery(tasks, task.id, { reviewVerdict: "blocked" });
           return markReady(change, beforeSend);
         };
         expect(await service.checkForCrew(task.id)).toContain("Validation changed");
         expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(0);
         expect(tasks.get(task.id)?.delivery?.validationReadiness?.state).toBe("not-applied");
         forge.markReady = markReady;
-        tasks.recordDelivery(task.id, {
+        seedDelivery(tasks, task.id, {
           reviewVerdict: "pass",
           reviewSha: carried ? head : currentHead,
         });
@@ -578,7 +579,7 @@ describe("PrCiService", () => {
         expect(await service.checkForCrew(task.id)).toContain("overall: green");
         expect(forge.change.draft).toBe(true);
         expect(forge.calls.filter((call) => call.startsWith("markReady"))).toHaveLength(1);
-        tasks.recordDelivery(task.id, {
+        seedDelivery(tasks, task.id, {
           reviewSha: nextHead,
           liveValidation: { ...noSurfaceProof(nextHead), permissions: published },
         });
@@ -1450,7 +1451,7 @@ describe("the CI round counter (delivery rigor phase 3)", () => {
   it("archives unqualified legacy failed versions without charging new own repairs", async () => {
     const { tasks, repos, service, forge } = setup();
     await insertDirectPrTask(tasks, repos);
-    tasks.recordDelivery("ab12cd34", { ciRounds: 2, ciRedHead: "legacy-head" });
+    seedDelivery(tasks, "ab12cd34", { ciRounds: 2, ciRedHead: "legacy-head" });
     forge.states = ["failure"];
     await service.checkForCrew("ab12cd34");
     expect(tasks.get("ab12cd34")?.delivery).toMatchObject({
@@ -2317,7 +2318,7 @@ describe("PrCiService and the sign-in where the project lives", () => {
     forge.states = ["failure"];
     const { tasks, repos, service } = setup({ forge });
     await insertDirectPrTask(tasks, repos);
-    tasks.recordDelivery("ab12cd34", { ciRounds: 3, ciCapAt: 5000 });
+    seedDelivery(tasks, "ab12cd34", { ciRounds: 3, ciCapAt: 5000 });
     const text = await service.checkForCrew("ab12cd34");
     expect(text).toContain(
       "Three unsuccessful own repairs exhausted the allowance (3/3): stop and report the failing check and attempts.",
@@ -2546,7 +2547,7 @@ ${said}`);
       forge.states = ["failure"];
       const { tasks, repos, service } = setup({ forge });
       await insertDirectPrTask(tasks, repos);
-      tasks.recordDelivery("ab12cd34", { ciRounds: 3, ciCapAt: 5000 });
+      seedDelivery(tasks, "ab12cd34", { ciRounds: 3, ciCapAt: 5000 });
       const read = await service.readWatched("ab12cd34");
       expect(read).toMatchObject({ kind: "settled", overall: "red", cap: { rounds: 3, cap: 3 } });
     });
@@ -2785,7 +2786,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
       proceedWithOpen: false,
       status: "standing",
     };
-    tasks.recordDelivery("ab12cd34", { mergeAuthorization: authorization });
+    seedDelivery(tasks, "ab12cd34", { mergeAuthorization: authorization });
     const declare = (toHead: string, changedPaths: string[] = []) =>
       service.checkForCrew("ab12cd34", {
         conflictRepair: {
@@ -2850,7 +2851,7 @@ describe("a merge under the captain's kept approval (FI3-304)", () => {
     const approved = run("rev-parse", "HEAD");
     run("commit", "--amend", "-m", "chore(pi): record Pi changelog version 1.0.0");
     const reworded = run("rev-parse", "HEAD");
-    tasks.recordDelivery("ab12cd34", {
+    seedDelivery(tasks, "ab12cd34", {
       mergeAuthorization: {
         version: 1,
         id: "auth-1",
@@ -2952,7 +2953,7 @@ describe("the captain's click on a pull request the task did not open, while Git
       title: PR94.title,
       at: Date.now(),
     };
-    harness.tasks.recordDelivery("ab12cd34", { mergeReviews: [review] });
+    seedDelivery(harness.tasks, "ab12cd34", { mergeReviews: [review] });
     // The click, with the gaps between GitHub's reads on a fake clock: it
     // settles only if the wait ends.
     const click = async () => {
@@ -3054,7 +3055,7 @@ describe("an absence declaration beside a check GitHub reported (INF-893)", () =
       },
       at: Date.now(),
     };
-    tasks.recordDelivery("ab12cd34", { mergeReviews: [review] });
+    seedDelivery(tasks, "ab12cd34", { mergeReviews: [review] });
 
     // replay-gate still running: the declaration does not cover it.
     expect(await service.mergeReview("ab12cd34", review.id)).toMatchObject({
@@ -3309,7 +3310,7 @@ describe("a passed review covers the same change", () => {
     const { tasks, repos, service } = setup();
     await insertDirectPrTask(tasks, repos);
     repos.configure(tasks.get("ab12cd34")?.repoId as string, { rigor: "reviewed" });
-    tasks.recordDelivery("ab12cd34", {
+    seedDelivery(tasks, "ab12cd34", {
       reviewVerdict: "pass",
       reviewSha: "feedbeef",
       liveValidation: noSurfaceProof("feedbeef"),
@@ -3323,7 +3324,7 @@ describe("a passed review covers the same change", () => {
     const { tasks, repos, service } = setup();
     await insertDirectPrTask(tasks, repos);
     repos.configure(tasks.get("ab12cd34")?.repoId as string, { rigor: "reviewed" });
-    tasks.recordDelivery("ab12cd34", { reviewVerdict: "pass", reviewSha: "older" });
+    seedDelivery(tasks, "ab12cd34", { reviewVerdict: "pass", reviewSha: "older" });
     expect(await service.open("ab12cd34", { title: "fix: ship it", body: "Why" })).toContain(
       "the current version needs an independent review",
     );
@@ -3358,7 +3359,7 @@ describe("a passed review covers the same change", () => {
     );
     const reading = await readChangeReading(dir, reviewed);
     if (!reading) throw new Error("the reviewed commit has no change reading");
-    tasks.recordDelivery("ab12cd34", {
+    seedDelivery(tasks, "ab12cd34", {
       reviewVerdict: "pass",
       reviewSha: reviewed,
       reviewChange: reading,
@@ -3370,7 +3371,7 @@ describe("a passed review covers the same change", () => {
     const updated = run("rev-parse", "HEAD");
     // INF-125: proof still names this version; the code-review assertion below
     // independently proves that an unchanged patch keeps its earlier review.
-    tasks.recordDelivery("ab12cd34", {
+    seedDelivery(tasks, "ab12cd34", {
       liveValidation: noSurfaceProof(
         updated,
         "fixture-reviewer",
@@ -3416,7 +3417,7 @@ describe("a passed review covers the same change", () => {
       headSha: edited,
       title: "feat: change line 20",
     };
-    tasks.recordDelivery("ab12cd34", {
+    seedDelivery(tasks, "ab12cd34", {
       liveValidation: noSurfaceProof(
         edited,
         "fixture-reviewer",
@@ -3464,7 +3465,7 @@ describe("a passed review covers the same change", () => {
       status: "standing",
     };
     const reading = async (on?: "checks" | "conflict" | "repair") => {
-      tasks.recordDelivery("ab12cd34", {
+      seedDelivery(tasks, "ab12cd34", {
         mergeAuthorization: {
           ...authorization,
           ...(on ? { waiting: { on, head: "feedbeef", at: 1 } } : { waiting: undefined }),
@@ -3582,7 +3583,7 @@ describe("shared story delivery boundaries", () => {
       at: Awaited<ReturnType<typeof saved>>,
       scope: "task" | "version" | "older-version" | "other-hold",
     ): void {
-      at.tasks.recordDelivery("ab12cd34", {
+      seedDelivery(at.tasks, "ab12cd34", {
         override: {
           words,
           holds: [scope === "other-hold" ? "checks" : "story"],
@@ -3706,8 +3707,7 @@ describe("shared story delivery boundaries", () => {
           }),
           // The last read before the send.
           changeFor: async (branch: string) => {
-            if (scope === "taken back")
-              at.tasks.recordDelivery("ab12cd34", { override: undefined });
+            if (scope === "taken back") seedDelivery(at.tasks, "ab12cd34", { override: undefined });
             return changeFor(branch);
           },
         });
@@ -3728,7 +3728,7 @@ describe("shared story delivery boundaries", () => {
           at: 1,
         };
         at.forge.states = ["failure"];
-        at.tasks.recordDelivery("ab12cd34", { mergeReviews: [review] });
+        seedDelivery(at.tasks, "ab12cd34", { mergeReviews: [review] });
         const outcome = await at.service.mergeReview("ab12cd34", review.id);
         if (scope === "task") {
           expect(outcome.ok).toBe(true);
@@ -3754,7 +3754,7 @@ describe("shared story delivery boundaries", () => {
       override(at, "task");
       Object.assign(at.forge, {
         pull: async () => {
-          at.tasks.recordDelivery("ab12cd34", { override: undefined });
+          seedDelivery(at.tasks, "ab12cd34", { override: undefined });
           return {
             number: 23,
             state: "open",
@@ -3871,7 +3871,7 @@ describe("shared story delivery boundaries", () => {
       const at = await saved();
       at.tasks.setDevice("ab12cd34", null);
       at.repos.configure(at.tasks.get("ab12cd34")!.repoId!, { rigor: "reviewed" });
-      at.tasks.recordDelivery("ab12cd34", {
+      seedDelivery(at.tasks, "ab12cd34", {
         reviewVerdict: "pass",
         reviewSha: original,
         liveValidation: noSurfaceProof(original),
@@ -3883,7 +3883,7 @@ describe("shared story delivery boundaries", () => {
           revisions: [...current!.revisions, { ...at.story, revision: 2, title }],
         }));
       at.readHead.mockImplementation(async () => {
-        at.tasks.recordDelivery("ab12cd34", {
+        seedDelivery(at.tasks, "ab12cd34", {
           liveValidation: { ...noSurfaceProof(original), reviews: [] },
         });
         return original;
@@ -3994,7 +3994,7 @@ describe("shared story delivery boundaries", () => {
         },
       ],
     };
-    at.tasks.recordDelivery("ab12cd34", {
+    seedDelivery(at.tasks, "ab12cd34", {
       mergeAuthorization: authorization,
       completionOffers: [
         {
@@ -4058,7 +4058,7 @@ describe("shared story delivery boundaries", () => {
   it("does not attach a saved-story hold to an existing unrecorded legacy PR", async () => {
     const at = await saved();
     const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
-    at.tasks.recordDelivery("ab12cd34", { presentation: undefined, prNumber: undefined });
+    seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: undefined });
     expect(await at.service.preparePresentation("ab12cd34", story)).toContain(
       "predates saved stories",
     );
@@ -4068,7 +4068,7 @@ describe("shared story delivery boundaries", () => {
   it("starts a saved story when the recorded pre-story PR has closed (INF-92 F1, captain's choice)", async () => {
     const at = await saved();
     const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
-    at.tasks.recordDelivery("ab12cd34", { presentation: undefined, prNumber: 23 });
+    seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: 23 });
     const open = at.forge.change;
     let body = "";
     at.forge.change = null;
@@ -4105,7 +4105,7 @@ describe("shared story delivery boundaries", () => {
     expect(delivery?.prNumber).not.toBe(23);
     expect(delivery?.changeLabel).not.toContain("23");
     // An open pull request for the branch is still a legacy one.
-    at.tasks.recordDelivery("ab12cd34", { presentation: undefined });
+    seedDelivery(at.tasks, "ab12cd34", { presentation: undefined });
     at.forge.change = open;
     expect(await at.service.preparePresentation("ab12cd34", story)).toContain(
       "predates saved stories",
@@ -4115,7 +4115,7 @@ describe("shared story delivery boundaries", () => {
   it("stops, opening nothing, when the recorded pre-story PR merged outside the app (INF-92 F3)", async () => {
     const at = await saved();
     const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
-    at.tasks.recordDelivery("ab12cd34", { presentation: undefined, prNumber: 23 });
+    seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: 23 });
     at.forge.change = null;
     at.bringBranchHome.mockResolvedValue("");
     at.readHead.mockResolvedValue(story.head);
@@ -4134,7 +4134,7 @@ describe("shared story delivery boundaries", () => {
   it("fails closed when the recorded pre-story PR cannot be read, and when it merges between prepare and open (INF-292 F5, F6)", async () => {
     const at = await saved();
     const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
-    at.tasks.recordDelivery("ab12cd34", { presentation: undefined, prNumber: 23 });
+    seedDelivery(at.tasks, "ab12cd34", { presentation: undefined, prNumber: 23 });
     at.forge.change = null;
     at.bringBranchHome.mockResolvedValue("");
     at.readHead.mockResolvedValue(story.head);
@@ -4169,7 +4169,7 @@ describe("shared story delivery boundaries", () => {
     async (reason) => {
       const at = await saved();
       const story = at.tasks.changePresentation("ab12cd34")?.revisions[0] as ChangePresentation;
-      at.tasks.recordDelivery("ab12cd34", {
+      seedDelivery(at.tasks, "ab12cd34", {
         presentation: undefined,
         prNumber: reason === "unrecorded legacy" ? undefined : 23,
       });

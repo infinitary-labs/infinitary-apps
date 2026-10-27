@@ -136,9 +136,20 @@ A report reads in Activity as its one-line summary, and that line opens to the r
 An answer or an operation's result that no report carries opens the same way from the Activity line that closed the task.
 An answer given on a card opens to the card's words, never its markup: each paragraph, heading and list item on a line of its own, with its drawings and pictures left to the card, which the Cards row opens (FI3-904).
 Nothing about the task is left out of Activity: a minor event - the update a report restates, a check reading that repeats, a status that does not close the task, the app's bookkeeping - folds under the row it led to, and what no row followed yet folds under the newest row (`docs/task-record.md`, "What Activity holds").
-What the crewmate did folds the same way (FI3-1189's rule 3): each call it made but those to the app's own tools, in the one line it wrote for the call, or a plain reading of the call (`Read src/a.ts`) when it wrote none (`docs/task-record.md`, "A crewmate's actions").
+Activity and agent history read the same normalized timeline: retained card offers, messages and choices, brief receipts and conversation actions sit in the same chronology as the task's events.
+The earlier folded action summaries remain a compatible read; the window shows each action once, as a disclosure from the common timeline.
+Each disclosure opens its exact retained source, including an earlier offer after its card changes, and shows the recorded author without treating a card script as the captain.
+An unknown time reads Undated, and an unavailable source says so rather than substituting newer words.
+Historical content is text, with no buttons that can repeat the action; the Cards row remains the full card detail view.
 A line with events or actions folded under it ends with their count in mono `--fg-3` (`+3`, read as "3 more") before its caret, and opens to them: each in the Activity grid, its short age in mono and its words in `--fg-3`, events and actions together oldest first, then the whole text, then any that came after the line.
-A line with nothing folded under it and a whole text that says no more than its summary stays a plain line.
+A retained source still opens when its summary already contains its words, so its recorded author remains reachable.
+A revised brief or recorded conversation leads with a plain sentence, such as "The brief was revised" or "The conversation resumed", rather than serialized fields or an internal opening reason.
+Where the source also holds raw structured text, a second native disclosure labeled `Recorded details` sits beneath the plain reading in Activity's text column, closed initially.
+It uses the row disclosure's quiet label, caret, hover and focus ring; Tab reaches its summary and Enter or Space opens it independently.
+Its exact raw contents retain line breaks in `--text-xs` `--font-mono`, `--fg-2`, wrapping within the text column rather than widening the record.
+A card script's raw value uses that same deeper disclosure while its choice and recorded author stay in plain sight.
+Opening either level remains a read, never a repeated choice, action or permission.
+An older detail response without the common timeline keeps plain lines where there is nothing more to read.
 The line keeps the Activity grid, with the row caret at its end, `--bg-2` on hover and a focus ring like a row's summary; the whole text sits beneath it in the text column, `--fg-2`, with its line breaks kept.
 Each line opens on its own and stays open across live updates; Enter or Space on the line opens it.
 

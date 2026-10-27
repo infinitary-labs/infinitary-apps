@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { declareCheckAction } from "../orchestrator/checkRepair";
 import { TaskGraphRefusal, TaskService } from "./taskService";
 
@@ -9,7 +10,7 @@ function setup() {
   const tasks = new TaskService({ db, strict: true });
   for (const id of ["a", "b", "c"]) {
     tasks.create({ id, title: id, prompt: "", repoId: null });
-    tasks.recordDelivery(id, {
+    seedDelivery(tasks, id, {
       headSha: id,
       ci: "red",
       ciRepair: { failures: [{ headSha: id, checks: ["checks"] }], diagnoses: [], repairs: [] },

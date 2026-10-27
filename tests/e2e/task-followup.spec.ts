@@ -5,6 +5,7 @@ import {
   FOLLOWUP_PROVENANCE_OPENING,
   renderAnswerShapeSection,
 } from "../../src/core/orchestrator/intentBrief";
+import { taskReadTable } from "../../src/core/storage/taskRecordFields";
 import { waitForFirstmateIdle } from "./crew";
 import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -76,7 +77,7 @@ function readTasks(userDataDir: string): TaskRow[] {
     (db) =>
       db
         .prepare(
-          "SELECT id, key, parent_id, kind, status, start_policy, title, goal, project_id FROM tasks ORDER BY created_at, seq",
+          `SELECT id, key, parent_id, kind, status, start_policy, title, goal, project_id FROM ${taskReadTable(db)} ORDER BY created_at, seq`,
         )
         .all() as TaskRow[],
   );

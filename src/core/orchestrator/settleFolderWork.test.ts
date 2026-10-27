@@ -1,6 +1,7 @@
 import type { Deliverable } from "@shared/routingPolicy";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { CardStore } from "../storage/cardStore";
 import { InboxStore } from "../storage/inboxStore";
 import { seedTask, type TaskSeed } from "../tasks/seedTask";
@@ -208,11 +209,11 @@ describe("verified folder-work completion", () => {
       "Cannot close",
     );
     h.cards.close(question, { kind: "firstmate" });
-    h.tasks.recordDelivery(h.task.id, { captainWait: { reason: "Read the result", at: 1000 } });
+    seedDelivery(h.tasks, h.task.id, { captainWait: { reason: "Read the result", at: 1000 } });
     expect((await h.settle.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
       "Cannot close",
     );
-    h.tasks.recordDelivery(h.task.id, { captainWait: undefined });
+    seedDelivery(h.tasks, h.task.id, { captainWait: undefined });
     h.host.hasRunningJobs.mockReturnValue(true);
     expect((await h.settle.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
       "Cannot close",
@@ -238,13 +239,13 @@ describe("verified folder-work completion", () => {
       "Cannot close",
     );
     h.host.runtimeState.mockReturnValue("idle");
-    h.tasks.recordDelivery(h.task.id, {
+    seedDelivery(h.tasks, h.task.id, {
       checkBack: { at: 1000, until: 2000, waitingFor: "The check to finish" },
     });
     expect((await h.settle.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
       "Cannot close",
     );
-    h.tasks.recordDelivery(h.task.id, { checkBack: undefined });
+    seedDelivery(h.tasks, h.task.id, { checkBack: undefined });
     h.tasks.setGate(h.task.id, { kind: "captain", reason: "A decision is pending" });
     expect((await h.settle.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
       "Cannot close",
@@ -254,11 +255,11 @@ describe("verified folder-work completion", () => {
 
   it("refuses task-owned changes and another pending settle", async () => {
     const h = setup();
-    h.tasks.recordDelivery(h.task.id, { prNumber: 7 });
+    seedDelivery(h.tasks, h.task.id, { prNumber: 7 });
     expect((await h.settle.closeFinishedFolderWork(h.task.id, evidence)).text).toContain(
       "pull request",
     );
-    h.tasks.recordDelivery(h.task.id, { prNumber: undefined });
+    seedDelivery(h.tasks, h.task.id, { prNumber: undefined });
     h.tasks.setPendingSettle(h.task.id, {
       mode: "land",
       actor: "captain",

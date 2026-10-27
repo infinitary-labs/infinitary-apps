@@ -1,6 +1,7 @@
 import { taskFactsOf } from "@shared/taskFacts";
 import type { TaskDetail } from "@shared/tasks";
 import { describe, expect, it } from "vitest";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { openInMemoryDatabase } from "../storage/db";
 import { ACTIVITY_PLACES } from "./recordActivity";
 import { seedTask } from "./seedTask";
@@ -62,7 +63,8 @@ function work(tasks: TaskService, id: string, title: string, parentId?: string) 
 }
 
 function merge(tasks: TaskService, id: string, pr: number) {
-  tasks.recordDelivery(
+  seedDelivery(
+    tasks,
     id,
     { prNumber: pr, changeLabel: `#${pr}` },
     { kind: "pr_opened", text: `PR #${pr}` },

@@ -132,6 +132,19 @@
    * @type {Map<number, ActivityView>}
    */
   const activityViews = new Map();
+  /** Exact-source disclosures kept across refreshes, never live card controls.
+   * @type {Map<string, {node: HTMLDetailsElement, key: string, ages: typeof ages}>} */
+  const sourceViews = new Map();
+  /** Raw panels follow their retained entry, even when an Activity body is rebuilt.
+   * Read the live node, not its deferred toggle event, as with Activity lines.
+   * @type {Map<string, HTMLDetailsElement>} */
+  const rawViews = new Map();
+  /** @type {Map<number, NonNullable<Detail["timeline"]>[number]>} */
+  let sourceByEvent = new Map();
+  /** @type {Map<string, NonNullable<Detail["timeline"]>[number]>} */
+  let sourceById = new Map();
+  /** @type {Map<number, NonNullable<Detail["timeline"]>>} */
+  let actionsByRow = new Map();
   let comparisonOpen = false;
 
   /**
@@ -661,8 +674,15 @@
   function activityRows(rows, wholeText, drawn) {
     return rows.map((row) => {
       const whole = wholeText.get(row.id) ?? "";
-      const key = JSON.stringify([row, whole]);
-      const summaryKey = JSON.stringify([row.at, row.kind, row.text, row.change, row.from]);
+      const key = JSON.stringify([row, whole, sourceByEvent.get(row.id), actionsByRow.get(row.id)]);
+      const summaryKey = JSON.stringify([
+        row.at,
+        row.kind,
+        row.text,
+        row.change,
+        row.from,
+        sourceByEvent.get(row.id)?.entry.summary,
+      ]);
       const prior = activityViews.get(row.id);
       if (prior?.key === key) {
         ages.push(...prior.ages);
@@ -670,6 +690,7 @@
         return prior.node;
       }
       const ageStart = ages.length;
+      /** @type {HTMLElement} */
       let node = activityRow(row, whole, drawn);
       let disclosure = lines.get(row.id);
       let rowAges = ages.slice(ageStart);
@@ -677,19 +698,19 @@
         // Folded events/actions and whole text can grow while the summary is
         // pressed. Keep the summary and all its hit targets, count included;
         // update only the body and the count's words, never the pressed node.
-        const summary = must(prior.node.firstElementChild);
+        const summary = must(prior.disclosure.firstElementChild);
         const count = /** @type {HTMLElement} */ (
           must(summary.lastElementChild?.firstElementChild ?? null)
         );
         const nextCount = /** @type {HTMLElement} */ (
-          must(node.firstElementChild?.lastElementChild?.firstElementChild ?? null)
+          must(disclosure.firstElementChild?.lastElementChild?.firstElementChild ?? null)
         );
         count.textContent = nextCount.textContent;
         count.hidden = nextCount.hidden;
         count.setAttribute("aria-label", nextCount.getAttribute("aria-label") ?? "");
-        while (summary.nextSibling) prior.node.removeChild(summary.nextSibling);
-        prior.node.append(...[...node.childNodes].slice(1));
-        node = prior.disclosure;
+        while (summary.nextSibling) prior.disclosure.removeChild(summary.nextSibling);
+        prior.disclosure.append(...[...disclosure.childNodes].slice(1));
+        node = prior.node;
         disclosure = prior.disclosure;
         lines.set(row.id, disclosure);
         // The retained summary's age owns its original label listeners.
@@ -701,12 +722,57 @@
     });
   }
 
+  /**
+   * @param {HTMLElement} node
+   * @param {NonNullable<Detail["timeline"]>[number] | undefined} reading
+   * @param {string | undefined} override
+   */
+  function appendSourceText(node, reading, override = undefined) {
+    const text = document.createElement("p");
+    text.className = "whole";
+    text.setAttribute("data-record-whole", "");
+    text.textContent =
+      override ?? reading?.text ?? "This historical source is no longer available.";
+    node.append(text);
+    if (reading?.details !== undefined) {
+      const raw = document.createElement("details");
+      raw.className = "row source-details";
+      const id = reading.entry.id;
+      raw.setAttribute("data-record-source-details", id);
+      const prior = rawViews.get(id);
+      raw.open = prior?.open ?? false;
+      if (prior) leftOpen.set(prior, prior.open);
+      rawViews.set(id, raw);
+      raw.addEventListener("toggle", () => {
+        const shown = rawViews.get(id);
+        const left = leftOpen.get(raw);
+        if (!shown || shown === raw || left === undefined || left === raw.open) return;
+        leftOpen.set(raw, raw.open);
+        shown.open = raw.open;
+      });
+      const summary = document.createElement("summary");
+      summary.append(words("Recorded details"), caretEl.cloneNode(true));
+      const content = document.createElement("pre");
+      content.textContent = reading.details;
+      raw.append(summary, content);
+      node.append(raw);
+    }
+  }
+
   /** @param {Row} row @param {string} whole @param {Map<number, HTMLDetailsElement>} drawn */
   function activityRow(row, whole, drawn) {
-    if (row.from) return linkedLine(row, row.from);
-    /** @type {{ at: number, text: string, kind: string, after: boolean, change?: Row["change"] }[]} */
+    const source = sourceByEvent.get(row.id);
+    if (row.from && !source) return linkedLine(row, row.from);
+    /** @type {{ id?: number, at: number, text: string, kind: string, after: boolean, sourceId?: string, change?: Row["change"] }[]} */
     const folded = [
       ...(row.folded ?? []).map((event) => ({ ...event, after: event.id > row.id })),
+      ...(actionsByRow.get(row.id) ?? []).map((reading) => ({
+        at: reading.entry.at ?? 0,
+        text: reading.entry.summary,
+        kind: "action",
+        sourceId: reading.entry.id,
+        after: reading.entry.at !== null && reading.entry.at > row.at,
+      })),
       ...(row.actions ?? []).map((action) => ({
         ...action,
         kind: "action",
@@ -714,7 +780,7 @@
       })),
     ].sort((a, b) => a.at - b.at);
     const says = Boolean(whole.trim()) && whole.trim() !== row.text.trim();
-    if (!says && folded.length === 0) {
+    if (!source && !says && folded.length === 0) {
       const node = line("event", row.at, row.text, row.change);
       node.setAttribute("data-record-event", row.kind);
       return node;
@@ -722,6 +788,10 @@
     const node = /** @type {HTMLDetailsElement} */ (document.createElement("details"));
     node.className = "event";
     node.setAttribute("data-record-event", row.kind);
+    if (source) {
+      node.setAttribute("data-timeline-entry", source.entry.id);
+      node.setAttribute("data-timeline-kind", source.entry.content.kind);
+    }
     const summary = document.createElement("summary");
     const end = span("end", "");
     const count = span("count", `+${folded.length}`);
@@ -732,24 +802,30 @@
     end.append(caretEl.cloneNode(true));
     summary.append(
       aged(span("mono", ""), row.at, short, summary),
-      words(row.text, row.change),
+      words(
+        source?.entry.summary ?? row.text,
+        !source || source.entry.summary === row.text ? row.change : undefined,
+      ),
       end,
     );
     /** @param {typeof folded} lines */
     const foldedLines = (lines) =>
       lines.map((event) => {
-        const node = line("event folded", event.at, event.text, event.change);
+        const source = event.sourceId
+          ? sourceById.get(event.sourceId)
+          : event.id === undefined
+            ? undefined
+            : sourceByEvent.get(event.id);
+        const node = source
+          ? sourceDisclosure(source)
+          : line("event folded", event.at, event.text, event.change);
+        node.className = "event folded";
         node.setAttribute("data-record-folded", event.kind);
         return node;
       });
     node.append(summary, ...foldedLines(folded.filter((event) => !event.after)));
-    if (says) {
-      const text = document.createElement("p");
-      text.className = "whole";
-      text.setAttribute("data-record-whole", "");
-      text.textContent = whole;
-      node.append(text);
-    }
+    if (source) node.append(span("whole", source.actorLabel));
+    if (says || source) appendSourceText(node, source, says ? whole : undefined);
     node.append(...foldedLines(folded.filter((event) => event.after)));
     node.open = drawn.get(row.id)?.open ?? false;
     lines.set(row.id, node);
@@ -760,7 +836,100 @@
       leftOpen.set(node, node.open);
       shown.open = node.open;
     });
+    if (row.from) {
+      // Keys remain outside the interactive summary, where the shared
+      // bridge can link them without nesting one control inside another.
+      const wrapper = document.createElement("div");
+      wrapper.className = "event linked-source";
+      wrapper.setAttribute("data-record-event", row.kind);
+      wrapper.setAttribute("data-record-from", row.from.key);
+      node.removeAttribute("data-record-event");
+      const from = span("from", `from ${row.from.key}`);
+      from.setAttribute("data-record-from-key", "");
+      wrapper.append(node, from);
+      return wrapper;
+    }
     return node;
+  }
+
+  /** One cached, inert disclosure for an exact retained source.
+   * @param {NonNullable<Detail["timeline"]>[number]} reading
+   * @param {string} [summaryText]
+   */
+  function sourceDisclosure(reading, summaryText = reading.entry.summary) {
+    const { entry } = reading;
+    const key = JSON.stringify([reading, summaryText]);
+    const prior = sourceViews.get(entry.id);
+    if (prior?.key === key) {
+      ages.push(...prior.ages);
+      return prior.node;
+    }
+    const ageStart = ages.length;
+    const node = document.createElement("details");
+    node.className = "event";
+    node.setAttribute("data-timeline-entry", entry.id);
+    node.setAttribute("data-timeline-kind", entry.content.kind);
+    const summary = document.createElement("summary");
+    summary.append(
+      entry.at === null ? span("mono", "") : aged(span("mono", ""), entry.at, short, summary),
+      words(entry.at === null ? `Undated · ${summaryText}` : summaryText),
+      caretEl.cloneNode(true),
+    );
+    node.append(summary, span("whole", reading.actorLabel));
+    appendSourceText(node, reading);
+    node.open = prior?.node.open ?? false;
+    sourceViews.set(entry.id, { node, key, ages: ages.slice(ageStart) });
+    return node;
+  }
+
+  /**
+   * Interleave retained evidence with the existing condensed event rows.
+   * Aliases name the same occurrence; folded events remain under their existing row.
+   * @param {Row[]} rows
+   * @param {HTMLElement[]} nodes
+   * @param {NonNullable<Detail["timeline"]>} history
+   */
+  function sourceRows(rows, nodes, history) {
+    const represented = new Set(
+      rows.flatMap((row) => [row.id, ...(row.folded ?? []).map((e) => e.id)]),
+    );
+    const positions = new Map(
+      history.flatMap(({ entry }, i) =>
+        [
+          entry.id,
+          ...entry.aliases,
+          ...(entry.content.ref.source === "task-event"
+            ? [`task-event:${entry.content.ref.eventId}`]
+            : []),
+        ].map((id) => [id, i]),
+      ),
+    );
+    const placed = nodes.map((node, i) => ({
+      node,
+      order: positions.get(`task-event:${rows[i]?.id}`) ?? -1,
+    }));
+    const kept = new Set(history.map(({ entry }) => entry.id));
+    for (const [order, reading] of history.entries()) {
+      const { entry } = reading;
+      if (
+        entry.content.ref.source === "session-action" &&
+        reading.activityRowId !== undefined &&
+        represented.has(reading.activityRowId)
+      )
+        continue;
+      const eventIds = [
+        ...(entry.content.ref.source === "task-event" ? [entry.content.ref.eventId] : []),
+        ...entry.aliases.flatMap((id) =>
+          /^task-event:\d+$/.test(id) ? [Number(id.slice("task-event:".length))] : [],
+        ),
+      ];
+      if (eventIds.some((id) => represented.has(id))) continue;
+      kept.add(entry.id);
+      placed.push({ node: sourceDisclosure(reading), order });
+    }
+    for (const id of sourceViews.keys()) if (!kept.has(id)) sourceViews.delete(id);
+    for (const id of rawViews.keys()) if (!kept.has(id)) rawViews.delete(id);
+    return placed.sort((a, b) => a.order - b.order).map(({ node }) => node);
   }
 
   /**
@@ -972,13 +1141,20 @@
     const scenario = focused
       .closest("[data-validation-scenario]")
       ?.getAttribute("data-validation-scenario");
+    const source = focused
+      .closest("[data-record-source-details]")
+      ?.getAttribute("data-record-source-details");
     const part = focused.closest("[data-record-section]") ?? root;
     const controls = () =>
       [...part.querySelectorAll(tag)].filter((node) =>
         scenario
           ? node.closest("[data-validation-scenario]")?.getAttribute("data-validation-scenario") ===
             scenario
-          : node.getAttribute("data-inf-task") === key && node.textContent === text,
+          : source
+            ? node
+                .closest("[data-record-source-details]")
+                ?.getAttribute("data-record-source-details") === source
+            : node.getAttribute("data-inf-task") === key && node.textContent === text,
       );
     return { controls, turn: controls().indexOf(focused) };
   }
@@ -1138,7 +1314,10 @@
     paintCards(current.cards);
     paintUses();
 
-    const rows = current.activityLog;
+    // Session actions come from the common reader when available, not a second transcript join.
+    const rows = current.timeline
+      ? current.activityLog.map(({ actions: _actions, ...row }) => row)
+      : current.activityLog;
     // Each whole text opens from the Activity line it came with: a report
     // from its own line, and an answer or an operation's result that no
     // report carries from the line that closed the task.
@@ -1147,25 +1326,53 @@
     for (const event of current.events) {
       if (event.kind === "report") wholeText.set(event.id, event.text);
     }
+    sourceByEvent = new Map();
+    sourceById = new Map();
+    actionsByRow = new Map();
+    for (const reading of current.timeline ?? []) {
+      sourceById.set(reading.entry.id, reading);
+      if (
+        reading.entry.content.ref.source === "session-action" &&
+        reading.activityRowId !== undefined
+      ) {
+        const under = actionsByRow.get(reading.activityRowId) ?? [];
+        under.push(reading);
+        actionsByRow.set(reading.activityRowId, under);
+      }
+      if (reading.entry.content.ref.source === "task-event") {
+        const eventId = reading.entry.content.ref.eventId;
+        sourceByEvent.set(eventId, reading);
+        if (reading.text !== null) wholeText.set(eventId, reading.text);
+      }
+      for (const id of [reading.entry.id, ...reading.entry.aliases]) {
+        if (/^task-event:\d+$/.test(id)) {
+          const eventId = Number(id.slice("task-event:".length));
+          sourceByEvent.set(eventId, reading);
+          if (reading.text !== null) wholeText.set(eventId, reading.text);
+        }
+      }
+    }
     const outcome = current.outcome ?? "";
     if (outcome && ![...wholeText.values()].includes(outcome)) {
       const closing = [...rows].reverse().find((row) => row.kind === "status" && !row.from);
       if (closing) wholeText.set(closing.id, outcome);
     }
-    const tail = rows.slice(-TIMELINE_TAIL);
-    const earlier = rows.length - tail.length;
-    activityCountEl.textContent = String(rows.length);
-    earlierEl.hidden = earlier === 0;
-    earlierLabelEl.textContent = `Show earlier · ${earlier}`;
     const drawn = lines;
     lines = new Map();
     for (const node of drawn.values()) leftOpen.set(node, node.open);
-    placeActivity(historyEl, activityRows(rows.slice(0, earlier), wholeText, drawn));
-    placeActivity(timelineEl, activityRows(tail, wholeText, drawn));
+    const allNodes = activityRows(rows, wholeText, drawn);
+    const shown = current.timeline ? sourceRows(rows, allNodes, current.timeline) : allNodes;
+    const tail = shown.slice(-TIMELINE_TAIL);
+    const earlier = shown.length - tail.length;
+    activityCountEl.textContent = String(shown.length);
+    earlierEl.hidden = earlier === 0;
+    earlierLabelEl.textContent = `Show earlier · ${earlier}`;
+    placeActivity(historyEl, shown.slice(0, earlier));
+    placeActivity(timelineEl, tail);
     const ids = new Set(rows.map((row) => row.id));
     for (const id of activityViews.keys()) if (!ids.has(id)) activityViews.delete(id);
     paintAges();
-    section("timeline", rows.length > 0);
+    section("timeline", shown.length > 0);
 
     paintFacts(current);
     restLabel.drop();

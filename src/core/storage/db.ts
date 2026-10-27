@@ -18,6 +18,7 @@ import {
 import { TaskDeliveryStore } from "./taskDeliveryStore";
 import { splitTurn } from "./taskExecutionStore";
 import { splitPolicies } from "./taskPolicyStore";
+import { migrateTaskRecordRetirement } from "./taskRecordProjection";
 import { conversationOf } from "./taskSessionStore";
 import { standingCap, type TaskDelivery } from "./taskStore";
 import {
@@ -1142,6 +1143,8 @@ const MIGRATIONS: readonly Migration[] = [
   // or resumed here. Reversible: merge each row's fields back into the
   // column (the settle into its own) and drop the tables.
   migrateTaskDeliveryRecords,
+  // INF-1296 piece 5: immutable specifications and owned shape records replace mixed columns.
+  migrateTaskRecordRetirement,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
@@ -1169,6 +1172,8 @@ export const TASK_POLICIES_VERSION = MIGRATIONS.indexOf(migrateTaskPolicies) + 1
 
 /** The migration that moved each task's change evidence and permissions to their own rows (INF-1296 piece 4). */
 export const TASK_DELIVERY_RECORDS_VERSION = MIGRATIONS.indexOf(migrateTaskDeliveryRecords) + 1;
+
+export const TASK_RECORD_RETIREMENT_VERSION = MIGRATIONS.indexOf(migrateTaskRecordRetirement) + 1;
 
 /** The migration that published the views; every later one re-creates them. */
 const VIEWS_VERSION = MIGRATIONS.indexOf(migratePublishedViews) + 1;

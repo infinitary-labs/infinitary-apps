@@ -20,6 +20,7 @@ import {
   usageTokens,
 } from "@shared/usage";
 import type { AppDatabase } from "./db";
+import { taskReadTable } from "./taskRecordFields";
 
 /**
  * The per-account usage ledger (broker phase 2, D-18): one `usage_events`
@@ -399,7 +400,7 @@ export class UsageStore {
         `SELECT t.id, t.key, t.title, p.id AS project_id, p.name AS project,
                 CASE WHEN json_extract(t.shape_json, '$.deliverable') = 'operation' THEN 'operation'
                      ELSE json_extract(t.shape_json, '$.kind') END AS kind
-         FROM tasks t LEFT JOIN projects p ON p.id = t.project_id
+         FROM ${taskReadTable(this.db)} t LEFT JOIN projects p ON p.id = t.project_id
          WHERE t.id IN (SELECT value FROM json_each(?))`,
       )
       .all(JSON.stringify(ids)) as {

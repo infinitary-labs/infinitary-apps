@@ -29099,6 +29099,364 @@
               ]
             }
           },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "entry": {
+                  "type": "object",
+                  "properties": {
+                    "schemaVersion": {
+                      "type": "number",
+                      "const": 1
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "taskId": {
+                      "type": "string"
+                    },
+                    "at": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "actor": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "captain",
+                                "firstmate",
+                                "crewmate",
+                                "supervisor",
+                                "host",
+                                "frame"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "summary": {
+                      "type": "string"
+                    },
+                    "content": {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "filing",
+                            "ask",
+                            "answer",
+                            "brief",
+                            "dispatch",
+                            "steer",
+                            "progress",
+                            "report",
+                            "failure",
+                            "card-raised",
+                            "card-choice",
+                            "status",
+                            "link",
+                            "move",
+                            "change",
+                            "check",
+                            "merge",
+                            "triage",
+                            "note",
+                            "compacted",
+                            "interruption",
+                            "decision",
+                            "escalation",
+                            "review",
+                            "cap-reset",
+                            "reply",
+                            "card-offer",
+                            "card-availability",
+                            "card-message",
+                            "card-exit",
+                            "effect-result",
+                            "card-seen",
+                            "session-action",
+                            "session-observation"
+                          ]
+                        },
+                        "version": {
+                          "type": "number",
+                          "const": 1
+                        },
+                        "ref": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "source": {
+                                  "type": "string",
+                                  "const": "task-event"
+                                },
+                                "taskId": {
+                                  "type": "string"
+                                },
+                                "eventId": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "source",
+                                "taskId",
+                                "eventId"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "source": {
+                                  "type": "string",
+                                  "const": "card-observation"
+                                },
+                                "cardId": {
+                                  "type": "string"
+                                },
+                                "lifecycleId": {
+                                  "type": "string"
+                                },
+                                "observationId": {
+                                  "type": "string"
+                                },
+                                "offerId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "interactionId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "messageId": {
+                                  "anyOf": [
+                                    {
+                                      "type": "integer",
+                                      "minimum": -9007199254740991,
+                                      "maximum": 9007199254740991
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "source",
+                                "cardId",
+                                "lifecycleId",
+                                "observationId",
+                                "offerId",
+                                "interactionId",
+                                "messageId"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "source": {
+                                  "type": "string",
+                                  "const": "card-message"
+                                },
+                                "cardId": {
+                                  "type": "string"
+                                },
+                                "messageId": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "source",
+                                "cardId",
+                                "messageId"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "source": {
+                                  "type": "string",
+                                  "const": "session-observation"
+                                },
+                                "observationId": {
+                                  "type": "string"
+                                },
+                                "conversation": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "source",
+                                "observationId",
+                                "conversation"
+                              ]
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "source": {
+                                  "type": "string",
+                                  "const": "session-action"
+                                },
+                                "file": {
+                                  "type": "string"
+                                },
+                                "index": {
+                                  "type": "integer",
+                                  "minimum": -9007199254740991,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "source",
+                                "file",
+                                "index"
+                              ]
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "version",
+                        "ref"
+                      ]
+                    },
+                    "links": {
+                      "type": "array",
+                      "items": {
+                        "oneOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "rel": {
+                                "type": "string",
+                                "enum": [
+                                  "reply",
+                                  "revision",
+                                  "cause"
+                                ]
+                              },
+                              "to": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "rel",
+                              "to"
+                            ]
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "rel": {
+                                "type": "string",
+                                "const": "concern"
+                              },
+                              "taskId": {
+                                "type": "string"
+                              },
+                              "relation": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "rel",
+                              "taskId",
+                              "relation"
+                            ]
+                          }
+                        ]
+                      }
+                    },
+                    "quiet": {
+                      "type": "boolean"
+                    },
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  },
+                  "required": [
+                    "schemaVersion",
+                    "id",
+                    "taskId",
+                    "at",
+                    "actor",
+                    "summary",
+                    "content",
+                    "links",
+                    "quiet",
+                    "aliases"
+                  ]
+                },
+                "actorLabel": {
+                  "type": "string"
+                },
+                "activityRowId": {
+                  "type": "integer",
+                  "minimum": -9007199254740991,
+                  "maximum": 9007199254740991
+                },
+                "text": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "details": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "entry",
+                "actorLabel",
+                "text"
+              ]
+            }
+          },
           "said": {
             "anyOf": [
               {
@@ -42864,6 +43222,9 @@
                     ]
                   },
                   "key": {
+                    "type": "string"
+                  },
+                  "field": {
                     "type": "string"
                   },
                   "text": {

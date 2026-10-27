@@ -10,6 +10,7 @@ import {
   MERGE_WORDS,
 } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody } from "./frames";
 import { seedGitHubSignIn, seedRepo, startGitHubStub } from "./githubStub";
 import { launchApp, SHORT_TICK } from "./launch";
@@ -96,7 +97,7 @@ test("external check changes refresh the completion strip and task facts", async
     // Record the green reading as one refresh interval old: the host's next
     // tick then reads the checks again on its own, with no captain prompt.
     // e2e-writer-ok: the journey ages the green reading by a refresh interval, the way waiting would
-    tasks.recordDelivery(taskId, { ciAt: Date.now() - CHECK_REFRESH_MS });
+    seedDelivery(tasks, taskId, { ciAt: Date.now() - CHECK_REFRESH_MS });
     // Wait for work, not a fixed sleep: a few ticks bound a busy host.
     await expect.poll(() => ledger()?.delivery?.ci, { timeout: 180_000 }).toBe("red");
     expect(checkReads()).toBeGreaterThan(readsBefore);

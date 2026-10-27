@@ -10,6 +10,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { DEMO_POSTER, GIF_DEMO_RECORDING } from "./demoFixtures";
 import { launchApp } from "./launch";
 import {
@@ -73,7 +74,7 @@ async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
     ...(words ? { words } : {}),
   });
   for (const ci of ["pending", "pending", "green"] as const) {
-    tasks.recordDelivery(ID, { ci, prNumber: 977 }, { kind: "ci", text: `CI ${ci}` });
+    seedDelivery(tasks, ID, { ci, prNumber: 977 }, { kind: "ci", text: `CI ${ci}` });
   }
   tasks.note(ID, "The captain approved merging #977.", { news: true });
   // INF-125: a historical fixture's unavailable live boundary remains explicit, not a pass.
@@ -159,7 +160,7 @@ async function seeded(): Promise<{ userDataDir: string; transcript: string }> {
     ),
     { head },
   );
-  tasks.recordDelivery(ID, { validationHead: head });
+  seedDelivery(tasks, ID, { validationHead: head });
   tasks.close(ID, { status: "done", reason: "merged", actor: "host" });
   tasks.markWorkspaceRemoved(ID);
   db.close();

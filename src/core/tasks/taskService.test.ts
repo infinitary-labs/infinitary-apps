@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { DECISION_RECORD_SCHEMA, type DecisionRecord } from "../../shared/provenance";
 import type { WorkShape } from "../../shared/routingPolicy";
 import { savedDeliveryReader } from "../storage/taskDeliveryFields";
@@ -469,12 +470,13 @@ describe("TaskService (task-system P0)", () => {
   it("records delivery facts against the repo posture and events for CI reads", () => {
     const { tasks } = setup();
     tasks.create({ id: "pr", title: "PR", prompt: "p", repoId: "r1", status: "active" });
-    tasks.recordDelivery(
+    seedDelivery(
+      tasks,
       "pr",
       { prUrl: "https://x/1", prNumber: 1 },
       { kind: "pr_opened", text: "PR #1", feed: true },
     );
-    tasks.recordDelivery("pr", { ci: "green", ciAt: 1_000 }, { kind: "ci", text: "CI green" });
+    seedDelivery(tasks, "pr", { ci: "green", ciAt: 1_000 }, { kind: "ci", text: "CI green" });
     expect(tasks.get("pr")?.delivery).toEqual({
       mode: "direct-pr",
       prUrl: "https://x/1",
@@ -499,7 +501,7 @@ describe("TaskService (task-system P0)", () => {
       status: "active",
       shape: { kind: "fix", kind_source: "none", delivery_ask: "local-only" },
     });
-    tasks.recordDelivery("local", { landedMode: "fast-forward" });
+    seedDelivery(tasks, "local", { landedMode: "fast-forward" });
     expect(tasks.get("local")?.delivery).toMatchObject({
       mode: "local-only",
       landedMode: "fast-forward",
@@ -531,10 +533,10 @@ describe("TaskService (task-system P0)", () => {
       status: "completed",
       shape: { ...shape, knowledge_access: "references" } as WorkShape,
     });
-    tasks.recordDelivery("older", JSON.parse(savedDelivery));
+    seedDelivery(tasks, "older", JSON.parse(savedDelivery));
     const saved = () => {
       const row = db
-        .prepare("SELECT shape_json, delivery_json FROM tasks WHERE id = ?")
+        .prepare("SELECT shape_json, delivery_json FROM task_records WHERE id = ?")
         .get("older") as { shape_json: string; delivery_json: string };
       // The delivery as saved across its column and its evidence and permission rows.
       const delivery = savedDeliveryReader(db)("older", row.delivery_json);
@@ -548,7 +550,7 @@ describe("TaskService (task-system P0)", () => {
     expect(tasks.get("older")?.delivery).not.toHaveProperty("landedAt");
 
     tasks.recordShape("older", { deliverable: "change" }, null);
-    tasks.recordDelivery("older", { ci: "merged" });
+    seedDelivery(tasks, "older", { ci: "merged" });
     expect(saved()).toEqual({
       shape: { ...shape, deliverable: "change" },
       delivery: { ...facts, ci: "merged" },
@@ -624,7 +626,7 @@ describe("TaskService (task-system P0)", () => {
   it("refuses to boot strict over rows that lack the record invariants", () => {
     const db = freshDatabase();
     db.prepare(
-      "INSERT INTO tasks (id, kind, title, prompt, repo_id, repo_dir, worktree_dir, branch, status, created_at) VALUES ('raw', 'work', 'raw', '', NULL, '', '', '', 'open', 1)",
+      "INSERT INTO tasks (id, kind, title, repo_id, repo_dir, worktree_dir, branch, status, created_at) VALUES ('raw', 'work', 'raw', NULL, '', '', '', 'open', 1)",
     ).run();
     expect(() => new TaskService({ db, strict: true })).toThrow(/lack key\/project_id\/updated_at/);
     expect(() => new TaskService({ db })).not.toThrow();
@@ -856,7 +858,7 @@ describe("INF-125 validation persistence", () => {
       },
       { head },
     );
-    tasks.recordDelivery("proof-task", {
+    seedDelivery(tasks, "proof-task", {
       reviewRounds: 2,
       reviewRoundPairs: [`${head}:1`],
       ciRounds: 2,
@@ -921,7 +923,7 @@ it("INF-203 F4: keeps transcript bytes out of delivery rewrites and validation t
       { ...run, id: `run-${index}`, evidence: [evidence] },
       { head },
     );
-    tasks.recordDelivery("lean-proof", { ci: "green", ciAt: index });
+    seedDelivery(tasks, "lean-proof", { ci: "green", ciAt: index });
   }
   const delivery = tasks.get("lean-proof")!.delivery!;
   expect(delivery.liveValidation?.runs).toHaveLength(12);

@@ -1,3 +1,4 @@
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import {
@@ -2172,11 +2173,7 @@ describe("CrewSupervisor", () => {
     await tick();
     expect(supervisor.crewStatus(taskId)[0]?.ci).toBeUndefined();
     const at = Date.now() - 4 * 60_000;
-    tasks.recordDelivery(
-      taskId,
-      { ci: "red", ciAt: at, headSha: "feedbeef00" },
-      { kind: "ci", text: "CI red", feed: false },
-    );
+    seedDelivery(tasks, taskId, { ci: "red", ciAt: at, headSha: "feedbeef00" }, { kind: "ci", text: "CI red", feed: false });
     expect(supervisor.crewStatus(taskId)[0]?.ci).toEqual({
       overall: "red",
       readAt: new Date(at).toISOString(),
@@ -2683,7 +2680,7 @@ describe("CrewSupervisor", () => {
         intent: intentOf("fix the meter"),
         repoId: repo.id,
       });
-      tasks.recordDelivery(taskId, { prNumber: 9 });
+      seedDelivery(tasks, taskId, { prNumber: 9 });
       await tick();
       if (path === "rework" || path === "cancel-idle") {
         crewmate.finishPrompt();
@@ -2732,7 +2729,7 @@ describe("CrewSupervisor", () => {
       branch: "fm/task-closed-attempt",
       worktreeDir: "/w/closed-attempt",
     });
-    tasks.recordDelivery(previous.id, { prNumber: 9 });
+    seedDelivery(tasks, previous.id, { prNumber: 9 });
     await supervisor.commission({
       title: "Fresh attempt",
       intent: intentOf("try a stronger model"),
@@ -3184,7 +3181,7 @@ describe("CrewSupervisor", () => {
       shape: { rigor_ask: "quick" },
     });
     await tick();
-    tasks.recordDelivery(taskId, { mode: "local-only", ci: "green", ciAt: Date.now() });
+    seedDelivery(tasks, taskId, { mode: "local-only", ci: "green", ciAt: Date.now() });
     const pictures = [{ id: "p1", alt: "The meter after", width: 640, height: 320, group: 0 }];
     const answer = await specs[0]?.onCard?.({
       requiredActions: [],
@@ -3499,7 +3496,7 @@ describe("CrewSupervisor", () => {
       (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("has not reported");
     tasks.recordReport("release", { text: "Published externally" });
-    tasks.recordDelivery("release", { prUrl: "https://github.com/o/r/pull/1", prNumber: 1 });
+    seedDelivery(tasks, "release", { prUrl: "https://github.com/o/r/pull/1", prNumber: 1 });
     expect(
       (await supervisor.closeExternallyReleased("release", "v1.2.3 published")).text,
     ).toContain("own pull request");
@@ -4285,7 +4282,7 @@ describe("CrewSupervisor", () => {
       h.crewmate.finishPrompt();
       await vi.waitFor(() => expect(h.authorization()?.waiting?.on).toBe("checks"));
       await h.supervisor.disposeAll();
-      h.tasks.recordDelivery(h.taskId, { mergeReviews: [] });
+      seedDelivery(h.tasks, h.taskId, { mergeReviews: [] });
       h.forge.states = ["success"];
       const tasks = new TaskService({ db: h.db, strict: true });
       const prCi = new PrCiService({ tasks, repos: h.repos, forgeFor: () => h.forge });
@@ -4343,7 +4340,7 @@ describe("CrewSupervisor", () => {
       const target = h.tasks.get(h.taskId)?.delivery?.checkTarget;
       if (!target) throw new Error("Missing selected review");
       h.forge.states = ["failure"];
-      h.forge.duringChecks = () => h.tasks.recordDelivery(h.taskId, {
+      h.forge.duringChecks = () => seedDelivery(h.tasks, h.taskId, {
         checkTarget: { ...target, id: "new-review", number: 8, branch: "fm/task-next" },
         prNumber: 8, headSha: REPAIRED, ci: "green",
       });
@@ -4610,7 +4607,7 @@ describe("CrewSupervisor", () => {
 
     it("an explicit live self-merging request releases only the routine completion wait and permits ready work", async () => {
       const h = await approved();
-      h.tasks.recordDelivery(h.taskId, {
+      seedDelivery(h.tasks, h.taskId, {
         captainWait: { at: Date.now(), cardId: h.card.id, reason: "Read the result" },
       });
       editPolicies(h, { autonomy: true });
@@ -4753,7 +4750,7 @@ describe("CrewSupervisor", () => {
       expect((await h.supervisor.settleTaskDetailed(h.taskId, "merge-pr")).text).toContain(
         "independent review",
       );
-      h.tasks.recordDelivery(h.taskId, {
+      seedDelivery(h.tasks, h.taskId, {
         reviewVerdict: "pass",
         reviewSha: "older",
         reviewRounds: 2,
@@ -4784,7 +4781,7 @@ describe("CrewSupervisor", () => {
       const reviewedAtOlder = async () => {
         const h = await approved();
         editPolicies(h, { autonomy: true, rigor: "reviewed" });
-        h.tasks.recordDelivery(h.taskId, { reviewVerdict: "pass", reviewSha: "older" });
+        seedDelivery(h.tasks, h.taskId, { reviewVerdict: "pass", reviewSha: "older" });
         return h;
       };
 
@@ -5061,7 +5058,7 @@ describe("CrewSupervisor", () => {
 
       it("reopens a counted limit at once: the repair limit's counters, its cap and the captain gate clear", async () => {
         const h = await approved();
-        h.tasks.recordDelivery(h.taskId, { ciRounds: 3, ciRedHead: APPROVED, ciCapAt: Date.now() });
+        seedDelivery(h.tasks, h.taskId, { ciRounds: 3, ciRedHead: APPROVED, ciCapAt: Date.now() });
         expect(standingCap(h.tasks.get(h.taskId)?.delivery)).toBeDefined();
         h.supervisor.declareOverride(h.taskId, {
           words: "Keep fixing it; take as many tries as it needs.",
@@ -5100,7 +5097,7 @@ describe("CrewSupervisor", () => {
           'title="Your words pass live proof and the checks for this version: &quot;Merge it without live proof; I tried it myself.&quot;. Proceeding without live proof."',
         );
         // A newer version is one his words did not cover.
-        h.tasks.recordDelivery(h.taskId, { headSha: "fixed0004" });
+        seedDelivery(h.tasks, h.taskId, { headSha: "fixed0004" });
         await vi.waitFor(() => expect(strip()).toBeUndefined());
       });
 
@@ -5381,7 +5378,7 @@ describe("CrewSupervisor", () => {
       expect(harness.authorization()?.attempt).toBeUndefined();
 
       const capped = await kept();
-      capped.tasks.recordDelivery(capped.taskId, { ciCapAt: Date.now(), ciRounds: 3 });
+      seedDelivery(capped.tasks, capped.taskId, { ciCapAt: Date.now(), ciRounds: 3 });
       await repairTurn(capped, async () => {
         capped.forge.headSha = REPAIRED;
         await capped.declare(repair("none"));
@@ -5619,7 +5616,7 @@ describe("CrewSupervisor", () => {
       // The record as a quit right after the merge request leaves it.
       const standing = harness.authorization();
       if (!standing) throw new Error("no approval");
-      harness.tasks.recordDelivery(harness.taskId, {
+      seedDelivery(harness.tasks, harness.taskId, {
         mergeAuthorization: {
           ...standing,
           attempt: { token: "t1", head: APPROVED, at: Date.now() },
@@ -5649,7 +5646,7 @@ describe("CrewSupervisor", () => {
         body: "<p>Pick the course to take.</p><p>Both keep the crew on schedule.</p>",
         actions: [{ id: "merge-pr", label: "Put it in", default: true, effect: SETTLE_MERGE }],
       });
-      tasks.recordDelivery("merge", { mode: "direct-pr", ci: "red", ciAt: Date.now() });
+      seedDelivery(tasks, "merge", { mode: "direct-pr", ci: "red", ciAt: Date.now() });
       await tick();
       const shown = cards().find((card) => card.id === id);
       expect(shown?.actions.map((action) => action.label)).toEqual(["Put it in"]);
@@ -5684,7 +5681,7 @@ describe("CrewSupervisor", () => {
       const { tasks, ops } = setup(fakeCrewmate());
       // Seeded before the boot's resume runs, as an earlier process left it.
       seedTask(tasks, { id: "legacy", title: "Kept before", status: "idle", worktreeDir: "/pr" });
-      tasks.recordDelivery("legacy", { mergeOrder: { at: 1, proceedWithOpen: false } });
+      seedDelivery(tasks, "legacy", { mergeOrder: { at: 1, proceedWithOpen: false } });
       await tick();
       expect(tasks.get("legacy")?.delivery?.mergeOrder).toBeUndefined();
       expect(ops.join("\n")).toContain("could not be carried forward");
@@ -7544,7 +7541,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       publication,
       published: publication,
     }));
-    tasks.recordDelivery(taskId, { headSha: head, prNumber: 1, ci: "green" });
+    seedDelivery(tasks, taskId, { headSha: head, prNumber: 1, ci: "green" });
     expect(() =>
       specs[0]?.onCard?.({
         title: "A second account",
@@ -7641,7 +7638,7 @@ describe("a crewmate's own completion card clears the standing CI gate first", (
       publication,
       published: publication,
     }));
-    tasks.recordDelivery(taskId, { headSha: head, prNumber: 1, ci: "green" });
+    seedDelivery(tasks, taskId, { headSha: head, prNumber: 1, ci: "green" });
     // INF-1364: saved-story merge offers belong to the crewmate. Refuse a
     // first-mate offer before showing it, also when revising an existing note.
     const firstmateNote = {
@@ -7924,7 +7921,7 @@ describe("a refused completion card is a fact the Firstmate reads (FI3-401)", ()
       why: expect.stringMatching(/^Card picture refused: /),
     });
 
-    tasks.recordDelivery(taskId, { ciRounds: 3, ciCapAt: Date.now() });
+    seedDelivery(tasks, taskId, { ciRounds: 3, ciCapAt: Date.now() });
     await expect(
       emitCard.run({
         required_actions: [],
@@ -11781,7 +11778,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     });
     // The real producers: a failed reading, then the crewmate's declaration.
     const failed = [{ name: "linux-checks", state: "failure" as const }];
-    tasks.recordDelivery(taskId, {
+    seedDelivery(tasks, taskId, {
       headSha: "head-1",
       ci: "red",
       ...observeCheckRepair(undefined, "head-1", failed, 1),
@@ -11830,7 +11827,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
       startPolicy: "on-request",
     });
     const failed = [{ name: "linux-checks", state: "failure" as const }];
-    tasks.recordDelivery(taskId, {
+    seedDelivery(tasks, taskId, {
       headSha: "head-1",
       ci: "red",
       ...observeCheckRepair(undefined, "head-1", failed, 1),
@@ -11857,7 +11854,7 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     );
 
     // The crewmate pushed again: the diagnosis was about another version.
-    tasks.recordDelivery(taskId, { headSha: "head-2", ci: "pending" });
+    seedDelivery(tasks, taskId, { headSha: "head-2", ci: "pending" });
     await supervisor.steerCrewmate(taskId, "go on");
     await tick();
     await report(clientSide, taskId, "Pushed a new version; its checks are running.");
@@ -13243,7 +13240,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       } else {
         // The real producers: a failed reading, then the crewmate's declaration.
         const failed = [{ name: "linux-checks", state: "failure" as const }];
-        tasks.recordDelivery(taskId, {
+        seedDelivery(tasks, taskId, {
           headSha: "head-1",
           ci: "red",
           ...observeCheckRepair(undefined, "head-1", failed, hostNow),
@@ -13317,7 +13314,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "running",
         repoId: repo.id,
       });
-      harness.tasks.recordDelivery(taskId, {
+      seedDelivery(harness.tasks, taskId, {
         headSha: "head-1",
         ci: "red",
         prNumber: 290,
@@ -13431,7 +13428,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         status: "running",
       });
       const delivery = tasks.get(taskId)?.delivery;
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         ...observeCheckRepair(
           delivery,
           "head-1",
@@ -13609,7 +13606,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // A baseline wait named work that was already done: the declaration's
       // own answer says to bring the change up to date, and nothing repeats it.
       const failed = [{ name: "linux-checks", state: "failure" as const }];
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         headSha: "head-1",
         ci: "red",
         ...observeCheckRepair(undefined, "head-1", failed, hostNow),
@@ -13663,7 +13660,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       // The CI service stamps the cap the way prCi does, and the host's one
       // cap wake goes out; that places the captain gate on the task.
       hostNow = idleSince;
-      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
       supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
       expect(tasks.get(taskId)?.gate).toEqual({ kind: "captain", ref: HEAD, reason: "the CI cap" });
       expect(tasks.flagsOf(tasks.get(taskId) as TaskRecord).held).toBe(true);
@@ -13718,7 +13715,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("the captain closing the cap's card leaves the cap's own hold, and its clock starts at the close", async () => {
       const { supervisor, ops, taskId, tasks, idleSince, at } = await stopped();
       hostNow = idleSince;
-      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
       supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
       const cardId = supervisor.addFirstmateCard({
         taskId,
@@ -13762,7 +13759,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("the stall card's Continue on a capped task is not the cap's answer: the cap and its gate stand", async () => {
       const { supervisor, crewmate, ops, taskId, tasks, cards, idleSince, at } = await stopped();
       hostNow = idleSince;
-      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
       supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
       for (const step of [20, 50, 80]) await at(minutes(step));
       expect(heldWakes(ops)).toHaveLength(2);
@@ -13806,7 +13803,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("the stall card on a review-capped task names the second look as the limit reached", async () => {
       const { supervisor, taskId, tasks, cards, idleSince, at } = await stopped();
       hostNow = idleSince;
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         reviewRounds: 3,
         reviewRoundSha: HEAD,
         reviewCapAt: idleSince,
@@ -13829,7 +13826,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         premiumCanServe: () => false,
       });
       hostNow = idleSince;
-      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
       supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
       const capWake = ops.find((line) => line.includes('"held": "ci-cap"'));
       expect(capWake).toContain('"label": "Try a stronger model"');
@@ -14236,7 +14233,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     function mergedBuilder(harness: Awaited<ReturnType<typeof stopped>>, id: string, basis: string) {
       const { tasks } = harness;
       tasks.create({ id, title: "Build the plan", prompt: "p", repoId: null, shape: { kind: "implement", basis } });
-      tasks.recordDelivery(id, { prNumber: 364, changeLabel: "#364" }, { kind: "pr_opened", text: "PR #364" });
+      seedDelivery(tasks, id, { prNumber: 364, changeLabel: "#364" }, { kind: "pr_opened", text: "PR #364" });
       tasks.close(id, { status: "done", reason: "merged", actor: "captain", text: "merged" });
       return tasks.get(id)?.key ?? id;
     }
@@ -14917,7 +14914,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const HEAD = "abc1234def5678";
       login.extras.noteCutOff(CLAUDE_ACCOUNT, { class: "refused" });
       supervisor.reconcileCutOffs();
-      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
       supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
       await at(minutes(20));
       await at(minutes(50));
@@ -15205,7 +15202,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     it("the wake a capped task owes, and its repeat", async () => {
       const { supervisor, ops, taskId, tasks, idleSince, at } = await stopped();
       hostNow = idleSince;
-      tasks.recordDelivery(taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
+      seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
       supervisor.holdForCiCap(taskId, { rounds: 3, headSha: HEAD });
       await at(minutes(20));
       await at(minutes(50));
@@ -16303,7 +16300,7 @@ describe("the task graph (task-system P2)", () => {
       expect(body()).toContain("not read yet");
       // The branch dropped off the facts at v2.7 (captain, 2026-09-19).
       expect(body()).not.toContain(`fm/task-${taskId}`);
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
         ci: "green",
@@ -16329,7 +16326,7 @@ describe("the task graph (task-system P2)", () => {
       // the captain: "let's consolidate these two metadata pieces into
       // one"). The prompts used to ask an agent to type out a count it
       // cannot see.
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         ciRounds: 2,
         ciRedHead: "9f3c1ab0000000000000000000000000000000ee",
       });
@@ -16353,7 +16350,7 @@ describe("the task graph (task-system P2)", () => {
       // while the cap stands - so the surface that carries it is a Firstmate
       // settle card on the same task, which is exactly what the captain is
       // answering when the cap asks for a decision.
-      tasks.recordDelivery(taskId, { ciRounds: 3, ciCapAt: Date.now() });
+      seedDelivery(tasks, taskId, { ciRounds: 3, ciCapAt: Date.now() });
       const held = supervisor.addFirstmateCard({
         title: "The smoke test hit its CI cap",
         body: "<p>CI went red on three heads.</p><p>Choose how to proceed.</p>",
@@ -16370,7 +16367,7 @@ describe("the task graph (task-system P2)", () => {
       );
       // The review's findings rounds fold into the Review cell the same way.
       tasks.updateFields(taskId, { policies: { rigor: "reviewed" } }, "firstmate");
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         reviewVerdict: "findings",
         reviewSha: "9f3c1ab0000000000000000000000000000000ee",
         reviewRounds: 1,
@@ -16491,7 +16488,7 @@ describe("the task graph (task-system P2)", () => {
       });
       await tick();
       // What check_pr_ci records for a working copy sent up to a plain host.
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         changeLabel: `fm/task-${taskId}`,
         ci: "green",
         ciAt: Date.now(),
@@ -16591,7 +16588,7 @@ describe("the task graph (task-system P2)", () => {
       // INF-1235: remote work uses the computer's host reading, never the home branch.
       if (remote) tasks.setDevice(taskId, "computer");
       // The offered version cannot be read here: no cell, never a zero.
-      tasks.recordDelivery(taskId, { headSha: "9".repeat(40), ci: "green", ciAt: Date.now() });
+      seedDelivery(tasks, taskId, { headSha: "9".repeat(40), ci: "green", ciAt: Date.now() });
       emit();
       await tick();
       if (remote) {
@@ -16602,7 +16599,7 @@ describe("the task graph (task-system P2)", () => {
       expect(cards().find((card) => card.taskId === taskId)?.body).not.toContain("+0");
 
       // A readable version: the counts, labeled apart, in mono.
-      tasks.recordDelivery(taskId, { headSha: first, ci: "green", ciAt: Date.now() });
+      seedDelivery(tasks, taskId, { headSha: first, ci: "green", ciAt: Date.now() });
       await tick();
       expect(lines()).toBe(
         `<span class="inf-fact" data-fact="lines"><span class="inf-fact-k">Lines</span><span class="inf-fact-v"><span class="inf-mono">${changeLinesWords(128, 42)}</span></span></span>`,
@@ -16618,12 +16615,12 @@ describe("the task graph (task-system P2)", () => {
       expect(body.indexOf('data-fact="lines"')).toBeLessThan(body.indexOf('data-fact="checks"'));
 
       // The change is revised: the strip shows the new version's counts.
-      tasks.recordDelivery(taskId, { headSha: revised, ci: "green", ciAt: Date.now() });
+      seedDelivery(tasks, taskId, { headSha: revised, ci: "green", ciAt: Date.now() });
       await tick();
       expect(lines()).toContain(changeLinesWords(1204, 7));
 
       // No old count is substituted for an unavailable newer version.
-      tasks.recordDelivery(taskId, { headSha: "9".repeat(40) });
+      seedDelivery(tasks, taskId, { headSha: "9".repeat(40) });
       await tick();
       expect(lines()).toBeUndefined();
 
@@ -16634,7 +16631,7 @@ describe("the task graph (task-system P2)", () => {
           changedFiles: ["src/meter.ts"],
           changeLines: { base, added: 128, deleted: 42 },
         });
-        tasks.recordDelivery(taskId, { headSha: "8".repeat(40) });
+        seedDelivery(tasks, taskId, { headSha: "8".repeat(40) });
         await tick();
         expect(lines()).toBeUndefined();
         expect(tasks.get(taskId)?.delivery?.changeLines?.head).toBe(revised);
@@ -16646,9 +16643,9 @@ describe("the task graph (task-system P2)", () => {
               finish = resolve;
             }),
         );
-        tasks.recordDelivery(taskId, { headSha: "7".repeat(40) });
+        seedDelivery(tasks, taskId, { headSha: "7".repeat(40) });
         await tick();
-        tasks.recordDelivery(taskId, { headSha: first });
+        seedDelivery(tasks, taskId, { headSha: first });
         finish({
           headSha: "7".repeat(40),
           changedFiles: ["src/meter.ts"],
@@ -19027,7 +19024,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(tasks.get(reviewId)?.status).toBe("done");
       expect(tasks.get(taskId)?.delivery?.reviewVerdict).toBe("pass");
       expect(tasks.get(taskId)?.delivery?.liveValidation?.runs).toHaveLength(1);
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         ci: "green",
         headSha: head,
         prNumber: 21,
@@ -19127,12 +19124,12 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await reportTurn(builder, taskId, "The reproduction waits for an answer.");
       // INF-765: the builder is at a review cap only the first mate's steer reopens.
       const capAt = Date.now();
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         reviewRounds: 3,
         reviewCapAt: capAt,
         reviewCapOwner: "firstmate",
       });
-      tasks.recordDelivery(taskId, { validationHead: "b".repeat(40) });
+      seedDelivery(tasks, taskId, { validationHead: "b".repeat(40) });
       const before = supervisor.cardsSnapshot().find((card) => card.id === cardId);
       expect(() => supervisor.act(cardId, "approve", "chrome")).toThrow(CardChoiceUnavailableError);
       expect(tasks.get(taskId)?.delivery?.liveValidation?.permissions[0]?.state).toBe("expired");
@@ -19194,7 +19191,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         text: "The change is complete and its earlier review passed.",
         summary: "The change is complete.",
       });
-      tasks.recordDelivery("legacy-careful", {
+      seedDelivery(tasks, "legacy-careful", {
         reviewVerdict: "pass",
         reviewSha: HEAD,
         headSha: HEAD,
@@ -19618,7 +19615,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const recorded = "6402d3ba04120d65fc232dff5fb3d055ae16cb7b";
       const repaired = "4c771ba299a659abbafb79096c024a0b0737139c";
       const later = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         prUrl: "https://github.com/o/r/pull/39",
         prNumber: 39,
         headSha: recorded,
@@ -19655,7 +19652,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       vi.mocked(workspace.branchHead).mockResolvedValue(later);
       // INF-125 supplies this lifecycle fixture's proof separately from the
       // existing assertion that review uses the committed repair, not the PR.
-      tasks.recordDelivery(builderId, { liveValidation: noSurfaceProof(later, reviewId) });
+      seedDelivery(tasks, builderId, { liveValidation: noSurfaceProof(later, reviewId) });
       await supervisor.steerCrewmate(reviewId, "re-review the repaired commit");
       await tick();
       expect(tasks.get(reviewId)?.delivery?.headSha).toBe(later);
@@ -19714,12 +19711,12 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // but its first code pass still needs the assigned reviewer's proof judgment.
       const proof = noSurfaceProof(passed);
       proof.reviews = [];
-      tasks.recordDelivery(builderId, { liveValidation: proof });
+      seedDelivery(tasks, builderId, { liveValidation: proof });
       const { taskId: firstId } = await review();
       await tick();
       expect(firstReviewer.promptCalls[0]).not.toContain("An earlier review already passed");
       expect(tasks.get(firstId)?.delivery?.passedHead).toBeUndefined();
-      tasks.recordDelivery(builderId, { liveValidation: noSurfaceProof(passed, firstId) });
+      seedDelivery(tasks, builderId, { liveValidation: noSurfaceProof(passed, firstId) });
       await reportTurn(firstReviewer, firstId, "verdict: pass\nNo findings.\nrisk: low - small.");
       expect(tasks.get(builderId)?.delivery).toMatchObject({
         reviewVerdict: "pass",
@@ -19959,10 +19956,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
       expect(reviewer.promptCalls.at(-1)).toContain("re-review at head");
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
       });
-      tasks.recordDelivery(reviewId, {
+      seedDelivery(tasks, reviewId, {
         validationAssignment: {
           head: tasks.get(reviewId)!.delivery!.headSha!,
           revision: 1,
@@ -20013,7 +20010,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // beside CI in the host's facts strip - the verdict and risk on the
       // line, the risk note on the cell's title - and the merge goes
       // through.
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
         headSha: HEAD,
@@ -20080,7 +20077,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       const currentReading = await readChangeReading(task.repoDir, updated);
       if (!reading || reading !== currentReading)
         throw new Error("The fixture must retain its actual unchanged patch.");
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
         headSha: updated,
@@ -20101,7 +20098,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           actions: [{ id: "merge", default: true, effect: SETTLE_MERGE }],
         });
       await expect(offer()).rejects.toThrow("This version needs live validation");
-      tasks.recordDelivery(taskId, { liveValidation: noSurfaceProof(updated) });
+      seedDelivery(tasks, taskId, { liveValidation: noSurfaceProof(updated) });
       const cardId = await offer();
       await tick();
       expect(cards().map((card) => card.id)).toContain(cardId);
@@ -20220,7 +20217,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
 
       // The CI service counted the third red head and stamped the cap;
       // the host's one wake follows.
-      tasks.recordDelivery(taskId, {
+      seedDelivery(tasks, taskId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
         headSha: HEAD,
@@ -20325,7 +20322,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       await reportTurn(builder, builderId, BUILDER_REPORT);
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
         headSha: HEAD,
@@ -20361,14 +20358,14 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           .timeline(builderId)
           .some((event) => event.kind === "review" && event.text.includes("round not counted")),
       ).toBe(true);
-      tasks.recordDelivery(builderId, { headSha: HEAD_2 });
+      seedDelivery(tasks, builderId, { headSha: HEAD_2 });
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD_2);
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_2}`);
       await tick();
       await reportTurn(reviewer, reviewId, findings(2));
       expect(tasks.get(builderId)?.delivery?.reviewRounds).toBe(2);
       expect(tasks.get(builderId)?.delivery?.reviewCapAt).toBeUndefined();
-      tasks.recordDelivery(builderId, { headSha: HEAD_3 });
+      seedDelivery(tasks, builderId, { headSha: HEAD_3 });
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD_3);
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_3}`);
       await tick();
@@ -20430,10 +20427,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD_3}`);
       await tick();
       expect(reviewer.promptCalls).toHaveLength(5);
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
       });
-      tasks.recordDelivery(reviewId, {
+      seedDelivery(tasks, reviewId, {
         validationAssignment: {
           head: tasks.get(reviewId)!.delivery!.headSha!,
           revision: 1,
@@ -20482,7 +20479,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       ].entries()) {
         const head = `${index}${HEAD.slice(1)}`;
         vi.mocked(workspace.branchHead).mockResolvedValue(head);
-        tasks.recordDelivery(builderId, { reviewRounds: 2, reviewRoundSha: undefined });
+        seedDelivery(tasks, builderId, { reviewRounds: 2, reviewRoundSha: undefined });
         await reportTurn(
           reviewer,
           reviewId,
@@ -20514,11 +20511,11 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
         // reopening review rounds never substitutes for the proof judgment.
         const proof = noSurfaceProof(nextHead);
         proof.reviews = [];
-        tasks.recordDelivery(builderId, { liveValidation: proof });
+        seedDelivery(tasks, builderId, { liveValidation: proof });
         await supervisor.steerCrewmate(reviewId, `re-review at ${nextHead}`);
         await tick();
       }
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
       });
       await reportTurn(
@@ -20529,7 +20526,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       expect(tasks.get(builderId)?.delivery?.reviewVerdict).toBe("pass");
       expect(tasks.get(reviewId)?.status).toBe("done");
       // Delegation never releases a CI cap, even when both caps coexist.
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         ciRounds: 3,
         ciCapAt: Date.now(),
         reviewRounds: 3,
@@ -20609,7 +20606,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       await reportTurn(builder, builderId, BUILDER_REPORT);
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
         headSha: HEAD,
@@ -20653,7 +20650,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
           retryConverse: vi.fn(),
         });
         await findings();
-        tasks.recordDelivery(builderId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: Date.now() });
+        seedDelivery(tasks, builderId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: Date.now() });
         supervisor.holdForCiCap(builderId, { rounds: 3, headSha: HEAD });
         const stored = (
           db
@@ -20775,10 +20772,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       vi.mocked(workspace.branchHead).mockResolvedValue(HEAD);
       await supervisor.steerCrewmate(reviewId, "review again");
       await tick();
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
       });
-      tasks.recordDelivery(reviewId, {
+      seedDelivery(tasks, reviewId, {
         validationAssignment: {
           head: tasks.get(reviewId)!.delivery!.headSha!,
           revision: 1,
@@ -20806,10 +20803,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       await tick();
       const b2 = ops.length;
       vi.mocked(workspace.branchHead).mockResolvedValue(null);
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(r2)!.delivery!.headSha!, r2),
       });
-      tasks.recordDelivery(r2, {
+      seedDelivery(tasks, r2, {
         validationAssignment: {
           head: tasks.get(r2)!.delivery!.headSha!,
           revision: 1,
@@ -20851,7 +20848,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       await reportTurn(builder, builderId, BUILDER_REPORT);
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
         headSha: HEAD,
@@ -20893,7 +20890,7 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       });
       await tick();
       await reportTurn(builder, builderId, BUILDER_REPORT);
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         prUrl: "https://github.com/o/r/pull/55",
         prNumber: 55,
         headSha: HEAD,
@@ -20927,10 +20924,10 @@ describe("the reviewed tier (delivery rigor phase 2)", () => {
       // no-mistakes rule), so the review closes and the hold releases.
       await supervisor.steerCrewmate(reviewId, `re-review at head ${HEAD}`);
       await tick();
-      tasks.recordDelivery(builderId, {
+      seedDelivery(tasks, builderId, {
         liveValidation: noSurfaceProof(tasks.get(reviewId)!.delivery!.headSha!, reviewId),
       });
-      tasks.recordDelivery(reviewId, {
+      seedDelivery(tasks, reviewId, {
         validationAssignment: {
           head: tasks.get(reviewId)!.delivery!.headSha!,
           revision: 1,
@@ -25150,7 +25147,7 @@ describe('the host\'s check watch (docs/forge.md, "The check watch")', () => {
 
     // The app stopped after the wake but before the watch cleared: the
     // record still holds the watch. Its wake is not sent again.
-    second.tasks.recordDelivery(taskId, { ciWatch: watch });
+    seedDelivery(second.tasks, taskId, { ciWatch: watch });
     const third = boot();
     for (let minute = 13; minute <= 20; minute++) {
       hostNow = start + minutes(minute);
@@ -27025,7 +27022,7 @@ describe("a discard that leaves its pull request open (INF-549's sibling)", () =
       intent: intentOf("try the new meter"),
       repoId: repo.id,
     });
-    harness.tasks.recordDelivery(taskId, {
+    seedDelivery(harness.tasks, taskId, {
       prNumber: 9,
       prUrl: "https://github.com/acme/shop/pull/9",
     });

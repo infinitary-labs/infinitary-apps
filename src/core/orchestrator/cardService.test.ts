@@ -7,6 +7,7 @@ import {
 } from "@shared/cards";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { CardStore } from "../storage/cardStore";
 import { openDatabase, openInMemoryDatabase } from "../storage/db";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
@@ -368,14 +369,14 @@ describe("CardService", () => {
     const shownBody = cards.snapshot()[0]?.body;
     const before = cards.thread(id).messages.length;
     const changes = cards.revisionChanges(id);
-    tasks.recordDelivery("t1", { ci: "red", ciAt: 1000 });
+    seedDelivery(tasks, "t1", { ci: "red", ciAt: 1000 });
     expect(cards.snapshot()[0]?.body).toBe(shownBody?.replace("pending", "red"));
     expect(cards.get(id)?.body).toBe(`<p>New author body.</p>${facts()}`);
     expect(cardStore.get(id)?.body).toBe(cards.get(id)?.body);
     expect(cards.thread(id).messages.length).toBe(before);
     expect(cards.revisionChanges(id)).toEqual(changes);
     cards.dispose();
-    tasks.recordDelivery("t1", { ci: "green", ciAt: 2000 });
+    seedDelivery(tasks, "t1", { ci: "green", ciAt: 2000 });
     // No card service was alive to hear the mutation; boot re-stamps it.
     expect(cardStore.get(id)?.body).toContain("red");
     expect(make(facts).snapshot()[0]?.body).toContain("green");

@@ -1301,7 +1301,7 @@ export class IdleLadder {
     findings: ReviewVerdictFacts,
     owner: "firstmate" | "captain" = "captain",
   ): TypedWake {
-    this.host.tasks.recordDelivery(builder.id, { reviewCapAt: at, reviewCapOwner: owner });
+    this.host.tasks.recordChangeEvidence(builder.id, { reviewCapAt: at, reviewCapOwner: owner });
     this.syncCaptainGate(builder.id, at);
     return reviewCapWake(
       builder,
@@ -1325,7 +1325,7 @@ export class IdleLadder {
     if (!card.taskId || by !== "captain" || !firstmateCard) return;
     if (action === "dismissed" || action === "closed") return;
     if (!standingCap(this.host.tasks.get(card.taskId)?.delivery)) return;
-    this.host.tasks.recordDelivery(card.taskId, { capAnsweredAt: this.host.now() });
+    this.host.tasks.recordChangeEvidence(card.taskId, { capAnsweredAt: this.host.now() });
   }
 
   /**
@@ -1360,7 +1360,7 @@ export class IdleLadder {
       delivery.reviewCapAt !== undefined &&
       delivery.reviewCapOwner === "firstmate"
     ) {
-      this.host.tasks.recordDelivery(
+      this.host.tasks.recordChangeEvidence(
         taskId,
         {
           reviewRounds: undefined,
@@ -1390,7 +1390,7 @@ export class IdleLadder {
         ? [`review cap (${delivery.reviewRounds ?? 0} findings rounds)`]
         : []),
     ].join(" and ");
-    this.host.tasks.recordDelivery(
+    this.host.tasks.recordChangeEvidence(
       taskId,
       {
         ciRepair: delivery.ciRepair ? { ...delivery.ciRepair, rerun: undefined } : undefined,
@@ -1451,7 +1451,7 @@ export class IdleLadder {
       reopened.push("rerun");
     }
     if (reopened.length === 0) return;
-    this.host.tasks.recordDelivery(
+    this.host.tasks.recordChangeEvidence(
       taskId,
       { ...patch, capAnsweredAt: undefined },
       {

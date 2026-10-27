@@ -25,6 +25,7 @@
  */
 
 import { decode } from "@toon-format/toon";
+import { taskReadTable } from "../src/core/storage/taskRecordFields.ts";
 import Database from "better-sqlite3";
 import { existsSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -1016,8 +1017,9 @@ export function readFleetTables(dbPath: string): FleetTables {
     );
     const tasks = new Map<string, TaskRow>();
     if (tables.has("tasks")) {
+      const taskTable = taskReadTable(db);
       const taskColumns = new Set(
-        (db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[]).map((c) => c.name),
+        (db.prepare(`PRAGMA table_info(${taskTable})`).all() as { name: string }[]).map((c) => c.name),
       );
       const startedAt = taskColumns.has("started_at") ? "started_at, " : "";
       const closedAt = taskColumns.has("closed_at") ? "closed_at" : "NULL AS closed_at";
@@ -1037,7 +1039,7 @@ export function readFleetTables(dbPath: string): FleetTables {
       const deliveryOf = savedDeliveryReader(db);
       for (const row of db
         .prepare(
-          `SELECT id, title, status, kind, repo_id, ${parent}, created_at, ${startedAt}${closedAt}, ${closedReason}, ${difficulty}, ${shape}, ${delivery}, ${outcome} FROM tasks`,
+          `SELECT id, title, status, kind, repo_id, ${parent}, created_at, ${startedAt}${closedAt}, ${closedReason}, ${difficulty}, ${shape}, ${delivery}, ${outcome} FROM ${taskTable}`,
         )
         .all() as TaskRow[]) {
         tasks.set(row.id, {
@@ -1145,8 +1147,9 @@ export function readFleetTables(dbPath: string): FleetTables {
     // the host files a `decision` row gated on the card id (task-system P1).
     const decisionByCard = new Map<string, TaskRow>();
     if (tables.has("tasks")) {
+      const taskTable = taskReadTable(db);
       const taskColumns = new Set(
-        (db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[]).map((c) => c.name),
+        (db.prepare(`PRAGMA table_info(${taskTable})`).all() as { name: string }[]).map((c) => c.name),
       );
       if (taskColumns.has("gate_ref")) {
         for (const row of db

@@ -10,6 +10,7 @@ import { type MergeReview, mergeRuleWords } from "../../src/shared/mergeReview";
 import { MERGE_WORDS, SKIP_RULES_MERGE_WORDS } from "../../src/shared/vocabulary";
 import { NEVER_SENT_AGAIN } from "../../src/shared/writeAsk";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import {
   SKIP_RULES_CARD_TITLE,
   SKIP_RULES_FAILED_CHECK,
@@ -63,7 +64,7 @@ function seedReviewCard(
   title: string,
   body: string,
 ) {
-  new TaskService({ db, strict: true }).recordDelivery(taskId, {
+  seedDelivery(new TaskService({ db, strict: true }), taskId, {
     mode: "direct-pr",
     mergeReviews: [review],
   });

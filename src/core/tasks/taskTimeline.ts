@@ -1,17 +1,36 @@
 import type { CardMessage, CardObservation, CardObservationKind } from "@shared/cards";
+import { cardWords } from "@shared/cardWords";
 import { reportSummary } from "@shared/feed";
+import { pastEndingWords } from "@shared/pastCard";
 import {
   TIMELINE_SCHEMA_VERSION,
   type TimelineContentKind,
   type TimelineEntry,
   type TimelineLink,
+  type TimelineReading,
   type TimelineSource,
 } from "@shared/timeline";
+import {
+  TIMELINE_BRIEF_REVISED,
+  timelineActorWords,
+  timelineConversationWords,
+} from "@shared/timelineWords";
 import type { CardStore } from "../storage/cardStore";
-import type { TaskEvent, TaskEventKind } from "../storage/taskEventStore";
+import {
+  type TaskEvent,
+  type TaskEventKind,
+  timelineEventIdentity,
+} from "../storage/taskEventStore";
+import type { TaskSessionObservationRecord } from "../storage/taskSessionStore";
+import type { SavedSpecification } from "../storage/taskSpecificationStore";
 import type { TaskRecord } from "../storage/taskStore";
 import type { SourcedAction } from "./crewActions";
-import { ACTIVITY_PLACES, reportHeadline } from "./recordActivity";
+import {
+  ACTIVITY_PLACES,
+  type ConcernedEventView,
+  condenseActivity,
+  reportHeadline,
+} from "./recordActivity";
 import { type ReportEntry, reportEntryOf } from "./reportEntry";
 import type { TaskService } from "./taskService";
 
@@ -93,6 +112,7 @@ export type TimelineCut = {
   message: number;
   /** Each kept session file read, by name, and how many actions it held. */
   actions: Record<string, number>;
+  sessions?: number;
 };
 
 export type TimelinePage = {
@@ -110,10 +130,12 @@ export type TimelineRecord =
       report?: ReportEntry;
       /** A brief receipt, read back whole as it was served. */
       brief?: string;
+      specification?: SavedSpecification;
     }
   | { source: "card-observation"; observation: CardObservation }
   | { source: "card-message"; message: CardMessage }
-  | { source: "session-action"; action: SourcedAction };
+  | { source: "session-action"; action: SourcedAction }
+  | { source: "session-observation"; observation: TaskSessionObservationRecord };
 
 /**
  * An entry opened: the record it names, or why it cannot be read - `gone`
@@ -127,6 +149,7 @@ export type TimelineExpansion =
 
 export type TaskTimelineOptions = {
   tasks: TaskService;
+  modelLabel?: (model: string) => string | undefined;
   /** The card evidence and threads; without it the timeline holds the task's events and actions. */
   cards?: Pick<
     CardStore,
@@ -144,6 +167,7 @@ const SOURCE_RANK: Record<TimelineSource, number> = {
   "card-observation": 1,
   "card-message": 2,
   "session-action": 3,
+  "session-observation": 4,
 };
 
 export class TaskTimeline {
@@ -152,6 +176,69 @@ export class TaskTimeline {
   /** The task's whole timeline, in order. */
   entries(taskId: string): TimelineEntry[] {
     return this.collect(taskId).placed.map((item) => item.entry);
+  }
+
+  /** Plain readings and exact retained details shared with Activity; no current-row substitution. */
+  history(taskId: string): TimelineReading[] {
+    const { placed, records, activityGroups } = this.collect(taskId, undefined, true);
+    return placed
+      .map(({ entry }) => ({ entry, record: records.get(entry.id) ?? null }))
+      .map(({ entry, record }) => {
+        if (!record) return { entry, text: null };
+        switch (record.source) {
+          case "task-event":
+            return {
+              entry,
+              ...(record.specification
+                ? {
+                    text: TIMELINE_BRIEF_REVISED,
+                    details: `${record.event.text}\n\n${JSON.stringify(record.specification, null, 2)}`,
+                  }
+                : { text: record.brief ?? record.event.text }),
+            };
+          case "card-message":
+            return { entry, text: record.message.text };
+          case "session-action":
+            return { entry, text: record.action.text };
+          case "session-observation": {
+            const observed = record.observation;
+            return {
+              entry,
+              text: entry.summary,
+              details: [
+                `Conversation: ${observed.conversation}`,
+                `Model: ${observed.model ?? "Unknown"}`,
+                `Computer: ${observed.computer ?? "Unknown"}`,
+                `Recorded reason: ${observed.began}`,
+              ].join("\n"),
+            };
+          }
+          case "card-observation": {
+            const observation = record.observation;
+            return {
+              entry,
+              text: observationText(observation, entry.summary),
+              ...(observation.kind === "action" && observation.payload.frameValue !== undefined
+                ? { details: observation.payload.frameValue }
+                : {}),
+            };
+          }
+        }
+        return { entry, text: null };
+      })
+      .map((reading) => ({
+        ...reading,
+        actorLabel: timelineActorWords(reading.entry.actor),
+        ...(activityGroups.has(reading.entry.id)
+          ? { activityRowId: activityGroups.get(reading.entry.id) }
+          : {}),
+      }));
+  }
+
+  /** Each normalized entry with its owner's exact typed payload, for agent history reads. */
+  sources(taskId: string): { entry: TimelineEntry; record: TimelineRecord | null }[] {
+    const { placed, records } = this.collect(taskId, undefined, true);
+    return placed.map(({ entry }) => ({ entry, record: records.get(entry.id) ?? null }));
   }
 
   /**
@@ -182,18 +269,13 @@ export class TaskTimeline {
     const { tasks, cards } = this.options;
     switch (source) {
       case "task-event": {
-        const eventId = Number(tail);
-        if (!Number.isInteger(eventId)) return unknown;
-        const event = tasks.event(eventId);
+        const local = Number(tail);
+        const event =
+          tasks.eventByIdentity(id) ?? (Number.isInteger(local) ? tasks.event(local) : undefined);
         if (!event) return gone;
-        if (event.taskId !== taskId && !tasks.concerning(taskId).some((e) => e.id === eventId))
+        if (event.taskId !== taskId && !tasks.concerning(taskId).some((e) => e.id === event.id))
           return unknown;
-        const record: TimelineRecord = {
-          source: "task-event",
-          event,
-          ...(event.kind === "report" ? { report: reportEntryOf(event) } : {}),
-          ...(event.kind === "briefed" ? { brief: tasks.servedBrief(event) } : {}),
-        };
+        const record = eventRecord(tasks, event);
         return { id, status: "available", record };
       }
       case "card-observation": {
@@ -212,6 +294,16 @@ export class TaskTimeline {
         if (!cards.messagesForTask(taskId, messageId).some((m) => m.id === messageId))
           return unknown;
         return { id, status: "available", record: { source: "card-message", message } };
+      }
+      case "session-observation": {
+        const observed = tasks.sessionObservation(tail);
+        if (!observed) return gone;
+        if (observed.taskId !== taskId) return unknown;
+        return {
+          id,
+          status: "available",
+          record: { source: "session-observation", observation: observed },
+        };
       }
       case "session-action": {
         const at = tail.lastIndexOf(":");
@@ -232,13 +324,25 @@ export class TaskTimeline {
   }
 
   /** Every entry up to `cut` (or up to now, which becomes the cut), aliases folded, in order. */
-  private collect(taskId: string, cut?: TimelineCut): { placed: Placed[]; cut: TimelineCut } {
+  private collect(
+    taskId: string,
+    cut?: TimelineCut,
+    includeRecords = false,
+  ): {
+    placed: Placed[];
+    cut: TimelineCut;
+    records: Map<string, TimelineRecord>;
+    activityGroups: Map<string, number>;
+  } {
     const { tasks, cards } = this.options;
     const upTo = (id: number, bound: number | undefined) => bound === undefined || id <= bound;
     const own = tasks.timeline(taskId).filter((event) => upTo(event.id, cut?.event));
     const concerned = tasks.concerning(taskId).filter((event) => upTo(event.id, cut?.event));
     const observations = cards?.observationsForTask(taskId, cut?.observation) ?? [];
     const messages = cards?.messagesForTask(taskId, cut?.message) ?? [];
+    const observedSessions = tasks
+      .sessionObservations(taskId)
+      .filter((observed) => !cut || observed.seq <= (cut.sessions ?? 0));
     const task = tasks.get(taskId);
     const actions = (task ? (this.options.actions?.(task) ?? []) : []).filter((action) =>
       cut ? action.index < (cut.actions[action.file] ?? 0) : true,
@@ -251,12 +355,64 @@ export class TaskTimeline {
       observation: newest(observations, (o) => o.seq),
       message: newest(messages, (m) => m.id),
       actions: countByFile(actions),
+      sessions: newest(observedSessions, (observed) => observed.seq),
     };
 
+    const named = new Map<string, TaskRecord | undefined>();
+    const rowOf = (id: string) => {
+      if (!named.has(id)) named.set(id, tasks.get(id));
+      return named.get(id);
+    };
+    const keyOf = (id: string) => {
+      const row = rowOf(id);
+      return row ? row.key || row.id : undefined;
+    };
+    const others = concerned.flatMap((event): ConcernedEventView[] => {
+      const from = rowOf(event.taskId);
+      if (!from) return [];
+      const change =
+        from.delivery?.changeLabel ??
+        (from.delivery?.prNumber ? `#${from.delivery.prNumber}` : undefined);
+      const { via, ...facts } = event;
+      return [
+        {
+          ...facts,
+          from: {
+            id: from.id,
+            key: from.key || from.id,
+            ...(change ? { change } : {}),
+            ...(from.delivery?.prUrl ? { changeUrl: from.delivery.prUrl } : {}),
+          },
+          ...(via ? { via: keyOf(via) } : {}),
+        },
+      ];
+    });
+    // The same typed wording owner as the compatible condensed read. An
+    // unreferenced older card title stays unknown, never today's title.
+    const summaries = new Map<number, string>();
+    const labels = new Map<string, string>();
+    const label = (model: string) => {
+      if (!labels.has(model))
+        labels.set(model, this.options.modelLabel?.(model) ?? model.slice(model.indexOf("/") + 1));
+      return labels.get(model)!;
+    };
+    const activityGroups = new Map<string, number>();
+    const actionIds = new Map(actions.map((action) => [action, actionId(action)]));
+    for (const row of condenseActivity(own, label, { concerned: others, keyOf, actions })) {
+      for (const action of row.actions ?? []) {
+        const id = actionIds.get(action as SourcedAction);
+        if (id) activityGroups.set(id, row.id);
+      }
+      summaries.set(row.id, row.text);
+      for (const folded of row.folded ?? []) summaries.set(folded.id, folded.text);
+    }
     const placed = new Map<string, Placed>();
-    for (const event of own) placed.set(eventId(event), eventEntry(taskId, event));
+    const eventSummary = (event: TaskEvent) =>
+      tasks.specificationFor(event) ? TIMELINE_BRIEF_REVISED : summaries.get(event.id);
+    for (const event of own)
+      placed.set(eventId(event), eventEntry(taskId, event, eventSummary(event)));
     for (const event of concerned) {
-      const item = eventEntry(taskId, event);
+      const item = eventEntry(taskId, event, eventSummary(event));
       item.entry.links.push({ rel: "concern", taskId: event.taskId, relation: event.relation });
       placed.set(eventId(event), item);
     }
@@ -293,20 +449,87 @@ export class TaskTimeline {
     for (const event of own) {
       const named = event.kind === "card_resolved" ? event.data?.observation : undefined;
       const receipt = typeof named === "string" ? placed.get(observationId(named)) : undefined;
-      if (!receipt) continue;
+      if (!receipt) {
+        // Import may retain the event but not the card owner's files.
+        // Preserve its explicit identity link without inventing that payload.
+        if (typeof named === "string")
+          placed.get(eventId(event))?.entry.aliases.push(observationId(named));
+        continue;
+      }
       placed.delete(eventId(event));
-      receipt.entry.aliases.push(eventId(event));
+      receipt.entry.aliases.push(eventId(event), `task-event:${event.id}`);
     }
     for (const action of actions) {
-      const id = `session-action:${action.file}:${action.index}`;
+      const id = actionId(action);
       placed.set(id, actionEntry(taskId, id, action));
     }
-    return { placed: [...placed.values()].sort((a, b) => compareKeys(a.key, b.key)), cut: taken };
+    const observedConversations = new Set<string>();
+    for (const observed of observedSessions) {
+      const summary = timelineConversationWords(
+        observed.began,
+        observedConversations.has(observed.conversation),
+      );
+      observedConversations.add(observed.conversation);
+      const id = `session-observation:${observed.id}`;
+      placed.set(id, {
+        entry: entry({
+          id,
+          taskId,
+          at: observed.observed_at,
+          actor: { kind: "host" },
+          summary,
+          content: {
+            kind: "session-observation",
+            version: 1,
+            ref: {
+              source: "session-observation",
+              conversation: observed.conversation,
+              observationId: observed.id,
+            },
+          },
+          quiet: true,
+        }),
+        key: {
+          dated: true,
+          at: observed.observed_at,
+          rank: SOURCE_RANK["session-observation"],
+          order: [observed.seq],
+        },
+      });
+    }
+    const records = new Map<string, TimelineRecord>();
+    if (includeRecords)
+      for (const event of [...own, ...concerned])
+        records.set(eventId(event), eventRecord(tasks, event));
+    if (includeRecords)
+      for (const observation of observations)
+        records.set(observationId(observation.id), { source: "card-observation", observation });
+    if (includeRecords)
+      for (const message of messages)
+        records.set(messageId(message.id), { source: "card-message", message });
+    if (includeRecords)
+      for (const action of actions)
+        records.set(actionId(action), {
+          source: "session-action",
+          action,
+        });
+    if (includeRecords)
+      for (const observed of observedSessions)
+        records.set(`session-observation:${observed.id}`, {
+          source: "session-observation",
+          observation: observed,
+        });
+    return {
+      placed: [...placed.values()].sort((a, b) => compareKeys(a.key, b.key)),
+      cut: taken,
+      records,
+      activityGroups,
+    };
   }
 }
 
 function eventId(event: TaskEvent): string {
-  return `task-event:${event.id}`;
+  return timelineEventIdentity(event);
 }
 
 function observationId(id: string): string {
@@ -325,9 +548,21 @@ function entry(
   return { schemaVersion: TIMELINE_SCHEMA_VERSION, links: [], aliases: [], ...fields };
 }
 
-function eventEntry(taskId: string, event: TaskEvent): Placed {
+function eventRecord(tasks: TaskService, event: TaskEvent): TimelineRecord {
+  const specification = tasks.specificationFor(event);
+  return {
+    source: "task-event",
+    event,
+    ...(specification ? { specification } : {}),
+    ...(event.kind === "report" ? { report: reportEntryOf(event) } : {}),
+    ...(event.kind === "briefed" ? { brief: tasks.servedBrief(event) } : {}),
+  };
+}
+
+function eventEntry(taskId: string, event: TaskEvent, words?: string): Placed {
   const summary =
-    event.kind === "report" ? reportHeadline(event.text, event.data?.summary) : event.text;
+    words ??
+    (event.kind === "report" ? reportHeadline(event.text, event.data?.summary) : event.text);
   return {
     entry: entry({
       id: eventId(event),
@@ -395,6 +630,46 @@ function observationEntry(
   };
 }
 
+/** Saved words for the window; agent reads retain the whole typed record. */
+function observationText(observation: CardObservation, summary: string): string | null {
+  switch (observation.kind) {
+    case "offer": {
+      const choices = observation.payload.actions.map(
+        (action) => `${action.label ?? action.id}${action.default ? " (recommended)" : ""}`,
+      );
+      return [
+        observation.payload.title,
+        cardWords(observation.payload.body),
+        ...(choices.length ? [choices.join("\n")] : []),
+      ].join("\n\n");
+    }
+    case "action": {
+      const answers = (observation.payload.answers ?? []).map((answer) => {
+        const prompt =
+          observation.payload.questions?.find((question) => question.name === answer.name)
+            ?.prompt ?? answer.name;
+        const values = (answer.labels ?? answer.values).join(", ");
+        return `${prompt}: ${values}${answer.written ? `\n${answer.written}` : ""}`;
+      });
+      return [summary, ...answers].join("\n\n");
+    }
+    case "exit":
+      return [
+        pastEndingWords({ how: observation.payload.reason, at: observation.recordedAt }),
+        observation.payload.note,
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+    case "effect_receipt":
+      return [summary, observation.payload.note].filter(Boolean).join("\n\n");
+    case "message_ref":
+      return null;
+    case "availability":
+    case "seen":
+      return summary;
+  }
+}
+
 /** An observation in one line, from its typed payload; the card's title where the offer names one. */
 function observationSummary(observation: CardObservation, title: string | undefined): string {
   const card = title ? `"${title}"` : "a card";
@@ -438,6 +713,10 @@ function messageEntry(taskId: string, message: CardMessage): Placed {
       order: [message.id],
     },
   };
+}
+
+function actionId(action: SourcedAction): string {
+  return `session-action:${action.file}:${action.index}`;
 }
 
 function actionEntry(taskId: string, id: string, action: SourcedAction): Placed {

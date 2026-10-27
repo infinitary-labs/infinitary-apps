@@ -5,6 +5,8 @@ import { AUTOMATIC_COMPUTER, PLACEMENT_DEMANDS, placementSnapshotSchema } from "
 import type { RiskAssessment } from "@shared/risk";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
+import { taskRecordRetirementReverseSql } from "../../../tests/helpers/taskRecordRetirement";
 import {
   IDLE_NUDGE_TEXT,
   idleNudge,
@@ -142,7 +144,11 @@ DROP TABLE task_permissions;
 DROP TABLE task_delivery_evidence;
 `;
 /** INF-1296 pieces 3 and 4's records, undone, newest first. */
-const REVERSE_RUNNING_WORK = REVERSE_TASK_DELIVERY + REVERSE_TASK_POLICIES + REVERSE_TASK_EXECUTION;
+const REVERSE_RUNNING_WORK =
+  taskRecordRetirementReverseSql() +
+  REVERSE_TASK_DELIVERY +
+  REVERSE_TASK_POLICIES +
+  REVERSE_TASK_EXECUTION;
 /** Migration 80's delivery columns, undone. */
 const REVERSE_MIGRATION_80 =
   "ALTER TABLE schedule_runs DROP COLUMN inbox_id; ALTER TABLE schedule_runs DROP COLUMN delivery; ALTER TABLE schedule_runs DROP COLUMN settled_at; ALTER TABLE schedule_runs DROP COLUMN cancel_reason; ALTER TABLE schedule_runs DROP COLUMN tasks; ALTER TABLE schedule_runs DROP COLUMN cards;\n";
@@ -753,7 +759,7 @@ describe("migrations 17-19 (the task record, P0)", () => {
     expect(fresh.prepare("SELECT id, key FROM projects").all()).toEqual([
       { id: "scratch", key: "SCR" },
     ]);
-    expect(columnNames(fresh, "tasks")).toEqual(
+    expect(columnNames(fresh, "task_records")).toEqual(
       expect.arrayContaining([
         "key",
         "seq",
@@ -1198,7 +1204,7 @@ describe("migration 45 (idle crew recovery)", () => {
     }
     at44.close();
     const upgraded = openDatabase(dir);
-    expect(columnNames(upgraded, "tasks")).toEqual(
+    expect(columnNames(upgraded, "task_execution")).toEqual(
       expect.arrayContaining(["idle_since", "recovery_rung", "recovery_count", "recovery_at"]),
     );
     upgraded.close();
@@ -1234,7 +1240,7 @@ describe("migration 46 (the two graph gaps)", () => {
       parentId: "build",
       shape: { kind: "review", kind_source: "host:review", basis: "build" },
     });
-    before.recordDelivery("build", { reviewVerdict: "findings", reviewedAt: Date.now() });
+    seedDelivery(before, "build", { reviewVerdict: "findings", reviewedAt: Date.now() });
     at45.exec(REVERSE_TASK_REFERENCES);
     // The stamps as a database before this migration stored them: a verdict
     // gone stale (the guess still says verified) and the cached join.
@@ -1251,7 +1257,7 @@ describe("migration 46 (the two graph gaps)", () => {
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
     const stamps = upgraded
       .prepare(
-        "SELECT COUNT(*) AS n FROM tasks WHERE json_type(shape_json, '$.basis_verified') IS NOT NULL OR json_type(delivery_json, '$.reviewTaskId') IS NOT NULL",
+        "SELECT COUNT(*) AS n FROM task_records WHERE json_type(shape_json, '$.basis_verified') IS NOT NULL OR json_type(delivery_json, '$.reviewTaskId') IS NOT NULL",
       )
       .get();
     expect(stamps).toEqual({ n: 0 });
@@ -1280,9 +1286,9 @@ describe("migration 47 (the gate becomes a witness, the primitives review P2)", 
     const active = (id: string) =>
       seedTask(tasks, { id, title: id, status: "completed", worktreeDir: `/wt/${id}` });
     active("ci-capped");
-    tasks.recordDelivery("ci-capped", { ciRounds: 3, ciRedHead: "abc1234", ciCapAt: 100 });
+    seedDelivery(tasks, "ci-capped", { ciRounds: 3, ciRedHead: "abc1234", ciCapAt: 100 });
     active("review-capped");
-    tasks.recordDelivery("review-capped", {
+    seedDelivery(tasks, "review-capped", {
       headSha: "def5678",
       reviewRounds: 3,
       reviewRoundSha: "def5678",
@@ -1290,13 +1296,13 @@ describe("migration 47 (the gate becomes a witness, the primitives review P2)", 
     });
     // Answered since the cap: the steer that reopens the rounds is all it waits on.
     active("answered");
-    tasks.recordDelivery("answered", { ciRounds: 3, ciCapAt: 100, capAnsweredAt: 150 });
+    seedDelivery(tasks, "answered", { ciRounds: 3, ciCapAt: 100, capAnsweredAt: 150 });
     // A row that already has a gate keeps it.
     active("gated");
-    tasks.recordDelivery("gated", { ciRounds: 3, ciCapAt: 100 });
+    seedDelivery(tasks, "gated", { ciRounds: 3, ciCapAt: 100 });
     tasks.setGate("gated", { kind: "at-time", until: 999 });
     active("uncapped");
-    tasks.recordDelivery("uncapped", { ciRounds: 1, ciRedHead: "abc1234" });
+    seedDelivery(tasks, "uncapped", { ciRounds: 1, ciRedHead: "abc1234" });
     at46.close();
 
     const upgraded = openDatabase(dir);
@@ -1629,7 +1635,8 @@ describe("migrations 34-35 (the work shape, its rule, and the served tier)", () 
 
     const upgraded = openDatabase(dir);
     expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
-    expect(columnNames(upgraded, "tasks")).toContain("shape_json");
+    expect(columnNames(upgraded, "tasks")).not.toContain("shape_json");
+    expect(columnNames(upgraded, "task_records")).toContain("shape_json");
     expect(columnNames(upgraded, "routing_decisions")).toContain("rule");
     expect(columnNames(upgraded, "routing_decisions")).toContain("served");
     // Nothing is backfilled: a row routed before the shape existed has no
@@ -1637,7 +1644,9 @@ describe("migrations 34-35 (the work shape, its rule, and the served tier)", () 
     // `served` is not assumed equal to `bucket` either - what the ladder
     // actually answered with was never recorded on that row.
     expect(
-      upgraded.prepare("SELECT id, difficulty, shape_json FROM tasks WHERE id = 'old1'").get(),
+      upgraded
+        .prepare("SELECT id, difficulty, shape_json FROM task_records WHERE id = 'old1'")
+        .get(),
     ).toEqual({ id: "old1", difficulty: null, shape_json: null });
     expect(
       upgraded.prepare("SELECT task_id, bucket, rule, served FROM routing_decisions").all(),

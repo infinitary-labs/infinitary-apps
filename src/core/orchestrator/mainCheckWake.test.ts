@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { openInMemoryDatabase } from "../storage/db";
 import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
@@ -38,7 +39,7 @@ function setup() {
       status: "running",
       repoId: "infinitary",
     });
-    tasks.recordDelivery(task.id, {
+    seedDelivery(tasks, task.id, {
       headSha: HEAD,
       ci: "red",
       prNumber: 290 + index,
@@ -148,7 +149,7 @@ describe("a main failure's wake (INF-833 Fix 4)", () => {
         throw new Error("the two waiting pull requests were not seeded");
       }
       answer({ kind: "read", sha: LATER, items: [{ name: CHECK, state: "success" }] });
-      tasks.recordDelivery(alreadyGreen.id, { ci: "green", headSha: LATER });
+      seedDelivery(tasks, alreadyGreen.id, { ci: "green", headSha: LATER });
       await poll();
       expect(steers.slice(woken).map((steer) => steer.taskId)).toEqual([stillWaiting.id]);
       expect(steers.at(-1)?.wake.once).toBe(mainCheckPassedOnce(CHECK, LATER));

@@ -465,6 +465,29 @@ describe("compact task record frame", () => {
         closedReason: "settled",
         outcome: result,
         outcomeSummary: "Set up the project Harbour.",
+        // INF-1484 E1: canonical status text must not override the closing result.
+        timeline: [
+          {
+            entry: {
+              schemaVersion: 1,
+              id: `task-event:test:${now - 50_000}`,
+              taskId: "test",
+              at: now - 50_000,
+              actor: { kind: "host" },
+              summary: "settled",
+              content: {
+                kind: "status",
+                version: 1,
+                ref: { source: "task-event", taskId: "test", eventId: now - 50_000 },
+              },
+              aliases: [],
+              links: [],
+              quiet: false,
+            },
+            actorLabel: "Recorded by the app",
+            text: "settled",
+          },
+        ],
         events: [
           event("created", "created", now - 60_000),
           event("status", "settled", now - 50_000),

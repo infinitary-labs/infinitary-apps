@@ -5,6 +5,7 @@ import { FIRSTMATE_SESSION_ID } from "@shared/observe";
 import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { encodeClaudeProjectDir } from "../claude/claudeTranscript";
 import { openInMemoryDatabase } from "../storage/db";
 import { SettingsStore } from "../storage/settingsStore";
@@ -546,7 +547,7 @@ describe("ObserveService", () => {
         shape: { kind: "fix", kind_source: "classifier:test", rigor: "reviewed" },
       }),
     );
-    tasks.recordDelivery("bld1", { reviewVerdict: "findings", reviewRisk: "medium" });
+    seedDelivery(tasks, "bld1", { reviewVerdict: "findings", reviewRisk: "medium" });
     seedTask(
       tasks,
       taskRow({
@@ -612,7 +613,7 @@ describe("ObserveService", () => {
     now += 1_000;
     review("rev1");
     now += 1_000;
-    tasks.recordDelivery("bld1", {
+    seedDelivery(tasks, "bld1", {
       reviewVerdict: "findings",
       reviewRisk: "medium",
       reviewedAt: now,
@@ -626,7 +627,7 @@ describe("ObserveService", () => {
     expect(await reviewOf("rev2")).toBeNull();
     // Its own verdict moves the claim to it.
     now += 1_000;
-    tasks.recordDelivery("bld1", { reviewVerdict: "pass", reviewRisk: "low", reviewedAt: now });
+    seedDelivery(tasks, "bld1", { reviewVerdict: "pass", reviewRisk: "low", reviewedAt: now });
     expect(await reviewOf("rev1")).toBeNull();
     expect(await reviewOf("rev2")).toBe("pass · risk low");
   });

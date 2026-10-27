@@ -18,6 +18,7 @@ import {
 } from "@shared/tasks";
 import type { WorkPosture } from "@shared/workPosture";
 import { describe, expect, it } from "vitest";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { modelReasonOf } from "../routing/modelReason";
 import { servedSlots } from "../routing/router";
 import { ActivityStore } from "../storage/activityStore";
@@ -456,7 +457,8 @@ describe("the task protocol (task-system P3)", () => {
     tick();
     tasks.link("c", "a", "related", "firstmate");
     tick();
-    tasks.recordDelivery(
+    seedDelivery(
+      tasks,
       "a",
       { prUrl: "https://x/pr/1", prNumber: 1 },
       { kind: "pr_opened", text: "PR #1", feed: true },
@@ -1029,7 +1031,7 @@ describe("the task protocol (task-system P3)", () => {
         from = record.id;
       }
       seedTask(f.tasks, { id: "waiting", title: "Ship", status: "idle", worktreeDir: "/wt/w" });
-      f.tasks.recordDelivery("waiting", {
+      seedDelivery(f.tasks, "waiting", {
         headSha: "head-1",
         ci: "red",
         ciRepair: {
@@ -1106,7 +1108,7 @@ describe("the task protocol (task-system P3)", () => {
     expect(board()).toEqual(keys("marked"));
     expect(reader()).toEqual(board());
     // The captain's words pass the merge hold for the task: nothing holds it.
-    tasks.recordDelivery("waiter", {
+    seedDelivery(tasks, "waiter", {
       override: { words: "merge it, no need to wait", holds: ["waits"], until: "task", at: 1 },
     });
     expect(board()).toEqual([]);
@@ -1179,7 +1181,7 @@ describe("the task protocol (task-system P3)", () => {
     const { tasks, protocol } = setup();
     seedTask(tasks, { id: "owner", title: "Fix main", status: "running", worktreeDir: "/wt/o" });
     seedTask(tasks, { id: "waiting", title: "Ship", status: "idle", worktreeDir: "/wt/w" });
-    tasks.recordDelivery("waiting", {
+    seedDelivery(tasks, "waiting", {
       headSha: "head-1",
       ci: "red",
       ciRepair: {
@@ -1203,9 +1205,9 @@ describe("the task protocol (task-system P3)", () => {
     expect(view()).toMatchObject({ blockedBy: [owner], flags: { blocked: false } });
     expect(protocol.detail("waiting").blockedBy).toEqual([owner]);
     // A new head ends the wait by itself; closed work is never named.
-    tasks.recordDelivery("waiting", { headSha: "head-2", ci: "pending" });
+    seedDelivery(tasks, "waiting", { headSha: "head-2", ci: "pending" });
     expect(view()?.blockedBy).toEqual([]);
-    tasks.recordDelivery("waiting", { headSha: "head-1", ci: "red" });
+    seedDelivery(tasks, "waiting", { headSha: "head-1", ci: "red" });
     tasks.close("owner", { status: "done", reason: "merged", actor: "captain" });
     expect(view()?.blockedBy).toEqual([]);
   });
@@ -1232,7 +1234,7 @@ describe("the task protocol (task-system P3)", () => {
     // The same task named by an undated baseline wait loses its time; the
     // edge alone would have said one, so the earliest is not known.
     const baseline = (at?: number) =>
-      tasks.recordDelivery("waiting", {
+      seedDelivery(tasks, "waiting", {
         headSha: "head-1",
         ci: "red",
         ciRepair: {
@@ -1556,14 +1558,16 @@ describe("the task protocol (task-system P3)", () => {
     tick();
     tasks.noteProgress("a", "Opened the change; waiting on the checks.");
     tick();
-    tasks.recordDelivery(
+    seedDelivery(
+      tasks,
       "a",
       { changeLabel: "#422", prNumber: 422, prUrl: "https://github.com/o/r/pull/422" },
       { kind: "pr_opened", text: "PR #422 https://github.com/o/r/pull/422", feed: true },
     );
     for (const ci of ["pending", "pending", "green", "green"] as const) {
       tick();
-      tasks.recordDelivery(
+      seedDelivery(
+        tasks,
         "a",
         { ci, ciAt: 1, headSha: "abc123" },
         { kind: "ci", text: `CI ${ci}` },
@@ -1853,7 +1857,8 @@ describe("the delta carrier (task-system P5)", () => {
       () => tasks.link("c", "a", "related", "firstmate"),
       () => tasks.unlink("c", "a", "related", "firstmate"),
       () =>
-        tasks.recordDelivery(
+        seedDelivery(
+          tasks,
           "a",
           { prUrl: "https://x/pr/1", prNumber: 1 },
           { kind: "pr_opened", text: "PR #1", feed: true },

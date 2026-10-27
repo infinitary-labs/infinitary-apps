@@ -9,6 +9,7 @@ import {
   TASK_DELIVERY_RECORDS_VERSION,
   TASK_EXECUTION_VERSION,
   TASK_POLICIES_VERSION,
+  TASK_RECORD_RETIREMENT_VERSION,
   TASK_REFERENCES_VERSION,
 } from "../../src/core/storage/db";
 import { savedDeliveryReader } from "../../src/core/storage/taskDeliveryFields";
@@ -18,6 +19,7 @@ import { dropViews } from "../../src/core/storage/views";
 import { atUtilityQos } from "../../src/core/utilityQos";
 import { INTEGRATION_KIND_NAMES } from "../../src/shared/integrations";
 import { deliveryForRecord, type RepoDelivery } from "../../src/shared/repos";
+import { taskRecordRetirementReverseSql } from "../helpers/taskRecordRetirement";
 
 /**
  * A profile as an older release saved it (docs/saved-data-compatibility.md,
@@ -82,6 +84,15 @@ export type OlderProfile = {
 export function asSavedByOlderRelease(userDataDir: string): OlderProfile {
   // Each format change is undone newest first, every one opening the
   // database only as far as its own migration, so none runs again.
+  if (existsSync(join(userDataDir, "firstmate.db"))) {
+    const db = openDatabase(userDataDir);
+    try {
+      dropViews(db);
+      db.exec(taskRecordRetirementReverseSql());
+    } finally {
+      db.close();
+    }
+  }
   const history = olderTaskHistory(userDataDir);
   const delivery = olderTaskDelivery(userDataDir);
   const policies = olderTaskPolicies(userDataDir);
@@ -257,7 +268,7 @@ function olderTaskReferences(userDataDir: string): OlderProfile["references"] {
  */
 function olderTaskHistory(userDataDir: string): Pick<OlderProfile, "resultCopies" | "decisions"> {
   if (!existsSync(join(userDataDir, "firstmate.db"))) return { resultCopies: [], decisions: [] };
-  const db = openDatabase(userDataDir);
+  const db = openDatabase(userDataDir, TASK_RECORD_RETIREMENT_VERSION - 1);
   try {
     const resultCopies = db
       .prepare(

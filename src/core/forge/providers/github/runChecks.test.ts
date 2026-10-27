@@ -1,6 +1,7 @@
 import { checksSpanWords } from "@shared/checksSpan";
 import { taskFactsOf } from "@shared/taskFacts";
 import { describe, expect, it } from "vitest";
+import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
 import { RunWatcher } from "../../../orchestrator/runWatch";
 import { WorkflowEvidenceService } from "../../../orchestrator/workflowEvidence";
 import { openInMemoryDatabase } from "../../../storage/db";
@@ -124,7 +125,7 @@ function setup(run: () => typeof RUN) {
     branch: "fm/task-alpha",
   });
   // No pull request yet: the last checks reading found none.
-  tasks.recordDelivery("alpha", { mode: "direct-pr", ci: "no-pr", ciAt: now });
+  seedDelivery(tasks, "alpha", { mode: "direct-pr", ci: "no-pr", ciAt: now });
   const checksWords = () => {
     const view = protocol.board().tasks.find((row) => row.id === "alpha");
     const checks = taskFactsOf(view as never, (m: string) => m).delivery?.checks;
@@ -167,7 +168,7 @@ describe("checks timing for a hand-started run (INF-594)", () => {
     await evidence.read("alpha", { runId: RUN.id });
     expect(checksWords()).toBe("failed after 17m");
 
-    tasks.recordDelivery("alpha", {
+    seedDelivery(tasks, "alpha", {
       prNumber: 999,
       changeLabel: "#999",
       prUrl: "https://github.com/infinitary-labs/infinitary/pull/999",

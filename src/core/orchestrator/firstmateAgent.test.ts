@@ -42,6 +42,7 @@ import {
   type SDKUserMessage,
   scriptedClaudeQuery,
 } from "../../../tests/helpers/scriptedClaudeQuery";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import {
   pageTaskField,
   readPagedTaskQuery,
@@ -2768,7 +2769,7 @@ describe("FirstmateAgent", () => {
         { id: "waiting", title: "Ship the gauge", status: "idle", worktreeDir: "/wt/waiting" },
       ],
     });
-    tasks.recordDelivery("waiting", {
+    seedDelivery(tasks, "waiting", {
       headSha: "head-1",
       ci: "red",
       ciRepair: {

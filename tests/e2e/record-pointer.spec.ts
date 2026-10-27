@@ -21,7 +21,7 @@ test("Activity keeps a native press across live updates, including growing folde
     const detail = await mountPointerRecord(page);
     const report = page.locator('[data-record-event="report"]');
     const summary = report.locator(":scope > summary");
-    const whole = report.locator("[data-record-whole]");
+    const whole = report.locator(":scope > [data-record-whole]");
     const press = async (update: () => Promise<void>) => {
       const box = await summary.boundingBox();
       if (!box) throw new Error("The Activity summary has no pointer target");
@@ -100,6 +100,74 @@ test("Activity keeps a native press across live updates, including growing folde
       await page.keyboard.press("Enter");
       await expect(whole).toBeHidden();
     });
+  } finally {
+    await app.close();
+  }
+});
+
+/** INF-1484 W1: a live Activity repaint must not close retained raw details.
+ * Real TaskService brief, actual Chromium/renderer/keyboard; the existing read bridge
+ * only orders folded action arrivals. No provider, shared effect or device is required.
+ */
+// biome-ignore lint/correctness/noEmptyPattern: Playwright needs the fixture slot for retained proof.
+test("raw details stay open and keep keyboard focus when folded actions change", async ({}, testInfo) => {
+  const app = await launchApp({
+    userDataDir: pointerRecordHome({ revisedBrief: true }),
+    withMockProvider: true,
+  });
+  try {
+    const detail = await mountPointerRecord(app.page);
+    const reading = detail.timeline?.find(
+      (entry) => entry.details !== undefined && entry.entry.content.ref.source === "task-event",
+    );
+    if (reading?.entry.content.ref.source !== "task-event")
+      throw new Error("The real revised brief has no raw source");
+    const eventId = reading.entry.content.ref.eventId;
+    const row = app.page.locator(`[data-timeline-entry="${reading.entry.id}"]`);
+    await pressKey(row.locator(":scope > summary"), "Enter");
+    const raw = row.locator("[data-record-source-details]");
+    const summary = raw.locator(":scope > summary");
+    await pressKey(summary, "Enter");
+    await expect(raw).toHaveAttribute("open", "");
+    await untilFocused(summary);
+    const action = { at: detail.updatedAt + 1, text: "Read the saved search check" };
+    const updated = {
+      ...detail,
+      activityLog: detail.activityLog.map((entry) =>
+        entry.id === eventId ? { ...entry, actions: [action] } : entry,
+      ),
+    };
+    for (const [stage, value] of [
+      ["arrived", updated],
+      ["removed", detail],
+    ] as const) {
+      await pushPointerRecord(app.page, value);
+      await expect(row.locator('[data-record-folded="action"]')).toHaveCount(
+        stage === "arrived" ? 1 : 0,
+      );
+      await expect(raw).toHaveAttribute("open", "");
+      await expect(raw.locator("pre")).toBeVisible();
+      await expect(raw.locator("pre")).toHaveText(reading.details ?? "");
+      await untilFocused(summary);
+      await testInfo.attach(`raw-${stage}`, {
+        body: Buffer.from(
+          JSON.stringify({
+            entry: reading.entry.id,
+            stage,
+            open: (await raw.getAttribute("open")) !== null,
+            focused: await summary.evaluate((node) => node.ownerDocument.activeElement === node),
+            details: await raw.locator("pre").innerText(),
+          }),
+        ),
+        contentType: "application/json",
+      });
+    }
+    // A later repaint must retain an explicit close too, not merely force every panel open.
+    await app.page.keyboard.press("Enter");
+    await expect(raw).not.toHaveAttribute("open", "");
+    await pushPointerRecord(app.page, updated);
+    await expect(raw).not.toHaveAttribute("open", "");
+    await untilFocused(summary);
   } finally {
     await app.close();
   }

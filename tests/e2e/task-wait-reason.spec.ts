@@ -10,6 +10,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { taskHoldWords } from "../../src/shared/taskHold";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { launchApp } from "./launch";
 import { resizeWindow } from "./layout";
 import { heroShot, regionShot } from "./pictures";
@@ -110,7 +111,7 @@ function fixture(): string {
     "chore: seed checks",
   );
   const head = git("rev-parse", "HEAD");
-  tasks.recordDelivery("checks", {
+  seedDelivery(tasks, "checks", {
     mode: "direct-pr",
     prNumber: 57,
     headSha: head,

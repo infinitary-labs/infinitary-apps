@@ -6,6 +6,7 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { launchApp } from "./launch";
 import { regionShot } from "./pictures";
 import { dockRegion, nowFrame, pressRow, recordFrame } from "./rails";
@@ -34,7 +35,7 @@ test("a capped task with its decision card up waits on the captain; one without 
     const worktreeDir = join(userDataDir, "worktrees", id);
     mkdirSync(worktreeDir, { recursive: true });
     seedTask(tasks, { id, title, status: "completed", worktreeDir, outcome: REPORT });
-    tasks.recordDelivery(id, {
+    seedDelivery(tasks, id, {
       headSha: HEAD,
       ci: "red",
       ciRounds: 3,
@@ -115,7 +116,7 @@ test("a first-mate review cap stays working without a captain gate after launch"
     worktreeDir,
     outcome: "The reviewer asks to say likely in the pull request description.",
   });
-  tasks.recordDelivery("review-wording", {
+  seedDelivery(tasks, "review-wording", {
     headSha: HEAD,
     reviewRounds: 3,
     reviewCapAt: Date.now(),

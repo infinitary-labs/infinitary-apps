@@ -174,7 +174,7 @@ export function declareMergeGuidance(
   if (input.impact === "changed-work") {
     const reason =
       "its crewmate declared that the captain's newer guidance changes the approved work";
-    tasks.recordDelivery(taskId, {
+    tasks.recordPermissionRecords(taskId, {
       mergeAuthorization: {
         ...authorization,
         status: "invalidated",
@@ -199,7 +199,7 @@ export function declareMergeGuidance(
     };
   }
   if (input.mark > guidance.declared) {
-    tasks.recordDelivery(taskId, {
+    tasks.recordPermissionRecords(taskId, {
       mergeAuthorization: {
         ...authorization,
         guidance: { ...guidance, declared: input.mark },
@@ -335,7 +335,7 @@ export function declareMergeRepair(
     const versionReadings = { ...latest?.versionReadings };
     if (approvedReading) versionReadings[authorization.approvedHead] = approvedReading;
     if (repairedReading) versionReadings[step.toHead] = repairedReading;
-    tasks.recordDelivery(taskId, {
+    tasks.recordApprovedChangeReading(taskId, {
       mergeAuthorization: {
         ...authorization,
         ...(approvedReading && !authorization.changeReading
@@ -542,7 +542,7 @@ export function decideMergeRepair(
       ],
       assessment,
     };
-    tasks.recordDelivery(builderId, {
+    tasks.recordPermissionRecords(builderId, {
       mergeAuthorization: {
         ...authorization,
         lineage: [...authorization.lineage, step],
@@ -561,7 +561,7 @@ export function decideMergeRepair(
   }
   const reason = assessmentEndReason(verdict);
   const assessed = { ...undecided, assessment };
-  tasks.recordDelivery(builderId, {
+  tasks.recordPermissionRecords(builderId, {
     mergeAuthorization: {
       ...authorization,
       status: "invalidated",

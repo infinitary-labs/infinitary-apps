@@ -11,6 +11,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import { main } from "../scripts/export-corpus.ts";
 import { main as extractDispatchMain } from "../scripts/extract-dispatch-corpus.ts";
 import { scratchDir } from "./helpers/scratchDirs";
+import { seedDelivery } from "./helpers/taskDelivery";
 
 /**
  * The corrected offline export, proven the way the captain's own evidence
@@ -402,8 +403,9 @@ function buildFixture(dir: string): void {
   // The facts the host records on a builder: the PR it opened, the CI
   // rounds it spent, and the verdict its reviewer returned - the last as a
   // `review` timeline event, which is what the phase-4 numbers count.
-  tasks.recordDelivery("t-build", { mode: "direct-pr", prNumber: 7, ciRounds: 2 });
-  tasks.recordDelivery(
+  seedDelivery(tasks, "t-build", { mode: "direct-pr", prNumber: 7, ciRounds: 2 });
+  seedDelivery(
+    tasks,
     "t-build",
     {
       reviewVerdict: "findings",
@@ -425,7 +427,8 @@ function buildFixture(dir: string): void {
     until: "task",
     at,
   });
-  tasks.recordDelivery(
+  seedDelivery(
+    tasks,
     "t-build",
     { override: override(["repairs", "rounds"], 20) },
     {
@@ -436,7 +439,8 @@ function buildFixture(dir: string): void {
       data: { news: true },
     },
   );
-  tasks.recordDelivery(
+  seedDelivery(
+    tasks,
     "t-build",
     { override: undefined },
     {
@@ -447,7 +451,8 @@ function buildFixture(dir: string): void {
       data: { news: true, overrideWithdrawn: override(["repairs", "rounds"], 20) },
     },
   );
-  tasks.recordDelivery(
+  seedDelivery(
+    tasks,
     "t-build",
     { override: override(["repairs"], 30) },
     {

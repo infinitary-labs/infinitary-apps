@@ -56,6 +56,11 @@ export const timelineSourceRefSchema = z.discriminatedUnion("source", [
     messageId: z.number().int(),
   }),
   z.object({
+    source: z.literal("session-observation"),
+    observationId: z.string(),
+    conversation: z.string(),
+  }),
+  z.object({
     source: z.literal("session-action"),
     file: z.string(),
     index: z.number().int(),
@@ -106,6 +111,7 @@ export const TIMELINE_CONTENT_KINDS = [
   "card-seen",
   // A crewmate's kept session.
   "session-action",
+  "session-observation",
 ] as const;
 export type TimelineContentKind = (typeof TIMELINE_CONTENT_KINDS)[number];
 
@@ -153,3 +159,15 @@ export const timelineEntrySchema = z.object({
   aliases: z.array(z.string()),
 });
 export type TimelineEntry = z.infer<typeof timelineEntrySchema>;
+
+/** A read-only plain reading with exact retained details, not a live card or action to run. */
+export const timelineReadingSchema = z.object({
+  entry: timelineEntrySchema,
+  actorLabel: z.string(),
+  /** A folded Activity parent, for presentation only, never a claimed cause. */
+  activityRowId: z.number().int().optional(),
+  text: z.string().nullable(),
+  /** Exact retained raw text, disclosed beneath the plain reading when present. */
+  details: z.string().optional(),
+});
+export type TimelineReading = z.infer<typeof timelineReadingSchema>;

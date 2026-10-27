@@ -875,6 +875,7 @@ export async function createServices(
     | undefined;
   const taskProtocol = new TaskProtocol({
     tasks,
+    timeline: { history: (id) => timeline.history(id) },
     validationEvidence: (taskId, evidence) =>
       readKeptValidationEvidence(evidence, crewmateCardPicturesDir(paths, taskId), taskId),
     repos,
@@ -964,6 +965,7 @@ export async function createServices(
   crewActionsOf = (record) => crewActions.of(record);
   const timeline = new TaskTimeline({
     tasks,
+    modelLabel: (model) => slots.nameOf(parseOfferingKey(model)),
     cards: cardStore,
     actions: (record) => crewActions.sourced(record),
   });
@@ -2260,6 +2262,7 @@ export async function createServices(
     workspace,
     repos,
     tasks,
+    taskTimeline: timeline,
     cardStore,
     ...(knowledge ? { knowledge } : {}),
     inbox,

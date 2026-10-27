@@ -293,3 +293,12 @@ The migration makes no consent: a permission is only one the profile already hel
 An unreadable delivery or settle stays where it was saved, read as before.
 An older build refuses the profile, because its migration history names a migration it does not know ("Before services start").
 A record export carries the same delivery facts as before, with no permission, so an import either way grants nothing.
+
+## Retiring mixed task storage
+
+The task-record retirement migration switches specification and remaining shape writers transactionally before services start.
+Immutable specifications keep the current older words without fabricating an earlier author or timestamp; future edits retain their earlier revisions.
+Typed family records replace the mixed shape column, while unknown older shape fields and unreadable evidence remain preserved.
+Superseded execution copies and mixed task columns are removed only after their consumers use the owned records or the read-only compatibility projection.
+Older-format imports remain supported; specification histories in newer exports preserve their revision order through local identity remapping.
+This is a forward migration, not permission to open the profile with an older app or to reverse it over subsequent work.

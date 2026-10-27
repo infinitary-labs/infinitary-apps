@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { taskRecordRetirementReverseSql } from "../../../tests/helpers/taskRecordRetirement";
 import { renderWake } from "../orchestrator/wakes";
 import { CardStore } from "./cardStore";
 import { openDatabase } from "./db";
 import { InboxStore } from "./inboxStore";
+import { dropViews } from "./views";
 
 describe("migration 73 retires saved keep-open choices", () => {
   it("upgrades open cards and pending messages without touching history, and keeps exact undo rows", () => {
@@ -57,6 +59,8 @@ describe("migration 73 retires saved keep-open choices", () => {
     });
     const history = cards.history("open");
     const observations = cards.observations("open");
+    dropViews(before);
+    before.exec(taskRecordRetirementReverseSql());
     before.exec(`
       ALTER TABLE cards DROP COLUMN holds_place;
       ALTER TABLE inbox DROP COLUMN cuts;

@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { Card } from "../../shared/cards";
 import { type AppPaths, crewmateHandoverDir, crewmateTempDir } from "../paths";
 import { InboxStore } from "../storage/inboxStore";
@@ -140,7 +141,7 @@ describe("handed-on result completion", () => {
   it("keeps a task-owned pull request on its normal delivery path", async () => {
     const { tasks, service } = fixture("change");
     tasks.recordResultHandoff("finder", { taskId: "builder" });
-    tasks.recordDelivery("finder", { prNumber: 497 });
+    seedDelivery(tasks, "finder", { prNumber: 497 });
     expect(await service.closeAnswerUsedAsBasis("finder")).toMatchObject({ ok: false });
     expect(tasks.get("finder")?.status).toBe("active");
   });

@@ -15,6 +15,7 @@ import {
 } from "../../src/shared/routingPolicy";
 import type { PlanItem } from "../../src/shared/taskPlan";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 
 type ModelExample = { provider: string; id: string; label: string };
 
@@ -190,12 +191,14 @@ export async function crewRoster(count: number, options: CrewRosterOptions = {})
     if (change) {
       const label = `#${change.prNumber}`;
       const prUrl = `https://github.com/example/crew/pull/${change.prNumber}`;
-      tasks.recordDelivery(
+      seedDelivery(
+        tasks,
         `${idPrefix}-${i}`,
         { mode: "direct-pr", prNumber: change.prNumber, changeLabel: label, prUrl },
         { kind: "pr_opened", text: `opened ${label}` },
       );
-      tasks.recordDelivery(
+      seedDelivery(
+        tasks,
         `${idPrefix}-${i}`,
         {
           ci: change.ci,

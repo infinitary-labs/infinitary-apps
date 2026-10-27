@@ -9,6 +9,7 @@ import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { keptRefFor } from "../../src/core/workspace/workspaceService";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { launchApp, SHORT_TICK } from "./launch";
 import { seedHostedOrigins } from "./projectSeed";
@@ -55,7 +56,7 @@ for (const complete of [true, false]) {
       worktreeDir,
       branch,
     });
-    tasks.recordDelivery(taskId, {
+    seedDelivery(tasks, taskId, {
       prNumber: 71,
       prUrl: "https://github.com/o/hosted/pull/71",
       headSha: head,

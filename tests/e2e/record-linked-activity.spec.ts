@@ -10,6 +10,7 @@ import { TaskService } from "../../src/core/tasks/taskService";
 import type { TaskDetail } from "../../src/shared/tasks";
 import { scratchDir } from "../helpers/scratchDirs";
 import type { ScriptedCall } from "../helpers/scriptedCalls";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { waitForFirstmateIdle } from "./crew";
 import { seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { type LaunchedApp, launchApp } from "./launch";
@@ -79,7 +80,8 @@ function seeded() {
     worktreeDir,
     branch,
   });
-  tasks.recordDelivery(
+  seedDelivery(
+    tasks,
     "fix",
     { prNumber: CHANGE.number, changeLabel: `#${CHANGE.number}` },
     { kind: "pr_opened", text: `PR #${CHANGE.number}` },

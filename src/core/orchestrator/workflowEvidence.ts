@@ -123,7 +123,7 @@ export class WorkflowEvidenceService {
       failureSeen: false,
     };
     if (!existing) {
-      this.options.tasks.recordDelivery(taskId, { runWatches: [...watches, watch] });
+      this.options.tasks.recordChangeEvidence(taskId, { runWatches: [...watches, watch] });
       this.options.tasks.note(taskId, `Started watching ${watch.name} (run ${runId}).`, {
         news: false,
       });
@@ -141,7 +141,7 @@ export class WorkflowEvidenceService {
     if (runFinished(run)) {
       if (existing) {
         recordRunChecks(this.options.tasks, taskId, run, now);
-        this.options.tasks.recordDelivery(taskId, {
+        this.options.tasks.recordChangeEvidence(taskId, {
           runWatches: watches.filter((w) => w.runId !== run.id),
         });
         this.options.tasks.note(
@@ -165,7 +165,7 @@ export class WorkflowEvidenceService {
       // A crewmate reading the failure itself already knows: suppress that early wake only.
       failureSeen: existing?.failureSeen === true || failedRunJobs(list).length > 0,
     };
-    this.options.tasks.recordDelivery(taskId, {
+    this.options.tasks.recordChangeEvidence(taskId, {
       runWatches: [...watches.filter((w) => w.runId !== run.id), watch],
     });
     if (!existing)

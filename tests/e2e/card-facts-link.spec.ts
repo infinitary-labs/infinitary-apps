@@ -9,6 +9,7 @@ import { type Card, SETTLE_FACTS_OPEN } from "../../src/shared/cards";
 import { checksRestWords, checksSpanOf, checksSpanWords } from "../../src/shared/checksSpan";
 import { CHECK_WORDS } from "../../src/shared/vocabulary";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { atRest, holdPointer } from "./layout";
@@ -90,7 +91,7 @@ test("a press on the fact strip's pull request link opens it though the strip re
     });
     // The strip names when they started and when they were read, which the
     // host's own refreshes leave as they are while the test runs.
-    tasks.recordDelivery(TASK, delivery);
+    seedDelivery(tasks, TASK, delivery);
     new CardStore(db).upsert(mergeCard());
   } finally {
     db.close();

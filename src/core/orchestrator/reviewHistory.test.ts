@@ -6,6 +6,7 @@
 import type { LiveValidation, ValidationScenario } from "@shared/liveValidation";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { renderReviewBrief } from "./intentBrief";
@@ -102,10 +103,11 @@ function inf812(observedReason: string) {
     parentId: "builder",
     shape: { kind: "review", kind_source: "host:review", basis: "builder" } as never,
   });
-  tasks.recordDelivery("builder", { liveValidation: proof(observedReason) });
+  seedDelivery(tasks, "builder", { liveValidation: proof(observedReason) });
   tick();
   tasks.recordReport("review", { text: `verdict: findings\n${F5}\n${F6}\nrisk: medium` });
-  tasks.recordDelivery(
+  seedDelivery(
+    tasks,
     "builder",
     { reviewVerdict: "findings", reviewSha: FIRST },
     { kind: "review", text: "review findings", data: { reviewTaskId: "review" } },
@@ -137,7 +139,8 @@ function inf812(observedReason: string) {
   });
   tick(10_000);
   tasks.recordReport("review", { text: `verdict: findings\n${F7}\nrisk: medium` });
-  tasks.recordDelivery(
+  seedDelivery(
+    tasks,
     "builder",
     { reviewVerdict: "findings", reviewSha: SECOND },
     { kind: "review", text: "review findings", data: { reviewTaskId: "review" } },

@@ -3,6 +3,22 @@
 The task as a record (task-system P0) and the wire protocol over it (P3).
 `docs/architecture.md` §19 summarizes the whole task system; capture is `docs/task-capture.md`, the graph `docs/task-graph.md`, retention `docs/task-retention.md`.
 
+## Specifications and composed records
+
+The task core references its current immutable `task_specifications` revision through `specification_id` (INF-1296 piece 5).
+A specification holds the authored goal, intent and prompt; a scope edit writes a revision rather than changing earlier words.
+The migration records the current older specification without inventing when it was authored or who authored it.
+A later scope-edit event names its specification revision and keeps the existing `journal` retention mark, so compaction cannot remove that reference.
+Export includes earlier revisions and any raw current specification the compatible task line cannot reproduce exactly.
+Import remaps their local identities while preserving revision order and the current reference.
+The remaining work-shape families live in `task_contracts`, `task_programs`, `task_workspace_facts`, `task_placement_requests` and `task_routing_requests`; unknown older fields remain in `task_legacy_shapes`, not a new permission source.
+`task_record_history` retains the closed policy snapshot, older result copy and unreadable older evidence.
+The internal read-only `task_records` view assembles these sources under the older column names for compatible consumers; it is neither another writer nor a published SQL surface.
+The task row no longer has the specification, shape, delivery or superseded execution columns.
+The typed scheduling columns and the existing activity/assignment/outcome indexes remain on the task row; they are not a generic operational payload.
+`TaskService` coordinates all writes in the existing transaction, through named evidence, permission, validation, execution and task operations.
+The former public `recordDelivery` field bag is private; fixture injection of older mixed records lives only in the test helper.
+
 ## Conversations on a task
 
 `TaskService.setSessionFile` commits the current resume pointer and its `task_sessions` association together.
@@ -21,6 +37,11 @@ Unrecorded files have no model, account, reason or timestamps; their computer na
 Files still held only on an unreachable computer are not enumerated by this fallback.
 Recorded associations remain available without a readable transcript and survive task closure, timeline compaction, restart and JSONL record export/import.
 Only erasing an unstarted task or the D-13 purge removes their rows, through `TaskService`.
+New lifecycle observations retain changed supplied facts beside their conversation reference in immutable `task_session_observations` rows.
+A change to the conversation, file, computer or device, provider, model or account appends an observation; an unchanged turn-end reading only refreshes the conversation association's last activity.
+Restoring observations by their recorded identities preserves identical historical rows rather than deduplicating retained evidence.
+They share the session writer and its transaction without adding bookkeeping to the legacy task-event stream.
+They do not copy resume tokens or reconstruct older assignments from the changing conversation row.
 
 ## A task's execution record
 
@@ -30,7 +51,7 @@ The resume binding is the opaque token the backend resumes from (`session_file`)
 `TaskService.sessions` marks current the conversation the binding names, or for a token with none the conversation its file is.
 `TaskStore` is the one writer, beneath `TaskService`, and a record still reads every one of these facts under the field it read before (`sessionFile`, `deviceId`, `accountId`, `placement`, `idleSince`, the `recovery*` fields, `startNotice`, and the turn's declarations on `delivery`), so no reader changed.
 A write of a task's whole delivery facts replaces the turn's declarations with the ones it carries, as the delivery column did before them.
-The task row's older columns stay empty until a later migration retires them; `activity`, `assignee`, `model` and `started_at` stay on the task row, because the published views and the feed read them there, as do the scheduling facts already typed on it (`priority`, `start_policy`, `gate`, `test_path`).
+The task row's older execution columns are retired; `activity`, `assignee`, `model` and `started_at` stay on the task row, because the published views and the feed read them there, as do the scheduling facts already typed on it (`priority`, `start_policy`, `gate`, `test_path`).
 A record export carries the binding's `conversation` on the task's line; an export an older build wrote imports with the conversation named as the migration names it.
 
 ## The idle clock
@@ -216,9 +237,20 @@ Every task event kind and card observation kind maps to exactly one content kind
 Two records are read as one entry only where an owner named them the same occurrence: a card's thread reference folds into its thread line, and a card choice event that names its card evidence (`card_resolved`'s `data.observation`, written since INF-1296) folds into that evidence as an alias.
 Nothing is folded on matching words or nearby times, so an older choice that names no evidence stays visible from both owners.
 Links are the owners' own: a choice, close or thread line replies to its offer, an offer revises the one it replaced, an effect's receipt names the interaction that caused it, and an event about another task names that task and how it stands.
+Task events retain a task-scoped stable source identity through export/import, independently of remapped numeric storage ids.
 The order is stable: undated entries first, then by time, then by source (task events, card evidence, thread lines, actions), then by each source's own order.
-`read` pages that order behind a cursor holding the cut it was taken at, so a page never shifts when later entries arrive; `expand` opens one entry's exact source record, or says it is gone or not this task's.
-Nothing in a view reads the timeline yet; Activity, the record and the by-key `tasks` read keep their own readers.
+`read` pages that order behind a cursor holding the cut it was taken at, and an incomplete agent timeline field read retains its first cut until its final transport page, so later entries cannot shift or repeat a page; `expand` opens one entry's exact source record, or says it is gone or not this task's.
+Activity reads `TaskDetail.timeline`; an agent explicitly requesting `field: "timeline"` receives the same normalized headers with their exact typed source records.
+Ordinary by-key reads do not load or include timeline bodies.
+The query tool retains its most recent incomplete timeline field read under the task's canonical id, so its key and id share a captured cut.
+Completing that read releases it; starting another timeline read replaces it, and a superseded continuation explicitly asks to restart from the first offset rather than combining cuts.
+The earlier `events`, `activityLog`, reports, decisions and sessions fields remain compatible focused projections.
+Activity keeps the existing condensed event rows, interleaves card evidence, thread lines, brief receipts and retained conversation actions, and exposes folded sources through native keyboard disclosures.
+The displayed author distinguishes the captain, agents, the app and a card script; an unknown time says Undated.
+A historical offer opens its retained words, never the latest card body, and historical actions have no live controls.
+Revised briefs, conversation observations and script choices lead with plain text; where the source carries raw data, `TimelineReading.details` keeps it in a further keyboard-reachable disclosure.
+A closing question answer or operation result takes precedence over its status source's shorter text when no report already carries that outcome.
+An unavailable source is explicit; opening history grants nothing, changes no permission and repeats no effect.
 
 ## Starting dropped work again
 
@@ -305,9 +337,9 @@ The shared task facts carry it as `plan` after `now` (`taskFactsOf`), labelled P
 
 A task's Activity (`TaskDetail.activityLog`, `condenseActivity` in `src/core/tasks/recordActivity.ts`) holds every event of its timeline in time order, read in plain words from typed fields only, never from the words.
 It also holds the events of other tasks that concern it, each a row in its time ("Whom an event concerns" below).
-Nothing is left out but evidence: a minor event folds under the next row of the task's own, the one it led to, and what no row followed yet folds under the newest of them.
+The compatible `activityLog` projection folds a minor event under the next row of the task's own, the one it led to, and what no row followed yet folds under the newest of them.
 A row carries what folded under it as `folded`, oldest first, and on the record its line opens to them (the design skill's TaskRecord, "Activity lines that open").
-What the crewmate did folds the same way, read from its kept session rather than the timeline ("A crewmate's actions").
+The compatible projection keeps its older folded action summaries; Activity itself reads those actions from the common timeline, without a second displayed copy.
 The timeline itself stays whole on `TaskDetail.events`.
 An answer given on a card is stored as the card's body (`FileQuestionInput`, `recordAnswer`), so `TaskDetail.outcome` reads it as the card's words (`cardWords` in `src/shared/cardWords.ts`), and the line that closed the task opens to those words, never to the markup.
 The `tasks` query keeps the body, and the record's Cards row opens the card itself.

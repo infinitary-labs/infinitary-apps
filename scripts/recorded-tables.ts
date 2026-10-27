@@ -74,7 +74,7 @@ function readTablesDatabase(path: string): RecordedTables {
     const tables = emptyTables();
     for (const name of RECORDED_TABLE_NAMES) {
       if (!present.has(name)) continue;
-      tables[name] = db.prepare(`SELECT * FROM ${name}`).all() as TableRow[];
+      tables[name] = db.prepare(`SELECT * FROM ${name === "tasks" && present.has("task_records") ? "task_records" : name}`).all() as TableRow[];
     }
     // A task's shape as the app reads it, its references in it.
     const shapeOf = savedShapeReader(db);

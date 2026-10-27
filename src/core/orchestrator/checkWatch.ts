@@ -191,7 +191,9 @@ export class CheckWatcher {
     // A new push whose checks are running gets the existing bounded watch.
     // Same-head reruns only refresh the display, as do settled readings.
     if (read.kind === "pending" && read.head !== head) {
-      this.host.tasks.recordDelivery(taskId, { ciWatch: armWatch(undefined, read.head, now) });
+      this.host.tasks.recordChangeEvidence(taskId, {
+        ciWatch: armWatch(undefined, read.head, now),
+      });
     }
   }
 
@@ -314,7 +316,7 @@ export class CheckWatcher {
     const same = (a: CiWatch) => a.head === standing.head && a.since === standing.since;
     if (!same(started) && !same(watch)) return;
     const sameHead = standing.head === watch.head && standing.since === watch.since;
-    this.host.tasks.recordDelivery(taskId, {
+    this.host.tasks.recordChangeEvidence(taskId, {
       ciWatch: {
         ...watch,
         ...(watch.failureSeen || (sameHead && standing.failureSeen) ? { failureSeen: true } : {}),
@@ -344,7 +346,7 @@ export class CheckWatcher {
   }
 
   private clear(taskId: string): void {
-    this.host.tasks.recordDelivery(taskId, { ciWatch: undefined });
+    this.host.tasks.recordChangeEvidence(taskId, { ciWatch: undefined });
   }
 
   private watchOf(taskId: string): CiWatch | undefined {

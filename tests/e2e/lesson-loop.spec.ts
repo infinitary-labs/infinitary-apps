@@ -56,7 +56,7 @@ function tasksOf(userDataDir: string): TaskRow[] {
   return readSavedData(userDataDir, (db) =>
     db
       .prepare(
-        "SELECT id, title, status, shape_json AS shape, closed_reason AS reason FROM tasks WHERE kind = 'work' ORDER BY created_at",
+        "SELECT id, title, status, shape_json AS shape, closed_reason AS reason FROM task_records WHERE kind = 'work' ORDER BY created_at",
       )
       .all(),
   ) as TaskRow[];

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { renderTasksQueryResult } from "../pi/taskTools";
 import { DATABASE_VERSION, openDatabase, openInMemoryDatabase } from "../storage/db";
+import { TaskSessionStore } from "../storage/taskSessionStore";
 import { exportTaskRecords, parseTaskExport } from "./taskExport";
 import { queryTasks } from "./taskQuery";
 import { TaskService } from "./taskService";
@@ -43,6 +44,57 @@ function facts(file: string, began = "start") {
 }
 
 describe("task conversation associations (INF-1288)", () => {
+  // INF-1484 E2: completed turns reread the same supplied facts; only transitions are history.
+  it.each([
+    ["file", { file: "/work/moved/pi-1.jsonl" }, undefined],
+    ["computer", { computer: "Home computer" }, undefined],
+    ["device", { device_id: "home" }, undefined],
+    ["provider", { provider: "anthropic-claude" }, undefined],
+    ["model", { model: "gpt-6" }, undefined],
+    ["account", { account_id: "home-account" }, undefined],
+    ["conversation", {}, "5f0c2a4e-1111-4222-8333-944455556666"],
+  ] as const)("records a changed %s but not identical turn-end facts", (_field, changed, token) => {
+    const { db, tasks, advance } = setup();
+    const file = "/work/crewmates/crew/sessions/pi-1.jsonl";
+    tasks.setSessionFile("crew", file, facts(file));
+    const original = tasks.sessionObservations("crew");
+    advance();
+    tasks.setSessionFile("crew", file, facts(file, "resume"));
+    expect(tasks.sessionObservations("crew")).toEqual(original);
+    expect(tasks.recordedSessions("crew")[0]?.last_at).toBe(1_100);
+    advance();
+    tasks.setSessionFile("crew", token ?? file, { ...facts(file), ...changed });
+    expect(tasks.sessionObservations("crew")).toHaveLength(2);
+    advance();
+    tasks.setSessionFile("crew", file, facts(file));
+    const restored = tasks.sessionObservations("crew");
+    expect(restored).toHaveLength(3);
+    expect(restored[0]).toEqual(original[0]);
+    advance();
+    tasks.setSessionFile("crew", file, facts(file));
+    expect(tasks.sessionObservations("crew")).toEqual(restored);
+    db.close();
+  });
+
+  it("restores identical historical observations without applying prospective deduplication", () => {
+    const { db, tasks } = setup();
+    const file = "/work/crewmates/crew/sessions/pi-1.jsonl";
+    tasks.setSessionFile("crew", file, facts(file));
+    const first = tasks.sessionObservations("crew")[0];
+    if (!first) throw new Error("The initial supplied facts were not observed");
+    const { id: _id, seq: _seq, taskId: _task, ...retained } = first;
+    new TaskSessionStore(db).observe("crew", retained, "retained-duplicate-observation");
+    const lines = exportTaskRecords(tasks, 2_000);
+    const other = openInMemoryDatabase();
+    const imported = new TaskService({ db: other });
+    imported.importRecords(parseTaskExport(lines));
+    expect(imported.sessionObservations("crew")).toHaveLength(2);
+    expect(exportTaskRecords(imported, 2_000)).toEqual(lines);
+    imported.setSessionFile("crew", file, facts(file));
+    expect(imported.sessionObservations("crew")).toHaveLength(2);
+    other.close();
+    db.close();
+  });
   it("retains one row across turns, restarts and model changes, with a separate row for a replacement", () => {
     const { db, tasks, advance } = setup();
     const pi = "/work/crewmates/crew/sessions/2026-09-26_pi-1.jsonl";

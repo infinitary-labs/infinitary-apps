@@ -102,6 +102,11 @@ import type { AppDatabase } from "../storage/db";
 import { type ProjectRecord, ProjectStore } from "../storage/projectStore";
 import { sessionFilesIn } from "../storage/sessionReader";
 import {
+  HISTORY_FIELDS,
+  PERMISSION_COLUMNS,
+  type PermissionField,
+} from "../storage/taskDeliveryFields";
+import {
   type ConcernedTaskEvent,
   type InsertTaskEvent,
   type TaskConcern,
@@ -110,6 +115,7 @@ import {
   type TaskEventActor,
   TaskEventStore,
 } from "../storage/taskEventStore";
+import { TURN_DECLARATION_FIELDS } from "../storage/taskExecutionStore";
 import { type TaskLink, TaskLinkStore, type TaskLinkType } from "../storage/taskLinkStore";
 import {
   REFERENCE_SHAPE_FIELDS,
@@ -820,6 +826,28 @@ function sameLink(a: TaskLink, b: TaskLink): boolean {
   return a.fromId === b.fromId && a.toId === b.toId && a.type === b.type;
 }
 
+/** A committed observation accompanying an owner-specific record write. */
+export type DeliveryObservation = {
+  kind: "ci" | "pr_opened" | "review" | "cap_reset" | "note";
+  text: string;
+  feed?: boolean;
+  actor?: TaskEventActor;
+  /**
+   * Provenance that rides the timeline event but is no delivery fact:
+   * which review a verdict came from (the replay scorer reads it).
+   */
+  data?: Record<string, unknown>;
+};
+export type ChangeEvidenceUpdate = Partial<
+  Omit<
+    TaskDelivery,
+    | PermissionField
+    | (typeof TURN_DECLARATION_FIELDS)[number]
+    | (typeof HISTORY_FIELDS)[number]
+    | "liveValidation"
+  >
+>;
+
 export class TaskService {
   private readonly db: AppDatabase;
   private readonly store: TaskStore;
@@ -957,6 +985,10 @@ export class TaskService {
   }
 
   /** One timeline event by its id, whatever its task; undefined once it is gone. */
+  eventByIdentity(identity: string): TaskEvent | undefined {
+    return this.events.byIdentity(identity);
+  }
+
   event(eventId: number): TaskEvent | undefined {
     return this.events.get(eventId);
   }
@@ -2233,6 +2265,10 @@ export class TaskService {
         text: update.verdict ? update.verdict : `updated: ${changes.join(", ")}`,
         data: {
           changes: patch,
+          ...(("goal" in update || "prompt" in update || "intent" in update) &&
+          this.store.specifications.exists()
+            ? { specificationRevision: this.store.specifications.revision(id), journal: true }
+            : {}),
           ...(update.verdict ? { ledger: "verdict" } : {}),
           news: true,
         },
@@ -3032,11 +3068,36 @@ export class TaskService {
         });
       }
       this.patch(id, { sessionFile, updatedAt: now });
+      if (sessionFile && facts)
+        this.conversations.observe(id, {
+          ...facts,
+          conversation: conversationOf(sessionFile),
+          observed_at: now,
+        });
     });
     run();
   }
 
   /** Durable rows only, for record export without inferred folder metadata. */
+  specificationFor(event: TaskEvent) {
+    const revision = event.data?.specificationRevision;
+    return typeof revision === "number" && this.store.specifications.exists()
+      ? this.store.specifications.at(event.taskId, revision)
+      : undefined;
+  }
+
+  recordedSpecifications(id: string) {
+    return this.store.specifications.exists() ? this.store.specifications.history(id) : [];
+  }
+
+  sessionObservations(id: string) {
+    return this.conversations.observations(id);
+  }
+
+  sessionObservation(id: string) {
+    return this.conversations.observation(id);
+  }
+
   recordedSessions(id: string): TaskSession[] {
     return this.conversations.list(id);
   }
@@ -3676,7 +3737,7 @@ export class TaskService {
         at: this.now(),
         deviceId: task.deviceId ?? null,
       });
-      this.recordDelivery(
+      this.writeDeliveryRecords(
         id,
         { liveValidation },
         {
@@ -3724,7 +3785,7 @@ export class TaskService {
         item.state = "expired";
         liveValidation.stateRevision = (liveValidation.stateRevision ?? 0) + 1;
       }
-      this.recordDelivery(
+      this.writeDeliveryRecords(
         id,
         { liveValidation },
         { kind: "note", text: reason, data: { validationDecisionExpired: { card, offer } } },
@@ -3743,7 +3804,7 @@ export class TaskService {
         ...input,
         at: this.now(),
       });
-      this.recordDelivery(
+      this.writeDeliveryRecords(
         id,
         { liveValidation },
         {
@@ -3760,20 +3821,46 @@ export class TaskService {
    * Delivery facts as they become known: a CI read, an opened PR. The mode
    * comes from the repo posture when the row has none yet.
    */
-  recordDelivery(
+  recordChangeEvidence(id: string, facts: ChangeEvidenceUpdate, event?: DeliveryObservation): void {
+    const elsewhere = [
+      ...Object.keys(PERMISSION_COLUMNS),
+      ...TURN_DECLARATION_FIELDS,
+      ...HISTORY_FIELDS,
+      "liveValidation",
+    ];
+    if (elsewhere.some((field) => Object.hasOwn(facts, field)))
+      throw new Error("Change evidence cannot write permissions, turn declarations or history.");
+    this.writeDeliveryRecords(id, facts, event);
+  }
+
+  /** The permission owner's typed records; no evidence or execution patch can travel with them. */
+  recordPermissionRecords(
+    id: string,
+    records: Partial<Pick<TaskDelivery, PermissionField>>,
+    event?: DeliveryObservation,
+  ): void {
+    if (Object.keys(records).some((field) => !Object.hasOwn(PERMISSION_COLUMNS, field)))
+      throw new Error("A permission write can only replace permission records.");
+    this.writeDeliveryRecords(id, records, event);
+  }
+
+  /** Bind the reading to the exact approval and version in the same transaction. */
+  recordApprovedChangeReading(
+    id: string,
+    reading: Pick<TaskDelivery, "mergeAuthorization" | "versionReadings">,
+  ): void {
+    this.writeDeliveryRecords(id, reading);
+  }
+
+  /** A resolved wait ends in execution, never in a historical report. */
+  clearCaptainWait(id: string): void {
+    this.writeDeliveryRecords(id, { captainWait: undefined });
+  }
+
+  private writeDeliveryRecords(
     id: string,
     patch: Partial<TaskDelivery>,
-    event?: {
-      kind: "ci" | "pr_opened" | "review" | "cap_reset" | "note";
-      text: string;
-      feed?: boolean;
-      actor?: TaskEventActor;
-      /**
-       * Provenance that rides the timeline event but is no delivery fact:
-       * which review a verdict came from (the replay scorer reads it).
-       */
-      data?: Record<string, unknown>;
-    },
+    event?: DeliveryObservation,
   ): void {
     const at = this.now();
     const run = this.write(() => {
@@ -4073,7 +4160,7 @@ export class TaskService {
   declareRequiredActions(id: string, offer: RequiredActionOffer, immediate = false): void {
     this.write(() => {
       const actions = this.validateRequiredActions(id, offer.actions);
-      this.recordDelivery(id, { requiredActionOffer: { ...offer, actions } });
+      this.writeDeliveryRecords(id, { requiredActionOffer: { ...offer, actions } });
       if (immediate) this.activateRequiredActions(id);
     })();
   }
@@ -4152,7 +4239,7 @@ export class TaskService {
         presentedGeneration: prior?.presentedGeneration ?? 0,
         activatedAt: prior?.activatedAt ?? this.now(),
       };
-      this.recordDelivery(id, { captainAction: state });
+      this.writeDeliveryRecords(id, { captainAction: state });
       const first = state.requirements[0]?.action;
       if (first)
         this.patch(id, {
@@ -4198,14 +4285,14 @@ export class TaskService {
       state: "ready",
       presentedGeneration: action.generation,
     };
-    this.recordDelivery(id, { captainAction: next });
+    this.writeDeliveryRecords(id, { captainAction: next });
     return next;
   }
 
   deferCaptainAction(id: string): void {
     const action = this.get(id)?.delivery?.captainAction;
     if (!action || this.get(id)?.status !== "open") return;
-    this.recordDelivery(id, { captainAction: { ...action, state: "deferred" } });
+    this.writeDeliveryRecords(id, { captainAction: { ...action, state: "deferred" } });
   }
 
   /** Only the host's human button or a fresh typed observation can finish this operation. */
@@ -4229,7 +4316,7 @@ export class TaskService {
       )
         return false;
       const next: CaptainAction = { ...action, state: mode, completedAt: this.now() };
-      this.recordDelivery(id, { captainAction: next });
+      this.writeDeliveryRecords(id, { captainAction: next });
       this.close(id, {
         status: "done",
         reason: "answered",
@@ -4300,7 +4387,8 @@ export class TaskService {
           const { dependencyTask: _dependency, ...kept } = diagnosis;
           return kept;
         });
-        if (baselineRemoved) this.recordDelivery(toId, { ciRepair: { ...repair, diagnoses } });
+        if (baselineRemoved)
+          this.writeDeliveryRecords(toId, { ciRepair: { ...repair, diagnoses } });
       }
       const removed = edgeRemoved || baselineRemoved;
       if (removed) {
@@ -4518,6 +4606,10 @@ export class TaskService {
         this.projects.raiseNextSeq(record.projectId, record.seq + 1);
         this.touch(record.id);
       }
+      for (const { taskId, specifications } of bundle.specifications ?? []) {
+        if (!incoming.has(taskId)) refuse(`A specification names an unknown task: ${taskId}`);
+        this.store.specifications.restore(taskId, specifications);
+      }
       // As exported: a recorded relationship keeps who recorded it and the
       // task it resolved to; a shape's name from an older export resolves
       // now, against this record, with who and when unknown.
@@ -4535,6 +4627,12 @@ export class TaskService {
         if (!incoming.has(taskId)) throw new Error(`Session names an unknown task: ${taskId}`);
         this.conversations.record(taskId, session);
       }
+      for (const { taskId, observation } of bundle.sessionObservations ?? []) {
+        if (!incoming.has(taskId)) refuse(`A session observation names an unknown task: ${taskId}`);
+        const { id, ...facts } = observation;
+        this.conversations.observe(taskId, facts, id);
+      }
+
       // A resume binding names its conversation once the conversations are in.
       const exported = new Map(
         (bundle.conversations ?? []).map(({ taskId, conversation }) => [taskId, conversation]),

@@ -522,7 +522,7 @@ export const TASKS_QUERY_TOOL_NAME = "tasks";
 export const TASKS_QUERY_TOOL_DESCRIPTION = [
   "Beyond context: key/task_id, kind/status/title/project, parent/blockers/blocked tasks/children, ready/wait; no bodies.",
   "Filters: project/status/key/id/title/goal/parent.",
-  "Key reads: ordered reports, last card, decisions, resolution offer/action/answers, brief, validation/review, sessions, earlier attempt.",
+  "Key reads: reports, cards, choices, brief, checks/reviews, sessions, earlier attempt. Timeline and exact sources only with field: timeline.",
   "Resolution is facts; HANDOFF governs authorization. History grants none; later reports preserve prior specs.",
   "Paging names remaining fields/lengths; identical card bodies appear once.",
 ].join(" ");
@@ -765,7 +765,13 @@ const TASKS_QUERY_OBJECT = Type.Object(TASKS_QUERY_PARAMETERS);
  */
 const PROJECTS_PARAMETER = Type.Optional(Type.Boolean({ description: "List project folders" }));
 
+export const TIMELINE_PAGING_RESTART =
+  "This timeline read is no longer retained. Read field timeline from offset 1.";
+
 function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTasks"]>) {
+  // Retain only this tool's most recent incomplete field read, by canonical id.
+  // A new read supersedes the previous one; never combine pages from different cuts.
+  const timelines = new Map<string, TaskQueryRow>();
   return async (
     params: Static<typeof TASKS_QUERY_OBJECT> & { projects?: boolean },
     signal?: AbortSignal,
@@ -776,26 +782,45 @@ function tasksQueryRun(onQueryTasks: NonNullable<CrewmateToolDelegate["onQueryTa
     if (params.offset !== undefined && !params.field) {
       return { text: "offset applies only with a field." };
     }
-    const result = await callWithSignal(
-      onQueryTasks,
-      [
-        {
-          ...(params.project ? { project: params.project } : {}),
-          ...(params.status ? { status: params.status as TaskStatus | "live" | "closed" } : {}),
-          ...(params.key ? { key: params.key } : {}),
-          ...(params.text ? { text: params.text } : {}),
-          ...(params.parent ? { parent: params.parent } : {}),
-          ...(params.limit !== undefined ? { limit: params.limit } : {}),
-          ...(params.projects ? { projects: true } : {}),
-        },
-      ],
-      signal,
-    );
+    const continuing = params.field === "timeline" && (params.offset ?? 1) > 1;
+    const retained = timelines.values().next().value;
+    const snapshot =
+      continuing &&
+      retained &&
+      params.key &&
+      (retained.task_id === params.key || retained.key === params.key.toUpperCase())
+        ? timelines.get(retained.task_id)
+        : undefined;
+    if (continuing && !snapshot) return { text: TIMELINE_PAGING_RESTART };
+    const result = snapshot
+      ? { rows: [snapshot], total: 1 }
+      : await callWithSignal(
+          onQueryTasks,
+          [
+            {
+              ...(params.project ? { project: params.project } : {}),
+              ...(params.status ? { status: params.status as TaskStatus | "live" | "closed" } : {}),
+              ...(params.key ? { key: params.key } : {}),
+              ...(params.field ? { field: params.field } : {}),
+              ...(params.text ? { text: params.text } : {}),
+              ...(params.parent ? { parent: params.parent } : {}),
+              ...(params.limit !== undefined ? { limit: params.limit } : {}),
+              ...(params.projects ? { projects: true } : {}),
+            },
+          ],
+          signal,
+        );
     if (params.projects) return { text: renderProjectsResult(result.projects ?? []) };
     if (params.field) {
       const row = result.rows[0];
       if (!row) return { text: "No tasks match." };
-      return { text: renderTasksFieldPage(row, params.field, params.offset ?? 1) };
+      const text = renderTasksFieldPage(row, params.field, params.offset ?? 1);
+      if (params.field === "timeline" && params.key) {
+        const page = parseTasksFieldPage(text);
+        timelines.clear();
+        if (page?.nextOffset) timelines.set(row.task_id, row);
+      }
+      return { text };
     }
     return { text: renderTasksQueryResult(result) };
   };

@@ -65,6 +65,7 @@ import {
   scriptedClaudeWorld,
 } from "../../../tests/helpers/scriptedClaudeContract";
 import type { ContractWorld } from "../../../tests/helpers/sessionContract";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { moveWorkFolder, olderWorkFolder } from "../../../tests/helpers/workFolderMove";
 import { attachmentPath, keepImages } from "../attachments";
 import { renderIntegrationReply } from "../axi/integrationCommands";
@@ -108,6 +109,7 @@ import { SettingsStore } from "../storage/settingsStore";
 import { CrewTranscripts } from "../tasks/crewTranscript";
 import { handoverFileName } from "../tasks/handoverFiles";
 import { seedTask } from "../tasks/seedTask";
+import { TaskTimeline } from "../tasks/taskTimeline";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
 import { ProjectChanges } from "../workspace/projectChanges";
@@ -1202,6 +1204,55 @@ describe("a task that runs on a computer that runs work", () => {
     expect(words).not.toContain(secret);
   });
 
+  // INF-1484 E1: on-ask history must survive the real placed session's work-request parser.
+  // Real paired connection, SessionHost, home dispatcher and SQLite; only model words are scripted.
+  it("carries an explicit timeline field through a placed session without expanding ordinary reads", async () => {
+    const at = await world();
+    const home = at.home();
+    const target = seedTask(home.tasks, {
+      id: "timeline-target",
+      title: "Read the saved practice release checks",
+      status: "queued",
+      startPolicy: "on-request",
+      intent: {
+        goal: "The earlier check remains readable.",
+        userWords: "read the saved practice release checks",
+      },
+    });
+    home.tasks.recordReport(target.id, {
+      text: "The Mac check stopped the practice release. The saved work is unchanged.",
+    });
+    const expected = new TaskTimeline({ tasks: home.tasks }).sources(target.id);
+    expect(expected.length).toBeGreaterThan(0);
+    const outcome = "The placed history read is complete.";
+    model([
+      { tools: [{ name: "tasks", args: { key: target.key } }] },
+      { tools: [{ name: "tasks", args: { key: target.key, field: "timeline" } }] },
+      { tools: [{ name: "report", args: { text: outcome } }] },
+      { text: "Reported." },
+    ]);
+    await at.start("t-first");
+    await expect.poll(() => home.tasks.get("t-first")?.outcome).toBe(outcome);
+    const calls = readFileSync(
+      join(crewmatePlacedDir(home.paths, "t-first"), "calls.jsonl"),
+      "utf8",
+    )
+      .trim()
+      .split("\n")
+      .map(
+        (line) =>
+          JSON.parse(line) as { channel: string; answer?: { rows: Record<string, unknown>[] } },
+      );
+    const replies = calls
+      .filter((call) => call.channel === "inf:work:tasks")
+      .map((call) => call.answer);
+    expect(replies).toHaveLength(2);
+    expect(replies[0]?.rows[0]).toMatchObject({ task_id: target.id, key: target.key });
+    expect(replies[0]?.rows[0]).not.toHaveProperty("timeline");
+    expect(replies[1]?.rows[0]?.timeline).toEqual(expected);
+    console.info("Placed on-ask history replies", JSON.stringify({ task: target.key, replies }));
+  });
+
   it("starts there, does each callback once here, and keeps its report and a copy of its record", async () => {
     const at = await world();
     model([
@@ -2136,7 +2187,7 @@ describe("a task that runs on a computer that runs work", () => {
       headSha: first,
       changeLines: { base: project.main, added: 1, deleted: 0 },
     });
-    home.tasks.recordDelivery("t-lines", { headSha: first, ci: "green", ciAt: Date.now() });
+    seedDelivery(home.tasks, "t-lines", { headSha: first, ci: "green", ciAt: Date.now() });
     await home.placed.answer(at.deviceId, "inf:work:card", {
       task: "t-lines",
       callId: "line-card",
@@ -2555,7 +2606,7 @@ describe("a task that runs on a computer that runs work", () => {
     writeFileSync(join(work, "footer.html"), "<footer>blue</footer>\n");
     const tip = await commit(work, "feat: a blue footer");
     // INF-125 adds an explicit proof prerequisite; INF-97 still owns the real moved-folder/git boundary below.
-    at.home().tasks.recordDelivery("t-moved", {
+    seedDelivery(at.home().tasks, "t-moved", {
       reviewVerdict: "pass",
       reviewSha: tip,
       validationHead: tip,

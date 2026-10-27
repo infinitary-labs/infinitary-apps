@@ -42,7 +42,7 @@ function runChecksState(run: WorkflowRun): RunChecks["state"] {
  * started at or after it; an older run leaves the newer one shown.
  */
 export function recordRunChecks(
-  tasks: Pick<TaskService, "get" | "recordDelivery">,
+  tasks: Pick<TaskService, "get" | "recordChangeEvidence">,
   taskId: string,
   run: WorkflowRun,
   at: number,
@@ -54,7 +54,7 @@ export function recordRunChecks(
     (run.startedAt === undefined || (shown.startedAt ?? 0) > run.startedAt)
   )
     return;
-  tasks.recordDelivery(taskId, {
+  tasks.recordChangeEvidence(taskId, {
     runChecks: {
       runId: run.id,
       name: run.name,
@@ -72,7 +72,7 @@ export function recordRunChecks(
  * version, so its diagnosis and rerun reservation need no pull request.
  */
 export function recordRunFailures(
-  tasks: Pick<TaskService, "get" | "recordDelivery">,
+  tasks: Pick<TaskService, "get" | "recordChangeEvidence">,
   taskId: string,
   { run, list }: RunReading,
 ): void {
@@ -80,7 +80,7 @@ export function recordRunFailures(
     failed: failedRunJobs(list).map((job) => job.name),
     complete: list.complete,
   });
-  if (ledger) tasks.recordDelivery(taskId, { ciRepair: ledger });
+  if (ledger) tasks.recordChangeEvidence(taskId, { ciRepair: ledger });
 }
 
 export function runWatchOnce(watch: RunWatch, event: "failure" | "end"): string {
@@ -205,7 +205,7 @@ export class RunWatcher {
   private update(taskId: string, watch: RunWatch, next: RunWatch): void {
     if (!this.current(taskId, watch)) return;
     const watches = this.host.tasks.get(taskId)?.delivery?.runWatches ?? [];
-    this.host.tasks.recordDelivery(taskId, {
+    this.host.tasks.recordChangeEvidence(taskId, {
       runWatches: watches.map((w) => (w.runId === watch.runId ? next : w)),
     });
   }
@@ -213,7 +213,7 @@ export class RunWatcher {
   private clear(taskId: string, watch: RunWatch): void {
     if (!this.current(taskId, watch)) return;
     const watches = this.host.tasks.get(taskId)?.delivery?.runWatches ?? [];
-    this.host.tasks.recordDelivery(taskId, {
+    this.host.tasks.recordChangeEvidence(taskId, {
       runWatches: watches.filter((w) => w.runId !== watch.runId),
     });
     this.host.tasks.note(taskId, `Stopped watching ${watch.name} (run ${watch.runId}).`, {

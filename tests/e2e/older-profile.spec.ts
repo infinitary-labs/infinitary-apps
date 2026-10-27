@@ -9,6 +9,8 @@ import { PLACEMENT_DEMANDS, placementSnapshotSchema } from "@shared/placement";
 import { CardService } from "../../src/core/orchestrator/cardService";
 import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
+import { timelineEventIdentity } from "../../src/core/storage/taskEventStore";
+import { taskReadTable } from "../../src/core/storage/taskRecordFields";
 import {
   type MergeAuthorization,
   type TaskDelivery,
@@ -24,6 +26,7 @@ import type { TaskDetail } from "../../src/shared/tasks";
 import type { WriteAsk } from "../../src/shared/writeAsk";
 import { SAMPLE_NOTES, serveNotesHttp } from "../helpers/mcpStandIn";
 import { scratchDir } from "../helpers/scratchDirs";
+import { seedDelivery } from "../helpers/taskDelivery";
 import { startCustomApiFixture } from "./customApiFixture";
 import { STUB_LOGIN, seedGitHubSignIn, startGitHubStub } from "./githubStub";
 import { askFirstmate } from "./lastTurn";
@@ -488,7 +491,7 @@ function savedRows(userDataDir: string) {
       data: data_json ? (JSON.parse(data_json) as Record<string, unknown>) : null,
     }));
     const delivery = db
-      .prepare("SELECT delivery_json FROM tasks WHERE id = ?")
+      .prepare(`SELECT delivery_json FROM ${taskReadTable(db)} WHERE id = ?`)
       .pluck()
       .get(HISTORY_ID) as string | null;
     return {
@@ -654,7 +657,7 @@ test("a task's history an older release saved reads the same after the upgrade",
         expect(new Set(ids).size).toBe(ids.length);
         // The older choice names no card evidence, so its event and the evidence both stay.
         for (const event of savedRows(userDataDir).events)
-          expect(ids).toContain(`task-event:${event.id}`);
+          expect(ids).toContain(timelineEventIdentity({ taskId: HISTORY_ID, id: event.id }));
         expect(ids.filter((id) => id.startsWith("card-observation:")).length).toBe(
           cardStore.observationsForTask(HISTORY_ID).filter((row) => row.kind !== "message_ref")
             .length,
@@ -764,7 +767,9 @@ function savedRelationships(userDataDir: string) {
     shapes: Object.fromEntries(
       (
         db
-          .prepare("SELECT id, shape_json FROM tasks WHERE id IN (SELECT value FROM json_each(?))")
+          .prepare(
+            `SELECT id, shape_json FROM ${taskReadTable(db)} WHERE id IN (SELECT value FROM json_each(?))`,
+          )
           .all(JSON.stringify(Object.values(RELATED))) as {
           id: string;
           shape_json: string | null;
@@ -1075,6 +1080,19 @@ function savedRunningWork(userDataDir: string) {
       Boolean(
         db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table),
       );
+    if (has("task_specifications")) {
+      const columns = (db.prepare("PRAGMA table_info(tasks)").all() as { name: string }[]).map(
+        (c) => c.name,
+      );
+      for (const name of [
+        "session_file",
+        "device_id",
+        "idle_since",
+        "recovery_rung",
+        "placement_json",
+      ])
+        expect(columns).not.toContain(name);
+    }
     const ids = JSON.stringify(Object.values(RUNNING));
     return {
       // An older release's profile has neither table.
@@ -1096,9 +1114,9 @@ function savedRunningWork(userDataDir: string) {
         : undefined,
       tasks: db
         .prepare(
-          `SELECT id, session_file, device_id, idle_since, recovery_rung, placement_json,
+          `SELECT id, ${has("task_specifications") ? "NULL AS session_file, NULL AS device_id, NULL AS idle_since, 0 AS recovery_rung, NULL AS placement_json" : "session_file, device_id, idle_since, recovery_rung, placement_json"},
              delivery_json, shape_json
-           FROM tasks WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id`,
+           FROM ${taskReadTable(db)} WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id`,
         )
         .all(ids) as Record<string, string | number | null>[],
     };
@@ -1439,7 +1457,7 @@ function seedDeliveryReads(userDataDir: string, project: ChartProject) {
       prerequisites: [],
       completion: { kind: "manual" as const, label: "Reloaded" },
     };
-    tasks.recordDelivery(DELIVERED.merged, {
+    seedDelivery(tasks, DELIVERED.merged, {
       ...changeOn("merged", merged.head),
       reviewVerdict: "pass",
       reviewSha: merged.head,
@@ -1559,7 +1577,7 @@ function seedDeliveryReads(userDataDir: string, project: ChartProject) {
     });
     tasks.close(DELIVERED.merged, { status: "done", reason: "merged", actor: "captain" });
 
-    tasks.recordDelivery(DELIVERED.held, {
+    seedDelivery(tasks, DELIVERED.held, {
       ...changeOn("held", held.head),
       completionOffers: [
         {
@@ -1629,17 +1647,17 @@ function seedDeliveryEffects(userDataDir: string, project: ChartProject): void {
         branch: project.branches[role].branch,
       });
     const { unanswered, moved, pending } = project.branches;
-    tasks.recordDelivery(DELIVERED.unanswered, {
+    seedDelivery(tasks, DELIVERED.unanswered, {
       ...changeOn("unanswered", unanswered.head),
       mergeAuthorization: keptApproval(project, "unanswered", unanswered.head, {
         attempt: { token: "attempt-unanswered", head: unanswered.head, at: Date.now() - 60_000 },
       }),
     });
-    tasks.recordDelivery(DELIVERED.moved, {
+    seedDelivery(tasks, DELIVERED.moved, {
       ...changeOn("moved", moved.head),
       mergeAuthorization: keptApproval(project, "moved", moved.first),
     });
-    tasks.recordDelivery(DELIVERED.pending, changeOn("pending", pending.head));
+    seedDelivery(tasks, DELIVERED.pending, changeOn("pending", pending.head));
     tasks.setPendingSettle(DELIVERED.pending, {
       mode: "merge-pr",
       actor: "captain",
@@ -1673,7 +1691,7 @@ function savedDelivery(userDataDir: string) {
       permissions: rows("task_permissions") as Record<string, unknown>[] | undefined,
       tasks: db
         .prepare(
-          `SELECT id, delivery_json, pending_settle_json FROM tasks
+          `SELECT id, delivery_json, pending_settle_json FROM ${taskReadTable(db)}
            WHERE id IN (SELECT value FROM json_each(?)) ORDER BY id`,
         )
         .all(ids) as {

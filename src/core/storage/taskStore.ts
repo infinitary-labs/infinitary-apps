@@ -32,6 +32,7 @@ import {
   TaskExecutionStore,
   withTurn,
 } from "./taskExecutionStore";
+import { TaskOwnedShapeStore } from "./taskOwnedShapeStore";
 import { splitPolicies, TaskPolicyStore, withPolicies } from "./taskPolicyStore";
 import {
   REFERENCE_SHAPE_FIELDS,
@@ -39,6 +40,7 @@ import {
   type TaskReference,
   TaskReferenceStore,
 } from "./taskReferenceStore";
+import { TaskSpecificationStore } from "./taskSpecificationStore";
 
 /**
  * The task record's row layer (task-system design section 4.1). A task is
@@ -925,12 +927,21 @@ export class TaskStore {
   readonly policies: TaskPolicyStore;
   /** A task's change evidence and permissions (INF-1296 piece 4); a record's delivery reads them. */
   readonly delivery: TaskDeliveryStore;
+  readonly specifications: TaskSpecificationStore;
+  readonly shapes: TaskOwnedShapeStore;
 
   constructor(private readonly db: AppDatabase) {
+    this.specifications = new TaskSpecificationStore(db);
+    this.shapes = new TaskOwnedShapeStore(db);
     this.references = new TaskReferenceStore(db);
     this.execution = new TaskExecutionStore(db);
     this.policies = new TaskPolicyStore(db);
     this.delivery = new TaskDeliveryStore(db);
+  }
+
+  /** Older migration fixtures still read the schema they were written against. */
+  private readTable(): string {
+    return this.specifications.exists() ? "task_records" : "tasks";
   }
 
   private record(row: Row): TaskRecord {
@@ -1044,9 +1055,61 @@ export class TaskStore {
     // tables exist (INF-1296 piece 4); the column keeps the history.
     const delivering = this.delivery.exists();
     const history = delivering && delivery ? splitDelivery(delivery).history : delivery;
-    this.db
-      .prepare(
-        `INSERT INTO tasks (
+    if (this.specifications.exists()) {
+      const values = {
+        id: record.id,
+        key: record.key,
+        seq: record.seq,
+        project_id: record.projectId,
+        parent_id: record.parentId,
+        kind: record.kind,
+        title: record.title,
+        repo_id: record.repoId,
+        repo_dir: record.repoDir,
+        worktree_dir: record.worktreeDir,
+        branch: record.branch,
+        difficulty: record.difficulty,
+        gate_kind: record.gate?.kind ?? null,
+        gate_ref: record.gate?.ref ?? null,
+        gate_until: record.gate?.until ?? null,
+        gate_reason: record.gate?.reason ?? null,
+        status: record.status,
+        activity: record.activity,
+        closed_reason: record.closedReason,
+        priority: record.priority,
+        start_policy: record.startPolicy,
+        workspace_state: record.workspaceState,
+        outcome: record.outcome,
+        outcome_summary: record.outcomeSummary,
+        assignee: record.assignee,
+        model: record.model,
+        created_at: record.createdAt,
+        updated_at: record.updatedAt,
+        started_at: record.startedAt,
+        closed_at: record.closedAt,
+        test_path: record.testPath ?? null,
+        captain_opened_at: record.captainOpenedAt ?? null,
+        verdict: record.verdict ?? null,
+      };
+      const fields = Object.keys(values);
+      this.db
+        .prepare(
+          `INSERT INTO tasks (${fields.join(",")}) VALUES (${fields.map(() => "?").join(",")})`,
+        )
+        .run(...Object.values(values));
+      this.specifications.revise(record.id, {
+        goal: record.goal,
+        prompt: record.prompt,
+        intent: record.intent,
+      });
+      this.shapes.replace(record.id, shape ? JSON.parse(shapeJson(shape)!) : null);
+      this.db
+        .prepare("INSERT INTO task_record_history (task_id, delivery_json) VALUES (?, ?)")
+        .run(record.id, history ? JSON.stringify(history) : null);
+    } else {
+      this.db
+        .prepare(
+          `INSERT INTO tasks (
            id, key, seq, project_id, parent_id, kind, title, goal, intent_json, prompt,
            repo_id, repo_dir, worktree_dir, branch, session_file, account_id, difficulty, shape_json,
            gate_kind, gate_ref, gate_until, gate_reason, status, activity, closed_reason,
@@ -1061,54 +1124,55 @@ export class TaskStore {
            ?, ?, ?, ?, ?, ?, ?,
            ?, ?, ?, ?${filing ? ",\n           ?, ?, ?" : ""}
          )`,
-      )
-      .run(
-        record.id,
-        record.key,
-        record.seq,
-        record.projectId,
-        record.parentId,
-        record.kind,
-        record.title,
-        record.goal,
-        record.intent ? JSON.stringify(record.intent) : null,
-        record.prompt,
-        record.repoId,
-        record.repoDir,
-        record.worktreeDir,
-        record.branch,
-        kept.sessionFile,
-        kept.accountId,
-        record.difficulty,
-        shapeJson(shape),
-        record.gate?.kind ?? null,
-        record.gate?.ref ?? null,
-        record.gate?.until ?? null,
-        record.gate?.reason ?? null,
-        record.status,
-        record.activity,
-        record.closedReason,
-        record.priority,
-        record.startPolicy,
-        record.workspaceState,
-        record.outcome,
-        record.outcomeSummary,
-        history ? JSON.stringify(history) : null,
-        !delivering && record.pendingSettle ? JSON.stringify(record.pendingSettle) : null,
-        record.assignee,
-        record.model,
-        record.createdAt,
-        record.updatedAt,
-        record.startedAt,
-        record.closedAt,
-        kept.idleSince ?? null,
-        kept.recoveryRung ?? 0,
-        kept.recoveryCount ?? 0,
-        kept.recoveryAt ?? null,
-        ...(filing
-          ? [record.testPath ?? null, record.captainOpenedAt ?? null, record.verdict ?? null]
-          : []),
-      );
+        )
+        .run(
+          record.id,
+          record.key,
+          record.seq,
+          record.projectId,
+          record.parentId,
+          record.kind,
+          record.title,
+          record.goal,
+          record.intent ? JSON.stringify(record.intent) : null,
+          record.prompt,
+          record.repoId,
+          record.repoDir,
+          record.worktreeDir,
+          record.branch,
+          kept.sessionFile,
+          kept.accountId,
+          record.difficulty,
+          shapeJson(shape),
+          record.gate?.kind ?? null,
+          record.gate?.ref ?? null,
+          record.gate?.until ?? null,
+          record.gate?.reason ?? null,
+          record.status,
+          record.activity,
+          record.closedReason,
+          record.priority,
+          record.startPolicy,
+          record.workspaceState,
+          record.outcome,
+          record.outcomeSummary,
+          history ? JSON.stringify(history) : null,
+          !delivering && record.pendingSettle ? JSON.stringify(record.pendingSettle) : null,
+          record.assignee,
+          record.model,
+          record.createdAt,
+          record.updatedAt,
+          record.startedAt,
+          record.closedAt,
+          kept.idleSince ?? null,
+          kept.recoveryRung ?? 0,
+          kept.recoveryCount ?? 0,
+          kept.recoveryAt ?? null,
+          ...(filing
+            ? [record.testPath ?? null, record.captainOpenedAt ?? null, record.verdict ?? null]
+            : []),
+        );
+    }
     if (policies) this.policies.set(record.id, policies);
     if (delivering) {
       this.delivery.setDelivery(record.id, delivery);
@@ -1139,7 +1203,7 @@ export class TaskStore {
   openByTestPath(testPath: string): TaskRecord | undefined {
     const row = this.db
       .prepare(
-        "SELECT * FROM tasks WHERE test_path = ? AND status IN ('open', 'active') ORDER BY created_at, seq LIMIT 1",
+        `SELECT * FROM ${this.readTable()} WHERE test_path = ? AND status IN ('open', 'active') ORDER BY created_at, seq LIMIT 1`,
       )
       .get(testPath) as Row | undefined;
     return row ? this.record(row) : undefined;
@@ -1158,6 +1222,7 @@ export class TaskStore {
     const running: Partial<TaskExecution> = {};
     for (const [field, column] of Object.entries(PATCH_COLUMNS) as [PatchField, string][]) {
       if (!(field in patch)) continue;
+      if (this.specifications.exists() && (field === "goal" || field === "prompt")) continue;
       if (executing && field in EXECUTION_COLUMNS) {
         (running as Record<string, unknown>)[field] = patch[field] ?? null;
         continue;
@@ -1165,7 +1230,17 @@ export class TaskStore {
       sets.push(`${column} = ?`);
       values.push(patch[field] ?? null);
     }
-    if ("intent" in patch) {
+    if (
+      this.specifications.exists() &&
+      ("goal" in patch || "prompt" in patch || "intent" in patch)
+    ) {
+      this.specifications.revise(id, {
+        ...("goal" in patch ? { goal: patch.goal ?? null } : {}),
+        ...("prompt" in patch ? { prompt: patch.prompt ?? "" } : {}),
+        ...("intent" in patch ? { intent: patch.intent ?? null } : {}),
+      });
+    }
+    if ("intent" in patch && !this.specifications.exists()) {
       sets.push("intent_json = ?");
       values.push(patch.intent ? JSON.stringify(patch.intent) : null);
     }
@@ -1176,8 +1251,12 @@ export class TaskStore {
         ? splitPolicies(patch.shape)
         : { shape: patch.shape ?? null, row: undefined };
       if (split.row !== undefined) this.policies.set(id, split.row);
-      sets.push("shape_json = ?");
-      values.push(shapeJson(split.shape));
+      if (this.shapes.exists())
+        this.shapes.replace(id, split.shape ? JSON.parse(shapeJson(split.shape)!) : null);
+      else {
+        sets.push("shape_json = ?");
+        values.push(shapeJson(split.shape));
+      }
     }
     if ("gate" in patch) {
       const gate = patch.gate ?? null;
@@ -1194,8 +1273,15 @@ export class TaskStore {
       const history = this.delivery.exists()
         ? this.delivery.setDelivery(id, split.delivery)
         : split.delivery;
-      sets.push("delivery_json = ?");
-      values.push(history ? JSON.stringify(history) : null);
+      if (this.specifications.exists())
+        this.db
+          .prepare(`INSERT INTO task_record_history (task_id, delivery_json) VALUES (?, ?)
+        ON CONFLICT(task_id) DO UPDATE SET delivery_json = excluded.delivery_json`)
+          .run(id, history ? JSON.stringify(history) : null);
+      else {
+        sets.push("delivery_json = ?");
+        values.push(history ? JSON.stringify(history) : null);
+      }
     }
     if ("placement" in patch) {
       if (executing) running.placement = patch.placement ?? null;
@@ -1221,34 +1307,39 @@ export class TaskStore {
     return this.read(
       this.db
         .prepare(
-          "SELECT * FROM tasks WHERE json_extract(placement_json, '$.reservation') = 'pending'",
+          `SELECT * FROM ${this.readTable()} WHERE json_extract(placement_json, '$.reservation') = 'pending'`,
         )
         .all() as Row[],
     );
   }
 
   get(id: string): TaskRecord | undefined {
-    const row = prepared(this.db, "SELECT * FROM tasks WHERE id = ?").get(id) as Row | undefined;
-    return row ? this.record(row) : undefined;
-  }
-
-  byKey(key: string): TaskRecord | undefined {
-    const row = this.db.prepare("SELECT * FROM tasks WHERE key = ?").get(key.toUpperCase()) as
+    const row = prepared(this.db, `SELECT * FROM ${this.readTable()} WHERE id = ?`).get(id) as
       | Row
       | undefined;
     return row ? this.record(row) : undefined;
   }
 
+  byKey(key: string): TaskRecord | undefined {
+    const row = this.db
+      .prepare(`SELECT * FROM ${this.readTable()} WHERE key = ?`)
+      .get(key.toUpperCase()) as Row | undefined;
+    return row ? this.record(row) : undefined;
+  }
+
   list(): TaskRecord[] {
-    return oldestFirst(this.read(prepared(this.db, "SELECT * FROM tasks").all() as Row[]));
+    return oldestFirst(
+      this.read(prepared(this.db, `SELECT * FROM ${this.readTable()}`).all() as Row[]),
+    );
   }
 
   listByStatus(...statuses: TaskStatus[]): TaskRecord[] {
     if (statuses.length === 0) return [];
     const marks = statuses.map(() => "?").join(", ");
-    const rows = prepared(this.db, `SELECT * FROM tasks WHERE status IN (${marks})`).all(
-      ...statuses,
-    ) as Row[];
+    const rows = prepared(
+      this.db,
+      `SELECT * FROM ${this.readTable()} WHERE status IN (${marks})`,
+    ).all(...statuses) as Row[];
     return oldestFirst(this.read(rows));
   }
 
@@ -1260,7 +1351,7 @@ export class TaskStore {
   listLiveOrClosedSince(since: number): TaskRecord[] {
     const rows = prepared(
       this.db,
-      "SELECT * FROM tasks WHERE status IN ('open', 'active') OR closed_at >= ?",
+      `SELECT * FROM ${this.readTable()} WHERE status IN ('open', 'active') OR closed_at >= ?`,
     ).all(since) as Row[];
     return oldestFirst(this.read(rows));
   }
@@ -1273,7 +1364,7 @@ export class TaskStore {
   listClosedSearchFields(): TaskSearchFields[] {
     const rows = prepared(
       this.db,
-      `SELECT id, key, kind, status, title, goal, closed_at FROM tasks
+      `SELECT id, key, kind, status, title, goal, closed_at FROM ${this.readTable()}
        WHERE status NOT IN ('open', 'active') ORDER BY created_at, seq`,
     ).all() as Pick<Row, "id" | "key" | "kind" | "status" | "title" | "goal" | "closed_at">[];
     return rows.map((row) => ({
@@ -1301,7 +1392,7 @@ export class TaskStore {
     if (ids.length === 0) return [];
     const rows = prepared(
       this.db,
-      "SELECT * FROM tasks WHERE id IN (SELECT value FROM json_each(?))",
+      `SELECT * FROM ${this.readTable()} WHERE id IN (SELECT value FROM json_each(?))`,
     ).all(JSON.stringify(ids)) as Row[];
     return oldestFirst(this.read(rows));
   }
@@ -1323,7 +1414,9 @@ export class TaskStore {
 
   /** A parent's direct children, oldest first. */
   listChildren(parentId: string): TaskRecord[] {
-    const rows = this.db.prepare("SELECT * FROM tasks WHERE parent_id = ?").all(parentId) as Row[];
+    const rows = this.db
+      .prepare(`SELECT * FROM ${this.readTable()} WHERE parent_id = ?`)
+      .all(parentId) as Row[];
     return oldestFirst(this.read(rows));
   }
 
@@ -1337,8 +1430,8 @@ export class TaskStore {
            SELECT t.id, tree.depth + 1 FROM tasks t JOIN tree ON t.parent_id = tree.id
            WHERE tree.depth < 64
          )
-         SELECT tasks.* FROM tasks JOIN tree ON tasks.id = tree.id
-         ORDER BY tree.depth, tasks.created_at, tasks.seq`,
+         SELECT records.* FROM ${this.readTable()} records JOIN tree ON records.id = tree.id
+         ORDER BY tree.depth, records.created_at, records.seq`,
       )
       .all(id) as Row[];
     return this.read(rows);
@@ -1353,7 +1446,7 @@ export class TaskStore {
   listReady(): TaskRecord[] {
     const rows = this.db
       .prepare(
-        `SELECT t.* FROM tasks t
+        `SELECT t.* FROM ${this.readTable()} t
          WHERE t.status = 'open' AND t.kind = 'work'
            AND t.gate_kind IS NULL AND t.start_policy = 'when-ready'
            AND NOT EXISTS (
@@ -1373,7 +1466,7 @@ export class TaskStore {
   listDeadBlocked(): TaskRecord[] {
     const rows = this.db
       .prepare(
-        `SELECT DISTINCT t.* FROM tasks t
+        `SELECT DISTINCT t.* FROM ${this.readTable()} t
          JOIN task_links l ON l.to_id = t.id AND l.type = 'blocks'
          JOIN tasks b ON b.id = l.from_id
          WHERE t.status = 'open' AND t.kind = 'work' AND t.gate_kind IS NULL

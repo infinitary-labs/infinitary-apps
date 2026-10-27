@@ -3,6 +3,7 @@ import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
 import { PrCiService } from "../../../orchestrator/prCi";
 import { WorkflowEvidenceService } from "../../../orchestrator/workflowEvidence";
 import { CHECK_CHANGE_TOOL, READ_WORKFLOW_TOOL } from "../../../pi/forgeTools";
@@ -629,7 +630,7 @@ async function setup() {
     savedAttempt: (headSha: string) => {
       const ledger = tasks.get("scene")?.delivery?.ciRepair;
       if (!ledger) throw new Error("no repair ledger to save the attempt on");
-      tasks.recordDelivery("scene", {
+      seedDelivery(tasks, "scene", {
         ciRepair: { ...ledger, repairs: [...ledger.repairs, { ...REPAIR, headSha }] },
         ciRounds: 1,
       });

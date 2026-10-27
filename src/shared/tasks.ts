@@ -14,6 +14,7 @@ import { deliverableSchema } from "./routingPolicy";
 import { taskBrowserFactSchema } from "./taskBrowser";
 import { taskPlanSchema } from "./taskPlan";
 import { effectiveTaskPoliciesSchema, taskRunsOnSchema } from "./taskPolicies";
+import { timelineReadingSchema } from "./timeline";
 import { workPostureSchema } from "./workPosture";
 
 /**
@@ -609,6 +610,8 @@ export const taskDetailSchema = taskViewSchema.extend({
   events: z.array(taskEventViewSchema),
   /** The timeline condensed for reading (the record's Activity; the popup audit, A8). */
   activityLog: z.array(taskActivityRowSchema),
+  /** Every retained source, including evidence, opened read-only from its exact reference. */
+  timeline: z.array(timelineReadingSchema).optional(),
   /**
    * The last sentence the crewmate wrote in its session, with its time
    * (`CrewActions.said`): its Now line between its notes (INF-557). Absent

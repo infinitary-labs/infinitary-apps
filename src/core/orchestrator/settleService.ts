@@ -840,7 +840,7 @@ export class SettleService {
         current.delivery?.prNumber !== pull.number
       )
         return false;
-      this.host.tasks.recordDelivery(taskId, {
+      this.host.tasks.recordChangeEvidence(taskId, {
         ci: "merged",
         headSha: pull.headSha,
         ciAt: this.host.now(),
@@ -2049,7 +2049,7 @@ export class SettleService {
     const generation = (previous?.generation ?? 0) + 1;
     const minted = this.mint(record, approval, proceedWithOpen, generation, now, reviewId);
     if (minted) {
-      this.host.tasks.recordDelivery(taskId, {
+      this.host.tasks.recordPermissionRecords(taskId, {
         mergeAuthorization: minted,
         ...(minted.review?.relationship === "referenced" ? { checkTarget: minted.review } : {}),
       });
@@ -2135,7 +2135,9 @@ export class SettleService {
     const record = this.host.tasks.get(taskId);
     const authorization = standingAuthorization(record?.delivery);
     if (!record || !authorization) return;
-    this.host.tasks.recordDelivery(taskId, { mergeAuthorization: { ...authorization, ...patch } });
+    this.host.tasks.recordPermissionRecords(taskId, {
+      mergeAuthorization: { ...authorization, ...patch },
+    });
   }
 
   /** The merge happened under the standing approval: it is spent. */
@@ -2172,7 +2174,7 @@ export class SettleService {
     const record = this.host.tasks.get(taskId);
     const authorization = standingAuthorization(record?.delivery);
     if (!record || !authorization) return false;
-    this.host.tasks.recordDelivery(taskId, {
+    this.host.tasks.recordPermissionRecords(taskId, {
       mergeAuthorization: {
         ...authorization,
         status,
@@ -2214,7 +2216,7 @@ export class SettleService {
     const before = authorization.guidance ?? { latest: 0, declared: 0, at: now };
     const mark = before.latest + 1;
     const began = outstandingGuidance(authorization) === undefined;
-    this.host.tasks.recordDelivery(taskId, {
+    this.host.tasks.recordPermissionRecords(taskId, {
       mergeAuthorization: { ...authorization, guidance: { ...before, latest: mark, at: now } },
     });
     this.host.tasks.note(
@@ -2273,7 +2275,7 @@ export class SettleService {
         if (unattended && this.host.cards.openMergeAction(taskId)) {
           return "a new completion card is up";
         }
-        this.host.tasks.recordDelivery(taskId, {
+        this.host.tasks.recordPermissionRecords(taskId, {
           mergeAuthorization: {
             ...now,
             attempt: { token: randomUUID(), head: dispatchHead, at: this.host.now() },
@@ -2322,7 +2324,7 @@ export class SettleService {
     const changed = current.waiting?.on !== wait || current.waiting.head !== head;
     const retries = changed ? 0 : (current.retries ?? 0) + 1;
     const retryAt = retryAfter(wait, retries, now);
-    this.host.tasks.recordDelivery(taskId, {
+    this.host.tasks.recordPermissionRecords(taskId, {
       mergeAuthorization: {
         ...current,
         waiting: { on: wait, head, at: now },
@@ -2436,7 +2438,7 @@ export class SettleService {
         return;
       }
       const delivery = this.host.tasks.get(taskId)?.delivery;
-      this.host.tasks.recordDelivery(taskId, {
+      this.host.tasks.recordApprovedChangeReading(taskId, {
         mergeAuthorization: { ...current, changeReading: reading },
         versionReadings: { ...delivery?.versionReadings, [authorization.approvedHead]: reading },
       });
@@ -2540,7 +2542,7 @@ export class SettleService {
     const now = this.host.now();
     const changed = current.waiting?.on !== wait || current.waiting.head !== head;
     const retries = changed ? 0 : (current.retries ?? 0) + 1;
-    this.host.tasks.recordDelivery(taskId, {
+    this.host.tasks.recordPermissionRecords(taskId, {
       mergeAuthorization: {
         ...current,
         waiting: { on: wait, head, at: now },
@@ -2710,7 +2712,7 @@ export class SettleService {
   resumeMergeAuthorizations(): void {
     for (const record of this.host.tasks.listLive()) {
       if (record.delivery?.mergeOrder) {
-        this.host.tasks.recordDelivery(record.id, { mergeOrder: undefined });
+        this.host.tasks.recordPermissionRecords(record.id, { mergeOrder: undefined });
         const text = `The kept merge click for "${record.title}" was made before this version and names no approved version, so it could not be carried forward. Its crewmate puts up its completion card again once the checks pass.`;
         this.host.tasks.note(record.id, text, { news: true, feed: true });
         this.wakeOnSettle(record.id, record.title, "merge-pr (kept before this version)", {
@@ -2877,7 +2879,7 @@ export class SettleService {
         // by any other close (FI3-304), in the close's own transaction.
         const standing = standingAuthorization(record.delivery);
         if (standing) {
-          this.host.tasks.recordDelivery(taskId, {
+          this.host.tasks.recordPermissionRecords(taskId, {
             mergeAuthorization: {
               ...standing,
               status: close.reason === "merged" ? "consumed" : "revoked",

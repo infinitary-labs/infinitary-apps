@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { basename } from "node:path";
 import { z } from "zod";
 import type { AppDatabase } from "./db";
@@ -41,6 +42,62 @@ export class TaskSessionStore {
       .run({ taskId, ...session });
   }
 
+  private observationTable: boolean | undefined;
+
+  private hasObservations(): boolean {
+    this.observationTable ??= Boolean(
+      this.db.prepare("SELECT 1 FROM sqlite_master WHERE name = 'task_session_observations'").get(),
+    );
+    return this.observationTable;
+  }
+
+  observe(taskId: string, facts: TaskSessionObservation, identity?: string): void {
+    if (!this.hasObservations()) return;
+    // Explicit identities restore retained history, including identical older readings.
+    // A newly supplied boundary records a transition, not another copy every turn.
+    if (identity === undefined) {
+      const fields = [
+        "conversation",
+        "file",
+        "computer",
+        "device_id",
+        "provider",
+        "model",
+        "account_id",
+      ] as const;
+      const previous = this.db
+        .prepare(
+          `SELECT ${fields.join(", ")} FROM task_session_observations
+         WHERE task_id = ? ORDER BY seq DESC LIMIT 1`,
+        )
+        .get(taskId) as Pick<TaskSessionObservation, (typeof fields)[number]> | undefined;
+      if (previous && fields.every((field) => previous[field] === facts[field])) return;
+    }
+    this.db
+      .prepare(`INSERT INTO task_session_observations
+      (id, task_id, conversation, file, computer, device_id, provider, model, account_id, began, observed_at)
+      VALUES (@id, @taskId, @conversation, @file, @computer, @device_id, @provider, @model, @account_id, @began, @observed_at)`)
+      .run({ ...facts, id: identity ?? randomUUID(), taskId });
+  }
+
+  observations(taskId: string): TaskSessionObservationRecord[] {
+    if (!this.hasObservations()) return [];
+    return this.db
+      .prepare(
+        "SELECT seq, id, task_id AS taskId, conversation, file, computer, device_id, provider, model, account_id, began, observed_at FROM task_session_observations WHERE task_id = ? ORDER BY seq",
+      )
+      .all(taskId) as TaskSessionObservationRecord[];
+  }
+
+  observation(id: string): TaskSessionObservationRecord | undefined {
+    if (!this.hasObservations()) return undefined;
+    return this.db
+      .prepare(
+        "SELECT seq, id, task_id AS taskId, conversation, file, computer, device_id, provider, model, account_id, began, observed_at FROM task_session_observations WHERE id = ?",
+      )
+      .get(id) as TaskSessionObservationRecord | undefined;
+  }
+
   list(taskId: string): TaskSession[] {
     return this.db
       .prepare(`
@@ -50,3 +107,16 @@ export class TaskSessionStore {
       .all(taskId) as TaskSession[];
   }
 }
+
+/** Immutable observed facts, never a reconstruction from the conversation's changing row. */
+export const taskSessionObservationSchema = taskSessionSchema
+  .omit({ resume_token: true, opened_at: true, last_at: true })
+  .extend({ observed_at: z.number() });
+export type TaskSessionObservation = z.infer<typeof taskSessionObservationSchema>;
+
+export const taskSessionObservationRecordSchema = taskSessionObservationSchema.extend({
+  id: z.string(),
+  taskId: z.string(),
+  seq: z.number().int(),
+});
+export type TaskSessionObservationRecord = z.infer<typeof taskSessionObservationRecordSchema>;

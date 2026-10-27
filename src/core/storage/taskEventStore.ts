@@ -1,4 +1,5 @@
 import type { AppDatabase } from "./db";
+import { taskReadTable } from "./taskRecordFields";
 
 /**
  * The per-task timeline (task-system design section 4.4): every state
@@ -42,6 +43,8 @@ export type TaskEventKind =
 
 export type TaskEvent = {
   id: number;
+  /** Stable source identity; storage-local numeric ids may be remapped by import. */
+  identity?: string;
   taskId: string;
   at: number;
   actor: TaskEventActor;
@@ -85,6 +88,7 @@ export type ConcernedTaskEvent = TaskEvent & { relation: TaskConcernRelation; vi
 
 type Row = {
   id: number;
+  identity?: string | null;
   task_id: string;
   at: number;
   actor: TaskEventActor;
@@ -106,6 +110,7 @@ function fromRow(row: Row): TaskEvent {
   }
   return {
     id: row.id,
+    identity: row.identity ?? `task-event:${encodeURIComponent(row.task_id)}:${row.id}`,
     taskId: row.task_id,
     at: row.at,
     actor: row.actor,
@@ -117,8 +122,35 @@ function fromRow(row: Row): TaskEvent {
   };
 }
 
+/** One owner's stable identity, never a hash of its words or its timestamp. */
+export function timelineEventIdentity(
+  event: Pick<TaskEvent, "id" | "taskId" | "identity">,
+): string {
+  return event.identity ?? `task-event:${encodeURIComponent(event.taskId)}:${event.id}`;
+}
+
 export class TaskEventStore {
+  private identities: boolean | undefined;
   constructor(private readonly db: AppDatabase) {}
+
+  private hasIdentities(): boolean {
+    this.identities ??= (
+      this.db.prepare("PRAGMA table_info(task_events)").all() as { name: string }[]
+    ).some((column) => column.name === "identity");
+    return this.identities;
+  }
+
+  byIdentity(identity: string): TaskEvent | undefined {
+    if (this.hasIdentities()) {
+      const row = this.db.prepare("SELECT * FROM task_events WHERE identity = ?").get(identity) as
+        | Row
+        | undefined;
+      if (row) return fromRow(row);
+    }
+    const local = identity.match(/^task-event:(.+):(\d+)$/)?.[2];
+    const event = local ? this.get(Number(local)) : undefined;
+    return event && timelineEventIdentity(event) === identity ? event : undefined;
+  }
 
   insert(event: InsertTaskEvent): number {
     const result = this.db
@@ -135,7 +167,12 @@ export class TaskEventStore {
         event.ref ?? null,
         (event.feed ?? true) ? 1 : 0,
       );
-    return Number(result.lastInsertRowid);
+    const id = Number(result.lastInsertRowid);
+    if (this.hasIdentities())
+      this.db
+        .prepare("UPDATE task_events SET identity = ? WHERE id = ?")
+        .run(event.identity ?? timelineEventIdentity({ ...event, id }), id);
+    return id;
   }
 
   /** The other tasks an event concerns, written with it (migration 71). */
@@ -313,16 +350,23 @@ export class TaskEventStore {
    * stays separate. This is a read projection, never a timeline rewrite.
    */
   listFeed(limit: number): TaskEvent[] {
+    const owned = taskReadTable(this.db) === "task_records";
+    const program = owned
+      ? `WHEN json_type(parent_program.value_json, '$.program') = 'object' THEN t.parent_id
+         WHEN json_type(own_program.value_json, '$.program') = 'object' THEN t.id`
+      : `WHEN json_type(p.shape_json, '$.program') = 'object' THEN p.id
+         WHEN json_type(t.shape_json, '$.program') = 'object' THEN t.id`;
+    const programJoins = owned
+      ? `LEFT JOIN task_programs parent_program ON parent_program.task_id = t.parent_id
+         LEFT JOIN task_programs own_program ON own_program.task_id = t.id`
+      : "LEFT JOIN tasks p ON p.id = t.parent_id";
     const rows = this.db
       .prepare(`
         WITH grouped AS (
-          SELECT e.*, CASE
-            WHEN json_type(p.shape_json, '$.program') = 'object' THEN p.id
-            WHEN json_type(t.shape_json, '$.program') = 'object' THEN t.id
-          END AS program_id
+          SELECT e.*, CASE ${program} END AS program_id
           FROM task_events e
           JOIN tasks t ON t.id = e.task_id
-          LEFT JOIN tasks p ON p.id = t.parent_id
+          ${programJoins}
           WHERE e.feed = 1
         ), ranked AS (
           SELECT *, ROW_NUMBER() OVER (

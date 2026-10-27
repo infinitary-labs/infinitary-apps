@@ -775,7 +775,7 @@ export class GithubGatewayService {
     )
       return;
     reserved.startedAt = this.options.now();
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordChangeEvidence(
       taskId,
       { ciRepair: ledger },
       { kind: "ci", text: "Failed-job rerun started", actor: "crewmate" },

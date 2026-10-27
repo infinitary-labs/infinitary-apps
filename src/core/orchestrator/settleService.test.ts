@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { noSurfaceProof } from "../../../tests/helpers/liveValidation";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { InboxStore } from "../storage/inboxStore";
 import type { MergeAuthorization } from "../storage/taskStore";
 import { seedTask } from "../tasks/seedTask";
@@ -104,7 +105,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
     if (!reading) throw new Error("the reviewed commit has no change reading");
     const updatedReading = await readChangeReading(dir, updated);
     if (updatedReading !== reading) throw new Error("the pure update changed the reading");
-    tasks.recordDelivery("review01", {
+    seedDelivery(tasks, "review01", {
       prNumber: 23,
       reviewVerdict: "pass",
       reviewSha: reviewed,
@@ -176,7 +177,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
     await host.runMergeAuthorization("review01");
     expect(merged()).toBe(false);
     expect(tasks.get("review01")?.delivery?.mergeAuthorization?.waiting?.on).toBe("review");
-    tasks.recordDelivery("review01", {
+    seedDelivery(tasks, "review01", {
       liveValidation: noSurfaceProof(
         updated,
         "fixture-reviewer",
@@ -198,7 +199,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
     const current = tasks.get("review01")?.delivery;
     const step = current?.mergeAuthorization?.lineage[0];
     if (!step || !current?.mergeAuthorization) throw new Error("the repair was not stored");
-    tasks.recordDelivery("review01", {
+    seedDelivery(tasks, "review01", {
       versionReadings: { ...current.versionReadings, [step.toHead]: "edited-line" },
       mergeAuthorization: {
         ...current.mergeAuthorization,
@@ -231,7 +232,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
     });
     const approved = "a".repeat(40);
     const repaired = "b".repeat(40);
-    tasks.recordDelivery("repair01", {
+    seedDelivery(tasks, "repair01", {
       reviewVerdict: "pass",
       reviewSha: approved,
       reviewChange: "same-change",
@@ -310,7 +311,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
     });
     const reviewed = "a".repeat(40);
     const later = "b".repeat(40);
-    tasks.recordDelivery("oldpass", { reviewVerdict: "pass", reviewSha: reviewed });
+    seedDelivery(tasks, "oldpass", { reviewVerdict: "pass", reviewSha: reviewed });
     const read = vi.fn(async (_dir: string, sha: string) =>
       sha === reviewed || sha === later ? "same-change" : "other",
     );
@@ -333,7 +334,7 @@ describe("a kept merge carries a passed review across a pure update", () => {
     expect(reviewCoversHead(carried, later)).toBe(true);
 
     tasks.setDevice("oldpass", "other-mac");
-    tasks.recordDelivery("oldpass", { reviewCarrySha: undefined, reviewChange: undefined });
+    seedDelivery(tasks, "oldpass", { reviewCarrySha: undefined, reviewChange: undefined });
     const placed = tasks.get("oldpass");
     expect(
       await carryPassedReview({

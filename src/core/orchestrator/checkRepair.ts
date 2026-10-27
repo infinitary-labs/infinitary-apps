@@ -254,7 +254,7 @@ export function declareCheckAction(
       ];
       carried.headSha = repair.headSha;
       carried.evidence = repair.evidence;
-      tasks.recordDelivery(
+      tasks.recordChangeEvidence(
         taskId,
         { ciRepair: ledger },
         {
@@ -339,7 +339,7 @@ export function declareCheckAction(
     };
     ledger.rerun = rerun;
   }
-  tasks.recordDelivery(
+  tasks.recordChangeEvidence(
     taskId,
     { ciRepair: ledger },
     {

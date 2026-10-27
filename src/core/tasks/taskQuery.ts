@@ -8,6 +8,7 @@ import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskStore";
 import { TaskService } from "./taskService";
+import type { TaskTimeline } from "./taskTimeline";
 
 /**
  * The `tasks` query (task-system P2, design section 7): the full query
@@ -26,6 +27,8 @@ export type TaskQueryInput = {
   status?: TaskStatusFilter;
   /** One task by key or id: full reports, decisions, pinned brief and closing resolution. */
   key?: string;
+  /** The explicitly requested field; only timeline reads load its retained source bodies. */
+  field?: string;
   /** Case-insensitive substring over title and goal. */
   text?: string;
   /** Children of this task (key or id). */
@@ -51,6 +54,7 @@ export type TaskQueryPlace = { computer: string; evidence_folder?: string };
 
 /** What the core's composition supplies beyond the record; each absent says nothing. */
 export type TaskQueryReach = {
+  timeline?: Pick<TaskTimeline, "sources">;
   /** A project's folder on the computer where the first mate lives. */
   projectFolder?: (repoId: string) => string | undefined;
   /** Where the task's crewmate ran, once one did. */
@@ -86,6 +90,8 @@ function queryResolution(resolved: CardResolution, newestBody?: string): TaskQue
 }
 
 export type TaskQueryRow = {
+  /** Retained entries and exact sources, shared with Activity. Explicit timeline field reads only. */
+  timeline?: ReturnType<TaskTimeline["sources"]>;
   /** Every conversation on this task; earlier attempts keep their own lists. By-key only. */
   sessions?: ReturnType<TaskService["sessions"]>;
   earlier_attempt?: string;
@@ -287,6 +293,9 @@ export function queryTasks(
         ...row,
         ...(one
           ? {
+              ...(input.field === "timeline" && reach.timeline
+                ? { timeline: reach.timeline.sources(record.id) }
+                : {}),
               sessions: tasks.sessions(record.id, reach.sessionFolderOf?.(record)),
               ...(record.shape?.escalate_from
                 ? {

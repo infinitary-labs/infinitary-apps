@@ -152,7 +152,7 @@ function readTasks(userDataDir: string): TaskRow[] {
     userDataDir,
     (db) =>
       db
-        .prepare("SELECT id, key, title, shape_json FROM tasks ORDER BY created_at, seq")
+        .prepare("SELECT id, key, title, shape_json FROM task_records ORDER BY created_at, seq")
         .all() as TaskRow[],
   );
 }

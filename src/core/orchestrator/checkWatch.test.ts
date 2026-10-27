@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { openInMemoryDatabase } from "../storage/db";
 import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
@@ -30,7 +31,7 @@ function setup() {
   const inbox = new InboxStore(db, { now: clock });
   seedTask(tasks, { id: "t1", title: "Ship it", status: "completed", branch: "fm/task-t1" });
   const start = now;
-  tasks.recordDelivery("t1", { ciWatch: armWatch(undefined, HEAD, start) });
+  seedDelivery(tasks, "t1", { ciWatch: armWatch(undefined, HEAD, start) });
   /** What the next read answers; a function reads the moment it is asked. */
   let next: WatchedReading | (() => WatchedReading) = {
     kind: "pending",
@@ -73,7 +74,7 @@ function setup() {
 describe("CheckWatcher", () => {
   it("quietly refreshes finished checks, backs off refusals and stops on close", async () => {
     const { tasks, reads, steers, at, start, answer } = setup();
-    tasks.recordDelivery("t1", { ciWatch: undefined, ci: "green", ciAt: start, prNumber: 7 });
+    seedDelivery(tasks, "t1", { ciWatch: undefined, ci: "green", ciAt: start, prNumber: 7 });
     answer({ kind: "failed", transient: false, problem: "sign in again", signIn: true });
     await at(minutes(4));
     expect(reads).toEqual([]);
@@ -144,7 +145,7 @@ describe("CheckWatcher", () => {
     const newer = armWatch(undefined, "beadbeef00000002", start + minutes(1));
     answer(() => {
       // The crewmate pushed and read the new head while the host was asking.
-      tasks.recordDelivery("t1", { ciWatch: newer });
+      seedDelivery(tasks, "t1", { ciWatch: newer });
       return {
         kind: "settled",
         overall: "green",

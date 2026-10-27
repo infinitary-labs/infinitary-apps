@@ -543,7 +543,7 @@ export class PrCiService {
       at: this.now(),
     };
     const kept = [review, ...(record.delivery?.mergeReviews ?? [])].slice(0, MERGE_REVIEW_CAP);
-    this.options.tasks.recordDelivery(record.id, {
+    this.options.tasks.recordPermissionRecords(record.id, {
       mergeReviews: kept,
       checkTarget: relationship === "referenced" ? review : undefined,
     });
@@ -652,7 +652,7 @@ export class PrCiService {
     const record = this.options.tasks.get(taskId);
     const reviews = record?.delivery?.mergeReviews;
     if (!reviews) return;
-    this.options.tasks.recordDelivery(taskId, {
+    this.options.tasks.recordPermissionRecords(taskId, {
       mergeReviews: reviews.map((item) =>
         item.id === reviewId
           ? {
@@ -750,7 +750,7 @@ export class PrCiService {
       at: this.now(),
     };
     const kept = [review, ...(record.delivery?.mergeReviews ?? [])].slice(0, MERGE_REVIEW_CAP);
-    this.options.tasks.recordDelivery(record.id, {
+    this.options.tasks.recordPermissionRecords(record.id, {
       mergeReviews: kept,
       checkTarget: relationship === "referenced" ? review : undefined,
     });
@@ -1099,7 +1099,7 @@ export class PrCiService {
   ): void {
     const reviews = this.options.tasks.get(taskId)?.delivery?.mergeReviews;
     if (!reviews) return;
-    this.options.tasks.recordDelivery(taskId, {
+    this.options.tasks.recordPermissionRecords(taskId, {
       mergeReviews: reviews.map((item) =>
         item.id === reviewId
           ? { ...item, sent: { at: item.sent?.at ?? this.now(), ...outcome } }
@@ -1371,7 +1371,7 @@ export class PrCiService {
         this.assertCheckTarget(record);
         this.record(record.id, pull?.merged ? "merged" : "no-pr");
         if (pull?.merged) {
-          this.options.tasks.recordDelivery(record.id, { headSha: pull.headSha });
+          this.options.tasks.recordChangeEvidence(record.id, { headSha: pull.headSha });
           this.merged.set(record.id, { pull, forge });
         }
         return { kind: "gone" };
@@ -1385,7 +1385,7 @@ export class PrCiService {
           this.record(record.id, checks.overall, { change, forge }, "watch", true, checks.items);
         } else {
           // An unchanged result is still a fresh reading, not a new status event.
-          this.options.tasks.recordDelivery(record.id, {
+          this.options.tasks.recordChangeEvidence(record.id, {
             ciAt: this.now(),
             ...checksSpan(checks.overall, checks.items),
           });
@@ -1550,7 +1550,7 @@ export class PrCiService {
     const { record, branch, forge } = located;
     try {
       requireConventional(input.title, "pull request title");
-      this.options.tasks.recordDelivery(taskId, { checkTarget: undefined });
+      this.options.tasks.recordPermissionRecords(taskId, { checkTarget: undefined });
       await this.branchHome(record);
       const dir = await this.validateRange(record.repoId, record.repoDir, branch, forge);
       const existing = await forge.changeFor(branch);
@@ -1592,7 +1592,7 @@ export class PrCiService {
         });
         const covered = this.options.tasks.get(taskId);
         validationHead = head;
-        this.options.tasks.recordDelivery(taskId, { validationHead: head });
+        this.options.tasks.recordChangeEvidence(taskId, { validationHead: head });
         const early =
           earlyPublication(current.delivery?.liveValidation, head, Boolean(existing)) ??
           (existing
@@ -1942,7 +1942,7 @@ export class PrCiService {
           );
         change = current;
         if (change.draft)
-          this.options.tasks.recordDelivery(
+          this.options.tasks.recordChangeEvidence(
             taskId,
             {
               validationReadiness: {
@@ -1959,7 +1959,7 @@ export class PrCiService {
       }
       if (!change.draft) {
         if (readiness && readiness.number === change.number)
-          this.options.tasks.recordDelivery(taskId, {
+          this.options.tasks.recordChangeEvidence(taskId, {
             validationReadiness: { head: change.headSha, number: readiness.number, state: "ready" },
           });
         return change;
@@ -1979,11 +1979,11 @@ export class PrCiService {
             "Validation changed; the prerequisite draft stays held until review.",
           );
         this.options.verifyValidationEvidence?.(taskId);
-        this.options.tasks.recordDelivery(taskId, {
+        this.options.tasks.recordChangeEvidence(taskId, {
           validationReadiness: { head: change.headSha, number: change.number!, state: "unknown" },
         });
       });
-      this.options.tasks.recordDelivery(taskId, {
+      this.options.tasks.recordChangeEvidence(taskId, {
         validationReadiness: { head: ready.headSha, number: ready.number!, state: "ready" },
       });
       return ready;
@@ -1991,7 +1991,7 @@ export class PrCiService {
       const previous = this.options.tasks.get(taskId)?.delivery?.validationReadiness;
       const problem = caught instanceof Error ? caught.message : String(caught);
       // Readiness is delivery bookkeeping, never a replacement for the host's check reading.
-      this.options.tasks.recordDelivery(
+      this.options.tasks.recordChangeEvidence(
         taskId,
         {
           validationReadiness: {
@@ -2163,7 +2163,7 @@ export class PrCiService {
         this.assertCheckTarget(record);
         if (pull?.merged) {
           this.record(record.id, "merged");
-          this.options.tasks.recordDelivery(record.id, { headSha: pull.headSha });
+          this.options.tasks.recordChangeEvidence(record.id, { headSha: pull.headSha });
           this.merged.set(record.id, { pull, forge });
           return { text: mergedWords(forge, pull, audience), recorded: true };
         }
@@ -2705,7 +2705,7 @@ export class PrCiService {
       at,
       checks.some((check) => isRedCheckState(check.state)),
     );
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordChangeEvidence(
       taskId,
       {
         ci: overall,
@@ -2764,7 +2764,7 @@ export class PrCiService {
     // first 40 characters name, which is not the attempt's version (INF-1184).
     if ((await this.holdsVersion(forge, attempt.headSha)) === false) {
       const where = placeWords(forge);
-      this.options.tasks.recordDelivery(
+      this.options.tasks.recordChangeEvidence(
         taskId,
         closeCheckRepair(delivery, attempt.headSha, "void"),
         {
@@ -2807,7 +2807,7 @@ export class PrCiService {
           text: `${name}: no check has started there yet, and ${at.join(", ")} ${at.length === 1 ? "is" : "are"} still at that version, where a run can still start, so it has no result yet.`,
         };
       }
-      this.options.tasks.recordDelivery(
+      this.options.tasks.recordChangeEvidence(
         taskId,
         closeCheckRepair(delivery, attempt.headSha, "superseded"),
         {
@@ -2827,7 +2827,7 @@ export class PrCiService {
       round.ciRounds === undefined
         ? ""
         : ` - round ${round.ciRounds} of ${CI_ROUND_CAP}${round.ciCapAt !== undefined ? ", the CI cap" : ""}`;
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordChangeEvidence(
       taskId,
       round,
       outcome
@@ -2933,7 +2933,7 @@ export class PrCiService {
       task.delivery?.changeLabel ??
       (task.delivery?.prNumber !== undefined ? `#${task.delivery.prNumber}` : undefined);
     if (known === label) return;
-    this.options.tasks.recordDelivery(
+    this.options.tasks.recordChangeEvidence(
       taskId,
       {
         changeLabel: label,

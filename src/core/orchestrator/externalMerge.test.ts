@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import type { Forge, ForgePull } from "../forge";
 import { appPathsFor } from "../paths";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
@@ -35,7 +36,7 @@ function fixture() {
     worktreeDir: "/not-mounted/worktree",
     branch: "fm/task-meter",
   });
-  tasks.recordDelivery("meter", { prNumber: 71, headSha: "a".repeat(40), ci: "green", ciAt: 0 });
+  seedDelivery(tasks, "meter", { prNumber: 71, headSha: "a".repeat(40), ci: "green", ciAt: 0 });
   const declare = () =>
     tasks.recordReport("meter", {
       text: "The meter fix is complete; only its merge remains.",
@@ -186,7 +187,7 @@ describe("external merge reconciliation", () => {
     "resumes monitoring a declared completion after restart from %s and a manual-merge choice",
     async (ci) => {
       const h = fixture();
-      h.tasks.recordDelivery("meter", { ci });
+      seedDelivery(h.tasks, "meter", { ci });
       h.blocked();
       h.merged();
       await h.watcher().poll(h.now());
@@ -439,7 +440,7 @@ describe("external merge reconciliation", () => {
     const reading = watcher.poll(h.now());
     await watcher.poll(h.now());
     expect(h.readPull).toHaveBeenCalledOnce();
-    h.tasks.recordDelivery("meter", { prNumber: 72 });
+    seedDelivery(h.tasks, "meter", { prNumber: 72 });
     answer({ ...h.pull(), merged: true, state: "closed" });
     await reading;
     expect(h.tasks.get("meter")?.status).toBe("active");
@@ -448,7 +449,7 @@ describe("external merge reconciliation", () => {
 
   it("ends a running check watch by closing, without a gone-check wake", async () => {
     const h = fixture();
-    h.tasks.recordDelivery("meter", { ciWatch: armWatch(undefined, h.pull().headSha, 0) });
+    seedDelivery(h.tasks, "meter", { ciWatch: armWatch(undefined, h.pull().headSha, 0) });
     h.merged();
     await h.watcher().poll(h.now());
     expect(h.tasks.get("meter")?.delivery?.ciWatch).toBeUndefined();

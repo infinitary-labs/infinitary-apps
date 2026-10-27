@@ -60,6 +60,8 @@ const BASIS_COLUMN = "/* basis */";
 const BASIS_FROM_REFERENCES =
   "(SELECT b.ref FROM task_references b WHERE b.task_id = t.id AND b.kind = 'basis')";
 const BASIS_FROM_SHAPE = "json_extract(t.shape_json, '$.basis')";
+const DELIVERABLE_COLUMN = "/* task deliverable */";
+const RIGOR_COLUMN = "/* task rigor */";
 
 /**
  * `v_placements_v1`'s source, written in place of these markers when the
@@ -156,8 +158,8 @@ export const PUBLISHED_VIEWS: readonly PublishedView[] = [
   d.model AS model,
   d.provider AS provider,
   CASE WHEN COALESCE(d.served, d.bucket) IN ${SLOT_VALUES} THEN COALESCE(d.served, d.bucket) END AS tier,
-  json_extract(t.shape_json, '$.deliverable') AS deliverable,
-  json_extract(t.shape_json, '$.rigor') AS rigor,
+  ${DELIVERABLE_COLUMN} AS deliverable,
+  ${RIGOR_COLUMN} AS rigor,
   ${DELIVERY_MODE} AS delivery,
   t.created_at AS created_at,
   t.updated_at AS updated_at,
@@ -488,7 +490,27 @@ function publishedViews(db: SchemaReader): PublishedView[] {
   return PUBLISHED_VIEWS.map((view) => ({
     ...view,
     select: view.select
+      .replaceAll(
+        "FROM tasks t",
+        hasTable(db, "task_specifications") ? "FROM task_records t" : "FROM tasks t",
+      )
+      .replaceAll(
+        "JOIN tasks t",
+        hasTable(db, "task_specifications") ? "JOIN task_records t" : "JOIN tasks t",
+      )
       .replace(BASIS_COLUMN, basis)
+      .replace(
+        DELIVERABLE_COLUMN,
+        hasTable(db, "task_contracts")
+          ? "(SELECT json_extract(value_json, '$.deliverable') FROM task_contracts WHERE task_id = t.id)"
+          : "json_extract(t.shape_json, '$.deliverable')",
+      )
+      .replace(
+        RIGOR_COLUMN,
+        hasTable(db, "task_routing_requests")
+          ? "(SELECT json_extract(value_json, '$.rigor') FROM task_routing_requests WHERE task_id = t.id)"
+          : "json_extract(t.shape_json, '$.rigor')",
+      )
       .replace(PLACEMENT_TABLE, executing ? "task_execution" : "tasks")
       .replace(PLACEMENT_TASK, executing ? "task_id" : "id")
       .replaceAll(DELIVERY_MODE, mode),

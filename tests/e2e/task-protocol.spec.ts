@@ -1,8 +1,16 @@
 import { expect, test } from "@playwright/test";
+import { crewComposer, crewmateView } from "./crewmateTab";
 import { type LaunchedApp, launchApp } from "./launch";
 import { MOCK_COMPLETION_TEXT, SPAWN_PROMPT_MARKER } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { nowRow, reportLine, startedLine, taskKey } from "./rails";
+import { nowRow, pressRow, reportLine, startedLine, taskKey } from "./rails";
+import {
+  SESSION_REPEAT_MARKER,
+  SESSION_REPEAT_REPORT,
+  sessionObservationRepeat,
+} from "./scenarios/sessionObservationRepeat";
+import { taskTabs } from "./taskBrowser";
+import { focusOn, pressKey, typeInto } from "./windowKeys";
 
 /**
  * The task protocol end to end (task-system P3, design section 9): a task
@@ -16,7 +24,7 @@ const TITLE = "write a short status note";
 let launched: LaunchedApp;
 
 test.beforeAll(async () => {
-  launched = await launchApp({ withMockProvider: true });
+  launched = await launchApp({ withMockProvider: true, scenarios: [sessionObservationRepeat] });
 });
 
 test.afterAll(async () => {
@@ -51,7 +59,36 @@ test("a commissioned crewmate starts, reports, and its task is on the board with
     return window.infinitary.tasks.detail(id);
   }, key);
   expect(detail.outcome).toBe(MOCK_COMPLETION_TEXT);
+  // INF-1484 E2: the real supervisor records the same session at start and turn end.
+  // Re-reading its token must not add another immutable Activity observation.
+  expect(
+    detail.timeline?.filter(({ entry }) => entry.content.kind === "session-observation"),
+  ).toHaveLength(1);
+  await test.info().attach("completed-turn-history", {
+    body: Buffer.from(JSON.stringify(detail.timeline, null, 2)),
+    contentType: "application/json",
+  });
   await expect(nowRow(page, key)).toBeVisible();
+  await pressRow(page, key);
+  const { tabs, selected } = taskTabs(page);
+  await pressKey(selected, "ArrowRight");
+  await pressKey(tabs.nth(1), "Enter");
+  const composer = crewComposer(crewmateView(page, detail.id));
+  await focusOn(composer);
+  await typeInto(composer, SESSION_REPEAT_MARKER);
+  await pressKey(composer, "Enter");
+  const reread = () => page.evaluate((id) => window.infinitary.tasks.detail(id), detail.id);
+  await expect.poll(async () => (await reread()).outcome).toBe(SESSION_REPEAT_REPORT);
+  await expect.poll(async () => (await reread()).activity).toBe("idle");
+  const repeated = await reread();
+  expect(repeated.events.filter((event) => event.kind === "report")).toHaveLength(2);
+  expect(
+    repeated.timeline?.filter(({ entry }) => entry.content.kind === "session-observation"),
+  ).toEqual(detail.timeline?.filter(({ entry }) => entry.content.kind === "session-observation"));
+  await test.info().attach("repeated-turn-history", {
+    body: Buffer.from(JSON.stringify(repeated.timeline, null, 2)),
+    contentType: "application/json",
+  });
 });
 
 /**

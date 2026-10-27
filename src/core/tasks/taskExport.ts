@@ -1,5 +1,6 @@
 import { committedPlacementSchema } from "@shared/placement";
 import { workShapeSchema } from "@shared/routingPolicy";
+import { effectiveTaskPoliciesSchema } from "@shared/taskPolicies";
 import {
   taskActivitySchema,
   taskClosedReasonSchema,
@@ -21,7 +22,13 @@ import {
 } from "../storage/taskEventStore";
 import type { TaskLink } from "../storage/taskLinkStore";
 import { type TaskReference, taskReferenceSchema } from "../storage/taskReferenceStore";
-import { type TaskSession, taskSessionSchema } from "../storage/taskSessionStore";
+import {
+  type TaskSession,
+  type TaskSessionObservation,
+  taskSessionObservationRecordSchema,
+  taskSessionSchema,
+} from "../storage/taskSessionStore";
+import type { SavedSpecification } from "../storage/taskSpecificationStore";
 import type { TaskRecord } from "../storage/taskStore";
 
 /**
@@ -76,6 +83,8 @@ const deliverySchema = z.object({
   ci: z.enum(["green", "red", "pending", "no-pr", "merged"]).optional(),
   ciAt: z.number().optional(),
   landedMode: z.enum(["fast-forward", "merge", "pr"]).optional(),
+  closedPolicies: effectiveTaskPoliciesSchema.optional(),
+  result: z.object({ at: z.number(), value: z.record(z.string(), z.unknown()) }).optional(),
 });
 
 const taskLineSchema = z.object({
@@ -96,6 +105,12 @@ const taskLineSchema = z.object({
   branch: z.string(),
   sessionFile: nullableString,
   sessions: z.array(taskSessionSchema).optional(),
+  sessionObservations: z
+    .array(taskSessionObservationRecordSchema.omit({ taskId: true, seq: true }))
+    .optional(),
+  specifications: z
+    .array(z.object({ goal: nullableString, prompt: z.string(), intentJson: nullableString }))
+    .optional(),
   /**
    * Its basis, branch source and earlier attempt as recorded (INF-1296 piece
    * 2): who named each and when. The shape still carries each name under its
@@ -136,6 +151,10 @@ const taskLineSchema = z.object({
 const eventLineSchema = z.object({
   kind: z.literal("event"),
   taskId: z.string().min(1),
+  identity: z
+    .string()
+    .regex(/^task-event:.+:-?\d+$/)
+    .optional(),
   at: z.number(),
   actor: taskEventActorSchema,
   eventKind: taskEventKindSchema,
@@ -209,6 +228,8 @@ export type TaskExportBundle = {
   projects: ProjectRecord[];
   tasks: TaskRecord[];
   sessions?: { taskId: string; session: TaskSession }[];
+  sessionObservations?: { taskId: string; observation: TaskSessionObservation & { id: string } }[];
+  specifications?: { taskId: string; specifications: SavedSpecification[] }[];
   /** Recorded references; an older export has none, and its shapes name them. */
   references?: { taskId: string; reference: TaskReference }[];
   /** Each resume binding's recorded conversation; an older export has none. */
@@ -227,6 +248,10 @@ export type TaskExportSource = {
   projects: { list(): ProjectRecord[] };
   list(): TaskRecord[];
   recordedSessions?(id: string): TaskSession[];
+  sessionObservations?(
+    id: string,
+  ): (TaskSessionObservation & { id: string; taskId: string; seq: number })[];
+  recordedSpecifications?(id: string): SavedSpecification[];
   recordedReferences?(id: string): TaskReference[];
   recordedConversation?(id: string): string | null;
   timeline(id: string): TaskEvent[];
@@ -272,7 +297,23 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
     ),
     ...tasks.map((task): TaskExportLine => {
       const { kind, ...rest } = task;
+      const specifications = source.recordedSpecifications?.(task.id) ?? [];
+      const first = specifications[0];
+      // A single canonical revision is already carried by the compatible
+      // task line. Keep its raw payload too when that line cannot reproduce
+      // it exactly (including older unknown intent fields or formatting).
+      const keepSpecifications =
+        specifications.length > 1 ||
+        (first &&
+          (first.goal !== task.goal ||
+            first.prompt !== task.prompt ||
+            first.intentJson !==
+              (task.intent ? JSON.stringify(taskIntentViewSchema.parse(task.intent)) : null)));
       const sessions = source.recordedSessions?.(task.id) ?? [];
+      const sessionObservations =
+        source
+          .sessionObservations?.(task.id)
+          .map(({ taskId: _taskId, seq: _seq, ...observed }) => observed) ?? [];
       const references = source.recordedReferences?.(task.id) ?? [];
       const conversation = task.sessionFile ? source.recordedConversation?.(task.id) : undefined;
       return {
@@ -280,6 +321,8 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
         ...rest,
         taskKind: kind,
         ...(sessions.length ? { sessions } : {}),
+        ...(sessionObservations.length ? { sessionObservations } : {}),
+        ...(keepSpecifications ? { specifications } : {}),
         ...(references.length ? { references } : {}),
         ...(conversation !== undefined ? { conversation } : {}),
       };
@@ -323,6 +366,8 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
     links: [],
     asks: [],
     sessions: [],
+    sessionObservations: [],
+    specifications: [],
     references: [],
     conversations: [],
   };
@@ -356,9 +401,21 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
         break;
       }
       case "task": {
-        const { kind: _kind, taskKind, sessions, references, conversation, ...rest } = line;
+        const {
+          kind: _kind,
+          taskKind,
+          sessions,
+          sessionObservations,
+          specifications,
+          references,
+          conversation,
+          ...rest
+        } = line;
+        if (specifications) bundle.specifications?.push({ taskId: rest.id, specifications });
         if (conversation !== undefined)
           bundle.conversations?.push({ taskId: rest.id, conversation });
+        for (const observation of sessionObservations ?? [])
+          bundle.sessionObservations?.push({ taskId: rest.id, observation });
         for (const session of sessions ?? []) bundle.sessions?.push({ taskId: rest.id, session });
         for (const reference of references ?? [])
           bundle.references?.push({ taskId: rest.id, reference });

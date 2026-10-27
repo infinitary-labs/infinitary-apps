@@ -67,14 +67,14 @@ export async function carryPassedReview(options: {
     if (options.record.deviceId) return false;
     reviewed = await read(options.repoDir, delivery.reviewSha).catch(() => null);
     if (!reviewed) return false;
-    options.tasks.recordDelivery(options.taskId, { reviewChange: reviewed });
+    options.tasks.recordChangeEvidence(options.taskId, { reviewChange: reviewed });
   }
   const stored = storedChangeReading(options.tasks.get(options.taskId)?.delivery, options.head);
   if (stored) return stored === reviewed;
   const headReading = await read(options.repoDir, options.head).catch(() => null);
   if (!headReading || headReading !== reviewed) return false;
   const latest = options.tasks.get(options.taskId)?.delivery;
-  options.tasks.recordDelivery(options.taskId, {
+  options.tasks.recordChangeEvidence(options.taskId, {
     versionReadings: { ...latest?.versionReadings, [options.head]: headReading },
   });
   options.tasks.note(

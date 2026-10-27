@@ -8,6 +8,7 @@ import type { IntegrationAsk } from "@shared/writeAsk";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { allowIntegrationReads } from "../../../../../tests/helpers/integrationApprovals";
 import { scratchDir } from "../../../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../../../tests/helpers/taskDelivery";
 import {
   FileIntegrationSecrets,
   forgeHostIntegration,
@@ -261,7 +262,7 @@ async function fixture(
     shape: { kind: "research", deliverable: "answer" },
   });
   const readChecks = vi.fn(async () => {
-    tasks.recordDelivery("task-1", { ciWatch: { head: HEAD, since: 1 } as never });
+    seedDelivery(tasks, "task-1", { ciWatch: { head: HEAD, since: 1 } as never });
     return "checks pending";
   });
   const service = new GithubGatewayService({
@@ -297,7 +298,7 @@ async function fixture(
     readChecks,
     onSignInRejected,
     reserve: () =>
-      tasks.recordDelivery("task-1", {
+      seedDelivery(tasks, "task-1", {
         headSha: HEAD,
         ci: "red",
         ciRepair: {
@@ -324,7 +325,7 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     "refuses a raw merge request write through %s %s on gitlab.com",
     async (method, rest) => {
       const f = await fixture();
-      f.tasks.recordDelivery("task-1", { prNumber: 36 });
+      seedDelivery(f.tasks, "task-1", { prNumber: 36 });
       f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
       const result = await f.write.run({
         method,
@@ -350,7 +351,7 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
     ["merge_requests/036?labels=evidence&description=Raw", "{}"],
   ])("refuses a description named in the query string: %s", async (rest, body) => {
     const f = await fixture();
-    f.tasks.recordDelivery("task-1", { prNumber: 36 });
+    seedDelivery(f.tasks, "task-1", { prNumber: 36 });
     f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
     const result = await f.write.run({
       method: "PUT",
@@ -537,7 +538,7 @@ describe("the gateway on a GitLab project, through crewmate tools and the key ma
 
   it("keeps a gitlab.com merge request's other writes and a server's own merge requests writable", async () => {
     const f = await fixture();
-    f.tasks.recordDelivery("task-1", { prNumber: 36 });
+    seedDelivery(f.tasks, "task-1", { prNumber: 36 });
     f.tasks.updateChangePresentation("task-1", () => ({ revisions: [], receipts: [] }));
     // A title or label change is not the description; another merge request is not this task's.
     await f.write.run({

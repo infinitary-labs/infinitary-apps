@@ -51,6 +51,7 @@ import { holdingWaits, waitsSince } from "./holdingWaits";
 import { type ConcernedEventView, condenseActivity, reportHeadline } from "./recordActivity";
 import { taskFeedLine } from "./taskFeed";
 import { type TaskChange, TaskService } from "./taskService";
+import type { TaskTimeline } from "./taskTimeline";
 
 /**
  * The task protocol's core side (task-system design section 9, P3): the
@@ -125,6 +126,7 @@ export type BoardPushMode = "snapshot" | "delta";
 
 export type TaskProtocolOptions = {
   tasks: TaskService;
+  timeline?: Pick<TaskTimeline, "history">;
   validationEvidence?: (taskId: string, evidence: ValidationEvidence[]) => ValidationEvidence[];
   /** Repo facts the views denormalize; absent repos read as none. */
   repos: {
@@ -520,6 +522,7 @@ export class TaskProtocol {
       ...(reasoning ? { reasoning } : {}),
       cards,
       events,
+      ...(this.options.timeline ? { timeline: this.options.timeline.history(id) } : {}),
       activityLog: condenseActivity(events, modelLabel, {
         cardTitle,
         concerned,

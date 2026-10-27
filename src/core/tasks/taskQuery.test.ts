@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { pngImage } from "../../../tests/helpers/images";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { attachmentPath, keepImages } from "../attachments";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
@@ -270,7 +271,8 @@ describe("the tasks query's work built on a task (INF-976)", () => {
       repoId: null,
       shape: { kind: "implement", basis: answerKey },
     });
-    tasks.recordDelivery(
+    seedDelivery(
+      tasks,
       "builder",
       { prNumber: 364, changeLabel: "#364", prUrl: "https://github.com/o/r/pull/364" },
       { kind: "pr_opened", text: "PR #364" },

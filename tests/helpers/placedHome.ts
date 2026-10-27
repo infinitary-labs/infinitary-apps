@@ -43,6 +43,7 @@ import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { InboxStore } from "../../src/core/storage/inboxStore";
 import { SettingsStore } from "../../src/core/storage/settingsStore";
 import { TaskService } from "../../src/core/tasks/taskService";
+import { TaskTimeline } from "../../src/core/tasks/taskTimeline";
 import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
 import { WorkspaceService } from "../../src/core/workspace/workspaceService";
 import type { Card } from "../../src/shared/cards";
@@ -177,6 +178,7 @@ export function startPlacedHome(options: {
   const db: AppDatabase = openDatabase(options.userData);
   const paths = appPathsFor(options.userData);
   const tasks = new TaskService({ db, now });
+  const cardStore = new CardStore(db);
   const inbox = new InboxStore(db, { now });
   inbox.resetInFlight(
     tasks
@@ -431,7 +433,8 @@ export function startPlacedHome(options: {
         }
       : {}),
     tasks,
-    cardStore: new CardStore(db),
+    cardStore,
+    taskTimeline: new TaskTimeline({ tasks, cards: cardStore }),
     inbox,
     paths,
     now,

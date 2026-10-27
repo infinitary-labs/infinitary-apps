@@ -2,11 +2,13 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Card } from "@shared/cards";
 import { TIMELINE_CONTENT_KINDS, timelineEntrySchema } from "@shared/timeline";
+import { TIMELINE_BRIEF_REVISED, timelineConversationWords } from "@shared/timelineWords";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { CardService } from "../orchestrator/cardService";
 import { CardStore } from "../storage/cardStore";
 import { openInMemoryDatabase } from "../storage/db";
+import { timelineEventIdentity } from "../storage/taskEventStore";
 import { CrewActions } from "./crewActions";
 import { seedTask } from "./seedTask";
 import { TaskService } from "./taskService";
@@ -140,15 +142,15 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
     const ids = entries.map((entry) => entry.id);
     for (const event of events) {
       if (event === resolved) continue;
-      expect(ids).toContain(`task-event:${event.id}`);
+      expect(ids).toContain(timelineEventIdentity(event));
     }
-    expect(ids).not.toContain(`task-event:${resolved?.id}`);
+    expect(ids).not.toContain(timelineEventIdentity(resolved!));
     const receipt = entries.find((entry) => entry.id === `card-observation:${choice?.id}`);
     expect(receipt).toMatchObject({
       content: { kind: "card-choice" },
       actor: { kind: "captain" },
       summary: '"Which fix should I keep?": Await the queue flush',
-      aliases: [`task-event:${resolved?.id}`],
+      aliases: [timelineEventIdentity(resolved!), `task-event:${resolved?.id}`],
     });
 
     // Each thread line is one entry, its card evidence reference folded in,
@@ -195,7 +197,7 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
     const resolved = world.tasks.timeline("rerun").find((event) => event.kind === "card_resolved");
     const choice = world.cardStore.observations(cardId).find((o) => o.kind === "action");
     expect(entries.map((entry) => entry.id)).toEqual(
-      expect.arrayContaining([`task-event:${resolved?.id}`, `card-observation:${choice?.id}`]),
+      expect.arrayContaining([timelineEventIdentity(resolved!), `card-observation:${choice?.id}`]),
     );
     expect(
       entries.every((entry) => entry.aliases.every((alias) => !alias.startsWith("task-"))),
@@ -323,4 +325,89 @@ describe("the unified task timeline (INF-1296 piece 1)", () => {
       expect(world.timeline.expand("rerun", entry.id).status).toBe("available");
     }
   });
+});
+
+it("keeps exact raw brief, conversation and script contents beneath the captain-approved plain reading", () => {
+  const world = setup();
+  seedTask(world.tasks, {
+    id: "plain",
+    title: "Check the practice release",
+    status: "idle",
+    intent: { goal: "The practice release passes.", userWords: "check the practice release" },
+  });
+  world.tasks.updateFields("plain", { goal: "The Mac and Linux checks pass." }, "captain");
+  const revision = world.timeline
+    .sources("plain")
+    .find((source) => source.record?.source === "task-event" && source.record.specification);
+  expect(revision?.record?.source).toBe("task-event");
+  const brief = world.timeline
+    .history("plain")
+    .find((reading) => reading.entry.id === revision?.entry.id);
+  expect(brief?.text).toBe(TIMELINE_BRIEF_REVISED);
+  if (revision?.record?.source !== "task-event")
+    throw new Error("The revised specification is missing");
+  expect(brief?.details).toBe(
+    `${revision.record.event.text}\n\n${JSON.stringify(revision.record.specification, null, 2)}`,
+  );
+  // A legacy pointer without an owner-held receipt is evidence, not a revised brief.
+  const unknownText = "The earlier record had no retained brief receipt.";
+  world.tasks.note("plain", unknownText, {
+    news: false,
+    data: { specificationRevision: Number(revision.record.event.data?.specificationRevision) + 1 },
+  });
+  const unknown = world.timeline.history("plain").find((reading) => reading.text === unknownText);
+  expect(unknown).toBeDefined();
+  expect(unknown?.entry.summary).toBe(unknownText);
+  expect(unknown?.details).toBeUndefined();
+  const facts = {
+    file: "/work/practice.jsonl",
+    computer: "Work computer",
+    device_id: "work",
+    provider: "openai-codex",
+    model: "gpt-5",
+    account_id: "work-account",
+    began: "resume",
+  };
+  world.tasks.setSessionFile("plain", "practice-resume", facts);
+  world.tasks.setSessionFile("plain", "practice-resume", { ...facts, model: "gpt-6" });
+  const observed = world.timeline
+    .history("plain")
+    .filter((reading) => reading.entry.content.kind === "session-observation");
+  expect(observed.map((reading) => reading.text)).toEqual([
+    timelineConversationWords("resume"),
+    timelineConversationWords("resume", true),
+  ]);
+  expect(observed[0]?.details).toContain(facts.model);
+  expect(observed[1]?.details).toContain("gpt-6");
+  const cardId = world.cards.emitCrewmateCard(
+    "plain",
+    {
+      id: "mode",
+      title: "Keep the queue flush",
+      body: "<p>The flush passes both checks.</p>",
+      actions: [{ id: "flush", label: "Keep the queue flush", default: true }],
+    },
+    "Practice",
+  );
+  const frameValue = JSON.stringify({ mode: "flush", checks: ["Mac", "Linux"] });
+  world.cards.resolve(
+    world.cards.get(cardId) as Card,
+    "script:flush",
+    "flush",
+    undefined,
+    "crewmate",
+    { source: "frame", frameValue },
+  );
+  const choice = world.timeline
+    .history("plain")
+    .find(
+      (reading) =>
+        reading.entry.content.kind === "card-choice" && reading.entry.actor?.kind === "frame",
+    );
+  expect(choice?.details).toBe(frameValue);
+  expect(choice?.text).not.toContain(frameValue);
+  expect(
+    world.timeline.sources("plain").find((source) => source.entry.id === choice?.entry.id)?.record,
+  ).toMatchObject({ source: "card-observation", observation: { payload: { frameValue } } });
+  world.db.close();
 });

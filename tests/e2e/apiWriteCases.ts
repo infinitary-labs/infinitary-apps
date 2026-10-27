@@ -1,6 +1,7 @@
 import type { GithubWriteInput } from "../../src/core/forge/api";
 import { MERGE_CONTINUED_LEAD, WRITE_ANSWERED_LEAD } from "../../src/core/orchestrator/wakes";
 import { savedDeliveryReader } from "../../src/core/storage/taskDeliveryFields";
+import { taskReadTable } from "../../src/core/storage/taskRecordFields";
 import type { WriteAsk } from "../../src/shared/writeAsk";
 import { readSavedData } from "./savedData";
 
@@ -117,7 +118,7 @@ export function writeAskCall(title: string): GithubWriteInput {
 export function savedWriteAsks(userDataDir: string, taskId: string): WriteAsk[] {
   const delivery = readSavedData(userDataDir, (db) => {
     const row = db
-      .prepare("SELECT delivery_json AS delivery FROM tasks WHERE id = ?")
+      .prepare(`SELECT delivery_json AS delivery FROM ${taskReadTable(db)} WHERE id = ?`)
       .get(taskId) as { delivery: string | null } | undefined;
     return savedDeliveryReader(db)(taskId, row?.delivery ?? null);
   });

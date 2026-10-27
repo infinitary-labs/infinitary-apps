@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { seedDelivery } from "../../../tests/helpers/taskDelivery";
 import { candidateHead, standingAuthorization } from "../orchestrator/mergeAuthorization";
 import { openDatabase, openInMemoryDatabase, TASK_DELIVERY_RECORDS_VERSION } from "../storage/db";
 import { type MergeAuthorization, type TaskDelivery, TaskStore } from "../storage/taskStore";
@@ -135,7 +136,7 @@ function olderProfile() {
   const at = openDatabase(dir, TASK_DELIVERY_RECORDS_VERSION - 1);
   const { tasks } = setup(at);
   seedTask(tasks, { id: "kept", title: "Color the chart", status: "idle" });
-  tasks.recordDelivery("kept", {
+  seedDelivery(tasks, "kept", {
     mode: "direct-pr",
     prNumber: 88,
     prUrl: "https://github.com/octo/chart/pull/88",
@@ -186,7 +187,7 @@ function olderProfile() {
     proceedWithOpen: false,
   });
   seedTask(tasks, { id: "landed", title: "Fix the axis", status: "completed" });
-  tasks.recordDelivery("landed", savedLanded() as Partial<TaskDelivery>);
+  seedDelivery(tasks, "landed", savedLanded() as Partial<TaskDelivery>);
   seedTask(tasks, { id: "closed", title: "Answer the question", status: "completed" });
   const history = {
     closedPolicies: {
@@ -299,7 +300,11 @@ describe("the migration of an older release's delivery facts", () => {
     // The column keeps only history; an unreadable delivery is left as saved.
     const rows = Object.fromEntries(
       (
-        upgraded.prepare("SELECT id, delivery_json, pending_settle_json FROM tasks").all() as {
+        upgraded
+          .prepare(
+            "SELECT task_id AS id, delivery_json, pending_settle_json FROM task_record_history",
+          )
+          .all() as {
           id: string;
           delivery_json: string | null;
           pending_settle_json: string | null;
@@ -325,7 +330,7 @@ describe("the migration of an older release's delivery facts", () => {
     const upgraded = openDatabase(dir);
     const { tasks } = setup(upgraded);
     // The answer came: the attempt token goes, and the approval is spent.
-    tasks.recordDelivery("kept", {
+    seedDelivery(tasks, "kept", {
       mergeAuthorization: {
         ...IN_FLIGHT,
         attempt: undefined,
@@ -367,7 +372,7 @@ describe("a task's delivery records", () => {
   it("replaces evidence and permissions with each whole delivery, and drops rows a task no longer needs", () => {
     const { db, tasks } = setup();
     seedTask(tasks, { id: "t", title: "Ship the legend", status: "idle" });
-    tasks.recordDelivery("t", {
+    seedDelivery(tasks, "t", {
       mode: "direct-pr",
       prNumber: 9,
       headSha: APPROVED,
@@ -380,7 +385,7 @@ describe("a task's delivery records", () => {
       ].map((row) => (row as { n: number }).n);
     expect(counts()).toEqual([1, 1]);
     // The offer ends: its permission row goes, the evidence stays.
-    tasks.recordDelivery("t", { completionOffers: undefined });
+    seedDelivery(tasks, "t", { completionOffers: undefined });
     expect(tasks.get("t")?.delivery).toEqual({ mode: "direct-pr", prNumber: 9, headSha: APPROVED });
     expect(counts()).toEqual([1, 0]);
     // The whole record is cleared: nothing is left behind.

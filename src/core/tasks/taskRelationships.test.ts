@@ -303,7 +303,7 @@ describe("the migration of an older release's relationships", () => {
     // The shape column no longer holds them.
     const stored = upgraded
       .prepare(
-        "SELECT COUNT(*) AS n FROM tasks WHERE json_type(shape_json, '$.basis') IS NOT NULL OR json_type(shape_json, '$.branch_from') IS NOT NULL OR json_type(shape_json, '$.escalate_from') IS NOT NULL",
+        "SELECT COUNT(*) AS n FROM task_records WHERE json_type(shape_json, '$.basis') IS NOT NULL OR json_type(shape_json, '$.branch_from') IS NOT NULL OR json_type(shape_json, '$.escalate_from') IS NOT NULL",
       )
       .get();
     expect(stored).toEqual({ n: 0 });

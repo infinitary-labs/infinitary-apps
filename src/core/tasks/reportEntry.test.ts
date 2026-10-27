@@ -21,7 +21,7 @@ function setup() {
   const asOlderRelease = (value: Record<string, unknown>, when: number, id = "finder") =>
     db
       .prepare(
-        "UPDATE tasks SET delivery_json = json_set(coalesce(delivery_json, '{}'), '$.result', json(?)) WHERE id = ?",
+        "UPDATE task_record_history SET delivery_json = json_set(coalesce(delivery_json, '{}'), '$.result', json(?)) WHERE task_id = ?",
       )
       .run(JSON.stringify({ at: when, value }), id);
   return { db, tasks, asOlderRelease };

@@ -24,6 +24,7 @@ import { type LaunchedApp, launchApp } from "./launch";
 import {
   FM_THREAD_CARD_TITLE,
   SPAWN_PROMPT_MARKER,
+  THREAD_ACK_ANSWER,
   THREAD_ACK_REPLY,
   THREAD_ACK_REVISED_TITLE,
   THREAD_ACK_TEXT,
@@ -707,6 +708,9 @@ test("a reply keeps the card shown with its thread while another card waits; an 
   await expect(pager(page, 2)).toBeVisible();
   await expect(thread.getByText(THREAD_ACK_TEXT)).toBeVisible();
   await expect(thread.getByText(`revised: ${THREAD_ACK_REVISED_TITLE}`)).toBeVisible();
+  // INF-1623: the revision's own answer lands after its revised line, though
+  // the acknowledgement already ended the reply's wait.
+  await expect(thread.getByText(THREAD_ACK_ANSWER)).toBeVisible();
   await expect(newBadge).toHaveCount(0);
   await page.screenshot({ path: test.info().outputPath("answer-in-place.png") });
   await closeOpenCards(page);

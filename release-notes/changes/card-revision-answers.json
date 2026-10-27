@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "card-revision-answers",
+      "kind": "fix",
+      "title": "A card's thread always shows the answer to your question after the card changes",
+      "body": "When a crewmate or your first mate changes a card to answer your question in its thread, its answer now always appears right after the line saying the card changed, and says what changed and where. Before, an answer could disappear when an earlier \"still checking\" line had come first, most often from a task on another computer. The line saying the card changed now names the sections it changed, instead of Whole card, when lines were only reworded. A card you put aside comes back only once the final answer is there.",
+      "area": "cards",
+      "picture": {
+        "dark": "card-revision-answers-dark.webp",
+        "light": "card-revision-answers-light.webp",
+        "alt": "A card's thread with your question, the crewmate's still-checking line, the line saying the card changed with links to What changed, Before and after and Checked, then the crewmate's answer"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

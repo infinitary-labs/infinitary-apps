@@ -135,7 +135,7 @@ export const FIRSTMATE_CARD_AUTHORING = renderInstructions(CARD_AUTHORING_PARTS,
 export const CARD_REPLY = [
   "CARD REPLIES",
   "Captain replies carry card ids.",
-  "Do the work first; always answer in-thread in one to three sentences. For changed cards, emit_card with SAME id and answer as reply; otherwise reply.",
+  "Do the work first; always answer in-thread in one to three sentences. For changed cards, emit_card with SAME id and answer as reply, on every revision while answering, saying what changed where; otherwise reply.",
   "A reply never moves the card: it stays beside its thread. Answers show once sent: give results when research is done, before other work, never acknowledgements or promises.",
   "Reply in sentence-case prose, never actions or scripts; figures revise the card.",
   "Replies resolve nothing; buttons stay: a reply is not a closing choice and does not authorize merging. Never close merely for a reply.",
@@ -325,7 +325,7 @@ export const CARD_PARAMS = {
   holds_place:
     "Leave unset unless the use case requires continuous attention on this card. True brings the card forward when it arrives. Choices close at once.",
   reply:
-    "Your short answer to the captain's reply in this card's thread; required when a revision answers one.",
+    "Your short answer in this card's thread, saying what changed where; required on every revision while answering.",
   width:
     "Body: short text narrow; wide 800 px; full ≤1,040 px; pass it only to require more room; it can only widen, never narrow.",
   actions: `${ACTIONS_EFFECTS}${ACTIONS_OPEN}`,

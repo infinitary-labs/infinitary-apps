@@ -114,6 +114,7 @@ Keyboard activation focuses the destination and Escape returns to the originatin
 Unrelated disclosures, drafts, thread position and choices stay unchanged.
 Older links locate their areas in the current card, preferring the surviving changed part and otherwise the same area's heading.
 An unavailable or ambiguous area retains its link, says so quietly on activation, and moves nothing.
-Whole card covers rewrites or excessive part counts, Preview updated covers interactive previews, and Title and Buttons target those actual regions.
+Whole card covers rewrites or excessive part counts; a reworded line counts as edited in its section, never as new, so a card whose lines were reworded names those sections.
+Preview updated covers interactive previews, and Title and Buttons target those actual regions.
 Go to the next revised area is in command search without a default shortcut, follows the selected revision's list and defaults to the newest released list.
 No incoming revision scrolls the card automatically; a collapsed thread keeps its existing opening control.

@@ -313,7 +313,12 @@ describe("ready decisions are the sole waiting fact", () => {
         h.cards.replyFromCrewmate("t", { cardId: id, text: "Checking." });
         await h.flush();
         h.assertWaiting("t", null);
-        h.cards.emitCrewmateCard("t", { ...decision, id, title: "Answered" }, "route");
+        // INF-1623: a revision made while answering carries its own answer.
+        h.cards.emitCrewmateCard(
+          "t",
+          { ...decision, id, title: "Answered", reply: "I retitled the card Answered." },
+          "route",
+        );
         await h.flush();
         h.assertWaiting("t", null);
         // INF-926: a report mid-turn does not bring back a card the captain

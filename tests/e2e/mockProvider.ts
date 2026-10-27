@@ -249,6 +249,9 @@ export const THREAD_PROSE_ANSWER = "Kept it; the queue flush makes the retry har
 export const THREAD_ACK_REPLY = "does it cover the retry on windows too?";
 export const THREAD_ACK_TEXT = "I'll check the windows retry and update the card.";
 export const THREAD_ACK_REVISED_TITLE = "Await the queue on every platform";
+/** The revision's own answer: every revision while answering says what changed (INF-1623). */
+export const THREAD_ACK_ANSWER =
+  "The windows retry waits on the same queue flush, so I added it to the card.";
 export const MOCK_THREAD_ACK_REPORT =
   "Checked the windows retry: awaiting the queue covers it too, and the card now says so.";
 
@@ -1904,6 +1907,7 @@ export async function startMockProvider(
                     name: "emit_card",
                     args: {
                       id: "thread-card",
+                      reply: THREAD_ACK_ANSWER,
                       title: THREAD_ACK_REVISED_TITLE,
                       body: "<p>Awaiting the job queue removes the race on every platform.</p><p>The windows retry waits on the same queue flush.</p>",
                       actions: [

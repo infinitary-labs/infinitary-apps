@@ -22883,6 +22883,50 @@ describe("CrewSupervisor: the card thread", () => {
     expect(crewmate.steer).not.toHaveBeenCalled();
   });
 
+  // INF-1623: the crew includes the first mate on its own cards.
+  it("shows the answer the Firstmate's revision carries after its closing words answered, and refuses one without it in that turn", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    harness.supervisor.setFirstmateHooks({
+      notifyOp: (wake) => harness.ops.push(served(wake)),
+      retryConverse: vi.fn(),
+      converseAboutCard: vi.fn(),
+    });
+    const body = "<h2>Options</h2><p>A or B.</p>";
+    const cardId = harness.supervisor.addFirstmateCard({
+      id: "pick",
+      title: "Pick one",
+      body,
+      actions: [{ id: "a", label: "A", default: true }],
+    });
+    await tick();
+    harness.supervisor.replyToCard(cardId, "the second option is wrong");
+    expect(harness.supervisor.recordFirstmateThreadAnswer(cardId, "You are right; B is wrong.")).toBe(
+      true,
+    );
+    const revision = {
+      id: "pick",
+      title: "Pick one",
+      body: "<h2>Options</h2><p>A or C.</p>",
+      actions: [{ id: "a", label: "A", default: true }],
+    };
+    expect(() => harness.supervisor.addFirstmateCard(revision)).toThrow(/under which heading/);
+    harness.supervisor.firstmateClosedOut();
+    harness.supervisor.addFirstmateCard({
+      ...revision,
+      reply: "I replaced B with C under Options.",
+    });
+    await tick();
+    expect(
+      harness.supervisor.cardThread(cardId).messages.map((message) => [message.who, message.text]),
+    ).toEqual([
+      ["captain", "the second option is wrong"],
+      ["firstmate", "You are right; B is wrong."],
+      ["host", "revised: Pick one"],
+      ["firstmate", "I replaced B with C under Options."],
+    ]);
+  });
+
   it("rides an image on a crewmate thread steer", async () => {
     const crewmate = fakeCrewmate();
     const harness = setup(crewmate);
@@ -23182,6 +23226,8 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     syncCardId(
       spec?.onCard?.({
         id: stable,
+        // Every revision after the turn's answer says what it changed (INF-1623).
+        reply: "I rewrote the card around one reconciler; the choices now lead with building it.",
         title: "General idle crew recovery · round 2",
         body: "<p>One reconciler reads every idle crewmate on a durable clock.</p><p>Every idle case in the record is one missing witness.</p>",
         actions: [
@@ -23274,6 +23320,8 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
 
     const oneAtATime = {
       id: stable,
+      // Every revision after the turn's answer says what it changed (INF-1623).
+      reply: "I changed the card to ask question 4 of 6 on its own.",
       title: "Choose GitHub access one question at a time",
       body: "<p>Question 4 of 6: may a crewmate open a proposed change on its own?</p><p>Your first three answers are recorded.</p>",
       actions: [
@@ -23387,6 +23435,142 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     expect(returns[0]?.at).toBeGreaterThan(replied + 819 * S);
   });
 
+  // INF-1623: INF-1595's exchange. The captain asked under the card, the
+  // crewmate's "Checking..." line ended the wait, and the revision a minute
+  // later carried its answer, which the app dropped because nothing waited.
+  it("puts a revision's answer right after its revised line when an earlier line already ended the wait", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const body =
+      "<h2>What changed</h2><p>A closed task's working copy is deleted.</p><h2>Checked</h2><p>The copy is deleted.</p>";
+    const { cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "fix(work): retire a closed task's working copy",
+      body,
+      actions: [],
+    });
+    harness.supervisor.replyToCard(
+      cardId,
+      "wait - do you mean worktrees? aren't we supposed to keep warm worktrees?",
+    );
+    await tick();
+    const spec = harness.specs[0];
+    // What an older computer that runs work sent: the line without its interim mark.
+    spec?.onReply?.({
+      cardId,
+      text: "Checking how this change meets the warm pool of ready working copies before I answer.",
+    });
+    const answer =
+      "Yes, these are the tasks' worktrees; retiring one resets it into the warm pool. I added a bullet under What changed.";
+    syncCardId(
+      spec?.onCard?.({
+        id: stable,
+        reply: answer,
+        title: "fix(work): retire a closed task's working copy",
+        body: `${body.replace("is deleted", "is retired")}<p>A retired copy goes to the pool of ready working copies.</p>`,
+        actions: [],
+      }),
+    );
+    await tick();
+    expect(
+      harness.supervisor.cardThread(cardId).messages.map((message) => [message.who, message.text]),
+    ).toEqual([
+      ["captain", "wait - do you mean worktrees? aren't we supposed to keep warm worktrees?"],
+      [
+        "crewmate",
+        "Checking how this change meets the warm pool of ready working copies before I answer.",
+      ],
+      ["host", "revised: fix(work): retire a closed task's working copy"],
+      ["crewmate", answer],
+    ]);
+  });
+
+  // INF-1623, the captain's "every": each revision made while answering
+  // carries its own answer, right after the app's revised line.
+  it("refuses a revision without its own answer after the turn's answer, and takes one once the turn has ended", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "Retire closed working copies",
+      body: "<h2>What changed</h2><p>A closed task's copy is deleted.</p>",
+      actions: [],
+    });
+    harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
+    await tick();
+    const spec = harness.specs[0];
+    spec?.onReply?.({ cardId, text: "Yes; retiring one puts it back in the warm pool." });
+    const revision = {
+      id: stable,
+      title: "Retire closed working copies",
+      body: "<h2>What changed</h2><p>A closed task's copy is retired into the warm pool.</p>",
+      actions: [],
+    };
+    const before = harness.supervisor.cardThread(cardId).messages.map((m) => m.who);
+    expect(() => spec?.onCard?.(revision)).toThrow(/under which heading/);
+    expect(harness.supervisor.cardThread(cardId).messages.map((m) => m.who)).toEqual(before);
+    expect(harness.cardStore.get(cardId)?.body).toBe(
+      "<h2>What changed</h2><p>A closed task's copy is deleted.</p>",
+    );
+    syncCardId(spec?.onCard?.({ ...revision, reply: "I reworded the bullet under What changed." }));
+    await tick();
+    expect(harness.supervisor.cardThread(cardId).messages.map((m) => m.who)).toEqual([
+      "captain",
+      "crewmate",
+      "host",
+      "crewmate",
+    ]);
+    crewmate.finishPrompt();
+    await tick();
+    // A later turn that nobody asked anything in revises as it always did.
+    expect(() =>
+      spec?.onCard?.({ ...revision, body: "<h2>What changed</h2><p>Retired, and reset.</p>" }),
+    ).not.toThrow();
+  });
+
+  // INF-1623, the captain's "make sure if the card is hidden/minimized etc,
+  // it only gets brought back after the final reply is in place".
+  it("keeps a card put aside away through a still-working line and its turn's end, and brings it back with the final answer", async () => {
+    const crewmate = fakeCrewmate();
+    const harness = setup(crewmate);
+    const { taskId, cardId, stable } = await onTheStage(harness, crewmate, {
+      title: "Retire closed working copies",
+      body: "<h2>What changed</h2><p>A closed task's copy is deleted.</p>",
+      actions: [],
+    });
+    const aside = () => harness.cards().find((card) => card.id === cardId)?.minimized;
+    harness.supervisor.replyToCard(cardId, "do you mean worktrees?");
+    await tick();
+    harness.supervisor.setCardMinimized(cardId, true);
+    const spec = harness.specs[0];
+    expect(
+      spec?.onReply?.({ cardId, text: "Checking the warm pool first.", interim: true }),
+    ).toContain("still waits for your answer");
+    crewmate.finishPrompt();
+    await tick();
+    expect(aside()).toBe(true);
+
+    await harness.supervisor.steerCrewmate(taskId, "Go on.");
+    await tick();
+    const answer = "Yes; retiring one resets it into the warm pool. I reworded What changed.";
+    syncCardId(
+      spec?.onCard?.({
+        id: stable,
+        reply: answer,
+        title: "Retire closed working copies",
+        body: "<h2>What changed</h2><p>A closed task's copy is retired into the warm pool.</p>",
+        actions: [],
+      }),
+    );
+    await tick();
+    expect(aside()).toBe(true);
+    crewmate.finishPrompt();
+    await tick();
+    expect(aside()).toBeUndefined();
+    expect(harness.supervisor.cardThread(cardId).messages.at(-1)).toMatchObject({
+      who: "crewmate",
+      text: answer,
+    });
+  });
+
   // INF-797: a card the captain put aside must not come back "while the
   // crewmate is still working and hasn't finished updating the card content".
   it("a card put aside that its crewmate answers and revises mid-turn comes back at its turn's end, with the last write", async () => {
@@ -23412,6 +23596,8 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     syncCardId(
       spec?.onCard?.({
         id: stable,
+        // Every revision after the turn's answer says what it changed (INF-1623).
+        reply: "I moved the draft plan to Saturday.",
         title: "Ship the release on Saturday (draft)",
         body: "<p>Draft: moving to Saturday.</p><p>Still checking the Windows build.</p>",
         actions,
@@ -23425,6 +23611,7 @@ describe("CrewSupervisor: a card reaches the stage at its author's close-out", (
     syncCardId(
       spec?.onCard?.({
         id: stable,
+        reply: "The Windows build passed, so the card now ships Saturday afternoon.",
         title: "Ship the release on Saturday after the Windows build",
         body: "<p>The Windows build passed.</p><p>Ship Saturday afternoon.</p>",
         actions,

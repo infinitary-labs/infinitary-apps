@@ -43279,6 +43279,9 @@
               },
               "text": {
                 "type": "string"
+              },
+              "interim": {
+                "type": "boolean"
               }
             },
             "required": [

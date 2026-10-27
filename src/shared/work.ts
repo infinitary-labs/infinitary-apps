@@ -582,7 +582,8 @@ export const workRequests = {
   },
   "inf:work:reply": {
     effect: "change",
-    request: asked({ cardId: z.string(), text: z.string() }),
+    /** `interim` marks a still-working line (`work-reply-interim.md`); an older home drops it. */
+    request: asked({ cardId: z.string(), text: z.string(), interim: z.boolean().optional() }),
     response: toolTextSchema,
   },
   "inf:work:speed-note": {

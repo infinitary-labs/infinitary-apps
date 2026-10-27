@@ -2,9 +2,13 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { cardPictureUrl } from "@shared/cardPictures";
 import type { Card } from "@shared/cards";
+import type { ChangePresentation } from "@shared/changePresentation";
+import { RISK_DIMENSIONS, type RiskDeclaration } from "@shared/risk";
 import { describe, expect, it } from "vitest";
+import story from "../../../tests/fixtures/card-revisions/inf-1595-story.json";
 import { projectFontBytes } from "../../../tests/helpers/fontFixture";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { tieredPresentationCardBody } from "../forge/presentationTiers";
 import { verifyCardImages } from "../pi/cardImages";
 import { resolveRevisionTargets, revisionLinks } from "./cardNavigation";
 
@@ -55,11 +59,43 @@ describe("revision destinations", () => {
         (t) => t.label,
       ),
     ).toEqual(["Checks 1", "Checks 2"]);
-    expect(links("<p>A</p>", "<p>B</p>").targets[0]?.label).toBe("Whole card");
+    expect(links("<p>A</p>", "<p>B</p><p>C</p><p>D</p>").targets[0]?.label).toBe("Whole card");
     expect(links(steady, `${steady}<style>p{color:red}</style>`).targets[0]?.label).toBe(
       "Preview updated",
     );
     expect(links(steady, `${steady}${"<p>Same</p>".repeat(513)}`).targets).toHaveLength(1);
+  });
+  it("names the sections of a card whose lines were reworded, never Whole card (INF-1623)", () => {
+    // INF-1595's story revisions 2 and 3: one new bullet under What changed
+    // answered the captain, and thirteen lines were reworded from delete to
+    // retire, so the line read Whole card and 13 parts removed.
+    const risk = Object.fromEntries(
+      RISK_DIMENSIONS.map((dimension) => [dimension, { level: "low", why: "Fixture." }]),
+    ) as RiskDeclaration;
+    const body = (revision: (typeof story.revisions)[number]) =>
+      tieredPresentationCardBody({
+        version: 2,
+        taskId: "81a74948",
+        revision: 1,
+        destination: { host: "github.com", projectId: 1, fullName: "o/r", visibility: "private" },
+        base: "a".repeat(40),
+        head: "a".repeat(40),
+        views: [],
+        risk,
+        requiredActions: [],
+        projectText: "",
+        assets: [],
+        pictures: [],
+        ...revision,
+      } as ChangePresentation);
+    const [before, after] = story.revisions.map(body) as [string, string];
+    const result = links(before, after);
+    expect(result.targets.map((target) => target.label)).toEqual([
+      "What changed",
+      "Before and after",
+      "Checked",
+    ]);
+    expect(result.removed).toBe(0);
   });
   it("prefers a surviving original part then the same area's heading, never a missing or ambiguous area", () => {
     const a = card(`${steady}<h2>Checks</h2><p>Old</p>`);

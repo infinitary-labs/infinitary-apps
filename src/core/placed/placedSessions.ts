@@ -1289,8 +1289,14 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         return { text: await (callbacks?.onReport ?? missing())(text, summary, declared) };
       }
       case "inf:work:reply": {
-        const { cardId, text } = request as InvokeRequest<"inf:work:reply">[0];
-        return { text: await (callbacks?.onReply ?? missing())({ cardId, text }) };
+        const { cardId, text, interim } = request as InvokeRequest<"inf:work:reply">[0];
+        return {
+          text: await (callbacks?.onReply ?? missing())({
+            cardId,
+            text,
+            ...(interim !== undefined ? { interim } : {}),
+          }),
+        };
       }
       case "inf:work:speed-note": {
         const { model, selection } = request as InvokeRequest<"inf:work:speed-note">[0];

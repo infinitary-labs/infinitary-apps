@@ -82,7 +82,7 @@ A card an older version sent away on a reply carries no stamp and stays off the 
 `CardService` is its one writer: the captain's line sets `answer` (`addMessage`), any later line ends it (the author's answer, or the host's `revised:` for a revision), every crewmate write holds a new or hidden card for its close-out, and `closeOut` - called from the crewmate's `report` and its resumable turn's end, and the first mate's turn end - releases what waited on that author.
 A report passes over every card with an `available` offer in its lifecycle (`CardStore.lastAvailableOffer`): only the turn's end releases those.
 `snapshot()` is the stage: a card on it whose author has written again is pushed as the version the stage showed until the close-out.
-A crewmate's answer or revision on a card the captain put aside (`Card.minimized`, "Put a card aside" in `docs/card-authoring.md`) saves the card as no longer aside, while `snapshot()` keeps it aside until that crewmate's turn ends (`asideUntilTurnEnd`, memory only), so a restart, itself a close-out, brings it back too.
+A crewmate's answer or revision, never its interim line, on a card the captain put aside (`Card.minimized`, "Put a card aside" in `docs/card-authoring.md`) saves the card as no longer aside, while `snapshot()` keeps it aside until that crewmate's turn ends (`asideUntilTurnEnd`, memory only), so a restart, itself a close-out, brings it back too.
 The columns are `cards.awaiting` (migration 52) and `cards.sent_back_at` (migration 59), so the hold survives a restart and a reload; the restart is itself every author's close-out, so a card that only waited on one reaches the stage at boot.
 `sentBackAt` is the reply's time; it no longer moves the card in the stack's order (`compareStack`).
 The optional declaration lives in `cards.holds_place` (migration 77); null means an ordinary arrival, and a revision without it removes it.
@@ -119,6 +119,8 @@ A thread line shows as soon as it is sent, so `CARD_REPLY` and the steer preambl
 **An interim line** (INF-990 friction 3: replies asking for code changes went 26 and 41 minutes with no sign of work): when the work will take more than a few minutes, the crewmate's steer preamble tells it to post one line first with `reply` and `interim` true, saying what it is doing.
 The line paints in the thread at once, like any author line, but it is declared, never inferred: `CardService.addMessage` keeps the card's `answer` hold, so the reply still waits, the waiting line or `working` follows, a revision without `reply` is still refused, and the whose-turn rule and the idle ladder still see an answer owed.
 Under a card nobody waits on, `interim` is an ordinary reply.
+The mark crosses from a computer that runs work too: `inf:work:reply` carries `interim` (`work-reply-interim.md`), so a crewmate there keeps the reply waiting the same way (INF-1623).
+An interim line never brings back a card the captain put aside: the card comes back with the final answer.
 The rule lives in the steer preamble and the tool's `interim` parameter, both crewmate-only, so the first mate's contract is unchanged.
 Closing a card asks first while its hold says a reply waits, as well as while the captain's line is the newest (`replyUnanswered`).
 
@@ -169,7 +171,9 @@ Since v4.14 it also says when: the work comes first and the answer once, because
 While a captain reply waits on the author, `emit_card` under that card's id without `reply` is refused as tool text naming the fix, and the card and thread stay unchanged (`CardService.upsertEmitted`).
 While one of a crewmate's cards waits on its answer, a new card carrying `reply` - a new id, or none - is refused naming the card that waits, since the reply rides only a revision of that card and would otherwise be lost (INF-990 friction 4).
 A `reply` under another of its cards succeeds, and its receipt names the card that still waits.
-An author that answers first with `reply(card_id, text)` may revise afterwards with no `reply`, because the answer already landed.
+A revision's `reply` lands right after its `revised:` line whenever the card has a thread, whether or not a reply still waits, so an earlier line that ended the wait never makes the answer vanish (INF-1623).
+Every revision made while answering carries its own answer (the captain's "every"): an author that answered with `reply(card_id, text)` and revises again before its close-out without `reply` is refused, card and thread unchanged (`answeringUntilCloseOut`, memory only).
+After the close-out, a revision nobody asked about needs no `reply`.
 The app reads only that typed state, never the words of the answer.
 
 A crewmate gains one output for that answer: `reply(card_id, text)` (`crewmateTaskTools.ts`, Claude twin in `claudeTaskTools.ts`), beside `report` / `emit_card` / `note_progress` / `file_followup`.
@@ -367,6 +371,8 @@ The comparison is independent of the last-seen bars.
 Moves, whitespace, attribute order and host decorations do not produce new parts.
 Unheaded changes are Change N; repeated headings receive numbers.
 Removed parts are counted without targets; a rewrite or a body beyond the 512-part bound gets Whole card, and an interactive preview gets Preview updated.
+A reworded line counts as edited, not new (INF-1623, direction C): a part gone and a part new under the same heading path pair one for one, so they name their section, never count toward Whole card, and are not counted as removed.
+The pairing reads only where each part sits, never its words.
 Title, heading-only and button changes target those regions.
 
 Every row shows three links, then N more and Show fewer, without a comparison caption.

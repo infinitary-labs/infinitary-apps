@@ -1320,6 +1320,60 @@ describe("a task that runs on a computer that runs work", () => {
     expect(calls.map((call) => call.channel)).toEqual(["inf:work:progress", "inf:work:report"]);
   });
 
+  it("keeps the captain's reply waiting after a still-working line from that computer, as it does here (INF-1623)", async () => {
+    // INF-1595's exchange: the crewmate there said what it was checking,
+    // marked as still working, and the mark was lost on the way home, so
+    // that line ended the captain's wait.
+    const at = await world();
+    const home = at.home();
+    model([
+      {
+        tools: [
+          {
+            name: "emit_card",
+            args: {
+              id: "retire-plan",
+              title: "Retire a closed task's working copy",
+              body: "<p>I retire the copy once its task closes.</p>",
+            },
+          },
+        ],
+      },
+      { text: "The card is up." },
+    ]);
+    await at.start("t-interim");
+    await expect.poll(() => home.cards().find((card) => card.taskId === "t-interim")).toBeTruthy();
+    const card = home.cards().find((card) => card.taskId === "t-interim");
+    if (!card) throw new Error("No card from t-interim");
+    await expect.poll(() => home.tasks.get("t-interim")?.activity).toBe("idle");
+    model([
+      {
+        tools: [
+          {
+            name: "reply",
+            args: {
+              card_id: card.id,
+              text: "Checking how this change meets the warm pool of ready working copies before I answer.",
+              interim: true,
+            },
+          },
+        ],
+      },
+      { text: "Checking." },
+    ]);
+    const requests = api.requests.length;
+    home.supervisor.replyToCard(
+      card.id,
+      "wait - do you mean worktrees? aren't we supposed to keep warm worktrees?",
+    );
+    await expect.poll(() => api.requests.length).toBe(requests + 2);
+    await expect.poll(() => home.tasks.get("t-interim")?.activity).toBe("idle");
+    expect(JSON.stringify(api.requests.at(-1)?.body)).toContain(
+      "the captain's reply still waits for your answer",
+    );
+    expect(home.cards().find((shown) => shown.id === card.id)?.awaiting).toBe("answer");
+  });
+
   it("holds the task out of reach while the connection is gone, and catches up exactly once it is back", async () => {
     const at = await world();
     const slow = gate();

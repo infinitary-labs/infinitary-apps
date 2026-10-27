@@ -262,6 +262,13 @@ export class CardService {
    */
   private readonly asideUntilTurnEnd = new Map<string, string>();
   /**
+   * Cards their author answered the captain on and has not closed out
+   * since, by card, with the lifecycle answered on (INF-1623): every
+   * revision in that turn carries its own answer, as one while the reply
+   * waits does. Memory only: a restart closes every author out.
+   */
+  private readonly answeringUntilCloseOut = new Map<string, string>();
+  /**
    * What changed in each card's shown version since the captain last saw
    * it, by card, worked out once per shown offer: a later look cannot move
    * it, because `seen` is recorded only for the version on the stage and the
@@ -1001,17 +1008,15 @@ export class CardService {
       // on its author, the revision carries the author's short answer too.
       const answer = input.reply?.trim();
       const waiting = this.host.cardStore.awaitingAuthor(resolved);
-      if (waiting) {
-        if (!answer) {
-          throw new Error(
-            `Card refused: the captain's reply under card "${resolved}" waits on your answer, and a revision alone does not give it. Call emit_card again with the same id and the same card plus reply: one to three sentences answering them and saying what changed. The card and its thread are unchanged.`,
-          );
-        }
-        if (answer.length > CARD_REPLY_MAX_CHARS) {
-          throw new Error(
-            `Card refused: reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter. The card and its thread are unchanged.`,
-          );
-        }
+      if (waiting && !answer) {
+        throw new Error(
+          `Card refused: the captain's reply under card "${resolved}" waits on your answer, and a revision alone does not give it. Call emit_card again with the same id and the same card plus reply: one to three sentences answering them and saying what you changed on the card and under which heading. The card and its thread are unchanged.`,
+        );
+      }
+      if (answer && answer.length > CARD_REPLY_MAX_CHARS) {
+        throw new Error(
+          `Card refused: reply is at most ${CARD_REPLY_MAX_CHARS} characters; say it shorter. The card and its thread are unchanged.`,
+        );
       }
       const revised = buildEmittedCard(resolved, input, context, existing.createdAt);
       const changed =
@@ -1021,6 +1026,19 @@ export class CardService {
         JSON.stringify(existing.attachment) !== JSON.stringify(revised.attachment) ||
         JSON.stringify(existing.risk) !== JSON.stringify(revised.risk) ||
         JSON.stringify(existing.requiredActions) !== JSON.stringify(revised.requiredActions);
+      // Every revision made while answering the captain carries its own
+      // answer (INF-1623, the captain's "every"): one after the turn's
+      // answer would otherwise follow it with no word on what it changed.
+      if (
+        changed &&
+        !answer &&
+        existing.lifecycleId !== undefined &&
+        this.answeringUntilCloseOut.get(resolved) === existing.lifecycleId
+      ) {
+        throw new Error(
+          `Card refused: you answered the captain's reply under card "${resolved}" in this turn, and this revision changes the card again without saying how. Call emit_card again with the same id and the same card plus reply: one to three sentences saying what you changed on the card and under which heading. The card and its thread are unchanged.`,
+        );
+      }
       // A card off the stage stays off it; one on it keeps showing what it
       // showed until its crewmate author's turn ends (the one rule), and so
       // does one still waiting on its author after the captain's reply,
@@ -1065,7 +1083,10 @@ export class CardService {
           revisionLinks(existing, updated),
         );
       }
-      if (answer && waiting) {
+      // The answer lands right after the revised line, whether or not the
+      // captain's reply still waits (INF-1623): an earlier line that ended
+      // the wait never makes the answer vanish.
+      if (answer && (waiting || this.host.cardStore.messages(resolved).length > 0)) {
         this.addMessage(resolved, context.author, answer);
       }
       this.scheduleBroadcast();
@@ -1393,6 +1414,7 @@ export class CardService {
           : card.author === "crewmate" && card.taskId === author.taskId;
       if (!mine) continue;
       if (reason === "report" && this.reachedStage(card)) continue;
+      this.answeringUntilCloseOut.delete(card.id);
       if (this.asideUntilTurnEnd.delete(card.id)) moved = true;
       let wrote = false;
       if (card.awaiting !== "answer" && card.lifecycleId) {
@@ -1625,9 +1647,11 @@ export class CardService {
     // what the author is doing, and the answer is still owed (INF-990
     // friction 3).
     // An author's line brings back a card the captain put aside: the
-    // Firstmate's at once, a crewmate's when its turn ends (INF-926).
-    if (who === "firstmate") this.setMinimized(cardId, false);
-    if (who === "crewmate") this.backAtTurnEnd(cardId);
+    // Firstmate's at once, a crewmate's when its turn ends (INF-926). An
+    // interim line does not: the card comes back with the final answer
+    // (INF-1623).
+    if (who === "firstmate" && !interim) this.setMinimized(cardId, false);
+    if (who === "crewmate" && !interim) this.backAtTurnEnd(cardId);
     const card = this.cards.get(cardId);
     // The captain writes about the version the stage shows him; an author,
     // or the host's line for its revision, about the newest one it wrote.
@@ -1673,6 +1697,9 @@ export class CardService {
       return message;
     });
     if (who === "captain" || answered) this.applyHold(cardId, held);
+    if (answered && card?.lifecycleId && (who === "crewmate" || who === "firstmate")) {
+      this.answeringUntilCloseOut.set(cardId, card.lifecycleId);
+    }
     this.host.broadcastThread?.(this.thread(cardId));
     // An author's answer is a row on the card's task too (FI3-1189's rule
     // 1); the captain's reply already is one, through its steer or its ask.

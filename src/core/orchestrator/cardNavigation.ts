@@ -39,10 +39,16 @@ export function revisionLinks(previous: Card, next: Card): CardRevisionLinks | u
   );
   const before = parts(previous, identities);
   const after = parts(next, identities);
-  const { added, removed } = unmatchedParts(
+  const { added } = unmatchedParts(
     before.filter((p) => !p.heading),
     after.filter((p) => !p.heading),
   );
+  const gone = unmatchedParts(
+    after.filter((p) => !p.heading),
+    before.filter((p) => !p.heading),
+  ).added;
+  const edited = rewordedCount(added, gone);
+  const removed = gone.length - edited;
   const changedHeadings = unmatchedParts(
     before.filter((p) => p.heading),
     after.filter((p) => p.heading),
@@ -64,7 +70,7 @@ export function revisionLinks(previous: Card, next: Card): CardRevisionLinks | u
     (added.length > 0 || changedHeadings.length > 0) &&
     (before.length > REVISION_TARGETS_MAX ||
       after.length > REVISION_TARGETS_MAX ||
-      added.length * 2 > after.filter((p) => !p.heading).length)
+      (added.length - edited) * 2 > after.filter((p) => !p.heading).length)
   )
     add("Whole card", "whole");
   else {
@@ -94,6 +100,31 @@ export function revisionLinks(previous: Card, next: Card): CardRevisionLinks | u
     targets,
     removed,
   };
+}
+
+/**
+ * How many new parts are reworded old ones (INF-1623, the captain's
+ * direction C): a part gone and a part new under the same heading pair
+ * up, one for one, and count as edited, so a card whose lines were
+ * reworded names its sections rather than Whole card, and its line counts
+ * no removal for them. The pairing reads only where each part sits, never
+ * its words.
+ */
+function rewordedCount(added: readonly NavigationPart[], gone: readonly NavigationPart[]): number {
+  const left = new Map<string, number>();
+  for (const part of gone) {
+    const at = part.area?.path ?? "";
+    left.set(at, (left.get(at) ?? 0) + 1);
+  }
+  let paired = 0;
+  for (const part of added) {
+    const at = part.area?.path ?? "";
+    const count = left.get(at) ?? 0;
+    if (!count) continue;
+    left.set(at, count - 1);
+    paired += 1;
+  }
+  return paired;
 }
 
 /** Carry identity across each intervening offer, stopping permanently at a missing/ambiguous area. */

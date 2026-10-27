@@ -1,0 +1,125 @@
+{
+  "source": "INF-1595's saved story revisions 2 and 3, the revision the captain asked about under its card (INF-1623).",
+  "revisions": [
+    {
+      "title": "fix(work): retire a closed task's working copy whose checkout left its branch",
+      "why": [
+        "Closed tasks' working copies were piling up on Kun's Mac mini: 37 stayed there after their work came home, filling its disk.",
+        "Every one had its checkout off its task's branch, as a reviewer's is, and the Mac mini's delete order failed on each of them every time."
+      ],
+      "whatChanged": [
+        "A computer that runs work now reads a task's own branch even when the checkout points elsewhere, so it saves both the checkout's and the branch's unmerged commits and can delete the copy and its branch.",
+        "A keep reads the working copy again each time the home asks, and answers the same saved commit when nothing changed.",
+        "A delete refuses while the saved commit misses any unmerged commit, so a copy an earlier version saved without its branch's commits is saved again first, then deleted.",
+        "docs/helper.md says how keeping and deleting work now, and a release note says what a person notices."
+      ],
+      "before": [
+        "A closed task whose checkout had left its branch kept its working copy on the other computer for good, because the delete order failed with a git error every time."
+      ],
+      "after": [
+        "Once the home holds the task's saved work, the other computer deletes the copy and its branch, and copies left behind earlier are saved again where needed and then deleted."
+      ],
+      "noPicture": "This changes what Infinitary deletes on a computer that runs work, not anything a screen shows.",
+      "checked": [
+        {
+          "check": "Reproduced the stuck copy before the fix, through a real home and a real computer that runs work, with a closed task whose checkout left its branch",
+          "result": "The home logged that it could not delete the copy there, a git error on an empty branch name, and the copy stayed"
+        },
+        {
+          "check": "The same journey after the fix, with a copy an earlier version had saved without its branch's commits",
+          "result": "The computer saved the missing commits again, the home took them, and the computer deleted the copy and its branch"
+        },
+        {
+          "check": "Read the working copies on Kun's Mac mini",
+          "result": "37 closed tasks' copies, all off their task's branch; two branches hold 18 and 48 commits their saved work misses, which the fix saves before deleting"
+        },
+        {
+          "check": "The two changed test files, ten times in a row on this Mac",
+          "result": "98 of 98 passed in each of the ten runs"
+        },
+        {
+          "check": "The run-work and external-merge journeys, which bring kept work home and delete copies, on the pull request",
+          "result": "24 passed and 2 skipped"
+        },
+        {
+          "check": "Working copy, placed session, workspace and crew supervisor tests, and every pull request check",
+          "result": "All passed"
+        }
+      ],
+      "verification": [
+        "Before the fix: `pnpm exec vitest run src/core/helper/workingCopies.test.ts` and the new placed-sessions test failed with `git rev-list --count  --not HEAD refs/remotes/origin/HEAD`: fatal ambiguous argument ''; the home logged \"could not retire t-review's working copy there yet\" and the copy stayed present.",
+        "After the fix: `src/core/helper/workingCopies.test.ts` 17 of 17 passed; `src/core/placed/placedSessions.test.ts` with `src/core/orchestrator/crewSupervisor.test.ts` 837 of 837 passed; workspaceService, worktreePool, sessionHost, handedResult, externalMerge and settleFolderWork tests 168 of 168 passed; `tests/release-notes-ledger.test.ts` passed.",
+        "Ten runs in a row of `pnpm exec vitest run src/core/helper/workingCopies.test.ts src/core/placed/placedSessions.test.ts`: 98 of 98 each time, no retries.",
+        "Local gate `pnpm typecheck && pnpm check && pnpm lint:adherence` passed after bringing the branch up to date with main (warnings only).",
+        "The commit's `Journeys: run-work, external-merge` trailer chose `tests/e2e/run-work.spec.ts` and `tests/e2e/external-merge.spec.ts`; the pull request's journeys run passed 24 and skipped 2, including \"work brought home after metadata repair\" with the copy removed.",
+        "Read-only survey of `~/Library/Application Support/infinitary/work/worktrees` on Kun's Mac mini: 37 closed tasks' copies, each detached or on another branch, each with its `fm/task-<id>` branch, a keep answer and no retire answer."
+      ],
+      "unfinished": [
+        "The 37 copies on Kun's Mac mini go once it runs a version with this fix; I deleted none of them by hand.",
+        "A copy whose task branch is gone and whose checkout left it still fails its delete order; none on the Mac mini is in that state today.",
+        "When the home has forgotten a closed task and holds an older save of its work, the cleanup of leftover copies still refuses that copy as unknown work."
+      ]
+    },
+    {
+      "title": "fix(work): retire a closed task's working copy whose checkout left its branch",
+      "why": [
+        "Closed tasks' working copies were piling up on Kun's Mac mini: 37 stayed there after their work came home, filling its disk.",
+        "Every one had its checkout off its task's branch, as a reviewer's is, and the Mac mini's delete order failed on each of them every time."
+      ],
+      "whatChanged": [
+        "A computer that runs work now reads a task's own branch even when the checkout points elsewhere, so it saves both the checkout's and the branch's unmerged commits and can retire the copy and delete its branch.",
+        "A retired copy goes to that computer's pool of ready working copies, as before, so a later task can take it; only copies past the pool's limit are deleted.",
+        "A keep reads the working copy again each time the home asks, and answers the same saved commit when nothing changed.",
+        "A retire refuses while the saved commit misses any unmerged commit, so a copy an earlier version saved without its branch's commits is saved again first.",
+        "docs/helper.md says how keeping and retiring work now, and a release note says what a person notices."
+      ],
+      "before": [
+        "A closed task whose checkout had left its branch kept its working copy on the other computer for good, because the retire order failed with a git error every time, so it never reached the pool either."
+      ],
+      "after": [
+        "Once the home holds the task's saved work, the other computer resets the copy clean into its pool of ready working copies, or deletes it when the pool is full, and copies left behind earlier are saved again where needed first."
+      ],
+      "noPicture": "This changes what Infinitary keeps and deletes on a computer that runs work, not anything a screen shows.",
+      "checked": [
+        {
+          "check": "Reproduced the stuck copy before the fix, through a real home and a real computer that runs work, with a closed task whose checkout left its branch",
+          "result": "The home logged that it could not retire the copy there, a git error on an empty branch name, and the copy stayed"
+        },
+        {
+          "check": "The same journey after the fix, with a copy an earlier version had saved without its branch's commits",
+          "result": "The computer saved the missing commits again, the home took them, and the computer retired the copy and deleted its branch"
+        },
+        {
+          "check": "Read the working copies on Kun's Mac mini",
+          "result": "37 closed tasks' copies, all off their task's branch, none in the pool; two branches hold 18 and 48 commits their saved work misses, which the fix saves first"
+        },
+        {
+          "check": "The two changed test files, ten times in a row on this Mac",
+          "result": "98 of 98 passed in each of the ten runs"
+        },
+        {
+          "check": "The run-work and external-merge journeys, which bring kept work home and retire copies, on the pull request",
+          "result": "24 passed and 2 skipped"
+        },
+        {
+          "check": "Working copy, pool, placed session, workspace and crew supervisor tests, and every pull request check",
+          "result": "All passed"
+        }
+      ],
+      "verification": [
+        "Before the fix: `pnpm exec vitest run src/core/helper/workingCopies.test.ts` and the new placed-sessions test failed with `git rev-list --count  --not HEAD refs/remotes/origin/HEAD`: fatal ambiguous argument ''; the home logged \"could not retire t-review's working copy there yet\" and the copy stayed present.",
+        "After the fix: `src/core/helper/workingCopies.test.ts` 17 of 17 passed; `src/core/placed/placedSessions.test.ts` with `src/core/orchestrator/crewSupervisor.test.ts` 837 of 837 passed; workspaceService, worktreePool, sessionHost, handedResult, externalMerge and settleFolderWork tests 168 of 168 passed; `tests/release-notes-ledger.test.ts` passed.",
+        "Ten runs in a row of `pnpm exec vitest run src/core/helper/workingCopies.test.ts src/core/placed/placedSessions.test.ts`: 98 of 98 each time, no retries.",
+        "Local gate `pnpm typecheck && pnpm check && pnpm lint:adherence` passed after bringing the branch up to date with main (warnings only).",
+        "The commit's `Journeys: run-work, external-merge` trailer chose `tests/e2e/run-work.spec.ts` and `tests/e2e/external-merge.spec.ts`; the pull request's journeys run passed 24 and skipped 2, including \"work brought home after metadata repair\" with the copy removed.",
+        "Read-only survey of `~/Library/Application Support/infinitary/work/worktrees` on Kun's Mac mini: 37 closed tasks' copies, each detached or on another branch, each with its `fm/task-<id>` branch, a keep answer and no retire answer; its `worktree-pool/` held 6 ready copies.",
+        "The pool itself is unchanged: `WorkingCopies.retire` calls `WorkspaceService.removeTaskWorktree`, which parks the copy in `WorktreePool` (`src/core/workspace/worktreePool.ts`: 3 idle per project, 8 in all, 7 days) and deletes it only when the pool refuses it."
+      ],
+      "unfinished": [
+        "The 37 copies on Kun's Mac mini go once it runs a version with this fix; I deleted none of them by hand.",
+        "A copy whose task branch is gone and whose checkout left it still fails its retire order; none on the Mac mini is in that state today.",
+        "When the home has forgotten a closed task and holds an older save of its work, the cleanup of leftover copies still refuses that copy as unknown work."
+      ]
+    }
+  ]
+}

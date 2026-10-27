@@ -66,7 +66,8 @@ The transcript's lines (`CrewLine`, `src/shared/crewTranscript.ts`):
   A task command such as `infinitary-browser-axi` names only what it was asked to do (`infinitary-browser-axi fill`, `taskCommandShown`), never its other words, which may hold what a crewmate typed into a page (`docs/axi-commands.md`).
   The whole text is read on its own when the fold opens (`inf:tasks:crewmate:result`), so a long session's transcript stays small.
   A call with no answer reads `running…` in the running turn, else `no result`.
-- The app's own tools as blocks: a progress note's plan, a report with its headline that opens to its whole text, a card it put up with Show the card while the stage holds it or once it closed, and the pull request it opened, with its label and page from the record and its checks while the work is live.
+- The app's own tools as blocks: a progress note's plan, a report with its headline that opens to its whole text, a card it put up with Show the card once the stage can show it or once it closed, and the pull request it opened, with its label and page from the record and its checks while the work is live.
+  Show the card follows the shared `onStage` rule: a new card awaiting close-out has no button, while a replied-under card stays reachable; a minimized or collapsed card can still be brought back.
   Every other call to the app's own tools reads as a call.
 - What an edit or a write changed, drawn from the call's own arguments (`diffOf`): each replacement as the lines it took out and put in, with up to two lines it kept on either side, and a new file as its lines, bounded at 80 lines and the rest counted.
 - A picture a call's result holds - the browser's photograph of a page, a picture the crewmate read - shown small under the call, larger on a press; the transcript names it by ref and its bytes are read only when it shows (`inf:tasks:crewmate:picture`).

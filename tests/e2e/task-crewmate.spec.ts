@@ -6,7 +6,7 @@ import { CardStore } from "../../src/core/storage/cardStore";
 import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
-import { CREWMATE_TAB_LABEL } from "../../src/shared/crewTranscript";
+import { CREWMATE_TAB_LABEL, CREWMATE_WORDS } from "../../src/shared/crewTranscript";
 import { reportSummary } from "../../src/shared/feed";
 import { CREWMATE_TAB_VIA } from "../../src/shared/provenance";
 import { INFO_TAB_LABEL } from "../../src/shared/taskBrowser";
@@ -35,6 +35,7 @@ import {
 import { encodePng } from "./pictureFixtures";
 import { heroShot, regionShot } from "./pictures";
 import { expandDock, openGroup, pressRow, recordCard, recordFrame, taskKey } from "./rails";
+import { shownCard } from "./stack";
 import { taskTabs } from "./taskBrowser";
 import { setThemeViaSettings } from "./theme";
 import { focusOn, pressKey, runFromSearch, typeInto, untilFocused } from "./windowKeys";
@@ -410,6 +411,20 @@ test("a line typed in the Crewmate tab steers a Claude crewmate mid-turn, queued
     await test.step("the tab shows the running turn: its card as a block, and the way to stop it", async () => {
       await expect(view).toHaveAttribute("data-crew-state", "working");
       await expect(crewBlock(view, "card")).toContainText(MOCK_CLAUDE_CARD_TITLE);
+      // INF-1559: the transcript must not offer a dead Show card while the
+      // host holds the emitted card off the stage until close-out.
+      await expect
+        .poll(() =>
+          page.evaluate(
+            async (id) =>
+              (await window.infinitary.cards.list()).find((card) => card.taskId === id)?.awaiting,
+            task.id,
+          ),
+        )
+        .toBe("close-out");
+      await expect(
+        crewBlock(view, "card").getByRole("button", { name: CREWMATE_WORDS.showCard }),
+      ).toHaveCount(0);
       await expect(view.locator("[data-crew-stop]")).toBeVisible();
       await expect(view.locator("[data-crew-elapsed]")).toBeVisible();
       await shoot(view, "crewmate-working-dark.png");
@@ -459,6 +474,15 @@ test("a line typed in the Crewmate tab steers a Claude crewmate mid-turn, queued
       );
       expect(steered?.text).toContain(CLAUDE_STEER_MARKER);
       await shoot(view, "crewmate-delivered-dark.png");
+    });
+
+    await test.step("after close-out, Show card opens the released card by keyboard", async () => {
+      const show = crewBlock(view, "card").getByRole("button", {
+        name: CREWMATE_WORDS.showCard,
+      });
+      await expect(show).toBeVisible();
+      await pressKey(show, "Enter");
+      await expect(shownCard(page, MOCK_CLAUDE_CARD_TITLE)).toBeVisible();
     });
   } finally {
     await launched.close();

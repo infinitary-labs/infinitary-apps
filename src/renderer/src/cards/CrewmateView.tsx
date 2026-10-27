@@ -1,4 +1,4 @@
-import { CARD_REPLY_MAX_CHARS } from "@shared/cards";
+import { CARD_REPLY_MAX_CHARS, onStage as cardOnStage } from "@shared/cards";
 import {
   type CrewLive,
   type CrewTranscript,
@@ -333,7 +333,10 @@ export function CrewmateView({
   const words = working ? liveWords(transcript, live) : "";
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
   const stageCards = useShellStore((s) => s.cards);
-  const onStage = useMemo(() => new Set(stageCards.map((card) => card.id)), [stageCards]);
+  const onStage = useMemo(
+    () => new Set(stageCards.filter(cardOnStage).map((card) => card.id)),
+    [stageCards],
+  );
   const [stopping, setStopping] = useState(false);
   const surface = useRef<HTMLElement | null>(null);
   const foot = useRef<HTMLDivElement | null>(null);

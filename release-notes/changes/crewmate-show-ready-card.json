@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "crewmate-show-ready-card",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Show the card waits until the card is ready",
+      "body": "The Crewmate tab no longer offers a button that does nothing while its crewmate is still preparing the card.",
+      "picture": {
+        "dark": "crewmate-show-ready-card-dark.webp",
+        "light": "crewmate-show-ready-card-light.webp",
+        "alt": "The Crewmate tab shows the Rivet count card in its transcript without a Show the card button while the crewmate is working."
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

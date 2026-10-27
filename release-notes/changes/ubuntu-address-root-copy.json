@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ubuntu-address-root-copy",
+      "reason": "Internal security hardening: the Ubuntu address installer checks and installs a root-owned copy instead of the account-writable download; no screen or normal install result changes."
+    }
+  ]
+}

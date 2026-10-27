@@ -336,7 +336,11 @@ The owner turns on that computer's SSH server, then types the address and, when 
 The look also reads whether the account may install software (`sudo -n true`) and the installed `infinitary` version.
 An account that may not is refused as `cannot-install`, unless the package already matches this computer's version, in which case no password is asked.
 This computer gets the deb for its own version from the tap, checks it, and sends it.
-The other computer checks it again and installs it with `apt-get`, which brings git, Xvfb and the libraries, and the package's install script loads the AppArmor profile, so Ubuntu's limit and the sandbox both stay on.
+Root copies the received deb from the account's cache into a root-owned directory under `/tmp`, checks that copy against the SHA-256, and gives only that copy to `apt-get`.
+Only after verification does root allow apt's unprivileged reader into the directory; unverified contents stay private even if the received path points at a root-only file.
+The directory and package allow apt's unprivileged reader to read, but only root may change them, so replacing the account's received file cannot change what apt installs.
+Root removes its private directory on exit, including a failed copy, check or install; a successful install also removes the received deb.
+`apt-get` brings git, Xvfb and the libraries, and the package's install script loads the AppArmor profile, so Ubuntu's limit and the sandbox both stay on.
 The same step turns on linger for that account, so its work keeps running after that user logs out.
 Where systemd does not run, as in a container or WSL without it, linger fails and the install still stands: the step says so on a line of its own (`LINGER_OFF_LINE`), and the add or update goes on.
 Once the work there joined, or updated, and runs in the background or starts at the next login, the last two lines are warnings that name the one line an administrator runs there: "To keep Mac mini running work after sam logs out, an administrator runs this there once:" and `sudo loginctl enable-linger sam`.

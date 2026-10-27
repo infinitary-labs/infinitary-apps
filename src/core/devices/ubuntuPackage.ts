@@ -138,8 +138,11 @@ export const RECEIVE_DEB = [
 export const LINGER_OFF_LINE = "infinitary:linger=off";
 
 /**
- * What root runs, with `$1` the deb and `$2` its SHA-256: check again,
- * install, turn on linger for the account that asked, and delete the deb.
+ * What root runs, with `$1` the deb and `$2` its SHA-256: copy into a
+ * root-owned folder, check and install that copy, turn on linger for the
+ * account that asked, and delete the deb. The account can change its cache
+ * at any time, but never the checked copy apt reads. Root's copy is removed
+ * on exit, including a failed check or install.
  * Where systemd does not run, as in a container or WSL without it, linger
  * fails and the install still stands: the step says `LINGER_OFF_LINE`, so
  * the home names the sudo line once the work joined. The password is not in
@@ -149,9 +152,19 @@ export const INSTALL_AS_ROOT = [
   "set -eu",
   'src="$1"',
   'sum="$2"',
-  'printf \'%s  %s\\n\' "$sum" "$src" | sha256sum -c --status || exit 65',
+  'd="$(mktemp -d /tmp/infinitary-install-XXXXXX)"',
+  "trap 'rm -rf \"$d\"' EXIT",
+  "trap 'exit 1' HUP INT TERM",
+  'deb="$d/infinitary.deb"',
+  'cp -- "$src" "$deb"',
+  // Set the file's mode before exposing the directory, even with a permissive source/umask.
+  // Keep unverified contents private: the source could point at a root-only file.
+  'chmod 644 "$deb"',
+  'printf \'%s  %s\\n\' "$sum" "$deb" | sha256sum -c --status || exit 65',
+  // Root owns both; apt's unprivileged reader may now read, but nobody else may write.
+  'chmod 755 "$d"',
   "export DEBIAN_FRONTEND=noninteractive",
-  'apt-get install -y --allow-downgrades "$src"',
+  'apt-get install -y --allow-downgrades "$deb"',
   'user="${SUDO_USER:-$USER}"',
   `loginctl enable-linger "$user" 2>/dev/null || printf '%s\\n' ${LINGER_OFF_LINE}`,
   'rm -f "$src"',

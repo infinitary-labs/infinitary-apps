@@ -94,6 +94,15 @@ import XCTest
             let advanced = motion.frame(roster: roster, now: 2, settled: false)
             XCTAssertEqual(advanced.glyphs.first { $0.task.id == remoteID }?.point, remote.point)
             XCTAssertEqual(advanced.glyphs.first { $0.task.id == remoteID }?.spin, remote.spin)
+            // INF-1520: a reachable crewmate whose posture reads unknown/unobserved, the reviewer among them, still orbits as on the desktop.
+            let reviewID = try XCTUnwrap(fixture["review"] as? String)
+            let unobserved = first.glyphs.filter { $0.task.executionDeviceId == nil && $0.task.workPosture?.state == "unknown" }
+            XCTAssertTrue(unobserved.contains { $0.task.id == reviewID }, "The fixture's reviewer must read unknown/unobserved")
+            for glyph in unobserved {
+                let moved = try XCTUnwrap(advanced.glyphs.first { $0.task.id == glyph.task.id })
+                XCTAssertFalse(moved.unknown, "\(glyph.task.title) is on a reachable computer")
+                XCTAssertNotEqual(moved.point, glyph.point, "\(glyph.task.title) must keep orbiting")
+            }
             let lost = PhoneSceneRoster(board: board, presence: computers, homeName: "Test Mac mini", inReach: false, generation: 1)
             let disconnected = motion.frame(roster: lost, now: 3, settled: false)
             let later = motion.frame(roster: lost, now: 4, settled: false)

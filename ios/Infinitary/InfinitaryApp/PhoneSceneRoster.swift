@@ -199,11 +199,12 @@ struct PhoneSceneRoster {
         if let posture = task.workPosture { return posture.state == "active" }
         return task.activity == "running" || task.activity == "starting"
     }
+    /// Only an unreachable computer freezes its crew, as on the desktop; an unobserved posture still orbits as idle (INF-1520).
     static func unknown(_ task: PhoneTask, computer: Computer) -> Bool {
-        !computer.reachable || task.workPosture?.state == "unknown"
+        !computer.reachable
     }
     static func words(_ task: PhoneTask, computer: Computer) -> String {
-        if unknown(task, computer: computer) { return "Activity unknown" }
+        if unknown(task, computer: computer) || task.workPosture?.state == "unknown" { return "Activity unknown" }
         if task.workPosture?.reason == "checks" { return "Waiting for checks" }
         return working(task) ? "Working" : task.state
     }

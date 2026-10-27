@@ -403,9 +403,9 @@ export function createCrewTools(delegate: CrewDelegate) {
       "host binds the personal workspace itself (no repo_id) and the crewmate builds in place,",
       "so name an existing surface's id in the goal for a change.",
       "Before security, codesign or any Keychain command against the real",
-      "keychains, ~/.infinitary/local-codesign or ~/.firstmate-3000/local-codesign, ask for consent on a card; never put a secret in a command line;",
-      "prefer reproducing keychain or signing behavior under a scratch HOME with",
-      "INFINITARY_LOCAL_CODESIGN_DIR. Returns the task id immediately;",
+      "keychains or a project's own signing material, ask for consent on a card; never put a secret in a command line;",
+      "prefer reproducing keychain or signing behavior with stand-ins under a",
+      "scratch HOME. Returns the task id immediately;",
       "the crewmate's results arrive later as [fm-op] messages, so end your turn.",
     ].join(" "),
     parameters: Type.Object({

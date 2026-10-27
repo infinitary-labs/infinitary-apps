@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "served-text-speaks-for-every-project",
+      "reason": "Internal: the instructions every crewmate and first mate are served no longer name this repository's own signing folders, scratch-signing setting, test file, Mac mini, CI runners or virtual Macs; the rules say the same in words every project has, and a test keeps it so. Nothing a person sees changes."
+    }
+  ]
+}

@@ -1204,17 +1204,21 @@ describe("the crewmate tool spec and the personas (contract v4.12, primitives P7
 });
 
 describe("asking before sensitive keychain access (INF-880, submitted answer 9)", () => {
+  // The rule names the person's keychains and a project's own signing material
+  // in words every project has; this repository's signing folders, setting and
+  // test are its own and stay in its instructions (tests/served-boundary.test.ts).
   const rule = [
     "security, codesign",
     "consent on a card",
-    "~/.firstmate-3000/local-codesign",
-    "scratch HOME with INFINITARY_LOCAL_CODESIGN_DIR",
+    "a project's own signing material",
+    "scratch HOME",
   ];
 
   it("reaches every served crewmate prompt", () => {
     for (const backend of [undefined, "pi", "claude"] as const) {
       const prompt = buildCrewmateSystemPrompt(backend);
       for (const part of rule) expect(prompt, `${backend}: ${part}`).toContain(part);
+      expect(prompt).toContain("a scratch HOME alone does not isolate the keychain search list");
       expect(prompt).toContain("Keep secrets off command lines and out of printed output");
     }
   });

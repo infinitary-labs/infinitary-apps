@@ -40,11 +40,11 @@ A crewmate's filed follow-up declares nothing: it is offered every kind, and its
 
 ## Bounded retrieval
 
-`retrieval` means the whole task asks for a fact, or how or why something is so, read from what this app can already read: the code and its history, the task record, the docs, and the current state of what it connects to - the fleet's computers, their CI runners and checks, and GitHub's runs, logs and pull requests.
+`retrieval` means the whole task asks for a fact, or how or why something is so, read from what this app can already read: the code and its history, the task record, the docs, and the current state of what it connects to - the fleet's computers, and the project's checks, runs, logs and pull requests where it lives.
 It may locate, quote, extract, list, summarize, compare records by a fixed rule, or trace how or why through them, within a bounded question and source or search scope.
 Listing a disagreement, explaining why records here disagree, or reporting a saved test outcome without running the test can qualify (INF-1430 revised FI3-1237's line that a causal explanation is never retrieval).
 An answer that needs a computer the app does not reach, a cause traced across past runs, a behavioral experiment or measurement, a bug reproduction, the web or an outside report, an audit, a recommendation, a design or a change excludes the whole task even when most effort is reading.
-Reading that state now - which job holds a slot or lease, whether a running job is stuck, what a setting or label says - can be retrieval; finding out why something got slow, failed or restarted across past runs is research.
+Reading that state now - which job is running or waiting its turn, whether a running job is stuck, what a setting or label says - can be retrieval; finding out why something got slow, failed or restarted across past runs is research.
 The dominant-effort rule applies only after retrieval is excluded.
 “Read-only,” “simple” and “quick” are not shortcuts to this verdict; uncertain boundaries answer `unclear` and request high.
 A retrieval crewmate's brief tells it to stop at that boundary: its card says what is and is not established, names the source still needed, and makes Look deeper the default (`renderAnswerShapeSection`).

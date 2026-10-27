@@ -173,6 +173,16 @@ The crewmate prompt follows the same homes: its tools say how `check_change`, `r
 `file_followup` owns filing eligibility, duplicate searches, dependencies and continuations; `note_progress` owns the plan format, `report` owns waiting and finished declarations, and `emit_card` owns completion-card shapes.
 The general validation resource rule owns secret handling on every tier; the core keeps the specific Keychain consent and isolation instructions.
 
+## What the served text may name
+
+The app serves one text to every user's first mate and crewmates: the two personas' prompts, each tool's name, description and parameters, the briefs, the wakes, the kind classifier's instruction and the personal workspace's seed.
+That text speaks for every project the app works on, never for this repository's own setup: its CI lanes and the Mac mini and virtual Macs that run them, its signing scripts and folders, its releases, and its tests, scripts and documents.
+Those stay in `AGENTS.md`, `docs/` and `scripts/`, which a crewmate working on this repository reads before anything else, as a crewmate on any project reads that project's own instructions.
+A rule every project needs is said in words every project has: the signing material a project keeps on this computer, not this repository's signing folder; the project's checks where it lives, not a workflow of ours; a project's own tests, not a file of ours.
+The same boundary holds for what the host does on its own: a behavior keyed to this repository's workflow names, runners, labels or folders would be a leak, while one keyed to what any project declares - its lockfile, the workflows its host lists, its instructions - is not.
+`tests/served-boundary.test.ts` holds the part that is a fact of the tree: a served text names no file this repository tracks, no workflow of its own and no `INFINITARY_` setting the app itself never reads.
+Whether a sentence would read true in a project that is not this one is judged in review and measured by replay, never matched against a word list (INF-1549 removed the first such sentence, on signing inside a disposable virtual Mac; INF-1553's audit removed the rest).
+
 ## An answer's closing receipt
 
 Every `answer-closed` receipt carries a `read` naming the exact `tasks` key; only the `next` instruction to use it is conditional.

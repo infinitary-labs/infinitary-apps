@@ -49,7 +49,13 @@ import {
 } from "./constellation";
 import { CROWDED_PLANES, planePhase, planeRadius, projectPlane } from "./orbitalPlanes";
 import { CREW_RUSH, streakArc } from "./rush";
-import { SCENE_REACH_PX, satelliteFits, satelliteOffset, satellitePhase } from "./satellites";
+import {
+  SCENE_REACH_PX,
+  satelliteFits,
+  satelliteOffset,
+  satellitePhase,
+  satelliteRadius,
+} from "./satellites";
 
 export type OrbitProjection = (
   point: { x: number; y: number; depth: number },
@@ -1747,6 +1753,8 @@ export class CrewOrbit {
         for (const id of ids) wanted.set(id, { x: 0, y: 0, z: 0, arrows: [blockerId] });
         continue;
       }
+      // Near the edge the circle shrinks rather than throwing its group back to the main orbit.
+      const radius = satelliteRadius(blocker.plane, blocker.angle.x, origin);
       const placed = ids.flatMap((id) => {
         const cue = cues.get(id);
         const mate = this.crew.get(id);
@@ -1755,13 +1763,14 @@ export class CrewOrbit {
           blocker.plane,
           blocker.angle.x,
           satellitePhase(cue.index, cue.count, now, settled),
+          radius,
         );
         return [{ id, x: origin.x + offset[0], y: origin.y + offset[1], z: offset[2] }];
       });
       const fits =
         !ids.some((id) => this.frameFallback.has(id)) &&
         placed.length === ids.length &&
-        placed.every((point) => satelliteFits(point));
+        satelliteFits(origin);
       if (!fits) for (const id of ids) this.frameFallback.add(id);
       else
         for (const id of ids) {

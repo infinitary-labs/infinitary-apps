@@ -139,7 +139,7 @@ A visible program ring remains a first-orbit occupant.
 A fallback crewmate drawn on its main orbit participates in that orbit's spacing.
 Each orbit preserves its survivors' circular order and turns their spacing as little as possible; a return enters the widest visible gap instead of restoring a reservation.
 Existing easing carries the changed seats, and Reduce Motion resolves placement and any bounds fallback in one settled frame.
-Bounds resolution keeps a rejected companion group on its main orbit for the remainder of that frame, so closing a gap cannot cause repeated circle/fallback attempts in one frame.
+Bounds resolution keeps a rejected companion group (one whose blocker is itself past the scene reach) on its main orbit for the remainder of that frame, so closing a gap cannot cause repeated circle/fallback attempts in one frame.
 The desktop's `offMain` set and the phone's drawing seat books carry resolved drawing occupancy, separately from logical crew counts.
 Tilt, speed, orbit growth, computer grouping, branch geometry, inspection and arrows remain unchanged; equal angles still project to unequal screen distances.
 No guide, ghost marker, label or setting is added.
@@ -158,7 +158,7 @@ Restart seeds the same relationship from the live board, and two reviews of one 
 `CrewOrbit.withReviewCues` turns each live review into a satellite cue beside the recorded waits.
 The host holds the builder's merge on its review as a recorded wait; the orbit layer drops that one edge, so the builder never orbits its own reviewer or points an arrow at it (the Tasks list and its gutter still show the wait).
 A real dependency keeps its place, and reviewers and waiting crewmates of one builder share up to three seats.
-More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a circle that would leave the scene keeps the reviewer on its slot.
+More than three, a builder that is itself a satellite, a reviewer not yet on its orbit, or a builder past the scene reach keeps the reviewer on its slot; near the scene's edge the circle shrinks instead ("Waiting on another crewmate" below).
 Circling or on its slot, the reviewer draws an arrow to the builder at all times, the way a waiting crewmate does ("Waiting on another crewmate" below), in the working ember (`--wire-hot`) rather than the gray (captain, INF-556: "for a reviewer relationship, it should use the orange color that we use as active").
 Like a waiting crewmate, it keeps circling when other crew pass close to it.
 A reviewer and builder on different computers stay where they are, because each computer's orbit holds only its own crew; the reviewer's arrow still crosses the stage to the builder (captain, INF-556: "the same reach as waits"), drawn by `ComputerOrbits` beside each computer's own arrows.
@@ -233,7 +233,9 @@ An idle dependency wait with one visible blocker on the same computer orbits tha
 The circle is 64 scene pixels from the blocker, before the stage's existing fit, and travels at 24 degrees per second on the stage clock.
 It is spanned by the blocker's radial spoke and the main plane's normal, so the planes stay at 90 degrees and the spoke turns with the blocker.
 At most three companions share that circle.
-A chain, more than one blocker, a larger group, or a companion that would leave the scene keeps its slot instead.
+Near the scene's edge the circle shrinks: its radius is the largest, up to 64 scene pixels, that keeps the whole circle inside the scene reach (262 scene pixels each axis) around the blocker's current place, so it shrinks smoothly as the blocker nears the edge and regrows as it moves away (captain, INF-1532, choice A: "Every waiter keeps circling, and nothing crosses the edge").
+A waiter therefore never drops back to its main orbit for part of a loop (`satelliteRadius`).
+A chain, more than one blocker, a larger group, or a blocker that is itself past the scene reach keeps its slot instead.
 A chain is a crewmate waiting on the waiter: queued work that waits on it has no crewmate, so it makes no chain and the waiter still circles (INF-38).
 Circling or on its slot, a waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker (captain, INF-304: the arrows "should be present at all times to make it more clear there's a relationship").
 The arrow keeps clear of both glyphs; as the two close in on screen, such as when the circle passes in front of the blocker, that clearance gives way so a short arrow still shows (`drawDependencyLink`).

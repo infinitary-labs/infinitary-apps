@@ -97,7 +97,8 @@ Waiting on another crewmate (captain's FI3-1680 choice): an idle dependency wait
 The circle is 64 scene pixels out, before the stage's existing fit, and travels at 24 degrees per second on the stage clock.
 Its plane is spanned by the blocker's radial spoke and the main plane's normal, so the two planes stay at 90 degrees and the spoke turns with the blocker.
 At most three companions take that circle.
-A chain, a second blocker, a larger group, or a companion that would leave the scene stays on its own slot instead.
+Near the scene's edge the circle shrinks just enough to stay inside the scene, and regrows as the blocker moves away, so a waiter never drops back to its slot for part of a loop (captain's INF-1532 choice A).
+A chain, a second blocker, a larger group, or a blocker that is itself past the scene's edge stays on its own slot instead.
 Only another crewmate waiting on the waiter makes a chain; queued work waiting on it has no crewmate and never keeps it on its slot (INF-38).
 No caption for a wait is drawn beneath the crewmate (captain, INF-38: "the center animation should be kept as clean as possible"); the tile and the summary name it, and the Tasks row says `waiting` (`../now/NowPanel.prompt.md`, "Naming a wait").
 Circling or on its slot, the waiting crewmate draws a quiet arrow to its blocker at all times, arrowhead at the blocker, and a reviewer draws one to the builder it reviews (captain, INF-304).

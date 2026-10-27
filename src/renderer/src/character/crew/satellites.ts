@@ -12,7 +12,7 @@ import { CROWDED_PLANES } from "./orbitalPlanes";
 type Vec3 = [number, number, number];
 
 /** Half the home formation's square, scene px. Remote clusters scale after this. */
-const SCENE_HALF_PX = 280;
+export const SCENE_HALF_PX = 280;
 const SCENE_MARGIN_PX = 18;
 /** How far from the center a seat off the slot may sit, scene px, each axis. */
 export const SCENE_REACH_PX = SCENE_HALF_PX - SCENE_MARGIN_PX;
@@ -41,7 +41,7 @@ export function satelliteOffset(
   plane: number,
   angle: number,
   phase: number,
-  radius = DEPENDENCY_VISUAL.radiusPx,
+  radius: number = DEPENDENCY_VISUAL.radiusPx,
 ): Vec3 {
   const { radial, normal } = planeAxes(plane, angle);
   return [
@@ -60,6 +60,30 @@ export function satellitePhase(
 ): number {
   const travel = settled ? 0 : (now / 1000) * (Math.PI / 180) * DEPENDENCY_VISUAL.degPerSec;
   return 1.2 + (index / Math.max(1, count)) * Math.PI * 2 + travel;
+}
+
+/**
+ * The circle's radius around a blocker at `origin`: the full radius, or the
+ * largest smaller one whose whole circle stays inside the home square, so a
+ * waiter near the edge keeps circling on a tighter circle and never leaves it
+ * (captain's INF-1532 choice A). Zero when the blocker itself is past the reach.
+ */
+export function satelliteRadius(
+  plane: number,
+  angle: number,
+  origin: { x: number; y: number },
+): number {
+  const { radial, normal } = planeAxes(plane, angle);
+  const spanX = Math.hypot(radial[0], normal[0]);
+  const spanY = Math.hypot(radial[1], normal[1]);
+  return Math.max(
+    0,
+    Math.min(
+      DEPENDENCY_VISUAL.radiusPx,
+      (SCENE_REACH_PX - Math.abs(origin.x)) / spanX,
+      (SCENE_REACH_PX - Math.abs(origin.y)) / spanY,
+    ),
+  );
 }
 
 /**

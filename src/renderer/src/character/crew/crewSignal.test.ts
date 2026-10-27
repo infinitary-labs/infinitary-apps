@@ -9,6 +9,7 @@ import { ComputerOrbits } from "./computers";
 import { applyCrewDependencies, applyCrewEvent, crewStatusOf, seedCrew } from "./crewSignal";
 import { CrewOrbit, DEFAULT_ORBIT, type OrbitFrame } from "./orbit";
 import { CROWDED_PLANES, planeRadius } from "./orbitalPlanes";
+import { SCENE_HALF_PX, SCENE_REACH_PX } from "./satellites";
 
 /** INF-1375, approved A: read actual rendered centers back on their main orbit. */
 function visibleSeats(frame: OrbitFrame, offMain: string[] = []) {
@@ -409,41 +410,69 @@ describe("crew orbit wiring", () => {
       model.setReview(reviewer, null);
       visibleSeats(model.update(0, true));
     });
-    it("spaces actual scene-boundary fallbacks on their main orbit rather than leaving another gap", () => {
-      let circles = 0,
-        fallbacks = 0;
+    // Captain's INF-1532 choice A: near the scene's edge a waiter's circle shrinks
+    // instead of throwing the waiter back to its main orbit for part of each loop.
+    it("keeps every reviewer circling its builder, wherever the builder sits on a crowded orbit", () => {
       for (let builder = 0; builder < CROWDED_PLANES[0].capacity; builder++) {
         const { model } = fixture(CROWDED_PLANES.reduce((n, p) => n + p.capacity, 0));
         const reviewerId = `crew-${CROWDED_PLANES.reduce((n, p) => n + p.capacity, 0) - 1}`;
         model.setReview(reviewerId, `crew-${builder}`);
         const frame = model.update(0, true),
-          reviewer = frame.crew.find((c) => c.id === reviewerId);
-        if (!reviewer) throw new Error("Missing reviewer");
-        const p = CROWDED_PLANES[reviewer.plane ?? 0];
-        if (!p) throw new Error("Missing plane");
-        const u = reviewer.x * Math.cos(p.node) + reviewer.y * Math.sin(p.node);
-        const v =
-          (-reviewer.x * Math.sin(p.node) + reviewer.y * Math.cos(p.node)) /
-          Math.cos((p.inclination * Math.PI) / 180);
-        const onMain =
-          Math.abs(
-            Math.hypot(u, v) -
-              planeRadius(
-                reviewer.plane ?? 0,
-                CROWDED_PLANES.map((p) => p.capacity),
-              ),
-          ) < 1e-6;
-        visibleSeats(frame, onMain ? [] : [reviewerId]);
+          reviewer = frame.crew.find((c) => c.id === reviewerId),
+          blocker = frame.crew.find((c) => c.id === `crew-${builder}`);
+        if (!reviewer || !blocker) throw new Error("Missing reviewer or builder");
+        visibleSeats(frame, [reviewerId]);
         expect(model.update(0, true)).toEqual(frame);
-        if (onMain) fallbacks++;
-        else circles++;
+        expect(Math.hypot(reviewer.x - blocker.x, reviewer.y - blocker.y)).toBeLessThanOrEqual(
+          DEPENDENCY_VISUAL.radiusPx + 1e-6,
+        );
+        expect(Math.max(Math.abs(reviewer.x), Math.abs(reviewer.y))).toBeLessThanOrEqual(
+          SCENE_REACH_PX + 1e-6,
+        );
         expect(frame.links).toEqual([
           { fromId: reviewerId, toId: `crew-${builder}`, kind: "review" },
         ]);
       }
-      expect(circles).toBeGreaterThan(0);
-      expect(fallbacks).toBeGreaterThan(0);
     });
+    for (const count of [19, 24])
+      it(`keeps a waiter on its shrinking circle, inside the scene, through a whole loop of its blocker (${count} crew)`, () => {
+        const { model, rows } = fixture(count);
+        applyCrewDependencies(
+          model,
+          rows.map((row, i) =>
+            i === 1
+              ? {
+                  ...row,
+                  blockedBy: ["SCR-1"],
+                  workPosture: { state: "idle", reason: "dependency" },
+                }
+              : row,
+          ),
+          [],
+          0,
+        );
+        // Let the waiter glide onto its circle, then follow every frame of one loop.
+        const start = 4000;
+        let frame = run(model, 0, start);
+        const plane = frame.crew.find((c) => c.id === "crew-0")?.plane ?? 0;
+        const loopMs = (360 / Math.abs(CROWDED_PLANES[plane]?.speedDegPerSec ?? 1)) * 1000;
+        let worstGap = 0,
+          worstEdge = 0;
+        for (let t = start; t <= start + loopMs; t += 16) {
+          frame = model.update(t);
+          const waiter = frame.crew.find((c) => c.id === "crew-1"),
+            blocker = frame.crew.find((c) => c.id === "crew-0");
+          if (!waiter || !blocker) throw new Error("Missing waiter or blocker");
+          worstGap = Math.max(worstGap, Math.hypot(waiter.x - blocker.x, waiter.y - blocker.y));
+          // The glyph, not only its center, stays inside the scene.
+          worstEdge = Math.max(
+            worstEdge,
+            Math.max(Math.abs(waiter.x), Math.abs(waiter.y)) + waiter.size / 2,
+          );
+        }
+        expect(worstGap).toBeLessThanOrEqual(DEPENDENCY_VISUAL.radiusPx + 1);
+        expect(worstEdge).toBeLessThanOrEqual(SCENE_HALF_PX);
+      });
 
     it("counts a visible program ring but not its branch parts, and seats a released part again", () => {
       const { model } = fixture();

@@ -1,0 +1,14 @@
+{
+  "entries": [
+    {
+      "id": "waiter-circle-shrinks-at-edge",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Waiting crewmates keep circling near the edge",
+      "body": "A crewmate waiting on another no longer jumps back to its orbit for a moment when the crewmate it waits on passes near the edge of the scene. Its circle shrinks just enough to stay inside the scene, then grows back. This works the same on your Mac, iPhone and iPad.",
+      "noPicture": "This changes motion, which a still picture of the scene cannot show.",
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

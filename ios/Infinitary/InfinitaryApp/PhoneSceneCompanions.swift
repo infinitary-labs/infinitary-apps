@@ -47,13 +47,27 @@ enum PhoneSceneCompanions {
         return cues
     }
 
-    static func offset(_ cue: Cue, orbit: PhoneSceneRoster.Orbit, time: Double, settled: Bool, share: Double) -> (point: CGPoint, z: Double) {
-        let tuning = CharacterCatalog.shared.dependency, p = CharacterCatalog.shared.planes[Int(orbit.plane.rounded())]
+    /// The circle spans the blocker's radial spoke and its plane's normal.
+    private static func axes(_ orbit: PhoneSceneRoster.Orbit) -> (radial: (Double, Double, Double), normal: (Double, Double, Double)) {
+        let p = CharacterCatalog.shared.planes[Int(orbit.plane.rounded())]
         let incline = p.inclination * .pi / 180, c = cos(p.node), s = sin(p.node)
+        return ((c * cos(orbit.angle) - s * cos(incline) * sin(orbit.angle), s * cos(orbit.angle) + c * cos(incline) * sin(orbit.angle), sin(incline) * sin(orbit.angle)),
+                (s * sin(incline), -c * sin(incline), cos(incline)))
+    }
+
+    /// INF-1532, the captain's choice A: the full radius, or the largest smaller one whose whole circle stays
+    /// within `reach` of the computer's center around a blocker at `point`, so a waiter near the edge keeps
+    /// circling on a tighter circle instead of leaving it. Zero when the blocker itself is past the reach.
+    static func radius(orbit: PhoneSceneRoster.Orbit, around point: CGPoint, reach: CGSize, share: Double) -> Double {
+        let (radial, normal) = axes(orbit)
+        let spanX = hypot(radial.0, normal.0), spanY = hypot(radial.1, normal.1)
+        let full = CharacterCatalog.shared.dependency["radiusPx"]! * PhoneSceneRoster.ringScale * share
+        return max(0, min(full, (reach.width - abs(point.x)) / spanX, (reach.height - abs(point.y)) / spanY))
+    }
+
+    static func offset(_ cue: Cue, orbit: PhoneSceneRoster.Orbit, time: Double, settled: Bool, radius: Double) -> (point: CGPoint, z: Double) {
+        let tuning = CharacterCatalog.shared.dependency, (radial, normal) = axes(orbit)
         let phase = tuning["phase"]! + Double(cue.index) / Double(max(1, cue.count)) * 2 * .pi + (settled ? 0 : time * tuning["degPerSec"]! * .pi / 180)
-        let radius = tuning["radiusPx"]! * PhoneSceneRoster.ringScale * share
-        let radial = (c * cos(orbit.angle) - s * cos(incline) * sin(orbit.angle), s * cos(orbit.angle) + c * cos(incline) * sin(orbit.angle), sin(incline) * sin(orbit.angle))
-        let normal = (s * sin(incline), -c * sin(incline), cos(incline))
         return (CGPoint(x: radius * (radial.0 * cos(phase) + normal.0 * sin(phase)),
                         y: radius * (radial.1 * cos(phase) + normal.1 * sin(phase))),
                 radius * (radial.2 * cos(phase) + normal.2 * sin(phase)))

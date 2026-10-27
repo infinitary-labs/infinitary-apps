@@ -203,6 +203,34 @@ import XCTest
         try await capture("capture-stop")
     }
 
+    /// INF-1532, the captain's choice A: near the scene's edge a waiter's circle shrinks instead of throwing the
+    /// waiter back to its main orbit for part of each loop. Through a whole turn of its blocker on a crowded home,
+    /// the waiter stays on its circle and its glyph stays inside the scene.
+    func testWaiterKeepsItsShrinkingCircleInsideTheScene() throws {
+        for count in [19, 24] {
+            let crew = (1...count).map { "crew-\($0)" }
+            let arrived = Dictionary(uniqueKeysWithValues: crew.enumerated().map { ($1, $0 + 1) })
+            let roster = PhoneSceneRoster(board: try board(crew, arrived: arrived, program: nil, device: nil, seq: 1, waits: ["crew-2": "crew-1"]),
+                                          presence: [], homeName: "Mac", inReach: true, generation: 1)
+            let computer = try XCTUnwrap(roster.computers.first { $0.id == "home" })
+            let plane = try XCTUnwrap(computer.book.crew["crew-1"]?.plane)
+            let full = CharacterCatalog.shared.dependency["radiusPx"]! * PhoneSceneRoster.ringScale * computer.share
+            let motion = PhoneSceneMotion(), start = 4.0, turn = 360 / abs(CharacterCatalog.shared.planes[plane].speedDegPerSec)
+            var worstGap = 0.0
+            // Let the waiter glide onto its circle, then follow every frame of one loop.
+            for step in 0...Int((start + turn) * 60) {
+                let now = Double(step) / 60, frame = motion.frame(roster: roster, now: now, settled: false)
+                guard now >= start else { continue }
+                let glyphs = Dictionary(uniqueKeysWithValues: frame.glyphs.map { ($0.task.id, $0) })
+                let waiter = try XCTUnwrap(glyphs["crew-2"]), blocker = try XCTUnwrap(glyphs["crew-1"])
+                worstGap = max(worstGap, hypot(waiter.point.x - blocker.point.x, waiter.point.y - blocker.point.y))
+                XCTAssertLessThanOrEqual(abs(waiter.point.x - waiter.center.x) + waiter.size / 2, computer.width / 2, "\(count) crew at \(now) s")
+                XCTAssertLessThanOrEqual(abs(waiter.point.y - waiter.center.y) + waiter.size / 2, roster.height / 2, "\(count) crew at \(now) s")
+            }
+            XCTAssertLessThanOrEqual(worstGap, full + 1, "\(count) crew: the waiter left its circle")
+        }
+    }
+
     /// The captain's ask: "by default 8 crewmates should all be visible on a portrait screen on ios". Through a whole
     /// turn of the first orbit, every one of eight crewmates stays inside the narrowest portrait iPhone around home.
     func testEightCrewmatesFitTheNarrowestPortraitIPhone() throws {

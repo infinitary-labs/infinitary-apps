@@ -204,6 +204,10 @@ export const FRAME_BASE_STYLE = `
   /* A pull request reads as every pull request link the app draws: underlined only while rested on. */
   .inf-fact-v a { text-decoration: none; }
   .inf-fact-v a:hover { text-decoration: underline; }
+  .inf-facts > .inf-check-verdict { flex-basis: 100%; min-width: 0; margin: 0; padding: 0; border: 0; font-size: var(--text-sm); }
+  .inf-check-verdict summary { overflow-wrap: anywhere; }
+  .inf-check-verdict summary > span:last-child { color: var(--fg-2); }
+  .inf-check-evidence { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--fg-3); }
   .inf-followups { margin: var(--space-3) 0 0; }
   .inf-followups-k { font-size: var(--text-xs); color: var(--fg-3); letter-spacing: var(--tracking-label); text-transform: uppercase; margin-bottom: 2px; }
   .inf-followup { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; column-gap: var(--space-2); font-size: var(--text-sm); line-height: 1.8; }

@@ -92,6 +92,9 @@ The button opens the viewer playing the recording; the poster, as a picture woul
 Nothing in the body moves: the recording plays only in the viewer, and only on that press.
 A GIF demo, the fallback when no MP4 could be made, shows the same poster and the same Play button; the GIF itself never loads in the body.
 A card carrying a settle effect or a validated review shows the host-rendered `.inf-facts` strip (project, crewmate model, posture, PR link, reported check facts and the review on a reviewed task) that the body never repeats.
+A failed reading adds a quiet, full-width disclosure row per failed check beneath the checks: its name in mono, then the crewmate's recorded verdict in `--fg-2`, with evidence one click or Enter deeper in `--fg-3`.
+The row wraps rather than truncating the verdict, preserves the reader's open state during time refreshes, and resets when its version or evidence changes.
+Unknown or undiagnosed causes say so, and a suspected intermittent failure never reads as proven.
 Its cells are the shape the task's own fact strip takes on its record and its crew summary (`../now/NowPanel.prompt.md`, Shared task facts), with the same state dot and words, and its pull request link is every pull request link's: `--accent`, underlined only while the pointer rests on it (`TaskRecord.prompt.md`, "Pull request links").
 The strip is the first thing in the action row, pushed left of the buttons in a frame of its own, so it stays in view however long the body is; when the row cannot hold both it takes its own row above the buttons, and its hairline shows only where it follows a body, on a past card.
 The completion card's merge says what a click does and follows its actual check hold (captain INF-1555 F12).

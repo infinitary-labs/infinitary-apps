@@ -378,6 +378,7 @@ import {
   type ThreadActivity,
 } from "./cardService";
 import { escapeCardText } from "./cardText";
+import { checkVerdicts } from "./checkVerdicts";
 import { CheckWatcher, type WatchedReading } from "./checkWatch";
 import { ciFactOf } from "./ciFact";
 import {
@@ -10638,6 +10639,7 @@ export class CrewSupervisor {
     } else if (delivery === "direct-pr") {
       cell("checks", "Checks", `${statusDot("idle")}${CHECKS_NOT_READ_WORDS}`);
     }
+    if (record.delivery) cells.push(checkVerdicts(record.delivery));
     // The independent review's word on a reviewed task (delivery rigor
     // phase 2): the verdict and the head it read, the risk beside CI and
     // never a hold (Q4), or where the review stands while it is live.

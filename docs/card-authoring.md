@@ -123,6 +123,12 @@ On any card carrying a `settle` effect, and on the story note of a task that mer
   It is rendered from the task record every time the card is emitted or revised; the host refreshes open strips on task changes and their running times on the shared tick.
   Host fact refreshes update both the shown and staged card without an author revision or thread message, so the card, record and paired view read the same delivery facts.
   The shown strip takes a refresh in place: its frame keeps the one document it was born with and the bridge rewrites only what changed (`markup`, `docs/ui-plugins.md` "Bridge v2"), so a press on its pull request link that the minute's refresh lands in still opens the pull request (FI3-1093).
+  A failed reading adds one disclosure per failed check at the offered version, directly under the Checks cell (`checkVerdicts`, `src/core/orchestrator/checkVerdicts.ts`; nightly session audit finding 3).
+  Its summary carries the check name and the crewmate's recorded `check_change` classification: Caused by this change, Broken on main too, Suspected intermittent failure, or Cause not established.
+  A check without a diagnosis says Not diagnosed yet; the host never infers a verdict from a report or the logs, and a suspected flake is not presented as a proven intermittent failure.
+  Opening the disclosure by click or keyboard reveals the crewmate's evidence as text.
+  Its `data-inf-disclosure` identity keeps the reader's open state through live time refreshes and resets it when the version, check or diagnosis changes.
+  Earlier-version diagnoses and non-failing readings show no verdicts.
   Each cell names its fact in `data-fact` (one of `SETTLE_FACTS`, `src/shared/cards.ts`), so a test finds a fact by what it is (`factsStrip` in `tests/e2e/stack.ts`), never by its label's words.
   The stage lifts the strip out of the body (`splitSettleFacts`, `src/shared/cards.ts`) and shows it in a sandboxed frame of its own at the start of the card's action row, left of the buttons, so a long body never scrolls it out of view; a past card shows the body whole, strip last.
   A finished code-work completion decision or note opens at **Why**, then **What changed**, **Before**, **After** (contract v4.37, FI3-253); the title alone carries the answer, with no answer line before Why.

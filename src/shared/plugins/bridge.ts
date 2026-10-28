@@ -546,6 +546,11 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
     var i;
     for (i = element.attributes.length - 1; i >= 0; i--) {
       var name = element.attributes[i].name;
+      // A reader owns a keyed disclosure's open state through live refreshes.
+      // A new identity (for example a changed version or evidence) resets it.
+      if (name === "open" && element.tagName === "DETAILS" &&
+          element.hasAttribute("data-inf-disclosure") &&
+          element.getAttribute("data-inf-disclosure") === source.getAttribute("data-inf-disclosure")) continue;
       if (!source.hasAttribute(name)) element.removeAttribute(name);
     }
     for (i = 0; i < source.attributes.length; i++) {
@@ -1711,7 +1716,7 @@ export const FRAME_BRIDGE_SCRIPT = `(function () {
  * to the script moves it: re-pin it in the same change, or
  * frameBridgeHash.test.ts fails and every frame's CSP blocks the script.
  */
-export const FRAME_BRIDGE_SHA256 = "sha256-I3xDCX9WXI0pK/AYEZly2u7ii61hlUbRhyoL8I7elc8=";
+export const FRAME_BRIDGE_SHA256 = "sha256-EFD9mRfo6DHkDkiWepBICf64MpR7ridi8u9/zV45RVo=";
 
 // --- the envelope, frame -> host -------------------------------------------
 

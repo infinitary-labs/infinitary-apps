@@ -1,7 +1,7 @@
 import { readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { removeLater, scratchDir } from "../../tests/helpers/scratchDirs";
 import {
   appendOverflow,
@@ -12,10 +12,12 @@ import {
   withPastedFiles,
 } from "./overflow";
 
-// Runs before any test below wires initOverflowDir, so it exercises the
-// module's fresh, unconfigured state - a script or a test file that never
-// calls initOverflowDir must still get a usable path, not a throw.
-it("falls back to the OS temp dir when no app dir has been wired yet", () => {
+// INF-1767: a shared worker may already have run taskService.test.ts and wired
+// its overflow directory. Load an unconfigured module for this pre-boot case;
+// a script that never calls initOverflowDir must still get a usable path.
+it("falls back to the OS temp dir when no app dir has been wired yet", async () => {
+  vi.resetModules();
+  const { capWithOverflow } = await import("./overflow");
   const text = "y".repeat(50);
   const excerpt = capWithOverflow(text, "unwired", { limit: 5 });
   const file = /full text: (.+)\]$/.exec(excerpt)?.[1] ?? "";

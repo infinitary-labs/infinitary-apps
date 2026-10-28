@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "overflow-fallback-test-isolation",
+      "reason": "Test-only repair: load an unconfigured overflow module for the fallback test even after a shared-worker predecessor configured its own directory. Product behavior and fallback assertions stay unchanged."
+    }
+  ]
+}

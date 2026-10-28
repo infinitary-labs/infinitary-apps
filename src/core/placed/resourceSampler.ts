@@ -12,6 +12,8 @@ import {
 import { ProcessAttribution, type ProcessReading, processResources } from "./processResources";
 import { processRoots } from "./processRoots";
 
+export type ProcessWindow = { first: ProcessReading[]; elapsedMs: number };
+
 export type ResourceSamplerOptions = {
   /** The host supplies memory facts; core never reaches into Electron. A Mac read is async. */
   memory?: () => ResourceMemory | null | Promise<ResourceMemory | null>;
@@ -25,6 +27,7 @@ export type ResourceSamplerOptions = {
     observation: ResourceObservation,
     processes: ProcessReading[] | null,
     started: number,
+    window?: ProcessWindow,
   ) => void;
 };
 
@@ -35,6 +38,10 @@ export class ResourceSampler {
   private readonly attribution = new ProcessAttribution();
   private pending: Promise<ResourceObservation> | undefined;
   private lastProcesses: ProcessReading[] | null = null;
+  private processWindow: ProcessWindow | undefined;
+  private baseline:
+    | { cpus: CpuInfo[]; at: number; processes: ProcessReading[] | null; processAt: number }
+    | undefined;
 
   constructor(private readonly options: ResourceSamplerOptions = {}) {}
 
@@ -44,7 +51,7 @@ export class ResourceSampler {
     const started = (this.options.now ?? (() => performance.now()))();
     const pending = this.sample()
       .then((observation) => {
-        this.options.observed?.(observation, this.lastProcesses, started);
+        this.options.observed?.(observation, this.lastProcesses, started, this.processWindow);
         return observation;
       })
       .finally(() => {
@@ -56,6 +63,7 @@ export class ResourceSampler {
 
   private async sample(): Promise<ResourceObservation> {
     this.lastProcesses = null;
+    this.processWindow = undefined;
     const stamp = { epoch: this.epoch, sequence: ++this.sequence };
     const unknown = (reason: "unavailable" | "interrupted"): ResourceObservation => ({
       ...stamp,
@@ -67,27 +75,35 @@ export class ResourceSampler {
       const readCpus = this.options.cpus ?? cpus;
       const now = this.options.now ?? (() => performance.now());
       const readProcess = this.options.processes;
-      const firstProcesses = readProcess ? await readProcess() : null;
-      const processStart = now();
+      const previous = this.baseline;
+      this.baseline = undefined;
+      const elapsed = previous ? now() - previous.at : -1;
+      const reuse = previous && elapsed >= 0 && elapsed <= RESOURCE_MAX_SAMPLE_MS;
+      const firstProcesses = reuse ? previous.processes : readProcess ? await readProcess() : null;
+      const processStart = reuse ? previous.processAt : now();
       if (firstProcesses)
         this.attribution.owners(firstProcesses, processRoots.read(), processRoots.readGroups());
-      const first = readCpus();
-      const start = now();
+      const first = reuse ? previous.cpus : readCpus();
+      const start = reuse ? previous.at : now();
       const pause = this.options.wait ?? wait;
-      await pause(RESOURCE_SAMPLE_MS);
+      if (!reuse) await pause(RESOURCE_SAMPLE_MS);
       // Timers can wake just before their requested millisecond. Finish the
       // window rather than presenting that as missing CPU information.
       const remaining = RESOURCE_SAMPLE_MS - (now() - start);
       if (remaining > 0) await pause(Math.ceil(remaining));
       const last = readCpus();
-      const sampleMs = now() - start;
+      const at = now();
+      const sampleMs = at - start;
       if (sampleMs < RESOURCE_SAMPLE_MS || sampleMs > RESOURCE_MAX_SAMPLE_MS)
         return unknown("interrupted");
       if (first.length === 0 || first.length !== last.length || last.length > 65_536)
         return unknown("interrupted");
       const lastProcesses = readProcess ? await readProcess() : null;
       this.lastProcesses = lastProcesses;
-      const processMs = now() - processStart;
+      const processAt = now();
+      const processMs = processAt - processStart;
+      this.baseline = { cpus: last, at, processes: lastProcesses, processAt };
+      if (firstProcesses) this.processWindow = { first: firstProcesses, elapsedMs: processMs };
       const processes =
         firstProcesses && lastProcesses
           ? processResources(

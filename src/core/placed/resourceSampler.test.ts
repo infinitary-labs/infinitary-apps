@@ -35,3 +35,82 @@ describe("ResourceSampler awaits the memory read", () => {
     if (observation.status === "sampled") expect(observation.memory).toEqual(memory);
   });
 });
+
+/** INF-1685: cover every refresh interval, retaining the short window after a quiet spell.
+ * The CPU delta is a recorded available core from placementCpu.ts (INF-1129).
+ * A manual clock makes skipped windows and wrong reported spans deterministic.
+ */
+describe("accepted CPU refresh windows", () => {
+  it("shares concurrent reads, reuses the completed endpoint, and resets after five seconds", async () => {
+    let clock = 0;
+    let reads = 0;
+    const pauses: number[] = [];
+    const sampler = new ResourceSampler({
+      memory: () => ({ totalBytes: 8 * 1024 ** 3, freeBytes: 3 * 1024 ** 3 }),
+      cpus: () => {
+        const n = ++reads;
+        return [
+          {
+            model: "Recorded CPU",
+            speed: 0,
+            times: { user: n * 70, nice: 0, sys: n * 120, idle: n * 60, irq: 0 },
+          },
+        ];
+      },
+      now: () => clock,
+      wait: async (ms) => {
+        pauses.push(ms);
+        clock += ms;
+      },
+    });
+    const first = sampler.read();
+    expect(sampler.read()).toBe(first);
+    expect(await first).toMatchObject({ status: "sampled", sampleMs: 250 });
+    expect(reads).toBe(2);
+    clock += 1750;
+    expect(await sampler.read()).toMatchObject({ status: "sampled", sampleMs: 1750 });
+    expect(reads).toBe(3);
+    clock += 5000;
+    expect(await sampler.read()).toMatchObject({ status: "sampled", sampleMs: 5000 });
+    expect(reads).toBe(4);
+    clock += 5001;
+    expect(await sampler.read()).toMatchObject({ status: "sampled", sampleMs: 250 });
+    expect(reads).toBe(6);
+    expect(pauses).toEqual([250, 250]);
+  });
+
+  it("finishes a too-short refresh and refuses reset counters or changed processor counts", async () => {
+    let clock = 0;
+    let count = 1;
+    let reset = false;
+    const sampler = new ResourceSampler({
+      memory: () => ({ totalBytes: 8 * 1024 ** 3, freeBytes: 3 * 1024 ** 3 }),
+      cpus: () =>
+        Array.from({ length: count }, () => ({
+          model: "Recorded CPU",
+          speed: 0,
+          times: {
+            user: reset ? 0 : clock * 70,
+            nice: 0,
+            sys: 0,
+            idle: reset ? 0 : clock * 60,
+            irq: 0,
+          },
+        })),
+      now: () => clock,
+      wait: async (ms) => {
+        clock += ms;
+      },
+    });
+    expect(await sampler.read()).toMatchObject({ status: "sampled" });
+    clock += 100;
+    expect(await sampler.read()).toMatchObject({ status: "sampled", sampleMs: 250 });
+    reset = true;
+    clock += 1750;
+    expect(await sampler.read()).toMatchObject({ status: "unknown", reason: "interrupted" });
+    reset = false;
+    count = 2;
+    clock += 1750;
+    expect(await sampler.read()).toMatchObject({ status: "unknown", reason: "interrupted" });
+  });
+});

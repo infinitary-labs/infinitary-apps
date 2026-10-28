@@ -96,11 +96,12 @@ function run(
  * pressure action stopping the admitted program fails at this process/command boundary.
  */
 describe("the declared heavy-run line through its native command", () => {
-  it("queues two real groups, keeps the first running through pressure, then admits the second", async () => {
+  it("starts a lone group on a busy CPU, queues another, and keeps running through pressure", async () => {
     const dir = scratchDir("infinitary-load-command-");
     const line = new LoadLine({ stateFile: join(dir, "load.json") });
     lines.push(line);
-    line.observe(reading, null);
+    // INF-1685 direction A: replay the recorded fully busy CPU state from placementCpu.ts.
+    line.observe({ ...reading, cpu: { ...reading.cpu, idleFraction: 0 } }, null);
     const channel = await AxiChannel.open({
       spawner: forkChildProcess(entry),
       binDir: bin,
@@ -270,8 +271,8 @@ describe("the declared heavy-run line through its native command", () => {
       dir,
       [process.execPath, "-e", "console.log('should not run')"],
       {
-        processors: String(reading.status === "sampled" ? reading.cpu.logicalCpus * 2 : 20),
-        memoryMiB: "4096",
+        processors: "4",
+        memoryMiB: String((reading.memory.totalBytes / 1024 ** 2) * 2),
       },
     );
     let following: ReturnType<typeof run> | undefined;
@@ -347,8 +348,8 @@ describe("the declared heavy-run line through its native command", () => {
       const sampler = new ResourceSampler({
         memory: () => reading.memory,
         processes: readProcesses,
-        observed: (observation, processes, started) =>
-          line.observe(observation, processes, started),
+        observed: (observation, processes, started, window) =>
+          line.observe(observation, processes, started, window),
       });
       expect((await sampler.read()).status).toBe("sampled");
       expect(await waiting.ended).not.toBe(0);

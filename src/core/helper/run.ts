@@ -248,8 +248,8 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
   const resources = new ResourceSampler({
     memory: options.resourceMemory,
     processes: readProcesses,
-    observed: (observation, processes, started) =>
-      loadLine.observe(observation, processes, started),
+    observed: (observation, processes, started, window) =>
+      loadLine.observe(observation, processes, started, window),
   });
   if (options.gitAskpass) configureComputerGit({ dataDir, askpass: options.gitAskpass, packaged });
   let name = joined.name;

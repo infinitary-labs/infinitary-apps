@@ -10,9 +10,10 @@ import {
 } from "@shared/resources";
 import { z } from "zod";
 import { memoryUsedBytes } from "./memoryUsed";
-import { type ProcessReading, readProcesses } from "./processResources";
+import { type ProcessReading, processResources, readProcesses } from "./processResources";
 import { processRoots } from "./processRoots";
 import { resourceCapacity } from "./resourceCapacity";
+import type { ProcessWindow } from "./resourceSampler";
 
 const heldSchema = z.object({
   id: z.string().uuid(),
@@ -52,6 +53,7 @@ export class LoadLine {
   private readonly roots = new Map<string, () => void>();
   private timer: ReturnType<typeof setInterval> | undefined;
   private latest: { observation: ResourceObservation; at: number } | undefined;
+  private measured = new Map<string, number>();
   private failure: unknown;
   private stopped = false;
 
@@ -91,6 +93,7 @@ export class LoadLine {
     observation: ResourceObservation,
     processes: ProcessReading[] | null,
     started = this.now(),
+    window?: ProcessWindow,
   ): void {
     if (this.stopped || this.failure) return;
     this.latest = { observation, at: started };
@@ -106,6 +109,20 @@ export class LoadLine {
             return !leader || leader.group !== held.pid || leader.started === held.started;
           }),
         );
+      }
+      this.measured.clear();
+      if (processes && window && observation.status === "sampled") {
+        const owners = new Map(
+          processes.flatMap((row) => {
+            const held = this.held.find((held) => held.pid === row.group);
+            return held ? [[row.pid, held.id] as const] : [];
+          }),
+        );
+        const use = processResources(window.first, processes, owners, window.elapsedMs);
+        if (use.status === "sampled") {
+          for (const run of use.tasks)
+            if (run.cpuCores !== undefined) this.measured.set(run.taskId, run.cpuCores);
+        }
       }
       this.admit();
     } catch (error) {
@@ -257,10 +274,15 @@ export class LoadLine {
   private admit(): void {
     this.check();
     const remaining = this.capacity();
+    let running = 0;
     if (remaining) {
       for (const held of this.held) {
         if (held.state !== "running") continue;
-        remaining.cpu -= held.demand.cpu;
+        running++;
+        const measured = this.measured.get(held.id) ?? 0;
+        // Restore observed use before applying the same placement margin, then
+        // reserve the larger of declared and measured use exactly once.
+        remaining.cpu += measured * 0.8 - Math.max(held.demand.cpu, measured);
         remaining.memoryBytes -= held.demand.memoryBytes;
       }
     }
@@ -271,7 +293,7 @@ export class LoadLine {
       const fits =
         !earlier &&
         remaining !== null &&
-        held.demand.cpu <= remaining.cpu &&
+        (running === 0 || held.demand.cpu <= remaining.cpu) &&
         held.demand.memoryBytes <= remaining.memoryBytes;
       if (!overridden && !fits) {
         earlier = true;
@@ -281,6 +303,7 @@ export class LoadLine {
         remaining.cpu -= held.demand.cpu;
         remaining.memoryBytes -= held.demand.memoryBytes;
       }
+      running++;
       return { ...held, state: "running" };
     });
     this.commit(next);

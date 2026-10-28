@@ -7,9 +7,14 @@ import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { attributedClaudeProcess } from "../claude/processResources";
 import { hostEnv } from "../hostEnv";
 import { JobManager } from "../jobs/jobManager";
-import { ProcessAttribution, processResources, readProcesses } from "./processResources";
+import {
+  ProcessAttribution,
+  type ProcessReading,
+  processResources,
+  readProcesses,
+} from "./processResources";
 import { processRoots } from "./processRoots";
-import { ResourceSampler } from "./resourceSampler";
+import { type ProcessWindow, ResourceSampler } from "./resourceSampler";
 
 // Measured live case: 0.77 s on the Mac mini; a 5 s budget covers five times that reading.
 vi.setConfig({ testTimeout: 5_000 });
@@ -64,10 +69,14 @@ describe("live task process observation", () => {
       });
       await started;
       const before = performance.now();
-      const observation = await new ResourceSampler({
+      const windows: { processes: ProcessReading[] | null; window?: ProcessWindow }[] = [];
+      const sampler = new ResourceSampler({
         processes: readProcesses,
         memory: () => ({ totalBytes: totalmem(), freeBytes: freemem() }),
-      }).read();
+        observed: (_observation, processes, _started, window) =>
+          windows.push({ processes, window }),
+      });
+      const observation = await sampler.read();
       console.info(
         "Live process observation",
         JSON.stringify({ durationMs: performance.now() - before, observation }),
@@ -99,6 +108,17 @@ describe("live task process observation", () => {
       if (measured.status !== "sampled") throw new Error("Work use unavailable");
       console.info("Measured hashing work", JSON.stringify(measured.tasks));
       expect(measured.tasks.find((task) => task.taskId === "client")?.cpuCores).toBeGreaterThan(0);
+      // INF-1685: a refresh reuses the preceding real process endpoint, including
+      // the hashing work between reads rather than only a new quarter-second slice.
+      const refreshed = await sampler.read();
+      expect(refreshed.status).toBe("sampled");
+      expect(windows[1]?.window?.first).toBe(windows[0]?.processes);
+      if (refreshed.status !== "sampled" || refreshed.processes?.status !== "sampled")
+        throw new Error("Refreshed process observation unavailable");
+      expect(
+        refreshed.processes.tasks.find((task) => task.taskId === "client")?.cpuCores,
+      ).toBeGreaterThan(0);
+      console.info("Full-interval refresh proof", JSON.stringify(refreshed));
     } finally {
       changed.close();
       writeFileSync(finish, "done");

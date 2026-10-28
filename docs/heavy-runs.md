@@ -28,8 +28,13 @@ Admission consumes the existing completed resource sample, not another CPU sampl
 The observation's age starts before sampling and must remain within the existing freshness allowance.
 Missing or stale readings admit nothing.
 The shared `resourceCapacity` owner retains the existing placement margins: 80 percent of observed idle processor capacity, and available memory minus the greater of 512 MiB or 10 percent of installed memory.
-The line subtracts each living admitted declaration from that headroom before admitting another request.
-This is conservative reservation accounting, not a prediction or a promise of physical isolation.
+With no admitted run, the first waiting request starts when fresh memory fits and pressure permits, regardless of processor load (INF-1685 direction A).
+Further requests need 80 percent of (observed idle processors plus measured use of admitted groups), minus the sum of each admitted run's larger of declared share and measured use.
+The sampler supplies its local process-time window to the line, which measures each declared process group separately, including multiple runs of the same task; task totals are not run totals.
+Unknown group use adds no invented capacity and reserves the declared share.
+New admissions in the same reading reserve their declarations immediately.
+Memory accounting still subtracts each living admitted declaration from memory headroom.
+This is admission accounting, not a prediction or a promise of physical isolation.
 A normal request cannot pass an earlier waiting request, even if the later request is smaller.
 A macOS warning or critical pressure reading suspends new admissions; normal pressure and fresh capacity allow the same line to advance.
 The existing resource-pressure Activity and first-mate wake remain the only pressure notices.

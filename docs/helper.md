@@ -391,6 +391,9 @@ They are kept in memory and never load accounts or sign-ins just to answer a rea
 The shared feed samples every two seconds while a task is active or a local declared run remains, even with no screen subscriber; screen demand retains its existing lease.
 
 - `ResourceSampler` measures CPU time deltas across a window of at least 250 milliseconds, no longer than five seconds, and reports the idle fraction and logical processor count.
+  A read within five seconds of the previous endpoint reuses that endpoint and measures the whole interval, finishing the minimum window if needed.
+  The first read or one after a longer quiet spell takes a fresh quarter-second window.
+  Process-time deltas use the corresponding process endpoints, so local declared-run accounting and task Use cover the same refresh interval.
   A missing CPU list, changed processor count, reset counter, empty delta or interrupted window is unknown, never idle.
 - The desktop host supplies memory facts in bytes through `HostCapabilities.resourceMemory`; work mode supplies the same adapter (`src/main/host/resourceMemory.ts`).
   Linux supplies `MemAvailable` separately from free memory.

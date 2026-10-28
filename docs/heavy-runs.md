@@ -75,3 +75,4 @@ The iPhone and iPad app retains its existing surface and ignores these optional 
 `src/core/placed/loadLine.integration.test.ts` runs real native wrappers through the task channel with a recorded ordinary-use Mac reading and explicitly supplied pressure states.
 It exercises queue order, unchanged streams and exit status, pressure admission, unknown and stale readings, revoked waiters, surviving descendants, restart restoration, failed state writes, nested demands and recorded overrides.
 `src/core/placed/processResources.test.ts` exercises declared-group attribution, PID reuse and explicit nested roots using recorded process metadata.
+This project's own local phone gate and journey runs declare their runs through this command (`docs/testing.md`, "A local heavy run's place").

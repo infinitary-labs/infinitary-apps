@@ -4,6 +4,7 @@ import { join, relative } from "node:path";
 import { afterAll, describe, expect, it, vi } from "vitest";
 import { MIC_PREFLIGHT } from "./e2e/micPreflight";
 import { RUNS_DIR, runName } from "./e2e/runEvidence";
+import { withoutLoadLine } from "./helpers/noLoadLine";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**
@@ -69,7 +70,7 @@ function fixtureRuns() {
   writeFileSync(log, "");
   const release = join(scratchDir("infinitary-evidence-release-"), "go");
   const env: NodeJS.ProcessEnv = {
-    ...process.env,
+    ...withoutLoadLine(process.env),
     TMPDIR: scratchDir("infinitary-evidence-tmp-"),
     INFINITARY_FIXTURE_LOG: log,
     INFINITARY_FIXTURE_RELEASE: release,
@@ -77,7 +78,8 @@ function fixtureRuns() {
     // check would boot Electron first, for up to 20 s, past the wait for the
     // held spec on a slow guest (INF-726).
     [MIC_PREFLIGHT]: "0",
-    // No crew place service here: the runs start at once (tests/crew-place.test.ts).
+    // No load line and no crew place service here: the runs start at once
+    // (tests/heavy-run-place.test.ts, tests/crew-place.test.ts).
     INFINITARY_CREW_PLACE_SOCKET: join(scratchDir("infinitary-evidence-crew-"), "none.sock"),
   };
   // This suite's run owns its own temp root; the fixture runs open theirs.

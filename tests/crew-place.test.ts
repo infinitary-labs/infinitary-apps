@@ -6,8 +6,10 @@ import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { crewPlaceSocket, takeCrewPlace } from "../scripts/crew-place";
+import { heavyRunWords } from "../scripts/heavy-run-place";
 import { hostEnv } from "../src/core/hostEnv";
 import { MIC_PREFLIGHT } from "./e2e/micPreflight";
+import { withoutLoadLine } from "./helpers/noLoadLine";
 import { scratchDir } from "./helpers/scratchDirs";
 
 /**
@@ -236,8 +238,9 @@ describe("the local runs that take one", () => {
     const fixtures = join(__dirname, "fixtures", "run-evidence");
     const log = join(scratchDir("crew-journey-"), "started.log");
     writeFileSync(log, "");
+    // A shell whose app has no load line takes this path (tests/heavy-run-place.test.ts).
     const env: NodeJS.ProcessEnv = {
-      ...process.env,
+      ...withoutLoadLine(process.env),
       ...localEnv(service.path),
       TMPDIR: scratchDir("crew-journey-tmp-"),
       INFINITARY_FIXTURE_LOG: log,
@@ -275,6 +278,7 @@ describe("the local runs that take one", () => {
       send(socket, { state: "granted", place: "mini-crew1" });
       expect(await exited).toBe(0);
       expect(readFileSync(log, "utf8")).toBe("quick\n");
+      expect(output).toContain(heavyRunWords.noLine);
       expect(output).toContain(
         "Waiting in line for a crew place: 1 ahead (cores 14 of 14 in use).",
       );
@@ -292,7 +296,7 @@ describe("the local runs that take one", () => {
       const service = await standIn();
       const evidence = scratchDir("crew-phone-evidence-");
       const env: NodeJS.ProcessEnv = {
-        ...hostEnv(),
+        ...withoutLoadLine(hostEnv()),
         ...localEnv(service.path),
         INFINITARY_CHECKS: "local",
       };
@@ -321,6 +325,7 @@ describe("the local runs that take one", () => {
         send(socket, { state: "refused", reason: "stand-in refuses so nothing builds" });
         socket.end();
         expect(await exited).not.toBe(0);
+        expect(output).toContain(heavyRunWords.noLine);
         expect(output).toContain(
           "The crew place service refused this run: stand-in refuses so nothing builds",
         );

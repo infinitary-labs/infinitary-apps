@@ -13,7 +13,7 @@ import { hardwareKeyboardArguments, observePhoneKeyboard, type PhoneChord, phone
 import { removeScratchDirs, scratchDir } from "../tests/helpers/scratchDirs.ts";
 import { ciModeRefusal } from "./checks-mode.ts";
 import { openModuleRunner, REPO_ROOT } from "./moduleRunner.ts";
-import { takeCrewPlace } from "./crew-place.ts";
+import { takeHeavyRunPlace } from "./heavy-run-place.ts";
 import { startPhoneActivity } from "./phone-activity.ts";
 import { runEveryCheck } from "./phone-checks.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
@@ -59,10 +59,10 @@ const devices: PhoneDevice[] = values.both ? ["iphone", "ipad"] : [values.ipad ?
 const jobs = phoneJobs(devices, values.waits ? ["rest"] : values.part ?? PHONE_PARTS.map((part) => part.name));
 const simulators = Number(values.simulators);
 mkdirSync(evidence, { recursive: true });
-// INF-1541 piece 4: a local gate waits in the Mac mini's one line for a crew place, never for a
-// quieter Mac; its parts ride the gate's place. CI's job, or a computer with no service, starts at once.
-const crewPlace = values.xctestrun ? { place: undefined, close() {} }
-  : await takeCrewPlace("phone", `test:phone ${devices.join(" and ")}: ${jobs.length} part(s)`);
+// INF-1541 piece 4 and INF-1664: a local gate waits in its computer's load line, or without one in the
+// Mac mini's crew places, never for a quieter Mac; its parts ride the gate's place. CI's job starts at once.
+const runPlace = values.xctestrun ? { close() {} }
+  : await takeHeavyRunPlace("phone", `test:phone ${devices.join(" and ")}: ${jobs.length} part(s)`);
 // Capture the account home before the disposable app/test HOME replaces it.
 const invokingHome = userInfo().homedir;
 const root = scratchDir(SCRATCH_PREFIX);
@@ -78,7 +78,7 @@ const { hostEnv } = await runner.import<typeof import("../src/core/hostEnv")>(jo
 const env = { ...hostEnv(), HOME: home, CFFIXED_USER_HOME: home };
 let activity: ReturnType<typeof startPhoneActivity>;
 try { activity = startPhoneActivity(env, invokingHome); }
-catch (error) { await runner.close(); crewPlace.close(); throw error; }
+catch (error) { await runner.close(); runPlace.close(); throw error; }
 let number = 0;
 const children = new Set<ChildProcess>();
 let interrupted = false;
@@ -442,7 +442,7 @@ try {
           try { removeScratchDirs(); }
           finally {
             try { activity.close(); }
-            finally { crewPlace.close(); }
+            finally { runPlace.close(); }
           }
         }
       }

@@ -170,16 +170,29 @@ Inside CI (`CI` is set) the heavy checks always run, because the Mac mini's runn
 A value other than `ci` or `local` refuses rather than guess.
 `tests/checks-mode.test.ts` runs each command with a scratch home's git settings.
 
-## A local heavy run's crew place
+## A local heavy run's place
 
-The Mac mini is always busy with the fleet's checks, so a local heavy run waits in the placement service's one line for a crew place rather than for a quieter Mac (INF-1541, the captain's "the mac will always be busy given how many other things our fleet needs to run").
-A local `pnpm test:phone` gate and every local `playwright test` run, repeats included, ask `scripts/crew-place.ts` for one before their heavy work: the gate before it builds, a journey run in the e2e global setup before any test starts.
-The client connects to the account's real `Library/Caches/infinitary-ci/crew-places.sock` (`INFINITARY_CREW_PLACE_SOCKET` overrides it), names only what runs (`phone` or `journeys`), prints each place in line it is told, and holds the place while its connection lives, so a run that ends or dies gives it back.
-The service decides what each kind costs and where it ranks beside the checks; the paired contract is dotfiles-private's fm-placer crew socket (DOP-112).
-With no service listening, as on any computer but the Mac mini, the run starts at once; inside CI the job already holds its runner's place and asks for none.
-A refused request fails the run with the service's reason; a service restart is asked again, and a run it had granted is counted again at once.
+A local `pnpm test:phone` gate and every local `playwright test` run, repeats included, take a place before their heavy work: the gate before it builds, a journey run in the e2e global setup before any test starts (`scripts/heavy-run-place.ts`).
+Inside CI the job already holds its runner's place and asks for none.
 A phone part the gate starts rides the gate's place.
-`tests/crew-place.test.ts` drives the client, a journey run and the phone gate against a stand-in service.
+
+Where the shell has this computer's load line, the run declares its needs there through `infinitary-load-axi run` and holds them until it ends (`docs/heavy-runs.md`).
+A phone gate declares 4 processors and 8192 MiB and a journey run 4 processors and 4096 MiB, the shares the Mac mini's crew places reserve, which include the simulators launchd starts outside the run's process group (INF-1664).
+The run prints the line's facts while it waits and says when it is admitted.
+A run that ends or dies gives its hold back.
+A run stopped while it still waits leaves the line: a small supervisor outside the run's process group ends the waiting command once the run's end closes its input.
+Inside a run its caller already declared, the run rides that hold, and the line refuses it when the outer run declared less.
+
+Where the shell has no line, the run asks the Mac mini's crew place service exactly as before, and says so first (the captain's "Add the fallback, no alpha needed").
+The shell has no line when the command is not on its PATH, the shell has no task channel, or the app gives the task no line, as an app older than the line does.
+The Mac mini is always busy with the fleet's checks, so there a local heavy run waits in the placement service's one line for a crew place rather than for a quieter Mac (INF-1541, the captain's "the mac will always be busy given how many other things our fleet needs to run").
+The client (`scripts/crew-place.ts`) connects to the account's real `Library/Caches/infinitary-ci/crew-places.sock` (`INFINITARY_CREW_PLACE_SOCKET` overrides it), names only what runs (`phone` or `journeys`), prints each place in line it is told, and holds the place while its connection lives, so a run that ends or dies gives it back.
+The service decides what each kind costs and where it ranks beside the checks; the paired contract is dotfiles-private's fm-placer crew socket (DOP-112).
+With no service listening, as on any computer but the Mac mini, the run starts at once.
+A refused request fails the run with the service's reason; a service restart is asked again, and a run it had granted is counted again at once.
+
+`tests/heavy-run-place.test.ts` drives a journey run, the phone gate, a run killed while it holds its place, nested runs and each way a shell has no line through the real task channel and line.
+`tests/crew-place.test.ts` drives the crew place client, a journey run and the phone gate against a stand-in service, from a shell with no line (`tests/helpers/noLoadLine.ts`).
 
 ## A main repair's priority label
 

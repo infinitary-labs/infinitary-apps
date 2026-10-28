@@ -4,7 +4,7 @@
       "id": "crewmate-show-ready-card",
       "kind": "fix",
       "area": "crewmates",
-      "title": "Show the card waits until the card is ready",
+      "title": "The Crewmate tab offers Show the card once the card is ready",
       "body": "The Crewmate tab no longer offers a button that does nothing while its crewmate is still preparing the card.",
       "picture": {
         "dark": "crewmate-show-ready-card-dark.webp",

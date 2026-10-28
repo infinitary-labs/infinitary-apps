@@ -3,6 +3,7 @@
     {
       "id": "waiting-on-you-beacon",
       "kind": "feature",
+      "highlight": 2,
       "area": "crewmates",
       "title": "A crewmate waiting on you wears a slow, breathing ring",
       "body": "When a crewmate's task is under Waiting on you, its crewmate on the home stage now carries the same ring the Tasks row shows, brightening and fading slowly so it catches your eye without nagging. It looks the same on your Mac, iPhone and iPad, and holds still when Reduce Motion is on.",

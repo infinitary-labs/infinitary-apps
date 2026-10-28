@@ -2,9 +2,9 @@
   "entries": [
     {
       "id": "downloads-with-private-source",
-      "kind": "fix",
-      "title": "Installer downloads no longer need a public code project",
-      "body": "Direct installers and their updates can come from downloads.getinfinitary.com while Infinitary's code stays private. Homebrew updates remain supported. Before the new download service is configured, releases keep providing Homebrew and Linux downloads.",
+      "kind": "improvement",
+      "title": "Downloads and updates come from getinfinitary.com",
+      "body": "The Mac disk image, updates installed from inside Infinitary and the Linux packages now download from downloads.getinfinitary.com. Homebrew installations keep updating through Homebrew.",
       "area": "updates",
       "noPicture": "Only the download addresses change; the desktop screens and update controls look the same.",
       "provenance": { "origin": "change" }

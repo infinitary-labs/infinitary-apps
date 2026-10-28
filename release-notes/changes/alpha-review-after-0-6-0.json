@@ -1,0 +1,24 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "e2e-browser-answer-background-message",
+      "reason": "Test-only: an end-to-end journey reads a browser answer that arrives as a background job's message. Nothing in the app changes.",
+      "covers": ["aea51a0818e98968a78b184c863ac215f565b6f4"]
+    },
+    {
+      "id": "center-animation-parity-rule",
+      "reason": "Project instructions only: a change to the center crew animation must update the desktop and phone apps together. Nothing in the app changes.",
+      "covers": ["e03fc98ba7f60b4084707f129d2cd6118c31aac2"]
+    },
+    {
+      "id": "testing-never-waits-for-load",
+      "reason": "Project testing documentation only: checks never wait for the computer's load to drop or skip a run because of it. Nothing in the app changes.",
+      "covers": ["33631c69d01dae1ad685d8137639f55162caedec"]
+    },
+    {
+      "id": "alpha-review-after-0-6-0",
+      "reason": "Release review for the first alpha after stable 0.6.0: ranks installing on Mac without Homebrew, the waiting-on-you ring and the one task history as highlights; rewords the download address, Show the card and Claude identity notes in plain words; adds exclusions for three internal changes; pins stable 0.6.0's record with its picked highlights. Nothing in the app changes."
+    }
+  ]
+}

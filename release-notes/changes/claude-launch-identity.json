@@ -5,7 +5,7 @@
       "kind": "fix",
       "area": "subscriptions",
       "title": "Claude conversations identify Infinitary by its own name",
-      "body": "New Claude conversations use Infinitary’s identity as a workaround for reported Claude allowance accounting differences. Lower allowance use is not guaranteed or measured by Infinitary. Your Claude sign-in and saved conversations stay unchanged.",
+      "body": "New Claude conversations now tell Claude they come from Infinitary, after people reported that Claude counted their allowance differently without it. Infinitary does not measure or promise lower allowance use. Your Claude sign-in and saved conversations stay the same.",
       "noPicture": "This changes the identity sent by new Claude processes, not any visible screen.",
       "provenance": { "origin": "change" }
     }

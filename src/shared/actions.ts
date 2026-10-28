@@ -1305,7 +1305,8 @@ const actionLines = {
     line: "Turn a named runbook on or off when asked. Read the available names and ids first.",
     toRequest: (v) => [v.id, v.enabled],
     readValue: (current) => ({ runbooks: current }),
-    done: (v) => `${v.name} ${v.enabled ? "on" : "off"}`,
+    done: (v) =>
+      `${v.name} ${v.enabled ? "on" : "off"}${v.replacement ? `; ${v.replacement} off` : ""}`,
   },
   "personal-resources": {
     area: "intelligence",

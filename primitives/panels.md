@@ -26,7 +26,7 @@ A one-off answer the captain reads once is a card ([cards-and-consent.md](cards-
 - The contract a panel is written against: `PanelProps`, `ServerContext` and `PersonalManifest` in [`../src/shared/personal/contracts.ts`](../src/shared/personal/contracts.ts) (type-only; it generates the workspace's `infinitary-env.d.ts`); the manifest schema and `PLUGIN_HOST_SUPPORT` in [`../src/shared/personal/manifest.ts`](../src/shared/personal/manifest.ts).
 - Mounting: `PersonalPlugins` in [`../src/renderer/src/personal/personalPlugins.ts`](../src/renderer/src/personal/personalPlugins.ts) (the captain's own, in the window through `PersonalPanelBody`) and the frame realm in [`../src/renderer/src/frameRealm/`](../src/renderer/src/frameRealm/) (`framePanelProps`), mounted by `FrameMountRegistry.mountPanel`.
 - The app's own folders: `APP_PANEL_FOLDERS` in [`../src/shared/surfaces.ts`](../src/shared/surfaces.ts).
-- Installing: `PluginInstaller` and `checkPluginTree` in [`../src/core/plugins/pluginInstaller.ts`](../src/core/plugins/pluginInstaller.ts), with `PluginRecords` the one writer of the `plugins` table.
+- Installing panels and guidance runbooks: `PluginInstaller` and `checkPluginTree` in [`../src/core/plugins/pluginInstaller.ts`](../src/core/plugins/pluginInstaller.ts), with `PluginRecords` the one writer of the `plugins` table.
 - The store: `PersonalStore` over `plugin_kv` in [`../src/core/personal/personalStore.ts`](../src/core/personal/personalStore.ts).
 - The switch: `ShellPreferencesService.setPersonalPanels` in [`../src/core/preferences/shellPreferences.ts`](../src/core/preferences/shellPreferences.ts); safe mode in [`../src/core/personal/safeMode.ts`](../src/core/personal/safeMode.ts).
 

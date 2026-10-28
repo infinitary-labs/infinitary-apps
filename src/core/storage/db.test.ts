@@ -14,13 +14,21 @@ import {
   stillDownOnce,
   stillDownWake,
 } from "../orchestrator/wakes";
+import { PluginRecords } from "../plugins/pluginRecords";
+import { fetchPluginSource } from "../plugins/pluginSource";
 import { PushedQuotaStore } from "../quota/pushedQuota";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import { CardStore } from "./cardStore";
 import type { AppDatabase } from "./db";
-import { DATABASE_VERSION, openDatabase, openInMemoryDatabase } from "./db";
+import {
+  CARD_ANSWERER_MIGRATION_VERSION,
+  DATABASE_VERSION,
+  openDatabase,
+  openInMemoryDatabase,
+  PLUGIN_KIND_MIGRATION_VERSION,
+} from "./db";
 import { INBOX_GRACE_MS, InboxStore, inboxContentHash } from "./inboxStore";
 import { SettingsStore } from "./settingsStore";
 import { PERMISSION_COLUMNS } from "./taskDeliveryFields";
@@ -3461,7 +3469,7 @@ it("INF-1610 upgrades existing cards with no answering mark, keeps a marked card
 // reply under it, and a restart must keep its reply row.
 it("INF-1670 upgrades existing cards with no answerer, keeps the stuck alert's across reopen and reverses without losing it", () => {
   const dir = tmpUserData();
-  const old = openDatabase(dir, DATABASE_VERSION - 1);
+  const old = openDatabase(dir, CARD_ANSWERER_MIGRATION_VERSION - 1);
   const columns = columnNames(old, "cards");
   old
     .prepare(
@@ -3525,5 +3533,60 @@ it("INF-1226 upgrades existing cards with no continues declaration, keeps a decl
   expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
     { id: consent.id, status: "ready" },
   ]);
+  reopened.close();
+});
+
+// Intent: INF-1177 piece 3 reuses the installer records without reclassifying an existing panel.
+it("INF-1482 keeps installed panels through the runbook-kind upgrade, restart and reversal", async () => {
+  const dir = tmpUserData();
+  const old = openDatabase(dir, PLUGIN_KIND_MIGRATION_VERSION - 1);
+  const columns = columnNames(old, "plugins");
+  // A legacy installed panel, in the shape the pre-runbook installer persisted.
+  old
+    .prepare(
+      "INSERT INTO plugins (id, source, spec, name, version, capabilities_json, installed_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    )
+    .run(
+      "token-watch",
+      "path",
+      join(process.cwd(), "tests/fixtures/personal-skills/token-watch"),
+      "Acme",
+      "1.0.0",
+      JSON.stringify({ reads: ["tasks.board"] }),
+      1,
+      1,
+    );
+  const before = old.prepare("SELECT * FROM plugins").all();
+  old.close();
+  const upgraded = openDatabase(dir);
+  expect(new PluginRecords(upgraded).get("token-watch")).toMatchObject({
+    kind: "panel",
+    name: "Acme",
+    capabilities: { reads: ["tasks.board"] },
+    installedAt: 1,
+  });
+  const spec = join(process.cwd(), "resources/runbooks/sequences");
+  const fetched = await fetchPluginSource({ source: "path", spec, workDir: join(dir, "fetch") });
+  new PluginRecords(upgraded).commit("studio-workflows", {
+    kind: "runbook",
+    source: "path",
+    spec,
+    pinned: fetched.pinned,
+    name: "Studio",
+    version: "1.0.0",
+    title: "Studio workflows",
+    capabilities: {},
+    stagedAt: 2,
+  });
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  expect(new PluginRecords(reopened).get("studio-workflows")).toMatchObject({
+    kind: "runbook",
+    name: "Studio",
+  });
+  new PluginRecords(reopened).delete("studio-workflows");
+  reopened.exec("ALTER TABLE plugins DROP COLUMN kind;");
+  expect(columnNames(reopened, "plugins")).toEqual(columns);
+  expect(reopened.prepare("SELECT * FROM plugins").all()).toEqual(before);
   reopened.close();
 });

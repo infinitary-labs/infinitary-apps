@@ -546,7 +546,13 @@ export async function createServices(
     knownHosts: () => knownForgeHosts(),
   });
   const settings = new SettingsStore(db, desktopConventions(host.app.platform).dictationKey);
-  const runbooks = new Runbooks(join(runbookSource, "resources/runbooks"), settings);
+  const pluginRecords = new PluginRecords(db);
+  const runbooks = new Runbooks(join(runbookSource, "resources/runbooks"), settings, () =>
+    pluginRecords
+      .installed()
+      .filter((record) => record.kind === "runbook")
+      .map((record) => join(paths.pluginsDir, record.id)),
+  );
   const repos = new RepoRegistry(db, paths.fleetDir, {
     settings,
     appDataDir: paths.userData,
@@ -2028,7 +2034,6 @@ export async function createServices(
   // The installed plugins (one plugin vehicle, Phase A): the record of what
   // the captain added and agreed to. The plugin host serves a panel from
   // its second root only what this record says he consented to.
-  const pluginRecords = new PluginRecords(db);
   const personalStore = new PersonalStore(db);
   const panelMounts = new PanelMountsHolder();
   // The personal workspace is a project from the first start, so a panel
@@ -2065,7 +2070,7 @@ export async function createServices(
         pluginRecords
           .installed()
           .flatMap((record) =>
-            record.name && record.capabilities
+            record.kind === "panel" && record.name && record.capabilities
               ? [{ id: record.id, name: record.name, capabilities: record.capabilities }]
               : [],
           ),
@@ -2465,6 +2470,7 @@ export async function createServices(
   // click on it (a host effect only his click on the card's controls runs).
   const pluginInstaller = new PluginInstaller({
     records: pluginRecords,
+    runbooks,
     pluginsDir: paths.pluginsDir,
     stagingDir: paths.pluginsStagingDir,
     checkCacheDir: join(paths.pluginsStagingDir, ".check"),

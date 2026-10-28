@@ -8,18 +8,44 @@ The host does not decide which subject an ask belongs to.
 
 ## Serving and switches
 
-`Runbooks` in `src/core/runbooks/runbooks.ts` reads the app bundle's `resources/runbooks` root through the existing self-source location.
+`Runbooks` in `src/core/runbooks/runbooks.ts` reads the app bundle's `resources/runbooks` root through the existing self-source location and the installer's committed runbook folders.
 `SettingsStore` owns the saved on/off map; absent entries are on, so an update's new built-ins start on.
 Settings → Intelligence lists each runbook by its manifest's name and description, with a keyboard-operable switch and save feedback.
 The first mate reads the same list and changes it through `app_state` and `app_change runbook`, an asked catalog action.
 The dispatcher owns the attributed feed line, named from the manifest rather than an internal identifier, and does not report unchanged writes as changes.
 The manifest may declare a replacement; enabling it turns the named runbook off in the same saved update.
-Adding and editing runbooks are separate work, not installer or editing surfaces shipped here.
+Adding a runbook uses the existing installer; copying and editing built-ins remains separate work.
 
 Enabled first-mate sections go through the appended-instructions door at each idle boundary, with `instructions_sha` over the exact joined text.
 Runbooks are outside the first mate's hard fixed-context budget; the model's physical context window still applies.
 A switch affects the first mate's next idle boundary and newly opened crew conversations, not a prompt already running.
 No procedure is refused for exceeding the core budget.
+
+## Adding and removing
+
+Ask the first mate to add a runbook from a full folder path, a git address (optionally pinned with `#ref`) or an npm package.
+`PluginInstaller` uses the existing source fetcher, plain-file copy and source pin, staging records and host consent effects.
+A top-level `runbook.json` chooses guidance admission rather than panel compilation; `PluginRecords` owns both kinds in the same table and installed folder root.
+Existing saved records remain panels.
+Nothing is served until the captain chooses Add it on the host's card, and closing or declining removes the staged files.
+Every runbook update asks again, because new guidance or a different replacement changes what the agents follow even when no panel grant changes.
+The card names the source, author, guidance reach and any built-in it turns off.
+Adding leaves one feed line, including that replacement; the built-in stays available to turn back on.
+An update cannot take a name from a different source or change a panel into a runbook.
+Ask the first mate to remove an added runbook by name; the installer's remove action uses its id and removes its files and record.
+Removal does not turn the replaced built-in back on or remove a separately installed panel.
+
+An installed manifest uses the bundle's schema and additionally names `author` and `version`.
+The admission reader, `checkRunbookFiles`, accepts Markdown, text, JSON, HTML, CSS and pictures as plain files, not symlinks or executable source.
+Section paths stay inside the folder and name plain text; skills and parts name folders.
+The same check runs when the global runbook root reads an installed folder, so an added script or escaping path on disk withdraws that runbook from reach.
+The shared source fetcher's tree and byte bounds apply before admission; npm lifecycle scripts, git hooks and submodules never run.
+
+A manifest may list relative panel folders in `panels`.
+The existing panel compiler checks each folder at admission, but adding the runbook mounts no panel.
+Guidance and skill roots cannot overlap these panel folders.
+The installer tells the first mate where those inert sources will live after consent; adding one later uses that folder through the same installer and its separate panel consent card.
+A panel's installed copy has its own record, grant and lifecycle.
 
 ## Typed crew reach
 
@@ -65,3 +91,6 @@ The panel-building runbook was not selected, so those skills and the design skil
 `tests/e2e/runbooks.spec.ts` switches Common workflows by keyboard, relaunches, and asks the first mate to turn it back on through the shared catalog.
 The fixed-context test measures the core separately from runbook guidance.
 The existing lesson and workflow journeys cover the guidance's consumers, and the replay gate measures the built-in first-mate guidance.
+
+`src/core/plugins/pluginInstaller.test.ts` also drives folder, local git and npm runbooks through real host consent, replacement, skill staging, separate panel consent and removal.
+`tests/e2e/installed-runbooks.spec.ts` adds and declines a runbook by keyboard, checks its persisted switches after restart, observes the served guidance and removes it by talking.

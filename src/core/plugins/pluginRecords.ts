@@ -4,7 +4,7 @@ import type { AppDatabase } from "../storage/db";
 /**
  * The installed-plugin record (one plugin vehicle, Phase A item 2;
  * migration 43): the ONE writer of the `plugins` table. A row says where a
- * plugin came from, what it was pinned to, and - the part that matters -
+ * panel or guidance runbook came from, what it was pinned to, and - the part that matters -
  * the capabilities the captain CONSENTED to. The host serves a plugin those
  * and nothing else, whatever the files on disk later ask for.
  *
@@ -18,6 +18,7 @@ export type PluginInstallSource = (typeof PLUGIN_INSTALL_SOURCES)[number];
 
 /** A plugin as it was staged: fetched, pinned, and checked, waiting to go in. */
 export type StagedPlugin = {
+  kind?: "panel" | "runbook";
   source: PluginInstallSource;
   /** What the captain named: a package spec, a git address, a folder. */
   spec: string;
@@ -32,6 +33,7 @@ export type StagedPlugin = {
 
 export type PluginRecord = {
   id: string;
+  kind: "panel" | "runbook";
   source: PluginInstallSource | null;
   spec: string | null;
   pinned: string | null;
@@ -46,6 +48,7 @@ export type PluginRecord = {
 
 type Row = {
   id: string;
+  kind: "panel" | "runbook";
   source: string | null;
   spec: string | null;
   pinned: string | null;
@@ -106,10 +109,10 @@ export class PluginRecords {
     const at = this.now();
     this.db
       .prepare(
-        `INSERT INTO plugins (id, source, spec, pinned, name, version, capabilities_json, installed_at, updated_at, pending_json)
-         VALUES (@id, @source, @spec, @pinned, @name, @version, @capabilities, @at, @at, NULL)
+        `INSERT INTO plugins (id, kind, source, spec, pinned, name, version, capabilities_json, installed_at, updated_at, pending_json)
+         VALUES (@id, @kind, @source, @spec, @pinned, @name, @version, @capabilities, @at, @at, NULL)
          ON CONFLICT (id) DO UPDATE SET
-           source = excluded.source, spec = excluded.spec, pinned = excluded.pinned,
+           kind = excluded.kind, source = excluded.source, spec = excluded.spec, pinned = excluded.pinned,
            name = excluded.name, version = excluded.version,
            capabilities_json = excluded.capabilities_json,
            installed_at = COALESCE(plugins.installed_at, excluded.installed_at),
@@ -117,6 +120,7 @@ export class PluginRecords {
       )
       .run({
         id,
+        kind: staged.kind ?? "panel",
         source: staged.source,
         spec: staged.spec,
         pinned: staged.pinned,
@@ -147,6 +151,7 @@ export class PluginRecords {
 function fromRow(row: Row): PluginRecord {
   return {
     id: row.id,
+    kind: row.kind,
     source: (row.source as PluginInstallSource | null) ?? null,
     spec: row.spec,
     pinned: row.pinned,

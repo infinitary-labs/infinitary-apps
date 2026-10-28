@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
 import {
+  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,
@@ -21,8 +22,11 @@ import { CrewSupervisor } from "../orchestrator/crewSupervisor";
 import { appPathsFor } from "../paths";
 import { PersonalExtensions } from "../personal/personalExtensions";
 import { PersonalStore } from "../personal/personalStore";
+import { Runbooks, stageRunbookSkills } from "../runbooks/runbooks";
+import { runbookAddedLine, runbookRemovedLine } from "../runbooks/words";
 import { CardStore } from "../storage/cardStore";
 import { InboxStore } from "../storage/inboxStore";
+import { SettingsStore } from "../storage/settingsStore";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
@@ -49,6 +53,12 @@ async function harness() {
   const db = freshDatabase();
   const store = new PersonalStore(db);
   const records = new PluginRecords(db);
+  const books = new Runbooks(join(process.cwd(), "resources/runbooks"), new SettingsStore(db), () =>
+    records
+      .installed()
+      .filter((record) => record.kind === "runbook")
+      .map((record) => join(paths.pluginsDir, record.id)),
+  );
   const tasks = new TaskService({ db, strict: true });
   const events: FmEvent[] = [];
   const supervisor = new CrewSupervisor({
@@ -77,7 +87,7 @@ async function harness() {
         records
           .installed()
           .flatMap((record) =>
-            record.name && record.capabilities
+            record.kind === "panel" && record.name && record.capabilities
               ? [{ id: record.id, name: record.name, capabilities: record.capabilities }]
               : [],
           ),
@@ -85,6 +95,7 @@ async function harness() {
   });
   const installer = new PluginInstaller({
     records,
+    runbooks: books,
     pluginsDir: paths.pluginsDir,
     stagingDir: paths.pluginsStagingDir,
     checkCacheDir: join(paths.pluginsStagingDir, ".check"),
@@ -130,6 +141,7 @@ async function harness() {
     db,
     store,
     records,
+    books,
     supervisor,
     personal,
     installer,
@@ -731,6 +743,189 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
         moves: true,
       });
       expect(h.installed()[0]).toMatchObject({ id: "task-desk", moves: true, error: null });
+    } finally {
+      h.personal.dispose();
+    }
+  });
+});
+
+// Intent: INF-1177 piece 3, accepted by the captain: guidance-only runbooks use the
+// existing installer consent, replace a declared built-in and reach both places.
+// Fixture: the shipped lessons skill and its real tested HTML parts, plus the
+// shipped Common workflows section. Real folder, local git and npm pack reads.
+describe("adding runbooks through the panel installer's consent", () => {
+  for (const source of ["path", "git", "npm"] as const) {
+    it(`pins a ${source} runbook, serves nothing before consent, and retains a separate panel door`, async () => {
+      const h = await harness();
+      const id = "studio-workflows";
+      const title = "Studio workflows";
+      const dir = h.plugin(id, {
+        "runbook.json": JSON.stringify({
+          id,
+          name: title,
+          description: "Plan and build with the studio's guidance.",
+          author: "Studio",
+          version: "1.0.0",
+          firstmate: "firstmate.json",
+          skills: "skills",
+          panels: ["panels/token-watch"],
+          replaces: "sequences",
+        }),
+        "firstmate.json": JSON.stringify(
+          readFileSync(
+            join(process.cwd(), "resources/runbooks/sequences/guide.md"),
+            "utf8",
+          ).replace("# Common workflows", "# Studio workflows"),
+        ),
+        "panels/token-watch/manifest.json": manifest(),
+        "panels/token-watch/panel.tsx": PANEL,
+        "package.json": JSON.stringify({
+          name: id,
+          version: "1.0.0",
+          scripts: { prepare: "exit 81", postinstall: "exit 82" },
+        }),
+      });
+      for (const file of ["SKILL.md", "parts"]) {
+        mkdirSync(join(dir, "skills/lessons"), { recursive: true });
+        cpSync(
+          join(process.cwd(), "resources/runbooks/lessons/skills/lessons", file),
+          join(dir, "skills/lessons", file),
+          { recursive: true },
+        );
+      }
+      const gitRun = (...args: string[]) =>
+        execFileSync("git", ["-C", dir, ...args], { encoding: "utf8" }).trim();
+      if (source === "git") {
+        gitRun("init", "-q", "-b", "main");
+        gitRun("add", ".");
+        gitRun(
+          "-c",
+          "user.name=Studio",
+          "-c",
+          "user.email=studio@example.test",
+          "commit",
+          "-qm",
+          "docs: studio guidance",
+        );
+      }
+      try {
+        expect(await h.installer.install({ source, spec: dir })).toContain(
+          "Only the captain's consent card adds it",
+        );
+        expect(h.books.list().some((book) => book.id === id)).toBe(false);
+        const card = h.cards().find((card) => card.id === consentCardId(id));
+        expect(card?.body).toContain("Common workflows off");
+        expect(card?.body).toContain("runs nothing");
+        expect(() => h.supervisor.act(consentCardId(id), "add", "frame")).toThrow(
+          "only from the card controls",
+        );
+        h.supervisor.close(consentCardId(id));
+        await h.settled();
+        expect(h.records.pending()).toEqual([]);
+        expect(h.books.firstmate().text).not.toContain("# Studio workflows");
+        await h.installer.install({ source, spec: dir });
+        const pin = h.records.get(id)?.pending?.pinned;
+        if (source === "path") expect(pin).toMatch(/^sha256:[0-9a-f]{64}$/);
+        else if (source === "git") expect(pin).toBe(gitRun("rev-parse", "HEAD"));
+        else expect(pin).toMatch(/^studio-workflows@1.0.0/);
+        h.supervisor.act(consentCardId(id), "add");
+        await h.settled();
+        expect(h.records.get(id)).toMatchObject({ kind: "runbook", pending: null, pinned: pin });
+        expect(h.books.list().find((book) => book.id === "sequences")?.enabled).toBe(false);
+        expect(h.books.firstmate().text).toContain("# Studio workflows");
+        expect(h.feed()).toEqual([runbookAddedLine(title, "Studio", "Common workflows")]);
+        expect(h.installed()).toEqual([]);
+        h.books.set("lessons", false);
+        for (const place of ["project", "personal"] as const) {
+          const skills = h.books.crew({
+            kind: "implement",
+            place,
+            delivery: "direct-pr",
+            care: "standard",
+            backend: "pi",
+            ...(place === "project" ? { project: "studio" } : {}),
+          }).skills;
+          expect(
+            skills.find((skill) => skill.name === "lessons")?.files["parts/quiz.html"],
+          ).toBeDefined();
+          const staged = await stageRunbookSkills(skills, join(h.root, place));
+          expect(
+            readFileSync(
+              join(staged.find((skill) => skill.name === "lessons")?.dir ?? "", "parts/quiz.html"),
+              "utf8",
+            ),
+          ).toBe(readFileSync(join(dir, "skills/lessons/parts/quiz.html"), "utf8"));
+        }
+        const reopened = new Runbooks(
+          join(process.cwd(), "resources/runbooks"),
+          new SettingsStore(h.db),
+          () => [join(h.paths.pluginsDir, id)],
+        );
+        expect(reopened.firstmate()).toEqual(h.books.firstmate());
+        // A panel only mounts after the captain separately asks and consents.
+        await h.installer.install({
+          source: "path",
+          spec: join(h.paths.pluginsDir, id, "panels/token-watch"),
+        });
+        expect(h.installed()).toEqual([]);
+        h.supervisor.act(consentCardId("token-watch"), "add");
+        await h.settled();
+        expect(h.installed().map((panel) => panel.id)).toEqual(["token-watch"]);
+        expect(await h.installer.install({ source: "path", spec: id, action: "remove" })).toContain(
+          "removed",
+        );
+        expect(h.books.list().some((book) => book.id === id)).toBe(false);
+        expect(h.books.firstmate().text).not.toContain("# Studio workflows");
+        expect(h.feed().at(-1)).toBe(runbookRemovedLine(title, "Studio"));
+        // Removing guidance does not withdraw separately granted panel consent.
+        expect(h.installed().map((panel) => panel.id)).toEqual(["token-watch"]);
+      } finally {
+        h.personal.dispose();
+      }
+    });
+  }
+  it("refuses scripts, escaping guidance and a panel disguised as a skill", async () => {
+    const h = await harness();
+    try {
+      const cases: Record<string, string>[] = [
+        { "scripts/run.sh": "echo no" },
+        {
+          "runbook.json": JSON.stringify({
+            id: "outside",
+            name: "Outside",
+            description: "",
+            author: "Studio",
+            version: "1",
+            firstmate: "../outside.md",
+          }),
+        },
+        {
+          "runbook.json": JSON.stringify({
+            id: "outside",
+            name: "Outside",
+            description: "",
+            author: "Studio",
+            version: "1",
+            skills: "panels",
+            panels: ["panels/token-watch"],
+          }),
+          "panels/token-watch/panel.tsx": PANEL,
+        },
+      ];
+      for (const extra of cases) {
+        const dir = h.plugin(`refused-${Object.keys(extra)[0]?.replace(/[^a-z]/g, "")}`, {
+          "runbook.json": JSON.stringify({
+            id: "outside",
+            name: "Outside",
+            description: "",
+            author: "Studio",
+            version: "1",
+          }),
+          ...extra,
+        });
+        expect(await h.installer.install({ source: "path", spec: dir })).toMatch(/^Not added:/);
+        expect(h.records.pending()).toEqual([]);
+      }
     } finally {
       h.personal.dispose();
     }

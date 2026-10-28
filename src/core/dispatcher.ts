@@ -1667,11 +1667,27 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
         const book = current.find((book) => book.id === args[0]);
         const was = previous.find((book) => book.id === args[0]);
         if (book && was)
-          trail(name, { name: book.name, enabled: book.enabled }, actor, {
-            target: book.id,
-            from: { name: was.name, enabled: was.enabled },
-            to: { name: book.name, enabled: book.enabled },
-          });
+          trail(
+            name,
+            {
+              name: book.name,
+              enabled: book.enabled,
+              replacement: previous.find(
+                (entry) =>
+                  entry.id !== book.id &&
+                  entry.enabled &&
+                  current.some((now) => now.id === entry.id && !now.enabled),
+              )?.name,
+            },
+            actor,
+            {
+              target: book.id,
+              // A replacement also changes another switch; returning this one to its
+              // first value must not withdraw the line for that other saved change.
+              from: previous,
+              to: current,
+            },
+          );
       } else if (name.startsWith("account-") && ACTIONS[name].change) {
         const accounts = before.get(name) as AccountView[];
         const account = accounts.find((a) => a.id === args[0]);

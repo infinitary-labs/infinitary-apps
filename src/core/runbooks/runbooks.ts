@@ -13,6 +13,7 @@ import {
 } from "../../shared/runbooks";
 import { skillFolders } from "../session/projectResources";
 import type { SettingsStore } from "../storage/settingsStore";
+import { checkRunbookFiles } from "./runbookFiles";
 
 type Entry = { manifest: RunbookManifest; dir: string };
 
@@ -21,14 +22,15 @@ export function crewRunbookText(served: { text: string; sha: string }): string {
   return `${served.text}\n\nRunbook resources: ${served.sha}.`;
 }
 
-/** Bundle-owned folders are the source of procedure. SettingsStore alone owns their switches. */
+/** Bundled and consented installed folders supply procedure. SettingsStore alone owns their switches. */
 export class Runbooks {
-  private readonly entries: Entry[];
+  private readonly bundled: Entry[];
   constructor(
     root: string,
     private readonly settings: Pick<SettingsStore, "getRunbookStates" | "setRunbookStates">,
+    private readonly installed: () => string[] = () => [],
   ) {
-    this.entries = readdirSync(root)
+    this.bundled = readdirSync(root)
       .sort()
       .map((name) => {
         const dir = join(root, name);
@@ -37,8 +39,24 @@ export class Runbooks {
         );
         return { manifest, dir };
       });
-    if (new Set(this.entries.map(({ manifest }) => manifest.id)).size !== this.entries.length)
+    if (new Set(this.bundled.map(({ manifest }) => manifest.id)).size !== this.bundled.length)
       throw new Error("Runbook names must be unique.");
+  }
+  builtins(): RunbookManifest[] {
+    return this.bundled.map(({ manifest }) => manifest);
+  }
+  private get entries(): Entry[] {
+    const entries = [...this.bundled];
+    for (const dir of this.installed()) {
+      try {
+        const manifest = checkRunbookFiles(dir);
+        if (entries.some((entry) => entry.manifest.id === manifest.id)) continue;
+        entries.push({ manifest, dir });
+      } catch (error) {
+        console.warn(`Could not read an added runbook: ${String(error)}`);
+      }
+    }
+    return entries;
   }
   list(): RunbookView[] {
     const states = this.settings.getRunbookStates();

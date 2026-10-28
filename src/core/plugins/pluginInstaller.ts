@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, rm, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { Card } from "@shared/cards";
 import { HERE } from "@shared/deviceNames";
 import type { FmEvent } from "@shared/events";
@@ -25,6 +25,9 @@ import { extensionSources } from "../personal/liveWorkspace";
 import { panelAddedLine, panelUpdatedLine } from "../personal/panelLines";
 import type { PersonalStore } from "../personal/personalStore";
 import { errorText } from "../personal/serverHost";
+import { checkRunbookFiles } from "../runbooks/runbookFiles";
+import type { Runbooks } from "../runbooks/runbooks";
+import { runbookAddedLine, runbookConsentTitle, runbookRemovedLine } from "../runbooks/words";
 import {
   CAN_READ_WORDS,
   MOVES_WORDS,
@@ -66,12 +69,20 @@ import {
  *    consented capabilities, says so in one feed line, and rescans - the
  *    plugin host then registers it beside the captain's own panels.
  *
- * An update of a plugin already added asks again only when its
+ * A tree with runbook.json takes guidance admission instead: no runtime or
+ * panel mounts, its own consent every time, and a declared built-in replacement.
+ * Included panels remain inert sources until separately added and consented.
+ *
+ * An update of a panel already added asks again only when its
  * capabilities differ from what he agreed to; otherwise it goes straight
  * in with one feed line. `uninstall` is `personalize remove`'s for a panel
  * he added.
  */
-export type PluginInstallRequest = { source: PluginInstallSource; spec: string };
+export type PluginInstallRequest = {
+  source: PluginInstallSource;
+  spec: string;
+  action?: "add" | "remove";
+};
 
 export type PluginCards = {
   raise: (card: Omit<Card, "author" | "priority" | "status" | "createdAt">) => void;
@@ -81,6 +92,7 @@ export type PluginCards = {
 
 export type PluginInstallerOptions = {
   records: PluginRecords;
+  runbooks?: Runbooks;
   pluginsDir: string;
   stagingDir: string;
   /** Where a staged panel is compiled to prove its imports; never served. */
@@ -169,6 +181,19 @@ export class PluginInstaller {
   }
 
   private async runInstall(request: PluginInstallRequest): Promise<string> {
+    if (request.action === "remove") {
+      const record = this.options.records.get(request.spec);
+      if (record?.kind !== "runbook") return "That added runbook is not available.";
+      const result = await this.runUninstall(record.id);
+      if (result.removed)
+        this.options.broadcast({
+          type: "personalized",
+          text: runbookRemovedLine(result.title ?? record.id, record.name ?? "its author"),
+        });
+      return result.removed
+        ? "The runbook was removed; the feed line is the answer."
+        : "That runbook is not added.";
+    }
     const workDir = join(this.options.stagingDir, `.fetch-${randomUUID()}`);
     try {
       let fetched: Awaited<ReturnType<PluginFetcher>>;
@@ -178,6 +203,8 @@ export class PluginInstaller {
         if (error instanceof PluginSourceError) return `Not added: ${error.message}`;
         return `Not added: could not fetch it (${errorText(error)}).`;
       }
+      if (await isFile(join(fetched.dir, "runbook.json")))
+        return await this.stageRunbook(request, fetched);
       const id = fetched.suggestedId.toLowerCase();
       if (!PERSONAL_ID_PATTERN.test(id) || id.length > PERSONAL_ID_MAX_LENGTH) {
         return `Not added: its name "${fetched.suggestedId}" cannot name a panel (lowercase letters, digits and single dashes, at most ${PERSONAL_ID_MAX_LENGTH} characters).`;
@@ -186,6 +213,8 @@ export class PluginInstaller {
         return `Not added: "${id}" is already one of the app's panels or one of the captain's own.`;
       }
       const existing = this.options.records.get(id);
+      if (existing?.kind === "runbook" || existing?.pending?.kind === "runbook")
+        return "Not added: that name belongs to a runbook.";
       const existingIdentity = existing?.installedAt ? identityOf(existing) : null;
       const identity = `${request.source}:${fetched.identity}`;
       if (existingIdentity && existingIdentity !== identity) {
@@ -226,6 +255,96 @@ export class PluginInstaller {
     }
   }
 
+  private async stageRunbook(
+    request: PluginInstallRequest,
+    fetched: Awaited<ReturnType<PluginFetcher>>,
+  ): Promise<string> {
+    const books = this.options.runbooks;
+    if (!books) return "Not added: this app cannot add runbooks.";
+    try {
+      const manifest = checkRunbookFiles(fetched.dir);
+      const id = manifest.id;
+      if (
+        !PERSONAL_ID_PATTERN.test(id) ||
+        id.length > PERSONAL_ID_MAX_LENGTH ||
+        books.builtins().some((book) => book.id === id) ||
+        (await this.options.reservedIds()).includes(id)
+      )
+        return "Not added: that name is already taken or cannot name an added runbook.";
+      if (manifest.replaces && !books.builtins().some((book) => book.id === manifest.replaces))
+        return "Not added: the built-in runbook it replaces is not available.";
+      const existing = this.options.records.get(id);
+      if (
+        (existing?.installedAt &&
+          (existing.kind !== "runbook" ||
+            identityOf(existing) !== `${request.source}:${fetched.identity}`)) ||
+        (existing?.pending && existing.pending.kind !== "runbook")
+      )
+        return "Not added: that name was already added from somewhere else; remove it first.";
+      for (const panel of manifest.panels ?? []) {
+        const cache = join(this.options.checkCacheDir, randomUUID());
+        const checked = await checkPluginTree(join(fetched.dir, panel), id, cache).finally(() =>
+          rm(cache, { recursive: true, force: true }),
+        );
+        if ("refusal" in checked)
+          return `Not added: a panel inside the runbook was refused: ${checked.refusal}`;
+      }
+      const staged: StagedPlugin = {
+        kind: "runbook",
+        source: request.source,
+        spec: request.spec.trim(),
+        pinned: fetched.pinned,
+        name: manifest.author,
+        version: manifest.version,
+        title: manifest.name,
+        capabilities: {},
+        stagedAt: Date.now(),
+      };
+      const dir = join(this.options.stagingDir, id);
+      await rm(dir, { recursive: true, force: true });
+      await rename(fetched.dir, dir);
+      this.options.records.stage(id, staged);
+      const replacement = books.builtins().find((book) => book.id === manifest.replaces)?.name;
+      this.options.cards.raise({
+        id: consentCardId(id),
+        title: runbookConsentTitle(manifest.name),
+        meta: `${manifest.author} ${manifest.version}`,
+        body:
+          `<p>This adds <b>${escapeHtml(manifest.name)}</b>, a runbook by ${escapeHtml(manifest.author)}, from ${request.source === "path" ? "the folder " : ""}<code>${escapeHtml(request.source === "path" ? basename(staged.spec) : staged.spec)}</code>.</p>` +
+          `<details><summary>Source</summary><p>${escapeHtml(staged.spec)}</p></details>` +
+          `<p>${escapeHtml(manifest.description)}</p><p>It supplies guidance, HTML parts and pictures, and runs nothing.</p>` +
+          `<p>Its guidance reaches ${manifest.projects ? "the projects it names" : "every project and your personal workspace"} when on.</p>` +
+          (replacement
+            ? `<p>Adding it turns ${escapeHtml(replacement)} off. You can turn that built-in runbook back on.</p>`
+            : "") +
+          ((manifest.panels?.length ?? 0)
+            ? "<p>Panels inside stay off. Adding each panel needs its own consent card.</p>"
+            : ""),
+        actions: [
+          {
+            id: "add",
+            label: "Add it",
+            variant: "primary",
+            default: true,
+            effect: { kind: "host", op: "add-plugin", arg: id },
+          },
+          {
+            id: "decline",
+            label: "Don't add",
+            variant: "secondary",
+            effect: { kind: "host", op: "decline-plugin", arg: id },
+          },
+        ],
+      });
+      const panels = (manifest.panels ?? []).map((panel) =>
+        join(this.options.pluginsDir, id, panel),
+      );
+      return `The runbook is fetched and pinned. Only the captain's consent card adds it. Say nothing more about it.${panels.length ? ` Panel folders stay inert; add each separately after consent: ${panels.join(", ")}.` : ""}`;
+    } catch (error) {
+      return `Not added: ${errorText(error)}`;
+    }
+  }
+
   private async runAdd(id: string): Promise<void> {
     const record = this.options.records.get(id);
     const staged = record?.pending;
@@ -238,6 +357,18 @@ export class PluginInstaller {
         text: `Could not add "${staged.title}": its files are gone - ask again to add it`,
       });
       return;
+    }
+    if (staged.kind === "runbook") {
+      try {
+        checkRunbookFiles(stagedDir);
+      } catch (error) {
+        await this.runDecline(id);
+        this.options.broadcast({
+          type: "firstmate_note",
+          text: `Could not add the runbook: ${errorText(error)}`,
+        });
+        return;
+      }
     }
     await this.commit(id, staged, record);
   }
@@ -254,6 +385,18 @@ export class PluginInstaller {
     await rm(old, { recursive: true, force: true });
     this.options.records.commit(id, staged);
     this.options.cards.withdraw(consentCardId(id), "superseded");
+    if (staged.kind === "runbook") {
+      this.options.runbooks?.set(id, true);
+      const manifest = checkRunbookFiles(target);
+      const replacement = this.options.runbooks
+        ?.builtins()
+        .find((book) => book.id === manifest.replaces)?.name;
+      this.options.broadcast({
+        type: "personalized",
+        text: runbookAddedLine(staged.title, staged.name, replacement),
+      });
+      return;
+    }
     const panelsOn = this.options.panelsOn();
     this.options.broadcast({
       type: "personalized",
@@ -275,7 +418,7 @@ export class PluginInstaller {
   private async runUninstall(id: string): Promise<{ removed: boolean; title?: string }> {
     const record = this.options.records.get(id);
     if (!record?.installedAt) return { removed: false };
-    const title = await readTitle(join(this.options.pluginsDir, id), id);
+    const title = await readTitle(join(this.options.pluginsDir, id), id, record.kind);
     await rm(join(this.options.pluginsDir, id), { recursive: true, force: true });
     await rm(join(this.options.stagingDir, id), { recursive: true, force: true });
     this.options.cards.withdraw(consentCardId(id), "removed");
@@ -455,12 +598,19 @@ function escapeHtml(text: string): string {
     .replace(/"/g, "&quot;");
 }
 
-async function readTitle(dir: string, id: string): Promise<string> {
+async function readTitle(dir: string, id: string, kind = "panel"): Promise<string> {
   try {
-    const raw = JSON.parse(await readFile(join(dir, "manifest.json"), "utf8")) as {
+    const raw = JSON.parse(
+      await readFile(join(dir, kind === "runbook" ? "runbook.json" : "manifest.json"), "utf8"),
+    ) as {
+      name?: unknown;
       title?: unknown;
     };
-    return typeof raw.title === "string" ? raw.title : id;
+    return kind === "runbook" && typeof raw.name === "string"
+      ? raw.name
+      : typeof raw.title === "string"
+        ? raw.title
+        : id;
   } catch {
     return id;
   }

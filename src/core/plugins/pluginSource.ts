@@ -63,9 +63,9 @@ export type PluginFetcher = (request: PluginFetchRequest) => Promise<FetchedPlug
 
 export const fetchPluginSource: PluginFetcher = async (request) => {
   const spec = request.spec.trim();
-  if (!spec) throw new PluginSourceError("Name where the panel comes from.");
+  if (!spec) throw new PluginSourceError("Name where it comes from.");
   if (spec.startsWith("-")) {
-    throw new PluginSourceError(`"${spec}" is not a place a panel can come from.`);
+    throw new PluginSourceError(`"${spec}" is not a place it can come from.`);
   }
   await mkdir(request.workDir, { recursive: true });
   const dest = join(request.workDir, "files");
@@ -116,10 +116,10 @@ async function fetchGit(spec: string, workDir: string, dest: string): Promise<Fe
   const address = hash > 0 ? spec.slice(0, hash) : spec;
   const ref = hash > 0 ? spec.slice(hash + 1) : "";
   if (address.startsWith("-") || /^ext::/i.test(address)) {
-    throw new PluginSourceError(`"${address}" is not an address a panel can come from.`);
+    throw new PluginSourceError(`"${address}" is not an address it can come from.`);
   }
   if (ref && (!/^[A-Za-z0-9._/-]+$/.test(ref) || ref.startsWith("-"))) {
-    throw new PluginSourceError(`"${ref}" is not a version a panel can be pinned to.`);
+    throw new PluginSourceError(`"${ref}" is not a version it can be pinned to.`);
   }
   const clone = join(workDir, "clone");
   try {

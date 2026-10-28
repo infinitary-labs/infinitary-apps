@@ -39,9 +39,9 @@ export const CONTRIBUTION_SLOTS = [
 export type ContributionSlot = (typeof CONTRIBUTION_SLOTS)[number];
 
 /**
- * Slots the renderer hosts today. `agent-pack` is reserved in the taxonomy
- * and deliberately has no manifest entry yet: its host is the agent, not
- * the UI, and its contract is named when that host exists.
+ * Slots the renderer hosts today. Guidance runbooks use runbook.json through
+ * Runbooks and the installer, not renderer contributions; the agent-pack
+ * taxonomy slot remains unmounted here.
  */
 export const HOSTED_CONTRIBUTION_SLOTS = ["card-kind", "settings-section", "side-panel"] as const;
 

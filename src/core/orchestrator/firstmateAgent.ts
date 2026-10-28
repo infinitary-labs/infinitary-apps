@@ -2826,7 +2826,7 @@ export class FirstmateAgent {
             ],
             {
               install_plugin: (params) => ({
-                title: `Asked to add a panel from ${stringParam(params.spec) ?? "elsewhere"}`,
+                title: `Asked to ${params.action === "remove" ? "remove" : "add"} a panel or runbook: ${stringParam(params.spec) ?? "elsewhere"}`,
               }),
             },
           )

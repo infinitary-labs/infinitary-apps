@@ -1171,11 +1171,24 @@ const MIGRATIONS: readonly Migration[] = [
   // (`Card.answeredBy`), as text: "firstmate" on the host's stuck alert.
   // Null keeps existing cards as they were; CardStore is the only writer and
   // no published view reads it. Dropping the column reverses it.
-  (db) => addColumn(db, "cards", "answered_by", "TEXT"),
+  addCardAnswerer,
+  // INF-1482: the existing installer record distinguishes guidance from panels.
+  // Existing rows remain panels; no published view reads it. Drop kind to reverse.
+  addPluginKind,
 ];
 
 /** The current database format, derived from the embedded migration ledger. */
 export const DATABASE_VERSION = MIGRATIONS.length;
+
+export const CARD_ANSWERER_MIGRATION_VERSION = MIGRATIONS.indexOf(addCardAnswerer) + 1;
+export const PLUGIN_KIND_MIGRATION_VERSION = MIGRATIONS.indexOf(addPluginKind) + 1;
+
+function addCardAnswerer(db: AppDatabase): void {
+  addColumn(db, "cards", "answered_by", "TEXT");
+}
+function addPluginKind(db: AppDatabase): void {
+  addColumn(db, "plugins", "kind", "TEXT NOT NULL DEFAULT 'panel'");
+}
 
 /** Named boundaries keep upgrade fixtures tied to their migration, not the newest release. */
 export const HOUSEKEEPING_INDEXES_MIGRATION_VERSION =

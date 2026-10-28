@@ -293,12 +293,16 @@ export class IdleLadder {
     const browserWithCaptain = this.host.browserWithCaptain?.(taskId) === true;
     // Work its crewmate declared finished waits on his close of its own card
     // (INF-731): that close is its crewmate's next turn.
-    const finishedCardUp = record?.delivery?.finishedAt !== undefined && this.ownCardFor(taskId);
+    const finished = record?.delivery?.finishedAt !== undefined;
+    const finishedCardUp = finished && this.ownCardFor(taskId);
     return {
       threadAwaitingAuthor: this.host.threadsAwaitingAuthor(taskId).length > 0,
       decisionCardOpen: cardUp || gateCardUp || captainWait || browserWithCaptain,
       captainWait,
       finishedCardUp,
+      // With no card of its own up, only the Firstmate's close is left
+      // (INF-1428): never a nudge for a crewmate with nothing left to do.
+      finishedNoCard: finished && !finishedCardUp,
       browserWithCaptain,
       askedFirstmate: record ? this.unansweredAsk(record) !== undefined : false,
       captainGateOwed: gate?.kind === "captain" && !cardUp && !gateCardUp && !captainWait,
@@ -336,10 +340,24 @@ export class IdleLadder {
    * until its next turn starts), and the Firstmate has not acted on the
    * task since.
    */
-  unansweredAsk(record: TaskRecord): FirstmateAsk | undefined {
-    const ask = record.delivery?.needsFirstmate;
+  unansweredAsk(record: TaskRecord): LadderAsk | undefined {
+    const ask = this.askOf(record);
     if (!ask) return undefined;
     return this.firstmateActedSince(record, ask.at) === undefined ? ask : undefined;
+  }
+
+  /**
+   * What its crewmate's last report asked of the Firstmate: its own
+   * request (`needs_firstmate`), or else work it declared finished with no
+   * card of its own up (INF-1428), which only the Firstmate's close ends -
+   * its crewmate has nothing left to do, so nothing nudges it.
+   */
+  private askOf(record: TaskRecord): LadderAsk | undefined {
+    const ask = record.delivery?.needsFirstmate;
+    if (ask) return ask;
+    const finishedAt = record.delivery?.finishedAt;
+    if (finishedAt === undefined || this.ownCardFor(record.id)) return undefined;
+    return { at: finishedAt, finished: true };
   }
 
   /**
@@ -392,29 +410,59 @@ export class IdleLadder {
    * The work a task waits on that only a start begins (FI3-671), from both
    * typed waits: a task its standing baseline wait names, and a blocker
    * holding its close. Closed work is not waiting to start, including a
-   * dropped baseline dependency; its close already resumes the waiter.
+   * dropped baseline dependency; its close already resumes the waiter. A
+   * named task that cannot start until its own blockers close stands for
+   * those blockers (the wait chain, INF-1428): the work only a start begins
+   * is whatever that chain reaches, so a chain that ends in work underway
+   * names nothing here.
    */
   unstartedWaits(record: TaskRecord): TaskRecord[] {
-    const tasks = this.host.tasks;
-    return uniqueTasks(
-      this.dependencyWaits(record).filter(
-        ({ task }) => TaskService.blockerHoldsClose(task) && tasks.awaitsStart(task),
-      ),
-    );
+    return [
+      ...new Map(
+        uniqueTasks(this.liveWaits(record))
+          .flatMap((task) => this.chainOf(task, new Set([record.id])).unstarted)
+          .map((task) => [task.id, task]),
+      ).values(),
+    ];
   }
 
   /**
    * The work a task waits on that is underway, or queued to start by itself
-   * (FI3-250): live, and not something only a start begins. The task moves
-   * again when it closes.
+   * (FI3-250): live, and not something only a start begins - or a task
+   * that cannot start until its own blockers close, every one of them
+   * underway in turn (the wait chain, INF-1428). The task moves again when
+   * it closes, or the chain's next report says what needs a start.
    */
   underwayWaits(record: TaskRecord): TaskRecord[] {
-    const tasks = this.host.tasks;
-    return uniqueTasks(
-      this.dependencyWaits(record).filter(
-        ({ task }) => TaskService.blockerHoldsClose(task) && !tasks.awaitsStart(task),
-      ),
+    return uniqueTasks(this.liveWaits(record)).filter(
+      (task) => this.chainOf(task, new Set([record.id])).unstarted.length === 0,
     );
+  }
+
+  /** The typed waits whose work is still live. */
+  private liveWaits(record: TaskRecord): TaskWait[] {
+    return this.dependencyWaits(record).filter(({ task }) => TaskService.blockerHoldsClose(task));
+  }
+
+  /**
+   * Where a live wait on `task` leads (INF-1428): work underway moves by
+   * itself; an open task that cannot start until its own blockers close
+   * waits on them, read the same way; anything else only a start begins,
+   * including an open task a dropped blocker holds, which nothing will
+   * free. A task already on the path is not followed again, so a cycle
+   * ends on the task that closes it, which only a start begins.
+   */
+  private chainOf(task: TaskRecord, path: ReadonlySet<string>): { unstarted: TaskRecord[] } {
+    const tasks = this.host.tasks;
+    if (!tasks.awaitsStart(task)) return { unstarted: [] };
+    if (task.status !== "open") return { unstarted: [task] };
+    const blockers = tasks.waitingOn(task.id);
+    if (blockers.length === 0 || blockers.some((blocker) => blocker.status === "dropped"))
+      return { unstarted: [task] };
+    const onPath = new Set([...path, task.id]);
+    const ahead = blockers.filter((blocker) => !onPath.has(blocker.id));
+    if (ahead.length === 0) return { unstarted: [task] };
+    return { unstarted: ahead.flatMap((blocker) => this.chainOf(blocker, onPath).unstarted) };
   }
 
   /**
@@ -555,7 +603,7 @@ export class IdleLadder {
    * request and before the Firstmate's first act since, so it runs once.
    */
   private endAnsweredAsk(record: TaskRecord, now: number): boolean {
-    const ask = record.delivery?.needsFirstmate;
+    const ask = this.askOf(record);
     const lastAct = record.recoveryAt;
     if (!ask || lastAct == null || lastAct < ask.at || record.idleSince == null) return false;
     const acted = this.firstmateActedSince(record, ask.at);
@@ -579,7 +627,9 @@ export class IdleLadder {
     const held =
       idleTurn(witnesses) === "asked"
         ? (record.recoveryCount ?? 0) < 2
-        : witnesses.decisionCardOpen || witnesses.finishedCardUp === true;
+        : witnesses.decisionCardOpen ||
+          witnesses.finishedCardUp === true ||
+          witnesses.finishedNoCard === true;
     if ((record.recoveryRung ?? 0) < 3 && held) return undefined;
     const count = record.recoveryCount ?? 0;
     return `stalled ${formatDurationShort(now - record.idleSince)} · ${count} wake${count === 1 ? "" : "s"}`;
@@ -877,8 +927,9 @@ export class IdleLadder {
   /**
    * A crewmate's request the Firstmate has not acted on (FI3-714): the
    * Firstmate's turn, and its crewmate already did its part, so nothing
-   * nudges it. The report's own wake (`rule:needs-firstmate`) was the
-   * first, so the ladder counts it as rung 2's first wake, sent when the
+   * nudges it. Work declared finished with no card of its own up asks for
+   * the Firstmate's close the same way (INF-1428). The report's own wake
+   * (`rule:needs-firstmate`, or `rule:finished`) was the first, so the ladder counts it as rung 2's first wake, sent when the
    * crewmate asked; from there the rung's own rules run - held while a wake
    * about the task still waits on the Firstmate's lane, and a reminder each
    * time one went thirty minutes without an act. The captain's choice of
@@ -891,7 +942,7 @@ export class IdleLadder {
     runtime: { crewmate: string } | undefined,
     now: number,
   ): void {
-    const ask = record.delivery?.needsFirstmate;
+    const ask = this.askOf(record);
     if (!ask) return;
     // The ladder's own acts on this request, never an earlier rung's.
     const ours =
@@ -1030,7 +1081,7 @@ export class IdleLadder {
     now: number,
     wakes: number,
   ): TypedWake {
-    const ask = record.delivery?.needsFirstmate;
+    const ask = this.askOf(record);
     const last = this.lastWords(record);
     const builtOn = wakeBuiltOn(builtOnRows(this.host.tasks, record.id));
     const facts: WakeFacts = {
@@ -1038,7 +1089,7 @@ export class IdleLadder {
       task: { id: record.id, title: record.title },
       ...(runtime ? { crewmate: runtime.crewmate } : {}),
       key: record.key || record.id,
-      request: ask?.request ?? "",
+      ...(ask && "finished" in ask ? { finished: true } : { request: ask?.request ?? "" }),
       askedMs: now - (ask?.at ?? now),
       wakes,
       ...(builtOn ? { builtOn } : {}),
@@ -1599,6 +1650,9 @@ export class IdleLadder {
 
 /** A typed wait a task stands on: how it was declared, and the work it names. */
 type TaskWait = DependencyWait & { kind: "baseline" | "blocks" };
+
+/** What a crewmate's last report asked of the Firstmate (`IdleLadder.askOf`). */
+type LadderAsk = FirstmateAsk | { at: number; finished: true };
 
 /** The tasks the waits name, each once. */
 function uniqueTasks(waits: readonly TaskWait[]): TaskRecord[] {

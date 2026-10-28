@@ -327,6 +327,8 @@ async function fixture(
     oversize?: boolean;
     signedOut?: boolean;
     dispatchStatus?: number;
+    /** Someone else dispatches the same workflow on the same ref with each dispatch. */
+    raceDispatch?: boolean;
     watchRun?: (taskId: string, runId: number) => string;
     beforeValidationWrite?: (
       taskId: string,
@@ -338,6 +340,20 @@ async function fixture(
   const seen: Seen[] = [];
   const types: (string | undefined)[] = [];
   let base = "";
+  // verify.yml's dispatched runs, newest first: an earlier one on main, then
+  // one per dispatch GitHub took, each with the next run number.
+  const dispatchedRuns = [{ ...workflowRun(7), event: "workflow_dispatch", head_branch: "main" }];
+  const dispatchRun = (ref: string) => {
+    const run = workflowRun(0);
+    dispatchedRuns.unshift({
+      ...run,
+      id: (dispatchedRuns[0]?.id ?? run.id) + 1,
+      event: "workflow_dispatch",
+      head_branch: ref.replace(/^refs\/heads\//, ""),
+      status: "queued",
+      conclusion: null as never,
+    });
+  };
   const server = createServer(async (req: IncomingMessage, res) => {
     let body = "";
     for await (const chunk of req) body += chunk;
@@ -405,9 +421,15 @@ async function fixture(
       if (options.dispatchStatus) json({ message: "Dispatch refused" }, options.dispatchStatus);
       else if (JSON.parse(body || "{}").return_run_details) json(DISPATCHED_RUN);
       else {
+        const ref = String(JSON.parse(body || "{}").ref ?? "main");
+        dispatchRun(ref);
+        if (options.raceDispatch) dispatchRun(ref);
         res.writeHead(204);
         res.end();
       }
+    } else if (url.pathname === "/repos/octo/meter/actions/workflows/verify.yml/runs") {
+      const event = url.searchParams.get("event");
+      json(RUN_LISTING(dispatchedRuns.filter((run) => !event || run.event === event)));
     } else if (url.pathname === "/repos/octo/meter" && req.method === "GET") {
       json(repository("meter", "private"));
     } else if (url.pathname === "/repos/octo/lamp" && req.method === "GET") {
@@ -1368,6 +1390,52 @@ describe("the GitHub gateway through crewmate tools and the app's sign-in", () =
     const late = (await second.write.run(rerun)).text;
     expect(second.readChecks).toHaveBeenCalledTimes(3);
     expect(late).toContain("did not read as running yet");
+  });
+
+  // INF-1428's own part (INF-1670 piece 2, the captain's Approve and build): a
+  // check run a crewmate starts is watched even when its start returned no
+  // run number - a dispatch without "return_run_details", as older GitHub
+  // Enterprise servers answer every dispatch.
+  it("watches the run a dispatch started when no run number came back, and never guesses between two new runs", async () => {
+    const watchRun = vi.fn((_taskId: string, runId: number) => `The app watches run ${runId}.`);
+    const { write, seen } = await fixture({ watchRun });
+    const dispatch = {
+      method: "POST" as const,
+      path: "/repos/octo/meter/actions/workflows/verify.yml/dispatches",
+      body: JSON.stringify({ ref: "fm/task-1", inputs: { profile: "alpha" } }),
+    };
+    const earlier = workflowRun(7).id;
+    const answer = (await write.run(dispatch)).text;
+    expect(answer).toContain('"status": 204');
+    expect(watchRun).toHaveBeenCalledWith("task-1", earlier + 1);
+    expect(answer).toContain(
+      `The dispatch returned no run number; run ${earlier + 1} is the one new dispatched run of that workflow on that ref since it was sent. The app watches run ${earlier + 1}.`,
+    );
+    const listing =
+      "GET /repos/octo/meter/actions/workflows/verify.yml/runs?event=workflow_dispatch&per_page=20";
+    expect(seen.map(({ method, path }) => `${method} ${path}`)).toEqual([
+      listing,
+      `POST ${dispatch.path}`,
+      listing,
+    ]);
+
+    // A dispatch that returns its run's number needs no listing.
+    seen.length = 0;
+    await write.run({
+      ...dispatch,
+      body: JSON.stringify({ ref: "fm/task-1", return_run_details: true }),
+    });
+    expect(watchRun).toHaveBeenLastCalledWith("task-1", 39631227000);
+    expect(seen.map(({ method, path }) => `${method} ${path}`)).toEqual([`POST ${dispatch.path}`]);
+
+    // Someone else's dispatch on the same ref lands beside it: no run is watched.
+    const raced = vi.fn((_taskId: string, runId: number) => `The app watches run ${runId}.`);
+    const race = await fixture({ watchRun: raced, raceDispatch: true });
+    const unwatched = (await race.write.run(dispatch)).text;
+    expect(raced).not.toHaveBeenCalled();
+    expect(unwatched).toContain(
+      "The write was accepted, but it supplied no run number to watch. Find the run with github_read, then call read_workflow with runId alone. Do not repeat the write.",
+    );
   });
 
   // INF-729 way D, the captain's choice: a nightly check task only answers, and its

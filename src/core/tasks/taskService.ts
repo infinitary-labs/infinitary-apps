@@ -444,6 +444,12 @@ export type ReportDeclaration = {
    * `at-time` gate until then, whose end steers it with the job's facts.
    */
   checkBack?: { minutes: number; waitingFor: string };
+  /**
+   * The tasks its crewmate says its task waits on (INF-1428, `waits_on`),
+   * already resolved to live tasks: each is recorded as a `blocks` link
+   * from it, a recorded wait that holds no merge (`TaskService.linkWaits`).
+   */
+  waitsOn?: string[];
 };
 
 function hasDeclaration(record: TaskRecord): boolean {
@@ -4554,6 +4560,20 @@ export class TaskService {
   ): boolean {
     const at = this.now();
     const run = this.write(() => this.insertLink(fromId, toId, type, actor, at, holdsMerge));
+    return run();
+  }
+
+  /**
+   * The waits a crewmate's report names (INF-1428): one `blocks` link from
+   * each task to the waiting one, a recorded wait that holds no merge, all
+   * in one write - a cycle any of them would close refuses them all.
+   * Returns the tasks newly linked.
+   */
+  linkWaits(waiterId: string, blockerIds: readonly string[], actor: TaskEventActor): string[] {
+    const at = this.now();
+    const run = this.write(() =>
+      blockerIds.filter((fromId) => this.insertLink(fromId, waiterId, "blocks", actor, at)),
+    );
     return run();
   }
 

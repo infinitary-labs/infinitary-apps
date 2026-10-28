@@ -349,7 +349,7 @@ export const GITHUB_READ_TOOL = crewmateTool({
 export const GITHUB_WRITE_TOOL = crewmateTool({
   name: "github_write",
   label: "Write where the project lives",
-  description: `Change data where your project lives (GitHub, or GitLab) with POST, PATCH, PUT or DELETE, and never act beyond your task. ${GITHUB_WRITE_SCOPE} ${GITHUB_GATEWAY_RULES} body is JSON text; file sends a release file. Send "return_run_details":true yourself in a GitHub workflow dispatch; the app adds nothing. An accepted dispatch or rerun starts the run watch; if it returns no run number, find the run with github_read and call read_workflow. Acceptance is not passing checks: confirm the run's head_sha. Reserve a flake rerun with check_change first. An unclear write is never replayed. Shared validation effects need validationEffect and exact prior consent.`,
+  description: `Change data where your project lives (GitHub, or GitLab) with POST, PATCH, PUT or DELETE, and never act beyond your task. ${GITHUB_WRITE_SCOPE} ${GITHUB_GATEWAY_RULES} body is JSON text; file sends a release file. Send "return_run_details":true yourself in a GitHub workflow dispatch; the app adds nothing. An accepted dispatch or rerun starts the run watch, finding a dispatch's new run when no run number came back; if the answer says nothing is watched, find the run with github_read and call read_workflow. Acceptance is not passing checks: confirm the run's head_sha. Reserve a flake rerun with check_change first. An unclear write is never replayed. Shared validation effects need validationEffect and exact prior consent.`,
   parameters: Type.Object({
     validationEffect: Type.Optional(
       Type.String({

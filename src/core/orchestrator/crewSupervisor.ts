@@ -11941,6 +11941,7 @@ export class CrewSupervisor {
     if (declaration?.finished && this.askEnding.crewmateStep(task.id)) {
       throw new Error(CREWMATE_ANSWER_ASK);
     }
+    const linked = this.linkReportedWaits(task, declaration?.waitsOn);
     task.explicitReport = report;
     task.explicitSummary = summary?.replace(/\s+/g, " ").trim() || undefined;
     task.explicitDeclared = declaration;
@@ -11957,6 +11958,7 @@ export class CrewSupervisor {
         );
       }
     }
+    if (linked) receipt.push(linked);
     if (declaration?.checkBack) {
       receipt.push(
         `When this turn ends, the app wakes you in ${formatDurationShort(declaration.checkBack.minutes * 60_000)} with your running job's facts, unless a turn starts before then.`,
@@ -12025,7 +12027,9 @@ export class CrewSupervisor {
     }
     const result = this.checkResult(task, declared);
     const checkBack = checkBackOf(declared);
+    const waitsOn = this.reportedWaits(task, declared);
     const needs = {
+      ...(waitsOn ? { waitsOn } : {}),
       ...(ask ? { needsFirstmate: ask.slice(0, 300) } : {}),
       ...(completion ? { mergeCompletesTask: completion } : {}),
       ...(result ? { result } : {}),
@@ -12046,6 +12050,67 @@ export class CrewSupervisor {
       );
     }
     return { wait: { reason: reason.slice(0, 300), ...(cardId ? { cardId } : {}) }, ...needs };
+  }
+
+  /**
+   * The tasks a report says its task waits on (INF-1428, `waits_on`),
+   * resolved to live tasks by key or id, or a refusal naming the first that
+   * is unknown, closed or the task itself. A wait is for work still to
+   * come, so finished refuses it. A cycle is refused when the links are
+   * written (`linkReportedWaits`).
+   */
+  private reportedWaits(
+    task: TaskRuntime,
+    declared: ReportDeclaration | undefined,
+  ): string[] | undefined {
+    const refs = (declared?.waitsOn ?? []).map((ref) => ref.trim()).filter(Boolean);
+    if (refs.length === 0) return undefined;
+    if (declared?.finished) {
+      throw new Error(
+        "Report refused: waits_on names work your task still waits on; pass it without finished.",
+      );
+    }
+    const ids: string[] = [];
+    for (const ref of refs) {
+      const record = this.options.tasks.resolve(ref);
+      if (!record) {
+        throw new Error(
+          `Report refused: waits_on names "${ref}", which is no task. Search with tasks and pass its key.`,
+        );
+      }
+      if (record.id === task.id) {
+        throw new Error(`Report refused: waits_on names your own task, ${ref}.`);
+      }
+      if (TaskService.isClosed(record)) {
+        throw new Error(
+          `Report refused: waits_on names ${record.key || record.id}, which is ${record.status}, so nothing waits on it any more.`,
+        );
+      }
+      if (!ids.includes(record.id)) ids.push(record.id);
+    }
+    return ids;
+  }
+
+  /**
+   * Records a report's waits as `blocks` links (INF-1428): a recorded wait,
+   * holding no merge, which the idle ladder and the report's sort read like
+   * any other (docs/report-sort.md). A cycle refuses the report with the
+   * graph's own words. Returns the receipt's line, if any link was new.
+   */
+  private linkReportedWaits(task: TaskRuntime, waitsOn: string[] | undefined): string | undefined {
+    if (!waitsOn?.length) return undefined;
+    let linked: string[];
+    try {
+      linked = this.options.tasks.linkWaits(task.id, waitsOn, "crewmate");
+    } catch (caught) {
+      if (caught instanceof TaskGraphRefusal) throw new Error(`Report refused: ${caught.message}`);
+      throw caught;
+    }
+    const names = waitsOn.map((id) => {
+      const record = this.options.tasks.get(id);
+      return record?.key || id;
+    });
+    return `${linked.length > 0 ? "Recorded" : "Already recorded"}: your task waits on ${names.join(", ")}. While that work is underway nothing nudges you, and when it closes you are steered; work nobody has started goes to the first mate.`;
   }
 
   /**

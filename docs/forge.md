@@ -635,7 +635,10 @@ The run watch never writes pull request check readings, diagnoses, repair counts
 `check_change` remains the pull request green gate; `github_read`, job log reads and downloads keep their existing contracts.
 An accepted own-project `github_write` dispatch with `workflow_run_id` arms the run watch immediately and says so.
 The crewmate sends `"return_run_details": true` itself; the app never adds it, because older GitHub Enterprise servers may refuse it.
-A dispatch with no run number says to find the run through `github_read` and take the short `read_workflow` read; never repeat an accepted write to obtain its number.
+A GitHub dispatch that does not send `"return_run_details": true` gets no run number back, so the app lists that workflow's dispatched runs before sending it and again after, up to three times while GitHub queues the run (one budgeted call each, `GithubGatewayService.dispatchBaseline`, INF-1428).
+The one new dispatched run on the dispatch's ref is its run, and the answer names it beside the watch's own words.
+Two new runs are someone else's race and the app never guesses between them; then, as when the listing cannot be read, the answer says to find the run through `github_read` and take the short `read_workflow` read.
+Never repeat an accepted write to obtain its number.
 Accepted GitHub run reruns use the route's run number, and job reruns read the job's `run_id` through the gateway (one budgeted call).
 GitLab pipeline starts use the returned pipeline `id`, pipeline retries use the route's number, and job retries or plays use the returned `pipeline.id`.
 The watch is armed before reading the run, so a rerun still being queued cannot clear it through a stale ended-run reading.

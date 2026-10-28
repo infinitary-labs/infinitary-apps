@@ -101,6 +101,9 @@ A `baseline-blocked` diagnosis at its change's current head, while the checks ar
 A marked `blocks` edge from a task that has not closed holds its close (`blockersHoldingClose`: a `blocks_me` filing, the host's review, or a required action's prerequisite).
 A link the first mate records holds the start only.
 When the named task is open and the ready sweep will not start it - on request, held, or waiting on blockers of its own (`TaskService.awaitsStart`) - only the first mate or the captain can begin that work, so a report from the waiting task wakes the first mate on any backend, naming that work - which a moving witness would otherwise hold quiet.
+An open named task that cannot start until its own blockers close stands for those blockers (the wait chain, INF-1428, the captain's Approve and build on INF-1670's piece 2): its blockers are read the same way, so a chain that ends in work underway is a wait on work underway, and a chain that ends in work nobody has started names that work.
+An open task a dropped blocker holds is named itself, since nothing will free it.
+So INF-785, waiting on an on-request task blocked by a task whose pull request was up for merge, is quiet until that merge; then the on-request task needs a start, and the waiting task's next report wakes the first mate naming it.
 Closed dependencies, including dropped baseline owners, are not unstarted work and do not mask a wait on other work still underway.
 The wake names each such task (`waits` on the report's facts, `IdleLadder.unstartedWaits`); the first mate's prompt says what to do with it: start it, steer the waiting crewmate to fold the fix into its own branch when that is smaller, or one decision card.
 Host delivery machinery (a review) never counts.
@@ -108,7 +111,7 @@ The row sits after the filings, which wake anyway, and before row 3: a crewmate 
 The idle ladder's turn ignores this witness.
 
 **A wait on work underway moves on its own** (FI3-250).
-When every task those typed waits name is live and not something only a start begins - underway, or queued to start by itself - the task waits on that work, not on anyone (`waitsOnUnderway`, `IdleLadder.underwayWaits`).
+When every task those typed waits name is live and not something only a start begins - underway, queued to start by itself, or a wait chain that ends in such work - the task waits on that work, not on anyone (`waitsOnUnderway`, `IdleLadder.underwayWaits`).
 It is a moving witness like a timed wait: a report sorts row 3 with no wake on any backend, and the ladder neither nudges, wakes nor raises its card however long the work takes - the work's own crewmate is supervised on its own clock.
 A wait on unstarted work beside it keeps the task out of this witness, so row 2a and the ladder still act.
 The task reads as waiting: its posture is `dependency` ("Blocked by another task"), the record names the work (`blockedBy` includes a live task a standing baseline wait names), and its context-block row says `waits on KEY`.
@@ -117,6 +120,9 @@ It goes only for work that closed after the wait began (the link's `createdAt`, 
 The words say what the close means: a link's done or dropped work no longer holds the task, so it carries on; a baseline wait's done work means bring the change up to date, and its dropped work means lead the report with it, which the ordinary report sort routes without treating the dropped task as unstarted work.
 A baseline wait also resumes before that close, when the default branch's own run of the check it names passes (`docs/forge.md`, "A main failure's wake"): one `main-check-passed` steer, once per check and commit, and the close still resumes it if that run has not passed.
 A record cancelled from its record or stall card runs the sweep at once, as every close does.
+A crewmate names a wait itself in its report: `report`'s top-level `waits_on` lists the keys of open tasks its work cannot go on without, and each is recorded as a `blocks` link from that task, actor crewmate, holding no merge (`TaskService.linkWaits`, INF-1428).
+The report is refused, with nothing linked, when a key is unknown, closed, its own task, or would close a cycle, or beside `finished`.
+The app never reads the report's words for a wait.
 Removing a `blocks` wait through `link_tasks remove` clears both its graph edge and any standing baseline diagnosis reference to that owner, preserving the failed readings and diagnosis evidence.
 Other dependency owners and historical diagnoses whose waits no longer stand remain unchanged.
 
@@ -164,9 +170,10 @@ The order is the rule's own:
    Before the card check, as row 0 outranks row 1 above - a reply hides its card on the captain's screen while the core keeps it open, so the card no longer holds the turn, and a reply that can no longer be delivered is a stranded task, not the crewmate's turn.
 3. Its crewmate's last report asked the first mate to act (`needs_firstmate`), and the first mate has not acted on the task since (`askedFirstmate`, FI3-714): the first mate's turn, whatever card is up and whatever still moves, as row 0a outranks them in the sort - and after an unanswered captain reply, which the crewmate answers first.
    Nothing nudges the crewmate, which already did its part, and no card goes up; "A request the first mate leaves unanswered is raised again" below says what the ladder does instead.
+   Work its crewmate declared finished with no card of its own up asks for the first mate's close the same way (`finishedNoCard`, INF-1428): its crewmate has nothing left to do.
 4. A card with actions is up on the task - a crewmate's, a first mate's, or a host card such as the crewmate's sign-in card, which carries its task (`cardWord` counts any card with actions, whoever wrote it; every such card places the `captain` gate, `docs/card-authoring.md`): the captain's turn, nothing.
    Such a task gets no nudge, no wake and no timer however long it stays (FI3-81 "Leave as is").
-   So does a wait its crewmate declared while any card of the task, a note included, is up (FI3-435), and work its crewmate declared finished while a card of its own is up (INF-731).
+   So does a wait its crewmate declared while any card of the task, a note included, is up (FI3-435), and work its crewmate declared finished while a card of its own is up (INF-731), or with none once the first mate acted on it (INF-1428): a nudge would ask a crewmate with nothing left to do.
    So does a task whose own browser is in the captain's hands - paused for the captain's help, being taken, or the captain's (`browserWithCaptain`, counted in `decisionCardOpen`; `docs/task-browser.md`, "Taking control"): the captain's Return control is the crewmate's one wake, so the card behind it may already be answered.
 5. Moving, nothing: guidance that will still be delivered (including a row waiting out its backoff, `InboxStore.hasDeliverable`), a background job inside its bound, a captured settle, a timed wait on its gate (a due one is the sweep's, on the same tick).
    A streaming turn never reaches the reconciler; the quiet watchdog owns it.
@@ -214,7 +221,8 @@ So while the request stands - from the report that asked until the crewmate's ne
 The first mate has acted when an event of its own lands on the task's timeline after the request - a steer, an interrupt, a card, an answer, a change, a link, a close - never the `decided` record each of its turns about the task leaves, or when a task built on it (its basis, by key or id) or under it (its parent) is created or started since, whether that task is still open or has merged or been dropped (`IdleLadder.firstmateActedSince`, INF-976).
 A task created or started before the request answers no later one.
 What the act was is never judged, only that one took effect, as answer delivery judges a captain message (`docs/task-capture.md`).
-The report's own wake counts as rung 2's first wake, sent when the crewmate asked, and the rung's rules run from there.
+Work declared finished with no card of its own up is raised the same way, from the report that declared it, its `idle-asked` saying it waits for the first mate's close (INF-1428).
+The report's own wake (row 0a, or row 1a for finished) counts as rung 2's first wake, sent when the crewmate asked, and the rung's rules run from there.
 The clock holds while a wake about the task waits on the first mate's lane.
 Each thirty minutes without an act bring a reminder, `idle-asked`, which says the request again in the crewmate's words beside its report (`rule:idle-repeat`), two in all (`ASKED_WAKES`).
 The report's wake and each reminder name the work already built on the task, open or closed, with its status, closing reason and change (`TaskService.builtOn`), so the first mate reconciles them before it files or starts more (INF-976).

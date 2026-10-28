@@ -266,6 +266,7 @@ export class GithubGatewayService {
             : this.askReason(taskId, route, target);
         if (why)
           return this.keepAsk(taskId, target, route, body, why, undefined, input.validationEffect);
+        const dispatched = await this.dispatchBaseline(taskId, target, route, parsed);
         const response = await this.send(
           taskId,
           api,
@@ -281,7 +282,7 @@ export class GithubGatewayService {
         if (integrationAllowed && response.status >= 300)
           throw new ForgeError("refused", render(response, api));
         const answered = render(response, api);
-        return `${answered}${await this.afterWrite(taskId, target, route, response)}`;
+        return `${answered}${await this.afterWrite(taskId, target, route, response, dispatched)}`;
       },
       through,
       integrationAllowed,
@@ -692,12 +693,91 @@ export class GithubGatewayService {
     this.calls.set(taskId, used + 1);
   }
 
+  /**
+   * The workflow's dispatched runs before a GitHub dispatch that will not
+   * return its run's number (no `"return_run_details": true`), so the run
+   * it starts can still be watched (INF-1428): afterwards, the one run of
+   * that workflow on that ref missing here is its run. One budgeted call,
+   * taken only while the dispatch itself still fits the budget; a failed
+   * read only means no run is found.
+   */
+  private async dispatchBaseline(
+    taskId: string,
+    target: Target,
+    route: ApiRoute,
+    parsed: unknown,
+  ): Promise<DispatchBaseline | undefined> {
+    if (!this.options.watchRun || !route.own || target.via !== "project") return undefined;
+    if (route.method !== "POST" || !isDispatch(target.forge, restOf(route))) return undefined;
+    const body = objectOf(parsed);
+    if (body.return_run_details === true) return undefined;
+    if ((this.calls.get(taskId) ?? 0) + 2 > API_CALLS_PER_TASK) return undefined;
+    const ref = typeof body.ref === "string" ? body.ref.replace(/^refs\/(heads|tags)\//, "") : "";
+    try {
+      const runs = await this.dispatchedRuns(taskId, target.api, route);
+      return runs ? { ids: new Set(runs.map((run) => run.id)), ref } : undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  /** The newest dispatched runs of a dispatch route's workflow, or undefined when unreadable. */
+  private async dispatchedRuns(
+    taskId: string,
+    api: ForgeApi,
+    route: ApiRoute,
+  ): Promise<{ id: number; ref: string }[] | undefined> {
+    const path = `${route.path.split("?")[0]?.replace(/\/dispatches$/, "/runs")}?event=workflow_dispatch&per_page=20`;
+    const response = await this.send(taskId, api, "GET", path);
+    if (response.status >= 300) return undefined;
+    const runs = responseObject(response).workflow_runs;
+    if (!Array.isArray(runs)) return undefined;
+    return runs.flatMap((run) => {
+      const { id, head_branch: ref } = objectOf(run);
+      return typeof id === "number" && Number.isSafeInteger(id)
+        ? [{ id, ref: typeof ref === "string" ? ref : "" }]
+        : [];
+    });
+  }
+
+  /**
+   * The run a dispatch with no run number started (INF-1428): the one
+   * dispatched run of its workflow, on its ref, that was not there before
+   * it was sent. Reread a few times while GitHub queues it; two new runs
+   * are someone else's race, and the app never guesses between them.
+   */
+  private async findDispatchedRun(
+    taskId: string,
+    api: ForgeApi,
+    route: ApiRoute,
+    before: DispatchBaseline,
+  ): Promise<number | undefined> {
+    const sleep = this.options.sleep ?? ((ms) => new Promise<void>((done) => setTimeout(done, ms)));
+    for (let attempt = 1; attempt <= REREAD_ATTEMPTS; attempt++) {
+      await sleep(REREAD_DELAY_MS);
+      let runs: { id: number; ref: string }[] | undefined;
+      try {
+        runs = await this.dispatchedRuns(taskId, api, route);
+      } catch {
+        return undefined;
+      }
+      if (!runs) return undefined;
+      const fresh = runs.filter(
+        (run) => !before.ids.has(run.id) && (!before.ref || run.ref === before.ref),
+      );
+      if (fresh.length > 1) return undefined;
+      if (fresh[0]) return fresh[0].id;
+    }
+    return undefined;
+  }
+
   /** Watch only exact run identities from successful own-project writes, never guess by version. */
   private async afterWrite(
     taskId: string,
     target: Target,
     route: ApiRoute,
     response: ForgeApiResponse,
+    dispatched?: DispatchBaseline,
   ): Promise<string> {
     if (response.status >= 300 || !route.own || target.via !== "project") return "";
     const notes: string[] = [];
@@ -733,12 +813,18 @@ export class GithubGatewayService {
         unread = true;
       }
     }
-    const known = typeof runId === "number" && Number.isSafeInteger(runId) && runId > 0;
+    let found = false;
+    if (dispatch && !isRunNumber(runId) && dispatched && this.options.watchRun) {
+      runId = await this.findDispatchedRun(taskId, target.api, route, dispatched);
+      found = isRunNumber(runId);
+      if (found) unread = false;
+    }
+    const known = isRunNumber(runId);
     if (this.options.watchRun && started) {
       let note = unread ? WATCH_NOT_STARTED : NO_RUN_NUMBER;
       if (known) {
         try {
-          note = this.options.watchRun(taskId, runId as number);
+          note = `${found ? `The dispatch returned no run number; run ${runId} is the one new dispatched run of that workflow on that ref since it was sent. ` : ""}${this.options.watchRun(taskId, runId as number)}`;
         } catch {
           note = WATCH_NOT_STARTED;
         }
@@ -962,6 +1048,18 @@ function startsRun(forge: Forge, route: ApiRoute): boolean {
   const rest = route.rest.split("/").map(decodeURIComponent).join("/");
   return isDispatch(forge, rest) || isPipelineStart(forge, rest) || route.rerun;
 }
+
+/** A route's path under the project, decoded. */
+function restOf(route: ApiRoute): string {
+  return route.rest.split("/").map(decodeURIComponent).join("/");
+}
+
+function isRunNumber(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+/** A workflow's dispatched runs before a dispatch, and the ref it names (`dispatchBaseline`). */
+type DispatchBaseline = { ids: Set<number>; ref: string };
 
 function objectOf(value: unknown): Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value)

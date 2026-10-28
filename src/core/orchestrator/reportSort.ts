@@ -164,8 +164,18 @@ export type Witnesses = {
    */
   finishedCardUp?: boolean;
   /**
+   * Its crewmate's last report declared its work finished and no card of
+   * its own is up (INF-1428): the Firstmate's close is the next move, and
+   * its crewmate has nothing left to do. The idle ladder alone reads it,
+   * raising the close as an unanswered request (`askedFirstmate`) until the
+   * Firstmate acts, and never nudging the crewmate; the report's sort reads
+   * the report's own `finished`.
+   */
+  finishedNoCard?: boolean;
+  /**
    * Its crewmate's last report asked the Firstmate to act (`needs_firstmate`,
-   * FI3-710), and the Firstmate has not acted on the task since
+   * FI3-710), or declared its work finished with no card of its own up
+   * (INF-1428), and the Firstmate has not acted on the task since
    * (`IdleLadder.firstmateActedSince`; FI3-714). The idle ladder alone reads
    * it: the report's sort reads the report's own declaration.
    */
@@ -434,7 +444,8 @@ function stillMoving(witnesses: Witnesses): boolean {
  *    whatever still moves, as row 0a outranks them in the sort; after an
  *    unanswered captain reply, which the crewmate answers first.
  *  - `captain`: a card with actions is up, or its crewmate declared its
- *    work finished with a card of its own still up - nothing fires.
+ *    work finished - with a card of its own still up, or with none once
+ *    the Firstmate acted on it - nothing fires.
  *  - `moving`: it will move on its own - nothing fires.
  *  - `owed`: held for the captain with no card up - the Firstmate's turn,
  *    so the ladder's wakes and its card apply and its nudge never does.
@@ -457,7 +468,8 @@ export function idleTurn(witnesses: Witnesses): IdleTurn {
   // The crewmate answers a reply the captain wrote since its request first,
   // as row 0 holds row 0a; the reply on its lane is that answer coming.
   if (witnesses.askedFirstmate && !witnesses.threadAwaitingAuthor) return "asked";
-  if (witnesses.decisionCardOpen || witnesses.finishedCardUp) return "captain";
+  if (witnesses.decisionCardOpen || witnesses.finishedCardUp || witnesses.finishedNoCard)
+    return "captain";
   if (stillMoving(witnesses)) return "moving";
   if (witnesses.captainGateOwed) return "owed";
   if (witnesses.accountHeld || witnesses.outOfReach) return "moving";

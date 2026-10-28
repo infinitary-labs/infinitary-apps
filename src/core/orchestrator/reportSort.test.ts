@@ -537,6 +537,20 @@ describe("idleTurn: the same witnesses, read the same way, for an idle crewmate"
     expect(idle({ waitsOnUnderway: true, captainGateOwed: true })).toBe("moving");
   });
 
+  // INF-1428, the captain's "File for later" on friction 5 (idle nags), built
+  // as INF-1670's piece 2: work declared finished with no card of its own
+  // up leaves its crewmate nothing to do, so it is never nudged; the
+  // Firstmate's close is raised as its request until the Firstmate acts.
+  it("finished with no card up is the first mate's turn until it acts, and never a nudge", () => {
+    expect(idle({ finishedNoCard: true, askedFirstmate: true })).toBe("asked");
+    expect(idle({ finishedNoCard: true })).toBe("captain");
+    expect(idle({ finishedNoCard: true, captainGateOwed: true })).toBe("captain");
+    // The captain's unanswered reply is still the crewmate's to answer first.
+    expect(idle({ finishedNoCard: true, askedFirstmate: true, threadAwaitingAuthor: true })).toBe(
+      "thread",
+    );
+  });
+
   it("a thread its account's cut-off holds is not nudged: nothing could answer it yet", () => {
     expect(idle({ threadAwaitingAuthor: true, accountHeld: true })).toBe("moving");
   });

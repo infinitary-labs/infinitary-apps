@@ -11907,6 +11907,146 @@ describe("the whose-turn rule at the report's call site (S7c, R4.8)", () => {
     );
   });
 
+  // INF-1428, built as INF-1670's piece 2 (the captain's Approve and build):
+  // INF-785 waited on INF-1659, which starts on request and is itself
+  // blocked by INF-1109, whose PR #496 was up for merge. Every report woke
+  // the first mate and the idle ladder raised the stuck alert. A task that
+  // cannot start until its own blockers close stands for those blockers.
+  describe("a wait through a task that cannot start until its own blockers close (INF-1428)", () => {
+    function inf785(tasks: ReturnType<typeof setup>["tasks"]) {
+      const secrets = seedTask(tasks, {
+        id: "1eb53573",
+        title: "Continue: Secrets settings, app wiring and live platform proofs",
+        status: "idle",
+      });
+      const storage = seedTask(tasks, {
+        id: "707e2b88",
+        title: "Enable production protected Secrets storage",
+        status: "queued",
+        startPolicy: "on-request",
+      });
+      tasks.link(secrets.id, storage.id, "blocks", "firstmate");
+      return { secrets, storage };
+    }
+
+    it("stays quiet while the chain's blocker is underway, and names the task once it needs a start", async () => {
+      const crewmate = fakeCrewmate();
+      const clientSide: FakeCrewmate = {
+        ...crewmate,
+        controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+      };
+      const { supervisor, ops, sorts, tasks, taskId } = await reportedTask(clientSide);
+      const { secrets, storage } = inf785(tasks);
+      supervisor.linkTasks(storage.id, taskId, "blocks");
+      supervisor.linkTasks(secrets.id, taskId, "blocks");
+      await report(clientSide, taskId, "Blocked on INF-1659 and INF-1109; nothing to do until #496 merges.");
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "routine", rule: "still-moving" });
+      expect(reportWakes(ops)).toHaveLength(0);
+
+      // PR #496 merges: the storage task now waits only on a start.
+      tasks.close(secrets.id, { status: "done", reason: "merged", actor: "host" });
+      await supervisor.steerCrewmate(taskId, "go on");
+      await tick();
+      await report(clientSide, taskId, "Still blocked on INF-1659.");
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
+      expect(reportWakes(ops)).toEqual([
+        `[fm-op] crewmate 1 reported on task ${taskId} "Job": Still blocked on INF-1659. It waits on ${storage.key} "Enable production protected Secrets storage" (not started); nothing starts that work by itself.`,
+      ]);
+    });
+
+    it("names the work at the chain's end when nobody has started it, and the blocked task when a dropped blocker holds it", async () => {
+      const crewmate = fakeCrewmate();
+      const clientSide: FakeCrewmate = {
+        ...crewmate,
+        controlProfile: { ...PI_CONTROL_PROFILE, backgroundWork: "client" },
+      };
+      const { supervisor, ops, sorts, tasks, taskId } = await reportedTask(clientSide);
+      const { secrets, storage } = inf785(tasks);
+      supervisor.linkTasks(storage.id, taskId, "blocks");
+      // The blocker at the chain's end goes back to waiting on a start.
+      const parked = seedTask(tasks, {
+        id: "parked-1109",
+        title: "Continue: Secrets settings, app wiring and live platform proofs",
+        status: "queued",
+        startPolicy: "on-request",
+      });
+      tasks.close(secrets.id, { status: "dropped", reason: "cancelled", actor: "host" });
+      tasks.link(parked.id, storage.id, "blocks", "firstmate");
+      await report(clientSide, taskId, "Blocked on INF-1659.");
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
+      expect(reportWakes(ops).at(-1)).toContain(
+        `It waits on ${storage.key} "Enable production protected Secrets storage" (not started)`,
+      );
+
+      // With the dropped blocker gone from its waits, the parked one is what needs a start.
+      supervisor.unlinkTasks(secrets.id, storage.id, "blocks");
+      await supervisor.steerCrewmate(taskId, "go on");
+      await tick();
+      await report(clientSide, taskId, "Still blocked on INF-1659.");
+      expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "waits-unstarted" });
+      expect(reportWakes(ops).at(-1)).toContain(
+        `It waits on ${parked.key} "Continue: Secrets settings, app wiring and live platform proofs" (not started)`,
+      );
+    });
+  });
+
+  // INF-1428's own part: a crewmate names the tasks it waits on in its
+  // report, and the app records each as a link, never reading its words.
+  describe("a report's waits_on (INF-1428)", () => {
+    it("records each named task as a wait that holds no merge, and refuses unknown, closed, own or circular keys", async () => {
+      const crewmate = fakeCrewmate();
+      const { specs, tasks, taskId } = await reportedTask(crewmate, {
+        hasRunningJobs: () => true,
+      });
+      const onReport = specs[0]?.onReport;
+      if (!onReport) throw new Error("Missing production report callback");
+      const secrets = seedTask(tasks, {
+        id: "1eb53573",
+        title: "Continue: Secrets settings, app wiring and live platform proofs",
+        status: "idle",
+      });
+      const merged = seedTask(tasks, {
+        id: "1c94b852",
+        title: "Fix sign-in journey scanning disappearing temporary files",
+        status: "idle",
+      });
+      tasks.close(merged.id, { status: "done", reason: "merged", actor: "host" });
+      const own = tasks.get(taskId);
+      const text = "Blocked on INF-1109's merge.";
+      expect(() => onReport(text, undefined, { waitsOn: ["INF-99999"] })).toThrow(
+        'waits_on names "INF-99999", which is no task',
+      );
+      expect(() => onReport(text, undefined, { waitsOn: [merged.key] })).toThrow(
+        `waits_on names ${merged.key}, which is done`,
+      );
+      expect(() => onReport(text, undefined, { waitsOn: [own?.key ?? taskId] })).toThrow(
+        "waits_on names your own task",
+      );
+      expect(() =>
+        onReport(text, undefined, { waitsOn: [secrets.key], finished: true }),
+      ).toThrow("pass it without finished");
+      expect(tasks.linksTo(taskId)).toEqual([]);
+
+      expect(onReport(text, undefined, { waitsOn: [secrets.key.toLowerCase()] })).toContain(
+        `Recorded: your task waits on ${secrets.key}.`,
+      );
+      expect(tasks.linksTo(taskId)).toEqual([
+        expect.objectContaining({ fromId: secrets.id, type: "blocks", holdsMerge: false }),
+      ]);
+      // A recorded wait holds no merge.
+      expect(tasks.blockersHoldingClose(taskId)).toEqual([]);
+      expect(tasks.timeline(taskId).at(-1)).toMatchObject({ actor: "crewmate", kind: "linked" });
+
+      // The task the report waits on already waits on it: a cycle.
+      const waiter = seedTask(tasks, { id: "waiter", title: "Waits on this job", status: "idle" });
+      tasks.link(taskId, waiter.id, "blocks", "firstmate");
+      expect(() =>
+        onReport(text, undefined, { waitsOn: [secrets.key, waiter.key] }),
+      ).toThrow(/^Report refused: .*would close a cycle/);
+      expect(tasks.linksTo(taskId)).toHaveLength(1);
+    });
+  });
+
   it("wakes on every report while a blocking filing stays planned, and not once it starts", async () => {
     const crewmate = fakeCrewmate();
     const clientSide: FakeCrewmate = {
@@ -14313,6 +14453,64 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         expect(askedWakes(ops), by).toEqual([]);
       }
     });
+  });
+
+  // INF-1428, built as INF-1670's piece 2: work declared finished with no
+  // card of its own up leaves its crewmate nothing to do, so the ladder
+  // never nudges it; the first mate's close is raised as its request.
+  it("never nudges a crewmate that reported finished with no card up, and reminds the first mate to close it (INF-1428)", async () => {
+    const harness = await stopped();
+    const { supervisor, crewmate, specs, ops, sorts, ledgerFacts, tasks, taskId } = harness;
+    await supervisor.steerCrewmate(taskId, "the captain closed your card");
+    await tick();
+    expect(
+      specs.at(-1)?.onReport?.("PR #612 merged and the captain closed the card.", undefined, {
+        finished: true,
+      }),
+    ).toContain("The first mate hears it when this turn ends and closes your task.");
+    await endTurn(crewmate, taskId);
+    expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "finished" });
+    const finishedAt = tasks.get(taskId)?.delivery?.finishedAt ?? hostNow;
+    const promptsBefore = crewmate.promptCalls.length;
+    const reminders = () => ops.filter((line) => line.includes("ago with no card of its own up"));
+
+    for (const idle of [10, 20, 29]) {
+      hostNow = finishedAt + minutes(idle);
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+    }
+    expect(crewmate.promptCalls).toHaveLength(promptsBefore);
+    expect(reminders()).toEqual([]);
+
+    hostNow = finishedAt + minutes(30);
+    supervisor.reconcileIdle(hostNow);
+    await tick();
+    expect(crewmate.promptCalls).toHaveLength(promptsBefore);
+    expect(ledgerFacts.at(-1)).toMatchObject({ kind: "idle-asked", finished: true, wakes: 2 });
+    expect(reminders()).toEqual([
+      expect.stringContaining(
+        `on task ${taskId} "Job" declared its work finished 30m ago with no card of its own up, so nothing is left for it and it is not nudged.`,
+      ),
+    ]);
+
+    // The first mate acts without closing it: nothing more fires, for either.
+    const next = seedTask(tasks, {
+      id: "next",
+      title: "Next",
+      status: "queued",
+      startPolicy: "on-request",
+    });
+    supervisor.linkTasks(next.id, taskId, "related");
+    for (const idle of [61, 120, 240]) {
+      hostNow = finishedAt + minutes(idle);
+      supervisor.reconcileIdle(hostNow);
+      await tick();
+    }
+    expect(crewmate.promptCalls).toHaveLength(promptsBefore);
+    expect(reminders()).toHaveLength(1);
+    expect(supervisor.cardsSnapshot().filter((card) => card.id.startsWith("card-stall-"))).toEqual(
+      [],
+    );
   });
 
   it("the FI3-83 strand: a provider outage keeps the captain's reply and delivers it on recovery", async () => {

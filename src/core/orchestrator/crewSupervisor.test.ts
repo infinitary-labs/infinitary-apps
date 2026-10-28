@@ -27,6 +27,7 @@ import {
   type CardThread,
   cardAnswersBytes,
   cardPresentation,
+  cardTakesReplies,
   MERGE_ANYWAY_ACTION,
   onStage,
   opensSettings,
@@ -13287,17 +13288,24 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await at(minutes(80));
     // Rung 3: the host's own card, in place of any further wake.
     const card = cards().find((entry) => entry.id === `card-stall-${taskId}`);
-    expect(card).toMatchObject({ taskId, author: "host", title: "Job has been stuck for 1h 20m" });
+    // INF-1670: the first mate answers a reply under it, and Drop task is gone.
+    expect(card).toMatchObject({
+      taskId,
+      author: "host",
+      title: "Job has been stuck for 1h 20m",
+      answeredBy: "firstmate",
+    });
     expect(card && cardPresentation(card)).toBe("attention");
+    expect(card && cardTakesReplies(card)).toBe(true);
     expect(card?.actions.map((action) => action.label)).toEqual([
-      "Continue",
-      "Drop task",
+      "Nudge",
+      "Keep waiting",
       "Discard",
     ]);
     expect(card?.body).toBe(
       "<p>It stopped with nothing running and no question for you. It was nudged once, and your first mate was told twice, and nothing has moved since.</p>" +
         "<p>What it last said: Done with step one.</p>" +
-        "<p>Continue tells it to finish or say what is in its way. Drop task ends the task and keeps a copy of its unfinished work. Discard throws its work away.</p>",
+        "<p>Nudge tells it to finish or say what is in its way. Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away. For anything else, reply here.</p>",
     );
     expect(sorts.at(-1)).toEqual({ taskId, verdict: "captain", rule: "idle-card" });
     // The card's row records what went up, a line with no wake to type.
@@ -13379,12 +13387,12 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     expect(supervisor.crewStatus(taskId)[0]?.stalled).toBeUndefined();
   });
 
-  it("the card's Continue nudges with the captain's authority, and Drop task ends the task", async () => {
+  it("the card's Nudge nudges with the captain's authority, and Keep waiting keeps the task quietly", async () => {
     const first = await stopped();
     await first.at(minutes(10));
     await endTurn(first.crewmate, first.taskId);
     for (const step of [20, 50, 80]) await first.at(minutes(step));
-    first.supervisor.act(`card-stall-${first.taskId}`, "continue");
+    first.supervisor.act(`card-stall-${first.taskId}`, "nudge");
     await tick();
     expect(first.crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
     const steered = first.tasks
@@ -13400,13 +13408,58 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     await second.at(minutes(10));
     await endTurn(second.crewmate, second.taskId);
     for (const step of [20, 50, 80]) await second.at(minutes(step));
-    second.supervisor.act(`card-stall-${second.taskId}`, "stop");
+    // INF-1670, the captain's written-in answer: Keep waiting closes the
+    // alert like the captain's close, steering nobody and ending nothing.
+    const prompts = second.crewmate.promptCalls.length;
+    second.supervisor.act(`card-stall-${second.taskId}`, "keep-waiting");
     await tick();
-    expect(second.tasks.get(second.taskId)).toMatchObject({
-      status: "dropped",
-      closedReason: "cancelled",
-    });
     expect(second.cards()).toEqual([]);
+    expect(second.crewmate.promptCalls).toHaveLength(prompts);
+    expect(second.tasks.get(second.taskId)).toMatchObject({ status: "active", recoveryRung: 3 });
+    const opsBefore = second.ops.length;
+    await second.at(minutes(400));
+    expect(second.ops).toHaveLength(opsBefore);
+    expect(second.cards()).toEqual([]);
+  });
+
+  // INF-1670: the captain's "why is there no reply box to ask questions?",
+  // answered by the first mate (question 3, A).
+  it("sends a reply under the card to the first mate, never owed by the crewmate, and keeps the card up until it answers", async () => {
+    const harness = await stopped();
+    const { supervisor, crewmate, ops, taskId, at, cards } = harness;
+    const converseAboutCard = vi.fn();
+    supervisor.setFirstmateHooks({
+      notifyOp: (wake) => ops.push(served(wake)),
+      retryConverse: vi.fn(),
+      converseAboutCard,
+    });
+    await at(minutes(10));
+    await endTurn(crewmate, taskId);
+    for (const step of [20, 50, 80]) await at(minutes(step));
+    const stall = `card-stall-${taskId}`;
+    const question = "is it stuck because the secret PR hasn't landed yet?";
+    supervisor.replyToCard(stall, question);
+    expect(converseAboutCard).toHaveBeenCalledWith(stall, question, undefined);
+    expect(crewmate.promptCalls.some((call) => call.includes(question))).toBe(false);
+    expect(
+      supervisor.threadActivitySince(0).find((entry) => entry.card.id === stall)?.owed,
+    ).toBe("firstmate");
+
+    // The task moves before the first mate answers: the card stays up.
+    await supervisor.steerCrewmate(taskId, "carry on with step two");
+    await tick();
+    expect(cards().some((card) => card.id === stall)).toBe(true);
+    await endTurn(crewmate, taskId, "Step two done.");
+    expect(supervisor.recordFirstmateThreadAnswer(stall, "Yes: it waits on PR #496.")).toBe(true);
+    expect(supervisor.cardThread(stall).messages.map((message) => message.who)).toEqual([
+      "captain",
+      "firstmate",
+    ]);
+
+    // Answered, the next move takes it down as before.
+    await supervisor.steerCrewmate(taskId, "and step three");
+    await tick();
+    expect(cards().some((card) => card.id === stall)).toBe(false);
   });
 
   it("the card's Discard runs the host's discard, and the captain's close keeps the task quietly", async () => {
@@ -13549,9 +13602,9 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
     ]);
     expect(ledgerFacts.at(-1)).toMatchObject({ kind: "idle-stall", note });
 
-    // The stall card's Continue is the same nudge, naming the same note.
+    // The stall card's Nudge is the same nudge, naming the same note.
     for (const step of [50, 80]) await at(minutes(step));
-    supervisor.act(`card-stall-${taskId}`, "continue");
+    supervisor.act(`card-stall-${taskId}`, "nudge");
     await tick();
     expect(crewmate.promptCalls.at(-1)).toBe(idleNoteNudgeText(note));
   });
@@ -14096,7 +14149,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       expect(crewmate.promptCalls).toHaveLength(prompts);
     });
 
-    it("the stall card's Continue on a capped task is not the cap's answer: the cap and its gate stand", async () => {
+    it("the stall card's Nudge on a capped task is not the cap's answer: the cap and its gate stand", async () => {
       const { supervisor, crewmate, ops, taskId, tasks, cards, idleSince, at } = await stopped();
       hostNow = idleSince;
       seedDelivery(tasks, taskId, { ciRounds: 3, ciRedHead: HEAD, ciCapAt: idleSince });
@@ -14106,17 +14159,17 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       const stall = `card-stall-${taskId}`;
       const card = cards().find((entry) => entry.id === stall);
       // The cap's question is still the captain's: the card says so, and
-      // says Continue is not an answer to it.
+      // says Nudge is not an answer to it.
       expect(card?.body).toContain(
         "<p>It has reached its limit of tries at getting the checks to pass, so it needs your call: try again, try a premium model, or discard it. Your first mate was told twice and has not asked you yet.</p>",
       );
       expect(card?.body).toContain(
-        "<p>Continue tells it to say what is in its way; it does not give it more tries. To try again or try a premium model, tell your first mate. Drop task ends the task and keeps a copy of its unfinished work. Discard throws its work away.</p>",
+        "<p>Nudge tells it to say what is in its way; it does not give it more tries. To try again or try a premium model, reply here. Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away.</p>",
       );
       expect(card?.body).not.toContain("no question for you");
       expect(card?.actions.map((action) => action.label)).toEqual([
-        "Continue",
-        "Drop task",
+        "Nudge",
+        "Keep waiting",
         "Discard",
       ]);
       expect(tasks.get(taskId)?.gate).toEqual({
@@ -14125,7 +14178,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
         reason: "the CI cap",
       });
 
-      supervisor.act(stall, "continue");
+      supervisor.act(stall, "nudge");
       await tick();
       // The crewmate is told to carry on, with the captain's authority...
       expect(crewmate.promptCalls.at(-1)).toBe(IDLE_NUDGE_TEXT);
@@ -14174,7 +14227,7 @@ describe("the idle ladder (idle crew recovery, docs/report-sort.md)", () => {
       for (const step of [20, 50, 80]) await at(minutes(step));
       const body = cards().find((entry) => entry.id === `card-stall-${taskId}`)?.body;
       expect(body).toContain("try again, try a stronger model, or discard it");
-      expect(body).toContain("To try again or try a stronger model, tell your first mate.");
+      expect(body).toContain("To try again or try a stronger model, reply here.");
       expect(body).not.toContain("try a premium model");
     });
 

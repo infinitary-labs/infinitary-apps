@@ -1009,6 +1009,14 @@ export const cardSchema = z.strictObject({
    * which takes replies as its author allows.
    */
   replies: z.literal(false).optional(),
+  /**
+   * Who answers a reply under a card whose author cannot (`cards.answered_by`):
+   * the host sets "firstmate" on its stuck alert (`card-stall-<task>`, INF-1670),
+   * so the chrome draws a reply row and the first mate answers in the thread,
+   * never the task's crewmate. Absent on every other card, which takes replies
+   * as its author allows.
+   */
+  answeredBy: z.literal("firstmate").optional(),
   /** Declared by the author: replies stay shown; each arrival comes forward. Choices still close. */
   holdsPlace: z.literal(true).optional(),
   /**
@@ -1235,11 +1243,14 @@ export const CONVERSE_TEXT_MAX_CHARS = 20_000;
  * runs on. A Firstmate card's reply is a captain turn about that card
  * (cards-as-threads phase 2). The host's own agent-down cards answer to
  * nobody, and neither does a card the host marked as taking no reply (the
- * welcome, `Card.replies`).
+ * welcome, `Card.replies`), unless the host named the first mate as its
+ * answerer (the stuck alert, `Card.answeredBy`).
  */
-export function cardTakesReplies(card: Pick<Card, "author" | "taskId" | "replies">): boolean {
+export function cardTakesReplies(
+  card: Pick<Card, "author" | "taskId" | "replies" | "answeredBy">,
+): boolean {
   if (card.replies === false) return false;
-  if (card.author === "firstmate") return true;
+  if (card.author === "firstmate" || card.answeredBy === "firstmate") return true;
   return card.author === "crewmate" && card.taskId !== undefined;
 }
 

@@ -202,6 +202,14 @@ The window draws no field on it and refuses the Reply commands with "This card t
 Its words send the captain to the message box under the card, so the first-run hint ends on a message sent from there (`docs/first-launch.md` "The welcome").
 Every other card keeps its row as its author allows.
 
+### The stuck alert's reply row
+
+One host card takes a reply: the idle ladder's stuck alert (`card-stall-<task>`, INF-1670, the captain's word: "i would remove the "drop task" option and leave nuanced operations to the reply").
+The host names its answerer when it raises the card (`Card.answeredBy` "firstmate", the `cards.answered_by` column), and `cardTakesReplies`, the phone's `takesReplies` and `CrewSupervisor.replyToCard` read that field, never the id.
+A reply there is a captain turn about the card, the same as a reply on a first mate card, and the first mate's closing words answer it (`CardService.firstmateAnswers`).
+It is never a thread the task's crewmate owes (`CardService.threadsAwaitingAuthor` leaves it out), so no nudge or reminder names it.
+While the answer is owed the alert stays up even if the task moves (`IdleLadder.withdrawStallCard`); once it lands, the next move takes the alert down as before.
+
 ## Images on steers (phase 2)
 
 Pi's `steer(text, images)` already existed.
@@ -259,7 +267,7 @@ It is branch 0, above the open-card branch, deliberately - the captain has spoke
 The design skill owns every visual rule (`.claude/skills/infinitary-design/components/cards/CardThread.prompt.md`); `src/renderer/src/cards/CardThread.tsx` implements it and `threadGeometry.ts` holds the ladder's arithmetic.
 
 While a card has no thread open beside it, its one field, reading "anything to add?", sits above the button row under one hairline, and Chat sits at the right edge of that row (INF-924; `docs/card-authoring.md`, "The card's one field").
-A card with no author to reach - the host's own agent-down set - has no field and no Chat at all, and neither has the welcome ("A card with no reply row", above).
+A card with no author to reach - the host's own agent-down set - has no field and no Chat at all, and neither has the welcome ("A card with no reply row", above); the stuck alert has both ("The stuck alert's reply row", above).
 
 The first sent message opens the thread beside the card in ONE container (tweak 1): one surface, border, radius and shadow, a single `--line-2` hairline between the columns, the pair centred as one object.
 For card and thread sizing, stage width is the window minus twice the larger expanded rail, so one-sided panels never shift the pair.

@@ -170,8 +170,10 @@ const MIGRATION_71_TABLE =
 /** INF-1296 piece 2's relationship rows, lent to an older schema for today's writer. */
 const TASK_REFERENCES_TABLE =
   "CREATE TABLE task_references (task_id TEXT NOT NULL, kind TEXT NOT NULL, ref TEXT NOT NULL, target_id TEXT, actor TEXT, recorded_at INTEGER, PRIMARY KEY (task_id, kind));";
-/** INF-1610's declaration that a card answers the captain's message, undone. */
-const REVERSE_MIGRATION_101 = "ALTER TABLE cards DROP COLUMN answering;\n";
+/** INF-1670's answerer of a card whose author cannot answer, undone. */
+const REVERSE_ANSWERED_BY = "ALTER TABLE cards DROP COLUMN answered_by;\n";
+/** INF-1610's declaration that a card answers the captain's message, with the later card column undone. */
+const REVERSE_MIGRATION_101 = `${REVERSE_ANSWERED_BY}ALTER TABLE cards DROP COLUMN answering;\n`;
 /** INF-1226's declaration that a card's choice is not its task's answer, with the later card column undone. */
 const REVERSE_MIGRATION_93 = `${REVERSE_MIGRATION_101}ALTER TABLE cards DROP COLUMN continues;\n`;
 /** INF-476's saved visibility column, with the later card column undone, without deleting card rows. */
@@ -1801,7 +1803,8 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
     // migration 69 (a merge card's risk) `risk_json`, and migration 70 (a
     // card that takes no reply) `replies`, migration 77 `holds_place`,
     // migration 82 `required_actions_json`, migration 87 `review_task_id`,
-    // INF-476 `minimized`, INF-1226 `continues` and INF-1610 `answering`.
+    // INF-476 `minimized`, INF-1226 `continues`, INF-1610 `answering` and
+    // INF-1670 `answered_by`.
     expect(columnNames(upgraded, "cards")).toEqual([
       ...before,
       "duplicate_of",
@@ -1826,6 +1829,7 @@ describe("migrations 24-25 (card lineage and the duplicate label, interaction P1
       "minimized",
       "continues",
       "answering",
+      "answered_by",
     ]);
     expect(columnNames(upgraded, "card_revisions")).toEqual([
       "id",
@@ -3459,6 +3463,40 @@ it("INF-1610 upgrades existing cards with no answering mark, keeps a marked card
   expect(columnNames(reopened, "cards")).toEqual(columns);
   expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
     { id: answer.id, status: "ready" },
+  ]);
+  reopened.close();
+});
+
+// INF-1670: the stuck alert names the first mate as the one who answers a
+// reply under it, and a restart must keep its reply row.
+it("INF-1670 upgrades existing cards with no answerer, keeps the stuck alert's across reopen and reverses without losing it", () => {
+  const dir = tmpUserData();
+  const old = openDatabase(dir, DATABASE_VERSION - 1);
+  const columns = columnNames(old, "cards");
+  old
+    .prepare(
+      "INSERT INTO cards (id, task_id, kind, author, priority, title, meta, body, actions_json, status, created_at) VALUES ('card-stall-a99caa29', 'a99caa29', 'card', 'host', 90, 'Move integration secrets has been stuck for 1h 21m', '', '<p>It stopped with nothing running and no question for you.</p>', '[]', 'ready', 1)",
+    )
+    .run();
+  old.close();
+  const upgraded = openDatabase(dir);
+  expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+  const store = new CardStore(upgraded);
+  const alert = store.get("card-stall-a99caa29");
+  if (!alert) throw new Error("The upgraded stuck alert is missing");
+  expect(alert).not.toHaveProperty("answeredBy");
+  store.upsert({ ...alert, answeredBy: "firstmate" });
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  expect(new CardStore(reopened).get(alert.id)).toMatchObject({
+    answeredBy: "firstmate",
+    status: "ready",
+    title: alert.title,
+  });
+  reopened.exec(REVERSE_ANSWERED_BY);
+  expect(columnNames(reopened, "cards")).toEqual(columns);
+  expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
+    { id: alert.id, status: "ready" },
   ]);
   reopened.close();
 });

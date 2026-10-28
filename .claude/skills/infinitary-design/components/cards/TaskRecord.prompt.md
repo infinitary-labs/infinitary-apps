@@ -45,7 +45,7 @@ A Dropped work record has only Start again in its next slot unless a replacement
 | Waiting on you | Drop task | `Show the card` | - (no card to show: This task needs you, Ask your first mate what is needed to continue.) |
 
 `Drop task` (secondary) is the one verb that ends a task from its record, whatever its state.
-Before the work starts it drops the record and the task never starts; once started it ends the task the way the stall card's Drop task does, keeping a copy of its unfinished work.
+Before the work starts it drops the record and the task never starts; once started it ends the task as the captain's cancel, keeping a copy of its unfinished work.
 The record whose Drop task was confirmed closes once the host accepts the drop, as it does on Start; the task stays dropped on its record, which the Tasks panel opens again with `Start again`.
 A row no host operation can end - the first mate's own decision and operation rows, or work returned to the queue after it started - leaves the end slot empty.
 The next slot holds the one primary: `Start` on work that waits for your word - on request, held or not, with no parts - and, disabled, on blocked work.

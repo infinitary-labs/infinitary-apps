@@ -122,6 +122,7 @@ Where a feature waits for the other side, its number is in the tables above.
 Cards, captured offers and placed card requests carry an optional `holdsPlace`, which declares forward arrival and leaves unmarked cards unchanged.
 They also carry an optional `continues`, a crewmate's declaration that the captain's choice on the card is not its task's answer (`card-continues.md`); a home without it reads the card as before, so the choice closes a task that only answers.
 They also carry an optional `answering`, the author's declaration that the card answers the captain's message it is about, and a card in the snapshot carries an optional `asked`, when that message was sent and its words, which the home reads from the saved message and a view draws as the "You asked" line (`card-asked-line.md`); an older view ignores both.
+A card in the snapshot may carry an optional `answeredBy`, "firstmate" on the host's stuck alert, which a view reads as taking a reply that the first mate answers (`card-answered-by.md`); an older view draws no reply row on it, as before.
 A card action's effect may be `request_write`: a crewmate's ask to send a write it kept where its project lives, which only the captain's click sends (`docs/forge.md`, "A write that asks").
 The setup card's Add project and Not now carry the host ops `add-project` and `decline-project` (`docs/fleet.md`, "Asking the first mate to add a project"), and the project-change card's Apply change and Not now carry `apply-project-change` and `decline-project-change`.
 

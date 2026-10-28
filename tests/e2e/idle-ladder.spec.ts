@@ -8,13 +8,17 @@ import { DecisionStore } from "../../src/core/storage/decisionStore";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { formatDurationShort } from "../../src/shared/quotaSignals";
-import { DROP_TASK_LABEL } from "../../src/shared/recordDrop";
 import { scratchDir } from "../helpers/scratchDirs";
 import { seedDelivery } from "../helpers/taskDelivery";
 import { cardBody } from "./frames";
 import { launchApp } from "./launch";
 import { taskKey, taskKeyLinks } from "./rails";
-import { cardSurface, expectNoCard, shownCard } from "./stack";
+import {
+  STUCK_ALERT_ANSWER,
+  STUCK_ALERT_QUESTION,
+  stuckAlertReply,
+} from "./scenarios/stuckAlertReply";
+import { cardReply, cardSurface, expectNoCard, shownCard, shownEntry } from "./stack";
 
 /**
  * The idle ladder's last rung, from the captain's chair (idle crew recovery,
@@ -23,7 +27,17 @@ import { cardSurface, expectNoCard, shownCard } from "./stack";
  * nudged, the Firstmate was told twice and did nothing, and then the app
  * closed. At the next launch the saved clock is overdue, so the host puts
  * the task to him on a card of its own - once, in plain words, with three
- * ways out - and his click on Drop task ends the task.
+ * ways out and a reply row. INF-1670, the captain's words: "i would remove
+ * the "drop task" option and leave nuanced operations to the reply". His
+ * question under it reaches the first mate, whose answer lands in the
+ * card's thread, and Keep waiting closes the card and leaves the task open.
+ *
+ * Promised result: the alert shows Nudge, Keep waiting and Discard and a
+ * reply row; a reply is answered in its thread; Keep waiting ends nothing.
+ * Data: a task saved idle past both wakes, and the stand-in first mate.
+ * Completion: the answer in the thread, then the card gone and the task
+ * still open. Platform: Electron, the hermetic launcher and the stand-in
+ * provider; no account, outside service or shared resource.
  */
 
 const TASK_TITLE = "Tidy the docs";
@@ -49,7 +63,7 @@ async function stallTitle(page: Page, taskId: string, taskTitle: string, idleSin
   return stallCardTitle(taskTitle, formatDurationShort(raisedAt - idleSince));
 }
 
-test("a crewmate stuck past every nudge and wake is the app's own card, and Drop task ends it", async () => {
+test("a crewmate stuck past every nudge and wake is the app's own card, which takes a reply the first mate answers", async () => {
   const userDataDir = scratchDir("infinitary-idle-ladder-");
   const db = openDatabase(userDataDir);
   const tasks = new TaskService({ db });
@@ -72,7 +86,11 @@ test("a crewmate stuck past every nudge and wake is the app's own card, and Drop
   });
   db.close();
 
-  const launched = await launchApp({ userDataDir });
+  const launched = await launchApp({
+    userDataDir,
+    withMockProvider: true,
+    scenarios: [stuckAlertReply],
+  });
   try {
     const { page } = launched;
     const title = await stallTitle(page, "stuck-task", TASK_TITLE, idleSince);
@@ -85,28 +103,43 @@ test("a crewmate stuck past every nudge and wake is the app's own card, and Drop
     expect((await head.innerText()).split(key)).toHaveLength(2);
     const body = cardBody(page, title);
     await expect(body.getByText("What it last said: I updated the index.")).toBeVisible();
-    for (const label of ["Continue", DROP_TASK_LABEL, "Discard"]) {
-      await expect(page.getByRole("button", { name: label, exact: true })).toBeVisible();
+    await expect(body.getByText("For anything else, reply here.")).toBeVisible();
+    const entry = shownEntry(page);
+    for (const label of ["Nudge", "Keep waiting", "Discard"]) {
+      await expect(entry.getByRole("button", { name: label, exact: true })).toBeVisible();
     }
-    // One card, the app's own, and none of the machinery names itself.
+    await expect(entry.getByRole("button", { name: "Drop task", exact: true })).toHaveCount(0);
+    // The app's own card, and none of the machinery names itself.
     const cards = await page.evaluate(() => window.infinitary.cards.list());
-    expect(cards.map((card) => [card.id, card.author])).toEqual([
-      ["card-stall-stuck-task", "host"],
-    ]);
+    expect(
+      cards.filter((card) => card.taskId === "stuck-task").map((card) => [card.id, card.author]),
+    ).toEqual([["card-stall-stuck-task", "host"]]);
     await expect(body.getByText(/ladder|wake|steer|supervis|harness|inbox|rung/i)).toHaveCount(0);
     await page.evaluate(() => document.fonts.ready);
     await page.screenshot({ path: test.info().outputPath("idle-ladder-stall-card.png") });
 
-    await page.getByRole("button", { name: DROP_TASK_LABEL, exact: true }).click();
+    // The captain asks under it; the first mate answers in its thread.
+    const reply = cardReply(page);
+    await expect(reply.field).toBeVisible();
+    await reply.field.click();
+    await reply.field.fill(STUCK_ALERT_QUESTION);
+    await reply.send.click();
+    const thread = entry.locator("[data-card-thread]");
+    await expect(thread.getByText(STUCK_ALERT_QUESTION)).toBeVisible();
+    await expect(thread.getByText(STUCK_ALERT_ANSWER)).toBeVisible({ timeout: 30_000 });
+    await expect(shownCard(page, title)).toBeVisible();
+
+    // Keep waiting closes the alert and ends nothing.
+    const status = () =>
+      page.evaluate(async () => {
+        const board = await window.infinitary.tasks.board();
+        return board.tasks.find((task) => task.id === "stuck-task")?.status;
+      });
+    const before = await status();
+    expect(before).toBe("active");
+    await entry.getByRole("button", { name: "Keep waiting", exact: true }).click();
     await expectNoCard(page, title);
-    await expect
-      .poll(async () =>
-        page.evaluate(async () => {
-          const board = await window.infinitary.tasks.board();
-          return board.tasks.find((task) => task.id === "stuck-task")?.status;
-        }),
-      )
-      .toBe("dropped");
+    expect(await status()).toBe(before);
   } finally {
     await launched.close();
   }

@@ -354,12 +354,12 @@ The design skill's `TaskRecord` owns the layout and the attention box's words.
 | Dropped without a replacement or parts | empty | Start again |
 | Done | no bar | no bar |
 
-Drop task is the one end verb (the captain's `end_verb`): on never-started work it runs the footer's own `drop-task` (FI3-243), captain-attributed `dropped/cancelled` with reason "No longer wanted"; once started it runs the stall card's `stop-task` (the captain's cancel; unlanded work is kept under `refs/infinitary/kept/<id>`).
+Drop task is the one end verb (the captain's `end_verb`): on never-started work it runs the footer's own `drop-task` (FI3-243), captain-attributed `dropped/cancelled` with reason "No longer wanted"; once started it runs the host op `stop-task` (the captain's cancel; unlanded work is kept under `refs/infinitary/kept/<id>`).
 It asks once, inline, and the confirm sentence between the slots says whether unfinished work is kept (`dropConfirmLead`): Cancel takes the end slot and focus, and the danger Drop task the next slot.
 An accepted Drop task closes the record, as an accepted Start does; the task stays dropped on its record, which the Tasks panel opens again with Start again.
 Tab reaches the buttons in the order shown.
-Continue and Start are the stall card's other host ops: `continue-task` (the ladder's nudge with the captain's authority) and `start-task`, which runs `startQueuedNow` - the first mate's `update_task start_now`, which also clears a hold.
-A click goes through `inf:task:run` (`window.infinitary.task.run`), lands on the task's history as the captain's with `via: "task-card"` (a Continue here reads apart from the stall card's), and wakes nobody: the first mate's next context block lists it beside the captain's card choices (FI3-695, `docs/inbox.md`).
+Continue and Start run the host ops `continue-task` (the ladder's nudge with the captain's authority, which the stall card's Nudge also runs) and `start-task`, which runs `startQueuedNow` - the first mate's `update_task start_now`, which also clears a hold.
+A click goes through `inf:task:run` (`window.infinitary.task.run`), lands on the task's history as the captain's with `via: "task-card"` (a Continue here reads apart from the stall card's Nudge), and wakes nobody: the first mate's next context block lists it beside the captain's card choices (FI3-695, `docs/inbox.md`).
 On never-started work, open parts are refused and nothing is written; tasks waiting on it stay waiting, and the blocks edge stays.
 A refusal is inline text; a Start the host refuses at once also comes back inline beside its feed line, and stop and continue refuse as a feed line.
 The task board runs the same ops on a tile, plus its own `queue-task` and `unqueue-task` on never-started work (`docs/task-board.md`, "Moves").

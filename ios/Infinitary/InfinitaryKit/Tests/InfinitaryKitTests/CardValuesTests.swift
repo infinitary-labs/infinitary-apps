@@ -13,6 +13,22 @@ struct CardValuesTests {
         #expect(!PhoneCard.canSendReply(" \n "))
     }
 
+    /// INF-1670: the stuck alert takes a reply on the phone as on the Mac, answered by the first mate;
+    /// the host's other cards still take none.
+    @Test func stuckAlertTakesAReply() throws {
+        let alert = try PhoneCard(.object([
+            "id": .string("card-stall-a99caa29"), "title": .string("Move integration secrets has been stuck for 1h 21m"),
+            "author": .string("host"), "taskId": .string("a99caa29"), "answeredBy": .string("firstmate"),
+            "body": .string("<p>It stopped with nothing running and no question for you.</p>"), "actions": .array([])
+        ]))
+        #expect(alert.takesReplies)
+        let signIn = try PhoneCard(.object([
+            "id": .string("card-auth-claude"), "title": .string("Sign in to Claude again"), "author": .string("host"),
+            "taskId": .string("a99caa29"), "body": .string("<p>Your sign-in ended.</p>"), "actions": .array([])
+        ]))
+        #expect(!signIn.takesReplies)
+    }
+
     /// INF-1610: the "You asked" line reads the message the Mac sent, folds a long one onto one run of words,
     /// keeps its paragraphs when opened, and names a message of pictures alone.
     @Test func askedLineReadsTheSavedMessage() throws {

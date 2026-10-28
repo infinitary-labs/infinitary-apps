@@ -74,8 +74,11 @@ public struct PhoneCard: Decodable, Identifiable, Sendable {
         guard let at = value["asked"]["at"].numeric, let text = value["asked"]["text"].text else { return nil }
         return PhoneAsked(at: Date(timeIntervalSince1970: at / 1000), text: text)
     }
+    /// INF-1670: the Mac's stuck alert is the host's, and names the first mate as the one who answers it.
     public var takesReplies: Bool {
-        value["replies"] != .bool(false) && (author == "firstmate" || (author == "crewmate" && value["taskId"].text != nil))
+        value["replies"] != .bool(false)
+            && (author == "firstmate" || value["answeredBy"] == .string("firstmate")
+                || (author == "crewmate" && value["taskId"].text != nil))
     }
     public var isPast: Bool { value["ending"] != .null }
     /// Minimized on the Mac: still open, but off its stack.

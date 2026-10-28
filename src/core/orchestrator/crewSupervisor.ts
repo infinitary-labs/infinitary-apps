@@ -1672,6 +1672,7 @@ export class CrewSupervisor {
         }),
       raiseCard: (card) => this.cards.put(card),
       withdrawCard: (id, resolution) => this.cards.takeDown(id, resolution),
+      answerOwed: (id) => this.cards.answerOwed(id),
       dispatchQueuedTask: (taskId) => this.dispatchQueuedTask(taskId),
       ...(serveability ? { serveability } : {}),
       placedAccount: (deviceId, taskId) => options.machines?.accountOf(deviceId, taskId),
@@ -10258,8 +10259,11 @@ export class CrewSupervisor {
     // A note its closed task kept has no crewmate left to answer: the
     // Firstmate takes the reply, as it does on its own card.
     const closedTask = card.taskId ? this.options.tasks.get(card.taskId) : undefined;
+    // The host's stuck alert names the first mate as its answerer (INF-1670).
     const toFirstmate =
-      card.author === "firstmate" || (closedTask !== undefined && TaskService.isClosed(closedTask));
+      card.author === "firstmate" ||
+      card.answeredBy === "firstmate" ||
+      (closedTask !== undefined && TaskService.isClosed(closedTask));
     // An accepted reply to a crewmate owns copies of its pictures before the
     // thread or the lane records it (the Firstmate's own turn keeps its own).
     const kept =
@@ -13630,9 +13634,11 @@ export class CrewSupervisor {
       if (source === "chrome" && this.hooks.notifyCaptainChoice)
         this.hooks.notifyCaptainChoice(wake, decisionTaskId);
       else this.hooks.notifyOp(wake, "agent", decisionTaskId);
-    } else if (card.taskId && !closedAnswer) {
+    } else if (card.taskId && !closedAnswer && card.author !== "host") {
       // The action round-trip: a declared choice on a crewmate's card
-      // reaches its still-running session as a steering message.
+      // reaches its still-running session as a steering message. A host
+      // card's choice with no effect - the stuck alert's Keep waiting - only
+      // closes it, as the captain's close does.
       this.steerChoice(card.taskId, card, source, choice);
     }
     return {};

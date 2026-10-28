@@ -1755,10 +1755,12 @@ export class CardService {
 
   /**
    * Whether the Firstmate is the one that answers a card's thread: its own
-   * card, or a note a task closed done kept, whose crewmate is gone.
+   * card, a card the host named it the answerer of (the stuck alert,
+   * `Card.answeredBy`), or a note a task closed done kept, whose crewmate
+   * is gone.
    */
   private firstmateAnswers(card: Card): boolean {
-    if (card.author === "firstmate") return true;
+    if (card.author === "firstmate" || card.answeredBy === "firstmate") return true;
     if (card.author !== "crewmate" || !card.taskId) return false;
     const task = this.host.tasks.get(card.taskId);
     return task !== undefined && TaskService.isClosed(task);
@@ -1838,6 +1840,11 @@ export class CardService {
     return still.length > 0 ? `${replied} ${stillWaitingWords(still)}` : replied;
   }
 
+  /** Whether a captain reply on this open card still waits for its answer. */
+  answerOwed(cardId: string): boolean {
+    return this.cards.has(cardId) && this.host.cardStore.awaitingAuthor(cardId);
+  }
+
   /**
    * Whether any of a task's open cards currently waits on an author answer.
    * The sort and idle ladder share this persisted lifecycle-aware witness;
@@ -1853,8 +1860,15 @@ export class CardService {
    * captain wrote under rather than another of its cards (INF-990 friction 4).
    */
   threadsAwaitingAuthor(taskId: string): { id: string; title: string }[] {
+    // A reply the first mate answers on the host's behalf (the stuck alert)
+    // is never a thread the task's crewmate owes (INF-1670).
     return [...this.cards.values()]
-      .filter((card) => card.taskId === taskId && this.host.cardStore.awaitingAuthor(card.id))
+      .filter(
+        (card) =>
+          card.taskId === taskId &&
+          card.answeredBy !== "firstmate" &&
+          this.host.cardStore.awaitingAuthor(card.id),
+      )
       .sort((a, b) => a.createdAt - b.createdAt)
       .map((card) => ({ id: card.id, title: card.title }));
   }

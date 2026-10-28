@@ -7867,6 +7867,10 @@
               "type": "boolean",
               "const": false
             },
+            "answeredBy": {
+              "type": "string",
+              "const": "firstmate"
+            },
             "holdsPlace": {
               "type": "boolean",
               "const": true
@@ -8934,6 +8938,10 @@
               "replies": {
                 "type": "boolean",
                 "const": false
+              },
+              "answeredBy": {
+                "type": "string",
+                "const": "firstmate"
               },
               "holdsPlace": {
                 "type": "boolean",
@@ -51992,6 +52000,10 @@
             "replies": {
               "type": "boolean",
               "const": false
+            },
+            "answeredBy": {
+              "type": "string",
+              "const": "firstmate"
             },
             "holdsPlace": {
               "type": "boolean",

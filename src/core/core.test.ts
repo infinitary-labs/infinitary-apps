@@ -3344,7 +3344,7 @@ describe("the idle ladder across a restart", () => {
     delete process.env.INFINITARY_QUOTA_FIXTURE_DIR;
   });
 
-  it("raises the overdue stall card at boot, once, and its Drop task ends the task", async () => {
+  it("raises the overdue stall card at boot, once, and its Discard ends the task", async () => {
     userDataDir = scratchDir("infinitary-core-idle-");
     quotaDir = scratchDir("infinitary-core-idle-quota-");
     writeFileSync(
@@ -3398,9 +3398,9 @@ describe("the idle ladder across a restart", () => {
     booted.services.supervisor.reconcileIdle(Date.now());
     expect(await stallCards()).toHaveLength(1);
 
-    await booted.dispatch("inf:cards:act", ["card-stall-stuck-task", "stop", "chrome"]);
+    await booted.dispatch("inf:cards:act", ["card-stall-stuck-task", "discard", "chrome"]);
     await waitFor(() => booted.services.tasks.get("stuck-task")?.status === "dropped", 10_000);
-    expect(booted.services.tasks.get("stuck-task")?.closedReason).toBe("cancelled");
+    expect(booted.services.tasks.get("stuck-task")?.closedReason).toBe("discarded");
     expect(await stallCards()).toEqual([]);
     // The close retires the working copy after the row reads dropped; a
     // copy whose save failed would stay present.
@@ -4136,15 +4136,15 @@ describe("a client that knows only the published contract", () => {
     return claimLink(link, { ...AT_FIRST_LAUNCH, name });
   };
 
-  /** Answers a task's stall card with Drop task, as the scripted client, and reads the feed after. */
+  /** Answers a task's stall card with Discard, as the scripted client, and reads the feed after. */
   const answerAndRead = async (client: ScriptedClient, taskId: (typeof stuck)[number]) => {
     const cardId = `card-stall-${taskId}`;
     const listed = await client.ask("inf:cards:list", []);
     expect(listed).toMatchObject({ t: "result", ok: true });
     const card = (listed.value as Card[]).find((candidate) => candidate.id === cardId);
-    expect(card?.actions.map((action) => action.id)).toContain("stop");
+    expect(card?.actions.map((action) => action.id)).toContain("discard");
 
-    expect(await client.ask("inf:cards:act", [cardId, "stop", "chrome"])).toMatchObject({
+    expect(await client.ask("inf:cards:act", [cardId, "discard", "chrome"])).toMatchObject({
       t: "result",
       ok: true,
     });
@@ -4184,7 +4184,7 @@ describe("a client that knows only the published contract", () => {
     expect(client.welcome).toMatchObject({ protocolVersion: PROTOCOL_VERSION, access: "read" });
     expect(await client.ask("inf:feed:recent", [])).toMatchObject({ t: "result", ok: true });
     expect(
-      await client.ask("inf:cards:act", ["card-stall-contract-behind", "stop", "chrome"]),
+      await client.ask("inf:cards:act", ["card-stall-contract-behind", "discard", "chrome"]),
     ).toMatchObject({ t: "result", ok: false });
     expect(core.services.tasks.get("contract-behind")?.status).not.toBe("dropped");
     console.info(
@@ -4225,7 +4225,7 @@ describe("a client that knows only the published contract", () => {
         expect(await client.ask("inf:feed:recent", [])).toMatchObject({ t: "result", ok: true });
         const answered = await client.ask("inf:cards:act", [
           "card-stall-contract-outside",
-          "stop",
+          "discard",
           "chrome",
         ]);
         expect(answered).toMatchObject({ t: "result", ok: false });

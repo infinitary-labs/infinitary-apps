@@ -5,7 +5,6 @@ import { holdNames, type OverridableHold } from "@shared/holds";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
 import { type SteerEventData, TASK_CARD_VIA } from "@shared/provenance";
 import { formatDurationShort } from "@shared/quotaSignals";
-import { DROP_TASK_LABEL } from "@shared/recordDrop";
 import { CI_ROUND_CAP, REVIEW_ROUND_CAP } from "@shared/rigor";
 import type { ServedWakeOrigin } from "@shared/servedFrame";
 import { capWithOverflow } from "../overflow";
@@ -215,6 +214,8 @@ export type IdleLadderHost = {
   /** Put a host card on the stack, or take one down unanswered. */
   raiseCard(card: Card): void;
   withdrawCard(id: string, resolution: string): void;
+  /** Whether a captain reply on an open card still waits for its answer. */
+  answerOwed(cardId: string): boolean;
   /** The ready sweep's effects: a queued start, a dead wait's wake, containers, counts. */
   dispatchQueuedTask(taskId: string): Promise<unknown>;
   /** Accounts' serveability; absent = every account serves (no cut-off watch). */
@@ -522,7 +523,7 @@ export class IdleLadder {
     return note ? { id: note.id, title: note.title } : undefined;
   }
 
-  /** The stall card's Continue: the nudge, naming the newest note up on the task, as rung 1 does. */
+  /** The stall card's Nudge: the nudge, naming the newest note up on the task, as rung 1 does. */
   nudgeFor(taskId: string): TypedWake {
     return idleNudge(false, this.noteFor(taskId), declaredStep(this.host.tasks.get(taskId)));
   }
@@ -1156,7 +1157,8 @@ export class IdleLadder {
    * every card with actions it places the captain gate on its task, so it
    * holds the turn while it is up and nothing repeats; it leaves on a
    * click, on his close (the keep: rung 3 stays, nothing more this
-   * episode), when the task moves, or when the task closes.
+   * episode), when the task moves - unless a reply under it still waits
+   * on the first mate, which answers it (INF-1670) - or when the task closes.
    */
   private raiseStallCard(record: TaskRecord, now: number): void {
     const id = stallCardId(record.id);
@@ -1180,7 +1182,7 @@ export class IdleLadder {
       : "Your first mate was told twice, and nothing has moved since.";
     // A task a standing cap holds has a question for the captain - the
     // cap's, which the Firstmate never put to him - so its card says so.
-    // Continue stays the nudge and is not the cap's answer
+    // Nudge stays the nudge and is not the cap's answer
     // (`resetCapsOnSteer`), so the words say what it does not do.
     const cap = standingCap(record.delivery);
     const modelWay = cap
@@ -1197,9 +1199,9 @@ export class IdleLadder {
       : wait
         ? `<p>It waits on you to ${escapeCardText(wait.reason)}, and no card has asked you. ${told}</p>`
         : `<p>It stopped with nothing running and no question for you. ${told}</p>`;
-    const continues = cap
-      ? `Continue tells it to say what is in its way; it does not give it more tries. To try again${modelWay ? ` or ${modelWay}` : ""}, tell your first mate.`
-      : "Continue tells it to finish or say what is in its way.";
+    const nudges = cap
+      ? `Nudge tells it to say what is in its way; it does not give it more tries. To try again${modelWay ? ` or ${modelWay}` : ""}, reply here.`
+      : "Nudge tells it to finish or say what is in its way.";
     const card: Card = {
       id,
       taskId: record.id,
@@ -1213,22 +1215,25 @@ export class IdleLadder {
       body: [
         opening,
         lastLine,
-        `<p>${continues} Drop task ends the task and keeps a copy of its unfinished work. Discard throws its work away.</p>`,
+        `<p>${nudges} Keep waiting closes this alert and leaves the task as it is. Discard ends it and throws its work away.${cap ? "" : " For anything else, reply here."}</p>`,
       ].join(""),
+      // The captain's choice on INF-1670: a reply here goes to the first
+      // mate, which can always answer, and nuanced operations ride it.
+      answeredBy: "firstmate",
       actions: [
         {
-          id: "continue",
-          label: "Continue",
+          id: "nudge",
+          label: "Nudge",
           variant: "primary",
           default: true,
           effect: { kind: "host", op: "continue-task", arg: record.id },
         },
         {
-          id: "stop",
-          // The task record's own end verb (FI3-565 piece 4): one name for one act.
-          label: DROP_TASK_LABEL,
+          // No effect: the click closes the alert, as the captain's close
+          // does (the keep: rung 3 stays, nothing more this episode).
+          id: "keep-waiting",
+          label: "Keep waiting",
           variant: "secondary",
-          effect: { kind: "host", op: "stop-task", arg: record.id },
         },
         {
           id: "discard",
@@ -1262,10 +1267,14 @@ export class IdleLadder {
     );
   }
 
-  /** The task moved on its own: its stall card, if the host raised one, is moot. */
+  /**
+   * The task moved on its own: its stall card, if the host raised one, is
+   * moot - unless the captain replied under it and the first mate's answer
+   * has not landed yet (INF-1670): it stays up until that answer arrives.
+   */
   withdrawStallCard(taskId: string): void {
     const id = stallCardId(taskId);
-    if (!this.cardOpen(id)) return;
+    if (!this.cardOpen(id) || this.host.answerOwed(id)) return;
     this.host.withdrawCard(id, "moved");
   }
 
@@ -1387,7 +1396,7 @@ export class IdleLadder {
    * together: the decision was about the task, not about one counter, and
    * a lineage that starts over starts over whole. The `cap_reset` event
    * records who reopened it, and the captain gate goes with the caps. The
-   * Continue on the stall card or the task card is the captain's steer but
+   * Nudge on the stall card or Continue on the task card is the captain's steer but
    * not the cap's answer: neither put the cap's decision to him, so the cap
    * stands.
    */

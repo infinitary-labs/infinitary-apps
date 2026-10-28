@@ -157,7 +157,7 @@ Charted's header counts crew-filed rows not yet opened (`captain_opened_at`; ope
 The row's word is `found on <origin key>`.
 The record card shows the filing's why and the first mate's `verdict` (one line, `update_task verdict` when leaving it planned).
 Hide removes the shown record entry from the stack, without dropping the task.
-Drop task on never-started work drops that one record as cancelled ("No longer wanted", captain-attributed) and refuses while any part is still open (on started work the same button is the stall card's cancel, which keeps a copy of the unfinished work); `update_task drop` is unchanged and still cascades open children when confirmed.
+Drop task on never-started work drops that one record as cancelled ("No longer wanted", captain-attributed) and refuses while any part is still open (on started work the same button is the captain's cancel, `stop-task`, which keeps a copy of the unfinished work); `update_task drop` is unchanged and still cascades open children when confirmed.
 `verify.yml`'s lanes run their gate from a path with a space, the path every crewmate works under.
 
 The retired supervision session held the read-only `tasks` query beside `crew_status`, so a wake about a task could see its parent, blockers and follow-ups; it wrote nothing on the graph, and S7c retired both it and those tools (`docs/report-sort.md`).

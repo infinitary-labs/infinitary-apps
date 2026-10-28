@@ -305,6 +305,11 @@ describe("cardTakesReplies", () => {
     expect(cardTakesReplies({ author: "firstmate", replies: false })).toBe(false);
     expect(cardTakesReplies({ author: "crewmate", taskId: "t1", replies: false })).toBe(false);
   });
+
+  // INF-1670: the stuck alert is the host's, and the first mate answers it.
+  it("reaches a host card that names the first mate as its answerer (the stuck alert)", () => {
+    expect(cardTakesReplies({ author: "host", taskId: "t1", answeredBy: "firstmate" })).toBe(true);
+  });
 });
 
 describe("stack order", () => {

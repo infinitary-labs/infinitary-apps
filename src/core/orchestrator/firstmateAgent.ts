@@ -3584,8 +3584,14 @@ export class FirstmateAgent {
     const requiredActionGuide = requiredActionTask
       ? `; required captain action task_id ${requiredActionTask}. Answer with emit_card using this same id, task_id and reply; the host preserves instructions and controls. For failure, read the output, arrange repair through the crew and keep repair status in this thread. Never confirm for the captain.`
       : "";
+    // INF-1670: the host's stuck alert names the first mate as its answerer;
+    // the host wrote it, so the answer is the turn's closing words.
+    const hostAlertGuide =
+      aboutCard?.author === "host" && aboutCard.answeredBy === "firstmate"
+        ? `; the host's stuck alert on task_id ${aboutCard.taskId ?? ""}, which you answer and cannot revise: your closing words are the answer in its thread, and any act it asks goes through your tools`
+        : "";
     const aboutCardLine = aboutCard
-      ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread${requiredActionGuide}`
+      ? `about: card ${aboutCard.id} (${cardPresentation(aboutCard)}) "${aboutCard.title}" - the captain replied in its thread${requiredActionGuide}${hostAlertGuide}`
       : undefined;
     const maybeCard = aboutCardLine ? undefined : shown ? maybeCardContextLine(shown) : undefined;
     // The task the turn points at (the open card, or the record card): the

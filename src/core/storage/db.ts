@@ -1167,6 +1167,11 @@ const MIGRATIONS: readonly Migration[] = [
     addColumn(db, "captain_asks", "answered_at", "INTEGER");
     addColumn(db, "captain_asks", "crewmate_asked_at", "INTEGER");
   },
+  // INF-1670: who answers a reply under a card whose author cannot
+  // (`Card.answeredBy`), as text: "firstmate" on the host's stuck alert.
+  // Null keeps existing cards as they were; CardStore is the only writer and
+  // no published view reads it. Dropping the column reverses it.
+  (db) => addColumn(db, "cards", "answered_by", "TEXT"),
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

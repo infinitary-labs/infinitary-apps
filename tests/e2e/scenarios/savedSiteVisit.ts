@@ -1,6 +1,13 @@
-import { BROWSER_COMMAND } from "../../../src/core/browser/commandWords";
-import { type Scenario, SPAWN_PROMPT_MARKER, sinceLastUser } from "../mockProvider";
-import { latestServedTurn } from "../providerRequest";
+import {
+  browser,
+  lookingAgain,
+  type Scenario,
+  SPAWN_PROMPT_MARKER,
+  shellJobsRunning,
+  sinceLastUser,
+  toolAnswers,
+} from "../mockProvider";
+import { latestServedTurn, providerMessages } from "../providerRequest";
 
 /** Approved direction C: the model reads the actual page without asking to sign in again. */
 export const SAVED_SITE_VISIT = "read the saved club at ";
@@ -13,8 +20,8 @@ export const savedSiteVisit: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream }) => {
     if (!wantsStream || !body.includes(SAVED_SITE_VISIT)) return undefined;
-    const { results } = sinceLastUser(body);
     if (isFirstmate) {
+      const { results } = sinceLastUser(body);
       const turn = latestServedTurn(body);
       const words =
         turn?.segments.find((part) => part.kind === "user" && part.origin === "captain")?.body ??
@@ -48,16 +55,15 @@ export const savedSiteVisit: Scenario =
       /read the saved club at (http:\/\/127\.0\.0\.1:\d+\/(?:\?visit=[a-z-]+)?)/,
     )?.[1];
     if (!url) return undefined;
-    if (results.length === 0)
-      return {
-        calls: [
-          {
-            name: "bash",
-            args: { command: `${BROWSER_COMMAND} open ${url}`, description: "Read the club page" },
-          },
-        ],
-      };
-    if (results.length === 1)
-      return { calls: [{ name: "report", args: { text: results[0] ?? "No page reading" } }] };
-    return { text: "Reported the club page." };
+    // A running/BUSY answer needs the next look, not a report. A shell exit
+    // resumes the same command across turns; it never starts another visit.
+    if (shellJobsRunning(body)) return { text: "The browser command is still running." };
+    const calls = lookingAgain(body, () => {
+      const answers = toolAnswers(providerMessages(body));
+      if (answers.length === 0) return [browser("open", url)];
+      if (answers.length === 1)
+        return [{ name: "report", args: { text: answers[0] ?? "No page reading" } }];
+      return undefined;
+    });
+    return calls ? { calls } : { text: "Reported the club page." };
   };

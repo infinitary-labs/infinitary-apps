@@ -4,6 +4,7 @@ import { promisify } from "node:util";
 import { type ProcessResources, RESOURCE_READ_TIMEOUT_MS } from "@shared/resources";
 import { hostEnv } from "../hostEnv";
 import { hostPlatform } from "../platform";
+import type { ProcessGroupOwner } from "./processRoots";
 
 const exec = promisify(execFile);
 
@@ -137,7 +138,11 @@ export async function readProcesses(): Promise<ProcessReading[] | null> {
 export class ProcessAttribution {
   private previous = new Map<number, { started: string; owner: string }>();
 
-  owners(rows: ProcessReading[], roots: ReadonlyMap<number, string>): Map<number, string> {
+  owners(
+    rows: ProcessReading[],
+    roots: ReadonlyMap<number, string>,
+    groups: ReadonlyMap<number, ProcessGroupOwner> = new Map(),
+  ): Map<number, string> {
     const byPid = new Map(rows.map((row) => [row.pid, row]));
     const owners = new Map<number, string>();
     const ownerOf = (row: ProcessReading): string | undefined => {
@@ -151,6 +156,10 @@ export class ProcessAttribution {
         if (held?.started === current.started) return held.owner;
         current = byPid.get(current.parent);
       }
+      const group = groups.get(row.group);
+      const leader = byPid.get(row.group);
+      if (group && (!leader || leader.group !== row.group || leader.started === group.started))
+        return group.owner;
       // A shell may have exited before this read; its living group members
       // still name the explicit root's group. No unregistered group is guessed.
       return roots.get(row.group);

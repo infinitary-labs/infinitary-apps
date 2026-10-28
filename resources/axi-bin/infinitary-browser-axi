@@ -42,6 +42,12 @@ if [ "$#" -eq 1 ] && [ -n "$version" ]; then
   esac
 fi
 
+# The load wrapper must keep the caller's streams, working directory and
+# environment, and exec its program in its own group after admission.
+if [ "$tool" = infinitary-load-axi ] && [ "${1:-}" = run ]; then
+  exec /bin/bash "${0%/*}/infinitary-load-run" "$@"
+fi
+
 address=${INFINITARY_AXI_ADDRESS:-${FM3000_AXI_ADDRESS:-}}
 key=${INFINITARY_AXI_KEY:-${FM3000_AXI_KEY:-}}
 cap=${INFINITARY_SHELL_CAP_MS:-${FM3000_SHELL_CAP_MS:-}}

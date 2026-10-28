@@ -1,3 +1,5 @@
+import { HERE } from "@shared/deviceNames";
+import { loadRunWords } from "@shared/load";
 import {
   type ComputerResourcesView,
   RESOURCE_DEMAND_RENEW_MS,
@@ -45,6 +47,14 @@ export function TaskResourceUse({ taskId }: { taskId: string }) {
       const share = reading.observation.processes.tasks.find((task) => task.taskId === taskId);
       return share ? [`${computer.label} · ${taskResourceWords(share)}`] : [];
     }) ?? [];
+  const runs =
+    view?.computers.flatMap((computer) => {
+      const own = computer.load?.runs.filter((run) => run.taskId === taskId) ?? [];
+      const label = computer.computerId === null ? HERE.this : computer.label;
+      if (!own.length) return [];
+      if (computer.load?.status !== "fresh") return [`Run status unavailable on ${label}`];
+      return own.map((run) => loadRunWords(run, label));
+    }) ?? [];
   const sampled = view?.computers.some(
     (computer) =>
       computer.reading.status === "fresh" &&
@@ -60,6 +70,16 @@ export function TaskResourceUse({ taskId }: { taskId: string }) {
           {shares.length ? shares.join("; ") : sampled ? TASK_USE_EMPTY : TASK_USE_UNAVAILABLE}
         </div>
       </div>
+      {runs.length > 0 && (
+        <div className="row">
+          <div className="label" data-task-fact-label="">
+            Run
+          </div>
+          <div className="title" data-task-load="" style={{ fontFamily: "var(--font-mono)" }}>
+            {runs.join("; ")}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

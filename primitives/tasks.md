@@ -106,6 +106,7 @@ Dropped work starts again as a fresh task joined by `replaced-by` (`TaskService.
 
 ## Where the detail lives
 
+- [Declared heavy runs](../docs/heavy-runs.md): caller-owned demand, per-computer admission, group lifetime and the task's separate Run row.
 - [The task record and its protocol](../docs/task-record.md): "Relationships", "Derived, never stored: the basis and the review join", "A typed result and where a working copy starts", "The unified timeline", "Starting dropped work again".
 - [Task graph](../docs/task-graph.md): "The graph", "The ready query", "Gates on active rows", "Follow-ups are not children", "The close rules", "Tools".
 - [Sequences](../docs/sequences.md): "The decision", "The host pieces it runs on (all generic)".

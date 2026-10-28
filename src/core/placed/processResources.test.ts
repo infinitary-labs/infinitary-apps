@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ProcessAttribution, processesFromPs, processResources } from "./processResources";
+import { ProcessRoots } from "./processRoots";
 
 // INF-1621 piece 1: metadata fields from this Mac's ps reading, not %CPU or arguments.
 const PS = `    1     0     1   2:01.03  23008 Tue Oct 27 11:03:29 2026
@@ -43,6 +44,37 @@ describe("accepted load plan: explicit task process shares", () => {
     expect(
       facts.tasks.reduce((sum, task) => sum + task.residentBytes, facts.other.residentBytes),
     ).toBe(rows.reduce((sum, row) => sum + row.residentBytes, 0));
+  });
+
+  // INF-1621 piece 2: a declared group is not an everlasting claim on its leader's PID.
+  it("attributes a registered group without claiming an unrelated process that reuses its leader PID", () => {
+    const rows = processesFromPs(PS) ?? [];
+    const [launchd, leader, other] = rows;
+    if (!launchd || !leader || !other) throw new Error("The recorded process table is incomplete");
+    const roots = new ProcessRoots();
+    const release = roots.addGroup(leader.group, "declared", leader.started);
+    expect(
+      new ProcessAttribution().owners(rows, roots.read(), roots.readGroups()).get(leader.pid),
+    ).toBe("declared");
+    const reusedInOtherGroup = { ...other, pid: leader.pid };
+    expect(
+      new ProcessAttribution()
+        .owners([reusedInOtherGroup], roots.read(), roots.readGroups())
+        .has(leader.pid),
+    ).toBe(false);
+    const reusedGroup = { ...leader, started: launchd.started };
+    expect(
+      new ProcessAttribution()
+        .owners([reusedGroup], roots.read(), roots.readGroups())
+        .has(leader.pid),
+    ).toBe(false);
+    const nested = roots.add(leader.pid, "nested");
+    expect(
+      new ProcessAttribution().owners(rows, roots.read(), roots.readGroups()).get(leader.pid),
+    ).toBe("nested");
+    nested();
+    release();
+    expect(roots.readGroups().size).toBe(0);
   });
 
   it("keeps known orphans but drops ownership on PID reuse and leaves new CPU counters unknown", () => {

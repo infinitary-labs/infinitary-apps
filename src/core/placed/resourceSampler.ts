@@ -20,6 +20,12 @@ export type ResourceSamplerOptions = {
   /** Monotonic, so a clock correction cannot make an old reading new. */
   now?: () => number;
   wait?: (ms: number) => Promise<unknown>;
+  /** Local owners reuse this completed window; process metadata never crosses the connection. */
+  observed?: (
+    observation: ResourceObservation,
+    processes: ProcessReading[] | null,
+    started: number,
+  ) => void;
 };
 
 /** Demand-only sampling, shared by the home and work mode. No idle polling or saved history. */
@@ -28,20 +34,28 @@ export class ResourceSampler {
   private sequence = 0;
   private readonly attribution = new ProcessAttribution();
   private pending: Promise<ResourceObservation> | undefined;
+  private lastProcesses: ProcessReading[] | null = null;
 
   constructor(private readonly options: ResourceSamplerOptions = {}) {}
 
   /** Simultaneous readers share one bounded window, not independent CPU baselines. */
   read(): Promise<ResourceObservation> {
     if (this.pending) return this.pending;
-    const pending = this.sample().finally(() => {
-      if (this.pending === pending) this.pending = undefined;
-    });
+    const started = (this.options.now ?? (() => performance.now()))();
+    const pending = this.sample()
+      .then((observation) => {
+        this.options.observed?.(observation, this.lastProcesses, started);
+        return observation;
+      })
+      .finally(() => {
+        if (this.pending === pending) this.pending = undefined;
+      });
     this.pending = pending;
     return pending;
   }
 
   private async sample(): Promise<ResourceObservation> {
+    this.lastProcesses = null;
     const stamp = { epoch: this.epoch, sequence: ++this.sequence };
     const unknown = (reason: "unavailable" | "interrupted"): ResourceObservation => ({
       ...stamp,
@@ -55,7 +69,8 @@ export class ResourceSampler {
       const readProcess = this.options.processes;
       const firstProcesses = readProcess ? await readProcess() : null;
       const processStart = now();
-      if (firstProcesses) this.attribution.owners(firstProcesses, processRoots.read());
+      if (firstProcesses)
+        this.attribution.owners(firstProcesses, processRoots.read(), processRoots.readGroups());
       const first = readCpus();
       const start = now();
       const pause = this.options.wait ?? wait;
@@ -71,13 +86,18 @@ export class ResourceSampler {
       if (first.length === 0 || first.length !== last.length || last.length > 65_536)
         return unknown("interrupted");
       const lastProcesses = readProcess ? await readProcess() : null;
+      this.lastProcesses = lastProcesses;
       const processMs = now() - processStart;
       const processes =
         firstProcesses && lastProcesses
           ? processResources(
               firstProcesses,
               lastProcesses,
-              this.attribution.owners(lastProcesses, processRoots.read()),
+              this.attribution.owners(
+                lastProcesses,
+                processRoots.read(),
+                processRoots.readGroups(),
+              ),
               processMs,
             )
           : { status: "unknown" as const };

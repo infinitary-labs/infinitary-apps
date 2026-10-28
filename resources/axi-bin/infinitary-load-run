@@ -1,0 +1,82 @@
+#!/bin/bash
+# The native half of infinitary-load-axi. No program or environment crosses
+# the task channel: the admitted group execs the caller's original argv here.
+# Bash's job-control group works without a terminal on macOS and Linux.
+
+invalid() {
+  printf 'error: %s\ncode: VALIDATION_ERROR\n' "$1" >&2
+  exit 2
+}
+usage() {
+  printf 'infinitary-load-axi run --processors <number> --memory-mib <number> -- <program> [arguments]\n'
+  printf 'Declare the whole run’s needs. It waits in this computer’s line, then runs unchanged.\n'
+}
+
+group=
+if [ "${1:-}" = _group ]; then group=1; shift; fi
+[ "${1:-}" = run ] || invalid 'Use run before the resource declarations.'
+shift
+cpu=
+memory=
+separator=
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    --help|-h) usage; exit 0 ;;
+    --processors)
+      [ "$#" -ge 2 ] && [ -z "$cpu" ] || invalid 'Name processors once, with a value.'
+      cpu=$2; shift 2 ;;
+    --memory-mib)
+      [ "$#" -ge 2 ] && [ -z "$memory" ] || invalid 'Name memory once, in MiB.'
+      memory=$2; shift 2 ;;
+    --) separator=1; shift; break ;;
+    *) invalid 'Name processors and memory, then -- and the program.' ;;
+  esac
+done
+[ -n "$cpu" ] && [ -n "$memory" ] && [ -n "$separator" ] && [ "$#" -gt 0 ] || invalid 'Name processors, memory and the program after --.'
+
+# A nested wrapper stays in the already admitted group. The app checks its
+# identity and refuses a demand larger than the outer declaration.
+if [ -z "$group" ] && [ -z "${INFINITARY_LOAD_HOLD:-}" ]; then
+  set -m
+  /bin/bash "$0" _group run --processors "$cpu" --memory-mib "$memory" -- "$@" <&0 &
+  child=$!
+  set +m
+  wait "$child"
+  exit $?
+fi
+
+launcher=${0%/*}/infinitary-load-axi
+last=
+while :; do
+  parent=()
+  if [ -n "${INFINITARY_LOAD_HOLD:-}" ]; then parent=(--parent "$INFINITARY_LOAD_HOLD"); fi
+  # The wrapper itself is the waiting job. Each short request must return its
+  # own answer rather than park one for an unrelated command in this task.
+  answer=$(INFINITARY_SHELL_CAP_MS= FM3000_SHELL_CAP_MS= INFINITARY_SHELL_ID= \
+    "$launcher" claim --pid "$$" --processors "$cpu" --memory-mib "$memory" "${parent[@]}" 2>&1)
+  code=$?
+  if [ "$code" -ne 0 ]; then printf '%s\n' "$answer" >&2; exit "$code"; fi
+  state=
+  hold=
+  delay=
+  while IFS=' ' read -r key value; do
+    case $key in
+      state:) state=$value ;;
+      hold:) hold=$value ;;
+      retrySeconds:) delay=$value ;;
+    esac
+  done <<< "$answer"
+  case $state in
+    running)
+      [ -n "$hold" ] || invalid 'The app answered without the run’s hold.'
+      export INFINITARY_LOAD_HOLD=$hold
+      exec -- "$@"
+      ;;
+    waiting)
+      if [ "$answer" != "$last" ]; then printf '%s\n' "$answer" >&2; last=$answer; fi
+      case $delay in ''|*[!0-9]*|0) invalid 'The app answered without its reading cadence.' ;; esac
+      sleep "$delay"
+      ;;
+    *) invalid 'The app did not answer admission; nothing started.' ;;
+  esac
+done

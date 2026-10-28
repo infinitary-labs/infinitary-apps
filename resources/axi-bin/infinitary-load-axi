@@ -1,0 +1,136 @@
+#!/bin/sh
+# Infinitary's task commands on a crewmate's search path
+# (docs/axi-commands.md, "The launcher").
+#
+# Every infinitary-<tool>-axi name in this directory is an identical copy of
+# this one file, and so is the fm-<tool>-axi name Firstmate 3000 gave it, kept
+# for a crewmate whose instructions predate the Infinitary rename: copies,
+# because a Windows checkout cannot make links. The name it ran
+# as says which command it is; infinitary-inbox-axi is the person's own,
+# run from any shell of theirs (below). The app puts this directory
+# first on the search path of a task's shell only when that task has the
+# tool (src/core/axi/channel.ts), with three variables: the loopback address
+# of the app's task channel, the file holding this task's key (a header line
+# only its owner can read), and the app's version. The key never appears on
+# a command line or in the environment: curl reads the header from the file.
+#
+# The app runs the command and answers what it prints and its exit code, as
+# the first line of its answer. Only shell builtins and the system's curl
+# run here: the packaged app has no Node a shell could run.
+
+nl='
+'
+tool=${0##*/}
+case $tool in
+  infinitary-*-axi | fm-*-axi) ;;
+  *)
+    printf 'error: run this as one of its infinitary-<tool>-axi names, such as infinitary-browser-axi\ncode: VALIDATION_ERROR\n'
+    exit 2
+    ;;
+esac
+
+# Each variable under its Infinitary name, or the older FM3000_ one.
+version=${INFINITARY_AXI_VERSION:-${FM3000_AXI_VERSION:-}}
+
+# A bare version flag answers at once, without the app.
+if [ "$#" -eq 1 ] && [ -n "$version" ]; then
+  case $1 in
+    -v | -V | --version)
+      printf '%s\n' "$version"
+      exit 0
+      ;;
+  esac
+fi
+
+# The load wrapper must keep the caller's streams, working directory and
+# environment, and exec its program in its own group after admission.
+if [ "$tool" = infinitary-load-axi ] && [ "${1:-}" = run ]; then
+  exec /bin/bash "${0%/*}/infinitary-load-run" "$@"
+fi
+
+address=${INFINITARY_AXI_ADDRESS:-${FM3000_AXI_ADDRESS:-}}
+key=${INFINITARY_AXI_KEY:-${FM3000_AXI_KEY:-}}
+cap=${INFINITARY_SHELL_CAP_MS:-${FM3000_SHELL_CAP_MS:-}}
+started=${INFINITARY_SHELL_STARTED_MS:-}
+shell=${INFINITARY_SHELL_ID:-}
+# The inbox is the person's own door, not a task's (docs/integrations.md,
+# "The inbox"): any program of this user runs it, from any shell, with the
+# person key and the running app's address read from the inbox's folder -
+# the one INFINITARY_INBOX names, or the release's data folder. No shell's
+# limit applies: the person's program waits for its receipt.
+if [ "$tool" = infinitary-inbox-axi ]; then
+  door=${INFINITARY_INBOX:-}
+  if [ -z "$door" ]; then
+    if [ -d "$HOME/Library/Application Support" ]; then
+      door="$HOME/Library/Application Support/infinitary/integrations/inbox"
+    else
+      door="${XDG_CONFIG_HOME:-$HOME/.config}/infinitary/integrations/inbox"
+    fi
+  fi
+  address=
+  key=$door/key
+  cap=
+  started=
+  shell=
+  if [ -r "$door/address" ]; then
+    IFS= read -r address <"$door/address" || :
+  fi
+  if [ ! -r "$key" ] || [ -z "$address" ]; then
+    printf 'error: Infinitary is not open, or its inbox is off, so nothing was recorded\ncode: NO_CHANNEL\nhelp[1]: Open Infinitary and turn the inbox on in Settings → Integrations, then run %s again\n' "$tool"
+    exit 1
+  fi
+fi
+# The working folder as the app names it: Git Bash on Windows says /c/...,
+# and pwd -W says C:/...
+cwd=$PWD
+case ${OSTYPE:-} in
+  msys* | cygwin*) cwd=$(pwd -W) ;;
+esac
+# Only this Mac's loopback and a port number.
+case $address in
+  127.0.0.1:*) port=${address#127.0.0.1:} ;;
+  *) port= ;;
+esac
+case $port in
+  '' | *[!0-9]*) address= ;;
+esac
+if [ -z "$address" ] || [ -z "$key" ] || [ ! -r "$key" ]; then
+  printf 'error: this shell has no channel to an Infinitary task, so %s cannot reach its task\ncode: NO_CHANNEL\nhelp[1]: Run %s in the shell of a task that has it, while Infinitary is open\n' "$tool" "$tool"
+  exit 1
+fi
+
+curl=/usr/bin/curl
+[ -x "$curl" ] || curl=curl
+
+# Each argument travels as its own form field, in order.
+count=$#
+while [ "$count" -gt 0 ]; do
+  arg=$1
+  shift
+  set -- "$@" --data-urlencode "arg=$arg"
+  count=$((count - 1))
+done
+
+# -q first: no ~/.curlrc may add options to this request.
+answer=$("$curl" -q --silent --show-error --noproxy '*' --max-time 120 \
+  -H @"$key" \
+  --data-urlencode "tool=$tool" \
+  --data-urlencode "bin=$0" \
+  --data-urlencode "cwd=$cwd" \
+  --data-urlencode "cap=$cap" \
+  --data-urlencode "started=$started" \
+  --data-urlencode "shell=$shell" \
+  "$@" "http://$address/run" 2>&1)
+status=$?
+code=${answer%%"$nl"*}
+case $status:$code in
+  0:[0-9] | 0:[0-9][0-9]) ;;
+  *)
+    printf 'error: %s could not reach Infinitary: %s\ncode: NO_CHANNEL\n' "$tool" "$code"
+    exit 1
+    ;;
+esac
+case $answer in
+  *"$nl"*) printf '%s\n' "${answer#*"$nl"}" ;;
+esac
+exit "$code"

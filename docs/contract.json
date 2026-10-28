@@ -2413,6 +2413,85 @@
                       ]
                     }
                   ]
+                },
+                "load": {
+                  "type": "object",
+                  "properties": {
+                    "runs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "taskId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "demand": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              },
+                              "memoryBytes": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "cpu",
+                              "memoryBytes"
+                            ]
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "waiting",
+                              "running"
+                            ]
+                          },
+                          "ahead": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "line",
+                              "capacity",
+                              "pressure",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "taskId",
+                          "demand",
+                          "state",
+                          "ahead"
+                        ]
+                      }
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "fresh",
+                        "unknown"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "runs",
+                    "status"
+                  ]
                 }
               },
               "required": [
@@ -57639,6 +57718,85 @@
                       ]
                     }
                   ]
+                },
+                "load": {
+                  "type": "object",
+                  "properties": {
+                    "runs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "taskId": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "demand": {
+                            "type": "object",
+                            "properties": {
+                              "cpu": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              },
+                              "memoryBytes": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              }
+                            },
+                            "required": [
+                              "cpu",
+                              "memoryBytes"
+                            ]
+                          },
+                          "state": {
+                            "type": "string",
+                            "enum": [
+                              "waiting",
+                              "running"
+                            ]
+                          },
+                          "ahead": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 9007199254740991
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "line",
+                              "capacity",
+                              "pressure",
+                              "unavailable"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "taskId",
+                          "demand",
+                          "state",
+                          "ahead"
+                        ]
+                      }
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "fresh",
+                        "unknown"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "runs",
+                    "status"
+                  ]
                 }
               },
               "required": [
@@ -59958,6 +60116,9 @@
                       "type": "boolean"
                     },
                     "integrations": {
+                      "type": "boolean"
+                    },
+                    "load": {
                       "type": "boolean"
                     }
                   },
@@ -65262,6 +65423,102 @@
   "resourceOrders": {
     "since": "6.3.0",
     "requests": {
+      "inf:computer:load": {
+        "effect": "write",
+        "request": {
+          "type": "array",
+          "prefixItems": [
+            {
+              "type": "object",
+              "properties": {
+                "overrides": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              },
+              "required": [
+                "overrides"
+              ]
+            }
+          ],
+          "minItems": 1,
+          "items": false
+        },
+        "response": {
+          "type": "object",
+          "properties": {
+            "runs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "taskId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "demand": {
+                    "type": "object",
+                    "properties": {
+                      "cpu": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "memoryBytes": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "cpu",
+                      "memoryBytes"
+                    ]
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "waiting",
+                      "running"
+                    ]
+                  },
+                  "ahead": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "reason": {
+                    "type": "string",
+                    "enum": [
+                      "line",
+                      "capacity",
+                      "pressure",
+                      "unavailable"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "taskId",
+                  "demand",
+                  "state",
+                  "ahead"
+                ]
+              }
+            }
+          },
+          "required": [
+            "runs"
+          ]
+        }
+      },
       "inf:computer:resources": {
         "effect": "read",
         "request": {

@@ -35,7 +35,7 @@ Pi's own shell (`jobs/jobManager.ts`) and the Claude client, and so every comman
 A request names its task by its key alone: the app looks the key up by its digest, and a command reaches only the tools of the task whose key it holds; nothing in its arguments names a task.
 Anything on this Mac can reach a loopback port, a web page among them, so a request that names another host (a name rebound to this Mac) or carries an origin is refused before its key is read; the launcher sends neither.
 A task granted again keeps its key, so a shell already given it still answers, and the task's close revokes it and deletes its file.
-The app's quit stops every running command and removes the keys.
+The app's quit stops every running command process and removes the keys; a heavy program already admitted by the native load wrapper is not a command process and keeps its group reservation.
 
 ## The command process
 
@@ -69,6 +69,17 @@ Global `--help`, command `--help` and `-v` answer without connecting to a task.
 Unknown commands and invalid arguments answer on stdout with exit 2 (`VALIDATION_ERROR`); a refusal and a connection or operational error use exit 1.
 No command table may register an SDK reserved command, and the runtime shadows every one with a refusal, including `update`, so no updater runs or appears in help.
 It never calls a hook installer and never writes provider settings.
+
+## The load command
+
+`infinitary-load-axi` reaches this computer's declared heavy-run line, through an optional `load` grant on the same task channel.
+The home grants it to local tasks with a command process and to work computers that advertise `heavy-run-line`; the work computer owns the actual line.
+Its bare invocation reads the task's declarations.
+Its `run --processors <number> --memory-mib <number> -- <program> [arguments]` path dispatches to the native Bash wrapper before the generic request path, so the program retains the caller's streams and environment.
+The wrapper's `claim` requests carry only its process identity, demand and optional outer hold.
+No command table can release a living group or bypass the recorded `load-line` hold.
+The caller's demand, FIFO admission, pressure behavior, nested runs and group lifetime are owned by [Declared heavy runs](heavy-runs.md).
+The project-neutral served instruction has one home in `CREWMATE_LOAD_LINE`; it says what to declare and never names this project's test gates.
 
 ## The browser command
 

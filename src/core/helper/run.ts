@@ -4,6 +4,7 @@ import { join } from "node:path";
 import type { MachineLoginOutcome } from "@shared/accounts";
 import type { DeviceGrant } from "@shared/devices";
 import type { WorkInvokeChannel } from "@shared/ipc";
+import { LOAD_ORDER, loadOrders } from "@shared/load";
 import { PLACEMENT_FACTS_ORDER, placementFactsRequestSchema } from "@shared/placement";
 import { RESOURCE_ORDER, type ResourceMemory, resourceOrders } from "@shared/resources";
 import { isSignInOrderChannel } from "@shared/signIns";
@@ -26,6 +27,7 @@ import { JoinedHome } from "../devices/joinedHome";
 import type { MoveDeps } from "../folderMove/move";
 import type { HostKeychain } from "../host";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
+import { LoadLine } from "../placed/loadLine";
 import { readPlacementFacts } from "../placed/placementFacts";
 import { readProcesses } from "../placed/processResources";
 import { ResourceSampler } from "../placed/resourceSampler";
@@ -136,6 +138,7 @@ export type StartHelperOptions = {
    */
   conversations?: (options: {
     dataDir: string;
+    load?: LoadLine;
     ask: (channel: WorkInvokeChannel, args: unknown, signal?: AbortSignal) => Promise<unknown>;
     tell: (channel: WorkInvokeChannel, args: unknown) => Promise<unknown>;
     browser?: ComputerBrowserParts;
@@ -237,9 +240,16 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     );
   const place = homePlace(joined.grant, options.interfaces);
   const packaged = options.packaged ?? false;
+  let loadOverrides = new Set<string>();
+  const loadLine = new LoadLine({
+    stateFile: join(dataDir, "load", "holds.json"),
+    overridden: (taskId) => loadOverrides.has(taskId),
+  });
   const resources = new ResourceSampler({
     memory: options.resourceMemory,
     processes: readProcesses,
+    observed: (observation, processes, started) =>
+      loadLine.observe(observation, processes, started),
   });
   if (options.gitAskpass) configureComputerGit({ dataDir, askpass: options.gitAskpass, packaged });
   let name = joined.name;
@@ -315,6 +325,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
           (async (start) => (await import("./conversations")).startConversations(start))
         )({
           dataDir,
+          load: loadLine,
           ask: (channel, args, signal) => link.ask(channel, args, signal),
           // A browser's fact and pictures go once, while the home is in reach.
           tell: (channel, args) => link.invoke(channel, args),
@@ -343,6 +354,7 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     if (ending) return ending;
     stopped = true;
     clearInterval(alive);
+    loadLine.dispose();
     downloading?.abort();
     // Every conversation lets go and writes what it holds, and a download
     // stopped part way takes what it fetched away, before the link and the
@@ -527,6 +539,12 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
             .catch(() => null),
         ]);
         return { ...facts, signIns: accounts };
+      }
+      if (channel === LOAD_ORDER) {
+        const [request] = loadOrders[LOAD_ORDER].request.parse(args);
+        loadOverrides = new Set(request.overrides);
+        loadLine.reconsider();
+        return loadLine.snapshot();
       }
       if (channel === RESOURCE_ORDER) {
         resourceOrders[RESOURCE_ORDER].request.parse(args);

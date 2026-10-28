@@ -869,6 +869,11 @@ export type CrewSupervisorOptions = {
   probeMedia?: MediaProbe;
   /** The host's loader for crewmates' project fonts (`HostCapabilities.typefaceProbe`). */
   probeTypeface?: TypefaceProbe;
+  /** The computer's declared-run owner and its advertised command capability. */
+  load?: {
+    forTask: (taskId: string) => import("../placed/loadLine").TaskLoad;
+    available: (machine: string) => boolean;
+  };
   /**
    * The task channel (docs/axi-commands.md): a task granted its browser gets
    * `infinitary-browser-axi` in its shell. Absent, no crewmate has a browser.
@@ -876,7 +881,11 @@ export type CrewSupervisorOptions = {
   taskCommands?: {
     grant: (
       taskId: string,
-      tools: { browser?: CrewmateBrowser; integrations?: TaskIntegrations },
+      tools: {
+        browser?: CrewmateBrowser;
+        integrations?: TaskIntegrations;
+        load?: import("../placed/loadLine").TaskLoad;
+      },
     ) => TaskShell;
   };
   /**
@@ -6156,12 +6165,14 @@ export class CrewSupervisor {
   private taskCommandHooks(
     task: TaskRuntime,
     machine: string,
-  ): Pick<CrewmateSpec, "browser" | "shell" | "integrations"> {
-    const { browsers, taskCommands, integrations, machines } = this.options;
+  ): Pick<CrewmateSpec, "browser" | "shell" | "integrations" | "load"> {
+    const { browsers, taskCommands, integrations, machines, load } = this.options;
+    const hasLoad = load?.available(machine) === true;
     if (machine !== LOCAL_MACHINE_ID) {
       // Its shell there is granted the commands; this Mac reads its browser
       // for the captain and answers its integrations' calls.
       return {
+        ...(hasLoad ? { load: true } : {}),
         ...(browsers && machines?.keepsBrowsers?.(machine)
           ? { browser: browsers.forTask(task.id) }
           : {}),
@@ -6174,11 +6185,13 @@ export class CrewSupervisor {
     const browser = browsers?.forTask(task.id);
     // Every crewmate here reaches the integrations (docs/integrations.md).
     const reach = integrations?.forTask(task.id);
-    if (!browser && !reach) return {};
+    if (!browser && !reach && !hasLoad) return {};
     return {
+      ...(hasLoad ? { load: true } : {}),
       ...(browser ? { browser } : {}),
       ...(reach ? { integrations: reach } : {}),
       shell: taskCommands.grant(task.id, {
+        ...(hasLoad && load ? { load: load.forTask(task.id) } : {}),
         ...(browser ? { browser } : {}),
         ...(reach ? { integrations: reach } : {}),
       }),

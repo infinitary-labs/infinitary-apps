@@ -206,6 +206,8 @@ export const placedSpecSchema = z.object({
    * the command rides.
    */
   integrations: z.boolean().optional(),
+  /** The named heavy-run-line change grants this computer's load command. */
+  load: z.boolean().optional(),
 });
 export type PlacedSpec = z.infer<typeof placedSpecSchema>;
 

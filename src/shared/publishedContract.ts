@@ -34,7 +34,7 @@ import {
   WORK_DOWNLOAD_SINCE,
   WORK_UPDATE_SINCE,
 } from "./ipc";
-import { RESOURCE_OBSERVATIONS_SINCE, RESOURCE_ORDER, resourceOrders } from "./resources";
+import { RESOURCE_OBSERVATIONS_SINCE, resourceOrders } from "./resources";
 import { SIGN_IN_ORDER_CHANNELS, signInOrders } from "./signIns";
 import {
   BROWSER_ORDER_CHANNELS,
@@ -254,13 +254,16 @@ export function publishedContract() {
     },
     resourceOrders: {
       since: RESOURCE_OBSERVATIONS_SINCE,
-      requests: {
-        [RESOURCE_ORDER]: {
-          effect: resourceOrders[RESOURCE_ORDER].effect,
-          request: received(`The ${RESOURCE_ORDER} order`, resourceOrders[RESOURCE_ORDER].request),
-          response: sent(`The ${RESOURCE_ORDER} answer`, resourceOrders[RESOURCE_ORDER].response),
-        },
-      },
+      requests: Object.fromEntries(
+        Object.entries(resourceOrders).map(([channel, declared]) => [
+          channel,
+          {
+            effect: declared.effect,
+            request: received(`The ${channel} order`, declared.request),
+            response: sent(`The ${channel} answer`, declared.response),
+          },
+        ]),
+      ),
     },
     // The update order a home asks a computer that runs work whatever its
     // version, from `since` on (`src/shared/work.ts`): bring Firstmate there

@@ -560,6 +560,7 @@ Which level a hold takes is a judgment by the four questions above, made by its 
 | `escalation` | soft | made-up number | a stronger model past the ladder's top | the captain names the model |
 | `program-bound` | soft | consent | a program's task() call past the bound the first mate proposed | the first mate raises the bound with `update_task program_bound` on the captain's words |
 | `start-waits` | soft | record | starting a task that waits on other work | the first mate removes the wait on the captain's words |
+| `load-line` | soft | record | a declared heavy run waiting for its computer's capacity or pressure reading | the override |
 | `host-rules` | fixed | outside fact | a merge the rules or readiness where the project lives hold | no one |
 | `nothing-to-merge` | fixed | physical limit | a merge or merge policy for work that has no merge | no one |
 | `sign-in` | fixed | outside fact | work where the app is not signed in | no one |

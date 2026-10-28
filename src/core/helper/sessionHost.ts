@@ -175,7 +175,7 @@ export type SessionHostOptions = {
   commands?: {
     grant: (
       task: string,
-      tools: { browser: boolean; integrations?: TaskIntegrations },
+      tools: { browser: boolean; integrations?: TaskIntegrations; load?: boolean },
     ) => { browser?: CrewmateBrowser; shell: TaskShell };
     close: (task: string) => void;
   };
@@ -275,7 +275,13 @@ type Held = {
   removed: boolean;
   /** The tool names, instructions and commands this conversation was opened with. */
   opened:
-    | { tools: readonly string[]; instructions: string; browser: boolean; integrations: boolean }
+    | {
+        tools: readonly string[];
+        instructions: string;
+        browser: boolean;
+        integrations: boolean;
+        load: boolean;
+      }
     | undefined;
   /** What the home opened the open conversation with, so a pass that rewrites its files opens it again. */
   spec: PlacedSpec | undefined;
@@ -796,9 +802,10 @@ export class SessionHost {
       // Its own browser, here beside its shell, when the home says it has
       // one, and its integrations, asked of the home, when it says it reaches them.
       const granted =
-        spec.browser || spec.integrations
+        spec.browser || spec.integrations || spec.load
           ? this.options.commands?.grant(held.task, {
               browser: spec.browser === true,
+              ...(spec.load ? { load: true } : {}),
               ...(spec.integrations ? { integrations: this.integrationsOf(held) } : {}),
             })
           : undefined;
@@ -871,6 +878,7 @@ export class SessionHost {
         instructions: spec.instructions,
         browser: spec.browser === true,
         integrations: spec.integrations === true,
+        load: spec.load === true,
       };
       held.spec = spec;
       held.backend = binding.backend;
@@ -913,7 +921,8 @@ export class SessionHost {
       !sameNames(opened.tools, spec.tools) ||
       opened.instructions !== spec.instructions ||
       opened.browser !== (spec.browser === true) ||
-      opened.integrations !== (spec.integrations === true)
+      opened.integrations !== (spec.integrations === true) ||
+      opened.load !== (spec.load === true)
     );
   }
 

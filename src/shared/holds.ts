@@ -90,6 +90,11 @@ export const HOLDS = {
     name: "a start's waits",
     way: "the first mate removes the wait on the captain's words",
   },
+  "load-line": {
+    level: "soft",
+    restsOn: "record",
+    name: "the heavy-run line",
+  },
   "host-rules": {
     level: "fixed",
     restsOn: "outside fact",

@@ -467,6 +467,9 @@ Each attributed task share names its computer, measured processor equivalents, r
 An unavailable, stale or older reading stays explicit as Use unavailable; no matching processes in sampled computers says No attributed processes in available readings.
 The row stays live while the record is open, including when a background job continues after the model turn ends, and changes no task status or idle clock.
 The sampler and pressure notices are owned by `docs/helper.md`, "Running tasks’ resource use".
+A separate Run row below Use shows each caller-declared heavy run's computer, waiting or admitted state, and declared processor and memory amounts (`docs/heavy-runs.md`).
+A waiting run says what it awaits or how many runs are ahead; unavailable remote facts keep the last-known run explicitly unavailable, never completed.
+A declaration is never presented as measured Use, and neither row adds a task state or a control.
 
 ## The Now line
 

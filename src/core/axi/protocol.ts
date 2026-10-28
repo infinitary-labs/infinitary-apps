@@ -6,6 +6,7 @@ import type {
   BrowserInspectInput,
   BrowserNavigateInput,
 } from "../browser/taskBrowsers";
+import type { LoadOp } from "./loadCommands";
 import type { SecretsOp, SecretsReply } from "./secretsCommands";
 
 /**
@@ -112,7 +113,7 @@ export type AxiCallMessage = {
   id: number;
   /** The command as the crewmate named it (`click`), for the words of a kept answer. */
   command: string;
-  op: BrowserOp | IntegrationOp | InboxOp | SecretsOp;
+  op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp;
   input: unknown;
 };
 

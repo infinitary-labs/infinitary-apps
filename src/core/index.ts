@@ -93,6 +93,8 @@ export async function startCore(given: HostCapabilities, options: CoreOptions = 
       services.sql.dispose();
       services.deviceSignIns.dispose();
       services.automaticPlacement.dispose();
+      services.loadLine.dispose();
+      services.computerLoads.dispose();
       services.computerResourceFeed.dispose();
       services.computerResources.dispose();
       services.devices.dispose();

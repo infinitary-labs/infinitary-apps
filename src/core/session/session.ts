@@ -211,6 +211,8 @@ export type SessionSpec = {
    * Pi's own shell, the Claude client and whatever it runs - gets it.
    */
   shell?: TaskShell;
+  /** The role has declared heavy runs on its execution computer. */
+  load?: boolean;
   /**
    * The host's callbacks the role's crewmate tools were bound to. A factory
    * whose conversation runs on another computer (src/core/placed/) binds the

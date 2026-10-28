@@ -17,6 +17,7 @@ import {
   validResourceMemory,
 } from "@shared/resources";
 import type { ComputerResourceReading } from "../placed/computerResources";
+import { resourceCapacity } from "../placed/resourceCapacity";
 import type { RoutePreview, RouteResult } from "./router";
 
 export type ResolvedPlacementRequirements = {
@@ -440,18 +441,7 @@ function resourceRejection(reading: ComputerResourceReading): PlacementRejection
 function capacityOf(candidate: PlacementCandidate): PlacementDemand | null {
   const reading = candidate.resources;
   if (resourceRejection(reading) || reading.status !== "fresh") return null;
-  const used = reading.memoryUsedBytes;
-  if (used === undefined) return null;
-  const { cpu, memory } = reading.observation;
-  const usable = memory.totalBytes - used;
-  return {
-    // Leave 20% of observed idle CPU and at least 512 MiB/10% of RAM untouched.
-    cpu: cpu.logicalCpus * cpu.idleFraction * 0.8,
-    memoryBytes: Math.max(
-      0,
-      Math.floor(usable - Math.max(512 * 1024 ** 2, memory.totalBytes * 0.1)),
-    ),
-  };
+  return resourceCapacity(reading);
 }
 
 function validDemand(demand: PlacementDemand): boolean {

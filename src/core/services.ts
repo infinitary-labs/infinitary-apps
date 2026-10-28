@@ -29,6 +29,7 @@ import type { FmEvent } from "@shared/events";
 import { feedLineFrom, feedRunOf } from "@shared/feed";
 import { GITHUB_COM, type KnownForgeHost, kindOfHost } from "@shared/forge";
 import { type ForgeChangeRow, type ForgeChangesView, forgeSignInCardId } from "@shared/forges";
+import { overridePasses } from "@shared/holds";
 import { INBOX_WORDS } from "@shared/integrations";
 import { PROTOCOL_VERSION } from "@shared/ipc";
 import { modelNames } from "@shared/modelDisplayName";
@@ -184,8 +185,10 @@ import { piReasoningCapabilities } from "./pi/reasoning";
 import { createPiSessionFactory } from "./pi/sessionFactory";
 import { readKeptValidationEvidence } from "./pi/validationEvidence";
 import { AutomaticPlacement } from "./placed/automaticPlacement";
+import { ComputerLoads } from "./placed/computerLoads";
 import { ComputerResourceFeed } from "./placed/computerResourceFeed";
 import { ComputerResources } from "./placed/computerResources";
+import { LoadLine } from "./placed/loadLine";
 import { HomeBrowsers, PlacedBrowsers } from "./placed/placedBrowsers";
 import { PlacedSessions } from "./placed/placedSessions";
 import type { PlacedWork } from "./placed/placedWork";
@@ -231,7 +234,7 @@ import { Router, servedSlots } from "./routing/router";
 import { resolveSelfSourceDir } from "./selfSource/resolve";
 import { SessionBinder } from "./session/binding";
 import { BoundsWatcher } from "./session/bounds";
-import type { SessionFactories } from "./session/session";
+import { LOCAL_MACHINE_ID, type SessionFactories } from "./session/session";
 import { crewMilestoneFor, SharingService } from "./sharing/sharingService";
 import { SqlService } from "./sql/sqlService";
 import { ActivityStore } from "./storage/activityStore";
@@ -431,6 +434,8 @@ export type CoreServices = {
   /** Demand-only resource facts; does not choose or move a task. */
   computerResources: ComputerResources;
   computerResourceFeed: ComputerResourceFeed;
+  loadLine: LoadLine;
+  computerLoads: ComputerLoads;
   automaticPlacement: AutomaticPlacement;
   /**
    * Each computer that runs work signing in to its own subscriptions, as
@@ -1387,9 +1392,33 @@ export async function createServices(
    * and a task whose record names one opens its conversation there.
    */
   const workDevices = new WorkDevices();
+  const loadOverridden = (taskId: string): boolean => {
+    const delivery = tasks.get(taskId)?.delivery;
+    return overridePasses(delivery, "load-line", delivery?.headSha);
+  };
+  const loadLine = new LoadLine({
+    stateFile: join(paths.userData, "load", "holds.json"),
+    overridden: loadOverridden,
+    changed: () => tasks.invalidatePresentation(),
+  });
   const computerResources = new ComputerResources({
     work: workDevices,
-    local: new ResourceSampler({ memory: host.resourceMemory, processes: readProcesses }),
+    local: new ResourceSampler({
+      memory: host.resourceMemory,
+      processes: readProcesses,
+      observed: (observation, processes, started) =>
+        loadLine.observe(observation, processes, started),
+    }),
+  });
+  const computerLoads = new ComputerLoads({
+    local: loadLine,
+    work: workDevices,
+    changed: () => tasks.invalidatePresentation(),
+    overrides: (computerId) =>
+      tasks
+        .list()
+        .filter((task) => task.deviceId === computerId && loadOverridden(task.id))
+        .map((task) => task.id),
   });
   // Leave from a Mac that runs work is Remove's, which brings its work here
   // first; bound once Your devices exists (docs/devices.md, "Leave").
@@ -1468,7 +1497,9 @@ export async function createServices(
         tasksStop();
       };
     },
-    working: () => tasks.list().some((task) => task.status === "active"),
+    working: () => loadLine.active || tasks.list().some((task) => task.status === "active"),
+    load: (computerId) => computerLoads.read(computerId),
+    refreshLoad: (computerId) => computerLoads.refresh(computerId),
     onContact: (listener) => workDevices.onWorkDevice(listener),
     emit: (view) => {
       emit("inf:computers:resources", view);
@@ -2305,7 +2336,9 @@ export async function createServices(
       // The sign-ins where projects live, on the same tick (PR 1.2).
       void forgeSignIns.checkHealth();
     },
-    hasRunningJobs: (taskId) => jobs.hasRunningJobs(taskId),
+    hasRunningJobs: (taskId) =>
+      jobs.hasRunningJobs(taskId) ||
+      computerLoads.hasTask(taskId, tasks.get(taskId)?.deviceId ?? null),
     oldestRunningJob: (taskId) => jobs.oldestRunningJob(taskId),
     // Every whose-turn sort is one `sort` row in the decision ledger, with
     // its rule and the wake's typed facts (S7c, R4.4; P6). The wake rides
@@ -2346,7 +2379,17 @@ export async function createServices(
     ...(host.mediaProbe ? { probeMedia: host.mediaProbe } : {}),
     ...(host.typefaceProbe ? { probeTypeface: host.typefaceProbe } : {}),
     ...(browsers ? { browsers } : {}),
-    ...(taskCommands ? { taskCommands } : {}),
+    ...(taskCommands
+      ? {
+          taskCommands,
+          load: {
+            forTask: (taskId: string) => loadLine.forTask(taskId),
+            available: (machine: string) =>
+              machine === LOCAL_MACHINE_ID ||
+              (placed.keepsBrowsers(machine) && computerLoads.supports(machine)),
+          },
+        }
+      : {}),
     integrations,
     quotaGateRefValid,
     quotaGateCleared: (ref) =>
@@ -3360,6 +3403,8 @@ export async function createServices(
     workDevices,
     computerResources,
     computerResourceFeed,
+    loadLine,
+    computerLoads,
     automaticPlacement,
     placed,
     deviceSignIns,

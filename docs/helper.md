@@ -388,7 +388,7 @@ The home can ask a work-enabled computer for current CPU and memory facts throug
 `ComputerResources` (`src/core/placed/computerResources.ts`) reads the home through the same sampler and freshness policy, with `null` as its computer id.
 These observations do not choose a computer, change Runs on, start a conversation or reserve capacity.
 They are kept in memory and never load accounts or sign-ins just to answer a reading.
-The shared feed samples every two seconds while a task is active, even with no screen subscriber; screen demand retains its existing lease.
+The shared feed samples every two seconds while a task is active or a local declared run remains, even with no screen subscriber; screen demand retains its existing lease.
 
 - `ResourceSampler` measures CPU time deltas across a window of at least 250 milliseconds, no longer than five seconds, and reports the idle fraction and logical processor count.
   A missing CPU list, changed processor count, reset counter, empty delta or interrupted window is unknown, never idle.
@@ -467,6 +467,8 @@ A normal reading ends the episode, and a subsequent warning is a new fact.
 The wake carries the observed task shares, unclaimed use, process count and swap occupancy when available.
 The first mate decides what to steer; this observation path never kills, pauses, slows or gates a run.
 The task record’s Use row reads these same live observations, with explicit unavailable words when they are missing or stale.
+The separate [heavy-run line](heavy-runs.md) consumes the completed sample to admit caller-declared programs, retains their groups across restart, and supplies the task record's separate Run row.
+The named `heavy-run-line` order shares the resource feed's cadence and is asked only of a work computer that advertises it.
 
 
 ## Holding a conversation

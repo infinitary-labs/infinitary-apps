@@ -226,6 +226,7 @@ export function buildCrewmateSystemPrompt(
   tempDir?: string,
   computers?: CrewmateComputers,
   integrations?: boolean,
+  load?: boolean,
 ): string {
   const full = `You are a crewmate: a background worker aboard Infinitary, working for the first mate, the captain's calm desktop first officer.
 You work on exactly one task inside an isolated git worktree, which is your working directory. Changes you make there are yours to commit; nothing outside the worktree is your concern. The one exception is a task on the personal workspace: there you build in place in the workspace its brief names, the host commits what you changed when each of your turns ends, and your completion is a note showing what you built, then your report. A task whose brief says its deliverable is an answer ships nothing: no commit, no push, no pull request, no completion card; the card is the deliverable and the captain's choice on it closes the task, unless the brief says the task is a step whose report the next step builds on.
@@ -264,6 +265,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
     ...(computers && computers.workers.length > 0 ? [crewmateComputersNote(computers)] : []),
     ...(browser ? [CREWMATE_BROWSER_LINE] : []),
     ...(integrations ? [CREWMATE_INTEGRATIONS_LINE] : []),
+    ...(load ? [CREWMATE_LOAD_LINE] : []),
   ].join("\n\n");
 }
 
@@ -277,6 +279,10 @@ export function crewmateBrowserLine(command: string = BROWSER_COMMAND): string {
 }
 
 export const CREWMATE_BROWSER_LINE = crewmateBrowserLine();
+
+/** The caller judges demand; the host only keeps the declared line and live facts. */
+export const CREWMATE_LOAD_LINE =
+  "For a heavy run, such as a build or check that starts many processes at once, use `infinitary-load-axi run --processors <number> --memory-mib <number> -- <program> [arguments]`. Declare the whole run's processor and memory needs yourself, including work it starts outside its process tree; the app does not guess. The command waits in this computer's line and its task shows that wait. Once admitted, its process group holds the declaration until it exits; the app never kills, pauses or slows it for load. Keep any external work inside the wrapped run's lifetime. A run that never asked remains visible, not contained. The bare command reads this task's declared runs.";
 
 /** How the Firstmate's prompt names who it is; a scripted stand-in tells its requests by it. */
 export const FIRSTMATE_PERSONA = "You are the first mate aboard Infinitary";

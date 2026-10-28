@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { computerLoadReadingSchema, loadOrders } from "./load";
 import type { PanelComputerResourceReading, PanelComputerResources } from "./personal/contracts";
 
 /** Resource facts are observations, never a promise or an enforced process limit. */
@@ -111,6 +112,7 @@ export const computerResourcesSchema = z.object({
       computerId: z.string().min(1).max(128).nullable(),
       label: z.string().min(1).max(256),
       reading: computerResourceReadingSchema,
+      load: computerLoadReadingSchema.optional(),
     }),
   ),
 }) satisfies z.ZodType<PanelComputerResources>;
@@ -121,8 +123,9 @@ export const RESOURCE_REFRESH_MS = 2_000;
 export const RESOURCE_DEMAND_RENEW_MS = 5_000;
 export const RESOURCE_DEMAND_LEASE_MS = 15_000;
 
-/** A read-only order, answered without loading accounts or opening any conversation. */
+/** Computer facts and declared-run admission; neither loads accounts or opens a conversation. */
 export const resourceOrders = {
+  ...loadOrders,
   [RESOURCE_ORDER]: {
     effect: "read",
     request: z.tuple([]),

@@ -1,3 +1,4 @@
+import type { ComputerLoadReading } from "@shared/load";
 import {
   type ComputerResourcesView,
   RESOURCE_DEMAND_LEASE_MS,
@@ -31,6 +32,8 @@ export class ComputerResourceFeed {
       emit: (view: ComputerResourcesView) => void;
       /** Crew work keeps observations alive even with no screen subscriber. */
       working?: () => boolean;
+      load?: (computerId: string | null) => ComputerLoadReading | undefined;
+      refreshLoad?: (computerId: string | null) => Promise<void>;
       now?: () => number;
     },
   ) {
@@ -87,6 +90,7 @@ export class ComputerResourceFeed {
       computers: this.options.computers().map((computer) => ({
         ...computer,
         reading: this.options.resources.read(computer.computerId),
+        ...(this.options.load ? { load: this.options.load(computer.computerId) } : {}),
       })),
     };
   }
@@ -126,8 +130,10 @@ export class ComputerResourceFeed {
     for (const listener of this.sampling) listener();
     for (const { computerId } of due) {
       this.started.set(computerId, now);
-      const reading = this.options.resources
-        .refresh(computerId)
+      const reading = Promise.all([
+        this.options.resources.refresh(computerId),
+        this.options.refreshLoad?.(computerId),
+      ])
         .then(() => {
           if (this.demanded()) this.publish();
         })

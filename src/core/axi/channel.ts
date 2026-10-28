@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
+import { LOAD_COMMAND } from "@shared/load";
 import { HERE } from "../../shared/deviceNames";
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import type { CrewmateBrowser } from "../browser/taskBrowsers";
@@ -14,6 +15,7 @@ import {
   isIntegrationAnswer,
   type TaskIntegrations,
 } from "../integrations";
+import { type LoadClaim, loadWaitWords, type TaskLoad } from "../placed/loadLine";
 import { type Injection, SECRETS_COMMAND, type SecretsCommand } from "../secrets/requests";
 import { ownTaskCommand } from "./names";
 import {
@@ -79,6 +81,7 @@ export type TaskTools = {
   browser?: CrewmateBrowser;
   integrations?: TaskIntegrations;
   secrets?: SecretsCommand;
+  load?: TaskLoad;
   /**
    * The inbox's door (docs/integrations.md, "The inbox"): only the person
    * key `admit` takes holds it, never a task's.
@@ -267,6 +270,8 @@ export class AxiChannel {
         [AXI_ADDRESS_ENV]: this.address,
         [AXI_KEY_ENV]: grant.keyFile,
         [AXI_VERSION_ENV]: this.options.version,
+        // A new task shell is not nested inside the program that started the app.
+        ...(tools.load ? { INFINITARY_LOAD_HOLD: "" } : {}),
       },
       path: [this.options.binDir],
     };
@@ -378,6 +383,7 @@ export class AxiChannel {
       (tool === BROWSER_COMMAND && grant.tools.browser !== undefined) ||
       (tool === INTEGRATIONS_COMMAND && grant.tools.integrations !== undefined) ||
       (tool === SECRETS_COMMAND && grant.tools.secrets !== undefined) ||
+      (tool === LOAD_COMMAND && grant.tools.load !== undefined) ||
       (tool === INBOX_COMMAND && grant.tools.inbox !== undefined);
     if (!has) {
       answer(
@@ -491,23 +497,46 @@ export class AxiChannel {
       return { kind: "earlier", command: parked.command, answer: settled };
     }
     const work: Promise<OpAnswer> =
-      tool === INTEGRATIONS_COMMAND
-        ? this.integrate(
-            grant,
-            message,
-            AbortSignal.timeout(Math.max(0, stopsAt - CAP_MARGIN_MS - Date.now())),
-          )
-        : tool === SECRETS_COMMAND
-          ? this.secret(grant, message, command.cwd)
-          : tool === INBOX_COMMAND
-            ? this.inbox(grant, message)
-            : this.operate(grant, message);
+      tool === LOAD_COMMAND
+        ? this.load(grant, message)
+        : tool === INTEGRATIONS_COMMAND
+          ? this.integrate(
+              grant,
+              message,
+              AbortSignal.timeout(Math.max(0, stopsAt - CAP_MARGIN_MS - Date.now())),
+            )
+          : tool === SECRETS_COMMAND
+            ? this.secret(grant, message, command.cwd)
+            : tool === INBOX_COMMAND
+              ? this.inbox(grant, message)
+              : this.operate(grant, message);
     const settled = await within(work, deadline);
     if (settled === TIMEOUT) {
       grant.parked.set(tool, { command: message.command, work });
       return { kind: "running", command: message.command };
     }
     return { kind: "answer", answer: settled };
+  }
+
+  private async load(grant: Grant, message: AxiCallMessage): Promise<IntegrationChannelAnswer> {
+    const load = grant.tools.load;
+    if (!load) return { text: "This task has no load command.", refused: "refused" };
+    try {
+      if (message.op === "load.read") return { data: load.read() };
+      if (message.op !== "load.claim")
+        return { text: "That is not a load operation.", refused: "invalid" };
+      const run = await load.claim(message.input as LoadClaim);
+      return {
+        data: {
+          state: run.state,
+          hold: run.id,
+          ahead: run.ahead,
+          ...(run.reason ? { reason: run.reason, note: loadWaitWords() } : {}),
+        },
+      };
+    } catch (error) {
+      return { text: error instanceof Error ? error.message : String(error), refused: "refused" };
+    }
   }
 
   /**

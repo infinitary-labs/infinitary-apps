@@ -66,6 +66,8 @@ export type CrewmateSpec = CrewmateToolDelegate & {
   quick?: boolean;
   /** What its shell carries: its task's commands (docs/axi-commands.md). */
   shell?: TaskShell;
+  /** This computer supports the declared heavy-run command. */
+  load?: boolean;
   /**
    * Delivery and care already known at dispatch. Absent keeps the full
    * prompt, which is the unknown-case fallback.
@@ -209,6 +211,7 @@ export function crewmateSessionSpec(
     // Its integrations' command rides the same channel, here or there.
     spec.integrations !== undefined &&
       (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
+    spec.load,
   );
   const tools = bindTools(CREWMATE_TOOLS, spec);
   return {
@@ -233,6 +236,7 @@ export function crewmateSessionSpec(
     builtins: "coding",
     tools,
     ...(spec.shell ? { shell: spec.shell } : {}),
+    ...(spec.load ? { load: true } : {}),
     callbacks: spec,
     shape: {
       turns: "rolling",

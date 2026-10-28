@@ -904,6 +904,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         ? { personalResources: spec.personalResources }
         : {}),
       tools: spec.tools.map((tool) => tool.name),
+      ...(spec.load ? { load: true } : {}),
       // Its own browser, there beside its shell (docs/task-browser.md, "On another computer").
       ...(spec.callbacks?.browser && device.roster.browsers ? { browser: true } : {}),
       // Its integrations, asked of this Mac (docs/integrations.md, "On a computer that runs work").

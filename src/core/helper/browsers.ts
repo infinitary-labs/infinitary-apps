@@ -24,6 +24,7 @@ import {
 } from "../browser/webSignIns";
 import type { HostBrowserFrame, HostChildSpawner, HostTaskBrowser } from "../host";
 import type { TaskIntegrations } from "../integrations";
+import type { LoadLine } from "../placed/loadLine";
 
 /**
  * The browsers of the tasks a computer that runs work holds
@@ -65,6 +66,7 @@ export type ComputerBrowsersOptions = {
   version: string;
   /** This computer's folder for the tasks' keys, emptied when the channel opens and closes. */
   keysDir: string;
+  load?: LoadLine;
   /** Told the shell a command came from once it reached this computer (`AxiChannelOptions.answering`). */
   answering?: (shell: string) => void;
   /** Where a task's pictures go: its evidence folder here. */
@@ -229,10 +231,11 @@ export class ComputerBrowsers {
    */
   grant(
     task: string,
-    tools: { browser: boolean; integrations?: TaskIntegrations },
+    tools: { browser: boolean; integrations?: TaskIntegrations; load?: boolean },
   ): { browser?: CrewmateBrowser; shell: TaskShell } {
     const browser = tools.browser ? this.browsers.forTask(task) : undefined;
     const shell = this.channel.grant(task, {
+      ...(tools.load && this.options.load ? { load: this.options.load.forTask(task) } : {}),
       ...(browser ? { browser } : {}),
       ...(tools.integrations ? { integrations: tools.integrations } : {}),
     });

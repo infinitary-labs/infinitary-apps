@@ -2,6 +2,7 @@ import { browserAxi } from "./browserCommands";
 import { runTaskAxiCli, type TaskAxiCli } from "./cli";
 import { inboxAxi } from "./inboxCommands";
 import { integrationsAxi } from "./integrationCommands";
+import { type LoadOp, loadAxi } from "./loadCommands";
 import type {
   AxiChildMessage,
   AxiParentMessage,
@@ -63,7 +64,7 @@ function parentPort(): Port {
 type Connection = {
   call: (
     command: string,
-    op: BrowserOp | IntegrationOp | InboxOp | SecretsOp,
+    op: BrowserOp | IntegrationOp | InboxOp | SecretsOp | LoadOp,
     input: unknown,
   ) => Promise<never>;
 };
@@ -77,6 +78,7 @@ const TOOLS: Record<
   "infinitary-integrations-axi": integrationsAxi as never,
   "infinitary-secrets-axi": secretsAxi as never,
   "infinitary-inbox-axi": inboxAxi as never,
+  "infinitary-load-axi": loadAxi as never,
 };
 
 const port = parentPort();

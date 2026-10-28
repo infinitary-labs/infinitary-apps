@@ -44,13 +44,54 @@ EXECUTABLE="$APP_DIR/Contents/MacOS/$(/usr/libexec/PlistBuddy -c "Print :CFBundl
 # lose to the single-instance lock of a copy already running there.
 # Chromium's --user-data-dir is the packaged app's userData; the debugging
 # port (any free one, named in the profile) is how the version is asked.
+# The app starts in a process group of its own (job control on for its
+# start alone), so its Chromium helpers and the children its core spawns can
+# be found and stopped with it.
 LAUNCH_PROFILE="$(mktemp -d "${TMPDIR:-/tmp}/infinitary-launch-check.XXXXXX")"
+set -m
 "$EXECUTABLE" --user-data-dir="$LAUNCH_PROFILE" --remote-debugging-port=0 &
 APP_PID=$!
+set +m
+
+# Whether a process is still running: a child of this script that has
+# exited stays a zombie until it is reaped, and a zombie writes nothing.
+running() {
+  local state
+  state="$(ps -o stat= -p "$1" 2>/dev/null)" && [[ "$state" != Z* ]]
+}
+
+# Every process still running that can write into the profile: the app's
+# group, and any process that names the profile in its arguments, as each
+# helper does, whatever group it is in.
+profile_writers() {
+  ps -axo pid=,pgid=,stat=,command= \
+    | GROUP="$APP_PID" PROFILE="$LAUNCH_PROFILE" \
+      awk '$3 !~ /^Z/ && ($2 == ENVIRON["GROUP"] || index($0, ENVIRON["PROFILE"])) { print $1 }'
+}
+
+# INF-1768: removing the profile while anything still writes into it fails
+# with "Directory not empty" after the gate has passed, and leaves the app's
+# processes running on the runner. So the app is asked to quit and given
+# its own lifecycle's time, whatever is left is stopped outright and reaped,
+# and the profile is removed only once nothing can write into it.
 cleanup() {
   kill "$APP_PID" 2>/dev/null || true
-  sleep 1
-  kill -9 "$APP_PID" 2>/dev/null || true
+  for _ in $(seq 1 100); do
+    running "$APP_PID" || break
+    sleep 0.1
+  done
+  local writers
+  for _ in $(seq 1 50); do
+    writers="$(profile_writers)"
+    [[ -n "$writers" ]] || break
+    # shellcheck disable=SC2086 # one process id per word
+    kill -9 $writers 2>/dev/null || true
+    sleep 0.1
+  done
+  wait "$APP_PID" 2>/dev/null || true
+  writers="$(profile_writers)"
+  [[ -z "$writers" ]] \
+    || fail "process(es) ${writers//$'\n'/ } still run with the launch profile $LAUNCH_PROFILE after SIGKILL, so the profile is left in place"
   rm -rf "$LAUNCH_PROFILE"
 }
 trap cleanup EXIT

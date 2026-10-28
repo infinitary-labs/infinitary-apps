@@ -76,6 +76,22 @@ jobs:
         with:
           ref: ${{ inputs.ref || '' }}
           persist-credentials: false
+      # The release's launch gate is the workflow's own (INF-1768): a stable
+      # checks out an older alpha's commit, whose check calls the gate beside
+      # it, so the calling workflow's copy of the gate and its probe replaces
+      # that source's before the check opens Infinitary.
+      - name: Check out the workflow's own launch gate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/check-app-launch.sh
+            scripts/app-runtime-version.mjs
+      - name: Use the workflow's own launch gate
+        run: cp .release-tooling/scripts/check-app-launch.sh .release-tooling/scripts/app-runtime-version.mjs scripts/
       - uses: pnpm/action-setup@v4
         if: ${{ env.MODE == 'rehearsal' }}
         with:

@@ -1,7 +1,8 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execFileSync, spawn, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
   chmodSync,
+  constants,
   cpSync,
   existsSync,
   lstatSync,
@@ -44,6 +45,7 @@ import {
 import { packagedFlavor } from "../src/main/userDataDir";
 import vitestConfig from "../vitest.config";
 import { MAC_ONLY_TAG } from "./e2e/tags.ts";
+import { electronBinary } from "./helpers/electronBundle";
 import { scratchDir } from "./helpers/scratchDirs";
 
 // Eight-worker Mac measurement: slowest default-budget case 1.854 s; brew keeps its explicit budget.
@@ -3582,6 +3584,41 @@ describe("the signed channel workflow", () => {
     for (const id of launchStages) expect(step(id).run).toContain("scripts/check-app-launch.sh");
   });
 
+  it("launches the app only through the workflow's own launch gate, after packaging", () => {
+    // INF-1768: a stable checks out an older alpha's commit, whose scripts
+    // call the gate beside them, so a repair to the gate reaches that
+    // release only when the workflow puts its own copy there first.
+    const gate = ["scripts/check-app-launch.sh", "scripts/app-runtime-version.mjs"];
+    const launches = (candidate: Step) =>
+      /(^|\s)scripts\/(check-app-launch|verify-mac-dmg)\.sh /m.test(candidate.run ?? "");
+    for (const [job, jobSteps] of [
+      ["release", signingSteps],
+      ["publish", publishSteps],
+    ] as const) {
+      const fetched = jobSteps.findIndex(
+        (candidate) => candidate.with?.path === ".release-tooling",
+      );
+      expect(jobSteps[fetched]?.uses, job).toBe("actions/checkout@v4");
+      expect(jobSteps[fetched]?.with?.ref, job).toBe("${{ github.sha }}");
+      expect(String(jobSteps[fetched]?.with?.["sparse-checkout"]).trim().split("\n"), job).toEqual(
+        gate,
+      );
+      const placed = jobSteps.findIndex(
+        (candidate) =>
+          candidate.run ===
+          `cp ${gate.map((file) => `.release-tooling/${file}`).join(" ")} scripts/`,
+      );
+      expect(placed, job).toBeGreaterThan(fetched);
+      // Both run in every profile, before the job's first launch.
+      expect([jobSteps[fetched]?.if, jobSteps[placed]?.if], job).toEqual([undefined, undefined]);
+      expect(jobSteps.findIndex(launches), job).toBeGreaterThan(placed);
+    }
+    // The app it launches is the source's, packaged before the gate moves in.
+    expect(signingSteps.findIndex((candidate) => candidate.id === "launch-gate")).toBeGreaterThan(
+      signingSteps.findIndex((candidate) => candidate.id === "package"),
+    );
+  });
+
   it.skipIf(process.platform !== "darwin")(
     "refuses a bundle whose version fields are not the release's numeric core, before launching it",
     () => {
@@ -3619,6 +3656,80 @@ describe("the signed channel workflow", () => {
         expect(result.status).toBe(1);
         expect(result.stderr).toContain(reason);
       }
+    },
+  );
+
+  it.skipIf(process.platform !== "darwin")(
+    "stops the launched app and everything writing into its profile before removing the profile",
+    { timeout: 50_000 },
+    async () => {
+      // INF-1768: stable 0.6.1's publication stopped after this gate printed
+      // OK, when removing its throwaway profile raced processes the app had
+      // started that were still writing into it ("Directory not empty").
+      // The stand-in is Electron's own process tree with the app's quit
+      // shape and a child that outlives it (tests/fixtures/launch-gate-app).
+      const fixture = join(root, "tests", "fixtures", "launch-gate-app");
+      const version: string = JSON.parse(
+        readFileSync(join(fixture, "package.json"), "utf8"),
+      ).version;
+      const app = join(scratchDir("infinitary-launch-gate-"), "Infinitary.app");
+      cpSync(join(dirname(electronBinary()), "..", ".."), app, {
+        recursive: true,
+        verbatimSymlinks: true,
+        mode: constants.COPYFILE_FICLONE,
+      });
+      cpSync(fixture, join(app, "Contents", "Resources", "app"), { recursive: true });
+      const core = version.split("-")[0];
+      execFileSync("/usr/libexec/PlistBuddy", [
+        "-c",
+        `Set :CFBundleShortVersionString ${core}`,
+        "-c",
+        `Set :CFBundleVersion ${core}`,
+        join(app, "Contents", "Info.plist"),
+      ]);
+      const profiles = scratchDir("infinitary-launch-gate-profiles-");
+      const home = scratchDir("infinitary-launch-gate-home-");
+      const witness = scratchDir("infinitary-launch-gate-witness-");
+      const gate = await new Promise<{ status: number | null; stdout: string; stderr: string }>(
+        (resolve, reject) => {
+          const run = spawn(join(root, "scripts", "check-app-launch.sh"), [app, version], {
+            env: {
+              ...process.env,
+              TMPDIR: profiles,
+              HOME: home,
+              CFFIXED_USER_HOME: home,
+              LAUNCH_GATE_WITNESS: witness,
+            },
+          });
+          let stdout = "";
+          let stderr = "";
+          run.stdout.on("data", (chunk) => {
+            stdout += chunk;
+          });
+          run.stderr.on("data", (chunk) => {
+            stderr += chunk;
+          });
+          run.on("error", reject);
+          run.on("close", (status) => resolve({ status, stdout, stderr }));
+        },
+      );
+      const running = readdirSync(witness)
+        .map((name) => Number(readFileSync(join(witness, name), "utf8")))
+        .filter((pid) => {
+          try {
+            process.kill(pid, 0);
+            return true;
+          } catch {
+            return false;
+          }
+        });
+      // Whatever the gate left running stops here, so a failure leaves nothing behind.
+      for (const pid of running) process.kill(pid, "SIGKILL");
+      expect(readdirSync(witness).sort()).toEqual(["app.pid", "child.pid"]);
+      expect(gate.status, gate.stderr).toBe(0);
+      expect(gate.stdout).toContain(`the running app reports ${version}`);
+      expect(running).toEqual([]);
+      expect(readdirSync(profiles)).toEqual([]);
     },
   );
 });
@@ -3693,6 +3804,7 @@ describe("the old-cask upgrade check (INF-884)", () => {
     with?: Record<string, string>;
     "runs-on"?: string;
     env?: Record<string, string>;
+    steps?: { name?: string; uses?: string; run?: string; with?: Record<string, string> }[];
   };
   const release = loadYamlFile(".github/workflows/release.yml") as { jobs: Record<string, Job> };
   const upgrade = loadYamlFile(".github/workflows/old-cask-upgrade.yml") as {
@@ -3736,6 +3848,25 @@ describe("the old-cask upgrade check (INF-884)", () => {
     expect(mode("workflow_dispatch", { channel: "alpha", version: "0.5.1-alpha.1" })).toBe("live");
     expect(mode("pull_request", {})).toBe("rehearsal");
     expect(mode("workflow_dispatch", { channel: "alpha", mode: "rehearsal" })).toBe("rehearsal");
+  });
+
+  it("opens Infinitary through the calling workflow's own launch gate", () => {
+    // INF-1768: a stable's check runs at an older alpha's commit, whose
+    // check calls the gate beside it; the release workflow's copy replaces it.
+    const steps = check.steps ?? [];
+    const gate = ["scripts/check-app-launch.sh", "scripts/app-runtime-version.mjs"];
+    const fetched = steps.findIndex((candidate) => candidate.with?.path === ".release-tooling");
+    expect(steps[fetched]?.uses).toBe("actions/checkout@v4");
+    expect(steps[fetched]?.with?.ref).toBe("${{ github.sha }}");
+    expect(String(steps[fetched]?.with?.["sparse-checkout"]).trim().split("\n")).toEqual(gate);
+    const placed = steps.findIndex(
+      (candidate) =>
+        candidate.run === `cp ${gate.map((file) => `.release-tooling/${file}`).join(" ")} scripts/`,
+    );
+    expect(placed).toBeGreaterThan(fetched);
+    expect(
+      steps.findIndex((candidate) => candidate.run?.includes("scripts/check-old-cask-upgrade.sh")),
+    ).toBeGreaterThan(placed);
   });
 
   it("runs only in a throwaway virtual Mac", () => {

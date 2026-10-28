@@ -554,6 +554,27 @@ jobs:
             -c.mac.bundleShortVersion="$BUNDLE_VERSION" \
             -c.mac.bundleVersion="$BUNDLE_VERSION"
 
+      # The launch gate is the workflow's own (INF-1768): a stable builds an
+      # older alpha's commit, whose scripts - the disk image's check among
+      # them - call the gate beside them, so a repair to the gate reaches
+      # that release only through the workflow. Its copy of the gate and its
+      # probe replaces the source's once the app is packaged, before any
+      # launch; the app's bytes stay the source's.
+      - name: Check out the workflow's own launch gate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/check-app-launch.sh
+            scripts/app-runtime-version.mjs
+
+      - name: Use the workflow's own launch gate
+        id: launch-gate
+        run: cp .release-tooling/scripts/check-app-launch.sh .release-tooling/scripts/app-runtime-version.mjs scripts/
+
       # The packaged catalog is this exact version and source, before the app
       # is verified, launched or notarized.
       - name: Verify the packaged release notes
@@ -890,6 +911,23 @@ jobs:
         with:
           ref: ${{ needs.resolve.outputs.source_commit }}
           persist-credentials: false
+
+      # The workflow's own launch gate, as in the signing job (INF-1768):
+      # every fetch-back launches the app through it. Nothing is packaged here.
+      - name: Check out the workflow's own launch gate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: .release-tooling
+          persist-credentials: false
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            scripts/check-app-launch.sh
+            scripts/app-runtime-version.mjs
+
+      - name: Use the workflow's own launch gate
+        id: publish-launch-gate
+        run: cp .release-tooling/scripts/check-app-launch.sh .release-tooling/scripts/app-runtime-version.mjs scripts/
 
       - uses: pnpm/action-setup@v4
         with:

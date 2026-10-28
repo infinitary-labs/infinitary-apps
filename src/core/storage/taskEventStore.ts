@@ -247,6 +247,24 @@ export class TaskEventStore {
     return row?.task_id;
   }
 
+  /** Every task with an event of `kind` carrying `ref` (a message id → the tasks it attached to). */
+  taskIdsWithRef(kind: TaskEventKind, ref: string): string[] {
+    const rows = this.db
+      .prepare("SELECT DISTINCT task_id FROM task_events WHERE kind = ? AND ref = ?")
+      .all(kind, ref) as { task_id: string }[];
+    return rows.map((row) => row.task_id);
+  }
+
+  /** The refs of a task's events of `kind`, oldest first. */
+  refsOf(taskId: string, kind: TaskEventKind): string[] {
+    const rows = this.db
+      .prepare(
+        "SELECT ref FROM task_events WHERE task_id = ? AND kind = ? AND ref IS NOT NULL ORDER BY at, id",
+      )
+      .all(taskId, kind) as { ref: string }[];
+    return rows.map((row) => row.ref);
+  }
+
   /** The ref of a task's oldest event of `kind` that names one, if it has one. */
   oldestRef(taskId: string, kind: TaskEventKind): string | undefined {
     const row = this.db

@@ -44,7 +44,7 @@ import {
   answerTask,
   MOCK_ANSWER_ACTION_LABEL,
   MOCK_ANSWER_CARD_TITLE,
-  MOCK_ANSWER_FINISHED_REPORT,
+  MOCK_ANSWER_FINISHED_AGAIN,
   MOCK_ANSWER_REPORT,
 } from "./scenarios/answerTask";
 import { OWN_RENT_CARD_TITLE, OWN_RENT_TITLE, ownRentAnswer } from "./scenarios/ownRentAnswer";
@@ -216,7 +216,10 @@ test("an answer task is briefed as shipping nothing, waits on its card, and clos
  * The captain's close of the answer card is not a choice (FI3-435, his
  * answer "Send it to the crewmate like every other card"): it reaches the
  * crewmate that wrote it, which judges the answer read and reports it
- * finished, and the Firstmate closes the task answered on that report.
+ * finished. A decision closed without a choice does not answer the
+ * captain's message (INF-1610 piece 2, the captain's "closed: split"), so
+ * that report is refused once; the crewmate says why it has no more to
+ * show, and the Firstmate closes the task answered on that report.
  * Its own app, so it owns every prerequisite.
  */
 test("closing the answer card reaches its crewmate, which reports it finished, and Firstmate closes it answered", async () => {
@@ -250,7 +253,8 @@ test("closing the answer card reaches its crewmate, which reports it finished, a
     await expectNoCard(page, MOCK_ANSWER_CARD_TITLE);
 
     // The close reached the crewmate as its next turn; it reported the
-    // answer read and finished; the Firstmate closed the task on that.
+    // answer read and finished, was asked once for the answer, said why it
+    // had none more; the Firstmate closed the task on that.
     await expect.poll(detail, { timeout: 30_000 }).toMatchObject({
       status: "done",
       closedReason: "answered",
@@ -261,7 +265,7 @@ test("closing the answer card reaches its crewmate, which reports it finished, a
         expect.objectContaining({ kind: "steered", actor: "captain" }),
         expect.objectContaining({
           kind: "report",
-          text: MOCK_ANSWER_FINISHED_REPORT,
+          text: MOCK_ANSWER_FINISHED_AGAIN,
           actor: "crewmate",
         }),
       ]),
@@ -270,7 +274,7 @@ test("closing the answer card reaches its crewmate, which reports it finished, a
     const steered = events.findIndex(
       (event) => event.kind === "steered" && event.actor === "captain",
     );
-    const reported = events.findIndex((event) => event.text === MOCK_ANSWER_FINISHED_REPORT);
+    const reported = events.findIndex((event) => event.text === MOCK_ANSWER_FINISHED_AGAIN);
     expect(steered).toBeGreaterThanOrEqual(0);
     expect(reported).toBeGreaterThan(steered);
     expect(
@@ -279,7 +283,7 @@ test("closing the answer card reaches its crewmate, which reports it finished, a
       ),
     ).toBe(true);
     await expect(
-      reportLine(page, row.key).filter({ hasText: reportSummary(MOCK_ANSWER_FINISHED_REPORT) }),
+      reportLine(page, row.key).filter({ hasText: reportSummary(MOCK_ANSWER_FINISHED_AGAIN) }),
     ).toBeVisible({ timeout: 30_000 });
     await expect(waiting.locator(`[data-now-key="${row.key}"]`)).toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath("answer-close-after.png") });

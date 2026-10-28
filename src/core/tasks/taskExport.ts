@@ -333,12 +333,19 @@ export function exportTaskRecords(source: TaskExportSource, now = Date.now()): s
       return { kind: "event", ...rest, eventKind: kind, ...(about ? { concerns: about } : {}) };
     }),
     ...links.map((link): TaskExportLine => ({ kind: "link", ...link })),
-    // The answer-delivery state is operational, not part of the exported record.
+    // The answer-delivery state and how the message ended are operational,
+    // not part of the exported record.
     ...asks.map(
       ({
         delivery: _delivery,
         deliveryFacts: _facts,
         noticeCardId: _notice,
+        followed: _followed,
+        continues: _continues,
+        answerCardId: _answerCard,
+        acceptedAt: _accepted,
+        answeredAt: _answered,
+        crewmateAskedAt: _crewmateAsked,
         ...ask
       }): TaskExportLine => ({
         kind: "ask",
@@ -445,6 +452,12 @@ export function parseTaskExport(input: string | Iterable<string>): TaskExportBun
           delivery: "legacy",
           deliveryFacts: { entries: [] },
           noticeCardId: null,
+          followed: false,
+          continues: null,
+          answerCardId: null,
+          acceptedAt: null,
+          answeredAt: null,
+          crewmateAskedAt: null,
         });
         break;
       }

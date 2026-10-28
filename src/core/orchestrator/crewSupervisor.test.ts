@@ -2261,6 +2261,13 @@ describe("CrewSupervisor", () => {
       cards
         .filter((card) => card.taskId === taskId)
         .map((card) => ({ author: card.author, title: card.title, actions: card.actions }));
+    // The captain asked for the work: its close answers their message
+    // (docs/task-capture.md "How a message ends").
+    const askedFor = (tasks: TaskService, taskId: string, words: string) => {
+      const ask = tasks.openAsk({ id: `ask-${taskId}`, text: words });
+      tasks.attachAsk(ask.id, taskId, "tool:spawn_crewmate");
+      tasks.closeAsk(ask.id, "closed");
+    };
 
     async function idleTask() {
       const crewmate = fakeCrewmate();
@@ -2269,6 +2276,7 @@ describe("CrewSupervisor", () => {
         title: "Rename the notice",
         intent: intentOf("rename the notice"),
       });
+      askedFor(harness.tasks, taskId, "rename the notice");
       await tick();
       crewmate.finishPrompt();
       await tick();
@@ -2407,6 +2415,40 @@ describe("CrewSupervisor", () => {
       expect(left(h.cards(), taskId)).toEqual([]);
     });
 
+    // INF-1533, the plan's at-most-one rule (INF-1610 piece 2): the captain
+    // closed the crewmate's answer note, then the first mate dropped the
+    // work. No closing note goes up; the note they accepted comes back
+    // revised with the drop and the first mate's sentence, once.
+    it("brings the answer the captain accepted back revised with a later drop, and adds no note (INF-1533)", async () => {
+      const h = await idleTask();
+      h.specs[0]?.onCard?.({
+        title: "The notice is renamed",
+        body: "<p>The notice now reads Your first mate has not answered your message.</p>",
+        actions: [],
+        answering: true,
+      });
+      await tick();
+      const answer = h.cards().find((card) => card.taskId === h.taskId) as Card;
+      h.supervisor.close(answer.id);
+      await tick();
+      // The close reaches the crewmate as its next turn, which ends idle.
+      h.crewmate.finishPrompt();
+      await tick();
+      expect(left(h.cards(), h.taskId)).toEqual([]);
+
+      await h.supervisor.withClosingSentence(h.taskId, SENTENCE, () =>
+        h.supervisor.settleTask(h.taskId, "discard"),
+      );
+      await tick();
+      const up = h.cards().filter((card) => card.taskId === h.taskId);
+      expect(up.map((card) => ({ id: card.id, actions: card.actions }))).toEqual([
+        { id: answer.id, actions: [] },
+      ]);
+      expect(up[0]?.body).toContain(closingNoteTitle(h.key, "dropped"));
+      expect(up[0]?.body).toContain(SENTENCE);
+      expect(up[0]?.body).toContain("The notice now reads");
+    });
+
     it("puts up the sentence when the first mate cancels idle work", async () => {
       const h = await idleTask();
       await h.supervisor.interruptCrewmate(h.taskId, "cancel", undefined, SENTENCE);
@@ -2424,6 +2466,7 @@ describe("CrewSupervisor", () => {
         title: "long",
         intent: intentOf("long running work"),
       });
+      askedFor(tasks, taskId, "long running work");
       await tick();
       await supervisor.interruptCrewmate(taskId, "cancel", undefined, SENTENCE);
       crewmate.failPrompt("aborted");

@@ -74,6 +74,17 @@ const CAPTAIN = {
   ask: "Should we ship the release tonight, or wait for the sign-in fix?",
 };
 
+/**
+ * The status answer: a captain's message ends on a card (INF-1610 piece 2,
+ * docs/task-capture.md "How a message ends"), so the status turn shows one.
+ */
+const STATUS_CARD = {
+  title: "Crewmate 1 is on the flaky sign-in test",
+  body: "<p>Crewmate 1 is fixing the sign-in test that fails about one run in five.</p>",
+  answering: true,
+  standalone: true,
+};
+
 const CARD = {
   title: "Release tonight or wait for the sign-in fix?",
   body: "<p>Wait for the fix, then release.</p><ul><li>The sign-in test still fails about one run in five.</li><li>Releasing tonight would put that failure in front of everyone who signs in.</li><li>Crewmate 1 is already working on the fix.</li></ul>",
@@ -270,7 +281,7 @@ describe("a Claude-served Firstmate session, recorded and replayed (W1 S11)", ()
       (request, res) => answerText(request, res, "Crewmate 1 is on the flaky sign-in test."),
       (request, res) => {
         statusArrived();
-        void statusHeld.then(() => answerTool(request, res, "crew_status", {}));
+        void statusHeld.then(() => answerTool(request, res, "emit_card", STATUS_CARD));
       },
       (request, res) =>
         answerTool(request, res, "spawn_crewmate", {
@@ -361,7 +372,7 @@ describe("a Claude-served Firstmate session, recorded and replayed (W1 S11)", ()
         names: ["spawn_crewmate"],
         closing: "Crewmate 1 is on the flaky sign-in test.",
       },
-      { kind: "user", user: CAPTAIN.status, ops: [], names: ["crew_status"], closing: "" },
+      { kind: "user", user: CAPTAIN.status, ops: [], names: ["emit_card"], closing: "" },
       // The steer the client folded into the running turn is a turn of its
       // own, exactly as a Pi session records one.
       {

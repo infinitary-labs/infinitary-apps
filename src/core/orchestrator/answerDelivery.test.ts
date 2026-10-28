@@ -90,7 +90,6 @@ describe("the output-only retry", () => {
       "settle_task",
       "create_task",
       "update_task",
-      "link_tasks",
       "schedule_prompt",
       "cancel_schedule",
       "remember",

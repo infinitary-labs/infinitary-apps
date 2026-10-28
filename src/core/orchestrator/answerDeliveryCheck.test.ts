@@ -1,8 +1,11 @@
+import type { Card } from "@shared/cards";
 import { describe, expect, it } from "vitest";
 import { freshDatabase } from "../../../tests/helpers/database";
 import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
+import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { ANSWER_MISSING_REF, AnswerDeliveryCheck } from "./answerDeliveryCheck";
+import { askEndingOf } from "./askEnding";
 import { answerMissingWake, captainTurn } from "./wakes";
 
 /**
@@ -15,6 +18,24 @@ function fixture(observe = false) {
   const tasks = new TaskService({ db, strict: true });
   const inbox = new InboxStore(db);
   const notices: string[] = [];
+  // The stack: the first mate's answers the captain has not yet responded to.
+  const up: Card[] = [];
+  const answer = (id: string): Card => {
+    const card: Card = {
+      id,
+      author: "firstmate",
+      priority: 30,
+      title: "Yes: a card you replied under keeps its place",
+      meta: "",
+      body: "<p>The stack keeps a card you replied under in its place while its author answers.</p>",
+      actions: [],
+      status: "ready",
+      // Shown after the message it answers.
+      createdAt: Date.now() + 1,
+    };
+    up.push(card);
+    return card;
+  };
   const boot = () =>
     new AnswerDeliveryCheck({
       tasks,
@@ -22,6 +43,11 @@ function fixture(observe = false) {
       now: () => 1_000,
       raiseNotice: (card) => notices.push(card.id),
       cardTitle: () => undefined,
+      ending: askEndingOf(tasks, {
+        values: () => up,
+        stored: (id) => up.find((card) => card.id === id),
+        shownAt: (card) => card.createdAt,
+      }),
       observe,
     });
   const ask = (id: string, text = `message ${id}`) => tasks.openAsk({ id, text });
@@ -29,7 +55,7 @@ function fixture(observe = false) {
     inbox
       .allFor(FIRSTMATE_RECIPIENT)
       .flatMap((row) => (row.facts?.kind === "answer-missing" ? [row.facts.askId] : []));
-  return { db, tasks, inbox, notices, boot, ask, retryRows };
+  return { db, tasks, inbox, notices, boot, ask, answer, retryRows };
 }
 
 describe("the answer-delivery check across a restart", () => {
@@ -51,10 +77,12 @@ describe("the answer-delivery check across a restart", () => {
     const f = fixture();
     f.ask("covered");
     f.ask("silent");
+    const card = f.answer("card-firstmate-covered");
     f.tasks.noteDelivery(["covered"], {
       outcome: "action",
       kind: "card",
       tool: "emit_card",
+      ref: card.id,
       at: 1,
     });
     f.boot().reconcile(["covered", "silent"]);
@@ -105,7 +133,14 @@ describe("the answer-delivery check across a restart", () => {
     f.boot().endTurn({ asks: ["m1"], held: false, unread: [] });
     const [row] = f.inbox.allFor(FIRSTMATE_RECIPIENT);
     f.inbox.ack([row?.id as number]);
-    f.tasks.noteDelivery(["m1"], { outcome: "action", kind: "card", tool: "emit_card", at: 2 });
+    const card = f.answer("card-firstmate-m1");
+    f.tasks.noteDelivery(["m1"], {
+      outcome: "action",
+      kind: "card",
+      tool: "emit_card",
+      ref: card.id,
+      at: 2,
+    });
     f.boot().reconcile([]);
     expect(f.tasks.getAsk("m1")?.delivery).toBe("covered");
     expect(f.notices).toEqual([]);
@@ -135,6 +170,47 @@ describe("the answer-delivery check across a restart", () => {
     f.boot().reconcile([]);
     expect(f.tasks.getAsk("m1")).toMatchObject({ delivery: "unresolved", noticeCardId: null });
     expect(f.notices).toEqual([]);
+  });
+
+  // INF-1610 piece 2, the first mate step: work started for a message ended
+  // with no card that answers it, so the first mate is asked once - naming
+  // the work - and after a restart the one notice follows, never a second ask.
+  it("asks the first mate once when the work for a message ends unanswered, and raises one notice after a restart", () => {
+    const f = fixture();
+    seedTask(f.tasks, {
+      id: "panels",
+      title: "Build personal panels in isolation",
+      status: "running",
+    });
+    f.ask("m1", "build the personal panels in isolation");
+    f.tasks.attachAsk("m1", "panels", "tool:spawn_crewmate");
+    f.tasks.closeAsk("m1", "closed");
+    f.boot().endTurn({ asks: ["m1"], held: false, unread: [] });
+    expect(f.tasks.getAsk("m1")?.delivery).toBe("covered");
+    expect(f.retryRows()).toEqual([]);
+
+    f.tasks.close("panels", { status: "done", reason: "answered", actor: "host" });
+    f.boot().sweep();
+    const [row] = f.inbox.allFor(FIRSTMATE_RECIPIENT);
+    expect(row?.facts).toMatchObject({
+      kind: "answer-missing",
+      askId: "m1",
+      workEnded: [{ id: "panels", title: "Build personal panels in isolation" }],
+    });
+    expect(f.tasks.getAsk("m1")?.delivery).toBe("retrying");
+    // A second sweep finds it already asked about.
+    f.boot().sweep();
+    expect(f.retryRows()).toEqual(["m1"]);
+
+    // The retry was served and showed nothing; the app restarts.
+    f.inbox.ack([row?.id as number]);
+    f.boot().reconcile([]);
+    expect(f.notices).toEqual(["card-ask-m1"]);
+    f.boot().reconcile([]);
+    f.boot().sweep();
+    expect(f.notices).toEqual(["card-ask-m1"]);
+    expect(f.retryRows()).toEqual([]);
+    expect(f.tasks.listAsksNotEnded()).toEqual([]);
   });
 
   it("judges nothing in observe mode", () => {

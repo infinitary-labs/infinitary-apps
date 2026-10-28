@@ -1210,6 +1210,159 @@ export class TaskService {
     return undefined;
   }
 
+  /**
+   * The work a captain's messages cover (docs/task-capture.md "How a
+   * message ends"): the tasks they attached to, those tasks' parts, the
+   * work built on them, and the work handed over from them - a
+   * replacement, a stronger model, a retry or a branch taken from one.
+   * With `before`, work filed after that time is left out, apart from a
+   * task a message attached to itself: work linked after a message was
+   * answered belongs to the newer message.
+   */
+  askWork(askIds: readonly string[], before?: number): TaskRecord[] {
+    const found = new Map<string, TaskRecord>();
+    const queue = askIds.flatMap((askId) => this.events.taskIdsWithRef("ask", askId));
+    const seeds = new Set(queue);
+    while (queue.length > 0) {
+      const id = queue.shift() as string;
+      if (found.has(id)) continue;
+      const record = this.store.get(id);
+      if (!record) continue;
+      if (before !== undefined && !seeds.has(id) && record.createdAt > before) continue;
+      found.set(id, record);
+      queue.push(...this.workAfter(record));
+    }
+    return [...found.values()];
+  }
+
+  /**
+   * The tasks the first mate's own tools attached these messages to: work
+   * it filed, started, steered or settled for them - never the host's
+   * fallback to the task a message pointed at.
+   */
+  askActedOn(askIds: readonly string[]): Set<string> {
+    const ids = new Set(askIds);
+    const acted = new Set<string>();
+    for (const askId of askIds) {
+      for (const taskId of this.events.taskIdsWithRef("ask", askId)) {
+        const tool = this.events
+          .listFor(taskId)
+          .some(
+            (event) =>
+              event.kind === "ask" &&
+              event.ref !== null &&
+              ids.has(event.ref) &&
+              typeof event.data?.via === "string" &&
+              event.data.via.startsWith("tool:"),
+          );
+        if (tool) acted.add(taskId);
+      }
+    }
+    return acted;
+  }
+
+  /** The tasks that carry a task's work on: its parts, what builds on it and its handovers. */
+  private workAfter(record: TaskRecord): string[] {
+    const key = record.key || null;
+    return [
+      ...this.store.listChildren(record.id).map((child) => child.id),
+      ...this.links.listFrom(record.id, "replaced-by").map((link) => link.toId),
+      ...(["basis", "retry-of", "branch-source"] as const).flatMap((kind) =>
+        this.references.taskIdsNaming(kind, record.id, key),
+      ),
+      ...this.escalations(record.id, "escalated_to"),
+    ];
+  }
+
+  /** The tasks a task's work came from: the inverse of `workAfter`. */
+  private workBefore(record: TaskRecord): string[] {
+    return [
+      ...(record.parentId ? [record.parentId] : []),
+      ...this.links.listTo(record.id, "replaced-by").map((link) => link.fromId),
+      ...this.references
+        .list(record.id)
+        .filter(
+          (entry) =>
+            entry.kind === "basis" || entry.kind === "retry-of" || entry.kind === "branch-source",
+        )
+        .flatMap((entry) => this.referenceTarget(entry)?.id ?? []),
+      ...this.escalations(record.id, "escalated_from"),
+    ];
+  }
+
+  /** The other attempt a stronger-model move names, on the side `side` records. */
+  private escalations(id: string, side: "escalated_to" | "escalated_from"): string[] {
+    return this.events
+      .listFor(id)
+      .filter((event) => event.kind === "escalated" && typeof event.data?.[side] === "string")
+      .flatMap((event) => (event.ref ? [event.ref] : []));
+  }
+
+  /**
+   * The captain's messages whose work includes this task, newest first:
+   * those attached to it or to the work it came from. A message answered
+   * before the task was filed is left out unless it attached to the task
+   * itself (`askWork`'s rule, from the other side).
+   */
+  asksAbove(id: string): AskRecord[] {
+    const seen = new Set<string>();
+    const asks = new Map<string, AskRecord>();
+    const target = this.store.get(id);
+    const queue = [id];
+    while (queue.length > 0) {
+      const current = queue.shift() as string;
+      if (seen.has(current)) continue;
+      seen.add(current);
+      const record = this.store.get(current);
+      if (!record) continue;
+      for (const ref of this.events.refsOf(current, "ask")) {
+        const ask = this.asks.get(ref);
+        if (!ask || asks.has(ask.id)) continue;
+        const later =
+          current !== id &&
+          target !== undefined &&
+          ask.answeredAt !== null &&
+          target.createdAt > ask.answeredAt;
+        if (!later) asks.set(ask.id, ask);
+      }
+      queue.push(...this.workBefore(record));
+    }
+    return [...asks.values()].sort((a, b) => b.at - a.at);
+  }
+
+  /** Followed messages that have not ended, oldest first. */
+  listAsksNotEnded(): AskRecord[] {
+    return this.asks.listNotEnded();
+  }
+
+  /** A message and every message that joined its work, oldest first. */
+  askMembers(rootId: string): AskRecord[] {
+    const root = this.asks.get(rootId);
+    return root ? [root, ...this.asks.listContinuing(rootId)] : [];
+  }
+
+  /** The captain accepted a card as the answer to these messages. */
+  acceptAnswer(askIds: readonly string[], cardId: string): void {
+    const at = this.now();
+    this.write(() => {
+      for (const id of askIds) this.asks.setAccepted(id, cardId, at);
+    })();
+  }
+
+  /** These messages are answered, on a card or by a reaction: final. */
+  markAnswered(askIds: readonly string[], cardId: string | null): void {
+    const at = this.now();
+    this.write(() => {
+      for (const id of askIds) this.asks.setAnswered(id, cardId, at);
+    })();
+  }
+
+  /** The once a message's last crewmate was asked for its answering card. */
+  markCrewmateAsked(askId: string): void {
+    const at = this.now();
+    this.write(() => this.asks.setCrewmateAsked(askId, at))();
+  }
+
   /** Complete text files the messages attached to this task kept at acceptance. */
   messageFiles(id: string): MessageFile[] {
     return this.events
@@ -4716,6 +4869,12 @@ export class TaskService {
       delivery: "pending",
       deliveryFacts: { entries: [], ...(input.retryOf ? { retryOf: input.retryOf } : {}) },
       noticeCardId: null,
+      followed: true,
+      continues: null,
+      answerCardId: null,
+      acceptedAt: null,
+      answeredAt: null,
+      crewmateAskedAt: null,
     };
     this.asks.insert(record);
     return record;
@@ -4737,6 +4896,20 @@ export class TaskService {
         .some((event) => event.kind === "ask" && event.ref === askId);
       if (already) return false;
       const first = this.asks.attach(askId, taskId, via, at);
+      // A message about work an earlier message's work includes joins that
+      // earlier message while it has not ended (docs/task-capture.md "How a
+      // message ends").
+      if (ask.followed && ask.continues === null) {
+        const earlier = this.asksAbove(taskId).find(
+          (other) =>
+            other.id !== askId &&
+            other.followed &&
+            other.at <= ask.at &&
+            other.answeredAt === null &&
+            other.delivery !== "unresolved",
+        );
+        if (earlier) this.asks.setContinues(askId, earlier.continues ?? earlier.id);
+      }
       this.patch(taskId, { updatedAt: at });
       this.addEvent({
         taskId,

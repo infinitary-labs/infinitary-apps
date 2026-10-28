@@ -83,7 +83,10 @@ const LABEL_COLUMNS = ["missed_escalation", "missed_note", "missed_at"] as const
 /** Every migration shipped today; the head moves as migrations are added. */
 const ALL_VERSIONS = Array.from({ length: DATABASE_VERSION }, (_, index) => index + 1);
 /** Migration 68's reply line, undone: the `captain_asks` column. */
-const REVERSE_MIGRATION_68 = "ALTER TABLE captain_asks DROP COLUMN reply;\n";
+/** INF-1610 piece 2's ending of each captain message, undone. */
+const REVERSE_MIGRATION_102 =
+  "ALTER TABLE captain_asks DROP COLUMN followed; ALTER TABLE captain_asks DROP COLUMN continues; ALTER TABLE captain_asks DROP COLUMN answer_card_id; ALTER TABLE captain_asks DROP COLUMN accepted_at; ALTER TABLE captain_asks DROP COLUMN answered_at; ALTER TABLE captain_asks DROP COLUMN crewmate_asked_at;\n";
+const REVERSE_MIGRATION_68 = `${REVERSE_MIGRATION_102}ALTER TABLE captain_asks DROP COLUMN reply;\n`;
 /** INF-1288's conversation associations, removed before a pre-sessions schema comparison. */
 const REVERSE_TASK_SESSIONS = "DROP TABLE task_sessions;\n";
 /** INF-1296 piece 2's relationship rows, undone: each name back into its shape field. */
@@ -3384,6 +3387,42 @@ it("INF-476 upgrades existing cards with no minimized state, persists a minimize
   expect(reopened.prepare("SELECT id, status FROM cards").all()).toEqual([
     { id: review.id, status: "ready" },
   ]);
+  reopened.close();
+});
+
+// INF-1610 piece 2: the captain's messages from before the app followed each
+// to its answer are never asked about again; a new one is followed and keeps
+// its answer across a restart.
+it("INF-1610 leaves every older captain message unfollowed, follows a new one, keeps its answer across reopen and reverses", () => {
+  const dir = tmpUserData();
+  const old = openDatabase(dir, 101);
+  const columns = columnNames(old, "captain_asks");
+  old
+    .prepare(
+      "INSERT INTO captain_asks (id, at, text, turn_state, delivery) VALUES ('stack', 1, 'did something change about how we order the cards in the stack?', 'closed', 'covered')",
+    )
+    .run();
+  old.close();
+  const upgraded = openDatabase(dir);
+  expect(appliedVersions(upgraded)).toEqual(ALL_VERSIONS);
+  const tasks = new TaskService({ db: upgraded, strict: true });
+  expect(tasks.getAsk("stack")).toMatchObject({ followed: false, answeredAt: null });
+  expect(tasks.listAsksNotEnded()).toEqual([]);
+  tasks.openAsk({ id: "taps", text: "the taps on the phone get lost" });
+  tasks.closeAsk("taps", "closed");
+  expect(tasks.listAsksNotEnded().map((ask) => ask.id)).toEqual(["taps"]);
+  tasks.markAnswered(["taps"], "card-firstmate-taps");
+  upgraded.close();
+  const reopened = openDatabase(dir);
+  const again = new TaskService({ db: reopened, strict: true });
+  expect(again.getAsk("taps")).toMatchObject({
+    followed: true,
+    answerCardId: "card-firstmate-taps",
+  });
+  expect(again.listAsksNotEnded()).toEqual([]);
+  reopened.exec(REVERSE_MIGRATION_102);
+  expect(columnNames(reopened, "captain_asks")).toEqual(columns);
+  expect(reopened.prepare("SELECT COUNT(*) AS n FROM captain_asks").get()).toEqual({ n: 2 });
   reopened.close();
 });
 

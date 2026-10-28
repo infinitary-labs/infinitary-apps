@@ -141,7 +141,9 @@ export function refusalOf(entries: readonly DeliveryEntry[]): DeliveryEntry | un
 /**
  * The tools an output-only retry refuses (as tool text): everything that
  * starts, steers, stops or closes work, or changes a setting. The lookups,
- * emit_card, close_card and emote stay: the retry may only show an answer.
+ * emit_card, close_card and emote stay, and so does link_tasks, which
+ * names the task that took ended work over: the retry may only show an
+ * answer or say where the work went.
  */
 export const ANSWER_ONLY_REFUSED_TOOLS: ReadonlySet<string> = new Set([
   "spawn_crewmate",
@@ -150,7 +152,6 @@ export const ANSWER_ONLY_REFUSED_TOOLS: ReadonlySet<string> = new Set([
   "settle_task",
   "create_task",
   "update_task",
-  "link_tasks",
   "schedule_prompt",
   "cancel_schedule",
   "remember",
@@ -164,7 +165,15 @@ export const ANSWER_ONLY_REFUSED_TOOLS: ReadonlySet<string> = new Set([
 ]);
 
 export const ANSWER_ONLY_REFUSAL =
-  "This turn only shows the captain the answer they are missing. Starting, steering, stopping or closing work and changing settings are not available now: show the answer with emit_card (or answer in the card's thread), or react with emote.";
+  "This turn only shows the captain the answer they are missing. Starting, steering, stopping or closing work and changing settings are not available now: show the answer with emit_card and answering true (or answer in the card's thread), link the task that took the work over with link_tasks, or react with emote.";
+
+/**
+ * The crewmate step's one ask (INF-1610, docs/task-capture.md "How a
+ * message ends"), as the finished report's refusal: the task stays open
+ * until the crewmate shows the answering card or says why it cannot.
+ */
+export const CREWMATE_ANSWER_ASK =
+  "Report refused once: your task is the last work for the captain's message and no card of yours answers it. Show the card that answers it with emit_card and answering true - or revise your card under the same id with answering true, which raises it again if they closed it - then report. If you cannot answer it, report finished again saying why, and the first mate answers it.";
 
 /** The one notice's card title. */
 export const ANSWER_NOTICE_TITLE = "Your first mate has not answered your message";

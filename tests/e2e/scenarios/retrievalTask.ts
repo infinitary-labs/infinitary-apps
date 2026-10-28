@@ -1,3 +1,4 @@
+import { CREWMATE_ANSWER_ASK } from "../../../src/core/orchestrator/answerDelivery";
 import {
   CARD_CLOSED_STEER_NEEDLE,
   calledTool,
@@ -8,6 +9,7 @@ import {
   toolAnswers,
 } from "../mockProvider";
 import { providerMessages } from "../providerRequest";
+import { MOCK_ANSWER_FINISHED_AGAIN } from "./answerTask";
 
 export const RETRIEVAL_TASK_TITLE = "Read meterlab release facts";
 
@@ -22,11 +24,13 @@ const RETRIEVAL_FINISHED_REPORT =
  * The lookup ask: the first mate spawns the retrieval task, and its crewmate
  * reads the committed release facts and answers on one decision card. Told
  * the captain closed that card, it judges the answer read and finished
- * (FI3-435).
+ * (FI3-435). A decision closed without a choice does not answer the
+ * captain's message (INF-1610 piece 2), so that report is refused once and
+ * the crewmate says why it has no more to show.
  */
-export const retrievalTask: Scenario =
-  () =>
-  ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
+export const retrievalTask: Scenario = () => {
+  let saidWhy = false;
+  return ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
     if (isFirstmate && wantsStream) {
       if (!hasToolResults && latestUserTail.includes(RETRIEVAL_TASK_ASK)) {
         return {
@@ -51,6 +55,12 @@ export const retrievalTask: Scenario =
       latestUserTail.includes(CARD_CLOSED_STEER_NEEDLE) &&
       wantsStream
     ) {
+      if (hasToolResults && body.includes(CREWMATE_ANSWER_ASK) && !saidWhy) {
+        saidWhy = true;
+        return {
+          calls: [{ name: "report", args: { text: MOCK_ANSWER_FINISHED_AGAIN, finished: true } }],
+        };
+      }
       if (hasToolResults) return { text: "done" };
       return {
         calls: [{ name: "report", args: { text: RETRIEVAL_FINISHED_REPORT, finished: true } }],
@@ -91,3 +101,4 @@ export const retrievalTask: Scenario =
     }
     return undefined;
   };
+};

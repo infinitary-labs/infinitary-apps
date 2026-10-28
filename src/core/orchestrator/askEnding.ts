@@ -1,0 +1,307 @@
+import { type Card, settleEffectOf } from "@shared/cards";
+import type { AskRecord } from "../storage/askStore";
+import type { TaskRecord } from "../storage/taskStore";
+import { TaskService } from "../tasks/taskService";
+import { actionTookEffect } from "./answerDelivery";
+import { hasMergeLine } from "./settleWords";
+
+/**
+ * How a captain's message ends (INF-1610 piece 2, docs/task-capture.md "How
+ * a message ends"): on a card the captain accepts as its answer. A message
+ * may run any number of tasks and cards first; the ones along the way stay
+ * as they are. This module reads typed state only - the saved message, the
+ * task graph, the cards and the captain's own response - and never the
+ * words of a card or a message.
+ *
+ * A message that joined an earlier one's open work (`continues`) ends with
+ * it: the earliest is the root, and the root with every message that joined
+ * it is one chain, with one ending.
+ */
+
+/** What the app reads from the stack. */
+export type AskEndingHost = {
+  tasks: TaskService;
+  /** The cards on the stack now. */
+  openCards: () => Iterable<Card>;
+  /** A card's row, open or resolved. */
+  storedCard: (id: string) => Card | undefined;
+  /** When the captain was last offered the card as it stands. */
+  shownAt: (card: Card) => number;
+};
+
+/** A root message with every message that joined its work. */
+export type AskChain = {
+  root: AskRecord;
+  members: AskRecord[];
+  ids: string[];
+  /** When the newest message of the chain was sent. */
+  newestAt: number;
+  work: TaskRecord[];
+};
+
+/**
+ * Where a chain stands. `answered` and `unanswered` are saved endings;
+ * `accepted` is an answer the captain accepted with nothing more running,
+ * which becomes `answered` once the first mate has nothing left to do for
+ * it; `working` has work still running; `waiting` has an answering card up
+ * for the captain; `missing` has neither.
+ */
+export type AskState =
+  | { kind: "answered"; cardId: string | null }
+  | { kind: "unanswered" }
+  | { kind: "accepted"; cardId: string | null }
+  | { kind: "working" }
+  | { kind: "waiting"; cardId: string }
+  | { kind: "missing" };
+
+/**
+ * Where a close of a task's work puts its outcome: on the card that answers
+ * its message (`revise`, `open` when it is still up), as the app's one
+ * closing note marked as the answer (`note`), nowhere because other work of
+ * the message runs on or took it over (`quiet`), or - for work no message
+ * of the captain's covers - by today's rule for work the fleet started.
+ */
+export type ClosingPlace =
+  | { kind: "revise"; card: Card; open: boolean }
+  | { kind: "note" }
+  | { kind: "quiet" }
+  | { kind: "unasked"; card?: Card };
+
+/**
+ * A card shaped as the outcome of work: its author's answering mark, a
+ * completion card's merge, or the app's merge line on the story note of
+ * work that merges on its own. All typed; never the card's words.
+ */
+export function answersByShape(card: Card): boolean {
+  return (
+    card.answering === true ||
+    card.actions.some((action) => settleEffectOf(action)?.mode === "merge") ||
+    hasMergeLine(card.body)
+  );
+}
+
+/** The ending over a card stack: its open cards, its rows and when each was offered. */
+export function askEndingOf(
+  tasks: TaskService,
+  cards: {
+    values(): Iterable<Card>;
+    stored(id: string): Card | undefined;
+    shownAt(card: Card): number;
+  },
+): AskEnding {
+  return new AskEnding({
+    tasks,
+    openCards: () => cards.values(),
+    storedCard: (id) => cards.stored(id),
+    shownAt: (card) => cards.shownAt(card),
+  });
+}
+
+export class AskEnding {
+  constructor(private readonly host: AskEndingHost) {}
+
+  /** A message's chain: its root, and every message that joined the root's work. */
+  chain(askId: string): AskChain | undefined {
+    const ask = this.host.tasks.getAsk(askId);
+    if (!ask) return undefined;
+    const root = ask.continues ? (this.host.tasks.getAsk(ask.continues) ?? ask) : ask;
+    const members = this.host.tasks.askMembers(root.id);
+    const ids = members.map((member) => member.id);
+    return {
+      root,
+      members,
+      ids,
+      newestAt: Math.max(...members.map((member) => member.at)),
+      work: this.host.tasks.askWork(ids),
+    };
+  }
+
+  /** The chains that have not ended, oldest first: one per root. */
+  openChains(): AskChain[] {
+    const open = this.host.tasks.listAsksNotEnded();
+    const openIds = new Set(open.map((ask) => ask.id));
+    return open
+      .filter((ask) => ask.continues === null || !openIds.has(ask.continues))
+      .flatMap((ask) => this.chain(ask.id) ?? []);
+  }
+
+  /** The chains whose work includes a task, newest first. */
+  chainsOf(taskId: string): AskChain[] {
+    const roots = new Set<string>();
+    const chains: AskChain[] = [];
+    for (const ask of this.host.tasks.asksAbove(taskId)) {
+      const chain = this.chain(ask.id);
+      if (!chain || roots.has(chain.root.id)) continue;
+      roots.add(chain.root.id);
+      chains.push(chain);
+    }
+    return chains;
+  }
+
+  private cardTask(card: Card): string | undefined {
+    return card.taskId ?? this.host.tasks.taskForCard(card.id)?.id;
+  }
+
+  /** The cards the first mate showed for the chain's messages, by its own facts. */
+  private shownFor(chain: AskChain): Set<string> {
+    return new Set(
+      chain.members.flatMap((member) =>
+        member.deliveryFacts.entries.flatMap((entry) =>
+          entry.outcome === "action" && entry.kind === "card" && entry.ref ? [entry.ref] : [],
+        ),
+      ),
+    );
+  }
+
+  /**
+   * Whether a card can answer the chain: shaped as an answer and about its
+   * work, or one the first mate showed for its messages.
+   */
+  candidate(chain: AskChain, card: Card): boolean {
+    return this.about(chain, card) && (this.shownFor(chain).has(card.id) || answersByShape(card));
+  }
+
+  /** Whether a card is about the chain: shown for its messages, or a card of its work. */
+  private about(chain: AskChain, card: Card): boolean {
+    if (this.shownFor(chain).has(card.id)) return true;
+    const taskId = this.cardTask(card);
+    return taskId !== undefined && chain.work.some((task) => task.id === taskId);
+  }
+
+  /** The newest card up that answers the chain and was shown since its newest message. */
+  waitingCard(chain: AskChain): Card | undefined {
+    let newest: Card | undefined;
+    for (const card of this.host.openCards()) {
+      if (!this.candidate(chain, card) || this.host.shownAt(card) < chain.newestAt) continue;
+      if (!newest || this.host.shownAt(card) > this.host.shownAt(newest)) newest = card;
+    }
+    return newest;
+  }
+
+  /**
+   * The captain's accepted answer, when they accepted it since the newest
+   * message. Work their choice started keeps the message working until it
+   * ends; then the accepted card still answers it, revised with the outcome.
+   */
+  private acceptance(chain: AskChain): string | undefined {
+    const { root } = chain;
+    if (!root.answerCardId || root.acceptedAt === null) return undefined;
+    return root.acceptedAt < chain.newestAt ? undefined : root.answerCardId;
+  }
+
+  /**
+   * The chain's own work: the tasks the first mate's tools acted on for
+   * it, and those filed or started after it (a part, a handover, a choice
+   * on its card that started work). A task the message only pointed at
+   * (its card or panel), which nobody acted on since, is not its work.
+   */
+  ownWork(chain: AskChain): TaskRecord[] {
+    const acted = this.host.tasks.askActedOn(chain.ids);
+    return chain.work.filter(
+      (task) => acted.has(task.id) || Math.max(task.createdAt, task.startedAt ?? 0) > chain.root.at,
+    );
+  }
+
+  /** Whether the chain's own work runs on: the message still waits for its outcome. */
+  private live(chain: AskChain): boolean {
+    return this.ownWork(chain).some((task) => !TaskService.isClosed(task));
+  }
+
+  state(chain: AskChain): AskState {
+    const { root } = chain;
+    if (root.answeredAt !== null) return { kind: "answered", cardId: root.answerCardId };
+    if (root.delivery === "unresolved") return { kind: "unanswered" };
+    const live = this.live(chain);
+    const accepted = this.acceptance(chain);
+    if (accepted && !live) return { kind: "accepted", cardId: accepted };
+    if (live) return { kind: "working" };
+    const waiting = this.waitingCard(chain);
+    if (waiting) return { kind: "waiting", cardId: waiting.id };
+    const entries = chain.members.flatMap((member) => member.deliveryFacts.entries);
+    // The first mate's answer in the thread of the card the message replied under.
+    const reply = entries.findLast(
+      (entry) => entry.outcome === "action" && entry.kind === "reply" && entry.ref,
+    );
+    if (reply?.ref) return { kind: "accepted", cardId: reply.ref };
+    // A reaction answers a message that asks nothing; the first mate judged that.
+    const reacted = actionTookEffect(
+      entries.filter(
+        (entry) =>
+          entry.outcome === "refused" || (entry.outcome === "action" && entry.kind === "reaction"),
+      ),
+    );
+    if (reacted) return { kind: "accepted", cardId: null };
+    return { kind: "missing" };
+  }
+
+  /**
+   * The captain responded to a card: a choice, or their close. It is the
+   * answer for each open chain it is about, when it was shown since the
+   * chain's newest message and no reply of theirs waits under it: their
+   * choice on a decision about its work that is not still asking, or their
+   * close of a note shaped as its answer. A decision closed without a
+   * choice answers nothing.
+   */
+  captainResponded(card: Card, response: "choice" | "close"): void {
+    if (card.awaiting === "answer") return;
+    if (response === "close" && card.actions.length > 0) return;
+    if (response === "choice" && (card.asking || card.continues)) return;
+    for (const chain of this.openChains()) {
+      // A choice on any decision about its work answers it; a closed note
+      // answers it only when shaped as its answer, not a note along the way.
+      const answers = response === "choice" ? this.about(chain, card) : this.candidate(chain, card);
+      if (!answers || this.host.shownAt(card) < chain.newestAt) continue;
+      this.host.tasks.acceptAnswer(chain.ids, card.id);
+    }
+  }
+
+  /**
+   * The crewmate step: a crewmate reports its task finished. When that task
+   * is the last running work of a followed message with no answer accepted
+   * or up, the crewmate is asked once for the card that answers it; the
+   * returned chain is the one it is asked about.
+   */
+  crewmateStep(taskId: string): AskChain | undefined {
+    for (const chain of this.chainsOf(taskId)) {
+      const { root } = chain;
+      if (!root.followed || root.answeredAt !== null || root.delivery === "unresolved") continue;
+      if (root.crewmateAskedAt !== null) continue;
+      const others = chain.work.some((task) => task.id !== taskId && !TaskService.isClosed(task));
+      if (others || this.acceptance(chain) || this.waitingCard(chain)) continue;
+      this.host.tasks.markCrewmateAsked(root.id);
+      return chain;
+    }
+    return undefined;
+  }
+
+  /**
+   * Where a closed task's outcome goes (the at-most-one rule). The newest
+   * message covering the task decides: its answer, recorded or accepted,
+   * is revised; other running work of it means quiet; an answering card up
+   * is revised; otherwise the app's one closing note answers it.
+   */
+  closingPlace(taskId: string): ClosingPlace {
+    const chain = this.chainsOf(taskId)[0];
+    const own = [...this.host.openCards()].find(
+      (card) => this.cardTask(card) === taskId && answersByShape(card),
+    );
+    if (!chain) return { kind: "unasked", ...(own ? { card: own } : {}) };
+    const { root } = chain;
+    const answer =
+      root.answeredAt !== null ? (root.answerCardId ?? undefined) : this.acceptance(chain);
+    if (answer) {
+      const open = [...this.host.openCards()].find((card) => card.id === answer);
+      const card = open ?? this.host.storedCard(answer);
+      return card ? { kind: "revise", card, open: open !== undefined } : { kind: "quiet" };
+    }
+    if (root.answeredAt !== null || root.delivery === "unresolved") return { kind: "quiet" };
+    if (chain.work.some((task) => task.id !== taskId && !TaskService.isClosed(task))) {
+      return { kind: "quiet" };
+    }
+    // An answering card up is revised; so is the task's own, shown before a
+    // later message about it, which the revision shows again as the answer.
+    const waiting = this.waitingCard(chain) ?? own;
+    if (waiting) return { kind: "revise", card: waiting, open: true };
+    return { kind: "note" };
+  }
+}

@@ -6,6 +6,7 @@ import { CardStore } from "../storage/cardStore";
 import { InboxStore } from "../storage/inboxStore";
 import { seedTask, type TaskSeed } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
+import { askEndingOf } from "./askEnding";
 import { CardService } from "./cardService";
 import { SettleService, type SettleServiceHost } from "./settleService";
 
@@ -70,6 +71,7 @@ function setup(seed: Partial<TaskSeed> = {}) {
     tasks,
     inbox,
     cards,
+    askEnding: askEndingOf(tasks, cards),
     workspace,
     runtimeState: vi.fn((): "starting" | "streaming" | "idle" | undefined => undefined),
     stopRuntime: vi.fn((): Promise<void> | undefined => undefined),
@@ -131,12 +133,18 @@ describe("verified folder-work completion", () => {
 
   it("leaves a finished closing note rather than a discarded one", async () => {
     const h = setup();
+    // The captain asked for the folder work, so its close answers them.
+    h.tasks.openAsk({ id: "ask-folder", text: "tidy the notes folder" });
+    h.tasks.attachAsk("ask-folder", h.task.id, "tool:create_task");
+    h.tasks.closeAsk("ask-folder", "closed");
     await h.settle.withClosingSentence(
       h.task.id,
       "The folder was checked and your edits remain intact.",
       () => h.settle.closeFinishedFolderWork(h.task.id, evidence),
     );
-    expect(h.cards.snapshot()).toMatchObject([{ title: `${h.task.key} finished`, actions: [] }]);
+    expect(h.cards.snapshot()).toMatchObject([
+      { title: `${h.task.key} finished`, actions: [], answering: true },
+    ]);
   });
 
   it.each([

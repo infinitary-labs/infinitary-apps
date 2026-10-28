@@ -32,6 +32,7 @@ import {
   type TaskWorkspace,
   type WorkspaceService,
 } from "../workspace/workspaceService";
+import type { AskEnding, ClosingPlace } from "./askEnding";
 import { type CardService, cardEmitter } from "./cardService";
 import { escapeCardText } from "./cardText";
 import {
@@ -48,15 +49,17 @@ import {
 import type { MergeGuard, MergeStop, PrOutcome } from "./prCi";
 import { reviewCoversHead } from "./reviewCarry";
 import {
+  type ClosedWithoutClick,
   cannotMergeText,
+  closedLine,
   closedWithoutClick,
   closingNoteTitle,
   discardedText,
   folderNotUpdatedText,
-  hasMergeLine,
   mergedLine,
   pullLeftOpenText,
   unlandedWorkText,
+  withCloseLine,
   withMergeLine,
 } from "./settleWords";
 import type { AnswerTaskClosedPayload, TypedWake } from "./wakes";
@@ -240,6 +243,10 @@ export type SettleServiceHost = {
   workspace: WorkspaceService;
   repos: RepoRegistry;
   cards: CardService;
+  /** How each captain's message ends: where a close's outcome goes (INF-1610). */
+  askEnding: AskEnding;
+  /** A close moved a message's work: the first mate's check reads it when it can. */
+  asksMoved?: () => void;
   /** Check selected proof synchronously, preserving the final no-yield send boundary. */
   verifyValidationEvidence?: (taskId: string) => void;
   /** The task's live crewmate turn state, when a runtime holds it. */
@@ -401,31 +408,56 @@ export class SettleService {
   }
 
   /**
-   * The first mate's note on started work it closed (INF-547, the
-   * captain's direction C with their answers): when the close leaves nothing
-   * of the task on their stack - no crewmate's story, no other note - and
-   * the captain has not already closed the crewmate's outcome card, its
-   * sentence goes up as the first mate's own note on that task. A note
-   * holds nothing and asks nothing; only their close takes it down.
+   * Where a close of started work puts what became of it (INF-1610's at
+   * most one closing note, docs/task-capture.md "How a message ends"). The
+   * captain's message the work covers decides, never the close's words:
+   * - the card that answers it, recorded or accepted, or up for them, is
+   *   revised with the outcome - the merge line on a merge - and a card
+   *   they already closed comes back only when the work was dropped after
+   *   all, by someone other than them;
+   * - other work of the message still running, or the task that took this
+   *   work over, keeps it quiet;
+   * - otherwise the first mate's sentence goes up as the app's one closing
+   *   note, marked as the answer.
+   * Work no message of the captain's covers - work the fleet started on
+   * its own - puts a note up only when code merged or was released, and
+   * only when nothing of the task is still on their stack.
    */
-  private leaveClosingNote(
+  private placeOutcome(
     record: TaskRecord,
     reason: TaskClose["reason"],
-    sentence: string,
+    actor: TaskClose["actor"],
+    sentence: string | undefined,
   ): void {
     const outcome = closedWithoutClick(reason);
     if (!outcome || record.startedAt === null) return;
-    // Work the first mate marked its own at the start (INF-1467, the
-    // captain's direction A): the captain did not ask for it, so only a
-    // merge or a release - code reaching their project without their
-    // click - puts a note up. A drop or a finish stays on the record and
-    // in Activity.
-    if (record.shape?.internal_step && outcome !== "merged" && outcome !== "released") return;
-    // The captain closed the crewmate's own outcome card and its crewmate
-    // reported the work finished: their close already said what became of
-    // it, so a note would only say it twice (INF-1137).
-    if (record.delivery?.finishedAt !== undefined) return;
-    if ([...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
+    // Work the first mate declared the captain did not ask for raises
+    // nothing new on their stack (INF-1467): a card of its that is up still
+    // takes the outcome, and a message it served gets its answer from the
+    // first mate step.
+    const asked = this.host.askEnding.closingPlace(record.id);
+    const place: ClosingPlace =
+      !record.shape?.internal_step || asked.kind === "unasked"
+        ? asked
+        : asked.kind === "revise" && asked.open
+          ? asked
+          : { kind: "unasked" };
+    const answer =
+      place.kind === "revise"
+        ? place
+        : place.kind === "unasked" && place.card
+          ? { card: place.card, open: true }
+          : undefined;
+    if (answer) {
+      if (!answer.open && (outcome !== "dropped" || actor === "captain")) return;
+      if (answer.open && outcome !== "merged" && !sentence) return;
+      this.reviseAnswer(answer.card, answer.open, record, outcome, actor, sentence);
+      return;
+    }
+    if (!sentence || place.kind === "quiet") return;
+    const unasked = place.kind === "unasked";
+    if (unasked && outcome !== "merged" && outcome !== "released") return;
+    if (unasked && [...this.host.cards.values()].some((card) => card.taskId === record.id)) return;
     const closed = this.host.tasks.get(record.id) ?? record;
     const prUrl = closed.delivery?.prUrl;
     const prNumber = closed.delivery?.prNumber;
@@ -438,41 +470,50 @@ export class SettleService {
       body: `<p>${escapeCardText(sentence)}</p>${pullRequest}`,
       actions: [],
       taskId: record.id,
+      ...(unasked ? {} : { answering: true }),
     });
   }
 
   /**
-   * The merge of a task that merges on its own, on its story note
-   * (INF-1219, the captain's direction A): the line that said it merges on
-   * its own is rewritten on the same note to say it merged, when, its pull
-   * request and the first mate's closing sentence. The note stays up, so no
-   * closing note of the first mate's goes up beside it.
+   * The card that answers the message, revised with what became of its
+   * work: on a merge the merge line - when, its pull request and the first
+   * mate's sentence (INF-1219) - else the close line. A card the captain
+   * closed comes back as a note, since what it offered is gone.
    */
-  private finishMergeNote(
+  private reviseAnswer(
+    card: Card,
+    open: boolean,
     record: TaskRecord,
+    outcome: ClosedWithoutClick,
     actor: TaskClose["actor"],
     sentence: string | undefined,
   ): void {
-    const note = [...this.host.cards.values()].find(
-      (card) =>
-        card.taskId === record.id &&
-        card.author === "crewmate" &&
-        card.actions.length === 0 &&
-        hasMergeLine(card.body),
-    );
-    if (!note) return;
-    const delivery = (this.host.tasks.get(record.id) ?? record).delivery;
+    const current = this.host.tasks.get(record.id) ?? record;
+    const delivery = current.delivery;
     const label =
       delivery?.prNumber !== undefined
-        ? `PR ${this.changeName(this.host.tasks.get(record.id) ?? record, delivery.prNumber)}`
+        ? `PR ${this.changeName(current, delivery.prNumber)}`
         : delivery?.changeLabel;
-    const line = mergedLine({
-      at: this.host.now(),
-      onItsOwn: actor !== "captain",
-      ...(label ? { change: { label, ...(delivery?.prUrl ? { url: delivery.prUrl } : {}) } } : {}),
-      ...(sentence ? { sentence } : {}),
-    });
-    this.host.cards.reviseBody(note.id, withMergeLine(note.body, line));
+    const body =
+      outcome === "merged"
+        ? withMergeLine(
+            card.body,
+            mergedLine({
+              at: this.host.now(),
+              onItsOwn: actor !== "captain",
+              ...(label
+                ? { change: { label, ...(delivery?.prUrl ? { url: delivery.prUrl } : {}) } }
+                : {}),
+              ...(sentence ? { sentence } : {}),
+            }),
+          )
+        : withCloseLine(card.body, closedLine(record.key || record.id, outcome, sentence));
+    if (open) this.host.cards.reviseBody(card.id, body);
+    else {
+      // Raised again as it now stands: no wait of its last showing comes with it.
+      const { awaiting: _awaiting, ...shown } = card;
+      this.host.cards.put({ ...shown, body, actions: [] });
+    }
   }
 
   /** Where the task's project lives, in the person's words ("GitHub", "GitLab", a host's address). */
@@ -2928,8 +2969,10 @@ export class SettleService {
     // poking here cannot race the lane purge that precedes its insertion.
     if (answerHandoffQueued) this.host.pokeInbox();
     this.host.cards.retireTaskCards(taskId, close.reason, { keepNotes: close.status === "done" });
-    if (record && close.reason === "merged") this.finishMergeNote(record, close.actor, sentence);
-    if (record && sentence) this.leaveClosingNote(record, close.reason, sentence);
+    if (record && record.status !== "done" && record.status !== "dropped") {
+      this.placeOutcome(record, close.reason, close.actor, sentence);
+    }
+    this.host.asksMoved?.();
     this.host.cards.scheduleBroadcast();
     this.host.broadcastCrewCounts();
     if (record?.worktreeDir && record.workspaceState !== "removed") {
@@ -3013,7 +3056,8 @@ export class SettleService {
     });
     void this.closeOpenPullRequest(taskId);
     this.host.cards.retireTaskCards(taskId, status);
-    if (record && sentence) this.leaveClosingNote(record, "cancelled", sentence);
+    if (record && status === "cancelled") this.placeOutcome(record, "cancelled", actor, sentence);
+    this.host.asksMoved?.();
     void this.retireDeliveryChildren(taskId, this.host.tasks.get(taskId)?.title);
     void this.retireWorkspace(taskId);
   }

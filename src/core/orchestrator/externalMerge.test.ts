@@ -11,6 +11,7 @@ import { InboxStore } from "../storage/inboxStore";
 import { seedTask } from "../tasks/seedTask";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
+import { askEndingOf } from "./askEnding";
 import type { CardService } from "./cardService";
 import { armWatch, CHECK_REFRESH_MS, CheckWatcher } from "./checkWatch";
 import { CrewSupervisor } from "./crewSupervisor";
@@ -61,6 +62,8 @@ function fixture() {
   const cards = {
     retireTaskCards: vi.fn(),
     values: () => [],
+    stored: () => undefined,
+    shownAt: () => 0,
     scheduleBroadcast: vi.fn(),
   } as unknown as CardService;
   const host: SettleServiceHost = {
@@ -68,6 +71,7 @@ function fixture() {
     inbox,
     repos,
     cards,
+    askEnding: askEndingOf(tasks, cards),
     now: () => now,
     workspace: { retireTaskWorktree: retire } as unknown as SettleServiceHost["workspace"],
     readPull: (id, number) => prCi.pullState(id, number),

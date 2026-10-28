@@ -1150,6 +1150,23 @@ const MIGRATIONS: readonly Migration[] = [
   // CardStore is the only writer and no published view reads it. Dropping
   // the column reverses it.
   (db) => addColumn(db, "cards", "answering", "INTEGER"),
+  // INF-1610 piece 2 (docs/task-capture.md "How a message ends"): each
+  // captain message is followed until a card the captain accepts answers
+  // it. `followed` marks the messages saved from now on - every existing
+  // row stays null and is never asked about again; `continues` the earlier
+  // message whose open work it joined; `answer_card_id` with `accepted_at`
+  // the card they accepted, and `answered_at` when that became final;
+  // `crewmate_asked_at` the one time its last crewmate was asked for the
+  // answering card. No published view reads them. Dropping the six
+  // columns reverses it.
+  (db) => {
+    addColumn(db, "captain_asks", "followed", "INTEGER");
+    addColumn(db, "captain_asks", "continues", "TEXT");
+    addColumn(db, "captain_asks", "answer_card_id", "TEXT");
+    addColumn(db, "captain_asks", "accepted_at", "INTEGER");
+    addColumn(db, "captain_asks", "answered_at", "INTEGER");
+    addColumn(db, "captain_asks", "crewmate_asked_at", "INTEGER");
+  },
 ];
 
 /** The current database format, derived from the embedded migration ledger. */

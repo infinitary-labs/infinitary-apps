@@ -59,6 +59,21 @@ export type AskRecord = {
   deliveryFacts: DeliveryFacts;
   /** The one notice card raised for it, once it had no answer after its retry. */
   noticeCardId: string | null;
+  /**
+   * Whether the app follows this message to the card that answers it
+   * (docs/task-capture.md "How a message ends"). False on every message
+   * saved before that, which is never asked about again.
+   */
+  followed: boolean;
+  /** The earlier message whose work this one joined, when it joined one still open. */
+  continues: string | null;
+  /** The card the captain accepted as the answer, and when, until it is final. */
+  answerCardId: string | null;
+  acceptedAt: number | null;
+  /** When the message was answered; final, so the answer never moves. */
+  answeredAt: number | null;
+  /** When the crewmate whose task ended its work was asked once for the answering card. */
+  crewmateAskedAt: number | null;
 };
 
 type Row = {
@@ -75,6 +90,12 @@ type Row = {
   delivery_facts: string | null;
   notice_card_id: string | null;
   reply: string | null;
+  followed: number | null;
+  continues: string | null;
+  answer_card_id: string | null;
+  accepted_at: number | null;
+  answered_at: number | null;
+  crewmate_asked_at: number | null;
 };
 
 /** The saved reply line back to its shape; anything unreadable is no reply, never a throw. */
@@ -150,8 +171,18 @@ function fromRow(row: Row): AskRecord {
     delivery: row.delivery,
     deliveryFacts: parseDeliveryFacts(row.delivery_facts),
     noticeCardId: row.notice_card_id,
+    followed: row.followed === 1,
+    continues: row.continues ?? null,
+    answerCardId: row.answer_card_id ?? null,
+    acceptedAt: row.accepted_at ?? null,
+    answeredAt: row.answered_at ?? null,
+    crewmateAskedAt: row.crewmate_asked_at ?? null,
   };
 }
+
+/** Where a followed message has not ended: answered, or given its one notice. */
+const NOT_ENDED =
+  "followed = 1 AND answered_at IS NULL AND delivery != 'unresolved' AND turn_state != 'open'";
 
 export class AskStore {
   constructor(private readonly db: AppDatabase) {}
@@ -159,8 +190,8 @@ export class AskStore {
   insert(ask: AskRecord): void {
     this.db
       .prepare(
-        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO captain_asks (id, at, text, images_json, hint_task_id, task_id, attached_via, attached_at, turn_state, delivery, delivery_facts, notice_card_id, followed, continues, answer_card_id, accepted_at, answered_at, crewmate_asked_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         ask.id,
@@ -181,6 +212,12 @@ export class AskStore {
           ? JSON.stringify(ask.deliveryFacts)
           : null,
         ask.noticeCardId,
+        ask.followed ? 1 : null,
+        ask.continues,
+        ask.answerCardId,
+        ask.acceptedAt,
+        ask.answeredAt,
+        ask.crewmateAskedAt,
       );
   }
 
@@ -222,6 +259,51 @@ export class AskStore {
 
   setNoticeCard(id: string, cardId: string): void {
     this.db.prepare("UPDATE captain_asks SET notice_card_id = ? WHERE id = ?").run(cardId, id);
+  }
+
+  /** The earlier message whose open work this one joined. */
+  setContinues(id: string, earlier: string): void {
+    this.db
+      .prepare("UPDATE captain_asks SET continues = ? WHERE id = ? AND continues IS NULL")
+      .run(earlier, id);
+  }
+
+  /** The captain accepted a card as the answer; the newest acceptance stands until it is final. */
+  setAccepted(id: string, cardId: string, at: number): void {
+    this.db
+      .prepare(
+        "UPDATE captain_asks SET answer_card_id = ?, accepted_at = ? WHERE id = ? AND answered_at IS NULL",
+      )
+      .run(cardId, at, id);
+  }
+
+  /** The message is answered, on a card or by a reaction; set once and never moved. */
+  setAnswered(id: string, cardId: string | null, at: number): void {
+    this.db
+      .prepare(
+        "UPDATE captain_asks SET answer_card_id = ?, answered_at = ? WHERE id = ? AND answered_at IS NULL",
+      )
+      .run(cardId, at, id);
+  }
+
+  setCrewmateAsked(id: string, at: number): void {
+    this.db.prepare("UPDATE captain_asks SET crewmate_asked_at = ? WHERE id = ?").run(at, id);
+  }
+
+  /** Followed messages that have not ended, oldest first. */
+  listNotEnded(): AskRecord[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM captain_asks WHERE ${NOT_ENDED} ORDER BY at, rowid`)
+      .all() as Row[];
+    return rows.map(fromRow);
+  }
+
+  /** The messages that joined this one's work, oldest first. */
+  listContinuing(id: string): AskRecord[] {
+    const rows = this.db
+      .prepare("SELECT * FROM captain_asks WHERE continues = ? ORDER BY at, rowid")
+      .all(id) as Row[];
+    return rows.map(fromRow);
   }
 
   /** The Firstmate's reply line beside the message (docs/composer.md "The last turn"). */

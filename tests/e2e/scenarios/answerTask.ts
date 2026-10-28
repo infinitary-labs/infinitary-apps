@@ -1,3 +1,4 @@
+import { CREWMATE_ANSWER_ASK } from "../../../src/core/orchestrator/answerDelivery";
 import { CARD_CLOSED_STEER_NEEDLE, type Scenario } from "../mockProvider";
 
 /**
@@ -28,11 +29,18 @@ export const MOCK_ANSWER_REPORT =
  */
 export const MOCK_ANSWER_FINISHED_REPORT =
   "The captain read the answer on the card, and nothing is left for me to do.";
+/**
+ * A decision the captain closed without a choice does not answer their
+ * message (INF-1610 piece 2), so the finished report is refused once; the
+ * crewmate says why it has no more to show, and its report stands.
+ */
+export const MOCK_ANSWER_FINISHED_AGAIN =
+  "My card held the whole answer and the captain closed it after reading; I have nothing more to show.";
 
 /** The first mate spawns the investigation; its crewmate answers on one card, and finishes once it is closed. */
-export const answerTask: Scenario =
-  () =>
-  ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
+export const answerTask: Scenario = () => {
+  let saidWhy = false;
+  return ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
     if (!wantsStream) return undefined;
     if (isFirstmate) {
       if (hasToolResults || !latestUserTail.includes(ANSWER_TASK_PROMPT_MARKER)) return undefined;
@@ -58,6 +66,12 @@ export const answerTask: Scenario =
       body.includes(ANSWER_TASK_PROMPT_MARKER) &&
       latestUserTail.includes(CARD_CLOSED_STEER_NEEDLE)
     ) {
+      if (hasToolResults && body.includes(CREWMATE_ANSWER_ASK) && !saidWhy) {
+        saidWhy = true;
+        return {
+          calls: [{ name: "report", args: { text: MOCK_ANSWER_FINISHED_AGAIN, finished: true } }],
+        };
+      }
       if (hasToolResults) return { text: "done" };
       return {
         calls: [{ name: "report", args: { text: MOCK_ANSWER_FINISHED_REPORT, finished: true } }],
@@ -86,3 +100,4 @@ export const answerTask: Scenario =
     }
     return undefined;
   };
+};

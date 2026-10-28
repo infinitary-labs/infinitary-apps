@@ -781,6 +781,7 @@ export class FirstmateAgent {
       raiseNotice: (card) => options.supervisor.raiseHostCard(card),
       cardTitle: (cardId) =>
         options.supervisor.cardsSnapshot().find((card) => card.id === cardId)?.title,
+      ending: options.supervisor.askEnding,
       observe: options.answerDelivery === "observe",
     });
     // A quit mid-turn left asks open; they land now, marked failed. One whose
@@ -790,6 +791,10 @@ export class FirstmateAgent {
     this.delivery.reconcile(stranded);
     options.supervisor.setFirstmateHooks({
       notifyOp: (wake, origin, ref) => this.notifyOp(wake, origin, ref),
+      // Mid-turn, the turn's own end reads every message (`endTurn`).
+      asksMoved: () => {
+        if (!this.running) this.delivery.sweep();
+      },
       firstmateCannotAnswer: () => this.cannotAnswerNow(),
       notifyCaptainChoice: (wake, ref) => this.notifyCaptainChoice(wake, ref),
       premiumCanServe: () => this.premiumCanServe(),
@@ -3654,6 +3659,7 @@ export class FirstmateAgent {
       // Served only while another computer runs work, so one computer pays nothing (INF-992).
       ...(this.options.supervisor.computersListed() ? { computers: COMPUTERS_RULE } : {}),
       task_index: this.renderTaskIndex(),
+      ...this.renderOpenAsks(),
       ...(introduction && introductionId
         ? {
             introduction: {
@@ -3828,6 +3834,74 @@ export class FirstmateAgent {
    * total; one-off question/operation rows appear only in the counts, never
    * as rows, so a chatty day cannot crowd the work out.
    */
+  /**
+   * The captain's messages that have not ended on an answer they accepted
+   * (INF-1610, docs/task-capture.md "How a message ends"), newest first and
+   * bounded like the task index: so "what is still open?" needs no
+   * crewmate. A message the notice answered stays listed while its notice
+   * is up. Answered ones are read through the tasks tool.
+   */
+  private renderOpenAsks(): { open_asks?: Record<string, unknown> } {
+    const ending = this.options.supervisor.askEnding;
+    const shown = new Set(this.options.supervisor.cardsSnapshot().map((card) => card.id));
+    const rows: { at: number; row: Record<string, unknown> }[] = [];
+    try {
+      for (const chain of ending.openChains()) {
+        const state = ending.state(chain);
+        const newest = chain.members.at(-1) ?? chain.root;
+        const live = ending.ownWork(chain).filter((task) => !TaskService.isClosed(task));
+        rows.push({
+          at: newest.at,
+          row: {
+            ask_id: chain.root.id,
+            sent: new Date(chain.root.at).toISOString(),
+            ...(chain.members.length > 1 ? { later_messages: chain.members.length - 1 } : {}),
+            state:
+              state.kind === "working"
+                ? "working"
+                : state.kind === "waiting"
+                  ? `waiting on the captain: card ${state.cardId}`
+                  : state.kind === "accepted"
+                    ? "answer accepted"
+                    : "no answer yet",
+            ...(live.length > 0
+              ? {
+                  running: live
+                    .slice(0, 4)
+                    .map((task) => `${task.key || task.id}: ${task.title.slice(0, 80)}`),
+                }
+              : {}),
+          },
+        });
+      }
+      for (const ask of this.options.tasks.listAsksByDelivery("unresolved")) {
+        if (!ask.followed || !ask.noticeCardId || !shown.has(ask.noticeCardId)) continue;
+        rows.push({
+          at: ask.at,
+          row: {
+            ask_id: ask.id,
+            sent: new Date(ask.at).toISOString(),
+            state: `unanswered: the app's notice ${ask.noticeCardId} is up`,
+          },
+        });
+      }
+    } catch (caught) {
+      console.warn("[firstmate] the open messages could not be read:", caught);
+      return {};
+    }
+    if (rows.length === 0) return {};
+    rows.sort((a, b) => b.at - a.at);
+    return {
+      open_asks: {
+        note: "The captain's messages not yet answered on a card they accepted, newest first, by when each was sent; their words are in your conversation. Each ends on the card marked answering that they accept.",
+        asks: rows.slice(0, TASK_INDEX_PER_PROJECT).map((entry) => entry.row),
+        ...(rows.length > TASK_INDEX_PER_PROJECT
+          ? { more: rows.length - TASK_INDEX_PER_PROJECT }
+          : {}),
+      },
+    };
+  }
+
   private renderTaskIndex(): string[] {
     const tasks = this.options.tasks;
     const byProject = new Map<string, TaskRecord[]>();

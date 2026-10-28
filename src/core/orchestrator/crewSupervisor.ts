@@ -372,6 +372,8 @@ import {
   type WorkspaceService,
   type WorktreeAcquisition,
 } from "../workspace/workspaceService";
+import { CREWMATE_ANSWER_ASK } from "./answerDelivery";
+import { type AskEnding, askEndingOf } from "./askEnding";
 import { revisionNotice } from "./cardChanges";
 import {
   type CardInteractionEvidence,
@@ -565,6 +567,12 @@ export type FirstmateHooks = {
   checkQuiet?: (now: number) => void;
   /** A durable-inbox delivery poke for the firstmate lane, on the shared tick. */
   pokeInbox?: () => void;
+  /**
+   * A captain's message's work closed or the captain answered a card: the
+   * first mate's answer check reads how each message stands, once it is
+   * not mid-turn (INF-1610).
+   */
+  asksMoved?: () => void;
 };
 
 /**
@@ -1488,6 +1496,8 @@ export class CrewSupervisor {
   private readonly moving = new Set<string>();
   /** The card stack: the open cards and every write to them. */
   private readonly cards: CardService;
+  /** How each captain's message ends (INF-1610, docs/task-capture.md "How a message ends"). */
+  readonly askEnding: AskEnding;
   /** Settling and closing: land, merge-pr, discard, and every close's teardown. */
   private readonly settle: SettleService;
   private crewmateSeq = 0;
@@ -1549,7 +1559,12 @@ export class CrewSupervisor {
       presentationChanged: options.presentationChanged,
       ...(options.broadcastThread ? { broadcastThread: options.broadcastThread } : {}),
       ...(options.build ? { build: options.build } : {}),
+      captainResponded: (card, response) => {
+        this.askEnding.captainResponded(card, response);
+        this.hooks.asksMoved?.();
+      },
     });
+    this.askEnding = askEndingOf(options.tasks, this.cards);
     this.settle = new SettleService({
       now: this.now,
       tasks: options.tasks,
@@ -1557,6 +1572,8 @@ export class CrewSupervisor {
       workspace: options.workspace,
       repos: options.repos,
       cards: this.cards,
+      askEnding: this.askEnding,
+      asksMoved: () => this.hooks.asksMoved?.(),
       verifyValidationEvidence: (taskId) => this.verifyValidationEvidence(taskId),
       runtimeState: (taskId) => this.tasks.get(taskId)?.state,
       stopRuntime: (taskId) => this.stopRuntime(taskId),
@@ -11905,6 +11922,12 @@ export class CrewSupervisor {
       throw new Error(`Report refused: ${implausible}. Write it again in plain words.`);
     }
     const declaration = this.checkDeclaration(task, declared);
+    // The crewmate step (INF-1610): the last running work of a captain's
+    // message reports finished with no card answering it, so its crewmate
+    // is asked once for that card; a second finished report is its reason.
+    if (declaration?.finished && this.askEnding.crewmateStep(task.id)) {
+      throw new Error(CREWMATE_ANSWER_ASK);
+    }
     task.explicitReport = report;
     task.explicitSummary = summary?.replace(/\s+/g, " ").trim() || undefined;
     task.explicitDeclared = declaration;

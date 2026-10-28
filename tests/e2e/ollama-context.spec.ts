@@ -70,27 +70,42 @@ test("selecting a base Ollama model creates a hidden alias and serves a visible 
   }
 });
 
-test("Retry replays the ask, and a successful operation needs no answer card", async () => {
+// A settings change ends on its answer card too: the captain's answer to
+// INF-1610's round-1 question 2, "No, a card goes up every time"
+// (docs/task-capture.md "How a message ends").
+test("Retry replays the ask, and a successful operation ends on its answer card", async () => {
   let phase: "fail" | "answer" | "operate" = "fail";
   const model = await startOllamaFixture((request) => {
     if (phase === "fail") return { content: "4." };
     if (request.messages.at(-1)?.role === "tool") return { content: "Done." };
     return {
-      tool_calls: [
-        nativeCall(
-          `call-${phase}`,
-          phase === "answer"
-            ? { name: "emit_card", args: { title: "Four", body: "<p>4</p>", standalone: true } }
-            : {
+      tool_calls:
+        phase === "answer"
+          ? [
+              nativeCall(`call-${phase}`, {
+                name: "emit_card",
+                args: { title: "Four", body: "<p>4</p>", standalone: true },
+              }),
+            ]
+          : [
+              nativeCall(`call-${phase}`, {
                 name: "app_change",
                 args: {
                   action: "theme",
                   value: { theme: "light" },
                   evidence: "switch to the light theme",
                 },
-              },
-        ),
-      ],
+              }),
+              nativeCall(`call-${phase}-card`, {
+                name: "emit_card",
+                args: {
+                  title: "The light theme is on",
+                  body: "<p>The app now uses the light theme.</p>",
+                  standalone: true,
+                  answering: true,
+                },
+              }),
+            ],
     };
   });
   const app = await launchApp({
@@ -115,7 +130,10 @@ test("Retry replays the ask, and a successful operation needs no answer card", a
     phase = "operate";
     await askFirstmate(app.page, "switch to the light theme");
     await expect(app.page.locator("body")).toHaveAttribute("data-theme", "light");
-    await expect(app.page.locator("[data-card-layer]")).toHaveCount(0);
+    // Its answer is the one card on the stack: no notice beside it.
+    await expect(shownCard(app.page, "The light theme is on")).toBeVisible();
+    await waitForFirstmateIdle(app.page);
+    await expect(app.page.locator("[data-card-layer]")).toHaveCount(1);
     expect(model.aliases.size).toBe(1);
   } finally {
     await app.close();

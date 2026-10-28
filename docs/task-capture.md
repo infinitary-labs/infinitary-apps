@@ -54,36 +54,80 @@ The floor is code; the ceiling is the prompt, the index, the about line and the 
 ## Answer delivery
 
 A captain message the first mate read and then did nothing visible about is a hidden answer: its closing words are never a card, and they become the reply line only when something took effect (`docs/composer.md` "The last turn"), so the captain sees no sign it was heard.
-The host checks each message for one thing - **at least one action took effect after the first mate read it** - and never whether the answer is right (`src/core/orchestrator/answerDelivery.ts`, the pure rule; `answerDeliveryCheck.ts`, the stateful check; `FirstmateAgent` records the facts).
+Each message saved from INF-1610 piece 2 on is followed until a card the captain accepts answers it ("How a message ends" below); a message saved before it keeps the older rule, which only checked that at least one action took effect after the first mate read it.
+The host never judges whether an answer is right (`src/core/orchestrator/answerDelivery.ts`, the pure rule and the served words; `askEnding.ts`, how a message stands; `answerDeliveryCheck.ts`, the stateful check; `FirstmateAgent` records the facts).
 
-What counts, recorded where the call succeeds (a typed result, never the words) for every message the running turn had read when it took effect:
+What the first mate did is recorded where the call succeeds (a typed result, never the words) for every message the running turn had read when it took effect:
 
-- a card shown or revised (`emit_card`, the Settings hand-over card, the app's approval card for a held `use_integration` call);
-- the closing words written into the card's replies, for a reply under a first mate card or a done task's kept note (`CardService.recordFirstmateThreadAnswer` returns whether it wrote);
+- a card shown or revised (`emit_card`, the Settings hand-over card, the app's approval card for a held `use_integration` call), with the card's id;
+- the closing words written into the card's replies, for a reply under a first mate card or a done task's kept note (`CardService.recordFirstmateThreadAnswer` returns whether it wrote), with the card's id;
 - work started, steered, stopped or settled (`spawn_crewmate`, `steer_crewmate` - including a steer the app only saved because the crewmate's account is held, which FI3-592 owns the status of - `interrupt_crewmate`, `settle_task`, a task dropped or started, a link changed);
 - a setting or operation recorded (`create_task`, `update_task`, `schedule_prompt`, `remember`, `forget`, a `record_knowledge` write that changed the collection, `personalize`, `install_plugin`, a flag, an applied `app_change`, which `cancel_schedule` is, a `use_integration` change or send that ran);
 - a card closed (`close_card`), and a reaction (`emote`).
 
-Never counted: a refused or thrown call, a lookup (`crew_status`, `tasks`, `locate_project`, `app_state`, `supervision_log`, `knowledge`, `integrations`, a `use_integration` read), a `record_knowledge` call repeating an earlier request, a graph refusal returned as text, and a reaction after a refused card (a refused `emit_card` is saved as an attempt with its typed reason, `crewmate-owns` or `card-refused`, and voids a later reaction).
+Never recorded: a refused or thrown call, a lookup (`crew_status`, `tasks`, `locate_project`, `app_state`, `supervision_log`, `knowledge`, `integrations`, a `use_integration` read), a `record_knowledge` call repeating an earlier request, and a graph refusal returned as text.
+A refused `emit_card` is saved as an attempt with its typed reason, `crewmate-owns` or `card-refused`, and voids a later reaction.
 A message that arrives mid-turn is judged only by actions after it; a steer the session never read goes back on the lane carrying its message id, with none of this turn's facts, and the turn that serves it judges it.
 
 The state is saved on `captain_asks` (migration 62): `delivery` (`pending`, `held`, `covered`, `retrying`, `unresolved`, `legacy`), `delivery_facts` and `notice_card_id`.
-Every row from before the migration is `legacy` and never checked.
+Every row from before migration 62 is `legacy` and never checked; every row from before piece 2's migration is unfollowed and keeps the older rule.
 `TaskService` is the only writer.
 
 The check runs at the turn's end, after reply capture and the first mate's close-out, so the normal output is saved first:
 
-1. Covered: `covered`, quietly.
-2. A failed or paused turn judges nothing: its messages are `held`, the failure keeps its card and its honest retry, and the turn that serves the words again judges them (parked rows carry the message id in their `captain-turn` facts).
-3. Otherwise one retry: the typed `answer-missing` wake (`docs/inbox.md`), once-name `answer-repair:<askId>`, served alone at the captain thinking level.
-   During it every tool that starts, steers, stops or closes work or changes a setting answers with a refusal as text (`ANSWER_ONLY_REFUSED_TOOLS`); `emit_card`, `close_card`, `emote` and the lookups stay.
-4. A retry that also leaves no action raises one task-less host notice, `card-ask-<askId>`: the captain's own words escaped, a typed reason when one is known, **Ask again** (default; host op `ask-again`, a fresh captain turn with the same hint, linked `retryOf`) and **Leave it** (runs nothing).
+1. A failed or paused turn judges nothing: its messages are `held`, the failure keeps its card and its honest retry, and the turn that serves the words again judges them (parked rows carry the message id in their `captain-turn` facts).
+2. A followed message is `covered` while its own work runs, while a card that can answer it is up, or once its answer is accepted; a message with none of these is missing its answer.
+3. A missing answer gets one retry: the typed `answer-missing` wake (`docs/inbox.md`), once-name `answer-repair:<askId>`, served alone at the captain thinking level.
+   During it every tool that starts, steers, stops or closes work or changes a setting answers with a refusal as text (`ANSWER_ONLY_REFUSED_TOOLS`); `emit_card`, `close_card`, `emote`, `link_tasks` and the lookups stay.
+4. A retry that still leaves the answer missing raises one task-less host notice, `card-ask-<askId>`: the captain's own words escaped, a typed reason when one is known, **Ask again** (default; host op `ask-again`, a fresh captain turn with the same hint, linked `retryOf`) and **Leave it** (runs nothing).
    It never quotes closing words, refusal text or an error, and the host's own record for it files no crewmate task.
+   The message, and every message joined to it, ends `unresolved`.
 
 Boot reconciles from the saved facts: a message stranded mid-turn is judged as uncovered, a retrying message whose wake was served is judged now, and a message whose parked words are still on the lane waits for them; the once-name and the fixed card id rule out a second retry or notice.
 Operational wakes and card clicks open no message and are never checked.
 The local model's own no-output check is separate: it looks only at the messages its own turn read.
 The replay and the developer evaluations wire the agent with `answerDelivery: "observe"`, which judges nothing; the replay's observational `asks_without_action` row reads the recording (`docs/replay-harness.md`).
+
+## How a message ends
+
+INF-1610, from the captain's words: "i like the idea that each captain ask has a "thread" and perhaps each "thread" has to have a card as its conclusion".
+A message may run any number of tasks and cards; the plans, questions and consents along the way stay as they are, and the message ends on a card the captain accepts as its answer (`src/core/orchestrator/askEnding.ts`).
+The host reads only typed facts: the saved message, the task graph, the cards and the captain's own response, never the words of a card or a message.
+
+What piece 2's migration adds to `captain_asks`: `followed` (every message saved from then on), `continues`, `answer_card_id` with `accepted_at`, `answered_at` and `crewmate_asked_at`.
+
+- **Its work.**
+  The tasks the message attached to, and every task that carries their work on: parts, builds on a plan (`basis`), retries, branches taken from them, replacements (`replaced-by`) and a stronger model (`escalated_to`), walked by `TaskService.askWork`.
+  The message's own work is the part of it the first mate's tools acted on for the message (`TaskService.askActedOn`), and anything filed or started after it; a task the message only pointed at, such as the card it was typed under, which nobody acted on since, is not working on it.
+- **Joining.**
+  A message about open work of an earlier message that has not ended joins it (`continues`), set once when it first attaches; the earliest is the root, and the root with every message that joined it ends together.
+  An answer once recorded never moves: work linked afterwards belongs to the newer message.
+- **A card that can answer it.**
+  A card about its work that its author marked `answering`, a completion card's merge, the app's merge line on a story note, or a card the first mate showed for the message; it counts only when it was shown since the newest message of the chain.
+- **Accepted.**
+  The captain's choice on a decision about its work that is not still asking (`asking`, `continues`), or their close of a note that can answer it, with no reply of theirs waiting under it (`CardService` reports each response through `captainResponded`).
+  A decision closed without a choice answers nothing; a reply, a question or a new message keeps the message open.
+  Work the choice started keeps the message working until it ends; then the accepted card still answers it.
+  The first mate's answer in the thread of the card the message was typed under is accepted; so is a reaction to a message that asks nothing, the first mate's own judgment.
+- **Answered.**
+  An accepted answer becomes `answered_at` once the first mate has nothing queued that could start more work for it.
+
+Who writes a missing answer, in the captain's order:
+
+1. The crewmate whose task is the message's last running work: when it reports finished with no answer accepted or up, its report is refused once (`CREWMATE_ANSWER_ASK`), saved as `crewmate_asked_at`; its second finished report stands.
+2. The first mate, through the retry above, once all of the message's work has ended with no answer: the wake names the work that ended (`workEnded`), and the first mate shows the answer or links the task that took the work over with `link_tasks`.
+3. The app's one notice.
+
+At most one closing note: when work closes without the captain's click, `SettleService` asks `AskEnding.closingPlace` where its outcome goes.
+
+- The accepted or recorded answer is revised with the outcome line and comes back to the stack only when the work was dropped after the captain accepted it.
+- Other running work of the message, or a handover, puts up nothing.
+- An answering card that is up is revised, and so is the task's own card shaped as an answer that is still up, even when a later message asked about it.
+- Otherwise the app's one closing note goes up, marked as the answer.
+- Work no message of the captain's covers, such as work the fleet started, puts up a note only when it merged or released and nothing of the task is on the stack.
+
+The first mate's turn facts list the open messages (`open_asks`): each one's id, when it was sent, how it stands and the work that still runs for it, newest first and bounded like the task list, with a notice still up counted as unanswered.
+They never repeat the captain's words, which are in its conversation.
 
 ## Pictures stay with the task
 

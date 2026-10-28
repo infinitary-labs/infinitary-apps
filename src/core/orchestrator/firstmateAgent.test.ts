@@ -7923,8 +7923,40 @@ describe("FirstmateAgent answer delivery", () => {
     const [first, second] = f.tasks.listAsks();
     expect(first?.delivery).toBe("covered");
     expect(second?.delivery).toBe("retrying");
-    expect(f.session.prompts[1]).toContain("second question");
-    expect(f.session.prompts[1]).not.toContain("first question");
+    // The retry asks about the second message alone; the first, whose card is
+    // up for the captain, is only among the open messages in the turn's facts.
+    const retry = f.session.prompts[1]?.slice(f.session.prompts[1].indexOf(ANSWER_MISSING_OPENING));
+    expect(retry).toContain("second question");
+    expect(retry).not.toContain("first question");
+  });
+
+  // INF-1610 piece 2: the first mate reads every message of the captain's
+  // still waiting for its answer in its turn facts, with how it stands.
+  it("lists a message whose work runs on among the open messages, and drops it once its answer is accepted", async () => {
+    const f = setup({ silent: true });
+    await f.agent.converse("build the personal panels in isolation");
+    await toolsOf(f.specs).get("spawn_crewmate")?.execute("spawn", {
+      title: "Build personal panels in isolation",
+      goal: "Build the panels in isolation",
+      user_words: "build the personal panels in isolation",
+    });
+    await finish(f, "Started the panels.");
+    const task = f.tasks.list().find((row) => row.title === "Build personal panels in isolation");
+    const open = () =>
+      decodeContext(f.agent.buildContextBlock()).open_asks as
+        | { asks: Record<string, unknown>[] }
+        | undefined;
+    expect(open()?.asks).toEqual([
+      expect.objectContaining({
+        ask_id: f.tasks.listAsks()[0]?.id,
+        state: "working",
+        running: [`${task?.key}: Build personal panels in isolation`],
+      }),
+    ]);
+    const ask = f.tasks.listAsks()[0];
+    f.tasks.close(task?.id ?? "", { status: "done", reason: "answered", actor: "host" });
+    f.tasks.markAnswered([ask?.id ?? ""], null);
+    expect(open()).toBeUndefined();
   });
 
   it("covers both messages when the action came after both were read", async () => {
@@ -8311,10 +8343,18 @@ describe("FirstmateAgent reply line", () => {
     const schedule = store.list()[0];
     await finish(f);
     expect(f.tasks.lastTurn()?.reply?.text).toBe("Scheduled: Check the panel");
+    // Each message still owes the captain its card: the retry shows it.
+    const answerRetry = async (count: number) => {
+      await drained(f.session, count);
+      await tools.get("emit_card")?.execute(`answer-${count}`, note(`answer-${count}`, "Done"));
+      await finish(f);
+    };
+    await answerRetry(2);
     await f.agent.converse("cancel that reminder");
     await tools.get("cancel_schedule")?.execute("cancel", { schedule_id: schedule?.id });
     await finish(f);
     expect(f.tasks.lastTurn()?.reply?.text).toBe("Cancelled schedule: Check the panel");
+    await answerRetry(4);
     expect(deletes).toEqual([
       [
         "inf:automation:delete",
@@ -8394,6 +8434,8 @@ describe("FirstmateAgent reply line", () => {
       "busy:true",
       "reply:Kept your squash-merge rule.",
       "busy:false",
+      // The message still owes the captain its card: the retry turn starts.
+      "busy:true",
     ]);
   });
 
@@ -8645,7 +8687,7 @@ describe("FirstmateAgent with knowledge", () => {
     ).toEqual({ searched: "private", found: "nothing matched these words" });
   });
 
-  it("counts a write that changed knowledge as the turn's action, never a read, a refusal or a repeat", async () => {
+  it("keeps a write that changed knowledge as the turn's fact, and still asks for the card that answers the message", async () => {
     const f = setup({ silent: true, knowledge: true });
     const states = () => f.tasks.listAsks().map((ask) => ask.delivery);
     await f.agent.converse("note that deploys happen on Tuesdays");
@@ -8659,8 +8701,14 @@ describe("FirstmateAgent with knowledge", () => {
     };
     await tools.get("record_knowledge")?.execute("k1", call);
     await finish(f);
-    expect(states()).toEqual(["covered"]);
-    expect(f.session.prompts).toHaveLength(1);
+    // The write took effect and is the turn's reply line, but a message is
+    // answered on a card (docs/task-capture.md "How a message ends").
+    expect(f.tasks.listAsks()[0]?.deliveryFacts.entries).toMatchObject([
+      { outcome: "action", kind: "record", tool: "record_knowledge" },
+    ]);
+    expect(states()).toEqual(["retrying"]);
+    await drained(f.session, 2);
+    expect(f.session.prompts[1]).toContain(ANSWER_MISSING_OPENING);
   });
 
   it("leaves a turn that only read, repeated or was refused to the answer-delivery retry", async () => {

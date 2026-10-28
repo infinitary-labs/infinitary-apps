@@ -740,14 +740,19 @@ A crewmate whose task merges on its own shows its completion story before the me
 The captain's words on INF-1219: "it misses the radar chart, and also it's not clear that this was a change merged by itself."
 The host opens that note with the merge line, written after the card lint: "Merges on its own", what happens next, and who set it, in the app's words from the setting (`pendingMergeLine`, `src/core/orchestrator/settleWords.ts`).
 At the merge, `SettleService` rewrites that line on the same note, as a revision the stage marks: merged on its own and when, the pull request linked, and the first mate's closing sentence (`mergedLine`).
-The note stays up, so no closing note of the first mate's goes up beside it.
+The note stays up and answers the captain's message, so no closing note goes up beside it.
 A crewmate on the personal workspace shows what it built on a note the same way, and the done close keeps notes.
 Every close the first mate makes of started work carries its one sentence: `settle_task` takes a top-level `closing_sentence` for every mode but `answered`, `interrupt_crewmate` takes it for `cancel`, and both refuse such a close without one.
 The sentence is a fact of the close (`closingSentence` in its timeline data).
-When the close leaves nothing of the task on the stack, the sentence goes up as the first mate's own note, titled with the task's key and its outcome (`merged`, `released` or `dropped`), with the pull request linked after a merge (`SettleService.leaveClosingNote`).
+Where it goes is one rule, at most one closing note for each of the captain's messages (`SettleService.placeOutcome`, `AskEnding.closingPlace`; `docs/task-capture.md`, "How a message ends"):
+
+- The card that answers the message, once the captain accepted it, takes the sentence as its close line (`closedLine`, or `mergedLine` after a merge), and comes back to the stack only when the work was dropped after they accepted it (INF-1533).
+- While other work of the message runs, or took the work over, nothing goes up (INF-1437).
+- An answering card that is up takes the sentence the same way.
+- Otherwise the sentence goes up as the first mate's own note, marked as the answer and titled with the task's key and its outcome (`merged`, `released` or `dropped`), with the pull request linked after a merge.
+
 A captain's click carries no sentence, an answer task's close takes none, and a task no crewmate started gets no note.
-A task whose crewmate reported its work finished gets no note either: that report comes only after the captain closed its outcome card, so their close already said what became of the work (INF-1137).
-Work the first mate marked its own (`shape.internal_step`) gets a note only when it merges or releases (INF-1467).
+Work no message of the captain's covers gets a note only when it merges or releases and nothing of the task is on the stack.
 The captain's words on INF-1467: "tasks the fleet decided to start that the captain didn't ask for should not report to the captain."
 The first mate sets that mark when it starts work the captain did not ask for - a step of a sequence it runs, a helper another task needs, a crewmate's request, or work it starts unasked, including a crewmate's filing it starts (`update_task internal_step`, on open work before it starts); work started by the captain's message, card choice or schedule is theirs.
 A drop, cancel or finish of such work stays on the task's record and in Activity, and a merge or release still leaves its one note, because code reached the project without the captain's click.
@@ -930,7 +935,7 @@ The visual rules are the design skill's (`components/cards/ResponseCard.prompt.m
 - **The answering mark.**
   An author declares `answering` on the card that answers the captain's message it is about: the outcome of the work they asked for, or the first mate's own answer.
   The mark is optional and stored as `Card.answering` in `cards.answering`; a revision without it removes it.
-  Nothing reads it yet: piece 2 ends a message's wait on it.
+  The captain's acceptance of a marked card ends the message's wait on it (`docs/task-capture.md`, "How a message ends").
 
 Tests: `taskService.capture.test.ts` "finds the captain's message a task's cards are about through the task graph", `cardService.test.ts` "puts the captain's message on each card about it", `cardTool.test.ts` "carries the answering mark", `src/renderer/src/cards/askedWords.test.ts`, the journey `tests/e2e/card-asked-line.spec.ts` (a short message whole, a long one in two lines that opens from the keyboard with its paragraphs and folds again), the phone's `CardValuesTests` and `PhoneJourney`'s asked line.
 

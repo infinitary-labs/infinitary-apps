@@ -5,11 +5,13 @@ import {
   type DeliveryEntry,
   type DeliveryNote,
   excerptOf,
+  JUDGEABLE_DELIVERY,
   judgeDelivery,
   noticeCard,
   noticeCardId,
   refusalOf,
 } from "./answerDelivery";
+import type { AskChain, AskEnding } from "./askEnding";
 import { answerMissingWake } from "./wakes";
 
 /**
@@ -27,6 +29,8 @@ export type AnswerDeliveryHost = {
   raiseNotice: (card: Pick<Card, "id" | "title" | "meta" | "body" | "actions">) => void;
   /** The title of a card the captain replied under, when it is still on the stack. */
   cardTitle: (cardId: string) => string | undefined;
+  /** How each message ends (`AskEnding`): its chain, its work and its answer. */
+  ending: AskEnding;
   /**
    * Judge nothing: no verdict, no retry, no notice. The replay harness and
    * the developer evaluations replay turns whose outcome is recorded, and the
@@ -154,6 +158,7 @@ export class AnswerDeliveryCheck {
           console.warn("[firstmate] answer delivery could not judge a message:", caught);
         }
       }
+      if (!end.held) this.sweep();
     } finally {
       this.clear();
     }
@@ -181,14 +186,73 @@ export class AnswerDeliveryCheck {
     if (ask?.delivery === "pending") this.host.tasks.setAskDelivery(id, "held");
   }
 
-  /** One message, judged from its saved facts. */
+  /**
+   * One message, judged when a turn that read it ends. A message saved
+   * before the app followed messages to their answer keeps the older
+   * rule: covered by any action. A followed one is judged by how its
+   * chain stands (docs/task-capture.md "How a message ends"): answered,
+   * work still running or an answering card up covers it; an answer the
+   * captain accepted is made final; with none of these, the first mate
+   * is asked once, and after that the one notice goes up.
+   */
   private judge(id: string): void {
     const ask = this.host.tasks.getAsk(id);
     if (!ask) return;
-    const verdict = judgeDelivery(ask.delivery, ask.deliveryFacts.entries);
-    if (verdict === "covered") this.host.tasks.setAskDelivery(id, "covered");
-    else if (verdict === "retry") this.retry(id);
-    else if (verdict === "notice") this.notify(id);
+    if (!ask.followed) {
+      const verdict = judgeDelivery(ask.delivery, ask.deliveryFacts.entries);
+      if (verdict === "covered") this.host.tasks.setAskDelivery(id, "covered");
+      else if (verdict === "retry") this.retry(id);
+      else if (verdict === "notice") this.notify(id);
+      return;
+    }
+    if (!JUDGEABLE_DELIVERY.includes(ask.delivery)) return;
+    const chain = this.host.ending.chain(id);
+    if (!chain) return;
+    const state = this.host.ending.state(chain);
+    if (state.kind === "unanswered") return;
+    if (state.kind === "missing") {
+      if (ask.delivery === "retrying") this.notify(id, chain);
+      else this.retry(id, chain);
+      return;
+    }
+    if (state.kind === "accepted") this.finalize(chain, state.cardId);
+    this.host.tasks.setAskDelivery(id, "covered");
+  }
+
+  /**
+   * Every followed message that has not ended, read again: an answer the
+   * captain accepted becomes final once the first mate has nothing queued
+   * that could start more work for it, and a message whose work has ended
+   * with no answer gets the first mate step, then the one notice. A
+   * message still waiting for its own turn's judgment, or already asked
+   * about, is left to that.
+   */
+  sweep(): void {
+    if (this.host.observe) return;
+    for (const chain of this.host.ending.openChains()) {
+      try {
+        if (chain.members.some((member) => member.delivery !== "covered")) continue;
+        const state = this.host.ending.state(chain);
+        if (state.kind === "accepted") this.finalize(chain, state.cardId);
+        else if (state.kind === "missing") {
+          const newest = chain.members.at(-1) ?? chain.root;
+          this.retry(newest.id, chain);
+        }
+      } catch (caught) {
+        console.warn("[firstmate] answer delivery could not read a message's ending:", caught);
+      }
+    }
+  }
+
+  /** Whether the first mate has nothing queued: a choice waiting on it may still start work. */
+  private laneEmpty(): boolean {
+    return this.host.inbox.allFor(FIRSTMATE_RECIPIENT).length === 0;
+  }
+
+  /** The accepted answer is final, for every message of the chain. */
+  private finalize(chain: AskChain, cardId: string | null): void {
+    if (!this.laneEmpty()) return;
+    this.host.tasks.markAnswered(chain.ids, cardId);
   }
 
   /**
@@ -206,14 +270,18 @@ export class AnswerDeliveryCheck {
    * replay's `asks_without_action` row, and the `answer-repair:<askId>`
    * name `inbox_once` keeps for every retry queued.
    */
-  private retry(id: string): void {
+  private retry(id: string, chain?: AskChain): void {
     const ask = this.host.tasks.getAsk(id);
     if (!ask) return;
     const refusal = refusalOf(ask.deliveryFacts.entries);
     const filed = ask.taskId ? this.host.tasks.get(ask.taskId) : undefined;
     const aboutId = this.about.get(id);
     const aboutTitle = aboutId ? this.host.cardTitle(aboutId) : undefined;
-    this.host.inbox.enqueueWake(
+    // Work a crewmate ran for it ended: the first mate is asked for the answer it found.
+    const ran = chain
+      ? this.host.ending.ownWork(chain).filter((task) => task.startedAt !== null)
+      : [];
+    const queued = this.host.inbox.enqueueWake(
       FIRSTMATE_RECIPIENT,
       answerMissingWake({
         askId: id,
@@ -223,19 +291,33 @@ export class AnswerDeliveryCheck {
         ...(refusal?.outcome === "refused"
           ? { refusal: refusal.reason, ...(refusal.ref ? { ownedBy: refusal.ref } : {}) }
           : {}),
+        ...(ran.length > 0
+          ? { workEnded: ran.map((task) => ({ id: task.id, title: task.title })) }
+          : {}),
       }),
       "agent",
       ANSWER_MISSING_REF,
     );
+    // The once-name already spent on an earlier retry: the notice follows.
+    if (queued === null) {
+      this.notify(id, chain);
+      return;
+    }
     this.host.tasks.setAskDelivery(id, "retrying");
   }
 
-  /** The one notice, raised under a fixed id and marked on the message so it is never raised again. */
-  private notify(id: string): void {
+  /**
+   * The one notice, raised under a fixed id and marked on the message so it
+   * is never raised again; every message of its chain ends unanswered with it.
+   */
+  private notify(id: string, chain?: AskChain): void {
     const ask = this.host.tasks.getAsk(id);
     if (!ask || ask.noticeCardId) return;
     this.host.raiseNotice(noticeCard(id, ask.text, ask.deliveryFacts.entries));
     this.host.tasks.markAskUnresolved(id, noticeCardId(id));
+    for (const other of chain?.ids ?? []) {
+      if (other !== id) this.host.tasks.setAskDelivery(other, "unresolved");
+    }
   }
 
   /**
@@ -283,5 +365,6 @@ export class AnswerDeliveryCheck {
         console.warn("[firstmate] answer delivery could not judge a retried message:", caught);
       }
     }
+    this.sweep();
   }
 }

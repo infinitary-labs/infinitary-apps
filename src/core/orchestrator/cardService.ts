@@ -150,6 +150,11 @@ export type CardServiceHost = {
   presentationChanged?: () => void;
   /** One card's thread, whole, after any message lands on it (phase 1). */
   broadcastThread?: (thread: CardThread) => void;
+  /**
+   * The captain chose an action on a card or closed it: the message it may
+   * answer hears it (INF-1610, `AskEnding.captainResponded`).
+   */
+  captainResponded?: (card: Card, response: "choice" | "close") => void;
   /** The app build every observation is stamped with (docs/card-evidence.md). */
   build?: string;
 };
@@ -432,6 +437,14 @@ export class CardService {
     return this.host.cardStore.newestAnswerForTask(taskId);
   }
 
+  /** When the captain was last offered the card as it stands: its newest offer, else its creation. */
+  shownAt(card: Card): number {
+    return (
+      (card.offerId ? this.host.cardStore.offer(card.id, card.offerId)?.at : undefined) ??
+      card.createdAt
+    );
+  }
+
   /** A card's thread messages, oldest first. */
   messages(cardId: string): CardMessage[] {
     return this.host.cardStore.messages(cardId);
@@ -524,6 +537,7 @@ export class CardService {
     });
     this.cards.delete(card.id);
     this.staged.delete(card.id);
+    if (by === "captain") this.host.captainResponded?.(card, "choice");
     const closedAnswer = this.recordResolution(card, action, by, answers, observation);
     this.scheduleBroadcast();
     return closedAnswer;
@@ -558,6 +572,7 @@ export class CardService {
     }
     this.cards.delete(card.id);
     this.staged.delete(card.id);
+    this.host.captainResponded?.(head ?? card, "close");
     this.recordResolution(card, "dismissed", "captain", undefined, observation);
     this.scheduleBroadcast();
   }

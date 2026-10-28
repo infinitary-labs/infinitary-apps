@@ -111,6 +111,28 @@ export function closedWithoutClick(reason: string): ClosedWithoutClick | undefin
   return undefined;
 }
 
+/**
+ * The line the app writes on the card that answers the captain's message
+ * when its work closes later (INF-1610's at most one closing note): what
+ * became of the work and the first mate's sentence, found again by its
+ * `data-close-line` mark, never by its words. A merge writes the merge line
+ * instead.
+ */
+export const CLOSE_LINE_MARK = "data-close-line";
+const CLOSE_LINE_OPEN = `<p class="inf-panel" ${CLOSE_LINE_MARK}>`;
+const CLOSE_LINE = new RegExp(`${CLOSE_LINE_OPEN}[\\s\\S]*?</p>`);
+
+/** The close line: the work's key and what became of it, then the first mate's sentence. */
+export function closedLine(key: string, outcome: ClosedWithoutClick, sentence?: string): string {
+  const said = sentence?.trim() ? `<br>Your first mate: “${escapeCardText(sentence.trim())}”` : "";
+  return `${CLOSE_LINE_OPEN}<strong>${escapeCardText(closingNoteTitle(key, outcome))}</strong>${said}</p>`;
+}
+
+/** The body with its close line put first, or the one it had replaced. */
+export function withCloseLine(body: string, line: string): string {
+  return CLOSE_LINE.test(body) ? body.replace(CLOSE_LINE, () => line) : `${line}${body}`;
+}
+
 /** The first mate's note on a task it closed: its key and what became of it. */
 export function closingNoteTitle(key: string, outcome: ClosedWithoutClick): string {
   return `${key} ${outcome}`;

@@ -1058,6 +1058,8 @@ export type WakeFacts =
       refusal?: "crewmate-owns" | "card-refused";
       /** The card that owns the work, when a refused card named it. */
       ownedBy?: string;
+      /** The work a crewmate ran for the message, all ended with no card answering it. */
+      workEnded?: { id: string; title: string }[];
     }
   | {
       /** Guidance whose pictures a legacy durable copy could not keep, and says so. */
@@ -2123,8 +2125,16 @@ function renderAnswerMissing(facts: Extract<WakeFacts, { kind: "answer-missing" 
       ? ` Your card was refused because ${facts.ownedBy ? `the crewmate's card ${facts.ownedBy}` : "the crewmate's card"} owns that work.`
       : " Your card was refused."
     : "";
-  return `[fm-op] ${ANSWER_MISSING_OPENING}, so they have no answer yet. Their words, verbatim: "${facts.excerpt}".${about}${refused} Show them the answer now with emit_card, or answer in the card's thread; a reaction may stand in only when the message asks for nothing. Starting, steering, stopping or closing work and changing settings are refused this turn.`;
+  if (facts.workEnded?.length) {
+    const work = facts.workEnded.map((task) => `${task.id} "${task.title}"`).join(", ");
+    return `[fm-op] ${ANSWER_MISSING_ENDED_OPENING}: ${work}, so they have no answer yet. Their words, verbatim: "${facts.excerpt}".${about} Show them the answer the work found now with emit_card and answering true, from its record. If another task took the work over, link it as the replacement with link_tasks instead. Starting, steering, stopping or closing work and changing settings are refused this turn.`;
+  }
+  return `[fm-op] ${ANSWER_MISSING_OPENING}, so they have no answer yet. Their words, verbatim: "${facts.excerpt}".${about}${refused} Show them the answer now with emit_card and answering true, or answer in the card's thread; a reaction may stand in only when the message asks for nothing. Starting, steering, stopping or closing work and changing settings are refused this turn.`;
 }
+
+/** How the first mate step opens when the message's work ended with no card answering it. */
+export const ANSWER_MISSING_ENDED_OPENING =
+  "The work for the captain's message ended with no card that answers it";
 
 /** How the seat-moved wake opens when the captain moved the seat. */
 export const SEAT_MOVED_OPENING = "Your seat moved on the captain's word";

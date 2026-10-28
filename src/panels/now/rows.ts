@@ -8,6 +8,7 @@ import {
   nowGroupsOf,
   taskStatusOf,
 } from "@infinitary/ui";
+import { ROW_START_LABEL, ROW_TRY_AGAIN_LABEL } from "./words";
 
 /**
  * What the Tasks panel lists, and how each row reads (task-system design
@@ -79,6 +80,25 @@ export function wordOf(task: PanelTaskRow): string {
   if (task.flags.held) return "held";
   if (task.foundOn) return `found on ${task.foundOn}`;
   return "";
+}
+
+/** A backlog row's Start: its words, and why it cannot start now, or null when it can. */
+export type RowStart = { label: string; reason: string | null };
+
+/**
+ * The Start a backlog row offers on rest (INF-1663, the captain's direction
+ * A on INF-1662): the record's own Start, read from the move the row already
+ * carries (`moves`, the record's rule), so the row starts exactly what the
+ * record would, and says the record's reason where it cannot. Null on a row
+ * with no moves: a decision, a question, or an older home.
+ */
+export function rowStartOf(task: PanelTaskRow): RowStart | null {
+  const allowance = task.moves?.["start-task"];
+  if (!allowance) return null;
+  return {
+    label: startMarks(task).startNotice ? ROW_TRY_AGAIN_LABEL : ROW_START_LABEL,
+    reason: allowance.ok ? null : allowance.text,
+  };
 }
 
 /** Crew-filed rows in this group the captain has not opened. */

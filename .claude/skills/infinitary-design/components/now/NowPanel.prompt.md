@@ -41,7 +41,7 @@ Nothing else in the rail: no chips, meters, models, or ages - everything richer 
 Clicking a row is a pointing gesture, never a work change: a row waiting on you refreshes its ready decision and brings it to the front of the stack (or opens the record if no eligible choice remains); any other row opens the task's record (`TaskRecord`) as a front entry in the main card stack, shown at once.
 One entry per task can remain open; each row reads selected while its record is open, even when paged away (FI3-309, replacing the gutter pane).
 Open task board in its header shows every task at once on the stage (`TaskBoard.prompt.md`).
-The panel has no buttons that change a task, no drag, no inline editing, no manual create - the record's action bar carries Drop task and the one next step (`TaskRecord`), and every other write happens by talking to the first mate.
+The panel's one button that changes a task is a backlog row's Start (below); it has no drag, no inline editing and no manual create - the record's action bar carries Drop task and the one next step (`TaskRecord`), and every other write happens by talking to the first mate.
 The filter (a key/title search and project chips) sits behind the search icon; its words are the panel's own state, and its project chip is the window's project focus, the same as the top bar's project pill (`components/core/ProjectFocus`).
 While the window is focused on a project the panel lists only that project's tasks, the filter closed or open, and its collapsed summary counts only them.
 Close search sits 6px right of the field: a 24px icon button with Lucide `x` at 14px in `--fg-3`, the next stop after the field, labelled "Close search" with the key Esc.
@@ -56,6 +56,18 @@ Group headers are the design system's micro labels; a collapsed group's header c
 Queued and backlog also count crew-filed rows the captain has not opened, as ` · N new` beside the count, and such a row's one dim word is `found on <key>` unless it is blocked or held.
 A collapsible header ends with the host panel expand chevron: the same 14px down stroke the rail uses to collapse a panel, in `--fg-2`, turned 180° so it points up while the group is collapsed and down while it is open.
 In the app this is a Tier-2 frame template (`src/renderer/src/plugins/builtin/now/`), not this JSX; the look is the same, and with nothing to show there is no panel and no rail.
+
+## Start on a backlog row (INF-1663)
+
+The captain's direction A on INF-1662: while the pointer rests on a backlog row, or the keyboard's focus is on it or its Start, a small secondary button reading `Start` shows over the row's right end, 4px in from it.
+It is the row's sibling, never inside the row, so the row stays one button that opens the record and nothing moves on rest.
+It is 22px tall, `--text-sm` medium in `--fg-1`, with a `--line-2` hairline border on no surface of its own, and fades in and out over `--dur-fast`; its border brightens to `--fg-3` on hover.
+The row keeps its rest look under it, `--bg-3` while the pointer is on the Start too; the title fades out before the Start's left edge, as wide as the Start is, and the trailing project name hides.
+One press runs the record's own Start (`tasks.run` with `start-task`) with no question, so the row moves to Queued as starting and to Working when its crewmate begins.
+A row whose start failed reads `Try again`, as the record's bar does.
+A row that cannot start - blocked, or one whose parts do the work - shows the Start dim (`--fg-3` on a `--line-1` border), still reachable, with the record's reason on rest (`useRestLabel`); held work on request starts, as its record's Start does.
+A press the app refuses dims the Start with the app's words until the row changes.
+Only backlog rows carry it; queued rows start by themselves, and the task board keeps its own Start, which asks once.
 
 ## Earlier work in the filter (FI3-579, piece 3)
 
@@ -188,6 +200,8 @@ Resting on a row still does not slow the stage.
 
 The list is one Tab stop, and the arrows move through it (the app's `docs/keyboard.md`, "Lists and Settings").
 The arrows ↑ and ↓ move between the rows and the headers of the groups that open and close, Home and End go to the ends, → opens a closed group and steps into it, ← closes an open one and goes up from a row to its header, and Enter opens the row's task as a click does.
+On a backlog row, → moves to its Start, Enter or Space presses it, ← goes back to the row, and ↑ and ↓ move on as from the row; the Start is no Tab stop of its own.
+A task that starts from there moves to Queued, then Working, and focus follows its row.
 The header of a group that is always open is a label, not a stop.
 In the search, ↓ goes to the first match, and F6 brings focus to the row it was last on.
 Closed from the keyboard (Esc, or Enter on Close search), the filter gives focus to the list's stop, the row it was last on.

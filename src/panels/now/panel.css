@@ -276,6 +276,67 @@
 [data-now-row][data-now-selected] .key {
   color: var(--fg-2);
 }
+/* A backlog row and its Start (INF-1663): the Start sits over the row's
+   right end, beside the row rather than in it, so the row stays one button
+   and nothing moves on rest. It shows while the pointer rests on the row or
+   the Start, or the keyboard's focus is on either. It draws no surface of
+   its own: the row keeps its rest look under it, and the row's words fade
+   out before its left edge, as wide as the Start is (`--now-start-w`). */
+[data-now-item] {
+  position: relative;
+}
+:where([data-now-item]:hover, [data-now-item]:has(:focus-visible)) > [data-now-row] {
+  background: var(--bg-3);
+}
+[data-now-item] .title,
+[data-now-item] .key {
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+:is([data-now-item]:hover, [data-now-item]:has(:focus-visible)) .title {
+  mask-image: linear-gradient(
+    to left,
+    transparent calc(var(--now-start-w, 0px) + 2px),
+    #000 calc(var(--now-start-w, 0px) + 18px)
+  );
+}
+:is([data-now-item]:hover, [data-now-item]:has(:focus-visible)) .key {
+  opacity: 0;
+}
+[data-now] [data-now-start] {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  font-size: var(--text-sm);
+  line-height: 1;
+  white-space: nowrap;
+  color: var(--fg-1);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-s);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+:is([data-now-item]:hover, [data-now-item]:has(:focus-visible)) [data-now-start] {
+  opacity: 1;
+  pointer-events: auto;
+}
+[data-now] [data-now-start]:hover {
+  background: transparent;
+  border-color: var(--fg-3);
+}
+[data-now] [data-now-start][aria-disabled="true"] {
+  color: var(--fg-3);
+  border-color: var(--line-1);
+  cursor: default;
+}
 /* A narrow panel: the row drops its project name and where it runs, and
    keeps only that its computer is out of reach. (With one project the
    panel leaves the name out itself.) After the rows' own rules, which

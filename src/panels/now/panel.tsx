@@ -9,6 +9,7 @@ import {
   taskStatusLabel,
   taskStatusOf,
   useInPlaceReveal,
+  useRestLabel,
 } from "@infinitary/ui";
 import {
   type CSSProperties,
@@ -38,6 +39,7 @@ import {
   type PanelGroup,
   projectChipsOf,
   projectNameOf,
+  rowStartOf,
   rowsOf,
   summaryOf,
   trailingOf,
@@ -71,6 +73,14 @@ import {
  * it, and closing the search keeps it. Typed words also ask the app for closed work the board no
  * longer lists (`tasks.search`) and paint it as an `earlier` group.
  *
+ * A backlog row offers its record's Start while the pointer or the keyboard
+ * rests on it (INF-1663, the captain's direction A on INF-1662): a button
+ * beside the row, over its right end, so the row stays one button that opens
+ * the record. One press runs the record's own Start (`tasks.run`), and the
+ * row moves to Queued as starting; a row the record could not start offers
+ * Try again; one that cannot start shows it dim, with the record's reason on
+ * rest. → from the row reaches it, Enter presses it and ← goes back.
+ *
  * The rows of the tasks whose records are open on the stack are tinted
  * (`view.openTaskIds`), including a record paged away from.
  *
@@ -101,7 +111,7 @@ import {
  * was born). tests/e2e/now-panel.spec.ts reads them.
  */
 
-export default function TasksPanel({ reads, point, view, asks, rail }: PanelProps) {
+export default function TasksPanel({ reads, point, view, asks, rail, tasks }: PanelProps) {
   const [board, setBoard] = useState<PanelTaskBoard | null>(null);
   const [expanded, setExpanded] = useState<ReadonlySet<PanelGroup>>(() => new Set());
   const [found, setFound] = useState<{ query: string; tasks: PanelTaskRow[] }>({
@@ -169,6 +179,27 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
       leave(row);
     },
     [leave],
+  );
+  // Focus on a row's Start stands for its row: a task that starts moves to
+  // Queued, and focus follows it to its row there, with no summary.
+  const focusStart = useCallback((start: HTMLElement, row: HTMLElement, task: PanelTaskRow) => {
+    focused.current = { row, task, ring: start.matches(":focus-visible") };
+  }, []);
+  // The last press on a row's Start, for the row as it stood then: busy until
+  // the app answers, then the app's refusal, if any, until the row changes.
+  const [press, setPress] = useState<StartPress | null>(null);
+  const startTask = useCallback(
+    async (task: PanelTaskRow) => {
+      if (!tasks) return;
+      const at = { taskId: task.id, updatedAt: task.updatedAt };
+      setPress({ ...at, refusal: null });
+      const result = await tasks.run(task.id, "start-task").catch((caught: unknown) => ({
+        ok: false as const,
+        text: caught instanceof Error ? caught.message : String(caught),
+      }));
+      setPress({ ...at, refusal: result.ok ? null : result.text });
+    },
+    [tasks],
   );
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -400,10 +431,23 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
     }
   });
   const onListKey = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented) return;
     if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    const from = (event.target as HTMLElement)
-      .closest("[data-now-nav]")
-      ?.getAttribute("data-now-nav");
+    const target = event.target as HTMLElement;
+    // → from a backlog row reaches its Start.
+    const start = target.matches("[data-now-row]")
+      ? target.parentElement?.querySelector<HTMLElement>("[data-now-start]")
+      : null;
+    if (event.key === "ArrowRight" && start) {
+      event.preventDefault();
+      focusWithRing(start);
+      return;
+    }
+    // From a Start, the other keys move as from its row.
+    const from = (
+      target.closest("[data-now-nav]") ??
+      target.closest("[data-now-item]")?.querySelector("[data-now-nav]")
+    )?.getAttribute("data-now-nav");
     if (!from) return;
     const move = nowNavMove(navItems, from, event.key);
     if (!move) return;
@@ -576,6 +620,9 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
                 onLeave={leave}
                 onFocusRow={focusRow}
                 onBlurRow={blurRow}
+                press={tasks ? press : undefined}
+                onStart={startTask}
+                onFocusStart={focusStart}
               />
             ))}
         </div>
@@ -583,6 +630,9 @@ export default function TasksPanel({ reads, point, view, asks, rail }: PanelProp
     </>
   );
 }
+
+/** The last press on a row's Start: the row as it stood, and the app's refusal once it answered. */
+type StartPress = { taskId: string; updatedAt: number; refusal: string | null };
 
 /** Where a row sits in the page, to the pixel. */
 function boxKey(row: HTMLElement): string {
@@ -607,6 +657,9 @@ export function Group({
   onLeave,
   onFocusRow,
   onBlurRow,
+  press,
+  onStart,
+  onFocusStart,
 }: {
   group: PanelGroup;
   rows: NowRow[];
@@ -631,6 +684,15 @@ export function Group({
   onFocusRow?: (row: HTMLElement, task: PanelTaskRow) => void;
   /** Focus left a row for somewhere else; a row removed while focused hears none. */
   onBlurRow?: (row: HTMLElement) => void;
+  /**
+   * Set where the panel moves tasks: backlog rows offer their Start, and
+   * this is the last press on one (null before any).
+   */
+  press?: StartPress | null;
+  /** A row's Start was pressed, and it can start. */
+  onStart?: (task: PanelTaskRow) => void;
+  /** Focus reached a row's Start. */
+  onFocusStart?: (start: HTMLElement, row: HTMLElement, task: PanelTaskRow) => void;
 }) {
   const collapsible = !OPEN_BY_DEFAULT.has(group);
   const reveal = useInPlaceReveal(open);
@@ -678,24 +740,34 @@ export function Group({
           data-in-place-reveal={reveal ? "drift" : undefined}
           style={{ display: "flex", flexDirection: "column", gap: 2 }}
         >
-          {rows.map(({ task, depth }) => (
-            <Row
-              key={task.id}
-              task={task}
-              depth={depth}
-              board={board}
-              singleProject={singleProject}
-              selected={selectedTaskIds.includes(task.id)}
-              lit={litTaskId === task.id}
-              isStop={stop === rowNavKey(task.id)}
-              onStop={onStop}
-              onOpen={onOpen}
-              onPeek={onPeek}
-              onLeave={onLeave}
-              onFocusRow={onFocusRow}
-              onBlurRow={onBlurRow}
-            />
-          ))}
+          {rows.map(({ task, depth }) => {
+            const start = group === "backlog" && press !== undefined ? rowStartOf(task) : null;
+            const pressed =
+              press?.taskId === task.id && press.updatedAt === task.updatedAt ? press : null;
+            return (
+              <Row
+                key={task.id}
+                task={task}
+                depth={depth}
+                board={board}
+                singleProject={singleProject}
+                selected={selectedTaskIds.includes(task.id)}
+                lit={litTaskId === task.id}
+                isStop={stop === rowNavKey(task.id)}
+                onStop={onStop}
+                onOpen={onOpen}
+                onPeek={onPeek}
+                onLeave={onLeave}
+                onFocusRow={onFocusRow}
+                onBlurRow={onBlurRow}
+                startLabel={start?.label}
+                startReason={pressed?.refusal ?? start?.reason ?? null}
+                startBusy={pressed !== null && pressed.refusal === null}
+                onStart={onStart}
+                onFocusStart={onFocusStart}
+              />
+            );
+          })}
         </div>
       )}
     </div>
@@ -717,6 +789,11 @@ const Row = memo(function Row({
   onLeave,
   onFocusRow,
   onBlurRow,
+  startLabel,
+  startReason = null,
+  startBusy = false,
+  onStart,
+  onFocusStart,
 }: {
   task: PanelTaskRow;
   depth: number;
@@ -731,13 +808,21 @@ const Row = memo(function Row({
   onLeave?: (row: HTMLElement) => void;
   onFocusRow?: (row: HTMLElement, task: PanelTaskRow) => void;
   onBlurRow?: (row: HTMLElement) => void;
+  /** The row's Start, on a backlog row of a panel that moves tasks. */
+  startLabel?: string | undefined;
+  /** Why the Start cannot start the task now, in the app's words. */
+  startReason?: string | null;
+  /** A press on the Start waits for the app's answer. */
+  startBusy?: boolean;
+  onStart?: (task: PanelTaskRow) => void;
+  onFocusStart?: (start: HTMLElement, row: HTMLElement, task: PanelTaskRow) => void;
 }) {
   const word = wordOf(task);
   const trailing = trailingOf(board, task, singleProject);
   const place = task.place ? ` · ${task.place.where}` : "";
   const waiting = task.blockedBy.length > 0 ? ` · Blocked by ${task.blockedBy.join(", ")}` : "";
   const label = `${task.key} · ${task.title} · ${projectNameOf(board, task)}${place} · ${taskStatusLabel(taskStatusOf(task))}${waiting}`;
-  return (
+  const row = (
     <button
       type="button"
       data-now-row={task.id}
@@ -800,7 +885,99 @@ const Row = memo(function Row({
       )}
     </button>
   );
+  if (startLabel === undefined) return row;
+  return (
+    <div data-now-item="">
+      {row}
+      <RowStart
+        task={task}
+        label={startLabel}
+        reason={startReason}
+        busy={startBusy}
+        onStart={onStart}
+        onFocusStart={(start, row, at) => {
+          onStop?.(rowNavKey(at.id));
+          onFocusStart?.(start, row, at);
+        }}
+        onBlurRow={onBlurRow}
+      />
+    </div>
+  );
 });
+
+/**
+ * A backlog row's Start (INF-1663): beside the row, drawn over its right end
+ * while the pointer or the keyboard rests on the row. It is no stop of its
+ * own: → from the row reaches it, Enter presses it, ← goes back. A Start
+ * that cannot start stays reachable, dim, with its reason on rest.
+ */
+function RowStart({
+  task,
+  label,
+  reason,
+  busy,
+  onStart,
+  onFocusStart,
+  onBlurRow,
+}: {
+  task: PanelTaskRow;
+  label: string;
+  reason: string | null;
+  busy: boolean;
+  onStart?: (task: PanelTaskRow) => void;
+  onFocusStart?: (start: HTMLElement, row: HTMLElement, task: PanelTaskRow) => void;
+  onBlurRow?: (row: HTMLElement) => void;
+}) {
+  const rest = useRestLabel(reason ?? undefined, { fact: true });
+  const ref = useRef<HTMLButtonElement | null>(null);
+  const rowOf = (start: HTMLElement) =>
+    start.parentElement?.querySelector<HTMLElement>("[data-now-row]") ?? null;
+  // The row's title fades out under the Start, as wide as the Start is.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: its words set its width
+  useLayoutEffect(() => {
+    const start = ref.current;
+    start?.parentElement?.style.setProperty("--now-start-w", `${start.offsetWidth}px`);
+  }, [label]);
+  const off = reason !== null || busy;
+  return (
+    <button
+      type="button"
+      data-now-start={task.id}
+      tabIndex={-1}
+      aria-label={`${label} ${task.key}`}
+      aria-disabled={off ? "true" : undefined}
+      aria-description={reason ?? undefined}
+      {...rest}
+      ref={(node) => {
+        ref.current = node;
+        rest.ref(node);
+      }}
+      onClick={() => {
+        if (!off) onStart?.(task);
+      }}
+      onKeyDown={(event) => {
+        rest.onKeyDown(event);
+        if (event.key !== "ArrowLeft") return;
+        const row = rowOf(event.currentTarget);
+        if (!row) return;
+        event.preventDefault();
+        focusWithRing(row);
+      }}
+      onFocus={(event) => {
+        rest.onFocus(event);
+        const row = rowOf(event.currentTarget);
+        if (row) onFocusStart?.(event.currentTarget, row, task);
+      }}
+      onBlur={(event) => {
+        rest.onBlur(event);
+        const row = rowOf(event.currentTarget);
+        if (row) onBlurRow?.(row);
+      }}
+    >
+      {label}
+    </button>
+  );
+}
 
 /** A quiet path in the reserved gutter, arrow at the blocker. */
 function edgePath(fromY: number, toY: number, lane: number): string {

@@ -1,5 +1,7 @@
 import type { PanelProject, PanelTaskBoard, PanelTaskRow } from "@infinitary/contracts";
 import { describe, expect, it } from "vitest";
+import { RECORD_NEXT_LABELS } from "../../shared/recordBar";
+import { taskMovesOf } from "../../shared/taskMoves";
 import {
   earlierRowsOf,
   hasSingleRegisteredRepoProject,
@@ -8,6 +10,7 @@ import {
   onRail,
   projectChipsOf,
   projectNameOf,
+  rowStartOf,
   rowsOf,
   summaryOf,
   trailingOf,
@@ -412,5 +415,49 @@ describe("what a row says after its title about its computer", () => {
       reach: "connecting",
     });
     expect(reach(task({ place }))).toMatchObject({ outOfReach: false, connecting: false });
+  });
+});
+
+describe("a backlog row's Start (INF-1663)", () => {
+  // Backlog work as the board lists it, with the moves the host derives from
+  // the record's own rule, as `tasks.board` carries them.
+  const backlog = (
+    overrides: Partial<PanelTaskRow> & { startNotice?: { reason: string } } = {},
+  ) => {
+    const row = task({ status: "open", activity: null, startPolicy: "on-request", ...overrides });
+    return { ...row, moves: taskMovesOf(row) } as PanelTaskRow;
+  };
+
+  it("starts what the record's Start would, in the record's words", () => {
+    expect(rowStartOf(backlog())).toEqual({ label: RECORD_NEXT_LABELS.start, reason: null });
+    // Held work on request still starts from its record.
+    expect(
+      rowStartOf(backlog({ flags: { blocked: false, held: true, needsYou: false, ready: false } })),
+    ).toEqual({ label: RECORD_NEXT_LABELS.start, reason: null });
+  });
+
+  it("reads Try again on a row whose start failed", () => {
+    expect(rowStartOf(backlog({ startNotice: { reason: "no working copy" } }))).toEqual({
+      label: RECORD_NEXT_LABELS["try-again"],
+      reason: null,
+    });
+  });
+
+  it("says why it cannot start: what it waits on, or its parts", () => {
+    const blocked = backlog({
+      blockedBy: ["FI3-3"],
+      flags: { blocked: true, held: false, needsYou: false, ready: false },
+    });
+    expect(rowStartOf(blocked)).toEqual({
+      label: RECORD_NEXT_LABELS.start,
+      reason: blocked.moves?.["start-task"].ok === false ? blocked.moves["start-task"].text : "",
+    });
+    expect(rowStartOf(blocked)?.reason).toContain("FI3-3");
+    const parent = backlog({ children: { total: 2, closed: 0 } });
+    expect(rowStartOf(parent)?.reason).toBeTruthy();
+  });
+
+  it("offers nothing on a row with no moves", () => {
+    expect(rowStartOf(task({ kind: "decision", status: "open" }))).toBeNull();
   });
 });

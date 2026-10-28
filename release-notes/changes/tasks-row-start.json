@@ -1,0 +1,18 @@
+{
+  "entries": [
+    {
+      "id": "tasks-row-start",
+      "kind": "feature",
+      "area": "tasks",
+      "title": "Start a backlog task from its row in the Tasks panel",
+      "body": "Rest the pointer on a task in the Tasks panel's backlog and a Start button appears at the row's end; one press starts the task, as Start on its record does. A task that could not start offers Try again. A task that cannot start yet shows Start dimmed, and resting on it says why. From the keyboard, press → on a backlog row to reach its Start, Enter to press it, and ← to go back.",
+      "picture": {
+        "dark": "tasks-row-start-dark.webp",
+        "light": "tasks-row-start-light.webp",
+        "alt": "The Tasks panel's backlog with the pointer resting on Chart the harbour, whose row shows a Start button at its right end"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ],
+  "exclusions": []
+}

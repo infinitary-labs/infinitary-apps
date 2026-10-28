@@ -817,6 +817,7 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       return services.settings.getDictation();
     },
     "inf:settings:runbooks:get": () => services.runbooks.list(),
+    "inf:settings:runbooks:copy": (id, copyId, name) => services.runbooks.copy(id, copyId, name),
     "inf:settings:runbooks:set": (id, enabled) => services.runbooks.set(id, enabled),
     "inf:settings:personal-resources:get": () => services.settings.getPersonalResourcesEnabled(),
     "inf:settings:personal-resources:set": (enabled) => {
@@ -1660,6 +1661,16 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           { label: accountId ? (services.vault.get(accountId)?.label ?? null) : null },
           actor,
           { target: "", from: actionValue(name, before.get(name)), to: value },
+        );
+      } else if (name === "runbook-copy") {
+        const current = after as RunbookView[];
+        trail(
+          name,
+          {
+            source: current.find((book) => book.id === args[0])?.name,
+            name: current.find((book) => book.id === args[1])?.name,
+          },
+          actor,
         );
       } else if (name === "runbook") {
         const previous = before.get(name) as RunbookView[];

@@ -1308,6 +1308,18 @@ const actionLines = {
     done: (v) =>
       `${v.name} ${v.enabled ? "on" : "off"}${v.replacement ? `; ${v.replacement} off` : ""}`,
   },
+  "runbook-copy": {
+    area: "intelligence",
+    tier: "asked",
+    change: "inf:settings:runbooks:copy",
+    current: "inf:settings:runbooks:get",
+    value: z.strictObject({ id: z.string(), copyId: z.string(), name: z.string().min(1) }),
+    line: "Copy a built-in runbook into the personal workspace when asked. Choose an unused copyId and a name. The copy starts off and its path is returned in the runbooks list. Edit its files there; turning it on with runbook turns the named built-in off. To restore ours, turn the copy off and ours on.",
+    toRequest: (v) => [v.id, v.copyId, v.name],
+    readValue: (current) => ({ runbooks: current }),
+    done: (v) =>
+      `copied ${v.source} as ${v.name} in your personal workspace; off until you turn it on`,
+  },
   "personal-resources": {
     area: "intelligence",
     tier: "asked",

@@ -8,13 +8,13 @@ The host does not decide which subject an ask belongs to.
 
 ## Serving and switches
 
-`Runbooks` in `src/core/runbooks/runbooks.ts` reads the app bundle's `resources/runbooks` root through the existing self-source location and the installer's committed runbook folders.
+`Runbooks` in `src/core/runbooks/runbooks.ts` reads the app bundle's `resources/runbooks` root through the existing self-source location, the installer's committed runbook folders and the personal workspace's `runbooks/` folders.
 `SettingsStore` owns the saved on/off map; absent entries are on, so an update's new built-ins start on.
 Settings → Intelligence lists each runbook by its manifest's name and description, with a keyboard-operable switch and save feedback.
 The first mate reads the same list and changes it through `app_state` and `app_change runbook`, an asked catalog action.
 The dispatcher owns the attributed feed line, named from the manifest rather than an internal identifier, and does not report unchanged writes as changes.
 The manifest may declare a replacement; enabling it turns the named runbook off in the same saved update.
-Adding a runbook uses the existing installer; copying and editing built-ins remains separate work.
+Adding a runbook from elsewhere uses the existing installer; personal copies use the same guidance reader and switches.
 
 Enabled first-mate sections go through the appended-instructions door at each idle boundary, with `instructions_sha` over the exact joined text.
 Runbooks are outside the first mate's hard fixed-context budget; the model's physical context window still applies.
@@ -47,6 +47,25 @@ Guidance and skill roots cannot overlap these panel folders.
 The installer tells the first mate where those inert sources will live after consent; adding one later uses that folder through the same installer and its separate panel consent card.
 A panel's installed copy has its own record, grant and lifecycle.
 
+## Making a built-in yours
+
+Ask the first mate to copy a built-in runbook, with a new name and unused id.
+The asked `runbook-copy` catalog action copies its whole folder into `runbooks/<copyId>/` in the personal workspace and returns that editable path in the runbook list.
+The copy's manifest keeps its sections, selectors, skills, parts and naming convention, gives it its own identity, and names the built-in in `replaces`.
+The copy starts off, so copying alone changes no served guidance.
+Existing ids and folders are never overwritten, and a linked personal runbooks root is refused.
+
+Edit the copy's files in the personal workspace, directly or through a crewmate working there.
+The global reader validates these plain folders on every read, through the same guidance-only boundary used for installed runbooks.
+Unlike an installer snapshot, the personal folder is the served source: edits reach the next idle boundary or new crew conversation without reinstalling.
+The app never rewrites personal copies on startup or update.
+
+Turn the copy on in Settings → Intelligence or ask the first mate.
+The existing replacement switch turns the built-in off in the same saved update and leaves one feed line naming both runbooks.
+The built-in stays available and unchanged; to restore it, turn the copy off and the built-in on.
+Turning the copy off does not automatically restore the built-in, and turning the built-in on does not turn other runbooks off.
+An invalid personal folder supplies no guidance until repaired; the saved switches remain as they were.
+
 ## Typed crew reach
 
 A crew section's manifest selectors match only the kind, project or personal place, delivery, care, backend and project id already known at dispatch.
@@ -75,7 +94,8 @@ Common workflows is the single switch for planning, features, bugfixes, refactor
 Its retrieval line follows INF-1441: a fact or how/why answer from what the app can read now is retrieval; comparing past runs, a reproduction, a measurement or the web is research.
 Programs has its own switch, so turning Common workflows off does not remove the programs guidance.
 Casual projects holds the small-project setup guidance.
-Lessons holds its first-mate section and the lesson skill with its tested parts and warm voice.
+Lessons holds its first-mate section and the lesson skill with its tested card parts and warm voice.
+Its guide points to the workspace-owned `personal-panel/parts/lesson/` template; executable panel source is not inside the runbook's guidance skill.
 It declares ongoing work and a requested intelligence rather than a special task kind.
 Testing rules supplies only its selected crew sections.
 Commit and PR naming supplies guidance and the data convention read by the existing commit-range, story-title and forge title checks.
@@ -97,3 +117,5 @@ The existing lesson and workflow journeys cover the guidance's consumers, and th
 
 `src/core/plugins/pluginInstaller.test.ts` also drives folder, local git and npm runbooks through real host consent, replacement, skill staging, separate panel consent and removal.
 `tests/e2e/installed-runbooks.spec.ts` adds and declines a runbook by keyboard, checks its persisted switches after restart, observes the served guidance and removes it by talking.
+
+`tests/e2e/personal-runbooks.spec.ts` copies real built-in guidance through the catalog, edits the personal source, switches by keyboard, checks one replacement line and the served prompt, restarts, and restores the built-in.

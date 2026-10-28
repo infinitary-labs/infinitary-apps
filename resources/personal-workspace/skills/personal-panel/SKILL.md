@@ -371,3 +371,9 @@ There is no keep, no discard and no undo. The captain asks, you change the
 files, place them on his rail to look, and your report keeps the change. "Make the rows smaller"
 is a change to the panel you already wrote; "put it back" is another. Every
 turn is a commit, so the history is the record.
+
+## Tested lesson panel
+
+`parts/lesson/` holds the tested subject-panel template the Lessons runbook uses after a finished round.
+It is inert source in this workspace-owned authoring skill, not runbook guidance and not a mounted panel.
+Keep the folder together when copying it: its imports are relative, and the lesson guide names the record path and title to fill in.

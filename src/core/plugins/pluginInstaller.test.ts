@@ -53,11 +53,15 @@ async function harness() {
   const db = freshDatabase();
   const store = new PersonalStore(db);
   const records = new PluginRecords(db);
-  const books = new Runbooks(join(process.cwd(), "resources/runbooks"), new SettingsStore(db), () =>
-    records
-      .installed()
-      .filter((record) => record.kind === "runbook")
-      .map((record) => join(paths.pluginsDir, record.id)),
+  const books = new Runbooks(
+    join(process.cwd(), "resources/runbooks"),
+    new SettingsStore(db),
+    () =>
+      records
+        .installed()
+        .filter((record) => record.kind === "runbook")
+        .map((record) => join(paths.pluginsDir, record.id)),
+    join(paths.personalWorkspaceDir, "runbooks"),
   );
   const tasks = new TaskService({ db, strict: true });
   const events: FmEvent[] = [];
@@ -109,6 +113,10 @@ async function harness() {
     refresh: () => personal.refresh(),
     reservedIds: async () => [
       ...BUILTIN_SURFACES.map((surface) => surface.id),
+      ...books
+        .list()
+        .filter((book) => book.path)
+        .map((book) => book.id),
       ...readdirSync(paths.personalWorkspaceDir, { withFileTypes: true })
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name),
@@ -754,6 +762,26 @@ describe('a panel that asks to move tasks (docs/ui-plugins.md, "A panel\'s cards
 // Fixture: the shipped lessons skill and its real tested HTML parts, plus the
 // shipped Common workflows section. Real folder, local git and npm pack reads.
 describe("adding runbooks through the panel installer's consent", () => {
+  it("keeps a personal runbook copy's id reserved when adding guidance from elsewhere", async () => {
+    // Intent: INF-1177 piece 4 keeps the captain's editable copy as the served source.
+    const h = await harness();
+    try {
+      h.books.copy("sequences", "my-workflows", "My workflows");
+      const path = h.books.list().find((book) => book.id === "my-workflows")?.path;
+      if (!path) throw new Error("The copy must have an editable path.");
+      const source = h.plugin("my-workflows", {});
+      mkdirSync(source, { recursive: true });
+      cpSync(path, source, { recursive: true });
+      expect(await h.installer.install({ source: "path", spec: source })).toContain(
+        "already taken",
+      );
+      expect(h.records.installed()).toEqual([]);
+      expect(h.books.list().find((book) => book.id === "my-workflows")?.path).toBe(path);
+      expect(h.cards()).toEqual([]);
+    } finally {
+      h.personal.dispose();
+    }
+  });
   for (const source of ["path", "git", "npm"] as const) {
     it(`pins a ${source} runbook, serves nothing before consent, and retains a separate panel door`, async () => {
       const h = await harness();

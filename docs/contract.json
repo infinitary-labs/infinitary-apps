@@ -34825,6 +34825,59 @@
             },
             "enabled": {
               "type": "boolean"
+            },
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "description",
+            "enabled"
+          ]
+        }
+      }
+    },
+    "inf:settings:runbooks:copy": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "string"
+          },
+          {
+            "type": "string",
+            "minLength": 1
+          }
+        ],
+        "minItems": 3,
+        "items": false
+      },
+      "response": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "path": {
+              "type": "string"
             }
           },
           "required": [
@@ -34868,6 +34921,9 @@
             },
             "enabled": {
               "type": "boolean"
+            },
+            "path": {
+              "type": "string"
             }
           },
           "required": [

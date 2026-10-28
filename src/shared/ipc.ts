@@ -2404,6 +2404,13 @@ export const invokeContract = {
     request: z.tuple([]),
     response: z.array(runbookViewSchema),
   },
+  "inf:settings:runbooks:copy": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string(), z.string(), z.string().min(1)]),
+    response: z.array(runbookViewSchema),
+  },
   "inf:settings:runbooks:set": {
     effect: "change",
     surface: "core",

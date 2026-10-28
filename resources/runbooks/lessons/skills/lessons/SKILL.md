@@ -80,14 +80,14 @@ Until the learner chooses, the card stays up. Do not nudge or re-ask.
 
 ## Subject panel
 
-After the first **finished** round (`done === n`), copy the `panel/` folder beside this guide into `lesson-<subject>/` at the workspace root.
+After the first **finished** round (`done === n`), copy `.claude/skills/personal-panel/parts/lesson/` from this workspace into `lesson-<subject>/` at the workspace root.
 A goal answer or an unfinished round creates no panel and counts no practice day.
 This is a tested part: never design or rewrite it, and do not open the panel skill or design overview.
 Fill the ONE `RECORD` line in `server.ts` with the absolute path to `lessons/<subject>/record.json`, and set the manifest title to the subject's title (at most 40 characters).
 Keep the record outside the panel folder: later rounds change only the records, never the panel code.
 Keep an existing subject panel; do not copy a new one every round.
 
-Write `record.json` beside `progress.md`, using the shape in `panel/record.ts`:
+Write `record.json` beside `progress.md`, using the shape in `.claude/skills/personal-panel/parts/lesson/record.ts`:
 
 ```json
 {

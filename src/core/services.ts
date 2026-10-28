@@ -547,11 +547,15 @@ export async function createServices(
   });
   const settings = new SettingsStore(db, desktopConventions(host.app.platform).dictationKey);
   const pluginRecords = new PluginRecords(db);
-  const runbooks = new Runbooks(join(runbookSource, "resources/runbooks"), settings, () =>
-    pluginRecords
-      .installed()
-      .filter((record) => record.kind === "runbook")
-      .map((record) => join(paths.pluginsDir, record.id)),
+  const runbooks = new Runbooks(
+    join(runbookSource, "resources/runbooks"),
+    settings,
+    () =>
+      pluginRecords
+        .installed()
+        .filter((record) => record.kind === "runbook")
+        .map((record) => join(paths.pluginsDir, record.id)),
+    join(paths.personalWorkspaceDir, "runbooks"),
   );
   const repos = new RepoRegistry(db, paths.fleetDir, {
     settings,
@@ -2486,6 +2490,10 @@ export async function createServices(
     // captain's own, whether or not the switch has them mounted right now.
     reservedIds: async () => [
       ...BUILTIN_SURFACES.map((surface) => surface.id),
+      ...runbooks
+        .list()
+        .filter((book) => book.path)
+        .map((book) => book.id),
       ...(await readdir(paths.personalWorkspaceDir, { withFileTypes: true }).catch(() => []))
         .filter((entry) => entry.isDirectory())
         .map((entry) => entry.name),

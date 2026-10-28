@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import { lstatSync, readdirSync, readFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import {
@@ -22,13 +31,14 @@ export function crewRunbookText(served: { text: string; sha: string }): string {
   return `${served.text}\n\nRunbook resources: ${served.sha}.`;
 }
 
-/** Bundled and consented installed folders supply procedure. SettingsStore alone owns their switches. */
+/** Bundled, installed and personal folders supply procedure. SettingsStore alone owns their switches. */
 export class Runbooks {
   private readonly bundled: Entry[];
   constructor(
     root: string,
     private readonly settings: Pick<SettingsStore, "getRunbookStates" | "setRunbookStates">,
     private readonly installed: () => string[] = () => [],
+    private readonly personalRoot?: string,
   ) {
     this.bundled = readdirSync(root)
       .sort()
@@ -47,7 +57,7 @@ export class Runbooks {
   }
   private get entries(): Entry[] {
     const entries = [...this.bundled];
-    for (const dir of this.installed()) {
+    for (const dir of [...this.installed(), ...this.personalFolders()]) {
       try {
         const manifest = checkRunbookFiles(dir);
         if (entries.some((entry) => entry.manifest.id === manifest.id)) continue;
@@ -58,13 +68,55 @@ export class Runbooks {
     }
     return entries;
   }
+  private personalFolders(strict = false): string[] {
+    const root = this.personalRoot;
+    if (!root || !existsSync(root)) return [];
+    if (lstatSync(root).isSymbolicLink() || !lstatSync(root).isDirectory()) {
+      if (strict) throw new Error("Your runbooks folder must be a plain folder.");
+      return [];
+    }
+    return readdirSync(root)
+      .sort()
+      .map((name) => join(root, name));
+  }
+  /** Copy only our immutable bundle, never overwrite personal work or activate new guidance. */
+  copy(id: string, copyId: string, name: string): RunbookView[] {
+    if (!this.personalRoot) throw new Error("The personal workspace is not available.");
+    const source = this.bundled.find((entry) => entry.manifest.id === id);
+    if (!source) throw new Error("Choose a built-in runbook to copy.");
+    const manifest = runbookManifestSchema.parse({
+      ...source.manifest,
+      id: copyId,
+      name,
+      author: "You",
+      version: "1.0.0",
+      replaces: id,
+    });
+    if (this.entries.some((entry) => entry.manifest.id === copyId))
+      throw new Error("That runbook id is already in use. Choose another for your copy.");
+    mkdirSync(this.personalRoot, { recursive: true });
+    this.personalFolders(true);
+    const dir = contained(this.personalRoot, copyId);
+    mkdirSync(dir); // Exclusive: an existing folder, even an invalid runbook, is never overwritten.
+    try {
+      cpSync(source.dir, dir, { recursive: true });
+      writeFileSync(join(dir, "runbook.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+      checkRunbookFiles(dir);
+      this.settings.setRunbookStates({ ...this.settings.getRunbookStates(), [copyId]: false });
+    } catch (error) {
+      rmSync(dir, { recursive: true, force: true });
+      throw error;
+    }
+    return this.list();
+  }
   list(): RunbookView[] {
     const states = this.settings.getRunbookStates();
-    return this.entries.map(({ manifest }) => ({
+    return this.entries.map(({ manifest, dir }) => ({
       id: manifest.id,
       name: manifest.name,
       description: manifest.description,
       enabled: states[manifest.id] !== false,
+      ...(this.personalRoot && dirname(dir) === this.personalRoot ? { path: dir } : {}),
     }));
   }
   set(id: string, enabled: boolean): RunbookView[] {

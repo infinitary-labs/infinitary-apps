@@ -33,11 +33,13 @@ An active task that builds in place and has a recorded conversation survives a r
 - `lessons/<subject>/progress.md`: the goal, skill states with dated evidence, words they use, what is next.
 - `lessons/parts/`: the tested board, progress, finish and quiz parts, copied from `.claude/skills/lessons/parts/` and pasted inline into each round, because a card cannot load a file.
 - `lessons/<subject>/record.json`: typed calendar facts, the learner's goal, dated skill states, the subject task's key and the next practice goal.
-- `lesson-<subject>/`: the tested personal panel copied from `.claude/skills/lessons/panel/` after the first finished round, with its record path and title filled in.
+- `lesson-<subject>/`: the tested personal panel copied from `.claude/skills/personal-panel/parts/lesson/` after the first finished round, with its record path and title filled in.
 
 ## The subject panel
 
 The teacher copies the panel part once and updates only the record alongside `progress.md` after subsequent submitted rounds.
+The template belongs to the workspace-owned `personal-panel` skill; the Lessons runbook holds guidance and HTML card parts only.
+Moving or copying a runbook installs no panel and changes no panel consent.
 A fresh subject has no panel until its first finished round; an unfinished round counts no practice day.
 The panel's own server reads and validates the record on startup and once a minute, publishing its snapshot through the existing panel store.
 An invalid record says progress could not be read, never zero progress; a missing or empty record docks nothing.

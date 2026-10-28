@@ -1,7 +1,8 @@
-import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { isPanelFolder } from "./liveWorkspace";
 import {
   AUTHORING_SKILL_IDS,
   DESIGN_SKILL_ID,
@@ -50,6 +51,23 @@ describe("seeding the workspace skills", () => {
       "Infinitary — Design System",
     );
     expect(readdirSync(skillPath(dir, DESIGN_SKILL_ID, "tokens")).sort()).toContain("colors.css");
+  });
+
+  it("seeds the unchanged lesson panel as an inert authoring part, ready for a deliberate panel copy", async () => {
+    // Intent: the captain's INF-1483 repair keeps real Lessons copy admission and panel behavior unchanged.
+    const dir = workspace();
+    await seedWorkspaceSkills({ sourceDir: REPO_ROOT, workspaceDir: dir });
+    const template = skillPath(dir, "personal-panel", "parts", "lesson");
+    const source = join(
+      REPO_ROOT,
+      "resources/personal-workspace/skills/personal-panel/parts/lesson",
+    );
+    for (const file of readdirSync(source))
+      expect(readFileSync(join(template, file))).toEqual(readFileSync(join(source, file)));
+    expect(await isPanelFolder("personal-panel", skillPath(dir, "personal-panel"))).toBe(false);
+    const panel = join(dir, "lesson-chess");
+    cpSync(template, panel, { recursive: true });
+    expect(await isPanelFolder("lesson-chess", panel)).toBe(true);
   });
 
   it("is idempotent: a second seed changes nothing", async () => {

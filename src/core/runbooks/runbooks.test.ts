@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { fakeBinding } from "../../../tests/helpers/fakeSession";
@@ -43,6 +43,75 @@ describe("runbooks over existing prompt and skill doors", () => {
     reopened.set("sequences", true);
     expect(reopened.firstmate()).toEqual(before);
     expect(() => reopened.set("missing", false)).toThrow("not available");
+  });
+  it("copies editable guidance off, replaces the built-in on request and keeps both across restart", () => {
+    // Intent: INF-1177 piece 4, using the actual bundled Common workflows.
+    const { db, settings } = fixture();
+    const personal = join(scratchDir("inf-personal-runbooks-"), "runbooks");
+    const books = new Runbooks(root, settings, () => [], personal);
+    const original = books.firstmate();
+    books.copy("sequences", "my-workflows", "My workflows");
+    const path = books.list().find((book) => book.id === "my-workflows")?.path;
+    expect(path).toBe(join(personal, "my-workflows"));
+    if (!path) throw new Error("The copy did not return its editable path.");
+    const manifest = JSON.parse(readFileSync(join(path, "runbook.json"), "utf8"));
+    expect(manifest.replaces).toBe("sequences");
+    const guide = join(path, manifest.firstmate);
+    const copied = readFileSync(guide, "utf8");
+    expect(copied).toBe(readFileSync(join(root, "sequences", manifest.firstmate), "utf8"));
+    expect(books.list().find((book) => book.id === "my-workflows")?.enabled).toBe(false);
+    expect(books.firstmate()).toEqual(original);
+    writeFileSync(guide, copied.replace("# Common workflows", "# My workflows"));
+    books.set("my-workflows", true);
+    expect(books.firstmate().text).toContain("# My workflows");
+    expect(books.firstmate().text).not.toContain("# Common workflows");
+    expect(books.list().find((book) => book.id === "sequences")?.enabled).toBe(false);
+    const reopened = new Runbooks(root, new SettingsStore(db), () => [], personal);
+    expect(reopened.firstmate()).toEqual(books.firstmate());
+    writeFileSync(guide, copied.replace("# Common workflows", "# Edited workflows"));
+    expect(reopened.firstmate().text).toContain("# Edited workflows");
+    reopened.set("my-workflows", false);
+    reopened.set("sequences", true);
+    expect(reopened.firstmate()).toEqual(original);
+    expect(readFileSync(guide, "utf8")).toContain("# Edited workflows");
+  });
+  it("copies the bundled lesson skills and tested parts into an editable runbook", () => {
+    // Intent: INF-1177 piece 4 and the captain's repair request: the real Lessons copy passes unchanged admission.
+    const { settings } = fixture();
+    const personal = join(scratchDir("inf-personal-lesson-runbook-"), "runbooks");
+    const books = new Runbooks(root, settings, () => [], personal);
+    books.copy("lessons", "my-lessons", "My lessons");
+    expect(readFileSync(join(personal, "my-lessons/skills/lessons/parts/quiz.html"), "utf8")).toBe(
+      readFileSync(join(root, "lessons/skills/lessons/parts/quiz.html"), "utf8"),
+    );
+    books.set("my-lessons", true);
+    const skill = books.crew(code).skills.find((skill) => skill.name === "lessons");
+    expect(skill).toBeDefined();
+    expect(skill?.files["parts/quiz.html"]).toBeDefined();
+    expect(Object.keys(skill?.files ?? {}).some((path) => /\.tsx?$/.test(path))).toBe(false);
+  });
+  it("never overwrites personal folders, accepts an escaping id or follows a linked copy root", () => {
+    // Intent: copy and edit keeps the captain's work intact; the actual bundle is the copy source.
+    const { settings } = fixture();
+    const workspace = scratchDir("inf-runbook-copy-collision-");
+    const personal = join(workspace, "runbooks");
+    const books = new Runbooks(root, settings, () => [], personal);
+    expect(() => books.copy("missing", "mine", "Mine")).toThrow("built-in");
+    expect(() => books.copy("sequences", "../escape", "Mine")).toThrow();
+    expect(existsSync(join(workspace, "escape"))).toBe(false);
+    expect(() => books.copy("sequences", "programs", "Mine")).toThrow("already in use");
+    mkdirSync(join(personal, "unfinished"), { recursive: true });
+    writeFileSync(join(personal, "unfinished/guide.md"), "Unfinished personal work");
+    expect(() => books.copy("sequences", "unfinished", "Mine")).toThrow();
+    expect(readFileSync(join(personal, "unfinished/guide.md"), "utf8")).toBe(
+      "Unfinished personal work",
+    );
+    const linked = join(workspace, "linked");
+    symlinkSync(personal, linked, "dir");
+    expect(() =>
+      new Runbooks(root, settings, () => [], linked).copy("sequences", "mine", "Mine"),
+    ).toThrow("plain folder");
+    expect(existsSync(join(personal, "mine"))).toBe(false);
   });
   it("serves testing only to the accepted project kinds on either backend", () => {
     const { books } = fixture();

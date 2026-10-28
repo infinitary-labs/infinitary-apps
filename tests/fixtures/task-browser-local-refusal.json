@@ -1,0 +1,14 @@
+{
+  "siteUrl": "http://127.0.0.1:5555/",
+  "host": "localhost:5555",
+  "refusal": "Blocked what the page asked for from other servers on this computer: localhost:5555. Open one with `infinitary-browser-axi open <url>` to let this task's pages reach it.",
+  "answers": [
+    "text \"Not signed up yet\"\ntext \"This page cannot reach the app\"",
+    "",
+    "",
+    "",
+    "text \"Signed up as Sam\"\ntext \"This page cannot reach the app\"",
+    "",
+    ""
+  ]
+}

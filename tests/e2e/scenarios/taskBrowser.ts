@@ -77,12 +77,17 @@ function taskBrowserStep(body: string): ScriptedCall[] | undefined {
         0,
         /Blocked what the page asked for from websites over plain http: (.+?)\. This/,
       );
-      const local = found(
-        0,
-        new RegExp(
-          `Blocked what the page asked for from other servers on ${HERE.this}: (.+?)\\. Open`,
-        ),
-      );
+      // Refusals drain into the next browser answer, not necessarily open's.
+      const local = answers
+        .map((_, index) =>
+          found(
+            index,
+            new RegExp(
+              `Blocked what the page asked for from other servers on ${HERE.this}: (.+?)\\. Open`,
+            ),
+          ),
+        )
+        .find((host) => host !== undefined);
       const atConnection = answers[0]?.includes("refused at the connection")
         ? " at the connection"
         : "";

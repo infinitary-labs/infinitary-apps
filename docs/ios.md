@@ -425,6 +425,11 @@ Any part failing fails the gate, and by default no part stops another.
 With `--stop-early`, which a pull request's phone check sets through `INFINITARY_PHONE_STOP_EARLY`, the first failed part ends the part still running on the other device, as an interrupted part does, and starts no other; every started simulator is still deleted, and the gate names the failed, stopped and unstarted parts and writes no `part-times.json`.
 A run on request runs every part to its end.
 Every explicit native observation goes through `InfinitaryUITests/PhoneWaits.swift`: element presence and absence, predicate reads and the disposable home's control requests.
+`PhoneJourney.appearances` observes screenshot pixels before attaching each light/dark pair and before returning from its light restoration (INF-1537).
+These fixtures have broad near-white or near-black surfaces: every screen quadrant's mean sRGB brightness must be on the requested side of the black/white midpoint, so an idle app or a dark card alone cannot stand in for a drawn dark screen.
+After the first matching frame it lets XCTest wait for the native transition to settle, then observes again and attaches that exact screenshot, not a later unchecked capture.
+A missing appearance fails with the last frame named `unconfirmed` and its quadrant readings in the log.
+This checks the journey's fixtures, not the appearance of arbitrary pictures or other apps.
 Its load clock, `PhoneWaitDeadline`, lives in `PhoneLoadClock/`, which both test targets compile, so the app-hosted display samples read the same clock.
 On ordinary runs it samples the same load clock as journeys, with 25 ms ticks, at most two ticks counted across a stall, and a share reduced by one-minute load per active processor above 1.
 Each wait ends by 20 times its budget on the monotonic wall clock, at most ten minutes; direct predicate evaluation preserves INF-975's short-window fix.

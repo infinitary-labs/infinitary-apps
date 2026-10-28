@@ -1,3 +1,4 @@
+import CoreImage
 import XCTest
 
 /// INF-64 piece 2's requested journey. Real TLS/core, disposable home and simulator; never a provider account.
@@ -17,18 +18,68 @@ import XCTest
     }
 
     private func picture(_ name: String) {
+        picture(name, screenshot: XCUIScreen.main.screenshot())
+    }
+
+    private func picture(_ name: String, screenshot: XCUIScreenshot) {
         // Capture the display, not an app-window crop computed before an iPad rotation.
-        let image = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        let image = XCTAttachment(screenshot: screenshot)
         image.name = name; image.lifetime = .keepAlways; add(image)
     }
 
+    /// INF-1537: a successful simulator command or an idle app is not a drawn appearance.
+    /// These fixtures have broad light/dark surfaces, including the sheets. Observe every quadrant,
+    /// so a dark card alone cannot pass for a dark screen, and retain the exact frame we observed.
+    /// This is a fixture check, not a theme detector for arbitrary pictures or other apps.
+    private func appearancePicture(_ name: String, dark: Bool) throws -> XCUIScreenshot {
+        let context = CIContext()
+        let colorSpace = CGColorSpace(name: CGColorSpace.sRGB)!
+        var observed: XCUIScreenshot?
+        var last: XCUIScreenshot?
+        var settled = false
+        var brightness: [Double] = []
+        let result = waitForPhonePredicate(NSPredicate { _, _ in
+            let screenshot = XCUIScreen.main.screenshot()
+            last = screenshot
+            guard self.app.state == .runningForeground, let pixels = screenshot.image.cgImage else { return false }
+            let image = CIImage(cgImage: pixels)
+            let halfWidth = image.extent.width / 2, halfHeight = image.extent.height / 2
+            brightness = []
+            for y in [0.0, halfHeight] {
+                for x in [0.0, halfWidth] {
+                    let bounds = CGRect(x: x, y: y, width: halfWidth, height: halfHeight)
+                    let average = image.applyingFilter("CIAreaAverage", parameters: [kCIInputExtentKey: CIVector(cgRect: bounds)])
+                    var rgba = [UInt8](repeating: 0, count: 4)
+                    context.render(average, toBitmap: &rgba, rowBytes: 4, bounds: CGRect(x: 0, y: 0, width: 1, height: 1),
+                                   format: .RGBA8, colorSpace: colorSpace)
+                    brightness.append(rgba.prefix(3).reduce(0.0) { $0 + Double($1) } / (3 * Double(UInt8.max)))
+                }
+            }
+            // The midpoint separates these fixtures' near-white and near-black surfaces, not a pixel golden.
+            guard brightness.allSatisfy({ dark ? $0 < 0.5 : $0 > 0.5 }) else { return false }
+            // Only now is the requested appearance actually drawing. Let XCTest wait for its
+            // native transition to settle, then observe again; the first dark frame can lack chrome.
+            if !settled {
+                settled = true
+                self.app.activate()
+                return false
+            }
+            observed = screenshot
+            return true
+        }, object: nil, timeout: 10)
+        print("Appearance picture \(name): expected \(dark ? "dark" : "light"), quadrant brightness \(brightness), result \(result)")
+        if result != .completed, let last { picture(name + "-unconfirmed", screenshot: last) }
+        return try XCTUnwrap(observed, "The app never drew \(dark ? "dark" : "light") for \(name); quadrant brightness \(brightness)")
+    }
+
     private func appearances(_ name: String) async throws {
-        picture(name)
+        picture(name, screenshot: try appearancePicture(name, dark: false))
         _ = try await home("display-dark")
-        app.activate() // XCTest waits for the native appearance transition to become idle.
-        picture(name + "-dark")
+        app.activate()
+        picture(name + "-dark", screenshot: try appearancePicture(name + "-dark", dark: true))
         _ = try await home("display-light")
         app.activate()
+        _ = try appearancePicture(name + "-restored", dark: false)
     }
 
     private func computerDetails() {

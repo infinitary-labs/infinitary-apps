@@ -24,6 +24,7 @@ import { type Core, startCore } from "@core/index";
 import type { Card } from "@shared/cards";
 import type { Rigor } from "@shared/rigor";
 import Database from "better-sqlite3";
+import { REPO_ROOT } from "../moduleRunner.ts";
 import { assertIsolatedStateDir, type Care, captainMove, RIGOR_FOR_CARE } from "./policy.ts";
 import type { Reward, Verifier } from "./verifier.ts";
 import { SETTING_PREFIXES } from "../../src/shared/envSettings.ts";
@@ -300,8 +301,9 @@ function headlessHost(stateDir: string, keychain: HostKeychain): HostCapabilitie
       platform: process.platform,
       packaged: false,
       userDataDir: stateDir,
-      appDir: stateDir,
-      resourcesDir: join(stateDir, "resources"),
+      // Unpackaged core reads bundled guidance from its checkout, not userData.
+      appDir: REPO_ROOT,
+      resourcesDir: join(REPO_ROOT, "resources"),
     },
     // Nothing is opened from a headless attempt: a link the core wants
     // shown lands in the log instead.

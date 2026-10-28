@@ -177,6 +177,8 @@ The real grader is the S0 verifier runner: `--verifier <repo>/scripts/bench/veri
 ### Isolation
 
 - The state directory must be new or empty. It may not overlap the app's folders under either name: `<appData>/infinitary`, `<appData>/infinitary-dev`, `<appData>/firstmate-3000` or `<appData>/firstmate-3000-dev`.
+- The headless host reads bundled resources, including runbooks, from the Infinitary checkout resolved by the module runner, independently of the caller's working directory.
+  Mutable userData stays in the attempt's state directory; no resources are copied into it.
 - A mock attempt (`--dry-run` or `--mock`) boots with the e2e suite's isolation:
   - `PI_OFFLINE=1`;
   - a quota fixture with no providers;

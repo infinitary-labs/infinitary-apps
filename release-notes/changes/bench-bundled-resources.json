@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "bench-bundled-resources",
+      "reason": "Internal benchmark tooling: resolve bundled runbooks from the app checkout while keeping attempt state isolated."
+    }
+  ]
+}

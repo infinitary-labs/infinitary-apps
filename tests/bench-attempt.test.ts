@@ -13,6 +13,8 @@ import { scratchDir } from "./helpers/scratchDirs";
  * against the attempt's own state directory, the mock Firstmate commissions
  * the fixture task's crewmate, the crewmate writes its one file, and the
  * stub verifier grades the patch the driver read out of the working copy.
+ * INF-1733: bundled guidance must come from the app checkout, not the
+ * attempt's empty state directory or the caller's working directory.
  */
 
 const PROJECT = fileURLToPath(new URL("../", import.meta.url));
@@ -30,6 +32,7 @@ describe("a dry-run attempt", () => {
       ["--preserve-symlinks-main", cli, "--dry-run", "--out", out],
       {
         encoding: "utf8",
+        cwd: scratchDir("infinitary-bench-cwd-"),
       },
     );
     expect(run.status, `${run.stdout}\n${run.stderr}`).toBe(0);

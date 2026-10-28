@@ -1,0 +1,8 @@
+{
+  "exclusions": [
+    {
+      "id": "phone-picker-reads-a-library-photo",
+      "reason": "Phone check only: the talk part's Photos picker step presses a library photo's cell, read by its kind, a comma and its date, instead of the first image whose label begins with Photo, which on the iPad was the picker sidebar's icon. Nothing in the app changes."
+    }
+  ]
+}

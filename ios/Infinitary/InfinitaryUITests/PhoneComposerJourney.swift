@@ -207,7 +207,9 @@ import XCTest
 @MainActor func addPhoneJourneyPhoto(app: XCUIApplication) {
     let photos = app.buttons["add-photos"]
     XCTAssertTrue(waitForPhonePress(photos)); tapOnPhone(photos)
-    let photo = app.images.matching(NSPredicate(format: "label BEGINSWITH 'Photo' OR label BEGINSWITH 'Screenshot'")).firstMatch
+    // INF-1576: a library photo's cell reads its kind, a comma and its date ("Photo, October 27, 12:04 AM"); the iPad
+    // picker's sidebar comes first with an icon read "Photo on a rectangle", and pressing it picks nothing.
+    let photo = app.images.matching(NSPredicate(format: "label BEGINSWITH 'Photo, ' OR label BEGINSWITH 'Screenshot, '")).firstMatch
     XCTAssertTrue(photo.waitForPresence(timeout: 10), app.debugDescription)
     let add = app.buttons.matching(NSPredicate(format: "label == 'Done' OR label == 'Add'")).firstMatch
     pickPhoneJourneyPhoto(photo, add: add, in: app)

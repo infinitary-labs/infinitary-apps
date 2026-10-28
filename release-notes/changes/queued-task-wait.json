@@ -1,0 +1,20 @@
+{
+  "entries": [
+    {
+      "id": "queued-task-wait",
+      "kind": "fix",
+      "title": "Queued tasks say what they are waiting for",
+      "body": "Tasks now name what they wait for and when that wait began, whether it is the first mate’s go, a computer or another task. Your first mate reads the same line without starting a crewmate to investigate. The Tasks panel shows the extra line only in Queued, keeping Backlog compact.",
+      "area": "tasks",
+      "provenance": {
+        "origin": "change"
+      },
+      "picture": {
+        "dark": "queued-task-wait-dark.webp",
+        "light": "queued-task-wait-light.webp",
+        "alt": "Task board showing a queued project build waiting for its project plan, with the time the wait began."
+      }
+    }
+  ],
+  "exclusions": []
+}

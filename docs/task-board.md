@@ -52,6 +52,7 @@ Find reaches a part by its key or title, and each part keeps its full record.
 Ordinary parent/child tasks keep the lane and nesting rules above.
 Lanes sort by priority, then oldest first; Done and Dropped newest first.
 An empty lane says so in its place ("Nothing queued").
+Unstarted tasks name their wait and its recorded time in the status line, from the same `queueWait` the Tasks panel, record and first mate read (`docs/task-record.md`, "A task waiting to start").
 
 Under the app's title row the board has one row of its own: the count of every task in Waiting on you and the four lanes of work, the project chips (All projects, then each project's key, only when two or more projects have tiles), and Find (a task's key or title, for this board alone).
 The chip and Find narrow every lane before it is paged, and every count is the whole narrowed lane's, never only the tiles drawn.

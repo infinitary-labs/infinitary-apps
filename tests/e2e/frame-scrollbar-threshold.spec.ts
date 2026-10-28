@@ -70,6 +70,15 @@ test("the task record stops resizing on both sides of a classic scrollbar thresh
       .evaluate((el) => (el as HTMLElement).click());
     await expect(frame.locator("[data-record-goal]")).toHaveText(goal);
     await frame.locator("body").evaluate(() => document.fonts.ready);
+    // INF-1605 adds a dated wait above this goal. Establish the real content's fit,
+    // rather than assuming the old fixture height still fits, before crossing its threshold.
+    const overflow = await settled(page, () =>
+      scroller.evaluate((el) => el.scrollHeight - el.clientHeight),
+    );
+    if (overflow > 0) {
+      const height = await page.evaluate(() => window.innerHeight);
+      await resizeWindow(app, page, { width: 1200, height: height + overflow });
+    }
     await expect.poll(() => scroller.evaluate((el) => el.scrollHeight - el.clientHeight)).toBe(0);
     const natural = await settled(page, () =>
       pane.evaluate((el) => ({

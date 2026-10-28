@@ -537,7 +537,8 @@ A panel that reads `tasks.board` gets `PanelProps.point` (`src/renderer/src/plug
 
 - `openTask(taskId)` opens a task as a Tasks row does: its waiting card forward, or its record at the front (`openTask` in `plugins/point/openTask.ts`).
 - `openRecord(taskId)` opens the task's record at the front even while a card waits for it, as the board's Open record does.
-- `peekTask({ taskId, box } | null)` rests on a task: the box is in the page's own pixels, the host adds where the page's frame sits, and the crew summary opens beside the panel on its rail, as a Tasks row's does, or on the stack beside the box itself, as the task board's tiles' always have (`PanelPeek` in `plugins/point/taskPeek.ts`, drawn by `PeekSummary` as `[data-point-summary]`).
+- `peekTask({ taskId, box } | null)` rests on a task: the box is in the page's own pixels, the host adds where the page's frame currently sits, and the crew summary opens beside the panel on its rail, as a Tasks row's does, or on the stack beside the box itself, as the task board's tiles' always have (`PanelPeek` in `plugins/point/taskPeek.ts`, drawn by `PeekSummary` as `[data-point-summary]`).
+  A frame resizing after the page reports its row repositions the summary from those page coordinates, so a shorter row moving into Backlog keeps its hairline.
 - `showCard(cardId)` brings a task's waiting card forward, by the `waitingCardId` the read gave, and answers whether it came forward.
 - `aim(taskId | null)`, in a card view only, aims the captain's next message: while that card is the shown entry, `submit` sends its aim as the turn's task, as a shown record does (`PanelCardEntry.aim`).
 - `draft(text)` starts the captain's next message: one line of at most 500 characters at the head of the main message field, the keyboard there and the caret after it, what the captain had typed kept after it (`beginDraft`, as the Create panel slot starts one); nothing is sent until the captain sends it.

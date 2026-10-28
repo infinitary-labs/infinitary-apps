@@ -1,9 +1,4 @@
-import {
-  PANEL_DRAFT_MAX,
-  type PanelBox,
-  type PanelPoint,
-  type PanelView,
-} from "@shared/personal/contracts";
+import { PANEL_DRAFT_MAX, type PanelPoint, type PanelView } from "@shared/personal/contracts";
 import { pointNeedsBoardMessage } from "@shared/personal/manifest";
 import { useMemo } from "react";
 import { z } from "zod";
@@ -177,13 +172,12 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
         return;
       }
       const frame = page.frame();
-      const at = frame?.getBoundingClientRect();
       const { taskId, box } = parsed.data;
       if (!listed(taskId)?.key) {
         taskPeek.release(where);
         return;
       }
-      taskPeek.set({ taskId, box: at ? offset(box, at) : box, page: where, pageFrame: frame });
+      taskPeek.set({ taskId, box, page: where, pageFrame: frame });
     },
     showCard: async (cardId) => {
       need("showCard");
@@ -252,16 +246,6 @@ export function panelPoint(panel: string, page: PointPage): PanelPoint {
       });
       return true;
     },
-  };
-}
-
-/** A box in a frame's own page, in the window's coordinates. */
-function offset(box: PanelBox, at: DOMRect): PanelBox {
-  return {
-    top: box.top + at.top,
-    right: box.right + at.left,
-    bottom: box.bottom + at.top,
-    left: box.left + at.left,
   };
 }
 

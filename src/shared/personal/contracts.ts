@@ -227,6 +227,8 @@ export type PanelTaskRow = {
    * is absent, and so is the whole field on an older home.
    */
   blockedSince?: Record<string, number>;
+  /** The home’s dated start-wait line, also read by the first mate. */
+  queueWait?: { line: string; since?: number };
   /** Its parts: how many, and how many are closed. */
   children: { total: number; closed: number };
   /** Reachable shown ready decision, null on hidden/working/closed tasks. */

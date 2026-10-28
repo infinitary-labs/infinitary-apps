@@ -346,6 +346,8 @@ export const taskViewSchema = z.object({
   startAttempt: startAttemptSchema.optional(),
   /** Confirmed manual start failure. Absent once cleared. */
   startNotice: startNoticeSchema.optional(),
+  /** One dated start wait, shared with the first mate. Absent after starting. */
+  queueWait: z.object({ line: z.string(), since: z.number().optional() }).optional(),
   createdAt: z.number(),
   updatedAt: z.number(),
   startedAt: z.number().nullable(),

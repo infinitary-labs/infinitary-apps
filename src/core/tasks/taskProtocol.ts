@@ -49,6 +49,7 @@ import type { TaskLink } from "../storage/taskLinkStore";
 import type { TaskRecord } from "../storage/taskStore";
 import { standingDependencyWaits } from "./dependencyWaits";
 import { holdingWaits, waitsSince } from "./holdingWaits";
+import { queueWaitOf } from "./queueWait";
 import { type ConcernedEventView, condenseActivity, reportHeadline } from "./recordActivity";
 import { taskFeedLine } from "./taskFeed";
 import { type TaskChange, TaskService } from "./taskService";
@@ -852,6 +853,8 @@ export class TaskProtocol {
     const delivery = record.delivery ? { ...record.delivery } : null;
     if (delivery) delete delivery.closedPolicies;
     const place = this.options.place?.(record);
+    const startAttempt =
+      this.options.startAttempt?.(record.id) ?? this.options.tasks.startAttemptOf(record.id);
     return withMoves({
       id: record.id,
       key: record.key,
@@ -874,6 +877,16 @@ export class TaskProtocol {
         ? { replacedBy: this.options.tasks.replacementOf(record.id) }
         : {}),
       startPolicy: record.startPolicy,
+      queueWait: startAttempt
+        ? undefined
+        : queueWaitOf(
+            record,
+            blockers,
+            graph.links,
+            (graph.children.get(record.id)?.total ?? 0) > 0
+              ? [...graph.byId.values()].filter((part) => part.parentId === record.id)
+              : [],
+          ),
       flags: {
         blocked,
         held,
@@ -906,7 +919,7 @@ export class TaskProtocol {
         : {}),
       ...(cardMerges(waitingCard) ? { waitingCardMerges: true as const } : {}),
       ...(captainWait ? { captainWait } : {}),
-      ...startMarksOf(record, this.options.startAttempt?.(record.id)),
+      ...startMarksOf(record, startAttempt),
       createdAt: record.createdAt,
       updatedAt: record.updatedAt,
       startedAt: record.startedAt,

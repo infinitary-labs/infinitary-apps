@@ -57,7 +57,7 @@ export type TaskStatusInput = Pick<
   | "startNotice"
   | "place"
 > &
-  Partial<Pick<TaskView, "blockedBy" | "blockedSince" | "waitingCardMerges">> & {
+  Partial<Pick<TaskView, "blockedBy" | "blockedSince" | "waitingCardMerges" | "queueWait">> & {
     closedReason: string | null;
   };
 
@@ -143,6 +143,7 @@ export function taskStatusOf(task: TaskStatusInput): TaskStatusReading {
   }
   if (task.status === "open") {
     const mark = task.startPolicy === "on-request" ? "backlog" : "queued";
+    if (task.queueWait) return reading(mark, task.queueWait.line);
     const parts = task.children.total;
     const holds = task.flags.blocked
       ? "Blocked by another task"

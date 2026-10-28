@@ -288,6 +288,7 @@ Selected photos appear as removable chips; messages and photos remain in memory 
 Command-Return sends from either message field; native controls retain hardware-keyboard focus, VoiceOver and Dynamic Type.
 
 The Tasks tab combines a filter of the live board with the Mac’s earlier-task search.
+An unstarted task shows the home’s dated `queueWait` line below its title and record heading, without rewording it or deciding readiness on the phone.
 Its five groups and their labels come from `src/shared/nowPanel.ts`, generated as a finite native lookup so the phone does not own another grouping rule.
 The phone keeps active parent trees together, hides dropped rows and closed ordinary operations from the groups, and keeps them searchable.
 Each group's header is a micro uppercase label with its count, as on the Mac.

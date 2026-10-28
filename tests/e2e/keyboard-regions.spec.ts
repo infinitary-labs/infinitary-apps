@@ -6,6 +6,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { launchApp } from "./launch";
 import { within } from "./layout";
 import { SPAWN_PROMPT_MARKER } from "./mockProvider";
+import { windowShot } from "./pictures";
 import { promptInput } from "./prompt";
 import { expandDock, nowFrame, openRowSummary, POINT_SUMMARY, rowSummary } from "./rails";
 import {
@@ -238,8 +239,13 @@ test("a task the keyboard rests on keeps focus, the Tab stop and its summary as 
 
       await toBacklog("notes");
       await expect(focused('[data-now-group="backlog"] [data-now-row="notes"]')).toHaveCount(1);
+      // INF-1605: the captain keeps Backlog compact; its shorter row still owns the summary.
+      await expect(row("notes").locator("[data-now-queue-wait]")).toHaveCount(0);
       await expect(openRowSummary(page)).toHaveAttribute(POINT_SUMMARY, "notes");
       await expect.poll(() => summaryLevelWith(page, row("notes"))).toBe(true);
+      if (test.info().repeatEachIndex === test.info().project.repeatEach - 1) {
+        await windowShot(page, test.info().outputPath("compact-backlog-summary.png"));
+      }
       // The keys go on from the row where it is now.
       await page.keyboard.press("ArrowDown");
       await expect(focused('[data-now-row="icons"]')).toHaveCount(1);

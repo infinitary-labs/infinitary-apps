@@ -657,3 +657,10 @@
 .fm-board-live[data-board-live="refused"] {
   color: var(--warn);
 }
+
+/* Start waits are complete facts, not a preview that needs a hover. */
+.fm-board-tile-status[data-board-queue-wait] {
+  display: block;
+  overflow: visible;
+  overflow-wrap: anywhere;
+}

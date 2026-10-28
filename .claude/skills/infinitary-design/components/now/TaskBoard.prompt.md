@@ -87,3 +87,5 @@ Show the card, on a waiting tile's menu, brings its card forward, a completion c
 - **The ⋯ menu**: Open record; Show the card while a decision waits; Continue on interrupted work; Queue it or Back to backlog, and Start now, on open work, each with a sub-line ("May start at once · asks once", "Asks once · the record's Start"); a separator; Drop task last, in danger.
   An entry that cannot run stays listed, dim, its reason as its sub-line (RowMenu, `RowMenu.prompt.md`).
 - Focus follows an accepted move to the tile's new lane, or the nearest row when the view does not draw it, and comes back to the tile after a refusal or a cancel.
+
+An unstarted task’s dated wait line wraps in full on its tile or list row, without a hover or ellipsis, from the home’s shared wait fact.

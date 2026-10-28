@@ -192,6 +192,8 @@ export type PlacementWaitKind = z.infer<typeof placementWaitKindSchema>;
 export const placementWaitSchema = z.object({
   kind: placementWaitKindSchema,
   words: z.string(),
+  /** When this kind of placement wait began; unchanged by fresh resource readings. */
+  since: z.number().optional(),
 });
 export type PlacementWait = z.infer<typeof placementWaitSchema>;
 export const UNCOMPARED_WAIT: PlacementWait = { kind: "room", words: PLACEMENT_WAIT };

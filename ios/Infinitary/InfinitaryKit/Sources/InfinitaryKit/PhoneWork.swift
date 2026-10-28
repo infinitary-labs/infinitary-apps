@@ -29,6 +29,9 @@ public struct PhoneTask: Decodable, Identifiable, Sendable {
     public let status: String
     public let createdAt: Double
     public let startPolicy: String?
+    /// The home’s dated start-wait line, shared with its first mate and desktop views.
+    public let queueWait: QueueWait?
+    public struct QueueWait: Decodable, Sendable { public let line: String; public let since: Double? }
     public let startAttempt: StartAttempt?
     public let requiredAction: RequiredAction?
     public let activity: String?

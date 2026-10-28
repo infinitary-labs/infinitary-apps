@@ -150,6 +150,7 @@ import { UsageStore } from "../storage/usageStore";
 import { legacyStateOf, seedTask } from "../tasks/seedTask";
 import { recentFeed, taskFeedLine } from "../tasks/taskFeed";
 import { TaskProtocol } from "../tasks/taskProtocol";
+import { queryTasks } from "../tasks/taskQuery";
 import { TaskService, TIMELINE_CAP } from "../tasks/taskService";
 import { ForgeAuthRequiredError } from "../workspace/forgeAuth";
 import { git } from "../workspace/git";
@@ -8305,8 +8306,9 @@ describe("the task record (task-system P0)", () => {
     });
     expect(tasks.get(second.taskId)).toMatchObject({ status: "open", gate: null });
     expect(tasks.blockers(second.taskId).map((record) => record.id)).toEqual([first.taskId]);
+    // INF-1605: the crew line reads the same dated wait as the task query.
     expect(supervisor.crewStatus().find((entry) => entry.taskId === second.taskId)?.gate).toBe(
-      `starts when ${tasks.get(first.taskId)?.key} finishes`,
+      queryTasks(tasks, { key: second.taskId }, () => undefined).rows[0]?.waiting,
     );
     expect(events.at(-2)).toMatchObject({
       type: "firstmate_note",
@@ -16081,7 +16083,7 @@ describe("the task graph (task-system P2)", () => {
     });
     expect(supervisor.crewStatus().find((entry) => entry.taskId === planned.id)).toMatchObject({
       status: "queued",
-      gate: "starts on request",
+      gate: queryTasks(tasks, { key: planned.id }, () => undefined).rows[0]?.waiting,
     });
     await supervisor.sweepGates(Date.now());
     await tick();
@@ -26042,6 +26044,8 @@ describe("an Automatic wait in Activity", () => {
     await supervisor.dispatchQueuedTask(task.id);
     expect(lines()).toEqual([`"Fix the ledger header": ${wait.words}`]);
     expect(tasks.get(task.id)?.startNotice ?? null).toBeNull();
+    const savedWait = tasks.get(task.id)?.shape?.placement_wait;
+    expect(savedWait).toEqual({ ...wait, since: expect.any(Number) });
 
     await supervisor.disposeAll();
     const restartedEvents: FmEvent[] = [];
@@ -26064,14 +26068,14 @@ describe("an Automatic wait in Activity", () => {
     });
     const restartedRecord = restartedTasks.get(task.id);
     if (!restartedRecord) throw new Error("the waiting task did not survive the restart");
-    expect(restartedRecord.shape?.placement_wait).toEqual(wait);
+    expect(restartedRecord.shape?.placement_wait).toEqual(savedWait);
     expect(restartedRecord.startNotice ?? null).toBeNull();
     expect(restarted.runsOnFact(restartedRecord)?.reason).toBe(wait.words);
     await restarted.dispatchQueuedTask(task.id);
     expect(
       restartedEvents.flatMap((event) => (event.type === "firstmate_note" ? [event.text] : [])),
     ).toEqual([]);
-    expect(restartedTasks.get(task.id)?.shape?.placement_wait).toEqual(wait);
+    expect(restartedTasks.get(task.id)?.shape?.placement_wait).toEqual(savedWait);
     expect(restarted.runsOnFact(restartedTasks.get(task.id) as TaskRecord)?.reason).toBe(
       wait.words,
     );

@@ -10,7 +10,7 @@ export type KeyPeek = { taskId: string; key: Box; card: Box; frame: HTMLIFrameEl
 
 /**
  * A task a panel's page rests on (`point.peekTask`, docs/ui-plugins.md "A
- * panel's cards"): its box in window coordinates, the page it is in - the
+ * panel's cards"): its box in its page's coordinates, the page it is in - the
  * panel on its rail or the card on the stack, whose edge the summary sits
  * beside - and that page's frame for a panel drawn in one. A Tasks row and
  * a task board tile are such tasks: the Tasks panel and its board are
@@ -22,6 +22,19 @@ export type PanelPeek = {
   page: HTMLElement;
   pageFrame: HTMLIFrameElement | null;
 };
+
+/** The row's box in the window now, including a frame resized since the page reported it. */
+export function panelPeekBox(peek: PanelPeek): Box {
+  const at = peek.pageFrame?.getBoundingClientRect();
+  if (!at) return peek.box;
+  const { box } = peek;
+  return {
+    top: box.top + at.top,
+    right: box.right + at.left,
+    bottom: box.bottom + at.top,
+    left: box.left + at.left,
+  };
+}
 
 /**
  * A task key the window itself draws (FI3-1271): a thread line, a card's
@@ -52,7 +65,9 @@ const sameBox = (a: Box, b: Box) =>
 const same = (a: TaskPeek, b: TaskPeek): boolean => {
   if (a === b) return true;
   if (a === null || b === null || a.taskId !== b.taskId) return false;
-  if ("page" in a) return "page" in b && a.page === b.page && sameBox(a.box, b.box);
+  if ("page" in a) {
+    return "page" in b && a.page === b.page && a.pageFrame === b.pageFrame && sameBox(a.box, b.box);
+  }
   if ("page" in b) return false;
   if ("anchor" in a) {
     return (

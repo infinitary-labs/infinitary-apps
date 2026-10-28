@@ -1018,12 +1018,20 @@ export default function TaskBoardCard({ card, reads, point, tasks, view: windowV
         <span
           className="fm-board-tile-status"
           data-board-status=""
+          data-board-queue-wait={task.queueWait?.line === reading.reason ? "" : undefined}
           data-board-failed={reading.reason === "Could not start" ? "" : undefined}
         >
           <span className="fm-board-tile-word-status">{reading.word}</span>
           {task.program && ` · ${task.children.closed} of ${task.children.total} parts finished`}
           {reading.reason && ` · ${reading.reason}`}
         </span>
+        {task.queueWait &&
+          (reading.mark === "queued" || reading.mark === "backlog") &&
+          reading.reason !== task.queueWait.line && (
+            <span className="fm-board-tile-status" data-board-queue-wait="">
+              {task.queueWait.line}
+            </span>
+          )}
         {reading.since !== undefined && (
           // When the one wait was recorded, never when work stopped (INF-38).
           <span className="fm-board-tile-since" data-board-wait-since="">

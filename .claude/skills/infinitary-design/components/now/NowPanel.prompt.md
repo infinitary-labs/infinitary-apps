@@ -22,6 +22,9 @@ Hide the project name and its grid track when the panel content is 320px wide or
 A task another computer runs adds where after the project name, `website · on Mac mini`, and while that computer is out of reach the line ends `out of reach` in `--warn`, and while its connection is being made it ends `connecting` in `--fg-3` with no warn mark (`../devices/RunsOn.prompt.md`).
 A part that does not fit leaves whole, the project name first and then the place; `out of reach` always stays, so the narrow panel keeps the track for those words alone.
 Count from the full board, not the visible-task filter.
+Only an unstarted row in the Queued section adds one quiet mono line below its title: what it waits for and since when, supplied by the home and shared with the first mate.
+Backlog keeps its compact row without that extra line, since it normally waits for an explicit go; the task's record and first-mate reads retain the wait fact.
+The Queued line wraps without ellipsis, and carries no control or new status.
 The row keeps the full project name in its accessible label; the preview shows it, and the row has no hover title.
 A blocked or held row, or working one waiting on its checks, carries exactly one dim word after the title; a child row indents under its parent when both belong to the same group.
 The task key also stays on hover, search, and the row locator.

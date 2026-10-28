@@ -146,7 +146,7 @@ struct PhoneTasks: View {
             .accessibilityValue(expanded.contains(group) ? "Expanded" : "Collapsed")
     }
 
-    // One line, as the Mac's row: status mark, key in dim mono, the title, and the project in dim mono at the end.
+    // The title row stays as on the Mac; an unstarted task adds the home’s full dated wait below it.
     private func taskRow(_ task: PhoneTask, last: Bool) -> some View {
         let project = board?.projects.first(where: { $0.id == task.projectId })?.name
         return Button { open(task) } label: {
@@ -154,11 +154,17 @@ struct PhoneTasks: View {
                 Image(systemName: task.status == "open" && task.waitingCardId == nil && task.minimizedCardId == nil ? "circle" : "circle.fill")
                     .font(.system(size: PhoneTheme.space2)).foregroundStyle(task.waitingCardId != nil || task.minimizedCardId != nil ? PhoneTheme.accent : task.activity == "running" ? PhoneTheme.warning : PhoneTheme.secondary)
                     .frame(width: Self.markWidth).accessibilityHidden(true)
-                HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
-                    Text(task.key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).fixedSize()
-                    Text(task.title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text).lineLimit(1)
-                    Spacer(minLength: PhoneTheme.space2)
-                    if let project { Text(project).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).lineLimit(1) }
+                VStack(alignment: .leading, spacing: PhoneTheme.space2) {
+                    HStack(alignment: .firstTextBaseline, spacing: PhoneTheme.space2) {
+                        Text(task.key).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).fixedSize()
+                        Text(task.title).font(PhoneFont.body).foregroundStyle(PhoneTheme.text).lineLimit(1)
+                        Spacer(minLength: PhoneTheme.space2)
+                        if let project { Text(project).font(PhoneFont.mono).foregroundStyle(PhoneTheme.muted).lineLimit(1) }
+                    }
+                    if let wait = task.queueWait {
+                        Text(wait.line).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
             }.padding(.vertical, PhoneTheme.space3).frame(minHeight: 44)
                 .contentShape(Rectangle())
@@ -241,6 +247,10 @@ struct PhoneTaskRecord: View {
                     // The record's title is the task's own; its key stays in mono on the line below for whoever looks for it.
                     Text(task.title).font(PhoneFont.title).accessibilityAddTraits(.isHeader).accessibilityIdentifier("task-record-title")
                     Text("\(task.key) · \(task.state) · \(session.mac.name)").font(PhoneFont.mono)
+                    if let wait = task.queueWait {
+                        Text(wait.line).font(PhoneFont.mono).foregroundStyle(PhoneTheme.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                     if let place = task.place { Text(place.where).foregroundStyle(PhoneTheme.secondary) }
                     // INF-589 item 11: the reach line says out of reach; this one says only that changes are off.
                     if let words = session.changesOffLine { Text(words).font(PhoneFont.callout).foregroundStyle(PhoneTheme.secondary) }

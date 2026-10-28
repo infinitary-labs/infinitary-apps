@@ -335,6 +335,7 @@ import {
   recordValidation as checkValidationTransition,
   StaleValidationDecisionError,
 } from "../tasks/liveValidation";
+import { queueWaitOf } from "../tasks/queueWait";
 import { carryOnWords, modelMoveWords, RESTART_RESUMED_WORDS } from "../tasks/recordActivity";
 import {
   builtOnRows,
@@ -8989,13 +8990,24 @@ export class CrewSupervisor {
         const lastReport = reportText
           ? capWithOverflow(reportText, "crew-status-report")
           : undefined;
-        const gate =
-          record.status === "open"
-            ? record.gate
-              ? gateText(record.gate)
-              : (this.waitingOnBlockers(record) ??
-                (record.startPolicy === "on-request" ? "starts on request" : undefined))
-            : undefined;
+        const starting = this.options.tasks.startAttemptOf(record.id);
+        const queueWait = starting
+          ? undefined
+          : queueWaitOf(
+              record,
+              this.options.tasks.blockers(record.id),
+              this.options.tasks.linksTo(record.id),
+              this.options.tasks.children(record.id),
+            );
+        const gate = starting
+          ? undefined
+          : (queueWait?.line ??
+            (record.status === "open"
+              ? record.gate
+                ? gateText(record.gate)
+                : (this.waitingOnBlockers(record) ??
+                  (record.startPolicy === "on-request" ? "starts on request" : undefined))
+              : undefined));
         const computer = this.taskComputer(record);
         const rigor = this.policiesOf(record)?.rigor.value;
         const review = this.reviewState(record);

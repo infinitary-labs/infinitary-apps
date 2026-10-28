@@ -499,6 +499,10 @@
       guidance = current.problem ?? "Ask your first mate how to continue.";
       urgent = true;
       danger = true;
+    } else if (current.queueWait) {
+      title = current.queueWait.line;
+      guidance = current.hold?.text ?? "";
+      urgent = current.flags.blocked;
     } else if (live && current.blockedBy.length > 0) {
       title = `Waiting on ${current.blockedBy.join(", ")}`;
       guidance = "This task is blocked by other work.";

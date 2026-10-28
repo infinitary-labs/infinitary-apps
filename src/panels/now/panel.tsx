@@ -747,6 +747,7 @@ export function Group({
             return (
               <Row
                 key={task.id}
+                group={group}
                 task={task}
                 depth={depth}
                 board={board}
@@ -776,6 +777,7 @@ export function Group({
 
 /** Only rows whose data, highlight, selection or Tab stop changed paint again. */
 const Row = memo(function Row({
+  group,
   task,
   depth,
   board,
@@ -795,6 +797,8 @@ const Row = memo(function Row({
   onStart,
   onFocusStart,
 }: {
+  /** The actual rendered section, including open rows nested in Working. */
+  group: PanelGroup;
   task: PanelTaskRow;
   depth: number;
   board: PanelTaskBoard;
@@ -862,6 +866,9 @@ const Row = memo(function Row({
           </span>
         )}
       </span>
+      {group === "queued" && task.queueWait && task.status === "open" && (
+        <span data-now-queue-wait="">{task.queueWait.line}</span>
+      )}
       {trailing.place ? (
         // Last first: what does not fit leaves whole, the project's
         // name before the place, never "out of reach".

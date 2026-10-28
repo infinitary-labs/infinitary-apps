@@ -1284,6 +1284,8 @@ describe("migration 46 (the two graph gaps)", () => {
       kind: "implement",
       kind_source: "classifier:test",
       basis: "plan",
+      // INF-1605: startup returned this unstarted fixture to the queue at its recorded update time.
+      start_wait_since: { policy: build?.updatedAt },
     });
     expect(build?.delivery).toMatchObject({ reviewVerdict: "findings" });
     expect(build && tasks.basisOf(build)).toEqual({ ref: "plan", verified: true });

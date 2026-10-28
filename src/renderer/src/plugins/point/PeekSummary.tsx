@@ -26,7 +26,7 @@ import {
 } from "../../character/crew/summaryMotion";
 import { useBoardTasks } from "../../character/crew/useCrewBoard";
 import { appReadExecutor } from "../reads/appExecutor";
-import { type TaskPeek, taskPeek, useTaskPeek } from "./taskPeek";
+import { panelPeekBox, type TaskPeek, taskPeek, useTaskPeek } from "./taskPeek";
 
 /**
  * The summary beside a task a panel rests on, or a task key
@@ -263,9 +263,10 @@ export function PeekSummary() {
       // On its rail, beside the panel, as a Tasks row's summary sits; on the
       // stack, beside the very row or tile the page rests on, as the task
       // board's always has.
+      const box = panelPeekBox(at);
       placed = panel
-        ? placeRowSummary(at.box, at.page.getBoundingClientRect(), size, summaryRoom(panel))
-        : placeKeySummary(at.box, at.box, size, summaryRoom());
+        ? placeRowSummary(box, at.page.getBoundingClientRect(), size, summaryRoom(panel))
+        : placeKeySummary(box, box, size, summaryRoom());
     } else if ("anchor" in at) {
       // A key that left the window takes its summary with it.
       if (!at.anchor.isConnected) {
@@ -304,6 +305,9 @@ export function PeekSummary() {
     placedFor.current = { panel, target };
     const observer = new ResizeObserver(place);
     observer.observe(panel);
+    // A shorter Backlog row resizes its bottom-aligned frame after the page reports it.
+    // Read the frame's current origin, rather than keeping the old window-space anchor.
+    if ("page" in peek && peek.pageFrame) observer.observe(peek.pageFrame);
     return () => observer.disconnect();
   }, [peek, task, place]);
   useSummaryFade(layerRef, leaving);

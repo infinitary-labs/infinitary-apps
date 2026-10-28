@@ -2023,7 +2023,15 @@ export class TaskService {
         accountId: null,
         ...(input.deviceId ? { deviceId: input.deviceId } : {}),
         difficulty: input.difficulty ?? null,
-        shape: input.shape ?? null,
+        shape: input.gate
+          ? {
+              ...(input.shape ?? { kind: "unclear" as const }),
+              start_wait_since: {
+                ...input.shape?.start_wait_since,
+                gate: at,
+              },
+            }
+          : (input.shape ?? null),
         gate: input.gate ?? null,
         status,
         activity: status === "active" ? (input.activity ?? "starting") : null,
@@ -3398,7 +3406,13 @@ export class TaskService {
       }
       if (current?.kind === wait.kind && current.words === wait.words) return;
       this.patch(id, {
-        shape: { ...shape, placement_wait: wait },
+        shape: {
+          ...shape,
+          placement_wait: {
+            ...wait,
+            since: current?.kind === wait.kind ? (current.since ?? this.now()) : this.now(),
+          },
+        },
         updatedAt: this.now(),
       });
     });
@@ -4670,6 +4684,19 @@ export class TaskService {
           this.writeDeliveryRecords(toId, { ciRepair: { ...repair, diagnoses } });
       }
       const removed = edgeRemoved || baselineRemoved;
+      if (edgeRemoved && type === "blocks" && record.status === "open") {
+        const shape = record.shape ?? { kind: "unclear" as const };
+        this.patch(toId, {
+          shape: {
+            ...shape,
+            start_wait_since: {
+              ...shape.start_wait_since,
+              dependencies: at,
+            },
+          },
+          updatedAt: at,
+        });
+      }
       if (removed) {
         this.touch(fromId);
         const from = this.store.get(fromId);
@@ -5479,6 +5506,34 @@ export class TaskService {
    * board's recent window, so no close path may forget it.
    */
   private patch(id: string, patch: Parameters<TaskStore["update"]>[1]): void {
+    // Date source transitions, not unrelated edits or resource refreshes.
+    if ("gate" in patch || "startPolicy" in patch || patch.status === "open" || patch.startNotice) {
+      const before = this.mustGet(id);
+      const policyChanged =
+        (patch.startPolicy !== undefined && patch.startPolicy !== before.startPolicy) ||
+        (patch.status === "open" && before.status !== "open") ||
+        Boolean(patch.startNotice);
+      const gateChanged =
+        "gate" in patch &&
+        (patch.gate?.kind !== before.gate?.kind ||
+          patch.gate?.ref !== before.gate?.ref ||
+          patch.gate?.until !== before.gate?.until);
+      if ((before.status === "open" || patch.status === "open") && (policyChanged || gateChanged)) {
+        const shape = patch.shape ?? before.shape ?? { kind: "unclear" as const };
+        const at = patch.updatedAt ?? this.now();
+        patch = {
+          ...patch,
+          shape: {
+            ...shape,
+            start_wait_since: {
+              ...before.shape?.start_wait_since,
+              ...(policyChanged ? { policy: at } : {}),
+              ...(gateChanged ? { gate: at } : {}),
+            },
+          },
+        };
+      }
+    }
     const closing = patch.status === "done" || patch.status === "dropped";
     const stamped =
       closing && patch.closedAt == null

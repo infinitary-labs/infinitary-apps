@@ -134,7 +134,8 @@ Out of reach and a read-only connection retain the view but refuse every change,
 The Tasks tab follows the desktop’s five groups: Waiting on you, Working, Queued, Backlog and Done, with search across its current list and earlier tasks.
 Each group header is a micro uppercase tracked label with its count, as on the Mac.
 The first three groups start expanded; Backlog and Done start collapsed, with their counts and disclosure chevrons.
-A row is one line: status mark, mono key, title, then the project in mono; dividers start past the mark, and active parent trees stay together.
+A row starts with its status mark, mono key, title, then the project in mono; dividers start past the mark, and active parent trees stay together.
+An unstarted task adds the home’s quiet mono wait line below its title, wrapping in full, and its record carries the same line.
 The search waits above the list until it is pulled down from the top; Shift-Command-F opens it, and VoiceOver always shows it.
 A task opens its record in the same column: goal, captain’s words, progress, outcome and timeline, plus a Crewmate section for the session and its direct message box.
 The timeline's events sit on a hairline rail in caption size, with each time right-aligned.

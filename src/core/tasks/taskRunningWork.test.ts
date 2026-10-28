@@ -224,6 +224,8 @@ describe("the migration of an older release's running work and policy inputs", (
     );
     expect(JSON.parse(rows.find((row) => row.id === "asked")!.shape_json!)).toEqual({
       kind: "implement",
+      // INF-1605: keep the source clock that startup recorded when it returned this fixture to the queue.
+      start_wait_since: readBefore.asked?.shape?.start_wait_since,
     });
     expect(JSON.parse(rows.find((row) => row.id === "odd")!.shape_json!)).toMatchObject({
       autonomy_ask: "yes",

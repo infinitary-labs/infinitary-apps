@@ -36,7 +36,7 @@ const opened = vi.fn(async (_value: { taskId: string; cardId?: string }) => {});
 vi.mock("./point/openTask", () => ({ openTask: (value: never) => opened(value) }));
 
 const { panelPoint, panelViewKey, panelViewOf } = await import("./panelPoint");
-const { taskPeek } = await import("./point/taskPeek");
+const { panelPeekBox, taskPeek } = await import("./point/taskPeek");
 
 const shell = () => useShellStore.getState();
 const reader = { view: "reader", title: "Reading" };
@@ -99,7 +99,7 @@ describe("point", () => {
     expect(() => point.peekTask(null)).toThrow('name "tasks.board"');
   });
 
-  it("rests on a task with its box in the window, the page's place added, and lets go", () => {
+  it("rests on a task in its page, adds the frame's current place, and lets go (INF-1605)", () => {
     // The page in the window the panel draws in: its panel on its rail.
     const where = { isConnected: true } as HTMLElement;
     const asked: string[] = [];
@@ -115,9 +115,26 @@ describe("point", () => {
     expect(asked).toEqual(['[data-side-panel="desk"]']);
     expect(taskPeek.get()).toEqual({
       taskId: "t-open",
-      box: { top: 110, right: 90, bottom: 130, left: 45 },
+      box: { top: 10, right: 50, bottom: 30, left: 5 },
       page: where,
       pageFrame: frameAt,
+    });
+    const rested = taskPeek.get();
+    if (!rested || !("page" in rested)) throw new Error("The panel did not report its rested row");
+    expect(panelPeekBox(rested)).toEqual({ top: 110, right: 90, bottom: 130, left: 45 });
+    // The captain's compact Backlog shortens the bottom-aligned rail after the report.
+    const before = frameAt.getBoundingClientRect();
+    const rise = rested.box.bottom - rested.box.top;
+    const frameReading = vi.spyOn(frameAt, "getBoundingClientRect").mockReturnValue({
+      ...before,
+      top: before.top + rise,
+    });
+    onTestFinished(() => frameReading.mockRestore());
+    expect(panelPeekBox(rested)).toEqual({
+      top: 110 + rise,
+      right: 90,
+      bottom: 130 + rise,
+      left: 45,
     });
     point.peekTask(null);
     expect(taskPeek.get()).toBeNull();
@@ -133,6 +150,10 @@ describe("point", () => {
       page: where,
       pageFrame: null,
     });
+    const inWindow = taskPeek.get();
+    if (!inWindow || !("page" in inWindow))
+      throw new Error("The window did not report its rested row");
+    expect(panelPeekBox(inWindow)).toEqual(inWindow.box);
     vi.unstubAllGlobals();
   });
 

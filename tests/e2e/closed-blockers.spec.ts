@@ -132,11 +132,17 @@ test("a dropped edge still prevents starting without naming closed work as a liv
   await expect(recordBarButton(page, "next")).toBeDisabled();
   // The body's attention box says why it cannot start yet.
   await expect(recordFrame(page).locator("[data-record-attention]")).toBeVisible();
+  // INF-1605: a dropped prerequisite still blocks START, but is explicitly dropped, not live work.
+  const wait = detail.queueWait;
+  if (!wait) throw new Error("The unstarted task has no dated queue wait");
+  await expect(recordFrame(page).locator("[data-record-attention-title]")).toHaveText(wait.line);
   for (const id of ["merged", "dropped", "discarded"]) {
     const closed = await page.evaluate((taskId) => window.infinitary.tasks.detail(taskId), id);
-    await expect(recordFrame(page).locator("[data-record-attention]")).not.toContainText(
-      closed.key,
-    );
+    if (closed.status === "dropped") {
+      expect(wait.line).toContain(`${closed.key} (dropped)`);
+    } else {
+      expect(wait.line).not.toContain(closed.key);
+    }
   }
 });
 

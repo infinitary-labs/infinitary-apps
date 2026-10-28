@@ -92,8 +92,9 @@ import { FIRSTMATE_RECIPIENT, InboxStore } from "../storage/inboxStore";
 import { ScheduleStore } from "../storage/scheduleStore";
 import { SessionRecordStore } from "../storage/sessionRecordStore";
 import { SettingsStore } from "../storage/settingsStore";
+import { queueWaitOf } from "../tasks/queueWait";
 import { seedTask, type TaskSeed } from "../tasks/seedTask";
-import { taskResolutionBody } from "../tasks/taskQuery";
+import { queryTasks, taskResolutionBody } from "../tasks/taskQuery";
 import { TaskService } from "../tasks/taskService";
 import { RepoRegistry } from "../workspace/repoRegistry";
 import type { WorkspaceService } from "../workspace/workspaceService";
@@ -7068,10 +7069,11 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       goal: "An ADR exists",
       user_words: "plan the ADR",
     });
-    expect(planned).toMatch(
-      /^Planned SCR-1 "Write the ADR" \(task_id [0-9a-f]{8}\) - starts on request\.$/,
-    );
     const adr = tasks.byKey("SCR-1");
+    if (!adr) throw new Error("The planned ADR was not filed");
+    // INF-1605: filing receipts use the same dated wait the first mate reads.
+    const wait = queryTasks(tasks, { key: adr.id }, () => undefined).rows[0]?.waiting;
+    expect(planned).toBe(`Planned ${adr.key} "Write the ADR" (task_id ${adr.id}) - ${wait}.`);
     expect(adr).toMatchObject({ status: "open", startPolicy: "on-request" });
     expect(tasks.asksFor(adr?.id as string).map((ask) => ask.attachedVia)).toEqual([
       "tool:create_task",
@@ -7113,7 +7115,9 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     // The query side, with the derived flags.
     const rows = await text("tasks", { status: "open" });
     expect(rows).toContain("2 of 2 matching tasks:");
-    expect(rows).toContain('"waiting": "blocked by SCR-1"');
+    expect(readTaskQueryText(rows).find((row) => row.key === impl?.key)?.waiting).toBe(
+      queryTasks(tasks, { key: impl?.id }, () => undefined).rows[0]?.waiting,
+    );
     expect(rows).toContain('"parent": "SCR-1"');
     expect(rows).toContain('"children": "1 open of 1"');
     expect(await text("tasks", { key: "SCR-2" })).toContain('"title": "Build it"');
@@ -7169,10 +7173,11 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(context.task_index).toContainEqual(
       expect.stringMatching(/^ {4}- SCR-2 .*open "Build it" \[blocked by SCR-1\]$/),
     );
-    expect(supervisor.crewStatus().map((entry) => entry.gate)).toEqual([
-      "starts on request",
-      `starts when ${adr?.key} finishes`,
-    ]);
+    expect(supervisor.crewStatus().map((entry) => entry.gate)).toEqual(
+      [adr, impl].map(
+        (record) => queryTasks(tasks, { key: record?.id }, () => undefined).rows[0]?.waiting,
+      ),
+    );
   });
 
   // INF-416 piece I, captain's retype-test yes: a queued update adds a declared
@@ -7264,11 +7269,12 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
     expect(tasks.get(piece.id)?.status).toBe("open");
   });
 
-  it("says a crewmate starts now on a when-ready row nothing waits on", async () => {
-    const { agent, specs } = setup();
+  it("names the filed wait while an independent when-ready task starts immediately", async () => {
+    const { agent, specs, tasks, supervisor } = setup();
     await agent.converse("fix the meter");
     const tools = piToolsOf(specs[0]?.tools ?? []) as unknown as GraphTool[];
     const create = tools.find((entry) => entry.name === "create_task") as GraphTool;
+    const filing = vi.spyOn(supervisor, "plan");
     const planned = await create.execute(
       "c",
       {
@@ -7283,9 +7289,16 @@ describe("the graph tools at the Firstmate boundary (task-system P2)", () => {
       undefined,
       {},
     );
-    expect(planned.content[0]?.text).toMatch(
-      /^Planned SCR-1 "Fix the meter" \(task_id [0-9a-f]{8}\) - a crewmate starts on it now\.$/,
+    const record = tasks.byKey("SCR-1");
+    if (!record) throw new Error("The independent task was not filed");
+    // The receipt describes filing, before the plan's immediate sweep starts work.
+    const filed = filing.mock.results[0]?.value;
+    if (!filed) throw new Error("The filing snapshot was not recorded");
+    const wait = queueWaitOf(filed, tasks.blockers(filed.id), tasks.linksTo(filed.id))?.line;
+    expect(planned.content[0]?.text).toBe(
+      `Planned ${record.key} "Fix the meter" (task_id ${record.id}) - ${wait}.`,
     );
+    expect(record.status).toBe("active");
   });
 });
 

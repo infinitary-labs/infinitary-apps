@@ -7,6 +7,7 @@ import type { WorkPosture } from "@shared/workPosture";
 import { attachmentPath } from "../attachments";
 import type { CardResolution } from "../storage/cardStore";
 import type { TaskDelivery, TaskRecord, TaskStatus } from "../storage/taskStore";
+import { queueWaitOf } from "./queueWait";
 import { TaskService } from "./taskService";
 import type { TaskTimeline } from "./taskTimeline";
 
@@ -368,15 +369,19 @@ function toRow(
   const openFollowUps = followUps.filter((followUp) => !TaskService.isClosed(followUp));
   const repo = record.repoId ? repoName(record.repoId) : undefined;
   const change = record.delivery ? taskChangeOf(record.delivery) : null;
-  const waiting = record.gate
-    ? record.gate.kind === "captain"
-      ? (record.gate.reason ?? "waiting on you")
-      : record.gate.kind === "quota-reset"
-        ? `quota (${record.gate.ref ?? "unknown scope"})`
-        : "a set time"
-    : flags.blocked && blockedBy.length > 0
-      ? `blocked by ${blockedBy.join(", ")}${flags.deadBlocker ? " (dropped - cannot clear)" : ""}`
-      : undefined;
+  const waiting =
+    (record.status === "open" && record.kind === "work" && !tasks.startAttemptOf(record.id)
+      ? queueWaitOf(record, tasks.blockers(record.id), tasks.linksTo(record.id), children)?.line
+      : undefined) ??
+    (record.gate
+      ? record.gate.kind === "captain"
+        ? (record.gate.reason ?? "waiting on you")
+        : record.gate.kind === "quota-reset"
+          ? `quota (${record.gate.ref ?? "unknown scope"})`
+          : "a set time"
+      : flags.blocked && blockedBy.length > 0
+        ? `blocked by ${blockedBy.join(", ")}${flags.deadBlocker ? " (dropped - cannot clear)" : ""}`
+        : undefined);
   const policies = tasks.policiesOf(record);
   const pictures = cardBody ? picturesOf(tasks, record.id) : [];
   const builtOnBy = cardBody ? builtOnRows(tasks, record.id) : [];

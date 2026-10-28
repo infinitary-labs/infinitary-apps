@@ -318,7 +318,10 @@ test("a queued premium ask held for premium allowance says in its record why it 
     await expect(recordCard(page)).toHaveAttribute("data-task-record", "premium");
     const words = taskHoldWords({ kind: "premium" });
     const frame = recordFrame(page);
-    await expect(frame.locator("[data-record-attention-title]")).toHaveText(words.title);
+    // INF-1605: the queued title is the home's dated wait; the hold still owns its guidance.
+    const wait = held.queueWait;
+    if (!wait) throw new Error("The held premium ask has no dated queue wait");
+    await expect(frame.locator("[data-record-attention-title]")).toHaveText(wait.line);
     await expect(frame.locator("[data-record-attention-guidance]")).toHaveText(words.text);
     const dir = process.env.FM_WAIT_PICTURES;
     if (dir) {

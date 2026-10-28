@@ -197,6 +197,14 @@ export const workShapeSchema = z.object({
    * Not the could-not-start notice. Absent once the task is no longer waiting.
    */
   placement_wait: placementWaitSchema.optional(),
+  /** Start-wait source timestamps, never a cached readiness decision. */
+  start_wait_since: z
+    .object({
+      policy: z.number().optional(),
+      gate: z.number().optional(),
+      dependencies: z.number().optional(),
+    })
+    .optional(),
   /**
    * The Firstmate's own declaration, made when it creates the task: this is
    * an internal step of a sequence it is running for an ask, whose answer is
@@ -422,6 +430,7 @@ export const HOST_STAMP_FIELDS = [
 export const HOST_KEPT_SHAPE_FIELDS = [
   "placement_fallback_accepted",
   "placement_wait",
+  "start_wait_since",
   "program_part",
 ] as const satisfies readonly (keyof WorkShape)[];
 

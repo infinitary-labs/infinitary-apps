@@ -31,7 +31,12 @@ describe("ongoing work compatibility", () => {
         intelligence: "high",
         deliverable: "change",
       });
-      expect(after.get("panel")?.shape).toEqual({ kind: "implement" });
+      const panel = after.get("panel");
+      expect(panel?.shape).toEqual({
+        kind: "implement",
+        // INF-1605: startup requeues this unstarted fixture at its recorded transition time.
+        start_wait_since: { policy: panel?.updatedAt },
+      });
       migrateOngoingWork(db);
       expect(after.get("subject")?.shape?.ongoing).toBe(true);
     } finally {

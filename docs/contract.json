@@ -26974,6 +26974,20 @@
                     "reason"
                   ]
                 },
+                "queueWait": {
+                  "type": "object",
+                  "properties": {
+                    "line": {
+                      "type": "string"
+                    },
+                    "since": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "line"
+                  ]
+                },
                 "createdAt": {
                   "type": "number"
                 },
@@ -28341,6 +28355,20 @@
             },
             "required": [
               "reason"
+            ]
+          },
+          "queueWait": {
+            "type": "object",
+            "properties": {
+              "line": {
+                "type": "string"
+              },
+              "since": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "line"
             ]
           },
           "createdAt": {
@@ -32592,6 +32620,20 @@
               },
               "required": [
                 "reason"
+              ]
+            },
+            "queueWait": {
+              "type": "object",
+              "properties": {
+                "line": {
+                  "type": "string"
+                },
+                "since": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "line"
               ]
             },
             "createdAt": {
@@ -54332,6 +54374,20 @@
                     "reason"
                   ]
                 },
+                "queueWait": {
+                  "type": "object",
+                  "properties": {
+                    "line": {
+                      "type": "string"
+                    },
+                    "since": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "line"
+                  ]
+                },
                 "createdAt": {
                   "type": "number"
                 },
@@ -55699,6 +55755,20 @@
                   },
                   "required": [
                     "reason"
+                  ]
+                },
+                "queueWait": {
+                  "type": "object",
+                  "properties": {
+                    "line": {
+                      "type": "string"
+                    },
+                    "since": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "line"
                   ]
                 },
                 "createdAt": {

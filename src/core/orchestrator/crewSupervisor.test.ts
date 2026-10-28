@@ -116,7 +116,7 @@ import { type AppPaths, appPathsFor, crewmateEvidenceDir } from "../paths";
 import { packagedPlanStepLines } from "../personal/sequencesSkill";
 import { EMIT_CARD_TOOL } from "../pi/cardTool";
 import { PI_CONTROL_PROFILE } from "../pi/controlProfile";
-import { carryOnWords } from "../tasks/recordActivity";
+import { carryOnWords, RESTART_RESUMED_WORDS } from "../tasks/recordActivity";
 import { createModelRuntime } from "../pi/modelRuntime";
 import { piSessionEvents } from "../pi/piEvents";
 import { CREWMATE_BROWSER_LINE, crewmateComputersNote } from "../pi/piResources";
@@ -6976,6 +6976,163 @@ describe("CrewSupervisor", () => {
       ]);
       await fresh.disposeAll();
     });
+
+    // INF-1582 finding 5: an update's deliberate abort remains a pause, not a recovery failure.
+    it("records restart recovery without a wake while an update pauses its turn", async () => {
+      const crewmate = fakeCrewmate();
+      const h = setup(crewmate);
+      const { taskId } = await h.supervisor.commission({ title: "Update observation", intent: intentOf("keep working") });
+      await tick();
+      h.tasks.setDevice(taskId, "mac-mini");
+      const wakesBefore = h.ops.length;
+      await h.supervisor.pauseForUpdate("mac-mini");
+      const paused = h.supervisor.crewStatus(taskId)[0]?.restart;
+      expect(paused?.text).toContain("is being updated");
+      crewmate.emit({ type: "turn_failed", taskId, error: "The turn was aborted for the update." });
+      crewmate.emit({ type: "request_started" });
+      expect(h.supervisor.crewStatus(taskId)[0]?.restart).toEqual(paused);
+      expect(h.ops).toHaveLength(wakesBefore);
+      await h.supervisor.disposeAll();
+    });
+
+    // INF-1582 finding 5 also covers a work computer restarting while its home stays open.
+    it("records restart recovery without a wake when the work computer reopens", async () => {
+      const crewmate = fakeCrewmate();
+      const h = setup(crewmate);
+      const { taskId } = await h.supervisor.commission({
+        title: "Work computer recovery",
+        intent: intentOf("keep working"),
+      });
+      await tick();
+      h.tasks.setDevice(taskId, "mac-mini");
+      const wakesBefore = h.ops.length;
+      h.supervisor.placedReopened(taskId);
+      expect(h.supervisor.crewStatus(taskId)[0]?.restart?.text).toContain(
+        "has not confirmed a new request",
+      );
+      crewmate.emit({ type: "request_started" });
+      expect(h.supervisor.crewStatus(taskId)[0]?.restart?.text).toBe(RESTART_RESUMED_WORDS);
+      expect(h.ops).toHaveLength(wakesBefore);
+      expect(crewmate.steer).not.toHaveBeenCalled();
+      await h.supervisor.disposeAll();
+    });
+
+    // INF-1582 finding 5: answer from recorded recovery, without steering the crew.
+    it.each(["resumed", "refused", "missing conversation", "held", "remote running", "guided"])(
+      "records restart recovery without a wake: %s",
+      async (outcome) => {
+        let now = 1000;
+        const original = fakeCrewmate();
+        const h = setup(original, { now: () => now });
+        const { taskId } = await h.supervisor.commission({
+          title: "Restart observation",
+          intent: intentOf("keep working"),
+        });
+        await tick();
+        await h.supervisor.disposeAll();
+        h.inbox.resetInFlight();
+        const recoveredTasks = new TaskService({
+          db: h.db,
+          repos: h.repos,
+          strict: true,
+          now: () => now,
+        });
+        if (outcome === "missing conversation") h.tasks.setSessionFile(taskId, null);
+        if (outcome === "remote running") {
+          h.tasks.setDevice(taskId, "mac-mini");
+          h.tasks.setActivity(taskId, "running");
+          h.inbox.deleteFor(taskId);
+        }
+        const resumed = fakeCrewmate();
+        const open = vi.fn(async () => {
+          if (outcome === "refused") throw new Error("The saved conversation could not be opened.");
+          return resumed;
+        });
+        const wake = vi.fn();
+        const fresh = new CrewSupervisor({
+          ...crewSessions(h.paths, open),
+          workspace: h.workspace,
+          repos: h.repos,
+          tasks: recoveredTasks,
+          cardStore: h.cardStore,
+          inbox: h.inbox,
+          paths: h.paths,
+          now: () => now,
+          ...(outcome === "held"
+            ? {
+                serveability: {
+                  cutOff: () => ({ class: "signed_out" as const, since: 500 }),
+                  providerName: () => "Claude",
+                },
+              }
+            : {}),
+          broadcastEvent: () => {},
+          broadcastCards: () => {},
+        });
+        fresh.setFirstmateHooks({ notifyOp: wake, retryConverse: vi.fn() });
+        // Before the sweep there is no evidence of an automatic continuation.
+        fresh.announceCarryOn();
+        expect(fresh.crewStatus(taskId)[0]?.restart?.text).toContain(
+          "has not started a request yet",
+        );
+        if (outcome === "held") h.tasks.setAccountId(taskId, "test-account");
+        now += 100_000;
+        if (outcome === "guided")
+          await fresh.steerCrewmate(taskId, "Please check the restart", "captain");
+        else await fresh.sweepInbox(now);
+        if (outcome === "resumed") {
+          await tick();
+          expect(resumed.promptCalls).toHaveLength(1);
+          resumed.emit({ type: "input_read", textSha256: createHash("sha256").update(resumed.promptCalls[0]!).digest("hex") });
+          resumed.emit({ type: "request_started" });
+          expect(fresh.crewStatus(taskId)[0]?.restart).toEqual({
+            at: new Date(now).toISOString(),
+            text: RESTART_RESUMED_WORDS,
+          });
+          expect(
+            h.tasks
+              .timeline(taskId)
+              .filter(
+                (row) =>
+                  (row.data?.restartOutcome as { outcome?: string } | undefined)?.outcome ===
+                  "resumed",
+              ),
+          ).toHaveLength(1);
+        } else {
+          const expected =
+            outcome === "held"
+              ? "sign-in or allowance"
+              : outcome === "missing conversation"
+                ? "saved conversation is unavailable"
+                : outcome === "remote running"
+                  ? "computer is out of reach"
+                  : outcome === "guided"
+                    ? "new guidance arrived"
+                    : "could not be opened";
+          expect(fresh.crewStatus(taskId)[0]?.restart?.text).toContain(expected);
+        }
+        expect(wake).not.toHaveBeenCalled();
+        expect(resumed.steer).not.toHaveBeenCalled();
+        const recorded = fresh.crewStatus(taskId)[0]?.restart;
+        await fresh.disposeAll();
+        const readOnly = new CrewSupervisor({
+          ...crewSessions(
+            h.paths,
+            vi.fn(async () => fakeCrewmate()),
+          ),
+          workspace: h.workspace,
+          repos: h.repos,
+          tasks: recoveredTasks,
+          cardStore: h.cardStore,
+          inbox: h.inbox,
+          paths: h.paths,
+          broadcastEvent: () => {},
+          broadcastCards: () => {},
+        });
+        expect(readOnly.crewStatus(taskId)[0]?.restart).toEqual(recorded);
+        await readOnly.disposeAll();
+      },
+    );
 
     it("reopens a task on a computer that runs work asking for its own model and effort", async () => {
       const crewmate = fakeCrewmate({ model: fable });

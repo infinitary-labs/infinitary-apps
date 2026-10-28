@@ -341,7 +341,7 @@ import {
   recordValidation as checkValidationTransition,
   StaleValidationDecisionError,
 } from "../tasks/liveValidation";
-import { carryOnWords, modelMoveWords } from "../tasks/recordActivity";
+import { carryOnWords, modelMoveWords, RESTART_RESUMED_WORDS } from "../tasks/recordActivity";
 import {
   builtOnRows,
   queryTasks,
@@ -1536,6 +1536,8 @@ export class CrewSupervisor {
   private readonly mainCheckWake: MainCheckWatcher | undefined;
   private readonly runWatch: RunWatcher | undefined;
   private recoveredPendingSettles = false;
+  /** Observing boot recovery never sends guidance or wakes an agent. */
+  private readonly restartObservations = new Map<string, { at: number; last?: string }>();
   /** Every running program (INF-799 piece 2, docs/programs.md). */
   private readonly programs: ProgramRunner;
   /** The bound each program last told the first mate it reached, so it hears it once per bound. */
@@ -6244,6 +6246,15 @@ export class CrewSupervisor {
     task.clientJob = undefined;
     task.clientTasks.clear();
     return session.subscribe((event) => {
+      if (
+        !task.paused &&
+        (event.type === "input_read" ||
+          event.type === "request_started" ||
+          event.type === "continuation_started")
+      )
+        this.recordRestartOutcome(task.id, "resumed");
+      if (event.type === "turn_failed" && !task.paused)
+        this.recordRestartOutcome(task.id, "stopped", event.error);
       if (event.type === "background_work_changed") {
         task.clientJobs = event.count;
         task.clientJobsSince =
@@ -6947,6 +6958,7 @@ export class CrewSupervisor {
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : String(caught);
       if (this.disposed) return;
+      if (!task.paused) this.recordRestartOutcome(task.id, "stopped", message);
       if (task.cancelled) {
         this.finish(task, "cancelled");
       } else if (task.interruptRequested) {
@@ -8109,6 +8121,14 @@ export class CrewSupervisor {
     // crewmate can declare only guidance it read (FI3-662).
     const guidance = isCaptainGuidance(given, body);
     const enqueue = (): number => {
+      if (this.restartObservations.has(taskId)) {
+        this.recordRestartOutcome(
+          taskId,
+          "stopped",
+          "new guidance arrived before automatic recovery was confirmed",
+        );
+        this.restartObservations.delete(taskId);
+      }
       const mark = guidance ? this.settle.holdForGuidance(taskId) : undefined;
       if (mark !== undefined) {
         const marked = withGuidanceMark(body, mark);
@@ -9012,6 +9032,7 @@ export class CrewSupervisor {
         const rigor = this.policiesOf(record)?.rigor.value;
         const review = this.reviewState(record);
         const thread = this.cards.threadFact(record.id);
+        const restart = this.restartFact(record.id);
         const stalled = this.ladder.stalledFact(record, this.now());
         const timing = this.timingFacts(record);
         const refused = record.delivery?.cardRefusal;
@@ -9045,6 +9066,7 @@ export class CrewSupervisor {
           ...(gate ? { gate } : {}),
           ...(computer ? { computer } : {}),
           ...(lastReport ? { lastReport } : {}),
+          ...(restart ? { restart } : {}),
           premiumRetryEligible: premiumRetryPossible(record),
           ...(rigor ? { rigor } : {}),
           ...(review ? { review } : {}),
@@ -11083,22 +11105,38 @@ export class CrewSupervisor {
    * drain; the tick only pokes it (startWatchdog).
    */
   /**
-   * The launch's one feed line naming the tasks that carry on by themselves
-   * (INF-1272): each lane holding a message a quit, a restart or an update
-   * cut (`cuts`), or the `turn-resumed` wake a quit left for a turn no
-   * message was serving. A launch with none says nothing. No wake: the
-   * boot sweep carries them on, and the first mate needs to steer none.
+   * Name the crew a restart cut, including turns still running elsewhere.
+   * The announcement records pending observation, never proof of recovery.
+   * Session events and the existing boot sweep supply the outcome; writing
+   * or reading the facts never sends guidance or wakes either agent.
    */
   announceCarryOn(): void {
     const carrying: TaskRecord[] = [];
-    for (const recipient of this.options.inbox.recipientsWithRows()) {
+    const recipients = new Set([
+      ...this.options.inbox.recipientsWithRows(),
+      ...this.options.tasks
+        .listActive()
+        .filter((record) => record.activity === "running")
+        .map((record) => record.id),
+    ]);
+    for (const recipient of recipients) {
       if (recipient === FIRSTMATE_RECIPIENT || recipient === SUPERVISION_RECIPIENT) continue;
       const record = this.options.tasks.get(recipient);
       if (!record || TaskService.isClosed(record)) continue;
       const cut = this.options.inbox
         .allFor(recipient)
         .some((row) => row.cuts > 0 || row.facts?.kind === "turn-resumed");
-      if (cut) carrying.push(record);
+      if (cut || record.activity === "running") {
+        carrying.push(record);
+        if (!this.restartObservations.has(record.id)) {
+          this.restartObservations.set(record.id, { at: this.now() });
+          this.recordRestartOutcome(
+            record.id,
+            "pending",
+            "automatic recovery has not started a request yet",
+          );
+        }
+      }
     }
     if (carrying.length === 0) return;
     this.options.broadcastEvent({
@@ -11109,11 +11147,47 @@ export class CrewSupervisor {
     });
   }
 
+  /** The latest durable observation, not an inference from the running flag. */
+  private restartFact(taskId: string): CrewStatusEntry["restart"] {
+    const event = this.options.tasks.restartObservation(taskId);
+    if (!event) return undefined;
+    return { at: new Date(event.at).toISOString(), text: event.text };
+  }
+
+  private recordRestartOutcome(
+    taskId: string,
+    outcome: "pending" | "waiting" | "resumed" | "stopped",
+    reason?: string,
+  ): void {
+    const observation = this.restartObservations.get(taskId);
+    if (!observation) return;
+    const text =
+      outcome === "resumed"
+        ? RESTART_RESUMED_WORDS
+        : outcome === "waiting" || outcome === "pending"
+          ? `Has not carried on after the app reopened: ${reason}.`
+          : `Stopped after the app reopened: ${reason}.`;
+    if (observation.last === text) return;
+    observation.last = text;
+    this.options.tasks.note(taskId, text, {
+      news: outcome !== "pending",
+      feed: outcome !== "pending",
+      data: {
+        journal: true,
+        restartOutcome: { reopenedAt: observation.at, outcome, ...(reason ? { reason } : {}) },
+      },
+    });
+    if (outcome === "resumed") this.restartObservations.delete(taskId);
+  }
+
   async sweepInbox(now: number): Promise<void> {
     if (this.sweepingInbox) return;
     this.sweepingInbox = true;
     try {
-      for (const recipient of this.options.inbox.recipientsWithRows()) {
+      for (const recipient of new Set([
+        ...this.options.inbox.recipientsWithRows(),
+        ...this.restartObservations.keys(),
+      ])) {
         // The firstmate lane is the agent's own to drain; the tick pokes it
         // separately (startWatchdog). The retired supervision lane is
         // skipped so leftover rows are never swept as a task's - boot
@@ -11129,6 +11203,14 @@ export class CrewSupervisor {
   private async sweepTaskLane(taskId: string, now: number): Promise<void> {
     const spent = this.options.inbox.spent(taskId, INBOX_ATTEMPT_MAX);
     if (spent.length > 0) this.escalateTaskGuidance(taskId, spent);
+    if (this.restartObservations.has(taskId) && this.laneHeld(taskId))
+      this.recordRestartOutcome(
+        taskId,
+        "waiting",
+        this.outOfReach(taskId)
+          ? "its computer is out of reach or still catching up"
+          : "its subscription is waiting for its sign-in or allowance",
+      );
     const due = this.deliverableRows(taskId, now);
     if (due.length === 0) return;
     const task = this.tasks.get(taskId);
@@ -11161,10 +11243,18 @@ export class CrewSupervisor {
     // A missing local conversation is not a closed task. A new wake can make
     // this lane due beside older, escalated guidance; keep both until the
     // unfinished task can resume, rather than orphaning its entire lane.
-    if (record.kind !== "work" || !TaskService.isResumable(record) || !record.sessionFile) return;
+    if (record.kind !== "work" || !TaskService.isResumable(record) || !record.sessionFile) {
+      this.recordRestartOutcome(
+        taskId,
+        "stopped",
+        !record.sessionFile ? "its saved conversation is unavailable" : "its task is not resumable",
+      );
+      return;
+    }
     if (this.retiredProviderOf(taskId)) {
       // Its session belongs to a subscription this build no longer offers:
       // no backend can reopen it, so the guidance is kept, not retried.
+      this.recordRestartOutcome(taskId, "stopped", "it ran on a subscription no longer offered");
       this.orphanTaskGuidance(taskId, record, "it ran on a subscription no longer offered");
       return;
     }
@@ -11179,7 +11269,12 @@ export class CrewSupervisor {
     try {
       const resumed = await this.resumeTask(taskId);
       void this.runTurn(resumed, laneTurnText(due), ids, pictures.images);
-    } catch {
+    } catch (caught) {
+      this.recordRestartOutcome(
+        taskId,
+        "stopped",
+        caught instanceof Error ? caught.message : String(caught),
+      );
       this.options.inbox.release(ids);
     }
   }
@@ -11335,7 +11430,21 @@ export class CrewSupervisor {
    */
   placedReopened(taskId: string): void {
     const task = this.tasks.get(taskId);
-    if (task?.session) this.carryRestart(task, this.machineOf(taskId), task.session);
+    if (task?.session) {
+      if (task.state !== "idle" && !this.restartObservations.has(taskId)) {
+        this.restartObservations.set(taskId, { at: this.now() });
+        this.recordRestartOutcome(
+          taskId,
+          "waiting",
+          "its computer reopened and has not confirmed a new request yet",
+        );
+        this.options.broadcastEvent({
+          type: "firstmate_note",
+          text: carryOnWords([{ key: task.key, title: task.title }]),
+        });
+      }
+      this.carryRestart(task, this.machineOf(taskId), task.session);
+    }
   }
 
   /**
@@ -11421,6 +11530,8 @@ export class CrewSupervisor {
       facts: { kind: "turn-resumed", stopped: "update", computer },
     });
     task.paused = { computer, row };
+    this.restartObservations.set(task.id, { at: this.now() });
+    this.recordRestartOutcome(task.id, "waiting", `Infinitary on ${computer} is being updated`);
     this.options.tasks.note(task.id, `paused while Infinitary on ${computer} is updated`, {
       news: true,
     });

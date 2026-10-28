@@ -3679,6 +3679,7 @@ export class FirstmateAgent {
         ...(entry.autonomy === undefined ? {} : { autonomy: entry.autonomy }),
         ...(entry.review ? { review: entry.review } : {}),
         ...(entry.thread ? { thread: entry.thread } : {}),
+        ...(entry.restart ? { restart: entry.restart } : {}),
         ...(entry.stalled ? { stalled: entry.stalled } : {}),
         // Durations to read, never guess (INF-1244).
         ...(entry.job ? { job: entry.job } : {}),

@@ -57,6 +57,8 @@ export type CrewStatusEntry = {
    */
   computer?: string;
   lastReport?: string;
+  /** Observed recovery after reopening; reading this never wakes the crewmate. */
+  restart?: { at: string; text: string };
   /** Whether this task has a higher escalation rung left (separate from model/quota availability). */
   premiumRetryEligible?: boolean;
   /** The rigor the host derived at dispatch (delivery rigor phase 2). */

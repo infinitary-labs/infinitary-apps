@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "crew-restart-observations",
+      "kind": "fix",
+      "area": "crewmates",
+      "title": "Know which crewmates carried on after reopening",
+      "body": "After a restart or update, each interrupted crewmate’s record says when it carried on by itself, or why it has not. Your first mate can read that fact without messaging the crew.",
+      "noPicture": "Recovery adds timestamped facts to the existing Activity feed and task record, not a new view or control.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

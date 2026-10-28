@@ -2,12 +2,15 @@ import { writeFileSync } from "node:fs";
 import { expect, test } from "@playwright/test";
 import type { TaskDetail } from "@shared/tasks";
 import { RESTART_REPLAY_NOTE } from "../../src/core/orchestrator/wakes";
+import { RESTART_RESUMED_WORDS } from "../../src/core/tasks/recordActivity";
+import { askFirstmate } from "./lastTurn";
 import { type LaunchedApp, launchApp, SHORT_TICK } from "./launch";
 import { resizeWindow } from "./layout";
 import { FM_SYSTEM_MARKER, SPAWN_PROMPT_MARKER, startMockProvider } from "./mockProvider";
 import { promptInput } from "./prompt";
-import { providerMessages, requestToolNames } from "./providerRequest";
+import { latestContext, providerMessages, requestToolNames } from "./providerRequest";
 import { expandDock } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   MOCK_RESTART_REPLAY_REPORT,
   RESTART_REPLAY_PROMPT_MARKER,
@@ -77,6 +80,9 @@ test("a crewmate's turn the app closes under three times picks up again at the n
 
     for (let quit = 1; quit <= RESTART_REPLAY_QUITS; quit += 1) {
       await test.step(`the app closes mid-turn (${quit} of ${RESTART_REPLAY_QUITS}) and the next launch delivers the message again, saying so`, async () => {
+        const firstmateRequests = () =>
+          mockProvider.requestBodies().filter((body) => body.includes(FM_SYSTEM_MARKER)).length;
+        const before = firstmateRequests();
         const { userDataDir, homeDir } = app;
         await app.close();
         app = await launchApp({ reuseMockProvider: mockProvider, userDataDir, homeDir, env });
@@ -86,6 +92,20 @@ test("a crewmate's turn the app closes under three times picks up again at the n
         expect(latestWords()).toContain(RESTART_REPLAY_NOTE);
         expect(latestWords()).toContain(TITLE);
         expect(await boardTitles()).toEqual([TITLE]);
+        // INF-1582 finding 5: the host records observed recovery, without asking either agent.
+        const observations = () =>
+          readSavedData(
+            app.userDataDir,
+            (db) =>
+              db
+                .prepare(
+                  "SELECT at, text, data_json FROM task_events WHERE task_id = ? AND json_extract(data_json, '$.restartOutcome.outcome') = 'resumed' ORDER BY id",
+                )
+                .all(taskId) as { at: number; text: string; data_json: string }[],
+          );
+        await expect.poll(() => observations().length).toBe(quit);
+        expect(observations().at(-1)?.text).toBe(RESTART_RESUMED_WORDS);
+        if (quit < RESTART_REPLAY_QUITS) expect(firstmateRequests()).toBe(before);
       });
     }
 
@@ -100,6 +120,23 @@ test("a crewmate's turn the app closes under three times picks up again at the n
       await expect.poll(outcome, { timeout: 60_000 }).toContain(MOCK_RESTART_REPLAY_REPORT);
       expect(await boardTitles()).toEqual([TITLE]);
     });
+    await askFirstmate(app.page, "hello after reopening");
+    const context = latestContext(
+      mockProvider
+        .requestBodies()
+        .filter((body) => body.includes(FM_SYSTEM_MARKER))
+        .at(-1) ?? "",
+    );
+    expect(context?.crew).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          task_id: taskId,
+          restart: expect.objectContaining({
+            text: RESTART_RESUMED_WORDS,
+          }),
+        }),
+      ]),
+    );
   } finally {
     // What the crewmate was handed at each launch, for the run's record.
     writeFileSync(

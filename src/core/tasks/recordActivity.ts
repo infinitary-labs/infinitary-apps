@@ -471,6 +471,9 @@ export function modelMoveWords(move: { from?: string; to: string; fallback: bool
     : `Moved from ${move.from} to ${move.to}`;
 }
 
+/** The observed restart result shared by the timeline, feed and its readers. */
+export const RESTART_RESUMED_WORDS = "Carried on by itself after the app reopened.";
+
 /**
  * The launch's feed line naming the tasks a quit, restart or update paused,
  * which carry on by themselves (`CrewSupervisor.announceCarryOn`, INF-1272).
@@ -478,8 +481,8 @@ export function modelMoveWords(move: { from?: string; to: string; fallback: bool
 export function carryOnWords(tasks: readonly { key: string; title: string }[]): string {
   const named = tasks.map((task) => `${task.key} “${task.title}”`).join(", ");
   return tasks.length === 1
-    ? `The app reopened, and 1 task carries on where it stopped: ${named}.`
-    : `The app reopened, and ${tasks.length} tasks carry on where they stopped: ${named}.`;
+    ? `The app reopened. Automatic recovery is pending for 1 task: ${named}.`
+    : `The app reopened. Automatic recovery is pending for ${tasks.length} tasks: ${named}.`;
 }
 
 /** The typed facts of a move to another model, as `recordServedModel` writes them. */

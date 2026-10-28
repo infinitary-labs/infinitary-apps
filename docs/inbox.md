@@ -71,8 +71,13 @@ It stays due one grace after its cut attempt began, so the next launch's sweep d
   A quit cuts a Claude client's own continuation with nothing in flight to replay, so the quit leaves a `turn-resumed` row on its lane (`disposeAll`), and the next launch's sweep carries the crewmate on with it: its last turn stopped part way when the app closed, and it checks what took effect before it repeats a step.
   The same row carries on a turn the app paused for an update of the computer it runs on (`docs/devices.md`, "Updating").
   It is a turn of its own, served after a renewed conversation's reason and before the rest (`laneTurnText`), and never steered into a running turn (`deliverableRows`).
-- **The launch says which tasks carry on.**
-  Before the boot sweep, one feed line names each open task whose lane holds a cut row or a `turn-resumed` row (`CrewSupervisor.announceCarryOn`, INF-1272); a launch with none says nothing, and it wakes no one.
+- **The launch names the interrupted crew, without claiming recovery before observing it.**
+  Before the boot sweep, one feed line names each unfinished task whose lane holds a cut row or a `turn-resumed` row, and a turn still running on another computer (`CrewSupervisor.announceCarryOn`); a launch with none says nothing.
+  Each task keeps timestamped recovery observations as host notes on its existing timeline, protected from compaction by `journal`.
+  The model taking in its input, a reply beginning or an observed continuation records that the crewmate carried on by itself; a withheld account, an unreachable computer, an unavailable conversation or a failed reopen records why it has not.
+  Repeated observations of the same state write nothing, while a later automatic continuation records the changed outcome.
+  `crew_status.restart` and the first mate's next ordinary context read the latest observation and its time without starting or steering either agent.
+  Pending recovery is not proof of a running turn, and neither writing nor reading these facts sends a wake.
   So a quit is the pause an update needs: the first mate's core says so, stops no task for one and steers none after, and a kept merge approval stands across it (`docs/delivery-rigor.md`, "Ends").
 - **What it costs.**
   A turn that itself takes the app down is replayed at every launch, since a cut never spends a try; the three tries still bound every refusal.

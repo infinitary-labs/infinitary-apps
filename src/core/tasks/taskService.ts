@@ -992,6 +992,11 @@ export class TaskService {
     return this.events.listFor(id);
   }
 
+  /** Latest host-observed recovery fact; no session is opened by this read. */
+  restartObservation(id: string): TaskEvent | undefined {
+    return this.events.latestWithObject(id, "note", "restartOutcome");
+  }
+
   /** One timeline event by its id, whatever its task; undefined once it is gone. */
   eventByIdentity(identity: string): TaskEvent | undefined {
     return this.events.byIdentity(identity);

@@ -1,0 +1,9 @@
+{
+  "entries": [],
+  "exclusions": [
+    {
+      "id": "ipad-control-center-pull",
+      "reason": "Test-only: the phone join journey pulls Control Center down in under a tenth of a second so a stalled SpringBoard still receives the whole pull, lift included; nothing a person sees changes."
+    }
+  ]
+}

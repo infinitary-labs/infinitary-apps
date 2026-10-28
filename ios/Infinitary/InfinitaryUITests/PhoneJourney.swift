@@ -288,8 +288,12 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10))
         // INF-136 #9: Control Center makes the scene inactive, not backgrounded.
         let beforeInactive = try await home("state", method: "GET")
+        // INF-1646: a starved SpringBoard can stall on the pull's first touch, and the system keeps only its first ~180 ms of touches.
+        // A default-speed pull lasts over a second, so its lift is dropped and Control Center never finishes opening; this pull lifts
+        // within a tenth of a second and waits whole in that queue, so Control Center opens once SpringBoard resumes.
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.01)).press(forDuration: 0.05,
-            thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.65)))
+            thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.65)),
+            withVelocity: XCUIGestureVelocity(rawValue: 20_000), thenHoldForDuration: 0)
         let springboard = XCUIApplication(bundleIdentifier: "com.apple.springboard")
         // A fresh simulator has no connectivity controls; the container itself witnesses the overlay.
         let controlCenter = springboard.otherElements["cc-root-folder-view"]

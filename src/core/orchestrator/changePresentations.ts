@@ -11,6 +11,7 @@ import {
   type PresentationRecovery,
   type StoryAround,
 } from "@shared/changePresentation";
+import type { NamingRule } from "../../shared/runbooks";
 import {
   AttachmentUploadError,
   changeTitle,
@@ -71,6 +72,7 @@ export class ChangePresentations {
 
   constructor(
     private readonly options: {
+      namingRule?: () => NamingRule | null;
       tasks: PresentationLedger;
       mediaDir: (taskId: string) => string;
       /** Read actual committed code, including after asynchronous uploads. */
@@ -105,7 +107,8 @@ export class ChangePresentations {
               "Keep the original Before base and destination; reconcile changed project identity or visibility before publishing.",
             );
           const revision = (prior?.revision ?? 0) + 1;
-          if (staged.version === 2) requireConventional(staged.title, "story title");
+          if (staged.version === 2)
+            requireConventional(staged.title, "story title", this.options.namingRule?.());
           const story = changePresentationSchema.parse({
             ...staged,
             taskId,
@@ -198,7 +201,7 @@ export class ChangePresentations {
   ): Promise<ForgeChange> {
     const story = this.current(taskId, revision);
     if (story.version === 2 && title !== story.title)
-      throw new Error("Use the saved conventional title for the pull request and completion card.");
+      throw new Error("Use the saved title for the pull request and completion card.");
     if (!forge.attachments)
       throw new Error("Native evidence publication is not available on this host.");
     const words = hostWords(forge);

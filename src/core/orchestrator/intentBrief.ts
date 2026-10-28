@@ -252,7 +252,7 @@ function renderPersonalFacts(personal: PersonalBriefFacts): string[] {
     return [
       `${BUILD_IN_PLACE_OPENING}: this is a teach task on the personal workspace, with no branch, pull request or rigor tier.`,
       `Workspace: ${personal.workspaceDir} - your working directory. Do not commit; the host commits each turn.`,
-      "Open .claude/skills/lessons/SKILL.md before the first card, and follow the standing directions each turn carries. Teach through lesson cards and keep the subject's panel record current using the tested part in the lessons guide. Read lessons/learner.md and keep the subject's progress under lessons/<subject>/. Do not open the panel skill, infinitary-env.d.ts, or the design overview.",
+      "Read the lessons skill listed in your session before the first card, and follow the standing directions each turn carries. Teach through lesson cards and keep the subject's panel record current using the tested part in the lessons guide. Read lessons/learner.md and keep the subject's progress under lessons/<subject>/. Do not open the panel skill, infinitary-env.d.ts, or the design overview.",
       "Your report commits this round, not the end of the subject. Keep one subject task open across rounds; use the lessons guide for the goal, round and welcome-back cards. Your completion is a report, never a merge card.",
     ];
   }

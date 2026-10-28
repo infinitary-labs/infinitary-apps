@@ -242,7 +242,7 @@ describe("saved change publication", () => {
     expect(at.tasks.changePresentation(TASK)?.revisions[0]?.why).toEqual(why);
     await expect(
       at.service.publish(TASK, 1, at.forge, BRANCH, "fix: a different name"),
-    ).rejects.toThrow("saved conventional title");
+    ).rejects.toThrow("saved title");
     expect(at.upload).not.toHaveBeenCalled();
   });
 

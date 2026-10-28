@@ -62,6 +62,7 @@ describe("crew tools", () => {
         { kind: "free", text: "keep the public API stable" },
       ],
       delivery_note: "single commit",
+      shape: { kind: "fix" },
     });
     expect(delegate.commission).toHaveBeenCalledWith({
       title: "Fix meter",
@@ -75,6 +76,7 @@ describe("crew tools", () => {
         deliveryNote: "single commit",
       },
       repoId: "r1",
+      shape: { kind: "fix" },
     });
     expect(result?.content[0]?.text).toBe("Commissioned crewmate 1 on task ab12cd34.");
   });
@@ -688,6 +690,7 @@ describe("spawn_crewmate's groups (contract v4.12, primitives P7)", () => {
     const properties = spawnSchema().properties ?? {};
     expect(Object.keys(properties)).toHaveLength(15);
     expect(Object.keys(properties.shape?.properties ?? {})).toEqual([
+      "kind",
       "delivery_ask",
       "basis",
       "premium_ask",

@@ -1,7 +1,10 @@
-import { chmodSync, readFileSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { Runbooks } from "../runbooks/runbooks";
+import { openInMemoryDatabase } from "../storage/db";
+import { SettingsStore } from "../storage/settingsStore";
 import { git } from "../workspace/git";
 import {
   packagedPlanStepLines,
@@ -11,6 +14,7 @@ import {
   SEQUENCES_SKILL_HEADER,
   SEQUENCES_SKILL_RELATIVE_PATH,
   SequencesSource,
+  seedSequencesSkill,
   sequencesSha,
 } from "./sequencesSkill";
 import { seedPersonalWorkspace } from "./workspace";
@@ -52,29 +56,36 @@ describe("packaged plan steps", () => {
   });
 });
 
-describe("the sequences skill in the personal workspace (docs/sequences.md)", () => {
-  it("is seeded once into a fresh workspace, in its seed commit", async () => {
+// INF-1177 intentionally moves the boot-owned guide to a switchable runbook.
+// Preserve seed/refresh/git assertions at that owner, and prove the old skill cannot leak back in.
+describe("Common workflows replaces the workspace's second guide", () => {
+  const books = () =>
+    new Runbooks(
+      join(process.cwd(), "resources/runbooks"),
+      new SettingsStore(openInMemoryDatabase()),
+    );
+  it("seeds the workspace once while serving guidance from the runbook, not a second skill", async () => {
     const dir = fresh();
-    await seedPersonalWorkspace({ dir });
-    const path = join(dir, SEQUENCES_SKILL_RELATIVE_PATH);
-    const served = readFileSync(path, "utf8");
-    expect(served).toBe(`${SEQUENCES_SKILL_HEADER}${SEQUENCES_SEED}`);
+    await seedPersonalWorkspace({ dir, skillsSourceDir: process.cwd() });
+    expect(existsSync(join(dir, SEQUENCES_SKILL_RELATIVE_PATH))).toBe(false);
+    const served = books().firstmate().text;
     expect(served).toContain("one place the change touches, no rule, state transition");
     expect(served).toContain("shape.skipped_plan_because");
     expect(served).not.toContain("clear and small");
-    expect(await git(dir, ["log", "--format=%s", "--", SEQUENCES_SKILL_RELATIVE_PATH])).toBe(
-      "chore: seed the personal workspace",
-    );
+    expect(await git(dir, ["log", "--format=%s"])).toBe("chore: seed the personal workspace");
     expect(await git(dir, ["status", "--porcelain"])).toBe("");
   });
-
-  it("overwrites local edits on refresh and commits the app-managed guide", async () => {
+  it("retires an earlier app-managed guide on refresh without overwriting the runbook or personal records", async () => {
     const dir = fresh();
-    await seedPersonalWorkspace({ dir });
+    await seedPersonalWorkspace({ dir, skillsSourceDir: process.cwd() });
     const path = join(dir, SEQUENCES_SKILL_RELATIVE_PATH);
-    const mine = `${SEQUENCES_SKILL_HEADER}# Sequences\n\nAlways reproduce first, even for features.\n`;
-    writeFileSync(path, mine);
-    await git(dir, ["add", "--", SEQUENCES_SKILL_RELATIVE_PATH]);
+    mkdirSync(join(dir, ".claude/skills/sequences"), { recursive: true });
+    writeFileSync(
+      path,
+      `${SEQUENCES_SKILL_HEADER}# Sequences\n\nAlways reproduce first, even for features.\n`,
+    );
+    writeFileSync(join(dir, "notes.md"), "My project notes.\n");
+    await git(dir, ["add", "--", SEQUENCES_SKILL_RELATIVE_PATH, "notes.md"]);
     await git(dir, [
       "-c",
       "user.name=Previous Firstmate",
@@ -84,33 +95,35 @@ describe("the sequences skill in the personal workspace (docs/sequences.md)", ()
       "-m",
       "Previous app guide",
     ]);
-    // The next refresh restores the packaged content and records the app's update.
-    const source = new SequencesSource(dir);
-    expect(source.current().text).toContain("Always reproduce first");
+    const before = books().firstmate();
     const logs: string[] = [];
-    const result = await seedPersonalWorkspace({ dir, log: (message) => logs.push(message) });
-    expect(result.healed).toContain(SEQUENCES_SKILL_RELATIVE_PATH);
-    expect(readFileSync(path, "utf8")).toBe(`${SEQUENCES_SKILL_HEADER}${SEQUENCES_SEED}`);
-    expect(source.current().text).toBe(SEQUENCES_SEED.trim());
+    const result = await seedPersonalWorkspace({
+      dir,
+      skillsSourceDir: process.cwd(),
+      log: (message) => logs.push(message),
+    });
+    expect(result.healed).toContain(join(".claude", "skills", "sequences"));
+    expect(existsSync(path)).toBe(false);
+    expect(readFileSync(join(dir, "notes.md"), "utf8")).toBe("My project notes.\n");
+    expect(books().firstmate()).toEqual(before);
     expect(logs).not.toEqual(expect.arrayContaining([expect.stringContaining("could not commit")]));
     expect((await git(dir, ["log", "--format=%s"])).split("\n")[0]).toBe(
       "chore: refresh managed files",
     );
     expect(await git(dir, ["status", "--porcelain"])).toBe("");
-
-    // A deleted file is likewise restored from the packaged seed.
-    rmSync(path);
-    await seedPersonalWorkspace({ dir });
-    expect(readFileSync(path, "utf8")).toBe(`${SEQUENCES_SKILL_HEADER}${SEQUENCES_SEED}`);
+    await seedPersonalWorkspace({ dir, skillsSourceDir: process.cwd() });
+    expect(existsSync(path)).toBe(false);
+    expect(books().firstmate()).toEqual(before);
   });
 });
 
-describe("SequencesSource: what the Firstmate is served", () => {
+describe("SequencesSource: the standalone legacy reader", () => {
   const seed = SEQUENCES_SEED.trim();
 
   it("serves the file's body without its front matter, re-reading only when it changed", async () => {
     const dir = fresh();
     await seedPersonalWorkspace({ dir });
+    await seedSequencesSkill(dir);
     const path = join(dir, SEQUENCES_SKILL_RELATIVE_PATH);
     const source = new SequencesSource(dir);
     expect(source.current()).toEqual({ text: seed, sha: sequencesSha(seed) });
@@ -132,6 +145,7 @@ describe("SequencesSource: what the Firstmate is served", () => {
     expect(new SequencesSource(dir).current()).toEqual({ text: seed, sha: sequencesSha(seed) });
 
     await seedPersonalWorkspace({ dir });
+    await seedSequencesSkill(dir);
     const path = join(dir, SEQUENCES_SKILL_RELATIVE_PATH);
     const source = new SequencesSource(dir);
     const bump = (seconds: number) =>

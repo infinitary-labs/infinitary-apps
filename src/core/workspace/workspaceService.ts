@@ -7,6 +7,7 @@ import { promisify } from "node:util";
 import { HERE } from "@shared/deviceNames";
 import type { FolderRefreshCause, FolderRefreshRefusal } from "@shared/folderRefresh";
 import type { KnownForgeHost } from "@shared/forge";
+import type { NamingRule } from "../../shared/runbooks";
 import { hostEnv } from "../hostEnv";
 import type { AppPaths } from "../paths";
 import { atUtilityQos } from "../utilityQos";
@@ -82,6 +83,7 @@ export type WorkspacePaths = Pick<
 >;
 
 export type WorkspaceServiceOptions = {
+  namingRule?: () => NamingRule | null;
   /** The pnpm executable; tests point it at a stub. */
   pnpm?: string;
   /** Bound on one install attempt. */
@@ -755,7 +757,7 @@ export class WorkspaceService {
     const { repoDir, branch } = workspace;
     const head = await git(repoDir, ["rev-parse", `${branch}^{commit}`]);
     const base = await git(repoDir, ["merge-base", "HEAD", head]);
-    await requireConventionalRange(repoDir, base, head);
+    await requireConventionalRange(repoDir, base, head, this.options.namingRule?.());
     const dirty = await git(repoDir, ["status", "--porcelain"]);
     if (dirty) {
       throw new Error("The repository has uncommitted changes; commit or stash them first.");

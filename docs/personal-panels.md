@@ -59,7 +59,6 @@ It is called from Step 2's `seedPersonalWorkspace`, so a heal rides the same com
 | `quota` | `QuotaMicroMeter` and the honesty rules (unknown is never zero, stale says its age, only a proven sign-out says "sign in again", a no-window read renders what happened) |
 | `tasks-and-feed` | The row tones and the feed line, and not rebuilding the panels the app already ships |
 | `usage` | The crew's tokens through the read-only `sql` view `v_usage_v1`, and the honesty rules a number must keep; its fixture is `token-watch` |
-| `lessons` | Teaching one subject across days: the learner and progress files, the tested card parts, the six teaching ideas and the lesson voice (`docs/lessons.md`) |
 | `clock-timer-scratchpad` | The three small panels: derived state, the store (a deadline, never a countdown), calm motion |
 
 The seed is **exact**: every boot makes the managed skill directories match their source, restoring what was deleted and removing what was added, so the rules cannot be quietly rewritten from inside.
@@ -69,6 +68,8 @@ The captain's panel instructions are not files here: each is a standing directio
 **One home, twice enforced.**
 `src/core/personal/skillText.test.ts` pins that no persona prompt and no card contract repeats a sentence of an authoring skill, AND that the skills and the workspace's own `AGENTS.md` do not repeat each other: the personal-panel skill owns a panel's mechanics and its look, and `AGENTS.md` keeps the common workspace rules and points there.
 A rule written in both would drift in one.
+
+The Lessons runbook supplies the lesson skill and its tested card parts through the third skill root, not the workspace seeder (`docs/runbooks.md`).
 
 ### The app's own data: the reads a panel declares
 

@@ -42,7 +42,7 @@ const DESIGN_SKILL_SOURCE = join(".claude", "skills", DESIGN_SKILL_ID);
  * The design skill's folder before the Infinitary rename (step 9): an
  * app-owned copy a seed takes away, so the workspace keeps one design skill.
  */
-export const RETIRED_SKILL_IDS = ["firstmate-3000-design"] as const;
+export const RETIRED_SKILL_IDS = ["firstmate-3000-design", "lessons", "sequences"] as const;
 
 /** The authoring skills, at theirs. */
 export const AUTHORING_SKILL_IDS = [
@@ -52,7 +52,6 @@ export const AUTHORING_SKILL_IDS = [
   "tasks-and-feed",
   "usage",
   "clock-timer-scratchpad",
-  "lessons",
 ] as const;
 export const AUTHORING_SKILLS_SOURCE = join("resources", "personal-workspace", "skills");
 

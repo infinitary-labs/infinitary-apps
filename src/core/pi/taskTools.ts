@@ -2,7 +2,7 @@ import { HOME } from "@shared/deviceNames";
 import { HOLD_KINDS, isOverridable, type OverridableHold, overrideRefusal } from "@shared/holds";
 import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots";
 import type { PlacementRequirements } from "@shared/placement";
-import type { WorkShapeAsk } from "@shared/routingPolicy";
+import { CLASSIFIABLE_KINDS, type WorkShapeAsk } from "@shared/routingPolicy";
 import type { TaskPolicyEdits } from "@shared/taskPolicies";
 import { type Static, Type } from "typebox";
 import { parseSpawnIntent, type SpawnIntent } from "../orchestrator/intentBrief";
@@ -164,6 +164,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
       ),
       start_policy: Type.Optional(START_POLICY),
       priority: PRIORITY,
+      kind: Type.Optional(stringEnum([...CLASSIFIABLE_KINDS, "unclear"])),
       basis: Type.Optional(Type.String({ description: "As spawn_crewmate's shape.basis." })),
       placement_requirements: Type.Optional({
         ...PLACEMENT_REQUIREMENTS_PARAM,
@@ -190,6 +191,7 @@ export function createTaskTools(delegate: TaskToolsDelegate) {
           ? { placement_requirements: params.placement_requirements }
           : {}),
         ...(basis ? { basis } : {}),
+        ...(params.kind ? { kind: params.kind } : {}),
         ...(params.internal_step ? { internal_step: true } : {}),
         ...(params.result_schema
           ? { result_schema: params.result_schema as Record<string, unknown> }

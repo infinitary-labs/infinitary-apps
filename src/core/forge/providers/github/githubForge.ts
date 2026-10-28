@@ -1,6 +1,7 @@
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace, GITHUB_COM, isGitHubEnterpriseCloud } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
+import type { NamingRule } from "../../../../shared/runbooks";
 import { requireConventional } from "../../../workspace/conventional";
 import {
   type ApiProject,
@@ -107,6 +108,7 @@ export function githubGraphqlUrl(apiBase: string): string {
 }
 
 export type GitHubForgeOptions = {
+  namingRule?: () => NamingRule | null;
   /** The person's GitHub sign-in, read at call time; undefined = not signed in. */
   token: () => Promise<string | undefined>;
   /**
@@ -601,7 +603,11 @@ export class GitHubForge implements Forge {
       {
         sha: headSha,
         merge_method: "squash",
-        commit_title: requireConventional(change.title ?? "", "pull request title"),
+        commit_title: requireConventional(
+          change.title ?? "",
+          "pull request title",
+          this.options.namingRule?.(),
+        ),
         commit_message: change.squashMessage ?? change.body ?? "",
       },
     )) as { merged?: boolean; sha?: string; message?: string } | null;
@@ -752,7 +758,11 @@ export class GitHubForge implements Forge {
         merge_method: "squash",
         merge_action: "direct_merge",
         bypass_rules: true,
-        commit_title: requireConventional(change.title ?? "", "pull request title"),
+        commit_title: requireConventional(
+          change.title ?? "",
+          "pull request title",
+          this.options.namingRule?.(),
+        ),
         commit_message: change.squashMessage ?? change.body ?? "",
       },
       ASYNC_MERGE_API_VERSION,

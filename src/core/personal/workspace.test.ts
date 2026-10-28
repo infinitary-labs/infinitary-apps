@@ -3,7 +3,6 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { scratchDir } from "../../../tests/helpers/scratchDirs";
 import { git } from "../workspace/git";
-import { SEQUENCES_SKILL_RELATIVE_PATH } from "./sequencesSkill";
 import { MANAGED_FILES, seedPersonalWorkspace } from "./workspace";
 
 // This file chains real git and is not about the utility-QoS clamp, so what
@@ -17,9 +16,7 @@ describe("seedPersonalWorkspace", () => {
     const dir = join(scratchDir("infinitary-personal-ws-"), "personal");
     const result = await seedPersonalWorkspace({ dir });
     expect(result.created).toBe(true);
-    expect(result.healed.sort()).toEqual(
-      [...MANAGED_FILES.map((file) => file.path), SEQUENCES_SKILL_RELATIVE_PATH].sort(),
-    );
+    expect(result.healed.sort()).toEqual(MANAGED_FILES.map((file) => file.path).sort());
     for (const file of MANAGED_FILES) {
       expect(readFileSync(join(dir, file.path), "utf8")).toBe(file.content);
     }

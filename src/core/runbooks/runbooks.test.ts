@@ -1,0 +1,157 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { describe, expect, it } from "vitest";
+import { fakeBinding } from "../../../tests/helpers/fakeSession";
+import { scratchDir } from "../../../tests/helpers/scratchDirs";
+import { type RunbookFacts, runbookMatches } from "../../shared/runbooks";
+import { crewmateSessionSpec } from "../orchestrator/crewSession";
+import { appPathsFor } from "../paths";
+import { createCrewmateResourceLoader } from "../pi/piResourceLoader";
+import { openInMemoryDatabase } from "../storage/db";
+import { SettingsStore } from "../storage/settingsStore";
+import { requireConventional } from "../workspace/conventional";
+import { Runbooks, stageRunbookSkills } from "./runbooks";
+
+const root = join(__dirname, "../../../resources/runbooks");
+const code: RunbookFacts = {
+  kind: "implement",
+  place: "project",
+  delivery: "direct-pr",
+  care: "standard",
+  backend: "pi",
+  project: "infinitary",
+};
+function fixture() {
+  const db = openInMemoryDatabase();
+  const settings = new SettingsStore(db);
+  return { db, settings, books: new Runbooks(root, settings) };
+}
+// Intent: the captain's accepted INF-1177 settings; the fixtures are the actual bundled procedures.
+describe("runbooks over existing prompt and skill doors", () => {
+  it("starts all six on and persists an individual switch without taking programs away", () => {
+    const { db, books } = fixture();
+    expect(books.list()).toHaveLength(6);
+    expect(books.list().every((book) => book.enabled)).toBe(true);
+    const before = books.firstmate();
+    books.set("sequences", false);
+    const reopened = new Runbooks(root, new SettingsStore(db));
+    expect(reopened.list().find((book) => book.id === "sequences")?.enabled).toBe(false);
+    const after = reopened.firstmate();
+    expect(after.sha).not.toBe(before.sha);
+    expect(after.text).not.toContain("# Common workflows");
+    expect(after.text).toContain("# Programs");
+    reopened.set("sequences", true);
+    expect(reopened.firstmate()).toEqual(before);
+    expect(() => reopened.set("missing", false)).toThrow("not available");
+  });
+  it("serves testing only to the accepted project kinds on either backend", () => {
+    const { books } = fixture();
+    const passage = (
+      JSON.parse(readFileSync(join(root, "testing/crew.json"), "utf8")) as string
+    ).trim();
+    for (const backend of ["pi", "claude"]) {
+      for (const kind of ["plan", "reproduce", "implement", "fix", "chore"])
+        expect(books.crew({ ...code, kind, backend }).text).toContain(passage);
+      for (const kind of ["research", "retrieval", "review", "teach", "unclear"])
+        expect(books.crew({ ...code, kind, backend }).text).not.toContain(passage);
+      expect(books.crew({ ...code, place: "personal", backend }).text).not.toContain(passage);
+    }
+    books.set("testing", false);
+    expect(books.crew(code).text).not.toContain(passage);
+  });
+  it("matches every declared axis without judging words", () => {
+    expect(
+      runbookMatches(
+        {
+          project: ["infinitary"],
+          backend: ["pi"],
+          kind: ["implement"],
+          place: ["project"],
+          delivery: ["direct-pr"],
+          care: ["standard"],
+        },
+        code,
+      ),
+    ).toBe(true);
+    for (const key of ["project", "backend", "kind", "place", "delivery", "care"] as const)
+      expect(runbookMatches({ [key]: [] }, code)).toBe(false);
+    expect(runbookMatches(undefined, code)).toBe(true);
+  });
+  it("serves naming to agents and the host from the same enabled manifest", () => {
+    const { books } = fixture();
+    expect(requireConventional("feat(runbooks): add guidance", "title", books.naming())).toContain(
+      "guidance",
+    );
+    expect(() => requireConventional("a plain title", "title", books.naming())).toThrow(
+      "conventional name",
+    );
+    books.set("naming", false);
+    expect(requireConventional("a plain title", "title", books.naming())).toBe("a plain title");
+    expect(books.crew(code).text).not.toContain("Name every commit subject");
+    expect(books.firstmate().text).not.toContain("Name every commit subject");
+  });
+  it("materializes actual lesson skills and HTML parts on the running computer, and off removes their reach", async () => {
+    const { books } = fixture();
+    const skills = books.crew(code).skills;
+    const staged = await stageRunbookSkills(skills, join(scratchDir("inf-runbooks-"), "skills"));
+    const lesson = staged.find((skill) => skill.name === "lessons");
+    expect(lesson).toBeDefined();
+    expect(readFileSync(join(lesson?.dir ?? "", "SKILL.md"), "utf8")).toBe(
+      readFileSync(join(root, "lessons/skills/lessons/SKILL.md"), "utf8"),
+    );
+    expect(readFileSync(join(lesson?.dir ?? "", "parts/quiz.html"), "utf8")).toBe(
+      readFileSync(join(root, "lessons/skills/lessons/parts/quiz.html"), "utf8"),
+    );
+    books.set("lessons", false);
+    expect(books.crew(code).skills).toEqual([]);
+  });
+  it("puts only the matched section in the actual crew preset on both backends", () => {
+    const { books } = fixture();
+    const root = scratchDir("inf-runbook-prompt-");
+    for (const backend of ["pi", "claude"] as const) {
+      const binding = backend === "pi" ? fakeBinding("test") : { backend, accountId: "test" };
+      const prompt = (kind: string) =>
+        crewmateSessionSpec(
+          appPathsFor(root),
+          {
+            taskId: "task-1",
+            machineId: "local",
+            cwd: root,
+            runbookText: books.crew({ ...code, kind, backend }).text,
+            procedure: { delivery: "local-only", rigor: "quick" },
+          },
+          binding,
+        ).instructions.base;
+      expect(prompt("implement")).toContain("Tests follow six words:");
+      expect(prompt("research")).not.toContain("Tests follow six words:");
+      books.set("testing", false);
+      books.set("naming", false);
+      expect(prompt("implement")).not.toContain("Tests follow six words:");
+      expect(prompt("implement")).not.toContain("Name every commit subject");
+      books.set("testing", true);
+      books.set("naming", true);
+    }
+  });
+  it("keeps project then personal skills ahead of runbook skills in the Pi resource door", async () => {
+    const { books } = fixture();
+    const cwd = scratchDir("inf-runbook-roots-");
+    const files = books.crew(code).skills;
+    const runbookSkills = await stageRunbookSkills(files, join(cwd, "runbooks"));
+    const personalSkills = await stageRunbookSkills(files, join(cwd, "personal"));
+    const personal = { skills: personalSkills, digests: { instructions: null, skills: "" } };
+    const loader = createCrewmateResourceLoader("base", undefined, {
+      cwd,
+      personal,
+      runbookSkills,
+    });
+    await loader.reload();
+    expect(loader.getSkills().skills.find((skill) => skill.name === "lessons")?.filePath).toBe(
+      join(cwd, "personal/lessons/SKILL.md"),
+    );
+    await stageRunbookSkills(files, join(cwd, ".claude/skills"));
+    await loader.reload();
+    expect(loader.getSkills().skills.find((skill) => skill.name === "lessons")?.filePath).toBe(
+      join(cwd, ".claude/skills/lessons/SKILL.md"),
+    );
+  });
+});

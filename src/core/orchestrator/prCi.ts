@@ -19,6 +19,7 @@ import { isMergeConflict } from "@shared/plainProblem";
 import { deliveryForRecord, type RepoView } from "@shared/repos";
 import { effectiveTaskPolicies } from "@shared/taskPolicies";
 import { NEVER_SENT_AGAIN } from "@shared/writeAsk";
+import type { NamingRule } from "../../shared/runbooks";
 import {
   AttachmentUploadError,
   changeTitle,
@@ -231,6 +232,7 @@ export class PrCiService {
 
   constructor(
     private readonly options: {
+      namingRule?: () => NamingRule | null;
       tasks: TaskService;
       repos: RepoRegistry;
       presentations?: ChangePresentations;
@@ -957,7 +959,7 @@ export class PrCiService {
       body: "",
     };
     try {
-      requireConventional(change.title ?? "", "pull request title");
+      requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
       if (relationship === "owned" && this.options.tasks.get(taskId)?.delivery?.presentation) {
         const current = await forge.changeFor(change.branch);
         if (
@@ -1255,7 +1257,7 @@ export class PrCiService {
     let dispatched = false;
     try {
       if (hasChangeRequests(forge.kind))
-        requireConventional(change.title ?? "", "pull request title");
+        requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
       const held = guard?.held?.();
       if (held) return { ok: false, relationship: "referenced", stop: "guidance", text: held };
       const stopped = guard?.beforeDispatch(candidate.headSha);
@@ -1521,13 +1523,17 @@ export class PrCiService {
     if ("said" in located) return located.said;
     const { record, branch, forge } = located;
     try {
-      requireConventional(input.title, "pull request title");
+      requireConventional(input.title, "pull request title", this.options.namingRule?.());
       this.options.tasks.recordPermissionRecords(taskId, { checkTarget: undefined });
       await this.branchHome(record);
       const dir = await this.validateRange(record.repoId, record.repoDir, branch, forge);
       const existing = await forge.changeFor(branch);
       if (existing && hasChangeRequests(forge.kind))
-        requireConventional(changeTitle(forge.kind, existing) ?? "", "existing pull request title");
+        requireConventional(
+          changeTitle(forge.kind, existing) ?? "",
+          "existing pull request title",
+          this.options.namingRule?.(),
+        );
       const current = this.options.tasks.get(taskId);
       const policy =
         current &&
@@ -2031,7 +2037,7 @@ export class PrCiService {
       ? fetched
       : name;
     const base = await git(dir, ["merge-base", head, target]);
-    await requireConventionalRange(dir, base, head);
+    await requireConventionalRange(dir, base, head, this.options.namingRule?.());
     return dir;
   }
 
@@ -2355,7 +2361,7 @@ export class PrCiService {
         change.headSha,
       );
       if (hasChangeRequests(forge.kind))
-        requireConventional(change.title ?? "", "pull request title");
+        requireConventional(change.title ?? "", "pull request title", this.options.namingRule?.());
       const fresh = this.options.tasks.get(taskId) ?? record;
       const policy = fresh
         ? effectiveTaskPolicies(

@@ -6,21 +6,22 @@ The captain-approved design is task `fm3000-opinionated-workflows-s1` (the repor
 ## The decision
 
 Sequences are guidance, not a runner.
-The first mate reads them from an app-managed document refreshed from the packaged seed on updates and served with its prompt.
+The first mate reads them from the built-in Common workflows runbook, served through the appended-instructions door when its switch is on (`docs/runbooks.md`).
 It opens an ask that takes more than one step as a parent task with each step a child, spawns each step when its turn comes, and bends the plan on the captain's words; an ask that takes one step is one `spawn_crewmate` with no parent (contract v4.19).
 The parent stays on request, so no crewmate starts on it; the first mate talks to each step's crewmate directly.
 Every hand-off is a decision the first mate makes on a wake it already receives.
-Nothing in the host advances a sequence: there is no new tool, no card effect, no settings record and no migration, and the words "sequence" and "step" reach no user surface.
+Nothing in the host advances a sequence: there is no new runner or card effect, and the words "sequence" and "step" reach no user surface.
 A program (`docs/programs.md`) is the agent's reach, not a sequence runner: the first mate may write the steps a script can decide as one script the host runs, and sequences themselves stay guidance.
-The seed's `programs` section says how, with the loop and the audit, deep research and migrate shapes written in the program's own names, so "use a workflow" or a loop toward a goal is one program task rather than a parent with steps (`docs/programs.md`, "The shapes the first mate is served").
+The separate Programs runbook says how, with the loop and the audit, deep research and migrate shapes written in the program's own names, so "use a workflow" or a loop toward a goal is one program task rather than a parent with steps (`docs/programs.md`, "The shapes the first mate is served").
 The task's shape gained facts the first mate declares and the host only stores and honours - `internal_step` and `skipped_plan_because` - and two it declares and the host checks - `result_schema` and `branch_from` (`src/shared/routingPolicy.ts`).
 
 A read-only answer from what the app can already read - a fact, or how or why something is so - is retrieval, with its question stated faithfully and the captain's words preserved verbatim; it is not broadened into an investigation by default.
 The goal names every source the answer needs, another computer included, because the classifier reads where the evidence lives from the words alone.
-The classifier, not the first mate, owns the kind, and an answer that needs past runs compared, a computer the app does not reach, a reproduction, a measurement or the web is research or reproduce.
+The first mate declares the kind on spawn or create; the classifier sorts only undeclared work, within the same answer/change branches.
+An answer that needs past runs compared, a computer the app does not reach, a reproduction, a measurement or the web is research or reproduce.
 When the captain chooses Look deeper on a retrieval answer's card, the first mate starts a read-only research step built on that answer, its goal naming the source the answer said was missing.
 
-The personal section draws the line between lessons, projects and panels.
+The Lessons and Casual projects runbooks draw the line between lessons, projects and panels.
 Someone learning or practising a subject, including a math quiz, gets one `teach` task per subject on the personal workspace with `personal_ui` true and the packaged teach line attached; its brief names the lessons guide and cards (`docs/lessons.md`).
 A glanceable rail surface remains a panel, and existing quiz or game panels stay untouched.
 An ambiguous ask naming something to learn becomes a lesson, otherwise a project; the first mate states its choice in the activity line.
@@ -34,14 +35,17 @@ Plan skipping stays governed by the existing skip rule, and the full project lin
 A casual web project's crewmate play-tests and photographs it in its task browser through a local server, then puts up a note beside its completion decision with that picture and `browser_button` Open with `browser_page` index.html, and never waits on that note (`docs/task-browser.md`, "A page from the project").
 
 Each step is one of the task kinds the classifier already speaks (plan, retrieval, research, reproduce, implement, fix), so the document's line for a step, the kind the host records and the tier it routes to agree.
-The host never reads a kind from a title - the classifier still sorts the step's goal.
+The host never reads a kind from a title: it records the declaration, or asks the classifier for undeclared work.
 A step's title says what that step does, not its place in the plan: `create_task`'s `title` gives "Ship the bridge to alpha" as its example, and `spawn_crewmate` and `update_task` point to it (INF-19).
 The host stores whatever title the first mate passes and never judges it.
 Validation is not a step: it is the project's rigor inside the implement or fix step, and at reviewed rigor the reviewer is that step's child exactly as before (`docs/delivery-rigor.md`).
 
 ## The document
 
-`userData/fleet/personal/.claude/skills/sequences/SKILL.md`, written by the workspace seeder (`src/core/personal/sequencesSkill.ts`, `seedSequencesSkill`) from the packaged seed whenever the file is missing or differs - on workspace setup and on app updates - so a hand edit is overwritten; until the file exists the built-in text (`SEQUENCES_SEED`) is served.
+`resources/runbooks/sequences/guide.md`, named by its `runbook.json`, is the app-owned guidance.
+Its switch is Common workflows in Settings → Intelligence, also changed through the first mate's runbook catalog action.
+Programs, casual projects and lessons have separate switches.
+The workspace no longer seeds a second copy as a skill.
 The seed carries five sequences - ideation, feature, bugfix, refactor, explainer
 - from kunchenguid/kun `ENTRY.md`, "Solving a task", sharpened by the captain-approved borrowings of task `fm3000-sequences-external-skills-s1` (mattpocock/skills' grill-me and wayfinder, cursor/plugins' pstack, both MIT): ask only what nothing else can settle, question rounds and a checkable spec in the plan step, evidence-first fixing, guardrails and no compatibility layer in a refactor, a Risk line naming what the change is safe because of, steps that need nothing from each other running at once, an idea too big for one plan broken into plan steps toward a stated destination, and a spec split into pieces only when each is a distinct outcome with a safe stopping point and a nameable benefit (the plan step's split rule, in the one packaged plan line the feature sequence relays whole; the feature sequence's `pieces` line: each piece its own implement step under the same parent, grounded on the plan and blocked by exactly the pieces it needs, never by printed order).
   The preamble gives an ask of more than one step a parent, left on request, with the next step filed on request in the same turn, and an ask of one step none.
@@ -54,7 +58,7 @@ The seed carries five sequences - ideation, feature, bugfix, refactor, explainer
   The ideation plan line also says what an ask for a prototype is: "When I ask for a prototype, a mock-up or to try something, it is this plan with a playable preview as the card: the thing itself, adjustable, its settings staged for the build."
   The first mate core sends such an ask to that line, so it lands as one read-only plan step whose card is the preview (`docs/card-authoring.md`, "A playable preview").
 
-A new seed reaches every installation on its next update: the file is app-managed, and a future customization flow is deferred.
+A new bundled guide reaches every installation on its next update; copying or adding a replacement remains separate work.
 
 ## How a step's line reaches its crewmate
 
@@ -62,9 +66,9 @@ Crewmates never see the document.
 A step's brief is what the first mate passes - the goal, the captain's words, and typed constraints - plus the host's basis section.
 The document's preamble asks the first mate to put a step's line in that step's constraints, as a `free` constraint, when it spawns or creates the step; `renderIntentBrief` prints a free constraint verbatim under "Constraints:", below the captain's words, which the brief marks as outranking it.
 Both `spawn_crewmate` and `create_task` take `constraints` and `delivery_note` with one shared schema (`CONSTRAINTS_PARAM`, `DELIVERY_NOTE_PARAM` in `src/core/pi/crewTools.ts`), so a later step planned on request carries its line as fully as the step that runs now.
-The host matches an attached packaged plan or teach line by whitespace-normalized equality, not by reading the captain's words.
-A packaged plan line is its whole bullet, the first line and every indented line under it, so the ideation plan's paragraph matches only when it is relayed whole.
-These closed facts set the kind without a classifier call, including when a named model skips classification.
+The first mate declares the task kind; the host does not compare the constraint to a packaged line.
+A declaration carries `firstmate:declared` provenance and follows INF-1441's existing deliverable branches.
+
 
 ## How it is served
 

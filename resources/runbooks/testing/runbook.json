@@ -1,0 +1,20 @@
+{
+  "id": "testing",
+  "name": "Testing rules",
+  "description": "Testing guidance for planning and code changes on a project.",
+  "crew": {
+    "file": "crew.json",
+    "when": {
+      "kind": [
+        "plan",
+        "reproduce",
+        "implement",
+        "fix",
+        "chore"
+      ],
+      "place": [
+        "project"
+      ]
+    }
+  }
+}

@@ -35,7 +35,7 @@ Goal: <the learner's words>
 
 Record what the learner showed, knew already or mixed up, with dates. Never a log of what was covered.
 
-`lessons/parts/` holds tested reusable parts. On the first lesson, copy the four parts from `.claude/skills/lessons/parts/` into it and commit. Improve a part only after testing it; do not retype one from memory.
+`lessons/parts/` holds tested reusable parts. On the first lesson, copy the four parts from the `parts/` folder beside this guide into it and commit. Improve a part only after testing it; do not retype one from memory.
 
 ## The method (six ideas, all adopted)
 
@@ -76,7 +76,7 @@ Until the learner chooses, the card stays up. Do not nudge or re-ask.
 
 ## Subject panel
 
-After the first **finished** round (`done === n`), copy `.claude/skills/lessons/panel/` into `lesson-<subject>/` at the workspace root.
+After the first **finished** round (`done === n`), copy the `panel/` folder beside this guide into `lesson-<subject>/` at the workspace root.
 A goal answer or an unfinished round creates no panel and counts no practice day.
 This is a tested part: never design or rewrite it, and do not open the panel skill or design overview.
 Fill the ONE `RECORD` line in `server.ts` with the absolute path to `lessons/<subject>/record.json`, and set the manifest title to the subject's title (at most 40 characters).

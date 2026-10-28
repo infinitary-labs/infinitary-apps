@@ -1,10 +1,10 @@
-import { mkdirSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { resolveClaudeExecutable } from "../../src/core/claude/claudeCli";
 import { seatMovedLine } from "../../src/core/orchestrator/seat";
-import { SEQUENCES_SKILL_RELATIVE_PATH } from "../../src/core/personal/sequencesSkill";
 import { catalogEntry } from "../../src/shared/providers";
+import { runbookManifestSchema } from "../../src/shared/runbooks";
 import { scratchDir } from "../helpers/scratchDirs";
 import { CLAUDE_SEAT_MODEL, claudeSeatRequests, launchClaudeSeat, say } from "./claudeSeat";
 import { waitForFirstmateIdle } from "./crew";
@@ -14,13 +14,16 @@ import {
   ANSWER_PROMPT_MARKER,
   MOCK_ANSWER_TITLE,
   type MockProviderServer,
+  servedInstructions,
   startMockProvider,
 } from "./mockProvider";
 import { feedLine } from "./rails";
+import { settingRow } from "./settings";
 import { shownCard } from "./stack";
+import { pressKey } from "./windowKeys";
 
 /**
- * The captain rewrites how the Firstmate approaches work while it answers on
+ * The captain switches the guidance the Firstmate uses while it answers on
  * Claude (docs/claude-client.md). A resumed Claude client serves the system
  * prompt it recorded when its session started, so the seat does not resume:
  * its next turn runs in a new conversation serving the new words, told what
@@ -28,7 +31,15 @@ import { shownCard } from "./stack";
  * client the product would run: the installed one, else the SDK's own copy.
  */
 
-const NEW_RULE = "Always name the rivet count first.";
+// INF-1177 moves app-managed guidance out of the duplicate workspace skill.
+// Read the actual runbook owner and change its supported switch, preserving
+// the instruction-renewal and conversation-continuity promises on Claude.
+const workflowRoot = join(process.cwd(), "resources/runbooks/sequences");
+const workflows = runbookManifestSchema.parse(
+  JSON.parse(readFileSync(join(workflowRoot, "runbook.json"), "utf8")),
+);
+if (!workflows.firstmate) throw new Error("Common workflows has no first-mate section.");
+const workflowGuide = readFileSync(join(workflowRoot, workflows.firstmate), "utf8").trim();
 
 let launched: LaunchedApp;
 let mockProvider: MockProviderServer;
@@ -48,7 +59,7 @@ test.afterAll(async () => {
 });
 
 test("changed instructions start a new conversation on Claude that serves them", async () => {
-  const { page, userDataDir } = launched;
+  const { page } = launched;
   await say(page, `remember the word cobalt, ${ANSWER_PROMPT_MARKER}`);
   await expect(shownCard(page, MOCK_ANSWER_TITLE)).toBeVisible({
     timeout: 45_000,
@@ -56,12 +67,22 @@ test("changed instructions start a new conversation on Claude that serves them",
   // A card can arrive before its session finishes. The old conversation must
   // be committed before changing instructions, or there is nothing to renew.
   await waitForFirstmateIdle(page, 45_000);
-  expect(claudeSeatRequests(mockProvider).some((body) => body.includes(NEW_RULE))).toBe(false);
+  expect(
+    claudeSeatRequests(mockProvider).some((body) =>
+      servedInstructions(body).includes(workflowGuide),
+    ),
+  ).toBe(true);
 
-  // The captain's own words on how to approach work, in the personal workspace.
-  const path = join(userDataDir, "fleet", "personal", SEQUENCES_SKILL_RELATIVE_PATH);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `---\nname: sequences\n---\n# Sequences\n\n${NEW_RULE}\n`);
+  await pressKey(page.getByRole("button", { name: "Settings", exact: true }), "Enter");
+  await pressKey(page.getByRole("tab", { name: "Intelligence", exact: true }), "Enter");
+  const control = settingRow(page, `runbook-${workflows.id}`).getByRole("switch", {
+    name: workflows.name,
+    exact: true,
+  });
+  await expect(control).toHaveAttribute("aria-checked", "true");
+  await pressKey(control, "Space");
+  await expect(control).toHaveAttribute("aria-checked", "false");
+  await page.keyboard.press("Escape");
 
   await say(page, `which word was it? ${ANSWER_PROMPT_MARKER}`);
   await expect(
@@ -85,8 +106,8 @@ test("changed instructions start a new conversation on Claude that serves them",
   const turn = claudeSeatRequests(mockProvider).find((body) =>
     body.includes("which word was it?"),
   ) as string;
-  // The new words reach the request, and the turn is told what came before.
-  expect(turn).toContain(NEW_RULE);
+  // The new selection reaches the request, and the turn is told what came before.
+  expect(servedInstructions(turn)).not.toContain(workflowGuide);
   expect(turn).toContain('the captain said \\"remember the word cobalt');
   await page.screenshot({ path: test.info().outputPath("claude-seat-instructions.png") });
 });

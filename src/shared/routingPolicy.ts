@@ -474,6 +474,7 @@ export const workShapeAskSchema = workShapeSchema
     program: true,
   })
   .extend({
+    kind: workKindSchema.exclude(["review"]).optional(),
     /**
      * The task an independent reviewer should read (delivery rigor phase 2).
      * An ask only: the host commissions the review as a CHILD of that

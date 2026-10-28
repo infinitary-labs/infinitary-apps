@@ -181,6 +181,10 @@ export const REQUEST_COPY = {
     fallback: "Could not save dictation. Please try again.",
     prefix: "Could not save dictation: ",
   },
+  "inf:settings:runbooks:set": {
+    fallback: "Could not save this runbook. Please try again.",
+    prefix: "",
+  },
   "inf:settings:personal-resources:set": {
     fallback: "Could not save your instructions and skills setting. Please try again.",
     prefix: "",

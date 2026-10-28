@@ -4,7 +4,6 @@ import { APP_GIT_IDENTITY, git } from "../workspace/git";
 import { PERSONAL_AGENTS_MD } from "./seed/agentsMd";
 import { INFINITARY_ENV_DTS } from "./seed/infinitaryEnv.generated";
 import { PERSONAL_TSCONFIG_JSON } from "./seed/tsconfigJson";
-import { SEQUENCES_SKILL_RELATIVE_PATH, seedSequencesSkill } from "./sequencesSkill";
 import { seedWorkspaceSkills } from "./workspaceSkills";
 
 /**
@@ -106,10 +105,6 @@ export async function seedPersonalWorkspace(options: SeedOptions): Promise<SeedR
       log(`personal workspace: no source for skills ${skills.missing.join(", ")}`);
     }
   }
-  // The app-managed sequences guide refreshes from its packaged seed, and its
-  // updates are committed under the app identity (./sequencesSkill.ts).
-  const sequences = (await seedSequencesSkill(dir)) ? [SEQUENCES_SKILL_RELATIVE_PATH] : [];
-  healed.push(...sequences);
   const written = [...healed, ...retired];
   if (written.length > 0) {
     try {

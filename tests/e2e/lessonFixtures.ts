@@ -9,7 +9,7 @@ import { join } from "node:path";
  * its cards. Scripted replies exercise the host and the card's own script,
  * never a model's teaching.
  */
-const PARTS = join(process.cwd(), "resources", "personal-workspace", "skills", "lessons", "parts");
+const PARTS = join(process.cwd(), "resources", "runbooks", "lessons", "skills", "lessons", "parts");
 
 export const LESSON_CHESS_ASK = "teach me chess: how the rook moves";
 export const LESSON_CHESS_TITLE = "Teach chess";

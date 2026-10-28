@@ -38,6 +38,7 @@ import { useRestLabel } from "../design/core/restLabel";
 import { DeviceSignInGroups } from "./DeviceSignIns";
 import { FIRSTMATE_SELECT_STYLE, FirstmateModelRow, SettingRow } from "./GeneralTab";
 import { ModelsSection } from "./ModelsSection";
+import { RunbooksSection } from "./RunbooksSection";
 import { ROW_GAP, SECTION_GAP, SettingError } from "./settingRows";
 import {
   CLAUDE_FIRST_RUN_TEXT,
@@ -1387,24 +1388,27 @@ export function SubscriptionsTab() {
           ) : null
         }
         additionalSettings={
-          <SettingRow
-            id="personal-resources"
-            error={personalSave.error}
-            title={PERSONAL_RESOURCES_WORDS.title}
-            description={PERSONAL_RESOURCES_WORDS.description}
-            control={
-              <Switch
-                aria-label={PERSONAL_RESOURCES_WORDS.title}
-                checked={personalSave.value ?? false}
-                disabled={personalSave.value === null || personalSave.saving}
-                onChange={(enabled) =>
-                  void personalSave.save(() =>
-                    window.infinitary.settings.setPersonalResources(enabled),
-                  )
-                }
-              />
-            }
-          />
+          <>
+            <SettingRow
+              id="personal-resources"
+              error={personalSave.error}
+              title={PERSONAL_RESOURCES_WORDS.title}
+              description={PERSONAL_RESOURCES_WORDS.description}
+              control={
+                <Switch
+                  aria-label={PERSONAL_RESOURCES_WORDS.title}
+                  checked={personalSave.value ?? false}
+                  disabled={personalSave.value === null || personalSave.saving}
+                  onChange={(enabled) =>
+                    void personalSave.save(() =>
+                      window.infinitary.settings.setPersonalResources(enabled),
+                    )
+                  }
+                />
+              }
+            />
+            <RunbooksSection />
+          </>
         }
       />
       {editedAccountId !== null && accountsSave.error && !listed(editedAccountId) ? (

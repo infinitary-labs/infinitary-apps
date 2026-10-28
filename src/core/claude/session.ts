@@ -1,4 +1,5 @@
 import { hostPlatform } from "../platform";
+import { stageRunbookSkills } from "../runbooks/runbooks";
 import { SESSION_COMPACTION_TOKENS } from "../session/compaction";
 import { attributedClaudeProcess } from "./processResources";
 import { claudeCodingReasoning } from "./reasoning";
@@ -386,7 +387,11 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     if (!attachment) throw new Error("A rolling Claude session attaches with a session.");
     const coding = spec.builtins === "coding";
     const project = attachment.project;
-    const staged = coding && Boolean(project?.skillsPlugin || project?.personalSkillsPlugin);
+    const staged =
+      coding &&
+      Boolean(
+        project?.skillsPlugin || project?.personalSkillsPlugin || project?.runbookSkillsPlugin,
+      );
     return {
       cwd: spec.cwd,
       ...(coding && hostPlatform() !== "win32"
@@ -451,9 +456,11 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
       // a skill declares: the app's session runs no project code of its own.
       ...(staged
         ? {
-            plugins: [project?.skillsPlugin, project?.personalSkillsPlugin].flatMap((path) =>
-              path ? [{ type: "local" as const, path }] : [],
-            ),
+            plugins: [
+              project?.skillsPlugin,
+              project?.personalSkillsPlugin,
+              project?.runbookSkillsPlugin,
+            ].flatMap((path) => (path ? [{ type: "local" as const, path }] : [])),
           }
         : {}),
       // A coding session's commits and pull requests carry no attribution,
@@ -1352,6 +1359,21 @@ class ClaudeRollingSession extends ClaudeQueryCore<SessionEvent> implements Mode
       } catch (error) {
         this.note(`the personal skills were not staged: ${String(error)}`);
       }
+    }
+    if (this.spec.runbookSkills) {
+      const names = new Set(projectSkillFolders(this.spec.cwd).map((skill) => skill.name));
+      if (this.spec.personalResources)
+        for (const skill of personalResources(this.config.env.HOME, names).skills)
+          names.add(skill.name);
+      const folders = await stageRunbookSkills(
+        this.spec.runbookSkills.filter((skill) => !names.has(skill.name)),
+        join(shape.record.dir, "runbook-files"),
+      );
+      project.runbookSkillsPlugin = await stageClaudeSkills(
+        folders,
+        join(shape.record.dir, "runbook-skills"),
+        "runbooks",
+      );
     }
     return project;
   }

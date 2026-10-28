@@ -17,6 +17,7 @@ import {
 } from "./placement";
 import { reasoningSchema } from "./reasoning";
 import { requiredActionsSchema } from "./requiredActions";
+import { runbookSkillFilesSchema } from "./runbooks";
 import {
   heldSignInSchema,
   taskBrowserCommandResultSchema,
@@ -189,6 +190,7 @@ export const placedSpecSchema = z.object({
   instructions: z.string(),
   /** Only the opt-in travels; each computer reads its own user files. */
   personalResources: z.boolean().optional(),
+  runbookSkills: z.array(runbookSkillFilesSchema).optional(),
   tools: z.array(z.string().min(1).max(64)).max(64),
   /** The conversation to reopen, as the computer named it in an earlier state. */
   resume: z.string().min(1).max(4096).optional(),

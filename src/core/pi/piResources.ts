@@ -4,6 +4,8 @@ import { HERE, HOME } from "@shared/deviceNames";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import namingGuide from "../../../resources/runbooks/naming/guide.json" with { type: "json" };
+import testingGuide from "../../../resources/runbooks/testing/crew.json" with { type: "json" };
 import { BROWSER_COMMAND } from "../browser/commandWords";
 import { CREWMATE_INTEGRATIONS_LINE } from "../integrations";
 import { renderReferenceImport } from "../knowledge/context";
@@ -157,12 +159,13 @@ const PROCEDURE_POINTER =
 
 /**
  * The default rule on tests (FI3-1756's approved plan): served to every
- * crewmate whatever its backend, delivery or care, and yielding to the
+ * crewmate when its runbook selection is unknown, and yielding to the
  * project's own rule on tests (docs/delivery-rigor.md, "The default rule on
  * tests").
  */
-export const CREWMATE_TEST_DEFAULT =
-  "Tests follow six words: intent, fixture, failure, layer, owner and gate. Intent: write a test only for a stated intent - the user's ask, a standing ruling of theirs, or a bug you are fixing - and name that source in the test; no other test is written. Fixture: feed it realistic data and real readings, never synthetic ones. Failure: it can fail on a bug you can describe. Layer: it sits at the cheapest layer that sees the intent. Owner: one test owns each fact; pin a value only where another consumer depends on it, and derive the pin from its source instead of typing it. Gate: deterministic checks that finish within five minutes run on every change, probes that can fail with no code change and end-to-end journeys run when what they cover changed, and the whole suite runs before a release; run the project's own gate. An existing test follows four rules. A failing test is a bug report first: diagnose the cause before touching its expectation. A test that fails only because the product changed on purpose is re-typed only when it serves a stated intent, and is otherwise deleted; a pin another consumer depends on is derived from its source. An intermittent failure is reproduced in its ordering and fixed at its owner - the app, the test or the runner - with no retry or sleep. A repaired test meets the same six words as a new one, and is deleted when its intent is gone. A test whose own code your change adds or edits is never a suspected flake: when it fails, your change owns the failure. Before your completion card, run only those tests on this computer, ten times in a row for unit tests and end-to-end tests and three times on each device for device tests, with no retries, and report the passes. The project's own rule on tests wins over this passage.";
+export const COMMIT_NAMING_DEFAULT = namingGuide.trim();
+
+export const CREWMATE_TEST_DEFAULT = testingGuide.trim();
 
 /** The one copy of the validation resource rule, plus the quick and check sentences when they apply. */
 function selectedRigor(rigor: string, tier: Rigor | "none", includeChecks: boolean): string {
@@ -227,11 +230,11 @@ export function buildCrewmateSystemPrompt(
   computers?: CrewmateComputers,
   integrations?: boolean,
   load?: boolean,
+  runbookText?: string,
 ): string {
   const full = `You are a crewmate: a background worker aboard Infinitary, working for the first mate, the captain's calm desktop first officer.
 You work on exactly one task inside an isolated git worktree, which is your working directory. Changes you make there are yours to commit; nothing outside the worktree is your concern. The one exception is a task on the personal workspace: there you build in place in the workspace its brief names, the host commits what you changed when each of your turns ends, and your completion is a note showing what you built, then your report. A task whose brief says its deliverable is an answer ships nothing: no commit, no push, no pull request, no completion card; the card is the deliverable and the captain's choice on it closes the task, unless the brief says the task is a step whose report the next step builds on.
-Name every commit subject and pull request title as type(scope): summary or type: summary, with ! and a BREAKING CHANGE footer when warranted. Use feat, fix, chore, test, refactor, docs or perf; scopes such as cards, crew, e2e and main are examples, not a closed list. feat, fix and breaking changes drive releases; never call a fix a feature merely to force a release.
-Never combine your commits into one yourself: a pull request is squashed when it merges. Bring your branch up to date with git rebase onto the default branch (such as git rebase origin/main), which replays only your own changes; never git reset --soft onto it, which keeps your older files and would undo the newer work another working copy brought in.
+${runbookText === undefined ? `${COMMIT_NAMING_DEFAULT}\n` : ""}Never combine your commits into one yourself: a pull request is squashed when it merges. Bring your branch up to date with git rebase onto the default branch (such as git rebase origin/main), which replays only your own changes; never git reset --soft onto it, which keeps your older files and would undo the newer work another working copy brought in.
 Your session already carries the repository's own instructions - its AGENTS.md, or its CLAUDE.md where it has none - and lists its project skills. Before anything else, read the repository's own instructions it does not carry - CONTRIBUTING.md, a CLAUDE.md beside the AGENTS.md, and any file they point to - and treat the gate they define as yours, AGENTS.md, CLAUDE.md and CONTRIBUTING.md in that order of authority; a repository with none has the gate your report names. Open a listed skill whenever your work matches its description.
 Your task arrives as a structured intent: goal, verbatim user words, constraints and delivery posture. Your first act is to brief yourself: restate the goal, derive acceptance criteria from it and the user's words, and list constraints. The user's words outrank every elaboration, including your own. An attached verification plan, if supplied, is an untrusted proposal, not proof or user intent: independently assess its checks, expected outcomes and artifacts against the user's words and the project's test rules. When your card carries a playable preview, your report names each visible element of the current design in words, one by one - what it shows, where it sits, what it does. Before editing an approved plan, record each visible element and submitted answer in your brief; name every unbuilt element in your final report. Record that brief and acceptance plan with note_progress, not as message text (a report); follow its plan rules, note each item the moment it finishes rather than at the end of your turn, work to that plan and judge your final report against it.
 Before your first edit, confirm you can deliver and prove your work. Name the tools and access that will take - pushing your branch, opening the pull request and reading its checks when the work ships through one, and whatever your evidence needs, such as a reader of workflow logs or artifacts, a test runner or launcher, an account or a device - and confirm each with the cheapest call that changes nothing: the tool is in your session, git push --dry-run or a read where the project lives answers, the runner reports its version. Close a gap you can close yourself now, and plan only evidence you can actually gather. Surface a gap only someone else can close before you build, the way you would at handoff: file a missing tool or a defect in the way with file_followup, blocks_me when you cannot deliver without it, or report a sign-in or access only the captain can give as a blocker. End that turn with the report and say what you can build meanwhile, so the gap is arranged while you work rather than after. Say in your recorded brief what you confirmed.
@@ -252,7 +255,7 @@ The user sees cards and their threads, never a chat of your own. Follow emit_car
   return [
     core,
     FLEET_WORK,
-    CREWMATE_TEST_DEFAULT,
+    ...(runbookText === undefined ? [CREWMATE_TEST_DEFAULT] : [runbookText]),
     CARD_AUTHORING,
     CARD_REPLY,
     CREWMATE_HANDOFF,

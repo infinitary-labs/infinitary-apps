@@ -38,6 +38,7 @@ export { type CrewmateComputers, type CrewmateProcedureFacts, crewmateProcedureF
 
 /** A crewmate as the supervisor starts it: the task's facts, and the callbacks its tools run on. */
 export type CrewmateSpec = CrewmateToolDelegate & {
+  runbookText?: string;
   taskId: string;
   /** The machine it runs on (D-11): "local", or the computer that runs work its task names. */
   machineId: string;
@@ -212,6 +213,7 @@ export function crewmateSessionSpec(
     spec.integrations !== undefined &&
       (spec.shell !== undefined || spec.machineId !== LOCAL_MACHINE_ID),
     spec.load,
+    spec.runbookText,
   );
   const tools = bindTools(CREWMATE_TOOLS, spec);
   return {

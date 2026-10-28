@@ -79,6 +79,7 @@ export const noneKindClassifier: KindClassifier = {
  * live beside the seam rather than in whichever module writes them.
  */
 export const KIND_SOURCE = {
+  declared: "firstmate:",
   classified: "classifier:",
   abstained: "classifier-abstained:",
   failed: "classifier-failed:",

@@ -2,6 +2,7 @@ import type { CutOff } from "@shared/authFailure";
 import type { CrewSpeed, SpeedSelection } from "@shared/crewSpeed";
 import type { FmEvent } from "@shared/events";
 import type { Reasoning } from "@shared/reasoning";
+import type { RunbookSkillFiles } from "../../shared/runbooks";
 import type { ServedInstructions, ServedState } from "../orchestrator/seat";
 import type { ModelRuntime } from "../pi/types";
 import type { BoundTool, CrewmateToolDelegate } from "./tools";
@@ -198,6 +199,7 @@ export type SessionSpec = {
   builtins: "none" | "coding";
   /** Opt-in to this running Mac's instructions and skills; never transported content. */
   personalResources?: boolean;
+  runbookSkills?: RunbookSkillFiles[];
   tools: readonly BoundTool[];
   shape: SessionShape;
   bounds?: SessionBounds;

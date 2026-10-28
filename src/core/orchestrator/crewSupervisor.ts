@@ -250,7 +250,6 @@ import type {
   PanelCaptureResult,
   PanelPlaceResult,
 } from "../personal/personalExtensions";
-import { planStepAttached, teachStepAttached } from "../personal/sequencesSkill";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { lintCrewmateCard } from "../pi/cardLint";
 import { resolveFirstmateCardId } from "../pi/cardTool";
@@ -285,6 +284,7 @@ import {
   requiresReasoningWait,
 } from "../routing/router";
 import { isDowngrade } from "../routing/routingEngine";
+import { crewRunbookText, type Runbooks } from "../runbooks/runbooks";
 import {
   type BackgroundJobName,
   type ClientBackgroundTask,
@@ -654,6 +654,7 @@ export type CrewSupervisorOptions = {
   bind: (accountId: string | undefined, providerId?: string) => Promise<SessionBinding>;
   /** The home's opt-in, carried without its files to whichever Mac opens the session. */
   personalResourcesEnabled?: () => boolean;
+  runbooks?: Runbooks;
   /**
    * The crewmate preset. Absent, `crewmateSessionSpec` over the app's paths;
    * the replay and the tests hand in one that also keeps each crewmate's
@@ -4687,8 +4688,8 @@ export class CrewSupervisor {
       };
     }
     return {
-      kind: "unclear",
-      kind_source: "none",
+      kind: ask?.kind ?? "unclear",
+      kind_source: ask?.kind ? "firstmate:declared" : "none",
       ...(ask?.premium_ask ? { premium_ask: true as const } : {}),
       ...(ask?.override_model_id ? { override_model_id: ask.override_model_id } : {}),
       ...(ask?.override_speed ? { override_speed: ask.override_speed } : {}),
@@ -4734,6 +4735,7 @@ export class CrewSupervisor {
   ): Promise<WorkShape> {
     if (shape.deliverable === "operation" || deliverableFor(intent, undefined) === "operation")
       return { ...shape, kind: "unclear", kind_source: `${KIND_SOURCE.skipped}operation` };
+    if (shape.kind_source === "firstmate:declared") return shape;
     const skip = shape.override_model_id
       ? "override"
       : shape.premium_ask
@@ -4741,19 +4743,7 @@ export class CrewSupervisor {
         : shape.escalation
           ? "escalation"
           : undefined;
-    // Attaching the packaged plan step is the host's own line, so the kind
-    // is plan even when a named model skips classification (FI3-1371).
-    const planned = planStepAttached(intent.constraints);
-    const taught = !planned && teachStepAttached(intent.constraints);
-    if (skip) {
-      return {
-        ...shape,
-        ...(planned ? { kind: "plan" as const } : taught ? { kind: "teach" as const } : {}),
-        kind_source: `${KIND_SOURCE.skipped}${skip}`,
-      };
-    }
-    if (planned) return { ...shape, kind: "plan", kind_source: "host:plan-step" };
-    if (taught) return { ...shape, kind: "teach", kind_source: "host:teach-step" };
+    if (skip) return { ...shape, kind_source: `${KIND_SOURCE.skipped}${skip}` };
     // A review's kind is the host's (delivery rigor phase 2), never asked.
     if (shape.kind === "review") return shape;
     const classifier = this.options.classifier;
@@ -5947,6 +5937,24 @@ export class CrewSupervisor {
       // Every crewmate is told the captain's computers and which one it runs on (INF-992).
       ...this.computersFor(crewmate.machineId),
     };
+    let runbookSkills: SessionSpec["runbookSkills"];
+    if (this.options.runbooks) {
+      const record = this.options.tasks.get(task.id);
+      const repo = record?.repoId ? this.options.repos.get(record.repoId) : undefined;
+      const facts = {
+        kind: record?.shape?.kind ?? "unclear",
+        place: repo?.kind === "personal" ? ("personal" as const) : ("project" as const),
+        delivery: briefed.procedure.delivery,
+        care: briefed.procedure.rigor,
+        backend: binding.backend,
+        ...(record?.repoId ? { project: record.repoId } : {}),
+      };
+      const served = this.options.runbooks.crew(facts);
+      Object.assign(briefed, {
+        runbookText: crewRunbookText(served),
+      });
+      runbookSkills = served.skills;
+    }
     const spec = this.options.sessionSpec
       ? this.options.sessionSpec(briefed, binding)
       : crewmateSessionSpec(this.options.paths, briefed, binding);
@@ -5965,6 +5973,7 @@ export class CrewSupervisor {
       delete spec.speed;
     }
     spec.personalResources = this.options.personalResourcesEnabled?.() === true;
+    if (runbookSkills) spec.runbookSkills = runbookSkills;
     const session = await factory.open(spec);
     const unopenable =
       Boolean(crewmate.resumeToken) && spec.shape.turns === "rolling" && !spec.shape.record.resume;
@@ -12756,7 +12765,13 @@ export class CrewSupervisor {
     if (refusal) return { ok: false, text: refusal };
     // Only declarations carry over: dispatch stamps, chosen accounts/models,
     // escalation floors and delivery outcomes all belong to the old attempt.
-    const shape = this.workShape(old.shape ?? undefined);
+    const { kind: _oldKind, ...oldAsk } = old.shape ?? { kind: "unclear" };
+    const shape = this.workShape({
+      ...oldAsk,
+      ...(old.shape?.kind_source === "firstmate:declared" && old.shape.kind !== "review"
+        ? { kind: old.shape.kind }
+        : {}),
+    });
     if (old.shape?.policies) shape.policies = { ...old.shape.policies, revision: 0 };
     const fresh = this.options.tasks.startAgain(old.id, {
       id: randomUUID().slice(0, 8),

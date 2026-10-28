@@ -856,6 +856,7 @@ export class SessionHost {
           ...(spec.thinking.quick ? { quick: true } : {}),
         },
         instructions: { base: instructions },
+        ...(spec.runbookSkills ? { runbookSkills: spec.runbookSkills } : {}),
         ...(spec.personalResources !== undefined
           ? { personalResources: spec.personalResources }
           : {}),

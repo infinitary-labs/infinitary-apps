@@ -90,7 +90,7 @@ export function buildSelfMap({ version, commit, trackedFiles, sources, tools }) 
     prompts: {
       firstmate: { builder: "buildFirstmateSystemPrompt", module: "src/core/pi/piResources.ts" },
       crewmate: { builder: "buildCrewmateSystemPrompt", module: "src/core/pi/piResources.ts" },
-      sequences: { builder: "SEQUENCES_SEED", module: "src/core/personal/sequencesSkill.ts" },
+      runbooks: { builder: "Runbooks", module: "src/core/runbooks/runbooks.ts" },
     },
     cardPresentations,
     events,

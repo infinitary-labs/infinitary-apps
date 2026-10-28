@@ -21,9 +21,9 @@ Three other shapes are never classified, because the captain's table decides the
 | `escalation` (S4's rung) | R1b | `skipped:escalation` |
 
 A row whose `kind_source` already carries one of the classifier prefixes is never classified again (`kindEstablished`): the classifier is consulted at most once per row, ever.
-Attaching a packaged plan-step line sets `kind` to `plan`, and a packaged teach line sets it to `teach`, even when one of those skips runs.
-A named model still records `skipped:override`, and the kind is `plan` rather than `unclear`.
-With no skip, these attachments record `host:plan-step` or `host:teach-step` and do not ask the classifier.
+The first mate may declare the kind on spawn or create; the row records `firstmate:declared` and the classifier is not asked.
+The host no longer reads the text of a relayed plan or lesson line to decide its kind.
+A declared kind is an establishment just as a classifier answer is, so queued dispatch keeps it.
 The one way back is a filed row whose named model is cleared with `update_task override_model_id` empty: its `skipped:override` becomes `none`, so it is classified when it starts.
 A model cleared while a queued row's start is skipping the classifier leaves nothing to skip, so that row is classified as it now stands.
 

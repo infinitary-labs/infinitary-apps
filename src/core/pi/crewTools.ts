@@ -2,7 +2,7 @@ import { type ReasoningChoice, reasoningChoiceSchema } from "@shared/modelSlots"
 import type { PlacementRequirements } from "@shared/placement";
 import type { RepoDelivery } from "@shared/repos";
 import type { Rigor } from "@shared/rigor";
-import type { WorkShapeAsk } from "@shared/routingPolicy";
+import { CLASSIFIABLE_KINDS, type WorkKind, type WorkShapeAsk } from "@shared/routingPolicy";
 import { Type } from "typebox";
 import type { CiReadingFact } from "../orchestrator/ciFact";
 import type { SteerDelivery } from "../orchestrator/crewSupervisor";
@@ -269,6 +269,7 @@ export const DELIVERY_NOTE_PARAM = Type.Optional(
  * parameter, and a Pi seat reads the same words in the same place.
  */
 const SHAPE_FIELD_RULES = {
+  kind: "Declare the kind: read-only answers use plan/retrieval/research/reproduce; changes use implement/fix/chore/teach. The classifier sorts only what you omit; review stays host-owned.",
   delivery_ask:
     "Only when the user asked in words for this task to ship as a pull request or to stay local. The repository's default is unchanged.",
   basis: BASIS_DESCRIPTION,
@@ -314,6 +315,7 @@ export const START_AFTER_GROUP_DESCRIPTION = groupDescription(
 
 /** The work-shape facts spawn_crewmate carries in `shape`, with the type each holds. */
 const SHAPE_FIELDS = {
+  kind: "string",
   delivery_ask: "string",
   basis: "string",
   premium_ask: "boolean",
@@ -449,6 +451,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       shape: Type.Optional(
         Type.Object(
           {
+            kind: Type.Optional(stringEnum([...CLASSIFIABLE_KINDS, "unclear"])),
             delivery_ask: Type.Optional(stringEnum(["direct-pr", "local-only"])),
             basis: Type.Optional(Type.String()),
             premium_ask: Type.Optional(Type.Boolean()),
@@ -707,6 +710,7 @@ export function createCrewStatusTool(crewStatus: (taskId?: string) => CrewStatus
  * supplied nothing at all.
  */
 function shapeAskFrom(params: {
+  kind?: Exclude<WorkKind, "review">;
   basis?: string;
   premium_ask?: boolean;
   override_model_id?: string;
@@ -732,6 +736,7 @@ function shapeAskFrom(params: {
   // At the start, following the project is the same as saying nothing.
   const runsOn = params.runs_on_ask?.trim().replace(/^project$/, "");
   const ask: WorkShapeAsk = {
+    ...(params.kind ? { kind: params.kind } : {}),
     ...(basis ? { basis } : {}),
     ...(params.premium_ask ? { premium_ask: true as const } : {}),
     ...(override ? { override_model_id: override } : {}),

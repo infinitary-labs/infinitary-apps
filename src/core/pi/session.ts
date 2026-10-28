@@ -1,3 +1,5 @@
+import { join } from "node:path";
+import { stageRunbookSkills } from "../runbooks/runbooks";
 import { clampThinkingLevel } from "./reasoning";
 
 export { clampThinkingLevel } from "./reasoning";
@@ -1049,7 +1051,12 @@ async function openCoding(
         new Set(projectSkillFolders(spec.cwd).map((skill) => skill.name)),
       )
     : undefined;
+  const runbookSkills =
+    spec.runbookSkills && spec.shape.turns === "rolling"
+      ? await stageRunbookSkills(spec.runbookSkills, join(spec.shape.record.dir, "runbook-skills"))
+      : [];
   const resourceLoader = createCrewmateResourceLoader(spec.instructions.base, undefined, {
+    runbookSkills,
     cwd: spec.cwd,
     ...(personal ? { personal } : {}),
   });

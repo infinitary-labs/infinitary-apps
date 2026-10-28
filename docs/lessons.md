@@ -1,7 +1,7 @@
 # Lessons
 
 A learner studies a subject (chess, fractions) across days through one lesson card at a time.
-The app adds no subject or skill type: a teacher crewmate follows the lessons guide, `resources/personal-workspace/skills/lessons`, which the workspace seeder surfaces at `.claude/skills/lessons` (`docs/personal-panels.md`).
+The app adds no subject or skill type: a teacher crewmate follows the lessons guide, `resources/runbooks/lessons/skills/lessons`, which the enabled Lessons runbook serves as a crew skill (`docs/runbooks.md`).
 This Mac user is one learner, so `lessons/` holds one learner.
 
 ## Subject, skill and round
@@ -14,10 +14,10 @@ This Mac user is one learner, so `lessons/` holds one learner.
 
 ## The task
 
-An attached packaged teach line marks a lesson request as `teach` without the classifier, including a named-model dispatch; otherwise the classifier sorts it (`docs/kind-classifier.md`).
+The first mate declares `teach` on spawn or create, including a named-model dispatch; the classifier sorts only an undeclared kind (`docs/kind-classifier.md`).
 R2 requests high (`docs/routing.md`).
 `deliverableFor` never makes it an answer, so a button on a lesson card does not close the subject.
-The first mate starts it with `spawn_crewmate` and `personal_ui` true, one task per subject; the sequences seed has the one line (`docs/sequences.md`).
+The first mate starts it with `spawn_crewmate` and `personal_ui` true, one task per subject; the Lessons runbook has the one line (`docs/sequences.md`).
 Its brief names the teach kind, the lessons skill and lesson records instead of the panel build instructions, both at spawn and when queued work starts.
 The workspace instructions do the same: a lesson opens the lessons skill and the learner records, and is not told to read panel types or the design overview.
 On the personal workspace a report normally commits the turn and, once the commit lands, routes to the first mate like any other report.

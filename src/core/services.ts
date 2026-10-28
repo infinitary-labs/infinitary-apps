@@ -231,6 +231,7 @@ import { ModelSlots } from "./routing/modelSlots";
 import { PlacedWorkScores } from "./routing/placedWork";
 import { quotaGateCleared, quotaGateRefValid } from "./routing/quotaGate";
 import { Router, servedSlots } from "./routing/router";
+import { Runbooks } from "./runbooks/runbooks";
 import { resolveSelfSourceDir } from "./selfSource/resolve";
 import { SessionBinder } from "./session/binding";
 import { BoundsWatcher } from "./session/bounds";
@@ -279,6 +280,7 @@ import { WorkspaceService } from "./workspace/workspaceService";
 
 /** Everything a client-facing dispatcher can reach. */
 export type CoreServices = {
+  runbooks: Runbooks;
   paths: AppPaths;
   auth: PiAuthService;
   vault: AccountVault;
@@ -534,8 +536,17 @@ export async function createServices(
   // The hosts on the person's own server the app knows (a GitHub Enterprise
   // host), read from the sign-in service built below.
   let knownForgeHosts: () => KnownForgeHost[] = () => [];
-  const workspace = new WorkspaceService(paths, { knownHosts: () => knownForgeHosts() });
+  const runbookSource = resolveSelfSourceDir({
+    isPackaged: host.app.packaged,
+    resourcesPath: host.app.resourcesDir,
+    appPath: host.app.appDir,
+  });
+  const workspace = new WorkspaceService(paths, {
+    namingRule: () => runbooks.naming(),
+    knownHosts: () => knownForgeHosts(),
+  });
   const settings = new SettingsStore(db, desktopConventions(host.app.platform).dictationKey);
+  const runbooks = new Runbooks(join(runbookSource, "resources/runbooks"), settings);
   const repos = new RepoRegistry(db, paths.fleetDir, {
     settings,
     appDataDir: paths.userData,
@@ -583,6 +594,7 @@ export async function createServices(
   const githubForge = (location: ForgeLocation) => {
     const forgeHost = location.host ?? GITHUB_COM;
     return new GitHubForge(location, {
+      namingRule: () => runbooks.naming(),
       token: () => forgeSignIns.token(forgeHost),
       apiBaseUrl: githubApiBaseFor(forgeHost, forgeEndpoints),
       onSignInRejected: () => forgeSignIns.rejected(forgeHost),
@@ -591,6 +603,7 @@ export async function createServices(
   const gitlabForge = (location: ForgeLocation) => {
     const forgeHost = location.host ?? "gitlab.com";
     return new GitLabForge(location, {
+      namingRule: () => runbooks.naming(),
       token: () => forgeSignIns.token(forgeHost),
       apiBaseUrl: gitlabApiBaseFor(forgeHost, forgeEndpoints),
       onSignInRejected: () => forgeSignIns.rejected(forgeHost),
@@ -1865,11 +1878,13 @@ export async function createServices(
       placed.copies.writeArtifact(taskId, deviceId, artifact),
   });
   const presentations: ChangePresentations = new ChangePresentations({
+    namingRule: () => runbooks.naming(),
     tasks,
     mediaDir: (taskId) => crewmateCardPicturesDir(paths, taskId),
     head: (taskId) => prCi.presentationHead(taskId),
   });
   const prCi: PrCiService = new PrCiService({
+    namingRule: () => runbooks.naming(),
     tasks,
     repos,
     presentations,
@@ -2290,6 +2305,7 @@ export async function createServices(
     crewSpeed: (model) => slots.speed(model),
     modelName: (model) => slots.nameOf(model),
     personalResourcesEnabled: () => settings.getPersonalResourcesEnabled(),
+    runbooks,
     build: host.app.version,
     sessions: sessionFactories,
     machines: placed,
@@ -2885,6 +2901,7 @@ export async function createServices(
         }),
       ];
     },
+    runbooks,
     paths,
     platform: host.app.platform,
     inbox,
@@ -3455,6 +3472,7 @@ export async function createServices(
     activityRun: () => runLine?.id ?? null,
     quota,
     settings,
+    runbooks,
     preferences,
     sharing,
     activity,

@@ -1,0 +1,6 @@
+{
+  "id": "programs",
+  "name": "Programs",
+  "description": "How the first mate composes repeated and parallel work.",
+  "firstmate": "guide.md"
+}

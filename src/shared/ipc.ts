@@ -291,6 +291,7 @@ import {
   computerResourcesSchema,
   RESOURCE_OBSERVATIONS_SINCE,
 } from "./resources";
+import { type RunbookView, runbookViewSchema } from "./runbooks";
 import {
   type KeptOutsideData,
   keptOutsideDataSchema,
@@ -2396,6 +2397,20 @@ export const invokeContract = {
     request: z.tuple([dictationSettingsSchema]),
     response: dictationSettingsSchema,
   },
+  "inf:settings:runbooks:get": {
+    effect: "read",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([]),
+    response: z.array(runbookViewSchema),
+  },
+  "inf:settings:runbooks:set": {
+    effect: "change",
+    surface: "core",
+    reach: "home",
+    request: z.tuple([z.string(), z.boolean()]),
+    response: z.array(runbookViewSchema),
+  },
   "inf:settings:personal-resources:get": {
     effect: "read",
     surface: "core",
@@ -3560,6 +3575,8 @@ export type FirstmateApi = {
     onDictation: (listener: (setting: DictationSettings) => void) => () => void;
     getDictation: () => Promise<DictationSettings>;
     setDictation: (setting: DictationSettings) => Promise<DictationSettings>;
+    getRunbooks: () => Promise<RunbookView[]>;
+    setRunbook: (id: string, enabled: boolean) => Promise<RunbookView[]>;
     getPersonalResources: () => Promise<boolean>;
     setPersonalResources: (enabled: boolean) => Promise<boolean>;
     getNotifications: () => Promise<boolean>;

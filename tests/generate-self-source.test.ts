@@ -122,7 +122,8 @@ describe("generate-self-source", () => {
 
     expect(map.prompts.firstmate?.builder).toBe("buildFirstmateSystemPrompt");
     expect(map.prompts.crewmate?.builder).toBe("buildCrewmateSystemPrompt");
-    expect(map.prompts.sequences?.builder).toBe("SEQUENCES_SEED");
+    expect(map.prompts.runbooks?.builder).toBe("Runbooks");
+    expect(existsSync(join(repoRoot, map.prompts.runbooks?.module as string))).toBe(true);
     expect(typeof buildFirstmateSystemPrompt()).toBe("string");
     expect(typeof buildCrewmateSystemPrompt()).toBe("string");
     expect(existsSync(join(repoRoot, map.prompts.firstmate?.module as string))).toBe(true);

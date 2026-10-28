@@ -35,7 +35,11 @@ import { buildCrewmateSystemPrompt } from "./piResources";
 export function createCrewmateResourceLoader(
   systemPrompt: string = buildCrewmateSystemPrompt(),
   appended: () => string | undefined = () => undefined,
-  project?: { cwd: string; personal?: PersonalResources },
+  project?: {
+    cwd: string;
+    personal?: PersonalResources;
+    runbookSkills?: { name: string; dir: string }[];
+  },
 ): ResourceLoader {
   const extensionsResult: LoadExtensionsResult = {
     extensions: [],
@@ -77,7 +81,10 @@ export function createCrewmateResourceLoader(
       agentsFiles = instructions ? [instructions] : [];
       skills = projectSkills(project.cwd);
       const names = new Set(skills.skills.map((skill) => skill.name));
-      for (const folder of project.personal?.skills ?? []) {
+      for (const folder of [
+        ...(project.personal?.skills ?? []),
+        ...(project.runbookSkills ?? []),
+      ]) {
         const loaded = loadSkillsFromDir({ dir: folder.dir, source: "user" });
         skills.diagnostics.push(...loaded.diagnostics);
         for (const skill of loaded.skills) {

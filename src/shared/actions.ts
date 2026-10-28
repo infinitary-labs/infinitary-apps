@@ -1296,6 +1296,17 @@ const actionLines = {
     readValue: (current) => ({ enabled: current }),
     done: (v) => `notifications ${v.enabled ? "on" : "off"}`,
   },
+  runbook: {
+    area: "intelligence",
+    tier: "asked",
+    change: "inf:settings:runbooks:set",
+    current: "inf:settings:runbooks:get",
+    value: z.strictObject({ id: z.string(), enabled: z.boolean() }),
+    line: "Turn a named runbook on or off when asked. Read the available names and ids first.",
+    toRequest: (v) => [v.id, v.enabled],
+    readValue: (current) => ({ runbooks: current }),
+    done: (v) => `${v.name} ${v.enabled ? "on" : "off"}`,
+  },
   "personal-resources": {
     area: "intelligence",
     tier: "asked",

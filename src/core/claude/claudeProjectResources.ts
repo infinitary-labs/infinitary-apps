@@ -29,6 +29,7 @@ export type ClaudeProjectResources = {
   instructions?: ProjectInstructions;
   personalInstructions?: string;
   personalSkillsPlugin?: string;
+  runbookSkillsPlugin?: string;
   /** The staged plugin's folder, when the working copy has a skill. */
   skillsPlugin?: string;
 };

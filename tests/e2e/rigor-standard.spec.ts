@@ -1,8 +1,13 @@
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { join } from "node:path";
 import { expect, test } from "@playwright/test";
 import { buildCrewmateSystemPrompt, crewmateProcedureFor } from "../../src/core/pi/piResources";
+import { crewRunbookText, Runbooks } from "../../src/core/runbooks/runbooks";
 import { openDatabase } from "../../src/core/storage/db";
+import { SettingsStore } from "../../src/core/storage/settingsStore";
+import { TaskStore } from "../../src/core/storage/taskStore";
+import { RepoRegistry } from "../../src/core/workspace/repoRegistry";
 import { COMPLETION_CARD_HEADINGS } from "../../src/shared/cardHeadings";
 import { reportSummary } from "../../src/shared/feed";
 import {
@@ -29,6 +34,7 @@ import {
 import { seedHostedOrigins } from "./projectSeed";
 import { promptInput } from "./prompt";
 import { reportLine, startedLine, taskKey } from "./rails";
+import { readSavedData } from "./savedData";
 import {
   MOCK_STANDARD_CARD_TITLE,
   MOCK_STANDARD_HOST_BUTTONS_CARD_TITLE,
@@ -136,18 +142,47 @@ test("a standard-tier crewmate's completion card renders the completion outline 
   // Firstmate's does not. The prompt is the one for the task's own
   // delivery and care, read from its record: this local task's omits the
   // pull-request passages its standard tier does not need.
-  const policies = await page.evaluate(async (title) => {
+  const taskView = await page.evaluate(async (title) => {
     const row = (await window.infinitary.tasks.board()).tasks.find((task) => task.title === title);
     if (!row) throw new Error(`No task "${title}"`);
-    return (await window.infinitary.tasks.detail(row.id)).policies ?? null;
+    return {
+      id: row.id,
+      policies: (await window.infinitary.tasks.detail(row.id)).policies ?? null,
+    };
   }, STANDARD_TIER_PROMPT_MARKER);
+  const procedure = crewmateProcedureFor(taskView.policies);
+  // INF-1177: prove the entire selected prompt, not the legacy unknown-selection
+  // fallback. Read actual task, repository and switch facts through their owners.
+  const runbookText = readSavedData(launched.userDataDir, (db) => {
+    const task = new TaskStore(db).get(taskView.id);
+    if (!task) throw new Error("The served task is missing.");
+    const repo = task.repoId
+      ? new RepoRegistry(db, launched.userDataDir).get(task.repoId)
+      : undefined;
+    const books = new Runbooks(join(process.cwd(), "resources/runbooks"), new SettingsStore(db));
+    return crewRunbookText(
+      books.crew({
+        kind: task.shape?.kind ?? "unclear",
+        place: repo?.kind === "personal" ? "personal" : "project",
+        delivery: procedure.delivery,
+        care: procedure.rigor,
+        backend: "pi",
+        ...(task.repoId ? { project: task.repoId } : {}),
+      }),
+    );
+  });
   const prompt = buildCrewmateSystemPrompt(
     "pi",
     undefined,
     undefined,
     undefined,
     undefined,
-    crewmateProcedureFor(policies),
+    procedure,
+    undefined,
+    undefined,
+    undefined,
+    undefined,
+    runbookText,
   );
   const bodies = mockProvider?.requestBodies() ?? [];
   const crewmate = bodies.filter(

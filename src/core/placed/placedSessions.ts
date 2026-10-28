@@ -883,6 +883,13 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
       throw new Error(
         `${this.nameOf(deviceId)} is ${awayWord(this.options.reachOf?.(deviceId) === "connecting")}, so the conversation waits`,
       );
+    if (
+      spec.runbookSkills?.length &&
+      !listsChange(this.options.devices.version(deviceId)?.changes, contractChange("runbooks"))
+    )
+      throw new Error(
+        `Update Infinitary on ${this.nameOf(deviceId)} before it can receive this task's runbook skills.`,
+      );
     const resume = crewmateResumeToken(spec.shape.record.resume);
     const version = this.options.devices.version(deviceId)?.contract;
     const supportsSpeed = Boolean(
@@ -914,6 +921,7 @@ export class PlacedSessions implements PlacedWork, CrewMachines {
         ...(spec.thinking.quick ? { quick: true } : {}),
       },
       instructions: spec.instructions.base,
+      ...(spec.runbookSkills ? { runbookSkills: spec.runbookSkills } : {}),
       ...(spec.personalResources !== undefined
         ? { personalResources: spec.personalResources }
         : {}),

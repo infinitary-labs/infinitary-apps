@@ -77,7 +77,7 @@ export async function startPhoneHome(
       platform: "test-os",
       packaged: false,
       userDataDir: userData,
-      appDir: root,
+      appDir: join(import.meta.dirname, "..", ".."),
       resourcesDir: join(root, "resources"),
     },
     openExternal: async () => {

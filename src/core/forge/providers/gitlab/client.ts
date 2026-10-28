@@ -1,6 +1,7 @@
 import { settingFrom } from "@shared/envSettings";
 import { forgePlace } from "@shared/forge";
 import { notSignedInText } from "@shared/forges";
+import type { NamingRule } from "../../../../shared/runbooks";
 import {
   API_RESPONSE_MAX_BYTES,
   type ForgeApiResponse,
@@ -36,6 +37,7 @@ export function gitlabApiBaseFor(
 }
 
 export type GitLabOptions = {
+  namingRule?: () => NamingRule | null;
   token: () => Promise<string | undefined>;
   apiBaseUrl: string;
   fetch?: typeof fetch;

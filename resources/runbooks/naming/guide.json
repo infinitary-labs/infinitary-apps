@@ -1,0 +1,1 @@
+"Name every commit subject and pull request title as type(scope): summary or type: summary, with ! and a BREAKING CHANGE footer when warranted. Use feat, fix, chore, test, refactor, docs or perf; scopes such as cards, crew, e2e and main are examples, not a closed list. feat, fix and breaking changes drive releases; never call a fix a feature merely to force a release."

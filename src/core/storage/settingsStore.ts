@@ -47,6 +47,7 @@ import {
 } from "@shared/releaseTracking";
 import { DEFAULT_SHARING, type Sharing, sharingSchema } from "@shared/sharing";
 import { z } from "zod";
+import { runbookStateSchema } from "../../shared/runbooks";
 import { type SeatDigestEntry, seatDigestEntrySchema } from "../orchestrator/seatDigest";
 import type { AppDatabase } from "./db";
 
@@ -324,6 +325,15 @@ export class SettingsStore {
 
   setDictation(setting: DictationSettings): void {
     this.set("dictation", setting);
+  }
+
+  getRunbookStates(): Record<string, boolean> {
+    const parsed = runbookStateSchema.safeParse(this.get("runbooks"));
+    return parsed.success ? parsed.data : {};
+  }
+
+  setRunbookStates(states: Record<string, boolean>): void {
+    this.set("runbooks", runbookStateSchema.parse(states));
   }
 
   /** Global instructions and skills for new crewmate sessions, off by default. */

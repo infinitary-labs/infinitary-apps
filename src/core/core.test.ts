@@ -1,5 +1,13 @@
 import { X509Certificate } from "node:crypto";
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import type { IncomingMessage } from "node:http";
 import { connect as netConnect } from "node:net";
 import { basename, join } from "node:path";
@@ -109,6 +117,11 @@ function fakeHost(
   notified: { title: string; body: string }[];
   loginItem: () => boolean;
 } {
+  cpSync(
+    join(process.cwd(), "resources/runbooks"),
+    join(userDataDir, "resources/self-source/resources/runbooks"),
+    { recursive: true },
+  );
   const opened: OpenedUrl[] = [];
   const notified: { title: string; body: string }[] = [];
   let startAtLogin = false;
@@ -123,7 +136,7 @@ function fakeHost(
         platform: "test-os",
         packaged,
         userDataDir,
-        appDir: userDataDir,
+        appDir: process.cwd(),
         resourcesDir: join(userDataDir, "resources"),
       },
       openExternal: async (url) => {

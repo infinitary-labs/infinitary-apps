@@ -111,7 +111,7 @@ export class GitLabForge implements Forge {
 
   constructor(
     readonly location: ForgeLocation,
-    options: GitLabOptions,
+    private readonly options: GitLabOptions,
   ) {
     this.host = location.host ?? "gitlab.com";
     this.place = forgePlace({ kind: "gitlab", host: this.host }) ?? this.host;
@@ -332,7 +332,11 @@ export class GitLabForge implements Forge {
 
   async putIn(change: ForgeChange, headSha: string): Promise<{ sha?: string }> {
     const iid = numbered(change, this.place);
-    const title = requireConventional(change.title ?? "", "pull request title");
+    const title = requireConventional(
+      change.title ?? "",
+      "pull request title",
+      this.options.namingRule?.(),
+    );
     // A saved story squashes under its plain summary, never its rendered evidence (INF-228 F2).
     const body = (change.squashMessage ?? change.body)?.trim() ?? "";
     // `sha` is GitLab's guard: the merge is refused (409) if the merge

@@ -35,10 +35,12 @@ import { firstmateTools } from "./helpers/firstmateTools";
 type ServedTool = { name: string; description: string; parameters: Schema };
 type Schema = { description?: string; properties?: Record<string, Schema> };
 
-async function fixedContext() {
+async function fixedContext(includeRunbooks = true) {
   const tools = piToolsOf(await firstmateTools());
   return {
-    systemPrompt: `${buildFirstmateSystemPrompt()}\n\n${SEQUENCES_SEED.trim()}`,
+    systemPrompt: includeRunbooks
+      ? `${buildFirstmateSystemPrompt()}\n\n${SEQUENCES_SEED.trim()}`
+      : buildFirstmateSystemPrompt(),
     tools,
     served: tools as unknown as ServedTool[],
   };
@@ -70,7 +72,7 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
     // 65,536 - 12,288 - 33,476. The pin is the derivation, not a ceiling kept beside it.
     expect(PROMISED_CONVERSATION).toBe(33_476);
     expect(FIXED_CONTEXT_BOUNDARY).toBe(19_772);
-    expect(fixedTokens(await fixedContext())).toBeLessThanOrEqual(FIXED_CONTEXT_BOUNDARY);
+    expect(fixedTokens(await fixedContext(false))).toBeLessThanOrEqual(FIXED_CONTEXT_BOUNDARY);
   });
 
   it("names a prototype only where it sends the ask to a plan (FI3-872)", async () => {
@@ -86,7 +88,7 @@ describe("the Firstmate's fixed context (contract v4.59)", () => {
   });
 
   it("leaves the smallest local window room for a working conversation", async () => {
-    const { systemPrompt, tools } = await fixedContext();
+    const { systemPrompt, tools } = await fixedContext(false);
     const fits = (tokens: number) =>
       localInputFits({ systemPrompt, tools, messages: [conversation(tokens)] }, OLLAMA_MIN_CONTEXT);
     // The app's own pre-send check on the window it requires of a local

@@ -358,6 +358,11 @@ const api: FirstmateApi = {
       readableRequest("inf:settings:dictation:set", () =>
         invoke("inf:settings:dictation:set", setting),
       ),
+    getRunbooks: () => invoke("inf:settings:runbooks:get"),
+    setRunbook: (id, enabled) =>
+      readableRequest("inf:settings:runbooks:set", () =>
+        invoke("inf:settings:runbooks:set", id, enabled),
+      ),
     getPersonalResources: () => invoke("inf:settings:personal-resources:get"),
     setPersonalResources: (enabled) =>
       readableRequest("inf:settings:personal-resources:set", () =>

@@ -9900,7 +9900,7 @@ describe("the task graph (R1)", () => {
     });
   });
 
-  it("keeps a packaged plan step as plan when a named model skips classification", async () => {
+  it("keeps a declared plan kind when a named model skips classification (INF-1177)", async () => {
     const crewmate = fakeCrewmate();
     let calls = 0;
     const { supervisor, tasks } = setup(crewmate, {
@@ -9922,13 +9922,13 @@ describe("the task graph (R1)", () => {
           { kind: "free", text: packagedPlanStepLines()[0] ?? "plan: missing" },
         ],
       },
-      shape: { override_model_id: "gpt-6-astra" },
+      shape: { kind: "plan", override_model_id: "gpt-6-astra" },
     });
     await tick();
     expect(calls).toBe(0);
     expect(tasks.get(taskId)?.shape).toMatchObject({
       kind: "plan",
-      kind_source: "skipped:override",
+      kind_source: "firstmate:declared",
       deliverable: "answer",
     });
   });

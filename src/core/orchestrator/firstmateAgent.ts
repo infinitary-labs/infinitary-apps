@@ -103,6 +103,7 @@ import type { ModelRuntime } from "../pi/types";
 import type { PluginInstallRequest } from "../plugins/pluginInstaller";
 import type { ShellPreferencesService } from "../preferences/shellPreferences";
 import { timeZoneFact } from "../prompts/timeZone";
+import type { Runbooks } from "../runbooks/runbooks";
 import type {
   ModelSession,
   SessionEvent,
@@ -283,6 +284,7 @@ export type FirstmateAgentOptions = {
    */
   now?: () => number;
   settings: SettingsStore;
+  runbooks?: Runbooks;
   modelRuntime: ModelRuntime;
   /** The flagship account binding (broker phase 6); absent = base runtime. */
   flagship?: Flagship;
@@ -3854,6 +3856,7 @@ export class FirstmateAgent {
   private sequencesFallback: SequencesFallback | undefined;
 
   private servedSequences(): ServedSequences {
+    if (this.options.runbooks) return this.options.runbooks.firstmate();
     this.sequences ??= new SequencesSource(this.options.personalize?.personalWorkspaceDir);
     const served = this.sequences.current();
     if (served.fallback !== this.sequencesFallback) {

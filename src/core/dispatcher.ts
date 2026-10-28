@@ -47,6 +47,7 @@ import { type RepoView, repoConfiguredEvent, repoRemovalRefusal } from "@shared/
 import { devicePlace } from "@shared/signIns";
 import type { AppPanelGates } from "@shared/surfaces";
 import { resolveWorkComputer } from "@shared/workComputer";
+import type { RunbookView } from "../shared/runbooks";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
@@ -815,6 +816,8 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
       emit("inf:settings:dictation", services.settings.getDictation());
       return services.settings.getDictation();
     },
+    "inf:settings:runbooks:get": () => services.runbooks.list(),
+    "inf:settings:runbooks:set": (id, enabled) => services.runbooks.set(id, enabled),
     "inf:settings:personal-resources:get": () => services.settings.getPersonalResourcesEnabled(),
     "inf:settings:personal-resources:set": (enabled) => {
       services.settings.setPersonalResourcesEnabled(enabled);
@@ -1658,6 +1661,17 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
           actor,
           { target: "", from: actionValue(name, before.get(name)), to: value },
         );
+      } else if (name === "runbook") {
+        const previous = before.get(name) as RunbookView[];
+        const current = after as RunbookView[];
+        const book = current.find((book) => book.id === args[0]);
+        const was = previous.find((book) => book.id === args[0]);
+        if (book && was)
+          trail(name, { name: book.name, enabled: book.enabled }, actor, {
+            target: book.id,
+            from: { name: was.name, enabled: was.enabled },
+            to: { name: book.name, enabled: book.enabled },
+          });
       } else if (name.startsWith("account-") && ACTIONS[name].change) {
         const accounts = before.get(name) as AccountView[];
         const account = accounts.find((a) => a.id === args[0]);

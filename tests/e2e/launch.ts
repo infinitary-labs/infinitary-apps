@@ -95,6 +95,10 @@ export function packagedEntry(appDir = builtAppDir(), devFlavor = false, version
       }),
     );
   }
+  // A released build carries its self-source resources. Model that bundle,
+  // rather than reading Electron's own empty Resources folder.
+  const resourcesDir = scratchDir("infinitary-packaged-resources-");
+  symlinkSync(appDir, join(resourcesDir, "self-source"), "dir");
   const entry = join(scratchDir("infinitary-packaged-entry-"), "entry.mjs");
   writeFileSync(
     entry,
@@ -105,6 +109,7 @@ export function packagedEntry(appDir = builtAppDir(), devFlavor = false, version
     const { default: Database } = await import(${JSON.stringify(pathToFileURL(join(appDir, "node_modules/better-sqlite3/lib/index.js")).href)});
     new Database(":memory:").close();
     Object.defineProperty(app, "isPackaged", { value: true });
+    Object.defineProperty(process, "resourcesPath", { value: ${JSON.stringify(resourcesDir)} });
     const nativePlatform = process.platform;
     // The host's composition reads Linux, so its Keychain stays inert; every
     // other reader - the window, its keys, its menu - reads this computer's.

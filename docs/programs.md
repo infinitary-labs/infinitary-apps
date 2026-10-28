@@ -7,7 +7,7 @@ The host learns no workflow's name; it runs what the first mate wrote and checks
 ## Filing a program
 
 `create_task` takes `program`, `{script, args?, bound}`, as a fact of the task's shape (`shape.program`, `src/shared/routingPolicy.ts`).
-The rule for it has one home, the served sequences guide's preamble (`src/core/personal/sequencesSkill.ts`); the parameter is served bare to keep the first mate's fixed context inside its boundary.
+The rule for it has one home, the Programs runbook (`resources/runbooks/programs/guide.md`); the parameter is served bare to keep the first mate's fixed context inside its boundary.
 The host refuses, as tool text with nothing filed (`programRefusal`, `src/core/program/programScript.ts`, and `programShape` in the supervisor):
 
 - a script that is not a non-empty string, that does not compile as the body of an async function, or that imports code;
@@ -39,7 +39,7 @@ The script returns the program's result, and its `branch`, a part's label, names
 
 ## The shapes the first mate is served
 
-The served sequences guide's `programs` section (`src/core/personal/sequencesSkill.ts`) is the one home of the dialect's rule and of five shapes written in it (INF-799 piece 3).
+The Programs runbook (`resources/runbooks/programs/guide.md`) is the one home of the dialect's rule and of five shapes written in it (INF-799 piece 3).
 It names the asks that are programs - "use a workflow", a loop, iteration or "keep at it" until a stop condition, an audit, deep research (never a research step) and a migration of each item or one at a time - and says each is one `create_task program` in the project, when-ready with no parent, never a spawn even when one crewmate could try.
 The script's globals are named there too, since a script that reads `bound` or another name `args` does not carry fails when it runs.
 The first mate adapts a shape to the ask; the host learns no shape's name and reads nothing of the script beyond what "Filing a program" refuses.

@@ -34803,6 +34803,83 @@
         ]
       }
     },
+    "inf:settings:runbooks:get": {
+      "effect": "read",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "maxItems": 0
+      },
+      "response": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "description",
+            "enabled"
+          ]
+        }
+      }
+    },
+    "inf:settings:runbooks:set": {
+      "effect": "change",
+      "reach": "home",
+      "request": {
+        "type": "array",
+        "prefixItems": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "boolean"
+          }
+        ],
+        "minItems": 2,
+        "items": false
+      },
+      "response": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "description": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "description",
+            "enabled"
+          ]
+        }
+      }
+    },
     "inf:settings:personal-resources:get": {
       "effect": "read",
       "reach": "home",
@@ -60492,6 +60569,31 @@
                     },
                     "personalResources": {
                       "type": "boolean"
+                    },
+                    "runbookSkills": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": {
+                            "type": "string",
+                            "pattern": "^[a-zA-Z0-9_-]+$"
+                          },
+                          "files": {
+                            "type": "object",
+                            "propertyNames": {
+                              "type": "string"
+                            },
+                            "additionalProperties": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "files"
+                        ]
+                      }
                     },
                     "tools": {
                       "maxItems": 64,

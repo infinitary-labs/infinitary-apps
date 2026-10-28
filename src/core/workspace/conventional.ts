@@ -1,12 +1,19 @@
+import naming from "../../../resources/runbooks/naming/runbook.json" with { type: "json" };
+import type { NamingRule } from "../../shared/runbooks";
 import { git } from "./git";
 
 /** Release-please recognises these conventional subjects; scopes are open-ended. */
-const SUBJECT = /^(feat|fix|chore|test|refactor|docs|perf)(?:\([a-z0-9][a-z0-9./-]*\))?!?: \S.+$/;
+export const DEFAULT_NAMING_RULE: NamingRule = naming.naming;
 
-export function requireConventional(subject: string, what = "commit"): string {
-  if (!SUBJECT.test(subject) || subject.includes("\n")) {
+export function requireConventional(
+  subject: string,
+  what = "commit",
+  rule: NamingRule | null = DEFAULT_NAMING_RULE,
+): string {
+  if (rule === null) return subject;
+  if (!new RegExp(rule.pattern).test(subject) || subject.includes("\n")) {
     throw new Error(
-      `The ${what} needs a conventional name such as "fix(crew): correct naming" or "feat: add a feature". Choose the accurate type (feat, fix, chore, test, refactor, docs, perf); do not call a fix a feature just to make a release. Received: ${JSON.stringify(subject)}.`,
+      `The ${what} needs a conventional name. ${rule.message} Received: ${JSON.stringify(subject)}.`,
     );
   }
   return subject;
@@ -21,7 +28,9 @@ export async function requireConventionalRange(
   dir: string,
   base: string,
   head: string,
+  rule: NamingRule | null = DEFAULT_NAMING_RULE,
 ): Promise<void> {
   const lines = await git(dir, ["log", "--no-merges", "--format=%s", `${base}..${head}`]);
-  for (const subject of lines.split("\n").filter(Boolean)) requireConventional(subject);
+  for (const subject of lines.split("\n").filter(Boolean))
+    requireConventional(subject, "commit", rule);
 }

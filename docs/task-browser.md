@@ -319,10 +319,17 @@ While it is `taking` the view's row reads `finishing the crewmate's current acti
 While the captain holds it:
 
 - the crewmate's commands refuse in words, its stop too, saying the captain will hand it back and wake it once;
-- the captain's pointer, wheel and keys on the view's picture go to the page through `inf:browser:input`, a shell channel the core answers only for the captain's own browser (`TaskBrowsers.captainInput`), as the browser protocol's own input at the page's own pixels; a Mac's editing keys go as the page's editing commands, paste included, and Back, Forward and Reload move the captain's page;
+- the captain's pointer, wheel and keys on the view's picture go to the page through `inf:browser:input`, a shell channel the core answers only for the captain's own browser (`TaskBrowsers.captainInput`), as the browser protocol's own input at the page's own pixels; the editing keys of the window's own system (⌘ on a Mac, Ctrl on Linux, where Ctrl+Y redoes too) go as the page's editing commands whatever system the page runs on, paste with the words on the captain's own clipboard ("Paste" below), and Back, Forward and Reload move the captain's page;
 - nothing records any of it: no timeline line, no fact, no notice, no event, and nothing the IPC layer keeps;
 - what the page says - refused requests, errors, dialogs, popups and its moves - is kept for nobody, so the crewmate never hears of the captain's time;
 - the browser never stops for being unused, and its fact carries `control: "captain"`, which the record's Browser line reads as `you have control` and the view's row as `you have control · the crewmate cannot see this page`, tinted violet.
+
+### Paste
+
+The paste key on the view, ⌘V on a Mac and Ctrl+V on Linux, carries the words on the clipboard of the computer whose window the captain pressed it in, which need not be the computer the page runs on ("On another computer").
+The view lets the paste key go on to the window's own paste and reads the words from that paste alone (`clipboard` on the key input), since the app's window may not read the clipboard on its own (`src/main/security/permissions.ts`).
+The page's computer types those words into the page when its own clipboard holds other words, and otherwise runs the page's own paste, which keeps a picture or formatting only it can read.
+A paste with no words, or past `TASK_BROWSER_PASTE_MAX`, is the page's own paste, and so is a paste key that brings no paste before it is let go.
 
 Return control hands the browser back with one press.
 While the captain has control, the view shows `Returning control lets the crewmate read and use this browser, including signed-in pages.` before that press.
@@ -513,6 +520,8 @@ The host makes each page (`src/main/host/taskBrowser.ts`, behind `HostTaskBrowse
 - It is sandboxed with context isolation and web security on, has no preload and so no app bridge, and refuses every permission, device permission and download, and every new window but a second page the core lets in ("A second page").
 - Navigation, redirects and frame navigation are checked against the same policy as requests; loopback is reached directly, and everything else through the browser's connection guard, its session's one proxy ("Where a page may go").
 - It never reloads a page that answers a form that was sent ("A final submission").
+- It draws every dropdown's list in the page, as Chromium's in-page list (`appearance: base-select`): a Mac's own list is a native menu, a window of its own, which closes at once beside a hidden page and is never in the page's pictures.
+  The rule is added to each new document in a layer and marked important, so a site's own styles do not win it back, and a dropdown can look different from the same site in another browser.
 - A certificate error, a site's sign-in box and a request for a client certificate are refused and told to the core (`HostBrowserRefusal`).
 - Every page uses an ordinary Chrome user agent, without Infinitary's name and version or Electron's token; reloading and navigating keep it.
   The host sets it on each page through Electron, and makes it Electron's fallback (`app.userAgentFallback`) when the task browser is made, before any page opens.

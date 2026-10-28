@@ -1,4 +1,5 @@
 import { HERE } from "@shared/deviceNames";
+import type { KeySystem } from "@shared/platform";
 import {
   attachmentStanding,
   browserDriverOf,
@@ -19,6 +20,7 @@ import {
   TASK_BROWSER_PAGE,
   TASK_BROWSER_PAGE_MAX,
   TASK_BROWSER_PAGE_MIN,
+  TASK_BROWSER_PASTE_MAX,
   type TaskBrowserDriver,
   type TaskBrowserFrame,
   type TaskBrowserInput,
@@ -34,6 +36,7 @@ import { useModelNames } from "../app/useModelNames";
 import { Button, IconButton, RowMenu, StatusDot } from "../design";
 import { CardSizeContext } from "../design/cards/CardSize";
 import { CARD_MAX_HEIGHT, cardFloor } from "../design/cards/ResponseCard";
+import { thisDesktop } from "../design/core/desktop";
 import { useOverflowTitle } from "../design/core/overflowTitle";
 import { useRestLabel } from "../design/core/restLabel";
 import { browserShownThereWords, isView } from "../devices/viewWords";
@@ -108,7 +111,7 @@ function modifiersOf(event: {
   );
 }
 
-/** A Mac's editing keys, sent to the page as its own editing commands. */
+/** The editing keys, sent to the page as its own editing commands. */
 const EDITING_COMMANDS: Record<string, "selectAll" | "undo" | "cut" | "copy" | "paste"> = {
   a: "selectAll",
   z: "undo",
@@ -116,6 +119,23 @@ const EDITING_COMMANDS: Record<string, "selectAll" | "undo" | "cut" | "copy" | "
   c: "copy",
   v: "paste",
 };
+
+type EditingCommand = NonNullable<Extract<TaskBrowserInput, { kind: "key" }>["command"]>;
+
+/**
+ * The editing command a key stands for in the window's own key system
+ * (docs/keyboard.md, "Keys on each system"): ⌘ on a Mac, Ctrl on Linux,
+ * where Ctrl+Y redoes too. The page gets the command whatever system it
+ * runs on.
+ */
+function editingCommand(event: React.KeyboardEvent, system: KeySystem): EditingCommand | undefined {
+  const held = system === "mac" ? event.metaKey && !event.ctrlKey : event.ctrlKey && !event.metaKey;
+  if (!held || event.altKey) return undefined;
+  const key = event.key.toLowerCase();
+  if (key === "z" && event.shiftKey) return "redo";
+  if (key === "y" && system !== "mac") return "redo";
+  return EDITING_COMMANDS[key];
+}
 
 /** What a key types on the page, for a key that types. */
 function typedText(event: React.KeyboardEvent): string | undefined {
@@ -125,6 +145,18 @@ function typedText(event: React.KeyboardEvent): string | undefined {
 }
 
 const MOUSE_BUTTONS = ["left", "middle", "right"] as const;
+
+type KeyInput = Extract<TaskBrowserInput, { kind: "key" }>;
+
+/** The paste key as the page gets it when the paste came from the menu rather than the key. */
+const PASTE_KEY: Omit<KeyInput, "type"> = {
+  kind: "key",
+  key: "v",
+  code: "KeyV",
+  keyCode: 86,
+  modifiers: 4,
+  command: "paste",
+};
 
 /**
  * The captain's own input on the page while he has control: the pointer,
@@ -136,6 +168,8 @@ function useCaptainInput(taskId: string, enabled: boolean) {
   const pendingMove = useRef<TaskBrowserInput | null>(null);
   const frame = useRef(0);
   const keysDown = useRef(new Set<string>());
+  /** The paste key pressed and its paste not yet come: the key, sent with the words once it does. */
+  const pendingPaste = useRef<Omit<KeyInput, "type"> | null>(null);
 
   const send = useCallback(
     (input: TaskBrowserInput) => {
@@ -182,10 +216,30 @@ function useCaptainInput(taskId: string, enabled: boolean) {
       });
     };
     node.addEventListener("wheel", onWheel, { passive: false });
+    // A paste on the view carries the words on this computer's own
+    // clipboard, which the page's computer may not share; the window reads
+    // them only from the paste the captain made (docs/task-browser.md, "Paste").
+    const onPaste = (event: ClipboardEvent) => {
+      const focused = document.activeElement;
+      if (!focused || !node.contains(focused)) return;
+      event.preventDefault();
+      const text = event.clipboardData?.getData("text/plain") ?? "";
+      const key = pendingPaste.current ?? PASTE_KEY;
+      pendingPaste.current = null;
+      send({
+        ...key,
+        type: "down",
+        ...(text && text.length <= TASK_BROWSER_PASTE_MAX ? { clipboard: text } : {}),
+      });
+      send({ ...key, type: "up" });
+    };
+    document.addEventListener("paste", onPaste);
     return () => {
       node.removeEventListener("wheel", onWheel);
+      document.removeEventListener("paste", onPaste);
       cancelAnimationFrame(frame.current);
       pendingMove.current = null;
+      pendingPaste.current = null;
       keysDown.current.clear();
     };
   }, [enabled, pointOf, send]);
@@ -220,27 +274,42 @@ function useCaptainInput(taskId: string, enabled: boolean) {
 
   const key = (type: "down" | "up") => (event: React.KeyboardEvent) => {
     if (!enabled || event.nativeEvent.isComposing) return;
-    const command =
-      event.metaKey && !event.ctrlKey && !event.altKey
-        ? event.key.toLowerCase() === "z" && event.shiftKey
-          ? ("redo" as const)
-          : EDITING_COMMANDS[event.key.toLowerCase()]
-        : undefined;
+    const command = editingCommand(event, thisDesktop().keys);
     // The app's own ⌘ shortcuts stay the app's; every other key is the page's.
     if (event.metaKey && !command) return;
+    const pressed: Omit<KeyInput, "type"> = {
+      kind: "key",
+      key: event.key.slice(0, 32),
+      code: event.code.slice(0, 32),
+      keyCode: Math.min(255, Math.max(0, event.keyCode)),
+      modifiers: modifiersOf(event),
+    };
+    if (command === "paste") {
+      event.stopPropagation();
+      // The paste key goes on to the window's own paste, which carries the words.
+      if (type === "down") {
+        if (!event.repeat) pendingPaste.current = { ...pressed, command };
+        return;
+      }
+      event.preventDefault();
+      // No paste came: the page pastes from its own computer's clipboard.
+      const key = pendingPaste.current;
+      pendingPaste.current = null;
+      if (key) {
+        send({ ...key, type: "down" });
+        send({ ...key, type: "up" });
+      }
+      return;
+    }
     if (type === "up" && !keysDown.current.delete(event.code || event.key)) return;
     if (type === "down") keysDown.current.add(event.code || event.key);
     event.preventDefault();
     event.stopPropagation();
     const text = type === "down" ? typedText(event) : undefined;
     send({
-      kind: "key",
+      ...pressed,
       type,
-      key: event.key.slice(0, 32),
-      code: event.code.slice(0, 32),
-      keyCode: Math.min(255, Math.max(0, event.keyCode)),
       ...(text ? { text } : {}),
-      modifiers: modifiersOf(event),
       ...(command && type === "down" ? { command } : {}),
     });
   };

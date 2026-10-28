@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { type ElectronApplication, expect, type Locator, type Page } from "@playwright/test";
 import { atRest } from "./layout";
 import { SHOWN_ENTRY } from "./stack";
-import { typeInto } from "./windowKeys";
+import { pressKey, typeInto } from "./windowKeys";
 
 /**
  * A task's own browser as the journeys read it (docs/task-browser.md): the
@@ -166,6 +166,49 @@ export async function typeOnPage(
     )
     .toBe(id);
   await typeInto(browserView(page, taskId).locator("[data-browser-page]"), text);
+}
+
+/** What an expression reads on a task's page at that address, or null with no such page. */
+export function onPage(
+  app: ElectronApplication,
+  siteUrl: string,
+  expression: string,
+): Promise<unknown> {
+  return app.evaluate(
+    async ({ webContents }, wanted) => {
+      const contents = webContents
+        .getAllWebContents()
+        .find((candidate) => candidate.getURL().startsWith(wanted.siteUrl));
+      return contents ? ((await contents.executeJavaScript(wanted.expression)) as unknown) : null;
+    },
+    { siteUrl, expression },
+  );
+}
+
+/**
+ * The captain's paste on the view, holding the captain's own computer's
+ * words: the window's paste key, ⌘V on a Mac and Ctrl+V on Linux, with the
+ * window's own paste carrying `text`. One test process shares one
+ * clipboard with every page it opens, so the paste the key brings has its
+ * words swapped for `text` rather than the computer's clipboard written:
+ * the page's computer then holds other words, as another computer would.
+ */
+export async function pasteOnView(view: Locator, text: string): Promise<void> {
+  await view.evaluate((node, words) => {
+    const swap = (event: ClipboardEvent) => {
+      if (!event.isTrusted) return;
+      window.removeEventListener("paste", swap, true);
+      event.stopImmediatePropagation();
+      event.preventDefault();
+      const data = new DataTransfer();
+      data.setData("text/plain", words);
+      node.dispatchEvent(
+        new ClipboardEvent("paste", { clipboardData: data, bubbles: true, cancelable: true }),
+      );
+    };
+    window.addEventListener("paste", swap, true);
+  }, text);
+  await pressKey(view, "ControlOrMeta+v");
 }
 
 /** Windows the app holds, its own and the task browsers' hidden pages alike. */

@@ -425,6 +425,7 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
   "src/shared/taskBrowser.ts": {
     TASK_BROWSER_PAGE_MIN: physical("the view's room is clamped up to it; the page lays out there"),
     TASK_BROWSER_PAGE_MAX: physical("the view's room is clamped down to it; the page lays out there"),
+    TASK_BROWSER_PASTE_MAX: physical("a longer paste carries no words; the page pastes from its own clipboard"),
   },
   "src/shared/taskKeys.ts": {
     TASK_KEYS_MAX: physical("later keys stay plain text, unlinked"),

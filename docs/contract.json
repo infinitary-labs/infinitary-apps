@@ -65333,6 +65333,10 @@
                             "copy",
                             "paste"
                           ]
+                        },
+                        "clipboard": {
+                          "type": "string",
+                          "maxLength": 8388608
                         }
                       },
                       "required": [

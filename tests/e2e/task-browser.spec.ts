@@ -89,8 +89,10 @@ import {
   clickOnPage,
   closeSite,
   filesHolding,
+  onPage,
   pageLaidOutAt,
   pageSays,
+  pasteOnView,
   stopTaskBrowsers,
   taskTabs,
   typeOnPage,
@@ -809,6 +811,8 @@ const ACCOUNT_PAGE = `<!doctype html>
     <p><label>Email <input id="email" type="email"></label></p>
     <p><label>Password <input id="password" type="password"></label></p>
     <p><button id="sign-in">Sign in</button></p>
+    <p><label>Plan <select id="plan"><option id="plan-monthly" value="monthly">Monthly</option><option id="plan-yearly" value="yearly">Yearly</option></select></label></p>
+    <p><label>Note <input id="note"></label></p>
     <p id="ready"></p>
     <script>
       const show = () => {
@@ -1204,6 +1208,31 @@ test("the captain takes a task's browser while its crewmate's command runs, and 
       expect(filesHolding(launched.userDataDir, PASSWORD)).toEqual([]);
       expect(JSON.stringify(await detail())).not.toContain(PASSWORD);
       expect(JSON.stringify(await detail())).not.toContain("sam@example.com");
+    });
+
+    // The captain's words (INF-1742): "dropdown inputs can't actually show the
+    // dropdown... when clicked, they do nothing", and "i can't paste text in
+    // clipboard into the task browser".
+    await test.step("he opens a dropdown on the picture and picks from its list, and pastes words from the captain's own computer", async () => {
+      await clickOnPage(launched.app, page, task.id, accountUrl, "plan");
+      // The list is drawn in the page, so its option has a place to press.
+      await expect
+        .poll(() =>
+          onPage(launched.app, accountUrl, 'document.getElementById("plan-yearly").offsetHeight'),
+        )
+        .toBeGreaterThan(0);
+      await clickOnPage(launched.app, page, task.id, accountUrl, "plan-yearly");
+      await expect.poll(() => pageSays(launched.app, accountUrl, "plan", "value")).toBe("yearly");
+
+      // The paste carries the captain's own computer's words, which need not
+      // be on the clipboard of the computer the page runs on.
+      const words = "pasted from the captain's own computer";
+      await clickOnPage(launched.app, page, task.id, accountUrl, "note");
+      await expect
+        .poll(() => onPage(launched.app, accountUrl, "document.activeElement?.id ?? null"))
+        .toBe("note");
+      await pasteOnView(view(page, task.id).locator("[data-browser-page]"), words);
+      await expect.poll(() => pageSays(launched.app, accountUrl, "note", "value")).toBe(words);
     });
 
     await test.step("Hide resumes nothing, and Return control wakes the crewmate once", async () => {

@@ -31,6 +31,7 @@ import {
   app,
   BrowserWindow,
   type BrowserWindowConstructorOptions,
+  clipboard,
   session as electronSession,
   nativeImage,
   net,
@@ -250,6 +251,19 @@ function pickerGuard(binding: string): string {
   };
 })();`;
 }
+
+/**
+ * Every page draws its dropdowns' lists itself, Chromium's in-page list,
+ * rather than as a Mac's own menu: that menu is a window of its own, which
+ * closes at once beside a hidden page and is never in the page's pictures
+ * (docs/task-browser.md, "The page itself"). The rule sits in a layer and is
+ * important, so a site's own styles do not win it back.
+ */
+const IN_PAGE_LISTS = `(() => {
+  const sheet = new CSSStyleSheet();
+  sheet.replaceSync("@layer infinitary-lists { select, ::picker(select) { appearance: base-select !important; } }");
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet];
+})();`;
 
 type RawAxValue = { value?: unknown };
 type RawAxNode = {
@@ -586,6 +600,10 @@ async function drivePage(
     source: pickerGuard(pickerBinding),
     runImmediately: true,
   });
+  await send("Page.addScriptToEvaluateOnNewDocument", {
+    source: IN_PAGE_LISTS,
+    runImmediately: true,
+  });
   // The page is laid out at its own size whatever shows it, at one pixel per point.
   const layOut = (): Promise<unknown> =>
     send("Emulation.setDeviceMetricsOverride", {
@@ -905,7 +923,17 @@ async function drivePage(
             modifiers: input.modifiers,
           });
           return;
-        case "key":
+        case "key": {
+          // A paste from a computer whose clipboard holds other words types
+          // those words; the page's own paste keeps what only it can read,
+          // such as a picture or formatting (docs/task-browser.md, "Paste").
+          const typed =
+            input.type === "down" &&
+            input.command === "paste" &&
+            input.clipboard &&
+            input.clipboard !== clipboard.readText()
+              ? input.clipboard
+              : undefined;
           await send("Input.dispatchKeyEvent", {
             type: input.type === "up" ? "keyUp" : input.text ? "keyDown" : "rawKeyDown",
             key: input.key,
@@ -915,9 +943,13 @@ async function drivePage(
             ...(input.type === "down" && input.text
               ? { text: input.text, unmodifiedText: input.text }
               : {}),
-            ...(input.type === "down" && input.command ? { commands: [input.command] } : {}),
+            ...(input.type === "down" && input.command && !typed
+              ? { commands: [input.command] }
+              : {}),
           });
+          if (typed) await send("Input.insertText", { text: typed });
           return;
+        }
       }
     },
     resize: async (next) => {

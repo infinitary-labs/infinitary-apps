@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CONNECTION_MAX_FRAME_BYTES } from "./connection";
 import { HERE } from "./deviceNames";
 
 /**
@@ -67,6 +68,14 @@ export type TaskBrowserControl = (typeof TASK_BROWSER_CONTROLS)[number];
  */
 export const UNKNOWN_OUTCOME_WORDS =
   "Until the seller or its payment service shows the result, say plainly you do not know whether it went through: a missing booking or charge proves nothing, so never guess either way or suggest trying again.";
+
+/**
+ * The longest clipboard text a paste on the view carries, in UTF-16 units:
+ * at most six bytes each in a request, so a paste fits one connection frame
+ * to a computer that runs work. A longer paste carries none, and the page
+ * pastes from its own computer's clipboard.
+ */
+export const TASK_BROWSER_PASTE_MAX = Math.floor(CONNECTION_MAX_FRAME_BYTES / 8);
 
 /** The longest reason, and next step, a crewmate's request for help carries. */
 export const TASK_BROWSER_REQUEST_MAX = 200;
@@ -152,10 +161,10 @@ export type TaskBrowserFrame = z.infer<typeof taskBrowserFrameSchema>;
 /**
  * The captain's own input to a task's page while he has control
  * (docs/task-browser.md, "Taking control"): a pointer at a point of the
- * page, a wheel, a key - a Mac's editing keys as their commands, paste
- * included - Back, Forward and Reload, or a page of the selector. Points
- * are the page's own pixels, at whatever size it has now. Nothing records
- * any of it.
+ * page, a wheel, a key - the window's editing keys as their commands, paste
+ * with the words on the captain's own clipboard - Back, Forward and
+ * Reload, or a page of the selector. Points are the page's own pixels, at
+ * whatever size it has now. Nothing records any of it.
  */
 const pagePoint = {
   x: z.number().min(0).max(TASK_BROWSER_PAGE_MAX.width),
@@ -188,8 +197,15 @@ export const taskBrowserInputSchema = z.discriminatedUnion("kind", [
     /** What the key types, for a key that types. */
     text: z.string().max(4).optional(),
     modifiers,
-    /** An editing command the key stands for on a Mac: select all, undo, paste. */
+    /** An editing command the key stands for in the window's own key system: select all, undo, paste. */
     command: z.enum(["selectAll", "undo", "redo", "cut", "copy", "paste"]).optional(),
+    /**
+     * With paste, the words on the clipboard of the computer whose window
+     * the captain pressed it in, which need not be the page's own
+     * (`task-browser-paste-text.md`). Without it, the page pastes from its
+     * own computer's clipboard.
+     */
+    clipboard: z.string().max(TASK_BROWSER_PASTE_MAX).optional(),
   }),
   z.object({ kind: z.literal("go"), go: z.enum(["back", "forward", "reload"]) }),
   /** The captain's pick in the page selector: the page his input and the crewmate's next look go to. */

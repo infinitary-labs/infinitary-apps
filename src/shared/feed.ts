@@ -106,7 +106,7 @@ export function feedLineFrom(event: FmEvent): Omit<FeedLine, "at"> | null {
       // The captain's call: show the note's own words. Activity and the
       // whisper paint this text as saved; lines already stored keep the
       // old prefix until retention drops them.
-      return { kind: "info", text: event.text };
+      return { kind: event.tone ?? "info", text: event.text };
     case "memory_noted":
       return { kind: "info", text: `First mate · remembered: ${event.text}` };
     case "personalized":

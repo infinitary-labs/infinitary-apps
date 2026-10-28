@@ -41,6 +41,7 @@ import {
   type ProviderView,
 } from "@shared/providers";
 import { type QuotaSnapshotView, servedProviderOf } from "@shared/quota";
+import type { ComputerResourcesView } from "@shared/resources";
 import { devicePlace } from "@shared/signIns";
 import { runsForAnotherFirstmate } from "@shared/sshConnection";
 import { BUILTIN_SURFACES } from "@shared/surfaces";
@@ -188,6 +189,8 @@ import { ComputerResources } from "./placed/computerResources";
 import { HomeBrowsers, PlacedBrowsers } from "./placed/placedBrowsers";
 import { PlacedSessions } from "./placed/placedSessions";
 import type { PlacedWork } from "./placed/placedWork";
+import { readProcesses } from "./placed/processResources";
+import { ResourcePressure } from "./placed/resourcePressure";
 import { ResourceSampler } from "./placed/resourceSampler";
 import { WorkDevices } from "./placed/workDevices";
 import { hostPlatform, thisDeviceSystem } from "./platform";
@@ -1386,7 +1389,7 @@ export async function createServices(
   const workDevices = new WorkDevices();
   const computerResources = new ComputerResources({
     work: workDevices,
-    local: new ResourceSampler({ memory: host.resourceMemory }),
+    local: new ResourceSampler({ memory: host.resourceMemory, processes: readProcesses }),
   });
   // Leave from a Mac that runs work is Remove's, which brings its work here
   // first; bound once Your devices exists (docs/devices.md, "Leave").
@@ -1444,6 +1447,7 @@ export async function createServices(
         kind: device.kind,
       }),
   });
+  let observePressure: (view: ComputerResourcesView) => void = () => {};
   const computerResourceFeed = new ComputerResourceFeed({
     resources: computerResources,
     computers: () => [
@@ -1456,9 +1460,20 @@ export async function createServices(
           label: deviceLabel(device),
         })),
     ],
-    onComputers: (listener) => devices.subscribe(listener),
+    onComputers: (listener) => {
+      const devicesStop = devices.subscribe(listener);
+      const tasksStop = tasks.onChange(listener);
+      return () => {
+        devicesStop();
+        tasksStop();
+      };
+    },
+    working: () => tasks.list().some((task) => task.status === "active"),
     onContact: (listener) => workDevices.onWorkDevice(listener),
-    emit: (view) => emit("inf:computers:resources", view),
+    emit: (view) => {
+      emit("inf:computers:resources", view);
+      observePressure(view);
+    },
   });
   const networkStandIn = host.app.packaged
     ? undefined
@@ -2871,6 +2886,13 @@ export async function createServices(
   });
   firstmateForSeat = firstmate;
   notifyFirstmate = (wake, origin) => firstmate.notifyOp(wake, origin);
+  const resourcePressure = new ResourcePressure({
+    taskKey: (id) => tasks.resolve(id)?.key ?? id,
+    notify: (wake) => notifyFirstmate(wake, "scheduled"),
+    activity: (fact) => broadcastEvent({ type: "firstmate_note", text: fact.text, tone: "warn" }),
+  });
+  observePressure = (view) => resourcePressure.observe(view);
+  observePressure(computerResourceFeed.snapshot());
   holdSeat = (accountId) => firstmate.holdSeatFor(accountId);
   scheduler.start(ticker);
   // Words from outside go from saved conversations once past their days,

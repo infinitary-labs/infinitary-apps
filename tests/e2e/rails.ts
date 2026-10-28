@@ -9,7 +9,7 @@ import type { TaskFactId } from "../../src/shared/taskFacts";
 import { taskStatusLabel, taskStatusOf } from "../../src/shared/taskPresentation";
 import type { TaskEventKind } from "../../src/shared/tasks";
 import { nextFrame } from "./crew";
-import { drawnFrame, railFrame } from "./frames";
+import { drawnFrame, frameElement, railFrame } from "./frames";
 import { takeTurn } from "./inputQueue";
 import { slidePointer } from "./layout";
 import { SHOWN_ENTRY } from "./stack";
@@ -371,6 +371,13 @@ export function recordFrame(page: Page): FrameLocator {
  * that could not be read never draws this body.
  */
 export async function expectRecordBody(page: Page): Promise<void> {
+  // INF-1629: the live Use row can place the body below the record's viewport.
+  // Chromium cannot paint that frame until it is scrolled into view. Keep an
+  // already drawn record's reading position; reveal only its undrawn body.
+  const element = frameElement(page, RECORD_FRAME_SELECTOR);
+  await expect(element).toBeAttached();
+  if ((await element.getAttribute("data-frame-drawn")) === null)
+    await element.scrollIntoViewIfNeeded();
   await expect(recordFrame(page).locator("[data-record-content]")).toBeVisible();
 }
 

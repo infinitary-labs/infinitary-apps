@@ -5,6 +5,7 @@ import { hostEnv, SHELL_CAP_ENV, SHELL_ID_ENV, SHELL_STARTED_ENV, withTaskShell 
 import type { TypedWake, WakeLane } from "../orchestrator/wakes";
 import { appendOverflow, capWithOverflow, overflowFilePath } from "../overflow";
 import { windowsBash } from "../pi/windowsBash";
+import { processRoots } from "../placed/processRoots";
 import { hostPlatform } from "../platform";
 import type { TaskShell } from "../session/session";
 import type { AppDatabase } from "../storage/db";
@@ -221,6 +222,10 @@ export class JobManager {
       windowsHide: true,
       stdio: ["ignore", "pipe", "pipe"],
     });
+    if (child.pid) {
+      const releaseRoot = processRoots.add(child.pid, input.ownerId);
+      child.once("exit", releaseRoot);
+    }
     const job: RunningJob = {
       id,
       ownerId: input.ownerId,

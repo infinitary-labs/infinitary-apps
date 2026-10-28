@@ -15,6 +15,8 @@ export const macMemoryPressureSchema = z.enum(["normal", "warning", "critical"])
 export type MacMemoryPressure = z.infer<typeof macMemoryPressureSchema>;
 export const resourceMemorySchema = z.object({
   totalBytes: bytes.positive(),
+  /** Swap occupancy, not part of installed memory or the placement allowance. */
+  swapUsedBytes: bytes.optional(),
   freeBytes: bytes,
   /** Linux MemAvailable. A reading with this is Linux to the one memory figure. */
   availableBytes: bytes.optional(),
@@ -28,6 +30,23 @@ export const resourceMemorySchema = z.object({
   memoryPressure: macMemoryPressureSchema.optional(),
 });
 export type ResourceMemory = z.infer<typeof resourceMemorySchema>;
+
+const processShareSchema = z.object({
+  processCount: z.number().int().nonnegative(),
+  residentBytes: bytes,
+  /** Processor equivalents from cumulative process-time deltas; omitted for new/unreadable processes. */
+  cpuCores: z.number().nonnegative().optional(),
+});
+export const processResourcesSchema = z.discriminatedUnion("status", [
+  z.object({
+    status: z.literal("sampled"),
+    processCount: z.number().int().nonnegative(),
+    tasks: z.array(processShareSchema.extend({ taskId: z.string().min(1) })),
+    other: processShareSchema,
+  }),
+  z.object({ status: z.literal("unknown") }),
+]);
+export type ProcessResources = z.infer<typeof processResourcesSchema>;
 
 const stamp = {
   /** One sampler lifetime; no host clock or permanent hardware identifier crosses. */
@@ -44,6 +63,8 @@ const sampledResourceObservationSchema = z.object({
     idleFraction: z.number().min(0).max(1),
   }),
   memory: resourceMemorySchema,
+  /** Absent on older computers. Process identifiers never cross the connection. */
+  processes: processResourcesSchema.optional(),
 });
 export const resourceObservationSchema = z.discriminatedUnion("status", [
   sampledResourceObservationSchema,
@@ -173,3 +194,24 @@ function panelReading(reading: ComputerResourceReading): PanelComputerResourceRe
     },
   };
 }
+
+/** The task record and pressure notice use the same literal, unit-labelled facts. */
+export function taskResourceWords(share: {
+  cpuCores?: number;
+  residentBytes: number;
+  processCount: number;
+}): string {
+  const used = share.cpuCores?.toFixed(2);
+  const cpu =
+    used === undefined
+      ? "Processor use unavailable"
+      : `${used} ${used === "1.00" ? "processor" : "processors"}`;
+  const memory =
+    share.residentBytes >= 1024 ** 3
+      ? `${(share.residentBytes / 1024 ** 3).toFixed(2)} GB resident`
+      : `${(share.residentBytes / 1024 ** 2).toFixed(1)} MB resident`;
+  return `${cpu} · ${memory} · ${share.processCount} ${share.processCount === 1 ? "process" : "processes"}`;
+}
+
+export const TASK_USE_UNAVAILABLE = "Use unavailable";
+export const TASK_USE_EMPTY = "No attributed processes in available readings";

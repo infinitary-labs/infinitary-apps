@@ -20,7 +20,7 @@ How the connection carries it is `docs/connection.md`; how a device pairs is `do
 | `orders` | What a home asks a computer that runs work (`src/shared/work.ts`), from the version `since` names, and the seed order and a prepare that names a seed from `seedSince`: each order's `effect`, and the JSON Schema of its `request`, which the home sends and so is published open, and of the computer's answer |
 | `signInOrders` | What a home asks a computer that runs work about its own sign-ins (`src/shared/signIns.ts`, `docs/helper.md` "Its own sign-ins"), from the version `since` names, published the same way; its sign-in where projects live (`inf:sign-ins:forge`, `inf:sign-ins:forge-out`) and Claude's pasted code from the version `forgesSince` names |
 | `browserOrders` | What a home asks a computer that runs work about its tasks' own browsers there (`src/shared/work.ts`, `docs/task-browser.md` "On another computer"), from the version `since` names, published the same way |
-| `resourceOrders` | Read-only CPU and memory observations from the version `since` names, independent of conversations and sign-ins (`src/shared/resources.ts`) |
+| `resourceOrders` | Read-only computer and task-process observations from the version `since` names, independent of conversations and sign-ins (`src/shared/resources.ts`) |
 | `updateOrders` | The one order a home asks a computer that runs work whatever its version (`src/shared/work.ts`, `docs/devices.md` "Updating over the connection"), from the version `since` names, published the same way; its name and shape never change across majors |
 
 Channels the desktop shell answers itself (`surface: "host"`) are not published: no other client can ask them.

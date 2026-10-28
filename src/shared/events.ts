@@ -336,7 +336,13 @@ export const fmEventSchema = z.discriminatedUnion("type", [
    * reads back (docs/task-record.md, "What Activity holds"), so it never
    * reaches a client as itself.
    */
-  z.object({ type: z.literal("firstmate_note"), text: z.string(), taskId: z.string().optional() }),
+  z.object({
+    type: z.literal("firstmate_note"),
+    text: z.string(),
+    taskId: z.string().optional(),
+    /** A task-less host notice may carry a physical warning; older views still receive its text. */
+    tone: z.enum(["info", "warn"]).optional(),
+  }),
   /**
    * A character reaction, drained by the character renderer: one the
    * Firstmate asked for with its emote tool, or a reply emote the host fired

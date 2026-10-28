@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { macBookResourcesView } from "./macBookResourceReading";
-import { panelComputerResources, validMemoryUsedBytes } from "./resources";
+import { panelComputerResources, taskResourceWords, validMemoryUsedBytes } from "./resources";
 
 describe("panelComputerResources", () => {
   it("gives a panel installed memory, the figure and pressure, and no raw counts", () => {
@@ -40,5 +40,18 @@ describe("validMemoryUsedBytes", () => {
     expect(validMemoryUsedBytes(100, undefined)).toBe(true);
     expect(validMemoryUsedBytes(100, 100)).toBe(true);
     expect(validMemoryUsedBytes(100, 101)).toBe(false);
+  });
+});
+
+// INF-1621: the real new Use row exposed "1 processes"; numeric readouts keep singular units singular.
+describe("task resource words", () => {
+  it("renders one process and processor distinctly from plural counts", () => {
+    const residentBytes = 48_807_936;
+    expect(taskResourceWords({ cpuCores: 1, residentBytes, processCount: 1 })).toMatch(
+      /^1\.00 processor · .* · 1 process$/,
+    );
+    expect(taskResourceWords({ cpuCores: 0, residentBytes, processCount: 2 })).toMatch(
+      /^0\.00 processors · .* · 2 processes$/,
+    );
   });
 });

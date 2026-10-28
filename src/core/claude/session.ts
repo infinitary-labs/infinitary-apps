@@ -1,4 +1,6 @@
+import { hostPlatform } from "../platform";
 import { SESSION_COMPACTION_TOKENS } from "../session/compaction";
+import { attributedClaudeProcess } from "./processResources";
 import { claudeCodingReasoning } from "./reasoning";
 
 export { claudeCodingReasoning } from "./reasoning";
@@ -387,6 +389,9 @@ export function claudeSessionOptions(input: ClaudeSessionOptionsInput): Options 
     const staged = coding && Boolean(project?.skillsPlugin || project?.personalSkillsPlugin);
     return {
       cwd: spec.cwd,
+      ...(coding && hostPlatform() !== "win32"
+        ? { spawnClaudeCodeProcess: attributedClaudeProcess(spec.owner, input.stderr) }
+        : {}),
       // The machine's default login and nothing ambient, none of the
       // person's Claude notes, plus the session state events the settle rule
       // reads, the output bound, and for the seat none of the client's

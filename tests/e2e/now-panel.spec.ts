@@ -520,6 +520,8 @@ test("Tasks panel, record hints, stack navigation, sizing and filings", {
     const record = recordCard(page);
     const body = record.locator("[data-card-body]");
     await expect(record).toBeVisible();
+    // INF-1629: facts can put the undrawn body below the record's viewport.
+    await expectRecordBody(page);
     await recordFrame(page)
       .locator("body")
       .evaluate((node) => {

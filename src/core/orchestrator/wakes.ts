@@ -8,6 +8,7 @@ import {
 } from "@shared/holds";
 import type { PlacementRequirements, PlacementSystem } from "@shared/placement";
 import type { EffectiveTaskPolicies } from "@shared/taskPolicies";
+import type { PressureTaskShare } from "../placed/resourcePressure";
 import {
   ABANDON,
   APPROVE_AND_BUILD,
@@ -307,6 +308,16 @@ export function waitingCardWords(cards: readonly WakeNote[]): string {
  * a fact the host read, never a sentence. A new wake adds its kind here.
  */
 export type WakeFacts =
+  | {
+      kind: "resource-pressure";
+      computerId: string | null;
+      label: string;
+      pressure: "warning" | "critical";
+      tasks: PressureTaskShare[];
+      other?: { cpuCores?: number; residentBytes: number; processCount: number };
+      processCount?: number;
+      swapUsedBytes?: number;
+    }
   | { kind: "validation-question-stale"; card: string; reason: string }
   | {
       kind: "task-policies-changed";
@@ -1823,6 +1834,8 @@ export const CAREFUL_NOTICE =
 
 function renderFacts(facts: WakeFacts, wake: Pick<WakeEnvelope, "ways" | "text">): string {
   switch (facts.kind) {
+    case "resource-pressure":
+      return `[fm-op] ${facts.label} reports ${facts.pressure} memory pressure. Nothing was killed, paused or slowed. In response to this notice, do not kill, pause or slow running work; judge these facts and steer future work instead. Current resource facts: ${JSON.stringify(facts)}. Task use is attributed only to known process trees; everything else is unclaimed, resident bytes may count shared pages more than once, and missing facts are unknown.`;
     case "validation-question-stale":
       return `The captain tried to answer validation question ${facts.card}, but nothing was approved: ${facts.reason} Its unusable actions were removed. Record a fresh request with a new identity and revise that same card for the current facts; do not repeat an unknown effect.`;
     case "task-policies-changed":

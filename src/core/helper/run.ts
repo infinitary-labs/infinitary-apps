@@ -27,6 +27,7 @@ import type { MoveDeps } from "../folderMove/move";
 import type { HostKeychain } from "../host";
 import type { MediaProbe, TypefaceProbe } from "../pi/cardImages";
 import { readPlacementFacts } from "../placed/placementFacts";
+import { readProcesses } from "../placed/processResources";
 import { ResourceSampler } from "../placed/resourceSampler";
 import type { ComputerAccounts } from "./accounts";
 import {
@@ -236,7 +237,10 @@ export function startHelper(options: StartHelperOptions): StartHelperOutcome {
     );
   const place = homePlace(joined.grant, options.interfaces);
   const packaged = options.packaged ?? false;
-  const resources = new ResourceSampler({ memory: options.resourceMemory });
+  const resources = new ResourceSampler({
+    memory: options.resourceMemory,
+    processes: readProcesses,
+  });
   if (options.gitAskpass) configureComputerGit({ dataDir, askpass: options.gitAskpass, packaged });
   let name = joined.name;
   let onHomeMac = joined.grant.onHomeMac ?? null;

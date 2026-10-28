@@ -169,3 +169,8 @@ Nothing folds under such a line, and it never stands as Now.
 
 Never persisted as a card, never emitted by an agent, never a feed line: it is a view of the record, opened from a now-panel row and gone when closed.
 In the app the body is a Tier-2 frame template (`src/renderer/src/plugins/builtin/record/`) fed by the `tasks.detail` read, not this JSX; the look is the same.
+
+The task record adds a live Use row after Now and Progress, on the same left edge, in the shared fact-row type.
+It shows the computer name, measured processor equivalents, resident memory and attributed process count in mono, without a meter or a color judgment.
+A missing or stale reading says Use unavailable; no matched processes says No attributed processes in available readings.
+Resident memory counts shared pages once per process and is not the computer’s used-memory figure.

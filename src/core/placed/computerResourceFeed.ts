@@ -29,6 +29,8 @@ export class ComputerResourceFeed {
       /** ComputerResources invalidates its receiver before this listener runs. */
       onContact: (listener: (contact: { deviceId: string }) => void) => () => void;
       emit: (view: ComputerResourcesView) => void;
+      /** Crew work keeps observations alive even with no screen subscriber. */
+      working?: () => boolean;
       now?: () => number;
     },
   ) {
@@ -37,6 +39,7 @@ export class ComputerResourceFeed {
       // Publish missing/out-of-reach immediately, never retain an old connection's value.
       this.publish();
       this.refresh();
+      if (!this.timer) this.tick();
     };
     this.stop = [
       options.onComputers(changed),
@@ -45,6 +48,7 @@ export class ComputerResourceFeed {
         changed();
       }),
     ];
+    if (options.working?.()) this.tick();
   }
 
   /** A catalog read is a bounded lease, renewed while a subscriber is present. */
@@ -137,7 +141,7 @@ export class ComputerResourceFeed {
   }
 
   private demanded(): boolean {
-    return !this.stopped && this.now() < this.demandedUntil;
+    return !this.stopped && (this.now() < this.demandedUntil || this.options.working?.() === true);
   }
 
   private now(): number {

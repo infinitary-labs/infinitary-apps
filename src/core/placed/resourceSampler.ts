@@ -9,10 +9,14 @@ import {
   validResourceMemory,
 } from "@shared/resources";
 
+import { ProcessAttribution, type ProcessReading, processResources } from "./processResources";
+import { processRoots } from "./processRoots";
+
 export type ResourceSamplerOptions = {
   /** The host supplies memory facts; core never reaches into Electron. A Mac read is async. */
   memory?: () => ResourceMemory | null | Promise<ResourceMemory | null>;
   cpus?: () => CpuInfo[];
+  processes?: () => Promise<ProcessReading[] | null>;
   /** Monotonic, so a clock correction cannot make an old reading new. */
   now?: () => number;
   wait?: (ms: number) => Promise<unknown>;
@@ -22,6 +26,7 @@ export type ResourceSamplerOptions = {
 export class ResourceSampler {
   private readonly epoch = randomUUID();
   private sequence = 0;
+  private readonly attribution = new ProcessAttribution();
   private pending: Promise<ResourceObservation> | undefined;
 
   constructor(private readonly options: ResourceSamplerOptions = {}) {}
@@ -47,6 +52,10 @@ export class ResourceSampler {
     try {
       const readCpus = this.options.cpus ?? cpus;
       const now = this.options.now ?? (() => performance.now());
+      const readProcess = this.options.processes;
+      const firstProcesses = readProcess ? await readProcess() : null;
+      const processStart = now();
+      if (firstProcesses) this.attribution.owners(firstProcesses, processRoots.read());
       const first = readCpus();
       const start = now();
       const pause = this.options.wait ?? wait;
@@ -61,6 +70,17 @@ export class ResourceSampler {
         return unknown("interrupted");
       if (first.length === 0 || first.length !== last.length || last.length > 65_536)
         return unknown("interrupted");
+      const lastProcesses = readProcess ? await readProcess() : null;
+      const processMs = now() - processStart;
+      const processes =
+        firstProcesses && lastProcesses
+          ? processResources(
+              firstProcesses,
+              lastProcesses,
+              this.attribution.owners(lastProcesses, processRoots.read()),
+              processMs,
+            )
+          : { status: "unknown" as const };
       const memory = await this.options.memory();
       if (!memory || !validResourceMemory(memory)) return unknown("unavailable");
       let total = 0;
@@ -85,6 +105,7 @@ export class ResourceSampler {
         sampleMs,
         cpu: { logicalCpus: last.length, idleFraction: idle / total },
         memory,
+        ...(readProcess ? { processes } : {}),
       };
     } catch {
       return unknown("unavailable");

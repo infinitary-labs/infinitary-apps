@@ -387,7 +387,8 @@ A development run may stand in the publisher check with `INFINITARY_CODESIGN`; a
 The home can ask a work-enabled computer for current CPU and memory facts through the read-only `inf:computer:resources` order (`src/shared/resources.ts`), from protocol 6.3 on.
 `ComputerResources` (`src/core/placed/computerResources.ts`) reads the home through the same sampler and freshness policy, with `null` as its computer id.
 These observations do not choose a computer, change Runs on, start a conversation or reserve capacity.
-They are demand-only, kept in memory, and never load accounts or sign-ins just to answer a reading.
+They are kept in memory and never load accounts or sign-ins just to answer a reading.
+The shared feed samples every two seconds while a task is active, even with no screen subscriber; screen demand retains its existing lease.
 
 - `ResourceSampler` measures CPU time deltas across a window of at least 250 milliseconds, no longer than five seconds, and reports the idle fraction and logical processor count.
   A missing CPU list, changed processor count, reset counter, empty delta or interrupted window is unknown, never idle.
@@ -435,10 +436,38 @@ A contact change immediately publishes the invalidated state; old pending replie
 A slow computer cannot hold another computer's completed reading back.
 The renderer shares one upstream push subscription and freezes each pushed value before fanning it out to its local readers.
 Read-catalog subscribers renew demand every five seconds; those requests return the shared cache rather than starting their own loops.
-The last demand expires after fifteen seconds, after which no new samples begin until another read arrives; a read already in flight stays bounded by its timeout.
+The last screen demand expires after fifteen seconds; when no task is active either, no new samples begin until another read or task activation arrives.
+A read already in flight stays bounded by its timeout.
 Closing the core stops the loop and invalidates the receiver.
-Live refreshes write no database row, task event, activity line or panel-store value.
+Ordinary samples write no database row, task event, activity line or panel-store value.
+A newly observed warning or critical memory-pressure fact writes one Activity notice and one durable first-mate wake ("Running tasks’ resource use").
 These readings are observations only, never a scheduling commitment, a physical-sharing identity, or a stored placement snapshot.
+
+### Running tasks’ resource use
+
+The optional `processes` observation carries the process count and each task’s processor equivalents, resident bytes and process count, plus everything else as `other`.
+An absent field is an older computer; `unknown` is a failed process-table read, never zero use.
+Process identifiers, arguments, paths, usernames and environments never cross the connection.
+`ProcessRoots` owns explicit process roots registered by every shell job, including a synchronous one, and every coding Claude client.
+`ProcessAttribution` walks parent links and registered groups, retaining observed ownership across reparenting only while the process birth stamp is unchanged.
+Each process contributes once; a nested explicit root owns its subtree.
+Processes outside those trees, including simulators started by launchd, remain in everything else; this observation does not infer ownership from a working folder.
+Processor use comes from cumulative process-time deltas across the sample, not macOS’s lifetime-average percentage.
+A new process without a comparable first reading has unknown processor use for that sample, while its resident bytes still show.
+Resident bytes sum RSS, so shared pages can appear in more than one process; they are not unique physical memory or the placement memory figure.
+Linux reads cumulative processor ticks and the process birth tick from `/proc/<pid>/stat`, using the host’s `CLK_TCK`, rather than the whole-second TIME that Linux ps reports.
+Those asynchronous reads run serially so a large process table cannot exhaust open file descriptors; an unreadable process has unknown processor use.
+The Mac adapter adds swap occupancy from `vm.swapusage`, independently of installed memory; Linux reads SwapTotal minus SwapFree from `/proc/meminfo`.
+None of these additions changes placement, its margins, sampling cadence or process priority.
+
+The home emits one Activity warning, one separate row per observed task share, and one durable first-mate wake for each newly observed warning or critical pressure level on a computer.
+Separate rows keep later tasks visible within Activity’s two-line display instead of putting every share in one truncated sentence.
+Repeated samples at that level do not repeat the notice; a missing reading does not establish recovery.
+A normal reading ends the episode, and a subsequent warning is a new fact.
+The wake carries the observed task shares, unclaimed use, process count and swap occupancy when available.
+The first mate decides what to steer; this observation path never kills, pauses, slows or gates a run.
+The task record’s Use row reads these same live observations, with explicit unavailable words when they are missing or stale.
+
 
 ## Holding a conversation
 

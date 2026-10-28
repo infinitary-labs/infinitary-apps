@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { promisify } from "node:util";
 import { hostEnv } from "@core/hostEnv";
 import { hostPlatform } from "@core/platform";
@@ -45,7 +46,34 @@ export function macPressureFromSysctl(text: string): MacMemoryPressure | null {
   return null;
 }
 
+/** `vm.swapusage` reports occupancy independently of installed memory. */
+export function macSwapFromSysctl(text: string): number | undefined {
+  const match = /used\s*=\s*([\d.]+)([KMG])/.exec(text);
+  if (!match) return undefined;
+  const bytes =
+    Number(match[1]) * ({ K: 1024, M: 1024 ** 2, G: 1024 ** 3 }[match[2] ?? ""] ?? Number.NaN);
+  return Number.isFinite(bytes) && bytes >= 0 ? Math.round(bytes) : undefined;
+}
+
+/** Linux /proc/meminfo reports KiB; a failed read omits only swap. */
+export function linuxSwapFromMeminfo(text: string): number | undefined {
+  const total = /^SwapTotal:\s+(\d+) kB$/m.exec(text);
+  const free = /^SwapFree:\s+(\d+) kB$/m.exec(text);
+  if (!total || !free) return undefined;
+  const used = (Number(total[1]) - Number(free[1])) * 1024;
+  return Number.isSafeInteger(used) && used >= 0 ? used : undefined;
+}
+
+async function readLinuxSwap(): Promise<number | undefined> {
+  try {
+    return linuxSwapFromMeminfo(await readFile("/proc/meminfo", "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
 export type MacMemoryFacts = {
+  swapUsedBytes?: number;
   inactiveBytes?: number;
   speculativeBytes?: number;
   memoryPressure?: MacMemoryPressure;
@@ -82,14 +110,20 @@ async function readText(file: string, args: string[]): Promise<string | null> {
 /** Fresh inactive pages and pressure. A miss is omitted facts, never a failed sample. */
 export async function readMacMemoryFacts(): Promise<MacMemoryFacts | null> {
   if (hostPlatform() !== "darwin") return null;
-  const [pagesText, pressureText] = await Promise.all([
+  const [pagesText, pressureText, swapText] = await Promise.all([
     readText("/usr/bin/vm_stat", []),
     readText("/usr/sbin/sysctl", ["-n", "kern.memorystatus_vm_pressure_level"]),
+    readText("/usr/sbin/sysctl", ["-n", "vm.swapusage"]),
   ]);
   const pages = pagesText ? macPagesFromVmStat(pagesText) : null;
   const memoryPressure = pressureText ? macPressureFromSysctl(pressureText) : null;
-  if (!pages && !memoryPressure) return null;
-  return { ...pages, ...(memoryPressure ? { memoryPressure } : {}) };
+  const swapUsedBytes = swapText ? macSwapFromSysctl(swapText) : undefined;
+  if (!pages && !memoryPressure && swapUsedBytes === undefined) return null;
+  return {
+    ...(swapUsedBytes === undefined ? {} : { swapUsedBytes }),
+    ...pages,
+    ...(memoryPressure ? { memoryPressure } : {}),
+  };
 }
 
 /** Electron reports KiB, not bytes. Keep unlike OS estimates unlike. */
@@ -106,7 +140,10 @@ export async function readResourceMemory(): Promise<ResourceMemory | null> {
         : { purgeableBytes: memory.purgeable * 1024, fileBackedBytes: memory.fileBacked * 1024 }),
     };
     if (!validResourceMemory(reading)) return null;
-    if (platform !== "darwin") return reading;
+    if (platform !== "darwin") {
+      const swapUsedBytes = await readLinuxSwap();
+      return { ...reading, ...(swapUsedBytes === undefined ? {} : { swapUsedBytes }) };
+    }
     return withMacMemoryFacts(reading, await readMacMemoryFacts());
   } catch {
     return null;

@@ -17,7 +17,7 @@ const boardDeltaPushes = sharedSubscription(
   (delta) => delta,
 );
 
-const resourcePushes = sharedSubscription(
+export const resourcePushes = sharedSubscription(
   (listener: (view: ComputerResourcesView) => void) =>
     window.infinitary.devices.onResources(listener),
   (view) => view,

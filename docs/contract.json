@@ -2221,6 +2221,11 @@
                                   "exclusiveMinimum": 0,
                                   "maximum": 9007199254740991
                                 },
+                                "swapUsedBytes": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
                                 "freeBytes": {
                                   "type": "integer",
                                   "minimum": 0,
@@ -2263,6 +2268,96 @@
                               "required": [
                                 "totalBytes",
                                 "freeBytes"
+                              ]
+                            },
+                            "processes": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "const": "sampled"
+                                    },
+                                    "processCount": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "tasks": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "processCount": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "residentBytes": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "cpuCores": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "taskId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "processCount",
+                                          "residentBytes",
+                                          "taskId"
+                                        ]
+                                      }
+                                    },
+                                    "other": {
+                                      "type": "object",
+                                      "properties": {
+                                        "processCount": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "residentBytes": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "cpuCores": {
+                                          "type": "number",
+                                          "minimum": 0
+                                        }
+                                      },
+                                      "required": [
+                                        "processCount",
+                                        "residentBytes"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "processCount",
+                                    "tasks",
+                                    "other"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "const": "unknown"
+                                    }
+                                  },
+                                  "required": [
+                                    "status"
+                                  ]
+                                }
                               ]
                             }
                           },
@@ -28579,6 +28674,11 @@
                                       "exclusiveMinimum": 0,
                                       "maximum": 9007199254740991
                                     },
+                                    "swapUsedBytes": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
                                     "freeBytes": {
                                       "type": "integer",
                                       "minimum": 0,
@@ -28621,6 +28721,96 @@
                                   "required": [
                                     "totalBytes",
                                     "freeBytes"
+                                  ]
+                                },
+                                "processes": {
+                                  "oneOf": [
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "status": {
+                                          "type": "string",
+                                          "const": "sampled"
+                                        },
+                                        "processCount": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "tasks": {
+                                          "type": "array",
+                                          "items": {
+                                            "type": "object",
+                                            "properties": {
+                                              "processCount": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "residentBytes": {
+                                                "type": "integer",
+                                                "minimum": 0,
+                                                "maximum": 9007199254740991
+                                              },
+                                              "cpuCores": {
+                                                "type": "number",
+                                                "minimum": 0
+                                              },
+                                              "taskId": {
+                                                "type": "string",
+                                                "minLength": 1
+                                              }
+                                            },
+                                            "required": [
+                                              "processCount",
+                                              "residentBytes",
+                                              "taskId"
+                                            ]
+                                          }
+                                        },
+                                        "other": {
+                                          "type": "object",
+                                          "properties": {
+                                            "processCount": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "residentBytes": {
+                                              "type": "integer",
+                                              "minimum": 0,
+                                              "maximum": 9007199254740991
+                                            },
+                                            "cpuCores": {
+                                              "type": "number",
+                                              "minimum": 0
+                                            }
+                                          },
+                                          "required": [
+                                            "processCount",
+                                            "residentBytes"
+                                          ]
+                                        }
+                                      },
+                                      "required": [
+                                        "status",
+                                        "processCount",
+                                        "tasks",
+                                        "other"
+                                      ]
+                                    },
+                                    {
+                                      "type": "object",
+                                      "properties": {
+                                        "status": {
+                                          "type": "string",
+                                          "const": "unknown"
+                                        }
+                                      },
+                                      "required": [
+                                        "status"
+                                      ]
+                                    }
                                   ]
                                 }
                               },
@@ -46914,6 +47104,13 @@
                                 },
                                 "taskId": {
                                   "type": "string"
+                                },
+                                "tone": {
+                                  "type": "string",
+                                  "enum": [
+                                    "info",
+                                    "warn"
+                                  ]
                                 }
                               },
                               "required": [
@@ -50386,6 +50583,13 @@
               },
               "taskId": {
                 "type": "string"
+              },
+              "tone": {
+                "type": "string",
+                "enum": [
+                  "info",
+                  "warn"
+                ]
               }
             },
             "required": [
@@ -57243,6 +57447,11 @@
                                   "exclusiveMinimum": 0,
                                   "maximum": 9007199254740991
                                 },
+                                "swapUsedBytes": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
                                 "freeBytes": {
                                   "type": "integer",
                                   "minimum": 0,
@@ -57285,6 +57494,96 @@
                               "required": [
                                 "totalBytes",
                                 "freeBytes"
+                              ]
+                            },
+                            "processes": {
+                              "oneOf": [
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "const": "sampled"
+                                    },
+                                    "processCount": {
+                                      "type": "integer",
+                                      "minimum": 0,
+                                      "maximum": 9007199254740991
+                                    },
+                                    "tasks": {
+                                      "type": "array",
+                                      "items": {
+                                        "type": "object",
+                                        "properties": {
+                                          "processCount": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "residentBytes": {
+                                            "type": "integer",
+                                            "minimum": 0,
+                                            "maximum": 9007199254740991
+                                          },
+                                          "cpuCores": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "taskId": {
+                                            "type": "string",
+                                            "minLength": 1
+                                          }
+                                        },
+                                        "required": [
+                                          "processCount",
+                                          "residentBytes",
+                                          "taskId"
+                                        ]
+                                      }
+                                    },
+                                    "other": {
+                                      "type": "object",
+                                      "properties": {
+                                        "processCount": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "residentBytes": {
+                                          "type": "integer",
+                                          "minimum": 0,
+                                          "maximum": 9007199254740991
+                                        },
+                                        "cpuCores": {
+                                          "type": "number",
+                                          "minimum": 0
+                                        }
+                                      },
+                                      "required": [
+                                        "processCount",
+                                        "residentBytes"
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "status",
+                                    "processCount",
+                                    "tasks",
+                                    "other"
+                                  ]
+                                },
+                                {
+                                  "type": "object",
+                                  "properties": {
+                                    "status": {
+                                      "type": "string",
+                                      "const": "unknown"
+                                    }
+                                  },
+                                  "required": [
+                                    "status"
+                                  ]
+                                }
                               ]
                             }
                           },
@@ -65020,6 +65319,11 @@
                       "exclusiveMinimum": 0,
                       "maximum": 9007199254740991
                     },
+                    "swapUsedBytes": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
                     "freeBytes": {
                       "type": "integer",
                       "minimum": 0,
@@ -65062,6 +65366,96 @@
                   "required": [
                     "totalBytes",
                     "freeBytes"
+                  ]
+                },
+                "processes": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "const": "sampled"
+                        },
+                        "processCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "tasks": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "processCount": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "residentBytes": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "cpuCores": {
+                                "type": "number",
+                                "minimum": 0
+                              },
+                              "taskId": {
+                                "type": "string",
+                                "minLength": 1
+                              }
+                            },
+                            "required": [
+                              "processCount",
+                              "residentBytes",
+                              "taskId"
+                            ]
+                          }
+                        },
+                        "other": {
+                          "type": "object",
+                          "properties": {
+                            "processCount": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "residentBytes": {
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 9007199254740991
+                            },
+                            "cpuCores": {
+                              "type": "number",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "processCount",
+                            "residentBytes"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "processCount",
+                        "tasks",
+                        "other"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "const": "unknown"
+                        }
+                      },
+                      "required": [
+                        "status"
+                      ]
+                    }
                   ]
                 }
               },

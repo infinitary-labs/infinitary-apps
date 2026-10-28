@@ -13,6 +13,7 @@ import { useShellStore } from "../app/store";
 import { useModelNames } from "../app/useModelNames";
 import { ResponseCard } from "../design/cards/ResponseCard";
 import { hasFactStrip, TaskFactRows, TaskFactStrip } from "../design/core/TaskFacts";
+import { TaskResourceUse } from "../design/core/TaskResourceUse";
 import { recordTemplate } from "../plugins/builtin";
 import { BUILTIN_PLUGIN_ID } from "../plugins/builtin/manifest";
 import { FrameMount } from "../plugins/frames/FrameMount";
@@ -309,6 +310,7 @@ export function RecordCard({
               onOpenBrowser={() => useShellStore.getState().openBrowserView(taskId)}
               focusable
             />
+            <TaskResourceUse taskId={taskId} />
           </div>
         )}
         {/* The body frame reaches past the card's edges by the room its rows'

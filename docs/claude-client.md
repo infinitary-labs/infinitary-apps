@@ -3,6 +3,16 @@
 How the Claude Max backend finds, checks and runs the Claude client the person installed.
 The backend's design is `docs/architecture.md` §16.1; the sign-in rules are below, and the renewal and model probes are `docs/claude-renew-probe.md` and `docs/claude-model-probe.md`.
 
+## Coding process ownership
+
+On macOS and Linux, a coding session uses the SDK’s supported `spawnClaudeCodeProcess` hook (`src/core/claude/processResources.ts`) to register the actual client PID as its task’s process root.
+The hook keeps the SDK’s executable, arguments, already-filtered environment and forwarded late-abort signal unchanged, uses piped streams without a terminal, and releases the root on process exit.
+The resource observer never signals that process; the existing session lifecycle still owns close and cancellation.
+The client’s stderr goes to the existing host log callback.
+The SDK’s custom-process contract delivers plain process exit, unlike its default local adapter’s bounded stderr-close delay and built-in stderr tail in exit errors; diagnostics remain in the host log rather than that SDK-formatted tail.
+The first mate, one-shot questions and Windows keep their existing SDK spawn path.
+Task attribution and its limitations are owned by `docs/helper.md`, "Running tasks’ resource use".
+
 ## Notes
 
 `claudeEnvFor` unconditionally sets `CLAUDE_CODE_ENTRYPOINT=infinitary`, replacing absent, empty and inherited labels with the app's own identity without mutating the supplied environment.

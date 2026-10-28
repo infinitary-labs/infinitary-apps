@@ -90,7 +90,7 @@ Whether the captain read something is the crewmate's call, never the first mate'
 
 **Finished wakes the first mate once, after the captain's close** (INF-731, the captain's "Send the 'crewmate finished' wake once per task, not once per reply").
 `finished` means the captain closed the crewmate's card, and on an answer task the first mate's `settle_task answered` is refused while a card of the crewmate's is up (`closeAnswerUsedAsBasis`), so each such wake asked for a close it could not make.
-So a report that declares it while a card of its own is still on the captain's screen, a note included, is row 1: the captain's turn, no wake (`finishedCardUp`, kept apart from `decisionCardOpen` so a personal workspace's report still closes its task past a note).
+So a report that declares it while a card of its own is still on the captain's screen, a note included, is row 1: the captain's turn, no wake (`finishedCardUp`, kept apart from `decisionCardOpen` so a note alone never holds a report's turn).
 The captain's replies under that card each bring the crewmate a turn and a report, and none of them wakes the first mate; the receipt tells the crewmate so.
 The captain's close reaches the crewmate as its next turn (`card-closed`), whose report declares `finished` again with the card gone: row 1a, the one wake, and the first mate closes the task.
 A request beside it (`needs_firstmate`) still wakes at row 0a, so a reply that needs the first mate reaches it.

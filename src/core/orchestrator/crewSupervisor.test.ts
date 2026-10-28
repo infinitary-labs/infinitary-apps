@@ -18563,8 +18563,8 @@ describe("decision actions", () => {
  * The personal workspace (talk-to-personalize Step 4): a personal-ui commission
  * is bound to the personal workspace by the host, runs with no worktree
  * and the two panel checks, stamps and commits through the personal
- * delegate, closes done on a report with no captain-turn witness, and refuses every
- * settle and every settle-effect card.
+ * delegate, routes a saved report like any other (INF-1677), and refuses every
+ * other settle and every settle-effect card.
  */
 describe("CrewSupervisor personal workspace (Step 4)", () => {
   function liveSetup(crewmate: FakeCrewmate, extras: SetupExtras = {}) {
@@ -18756,7 +18756,9 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(crewmate.promptCalls.at(-1)).not.toContain("Always use compact rows in my panels.");
   });
 
-  it("commits the turn with the report and closes done, with no wake and no settle", async () => {
+  // INF-1677: a panel build ends with the default completion. The host saves
+  // the turn, the report reaches the first mate, and its finished close ends it.
+  it("commits the turn with the report, routes it, and closes done when the first mate declares it finished", async () => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
     const { taskId } = await h.supervisor.commission({
@@ -18777,8 +18779,15 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     crewmate.emit({ type: "assistant_delta", taskId, text: "Tokyo clock panel added." });
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
-    await vi.waitFor(() => expect(h.tasks.get(taskId)?.status).toBe("done"));
+    // The report routes only once its commit is saved.
+    await vi.waitFor(() => expect(h.ops).toHaveLength(1));
     expect(h.commits).toEqual([{ taskId, message: "Tokyo clock panel added." }]);
+    expect(h.ops[0]).toContain("Tokyo clock panel added.");
+    expect(h.tasks.get(taskId)?.status).toBe("active");
+    expect(crewmate.dispose).not.toHaveBeenCalled();
+    expect(
+      (await h.supervisor.closeFinishedFolderWork(taskId, "the clock is on the right rail")).text,
+    ).toContain("as finished");
     expect(h.tasks.get(taskId)).toMatchObject({
       status: "done",
       closedReason: "finished",
@@ -18794,13 +18803,12 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(
       h.tasks.timeline(taskId).find((event) => event.kind === "note" && !event.data?.refused)?.text,
     ).toContain("committed abcdef0 in the personal workspace (tokyo-clock)");
-    // No wake went anywhere: the panel is simply there.
-    expect(h.ops).toEqual([]);
+    expect(h.ops).toHaveLength(1);
     expect(h.live.ended).toContain(taskId);
     expect(crewmate.dispose).toHaveBeenCalled();
   });
 
-  it("keeps the task open and tells the Firstmate when the commit fails, and closes once a later report commits", async () => {
+  it("keeps the task open and tells the Firstmate when the commit fails, and routes the report once a later one commits", async () => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
     const { taskId } = await h.supervisor.commission({
@@ -18826,22 +18834,22 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     expect(h.ops[0]).toContain(taskId);
     expect(h.ops[0]).toContain(refusal);
 
-    // A steer starts the next turn; its report commits again and closes the task.
+    // The failed turn's report is not routed as finished work.
+    expect(h.ops[0]).not.toContain("Tokyo clock panel added.");
+
+    // A steer starts the next turn; its report commits again and routes.
     await h.supervisor.steerCrewmate(taskId, "the lock is gone, report again");
     await tick();
     crewmate.emit({ type: "assistant_delta", taskId, text: "Tokyo clock panel added again." });
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
-    await vi.waitFor(() => expect(h.tasks.get(taskId)?.status).toBe("done"));
-    expect(h.tasks.get(taskId)).toMatchObject({
-      closedReason: "finished",
-      delivery: { mode: "in-place" },
-    });
+    await vi.waitFor(() => expect(h.ops).toHaveLength(2));
+    expect(h.ops[1]).toContain("Tokyo clock panel added again.");
     expect(h.commits).toEqual([{ taskId, message: "Tokyo clock panel added again." }]);
-    expect(h.ops).toHaveLength(1);
+    expect(h.tasks.get(taskId)?.status).toBe("active");
   });
 
-  it("closes on a report beside a note, keeps the note, and sends no wake", async () => {
+  it("routes a report beside its note, and the finished close keeps the note", async () => {
     const crewmate = fakeCrewmate();
     const h = liveSetup(crewmate);
     const { taskId } = await h.supervisor.commission({
@@ -18861,15 +18869,18 @@ describe("CrewSupervisor personal workspace (Step 4)", () => {
     spec?.onReport?.("Tokyo clock panel added.");
     crewmate.emit({ type: "turn_end", taskId });
     crewmate.finishPrompt();
-    await vi.waitFor(() => expect(h.tasks.get(taskId)?.status).toBe("done"));
-    expect(h.tasks.get(taskId)?.closedReason).toBe("finished");
+    // A note is not a decision: the report wakes the first mate like any other.
+    await vi.waitFor(() => expect(h.ops).toHaveLength(1));
+    expect(h.sorts.at(-1)).toMatchObject({ taskId, verdict: "captain" });
     expect(h.commits).toEqual([{ taskId, message: "Tokyo clock panel added." }]);
+    expect(
+      (await h.supervisor.closeFinishedFolderWork(taskId, "the clock is on the right rail")).text,
+    ).toContain("as finished");
+    expect(h.tasks.get(taskId)?.closedReason).toBe("finished");
     expect(h.supervisor.cardsSnapshot().find((card) => card.id === cardId)).toMatchObject({
       taskId,
       actions: [],
     });
-    expect(h.ops).toEqual([]);
-    expect(h.sorts).toEqual([]);
   });
 
   // With its note up the wait is quiet; with no card up the captain has

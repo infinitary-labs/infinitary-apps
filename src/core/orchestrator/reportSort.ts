@@ -160,7 +160,7 @@ export type Witnesses = {
    * (`closeAnswerUsedAsBasis`), so his close is the next move: it reaches
    * the crewmate as its next turn, whose report declares finished again with
    * the card gone. Read beside `decisionCardOpen`, never inside it, so a
-   * personal workspace's report still closes its task past a note.
+   * note alone never holds a report's turn.
    */
   finishedCardUp?: boolean;
   /**

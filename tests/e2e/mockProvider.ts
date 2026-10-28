@@ -736,7 +736,8 @@ export const ESCALATION_REFUSAL_PHRASE = NOTHING_SPAWNED;
  * reports after a short delay so the running dot is observable; on the
  * change brief it rewrites the panel with smaller rows, captures, places
  * and captures it again, and reports after the same delay, so a spec can
- * watch the rails while the change is underway.
+ * watch the rails while the change is underway. Each build shows its
+ * answering note before it reports.
  */
 export const MOCK_PANEL_ID = "tokyo-clock";
 export const MOCK_PANEL_TITLE = "Tokyo clock";
@@ -752,6 +753,27 @@ export const MOCK_PANEL_REPORT_DELAY_MS = 2_500;
  */
 const LIVE_BRIEF_MARKER = `${BUILD_IN_PLACE_OPENING}:`;
 const ROWS_SMALLER_MARKER = "rows smaller";
+
+/**
+ * The answering note a panel build ends with before its report (INF-1677):
+ * the ordinary completion of work with nothing to merge.
+ */
+export const MOCK_PANEL_NOTE_TITLE = "Your Tokyo clock panel is on the rail";
+function panelNote(result: string): ScriptedCall {
+  return {
+    name: "emit_card",
+    args: {
+      title: MOCK_PANEL_NOTE_TITLE,
+      answering: true,
+      body: completionCardBody(
+        "<p>You asked for a Tokyo clock panel.</p>",
+        `<p>${result}</p>`,
+        "<p>Your rail had no such panel.</p>",
+        "<p>The panel is on your rail now.</p>",
+      ),
+    },
+  };
+}
 
 function mockPanelSource(rows: "regular" | "small"): string {
   return [
@@ -1512,8 +1534,8 @@ export async function startMockProvider(
         if (isFirstmate && wantsStream) {
           // The answer-delivery retry (a captain message nothing took effect
           // after, such as plain chat the mock answers in closing words, or
-          // one whose work ended with no card answering it - a personal
-          // build the host closed on its report, a crewmate that failed):
+          // one whose work ended with no card answering it, such as a
+          // crewmate that failed):
           // the mock reacts, as a model with nothing more to show does, so
           // the message is covered quietly. Both openings are the one retry
           // (docs/task-capture.md, "How a message ends"); it never re-reads
@@ -1845,6 +1867,10 @@ export async function startMockProvider(
               streamToolCalls([{ name: "capture_panel", args: { id: MOCK_PANEL_ID } }]);
               return;
             }
+            if (!calledTool(body, "emit_card")) {
+              streamToolCalls([panelNote(MOCK_PANEL_REVISED_REPORT)]);
+              return;
+            }
             if (!calledTool(body, "report")) {
               setTimeout(() => {
                 streamToolCalls([{ name: "report", args: { text: MOCK_PANEL_REVISED_REPORT } }]);
@@ -1881,6 +1907,10 @@ export async function startMockProvider(
           }
           if (toolCallCount(body, "capture_panel") < 2) {
             streamToolCalls([{ name: "capture_panel", args: { id: MOCK_PANEL_ID } }]);
+            return;
+          }
+          if (!calledTool(body, "emit_card")) {
+            streamToolCalls([panelNote(MOCK_PANEL_REPORT)]);
             return;
           }
           if (!calledTool(body, "report")) {

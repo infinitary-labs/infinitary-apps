@@ -1,5 +1,5 @@
 import { CREATE_PANEL_DRAFT } from "../../../src/shared/createPanelSlot";
-import type { Scenario } from "../mockProvider";
+import { MOCK_PANEL_REPORT, MOCK_PANEL_REVISED_REPORT, type Scenario } from "../mockProvider";
 
 /**
  * The talk-to-personalize build loop (Step 4). "make me a panel: <title>",
@@ -7,7 +7,9 @@ import type { Scenario } from "../mockProvider";
  * finished by the captain, makes the mock Firstmate spawn with personal_ui
  * true; "remove my panel <id>" is the Tier A `personalize remove`. The
  * crewmate that builds the panel answers the host's own build-in-place
- * brief, so it stays in the shared stand-in.
+ * brief, so it stays in the shared stand-in. Its report reaches the first
+ * mate like any other, and the first mate closes the build as finished
+ * (INF-1677).
  */
 export const PERSONAL_PANEL_PROMPT_MARKER = "make me a panel:";
 export const PERSONAL_REMOVE_PROMPT_MARKER = "remove my panel ";
@@ -17,6 +19,26 @@ export const personalPanels: Scenario =
   () =>
   ({ isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
     if (!isFirstmate || !wantsStream || hasToolResults) return undefined;
+    const reported = latestUserTail.match(/reported on task ([\w-]+)/)?.[1];
+    if (
+      reported &&
+      (latestUserTail.includes(MOCK_PANEL_REPORT) ||
+        latestUserTail.includes(MOCK_PANEL_REVISED_REPORT))
+    ) {
+      return {
+        calls: [
+          {
+            name: "settle_task",
+            args: {
+              task_id: reported,
+              mode: "finished",
+              completion_evidence: "the panel is on the rail and its report saved it",
+              closing_sentence: "Your panel is built.",
+            },
+          },
+        ],
+      };
+    }
     if (latestUserTail.includes(PERSONAL_REMOVE_PROMPT_MARKER)) {
       const surface = latestUserTail.match(/remove my panel ([a-z0-9-]+)/)?.[1]?.trim() as string;
       return {

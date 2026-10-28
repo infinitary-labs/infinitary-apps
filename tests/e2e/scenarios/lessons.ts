@@ -25,6 +25,8 @@ import {
 import { calledTool, type Scenario, type ScriptedCall, toolAnswers } from "../mockProvider";
 import { providerMessages } from "../providerRequest";
 
+const LESSONS_STOPPED_REPORT = "Lessons stopped; records kept.";
+
 /**
  * The lessons (FI3-1474): the mock Firstmate spawns each subject's teacher
  * on the personal workspace, and the mock teacher plays scripted rounds from
@@ -57,6 +59,24 @@ export const lessons: Scenario =
             ],
           };
         }
+      }
+      // Stopping the lessons ends the subject the ordinary way (INF-1677):
+      // its finished report reaches the first mate, which closes it.
+      const reported = latestUserTail.match(/reported on task ([\w-]+)/)?.[1];
+      if (reported && latestUserTail.includes(LESSONS_STOPPED_REPORT)) {
+        return {
+          calls: [
+            {
+              name: "settle_task",
+              args: {
+                task_id: reported,
+                mode: "finished",
+                completion_evidence: "the lessons stopped and their records are saved",
+                closing_sentence: "The lessons are stopped; their records are kept.",
+              },
+            },
+          ],
+        };
       }
       return undefined;
     }
@@ -119,9 +139,7 @@ export const lessons: Scenario =
     if (hasToolResults) return { text: "Round ready." };
     if (choseOnCard("Stop these lessons")) {
       return {
-        calls: [
-          { name: "report", args: { text: "Lessons stopped; records kept.", finished: true } },
-        ],
+        calls: [{ name: "report", args: { text: LESSONS_STOPPED_REPORT, finished: true } }],
       };
     }
     if (choseOnCard("Start today's lesson")) {

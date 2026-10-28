@@ -147,7 +147,8 @@ describe("renderIntentBrief", () => {
     );
     expect(brief).toContain("Workspace: /data/fleet/personal - your working directory.");
     expect(brief).toContain("Do not commit; the host commits at the end of each of your turns");
-    expect(brief).toContain("never a completion card");
+    // A build ends the ordinary way (INF-1677): a note showing it, then the report.
+    expect(brief).toContain("Your completion is a factual note showing what you built");
     // The session lists the workspace's skills itself (FI3-789): the brief
     // names the two to start from and never lists them a second time.
     expect(brief).toContain(

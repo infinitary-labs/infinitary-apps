@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "id": "personal-panel-ordinary-ending",
+      "kind": "fix",
+      "title": "A panel you asked for ends with a note about it",
+      "body": "When a crewmate finishes building or changing one of your panels, it shows what it built on a note, and the first mate closes the task once the panel is saved. Closing the note tells the app you have seen it.",
+      "area": "tasks",
+      "noPicture": "The note is an ordinary card; what changed is how the build's task ends, which a still picture does not show.",
+      "provenance": { "origin": "change" }
+    }
+  ]
+}

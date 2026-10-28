@@ -1,9 +1,13 @@
 import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
-import { expect, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 import { reportSummary } from "@shared/feed";
 import Database from "better-sqlite3";
+import {
+  ANSWER_MISSING_ENDED_OPENING,
+  ANSWER_MISSING_OPENING,
+} from "../../src/core/orchestrator/wakes";
 import { personalPanelRemovedLine } from "../../src/core/personal/panelLines";
 import { mountLine } from "../../src/core/personal/panelMounts";
 import { MANAGED_FILES } from "../../src/core/personal/workspace";
@@ -14,6 +18,7 @@ import { scratchDir } from "../helpers/scratchDirs";
 import { type LaunchedApp, launchApp } from "./launch";
 import {
   MOCK_PANEL_ID,
+  MOCK_PANEL_NOTE_TITLE,
   MOCK_PANEL_REPORT,
   MOCK_PANEL_REVISED_REPORT,
   MOCK_PANEL_TITLE,
@@ -149,9 +154,10 @@ test.describe("the personal extension host (Step 2)", () => {
  * Step 4 row): through the mock provider, an ask becomes a panel. The mock
  * Firstmate spawns with personal_ui; the mock crewmate writes the
  * extension with Pi's own write tool, lints, captures, and reports; the
- * host stamps the task onto the manifest (the running dot), commits the
- * workspace with the report as the message, and closes the task done with
- * no card and no settle. The build runs apart from the rails
+ * host stamps the task onto the manifest (the running dot) and commits the
+ * workspace with the report as the message. The crewmate's answering note
+ * shows the result, and the report reaches the first mate, which closes
+ * the task as finished (INF-1677). The build runs apart from the rails
  * (docs/personal-panels.md, "Built apart"): the crewmate's version is drawn
  * out of sight, where its capture photographs it, and the rail takes it at
  * the report. The panel persists across a relaunch, a second ask is a
@@ -229,6 +235,38 @@ async function awaitTurnCommit(
   };
   await expect.poll(read, { timeout: 30_000 }).not.toBeNull();
   return read();
+}
+
+/**
+ * A panel build's ordinary ending (INF-1677): its crewmate's one answering
+ * note, with no actions, stays after the task closes; the captain's close
+ * of it accepts the answer, and no answer retry ever reached the first mate.
+ */
+async function acceptNote(page: Page, mockProvider: MockProviderServer): Promise<void> {
+  const notes = () =>
+    page.evaluate(() =>
+      window.infinitary.cards
+        .list()
+        .then((cards) =>
+          cards.map(({ id, title, actions, answering }) => ({ id, title, actions, answering })),
+        ),
+    );
+  await expect
+    .poll(notes)
+    .toEqual([
+      { id: expect.any(String), title: MOCK_PANEL_NOTE_TITLE, actions: [], answering: true },
+    ]);
+  const [note] = await notes();
+  await page.evaluate((id) => window.infinitary.cards.close(id), note?.id ?? "");
+  await expect.poll(notes).toEqual([]);
+  expect(
+    mockProvider
+      .requestBodies()
+      .some(
+        (body) =>
+          body.includes(ANSWER_MISSING_OPENING) || body.includes(ANSWER_MISSING_ENDED_OPENING),
+      ),
+  ).toBe(false);
 }
 
 /** A PNG's width and height from its IHDR chunk. */
@@ -493,11 +531,13 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
         )
         .toBe(true);
 
-      // The report is the feed line; the close is the record's own line; no card.
+      // The report is the feed line; the close is the record's own line.
       await expect(statusLine(page, key)).toBeVisible({ timeout: 30_000 });
       await expect(panel().locator("[data-side-panel-running]")).toHaveCount(0);
       await expect(page.locator("[data-panel-draft]")).toHaveCount(0);
-      expect(await page.evaluate(() => window.infinitary.cards.list())).toEqual([]);
+      // The build ended the ordinary way (INF-1677): one answering note with
+      // no actions stays after the close, and closing it accepts the answer.
+      await acceptNote(page, mockProvider);
 
       // The record: done, finished, on the personal repo, with no worktree.
       const tasks = readTasks(userDataDir);
@@ -661,6 +701,7 @@ test.describe("the build loop: an ask becomes a panel (Step 4)", () => {
       expect(manifest.origin?.taskId).toBe(tasks[1]?.id);
       await expect(panel().locator("[data-side-panel-running]")).toHaveCount(0);
       await expect(page.locator("[data-panel-draft]")).toHaveCount(0);
+      await acceptNote(page, mockProvider);
     });
 
     await test.step("remove it: the host takes the panel off the rails and commits the removal", async () => {

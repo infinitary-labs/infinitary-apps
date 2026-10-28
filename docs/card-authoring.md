@@ -83,7 +83,7 @@ A third effect kind, `host`, carries the app's own operations (re-run an account
 
 Completed captain-requested work gets an outcome card before the final report.
 Without a change of the task's own to put in, it is a factual note naming what happened and how it was verified, with no settle action; the first mate can then close or continue the task.
-Answer tasks already deliver their card; internal reviews and hand-off steps deliver their report, and personal-workspace builds explicitly remain report-only.
+Answer tasks already deliver their card, and internal reviews and hand-off steps deliver their report; a personal-workspace build ends with the factual note like any other work with nothing to merge (INF-1677).
 With a change to put in, the completion card has two actions: the merge (`default`, `settle merge`) and the discard (`danger`, `settle discard`).
 The host writes that pair (captain lock 3): a crewmate declares one action carrying `settle merge` and the host replaces every settle action with the merge labelled for the task's posture and the discard beside it (`CrewSupervisor.withCompletionActions`).
 A `request_merge` action is not that pair: the host labels it Merge the pull request and leaves the crewmate's other actions, including Not now, so a pull request the task did not open is not discarded with the task (`docs/forge.md`, "A requested merge").
@@ -741,7 +741,7 @@ The captain's words on INF-1219: "it misses the radar chart, and also it's not c
 The host opens that note with the merge line, written after the card lint: "Merges on its own", what happens next, and who set it, in the app's words from the setting (`pendingMergeLine`, `src/core/orchestrator/settleWords.ts`).
 At the merge, `SettleService` rewrites that line on the same note, as a revision the stage marks: merged on its own and when, the pull request linked, and the first mate's closing sentence (`mergedLine`).
 The note stays up and answers the captain's message, so no closing note goes up beside it.
-A crewmate on the personal workspace shows what it built on a note the same way, and the done close keeps notes.
+A crewmate on the personal workspace shows what it built on a note marked answering, and the first mate's `finished` close keeps it (`docs/personal-panels.md`, "Report, commit, close").
 Every close the first mate makes of started work carries its one sentence: `settle_task` takes a top-level `closing_sentence` for every mode but `answered`, `interrupt_crewmate` takes it for `cancel`, and both refuse such a close without one.
 The sentence is a fact of the close (`closingSentence` in its timeline data).
 Where it goes is one rule, at most one closing note for each of the captain's messages (`SettleService.placeOutcome`, `AskEnding.closingPlace`; `docs/task-capture.md`, "How a message ends"):

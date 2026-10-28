@@ -7,6 +7,9 @@ export const PERSONALIZE_SHOW_PROMPT_MARKER = "show tasks again";
 
 export const PERSONALIZE_INSTRUCTION_PROMPT_MARKER = "always use compact rows in my panels";
 
+/** The work the hide-tasks test starts so a crewmate row is on the board; it builds in the personal workspace. */
+export const PERSONALIZE_TIDY_TITLE = "tidy the personalize fixture";
+
 /** The standing instruction the mock Firstmate writes for that turn. */
 export const MOCK_STANDING_INSTRUCTION = "Always use compact rows in my panels.";
 
@@ -15,6 +18,25 @@ export const personalize: Scenario =
   () =>
   ({ body, isFirstmate, wantsStream, latestUserTail, hasToolResults }) => {
     if (!isFirstmate || !wantsStream) return undefined;
+    // That crewmate's report ends the ordinary way (INF-1677): the first
+    // mate closes the personal workspace's finished work.
+    // The request carries the wake JSON-escaped, so the title's quotes come escaped.
+    const reported = latestUserTail.match(/reported on task ([\w-]+) \\?"([^"\\]*)/);
+    if (!hasToolResults && reported?.[1] && reported[2] === PERSONALIZE_TIDY_TITLE) {
+      return {
+        calls: [
+          {
+            name: "settle_task",
+            args: {
+              task_id: reported[1],
+              mode: "finished",
+              completion_evidence: "its crewmate reported and the workspace saved its turn",
+              closing_sentence: "The fixture is tidied.",
+            },
+          },
+        ],
+      };
+    }
     if (!hasToolResults && latestUserTail.includes(PERSONALIZE_HIDE_PROMPT_MARKER)) {
       return {
         calls: [

@@ -16,6 +16,7 @@ import {
   PERSONALIZE_HIDE_PROMPT_MARKER,
   PERSONALIZE_INSTRUCTION_PROMPT_MARKER,
   PERSONALIZE_SHOW_PROMPT_MARKER,
+  PERSONALIZE_TIDY_TITLE,
   personalize,
 } from "./scenarios/personalize";
 import { PERSONALIZE_THEME_PROMPT_MARKER, personalizeTheme } from "./scenarios/personalizeTheme";
@@ -81,7 +82,7 @@ test("switch to light flips the theme with one feed line and no card", async () 
 test("hide tasks removes the panel without losing its tasks, and show brings it back", async () => {
   const { page } = launched;
   // A crewmate at work puts a row on the board, so Tasks docks on the right.
-  await say(page, `${SPAWN_PROMPT_MARKER} tidy the personalize fixture`);
+  await say(page, `${SPAWN_PROMPT_MARKER} ${PERSONALIZE_TIDY_TITLE}`);
   await expect(nowFrame(page).locator("[data-now-row]").first()).toBeVisible({
     timeout: 30_000,
   });
@@ -177,10 +178,15 @@ test("a panel instruction is a standing direction for the personal workspace", a
   const { app, page, userDataDir } = launched;
   const workspace = join(userDataDir, "fleet", "personal");
   // INF-1131: the file shares one app, and the crewmate the hide-tasks test
-  // started builds its panel in this workspace and commits when it reports.
+  // started builds its panel in this workspace, commits when it reports, and
+  // closes when the first mate closes its finished work.
   // The count starts once no crewmate there is still at work, so it measures
   // only what the direction did. Run alone, nothing is at work.
   await expect.poll(() => buildingInWorkspace(page), { timeout: 30_000 }).toEqual([]);
+  // That task's close leaves its note for the captain (INF-1677); closing it
+  // here keeps the check below about what the direction itself shows.
+  for (const card of await page.evaluate(() => window.infinitary.cards.list()))
+    await page.evaluate((id) => window.infinitary.cards.close(id), card.id);
   const before = savePointCount(workspace);
   await say(page, PERSONALIZE_INSTRUCTION_PROMPT_MARKER);
   await expect(

@@ -1511,7 +1511,8 @@ export class SettleService {
 
   /**
    * INF-1279 and INF-1430: the first mate declares verified operational
-   * success, including legacy folder work. Evidence is its judgment, not
+   * success, including legacy folder work and a personal workspace build
+   * (INF-1677). Evidence is its judgment, not
    * a host interpretation of prose. Never inspect, commit or merge as proof;
    * the ordinary close owner retires a scratch copy and leaves a folder alone.
    */
@@ -1524,16 +1525,19 @@ export class SettleService {
     const refuse = (why: string) => ({ text: `Cannot close ${handle} as finished: ${why}` });
     if (this.settlingTasks.has(record.id) || record.pendingSettle)
       return refuse("another settle is already in progress.");
+    // The personal workspace builds in place too (INF-1677): the host
+    // commits each turn, so its finished work closes here like folder work.
+    const personal = this.host.isPersonalTask(record.id);
     if (
       record.kind !== "work" ||
       !(
         this.host.deliverableOf(record) === "operation" ||
-        (this.host.deliverableOf(record) === "change" && isFolderWork(record.shape?.in_place))
-      ) ||
-      this.host.isPersonalTask(record.id)
+        (this.host.deliverableOf(record) === "change" &&
+          (personal || isFolderWork(record.shape?.in_place)))
+      )
     )
       return refuse(
-        "this mode is for an operation or work run in a project's folder, not an answer or a change to merge.",
+        "this mode is for an operation or work built in place, not an answer or a change to merge.",
       );
     if (
       this.host.deliverableOf(record) !== "operation" &&
@@ -1580,6 +1584,7 @@ export class SettleService {
           actor: "firstmate",
           text: `finished: ${evidence}`,
           data: { completionEvidence: evidence },
+          ...(personal ? { delivery: { mode: "in-place" as const } } : {}),
         },
         { recordBeforeStop: true },
       );

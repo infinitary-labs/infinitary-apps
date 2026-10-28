@@ -636,7 +636,7 @@ export function createCrewTools(delegate: CrewDelegate) {
       "files_from or a card choice, with no unmerged work; also internal answers with a report or successor, or finished answers. Never discard results. " +
       "released closes a reported, idle work task only after you independently verify its " +
       "delivery through an external release process, with release_evidence. finished closes verified, reported, idle " +
-      "operations or in_folder work as done with completion_evidence; folder files and git stay. " +
+      "operations, in_folder or personal_ui work with completion_evidence; folder files and git stay. " +
       "Missing changes or dismissed cards prove nothing. Never discard successful folder work or use finished to bypass merging. " +
       "Records and sessions stay. " +
       "Use crew_status to pick the task id; never guess among several matches.",

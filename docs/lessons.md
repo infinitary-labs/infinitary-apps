@@ -20,10 +20,10 @@ R2 requests high (`docs/routing.md`).
 The first mate starts it with `spawn_crewmate` and `personal_ui` true, one task per subject; the sequences seed has the one line (`docs/sequences.md`).
 Its brief names the teach kind, the lessons skill and lesson records instead of the panel build instructions, both at spawn and when queued work starts.
 The workspace instructions do the same: a lesson opens the lessons skill and the learner records, and is not told to read panel types or the design overview.
-On the personal workspace a report normally commits the turn and closes the task.
+On the personal workspace a report normally commits the turn and, once the commit lands, routes to the first mate like any other report.
 For a teach task every finished turn is committed, with the report as the message or `lesson turn` when there is none, and none closes the task or wakes the first mate.
 A commit that fails is the one exception: it wakes the first mate with git's words, as on any personal task (`docs/personal-panels.md`, "Report, commit, close").
-A report that asks the first mate for something, or declares the work finished, routes as any other report; finishing closes the task and keeps the files.
+A report that asks the first mate for something, or declares the work finished, routes as any other report once its commit lands; the first mate closes a finished subject with `settle_task` `finished`, which keeps the files (INF-1677).
 `lessons/` is a record folder: it holds no `panel.tsx` or `server.ts`, so a panel build never loads, stamps, lints, places or copies it (`isPanel`, `src/core/personal/liveWorkspace.ts`).
 An active task that builds in place and has a recorded conversation survives a restart; boot recovery returns to the queue only an active task with neither a working copy nor a conversation (`TaskService.releaseUnstartedDispatches`).
 

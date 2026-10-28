@@ -7326,14 +7326,12 @@ export class CrewSupervisor {
     // missing token never erases a good one.
     if (task.session)
       this.recordCrewSession(task, task.session, task.conversationBegan ?? "resume");
-    // The personal workspace (Step 4): a report is the turn's commit, and - with no
-    // captain-turn witness - the task's completion: the host commits
-    // the workspace with the report as the message and, once the commit
-    // lands, closes the record done. The report is already the feed line;
-    // no wake goes anywhere, because nothing is owed - the panel is simply
-    // there. A commit that fails keeps the task open and tells the Firstmate
-    // (`commitFailed`). A report beside a decision or declared captain wait
-    // is his turn, so it routes like any other.
+    // The personal workspace (Step 4): a report is the turn's commit. The
+    // host commits the workspace with the report as the message and, once
+    // the commit lands, routes the report like any other (INF-1677): its
+    // completion is the ordinary one, which the first mate closes as
+    // finished. A commit that fails keeps the task open and tells the
+    // Firstmate instead (`commitFailed`), so it never reads as finished.
     const personal = this.options.personal;
     // A teach task is a subject kept open across days: every finished turn is
     // committed (its records are files), and none closes the task or wakes
@@ -7348,17 +7346,13 @@ export class CrewSupervisor {
       !declared?.needsFirstmate &&
       declared?.finished !== true
     ) {
-      void this.commitLiveTurn(task, report || "lesson turn", personal, { close: false });
+      void this.commitLiveTurn(task, report || "lesson turn", personal);
       return;
     }
-    if (report && !turnError && !options.interrupted && personal && this.isPersonalTask(task.id)) {
-      // A declared wait holds it with or without a card up; with none, the sort wakes the Firstmate.
-      const cardOpen =
-        this.ladder.witnesses(task.id, this.now()).decisionCardOpen ||
-        Boolean(this.options.tasks.get(task.id)?.delivery?.captainWait);
-      void this.commitLiveTurn(task, report, personal, { close: !cardOpen });
-      if (!cardOpen) return;
-    }
+    const saved =
+      report && !turnError && !options.interrupted && personal && this.isPersonalTask(task.id)
+        ? this.commitLiveTurn(task, report, personal)
+        : undefined;
     if (turnError) {
       // A provider-failed turn: the session lives and stays steerable, but
       // the failure is never reported as an empty report. The feed line
@@ -7436,6 +7430,12 @@ export class CrewSupervisor {
       // reads its first line, records it on the builder, and on a pass
       // closes the review - which is what releases the merge hold.
       void this.settleReview(task, report);
+    } else if (report && saved) {
+      void saved.then((committed) => {
+        const record = this.options.tasks.get(task.id);
+        if (committed && record && !TaskService.isClosed(record))
+          this.sortReport(task, report, filed, declared);
+      });
     } else if (report) {
       this.sortReport(task, report, filed, declared);
     }
@@ -7859,21 +7859,19 @@ export class CrewSupervisor {
   }
 
   /**
-   * The end of a live crewmate turn (Step 4): stamp, lint, commit, and -
-   * when the report completes the work - close the task done. The commit
-   * and the lint land on the task's timeline (never the feed); the close's
-   * feed line is the record's own. A commit that fails closes nothing
-   * (`commitFailed`).
+   * The end of a live crewmate turn (Step 4): stamp, lint and commit. The
+   * commit and the lint land on the task's timeline (never the feed). It
+   * answers whether the turn's work is saved, so only a saved report routes;
+   * a commit that fails tells the Firstmate instead (`commitFailed`).
    */
   private async commitLiveTurn(
     task: TaskRuntime,
     report: string,
     personal: PersonalLiveDelegate,
-    options: { close: boolean },
-  ): Promise<void> {
+  ): Promise<boolean> {
     try {
       const commit = await personal.commitTurn(task.id, report);
-      if (!this.options.tasks.get(task.id)) return;
+      if (!this.options.tasks.get(task.id)) return false;
       if (commit.committed && commit.sha) {
         this.options.tasks.note(
           task.id,
@@ -7896,17 +7894,9 @@ export class CrewSupervisor {
       }
     } catch (caught) {
       this.commitFailed(task, caught);
-      return;
+      return false;
     }
-    if (!options.close) return;
-    // Cancelled, closed, or resumed into another turn meanwhile: leave it.
-    if (this.tasks.get(task.id) !== task || task.state !== "idle") return;
-    await this.settle.closeTask(task.id, {
-      status: "done",
-      reason: "finished",
-      actor: "host",
-      delivery: { mode: "in-place" },
-    });
+    return true;
   }
 
   /**

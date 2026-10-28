@@ -4,10 +4,12 @@ import {
   type IntelligenceBucket,
   SLOTS,
   servedModelKey,
+  servedProviderOf,
 } from "@shared/quota";
+import { CREW_NEAR_FLOOR_PERCENT } from "@shared/quotaSignals";
 import type { RuleId, WorkShape } from "@shared/routingPolicy";
 import type { QuotaService } from "../quota/quotaService";
-import type { DecisionStore, RoutingCandidateFact } from "../storage/decisionStore";
+import type { DecisionStore, RoutingCandidateFact, SelectionFacts } from "../storage/decisionStore";
 import type { SettingsStore } from "../storage/settingsStore";
 import {
   estimateTokens,
@@ -60,6 +62,8 @@ export type RoutingPool = {
   catalog: CatalogModelView[];
   /** Whose sign-ins these are, for the record. */
   note: string;
+  /** The computer these sign-ins are on, by name, for the record. */
+  place?: string;
   readings?: import("@shared/quota").QuotaProviderView[];
   /** The computer's existing account-binding policy, before session attachment. */
   modelAccounts?: ReadonlyMap<string, string>;
@@ -77,6 +81,8 @@ export type RoutePreview = {
   requiresReasoningWait: boolean;
   /** Every candidate weighed, with its score and reading; saved with the decision. */
   candidates?: RoutingCandidateFact[];
+  /** How the choice was made, saved with the decision (INF-1714). */
+  selection?: SelectionFacts;
 };
 
 export type RouteOptions = {
@@ -128,6 +134,11 @@ export class Router {
        * allowance.
        */
       withheldModels?: () => WithheldModel[];
+      /**
+       * The account of this Mac a crewmate on that model would bind now
+       * (`AccountSelector.crewAccount`): the model is ranked by its reading.
+       */
+      crewAccount?: (piProviderId: string, model: string) => string | undefined;
     },
   ) {}
 
@@ -162,7 +173,7 @@ export class Router {
 
   /** Record the preview chosen by atomic placement, never another speculative candidate. */
   commit(taskId: string, evaluation: RoutePreview): RouteResult {
-    const { result, reasons, candidates, accountId } = evaluation;
+    const { result, reasons, candidates, accountId, selection } = evaluation;
     this.options.decisions.recordRouting({
       taskId,
       provider: result.choice?.provider ?? null,
@@ -171,12 +182,13 @@ export class Router {
       rule: result.rule,
       served: result.choice ? (result.servedBucket ?? result.bucket) : null,
       reasons,
-      ...((candidates && candidates.length > 0) || accountId
+      ...((candidates && candidates.length > 0) || accountId || selection
         ? {
             facts: {
               kind: "routing-candidates" as const,
               candidates: candidates ?? [],
               ...(accountId ? { accountId } : {}),
+              ...(selection ? { selection } : {}),
             },
           }
         : {}),
@@ -220,13 +232,23 @@ export class Router {
     const rawCatalog = options.pool
       ? options.pool.catalog
       : (this.options.quota.latestModels()?.models ?? []);
+    // Each model is ranked by the account that would serve it: a computer's
+    // own binding there, or this Mac's crew account pick.
+    const pool = options.pool;
+    const crewAccount = this.options.crewAccount;
+    const bound = pool
+      ? (model: CatalogModelView) =>
+          pool.modelAccounts?.get(servedModelKey(model)) ??
+          pool.accounts?.get(servedProviderOf(model.provider))
+      : crewAccount
+        ? (model: CatalogModelView) => crewAccount(servedProviderOf(model.provider), model.id)
+        : undefined;
     const catalog =
       this.options.placedWork?.catalog(
         rawCatalog,
-        options.pool
-          ? (options.pool.readings ?? [])
-          : (this.options.quota.latest()?.providers ?? []),
+        pool ? (pool.readings ?? []) : (this.options.quota.latest()?.providers ?? []),
         Date.now(),
+        bound,
       ) ?? rawCatalog;
     const available = kept(options.pool?.available ?? this.options.availableModels());
     const routable = this.options.slots?.routable(available);
@@ -318,11 +340,35 @@ export class Router {
       preferenceRank,
       requiresReasoningWait: requiresReasoningWait(shape, result),
       candidates: decision.candidates.map((candidate) => {
-        const charge = (catalog as RankedModel[]).find(
+        const ranked = (catalog as RankedModel[]).find(
           (model) => servedModelKey(model) === `${candidate.provider}/${candidate.model}`,
-        )?.charge;
-        return { ...candidate, ...(charge ? { charge } : {}) };
+        );
+        return {
+          ...candidate,
+          ...(ranked?.rawSpendPriority !== undefined
+            ? { rawSpendPriority: ranked.rawSpendPriority }
+            : {}),
+          ...(ranked?.accountId ? { accountId: ranked.accountId } : {}),
+          ...(ranked?.measuredAt !== undefined ? { measuredAt: ranked.measuredAt } : {}),
+          ...(ranked?.resetsAtMs !== undefined ? { resetsAtMs: ranked.resetsAtMs } : {}),
+          ...(ranked?.charge ? { charge: ranked.charge } : {}),
+        };
       }),
+      ...(decision.decidedBy
+        ? {
+            selection: {
+              version: 1 as const,
+              decidedBy:
+                decision.decidedBy === "pin"
+                  ? askPin && matches(askPin)
+                    ? ("named" as const)
+                    : ("pinned" as const)
+                  : decision.decidedBy,
+              floorPercent: CREW_NEAR_FLOOR_PERCENT,
+              computer: pool?.place ?? "home",
+            },
+          }
+        : {}),
     };
   }
 

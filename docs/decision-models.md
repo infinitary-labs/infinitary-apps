@@ -178,7 +178,8 @@ A routing row and an account row save every candidate they weighed in `facts_jso
 Each candidate carries the allowance reading behind it (`percentRemaining`, `pace`), its `spendPriority` score and what became of it (`status`: picked, eligible, or why it was skipped).
 The skipped ones are there: a model at 0%, one in no slot, one that cannot serve the turn; an account that is disabled, signed out, withheld, exhausted or reserved for the first mate.
 A pinned choice scores nothing, so its row saves none.
-They live in the record only: no screen reads them and nothing ranks by them, so an investigation reads them with a query over `decisions` (the old views do not carry the column).
+Since INF-1714 each candidate also carries its allowance `band`, and a routing row a `selection` saying what decided; the task record's Why this model reads its own routing row's facts (`docs/routing.md`, "Why this model on the task record").
+Nothing ranks by them, and an investigation reads them with a query over `decisions` (the old views do not carry the column).
 
 The three old table names are read-only views over the ledger, each kind's rows in its old columns (`LEDGER_VIEWS`, `src/core/storage/views.ts`): `routing_decisions`, `account_decisions` and `supervision_outcomes`, where a rule's sort reads `model` as its `rule:<id>` stamp and gains `facts_json`.
 So the published views, Observe, the exporters, the miss deriver and the replay scorer read the same rows from an old database and a new one, and nothing writes through them.

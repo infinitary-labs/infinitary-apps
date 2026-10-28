@@ -8,7 +8,7 @@ import {
   servedModelKey,
   servedProviderOf,
 } from "@shared/quota";
-import { compareSpendRank, spendGroup } from "@shared/quotaSignals";
+import { type BandRank, bandOf, compareBandRank, type SpendBand } from "@shared/quotaSignals";
 import type { RoutingCandidateFact } from "../storage/decisionStore";
 import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./capability";
 
@@ -21,12 +21,13 @@ import { capabilityMiss, type ModelCapabilityLookup, type TurnNeeds } from "./ca
  *    routing rule in FIRSTMATE_PROMPT_CORE). No prompt heuristic lives
  *    here; absent a class the request is medium.
  * 2. Candidates = slot ∩ Pi-available models, minus exhausted scopes.
- * 3. Within a slot, serveable candidates rank by spend priority
- *    (quota-axi semantics: highest first), those projected to last through
- *    every reset before those projected to run out (INF-898). Unmeasurable
- *    signals rank below any known one and keep runway order among
- *    themselves; a newer id of the same model line in the same group still
- *    overrides (recency within slot).
+ * 3. Within a slot, serveable candidates rank band first (INF-1714): an
+ *    unadjusted reading projected to last through every reset, then one
+ *    projected to run out, then one at or below the near-floor, then an
+ *    unknown one. Inside a band they rank by spend priority (quota-axi
+ *    semantics, adjusted for placed work: highest first); unmeasurable
+ *    signals keep runway order among themselves, and a newer id of the
+ *    same model line in the same band still overrides (recency within slot).
  * 4. Pins always win. Unoffered providers never become a choice.
  *
  * Two boundaries sit outside the ladder:
@@ -48,8 +49,11 @@ export type PiModelRef = { provider: string; id: string };
 export type SlottedRef = PiModelRef & { slot: Slot };
 
 export type RoutingInput = {
-  /** Quota catalog models in runway order. */
-  catalog: CatalogModelView[];
+  /**
+   * Quota catalog models in runway order; `band`, when present, is the band
+   * of the unadjusted reading beside a placed-work-adjusted score.
+   */
+  catalog: (CatalogModelView & { band?: SpendBand })[];
   /**
    * Models Pi can actually serve right now (configured auth). Pins resolve
    * against THIS pool, not the slotted one: an explicit pin is the user
@@ -121,6 +125,28 @@ export type RoutingDecision = {
    * leaves this empty). The record keeps them; nothing reads them to rank.
    */
   candidates: RoutingCandidateFact[];
+  /**
+   * What decided the choice, as a typed fact for the record (INF-1714):
+   * a pin, the band (the runner-up sat in a lower one), spend priority
+   * inside the band, same-line recency, runway order, or the only candidate.
+   */
+  decidedBy?: DecidedBy;
+};
+
+export type DecidedBy =
+  | "pin"
+  | "band"
+  | "spend-priority"
+  | "recency"
+  | "runway-order"
+  | "only-candidate";
+
+/** How the reasons record says why a higher score sat in a lower band. */
+const BAND_WORDS: Record<SpendBand, string> = {
+  room: "lasts through its reset",
+  conserve: "is projected to run out before its reset",
+  near_floor: "is at or below the near-floor",
+  unknown: "has no usable reading",
 };
 
 const BUCKET_RANK: Record<Slot, number> = {
@@ -227,7 +253,13 @@ export function route(input: RoutingInput): RoutingDecision {
     if (!isOfferedProvider(piProvider) && !isCustomApiProvider(piProvider)) continue;
     if (availableKeys.has(servedModelKey(pin))) {
       reasons.push(`pinned ${pin.provider}/${pin.id}`);
-      return { bucket, choice: { provider: piProvider, id: pin.id }, reasons, candidates: [] };
+      return {
+        bucket,
+        choice: { provider: piProvider, id: pin.id },
+        reasons,
+        candidates: [],
+        decidedBy: "pin",
+      };
     }
   }
 
@@ -250,6 +282,7 @@ export function route(input: RoutingInput): RoutingDecision {
       ...(typeof model.lastsThroughReset === "boolean"
         ? { lastsThroughReset: model.lastsThroughReset }
         : {}),
+      band: bandOf(model),
       status: "not reached",
     });
   }
@@ -266,7 +299,7 @@ export function route(input: RoutingInput): RoutingDecision {
 
   for (const candidateSlot of BUCKET_FALLBACK[bucket]) {
     const inSlot: {
-      model: { provider: string; id: string; spendPriority?: number; lastsThroughReset?: boolean };
+      model: { provider: string; id: string } & BandRank;
       ref: PiModelRef;
       slot: Slot;
     }[] = input.catalog.flatMap((model) => {
@@ -340,11 +373,11 @@ export function route(input: RoutingInput): RoutingDecision {
       }
     }
     const pool = elsewhere.length > 0 ? elsewhere : inSlot;
-    const ranked = [...pool].sort((a, b) => compareSpendRank(a.model, b.model));
+    const ranked = [...pool].sort((a, b) => compareBandRank(a.model, b.model));
     let chosen = ranked[0] as (typeof ranked)[number];
-    // Recency overrides only inside the leader's group, so a newer id never
-    // brings back a model projected to run out (or an unknown one).
-    const group = spendGroup(chosen.model);
+    // Recency overrides only inside the leader's band, so a newer id never
+    // brings back a model in a lower band.
+    const band = bandOf(chosen.model);
     const highest = ranked.reduce(
       (best, entry) =>
         (entry.model.spendPriority ?? Number.NEGATIVE_INFINITY) >
@@ -355,7 +388,7 @@ export function route(input: RoutingInput): RoutingDecision {
     );
     let recencyOverride = false;
     for (const entry of ranked) {
-      if (spendGroup(entry.model) !== group) continue;
+      if (bandOf(entry.model) !== band) continue;
       if (newerId(entry.model.id, chosen.model.id) === true) {
         chosen = entry;
         recencyOverride = true;
@@ -366,14 +399,24 @@ export function route(input: RoutingInput): RoutingDecision {
     if (candidateSlot !== bucket) {
       reasons.push(`no serveable ${bucket} model; fell back to ${candidateSlot}`);
     }
+    const runnerUp = ranked.find((entry) => entry !== chosen);
+    const decidedBy: DecidedBy = recencyOverride
+      ? "recency"
+      : !runnerUp
+        ? "only-candidate"
+        : bandOf(runnerUp.model) !== band
+          ? "band"
+          : typeof chosen.model.spendPriority === "number"
+            ? "spend-priority"
+            : "runway-order";
     const pickedBy = recencyOverride
       ? "same-line recency over spend priority"
       : typeof chosen.model.spendPriority === "number"
         ? `spend priority ${chosen.model.spendPriority.toFixed(2)}`
         : "runway order";
-    if (highest !== ranked[0]) {
+    if (highest !== ranked[0] && bandOf(highest.model) !== band) {
       reasons.push(
-        `${highest.model.provider}/${highest.model.id} has a higher spend priority but is projected to run out before its reset`,
+        `${highest.model.provider}/${highest.model.id} has a higher spend priority but ${BAND_WORDS[bandOf(highest.model)]}`,
       );
     }
     reasons.push(`picked ${chosen.model.provider}/${chosen.model.id} by ${pickedBy}`);
@@ -383,6 +426,7 @@ export function route(input: RoutingInput): RoutingDecision {
       choice: chosen.ref,
       reasons,
       candidates: candidates(),
+      decidedBy,
     };
   }
 

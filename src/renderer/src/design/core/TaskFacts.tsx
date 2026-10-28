@@ -1,8 +1,9 @@
 import { checksFinishedAgo, checksRestWords, checksSpanWords } from "@shared/checksSpan";
 import { FACT_DOT, type FactDotState } from "@shared/factDot";
 import { feedRelativeAge } from "@shared/feed";
+import { bandWords, MODEL_WHY_WORDS } from "@shared/modelChoice";
 import { reasoningWord } from "@shared/reasoning";
-import type { TaskChecks, TaskFacts } from "@shared/taskFacts";
+import type { TaskChecks, TaskFacts, TaskModelWhy } from "@shared/taskFacts";
 import {
   clipPlanLine,
   foldPlan,
@@ -381,8 +382,14 @@ export function TaskFactStrip({
   facts,
   onOpenChange,
   focusable = false,
+  why = false,
 }: {
   facts: TaskFacts;
+  /**
+   * Show Why this model under the strip (INF-1714): the full task record
+   * only, never a summary someone points at.
+   */
+  why?: boolean;
   /** Where a click on the change goes; without it the change is plain text. */
   onOpenChange?: (url: string) => void;
   /**
@@ -457,7 +464,86 @@ export function TaskFactStrip({
           {facts.reason}
         </div>
       )}
+      {why && facts.why && <ModelWhy why={facts.why} />}
     </div>
+  );
+}
+
+/** 24-hour clock time, the day too when it is not today, for a reset. */
+function whenOf(at: number, now: number): string {
+  const day = new Date(at);
+  const clock = `${String(day.getHours()).padStart(2, "0")}:${String(day.getMinutes()).padStart(2, "0")}`;
+  return day.toDateString() === new Date(now).toDateString()
+    ? clock
+    : `${day.toLocaleDateString(undefined, { month: "short", day: "numeric" })}, ${clock}`;
+}
+
+/** How long before the choice its reading was taken. */
+function readBefore(measuredAt: number, at: number): string {
+  const minutes = Math.max(0, Math.floor((at - measuredAt) / 60_000));
+  if (minutes < 1) return "read just before";
+  if (minutes < 60) return `read ${minutes}m before`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `read ${hours}h before` : `read ${Math.floor(hours / 24)}d before`;
+}
+
+/**
+ * Why this model (INF-1714, the captain's option A): a native disclosure
+ * under the fact strip holding what chose the model, how the allowance
+ * compared, and each model weighed with the reading it was ranked on.
+ */
+function ModelWhy({ why }: { why: TaskModelWhy }) {
+  const comparison = why.comparison;
+  // A reading's age is told against the newest reading weighed: the choice followed it.
+  const at = Math.max(
+    0,
+    ...(comparison?.candidates.map((candidate) => candidate.measuredAt ?? 0) ?? []),
+  );
+  return (
+    <details className="why" data-task-fact="why">
+      <summary>{MODEL_WHY_WORDS.summary}</summary>
+      {(why.line || why.choice) && (
+        <p className="why-line" data-task-why-line="">
+          {[why.line ? `${why.line}.` : null, why.choice].filter(Boolean).join(" ")}
+        </p>
+      )}
+      {comparison ? (
+        <ol className="why-list">
+          {comparison.candidates.map((candidate) => {
+            const facts = [
+              candidate.band ? bandWords(candidate.band, comparison.floorPercent) : undefined,
+              candidate.percentRemaining !== undefined
+                ? `${Math.round(candidate.percentRemaining)}% left`
+                : undefined,
+              candidate.measuredAt !== undefined ? readBefore(candidate.measuredAt, at) : undefined,
+              candidate.resetsAtMs !== undefined
+                ? `resets ${whenOf(candidate.resetsAtMs, Date.now())}`
+                : undefined,
+            ].filter((fact): fact is string => fact !== undefined);
+            return (
+              <li
+                key={candidate.model}
+                className="why-candidate"
+                data-picked={candidate.picked ? "" : undefined}
+              >
+                <span className="why-name" data-task-why-name="">
+                  {candidate.name}
+                  {candidate.picked ? ` · ${MODEL_WHY_WORDS.chosen}` : ""}
+                </span>
+                {facts.length > 0 && <span>{facts.join(" · ")}</span>}
+                {candidate.placedWorkPoints !== undefined && (
+                  <span data-task-why-placed="">
+                    {MODEL_WHY_WORDS.placedWork(candidate.placedWorkPoints)}
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        why.unrecorded && <p data-task-why-unrecorded="">{MODEL_WHY_WORDS.notRecorded}</p>
+      )}
+    </details>
   );
 }
 

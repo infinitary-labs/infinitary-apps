@@ -6582,7 +6582,8 @@ describe("CrewSupervisor", () => {
         shape: { override_model_id: `${provider}/${model.id}` },
       });
       await tick();
-      expect(selectForSpawn).toHaveBeenCalledWith(taskId, provider);
+      // The account is ranked for the routed model (INF-1714).
+      expect(selectForSpawn).toHaveBeenCalledWith(taskId, provider, { model: model.id });
       expect(sessionSpecs).toHaveLength(1);
       expect(sessionSpecs[0]?.model).toEqual(model);
       expect(sessionSpecs[0]?.binding).toMatchObject({ accountId: "acct_signed_in" });
@@ -6637,7 +6638,7 @@ describe("CrewSupervisor", () => {
       intent: intentOf("do the work"),
     });
     await tick();
-    expect(selectForSpawn).toHaveBeenCalledWith(taskId, "openai-codex");
+    expect(selectForSpawn).toHaveBeenCalledWith(taskId, "openai-codex", { model: "gpt-5.5" });
     // The account is the session's binding: its own store, direct injection.
     expect(sessionSpecs[0]?.binding).toMatchObject({ accountId: "acct_work2" });
     expect(tasks.get(taskId)?.accountId).toBe("acct_work2");

@@ -595,7 +595,12 @@ export type SteerDelivery =
 
 /** The account-selection surface the supervisor consumes (AccountSelector). */
 export type AccountAttachment = {
-  selectForSpawn(taskId: string, piProviderId: string): string | undefined;
+  /** `crew` names the routed model, so its accounts rank in that model's scope (INF-1714). */
+  selectForSpawn(
+    taskId: string,
+    piProviderId: string,
+    crew?: { model: string },
+  ): string | undefined;
   reselectForResume(
     taskId: string,
     accountId: string | null,
@@ -5691,7 +5696,9 @@ export class CrewSupervisor {
       // own account, which its binding names, never one of this Mac's.
       const accountId =
         routedModel && !placed
-          ? this.options.accounts?.selectForSpawn(taskId, routedModel.provider)
+          ? this.options.accounts?.selectForSpawn(taskId, routedModel.provider, {
+              model: routedModel.id,
+            })
           : placed
             ? spec.placementAccount
             : undefined;
@@ -8557,7 +8564,9 @@ export class CrewSupervisor {
           : `moved by ${who} off ${from ?? "its provider"}`,
       );
       this.options.router?.commit(taskId, preview);
-      const accountId = this.options.accounts?.selectForSpawn(taskId, choice.provider);
+      const accountId = this.options.accounts?.selectForSpawn(taskId, choice.provider, {
+        model: choice.id,
+      });
       if (runtime) {
         this.releaseSession(runtime);
         this.tasks.delete(taskId);

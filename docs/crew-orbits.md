@@ -415,7 +415,8 @@ Once the record's read answers, the whole projection is that read's, the same on
 | INTELLIGENCE (strip) | the level the crewmate is served on, as the `SlotBadge` Settings → Models draws it; absent before routing | `tasks.board` `tier`, the level the crewmate's solid shows |
 | REASONING (strip) | the reasoning its session opened at ("Extra high", "Model's own"); absent when the record cannot say | `tasks.detail` `reasoning` through `reasoningWord` (`docs/routing.md` "Reasoning effort") |
 | PULL REQUEST, CHECKS, REVIEW (strip) | the pull request (or branch) by its label as plain text, its checks as the merge card's dot and word with how long they have run or took (`running for 15m`, `passed in 14m · 5m ago`), and a review's verdict; absent until the task has a change or a checks reading, except that a task with no change shows the newest run it started by hand and the app watched as its CHECKS (`docs/forge.md`, "The checks cell's time") | `tasks.board` `delivery` |
-| footnote | why that model was chosen, then why the reasoning is lower than its level asks, in plain words; absent when the record can say neither | `tasks.detail` `modelReason` and `reasoning` through `modelFootnote` (`docs/routing.md` "Why this model") |
+| footnote | why the reasoning is lower than its level asks, in plain words; absent when it is not | `tasks.detail` `reasoning` through `reasoningNote` (`docs/routing.md` "Reasoning effort") |
+| Why this model (record only) | a disclosure under the strip: why that model was chosen, how the allowance decided and the ranked models; the summary never shows it (INF-1714) | `tasks.detail` `modelReason` and `modelChoice` (`docs/routing.md` "Why this model on the task record") |
 
 The status, the task title and the project wrap in full.
 The other facts stay one line, the panel is as wide as its longest line up to 360 px, and a longer note ends in an ellipsis while the note's age stays whole at the panel's right edge.

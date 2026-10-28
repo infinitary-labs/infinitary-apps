@@ -100,6 +100,8 @@ describe("crew summary facts", () => {
       tier: "high",
       reasoning: null,
       reason: null,
+      // Why this model is the record's read alone (INF-1714).
+      why: null,
       delivery: null,
       // The task's own browser is the record's read alone.
       browser: null,

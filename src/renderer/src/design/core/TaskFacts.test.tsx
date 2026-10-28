@@ -130,17 +130,23 @@ describe("one task's facts on the crew summary and the task record", () => {
         <TaskFactRows facts={facts} planView="list" omitStrip onOpenChange={() => {}} />
         <div data-record-rows="" />
         <div className="fm-task-facts fm-record-strip" data-record-strip="">
-          <TaskFactStrip facts={facts} onOpenChange={() => {}} />
+          <TaskFactStrip facts={facts} onOpenChange={() => {}} why />
         </div>
       </>,
     );
     const shown = factsOf(summary);
     // The task's own browser is the record's alone: no read here carries one.
-    expect(shown.map(([id]) => id)).toEqual(TASK_FACTS.filter((id) => id !== "browser"));
+    // Why this model is the full record's alone too (INF-1714, the captain's
+    // ruling: "don't show this in the hover preview of a task").
+    expect(shown.map(([id]) => id)).toEqual(
+      TASK_FACTS.filter((id) => id !== "browser" && id !== "why"),
+    );
     const onRecord = factsOf(record);
-    expect(Object.fromEntries(onRecord)).toEqual(Object.fromEntries(shown));
+    const { why, ...recordShared } = Object.fromEntries(onRecord);
+    expect(recordShared).toEqual(Object.fromEntries(shown));
+    expect(why).toBe("Why this modelBuilding from the plan in SCR-1.Comparison not recorded");
     // One order on both: the record only moves its strip below its rows.
-    expect(onRecord.map(([id]) => id)).toEqual(shown.map(([id]) => id));
+    expect(onRecord.map(([id]) => id)).toEqual(TASK_FACTS.filter((id) => id !== "browser"));
     const stripAt = record.indexOf("data-record-strip");
     const rowsAt = record.indexOf("data-record-rows");
     expect(rowsAt).toBeGreaterThan(-1);
@@ -152,7 +158,7 @@ describe("one task's facts on the crew summary and the task record", () => {
       plan: "1 of 3Cut the first request5m",
       model: "Nano Banana Pro",
       reasoning: "Extra high",
-      reason: "Building from the plan in SCR-1. Reasoning one step lower for Quick care.",
+      reason: "Reasoning one step lower for Quick care.",
       change: "#57",
       checks: "running for 15m",
       review: "passed · risk low",

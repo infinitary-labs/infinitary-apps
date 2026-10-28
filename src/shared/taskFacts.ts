@@ -1,9 +1,10 @@
 import { currentCheckSummary } from "./checkSnapshot";
 import { type ChecksSpan, checksSpanOf, runChecksSpanOf } from "./checksSpan";
 import type { FactDotState } from "./factDot";
-import { type ModelReason, modelFootnote } from "./modelReason";
+import { type ModelChoice, type ModelChoiceCandidate, modelChoiceLine } from "./modelChoice";
+import { type ModelReason, modelReasonLine } from "./modelReason";
 import type { Slot } from "./modelSlots";
-import type { Reasoning } from "./reasoning";
+import { type Reasoning, reasoningNote } from "./reasoning";
 import {
   browserDriverOf,
   DRIVER_WORDS,
@@ -47,6 +48,7 @@ export const TASK_FACTS = [
   "checks",
   "review",
   "reason",
+  "why",
   "browser",
 ] as const;
 export type TaskFactId = (typeof TASK_FACTS)[number];
@@ -96,6 +98,21 @@ export type TaskDelivery = {
   review: TaskReview | null;
 };
 
+/** The record's Why this model: the captain's words for what decided, and the comparison. */
+export type TaskModelWhy = {
+  /** What chose the model or its level (`modelReasonLine`). */
+  line: string | null;
+  /** How the allowance decided between models (`modelChoiceLine`). */
+  choice: string | null;
+  /** No comparison was saved and the captain's own choice did not decide (before INF-1714). */
+  unrecorded: boolean;
+  /** The compared models, named, ranked as decided; null when none was saved. */
+  comparison: {
+    floorPercent: number;
+    candidates: (ModelChoiceCandidate & { name: string })[];
+  } | null;
+};
+
 export type TaskFacts = {
   key: string;
   status: TaskStatusReading;
@@ -117,8 +134,14 @@ export type TaskFacts = {
   tier: Slot | null;
   /** The reasoning its session opened at. */
   reasoning: Reasoning | null;
-  /** Why that model, and why the reasoning sits lower, in one footnote. */
+  /** Why the reasoning sits lower than its level asks; null when it does not. */
   reason: string | null;
+  /**
+   * Why this model (INF-1714): the rule's reason and how the allowance
+   * compared, which only the task record shows; null before assignment or
+   * when the record cannot say.
+   */
+  why: TaskModelWhy | null;
   delivery: TaskDelivery | null;
   /** Only the record's read carries it: null while the task has no browser here. */
   browser: TaskBrowserLine | null;
@@ -132,8 +155,36 @@ export type TaskFactsInput = TaskStatusInput &
     plan?: TaskPlan | null;
     reasoning?: Reasoning;
     modelReason?: ModelReason;
+    modelChoice?: ModelChoice;
     browser?: TaskBrowserFact;
   };
+
+/** Why this model, from the routing decision's reason and its saved comparison. */
+function modelWhyOf(
+  task: Pick<TaskFactsInput, "modelReason" | "modelChoice">,
+  modelName: (model: string) => string,
+): TaskModelWhy | null {
+  const line = task.modelReason ? modelReasonLine(task.modelReason) : null;
+  const choice = task.modelChoice;
+  // A model the captain named or pinned is said by the line alone.
+  const compared = choice && choice.decidedBy !== "named" && choice.decidedBy !== "pinned";
+  if (!line && !compared) return null;
+  const own = task.modelReason?.named || task.modelReason?.pinned;
+  return {
+    line,
+    unrecorded: !choice && !own,
+    choice: compared ? modelChoiceLine(choice, modelName) : null,
+    comparison: compared
+      ? {
+          floorPercent: choice.floorPercent,
+          candidates: choice.candidates.map((candidate) => ({
+            ...candidate,
+            name: modelName(candidate.model),
+          })),
+        }
+      : null,
+  };
+}
 
 /** One projection for the crew summary and the task record, so one task reads the same on both. */
 export function taskFactsOf(task: TaskFactsInput, modelName: (model: string) => string): TaskFacts {
@@ -148,7 +199,8 @@ export function taskFactsOf(task: TaskFactsInput, modelName: (model: string) => 
     // The readout belongs to a model: none of it stands without one.
     tier: model ? task.tier : null,
     reasoning: model ? (task.reasoning ?? null) : null,
-    reason: model ? modelFootnote(task.modelReason, task.reasoning) : null,
+    reason: model && task.reasoning ? reasoningNote(task.reasoning) : null,
+    why: model ? modelWhyOf(task, modelName) : null,
     delivery: deliveryOf(task),
     browser: task.browser ? browserLineOf(task.browser, task) : null,
   };

@@ -225,6 +225,7 @@ import { bundledSource, recordLaunch } from "./releaseTracking";
 import { AccountSelector } from "./routing/accountRouter";
 import { computerBoardModels } from "./routing/computerPool";
 import { DecisionKindClassifier } from "./routing/decisionKindClassifier";
+import { modelChoiceOf } from "./routing/modelChoice";
 import { modelAddedNote, modelGoneNote } from "./routing/modelNews";
 import { modelReasonOf } from "./routing/modelReason";
 import { ModelSlots } from "./routing/modelSlots";
@@ -942,6 +943,8 @@ export async function createServices(
         pins: () => settings.getRoutingSettings().pins,
         keyOf: (ref) => tasks.resolve(ref)?.key || undefined,
       }),
+    // The record's Why this model: the comparison that same decision saved (INF-1714).
+    modelChoice: (record) => modelChoiceOf(record, ledger),
     // Read at a detail read, long after the slot record below is built:
     // the one model-name lookup the renderer applies too (FI3-565 piece 2).
     modelLabel: (model) => slots.nameOf(parseOfferingKey(model)),
@@ -1307,6 +1310,13 @@ export async function createServices(
    */
   const decisionNamedModels = () =>
     availableModels().filter((model) => model.provider !== "anthropic");
+  const accounts = new AccountSelector({
+    pool: vault,
+    placedWork,
+    quota,
+    flagshipAccountId: () => settings.getFirstmateAccount(),
+    decisions: ledger,
+  });
   const router = new Router({
     quota,
     placedWork,
@@ -1316,13 +1326,7 @@ export async function createServices(
     slots,
     capabilityFor,
     withheldModels: () => vault.withheldModels(),
-  });
-  const accounts = new AccountSelector({
-    pool: vault,
-    placedWork,
-    quota,
-    flagshipAccountId: () => settings.getFirstmateAccount(),
-    decisions: ledger,
+    crewAccount: (provider, model) => accounts.crewAccount(provider, model),
   });
   /**
    * A plan-window reading a Claude client pushed - a crewmate's, the

@@ -379,6 +379,13 @@ export const LIMITS: Record<string, Record<string, LimitEntry>> = {
     RESOLVED_TOOL_LIMIT: record("none needed: no resolved set can exceed it"),
     FLOOR_REJECTIONS: record("the start is held until that level's reset, then placed again"),
   },
+  "src/shared/quotaSignals.ts": {
+    // INF-1714: the captain chose 10%, a policy value, not a measured safe limit.
+    CREW_NEAR_FLOOR_PERCENT: {
+      rests: "consent",
+      way: "none needed: a near-floor allowance still serves, after every one above it",
+    },
+  },
   "src/shared/plugins/bridge.ts": {
     ACTION_VALUE_MAX_BYTES: physical("refused with value_too_large naming the bound; send less"),
     FRAME_MAX_SUBSCRIPTIONS: physical("refused naming the bound; unsubscribe one first"),

@@ -48,31 +48,59 @@ export type AccountSelectorOptions = {
 export class AccountSelector {
   constructor(private readonly options: AccountSelectorOptions) {}
 
-  /** Pick the account of `piProviderId` serving a task spawn, and record why. */
-  selectForSpawn(taskId: string, piProviderId: string): string | undefined {
-    const candidates = this.candidatesFor(piProviderId);
+  /**
+   * Pick the account of `piProviderId` serving a task spawn, and record why.
+   * A crewmate's spawn names its `crew` model: the accounts are read in that
+   * model's scope and ranked by the crew allowance bands, as routing ranked
+   * the model (INF-1714); a decision model's call names none.
+   */
+  selectForSpawn(
+    taskId: string,
+    piProviderId: string,
+    crew?: { model: string },
+  ): string | undefined {
+    const decision = this.decide(piProviderId, crew);
+    if (!decision) return undefined;
+    this.options.decisions.recordAccount({
+      taskId,
+      provider: piProviderId,
+      accountId: decision.accountId ?? null,
+      reasons: [...decision.reasons, ...this.withheldElsewhere(piProviderId)],
+      facts: {
+        kind: "account-candidates",
+        candidates: decision.candidates,
+        ...(decision.pinned ? { pinned: true as const } : {}),
+      },
+    });
+    if (decision.accountId) {
+      this.options.pool.markSelected(decision.accountId);
+    }
+    return decision.accountId;
+  }
+
+  /**
+   * The account a crewmate's spawn on `model` would bind now, recording
+   * nothing: routing ranks the model by this account's reading, so the
+   * model and the account that serves it are judged on the same facts.
+   */
+  crewAccount(piProviderId: string, model: string): string | undefined {
+    return this.decide(piProviderId, { model })?.accountId;
+  }
+
+  private decide(piProviderId: string, crew?: { model: string }) {
+    const candidates = this.candidatesFor(piProviderId, crew?.model);
     if (candidates.length === 0) return undefined;
     const pinned = this.options.pool.pinnedAccount(piProviderId);
     const flagship = this.options.flagshipAccountId();
-    const decision = selectAccount({
+    return selectAccount({
       providerId: piProviderId,
       candidates,
       ...(pinned ? { pinnedAccountId: pinned } : {}),
       ...(flagship
         ? { protect: { accountId: flagship, floorPercent: FLAGSHIP_RESERVE_FLOOR_PERCENT } }
         : {}),
+      ...(crew ? { bands: true } : {}),
     });
-    this.options.decisions.recordAccount({
-      taskId,
-      provider: piProviderId,
-      accountId: decision.accountId ?? null,
-      reasons: [...decision.reasons, ...this.withheldElsewhere(piProviderId)],
-      facts: { kind: "account-candidates", candidates: decision.candidates },
-    });
-    if (decision.accountId) {
-      this.options.pool.markSelected(decision.accountId);
-    }
-    return decision.accountId;
   }
 
   /**
@@ -85,15 +113,21 @@ export class AccountSelector {
     taskId: string,
     accountId: string | null,
   ): { accountId?: string; changed: boolean } {
+    // A resume is a crewmate's: its account is ranked for the routed model.
     if (accountId) {
       const record = this.options.pool.list().find((account) => account.id === accountId);
       if (record?.enabled && this.options.pool.connectedSync(accountId) !== false) {
         return { accountId, changed: false };
       }
     }
-    const provider = this.providerForTask(taskId);
+    const routed = this.options.decisions.latestRouting(taskId);
+    const provider = routed?.provider ?? undefined;
     if (!provider) return { changed: Boolean(accountId) };
-    const reselected = this.selectForSpawn(taskId, provider);
+    const reselected = this.selectForSpawn(
+      taskId,
+      provider,
+      routed?.model ? { model: routed.model } : undefined,
+    );
     return {
       ...(reselected ? { accountId: reselected } : {}),
       changed: reselected !== (accountId ?? undefined),
@@ -120,12 +154,7 @@ export class AccountSelector {
     });
   }
 
-  /** The provider the task's spawn was routed to, from its newest routing decision. */
-  private providerForTask(taskId: string): string | undefined {
-    return this.options.decisions.latestRouting(taskId)?.provider ?? undefined;
-  }
-
-  private candidatesFor(piProviderId: string): AccountCandidate[] {
+  private candidatesFor(piProviderId: string, model?: string): AccountCandidate[] {
     const snapshot = this.options.quota.latest();
     const quotaId = quotaEntryForPiProvider(piProviderId)?.quotaId;
     const now = Date.now();
@@ -133,8 +162,8 @@ export class AccountSelector {
       const row = snapshot?.providers.find(
         (provider) => provider.accountId === account.id && provider.provider === quotaId,
       );
-      const effective = effectiveFromProvider(row, now);
-      const score = row ? this.options.placedWork?.score(row, now) : undefined;
+      const effective = effectiveFromProvider(row, now, model);
+      const score = row ? this.options.placedWork?.score(row, now, model) : undefined;
       const connected = this.options.pool.connectedSync(account.id);
       const withheld = this.options.pool.withheldReason(account.id);
       return {

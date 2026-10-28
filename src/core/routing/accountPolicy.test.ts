@@ -211,3 +211,49 @@ describe("selectAccount (the per-account selection policy)", () => {
     });
   });
 });
+
+// INF-1714: a crewmate's account is ranked by the same bands as its model;
+// a decision model's call keeps the three spend groups.
+describe("selectAccount - crew allowance bands (INF-1714)", () => {
+  const roomy = candidate({
+    accountId: "work",
+    effectivePercentRemaining: 20,
+    spendPriority: -1.08,
+    lastsThroughReset: false,
+  });
+  const nearFloor = candidate({
+    accountId: "personal",
+    effectivePercentRemaining: 4,
+    spendPriority: 0.5,
+    lastsThroughReset: false,
+  });
+
+  it("ranks an account above the floor before a near-floor one with a higher score", () => {
+    const decision = selectAccount({
+      providerId: "openai-codex",
+      candidates: [nearFloor, roomy],
+      bands: true,
+    });
+    expect(decision.accountId).toBe("work");
+    expect(decision.candidates.map((fact) => [fact.accountId, fact.band])).toEqual([
+      ["personal", "near_floor"],
+      ["work", "conserve"],
+    ]);
+  });
+
+  it("leaves a decision model's pick to spend priority", () => {
+    const decision = selectAccount({ providerId: "openai-codex", candidates: [nearFloor, roomy] });
+    expect(decision.accountId).toBe("personal");
+    expect(decision.candidates.every((fact) => fact.band === undefined)).toBe(true);
+  });
+
+  it("keeps the pin over the bands", () => {
+    const decision = selectAccount({
+      providerId: "openai-codex",
+      candidates: [nearFloor, roomy],
+      pinnedAccountId: "personal",
+      bands: true,
+    });
+    expect(decision.accountId).toBe("personal");
+  });
+});

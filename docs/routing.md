@@ -87,9 +87,11 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   A resumed conversation retains its opening level.
   The session says what it opened at (`ModelSession.reasoning()`, FI3-439: the level after the cap and the Quick step, why it is lower - `quick` or `capped` - `off` for a model the runtime marks as not reasoning, `default` where Claude sends none), the supervisor records it on the `dispatched` timeline row beside the model, and `TaskDetail.reasoning` carries the newest one while the record still names that model; the crewmate summary shows it.
 - Same-tier routing order: spend priority first (quota-axi ranking semantics - the scope whose paid allowance is most on track to expire unused; a known signal, even negative, outranks an unmeasurable one, and unknown is NEVER zero), then a newer id within the same model line (dotted/dashed version tokens; the line is the id's prefix AND suffix around the version, so gpt-5.6-luna never outranks gpt-5.3-codex-spark) still overrides; unmeasurable candidates keep runway order (`newerId` + the ranked pool in `src/core/routing/routingEngine.ts`; the account pick in `accountPolicy.ts` ranks the same way).
-  Spend priority ranks inside three groups (INF-898, `compareSpendRank` in `src/shared/quotaSignals.ts`): a fresh, known score whose scope is projected to last through every reset (`lastsThroughReset`, the scope's runway at its observed burn), then a known score projected to run out first, then an unmeasurable one.
-  So a tight session outranks a weekly surplus: a model whose session runs out before its reset yields to one at the same level that lasts, whatever their scores.
-  Recency overrides only inside the leader's group, and the reasons name a higher-scored model passed over because it runs out.
+  A crew task ranks by allowance band first (INF-1714, `spendBand` and `compareBandRank` in `src/shared/quotaSignals.ts`), decided from the raw, model-scoped reading before any placed-work charge: room (above the near-floor, a known score projected to last through every reset), conserve (above the near-floor, projected to run out first), near-floor (a known allowance at or below `CREW_NEAR_FLOOR_PERCENT`, 10%), then unknown (no usable, fresh reading).
+  So Claude at 20% that runs out still outranks Codex at 4%, whatever their scores: the larger remaining allowance is spent before a near-floor one.
+  Inside a band the placed-work-adjusted spend priority orders candidates (INF-1680), and a placed-work charge never moves a candidate between bands.
+  Recency overrides only inside the leader's band, and the reasons name a higher-scored model passed over because of its band.
+  The first mate and the decision models keep the three groups of `compareSpendRank` (INF-898: lasts through every reset, runs out first, unmeasurable); only crew routing and the crew account pick read the bands.
   Nothing becomes ineligible for it: pins, slots, capability, the reviewer's provider, the 0% exclusion and the fallback ladder are unchanged, and a running crewmate keeps its model.
   The model catalog's best account per model, a computer's own pool and the account pick rank the same way.
 - A task on a computer that runs work routes among that computer's own subscriptions, never this Mac's (`docs/helper.md`, "A task's model"): `Router.decide` takes a `pool` in place of this Mac's models and quota catalog, the slot record, pins and the ladder read it as they read this Mac's own, and its reasons name it.
@@ -104,15 +106,15 @@ Moved verbatim from `AGENTS.md` on 2026-09-24; `AGENTS.md` keeps a one-line poin
   Otherwise, including when the withheld model's own allowance is spent, the line says that slot's models have used up their allowance; a computer's own pool carries no withheld cause.
 - **A move leaves a provider out** (INF-849): `withoutProvider` removes one provider from what may serve - the available models, a computer's unlisted ones and the pins - with no fallback to it, unlike R9's `avoidProvider`, and adds a reason line naming it.
   A started task moving off the provider that failed it routes this way on its own shape, and finds nothing when only that provider serves (`docs/task-record.md`, "Moving a started task to another provider").
-- **Why this model** (FI3-427, captain's pick 2026-10-01): the crewmate summary on the home stage, and the task record's shared facts since FI3-565 piece 2, say under the model's name why it was chosen (`docs/crew-orbits.md` "The summary").
+- **Why this model** (FI3-427, captain's pick 2026-10-01): the task record says why its model was chosen, under its Why this model disclosure since INF-1714 (`docs/crew-orbits.md` "The summary").
   `modelReasonOf` (`src/core/routing/modelReason.ts`) builds `TaskDetail.modelReason` from the TYPED columns of the task's newest routing decision that chose something - `rule`, `bucket`, `served` - beside the shape it was made from (the kind for R2, the basis key for R4/R6, the rejected attempt for R1b, the builder for a review, and whether another provider than the builder's served an R9 review, read off the builder's own decision at that time).
   It never reads the reasons prose.
   Two facts are derived at the read because the row has no column for them: `named` (R0, and the served model is the one the shape named) and `pinned` (the served model is a current Settings pin, which outranks every slot).
   It is absent when the task never routed, when the row predates the rule column, or when the record's model is not the one the decision chose, so the line never explains a model the crewmate is not on.
   The record's model follows the model that answers: when Claude Code moves a crewmate to another model, the record names it and the routing ledger keeps the router's decision as it was made (`docs/claude-client.md`, "The model that answers").
   `modelReasonLine` (`src/shared/modelReason.ts`) is the one wording: the captain's own choice first ("You asked for this model", "You pinned this model in Settings"), then a slot that could not serve ("No high model could take it"), then the rule's reason ("Building from the plan in FI3-419").
-  Since FI3-439 the line never leads with the level: the summary shows the served level and the reasoning as their own labeled values, and `modelFootnote` adds why the reasoning is lower ("Reasoning one step lower for Quick care.").
-  Why one model won over another inside a slot (spend priority, recency) is still prose only and is not shown.
+  Since FI3-439 the line never leads with the level: the summary shows the served level and the reasoning as their own labeled values, and the footnote says why the reasoning is lower ("Reasoning one step lower for Quick care.", `reasoningNote`).
+  The task record shows this line, and why one model won over another inside a slot (band, spend priority, recency), under its Why this model disclosure ("Why this model on the task record" below); the summary's footnote keeps only the reasoning's.
 
 ## Read-only computer evaluation
 
@@ -219,8 +221,19 @@ It includes open tasks with a committed routing choice, including an Automatic p
 The newest route's saved account identity attributes pre-attachment work to the login behind that score; an attached task's recorded account takes precedence.
 Older decisions without that identity fall back to the first observed sign-in for that provider on the task's computer.
 The first mate's own calls are not placed-task charges.
-The router recomputes spend priority and the runway over charged windows, so placed work can make a window run out before its reset, but retains the raw headroom for all eligibility checks, so a negative projection never invents an exhaustion hold.
+The router recomputes spend priority over charged windows to order candidates inside a band, but the band itself and every eligibility check read the raw headroom and runway, so a charge never moves a candidate between bands and a negative projection never invents an exhaustion hold.
 Automatic placement commits its chosen route in the existing transaction, so the next start sees that choice without an additional allowance reservation.
+
+## Why this model on the task record
+
+The task record's fact strip ends with a Why this model disclosure (INF-1714, captain's pick A with the note to fold the model's reason into it and keep it off the hover preview; `ModelWhy` in `src/renderer/src/design/core/TaskFacts.tsx`); the crewmate summary shows none of it.
+It holds the model's reason (`modelReasonLine`, "Why this model" above), one sentence on how the allowance decided (`modelChoiceLine` in `src/shared/modelChoice.ts`) and the ranked models with their band, remaining allowance, reading age, reset and any placed-work estimate.
+`modelChoiceOf` (`src/core/routing/modelChoice.ts`) builds `TaskDetail.modelChoice` from the same routing row `modelReasonOf` reads, and only while the record's model is the one it chose.
+The routing row's candidate facts carry each model's band, the score it ranked by, the raw score when placed work changed it, the account whose reading it used, when that reading was taken and when its limiting window resets; its `selection` records the facts version, what decided (`named`, `pinned`, `band`, `spend-priority`, `recency`, `runway-order` or `only-candidate`), the near-floor percent and the computer.
+A model the person named or pinned shows that reason and no comparison; a choice recorded before the bands reads "Comparison not recorded".
+The projection reads only what was saved when the choice was made, so a later reading, a refresh or a restart never rewrites it.
+
+The crew account the model ranking reads is the account the task binds: at home `AccountSelector.crewAccount` previews the same model-scoped, pin-first, reserve-respecting choice `selectForSpawn` records, and on a computer that runs work the pool's own binding for that model.
 
 ## Operations
 

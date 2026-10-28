@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { QuotaProviderView, QuotaWindowView } from "./quota";
 import {
+  bandOf,
+  CREW_NEAR_FLOOR_PERCENT,
   classifyProviderWindows,
+  compareBandRank,
   formatDurationShort,
   providerScopes,
   scopeSignals,
+  spendBand,
   windowSignals,
 } from "./quotaSignals";
 
@@ -311,5 +315,52 @@ describe("formatDurationShort", () => {
     expect(formatDurationShort(7 * 3600 * 1000 + 21 * 60 * 1000)).toBe("7h 21m");
     expect(formatDurationShort(40 * 60 * 1000)).toBe("40m");
     expect(formatDurationShort(-5)).toBe("0m");
+  });
+});
+
+// INF-1714 (the captain approved floor 10% and "A · Balance inside the band"):
+// the band decides first, then spend priority inside it.
+describe("spendBand / compareBandRank (crew allowance bands)", () => {
+  it("reads the near-floor from the headroom at or below the floor, before the score", () => {
+    const at = { effectivePercentRemaining: CREW_NEAR_FLOOR_PERCENT, spendPriority: 2 };
+    expect(spendBand({ ...at, lastsThroughReset: true })).toBe("near_floor");
+    expect(spendBand({ ...at, effectivePercentRemaining: CREW_NEAR_FLOOR_PERCENT + 0.5 })).toBe(
+      "conserve",
+    );
+    expect(
+      spendBand({
+        ...at,
+        effectivePercentRemaining: CREW_NEAR_FLOOR_PERCENT + 0.5,
+        lastsThroughReset: true,
+      }),
+    ).toBe("room");
+    // A reading with headroom but no usable pace is unknown, never healthy.
+    expect(spendBand({ effectivePercentRemaining: 60 })).toBe("unknown");
+    expect(spendBand({})).toBe("unknown");
+    // A near-floor reading with no score is still near-floor: known allowance.
+    expect(spendBand({ effectivePercentRemaining: 4 })).toBe("near_floor");
+  });
+
+  it("never lets a higher score cross a band, and orders by score inside one", () => {
+    const room = { effectivePercentRemaining: 60, spendPriority: -2, lastsThroughReset: true };
+    const conserve = { effectivePercentRemaining: 20, spendPriority: 5, lastsThroughReset: false };
+    const nearFloor = { effectivePercentRemaining: 4, spendPriority: 9, lastsThroughReset: true };
+    const unknown = { effectivePercentRemaining: 90 };
+    const sorted = [unknown, nearFloor, conserve, room].sort(compareBandRank);
+    expect(sorted).toEqual([room, conserve, nearFloor, unknown]);
+    expect(compareBandRank({ ...room, spendPriority: 1 }, room)).toBeLessThan(0);
+  });
+
+  it("keeps a carried band over the adjusted facts beside it", () => {
+    // Placed work charged this room reading into a projected run-out; the band stays.
+    const charged = {
+      effectivePercentRemaining: 22,
+      spendPriority: -0.4,
+      lastsThroughReset: false,
+      band: "room" as const,
+    };
+    const other = { effectivePercentRemaining: 70, spendPriority: 0.2, lastsThroughReset: false };
+    expect(bandOf(charged)).toBe("room");
+    expect(compareBandRank(charged, other)).toBeLessThan(0);
   });
 });

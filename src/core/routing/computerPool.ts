@@ -208,6 +208,7 @@ export function computerPool(
     catalog,
     readings: quota?.providers,
     accounts,
+    place: who,
     note: `${who}'s own sign-ins (${providers.length > 0 ? providers.join(", ") : "none"}): ${count}`,
     unowned: extra
       .filter((model) => !isCustomApiProvider(model.provider))

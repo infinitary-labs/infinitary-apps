@@ -4,10 +4,11 @@ import { openDatabase } from "../../src/core/storage/db";
 import { seedTask } from "../../src/core/tasks/seedTask";
 import { TaskService } from "../../src/core/tasks/taskService";
 import { CREW_HOVER } from "../../src/renderer/src/character/crew/hoverMeasures";
+import { MODEL_WHY_WORDS } from "../../src/shared/modelChoice";
 import { modelDisplayName } from "../../src/shared/modelDisplayName";
-import { modelFootnote } from "../../src/shared/modelReason";
+import { modelReasonLine } from "../../src/shared/modelReason";
 import type { NowGroup } from "../../src/shared/nowPanel";
-import { type Reasoning, reasoningWord } from "../../src/shared/reasoning";
+import { type Reasoning, reasoningNote, reasoningWord } from "../../src/shared/reasoning";
 import type { PlanItem } from "../../src/shared/taskPlan";
 import {
   type TaskStatusInput,
@@ -84,21 +85,23 @@ const roster = (count: number) =>
 
 /**
  * The readout under a crewmate's model: the level the fixture's decision
- * served, the reasoning its dispatch recorded, and the footnote in the
- * shared wording of both.
+ * served, the reasoning its dispatch recorded, and the footnote, which says
+ * only why that reasoning is lower and is absent when it is not. Why the
+ * model was chosen is the full record's alone (INF-1714, the captain's
+ * ruling: "don't show this in the hover preview of a task. only show in the
+ * full task card").
  */
-async function readoutOf(
-  page: Page,
-  reasoning: Reasoning | undefined,
-): Promise<{ tier: string; reasoning: string; reason: string }> {
+function readoutOf(reasoning: Reasoning | undefined): {
+  tier: string;
+  reasoning: string;
+  reason: string | null;
+} {
   if (!reasoning) throw new Error("The fixture recorded no reasoning for this crewmate");
-  const basis = await page.evaluate(() => window.infinitary.tasks.detail("hover-crew-basis"));
-  const reason = modelFootnote(
-    { rule: ROUTING.rule, asked: ROUTING.asked, served: ROUTING.served, basis: basis.key },
-    reasoning,
-  );
-  if (!reason) throw new Error("The fixture's routing decision has no wording");
-  return { tier: ROUTING.served, reasoning: reasoningWord(reasoning), reason };
+  return {
+    tier: ROUTING.served,
+    reasoning: reasoningWord(reasoning),
+    reason: reasoningNote(reasoning),
+  };
 }
 
 /** The Tasks dot's words for a task, which the summary repeats. */
@@ -169,9 +172,10 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
       pointer = await pointAtCrewmate(page, task.id);
 
       await expect(crewSummary(page)).toBeVisible();
-      // The note, the reasoning and the footnote fill in when the record answers.
-      const readout = await readoutOf(page, fixture.openings[task.id]);
-      await expect(taskFact(crewSummary(page), "reason")).toHaveText(readout.reason);
+      // The note and the reasoning fill in when the record answers.
+      const readout = readoutOf(fixture.openings[task.id]);
+      await expect(taskFact(crewSummary(page), "reasoning")).toHaveText(readout.reasoning);
+      await expect(taskFact(crewSummary(page), "why")).toHaveCount(0);
       const summary = await summaryFacts(page);
       expect(summary).toMatchObject({
         id: task.id,
@@ -217,11 +221,19 @@ test("pointing at a crewmate opens its summary, Escape closes it and clicking op
       await page.mouse.up();
       await expect(recordCard(page)).toHaveAttribute("data-task-record", task.id);
       await expect(crewSummary(page)).toHaveCount(0);
-      // The record shows the summary's facts: the same values.
+      // The record shows the summary's facts: the same values, and Why this
+      // model, which is the record's alone (INF-1714). The fixture's routing
+      // row saved no comparison, so it says the model's reason and no list.
       const shared = shown.filter(([id]) => id !== "project");
+      const detail = await page.evaluate((id) => window.infinitary.tasks.detail(id), task.id);
+      const reason = detail.modelReason ? modelReasonLine(detail.modelReason) : null;
+      if (!reason) throw new Error("The fixture's routing decision has no wording");
       await expect
         .poll(async () => Object.fromEntries(await shownTaskFacts(recordCard(page))))
-        .toEqual(Object.fromEntries(shared));
+        .toEqual({
+          ...Object.fromEntries(shared),
+          why: `${MODEL_WHY_WORDS.summary}${reason}.${MODEL_WHY_WORDS.notRecorded}`,
+        });
       // The record draws the same plan as the whole list, every item with its mark.
       await expect(recordCard(page).locator("[data-task-plan-list] [data-plan-label]")).toHaveText(
         PLAN.map((item) => item.label),
@@ -303,8 +315,11 @@ test("resting on a backlog, an idle or a done Tasks row opens the same summary b
     await test.step("the crewmate's own summary, read on the stage", async () => {
       await pointAtCrewmate(page, idle.id);
       await expect(crewSummary(page)).toBeVisible();
-      const readout = await readoutOf(page, fixture.openings[idle.id]);
-      await expect(taskFact(crewSummary(page), "reason")).toHaveText(readout.reason);
+      const readout = readoutOf(fixture.openings[idle.id]);
+      await expect(taskFact(crewSummary(page), "reasoning")).toHaveText(readout.reasoning);
+      if (readout.reason)
+        await expect(taskFact(crewSummary(page), "reason")).toHaveText(readout.reason);
+      else await expect(taskFact(crewSummary(page), "reason")).toHaveCount(0);
       await expect
         .poll(async () => (await shownTaskFacts(crewSummary(page))).map(([id]) => id))
         .toContain("project");
@@ -318,7 +333,7 @@ test("resting on a backlog, an idle or a done Tasks row opens the same summary b
       await expect(rowSummary(page)).toHaveAttribute(POINT_SUMMARY, idle.id);
       const summary = rowSummary(page).locator("[data-crew-summary]");
       await expect(summary).toHaveAttribute("data-crew-summary", idle.id);
-      await expect(taskFact(summary, "reason")).toBeVisible();
+      await expect(taskFact(summary, "reasoning")).toBeVisible();
       // The same facts, words and order as on the stage.
       await expect.poll(() => shownTaskFacts(summary)).toEqual(onStage);
       // Read once it has settled: the summary slides in from the row.

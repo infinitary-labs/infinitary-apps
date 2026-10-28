@@ -370,3 +370,45 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+/* Why this model (INF-1714): the record's own disclosure under the strip,
+   in the footnote's size and color; the chosen model's rule is lit. */
+.fm-task-facts .why {
+  margin-top: 6px;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--fg-3);
+}
+.fm-task-facts .why summary {
+  width: fit-content;
+  color: var(--fg-2);
+  cursor: pointer;
+  border-radius: var(--radius-s);
+}
+.fm-task-facts .why summary:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.fm-task-facts .why-line {
+  margin: 6px 0 0;
+  overflow-wrap: anywhere;
+}
+.fm-task-facts .why-list {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.fm-task-facts .why-candidate {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--line-2);
+}
+.fm-task-facts .why-candidate[data-picked] {
+  border-left-color: var(--accent);
+}
+.fm-task-facts .why-name {
+  color: var(--fg-1);
+}

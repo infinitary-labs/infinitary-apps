@@ -482,4 +482,43 @@ describe("INF-443 learned placed-work ranking", () => {
     expect(Object.values(w.settings.getAllowancePrices())).toEqual([3 / 60]);
     w.db.close();
   });
+
+  // INF-1714: an estimate of placed work orders candidates inside a band and
+  // never moves one between bands; only a fresh reading can.
+  it("keeps a charged allowance in the band of its unadjusted reading", () => {
+    const w = world();
+    w.learn();
+    const reading = row("grok", "mini-grok", 22);
+    w.seed("running", "mini");
+    w.route("running");
+    const scored = w.scores.score(reading, AT);
+    expect(scored.lastsThroughReset).toBe(false);
+    expect(scored.band).toBe("room");
+    // A fresh reading at the floor moves it.
+    expect(w.scores.score(row("grok", "mini-grok", 9), AT).band).toBe("near_floor");
+    w.db.close();
+  });
+
+  // INF-1714: the model is ranked by the account that will serve it, so the
+  // model ranking and the account binding read the same reading.
+  it("ranks a model by the account bound to serve it, and saves which one", () => {
+    const w = world();
+    const rows = [row("grok", "home-grok", 84), row("grok", "mini-grok", 19)];
+    w.scores.observe("home", snapshot(AT, rows));
+    const [best] = w.scores.catalog([{ provider: "grok", id: GROK.id, label: "Grok" }], rows, AT);
+    expect(best).toMatchObject({ accountId: "home-grok", effectivePercentRemaining: 84 });
+    const [bound] = w.scores.catalog(
+      [{ provider: "grok", id: GROK.id, label: "Grok" }],
+      rows,
+      AT,
+      () => "mini-grok",
+    );
+    expect(bound).toMatchObject({
+      accountId: "mini-grok",
+      effectivePercentRemaining: 19,
+      measuredAt: AT,
+      resetsAtMs: rows[1]!.windows[0]!.resetsAtMs,
+    });
+    w.db.close();
+  });
 });

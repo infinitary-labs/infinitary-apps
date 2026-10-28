@@ -1,3 +1,4 @@
+import { CREW_NEAR_FLOOR_PERCENT } from "@shared/quotaSignals";
 import type { WorkShape } from "@shared/routingPolicy";
 import { describe, expect, it } from "vitest";
 import type { QuotaService } from "../quota/quotaService";
@@ -686,6 +687,7 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
           percentRemaining: 12,
           pace: "ahead",
           spendPriority: 3.5,
+          band: "conserve",
           status: "picked at medium",
         },
         {
@@ -694,15 +696,24 @@ describe("Router - reviewer placement (R9, delivery rigor phase 3)", () => {
           percentRemaining: 80,
           pace: "on_pace",
           spendPriority: 0.4,
+          band: "conserve",
           status: "eligible at medium",
         },
         {
           provider: "anthropic-claude",
           model: "opus",
           percentRemaining: 0,
+          band: "near_floor",
           status: "skipped: exhausted at medium",
         },
       ],
+      // INF-1714: how the choice was made, under which near-floor, for which computer.
+      selection: {
+        version: 1,
+        decidedBy: "spend-priority",
+        floorPercent: CREW_NEAR_FLOOR_PERCENT,
+        computer: "home",
+      },
     });
   });
 });

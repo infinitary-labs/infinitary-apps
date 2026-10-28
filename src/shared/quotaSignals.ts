@@ -388,6 +388,67 @@ export function compareSpendRank(a: SpendRank, b: SpendRank): number {
   return 0;
 }
 
+/**
+ * The near-floor boundary of crew routing (INF-1714, the captain's choice of
+ * 10%): a known allowance at or below it ranks after every allowance above
+ * it, whatever its score. It matches the meter's danger boundary; it is not
+ * the first mate's 15% reserve.
+ */
+export const CREW_NEAR_FLOOR_PERCENT = 10;
+
+/**
+ * The four crew allowance bands, in order (INF-1714): room - above the
+ * floor, a known score, projected to last through every reset; conserve -
+ * above the floor, a known score, projected to run out first; near-floor -
+ * a known allowance at or below the floor; unknown - no usable reading.
+ * A band is read from the unadjusted reading only: an estimate of placed
+ * work orders candidates inside a band and never moves one between bands.
+ */
+export type SpendBand = "room" | "conserve" | "near_floor" | "unknown";
+
+export const SPEND_BANDS: readonly SpendBand[] = ["room", "conserve", "near_floor", "unknown"];
+
+/** The raw facts a band is read from. */
+export type BandFacts = SpendRank & { effectivePercentRemaining?: number };
+
+export function spendBand(raw: BandFacts, floorPercent = CREW_NEAR_FLOOR_PERCENT): SpendBand {
+  if (
+    typeof raw.effectivePercentRemaining === "number" &&
+    raw.effectivePercentRemaining <= floorPercent
+  )
+    return "near_floor";
+  if (typeof raw.spendPriority !== "number") return "unknown";
+  return raw.lastsThroughReset === true ? "room" : "conserve";
+}
+
+/**
+ * A crew candidate's ranking facts: `band` is the band of its unadjusted
+ * reading, when a placed-work adjustment replaced the score beside it;
+ * absent, the band is read from these facts, which are then unadjusted.
+ */
+export type BandRank = BandFacts & { band?: SpendBand };
+
+export function bandOf(rank: BandRank): SpendBand {
+  return rank.band ?? spendBand(rank);
+}
+
+/**
+ * Crew ranking (INF-1714): the band first, then the highest spend priority
+ * inside it (adjusted for placed work where it was). Equal ranks compare 0,
+ * so the caller's own tiebreak decides. The first mate and the decision
+ * models keep `compareSpendRank`.
+ */
+export function compareBandRank(a: BandRank, b: BandRank): number {
+  const band = SPEND_BANDS.indexOf(bandOf(a)) - SPEND_BANDS.indexOf(bandOf(b));
+  if (band !== 0) return band;
+  if (typeof a.spendPriority === "number" && typeof b.spendPriority === "number") {
+    return b.spendPriority - a.spendPriority;
+  }
+  if (typeof a.spendPriority === "number") return -1;
+  if (typeof b.spendPriority === "number") return 1;
+  return 0;
+}
+
 /** "3h 20m", "5d 19h", "40m" - the human form of a runway or reset horizon. */
 export function formatDurationShort(ms: number): string {
   const totalMinutes = Math.max(0, Math.round(ms / 60_000));

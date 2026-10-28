@@ -4,7 +4,7 @@ import type { DecisionStore, RoutingDecision } from "../storage/decisionStore";
 import type { TaskRecord } from "../storage/taskStore";
 
 /** The newest decision of a task that chose a model, at or before `at`. */
-function chosen(
+export function chosen(
   decisions: Pick<DecisionStore, "routing">,
   taskId: string,
   at = Number.POSITIVE_INFINITY,

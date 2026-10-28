@@ -1,3 +1,5 @@
+import type { CrewDecidedBy } from "@shared/modelChoice";
+import type { SpendBand } from "@shared/quotaSignals";
 import type { WakeFacts } from "../orchestrator/wakes";
 import type { ChargeFact } from "../routing/placedWork";
 import type { AppDatabase } from "./db";
@@ -84,6 +86,14 @@ export type RoutingCandidateFact = {
   spendPriority?: number;
   /** Projected to last through every reset (true) or to run out first (false). */
   lastsThroughReset?: boolean;
+  /** The band of its unadjusted reading (INF-1714); absent on rows before it. */
+  band?: SpendBand;
+  /** The score before placed work, when placed work adjusted `spendPriority`. */
+  rawSpendPriority?: number;
+  /** The account whose reading ranked it, when it was measured and when its tightest window resets. */
+  accountId?: string;
+  measuredAt?: number;
+  resetsAtMs?: number;
   /** What became of it: picked, eligible (ranked, not picked), or why it was skipped. */
   status: string;
   charge?: ChargeFact;
@@ -97,8 +107,22 @@ export type AccountCandidateFact = {
   pace?: string;
   spendPriority?: number;
   lastsThroughReset?: boolean;
+  band?: SpendBand;
   status: string;
   charge?: ChargeFact;
+};
+
+/**
+ * How a crew routing choice was made (INF-1714), versioned so a reader
+ * tells a row of this policy from an older one: what decided it, the
+ * near-floor boundary it ranked under, and the computer it routed for
+ * (`home`, or the computer that runs work by name).
+ */
+export type SelectionFacts = {
+  version: 1;
+  decidedBy: CrewDecidedBy;
+  floorPercent: number;
+  computer: string;
 };
 
 /**
@@ -107,8 +131,18 @@ export type AccountCandidateFact = {
  * (docs/decision-models.md, "Candidate facts").
  */
 export type CandidateFacts =
-  | { kind: "routing-candidates"; candidates: RoutingCandidateFact[]; accountId?: string }
-  | { kind: "account-candidates"; candidates: AccountCandidateFact[] };
+  | {
+      kind: "routing-candidates";
+      candidates: RoutingCandidateFact[];
+      accountId?: string;
+      selection?: SelectionFacts;
+    }
+  | {
+      kind: "account-candidates";
+      candidates: AccountCandidateFact[];
+      /** The provider's account pin chose it (INF-1714). */
+      pinned?: true;
+    };
 
 export type RoutingDecisionInput = {
   taskId: string;
@@ -207,6 +241,15 @@ function parseFacts(json: string | null): WakeFacts | null {
   }
 }
 
+function parseCandidateFacts(json: string | null): CandidateFacts | null {
+  if (!json) return null;
+  try {
+    return JSON.parse(json) as CandidateFacts;
+  } catch {
+    return null;
+  }
+}
+
 function fromSortRow(row: SortRow): SupervisionOutcome {
   return {
     id: row.id,
@@ -291,6 +334,14 @@ export class DecisionStore {
         input.facts ? JSON.stringify(input.facts) : null,
       );
     return Number(info.lastInsertRowid);
+  }
+
+  /** The candidate facts a routing row saved, by its id; null when it saved none. */
+  routingFacts(id: number): CandidateFacts | null {
+    const row = this.db
+      .prepare("SELECT facts_json FROM decisions WHERE id = ? AND kind = 'routing'")
+      .get(id) as { facts_json: string | null } | undefined;
+    return parseCandidateFacts(row?.facts_json ?? null);
   }
 
   /** Record one sort: the wake, its facts, the verdict and why. */

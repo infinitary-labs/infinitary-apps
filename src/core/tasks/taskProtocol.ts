@@ -9,6 +9,7 @@ import {
 import type { FmEvent } from "@shared/events";
 import type { ValidationEvidence } from "@shared/liveValidation";
 import { liveValidationSummary } from "@shared/liveValidationSummary";
+import type { ModelChoice } from "@shared/modelChoice";
 import type { ModelReason } from "@shared/modelReason";
 import { providerLabel, type Slot, slotSchema } from "@shared/modelSlots";
 import { plainProblem, typedFailureOf } from "@shared/plainProblem";
@@ -176,6 +177,8 @@ export type TaskProtocolOptions = {
   modelLabel?: (model: string) => string | undefined;
   /** Why a task's crewmate runs on its model (`TaskDetail.modelReason`); absent when unknown. */
   modelReason?: (record: TaskRecord) => ModelReason | undefined;
+  /** How it got that model (`TaskDetail.modelChoice`); absent when the decision saved no comparison. */
+  modelChoice?: (record: TaskRecord) => ModelChoice | undefined;
   /** Where a task runs (`TaskDetail.runsOn`); absent when no other computer could run it. */
   runsOn?: (record: TaskRecord) => TaskRunsOn | undefined;
   /**
@@ -427,6 +430,7 @@ export class TaskProtocol {
       return name;
     };
     const modelReason = this.options.modelReason?.(record);
+    const modelChoice = this.options.modelChoice?.(record);
     const runsOn = this.options.runsOn?.(record);
     const reasoning = reasoningOf(record, timeline);
     const browser = this.options.browser?.(id);
@@ -519,6 +523,7 @@ export class TaskProtocol {
       outcome: readableOutcome(record, timeline),
       modelLabel: record.model ? modelLabel(record.model) : null,
       ...(modelReason ? { modelReason } : {}),
+      ...(modelChoice ? { modelChoice } : {}),
       ...(reasoning ? { reasoning } : {}),
       cards,
       events,

@@ -1,7 +1,12 @@
 import type { CatalogModelView, QuotaProviderView, QuotaSnapshotView } from "@shared/quota";
 import { allowanceProviderOf } from "@shared/quota";
-import { classifyProviderWindows, compareSpendRank } from "@shared/quotaSignals";
-import { effectiveFromProvider, scopeAppliesToModel } from "../quota/catalog";
+import {
+  classifyProviderWindows,
+  compareBandRank,
+  type SpendBand,
+  spendBand,
+} from "@shared/quotaSignals";
+import { effectiveFromProvider, limitingResetOf, scopeAppliesToModel } from "../quota/catalog";
 import type { AppDatabase } from "../storage/db";
 import type { SettingsStore } from "../storage/settingsStore";
 
@@ -18,7 +23,19 @@ export type ChargeFact = {
     resetsAtMs?: number;
   }[];
 };
-export type RankedModel = CatalogModelView & { charge?: ChargeFact };
+/**
+ * A catalog model ranked for crew routing, with the account whose reading
+ * ranked it: `band` from that unadjusted reading (INF-1714), `rawSpendPriority`
+ * the score before placed work, and when and until when the reading holds.
+ */
+export type RankedModel = CatalogModelView & {
+  charge?: ChargeFact;
+  band?: SpendBand;
+  rawSpendPriority?: number;
+  accountId?: string;
+  measuredAt?: number;
+  resetsAtMs?: number;
+};
 type Reading = { source: string; row: QuotaProviderView; at: number };
 type Cycle = Reading & { windowId: string; reset: number; initial: number; start: number };
 type Work = {
@@ -183,14 +200,21 @@ export class PlacedWorkScores {
     now: number,
     model?: string,
     data = { work: this.work(), samples: this.finished(now) },
-  ): { spendPriority?: number; lastsThroughReset?: boolean; charge?: ChargeFact } {
+  ): {
+    spendPriority?: number;
+    lastsThroughReset?: boolean;
+    charge?: ChargeFact;
+    band: SpendBand;
+  } {
     const original = effectiveFromProvider(row, now, model);
-    if (row.status !== "ok" || row.stale || !row.accountId) return original;
+    // The band is the unadjusted reading's: a charge never moves it (INF-1714).
+    const band = spendBand(original);
+    if (row.status !== "ok" || row.stale || !row.accountId) return { ...original, band };
     const reading =
       [...this.readings.values()].find(
         (r) => r.row.accountId === row.accountId && r.at === row.measuredAt,
       ) ?? [...this.readings.values()].find((r) => r.row.accountId === row.accountId);
-    if (!reading) return original;
+    if (!reading) return { ...original, band };
     const prices = this.settings.getAllowancePrices();
     const works = data.work.filter(
       (w) =>
@@ -250,10 +274,12 @@ export class PlacedWorkScores {
     return {
       ...(adjusted.spendPriority !== undefined ? { spendPriority: adjusted.spendPriority } : {}),
       // Placed work counts toward the runway too: a charge can bring a
-      // window's projected exhaustion before its reset.
+      // window's projected exhaustion before its reset, which the record
+      // keeps, while the band stays the unadjusted reading's.
       ...(adjusted.lastsThroughReset !== undefined
         ? { lastsThroughReset: adjusted.lastsThroughReset }
         : {}),
+      band,
       charge: {
         accountId: row.accountId,
         source: reading.source,
@@ -264,7 +290,18 @@ export class PlacedWorkScores {
     };
   }
 
-  catalog(catalog: CatalogModelView[], rows: QuotaProviderView[], now: number): RankedModel[] {
+  /**
+   * Each model's crew ranking facts from one account's reading: the account
+   * `bound` names for it when that account has a reading - the one that will
+   * serve it, so the model is ranked by the account it runs on - else the
+   * best account by the crew bands.
+   */
+  catalog(
+    catalog: CatalogModelView[],
+    rows: QuotaProviderView[],
+    now: number,
+    bound?: (model: CatalogModelView) => string | undefined,
+  ): RankedModel[] {
     const data = { work: this.work(), samples: this.finished(now) };
     return catalog.map((model) => {
       const candidates = rows
@@ -276,12 +313,30 @@ export class PlacedWorkScores {
         }))
         .filter((c) => c.raw.effectivePercentRemaining !== undefined);
       candidates.sort((a, b) => {
-        const order = compareSpendRank({ ...a.raw, ...a.score }, { ...b.raw, ...b.score });
+        const order = compareBandRank({ ...a.raw, ...a.score }, { ...b.raw, ...b.score });
         if (order !== 0) return order;
         return (b.raw.effectivePercentRemaining ?? -1) - (a.raw.effectivePercentRemaining ?? -1);
       });
-      const best = candidates[0];
-      return best ? { ...model, ...best.raw, ...best.score } : model;
+      // Only a choice among accounts asks which one would serve.
+      const boundId = candidates.length > 1 ? bound?.(model) : undefined;
+      const best =
+        (boundId ? candidates.find((c) => c.row.accountId === boundId) : undefined) ??
+        candidates[0];
+      if (!best) return model;
+      const resetsAtMs = limitingResetOf(best.row, now, model.id);
+      // When the reading was taken: the observed reading's time, else the row's own.
+      const measuredAt = best.score.charge?.measuredAt ?? best.row.measuredAt;
+      return {
+        ...model,
+        ...best.raw,
+        ...best.score,
+        ...(best.raw.spendPriority !== undefined
+          ? { rawSpendPriority: best.raw.spendPriority }
+          : {}),
+        ...(best.row.accountId ? { accountId: best.row.accountId } : {}),
+        ...(measuredAt !== undefined ? { measuredAt } : {}),
+        ...(resetsAtMs !== undefined ? { resetsAtMs } : {}),
+      };
     });
   }
 }

@@ -1,4 +1,4 @@
-import { compareSpendRank } from "@shared/quotaSignals";
+import { bandOf, compareBandRank, compareSpendRank, type SpendBand } from "@shared/quotaSignals";
 import type { AccountCandidateFact } from "../storage/decisionStore";
 import type { ChargeFact } from "./placedWork";
 
@@ -57,6 +57,8 @@ export type AccountCandidate = {
    * its observed burn (INF-898); absent means unknown.
    */
   lastsThroughReset?: boolean;
+  /** The band of the unadjusted reading, beside a placed-work-adjusted score. */
+  band?: SpendBand;
   charge?: ChargeFact;
 };
 
@@ -68,6 +70,11 @@ export type AccountSelectionInput = {
   pinnedAccountId?: string;
   /** The Firstmate flagship reservation (one pool, one asymmetric rule). */
   protect?: { accountId: string; floorPercent: number };
+  /**
+   * Rank by the crew allowance bands (INF-1714), as crew routing ranks the
+   * model; absent, the decision models keep the three spend groups.
+   */
+  bands?: boolean;
 };
 
 export type AccountSelectionDecision = {
@@ -75,6 +82,8 @@ export type AccountSelectionDecision = {
   reasons: string[];
   /** Every candidate with the reading behind it and what became of it. */
   candidates: AccountCandidateFact[];
+  /** The provider's account pin chose it. */
+  pinned?: true;
 };
 
 /** Headroom within this many points counts as a tie for tiebreak purposes. */
@@ -98,6 +107,7 @@ export function selectAccount(input: AccountSelectionInput): AccountSelectionDec
       ...(typeof candidate.lastsThroughReset === "boolean"
         ? { lastsThroughReset: candidate.lastsThroughReset }
         : {}),
+      ...(input.bands ? { band: bandOf(candidate) } : {}),
       ...(candidate.charge ? { charge: candidate.charge } : {}),
       status: statusOf(candidate, picked, input),
     })),
@@ -148,7 +158,7 @@ function choose(input: AccountSelectionInput): Omit<AccountSelectionDecision, "c
   if (pinned) {
     if (!isExhausted(pinned)) {
       reasons.push(`picked ${pinned.label}: pinned`);
-      return { accountId: pinned.accountId, reasons };
+      return { accountId: pinned.accountId, reasons, pinned: true };
     }
     reasons.push(`pin ${pinned.label} is exhausted; falling back to selection`);
   }
@@ -193,7 +203,7 @@ function choose(input: AccountSelectionInput): Omit<AccountSelectionDecision, "c
   );
 
   if (measured.length > 0) {
-    measured.sort(compareMeasured);
+    measured.sort((a, b) => compareMeasured(a, b, input.bands === true));
     const chosen = measured[0] as AccountCandidate;
     const why =
       typeof chosen.spendPriority === "number"
@@ -231,8 +241,8 @@ function isExhausted(candidate: AccountCandidate): boolean {
  * known signal outranks an unmeasurable one; then headroom beyond the tie
  * delta; then LRU.
  */
-function compareMeasured(a: AccountCandidate, b: AccountCandidate): number {
-  const order = compareSpendRank(a, b);
+function compareMeasured(a: AccountCandidate, b: AccountCandidate, bands: boolean): number {
+  const order = bands ? compareBandRank(a, b) : compareSpendRank(a, b);
   if (order !== 0) return order;
   const remainingA = a.effectivePercentRemaining ?? 0;
   const remainingB = b.effectivePercentRemaining ?? 0;

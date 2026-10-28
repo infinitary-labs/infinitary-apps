@@ -3,6 +3,7 @@ import type { taskLifecycleOpSchema } from "./cards";
 import { checkSnapshotSchema } from "./checkSnapshot";
 import { computerReachSchema } from "./devices";
 import { liveValidationSummarySchema } from "./liveValidationSummary";
+import { modelChoiceSchema } from "./modelChoice";
 import { modelReasonSchema } from "./modelReason";
 import { slotSchema } from "./modelSlots";
 import { placementSnapshotSchema } from "./placement";
@@ -598,6 +599,12 @@ export const taskDetailSchema = taskViewSchema.extend({
    * columns; absent when the task never routed or the record cannot say.
    */
   modelReason: modelReasonSchema.optional(),
+  /**
+   * How the routing decision behind that model compared it with the others
+   * (INF-1714), as saved when it was made; absent before INF-1714 or when the
+   * crewmate runs on another model than the decision chose.
+   */
+  modelChoice: modelChoiceSchema.optional(),
   /**
    * The reasoning the crewmate's session opened at on that model, as its
    * newest dispatch recorded it (FI3-439); absent when the record cannot say

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ModelChoice } from "./modelChoice";
 import { modelNames } from "./modelDisplayName";
 import { browserDriverOf, canOpenAgain, type TaskBrowserStop } from "./taskBrowser";
 import { TASK_FACTS, taskFactsOf } from "./taskFacts";
@@ -159,6 +160,7 @@ describe("the shared task facts", () => {
       "checks",
       "review",
       "reason",
+      "why",
       "browser",
     ]);
   });
@@ -188,7 +190,15 @@ describe("the shared task facts", () => {
       model: "Nano Banana Pro",
       tier: "medium",
       reasoning: { level: "off" },
-      reason: "Building from the plan in SCR-1",
+      // INF-1714, the captain's ruling: why the model moves under the record's
+      // Why this model, and only a lower reasoning stays in the footnote.
+      reason: null,
+      why: {
+        line: "Building from the plan in SCR-1",
+        unrecorded: true,
+        choice: null,
+        comparison: null,
+      },
       delivery: {
         change: {
           noun: "Pull request",
@@ -350,6 +360,63 @@ describe("the shared task facts", () => {
     const unassigned = taskFactsOf(detail({ model: null }), names);
     expect(unassigned).toMatchObject({ model: null, tier: null, reasoning: null, reason: null });
     expect(taskFactsOf(detail({ model: "fm-mock/mock-1" }), names).model).toBe("mock-1");
+  });
+
+  // INF-1714, the captain's pick A: the record's Why this model says what
+  // decided between models, from the comparison saved with the choice.
+  it("explains a band choice under Why this model, and a named model by its reason alone", () => {
+    const choice: ModelChoice = {
+      decidedBy: "band",
+      floorPercent: 10,
+      candidates: [
+        {
+          model: "openrouter/google/gemini-3-pro-image",
+          picked: true,
+          band: "conserve",
+          percentRemaining: 20,
+        },
+        { model: "fm-mock/mock-1", picked: false, band: "near_floor", percentRemaining: 4 },
+      ],
+    };
+    const why = taskFactsOf(detail({ modelChoice: choice }), names).why;
+    expect(why).toEqual({
+      line: "Building from the plan in SCR-1",
+      unrecorded: false,
+      choice:
+        "Nano Banana Pro had more allowance to spare than mock-1, which had 10% or less left.",
+      comparison: {
+        floorPercent: 10,
+        candidates: [
+          {
+            model: "openrouter/google/gemini-3-pro-image",
+            picked: true,
+            band: "conserve",
+            percentRemaining: 20,
+            name: "Nano Banana Pro",
+          },
+          {
+            model: "fm-mock/mock-1",
+            picked: false,
+            band: "near_floor",
+            percentRemaining: 4,
+            name: "mock-1",
+          },
+        ],
+      },
+    });
+    const named = taskFactsOf(
+      detail({
+        modelReason: { rule: "R0", asked: "medium", served: "medium", named: true },
+        modelChoice: { decidedBy: "named", floorPercent: 10, candidates: [] },
+      }),
+      names,
+    ).why;
+    expect(named).toEqual({
+      line: "You asked for this model",
+      unrecorded: false,
+      choice: null,
+      comparison: null,
+    });
   });
 
   it("names a branch on a plain Git host, and the checks before any change", () => {

@@ -786,3 +786,79 @@ describe("route - a session projected to run out is conserved (INF-898)", () => 
     expect(decision.choice).toEqual({ provider: "openai-codex", id: "gpt-6-astra" });
   });
 });
+
+// INF-1714 on INF-1699's finding 6: eight tasks in three minutes went to the
+// provider with 2% of its allowance left. The recorded candidate facts of that
+// burst (INF-1680): Claude at 20% scored -1.08 before placed work and -3.98
+// after; Codex at 4% scored -3.30; both projected to run out before reset.
+describe("route - allowance bands decide before spend priority (INF-1714)", () => {
+  const available = [
+    { provider: "anthropic-claude", id: "claude-opus-5-5" },
+    { provider: "openai-codex", id: "gpt-6-astra" },
+  ];
+  const claude = {
+    provider: "claude",
+    id: "claude-opus-5-5",
+    label: "Claude Opus 5.5",
+    effectivePercentRemaining: 20,
+    // The placed-work charge moved the score and the runway; the band stays the raw one.
+    spendPriority: -3.98,
+    lastsThroughReset: false,
+    band: "conserve" as const,
+  };
+  const codex = {
+    provider: "codex",
+    id: "gpt-6-astra",
+    label: "GPT-6 Astra",
+    effectivePercentRemaining: 4,
+    spendPriority: -3.3,
+    lastsThroughReset: false,
+  };
+
+  it("serves Claude at 20% over Codex at 4%, though Claude's charged score is lower", () => {
+    const decision = route({ catalog: [codex, claude], available, pins: [] });
+    expect(decision.choice).toEqual({ provider: "anthropic-claude", id: "claude-opus-5-5" });
+    expect(decision.decidedBy).toBe("band");
+    expect(decision.candidates).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ provider: "openai-codex", band: "near_floor" }),
+        expect.objectContaining({ provider: "anthropic-claude", band: "conserve" }),
+      ]),
+    );
+    expect(decision.reasons).toContain(
+      "codex/gpt-6-astra has a higher spend priority but is at or below the near-floor",
+    );
+  });
+
+  it("still serves a near-floor allowance when nothing above the floor can", () => {
+    const decision = route({ catalog: [codex], available, pins: [] });
+    expect(decision.choice).toEqual({ provider: "openai-codex", id: "gpt-6-astra" });
+    expect(decision.decidedBy).toBe("only-candidate");
+  });
+
+  it("lets spend priority decide inside one band", () => {
+    const decision = route({
+      catalog: [claude, { ...codex, effectivePercentRemaining: 30 }],
+      available,
+      pins: [],
+    });
+    expect(decision.choice).toEqual({ provider: "openai-codex", id: "gpt-6-astra" });
+    expect(decision.decidedBy).toBe("spend-priority");
+  });
+
+  it("never lets a newer id of the same line bring back a near-floor model", () => {
+    const decision = route({
+      catalog: [
+        { ...codex, id: "gpt-6-astra", effectivePercentRemaining: 40 },
+        { ...codex, id: "gpt-6.1-astra", effectivePercentRemaining: 8, spendPriority: 1 },
+      ],
+      available: [
+        { provider: "openai-codex", id: "gpt-6-astra" },
+        { provider: "openai-codex", id: "gpt-6.1-astra" },
+      ],
+      pins: [],
+    });
+    expect(decision.choice).toEqual({ provider: "openai-codex", id: "gpt-6-astra" });
+    expect(decision.decidedBy).toBe("band");
+  });
+});

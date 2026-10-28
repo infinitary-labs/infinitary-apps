@@ -29449,6 +29449,76 @@
               "served"
             ]
           },
+          "modelChoice": {
+            "type": "object",
+            "properties": {
+              "decidedBy": {
+                "type": "string",
+                "enum": [
+                  "named",
+                  "pinned",
+                  "band",
+                  "spend-priority",
+                  "recency",
+                  "runway-order",
+                  "only-candidate"
+                ]
+              },
+              "floorPercent": {
+                "type": "number"
+              },
+              "candidates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "model": {
+                      "type": "string"
+                    },
+                    "picked": {
+                      "type": "boolean"
+                    },
+                    "band": {
+                      "type": "string",
+                      "enum": [
+                        "room",
+                        "conserve",
+                        "near_floor",
+                        "unknown"
+                      ]
+                    },
+                    "percentRemaining": {
+                      "type": "number"
+                    },
+                    "spendPriority": {
+                      "type": "number"
+                    },
+                    "rawSpendPriority": {
+                      "type": "number"
+                    },
+                    "placedWorkPoints": {
+                      "type": "number"
+                    },
+                    "measuredAt": {
+                      "type": "number"
+                    },
+                    "resetsAtMs": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "model",
+                    "picked"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "decidedBy",
+              "floorPercent",
+              "candidates"
+            ]
+          },
           "reasoning": {
             "type": "object",
             "properties": {

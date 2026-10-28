@@ -282,7 +282,7 @@ export function RecordCard({
           <>
             {facts && hasFactStrip(facts) && (
               <div className="fm-task-facts fm-record-strip" data-record-strip="">
-                <TaskFactStrip facts={facts} onOpenChange={openLink} focusable />
+                <TaskFactStrip facts={facts} onOpenChange={openLink} focusable why />
               </div>
             )}
             <RecordPaneFooter

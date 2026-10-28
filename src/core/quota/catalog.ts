@@ -33,6 +33,34 @@ export function scopeAppliesToModel(scope: string, modelId: string): boolean {
   return false;
 }
 
+/** The scope that bounds a model on one account row: its model window's, else account-wide. */
+function modelScope(
+  provider: QuotaProviderView,
+  nowMs: number,
+  modelId?: string,
+): ScopeSignals | undefined {
+  const view = providerScopes(provider, nowMs);
+  if (modelId) {
+    const match = view.scopes.find(
+      (candidate) =>
+        candidate.scope.startsWith("model:") && scopeAppliesToModel(candidate.scope, modelId),
+    );
+    if (match) return match;
+  }
+  return view.allModels;
+}
+
+/** When the window holding a model's least headroom on one account row resets. */
+export function limitingResetOf(
+  provider: QuotaProviderView,
+  nowMs: number,
+  modelId?: string,
+): number | undefined {
+  if (provider.status !== "ok" || provider.stale) return undefined;
+  const id = modelScope(provider, nowMs, modelId)?.limitingWindowId;
+  return provider.windows.find((window) => window.id === id)?.resetsAtMs;
+}
+
 /**
  * One account row's effective view for a model: the account-wide scope
  * (windows that jointly bound every model), narrowed by a model-scoped
@@ -46,15 +74,7 @@ export function effectiveFromProvider(
   modelId?: string,
 ): EffectiveView {
   if (provider?.status !== "ok" || provider.stale) return {};
-  const view = providerScopes(provider, nowMs);
-  let scope: ScopeSignals | undefined = view.allModels;
-  if (modelId) {
-    const match = view.scopes.find(
-      (candidate) =>
-        candidate.scope.startsWith("model:") && scopeAppliesToModel(candidate.scope, modelId),
-    );
-    if (match) scope = match;
-  }
+  const scope = modelScope(provider, nowMs, modelId);
   if (!scope) return {};
   // The pace label keeps the pre-existing display ladder over the scope's
   // own windows (ahead - the conserve signal - outranks the rest).

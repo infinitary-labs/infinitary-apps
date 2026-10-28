@@ -428,7 +428,7 @@ A run on request runs every part to its end.
 Every explicit native observation goes through `InfinitaryUITests/PhoneWaits.swift`: element presence and absence, predicate reads and the disposable home's control requests.
 `PhoneJourney.appearances` observes screenshot pixels before attaching each light/dark pair and before returning from its light restoration (INF-1537).
 These fixtures have broad near-white or near-black surfaces: every screen quadrant's mean sRGB brightness must be on the requested side of the black/white midpoint, so an idle app or a dark card alone cannot stand in for a drawn dark screen.
-After the first matching frame it lets XCTest wait for the native transition to settle, then observes again and attaches that exact screenshot, not a later unchecked capture.
+It reads them only once a still part of the screen has redrawn and settled (`waitForRedraw`), since XCTest no longer waits out the native transition; after the first matching frame it observes again and attaches that exact screenshot, not a later unchecked capture.
 A missing appearance fails with the last frame named `unconfirmed` and its quadrant readings in the log.
 This checks the journey's fixtures, not the appearance of arbitrary pictures or other apps.
 Its load clock, `PhoneWaitDeadline`, lives in `PhoneLoadClock/`, which both test targets compile, so the app-hosted display samples read the same clock.
@@ -497,6 +497,8 @@ For its unmodified arrows, Tab and Space, the captain-approved contract instead 
 There is no native-focus wait, priming input or retry.
 Its touch drags read the target's and the viewport's current frames for each drag's direction and distance, at most eight drags, and a program opens from a tap near its square's corner.
 The scene journey proves rightward panning, leftward return to the same world point, a visible real crewmate selected by Tab and that crewmate's matching preview opened by Space, retaining pictures and an optional keyboard recording.
+Its fixture's crew reach the phone one push at a time, and on the iPad the home's ring fits the screen, so only the other computer's formation gives Right somewhere to pan.
+The journey therefore presses its first key only once the scene has drawn that formation's crewmate and the reviewer, the fixture's last crewmate (INF-1477).
 The registration parser still reads empty modifier groups and normalizes BackBoard's arrow and Tab spellings without treating rejected commands as acknowledgements.
 UIKit publishes an app's key commands to backboardd only while a hardware keyboard is attached when its deferred update runs after the next Core Animation commit, so for that wait the home attaches one to its owned simulator by setting the simulator-wide attached state `UIDevice` reads, the value backboardd itself writes when a keyboard connects, and detaches it again however the wait ends.
 XCTest's virtual keyboard connects and disconnects within a millisecond of each key press, so a priming press only races that publication, and once a press has detached it no app process launched afterwards publishes at launch.
@@ -505,6 +507,34 @@ Subscription renewal happens only at the explicit launch boundary, never as a ti
 An evidence-writer failure stops the observer, rejects readiness and waits for both output streams before simulator cleanup.
 An app-side command list is not that acknowledgement; a missing witness fails before sending the chord, without a delay, another priming attempt or a repeated chord.
 For Return, the driver checks the router's carriage-return registration but supplies newline to XCTest: Xcode 26.4 emits the physical Return key for newline and no key for its Return constant.
+Every tap a native journey sends, on an element or a point, goes through `tapOnPhone`, the one way a journey sends a tap again besides the photo pick below (INF-1477, the captain's "Allow a proven second tap").
+A swipe, a drag or a key is sent once, as before.
+XCTest gives each synthesized tap a virtual touch screen of its own, and on a starved simulator backboardd can fail to read that screen's properties in time.
+It then attaches the screen as an accessory, or as a bad usage pair when it read no usage page, and ignores its touches, and XCTest confirms the tap after five seconds with no error.
+The same backboardd subscription also carries touch screen attachments, touching contacts that name their screen and ignored touches, and the test home answers what happened to the first touch screen attached after the tap began.
+The tap stays synchronous for its callers: the helper asks the test home off the main actor and turns the run loop until the answer arrives, so each tap also waits for its backboardd line to reach the test home.
+A built-in touch screen was delivered, and so was a screen whose own contact backboardd reports touching, since iOS 27.0 attaches every XCTest screen as an accessory and still delivers its touches, naming the screen on each contact line.
+Any other screen whose touches backboardd reports ignoring was discarded; only that proof sends one more tap, and two ignored taps fail the part.
+Any other screen alone, a missing line or a stopped observer is unknown and sends nothing more.
+Once a part has recorded a failure, XCTest synthesizes no more events, so a later tap attaches no touch screen; `tapOnPhone` then sends the tap without waiting for its target or reading its outcome (`PhoneFailures`).
+A warning is not a failure: after UIKit's runtime warning about a reparented view, XCTest goes on sending events, so every later tap still waits for its target and reads its outcome.
+A touch the app received but SpringBoard's gesture arbitration swallowed leaves no such proof, so it is not tapped again, with one exception: the photo pick.
+On a busy iPhone the photo's lift can reach the photo picker late enough that the picker reads the tap as a press-and-hold and opens the photo's preview, choosing nothing.
+The picker logs `performAllAnimations for animator: <_UIContextMenuAnimator` as it opens that preview, and the test home answers whether that line followed the tap (`PhonePickerPreviews`).
+The iPad logged the same line and still chose the photo, so the line alone is not proof: the photo pick taps once more only after the photo holds still with no photo chosen and that line read (INF-1477, the captain's "Allow one more photo tap"), and a second press-and-hold fails the part.
+The preview stays open after the lift and hides the photo from the accessibility tree, so when UIKit's element labeled `Preview` is on screen after that line, one tap on the dimmed screen below it closes it before the photo is tapped again (the captain's "Allow the closing tap").
+Before and after each action XCTest waits for the app's main run loop to idle and for a reply from inside the app saying its animations finished (INF-1541, the captain's "The test code skips Apple's animation wait and checks each target itself").
+On a busy Mac that reply can stop coming, as it did after a rotation in INF-1538, and XCTest then waits 60 seconds before every later action.
+Every journey replaces XCTest's private `-[XCUIApplicationProcess waitForQuiescenceIncludingAnimationsIdle:usingActivity:isPreEvent:]`, which every one of those waits reaches in Xcode 26.4, with one that keeps the run loop wait and never asks for the animation reply, as WebDriverAgent does (`PhoneAnimationWait.swift`).
+A tap checks its own target instead: `tapOnPhone` waits until the target's frame, and the screen's own pixels inside it, read the same twice in a row on the load clock (`waitForSteadyTarget`), except a crewmate orbiting in the scene, which never holds still.
+The frame alone is not enough: UIKit gives a sheet or an alert its final frame as it starts to slide or fade in, and drops a touch until it has arrived.
+A check that a control can be pressed waits the same way before it asks XCTest, since right after the iPad's last card closed, XCTest found no tap point for the reply line when the check asked at once.
+Any other such check waits on the load clock until XCTest finds the control's tap point (`waitForPhonePress`), since on a busy iPad the sidebar's first group read none right after it appeared.
+A typed field waits for keyboard focus after its tap (`focusForPhoneTyping`), so a dropped tap fails where it happened rather than at the typing.
+A display change, such as dark appearance or the largest type, waits until a still part of the screen draws differently than before the change and settles (`waitForRedraw`), and its pictures are taken after that.
+A turn of the device waits until a target the turn carries elsewhere has left its old frame and holds still in its new place (`turnPhone`), since until the app turns that target holds still where it was.
+A check that read a dialog's button, a gliding row or a web page's answer right after an action waits for it on the load clock instead.
+If Xcode stops offering that method, or changes what it takes, the journey fails naming it; the gate fails a part whose log never printed "Phone animation wait skipped", and prints how many animation waits XCTest still ran out in each part.
 The talk part checks that Command-Return restores the field's observed empty value and writes exactly one captain message to the real home.
 The talk part exercises details, keyboard dismissal, both card-paging shortcuts and Send as first chords after relaunch, retaining the original button and draft assertions.
 The composed journey verifies keyboard dismissal and computer details after relaunch without changing its retained-text and retained-photo assertions.

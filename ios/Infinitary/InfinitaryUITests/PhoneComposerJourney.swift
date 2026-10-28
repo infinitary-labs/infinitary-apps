@@ -16,7 +16,7 @@ import XCTest
     try await recordKeyboard(false)
 
     // Exercise the removal control as well as Photos and Send, without losing the unsent words.
-    app.buttons["photo-chip"].tap()
+    tapOnPhone(app.buttons["photo-chip"])
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 0)
     XCTAssertEqual(input.value as? String, words)
     addPhoneJourneyPhoto(app: app)
@@ -28,7 +28,7 @@ import XCTest
         let surface = name == "Activity" ? app.scrollViews["activity-list"]
             : name == "Tasks" ? app.buttons["group-waiting"] : app.scrollViews["card-scroll"]
         XCTAssertTrue(surface.waitForPresence(timeout: 10), "The requested tab actually opens")
-        XCTAssertTrue(surface.isHittable)
+        XCTAssertTrue(waitForPhonePress(surface))
         if name != "Activity" { verifyPhoneReadingColumn(surface, column: column) }
         if name == "Home" {
             XCTAssertEqual(input.value as? String, words, "Changing tabs keeps the unsent words")
@@ -41,8 +41,8 @@ import XCTest
         }
     }
     picture("draft-after-tabs")
-    XCUIDevice.shared.orientation = .landscapeLeft
-    app.activate()
+    // INF-1541 piece 1: the message box moves to the foot of the turned screen, so the turn waits for it to settle there.
+    turnPhone(to: .landscapeLeft, in: app, moving: input)
     XCTAssertTrue(input.waitForPresence(timeout: 10))
     if UIDevice.current.userInterfaceIdiom == .pad {
         let sidebar = phoneSidebar(app)
@@ -52,14 +52,14 @@ import XCTest
         XCTAssertLessThanOrEqual(sidebar.frame.maxX, input.frame.minX,
             "The landscape composer belongs to the stage beside the sidebar")
         verifyPhoneReadingColumn(app.scrollViews["card-scroll"], app: app)
-        phoneSidebarRail("Tasks", in: sidebar).tap()
+        tapOnPhone(phoneSidebarRail("Tasks", in: sidebar))
         // The search waits above the list until it is pulled down (INF-589 item 9), so the first group stands for Tasks.
         let tasks = sidebar.buttons["group-waiting"]
         XCTAssertTrue(tasks.waitForPresence(timeout: 10), "The Tasks rail shows Tasks in the landscape sidebar")
-        XCTAssertTrue(tasks.isHittable)
+        XCTAssertTrue(waitForPhonePress(tasks))
     }
     XCTAssertEqual(input.value as? String, words, "Rotating keeps the unsent words")
-    XCTAssertTrue(input.isHittable, "The composer remains visible at the stage's foot")
+    XCTAssertTrue(waitForPhonePress(input), "The composer remains visible at the stage's foot")
     XCTAssertGreaterThan(input.frame.minY, app.frame.midY)
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
     XCTAssertEqual(app.textFields.matching(identifier: "message-box").count, 1)
@@ -74,14 +74,14 @@ import XCTest
         let title = app.staticTexts["card-title"]
         XCTAssertTrue(phoneCardReadingBounds(card, app: app).contains(phoneAccessibilityBounds(title.frame)),
             "Landscape leaves room to read the full card heading, not just its attribution")
-        XCTAssertTrue(title.isHittable)
+        XCTAssertTrue(waitForPhonePress(title))
         picture("draft-landscape")
         let body = app.webViews.staticTexts.firstMatch
         let action = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'card-action-'")).firstMatch
         // The body reads inside its scroller; a choice may be pinned at the frame's foot or scroll with a short card's body.
         for (element, region) in [(body, app.scrollViews["card-scroll"]), (action, card)] {
             revealPhoneCardReading(element, in: region, app: app)
-            XCTAssertTrue(element.isHittable, "The landscape card can be read and used")
+            XCTAssertTrue(waitForPhonePress(element), "The landscape card can be read and used")
             XCTAssertTrue(phoneCardReadingBounds(region, app: app).contains(phoneAccessibilityBounds(element.frame)),
                 "Landscape shows the complete reading \(element.frame) inside \(phoneCardReadingBounds(region, app: app)), not a clipped sliver")
             picture(element.elementType == .button ? "draft-landscape-card-action" : "draft-landscape-card-body")
@@ -93,18 +93,17 @@ import XCTest
     } else { picture("draft-landscape") }
     if UIDevice.current.userInterfaceIdiom == .pad {
         let sidebar = phoneSidebar(app)
-        phoneSidebarRail("Activity", in: sidebar).tap()
+        tapOnPhone(phoneSidebarRail("Activity", in: sidebar))
         XCTAssertTrue(sidebar.staticTexts.matching(identifier: "activity-text").firstMatch.waitForPresence(timeout: 10))
     }
-    XCUIDevice.shared.orientation = .portrait
-    app.activate()
+    turnPhone(to: .portrait, in: app, moving: input)
     XCTAssertTrue(phoneSidebar(app).waitForAbsence(timeout: 10))
     XCTAssertTrue(input.waitForPresence(timeout: 10))
     XCTAssertEqual(input.value as? String, words)
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
     verifyPhoneComposerBounds(app: app)
     picture("draft-returned-to-portrait")
-    input.tap()
+    tapOnPhone(input)
     try await dismissPhoneJourneyKeyboard(app: app, usingKey: true)
     XCTAssertEqual(input.value as? String, words, "The keyboard command does not type into the draft")
     XCTAssertEqual(app.buttons.matching(identifier: "photo-chip").count, 1)
@@ -115,7 +114,7 @@ import XCTest
     // INF-499 #8: one real press must not send the retained text/photo behind a native sheet.
     try await pressPhoneKey(XCUIKeyboardKey.return.rawValue, modifiers: .command, in: app)
     picture("sheet-after-command-return")
-    closeDetails.tap()
+    tapOnPhone(closeDetails)
     XCTAssertTrue(closeDetails.waitForAbsence(timeout: 10))
     picture("draft-after-sheet-command-return")
     XCTAssertEqual(input.value as? String, words)
@@ -149,16 +148,70 @@ import XCTest
     }
 }
 
+/// INF-1477 (the captain's choice "Allow one more photo tap"): a photo tap the iPhone delivered can reach the picker as a
+/// press-and-hold when its lift arrives late, as in phone run 40486884004, and the picker then previews the photo and
+/// chooses nothing. Only the picker's own line for that press (the test home's picker-preview) sends one more tap, once the
+/// photo holds still again and is still not chosen: the iPad's picker in the same run logged that line and chose the photo.
+/// The preview stays open after the lift and hides the photo from the accessibility tree, as a 1.8 second press showed on
+/// the iPhone, so a tap on the dimmed screen below it closes it first (closePhonePickerPreview; the captain's choice
+/// "Allow the closing tap").
+@MainActor private func pickPhoneJourneyPhoto(_ photo: XCUIElement, add: XCUIElement, in app: XCUIApplication) {
+    // iOS 26 exposes the real asset frame, but not a hittable AX point; never guess a screen coordinate.
+    let point = photo.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+    let chosen = NSPredicate { _, _ in add.exists && add.isEnabled }
+    var held: [String] = []
+    for _ in 0..<2 {
+        let since = Date().timeIntervalSince1970 * 1000
+        tapOnPhone(point)
+        guard !PhoneFailures.recorded else { return }
+        let answer: [String: Any]
+        do {
+            let reading = try askPhoneHome("picker-preview", since: since)
+            _ = waitForPhonePredicate(NSPredicate { _, _ in reading.value != nil || chosen.evaluate(with: nil) },
+                                      object: nil, timeout: 40)
+            if reading.value == nil, chosen.evaluate(with: nil) { return }
+            answer = try reading.answer()
+        } catch {
+            XCTFail("The photo picker's reading of the photo tap was not read: \(error)")
+            return
+        }
+        guard answer["previewed"] as? Bool == true, let proof = answer["proof"] as? String else {
+            if !chosen.evaluate(with: nil) { XCTFail("The picker chose no photo and logged no press-and-hold: \(answer)") }
+            return
+        }
+        print("Photo picker press-and-hold: \(proof)")
+        held.append(proof)
+        // UIKit labels the open preview "Preview"; a photo the picker chose shows no preview.
+        let preview = app.otherElements["Preview"]
+        _ = waitForPhonePredicate(NSPredicate { _, _ in chosen.evaluate(with: nil) || preview.exists }, object: nil, timeout: 10)
+        if chosen.evaluate(with: nil) { return }
+        guard held.count < 2 else { break }
+        if preview.exists { closePhonePickerPreview(preview, in: app) }
+        guard !PhoneFailures.recorded else { return }
+        waitForSteadyTarget(photo)
+        if chosen.evaluate(with: nil) { return }
+    }
+    XCTFail("The photo picker read both photo taps as a press-and-hold: \(held)")
+}
+
+/// The preview's dimmed screen closes it on a tap outside the preview; below it lies only the photo grid.
+@MainActor private func closePhonePickerPreview(_ preview: XCUIElement, in app: XCUIApplication) {
+    let window = app.windows.firstMatch
+    waitForSteadyTarget(preview)
+    let screen = window.frame, shown = preview.frame
+    tapOnPhone(window.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: (shown.maxY + screen.maxY) / 2 / screen.height)))
+    XCTAssertTrue(preview.waitForAbsence(timeout: 10), "The photo picker's preview stayed open: \(app.debugDescription)")
+}
+
 /// The single native picker reader for the composed-draft and send journey.
 @MainActor func addPhoneJourneyPhoto(app: XCUIApplication) {
     let photos = app.buttons["add-photos"]
-    XCTAssertTrue(photos.isHittable); photos.tap()
+    XCTAssertTrue(waitForPhonePress(photos)); tapOnPhone(photos)
     let photo = app.images.matching(NSPredicate(format: "label BEGINSWITH 'Photo' OR label BEGINSWITH 'Screenshot'")).firstMatch
     XCTAssertTrue(photo.waitForPresence(timeout: 10), app.debugDescription)
-    // iOS 26 exposes the real asset frame, but not a hittable AX point; never guess a screen coordinate.
-    photo.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
     let add = app.buttons.matching(NSPredicate(format: "label == 'Done' OR label == 'Add'")).firstMatch
-    XCTAssertTrue(add.waitForPresence(timeout: 10)); XCTAssertTrue(add.isEnabled); add.tap()
+    pickPhoneJourneyPhoto(photo, add: add, in: app)
+    XCTAssertTrue(add.waitForPresence(timeout: 10)); XCTAssertTrue(add.isEnabled); tapOnPhone(add)
     // INF-662 piece 2: with other simulators beside this one, Photos has taken just over 10 seconds
     // to hand the picked photo's bytes over; the chip appears once they have loaded.
     XCTAssertTrue(app.buttons["photo-chip"].waitForPresence(timeout: 30), app.debugDescription)
@@ -177,6 +230,9 @@ import XCTest
         XCTAssertTrue(phoneAccessibilityBounds(footer.frame).contains(phoneAccessibilityBounds(control.frame)),
             "The footer clips \(control.identifier): \(control.frame) outside \(footer.frame)")
         if control.elementType == .button && control.isEnabled {
+            // INF-1541 piece 1: XCTest no longer waits out the stage's change, so a press's check waits, as a tap does, for
+            // its target to hold still. Right after the last card closed on the iPad, the reply line had no tap point yet.
+            waitForSteadyTarget(control)
             XCTAssertTrue(control.isHittable, "The footer control \(control.identifier) can be pressed")
         }
     }
@@ -187,6 +243,7 @@ import XCTest
     if card.exists {
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
         XCTAssertTrue(pager.waitForPresence(timeout: 10))
+        waitForSteadyTarget(pager)
         XCTAssertTrue(pager.isHittable, "The card pager is not covered by the composer")
         for id in ["previous-card", "card-pager", "next-card"] {
             let control = app.descendants(matching: .any).matching(identifier: id).firstMatch
@@ -197,7 +254,10 @@ import XCTest
                 "\(id) \(control.frame) belongs above the composer \(footer.frame)")
             XCTAssertLessThanOrEqual(phoneAccessibilityBounds(card.frame).maxY, frame.minY,
                 "The card scroll area stays above \(id), rather than extending behind it")
-            if control.isEnabled { XCTAssertTrue(control.isHittable, "\(id) remains usable above the composer") }
+            if control.isEnabled {
+                waitForSteadyTarget(control)
+                XCTAssertTrue(control.isHittable, "\(id) remains usable above the composer")
+            }
         }
     }
     let keyboard = app.keyboards.firstMatch
@@ -220,8 +280,8 @@ import XCTest
 @MainActor private func dismissPhoneJourneyKeyboard(app: XCUIApplication, usingKey: Bool = false) async throws {
     let done = app.navigationBars.buttons["dismiss-phone-keyboard"]
     XCTAssertTrue(done.waitForPresence(timeout: 10))
-    XCTAssertTrue(done.isHittable)
-    if usingKey { try await pressPhoneKey("k", modifiers: [.command, .shift], in: app) } else { done.tap() }
+    XCTAssertTrue(waitForPhonePress(done))
+    if usingKey { try await pressPhoneKey("k", modifiers: [.command, .shift], in: app) } else { tapOnPhone(done) }
     XCTAssertTrue(app.keyboards.firstMatch.waitForAbsence(timeout: 10))
 }
 

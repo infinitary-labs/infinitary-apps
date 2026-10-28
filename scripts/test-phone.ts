@@ -19,7 +19,7 @@ import { runEveryCheck } from "./phone-checks.ts";
 import { GATE_SIMULATOR, removePhoneLeftovers, SCRATCH_PREFIX } from "./phone-leftovers.ts";
 import { phoneRecording } from "./phone-recording.ts";
 import { phoneSimulator } from "./phone-simulator.ts";
-import { PHONE_PARTS, type PhoneDevice, partSelection, phoneExecutionArguments, phoneJobs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
+import { PHONE_PARTS, type PhoneDevice, partSelection, phoneAnimationWaits, phoneExecutionArguments, phoneJobs, runDeviceLanes, testHomeKeys } from "./phone-test-plan.ts";
 
 // INF-800: with CI mode on, the phone check runs only through CI (docs/testing.md).
 const refusal = ciModeRefusal("phone");
@@ -128,6 +128,16 @@ const recording = {
   keyboardBeforeLaunch: async () => {
     if (!keyboard) throw new Error("No owned simulator keyboard observer exists");
     return keyboard.beforeLaunch();
+  },
+  // INF-1477: what backboardd did with the tap the runner began at `since`, from the same renewed subscription.
+  touchOutcome: async (since: number) => {
+    if (!keyboard) throw new Error("No owned simulator keyboard observer exists");
+    return keyboard.touch(since);
+  },
+  // INF-1477: whether the photo picker read the photo tap the runner began at `since` as a press-and-hold.
+  pickerPreview: async (since: number) => {
+    if (!keyboard) throw new Error("No owned simulator keyboard observer exists");
+    return keyboard.preview(since);
   },
   keyboardReady: async (chord: PhoneChord) => {
     if (!simulator || !keyboard) throw new Error("No owned simulator keyboard observer exists");
@@ -370,10 +380,13 @@ const onePart = async () => {
   simulatorLog = await observePhoneLog({ device: owned, env, evidence, children,
     predicate: `(${SIMULATOR_LOG}) OR (${SYSTEM_LOG})`, onLine: timeoutStack?.receive });
   const testing = new Date();
+  let output = "";
   await run("xcodebuild", ["-xctestrun", plan, ...destination, ...partSelection(values.part![0]!, values.waits),
     ...phoneExecutionArguments(GRADES_BUDGETS), "test-without-building"])
+    .then((log) => { output = log; })
     .finally(async () => { await recording.stop(); await demo.finish(recordings, evidence); })
     .catch(async (error: Error & { output?: string }) => {
+      output = error.output ?? "";
       // The CI job log names why a part failed; its results archive is often too large to fetch.
       for (const line of (error.output ?? "").split("\n").filter((each) => / error: |Test Case .* failed/.test(each)).slice(0, 20))
         console.log(line);
@@ -389,7 +402,11 @@ const onePart = async () => {
         .then(() => console.log(`The simulator's system log is in ${number}-xcrun.log`))
         .catch((problem: Error) => console.log(`The simulator's system log could not be kept: ${problem.message}`));
       throw error;
-    });
+    })
+    .finally(() => console.log(`XCTest animation waits that ran out: ${phoneAnimationWaits(output).missed}`));
+  // INF-1541 piece 1: the native wait-clock tests launch no app, so only a journey part must say it skipped the wait.
+  if (!values.waits && !phoneAnimationWaits(output).skipped)
+    throw new Error(`The ${values.part![0]} part ran with XCTest's animation wait: its journey never printed "Phone animation wait skipped", so the hook in PhoneAnimationWait.swift is missing`);
 };
 let failures: string[] = [];
 try {

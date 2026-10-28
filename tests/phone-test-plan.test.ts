@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   PHONE_PARTS,
   partSelection,
+  phoneAnimationWaits,
   phoneExecutionArguments,
   phoneJobs,
   runDeviceLanes,
@@ -280,5 +281,35 @@ describe("the native clock proof selection", () => {
     expect(() => partSelection("cards", true)).toThrow(
       "Native wait-clock tests belong to the rest part",
     );
+  });
+});
+
+// INF-1541 piece 1 (the captain's choice "The test code skips Apple's animation wait and checks each target itself"):
+// the gate fails a journey part whose log never says it skipped XCTest's animation wait, and counts every animation
+// wait XCTest still ran out. The first lines are INF-1538's stalled iPhone talk part, as its log printed them.
+const stalled = `    t =    68.22s Setting device orientation to Landscape Left
+    t =    68.22s     Device orientation changed to Landscape Left
+    t =    68.30s     Interface orientation changed to Landscape Right
+    t =    68.30s     Wait for com.getinfinitary.infinitary to idle
+    t =   128.32s App animations complete notification not received, will attempt to continue.
+    t =   128.32s Open com.getinfinitary.infinitary
+    t =   128.33s     Activate com.getinfinitary.infinitary
+    t =   128.34s         Wait for com.getinfinitary.infinitary to idle
+    t =   188.38s App animations complete notification not received, will attempt to continue.
+    t =   188.39s Checking existence of \`"message-box" TextField\``;
+// Piece 1's own iPhone join part, as its log printed the start of the journey.
+const skipped = `    t =     0.13s Set Up
+Phone animation wait skipped: -[XCUIApplicationProcess waitForQuiescenceIncludingAnimationsIdle:usingActivity:isPreEvent:]
+    t =     0.13s Setting device orientation to Portrait
+    t =     0.13s     Device orientation changed to Portrait
+    t =     0.15s     Wait for com.apple.springboard to idle`;
+
+describe("a part's animation waits", () => {
+  it("counts each animation wait XCTest ran out, and a part that never skipped the wait", () => {
+    expect(phoneAnimationWaits(stalled)).toEqual({ skipped: false, missed: 2 });
+  });
+
+  it("reads the hook's own line as a part that skipped the wait", () => {
+    expect(phoneAnimationWaits(skipped)).toEqual({ skipped: true, missed: 0 });
   });
 });

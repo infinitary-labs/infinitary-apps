@@ -43,6 +43,19 @@ export function phoneExecutionArguments(grades: boolean): string[] {
   ])];
 }
 
+/** INF-1541 piece 1 (the captain's choice "The test code skips Apple's animation wait and checks each target itself"):
+ * every journey replaces XCTest's private quiescence wait so no wait asks for the app's animation reply, and prints
+ * "Phone animation wait skipped: " once it has (ios/Infinitary/InfinitaryUITests/PhoneAnimationWait.swift); a part whose
+ * log never says so ran with Apple's wait. `missed` counts XCTest's own line for an animation wait that ran out, which
+ * INF-1538's stalled part printed 18 times; the replacement leaves none, so any the gate counts got past it. */
+export function phoneAnimationWaits(output: string): { skipped: boolean; missed: number } {
+  const lines = output.split("\n");
+  return {
+    skipped: lines.some((line) => line.includes("Phone animation wait skipped: ")),
+    missed: lines.filter((line) => line.includes("App animations complete notification not received")).length,
+  };
+}
+
 /** The xcodebuild arguments that choose one part's tests from the built test plan. */
 export function partSelection(name: string, waitsOnly = false): string[] {
   // INF-1083: prove the native clock in either mode without grading unrelated UI journeys.

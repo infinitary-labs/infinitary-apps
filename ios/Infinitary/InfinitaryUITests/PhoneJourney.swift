@@ -57,8 +57,9 @@ import XCTest
             }
             // The midpoint separates these fixtures' near-white and near-black surfaces, not a pixel golden.
             guard brightness.allSatisfy({ dark ? $0 < 0.5 : $0 > 0.5 }) else { return false }
-            // Only now is the requested appearance actually drawing. Let XCTest wait for its
-            // native transition to settle, then observe again; the first dark frame can lack chrome.
+            // Only now is the requested appearance actually drawing. The screen inside the caller's still element has
+            // settled (waitForRedraw), and XCTest no longer waits out animations, so observe again; the first dark frame
+            // can lack chrome.
             if !settled {
                 settled = true
                 self.app.activate()
@@ -72,13 +73,21 @@ import XCTest
         return try XCTUnwrap(observed, "The app never drew \(dark ? "dark" : "light") for \(name); quadrant brightness \(brightness)")
     }
 
-    private func appearances(_ name: String) async throws {
+    /// INF-1541 piece 1: XCTest no longer waits out the display's change, so each picture waits until `shown`, a part
+    /// of the screen that holds still, draws differently than it did before the change, and settles; INF-1537 then
+    /// confirms the whole screen draws the requested appearance before the picture is kept. Its first match is read,
+    /// since a line such as Activity's can repeat.
+    private func appearances(_ name: String, showing element: XCUIElement) async throws {
+        let shown = element.firstMatch
+        let light = waitForRedraw(shown, from: nil)
         picture(name, screenshot: try appearancePicture(name, dark: false))
         _ = try await home("display-dark")
         app.activate()
+        let dark = waitForRedraw(shown, from: light)
         picture(name + "-dark", screenshot: try appearancePicture(name + "-dark", dark: true))
         _ = try await home("display-light")
         app.activate()
+        _ = waitForRedraw(shown, from: dark)
         _ = try appearancePicture(name + "-restored", dark: false)
     }
 
@@ -86,14 +95,14 @@ import XCTest
         let details = app.buttons["computer-details"]
         XCTAssertTrue(details.waitForPresence(timeout: 10))
         XCTAssertEqual(details.label, "Your computer")
-        details.tap()
+        tapOnPhone(details)
         XCTAssertTrue(app.buttons["close-computer-details"].waitForPresence(timeout: 10))
     }
 
     private func tab(_ name: String) {
         // INF-1062: the tabs are words in the top bar's strip, the same on iPhone and an upright iPad; the pressed one lights.
         let tab = app.buttons["tab-" + name.lowercased()]
-        XCTAssertTrue(tab.waitForPresence(timeout: 10), app.debugDescription); tab.tap()
+        XCTAssertTrue(tab.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(tab)
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: tab, timeout: 10), .completed, "\(name) is the lit tab after its press")
     }
 
@@ -117,24 +126,19 @@ import XCTest
     private func submitLink(_ command: String = "link") async throws {
         let invitation = try await home(command)
         let link = try XCTUnwrap(invitation["link"] as? String)
-        app.buttons["paste-link"].tap()
+        tapOnPhone(app.buttons["paste-link"])
         let field = app.textFields["join-link"]
-        XCTAssertTrue(field.waitForPresence(timeout: 10))
-        field.tap()
-        // A fresh iOS keyboard presents its own typing guide before accepting other taps.
-        if app.staticTexts["Speed up your typing by sliding your finger across the letters to compose a word."].exists {
-            app.buttons["Continue"].tap()
-        }
+        focusForPhoneTyping(field, in: app)
         field.typeText(link)
         // INF-1312: Paste and Continue share one row; pictured once, on the first link.
         if command == "wrong-link" { picture("paste-link") }
-        app.buttons["read-link"].tap()
+        tapOnPhone(app.buttons["read-link"])
         // iOS 26 exposes a dialog's native button and its SwiftUI label as nested buttons.
         let confirm = app.buttons["confirm-join"].firstMatch
         XCTAssertTrue(confirm.waitForPresence(timeout: 10))
         // INF-589 item 4: the cancel choice stays in view beside Join, where a popover would hide it.
-        XCTAssertTrue(app.alerts.buttons["Cancel"].firstMatch.isHittable, app.debugDescription)
-        confirm.tap()
+        waitUntilHittable(app.alerts.buttons["Cancel"].firstMatch)
+        tapOnPhone(confirm)
     }
 
     private func join() async throws {
@@ -148,6 +152,9 @@ import XCTest
     // state the single journey reached before that part.
     private func launchFresh() async throws {
         continueAfterFailure = false
+        PhoneFailures.watch()
+        // INF-1541 piece 1: before the first action, so no wait in the part asks for the app's animation reply.
+        try skipPhoneAnimationWait()
         app.launchEnvironment["INFINITARY_ISOLATED_PHONE_TEST"] = "1"
         // INF-1528: the simulator never ends the app's background time, so the app ends it after this long.
         app.launchEnvironment["INFINITARY_TEST_BACKGROUND_TIME"] = "15"
@@ -165,7 +172,7 @@ import XCTest
     /// Part 1, join and recover: a wrong Mac, joining, reading, relaunch, out of reach, catch-up, Leave, Forget and Removed.
     func testJoinAndRecover() async throws {
         try await launchFresh()
-        try await appearances("join")
+        try await appearances("join", showing: app.staticTexts["Welcome aboard Infinitary"])
         try await submitLink("wrong-link")
         XCTAssertTrue(app.staticTexts["This is not the computer your link names. Nothing was sent."].waitForPresence(timeout: 15))
         let refused = try await home("state", method: "GET")
@@ -186,7 +193,7 @@ import XCTest
         waitUntilEnabled(keepFinding)
         XCTAssertTrue(keepFinding.isEnabled)
         picture("review-finding")
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
         XCTAssertTrue(cardHeading("Your phone is reading your Mac").waitForPresence(timeout: 10))
         let first = try await home("state", method: "GET")
         let devices = try XCTUnwrap(first["devices"] as? [[String: Any]])
@@ -198,7 +205,7 @@ import XCTest
         XCTAssertTrue(app.webViews.staticTexts["This card belongs to the disposable test home."].firstMatch.waitForPresence(timeout: 10))
         verifyPhoneComposerBounds(app: app)
         picture("cards")
-        try await appearances("cards")
+        try await appearances("cards", showing: app.staticTexts["Your phone is reading your Mac"])
         // INF-1062: the computer's name leaves the bar for its sheet, and Leave stays behind that sheet (INF-209).
         XCTAssertFalse(app.staticTexts["home-name"].exists, "The bar no longer carries the computer's name")
         XCTAssertFalse(app.buttons["leave"].exists)
@@ -211,18 +218,18 @@ import XCTest
         XCTAssertTrue(app.staticTexts["In reach"].exists, "The computer's sheet says its reach")
         XCTAssertTrue(app.staticTexts["reached-address"].label.hasPrefix("127.0.0.1:"), "The sheet names the route reached, not the saved preference")
         XCTAssertTrue(app.buttons["leave"].exists)
-        try await appearances("computer-details")
-        app.buttons["close-computer-details"].tap()
+        try await appearances("computer-details", showing: app.staticTexts["home-name"])
+        tapOnPhone(app.buttons["close-computer-details"])
         // INF-1062, the captain's pick: Settings at the bar's left is this phone's own sheet, with no Leave in it.
         try await pressPhoneKey(",", modifiers: .command, in: app)
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.staticTexts["app-version"].label.hasPrefix("Version "), app.staticTexts["app-version"].label)
         XCTAssertFalse(app.buttons["leave"].exists)
-        try await appearances("phone-settings")
-        app.buttons["close-phone-settings"].tap()
+        try await appearances("phone-settings", showing: app.staticTexts["app-version"])
+        tapOnPhone(app.buttons["close-phone-settings"])
         XCTAssertTrue(app.buttons["close-phone-settings"].waitForAbsence(timeout: 10))
         let settings = app.buttons["phone-settings"]
-        XCTAssertTrue(settings.isHittable); XCTAssertEqual(settings.label, "Settings")
+        XCTAssertTrue(waitForPhonePress(settings)); XCTAssertEqual(settings.label, "Settings")
         let strip = [app.buttons["tab-home"], app.buttons["tab-tasks"], app.buttons["tab-activity"]]
         XCTAssertLessThan(settings.frame.maxX, strip[0].frame.minX, "Settings sits left of the strip")
         // INF-1328: the segmented control draws its tabs edge to edge, in order and never overlapping.
@@ -230,25 +237,30 @@ import XCTest
         XCTAssertLessThan(strip[2].frame.maxX, app.buttons["computer-details"].frame.minX, "The computer sits right of the strip")
         XCTAssertTrue(strip[0].isSelected, "Home is the lit tab")
         let stripFrames = strip.map { $0.frame.integral }
+        // INF-1541 piece 1: the card's heading redraws at the largest type before the strip is read against it.
+        let heading = app.staticTexts["Your phone is reading your Mac"]
+        let standard = waitForRedraw(heading, from: nil)
         _ = try await home("display-large")
-        XCTAssertTrue(app.buttons["computer-details"].isHittable)
+        let largest = waitForRedraw(heading, from: standard)
+        XCTAssertTrue(waitForPhonePress(app.buttons["computer-details"]))
         // INF-1062: the strip keeps the bar's own size at the largest standard type, so no word truncates and the
         // bar's buttons stay where they were; growing words once truncated Activity and lost a tap on the computer.
         XCTAssertEqual(strip.map { $0.frame.integral }, stripFrames, "The strip's words keep the bar's own size at the largest type")
         picture("cards-largest-standard-type")
         computerDetails()
-        XCTAssertTrue(app.buttons["leave"].isHittable)
+        XCTAssertTrue(waitForPhonePress(app.buttons["leave"]))
         picture("computer-details-largest-standard-type")
-        app.buttons["close-computer-details"].tap()
+        tapOnPhone(app.buttons["close-computer-details"])
         _ = try await home("display-light")
+        _ = waitForRedraw(heading, from: largest)
         if UIDevice.current.userInterfaceIdiom == .pad {
-            XCUIDevice.shared.orientation = .landscapeLeft
-            app.activate()
+            // INF-1541 piece 1: turned, the card's heading moves onto the stage beside the sidebar, and back upright.
+            turnPhone(to: .landscapeLeft, in: app, moving: heading)
             let sidebar = phoneSidebar(app)
             XCTAssertTrue(sidebar.waitForPresence(timeout: 10), app.debugDescription)
             XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].exists)
             XCTAssertLessThanOrEqual(sidebar.frame.maxX, app.scrollViews["card-scroll"].frame.minX)
-            try await appearances("ipad-landscape")
+            try await appearances("ipad-landscape", showing: app.staticTexts["Your phone is reading your Mac"])
             // INF-589 item 16: Tasks and Activity are a segmented pair at the sidebar's top, each scrolling alone.
             // INF-944 item 6: in the tabs' order, Tasks then Activity, opening on Tasks.
             let tasksRail = phoneSidebarRail("Tasks", in: sidebar), activityRail = phoneSidebarRail("Activity", in: sidebar)
@@ -256,19 +268,18 @@ import XCTest
             XCTAssertTrue(tasksRail.isSelected)
             let waiting = sidebar.buttons["group-waiting"]
             XCTAssertTrue(waiting.waitForPresence(timeout: 10), "The sidebar opens on Tasks")
-            XCTAssertTrue(waiting.isHittable)
+            XCTAssertTrue(waitForPhonePress(waiting))
             XCTAssertLessThanOrEqual(tasksRail.frame.maxY, waiting.frame.minY, "The pair sits at the sidebar's top")
             picture("ipad-landscape-tasks")
-            activityRail.tap()
+            tapOnPhone(activityRail)
             let activity = sidebar.staticTexts.matching(identifier: "activity-text").firstMatch
             XCTAssertTrue(activity.waitForPresence(timeout: 10), "Activity opens at once")
             XCTAssertFalse(waiting.exists)
             XCTAssertLessThanOrEqual(activityRail.frame.maxY, activity.frame.minY)
-            tasksRail.tap()
+            tapOnPhone(tasksRail)
             XCTAssertTrue(waiting.waitForPresence(timeout: 10))
             XCTAssertFalse(activity.exists)
-            XCUIDevice.shared.orientation = .portrait
-            app.activate()
+            turnPhone(to: .portrait, in: app, moving: heading)
             XCTAssertTrue(sidebar.waitForAbsence(timeout: 10))
         }
         // INF-136 #2: no product traffic for longer than both former pairing deadlines.
@@ -299,7 +310,7 @@ import XCTest
         let controlCenter = springboard.otherElements["cc-root-folder-view"]
         XCTAssertTrue(controlCenter.waitForPresence(timeout: 10), springboard.debugDescription)
         // Dismiss the empty simulator's overlay without invoking iPad's Home/window gesture.
-        springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.9)).tap()
+        tapOnPhone(springboard.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.9)))
         XCTAssertTrue(controlCenter.waitForAbsence(timeout: 10))
         app.activate()
         reach("In reach", timeout: 10)
@@ -311,7 +322,7 @@ import XCTest
         let line = try XCTUnwrap(feed.first?["text"] as? String)
         XCTAssertTrue(app.staticTexts[line].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts.matching(identifier: "activity-text").firstMatch.label, feed.last?["text"] as? String)
-        try await appearances("activity")
+        try await appearances("activity", showing: app.staticTexts[line])
         tab("Home")
         _ = try await home("empty-cards")
         // INF-1060: as on the Mac, the empty stage is the character alone, with no line under it.
@@ -323,7 +334,7 @@ import XCTest
         }
         XCTAssertFalse(app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch.exists, "The pager shows on an empty stage")
         _ = try await home("capture-character-start")
-        try await appearances("empty-stage")
+        try await appearances("empty-stage", showing: app.buttons["phone-settings"])
         _ = try await home("capture-stop")
         _ = try await home("stream-reset")
         XCTAssertTrue(app.staticTexts["Your phone is reading your Mac"].waitForPresence(timeout: 10))
@@ -340,11 +351,11 @@ import XCTest
         XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'out of reach' AND NOT (label ==[c] 'Out of reach')")).count, 0,
             app.debugDescription)
         XCTAssertEqual(app.staticTexts["connection-refusal"].label, "Changes are off until Test Mac mini is back.")
-        try await appearances("out-of-reach")
+        try await appearances("out-of-reach", showing: app.staticTexts["connection-refusal"])
         computerDetails()
         XCTAssertTrue(app.buttons["forget-mac"].exists)
         picture("computer-details-out-of-reach")
-        app.buttons["close-computer-details"].tap()
+        tapOnPhone(app.buttons["close-computer-details"])
         // Record the recovery itself, not the separate appearance and details checks above.
         _ = try await home("capture-start")
         let change = try await home("change")
@@ -374,7 +385,9 @@ import XCTest
         let oldest = app.staticTexts.matching(NSPredicate(format: "label == %@", try XCTUnwrap(caughtUpFeed.first?["text"] as? String))).firstMatch
         let list = app.scrollViews["activity-list"]
         for _ in 0..<12 where !(oldest.exists && oldest.isHittable) { list.swipeUp() }
-        XCTAssertTrue(oldest.isHittable, "The oldest line, the last row, can be reached and pressed: \(app.debugDescription)")
+        // INF-1541 piece 1: XCTest no longer waits out the last swipe's glide, so the row is read once it holds still.
+        waitForSteadyTarget(oldest)
+        XCTAssertTrue(waitForPhonePress(oldest), "The oldest line, the last row, can be reached and pressed: \(app.debugDescription)")
         XCTAssertLessThanOrEqual(oldest.frame.maxY, app.frame.maxY, "The last row is whole in the window")
         picture("activity-end")
         tab("Home")
@@ -409,11 +422,11 @@ import XCTest
         XCTAssertEqual(app.staticTexts.matching(NSPredicate(format: "label == %@", replayed)).count, 1)
 
         computerDetails()
-        app.buttons["leave"].tap()
+        tapOnPhone(app.buttons["leave"])
         // INF-589 item 4: Keep it stays in view beside Leave.
         XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.waitForPresence(timeout: 10))
-        XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.isHittable, app.debugDescription)
-        app.buttons["confirm-leave"].firstMatch.tap()
+        waitUntilHittable(app.alerts.buttons["Keep it"].firstMatch)
+        tapOnPhone(app.buttons["confirm-leave"].firstMatch)
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 20), app.debugDescription)
         let afterLeave = try await home("state", method: "GET")
         XCTAssertEqual((afterLeave["devices"] as? [Any])?.count, 0)
@@ -422,11 +435,11 @@ import XCTest
         _ = try await home("offline")
         XCTAssertTrue(app.staticTexts["Out of reach"].waitForPresence(timeout: 20))
         computerDetails()
-        app.buttons["forget-mac"].tap()
+        tapOnPhone(app.buttons["forget-mac"])
         XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.waitForPresence(timeout: 10))
-        XCTAssertTrue(app.alerts.buttons["Keep it"].firstMatch.isHittable, app.debugDescription)
+        waitUntilHittable(app.alerts.buttons["Keep it"].firstMatch)
         picture("forget-confirmation")
-        app.buttons["confirm-forget"].firstMatch.tap()
+        tapOnPhone(app.buttons["confirm-forget"].firstMatch)
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 10))
         app.terminate(); try await launchPhoneApp(app)
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 10))
@@ -437,8 +450,8 @@ import XCTest
         try await join() // Fresh-link recovery reuses the identity still listed on this Mac.
         _ = try await home("remove")
         XCTAssertTrue(app.staticTexts["Removed from your computer"].waitForPresence(timeout: 20), app.debugDescription)
-        try await appearances("removed")
-        app.buttons["join-again"].tap()
+        try await appearances("removed", showing: app.staticTexts["Removed from your computer"])
+        tapOnPhone(app.buttons["join-again"])
         XCTAssertTrue(app.buttons["paste-link"].exists)
         // INF-136 #3: two genuine 401s separated by an unreachable address still prove removal.
         try await submitLink("link-with-unreachable")
@@ -460,7 +473,7 @@ import XCTest
         // address order, not the clock, fixes the count: one stall after every attempt at the home but the last.
         XCTAssertEqual(try since("stalledConnections"), try since("homeAttempts") - 1,
             "Removal survives a stalled handshake with no HTTP response between authenticated refusals: \(readings)")
-        app.buttons["join-again"].tap()
+        tapOnPhone(app.buttons["join-again"])
         app.terminate(); try await launchPhoneApp(app)
         XCTAssertTrue(app.buttons["paste-link"].waitForPresence(timeout: 10))
         // INF-136 re-review #1: a damaged saved record must not block a fresh confirmed link.
@@ -500,7 +513,7 @@ import XCTest
         try await launchFresh()
         // The port first, then the address, whose Return continues as Continue does.
         func typeAddress() {
-            app.buttons["join-by-address"].tap()
+            tapOnPhone(app.buttons["join-by-address"])
             let field = app.textFields["ssh-address"]
             XCTAssertTrue(field.waitForPresence(timeout: 10), app.debugDescription)
             // INF-1377 / INF-1265: the iPad number-pad popover intercepts the next field's tap.
@@ -508,7 +521,7 @@ import XCTest
             focusForPhoneTyping(portField, in: app)
             portField.typeText(String(port))
             if UIDevice.current.userInterfaceIdiom == .pad {
-                app.navigationBars["Join by its address"].tap()
+                tapOnPhone(app.navigationBars["Join by its address"])
                 // UIKit retains a zero-height, offscreen Keyboard after hiding the popover.
                 XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in
                     self.app.keyboards.allElementsBoundByIndex.allSatisfy { $0.frame.intersection(self.app.frame).isEmpty }
@@ -519,56 +532,53 @@ import XCTest
         }
         XCTAssertTrue(app.buttons["join-by-address"].waitForPresence(timeout: 10))
         picture("join-with-address")
-        app.buttons["join-by-address"].tap()
+        tapOnPhone(app.buttons["join-by-address"])
         let announced = app.buttons["nearby-ssh-\(host):\(port)"]
         XCTAssertTrue(announced.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertTrue(announced.label.hasPrefix("Test computer"), announced.label)
         XCTAssertFalse(announced.isEnabled, "A tap waits for the account it fills in")
         picture("address-nearby")
         // The sweep asks first; only the yes tries the addresses.
-        app.buttons["ssh-sweep"].tap()
+        tapOnPhone(app.buttons["ssh-sweep"])
         let look = app.buttons["ssh-sweep-confirm"].firstMatch
         XCTAssertTrue(look.waitForPresence(timeout: 10), app.debugDescription)
-        XCTAssertTrue(app.alerts.buttons["Cancel"].firstMatch.isHittable, app.debugDescription)
-        look.tap()
+        waitUntilHittable(app.alerts.buttons["Cancel"].firstMatch)
+        tapOnPhone(look)
         let swept = app.buttons["nearby-ssh-localhost:\(port)"]
         XCTAssertTrue(swept.waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertTrue(swept.label.hasPrefix("localhost"), swept.label)
         picture("address-swept")
         let accountField = app.textFields["ssh-account"]
-        accountField.tap()
-        if app.staticTexts["Speed up your typing by sliding your finger across the letters to compose a word."].exists {
-            app.buttons["Continue"].tap()
-        }
+        focusForPhoneTyping(accountField, in: app)
         accountField.typeText(account)
         waitUntilEnabled(announced)
-        announced.tap()
+        tapOnPhone(announced)
         XCTAssertEqual(app.textFields["ssh-address"].value as? String, address)
         XCTAssertEqual(app.textFields["ssh-port"].value as? String, String(port))
         picture("address-filled")
-        app.buttons["ssh-continue"].tap()
+        tapOnPhone(app.buttons["ssh-continue"])
         // The first sign-in asks about the computer's key, and Not this one sends nothing.
         let fingerprint = app.staticTexts["ssh-fingerprint"]
         XCTAssertTrue(fingerprint.waitForPresence(timeout: 30), app.debugDescription)
         XCTAssertTrue(fingerprint.label.hasPrefix("SHA256:"), fingerprint.label)
-        try await appearances("address-fingerprint")
-        app.buttons["ssh-not-this-one"].tap()
+        try await appearances("address-fingerprint", showing: fingerprint)
+        tapOnPhone(app.buttons["ssh-not-this-one"])
         XCTAssertTrue(app.buttons["join-by-address"].waitForPresence(timeout: 10))
         let declined = try await home("state", method: "GET")
         XCTAssertEqual((declined["devices"] as? [Any])?.count, 0)
         // Asked again, since no yes was kept; then trusted.
         typeAddress()
         XCTAssertTrue(fingerprint.waitForPresence(timeout: 30), app.debugDescription)
-        app.buttons["ssh-trust"].tap()
+        tapOnPhone(app.buttons["ssh-trust"])
         // The computer does not know this phone's key and takes a password.
         let password = app.secureTextFields["ssh-password"]
         XCTAssertTrue(password.waitForPresence(timeout: 30), app.debugDescription)
         let key = app.staticTexts["ssh-public-key"]
         XCTAssertTrue(key.exists)
-        try await appearances("address-password")
+        try await appearances("address-password", showing: key)
         focusForPhoneTyping(password, in: app)
         password.typeText("not the password")
-        app.buttons["ssh-send-password"].tap()
+        tapOnPhone(app.buttons["ssh-send-password"])
         let problem = app.staticTexts["ssh-problem"]
         XCTAssertTrue(problem.waitForPresence(timeout: 30), app.debugDescription)
         XCTAssertEqual(problem.label, "127.0.0.1 did not take that password. Nothing was kept.")
@@ -576,7 +586,7 @@ import XCTest
         // The person adds the key the phone shows to their account there, then tries again.
         XCTAssertTrue(key.waitForPresence(timeout: 10))
         _ = try await home("ssh-authorize", body: key.label)
-        app.buttons["ssh-try-again"].tap()
+        tapOnPhone(app.buttons["ssh-try-again"])
         reach("In reach", timeout: 30)
         let joined = try await home("state", method: "GET")
         let devices = try XCTUnwrap(joined["devices"] as? [[String: Any]])
@@ -629,7 +639,7 @@ import XCTest
         let input = app.textFields["message-box"]
         focusForPhoneTyping(input, in: app); input.typeText(try XCTUnwrap(fixture["text"] as? String))
         XCTAssertEqual(character.value as? String, "idle", "Typing is not evidence of dictation or listening")
-        app.buttons["send-message"].tap()
+        tapOnPhone(app.buttons["send-message"])
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'working'"), object: character, timeout: 20), .completed)
         picture("character-working")
         _ = try await home("capture-stop")
@@ -679,6 +689,12 @@ import XCTest
         let remoteID = try XCTUnwrap(fixture["remote"] as? String)
         let local = app.buttons["crew-task-" + firstID], remote = app.buttons["crew-task-" + remoteID]
         XCTAssertTrue(local.waitForPresence(timeout: 10))
+        // INF-1477: the fixture's crew reach the phone one push at a time. On the iPad the home's ring fits the screen,
+        // so only the other computer's formation gives Right somewhere to pan, and a Right pressed before it arrives
+        // pans nowhere. The scene is whole once it draws that formation and the reviewer, the fixture's last crewmate.
+        let reviewer = app.buttons["crew-task-" + (try XCTUnwrap(fixture["review"] as? String))]
+        XCTAssertTrue(remote.waitForPresence(timeout: 10), "The other computer's crewmate must reach the scene")
+        XCTAssertTrue(reviewer.waitForPresence(timeout: 10), "The fixture's last crewmate must reach the scene")
         let character = app.otherElements["phone-character"]
         let centered = NSPredicate { _, _ in
             abs(character.frame.midX - scene.frame.midX) < 1 && abs(character.frame.midY - scene.frame.midY) < 1
@@ -688,35 +704,35 @@ import XCTest
         try await verifyCrewKeyboard(scene, character: character)
         _ = try await home("capture-scene-start")
         revealCrew(local, in: scene)
-        local.tap()
+        tapOnPhone(local, orbiting: true)
         XCTAssertTrue(app.otherElements["crew-preview"].waitForPresence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Check harbour marker 1"].exists)
         picture("native-scene-task-preview")
-        app.buttons["close-crew-preview"].tap()
+        tapOnPhone(app.buttons["close-crew-preview"])
         // A different computer remains a formation beside home, never a pager or a smaller version of every glyph.
         revealCrew(remote, in: scene)
         XCTAssertEqual(remote.value as? String, "Activity unknown")
         picture("native-scene-remote-formation")
         _ = try await home("capture-stop")
-        remote.tap()
+        tapOnPhone(remote)
         XCTAssertTrue(app.staticTexts["Read the offshore chart"].waitForPresence(timeout: 10))
         XCTAssertTrue(app.staticTexts["Scene Mac"].exists)
         picture("native-scene-remote-preview")
-        app.buttons["open-crew-task"].tap()
+        tapOnPhone(app.buttons["open-crew-task"])
         XCTAssertTrue(app.staticTexts["task-record-title"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts["task-record-title"].label, "Read the offshore chart")
         picture("native-scene-existing-task-record")
-        app.buttons["close-record"].tap()
+        tapOnPhone(app.buttons["close-record"])
         let computerID = try XCTUnwrap(fixture["computer"] as? String), programID = try XCTUnwrap(fixture["program"] as? String)
         let mark = app.buttons["crew-task-" + computerID + ":" + programID]
         revealCrew(mark, in: scene)
         // INF-1066: the whole 44-point square answers touch, so a tap near its corner, outside the drawn circle, opens it.
         XCTAssertGreaterThanOrEqual(mark.frame.width + 0.001, 44); XCTAssertGreaterThanOrEqual(mark.frame.height + 0.001, 44)
-        mark.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
+        tapOnPhone(mark.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)))
         XCTAssertTrue(app.staticTexts["crew-program-counts"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.staticTexts["crew-program-counts"].label, try XCTUnwrap(fixture["programWords"] as? String))
         picture("native-scene-program-preview")
-        app.buttons["close-crew-preview"].tap()
+        tapOnPhone(app.buttons["close-crew-preview"])
         _ = try await home("scene-stage-finished")
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "value == 'Program, 0 running parts'"), object: mark, timeout: 10), .completed, app.debugDescription)
         picture("native-scene-between-program-stages")
@@ -744,7 +760,8 @@ import XCTest
         let originalX = character.frame.midX
         try pressBrowsingKey(XCUIKeyboardKey.rightArrow.rawValue)
         let panResult = waitForPhonePredicate(NSPredicate { _, _ in character.frame.midX < originalX - 1 }, object: nil, timeout: 10)
-        XCTAssertEqual(panResult, .completed, "Right pans the actual scene")
+        XCTAssertEqual(panResult, .completed, "Right pans the actual scene: it reads \(scene.value ?? "no value"), "
+                       + "and the first mate moved from x \(originalX) to x \(character.frame.midX)")
         picture("native-scene-keyboard-pan")
         try pressBrowsingKey(XCUIKeyboardKey.leftArrow.rawValue)
         let returnResult = waitForPhonePredicate(NSPredicate { _, _ in abs(character.frame.midX - originalX) < 1 }, object: nil, timeout: 10)
@@ -764,7 +781,7 @@ import XCTest
         XCTAssertTrue(preview.staticTexts[selectedTitle].exists, "The preview belongs to the crewmate selected by Tab")
         picture("native-scene-keyboard-preview")
         _ = try await home("capture-stop")
-        app.buttons["close-crew-preview"].tap()
+        tapOnPhone(app.buttons["close-crew-preview"])
     }
 
     // INF-1399: isHittable also accepts a sliver of a clipped 44-point target, and a touch XCTest then
@@ -822,9 +839,9 @@ import XCTest
         if app.staticTexts["card-title"].label == title { return }
         // SwiftUI Menu is a popup on current iOS; use its own stable identity rather than a legacy button type.
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
-        XCTAssertTrue(pager.waitForPresence(timeout: 10), app.debugDescription); pager.tap()
+        XCTAssertTrue(pager.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(pager)
         let item = app.buttons[title].firstMatch
-        XCTAssertTrue(item.waitForPresence(timeout: 10), app.debugDescription); item.tap()
+        XCTAssertTrue(item.waitForPresence(timeout: 10), app.debugDescription); tapOnPhone(item)
         XCTAssertTrue(cardHeading(title).waitForPresence(timeout: 10))
     }
 
@@ -873,11 +890,11 @@ import XCTest
         XCTAssertEqual(toggle.label, "Show all")
         let folded = line.frame.height
         picture("card-asked-folded")
-        toggle.tap()
+        tapOnPhone(toggle)
         XCTAssertTrue(app.buttons["Show less"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertGreaterThan(line.frame.height, folded * 2, "Show all opens the whole message")
         picture("card-asked-open")
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
         XCTAssertTrue(cardHeading(title).waitForAbsence(timeout: 10), app.debugDescription)
     }
 
@@ -891,10 +908,10 @@ import XCTest
         let pager = app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch
         picture("card-readiness-waiting-with-ready-sibling")
         XCTAssertEqual(pager.label, "1 of 1", "A held card is neither a page nor an unread offer")
-        pager.tap()
+        tapOnPhone(pager)
         XCTAssertFalse(app.buttons[held].exists, "The held card cannot be chosen from the pager")
-        app.buttons[ready].firstMatch.tap()
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons[ready].firstMatch)
+        tapOnPhone(app.buttons["close-card"])
         XCTAssertTrue(app.otherElements["phone-character"].waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertFalse(pager.exists, "Only the waiting card remains, so the stage and pager are empty")
         picture("card-readiness-waiting")
@@ -912,13 +929,18 @@ import XCTest
         picture("card-readiness-replied-under")
         _ = try await home("release-held-card")
         XCTAssertTrue(app.webViews.staticTexts["The harbour survey is ready for your choice."].waitForPresence(timeout: 10), app.debugDescription)
-        app.buttons["card-action-keep"].tap()
+        tapOnPhone(app.buttons["card-action-keep"])
         XCTAssertTrue(cardHeading(held).waitForAbsence(timeout: 10), app.debugDescription)
         XCTAssertFalse(app.staticTexts["card-error"].exists)
         let state = try await home("readiness-state", method: "GET")
         let card = try XCTUnwrap(state["card"] as? [String: Any])
         let ending = try XCTUnwrap(card["ending"] as? [String: Any])
         XCTAssertEqual(ending["actionId"] as? String, "keep", "The home accepted the released card's choice")
+    }
+
+    /// INF-1541 piece 1: XCTest no longer waits out a dialog's entrance, so its button is read once it takes a touch.
+    private func waitUntilHittable(_ element: XCUIElement) {
+        XCTAssertTrue(waitForPhonePress(element), app.debugDescription)
     }
 
     private func verifyCards() async throws {
@@ -949,17 +971,17 @@ import XCTest
         let beforeCalls = try XCTUnwrap(before["calls"] as? [[String: Any]])
         XCTAssertTrue(beforeCalls.contains { $0["channel"] as? String == "inf:cards:seen" })
         let leaveFrame = app.webViews.buttons["Try to leave the card"]
-        reveal(leaveFrame); leaveFrame.tap()
+        reveal(leaveFrame); tapOnPhone(leaveFrame)
         // A loaded child cannot navigate away or contact the loopback endpoint; the form journey still works below.
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForPresence(timeout: 10))
         let afterNavigation = try await home("card-state", method: "GET")
         XCTAssertEqual(afterNavigation["leaks"] as? Int, 0)
         XCTAssertFalse(beforeCalls.contains { $0["channel"] as? String == "inf:cards:act" })
         let stall = app.webViews.buttons["Stall the card"]
-        reveal(stall); stall.tap()
+        reveal(stall); tapOnPhone(stall)
         XCTAssertTrue(app.buttons["retry-card"].waitForPresence(timeout: 20), app.debugDescription)
         picture("card-recovery")
-        app.buttons["retry-card"].tap()
+        tapOnPhone(app.buttons["retry-card"])
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForPresence(timeout: 20), app.debugDescription)
 
         let choose = app.buttons["card-action-choose"]
@@ -967,15 +989,15 @@ import XCTest
         // enables its footer; its text exists sooner.
         waitUntilEnabled(choose)
         let stalledAnswer = app.webViews.buttons["Stall the next answer"]
-        reveal(stalledAnswer); stalledAnswer.tap()
-        reveal(choose); choose.tap()
+        reveal(stalledAnswer); tapOnPhone(stalledAnswer)
+        reveal(choose); tapOnPhone(choose)
         XCTAssertTrue(app.staticTexts["This card did not answer. Your choice was not sent."].waitForPresence(timeout: 10))
         XCTAssertTrue(app.buttons["retry-card"].waitForPresence(timeout: 15))
         XCTAssertTrue(app.buttons["close-card"].isEnabled, "A stalled form cannot keep native chrome busy")
-        app.buttons["retry-card"].tap()
+        tapOnPhone(app.buttons["retry-card"])
         XCTAssertTrue(app.webViews.staticTexts[boundary].waitForPresence(timeout: 20))
         waitUntilEnabled(choose)
-        reveal(choose); choose.tap()
+        reveal(choose); tapOnPhone(choose)
         XCTAssertTrue(app.staticTexts["Answer each required question first."].waitForPresence(timeout: 10))
         let refused = try await home("card-state", method: "GET")
         XCTAssertNil(refused["choice"] as? [String: Any])
@@ -990,27 +1012,27 @@ import XCTest
         let shown = firstShown("North Basin", in: app.webViews.matching(identifier: "card-body").firstMatch)
         XCTAssertTrue(shown.body.contains(shown.text), "North Basin \(shown.text) lies outside the card body \(shown.body)")
         let north = app.webViews.staticTexts["North Basin"].firstMatch
-        reveal(north); north.tap()
+        reveal(north); tapOnPhone(north)
         let marker = app.webViews.buttons["Move the marker"]
         reveal(marker)
         _ = try await home("capture-card-start")
-        marker.tap()
-        XCTAssertTrue(app.webViews.staticTexts["Marker inside the harbour"].exists)
+        tapOnPhone(marker)
+        XCTAssertTrue(app.webViews.staticTexts["Marker inside the harbour"].waitForPresence(timeout: 10))
         // The native draft owner must have observed the required pick before paging can remount the document.
         waitForAnsweredPhoneForm(in: app)
         picture("card-form-picked")
         _ = try await home("capture-stop")
         _ = try await home("capture-page-start")
-        app.buttons["next-card"].tap()
+        tapOnPhone(app.buttons["next-card"])
         XCTAssertTrue(cardHeading(chart).waitForPresence(timeout: 10))
-        app.buttons["previous-card"].tap()
+        tapOnPhone(app.buttons["previous-card"])
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10))
         _ = try await home("capture-stop")
         // Paging remounts the document; the named answers and staged value still leave together.
         // INF-1086 / INF-1574: the remounted card's footer stays disabled until its body is revealed at its drawn height.
         let settings = app.buttons["card-action-settings"]
         waitUntilEnabled(settings)
-        reveal(settings); settings.tap()
+        reveal(settings); tapOnPhone(settings)
         XCTAssertTrue(app.staticTexts["Do this on Test Mac mini."].waitForPresence(timeout: 10))
         let unsent = try await home("card-state", method: "GET")
         XCTAssertFalse((unsent["calls"] as? [[String: Any]] ?? []).contains { $0["channel"] as? String == "inf:cards:act" })
@@ -1018,7 +1040,7 @@ import XCTest
         // Wait on the native form reading, then the actual action gate, never on a quiet interval.
         waitForAnsweredPhoneForm(in: app)
         waitUntilEnabled(choose)
-        reveal(choose); choose.tap()
+        reveal(choose); tapOnPhone(choose)
         let dismissed = cardHeading(choice).waitForAbsence(timeout: 10)
         if !dismissed {
             do {
@@ -1042,12 +1064,12 @@ import XCTest
         XCTAssertFalse(app.buttons["card-action-choose"].isEnabled)
         XCTAssertFalse(app.textFields["card-reply"].exists)
         picture("past-card")
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
         _ = try await home("show-past")
         // INF-589 item 7: an answered card opened from its notice shows as a past card.
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         XCTAssertEqual(app.descendants(matching: .any).matching(identifier: "card-pager").firstMatch.label, "Past card")
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
 
         showCard(chart)
         // INF-1062: with no bar under it, scrolling a long card leaves the message box where it is, in the column's width.
@@ -1058,41 +1080,41 @@ import XCTest
             XCTAssertEqual(composer.frame.minY, before.minY, accuracy: 1, "Scrolling a card does not move the message box")
             XCTAssertEqual(composer.frame.width, before.width, accuracy: 1, "Scrolling a card does not narrow the message box")
             verifyPhoneComposerBounds(app: app)
-            try await appearances("card-scrolled")
+            try await appearances("card-scrolled", showing: app.buttons["close-card"])
         }
         let pictureElement = app.webViews.images["Blue harbour survey"].firstMatch
         XCTAssertTrue(pictureElement.waitForPresence(timeout: 10))
-        reveal(pictureElement); pictureElement.tap()
+        reveal(pictureElement); tapOnPhone(pictureElement)
         XCTAssertTrue(app.webViews["card-picture"].waitForPresence(timeout: 10))
         picture("picture-viewer")
         _ = try await home("capture-picture-start")
         app.webViews["card-picture"].pinch(withScale: 1.6, velocity: 1)
         picture("picture-zoomed")
         _ = try await home("capture-stop")
-        app.buttons["Done"].tap()
+        tapOnPhone(app.buttons["Done"])
         // The home measures the recording and owns its duration label.
         let play = app.webViews.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Play the demo,")).firstMatch
         reveal(play)
         _ = try await home("capture-media-start")
-        play.tap()
+        tapOnPhone(play)
         let player = app.descendants(matching: .any).matching(identifier: "card-recording").firstMatch
         XCTAssertTrue(player.waitForPresence(timeout: 10))
         // The body's Play already starts playback; AVKit may hide its controls before a short clip ends.
         // Completion comes from the real player's end notification, not a transient controls snapshot.
         XCTAssertTrue(app.staticTexts["recording-finished"].waitForPresence(timeout: 15), app.debugDescription)
-        app.buttons["Play again"].tap()
+        tapOnPhone(app.buttons["Play again"])
         XCTAssertTrue(app.staticTexts["recording-finished"].waitForPresence(timeout: 15))
         let mediaState = XCTAttachment(string: app.debugDescription)
         mediaState.name = "recording-controls"; mediaState.lifetime = .keepAlways; add(mediaState)
         picture("recording-playing")
         _ = try await home("capture-stop")
-        app.buttons["Done"].tap()
+        tapOnPhone(app.buttons["Done"])
         let reply = app.textFields["card-reply"]
         reveal(reply)
         _ = try await home("capture-reply-start")
         focusForPhoneTyping(reply, in: app); reply.typeText("Keep the northern entrance clear.")
         let send = app.buttons["send-reply"]
-        reveal(send); send.tap()
+        reveal(send); tapOnPhone(send)
         XCTAssertTrue(app.staticTexts["Keep the northern entrance clear."].waitForPresence(timeout: 10), app.debugDescription)
         let replied = try await home("card-state", method: "GET")
         let thread = try XCTUnwrap(replied["thread"] as? [String: Any])
@@ -1104,7 +1126,7 @@ import XCTest
         picture("card-thread")
         _ = try await home("capture-stop")
         let browser = app.buttons["card-action-browser"]
-        reveal(browser); browser.tap()
+        reveal(browser); tapOnPhone(browser)
         XCTAssertTrue(app.staticTexts["Do this on Test Mac mini."].waitForPresence(timeout: 10))
 
         _ = try await home("offline")
@@ -1113,7 +1135,7 @@ import XCTest
         XCTAssertFalse(app.buttons["card-action-body"].isEnabled)
         let atDisconnect = try await home("card-state", method: "GET")
         let bodyButton = app.webViews.buttons["Choose from the body"]
-        reveal(bodyButton); bodyButton.tap()
+        reveal(bodyButton); tapOnPhone(bodyButton)
         picture("card-out-of-reach")
         _ = try await home("online")
         reach("In reach", timeout: 20)
@@ -1121,11 +1143,11 @@ import XCTest
         let writes: ([String: Any]) -> Int = { state in (state["calls"] as? [[String: Any]] ?? []).filter { $0["channel"] as? String == "inf:cards:act" }.count }
         XCTAssertEqual(writes(afterReconnect), writes(atDisconnect), "An offline body action is never replayed")
         _ = try await home("hold-card-action")
-        reveal(bodyButton); bodyButton.tap()
+        reveal(bodyButton); tapOnPhone(bodyButton)
         _ = try await home("card-action-held")
         XCTAssertFalse(app.buttons["card-action-body"].isEnabled, "A body choice owns the same pending gate as the footer")
         XCTAssertFalse(app.buttons["close-card"].isEnabled)
-        bodyButton.tap()
+        tapOnPhone(bodyButton)
         XCTAssertTrue(app.staticTexts["This card already has a choice in progress."].waitForPresence(timeout: 10))
         _ = try await home("release-card-action")
         XCTAssertTrue(cardHeading(chart).waitForAbsence(timeout: 10))
@@ -1139,9 +1161,9 @@ import XCTest
         let pastWords = try XCTUnwrap(bodyChoice["conversationEnding"] as? String)
         XCTAssertTrue(app.staticTexts["past-ending"].label.hasPrefix(pastWords), "A script's choice is not credited to the captain")
         picture("past-body-choice")
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
         showCard(note)
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
         XCTAssertTrue(cardHeading(note).waitForAbsence(timeout: 10))
         let closed = try await home("card-state", method: "GET")
         XCTAssertNotNil(closed["note"] as? [String: Any])
@@ -1165,7 +1187,7 @@ import XCTest
         reach("In reach", timeout: 20)
         _ = try await home("late-picture-asked")
         picture("card-picture-after-reaching")
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
         XCTAssertTrue(cardHeading(lateTitle).waitForAbsence(timeout: 10))
         // The same after view in both themes supplies the release note's native hero pair.
         let hero = try await home("hero-card")
@@ -1181,8 +1203,8 @@ import XCTest
         // INF-944 item 5 with INF-945's pick: the Mac's row, pinned at the card's foot with no scrolling,
         // the default last at the right and every choice keeping a 44-point touch area.
         let keepChoice = app.buttons["card-action-keep"], waitChoice = app.buttons["card-action-wait"]
-        XCTAssertTrue(keepChoice.isHittable, "The choices sit in view without scrolling")
-        XCTAssertTrue(waitChoice.isHittable)
+        XCTAssertTrue(waitForPhonePress(keepChoice), "The choices sit in view without scrolling")
+        XCTAssertTrue(waitForPhonePress(waitChoice))
         // The answered count starts the first line, so the row wraps where its choices do not fit beside it.
         if abs(keepChoice.frame.midY - waitChoice.frame.midY) < 1 {
             XCTAssertLessThan(waitChoice.frame.maxX, keepChoice.frame.minX, "The default is drawn last")
@@ -1206,7 +1228,7 @@ import XCTest
         XCTAssertTrue(restore.waitForPresence(timeout: 10), app.debugDescription)
         XCTAssertLessThan(app.buttons["group-waiting"].frame.minY, restore.frame.minY, "It is listed under Waiting on you")
         picture("tasks-minimized")
-        restore.tap()
+        tapOnPhone(restore)
         XCTAssertTrue(cardHeading(heroTitle).waitForPresence(timeout: 10), "Its row brings the card back on Home")
         XCTAssertEqual(waitForPhonePredicate(NSPredicate(format: "selected == true"), object: app.buttons["tab-home"], timeout: 10), .completed)
         let restored = try await home("hero-state", method: "GET")
@@ -1235,7 +1257,7 @@ import XCTest
         // INF-621: the failed iPad picture caught the footer before its body drew.
         // A hittable button can still be disabled; wait for the real action gate.
         waitUntilEnabled(useSaved)
-        picture("saved-sign-in-choice"); useSaved.tap()
+        picture("saved-sign-in-choice"); tapOnPhone(useSaved)
         XCTAssertTrue(cardHeading(saved).waitForAbsence(timeout: 10))
         let accepted = try await home("card-state", method: "GET")
         let savedPast = try XCTUnwrap(accepted["saved"] as? [String: Any])
@@ -1245,11 +1267,11 @@ import XCTest
         // The native footer's gate is the actual drawn acknowledgement for this page.
         waitUntilEnabled(app.buttons["card-action-keep"])
         let change = app.webViews.buttons["Keep the evening tide"]
-        reveal(change); change.tap()
+        reveal(change); tapOnPhone(change)
         XCTAssertTrue(app.webViews.buttons["Evening tide saved"].waitForPresence(timeout: 10))
         // A completed page away/back witnesses receipt and restoration of the changed native draft.
         _ = try await home("show-saved-past")
-        XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10)); app.buttons["close-card"].tap()
+        XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10)); tapOnPhone(app.buttons["close-card"])
         showCard(fallback)
         let restored = app.webViews.textFields["Harbour note"]
         XCTAssertTrue(restored.waitForPresence(timeout: 10))
@@ -1257,13 +1279,13 @@ import XCTest
         // The saved fill arrives before script initialization on a remount, just as on the first mount.
         waitUntilEnabled(app.buttons["card-action-keep"])
         let stall = app.webViews.buttons["Stop the chart"]
-        reveal(stall); stall.tap()
+        reveal(stall); tapOnPhone(stall)
         XCTAssertTrue(app.buttons["retry-card"].waitForPresence(timeout: 20), app.debugDescription)
         XCTAssertTrue(app.staticTexts["Choices use the last saved answers. Retry to read the card again."].exists)
         _ = try await home("capture-review-start")
         picture("saved-answer-recovery")
         let keep = app.buttons["card-action-keep"]
-        reveal(keep); keep.tap()
+        reveal(keep); tapOnPhone(keep)
         XCTAssertTrue(cardHeading(fallback).waitForAbsence(timeout: 10))
         let result = try await home("card-state", method: "GET")
         let past = try XCTUnwrap(result["fallback"] as? [String: Any])
@@ -1278,19 +1300,19 @@ import XCTest
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         picture("saved-answer-choice")
         _ = try await home("capture-stop")
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
     }
 
     /// INF-499 #3: reading a past card gives the message its history hint, never a current-card hint.
     private func verifyPastMessageContext() async throws {
         let fixture = try await home("context-fixture")
         showCard(try XCTUnwrap(fixture["title"] as? String))
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
         _ = try await home("show-context-past")
         XCTAssertTrue(app.staticTexts["Past"].waitForPresence(timeout: 10))
         let input = app.textFields["message-box"]
         focusForPhoneTyping(input, in: app); input.typeText(try XCTUnwrap(fixture["text"] as? String))
-        app.buttons["send-message"].tap()
+        tapOnPhone(app.buttons["send-message"])
         let sent = try await home("context-sent")
         let writes = try XCTUnwrap(sent["writes"] as? [[String: Any]])
         let payload = try XCTUnwrap((writes.last?["args"] as? [[String: Any]])?.first)
@@ -1298,7 +1320,7 @@ import XCTest
         XCTAssertNil(payload["visibleCardId"])
         XCTAssertNil(payload["taskId"])
         picture("message-about-past-card")
-        app.buttons["close-card"].tap()
+        tapOnPhone(app.buttons["close-card"])
     }
 
     /// INF-64 piece 5: native input and controls reach the real Mac as captain actions.
@@ -1319,7 +1341,7 @@ import XCTest
             "Command-Return behind the details sheet sends no hidden composer request")
         // The completed keyboard/details interactions follow rotation's intermediate redraw.
         picture("draft-portrait-ready")
-        app.buttons["send-message"].tap()
+        tapOnPhone(app.buttons["send-message"])
         let sent = try await home("talk-sent")
         let writes = try XCTUnwrap(sent["writes"] as? [[String: Any]])
         let message = try XCTUnwrap(writes.first { $0["channel"] as? String == "inf:converse" })
@@ -1350,7 +1372,7 @@ import XCTest
         tab("Tasks")
         XCTAssertTrue(app.buttons["group-backlog"].waitForPresence(timeout: 10))
         picture("tasks")
-        app.buttons["group-backlog"].tap()
+        tapOnPhone(app.buttons["group-backlog"])
         XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
         picture("tasks-backlog")
         // INF-589 item 9: search waits above the list until it is pulled down, and Find a task opens it by key, as on the Mac.
@@ -1358,26 +1380,26 @@ import XCTest
         XCTAssertFalse(search.exists)
         app.scrollViews["tasks-list"].swipeDown()
         XCTAssertTrue(search.waitForPresence(timeout: 10))
-        app.buttons["close-task-search"].tap()
+        tapOnPhone(app.buttons["close-task-search"])
         XCTAssertTrue(search.waitForAbsence(timeout: 10))
         try await pressPhoneKey("f", modifiers: [.command, .shift], in: app)
         XCTAssertTrue(search.waitForPresence(timeout: 10))
         search.typeText("harbour")
         XCTAssertTrue(app.buttons["task-phone-work"].waitForPresence(timeout: 10))
         picture("task-search")
-        app.buttons["task-phone-work"].tap()
+        tapOnPhone(app.buttons["task-phone-work"])
         XCTAssertTrue(app.buttons["start-task"].waitForPresence(timeout: 10))
         picture("task-before-start")
         _ = try await home("capture-talk-start")
-        app.buttons["start-task"].tap()
+        tapOnPhone(app.buttons["start-task"])
         let started = try await home("talk-started")
         XCTAssertNotNil(started["startedAt"] as? Double)
         XCTAssertTrue(started["executionDeviceId"] is NSNull, "The phone starts work on its Mac, never on the phone")
-        XCTAssertTrue(app.buttons["Crewmate"].waitForPresence(timeout: 10)); app.buttons["Crewmate"].tap()
+        XCTAssertTrue(app.buttons["Crewmate"].waitForPresence(timeout: 10)); tapOnPhone(app.buttons["Crewmate"])
         XCTAssertTrue(app.buttons["interrupt-task"].waitForPresence(timeout: 10))
         picture("crewmate-working")
         _ = try await home("capture-stop")
-        app.buttons["interrupt-task"].tap()
+        tapOnPhone(app.buttons["interrupt-task"])
         let interrupted = try await home("talk-interrupted")
         let events = try XCTUnwrap(interrupted["events"] as? [[String: Any]])
         XCTAssertTrue(events.contains { $0["kind"] as? String == "interrupted" && $0["actor"] as? String == "captain" })
@@ -1385,12 +1407,12 @@ import XCTest
         _ = try await home("talk-resumable")
         XCTAssertTrue(app.buttons["continue-task"].waitForPresence(timeout: 10))
         picture("task-interrupted")
-        app.buttons["continue-task"].tap()
+        tapOnPhone(app.buttons["continue-task"])
         XCTAssertTrue(app.buttons["interrupt-task"].waitForPresence(timeout: 20))
         let steer = try XCTUnwrap(fixture["steer"] as? String)
         let steerField = app.textFields["steer-box"]
-        steerField.tap(); steerField.typeText(steer)
-        app.buttons["steer-task"].tap()
+        focusForPhoneTyping(steerField, in: app); steerField.typeText(steer)
+        tapOnPhone(app.buttons["steer-task"])
         let steered = try await home("talk-steered")
         let task = try XCTUnwrap(steered["task"] as? [String: Any])
         XCTAssertEqual(task["outcome"] as? String, fixture["report"] as? String)
@@ -1398,7 +1420,7 @@ import XCTest
         for write in allWrites { XCTAssertEqual((write["actor"] as? [String: Any])?["kind"] as? String, "captain") }
         XCTAssertTrue(allWrites.contains { $0["channel"] as? String == "inf:task:run" && ($0["args"] as? [String])?.last == "continue-task" })
         picture("crewmate-steered")
-        app.buttons["close-record"].tap()
+        tapOnPhone(app.buttons["close-record"])
         // INF-589 item 6: the notice is a quiet pill under the title on any tab, and a tap opens its card.
         let notice = app.buttons["phone-notice"]
         XCTAssertTrue(notice.waitForPresence(timeout: 10))
@@ -1407,8 +1429,9 @@ import XCTest
         XCTAssertGreaterThanOrEqual(notice.frame.minY, bar.frame.maxY, "The notice sits under the bar, not over it")
         XCTAssertTrue(app.buttons["tab-tasks"].isSelected, "The notice shows on Tasks, where the record was")
         picture("foreground-notice")
-        XCUIDevice.shared.orientation = .landscapeLeft
-        app.activate()
+        // INF-1541 piece 1: turned, an iPad's notice moves over the stage and an iPhone's strip moves into the bar.
+        turnPhone(to: .landscapeLeft, in: app,
+                  moving: UIDevice.current.userInterfaceIdiom == .pad ? notice : app.buttons["tab-home"])
         if UIDevice.current.userInterfaceIdiom == .pad {
             // INF-589 item 16: in landscape the notice sits over the stage, beside the sidebar rather than across it.
             let sidebar = phoneSidebar(app)
@@ -1419,14 +1442,14 @@ import XCTest
         } else {
             // INF-589 item 17: on its side the card gets the height; the one-row bar keeps its strip and the notice waits.
             XCTAssertTrue(notice.waitForAbsence(timeout: 10))
-            XCTAssertTrue(app.buttons["tab-home"].isHittable, "The strip stays in the bar on its side")
+            XCTAssertTrue(waitForPhonePress(app.buttons["tab-home"]), "The strip stays in the bar on its side")
             picture("on-its-side")
         }
-        XCUIDevice.shared.orientation = .portrait
-        app.activate()
+        // Upright, the strip comes back under the bar: from the bar on an iPhone, and from nowhere on an iPad.
+        turnPhone(to: .portrait, in: app, moving: app.buttons["tab-home"])
         XCTAssertTrue(notice.waitForPresence(timeout: 10), "Upright, the unread notice returns")
         let noticed = notice.label
-        notice.tap()
+        tapOnPhone(notice)
         XCTAssertTrue(notice.waitForAbsence(timeout: 10))
         let heading = app.staticTexts["card-title"]
         XCTAssertTrue(heading.waitForPresence(timeout: 10))
@@ -1446,7 +1469,7 @@ import XCTest
         XCTAssertEqual((after["writes"] as? [Any])?.count, allWrites.count, "Reconnecting never sends the retained draft")
         XCTAssertEqual(input.value as? String, "Keep this unsent draft")
         _ = try await home("lose-reply")
-        app.buttons["send-message"].tap()
+        tapOnPhone(app.buttons["send-message"])
         let unconfirmed = app.staticTexts["message-problem"]
         XCTAssertTrue(unconfirmed.waitForPresence(timeout: 20))
         XCTAssertTrue(unconfirmed.label.contains("Could not confirm"), unconfirmed.label)
@@ -1454,7 +1477,7 @@ import XCTest
         picture("unconfirmed-send")
         XCTAssertGreaterThanOrEqual(unconfirmed.frame.minY, app.frame.minY)
         XCTAssertLessThanOrEqual(unconfirmed.frame.maxY, app.frame.maxY, "The entire unconfirmed-send warning stays on screen")
-        XCTAssertTrue(unconfirmed.isHittable, "Nothing sits over the warning at the foot")
+        XCTAssertTrue(waitForPhonePress(unconfirmed), "Nothing sits over the warning at the foot")
         _ = try await home("online")
         reach("In reach", timeout: 20)
         let once = try await home("talk-state", method: "GET")
@@ -1481,7 +1504,7 @@ import XCTest
         XCTAssertTrue(app.buttons["next-card"].isEnabled)
         computerDetails()
         try await pressPhoneKey("]", modifiers: [.command, .shift], in: app)
-        app.buttons["close-computer-details"].tap()
+        tapOnPhone(app.buttons["close-computer-details"])
         XCTAssertTrue(cardHeading(choice).waitForPresence(timeout: 10), "A sheet keeps its pager shortcut from the stage behind it")
         try await pressPhoneKey("]", modifiers: [.command, .shift], in: app)
         XCTAssertTrue(cardHeading(chart).waitForPresence(timeout: 10))

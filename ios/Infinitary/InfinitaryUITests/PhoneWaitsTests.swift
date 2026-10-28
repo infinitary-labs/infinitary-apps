@@ -66,6 +66,19 @@ import XCTest
         XCTAssertFalse(complete.evaluate(with: "0 of 0 answered"))
     }
 
+    func testSteadyReadingNeedsTwoEqualReadsOfAFoundTarget() {
+        // INF-1541 piece 1 (the captain's choice "checks each target itself"): a tap waits until its target reads the
+        // same twice. The frame is INF-1399's recorded crewmate target, then that target a point and a half on.
+        let target = CGRect(x: 372.6666666666667, y: 392, width: 44, height: 44)
+        var steady = PhoneSteadyReading<CGRect>()
+        XCTAssertFalse(steady.read(nil))
+        XCTAssertFalse(steady.read(nil), "A target never found never holds still")
+        XCTAssertFalse(steady.read(target), "One read is not two")
+        XCTAssertFalse(steady.read(target.offsetBy(dx: -1.5, dy: 0)), "A moving target is not steady")
+        XCTAssertTrue(steady.read(target.offsetBy(dx: -1.5, dy: 0)))
+        XCTAssertFalse(steady.read(nil), "A target that left is not steady")
+    }
+
     func testImmediatePredicateIsReadDirectly() {
         // INF-975: a sub-second observation must actually evaluate the predicate.
         XCTAssertEqual(waitForPhonePredicate(NSPredicate { _, _ in true }, object: self, timeout: 0.001), .completed)

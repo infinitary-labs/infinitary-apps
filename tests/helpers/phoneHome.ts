@@ -31,7 +31,12 @@ import { encodePng } from "../e2e/pictureFixtures";
 import { budgetTimer, type DeadlineTimer, keepControlConnection } from "./budgets";
 import { claimedPort } from "./claimedPort";
 import { standInDnsSd } from "./dnsSdStandIn";
-import type { PhoneChord, PhoneKeyWitness } from "./phoneKeyboard";
+import type {
+  PhoneChord,
+  PhoneKeyWitness,
+  PhonePickerPreview,
+  PhoneTouchOutcome,
+} from "./phoneKeyboard";
 import { phoneSceneFixture } from "./phoneScene";
 import { startScriptedClient } from "./scriptedClient";
 import { type SshServer, startSshServer } from "./sshServer";
@@ -58,6 +63,8 @@ export async function startPhoneHome(
     display?(appearance: "light" | "dark", large: boolean): Promise<void>;
     keyboardBeforeLaunch?(): Promise<{ generation: number }>;
     keyboardReady?(chord: PhoneChord): Promise<PhoneKeyWitness>;
+    touchOutcome?(since: number): Promise<PhoneTouchOutcome>;
+    pickerPreview?(since: number): Promise<PhonePickerPreview>;
   },
 ) {
   const port = await claimedPort();
@@ -354,6 +361,35 @@ export async function startPhoneHome(
             throw new Error("A keyboard request must name one key and its modifiers");
           result = await controls.keyboardReady(chord);
           observations.push({ check: "keyboard-registration", result });
+          break;
+        }
+        case "POST touch-outcome": {
+          if (!controls?.touchOutcome) throw new Error("No simulator touch observer is available");
+          let body = "";
+          for await (const chunk of request) {
+            body += chunk.toString();
+            if (body.length > 1024) throw new Error("A touch request is too large");
+          }
+          const { since } = JSON.parse(body);
+          if (typeof since !== "number" || !Number.isFinite(since))
+            throw new Error("A touch request must name when its tap began");
+          result = await controls.touchOutcome(since);
+          observations.push({ check: "touch-outcome", result });
+          break;
+        }
+        case "POST picker-preview": {
+          if (!controls?.pickerPreview)
+            throw new Error("No simulator photo picker observer is available");
+          let body = "";
+          for await (const chunk of request) {
+            body += chunk.toString();
+            if (body.length > 1024) throw new Error("A photo picker request is too large");
+          }
+          const { since } = JSON.parse(body);
+          if (typeof since !== "number" || !Number.isFinite(since))
+            throw new Error("A photo picker request must name when its tap began");
+          result = await controls.pickerPreview(since);
+          observations.push({ check: "picker-preview", result });
           break;
         }
         case "POST link":

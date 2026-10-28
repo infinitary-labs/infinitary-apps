@@ -107,6 +107,194 @@ export class PhoneKeyRegistrations {
   }
 }
 
+export type PhoneTouchOutcome =
+  | { outcome: "delivered" | "discarded"; sender: string; timestamp: string; proof: string }
+  | { outcome: "unknown"; reason: string };
+type TouchScreen = {
+  sender: string;
+  builtInTouchScreen: boolean;
+  at: number;
+  timestamp: string;
+  line: string;
+};
+const touchSender = (hex: string) => hex.toLowerCase().replace(/^0+/, "");
+const firstLine = (message: string) => message.split("\n", 1)[0] ?? "";
+
+/** An ndjson record's own time ("2026-10-26 14:04:01.403588-0700"), in the runner's milliseconds. */
+export function phoneLogMilliseconds(timestamp: string): number {
+  const parts = /^(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2})(\.\d{1,3})?\d*([+-]\d{2})(\d{2})$/.exec(
+    timestamp,
+  );
+  if (!parts) return Number.NaN;
+  return Date.parse(`${parts[1]}T${parts[2]}${parts[3] ?? ""}${parts[4]}:${parts[5]}`);
+}
+
+/**
+ * INF-1477 (the captain's choice "Allow a proven second tap"): XCTest gives each synthesized tap a virtual
+ * touch screen of its own. When a starved simulator's backboardd cannot read that screen's properties in
+ * time, it attaches the screen as an accessory, or as a bad usage pair when it read no usage page, and
+ * ignores its touches, and XCTest confirms the tap after five seconds with no error. backboardd's own lines
+ * are the witness: the first screen it attached once the tap began was delivered when it read a built-in
+ * touch screen, or reported a contact on that screen touching, and discarded only once backboardd reports
+ * ignoring its touches. Anything else, an accessory screen or a bad usage pair alone included, is not
+ * proof and reads as unknown. iOS 27.0 reads every XCTest screen as an accessory and still delivers its
+ * touches, naming the screen on each contact line, as the Mac mini's iPad join part showed on Xcode 27.1.
+ */
+export class PhoneTouchOutcomes {
+  private screens: TouchScreen[] = [];
+  private ignored = new Map<string, string>();
+  private touching = new Map<string, string>();
+  private listeners = new Set<() => void>();
+  private failure: Error | undefined;
+
+  receive(record: { processImagePath?: string; eventMessage?: string; timestamp?: string }) {
+    if (basename(record.processImagePath ?? "") !== "backboardd") return;
+    const message = record.eventMessage ?? "";
+    // What backboardd read the screen as, then where it sits. Phone run 40469903139 read one tap's screen as
+    // "bad usage pair: (0x0 / 0x4); builtin" and ignored its touches, so only "touchScreen; builtin" takes them.
+    const screen =
+      /^init: <BKDirectTouchState: 0x[\dA-Fa-f]+; ([^;>]+); (builtin|accessory);[^>]*?\bsenderID: 0x([\dA-Fa-f]+);/.exec(
+        message,
+      );
+    if (screen?.[1] && screen[2] && screen[3]) {
+      const at = phoneLogMilliseconds(record.timestamp ?? "");
+      if (Number.isNaN(at)) return;
+      this.screens.push({
+        sender: touchSender(screen[3]),
+        builtInTouchScreen: screen[1] === "touchScreen" && screen[2] === "builtin",
+        at,
+        timestamp: record.timestamp ?? "",
+        line: firstLine(message),
+      });
+    } else {
+      const ignoring =
+        /^ignoring digitizer event for display .*? from unsupported service: .*?\bid:0x([\dA-Fa-f]+)\b/.exec(
+          message,
+        );
+      const touched = /^\[([\dA-Fa-f]+)\] contact \d+ presence: touching$/.exec(message);
+      if (ignoring?.[1]) {
+        const sender = touchSender(ignoring[1]);
+        if (!this.ignored.has(sender)) this.ignored.set(sender, firstLine(message));
+      } else if (touched?.[1]) {
+        const sender = touchSender(touched[1]);
+        if (!this.touching.has(sender)) this.touching.set(sender, message);
+      } else return;
+    }
+    for (const notify of this.listeners) notify();
+  }
+
+  /** The outcome of the tap the runner began at `since`, on its own clock in milliseconds. */
+  outcome(since: number): Promise<PhoneTouchOutcome> {
+    return new Promise((resolve) => {
+      const finish = (result: PhoneTouchOutcome) => {
+        deadline.cancel();
+        this.listeners.delete(check);
+        resolve(result);
+      };
+      const check = () => {
+        if (this.failure) {
+          finish({ outcome: "unknown", reason: this.failure.message });
+          return;
+        }
+        // The runner sends nothing else between the tap's start and its outcome, so the first is its own.
+        const screen = this.screens
+          .filter((each) => each.at >= since)
+          .sort((a, b) => a.at - b.at)[0];
+        if (!screen) return;
+        const { sender, timestamp } = screen;
+        if (screen.builtInTouchScreen) {
+          finish({ outcome: "delivered", sender, timestamp, proof: screen.line });
+          return;
+        }
+        const touched = this.touching.get(sender);
+        if (touched) {
+          finish({ outcome: "delivered", sender, timestamp, proof: touched });
+          return;
+        }
+        const ignored = this.ignored.get(sender);
+        if (ignored) finish({ outcome: "discarded", sender, timestamp, proof: ignored });
+      };
+      // A failure deadline, not a delay: without a witness the runner sends no second tap.
+      const deadline = budgetTimer(
+        () =>
+          finish({
+            outcome: "unknown",
+            reason: `No touch screen witness since ${new Date(since).toISOString()}`,
+          }),
+        30_000,
+      );
+      this.listeners.add(check);
+      check();
+    });
+  }
+
+  close(error = new Error("The simulator touch observer stopped")) {
+    this.failure ??= error;
+    for (const notify of this.listeners) notify();
+  }
+}
+
+export type PhonePickerPreview =
+  | { previewed: true; timestamp: string; proof: string }
+  | { previewed: false; reason: string };
+
+/**
+ * INF-1477 (the captain's choice "Allow one more photo tap"): a photo tap the iPhone delivered can still reach
+ * the photo picker as a press-and-hold. In phone run 40486884004 the lift reached the picker 1.65 seconds after
+ * it left the screen, so the picker opened the photo's preview and chose nothing. The picker's own context
+ * menu line, logged as it handles that lift, is the proof; the runner taps the photo once more only on it.
+ */
+export class PhonePickerPreviews {
+  private previews: { at: number; timestamp: string; line: string }[] = [];
+  private listeners = new Set<() => void>();
+  private failure: Error | undefined;
+
+  receive(record: { processImagePath?: string; eventMessage?: string; timestamp?: string }) {
+    if (basename(record.processImagePath ?? "") !== "PhotosPicker") return;
+    const message = record.eventMessage ?? "";
+    if (!message.startsWith(PICKER_PREVIEW_LINE)) return;
+    const at = phoneLogMilliseconds(record.timestamp ?? "");
+    if (Number.isNaN(at)) return;
+    this.previews.push({ at, timestamp: record.timestamp ?? "", line: firstLine(message) });
+    for (const notify of this.listeners) notify();
+  }
+
+  /** The picker's first preview of a photo tap the runner began at `since`, on its own clock in milliseconds. */
+  preview(since: number): Promise<PhonePickerPreview> {
+    return new Promise((resolve) => {
+      const finish = (result: PhonePickerPreview) => {
+        deadline.cancel();
+        this.listeners.delete(check);
+        resolve(result);
+      };
+      const check = () => {
+        if (this.failure) {
+          finish({ previewed: false, reason: this.failure.message });
+          return;
+        }
+        const preview = this.previews.find((each) => each.at >= since);
+        if (preview) finish({ previewed: true, timestamp: preview.timestamp, proof: preview.line });
+      };
+      // A failure deadline, not a delay: a photo the picker chose leaves no preview, and the runner stops asking.
+      const deadline = budgetTimer(
+        () =>
+          finish({
+            previewed: false,
+            reason: `No photo picker preview since ${new Date(since).toISOString()}`,
+          }),
+        30_000,
+      );
+      this.listeners.add(check);
+      check();
+    });
+  }
+
+  close(error = new Error("The simulator photo picker observer stopped")) {
+    this.failure ??= error;
+    for (const notify of this.listeners) notify();
+  }
+}
+
 /** The simulator-wide state UIKit reads through GSEventIsHardwareKeyboardAttached. */
 export const PHONE_HARDWARE_KEYBOARD_STATE = "GSEventHardwareKeyboardAttached";
 // GraphicsServices packs (countryCode << 8) | (type << 16) | attached, and tests the low byte.
@@ -165,9 +353,18 @@ export function phoneApplicationPid(services: string, bundle: string): number {
   return pid;
 }
 
-/** Registration subset of INF-355's observe.sh, limited to the runner's own simulator. */
+/** UIKit's context menu line in the photo picker, logged as it handles a press-and-hold's lift. */
+const PICKER_PREVIEW_LINE = "performAllAnimations for animator: <_UIContextMenuAnimator";
+
+/** Registration subset of INF-355's observe.sh, limited to the runner's own simulator,
+ * INF-1477's touch screen attachments, touching contacts that name their screen and ignored touches
+ * from the same backboardd, and the photo picker's press-and-hold. */
 const PHONE_KEYBOARD_LOG_PREDICATE =
-  'process == "backboardd" AND composedMessage BEGINSWITH "new key command registrations for pid:"';
+  '(process == "backboardd" AND (composedMessage BEGINSWITH "new key command registrations for pid:"' +
+  ' OR composedMessage BEGINSWITH "init: <BKDirectTouchState"' +
+  ' OR (composedMessage BEGINSWITH "[" AND composedMessage ENDSWITH "presence: touching")' +
+  ' OR composedMessage BEGINSWITH "ignoring digitizer event"))' +
+  ` OR (process == "PhotosPicker" AND composedMessage BEGINSWITH "${PICKER_PREVIEW_LINE}")`;
 
 type PhoneKeyboardOptions = {
   simulator: string;
@@ -188,12 +385,16 @@ export async function observePhoneKeyboard(options: PhoneKeyboardOptions) {
       return { generation: ++generation };
     },
     wait: (pid: number, chord: PhoneChord) => stream.wait(pid, chord),
+    touch: (since: number) => stream.touch(since),
+    preview: (since: number) => stream.preview(since),
     close: () => stream.close(),
   };
 }
 
 async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: boolean) {
   const registrations = new PhoneKeyRegistrations();
+  const touches = new PhoneTouchOutcomes();
+  const previews = new PhonePickerPreviews();
   const child = spawn(
     "xcrun",
     [
@@ -234,6 +435,8 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
   // Handle a writer failure immediately, but also rethrow it after every writer has stopped.
   const failed = (error: Error) => {
     registrations.close(error);
+    touches.close(error);
+    previews.close(error);
     child.kill("SIGTERM");
   };
   void saved.catch(failed);
@@ -243,6 +446,8 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
   const stopped = new Promise<void>((resolve) =>
     child.once("close", () => {
       registrations.close();
+      touches.close();
+      previews.close();
       options.children.delete(child);
       resolve();
     }),
@@ -263,6 +468,8 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
       child.once("error", (error) => {
         deadline.cancel();
         registrations.close(error);
+        touches.close(error);
+        previews.close(error);
         reject(error);
       });
       child.once("close", () => {
@@ -276,7 +483,10 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
           return;
         }
         try {
-          registrations.receive(JSON.parse(line));
+          const record = JSON.parse(line);
+          registrations.receive(record);
+          touches.receive(record);
+          previews.receive(record);
         } catch {
           /* Non-record log diagnostics are not witnesses. */
         }
@@ -288,6 +498,8 @@ async function openPhoneKeyboardStream(options: PhoneKeyboardOptions, append: bo
   }
   return {
     wait: (pid: number, chord: PhoneChord) => registrations.wait(pid, chord),
+    touch: (since: number) => touches.outcome(since),
+    preview: (since: number) => previews.preview(since),
     close,
   };
 }

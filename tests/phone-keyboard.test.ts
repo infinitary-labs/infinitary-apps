@@ -10,7 +10,10 @@ import {
   observePhoneKeyboard,
   PHONE_HARDWARE_KEYBOARD_STATE,
   PhoneKeyRegistrations,
+  PhonePickerPreviews,
+  PhoneTouchOutcomes,
   phoneApplicationPid,
+  phoneLogMilliseconds,
   withPhoneHardwareKeyboard,
 } from "./helpers/phoneKeyboard";
 import { scratchDir } from "./helpers/scratchDirs";
@@ -300,6 +303,290 @@ describe("the native chord's backboard registration witness (INF-355)", () => {
 
 // UIKit publishes key commands only while a hardware keyboard is attached when its deferred update runs.
 // The home attaches one to its own simulator for the wait; XCTest's own keyboard detaches within a millisecond.
+// INF-1477 (the captain's choice "Allow a proven second tap"): phone run 40388726706's iPhone cards part.
+// Its backboardd readings, at the compact log's millisecond times in that virtual Mac's UTC, around two taps:
+// the card list's, delivered, and the pick of "Read the harbour chart", whose touches backboardd ignored.
+const backboardd = "/usr/libexec/backboardd";
+const earlierTap = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-26 21:03:57.595000+0000",
+  eventMessage:
+    "init: <BKDirectTouchState: 0x10ab23560; touchScreen; builtin; senderID: 0x109C094000019; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+};
+const listTap = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-26 21:03:58.314000+0000",
+  eventMessage:
+    "init: <BKDirectTouchState: 0x10ab23560; touchScreen; builtin; senderID: 0x109C09400001A; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+};
+const pickAttached = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-26 21:04:01.403000+0000",
+  eventMessage:
+    "init: <BKDirectTouchState: 0x10ab21c00; touchScreen; accessory; authenticated: YES; senderID: 0x109C09400001B; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+};
+const pickIgnored = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-26 21:04:01.406000+0000",
+  eventMessage:
+    "ignoring digitizer event for display <main> from unsupported service: (<BKIOHIDService: 0x10abd1a80; serviceStatus: matched; IOHIDService: IOHIDService name: id:0x109c09400001b primaryUsagePage:0xd primaryUsage:0x4 transport:Recap locationID:recap-bus-0 reportInterval:0 batchInterval:0 events:1 mask:0x800 sensorcontrols:7; senderID: 0x109C09400001B; displayUUID: 0x0; eventSource: verifiedExternalAccessory; primaryUsagePage: 0xD; primaryUsage: 0x4; authenticated: YES; builtIn: NO>):+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\nTimestamp:           58597032975\nTimestamp type:      Absolute\nTotal Latency:       237 us\nSenderID:            0x000109C09400001B NON KERNEL SENDER\nBuiltIn:             1\nEventType:           Digitizer",
+};
+// When testmanagerd began synthesizing each tap, from the same log.
+const listTapBegan = phoneLogMilliseconds("2026-10-26 21:03:58.307000+0000");
+const pickBegan = phoneLogMilliseconds("2026-10-26 21:04:01.115000+0000");
+// Phone run 40469903139's iPhone join part: backboardd read the tap on the link field as a bad usage pair, built in,
+// and ignored its touches. The runner began that tap at 09:22:25.700 in that virtual Mac's UTC, by its own report.
+const fieldAttached = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-27 09:22:26.039000+0000",
+  eventMessage:
+    "init: <BKDirectTouchState: 0x10b2f8a80; bad usage pair: (0x0 / 0x4); builtin; senderID: 0x103BFDC000040; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+};
+const fieldIgnored = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-27 09:22:26.043000+0000",
+  eventMessage:
+    "ignoring digitizer event for display <main> from unsupported service: (<BKIOHIDService: 0x10b25af00; serviceStatus: matched; IOHIDService: IOHIDService name: id:0x103bfdc000040 primaryUsagePage:0xd primaryUsage:0x4 transport:Recap locationID:recap-bus-0 reportInterval:0 batchInterval:0 events:1 mask:0x800 sensorcontrols:7; senderID: 0x103BFDC000040; displayUUID: 0x0; eventSource: builtin; primaryUsagePage: 0x0; primaryUsage: 0x4; authenticated: YES; builtIn: YES>):+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++\nTimestamp:           31243381944\nTimestamp type:      Absolute\nTotal Latency:       195 us",
+};
+const fieldTapBegan = Date.parse("2026-10-27T09:22:25.700Z");
+// The Mac mini's iPad join part on Xcode 27.1 and iOS 27.0: backboardd read both taps' screens as accessories,
+// named each screen on its contact lines and delivered the touches to the app.
+const pasteContact = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-27 21:41:38.782000-0700",
+  eventMessage: "[10DAC72000000] contact 2 presence: touching",
+};
+const linkAttached = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-27 21:51:39.898996-0700",
+  eventMessage:
+    "init: <BKDirectTouchState: 0x10552a800; touchScreen; accessory; builtIn: NO; displayIntegrated: YES; authenticated: YES; displayUUID: 509D2289-83E1-400C-AF22-AA1E14F71642; senderID: 0x10DAC76000001; contacts: contacts: []; destinations: []; latentSystemGestureDestinations: ()>",
+};
+const linkContact = {
+  processImagePath: backboardd,
+  timestamp: "2026-10-27 21:51:39.899000-0700",
+  eventMessage: "[10DAC76000001] contact 2 presence: touching",
+};
+const linkTapBegan = phoneLogMilliseconds("2026-10-27 21:51:39.894000-0700");
+
+describe("a tap's touch screen witness (INF-1477)", () => {
+  it("reads the tap's own built-in touch screen as delivered, never an earlier tap's that arrives late", async () => {
+    vi.useFakeTimers();
+    const touches = new PhoneTouchOutcomes();
+    let outcome: unknown;
+    const read = touches.outcome(listTapBegan).then((value) => {
+      outcome = value;
+    });
+    // The log stream can hand over another process's or an earlier tap's lines out of order.
+    touches.receive(earlierTap);
+    await Promise.resolve();
+    expect(outcome).toBeUndefined();
+    touches.receive(listTap);
+    await read;
+    expect(outcome).toEqual({
+      outcome: "delivered",
+      sender: "109c09400001a",
+      timestamp: listTap.timestamp,
+      proof: listTap.eventMessage,
+    });
+  });
+
+  it("proves a discarded tap only once backboardd reports ignoring the touches of its accessory screen", async () => {
+    vi.useFakeTimers();
+    const touches = new PhoneTouchOutcomes();
+    touches.receive(earlierTap);
+    touches.receive(listTap);
+    let outcome: unknown;
+    const read = touches.outcome(pickBegan).then((value) => {
+      outcome = value;
+    });
+    touches.receive(pickAttached);
+    await Promise.resolve();
+    // An accessory screen alone is not proof that its touches went nowhere.
+    expect(outcome).toBeUndefined();
+    touches.receive(pickIgnored);
+    await read;
+    expect(outcome).toEqual({
+      outcome: "discarded",
+      sender: "109c09400001b",
+      timestamp: pickAttached.timestamp,
+      proof: pickIgnored.eventMessage.split("\n")[0],
+    });
+  });
+
+  it("proves a discarded tap on a built-in screen backboardd read as a bad usage pair, never delivered", async () => {
+    vi.useFakeTimers();
+    const touches = new PhoneTouchOutcomes();
+    let outcome: unknown;
+    const read = touches.outcome(fieldTapBegan).then((value) => {
+      outcome = value;
+    });
+    touches.receive(fieldAttached);
+    await Promise.resolve();
+    // Built in, but not read as a touch screen: like an accessory screen, it is not proof either way alone.
+    expect(outcome).toBeUndefined();
+    touches.receive(fieldIgnored);
+    await read;
+    expect(outcome).toEqual({
+      outcome: "discarded",
+      sender: "103bfdc000040",
+      timestamp: fieldAttached.timestamp,
+      proof: fieldIgnored.eventMessage.split("\n")[0],
+    });
+  });
+
+  it("reads an iOS 27.0 accessory screen as delivered once backboardd reports its own contact touching", async () => {
+    vi.useFakeTimers();
+    const touches = new PhoneTouchOutcomes();
+    touches.receive(pasteContact);
+    let outcome: unknown;
+    const read = touches.outcome(linkTapBegan).then((value) => {
+      outcome = value;
+    });
+    touches.receive(linkAttached);
+    await Promise.resolve();
+    // The earlier tap's contact names another screen, so it is no proof for this one.
+    expect(outcome).toBeUndefined();
+    touches.receive(linkContact);
+    await read;
+    expect(outcome).toEqual({
+      outcome: "delivered",
+      sender: "10dac76000001",
+      timestamp: linkAttached.timestamp,
+      proof: linkContact.eventMessage,
+    });
+  });
+
+  it("reads no proof as unknown, so the runner sends no second tap", async () => {
+    vi.useFakeTimers();
+    const touches = new PhoneTouchOutcomes();
+    touches.receive(pickAttached);
+    const unproven = touches.outcome(pickBegan);
+    await vi.runAllTimersAsync();
+    await expect(unproven).resolves.toMatchObject({
+      outcome: "unknown",
+      reason: expect.stringContaining("No touch screen witness"),
+    });
+    // A stopped observer is not a witness either, even with the proof already cached.
+    const stopped = new PhoneTouchOutcomes();
+    stopped.receive(pickAttached);
+    const pending = stopped.outcome(listTapBegan);
+    stopped.close();
+    await expect(pending).resolves.toMatchObject({
+      outcome: "unknown",
+      reason: expect.stringContaining("observer stopped"),
+    });
+    stopped.receive(pickIgnored);
+    await expect(stopped.outcome(pickBegan)).resolves.toMatchObject({ outcome: "unknown" });
+  });
+
+  it("answers a tap's outcome and a photo tap's preview from the same renewed subscription as the chords", async () => {
+    const evidence = scratchDir("phone-keyboard-touch-");
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    const child = Object.assign(new EventEmitter(), {
+      stdout,
+      stderr,
+      kill: vi.fn(() => {
+        stdout.end();
+        stderr.end();
+        queueMicrotask(() => child.emit("close", null, "SIGTERM"));
+        return true;
+      }),
+    });
+    spawn.mockImplementation(() => {
+      queueMicrotask(() =>
+        stdout.write("Filtering the log data using the registration predicate\n"),
+      );
+      return child;
+    });
+    const children = new Set<ChildProcess>();
+    const observer = await observePhoneKeyboard({
+      simulator: "7D9C9633-B5F6-494B-B9F9-E8B92E0C6DA9",
+      env: {},
+      evidence,
+      children,
+    });
+    const read = observer.touch(pickBegan);
+    for (const record of [listTap, pickAttached, pickIgnored])
+      stdout.write(`${JSON.stringify(record)}\n`);
+    await expect(read).resolves.toMatchObject({ outcome: "discarded", sender: "109c09400001b" });
+    const previewed = observer.preview(photoTapBegan);
+    stdout.write(`${JSON.stringify(pickerHeld)}\n`);
+    await expect(previewed).resolves.toMatchObject({
+      previewed: true,
+      proof: pickerHeld.eventMessage,
+    });
+    await observer.close();
+    expect(children.size).toBe(0);
+  });
+});
+
+// INF-1477 (the captain's choice "Allow one more photo tap"): phone run 40486884004's iPhone talk part, at the
+// compact log's millisecond times in that virtual Mac's UTC. The iPhone delivered the second photo tap, but its lift
+// reached the photo picker 1.65 seconds late: the picker opened the photo's preview, then logged its context menu
+// line as it handled the lift, and chose nothing.
+const photosPicker = "/System/Library/ExtensionKit/Extensions/PhotosPicker.appex/PhotosPicker";
+const pickerPreviewOpened = {
+  processImagePath: photosPicker,
+  timestamp: "2026-10-27 11:06:58.651000+0000",
+  eventMessage:
+    "Current asset changed and not scrubbing. UUID: B84E8479-475C-4727-A4A4-B77AA9980897",
+};
+const pickerHeld = {
+  processImagePath: photosPicker,
+  timestamp: "2026-10-27 11:06:59.624000+0000",
+  eventMessage: "performAllAnimations for animator: <_UIContextMenuAnimator: 0x1162914d0>",
+};
+// When testmanagerd began synthesizing that photo tap, and when the runner asked for the next tap's outcome.
+const photoTapBegan = phoneLogMilliseconds("2026-10-27 11:06:57.803000+0000");
+const nextTapBegan = phoneLogMilliseconds("2026-10-27 11:07:28.133000+0000");
+
+describe("a photo tap the picker read as a press-and-hold (INF-1477)", () => {
+  it("proves the press-and-hold only by the picker's context menu line after the tap began", async () => {
+    vi.useFakeTimers();
+    const previews = new PhonePickerPreviews();
+    let preview: unknown;
+    const read = previews.preview(photoTapBegan).then((value) => {
+      preview = value;
+    });
+    // The picker opening a preview is not the end of the press, and backboardd's lines are not the picker's.
+    previews.receive(pickerPreviewOpened);
+    previews.receive(listTap);
+    await Promise.resolve();
+    expect(preview).toBeUndefined();
+    previews.receive(pickerHeld);
+    await read;
+    expect(preview).toEqual({
+      previewed: true,
+      timestamp: pickerHeld.timestamp,
+      proof: pickerHeld.eventMessage,
+    });
+  });
+
+  it("reads no line since the tap, or a stopped observer, as no preview, so the runner taps no more", async () => {
+    vi.useFakeTimers();
+    const previews = new PhonePickerPreviews();
+    previews.receive(pickerHeld);
+    // The earlier photo tap's preview is not the next tap's.
+    const later = previews.preview(nextTapBegan);
+    await vi.runAllTimersAsync();
+    await expect(later).resolves.toMatchObject({
+      previewed: false,
+      reason: expect.stringContaining("No photo picker preview"),
+    });
+    const stopped = new PhonePickerPreviews();
+    const pending = stopped.preview(photoTapBegan);
+    stopped.close();
+    await expect(pending).resolves.toMatchObject({
+      previewed: false,
+      reason: expect.stringContaining("observer stopped"),
+    });
+    stopped.receive(pickerHeld);
+    await expect(stopped.preview(photoTapBegan)).resolves.toMatchObject({ previewed: false });
+  });
+});
+
 describe("the owned simulator's hardware keyboard during a chord's acknowledgement wait", () => {
   const simulator = "A9EEAD2F-B238-4612-9A9C-250E64BC7E52";
 

@@ -4126,6 +4126,47 @@ const STARTED_HERE = "A placed task asked this Mac's workspace for createTaskWor
  * of its own, and stays when the project moves.
  */
 describe("a task's own Runs on", () => {
+  // INF-1582: a named computer starts real placed work, not merely a queued row.
+  it("starts work by computer name and keeps its stable device ID", async () => {
+    const project = await gitProject();
+    const at = await world(() => project.forge(Buffer.alloc(0)));
+    const home = at.home();
+    const { repo } = await adoptHere(home.repos, project.home);
+    model([
+      {
+        tools: [
+          { name: "emit_card", args: { title: "Named computer started", body: "<p>On it.</p>" } },
+        ],
+      },
+      { text: "Started on the named computer." },
+    ]);
+    const { taskId, crewmate } = await home.supervisor.commission({
+      title: "named footer",
+      intent: { goal: "Make the footer blue.", userWords: "make the footer blue on Mac mini" },
+      repoId: repo.id,
+      shape: { runs_on_ask: "Mac mini" },
+    });
+    expect(crewmate).not.toBe("queued");
+    await expect.poll(() => home.tasks.get(taskId)?.branch).toBe(`fm/task-${taskId}`);
+    expect(home.tasks.get(taskId)).toMatchObject({
+      status: "active",
+      deviceId: at.deviceId,
+      shape: expect.objectContaining({ runs_on_ask: at.deviceId }),
+    });
+    await expect
+      .poll(() => home.cards().find((card) => card.title === "Named computer started"))
+      .toMatchObject({ place: "as Builder" });
+    console.log(
+      "Named placement proof",
+      JSON.stringify({
+        selected: "Mac mini",
+        storedComputer: home.tasks.get(taskId)?.deviceId,
+        branch: home.tasks.get(taskId)?.branch,
+        result: "The placed crewmate emitted its card.",
+      }),
+    );
+  });
+
   it("starts a task on the computer the captain named while its project runs here, and its card says where", async () => {
     const project = await gitProject();
     const at = await world(() => project.forge(Buffer.alloc(0)));

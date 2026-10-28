@@ -3016,7 +3016,10 @@ export class FirstmateAgent {
                   record.repoId ? this.options.repos.get(record.repoId) : undefined,
                 )
               : null;
-            const runsOn = input.runsOn;
+            const runsOn =
+              typeof input.runsOn === "string"
+                ? supervisor.resolveRunsOn(input.runsOn)
+                : input.runsOn;
             // A model named for started work moves it there between turns,
             // keeping its key, branch and working copy (INF-849).
             const moveTo =

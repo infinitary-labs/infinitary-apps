@@ -6,9 +6,10 @@ import { type Card, FIRSTMATE_CARD_META } from "@shared/cards";
 import type { DeviceView } from "@shared/devices";
 import { deviceRunsWork } from "@shared/devices";
 import { AUTOMATIC_COMPUTER, AUTOMATIC_WORD, type PlacementRequirements } from "@shared/placement";
-import type { RepoPolicyPatch, RepoView } from "@shared/repos";
+import { type RepoPolicyPatch, type RepoView, RUNS_ON_THIS_MAC } from "@shared/repos";
 import { devicePlace } from "@shared/signIns";
 import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
+import { resolveWorkComputer } from "@shared/workComputer";
 import { z } from "zod";
 import type { CoreDispatch } from "../dispatcher";
 import { escapeCardText } from "../orchestrator/cardText";
@@ -63,15 +64,13 @@ export class ProjectChanges {
           "This project is kept on this computer. Approve where it lives before choosing pull requests.",
         );
     }
-    if (
-      action === "project-runs-on" &&
-      value.deviceId !== null &&
-      value.deviceId !== AUTOMATIC_COMPUTER &&
-      !this.options
-        .devices()
-        .some((device) => device.id === value.deviceId && deviceRunsWork(device.kind))
-    )
-      throw new Error("Choose a computer that runs work from app_state.");
+    if (action === "project-runs-on" && typeof value.deviceId === "string") {
+      const resolved = resolveWorkComputer(
+        value.deviceId,
+        this.options.devices().filter((device) => deviceRunsWork(device.kind)),
+      );
+      value.deviceId = resolved === RUNS_ON_THIS_MAC ? null : resolved;
+    }
     if (action === "project-settings") {
       await this.options.repos.checkDetails(
         value.repoId as string,

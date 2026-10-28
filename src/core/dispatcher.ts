@@ -46,6 +46,7 @@ import type { RepoPolicyPatch, RepoSetupResult } from "@shared/repos";
 import { type RepoView, repoConfiguredEvent, repoRemovalRefusal } from "@shared/repos";
 import { devicePlace } from "@shared/signIns";
 import type { AppPanelGates } from "@shared/surfaces";
+import { resolveWorkComputer } from "@shared/workComputer";
 import { RemoteLoginRefusedError } from "./devices/remoteLogin";
 import type { CoreEventSink } from "./events";
 import { SignInRequiredError, signInRefusal } from "./forge";
@@ -390,15 +391,14 @@ export function createCoreDispatcher(options: CoreDispatcherOptions): CoreDispat
     // computer that runs work on the list, or null for this Mac.
     "inf:devices:runs-on": (repoId, deviceId) => {
       try {
-        if (
-          deviceId !== null &&
-          deviceId !== AUTOMATIC_COMPUTER &&
-          !services.devices
-            .list()
-            .some((device) => device.id === deviceId && deviceRunsWork(device.kind))
-        )
-          throw new Error("No computer that runs work has that deviceId. Look with app_state.");
-        return services.repos.setRunsOn(repoId, deviceId);
+        const resolved =
+          deviceId === null
+            ? null
+            : resolveWorkComputer(
+                deviceId,
+                services.devices.list().filter((device) => deviceRunsWork(device.kind)),
+              );
+        return services.repos.setRunsOn(repoId, resolved === "this-mac" ? null : resolved);
       } catch (caught) {
         // A refused change is a feed line, as a refused project setting is.
         const text = caught instanceof Error ? caught.message : String(caught);

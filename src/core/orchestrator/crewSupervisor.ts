@@ -216,6 +216,7 @@ import {
   sendWriteWords,
 } from "@shared/vocabulary";
 import type { HandoverFile } from "@shared/work";
+import { resolveWorkComputer } from "@shared/workComputer";
 import type { AccountHold } from "@shared/workPosture";
 import { type IntegrationAsk, NEVER_SENT_AGAIN, type WriteAsk } from "@shared/writeAsk";
 import { ACTION_VALUE_MAX_BYTES } from "../../shared/plugins/bridge";
@@ -2272,6 +2273,15 @@ export class CrewSupervisor {
     return ask === null ? undefined : this.placeRefusal(handle, record, ask);
   }
 
+  /** Resolve the first mate's placement name before any task record is written. */
+  resolveRunsOn(ask: string): string {
+    const machines = this.options.machines;
+    return resolveWorkComputer(
+      ask,
+      (machines?.computers() ?? []).map((id) => ({ id, name: machines?.nameOf(id) ?? id })),
+    );
+  }
+
   /** Why a task cannot be asked to run at `ask`, or undefined when it can. */
   private placeRefusal(handle: string, record: PlacementRecord, ask: string): string | undefined {
     if (record.shape?.kind === "review")
@@ -3205,14 +3215,27 @@ export class CrewSupervisor {
     const title = (input.title.trim() || input.intent.goal || "Task").slice(0, 64);
     // Where the captain said it runs is checked before a row exists
     // (docs/helper.md, "A task's own Runs on").
-    const runsOnAsk = input.shape?.runs_on_ask?.trim();
+    let runsOnAsk: string | undefined;
+    try {
+      runsOnAsk = input.shape?.runs_on_ask?.trim()
+        ? this.resolveRunsOn(input.shape.runs_on_ask)
+        : undefined;
+    } catch (caught) {
+      throw new Error(
+        `${NOTHING_SPAWNED} ${caught instanceof Error ? caught.message : String(caught)}`,
+      );
+    }
     const runsOnRefused =
       runsOnAsk && this.placeRefusal(`"${title}"`, { repoId: boundRepoId }, runsOnAsk);
     if (runsOnRefused) throw new Error(`${NOTHING_SPAWNED} ${runsOnRefused}`);
     const handOff = this.handOffShape(input.shape, boundRepoId);
     if ("refused" in handOff) throw new Error(`${NOTHING_SPAWNED} ${handOff.refused}`);
     const shape = this.withDeliverable(
-      { ...this.workShape(input.shape, escalation), ...handOff },
+      {
+        ...this.workShape(input.shape, escalation),
+        ...handOff,
+        ...(runsOnAsk ? { runs_on_ask: runsOnAsk } : {}),
+      },
       input.intent,
     );
     const graph = {

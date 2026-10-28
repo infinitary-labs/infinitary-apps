@@ -302,3 +302,59 @@ test("asking Firstmate sets where one filed task runs, its record says so, and i
     await expect(recordFact(page, "runs-on")).toContainText(RUNS_ON_SOURCE_WORDS.project);
   });
 });
+
+// INF-1582: a first mate names a work computer without a failed call and a second lookup.
+test("computer names place projects, filed tasks and new work using stable device IDs", async () => {
+  const { app, page, deviceId } = await homeAndComputer();
+  const { repo } = await projectOnThisComputer(page);
+  const [projectResult] = await ask(app, "Run website on Mac mini.", [
+    {
+      name: "app_change",
+      args: {
+        action: "project-runs-on",
+        value: { repoId: repo.id, deviceId: "Mac mini" },
+        evidence: "Run website on Mac mini.",
+        on_words: true,
+      },
+    },
+  ]);
+  expect(projectResult).not.toContain("No computer");
+  expect(
+    (await page.evaluate(() => window.infinitary.repos.list())).find((row) => row.id === repo.id)
+      ?.runsOn,
+  ).toBe(deviceId);
+
+  const footer = await fileTask(app, "Fix the named computer footer", repo.id);
+  const [updated] = await ask(app, "Keep this task on Mac mini.", [
+    {
+      name: "update_task",
+      args: { task: footer.key, runs_on: "Mac mini" },
+    },
+  ]);
+  expect(updated).toContain("Runs on:");
+  expect(
+    (await page.evaluate((id) => window.infinitary.tasks.detail(id), footer.id)).runsOn,
+  ).toEqual({ label: PLACE.label, source: "task" });
+
+  const [spawned] = await ask(app, "Start the header on Mac mini after the footer.", [
+    {
+      name: "spawn_crewmate",
+      args: {
+        title: "Named computer header",
+        goal: "Fix the header.",
+        user_words: "Start the header on Mac mini after the footer.",
+        repo_id: repo.id,
+        shape: { runs_on_ask: "Mac mini" },
+        start_after: { after_task: footer.key },
+      },
+    },
+  ]);
+  expect(spawned).not.toContain("Nothing was spawned");
+  const { tasks } = await page.evaluate(() => window.infinitary.tasks.board());
+  const header = tasks.find((task) => task.title === "Named computer header");
+  expect(header).toBeDefined();
+  expect(
+    (await page.evaluate((id) => window.infinitary.tasks.detail(id), header?.id as string)).runsOn,
+  ).toEqual({ label: PLACE.label, source: "task" });
+  console.log(JSON.stringify({ projectResult, updated, spawned, storedProjectComputer: deviceId }));
+});

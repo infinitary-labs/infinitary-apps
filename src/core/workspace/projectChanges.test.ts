@@ -1,4 +1,5 @@
 import type { Card } from "@shared/cards";
+import type { DeviceView } from "@shared/devices";
 import { AUTOMATIC_COMPUTER } from "@shared/placement";
 import type { RepoView } from "@shared/repos";
 import { describe, expect, it } from "vitest";
@@ -97,5 +98,94 @@ describe("the app's exact-change card", () => {
       { label: "Apply change", variant: "primary", default: true },
       { label: "Not now", variant: "ghost", default: false },
     ]);
+  });
+});
+
+// INF-1582: the project-change owner resolves names before applying or offering a change.
+describe("named project placement", () => {
+  it("keeps IDs for exact words and proposals, including an offline computer later renamed", async () => {
+    let current = { ...WEBSITE };
+    let devices: DeviceView[] = [
+      { id: "mini-1", name: "Kun's Mac mini", kind: "work", pairedAt: 1, inReach: false },
+    ];
+    const raised: Omit<Card, "author" | "priority" | "status" | "createdAt">[] = [];
+    const sent: unknown[][] = [];
+    const changes = new ProjectChanges({
+      repos: { get: () => current } as unknown as RepoRegistry,
+      devices: () => devices,
+      raiseCard: (card) => raised.push(card),
+      tell: () => {},
+    });
+    changes.bindDispatch((async (channel: string, args: unknown[]) => {
+      if (channel === "inf:repos:list") return [current];
+      if (channel === "inf:devices:runs-on") {
+        sent.push(args);
+        current = { ...current, runsOn: args[1] as string | null };
+        return current;
+      }
+      throw new Error(`No ${channel} here.`);
+    }) as CoreDispatch);
+    await changes.request(
+      "project-runs-on",
+      { repoId: WEBSITE.id, deviceId: "Kun's Mac mini" },
+      {
+        kind: "firstmate",
+        wake: "captain",
+        projectWords: true,
+        evidence: "Run website on Kun's Mac mini.",
+      },
+    );
+    expect(sent).toEqual([[WEBSITE.id, "mini-1"]]);
+    expect(raised).toHaveLength(0);
+    current = { ...current, runsOn: null };
+    await changes.request(
+      "project-runs-on",
+      { repoId: WEBSITE.id, deviceId: "Kun's Mac mini" },
+      { kind: "firstmate", wake: "other" },
+    );
+    expect(sent).toHaveLength(1);
+    const effect = raised[0]?.actions[0]?.effect;
+    if (effect?.kind !== "host") throw new Error("Missing exact-change host effect");
+    devices = [
+      {
+        ...devices[0],
+        id: "mini-1",
+        name: "Renamed mini",
+        kind: "work",
+        pairedAt: 1,
+        inReach: false,
+      },
+    ];
+    await changes.apply(effect.arg);
+    expect(sent).toEqual([
+      [WEBSITE.id, "mini-1"],
+      [WEBSITE.id, "mini-1"],
+    ]);
+
+    devices.push({
+      ...devices[0],
+      id: "mini-2",
+      name: "Renamed mini",
+      kind: "work",
+      pairedAt: 1,
+      inReach: false,
+    });
+    await expect(
+      changes.request(
+        "project-runs-on",
+        { repoId: WEBSITE.id, deviceId: "Renamed mini" },
+        { kind: "firstmate", wake: "captain", projectWords: true, evidence: "Run on Renamed mini" },
+      ),
+    ).rejects.toThrow(/More than one/);
+    devices = [{ id: "view-1", name: "Phone", kind: "view", pairedAt: 1, inReach: false }];
+    await expect(
+      changes.request(
+        "project-runs-on",
+        { repoId: WEBSITE.id, deviceId: "Phone" },
+        { kind: "firstmate", wake: "other" },
+      ),
+    ).rejects.toThrow(/No computer/);
+    expect(sent).toHaveLength(2);
+    expect(raised).toHaveLength(1);
   });
 });

@@ -885,6 +885,8 @@ The first mate sets it only from the captain's words, never by judging, and only
 - **The setting.**
   `WorkShape.runs_on_ask` holds a computer that runs work by its device id, or `this-mac` (`RUNS_ON_THIS_MAC`); absent, the task follows its parent's, else its project's.
   The first mate passes it as `spawn_crewmate`'s `shape.runs_on_ask`, or as `update_task`'s `runs_on` on a filed task, where `project` clears it.
+  Both accept a full computer name as well as an ID; the host matches names case-insensitively, refuses duplicate names with their IDs, and stores the resolved ID before writing the task.
+  Project placement through `app_change project-runs-on` and a `project-setup` proposal resolve names the same way, including computers out of reach; no partial-name guessing or fallback changes where work runs.
   `TaskService.updateFields` writes it, one timeline line and feed line ("updated: Runs on: Mac mini (This task)"), and `recordShape` writes only the host's stamp onto the record as it stands, so an edit made while a queued task is classified is never lost.
 - **Which wins.**
   A task's own Runs on wins; without one, a part takes its nearest parent's; without either, its project's (`CrewSupervisor.ownRunsOn`, `runsOnFor`).

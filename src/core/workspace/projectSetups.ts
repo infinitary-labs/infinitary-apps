@@ -26,6 +26,7 @@ import {
 import { rigorSchema } from "@shared/rigor";
 import { signInPlace } from "@shared/signIns";
 import { AUTONOMY_WORDS, CARE_WORDS, PROJECT_DELIVERY_WORDS } from "@shared/vocabulary";
+import { resolveWorkComputer } from "@shared/workComputer";
 import type { CoreDispatch } from "../dispatcher";
 import { renderSignInRefusal, SignInRequiredError } from "../forge";
 import { escapeCardText } from "../orchestrator/cardText";
@@ -85,8 +86,14 @@ export class ProjectSetups {
    * words. A project already on the list gets no card.
    */
   async propose(raw: unknown): Promise<{ text: string; cardId?: string }> {
-    const { delivery, autonomy, rigor, runsOn, work, ...asked } =
-      projectSetupProposalSchema.parse(raw);
+    const {
+      delivery,
+      autonomy,
+      rigor,
+      runsOn: runsOnAsk,
+      work,
+      ...asked
+    } = projectSetupProposalSchema.parse(raw);
     const spec: RepoSetupSpec =
       asked.kind === "adopt" ? { ...asked, path: resolve(expandHome(asked.path)) } : asked;
     const checked = await this.options.repos.check(spec);
@@ -104,14 +111,12 @@ export class ProjectSetups {
     const computers = runsHereOnly({ kind: "project", origin: checked.origin })
       ? []
       : this.options.devices().filter((device) => deviceRunsWork(device.kind));
-    if (runsOn) {
-      if (!checked.origin)
-        throw new Error(
-          `${checked.name} would be kept on ${HERE.this} only, so its tasks run here. Pass runsOn null.`,
-        );
-      if (runsOn !== AUTOMATIC_COMPUTER && !computers.some((computer) => computer.id === runsOn))
-        throw new Error("No computer that runs work has that deviceId. Look with app_state.");
-    }
+    if (runsOnAsk && !checked.origin)
+      throw new Error(
+        `${checked.name} would be kept on ${HERE.this} only, so its tasks run here. Pass runsOn null.`,
+      );
+    const resolved = runsOnAsk ? resolveWorkComputer(runsOnAsk, computers) : runsOnAsk;
+    const runsOn = resolved === RUNS_ON_THIS_MAC ? null : resolved;
     const offer: ProjectSetupOffer = {
       name: checked.name,
       setup: spec,

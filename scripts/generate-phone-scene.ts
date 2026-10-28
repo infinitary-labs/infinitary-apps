@@ -16,6 +16,8 @@ try {
   const { SATURN } = await runner.import<typeof import("../src/renderer/src/character/saturn.ts")>(join(character, "saturn.ts"));
   const { GALAXY } = await runner.import<typeof import("../src/renderer/src/character/galaxy.ts")>(join(character, "galaxy.ts"));
   const { ALGOL } = await runner.import<typeof import("../src/renderer/src/character/algol.ts")>(join(character, "algol.ts"));
+  const { TRAVEL_PER_SECOND, WARP, WARP_LEAD, WARP_SCHEDULE, WARP_STARS, WARP_TRAVEL } = await runner.import<typeof import("../src/renderer/src/character/warp.ts")>(join(character, "warp.ts"));
+  const { WARP_RELEASE_MS } = await runner.import<typeof import("../src/renderer/src/character/crew/warp.ts")>(join(character, "crew/warp.ts"));
   const { FLICKER_TUNING } = await runner.import<typeof import("../src/renderer/src/character/flicker.ts")>(join(character, "flicker.ts"));
   const { REPLY_EMOTES, replyFrame } = await runner.import<typeof import("../src/renderer/src/character/replies.ts")>(join(character, "replies.ts"));
   const { CAPTAIN_BREATH_MS, CrewOrbit, DEFAULT_ORBIT, REMOTE_TRIP } = await runner.import<typeof import("../src/renderer/src/character/crew/orbit.ts")>(join(character, "crew/orbit.ts"));
@@ -30,13 +32,21 @@ try {
       targets: FM_STATES, durations: EMOTE_DURATION_MS, fidgets: FIDGET_DURATION_MS,
       solids: TIER_SOLIDS, planes: CROWDED_PLANES,
       ring: { startRadiusPx: GROWING_RING.startRadiusPx, remoteShare: CLUSTER_LAYOUT.sizeShare }, constellations: { orion: ORION, dipper: BIG_DIPPER },
-      saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING,
+      saturn: SATURN, galaxy: GALAXY, algol: ALGOL, flicker: FLICKER_TUNING, warp: warpData(),
       captain: { ...CAPTAIN_LIGHT, breathMs: CAPTAIN_BREATH_MS },
     },
     "ios/Infinitary/InfinitaryTests/PhoneSceneTraces.generated.json": REPLY_EMOTES.flatMap((emote) =>
       [0, 0.05, 0.15, 0.25, 0.4, 0.55, 0.7, 0.85, 1].map((progress) => ({ emote, progress, frame: replyFrame(emote, progress) }))),
     "ios/Infinitary/InfinitaryTests/PhoneOrbitSeats.generated.json": orbitSeats(),
   };
+  /** INF-1755: the warps' settings, schedule, travel and the very stars the desktop draws, only the ones it reads. */
+  function warpData() {
+    const fixed = (n: number) => Math.round(n * 1e6) / 1e6;
+    const stars = (list: Array<[number, number, number]>, count: number) => list.slice(0, count).map((s) => s.map(fixed));
+    return { ...WARP, travelPerSecond: TRAVEL_PER_SECOND, releaseMs: WARP_RELEASE_MS, schedule: WARP_SCHEDULE, lead: WARP_LEAD,
+      travel: Array.from(WARP_TRAVEL, fixed), head: stars(WARP_STARS.head, WARP.stars), side: stars(WARP_STARS.side, Math.ceil(WARP.stars * 0.6)),
+      inner: stars(WARP_STARS.inner, WARP_STARS.inner.length) };
+  }
   /** INF-1325: the desktop's own seat choices through arrivals and departures, for the phone to replay. */
   function orbitSeats() {
     type Step = { arrive?: string[]; leave?: string[]; program?: { id: string; parts: string[] }; read?: boolean };

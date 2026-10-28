@@ -28,6 +28,10 @@
 // orbits (./rush.ts): only their travel and a share of their spin speed up,
 // with a streak behind each one; every clip keeps its pace.
 //
+// While it plays a warp (../warp.ts) the crew ride along (./warp.ts): their
+// travel speeds up the same way, the tunnel opens their orbits face-on, and
+// each orbiting crewmate is moved in screen space after it is seated.
+//
 // A remote cluster's orbit (./computers.ts) hands this model a projection
 // that puts its circles beside the home formation. Its spark, its fall home
 // and its packets then fly one curved path in screen space between the
@@ -39,6 +43,7 @@ import { type CenterCue, DEPENDENCY_VISUAL } from "@shared/dependencyVisual";
 import type { Slot } from "@shared/modelSlots";
 import { clamp01, easeInOut, easeOut, Spring, TAU } from "../face";
 import { flickerEnvelope, flickerMerge } from "../flicker";
+import { type WarpFrame, warpCrewTravel } from "../warp";
 import {
   CONSTELLATION,
   layoutProgram,
@@ -56,6 +61,7 @@ import {
   satellitePhase,
   satelliteRadius,
 } from "./satellites";
+import { warpCrewmate } from "./warp";
 
 export type OrbitProjection = (
   point: { x: number; y: number; depth: number },
@@ -510,8 +516,11 @@ export class CrewOrbit {
   private last: number;
   private crowded = false;
   private planeBlend = new Spring(0, 0.8, 1);
-  /** Extra travel the black hole's rush has added to the orbit's clock, ms. */
+  /** Extra travel the black hole's rush and the warps have added to the orbit's clock, ms. */
   private lead = 0;
+  /** This frame's warp on the orbits: how far they open face-on, and how much they draw in. */
+  private warpFlat = 0;
+  private warpShrink = 1;
   private listeners = new Set<() => void>();
   /** Bumps on every command; a static (reduced-motion) frame repaints on it. */
   version = 0;
@@ -1044,11 +1053,13 @@ export class CrewOrbit {
    * The slot in scene space, before a remote cluster's scale and a dependency
    * offset, on plane `onPlane` (a crewmate's painted plane, between two while it glides).
    */
-  private scenePoint(onPlane: number, angle: number, radius: number) {
+  private scenePoint(onPlane: number, angle: number, orbitRadius: number) {
     const mix = this.planeBlend.x;
+    const radius = orbitRadius * this.warpShrink;
+    const flat = this.warpFlat;
     const ring = {
       x: Math.cos(angle) * radius,
-      y: Math.sin(angle) * radius * this.tuning.tilt,
+      y: Math.sin(angle) * radius * (this.tuning.tilt + (1 - this.tuning.tilt) * flat),
       z: 0,
       depth: 0.5 + 0.5 * Math.sin(angle),
     };
@@ -1056,8 +1067,8 @@ export class CrewOrbit {
     const lower = Math.max(0, Math.min(CROWDED_PLANES.length - 1, Math.floor(onPlane)));
     const upper = Math.min(CROWDED_PLANES.length - 1, lower + 1);
     const between = clamp01(onPlane - lower);
-    const from = projectPlane(lower, angle, radius);
-    const to = between === 0 ? from : projectPlane(upper, angle, radius);
+    const from = projectPlane(lower, angle, radius, flat);
+    const to = between === 0 ? from : projectPlane(upper, angle, radius, flat);
     const plane = {
       x: from.x + (to.x - from.x) * between,
       y: from.y + (to.y - from.y) * between,
@@ -1149,10 +1160,11 @@ export class CrewOrbit {
    * Advance and snapshot. `settled` (reduced motion) snaps every spring to
    * its slot and completes every clip, so one static frame shows the
    * formation as it will be - no spark, no fall, no packet. `rush` is the
-   * black hole's rush level (./rush.ts), 0 at the normal pace; a settled
-   * frame has none.
+   * black hole's rush level (./rush.ts), 0 at the normal pace; `warp` is the
+   * warp the first mate is playing (./warp.ts), null when none. A settled
+   * frame has neither, and a remote cluster's orbit never takes a warp.
    */
-  update(now: number, settled = false, rush = 0): OrbitFrame {
+  update(now: number, settled = false, rush = 0, warp: WarpFrame | null = null): OrbitFrame {
     this.frameFallback.clear();
     const originalSeats = new Map(this.roster().map((c) => [c.id, c.planeSlot]));
     const originalMarks = new Map([...this.programs].map(([id, p]) => [id, p.rootSlot]));
@@ -1160,7 +1172,7 @@ export class CrewOrbit {
     let frame: OrbitFrame;
     do {
       this.seatsChanged = false;
-      frame = this.updateFrame(now, settled, rush);
+      frame = this.updateFrame(now, settled, rush, warp);
       if (this.seatsChanged) {
         const resolved = this.offMain;
         // Resolve each candidate from the same starting seats. A rejected circle
@@ -1178,7 +1190,12 @@ export class CrewOrbit {
     return frame;
   }
 
-  private updateFrame(now: number, settled: boolean, rush: number): OrbitFrame {
+  private updateFrame(
+    now: number,
+    settled: boolean,
+    rush: number,
+    warp: WarpFrame | null,
+  ): OrbitFrame {
     const dt = Math.min(Math.max(0, now - this.last) / 1000, 0.05);
     this.last = now;
     // A crewmate whose close waited on its spark leaves once the spark has
@@ -1194,7 +1211,14 @@ export class CrewOrbit {
     // target, so the crew race on their slots instead of trailing them.
     // Spawns, departures, packets and every other clip keep their pace.
     const level = settled ? 0 : clamp01(rush);
-    const travel = 1 + (CREW_RUSH.peak - 1) * level;
+    // A warp lends the crew its own lead the same way; the tunnel opens the
+    // orbits face-on and draws them in, the sphere draws them in a little.
+    const w = settled || this.projection ? null : warp;
+    this.warpFlat = w?.variant === "tunnel" ? w.k : 0;
+    this.warpShrink = w
+      ? 1 - (w.variant === "tunnel" ? 0.12 : w.variant === "sphere" ? 0.05 : 0) * w.k
+      : 1;
+    const travel = 1 + (CREW_RUSH.peak - 1) * level + (w ? warpCrewTravel(w.variant, w.sp) - 1 : 0);
     const lead = (travel - 1) * dt * 1000;
     this.lead += lead;
     const targetBlend = this.crowded ? 1 : 0;
@@ -1468,6 +1492,11 @@ export class CrewOrbit {
     }
     const links = this.applyCompanions(crewFrames, scenes, now, settled, dt, seats);
     const programs = this.programFrames(layouts, crewFrames, now, settled, packets);
+    // The warp's riders: every orbiting crewmate not drawn on a constellation.
+    if (w) {
+      const riders = crewFrames.filter((f) => f.phase === "orbiting" && !seats.has(f.id));
+      for (const [i, f] of riders.entries()) warpCrewmate(f, i, riders.length, w);
+    }
     // Packets ride the line to where the crewmate is drawn, circle included.
     for (const frame of crewFrames) {
       const anchor = anchors.get(frame.id);

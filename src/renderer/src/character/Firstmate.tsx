@@ -20,6 +20,7 @@ import {
 } from "./constellations";
 import { receiveFrame, sendoffFrame } from "./crew/cues";
 import { crewRush } from "./crew/rush";
+import { crewWarp } from "./crew/warp";
 import {
   bankedHeat,
   CR,
@@ -83,6 +84,14 @@ import { drawSaturnOver, drawSaturnUnder, placeSaturnVertices, type SaturnLayout
 import { type SkyDots, skyEnvelope } from "./sky";
 import { stageClock, stageNow } from "./stageClock";
 import { FM_STATES, type StateTargets } from "./targets";
+import {
+  drawWarpSphere,
+  isWarp,
+  placeSphereVertices,
+  type WarpVariant,
+  warpJitter,
+  warpPose,
+} from "./warp";
 
 // The Firstmate: a 4D tesseract projection of lines and dots with a pair of
 // soft-light eyes in the inner cell - the captain-approved character design
@@ -98,7 +107,8 @@ import { FM_STATES, type StateTargets } from "./targets";
 // confused, and a fidget pool: roll, yawn, orbit, the five sky fidgets of
 // ./sky - Orion, the Big Dipper, Saturn, a spiral galaxy, Algol - and a
 // pretend black hole, which also sends the crew racing round their orbits,
-// ./crew/rush) overlay the base states and return home on their own, and so
+// ./crew/rush, and the three warps of ./warp, which take the crew along,
+// ./crew/warp) overlay the base states and return home on their own, and so
 // do the reply emotes (./replies: nod, salute, tick, tuck, aww), which play
 // as the Firstmate's own turn ends. A preserved crystal parameter folds the
 // working character into the crystal (./crystal); like
@@ -659,6 +669,9 @@ function drawFrame(
       ? skyEnvelope(et)
       : 0;
   const con: Constellation | null = fv === "orion" ? ORION : fv === "dipper" ? BIG_DIPPER : null;
+  // The warps (./warp): the first mate's own carriage through the wormhole.
+  const warpV: WarpVariant | null = isWarp(fv) ? fv : null;
+  const wp = warpV ? warpPose(warpV, et) : null;
   const sat = fv === "saturn" ? skyK : 0;
   const gal = fv === "galaxy" ? skyK : 0;
   const alg = fv === "algol" ? skyK : 0;
@@ -705,8 +718,8 @@ function drawFrame(
     sim.lastKick = kick;
   }
   sim.vel += (0.5 + (level || 0) * 6 - sim.vel) * Math.min(dt * 1.5, 1);
-  sim.a += cur.sa * dt;
-  sim.b += cur.sb * dt;
+  sim.a += (cur.sa + (wp?.sa ?? 0)) * dt;
+  sim.b += (cur.sb + (wp?.sb ?? 0)) * dt;
   sim.hs += dt * sim.vel * cur.flat;
 
   // The gaze: directed by state and emote, wandering when idle.
@@ -724,6 +737,7 @@ function drawFrame(
       sim.gaze.look(0, 0.12); // concentrating
     else if (con) sim.gaze.look(con.gaze[0], con.gaze[1]);
     else if (fv === "saturn") sim.gaze.look(0, 0.1);
+    else if (wp) sim.gaze.look(wp.look[0], wp.look[1]);
     else sim.gaze.look(0, 0);
   } else if (reply?.gaze) sim.gaze.look(reply.gaze.x, reply.gaze.y);
   else sim.gaze.free();
@@ -761,6 +775,7 @@ function drawFrame(
   if (fv === "yawn") sim.lid = Math.max(sim.lid, pulse(et, 0.12, 0.62) * 0.95);
   if (fv === "blackhole") sim.lid = Math.max(sim.lid, bhEnvelope(et) * 0.3);
   if (fv === "galaxy") sim.lid = Math.max(sim.lid, gal * GALAXY.lid);
+  if (wp) sim.lid = Math.max(sim.lid, wp.lid);
   sim.wink = state === "greet" ? band(et, 0.42, 0.1, 0.68, 0.12) : 0;
   sim.happy =
     state === "celebrate"
@@ -791,7 +806,7 @@ function drawFrame(
   const breathe =
     (1 + cur.breath * Math.sin(now / 650) + (level || 0) * cur.breath * 1.6) *
     (1 + 0.035 * sendoff.exhale);
-  const R = size * 0.27 * breathe * cur.scale;
+  const R = size * 0.27 * breathe * cur.scale * (wp?.scale ?? 1);
 
   // Emote choreography factors, baked into the projected points below so the
   // glow mask and crisp pass stay consistent by construction.
@@ -814,6 +829,11 @@ function drawFrame(
     const y = pulse(et, 0.12, 0.62);
     poseSy = 1 + 0.16 * y;
     poseSx = 1 - 0.09 * y;
+  } else if (wp) {
+    // The corkscrew leans into the wormhole and stretches with the speed.
+    poseRot = wp.rot;
+    poseSx = wp.sx;
+    poseSy = wp.sy;
   } else if (reply) {
     poseRot = reply.rot;
     poseTx = reply.tx * size;
@@ -841,6 +861,7 @@ function drawFrame(
     dim *
     (sim.haloBoost *
       cur.glow *
+      (wp?.glow ?? 1) *
       (0.1 + heat * 0.16 + cur.breath * 0.6 * (0.5 + 0.5 * Math.sin(now / 650))) +
       notice.strength * 0.3 +
       sendoff.glow * 0.22 +
@@ -880,6 +901,12 @@ function drawFrame(
       px += noise1(tSec * 14 + i * 3.1) * jit * R;
       py += noise1(tSec * 13 + i * 5.7) * jit * R;
     }
+    if (wp && wp.jitter > 0.0005) {
+      // The tunnel's tremble at warp speed.
+      const [nx, ny] = warpJitter(tSec, i);
+      px += nx * wp.jitter * R;
+      py += ny * wp.jitter * R;
+    }
     return [px, py, (k4 + k3) / 2, w1] as Pt;
   });
 
@@ -918,6 +945,8 @@ function drawFrame(
   if (con) placeConstellationVertices(skyK, con, pts, c, R, tSec, windProgress, skyDots);
   placeSaturnVertices(sat, SAT_LAYOUT, pts, c, R, tSec, windProgress, skyDots);
   placeGalaxyVertices(gal, pts, c, R, tSec, windProgress, skyDots);
+  // The sphere warp: the vertices take their places on the wormhole's rim (./warp).
+  if (warpV === "sphere") placeSphereVertices(et, BH_LAYOUT.rank, pts, c, R, tSec, windProgress);
 
   // The crystal: the vertices lift into the standing bipyramid by the
   // crystal amount (./crystal owns the geometry).
@@ -1048,6 +1077,10 @@ function drawFrame(
         }
       : null;
   if (bhEnv) drawBlackholeUnder(bhEnv);
+  // The sphere warp's wormhole, under the wires that ring it.
+  if (warpV === "sphere") {
+    drawWarpSphere(ctx, et, c, R, tSec, { bright: briRgb, bg: bgRgb, boost });
+  }
   // The sky fidgets' under-layers: Saturn's far ring half and globe, the
   // galaxy's bulge and arms, Algol's orbit - all beneath the wires. A figure
   // drawn during a turn takes the wires' ember, so the turn reads at its peak.
@@ -1430,6 +1463,11 @@ export function Firstmate({
     if (snap.state === "fidget" && snap.variant === "blackhole" && !prefersReducedMotion()) {
       crewRush.playing(now - snap.phase, FIDGET_DURATION_MS.blackhole, now);
     } else crewRush.stopped(now);
+    // A warp takes the crew along (./crew/warp.ts) on the same clock.
+    if (snap.state === "fidget" && isWarp(snap.variant) && !prefersReducedMotion()) {
+      const sim = simRef.current;
+      crewWarp.playing(snap.variant, now - snap.phase, size * 0.27, sim.heat);
+    } else crewWarp.stopped(now);
     if (snap.state !== ariaState.current) ariaState.current = snap.state;
     const drawn = {
       now,

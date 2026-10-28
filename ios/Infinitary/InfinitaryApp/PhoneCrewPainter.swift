@@ -18,10 +18,25 @@ enum PhoneCrewPainter {
         for mark in frame.marks {
             context.stroke(circle(mark.point, CharacterCatalog.shared.program["rootMarkPx"]!), with: .color(palette.acc.color(0.8)), lineWidth: 1.2)
         }
-        for glyph in frame.glyphs { draw(glyph, now: now, still: still, in: &context, palette: palette) }
+        for glyph in frame.glyphs {
+            streak(glyph, in: &context, palette: palette)
+            draw(glyph, now: now, still: still, in: &context, palette: palette)
+        }
         for (point, strength) in frame.packets {
             context.fill(circle(point, 5), with: .radialGradient(Gradient(colors: [palette.acc.color(0.6 * strength), palette.acc.color(0)]), center: point, startRadius: 0, endRadius: 5))
             context.fill(circle(point, 2), with: .color(palette.acc.color(strength)))
+        }
+    }
+    /// A warp rider's light trail (CharacterWarp.ride), in its own light lifted toward white, thinning and fading away from it.
+    private static func streak(_ glyph: PhoneSceneMotion.Glyph, in context: inout GraphicsContext, palette: CharacterPainter.Palette) {
+        let points = glyph.streak, segments = points.count - 1
+        guard segments > 0, glyph.unfold > 0.01 else { return }
+        let color = palette.acc.mix(palette.hot, glyph.unknown ? 0 : glyph.work).mix(CharacterPainter.RGB(255, 246, 230), 0.25)
+        for i in 0..<segments {
+            let fade = 1 - Double(i) / Double(segments)
+            context.stroke(Path { $0.move(to: points[i]); $0.addLine(to: points[i + 1]) },
+                           with: .color(color.color(min(1, 0.42 * fade * fade * glyph.alpha * glyph.unfold * palette.boost))),
+                           style: StrokeStyle(lineWidth: max(0.6, glyph.size * 0.2 * fade), lineCap: .round))
         }
     }
     private static func draw(_ glyph: PhoneSceneMotion.Glyph, now: Double, still: Bool, in context: inout GraphicsContext, palette: CharacterPainter.Palette) {

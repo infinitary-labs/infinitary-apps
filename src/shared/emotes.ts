@@ -43,6 +43,12 @@ export type FidgetVariant =
   | "saturn"
   | "galaxy"
   | "algol"
+  // The warps (renderer character/warp.ts): the crew travelling at warp
+  // speed through a wormhole, all three of the prototype's treatments
+  // (captain, INF-1750: "add all 3 actually").
+  | "tunnel"
+  | "sphere"
+  | "corkscrew"
   | "blackhole";
 
 /**

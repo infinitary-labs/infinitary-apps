@@ -254,8 +254,9 @@ struct PhoneSceneFrame: View {
 
     var body: some View {
         let now = still ? 0 : clock.now
-        let frame = crew.frame(roster: roster, now: now, settled: still)
         let pose = still ? CharacterPose.still(state, at: 0) : character.advance(to: now, state: state)
+        // A warp takes the home crew along (CharacterWarp), as the first mate's 280-point drawing plays it.
+        let frame = crew.frame(roster: roster, now: now, settled: still, warp: CharacterWarp.frame(pose, coreR: 280 * 0.27))
         ZStack(alignment: .topLeading) {
             Canvas { context, _ in
                 #if DEBUG
@@ -266,6 +267,11 @@ struct PhoneSceneFrame: View {
                 #endif
                 context.translateBy(x: offset.width, y: offset.height)
                 let palette = cache.palette(context.environment)
+                // A warp's wormhole and stars lie behind every crewmate and the first mate.
+                if let warp = crew.warp {
+                    CharacterWarp.drawBackdrop(warp, at: CGPoint(x: roster.homeX, y: roster.height / 2), riders: crew.riders,
+                                               scale: PhoneSceneRoster.ringScale, palette: palette, in: &context)
+                }
                 PhoneCrewPainter.draw(frame, roster: roster, now: now, still: still, in: &context, palette: palette)
                 var firstmate = context
                 firstmate.translateBy(x: roster.homeX - 140, y: roster.height / 2 - 140)

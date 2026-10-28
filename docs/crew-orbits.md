@@ -105,6 +105,9 @@ A remote send-off or steer cue carries a unit direction, so the first mate glanc
 **The black hole stays at home.**
 Remote clusters receive a rush level of zero: their crew keep their pace and show no streak while the home crew race, since a cluster orbits its own center, out of the first mate's pull ("The black hole's rush" below).
 
+**The warps stay at home too.**
+A remote cluster's orbit never takes a warp: its crew keep their own group and pace while the home crew ride ("The warps" below).
+
 **Placement arrives with the row.**
 The core creates a placed task's row with its computer in the same write (`CreateTaskInput.deviceId`), so the row's first `task_changed` already carries `executionDeviceId` and the crewmate spawns on its own cluster.
 A placement that still arrives after the spawn - an older home, or a moved task - takes the crewmate off the orbit it was on at once (`CrewOrbit.discard`: no departure, and no settled snap of the others, who re-space on their springs) and spawns it on the right one, still as a spark if it was one.
@@ -501,4 +504,20 @@ Reduced motion plays no black hole and no rush: the settled frame ignores the le
 The near crew canvas publishes the travel speed as `data-crew-travel` (1 except during a rush), compare-before-write.
 
 `rush.test.ts` covers the schedule (ramp, hold, settle, a cut, a pinned clock, a new black hole mid-settle) and the streak's arc; `orbitalPlanes.test.ts` covers racing travel per orbit at ×36 on evenly spaced slots, the return to the normal pace, the spin share with an arrival unfolding on its usual schedule, streaks only while racing and behind the crewmate, and reduced motion; `crewmate.test.ts` the streak's paint under an unchanged solid; `computers.test.ts` the remote clusters' unchanged pace and absent streaks at the top of the rush.
+
+## The warps
+
+Captain's ask (INF-1750): "i want this fidget animation to look like the whole crew is traveling through space at warp speed like through a wormhole"; all three prototype treatments were chosen ("add all 3 actually"), and on who rides: "Only the crew circling the first mate.
+Crewmates working on your other computers stay in their own groups, as they do during the black hole."
+
+The character publishes the warp it plays to `crew/warp.ts`'s shared `crewWarp` every frame (its start in stage time, the first mate's radius and its ember) and that it stopped; the orbit reads the frame each frame (`CrewOrbit.update(now, settled, rush, warp)`), and so does the crew's far canvas, which paints the warp's backdrop under every crewmate.
+Every warp lends the crew a lead on the orbit's clock, as the rush does (`WARP_LEAD` seconds of their own pace per unit of warp distance), so the crew travel faster on their evenly spaced slots and the lead stays where the warp leaves it.
+The tunnel opens every orbit face-on and draws it in a little, and each rider trembles, comes in front and trails light outward; the sphere's riders dive into its wormhole one after another and come back out; the corkscrew's riders peel off into a spiral line behind the first mate, through the hourglass's throat.
+Each of those moves is scaled by the warp's envelope and applied in screen space after a crewmate is seated, so at the end every crewmate is back on its own seat.
+A rider is an orbiting crewmate not drawn on a constellation; spawns, departures and other computers' clusters keep their own motion.
+A warp cut short by attention lets the crew go home over 0.6 s (`WARP_RELEASE_MS`).
+Reduced motion plays no warp.
+The near crew canvas publishes the warp it draws as `data-crew-warp`, compare-before-write, and its travel speed as `data-crew-travel`.
+
+`crew/warp.test.ts` covers each warp's ride: the home crew move, the riders end on their own seats, a remote cluster keeps its pace, and a cut warp lets go; on the phone, `PhoneWarpTests` holds the same promises for its scene.
 

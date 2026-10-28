@@ -7,7 +7,7 @@ struct CharacterMachine {
         var reply: Bool { [.nod, .salute, .tick, .tuck, .aww].contains(self) }
     }
     typealias Emote = Mode
-    enum Fidget: String, CaseIterable, Sendable { case roll, yawn, orbit, orion, dipper, saturn, galaxy, algol, blackhole }
+    enum Fidget: String, CaseIterable, Sendable { case roll, yawn, orbit, orion, dipper, saturn, galaxy, algol, tunnel, sphere, corkscrew, blackhole }
     static func seconds(_ mode: Mode) -> Double? { CharacterCatalog.shared.durations[mode.rawValue].map { $0 / 1000 } }
     private(set) var mode = Mode.idle
     private(set) var variant: Fidget?

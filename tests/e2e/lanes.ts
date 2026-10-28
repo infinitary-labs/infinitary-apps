@@ -92,6 +92,7 @@ export const APPLICATION_SUITES = [
   "card-threads.spec.ts",
   "card-viewport-height.spec.ts",
   "check-refresh.spec.ts",
+  "character-warp.spec.ts",
   "claude-seat-overflow.spec.ts",
   "claude-stopped-report.spec.ts",
   "closed-blockers.spec.ts",

@@ -3,6 +3,7 @@ import { type DeviceView, deviceRunsWork } from "@shared/devices";
 import type { Slot } from "@shared/modelSlots";
 import { HERE } from "../../../../shared/deviceNames";
 import { Spring } from "../face";
+import type { WarpFrame } from "../warp";
 import type { Program } from "./constellation";
 import {
   CrewOrbit,
@@ -533,10 +534,15 @@ export class ComputerOrbits extends CrewOrbit {
     this.clusterCues = [];
     return cues;
   }
-  override update(now: number, settled = false, rush = 0): OrbitFrame {
+  override update(
+    now: number,
+    settled = false,
+    rush = 0,
+    warp: WarpFrame | null = null,
+  ): OrbitFrame {
     const dt = Math.min(Math.max(0, now - this.clock) / 1000, 0.05);
     this.clock = now;
-    const legacy = super.update(now, settled, rush);
+    const legacy = super.update(now, settled, rush, warp);
     this.settleSeats(dt, settled);
     const clusters = this.clusters();
     this.positions = new Map(clusters.map((c) => [c.id, c]));
@@ -559,8 +565,8 @@ export class ComputerOrbits extends CrewOrbit {
         const center = this.positions.get(computer.id);
         local.frozenCenter = local.lastCenter ?? { x: center?.x ?? 0, y: center?.y ?? 0 };
       }
-      // The black hole's rush stays at home: a remote cluster orbits its own
-      // center, out of the Firstmate's pull.
+      // The black hole's rush and the warps stay at home: a remote cluster
+      // orbits its own center, out of the Firstmate's pull.
       let frame = computer.reachable
         ? local.model.update(local.time, settled, 0)
         : (local.frozen ?? local.model.update(local.time, true, 0));

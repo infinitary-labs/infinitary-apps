@@ -85,12 +85,16 @@ export function planePhase(plane: number, now: number): number {
   return -(now / 1000) * DEG * p.speedDegPerSec;
 }
 
-/** Orthographic projection of a true 3D circle, z positive toward the camera. */
-export function projectPlane(plane: number, angle: number, radius?: number) {
+/**
+ * Orthographic projection of a true 3D circle, z positive toward the camera.
+ * `flatten` opens the orbit toward face-on (1 is a flat circle), as the
+ * tunnel warp does (../warp.ts).
+ */
+export function projectPlane(plane: number, angle: number, radius?: number, flatten = 0) {
   const p = CROWDED_PLANES[plane];
   if (!p) throw new Error("Unknown orbital plane");
   const r = radius ?? p.radius;
-  const inclination = p.inclination * DEG;
+  const inclination = p.inclination * DEG * (1 - flatten);
   const u = r * Math.cos(angle);
   const v = r * Math.sin(angle) * Math.cos(inclination);
   return {

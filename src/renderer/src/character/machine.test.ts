@@ -205,6 +205,10 @@ describe("FirstmateMachine fidget pool", () => {
       "saturn",
       "galaxy",
       "algol",
+      // The warps (captain, INF-1750: "add all 3 actually"), before the black hole.
+      "tunnel",
+      "sphere",
+      "corkscrew",
       "blackhole",
     ]);
     for (const sky of ["orion", "dipper", "saturn", "galaxy", "algol"] as const) {

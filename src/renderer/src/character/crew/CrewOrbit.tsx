@@ -19,6 +19,7 @@ import { prefersReducedMotion } from "../reducedMotion";
 import { stageClock, stageRateTarget } from "../stageClock";
 import { CLUSTER_LAYOUT, ComputerOrbits, HOME_COMPUTER } from "./computers";
 import "./computers.css";
+import { drawWarpBackdrop, type WarpFrame } from "../warp";
 import { CrewSummary } from "./CrewSummary";
 import {
   type CrewColors,
@@ -57,6 +58,7 @@ import {
   useSummaryPresence,
 } from "./summaryMotion";
 import type { CrewFacts } from "./useCrewBoard";
+import { crewWarp } from "./warp";
 import "./modelLabels.css";
 import "./stateWords.css";
 
@@ -167,11 +169,30 @@ function paintFrame(
   colors: CrewColors,
   now: number,
   inspected: string | null,
+  warp: WarpFrame | null,
 ): void {
   near.ctx.clearRect(0, 0, box.width, box.height);
   far.ctx.clearRect(0, 0, box.width, box.height);
   const cx = box.width / 2;
   const cy = box.height / 2;
+  // A warp's wormhole and stars lie behind every crewmate and the character.
+  if (warp) {
+    const seated = new Set(frame.programs.flatMap((p) => p.nodes.map((n) => n.id)));
+    const riders = frame.crew.filter(
+      (cm) =>
+        cm.phase === "orbiting" &&
+        (cm.computerId ?? HOME_COMPUTER) === HOME_COMPUTER &&
+        !seated.has(cm.id),
+    ).length;
+    drawWarpBackdrop(
+      far.ctx,
+      warp,
+      cx,
+      cy,
+      { acc: colors.accent, hot: colors.hot, boost: colors.boost },
+      riders,
+    );
+  }
   const byId = new Map(frame.crew.map((cm) => [cm.id, cm]));
   // A constellation lies flat at its mark's depth, under the crew it seats.
   for (const program of frame.programs)
@@ -710,8 +731,9 @@ export function CrewOrbit({
       const now = stageClock.advance(real);
       const light = lightRef.current;
       light.duration ??= motionToken(document.documentElement, "--dur-med");
+      const warp = reducedMotion ? null : crewWarp.frame(now);
       const frame = lightFrame(
-        model.update(now, reducedMotion, crewRush.level(now)),
+        model.update(now, reducedMotion, crewRush.level(now), warp),
         focusRef.current ?? { project: null, projectOf: () => undefined },
         light.state,
         light.at === 0 ? 0 : real - light.at,
@@ -804,6 +826,11 @@ export function CrewOrbit({
       if (near.canvas.dataset.stageRate !== rate) near.canvas.dataset.stageRate = rate;
       const travel = String(Math.round(frame.travel * 100) / 100);
       if (near.canvas.dataset.crewTravel !== travel) near.canvas.dataset.crewTravel = travel;
+      const warpName = warp?.variant ?? "";
+      if ((near.canvas.dataset.crewWarp ?? "") !== warpName) {
+        if (warpName) near.canvas.dataset.crewWarp = warpName;
+        else delete near.canvas.dataset.crewWarp;
+      }
       if (shownRef.current) placeSummary();
       placeLit();
       const present = new Set<string>();
@@ -913,8 +940,12 @@ export function CrewOrbit({
         ariaRef.current = label;
         nearRef.current?.setAttribute("aria-label", label);
       }
+      // With nobody out, a warp still paints its wormhole: the first mate travels alone.
       const empty =
-        frame.crew.length === 0 && frame.packets.length === 0 && frame.programs.length === 0;
+        frame.crew.length === 0 &&
+        frame.packets.length === 0 &&
+        frame.programs.length === 0 &&
+        !warp;
       if (empty && !paintedRef.current) return;
       paintedRef.current = !empty;
       if (
@@ -937,7 +968,7 @@ export function CrewOrbit({
         };
         lastRead.current = real;
       }
-      paintFrame(near, far, box, frame, colorsRef.current, now, inspectingRef.current);
+      paintFrame(near, far, box, frame, colorsRef.current, now, inspectingRef.current, warp);
     },
     `${extent}:${version}:${viewportWidth}:${viewportHeight}:${nameKey}:${theme}:${focus?.project ?? ""}`,
   );
@@ -966,6 +997,7 @@ export function CrewOrbit({
           colorsRef.current,
           view.now,
           inspectingRef.current,
+          null,
         );
       });
     });

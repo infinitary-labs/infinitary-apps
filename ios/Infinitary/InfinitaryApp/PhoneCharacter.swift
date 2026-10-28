@@ -240,8 +240,10 @@ private struct Gaze {
         pose.cur = pose.cur.eased(toward: .of(mode), by: min(dt * 4, 1))
         pose.heat += ((state == .working ? 1 : 0) - pose.heat) * min(dt * 3, 1)
         vel += (0.5 - vel) * min(dt * 1.5, 1)
-        pose.a += pose.cur.sa * dt
-        pose.b += pose.cur.sb * dt
+        // A warp (CharacterWarp) adds its own spin, squint and held look.
+        let warp = CharacterWarp.pose(of: pose)
+        pose.a += (pose.cur.sa + (warp?.sa ?? 0)) * dt
+        pose.b += (pose.cur.sb + (warp?.sb ?? 0)) * dt
         pose.hs += dt * vel * pose.cur.flat
         pose.milliseconds += dt * 1000
         let reply = CharacterReply.frame(mode, et)
@@ -258,6 +260,7 @@ private struct Gaze {
             } else if machine.variant == .yawn { look = (0, -0.35 * pulse(et, 0.12, 0.62)) }
             else if machine.variant == .blackhole { look = (0, 0.12) }
             else if machine.variant == .saturn { look = (0, 0.1) }
+            else if let warp { look = warp.look }
             else { look = (0, 0) }
             if let constellation = CharacterCatalog.shared.constellations[machine.variant?.rawValue ?? ""] {
                 look = (constellation.gaze[0], constellation.gaze[1])
@@ -269,6 +272,7 @@ private struct Gaze {
         if machine.variant == .roll { pose.lid = max(pose.lid, band(et, 0.3, 0.15, 0.6, 0.22)) }
         if machine.variant == .yawn { pose.lid = max(pose.lid, pulse(et, 0.12, 0.62) * 0.95) }
         if machine.variant == .blackhole { pose.lid = max(pose.lid, CharacterSky.envelope(pose) * 0.3) }
+        if let warp { pose.lid = max(pose.lid, warp.lid) }
         if machine.variant == .galaxy { pose.lid = max(pose.lid, CharacterSky.envelope(pose) * CharacterCatalog.shared.galaxy["lid"]!) }
         pose.wink = mode == .greet ? band(et, 0.42, 0.1, 0.68, 0.12) : 0
         pose.happy = mode == .greet ? band(et, 0.12, 0.18, 0.82, 0.18) : mode == .celebrate ? band(et, 0.08, 0.15, 0.85, 0.15) : reply.happy
@@ -348,7 +352,8 @@ enum CharacterPainter {
         let cur = p.cur, heat = p.heat, now = p.milliseconds, et = p.progress
         let bright = acc.mix(hot, heat), dimUse = dim.mix(RGB(hot.r * 0.55, hot.g * 0.5, hot.b * 0.45), heat)
         let breathe = 1 + cur.breath * sin(now / 650)
-        let R = s * 0.27 * breathe * cur.scale
+        let warp = CharacterWarp.pose(of: p)
+        let R = s * 0.27 * breathe * cur.scale * (warp?.scale ?? 1)
 
         // Every body transform feeds the same projected points for the combined glow and crisp pass.
         let reply = CharacterReply.frame(p.mode, et)
@@ -365,6 +370,8 @@ enum CharacterPainter {
         } else if p.mode == .fidget {
             if p.variant == .roll { spin += easeInOut(clamp01((et - 0.08) / 0.75)) * .pi }
             if p.variant == .yawn { let y = pulse(et, 0.12, 0.62); sy = 1 + 0.16 * y; sx = 1 - 0.09 * y }
+            // The corkscrew leans into the wormhole and stretches with the speed.
+            if let warp { rotation = warp.rot; sx = warp.sx; sy = warp.sy }
         }
         context.opacity *= CharacterSky.dim(p)
         let poseCos = cos(rotation), poseSin = sin(rotation)
@@ -374,7 +381,7 @@ enum CharacterPainter {
         }
 
         // The ambient glow, breathing while listening.
-        let glowA = haloBoost * cur.glow * (0.1 + heat * 0.16 + cur.breath * 0.6 * (0.5 + 0.5 * sin(now / 650))) + replyGlow * 0.18
+        let glowA = haloBoost * cur.glow * (warp?.glow ?? 1) * (0.1 + heat * 0.16 + cur.breath * 0.6 * (0.5 + 0.5 * sin(now / 650))) + replyGlow * 0.18
         context.fill(Path(CGRect(x: 0, y: 0, width: s, height: s)), with: .radialGradient(
             Gradient(colors: [bright.color(glowA), bright.color(0)]), center: CGPoint(x: c, y: c), startRadius: 0, endRadius: s / 2))
 
@@ -406,7 +413,17 @@ enum CharacterPainter {
             let jitter = cur.jitter * sin(et * .pi) * 0.09 * R
             cache.points[i].x += CharacterSky.twinkle(now / 1000 * 14 + Double(i) * 3.1) * jitter
             cache.points[i].y += CharacterSky.twinkle(now / 1000 * 13 + Double(i) * 5.7) * jitter
-            let placed = CharacterSky.place(i, base: CGPoint(x: cache.points[i].x, y: cache.points[i].y), pose: p, c: c, r: R)
+            if let warp, warp.jitter > 0.0005 {
+                // The tunnel's tremble at warp speed.
+                cache.points[i].x += CharacterSky.twinkle(now / 1000 * 14 + Double(i) * 3.1) * warp.jitter * R
+                cache.points[i].y += CharacterSky.twinkle(now / 1000 * 13 + Double(i) * 5.7) * warp.jitter * R
+            }
+            var placed = CharacterSky.place(i, base: CGPoint(x: cache.points[i].x, y: cache.points[i].y), pose: p, c: c, r: R)
+            // The sphere warp: the vertices take their places on the wormhole's rim.
+            if warp != nil, p.variant == .sphere,
+               let rim = CharacterWarp.sphereVertex(i, base: placed.point, et: et, c: c, r: R, time: now / 1000) {
+                placed.point = rim.point; placed.progress = rim.progress
+            }
             cache.sky[i] = placed
             (cache.points[i].x, cache.points[i].y) = posed(placed.point.x, placed.point.y)
             if let w = placed.w { cache.points[i].w += (w - cache.points[i].w) * placed.progress }
@@ -456,6 +473,10 @@ enum CharacterPainter {
                 mask.blendMode = .plusLighter
                 paint(cache.prims, cache.points, in: &mask) { _, _ in tint }
             }
+        }
+        // The sphere warp's wormhole, under the wires that ring it.
+        if warp != nil, p.variant == .sphere {
+            CharacterWarp.drawSphere(et, c: c, r: R, time: now / 1000, bright: bright, background: bg, boost: boost, in: &context)
         }
         CharacterSky.draw(p, over: false, context: &context, c: c, r: R, color: bright.color(1), background: bg.color(1))
         paint(cache.prims, cache.points, in: &context) { kind, mix in

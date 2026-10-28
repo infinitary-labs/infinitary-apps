@@ -183,12 +183,13 @@ struct PhoneSceneRoster {
         /// How far the target's plane turned this frame, radians.
         var turn = 0.0
     }
-    static func projected(_ orbit: Orbit) -> (point: CGPoint, depth: Double) {
+    /// `flatten` opens the orbit toward face-on, as the tunnel warp does (CharacterWarp).
+    static func projected(_ orbit: Orbit, flatten: Double = 0) -> (point: CGPoint, depth: Double) {
         let planes = CharacterCatalog.shared.planes
         let lower = max(0, min(planes.count - 1, Int(orbit.plane.rounded(.down)))), upper = min(planes.count - 1, lower + 1)
         let between = max(0, min(1, orbit.plane - Double(lower)))
         func on(_ p: CharacterCatalog.Plane) -> (x: Double, y: Double, depth: Double) {
-            let incline = p.inclination * .pi / 180
+            let incline = p.inclination * .pi / 180 * (1 - flatten)
             let u = orbit.radius * cos(orbit.angle), v = orbit.radius * sin(orbit.angle) * cos(incline)
             return (u * cos(p.node) - v * sin(p.node), u * sin(p.node) + v * cos(p.node), (sin(orbit.angle) * sin(incline) + 1) / 2)
         }
@@ -222,7 +223,9 @@ struct PhoneSceneRoster {
         var unknown = false, checks = false, programPart = false
         /// Waiting on the captain (INF-1543): its eased blend and when the wait began, the breath's phase.
         var captain = 0.0, captainSince = 0.0
-        var size: Double { (programPart ? CharacterCatalog.shared.program["crewGapPx"]! : CharacterCatalog.shared.orbit["glyph"]!) * (0.84 + 0.32 * depth) }
+        /// A warp's change of size and its light trail (CharacterWarp.ride), on the drawn frame only.
+        var scale = 1.0, streak: [CGPoint] = []
+        var size: Double { (programPart ? CharacterCatalog.shared.program["crewGapPx"]! : CharacterCatalog.shared.orbit["glyph"]!) * (0.84 + 0.32 * depth) * scale }
     }
     struct Packet { let id: UUID; let taskID: String; let report: Bool; let started: Double }
     struct Mark: Identifiable {
@@ -253,6 +256,10 @@ struct PhoneSceneRoster {
     private var markOrbits: [String: (orbit: PhoneSceneRoster.Orbit, center: CGPoint)] = [:]
     private var home: CGPoint?
     private var drawingBooks: [String: PhoneSceneRoster.SeatBook] = [:]
+    private var ride = CharacterWarp.Ride()
+    /// The warp the crew ride this frame and how many ride it, for the backdrop under them.
+    private(set) var warp: CharacterWarp.Frame?
+    private(set) var riders = 0
     var current = Frame(glyphs: [], marks: [], packets: [], links: [])
 
     func receive(_ signal: PhoneSceneSignal) {
@@ -276,8 +283,12 @@ struct PhoneSceneRoster {
         }
     }
 
-    func frame(roster: PhoneSceneRoster, now: Double, settled: Bool) -> Frame {
+    /// `warp` is the warp the first mate plays (CharacterWarp.frame), nil when none.
+    func frame(roster: PhoneSceneRoster, now: Double, settled: Bool, warp playing: CharacterWarp.Frame? = nil) -> Frame {
         let dt = min(0.05, max(0, now - (last ?? now))); last = now; time = now
+        if settled { ride = CharacterWarp.Ride() }
+        let warp = settled ? nil : ride.resolve(playing, now: now)
+        self.warp = warp
         if generation != roster.generation { rosterReady = false }
         let initial = generation != roster.generation || !rosterReady
         if initial { members = [:]; packets = []; computerTime = [:]; drawingBooks = [:]; generation = roster.generation; home = nil }
@@ -303,13 +314,15 @@ struct PhoneSceneRoster {
         var markPlaces: [String: (orbit: PhoneSceneRoster.Orbit, center: CGPoint)] = [:]
         for computer in roster.computers {
             let turning = computer.reachable && !settled
-            if turning { computerTime[computer.id, default: 0] += dt }
+            // A warp lends the home crew its lead, which stays where the warp leaves it; other computers keep their pace.
+            let travel = computer.id == "home" ? warp.map { CharacterWarp.crewTravel($0.variant, $0.sp) } ?? 1 : 1
+            if turning { computerTime[computer.id, default: 0] += dt * travel }
             let localTime = computerTime[computer.id, default: 0], center = CGPoint(x: computer.x, y: roster.height / 2)
             let counts = computer.book.counts
             func orbit(plane: Int, slot: Double) -> PhoneSceneRoster.Orbit {
                 let rate = CharacterCatalog.shared.planes[plane].speedDegPerSec * .pi / 180
                 return .init(plane: Double(plane), angle: slot - localTime * rate,
-                             radius: PhoneSceneRoster.planeRadius(plane, counts: counts) * computer.share, turn: turning ? -dt * rate : 0)
+                             radius: PhoneSceneRoster.planeRadius(plane, counts: counts) * computer.share, turn: turning ? -dt * travel * rate : 0)
             }
             func place(_ orbit: PhoneSceneRoster.Orbit, around center: CGPoint) -> (CGPoint, Double) {
                 let projected = PhoneSceneRoster.projected(orbit)
@@ -469,7 +482,10 @@ struct PhoneSceneRoster {
             members[id] = member
         }
         if settled { discardEffects() }
-        let glyphs = members.values.map(\.glyph).sorted { $0.depth < $1.depth }
+        var glyphs = members.values.map(\.glyph)
+        riders = 0
+        if let warp { riders = Self.ride(&glyphs, warp: warp, roster: roster, home: firstmate, offsets: members.mapValues(\.companion)) }
+        glyphs.sort { $0.depth < $1.depth }
         let byID = Dictionary(uniqueKeysWithValues: glyphs.map { ($0.task.id, $0) })
         let byKey = Dictionary(uniqueKeysWithValues: glyphs.map { ($0.task.key, $0) })
         var links: [(CGPoint, CGPoint, Bool)] = []
@@ -499,6 +515,26 @@ struct PhoneSceneRoster {
         }
         current = Frame(glyphs: glyphs, marks: marks, packets: flying, links: links)
         return current
+    }
+    /// The warp's riders, on the drawn frame only: every home crewmate on its orbit, opened face-on and drawn in as
+    /// the tunnel and sphere do, then moved by CharacterWarp.ride. Returns how many ride.
+    private static func ride(_ glyphs: inout [Glyph], warp: CharacterWarp.Frame, roster: PhoneSceneRoster, home: CGPoint, offsets: [String: CGPoint]) -> Int {
+        let flat = warp.variant == .tunnel ? warp.k : 0
+        let shrink = 1 - (warp.variant == .tunnel ? 0.12 : warp.variant == .sphere ? 0.05 : 0) * warp.k
+        let riders = glyphs.indices.filter { i in
+            let g = glyphs[i]
+            return !g.unknown && !g.programPart && g.unfold >= 1 && g.alpha >= 1 && g.orbit != nil && PhoneSceneRoster.computerID(g.task) == "home"
+        }.sorted { (roster.order[glyphs[$0].task.id] ?? .max, glyphs[$0].task.id) < (roster.order[glyphs[$1].task.id] ?? .max, glyphs[$1].task.id) }
+        for (index, i) in riders.enumerated() {
+            if var orbit = glyphs[i].orbit, offsets[glyphs[i].task.id] ?? .zero == .zero {
+                orbit.radius *= shrink
+                let projected = PhoneSceneRoster.projected(orbit, flatten: flat)
+                glyphs[i].point = CGPoint(x: glyphs[i].center.x + projected.point.x, y: glyphs[i].center.y + projected.point.y)
+                glyphs[i].depth = projected.depth
+            }
+            CharacterWarp.ride(&glyphs[i], index: index, count: riders.count, around: home, w: warp, scale: PhoneSceneRoster.ringScale)
+        }
+        return riders.count
     }
     /// Ride the plane's turn, then close on the target by the nearest way round, its radius and plane with it.
     private static func glide(_ place: inout PhoneSceneRoster.Orbit, toward goal: PhoneSceneRoster.Orbit, _ eased: Double) {

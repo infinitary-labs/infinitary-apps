@@ -17,6 +17,7 @@
 
 import type { FidgetVariant } from "@shared/emotes";
 import { isReplyEmote, REPLY_DURATION_MS, type ReplyEmote } from "./replies";
+import { WARP } from "./warp";
 
 export type { FidgetVariant };
 
@@ -68,6 +69,10 @@ export const FIDGET_DURATION_MS: Record<FidgetVariant, number> = {
   saturn: 5200,
   galaxy: 5800,
   algol: 5000,
+  // The warps' length is the captain's setting on the prototype card.
+  tunnel: WARP.durationMs,
+  sphere: WARP.durationMs,
+  corkscrew: WARP.durationMs,
   // Last on purpose: the pool draws by key order, and the black hole's e2e
   // picks "the last variant" with a deterministic draw.
   blackhole: 5600,
@@ -111,6 +116,9 @@ export const CLIP_BLEND_MS: Record<string, number> = {
   saturn: 250,
   galaxy: 250,
   algol: 250,
+  tunnel: 250,
+  sphere: 250,
+  corkscrew: 250,
   blackhole: 250,
 };
 

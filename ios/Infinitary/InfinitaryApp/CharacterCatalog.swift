@@ -29,6 +29,8 @@ struct CharacterCatalog: Decodable, Sendable {
         let spinA: Double; let spinB: Double; let spinBelt: Double; let streamlines: [[Double]]
     }
     let saturn: Saturn
+    /// The warp fidgets (INF-1755): settings, schedule, travel table and stars.
+    let warp: CharacterWarp.Data
     static let shared: CharacterCatalog = {
         // A generated app resource, checked alongside the theme and contract at the phone gate.
         let url = Bundle.main.url(forResource: "PhoneSceneData.generated", withExtension: "json")!

@@ -1,0 +1,17 @@
+{
+  "entries": [
+    {
+      "id": "warp-fidgets",
+      "kind": "feature",
+      "title": "Your crew travels at warp speed",
+      "body": "The first mate has three new fidgets that take the crew circling it through a wormhole at warp speed: a tunnel with rings pouring out from behind its eyes, a round wormhole the crew dive through, and a side view of an hourglass wormhole with the crew in a spiral line through it. Crewmates on your other computers stay in their own groups. They play on your Mac, iPhone and iPad.",
+      "area": "firstmate",
+      "picture": {
+        "dark": "warp-fidgets-dark.webp",
+        "light": "warp-fidgets-light.webp",
+        "alt": "The first mate looking down a wormhole of rings and streaking stars, with its crew flying in a flat ring around it"
+      },
+      "provenance": { "origin": "change" }
+    }
+  ]
+}
